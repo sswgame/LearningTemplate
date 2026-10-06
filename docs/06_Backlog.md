@@ -756,6 +756,7 @@ cd build/Ninja-Debug/Bin
 
 ### 3-3. 환경 · 툴체인
 
+- **VS Code 실행 인자 GUI 는 `Tools/launch-args`**(프로필 `Profiles/SwEngine.json` — 매크로 · 인자 표 · 캐시 규칙을 바꾸면 이 파일을 고친다). 켜진 인자는 추적되는 `.vscode/settings.json` 의 `cmake.debugConfig` 에 쓰인다. 시험 · 패키징은 `py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration` · `package` — VS Code 터미널에서 띄우는 VS Code 는 물려받은 `ELECTRON_RUN_AS_NODE` 를 빼야 창으로 뜬다(종료 코드 9).
 - **리눅스 Vulkan 검증 레이어는 시스템 패키지(`vulkan-validationlayers`)다 — vcpkg 포트는 Windows 만**(`"platform": "!linux"`). Windows 만 레이어를 Bin 옆에
   복사하고 `VK_LAYER_PATH` 를 건다(`RuntimeDependencies.cmake` · `VulkanRHIDevice.cpp`). 리눅스 CI(ubuntu-22.04 · clang 14)에서 그 포트가 configure 에서 져 잡 넷이 섰다.
   레이어가 없으면 경고 한 줄 뒤 검증 없이 돈다.

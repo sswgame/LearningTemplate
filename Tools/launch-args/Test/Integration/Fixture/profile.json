@@ -1,0 +1,16 @@
+{
+    "name": "Fog Fixture",
+    "global_variable": {
+        "files": [ "src/**/*.cc" ],
+        "macros": [ { "name": "DEFINE_CVAR", "tag": "" } ],
+        "argument_index": { "name": 0, "type": 1, "default_value": 2, "description": 3 },
+        "type_map": { "std::string": "string" }
+    },
+    "argument": {
+        "files": [ "src/flags.inc" ],
+        "macro": "FLAG",
+        "argument_index": { "name": 0, "default_value": 2, "spelling_start": 1 },
+        "exclusive_groups": [ { "id": "gpu", "label": "GPU", "arguments": [ "USE_GL", "USE_VK" ] } ]
+    },
+    "command_line": { "prefix": "--", "separator": "=" }
+}

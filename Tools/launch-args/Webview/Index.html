@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src {{CSP_SOURCE}}; script-src 'nonce-{{NONCE}}';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="{{STYLE_URI}}">
+  <title>Launch Arguments</title>
+</head>
+<body>
+  <header class="summary">
+    <div class="context" id="contextLine"></div>
+    <div id="bannerList"></div>
+    <div class="command-line">
+      <div class="command-line-head">
+        <span id="commandLineCount">명령줄</span>
+        <span class="spacer"></span>
+        <button class="icon-button" id="copyButton" title="명령줄 복사 (셸에 붙여 넣을 수 있게 따옴표 포함)">복사</button>
+      </div>
+      <div class="command-line-body" id="commandLineBody"></div>
+      <div class="note" id="deliveryNote">이 인자는 CMake Tools 설정(cmake.debugConfig)에 쓰여 CMake Tools 의 디버그 · 실행이 읽고, launch.json 에서 "launchArgs" 를 적은 구성에도 들어갑니다.</div>
+      <div id="issueList"></div>
+      <div class="note warning" id="powerShellNote" hidden>
+        점(.)이 든 인자가 있습니다. 기본 터미널이 Windows PowerShell 이면 CMake Tools 의 ▷ 실행은 이 인자를 둘로 쪼갭니다 —
+        아래 <b>CMake Tools 로 디버그</b> · <b>실행 (셸 없이)</b>는 셸을 거치지 않아 안전합니다.
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="button" id="debugButton" title="CMake Tools 의 디버그(cmake.debugTarget)를 이 인자로 시작합니다">CMake Tools 로 디버그</button>
+      <button class="button" id="runButton" title="CMake Tools 의 실행 대상을 셸을 거치지 않고 이 인자로 실행합니다(필요하면 먼저 빌드)">실행 (셸 없이)</button>
+      <span class="spacer"></span>
+      <button class="button secondary" id="disableAllButton" title="체크를 모두 풀어 명령줄을 비웁니다. 입력한 값은 기억합니다">모두 빼기</button>
+    </div>
+  </header>
+
+  <nav class="tab-bar" id="tabBar">
+    <button class="tab" data-tab="globalVariable">전역 변수 <span class="count" id="globalVariableCount"></span></button>
+    <button class="tab" data-tab="argument">인자 <span class="count" id="argumentCount"></span></button>
+    <button class="tab" data-tab="custom">사용자 · 환경 <span class="count" id="customCount"></span></button>
+    <button class="tab" data-tab="preset">프리셋 <span class="count" id="presetCount"></span></button>
+  </nav>
+
+  <section class="filter-bar" id="filterBar">
+    <input class="input" id="searchInput" type="search" placeholder="이름 · 설명 검색">
+    <label class="chip" title="체크된 항목(명령줄에 넘어가는 것)만 보입니다. 값을 고쳤는지와는 상관없습니다"><input type="checkbox" id="enabledOnlyToggle"> 체크된 항목만</label>
+    <label class="chip" title="묶음 안의 순서">정렬
+      <select class="input small" id="sortSelect">
+        <option value="nameAscending">이름 ↑</option>
+        <option value="nameDescending">이름 ↓</option>
+        <option value="enabledFirst">체크된 항목 먼저</option>
+        <option value="source">소스 순서</option>
+      </select>
+    </label>
+    <div class="filter-line" id="tagFilterLine">
+      <span class="filter-label">분류</span>
+      <span id="tagChipList"></span>
+      <span class="spacer"></span>
+      <label class="chip" title="목록을 무엇으로 묶을지">묶기
+        <select class="input small" id="groupBySelect">
+          <option value="module">모듈별</option>
+          <option value="tag">분류별</option>
+          <option value="none">묶지 않음</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="tab-page" data-page="globalVariable">
+    <div id="globalVariableList"></div>
+  </section>
+
+  <section class="tab-page" data-page="argument">
+    <div id="exclusiveGroupList"></div>
+    <div id="argumentList"></div>
+  </section>
+
+  <section class="tab-page" data-page="custom">
+    <h3 class="section-title">사용자 인자</h3>
+    <p class="hint">카탈로그에 없는 인자를 적습니다. 여러 개를 한 줄로 붙여 넣으면 나눠 넣고, 아는 것(전역 변수 · 인자)은 제 칸으로 옮깁니다.</p>
+    <div class="add-row">
+      <input class="input" id="customInput" placeholder='-flag -key=value "-path=a b"'>
+      <button class="button" id="customAddButton">추가</button>
+    </div>
+    <div id="customList"></div>
+
+    <h3 class="section-title">환경 변수</h3>
+    <p class="hint">실행 · 디버그 때 프로그램에 줍니다(cmake.debugConfig.environment).</p>
+    <div class="add-row">
+      <input class="input" id="environmentNameInput" placeholder="이름">
+      <input class="input" id="environmentValueInput" placeholder="값">
+      <button class="button" id="environmentAddButton">추가</button>
+    </div>
+    <div id="environmentList"></div>
+  </section>
+
+  <section class="tab-page" data-page="preset">
+    <p class="hint">지금 고른 것 전체(체크 · 값 · 사용자 인자 · 환경 변수)를 이름 붙여 둡니다. 같은 이름은 덮어씁니다.</p>
+    <div class="add-row">
+      <input class="input" id="presetNameInput" placeholder="프리셋 이름">
+      <button class="button" id="presetSaveButton">저장</button>
+    </div>
+    <div id="presetList"></div>
+  </section>
+
+  <script nonce="{{NONCE}}" src="{{SCRIPT_URI}}"></script>
+</body>
+</html>

@@ -1,256 +1,113 @@
 {
+    // 실행 인자는 사이드바 "Launch Args"(Tools/launch-args)에서 고른다 — 백엔드 · 에디터 · -gv_* 를 구성마다 적지 않는다.
+    // "launchArgs": "replace" 인 구성은 F5 순간 그 패널의 인자 · 환경 변수를 받는다(확장이 없으면 인자 없이 뜬다).
+    // 실행 파일 경로는 CMake Tools 가 고른 구성 프리셋의 빌드 폴더를 따른다(${command:cmake.buildDirectory}) —
+    // Ninja-Debug · 게임별 Debug 프리셋 · ASAN 을 바꾸면 구성을 고치지 않아도 그 빌드를 띄운다.
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "App + Editor DX12 (CodeLLDB)",
+            "name": "App (CodeLLDB · 사이드바 인자)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
-            "args": [
-                "-dx12",
-                "-EnableEditor"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "App + Editor DX11 (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
-            "args": [
-                "-dx11",
-                "-EnableEditor"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "App + Editor Vulkan (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
-            "args": [
-                "-vulkan",
-                "-EnableEditor"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "App + Editor OpenGL (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
-            "args": [
-                "-opengl",
-                "-EnableEditor"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "App Game DX12 (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
-            "args": [
-                "-dx12"
-            ],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "EngineTest (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/EngineTest.exe",
+            "program": "${command:cmake.buildDirectory}/Bin/App.exe",
             "args": [],
-            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
+            "launchArgs": "replace",
+            "cwd": "${command:cmake.buildDirectory}/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
             ]
         },
         {
-            "name": "SmokeTest (CodeLLDB)",
+            // CMake Tools 상태 표시줄에서 고른 실행 대상(App · 시험 실행 파일 …)을 디버그한다. 대상이 오래됐으면 먼저 빌드한다.
+            "name": "CMake 실행 대상 (CodeLLDB · 사이드바 인자)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/SmokeTest.exe",
+            "program": "${command:cmake.launchTargetPath}",
             "args": [],
-            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
+            "launchArgs": "replace",
+            "cwd": "${command:cmake.buildDirectory}/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
             ]
         },
         {
-            "name": "CoreTest (CodeLLDB)",
+            // 시험 실행 파일 하나를 골라 케이스 필터로 돌린다. 작업 폴더는 Bin 이어야 한다(위로 올라가며 Resource/ 를 찾는다).
+            // Shipping 의 시험 실행 파일은 Bin 이 아니라 TestBin 에 있다 — 디버그는 Debug 계열 프리셋에서 한다.
+            "name": "시험 (CodeLLDB)",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/CoreTest.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
+            "program": "${command:cmake.buildDirectory}/Bin/${input:testExecutable}.exe",
+            "args": [
+                "--test_filter=${input:testFilter}"
+            ],
+            "cwd": "${command:cmake.buildDirectory}/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
             ]
         },
         {
-            "name": "ReflectionTest (CodeLLDB)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/ReflectionTest.exe",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/Ninja-Debug/Bin",
-            "env": {
-                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
-            },
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "Attach App (CodeLLDB)",
+            "name": "App 에 붙기 (CodeLLDB)",
             "type": "lldb",
             "request": "attach",
-            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
+            "program": "${command:cmake.buildDirectory}/Bin/App.exe",
             "pid": "${command:pickProcess}",
             "sourceLanguages": [
                 "cpp"
             ]
         },
         {
-            "name": "App + Editor Vulkan (WSL)",
+            // WSL 안에서 연 창(Remote - WSL)에서 쓴다. 빌드는 WSL-Debug 프리셋.
+            "name": "App (WSL · 사이드바 인자)",
             "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
+            "args": [],
+            "launchArgs": "replace",
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
+            "name": "시험 (WSL)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/WSL-Debug/Bin/${input:testExecutable}",
             "args": [
-                "-vulkan",
-                "-EnableEditor"
+                "--test_filter=${input:testFilter}"
             ],
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
             "terminal": "integrated",
             "sourceLanguages": [
                 "cpp"
             ]
-        },
+        }
+    ],
+    "inputs": [
         {
-            "name": "App + Editor OpenGL (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
-            "args": [
-                "-opengl",
-                "-EnableEditor"
+            "id": "testExecutable",
+            "type": "pickString",
+            "description": "디버그할 시험 실행 파일",
+            "options": [
+                "EngineTest",
+                "CoreTest",
+                "ReflectionTest",
+                "SmokeTest",
+                "EditorTest",
+                "EditorUiTest",
+                "AppTest"
             ],
-            "cwd": "${workspaceFolder}",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
+            "default": "EngineTest"
         },
         {
-            "name": "App Game Vulkan (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/App",
-            "args": [
-                "-vulkan"
-            ],
-            "cwd": "${workspaceFolder}",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "EngineTest (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/EngineTest",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "CoreTest (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/CoreTest",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "SmokeTest (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/SmokeTest",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
-        },
-        {
-            "name": "ReflectionTest (WSL)",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/WSL-Debug/Bin/ReflectionTest",
-            "args": [],
-            "cwd": "${workspaceFolder}/build/WSL-Debug/Bin",
-            "terminal": "integrated",
-            "sourceLanguages": [
-                "cpp"
-            ]
+            "id": "testFilter",
+            "type": "promptString",
+            "description": "--test_filter (예: SceneTest.* · InputManagerTest.*:WindowTest.*-WindowTest.Recreate* · * = 전부)",
+            "default": "*"
         }
     ]
 }
