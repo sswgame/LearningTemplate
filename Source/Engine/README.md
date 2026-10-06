@@ -227,3 +227,4 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   블록 수)에 남는다(백엔드 교체 뒤 ~1.1 MB). 진단은 MemoryProfiler 세부 추적을 켜고 `destroyAll` 뒤 `getTopCallStacks( LiveBytes )`. 교체 전 백엔드의 매니페스트는
   종료까지 상주한다(상한 4 개라 둔다). 모듈 인스턴스 내리기는 에디터 · 게임 모두 타입을 걷은 **뒤** 서비스를 뗀다(`ModuleHostInternal::destroyInstance`).
   프로세스 정적 저장소(이름 풀 · 트랜스폼 페이지 · 경로 캐시)는 `EngineBootstrap::shutdown` 이 놓는다 — 컨테이너의 `clear()` 는 버킷 · 밀집 배열 · 용량을 남기므로 타입을 적은 빈 객체를 대입한다(`= {}` 는 initializer_list 대입이 골라져 남는다). 이름 풀 블록은 넣는 쪽 태그가 아니라 `EngineMisc` 로 센다. 종료 보고 0 은 `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다.
+- **`Win32Window` 의 `WM_SIZE` 처리 중 OS 가 같은 스레드로 창 프로시저를 다시 부를 수 있어 `_bResizing` 이 중첩 `onResize` 를 막습니다.** 리사이즈 경로를 고칠 때 이 가드를 지나게 둡니다. 다른 스레드와의 경합은 `RenderThread::waitIdle()` 이 막습니다.

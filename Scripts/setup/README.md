@@ -32,3 +32,5 @@ LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진�
 - **WSL 의 sccache 적중은 빈 의존 파일(.d)을 남길 수 있다** — 적중한 오브젝트의 `ninja -t deps` 가 `#deps 0` 이면 그 TU 의 소스 · 헤더를 고쳐도 `ninja: no work to do`
   다(유니티 TU 에서 봤다). 낡은 빌드가 의심되면 그 오브젝트를 지우거나 `SCCACHE_RECACHE=1` 로 다시 짓는다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
+- **오랜만에 쓰는 WSL 클론은 많이 뒤처져 있을 수 있습니다.** 실패가 이번 변경 탓인지 보려면 패치 없는 HEAD 로 기준선을 먼저 잽니다. 클론은 `git fetch … main` 뒤 `git reset --hard FETCH_HEAD` 로 맞추고 stash 를 쌓지 않습니다.
+  리눅스 전용 파일은 Windows 빌드가 컴파일하지 않으므로 고쳤으면 반드시 WSL 에서 빌드합니다.
