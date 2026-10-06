@@ -50,7 +50,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import kNotOurCodeDirNames  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: CI 러너(ubuntu-22.04)의 `python3` 가 이 버전이다. 여기서 파싱되지 않으면 리눅스 CI 가 멈춘다.
 kMinimumVersion = (3, 10)
@@ -68,8 +68,10 @@ def findNewerSyntaxInternal(path: Path, repositoryRoot: Path) -> list[str]:
     """@brief 파일 하나에서 `kMinimumVersion` 이 거절할 f-string 식을 찾습니다."""
     try:
         source = path.read_text(encoding="utf-8")
-    except OSError:
+    except FileNotFoundError:
         return []
+    except OSError as exception:
+        raise GateError(f"읽기 실패: {path}: {exception}") from exception
 
     try:
         tree = ast.parse(source)

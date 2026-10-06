@@ -36,9 +36,6 @@ _kDunderRe = re.compile(r'^__[a-z0-9_]+__$')
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
 
-#: `PascalCase.py` 예외. 패키지 표시 파일과 `python -m` 진입점은 이름이 정해져 있다.
-_kAllowedModuleName = {"__init__", "__main__"}
-
 #: `camelCase` — 소문자로 시작하고 밑줄이 없다. 뒤에 `Internal` 이 붙는 것도 같은 모양이다.
 _kCamelCaseRe = re.compile(r'^[a-z][a-zA-Z0-9]*$')
 
@@ -47,9 +44,6 @@ _kConstantNameRe = re.compile(r'^_?k[A-Z][a-zA-Z0-9]*$')
 
 #: `PascalCase.py`
 _kModuleNameRe = re.compile(r'^[A-Z][a-zA-Z0-9]*$')
-
-#: 모듈 수준이라도 상수가 아닌 것들.
-_kAllowedModuleVariable = {"main"}
 
 #: 타입을 만드는 호출 — 그 결과는 상수가 아니라 **타입**이라 `PascalCase` 가 맞다.
 _kTypeFactoryName = {"TypeVar", "NewType", "ParamSpec", "TypeVarTuple", "NamedTuple", "TypedDict"}
@@ -140,7 +134,10 @@ def checkModuleConstantInternal(node: ast.Assign | ast.AnnAssign, relPath: str) 
             continue
 
         name = target.id
-        if _kDunderRe.match(name) or name in _kAllowedModuleVariable:
+        if _kDunderRe.match(name):
+            continue
+        if f"variable:{name}" in CheckPythonConventionsGate.mapExemption:
+            CheckPythonConventionsGate.useExemption(f"variable:{name}")
             continue
 
         if isTypeDeclarationInternal(node):
@@ -170,7 +167,9 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
     listViolation: list[str] = []
 
     stem = path.stem
-    if stem not in _kAllowedModuleName and not _kModuleNameRe.match(stem):
+    if f"module:{stem}" in CheckPythonConventionsGate.mapExemption:
+        CheckPythonConventionsGate.useExemption(f"module:{stem}")
+    elif not _kModuleNameRe.match(stem):
         listViolation.append(
             f"{relPath}:1 모듈 이름 '{path.name}' 는 PascalCase.py 여야 합니다 — AGENTS.md '### Python'"
         )
@@ -195,6 +194,13 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
 
 class CheckPythonConventionsGate(LintGate):
     """`AGENTS.md` 의 Python 규칙 — 지금까지 아무 게이트도 보지 않던 자리다."""
+
+    #: `module:<파일 줄기>` · `variable:<모듈 변수>` → 이름 규칙에서 빼는 까닭.
+    mapExemption = {
+        "module:__init__": "패키지 표시 파일 — 이름이 정해져 있다",
+        "module:__main__": "`python -m` 진입점 — 이름이 정해져 있다",
+        "variable:main": "게이트 · 픽서 · 보고서의 진입점(`main = XxxGate.run`) — 상수가 아니다",
+    }
 
     description = "Scripts/ 및 Tools/ 파이썬 명명 규칙 검사 (AGENTS.md '### Python')"
     buildComment = "Checking Python naming conventions (AGENTS.md)..."

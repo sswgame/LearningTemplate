@@ -131,7 +131,8 @@ def readTextFiles(listPath: Iterable[Path],
                   errors: str = "replace",
                   mustContain: str | None = None) -> list[tuple[Path, str]]:
     """
-    파일들을 **동시에** 읽어 `(경로, 내용)` 을 넘긴 순서대로 돌려줍니다. 읽을 수 없는 파일은 뺍니다.
+    파일들을 **동시에** 읽어 `(경로, 내용)` 을 넘긴 순서대로 돌려줍니다. 훑는 사이에 지워진 파일만 빼고,
+    그 밖의 읽기 실패(권한 · 잠금)는 `OSError` 로 올립니다 — 못 읽은 파일을 말없이 빼면 검사가 그 파일을 본 척한다.
 
     `mustContain` 을 주면 그 문자열이 없는 파일도 뺍니다 — 저장소를 훑는 린트는 대개 한두 파일에만 있는 표식(매크로 이름 · 함수 이름)을
     찾으므로, 비싼 정규식 앞에서 걸러 두면 나머지 천여 파일에는 정규식을 돌리지 않는다. 윈도우는 파일 열기가 느려(파일당 ~0.5 ms, 필터
@@ -143,8 +144,10 @@ def readTextFiles(listPath: Iterable[Path],
         path = listTarget[index]
         try:
             text = path.read_text(encoding=encoding, errors=errors)
-        except OSError:
-            return None
+        except FileNotFoundError:
+            return None    # 훑는 사이에 지워진 파일 — 볼 것이 없다
+        except OSError as exception:
+            raise OSError(f"읽기 실패: {path}: {exception}") from exception
         if mustContain is not None and mustContain not in text:
             return None
         return index, path, text

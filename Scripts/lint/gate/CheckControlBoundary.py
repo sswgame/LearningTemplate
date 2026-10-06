@@ -55,20 +55,6 @@ _kListRawInputQuery = (
 )
 _kRawInputQueryRe = re.compile(r"(?:\.|->)\s*(" + "|".join(_kListRawInputQuery) + r")\s*\(")
 
-# 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
-_kAllowedReader: dict[str, str] = {
-    "Source/GameFramework/Base/Control/PlayerControllerComponent.*": "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자",
-    "Source/GameFramework/Base/Control/ControlSystem.*": "조종 시스템 — 플레이어 조종자에게 입력 관리자를 건넨다(스스로 액션을 읽지 않는다)",
-    "Source/GameFramework/Base/Camera/*": "플레이어 뷰 카메라(시점 고르기 · 팬 · 줌) — 폰이 아니다",
-    "Source/GameFramework/Base/Framework/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
-    "Source/GameFramework/Base/Data/GameSettings.h": "입력 맵 경로 설정",
-    "Source/Games/NileCity/NileDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)",
-    "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RtsWorld 명령)",
-    "Source/Games/ThemeParkTycoon/ParkDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)",
-    "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)",
-    "Source/Games/MeadowVillage/MeadowTownDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)",
-}
-
 # 허용 표에 들 수 없는 폰 쪽 파일.
 _kListPawnSidePattern = (
     "Source/GameFramework/Base/Control/*MovementComponent*",
@@ -84,17 +70,10 @@ def isPawnSideInternal(relative: str) -> bool:
     return any(fnmatch.fnmatch(relative, pattern) for pattern in _kListPawnSidePattern)
 
 
-def findAllowReasonInternal(relative: str) -> str:
-    for pattern, reason in _kAllowedReader.items():
-        if fnmatch.fnmatch(relative, pattern):
-            return reason
-    return ""
-
-
 def checkTableInternal() -> list[str]:
     """허용 표가 폰 쪽 파일을 덮으면 그 자체가 위반이다(표를 넓혀 경계를 지우지 못하게)."""
     violations: list[str] = []
-    for pattern in _kAllowedReader:
+    for pattern in CheckControlBoundaryGate.mapExemption:
         for pawnPattern in _kListPawnSidePattern:
             probe = pawnPattern.replace("*", "Probe")
             if fnmatch.fnmatch(probe, pattern):
@@ -103,13 +82,14 @@ def checkTableInternal() -> list[str]:
 
 
 def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
+    gate = CheckControlBoundaryGate
     violations = checkTableInternal()
-    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h", ".inl")):
+    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=(".cpp", ".h", ".inl"))
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
-            continue
+        allowKey = None if isPawnSideInternal(relative) else gate.findExemptionKey(relative)
+        if allowKey is not None:
+            gate.seeExemption(allowKey)
         for lineIndex, line in enumerate(text.splitlines(), start=1):
             rawMatch = _kRawInputQueryRe.search(line)
             if rawMatch:
@@ -118,14 +98,30 @@ def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
                 continue
             if not _kInputReadRe.search(line):
                 continue
-            if isPawnSideInternal(relative) or not findAllowReasonInternal(relative):
-                violations.append(f"[Control Boundary] {relative}:{lineIndex}: pawn-side code reads input — produce a ControlIntent in a controller "
-                                  f"instead: {line.strip()}")
+            if allowKey is not None:
+                gate.useExemption(allowKey)
+                continue
+            violations.append(f"[Control Boundary] {relative}:{lineIndex}: pawn-side code reads input — produce a ControlIntent in a controller "
+                              f"instead: {line.strip()}")
     return violations
 
 
 class CheckControlBoundaryGate(LintGate):
     """입력을 읽는 파일은 허용 표에만 — 폰은 의도만 읽는다."""
+
+    #: 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
+    mapExemption = {
+        "Source/GameFramework/Base/Control/PlayerControllerComponent.*": "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자",
+        "Source/GameFramework/Base/Control/ControlSystem.*": "조종 시스템 — 플레이어 조종자에게 입력 관리자를 건넨다(스스로 액션을 읽지 않는다)",
+        "Source/GameFramework/Base/Camera/*": "플레이어 뷰 카메라(시점 고르기 · 팬 · 줌) — 폰이 아니다",
+        "Source/GameFramework/Base/Framework/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
+        "Source/GameFramework/Base/Data/GameSettings.h": "입력 맵 경로 설정",
+        "Source/Games/NileCity/NileDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)",
+        "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RtsWorld 명령)",
+        "Source/Games/ThemeParkTycoon/ParkDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)",
+        "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)",
+        "Source/Games/MeadowVillage/MeadowTownDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)",
+    }
 
     description = ("GameFramework · Games 에서 입력(InputManager · InputMap)을 읽는 파일이 허용 표(플레이어 조종자 · 플레이어 뷰 · 명령 조종자)에 있는지, "
                    "그리고 어디서도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 직접 묻지 않는지 검사")
@@ -137,7 +133,7 @@ class CheckControlBoundaryGate(LintGate):
     hint = (
         "  폰(몸 · 이동 · 탈것)은 PawnComponent::getIntent() 의 ControlIntent 만 읽습니다.\n"
         "  입력 → 액션 → 의도는 PlayerControllerComponent 가 만들고, AI 는 AiControllerComponent 로 같은 의도를 냅니다.\n"
-        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 _kAllowedReader 에 이유와 함께 한 줄.\n"
+        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 mapExemption 에 이유와 함께 한 줄.\n"
         "  허용 파일도 장치를 직접 묻지 않습니다 — 클릭 · 끌기 · 시점 · 확대는 입력 맵(*.input.xml)에 액션을 두고 InputMap 으로 읽고,\n"
         "  커서 화면 위치만 InputManager::getMousePositionNormalized() 로 읽습니다."
     )
@@ -190,7 +186,7 @@ class CheckControlBoundaryGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findViolations(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary=f"GameFramework · Games 의 입력 읽기(허용 {len(_kAllowedReader)} 줄)")
+        return GateResult(listViolation=violations, summary="GameFramework · Games 의 입력 읽기")
 
 
 main = CheckControlBoundaryGate.run

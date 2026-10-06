@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — comm
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
 
 from common import kNotOurCodeDirNames  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 텍스트로 다뤄야 하는 확장자. 여기 없는 것(이미지·폰트·바이너리 에셋)은 검사하지 않는다.
 kTextSuffix = (
@@ -84,8 +84,10 @@ def findNulBytesInternal(path: Path, repositoryRoot: Path) -> list[str]:
     """@brief 파일 하나에서 널 바이트를 찾습니다."""
     try:
         data = path.read_bytes()
-    except OSError:
+    except FileNotFoundError:
         return []
+    except OSError as exception:
+        raise GateError(f"읽기 실패: {path}: {exception}") from exception
 
     if b"\x00" not in data:
         return []

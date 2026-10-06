@@ -32,20 +32,17 @@ class HelperRule:
     - `name`        : 위반 줄에 찍는 이름
     - `pattern`     : 그 모양(줄 단위 정규식, `#` 로 시작하는 주석 줄은 보지 않는다)
     - `instead`     : 대신 쓸 것
-    - `allowedPaths`: 저장소 기준 경로 — 예외는 이유를 주석으로
+
+    예외는 게이트의 `mapExemption` 에 `<규칙 이름>:<경로>` 로 이유와 함께 둔다.
     """
 
     name: str
     pattern: re.Pattern[str]
     instead: str
-    allowedPaths: tuple[str, ...] = ()
 
 
 _kRule: tuple[HelperRule, ...] = (
-    HelperRule("subprocess", re.compile(r"\bsubprocess\.(run|check_output|check_call|call)\("), "common.runProcess",
-               # 컴파일 DB 의 셸 명령 문자열을 그대로 넘기는 훑기 — Process.py 머리말의 "쓰지 않는 곳"
-               ("Scripts/lint/report/RunBuildWarnings.py", "Scripts/lint/report/RunHeaderSelfContained.py",
-                "Scripts/lint/report/RunForwardDeclarationCandidates.py")),
+    HelperRule("subprocess", re.compile(r"\bsubprocess\.(run|check_output|check_call|call)\("), "common.runProcess"),
     HelperRule("compile DB", re.compile(r"[\"']compile_commands\.json[\"']"), "BuildTree.readCompileDatabase"),
     HelperRule("빌드 폴더 조립", re.compile(r"/\s*[\"']build[\"']\s*/|os\.path\.join\([^)\n]*[\"']build[\"']"), "BuildTree.fromArguments · fromPreset"),
     HelperRule("콘솔 인코딩", re.compile(r"\.reconfigure\(\s*encoding"), "모듈 수준 `import common`(common/__init__.py)"),
@@ -53,17 +50,24 @@ _kRule: tuple[HelperRule, ...] = (
     HelperRule("CMakeCache 읽기", re.compile(r"[\"']CMakeCache\.txt[\"']"), "BuildTree.readCacheValue"),
 )
 
-#: 규칙의 정규식 · 조각을 글로 드는 파일 — 자기 자신과, 같은 정규식으로 숫자를 세는 보고서.
-_kSelfPaths = ("Scripts/lint/gate/CheckScriptCommonHelpers.py", "Scripts/lint/report/RunBuildScriptInventory.py")
+#: `mapExemption` 에서 모든 규칙을 빼는 키의 앞말 — 규칙의 정규식 · 조각을 글로 드는 파일.
+_kAllRulePrefix = "*:"
 
 
 class CheckScriptCommonHelpersGate(LintGate):
+    #: `<규칙 이름>:<경로>`(`*:` 는 모든 규칙) → 이유.
+    mapExemption = {
+        "subprocess:Scripts/lint/report/RunBuildWarnings.py": "컴파일 DB 의 셸 명령 문자열을 그대로 넘기는 훑기 — Process.py 머리말의 \"쓰지 않는 곳\"",
+        "*:Scripts/lint/gate/CheckScriptCommonHelpers.py": "규칙의 정규식 · 조각을 글로 드는 게이트 자신",
+        "*:Scripts/lint/report/RunBuildScriptInventory.py": "같은 정규식으로 숫자를 세는 보고서",
+    }
+
     description = "Scripts/ 가 common 의 한 자리(프로세스 · 빌드 폴더 · 콘솔 · 생성 파일)를 비켜 가지 않는지"
     buildComment = "Checking that scripts use the shared helpers in Scripts/common..."
     timeoutSeconds = 30
     preCommitPattern = ("Scripts/*.py",)
     preCommitFileArgument = "--files"
-    hint = "  common 의 한 자리를 쓰십시오. 정말 예외면 그 규칙 줄의 allowedPaths 에 경로와 이유를 적습니다."
+    hint = "  common 의 한 자리를 쓰십시오. 정말 예외면 mapExemption 에 '<규칙 이름>:<경로>' 와 이유를 적습니다."
     selfTestCases = [
         {"name": "subprocess 직접", "files": {"Scripts/dev/Probe.py": "import subprocess\nsubprocess.run(['x'])\n"}},
         {"name": "build/<preset> 조립", "files": {"Scripts/dev/Probe.py": "path = root / \"build\" / preset\n"}},
@@ -78,13 +82,17 @@ class CheckScriptCommonHelpersGate(LintGate):
         listViolation: list[str] = []
         for path, text in self.readFiles(listPath):
             relPath = path.relative_to(repositoryRoot).as_posix()
-            if relPath.startswith("Scripts/common/") or relPath in _kSelfPaths:
+            if relPath.startswith("Scripts/common/"):
                 continue
             for rule in _kRule:
-                if relPath in rule.allowedPaths:
-                    continue
+                listKey = [key for key in (f"{rule.name}:{relPath}", _kAllRulePrefix + relPath) if key in self.mapExemption]
+                for key in listKey:
+                    self.seeExemption(key)
                 for lineNumber, line in enumerate(text.splitlines(), 1):
                     if rule.pattern.search(line) and not line.lstrip().startswith("#"):
+                        if listKey:
+                            self.useExemption(listKey[0])
+                            continue
                         listViolation.append(f"{relPath}:{lineNumber}: {rule.name} — {rule.instead} 를 쓴다")
         return GateResult(listViolation=listViolation, summary=f"{len(listPath)} scripts · {len(_kRule)} rules")
 

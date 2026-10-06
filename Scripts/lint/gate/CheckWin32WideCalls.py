@@ -9,7 +9,7 @@ Win32 는 문자열을 받는 함수마다 `xxxA`(ANSI 코드 페이지) · `xxx
 
 문자열은 `utf8` 로 들고 경계에서 UTF-16 으로 바꾸므로 TCHAR 전환으로 얻는 것이 없다 — 일반 이름은 부르지 않고 `W` 를 쓴다.
 `A` 판을 이름으로 부르는 것도 막는다: `A` 판은 문자열을 ANSI 코드 페이지로 읽어, UTF-8 경로(한글 사용자 폴더 · 설치 경로)를 깨뜨린다.
-예외는 `_kSetAnsiAllowed`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 자리)뿐이다.
+예외는 `mapExemption`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 `A` 판 이름)뿐이다.
 `->GetMessage(` · `.GetMessage(` 처럼 멤버로 부르는 같은 이름(COM 인터페이스 메서드)은 보지 않는다. 주석 · 문자열 안의 언급도 보지 않는다.
 
   python Scripts/lint/gate/CheckWin32WideCalls.py [--root <repo>] [--files a.cpp b.h]
@@ -70,11 +70,6 @@ _kListGenericName = (
     "FillConsoleOutputCharacter", "WriteConsoleOutput", "WriteConsoleOutputCharacter",
 )
 
-#: `A` 판을 이름으로 불러도 되는 일반 이름입니다. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
-_kSetAnsiAllowed = frozenset({
-    "OutputDebugString",  # 디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다
-})
-
 #: 일반 이름 또는 그 `A` 판을 함수처럼 부르는 자리입니다. 더 긴 이름의 일부(`DefWindowProcW` · `myGetMessage`)는 빠집니다.
 _kGenericCallRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kListGenericName) + r")(A?)\s*\(")
 
@@ -96,7 +91,8 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
                     continue
                 name = match.group(1)
                 bAnsi = match.group(2) == "A"
-                if bAnsi and name in _kSetAnsiAllowed:
+                if bAnsi and name + "A" in CheckWin32WideCallsGate.mapExemption:
+                    CheckWin32WideCallsGate.useExemption(name + "A")
                     continue
                 originalLine = listOriginalLine[lineIndex - 1].strip()
                 called = name + match.group(2)
@@ -106,6 +102,11 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
 
 class CheckWin32WideCallsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
+
+    #: 이름으로 불러도 되는 `A` 판 → 이유. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
+    mapExemption = {
+        "OutputDebugStringA": "디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다",
+    }
 
     description = "Win32 API 를 문자 집합 일반 이름(A/W 매크로) · A 판이 아니라 W 판 이름으로 부르는지 검사"
     buildComment = "Checking that Win32 calls name the W variant..."

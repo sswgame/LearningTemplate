@@ -457,7 +457,7 @@ _kBadPrintfSpecRe = re.compile(
 _kStringLiteralRe = re.compile(r'"((?:\\.|[^"\\])*)"')
 
 # [비복수형 예외 단어 목록]
-kNonPluralExceptions = (
+kNonPluralWordEndings = (
     "Bounds", "Status", "Pass", "Address", "Axis", "Process", "Class", "Cross",
     "Loss", "Mass", "Press", "Canvas", "Args", "Bytes", "Bindless", "RtvIndex",
     "DsvIndex", "Matrix", "Vertex", "Alias", "Species", "Series", "Focus", "Radius",
@@ -479,7 +479,7 @@ def makeSingularInternal(word: str) -> str:
 
 def isPluralWordInternal(word: str) -> bool:
     """단어가 복수형 어미를 가지는지 판정합니다 (예외 목록 제외)."""
-    if any(word.endswith(exc) for exc in kNonPluralExceptions):
+    if any(word.endswith(exc) for exc in kNonPluralWordEndings):
         return False
     if word.endswith(("ies", "es", "s")) and not word.endswith("ss"):
         return True

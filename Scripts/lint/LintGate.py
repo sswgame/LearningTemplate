@@ -43,6 +43,7 @@ main = CheckSomethingGate.run
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -91,6 +92,7 @@ class LintGate:
     - `maxNoteShown`     : 참고를 몇 개까지 찍을지.
     - `selfTestCases`    : 이 게이트가 **반드시 잡아야 하는** 조각. `CheckLintsAreAlive` 가 읽어 간다.
     - `selfTestSkipReason`: 조각을 만들 수 없는 이유. 이유 없는 예외는 없다.
+    - `mapExemption`     : 규칙에서 빼 주는 자리 → 이유. 이유 · 낡음 · 크기를 기반이 본다(아래 "예외 표").
 
     CMake 가 이 게이트를 타깃·CTest 로 등록할 때 묻는 것 셋도 여기 있다 — CMake 에 따로 적으면 파이썬과 어긋난다
     (`Scripts/lint/LintCatalog.py` 가 읽어 간다).
@@ -132,6 +134,38 @@ class LintGate:
     preCommitFileArgument: str = ""
     preCommitSkipReason: str = ""
 
+    # --- 예외 표 -------------------------------------------------------------
+    #
+    # - `mapExemption`: 이 게이트가 규칙에서 빼 주는 자리(경로 · fnmatch 패턴 · `종류:이름` — 키의 뜻은 게이트가 정한다) → 이유.
+    #                   예외는 이 표에만 둔다(`selftest/CheckExemptionTables` 가 모듈 수준 `_k…Allowed/Exempt…` 표를 막는다). 기반이 지키는 것:
+    #                   ① 이유가 빈 줄이 있으면 검사가 서지 않는다(종료 2) ② **전체 훑기**(`--files` 없음)에서 대상은 봤는데 한 번도 적용되지
+    #                   않은 줄, 그리고 실제 저장소(`.git` 이 있는 루트)에서 대상조차 못 본 줄은 "낡은 예외" 위반이다 ③ OK 줄에 표 크기를 찍는다.
+    #                   게이트는 예외의 대상(그 파일 · 그 이름)을 훑을 때 `seeExemption( key )`, 예외로 위반을 넘길 때 `useExemption( key )` 를 부른다.
+    #                   둘 다 클래스 메서드다 — 모듈 수준 도우미 함수도 `XxxGate.useExemption( key )` 로 부른다. 기록은 `main()` 이 비운다.
+    mapExemption: dict[str, str] = {}
+    _setSeenExemption: set[str] = set()
+    _setUsedExemption: set[str] = set()
+
+    @classmethod
+    def seeExemption(cls, key: str) -> None:
+        """예외 `key` 의 대상을 이번 훑기에서 보았다고 적습니다."""
+        cls._setSeenExemption.add(key)
+
+    @classmethod
+    def useExemption(cls, key: str) -> str:
+        """예외 `key` 로 위반 하나를 넘깁니다. 이유를 돌려줍니다(표에 없는 키면 KeyError — 게이트의 결함이다)."""
+        cls._setSeenExemption.add(key)
+        cls._setUsedExemption.add(key)
+        return cls.mapExemption[key]
+
+    @classmethod
+    def findExemptionKey(cls, value: str) -> str | None:
+        """키가 fnmatch 패턴인 표에서 `value` 에 맞는 첫 키를 돌려줍니다(없으면 None)."""
+        for key in cls.mapExemption:
+            if fnmatch.fnmatchcase(value, key):
+                return key
+        return None
+
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
         if not cls.name:
@@ -162,12 +196,36 @@ class LintGate:
         args = parser.parse_args(argv)
 
         repositoryRoot = (args.root or getProjectRoot()).resolve()
+        cls = type(self)
+        cls._setSeenExemption = set()
+        cls._setUsedExemption = set()
+        listNoReason = [key for key, reason in self.mapExemption.items() if not reason.strip()]
+        if listNoReason:
+            print(f"[{self.name}] 이유 없는 예외: {', '.join(listNoReason)} — 이유 없는 예외는 없다", file=sys.stderr)
+            return 2
         try:
             result = self.scan(repositoryRoot, args)
         except GateError as exception:
             print(f"[{self.name}] {exception}", file=sys.stderr)
             return 2
+        if not getattr(args, "files", None):
+            result.listViolation += self.findStaleExemptionsInternal(repositoryRoot)
+        if self.mapExemption:
+            result.summary = f"{result.summary} · 예외 {len(self.mapExemption)} 줄" if result.summary else f"예외 {len(self.mapExemption)} 줄"
         return self.report(result)
+
+    def findStaleExemptionsInternal(self, repositoryRoot: Path) -> list[str]:
+        """전체 훑기 뒤 — 대상은 봤는데 쓰지 않은 예외, 실제 저장소에서 대상을 못 본 예외."""
+        bRealRepository = (repositoryRoot / ".git").exists()
+        listStale: list[str] = []
+        for key, reason in self.mapExemption.items():
+            if key in self._setUsedExemption:
+                continue
+            if key in self._setSeenExemption:
+                listStale.append(f"[낡은 예외] '{key}' 의 대상은 그대로인데 규칙을 어기지 않습니다 — mapExemption 에서 지웁니다({reason})")
+            elif bRealRepository:
+                listStale.append(f"[낡은 예외] '{key}' 의 대상이 없습니다(옮겼거나 지웠다) — mapExemption 을 고칩니다({reason})")
+        return listStale
 
     def report(self, result: GateResult) -> int:
         """결과를 찍고 종료 코드를 정합니다. 출력 모양을 바꾸려는 게이트만 재정의합니다."""
@@ -228,7 +286,10 @@ class LintGate:
         한 번 읽어 여러 게이트가 나눠 쓰기 · 내용 해시 캐시를 얹을 자리는 이 메서드와 `selectTargetFiles` 둘이다 — 게이트가 `open()` ·
         `read_text()` 를 직접 부르면 그 최적화를 비켜 간다.
         """
-        return readTextFiles(listPath, encoding=encoding, errors=errors, mustContain=mustContain)
+        try:
+            return readTextFiles(listPath, encoding=encoding, errors=errors, mustContain=mustContain)
+        except OSError as exception:
+            raise GateError(str(exception)) from exception
 
     @staticmethod
     def printListInternal(lines: list[str], maxShown: int) -> None:

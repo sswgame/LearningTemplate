@@ -60,11 +60,6 @@ _kSkippedAboveRe = re.compile(r"^\s*(?://|/\*|\*|template\s*<)")
 #: 린트 대상에서 시험을 뺀 것(Source · Tools 의 C++) — 시험 도우미는 다음 단계(U3)에서 같은 규칙에 든다.
 _kListScanRoot = kLintProductRelDirs
 _kListScanSuffix = (".h", ".cpp", ".inl")
-_kListSkippedFolder = ("Source/RuntimeAPI/",)
-
-#: 다른 작업이 고치는 중이라 아직 `[[nodiscard]]` 를 달지 못한 선언 — (파일, 이름). 그 파일의 그 이름만 건너뛴다.
-#: 항목이 낡으면(이름이 없거나 이미 달렸으면) 위반으로 알린다 — 지우라는 뜻이다.
-_kSetDeferredDeclaration: set[tuple[str, str]] = set()
 
 
 def hasNodiscardAboveInternal(listLine: list[str], lineIndex: int) -> bool:
@@ -121,18 +116,16 @@ def findFallibleNameInternal(listLine: list[str], lineIndex: int) -> str | None:
 
 def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
     """`[[nodiscard]]` 가 없는 실패 가능 bool 선언을 모아 위반 문자열로 돌려줍니다."""
+    gate = CheckFallibleNodiscardGate
     violations: list[str] = []
-    setDeferredSeen: set[tuple[str, str]] = set()
-    setScannedFile: set[str] = set()
-    for path in LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kListScanSuffix):
+    listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kListScanSuffix)
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        if relative.startswith(_kListSkippedFolder):
-            continue
-        try:
-            listLine = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        except OSError:
-            continue
-        setScannedFile.add(relative)
+        # 예외 키는 폴더 패턴(`Source/RuntimeAPI/*`)이거나 `<파일>:<이름>` 하나다.
+        folderKey = gate.findExemptionKey(relative)
+        if folderKey is not None:
+            gate.seeExemption(folderKey)
+        listLine = text.splitlines()
         # 헤더가 아니면 번역 단위 지역 함수(익명 네임스페이스 안 · static)만 본다 — 나머지는 헤더 선언의 정의다.
         bHeader = path.suffix.lower() == ".h"
         setLocalLine = set() if bHeader else findTranslationUnitLocalLinesInternal(listLine)
@@ -143,21 +136,22 @@ def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFil
                 continue
             if bHeader is False and lineIndex not in setLocalLine and re.match(r"^\s*static\b", line) is None:
                 continue
-            if (relative, name) in _kSetDeferredDeclaration:
-                setDeferredSeen.add((relative, name))
+            declarationKey = f"{relative}:{name}"
+            if folderKey is not None or declarationKey in gate.mapExemption:
+                gate.useExemption(folderKey if folderKey is not None else declarationKey)
                 continue
             violations.append(f"[Fallible Nodiscard] {relative}:{lineIndex + 1}: {name} — {line.strip()}")
 
-    # 미뤄 둔 항목이 그 파일을 훑었는데 보이지 않았다 — 고쳐졌거나 이름이 바뀌었다. 목록에서 지운다.
-    for relative, name in sorted(_kSetDeferredDeclaration):
-        if relative in setScannedFile and (relative, name) not in setDeferredSeen:
-            violations.append(f"[Fallible Nodiscard] {relative}: '{name}' 는 _kSetDeferredDeclaration 에 있지만 [[nodiscard]] 없는 선언으로 "
-                              f"보이지 않습니다 — 목록에서 지우세요")
     return violations
 
 
 class CheckFallibleNodiscardGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
+
+    #: 폴더 패턴(fnmatch) 또는 `<파일>:<이름>` → 속성을 달지 않는 까닭.
+    mapExemption = {
+        "Source/RuntimeAPI/*": "C-ABI 계약(extern \"C\" 함수 포인터 표) — 속성을 달 자리가 아니다",
+    }
 
     description = "실패 가능 bool 함수의 [[nodiscard]] 검사"
     buildComment = "Checking fallible bool declarations for [[nodiscard]]..."

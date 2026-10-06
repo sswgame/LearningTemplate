@@ -83,10 +83,6 @@ _kFirstParamRe = re.compile(r"\(\s*(?:const\s+)?(string_view|hashed_string)\b")
 # 5) BareGetter 가 건너뛰는 것 — 술어 접두사는 규칙이 허용하는 게터 모양이다.
 _kPredicatePrefixRe = re.compile(r"^(is|has|was|can|should)[A-Z]")
 
-# 규칙보다 오래된 이름 중 **바꾸면 남의 계약이 깨지는 것**만 여기 적는다. 이유 없이 늘리지 말 것.
-_kAllowedName: frozenset[str] = frozenset()
-
-
 def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
     relativePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
@@ -111,8 +107,6 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
             continue
 
         name = match.group(1)
-        if name in _kAllowedName:
-            continue
         firstParam = _kFirstParamRe.search(line[match.end() - 1 :])
         if firstParam is not None:
             # 매개변수 수가 같은 쌍만 모호하다 — `f( string_view )` 와 `f( const hashed_string&, int )` 는 아니다.

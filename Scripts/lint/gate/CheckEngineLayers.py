@@ -178,28 +178,10 @@ _kEngineTier: dict[str, int] = {
     _kRootLayerName: 9,
 }
 
-# 티어가 아니라 **prelude·경로 헬퍼**인 헤더. 어느 티어에서 include 해도 된다.
-#   - EngineMinimal.h / Common.h : 타입 별칭과 전방 선언만 모은 우산 헤더.
-#   - ResourceUtil.h             : 리소스 경로 해석 static 헬퍼. loadFromResource 진입점이 쓴다.
-_kUbiquitousHeaders: frozenset[str] = frozenset(
-    {
-        "Engine/EngineMinimal.h",
-        "Engine/Common/Common.h",
-        "Engine/Resource/ResourceUtil.h",
-    }
-)
-
-# 티어가 아니라 **배선**인 파일. 모든 서브시스템을 알아야 하므로 티어 검사에서 뺀다.
-#   - EngineServices.cpp   : 서비스 로케이터 구현. 노출하는 모든 매니저를 include 해야 한다.
-#   - ReflectGenerated.h   : .gen.cpp 전용 preamble.
-#   - AssetManager.cpp  : 리소스 파사드 구현.
-_kWiringFiles: frozenset[str] = frozenset(
-    {
-        "Source/Engine/Common/EngineServices.cpp",
-        "Source/Engine/Reflection/ReflectGenerated.h",
-        "Source/Engine/Resource/AssetManager.cpp",
-    }
-)
+#: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해
+#: 위 티어를 include 해도 되는 배선 파일이다(`CheckEngineLayersGate.mapExemption`).
+_kPreludePrefix = "prelude:"
+_kWiringPrefix = "wiring:"
 
 
 def engineTierOfInternal(folderName: str) -> int | None:
@@ -240,8 +222,12 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
 
     if startsWithPathComponent(relativeFilePath, kDirSourceEngine) is False:
         return fileViolations
-    if relativeFilePath in _kWiringFiles:
-        return fileViolations
+    gate = CheckEngineLayersGate
+    wiringKey = _kWiringPrefix + relativeFilePath
+    bWiring = wiringKey in gate.mapExemption
+    if bWiring:
+        gate.seeExemption(wiringKey)
+    tierViolations: list[str] = []
 
     enginePrefixLen = len(kDirSourceEngine) + 1
     engineRelativePath = relativeFilePath[enginePrefixLen:]
@@ -255,8 +241,8 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         normalizedInclude = normalizePath(includePath)
         if normalizedInclude.startswith("Engine/") is False:
             continue
-        if normalizedInclude in _kUbiquitousHeaders:
-            continue
+        if _kPreludePrefix + normalizedInclude in gate.mapExemption:
+            gate.seeExemption(_kPreludePrefix + normalizedInclude)
         destRelative = normalizedInclude[len("Engine/") :]
         destLayer = engineLayerOfInternal(destRelative)
         if destLayer == sourceLayer:
@@ -266,15 +252,30 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
             fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (티어 표에 없는 폴더 \'{destLayer}\')')
             continue
         if destTier > sourceTier:
-            fileViolations.append(
+            preludeKey = _kPreludePrefix + normalizedInclude
+            if preludeKey in gate.mapExemption:
+                gate.useExemption(preludeKey)
+                continue
+            tierViolations.append(
                 f'{relativeFilePath}: #include "{includePath}"  (티어 {sourceLayer}(T{sourceTier}) -> {destLayer}(T{destTier}))'
             )
 
-    return fileViolations
+    if bWiring and tierViolations:
+        gate.useExemption(wiringKey)
+        return fileViolations
+    return fileViolations + tierViolations
 
 
 class CheckEngineLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
+
+    #: 티어 예외 → 이유. prelude 는 위 티어 헤더를 include 할 때, 배선은 그 파일이 위 티어를 include 할 때 쓰인다.
+    mapExemption = {
+        "prelude:Engine/EngineMinimal.h": "타입 별칭과 전방 선언만 모은 우산 헤더 — 어느 티어에서 include 해도 된다",
+        "prelude:Engine/Resource/ResourceUtil.h": "리소스 경로 해석 static 헬퍼(Core 만 include) — loadFromResource 진입점이 쓴다",
+        "wiring:Source/Engine/Reflection/ReflectGenerated.h": ".gen.cpp 전용 preamble — 생성 코드가 쓰는 모든 형식을 모은다",
+        "wiring:Source/Engine/Resource/AssetManager.cpp": "리소스 파사드 구현 — 캐릭터 · 파괴 · 그래픽스 캐시를 소유하는 조립점(UE 의 에셋 매니저 자리)",
+    }
 
     description = "Engine 레이어 금지 include 검사"
     buildComment = "Checking Engine layer include rules..."

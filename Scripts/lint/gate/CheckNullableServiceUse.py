@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import normalizePath  # noqa: E402
-from LintGate import GateResult, LintGate  # noqa: E402
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 곧바로 화살표가 붙는 모양만 잡는다 — 포인터를 받아 두고 확인한 뒤 쓰는 형태
 # (`T* p = getService<T>();`)는 걸리지 않는다.
@@ -93,8 +93,10 @@ def findDirectDereferences(repositoryRoot: Path, listTargetFile: list[str] | Non
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         try:
             text = path.read_text(encoding="utf-8", errors="replace")
-        except OSError:
+        except FileNotFoundError:
             continue
+        except OSError as exception:
+            raise GateError(f"읽기 실패: {relative}: {exception}") from exception
 
         lines = text.splitlines()
         for lineIndex, line in enumerate(lines, start=1):

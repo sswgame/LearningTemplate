@@ -28,7 +28,7 @@ from common import kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 지연 로드를 정해도 되는 유일한 파일(저장소 상대).
-_kAllowedFile = "cmake/Engine/ModuleTargets.cmake"
+_kDelayLoadHome = "cmake/Engine/ModuleTargets.cmake"
 _kDelayLoadRe = re.compile(r"DELAYLOAD\s*:", re.IGNORECASE)
 
 
@@ -62,7 +62,7 @@ class CheckDelayLoadSitesGate(LintGate):
         listViolation: list[str] = []
         for path in listPath:
             relativePath = path.relative_to(repositoryRoot).as_posix()
-            if relativePath == _kAllowedFile:
+            if relativePath == _kDelayLoadHome:
                 continue
             for lineNumber, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), start=1):
                 if line.lstrip().startswith("#"):

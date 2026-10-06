@@ -41,18 +41,19 @@ kSourceSuffix = (".h", ".cpp", ".inl", ".xxx")
 def collectEdgesInternal(repositoryRoot: Path) -> dict[str, dict[str, list[str]]]:
     """레이어 → 레이어 → [그 엣지를 만든 파일]. 게이트가 빼는 파일·헤더는 여기서도 뺀다."""
     engineDir = repositoryRoot / kDirSourceEngine
+    mapExemption = gate.CheckEngineLayersGate.mapExemption
     listEdge: dict[str, dict[str, list[str]]] = defaultdict(lambda: defaultdict(list))
     for filePath in engineDir.rglob("*"):
         if filePath.suffix not in kSourceSuffix or not filePath.is_file():
             continue
         relativeFilePath = filePath.relative_to(repositoryRoot).as_posix()
-        if relativeFilePath in gate._kWiringFiles:
+        if gate._kWiringPrefix + relativeFilePath in mapExemption:
             continue
         sourceLayer = gate.engineLayerOfInternal(filePath.relative_to(engineDir).as_posix())
         text = filePath.read_text(encoding="utf-8", errors="replace")
         for includePath in gate._kIncludeRe.findall(text):
             normalizedInclude = normalizePath(includePath)
-            if not normalizedInclude.startswith("Engine/") or normalizedInclude in gate._kUbiquitousHeaders:
+            if not normalizedInclude.startswith("Engine/") or gate._kPreludePrefix + normalizedInclude in mapExemption:
                 continue
             destLayer = gate.engineLayerOfInternal(normalizedInclude[len("Engine/"):])
             if destLayer != sourceLayer:

@@ -27,7 +27,7 @@ from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: `std::filesystem` 을 써도 되는 유일한 폴더입니다.
-_kAllowedRoot = "Source/Core/File/Std/"
+_kStdFilesystemHome = "Source/Core/File/Std/"
 
 _kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
@@ -46,14 +46,14 @@ def stripComments(text: str) -> str:
 
 def findViolationsInFile(relative: str, text: str) -> list[str]:
     """파일 하나의 위반 줄입니다."""
-    if relative.startswith(_kAllowedRoot):
+    if relative.startswith(_kStdFilesystemHome):
         return []
     listViolation: list[str] = []
     for lineNumber, line in enumerate(stripComments(text).splitlines(), start=1):
         if _kIncludeRe.match(line) is not None:
-            listViolation.append(f"{relative}:{lineNumber}: <filesystem> -> {_kAllowedRoot} 안에서만 include 합니다")
+            listViolation.append(f"{relative}:{lineNumber}: <filesystem> -> {_kStdFilesystemHome} 안에서만 include 합니다")
         elif _kTokenRe.search(line) is not None:
-            listViolation.append(f"{relative}:{lineNumber}: std::filesystem -> FileUtil 로 묻습니다({_kAllowedRoot} 밖에서는 쓰지 않습니다)")
+            listViolation.append(f"{relative}:{lineNumber}: std::filesystem -> FileUtil 로 묻습니다({_kStdFilesystemHome} 밖에서는 쓰지 않습니다)")
     return listViolation
 
 
@@ -78,7 +78,7 @@ class CheckStdFilesystemIsolationGate(LintGate):
     hint = (
         "  파일 시스템은 FileUtil 로 묻습니다 — 존재 · 크기 · 시각(getFileWriteTime · setFileWriteTime) · 순회(forEachDirectoryEntry) ·\n"
         "  만들기 · 지우기 · 복사 · 권한(setWritable) · 경로(makeAbsolutePath · makeCanonicalPath · getTempDirectory).\n"
-        f"  없는 기능이 필요하면 FileUtil 에 선언하고 {_kAllowedRoot}FileUtilStdFileSystem.cpp 에 구현합니다."
+        f"  없는 기능이 필요하면 FileUtil 에 선언하고 {_kStdFilesystemHome}FileUtilStdFileSystem.cpp 에 구현합니다."
     )
     selfTestCases = [
         {

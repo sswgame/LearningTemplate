@@ -52,8 +52,9 @@
 
 티어가 아닌 파일이 두 종류 있고, 게이트도 이 둘을 예외로 둡니다.
 
-- **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Common/Common.h`, `Resource/ResourceUtil.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다.
-- **배선 파일**(`Common/EngineServices.cpp`, `Reflection/ReflectGenerated.h`, `Resource/AssetManager.cpp`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다.
+- **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourceUtil.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
+- **배선 파일**(`Reflection/ReflectGenerated.h`, `Resource/AssetManager.cpp`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다.
+- 두 목록은 `CheckEngineLayersGate.mapExemption` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
 
 ## 따라 해 보기 — 새 코드가 들어갈 폴더 고르기
 

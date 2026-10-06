@@ -24,16 +24,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kAllowedUppercaseBasenames = {"README.md"}
-
-
 def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list[str]:
     """Resource/ 아래 파일의 경로 조각(폴더 · 파일 이름)에 대문자가 있으면 위반입니다(README.md 만 예외). 빈 폴더는 git 이 들지 않으므로 파일 경로로 본다."""
     violations: list[str] = []
     for path in listPath:
         relative = path.resolve().relative_to(repositoryRoot.resolve())
         for part in relative.parts[1:]:
-            if part in _kAllowedUppercaseBasenames:
+            if part in CheckResourceCasingGate.mapExemption:
+                CheckResourceCasingGate.useExemption(part)
                 continue
             if any(character.isupper() for character in part):
                 violations.append(f"[Resource Casing] 대문자가 포함된 리소스 경로: {relative.as_posix()}")
@@ -43,6 +41,11 @@ def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list
 
 class CheckResourceCasingGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
+
+    #: 대문자를 둬도 되는 경로 조각(파일 · 폴더 이름) → 이유.
+    mapExemption = {
+        "README.md": "GitHub 이 폴더 설명으로 읽는 이름",
+    }
 
     description = "Resource 하위 소문자 명명 규칙 검사"
     buildComment = "Checking Resource lowercase casing rules..."

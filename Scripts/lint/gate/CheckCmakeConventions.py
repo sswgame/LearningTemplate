@@ -63,8 +63,6 @@ _kListLocalCreateRe: tuple[re.Pattern[str], ...] = (
 
 #: `add_library(<이름> SHARED|MODULE|${종류} …)` — 모듈 라이브러리는 팩토리만 만든다.
 _kModuleLibraryRe = re.compile(r'^\s*add_library\s*\(\s*\S+\s+(SHARED|MODULE|\$\{)', re.IGNORECASE)
-#: 팩토리(`sw_addModuleLibrary`)와 Engine 자신(Dev 에서는 DLL, Shipping 에서는 정적 — 팩토리가 부르는 쪽이 아니다).
-_kModuleLibraryAllowedPaths = ("cmake/Engine/ModuleTargets.cmake", "Source/Engine/CMakeLists.txt")
 
 #: 파일 스코프의 `set(<이름> "${CMAKE_…_DIR}")` — 값 전체가 내장 경로 하나(별칭).
 _kPathAliasRe = re.compile(
@@ -100,6 +98,9 @@ _kReservedVariablePrefix = ("CMAKE_", "CTEST_", "CPACK_", "ENV", "SW_", "VCPKG_"
 def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
     """파일 하나를 줄 단위로 봅니다."""
     relPath = path.relative_to(repositoryRoot).as_posix()
+    gate = CheckCmakeConventionsGate
+    if relPath in gate.mapExemption:
+        gate.seeExemption(relPath)
     listViolation: list[str] = []
     bInFunction = False
     setReported: set[str] = set()
@@ -124,7 +125,9 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
             bInFunction = False
             continue
 
-        if _kModuleLibraryRe.match(line) and relPath not in _kModuleLibraryAllowedPaths:
+        if _kModuleLibraryRe.match(line) and relPath in gate.mapExemption:
+            gate.useExemption(relPath)
+        elif _kModuleLibraryRe.match(line):
             listViolation.append(f"{relPath}:{lineNumber} SHARED · MODULE 라이브러리는 sw_addModuleLibrary 로 만든다 — cmake/Engine/ModuleTargets.cmake")
 
         if _kCommandGuardRe.match(line) and not relPath.startswith(_kVcpkgToolchainPrefix):
@@ -168,6 +171,12 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
 
 class CheckCmakeConventionsGate(LintGate):
     """`AGENTS.md` 의 CMake 규칙 — Python 과 함께, 지금까지 아무도 보지 않던 자리다."""
+
+    #: SHARED · MODULE `add_library` 를 직접 불러도 되는 파일 → 이유.
+    mapExemption = {
+        "cmake/Engine/ModuleTargets.cmake": "팩토리 sw_addModuleLibrary 자신",
+        "Source/Engine/CMakeLists.txt": "Engine 자신 — Dev 에서는 DLL, Shipping 에서는 정적이라 팩토리가 부르는 쪽이 아니다",
+    }
 
     description = "CMake 명명 규칙 검사 (AGENTS.md '### CMake')"
     buildComment = "Checking CMake naming conventions (AGENTS.md)..."

@@ -10,6 +10,7 @@ import io
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
@@ -99,6 +100,66 @@ class LintGateShellTest(unittest.TestCase):
     def testRootDefaultsToRepository(self) -> None:
         runQuietly([])
         self.assertEqual(_FixedGate.seenRoot.resolve(), kRepositoryRoot.resolve())
+
+
+class _ExemptGate(LintGate):
+    """시험용 — 표 한 줄, 훑기가 무엇을 보고 쓰는지 바깥에서 정한다."""
+
+    description = "시험용"
+    selfTestSkipReason = "시험용 — 등록되지 않는다"
+    mapExemption = {"Source/Allowed.cpp": "시험용 예외"}
+    bSee = False
+    bUse = False
+
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        self.addFilesArgument(parser)
+
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        if self.bSee:
+            self.seeExemption("Source/Allowed.cpp")
+        if self.bUse:
+            self.useExemption("Source/Allowed.cpp")
+        return GateResult(summary="시험")
+
+
+class LintGateExemptionTest(unittest.TestCase):
+    """`mapExemption` — 쓴 줄은 통과, 본 대상에 쓰지 않은 줄 · 실제 저장소에서 대상이 없는 줄은 낡은 예외, 이유 없는 줄은 종료 2."""
+
+    def runGate(self, root: Path, bSee: bool, bUse: bool, argv: list[str] | None = None) -> int:
+        _ExemptGate.bSee, _ExemptGate.bUse = bSee, bUse
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            return _ExemptGate.run(["--root", str(root), *(argv or [])])
+
+    def testUsedExemptionPasses(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            self.assertEqual(self.runGate(Path(tempDir), True, True), 0)
+
+    def testSeenButUnusedExemptionIsStale(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            self.assertEqual(self.runGate(Path(tempDir), True, False), 1)
+
+    def testUnseenExemptionIsStaleOnlyInARealRepository(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            root = Path(tempDir)
+            self.assertEqual(self.runGate(root, False, False), 0)      # 셀프테스트 조각 같은 임시 트리 — 판단하지 않는다
+            (root / ".git").mkdir()
+            self.assertEqual(self.runGate(root, False, False), 1)
+
+    def testPartialScanDoesNotJudgeStaleness(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            root = Path(tempDir)
+            (root / ".git").mkdir()
+            (root / "Probe.cpp").write_text("int x;\n", encoding="utf-8")
+            self.assertEqual(self.runGate(root, True, False, ["--files", "Probe.cpp"]), 0)
+
+    def testExemptionWithoutReasonStopsTheGate(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir, unittest.mock.patch.dict(_ExemptGate.mapExemption, {"Source/Allowed.cpp": " "}):
+            self.assertEqual(self.runGate(Path(tempDir), True, True), 2)
+
+    def testRecordIsClearedBetweenRuns(self) -> None:
+        with tempfile.TemporaryDirectory() as tempDir:
+            self.assertEqual(self.runGate(Path(tempDir), True, True), 0)
+            self.assertEqual(self.runGate(Path(tempDir), True, False), 1)
 
 
 if __name__ == "__main__":

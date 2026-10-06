@@ -13,7 +13,7 @@
 기간 값(`std::chrono::milliseconds( n )` · `sleep_for`)은 시계 읽기가 아니므로 보지 않는다. 파일 시계
 (`std::filesystem::file_time_type::clock`)도 보지 않는다 — 파일 시각과 견줄 때만 쓴다. 주석 · 문자열 안의 언급은 보지 않는다.
 
-예외는 `_kMapExemptFileToReason` 표 한 곳이다. 예외 파일이 더는 std 시계를 읽지 않으면 그 줄은 낡은 예외로 실패한다.
+예외는 `mapExemption` 표 한 곳이다. 예외 파일이 더는 std 시계를 읽지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).
 
   python Scripts/lint/gate/CheckClockReads.py [--root <repo>] [--files a.cpp b.h]
 """
@@ -34,29 +34,26 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
-#: std 시계를 읽어도 되는 파일 → 이유.
-_kMapExemptFileToReason = {
-    "Source/Core/Time/WallClock.cpp": "UTC 벽시계의 유일한 자리 — 서버의 기간 · 만료 · 기록 시각은 기준점(epoch)이 있어야 한다. 경과 시간은 MonotonicClock",
-}
-
 _kClockNameRe = re.compile(r"(?<![\w$])(steady_clock|high_resolution_clock|system_clock)(?![\w$])")
 
 
 def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """예외 밖에서 std 시계 이름을 쓰는 줄과, 더는 std 시계를 읽지 않는 예외 파일을 위반 문자열로 돌려줍니다."""
+    """예외 밖에서 std 시계 이름을 쓰는 줄을 위반 문자열로 돌려줍니다. 예외 파일은 보면 `see`, 시계를 읽으면 `use` 로 적습니다."""
+    gate = CheckClockReadsGate
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
     for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        bExempt = relative in _kMapExemptFileToReason
+        bExempt = relative in gate.mapExemption
         listCodeMatch: list[tuple[int, str]] = []
         if _kClockNameRe.search(text) is not None:
             listCodeMatch = [(lineIndex, match.group(1))
                              for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1)
                              for match in _kClockNameRe.finditer(line)]
         if bExempt:
-            if not listCodeMatch:
-                listViolation.append(f"{relative}: 예외 표에 있지만 std 시계를 읽지 않는다 — 낡은 예외 줄을 지웁니다")
+            gate.seeExemption(relative)
+            if listCodeMatch:
+                gate.useExemption(relative)
             continue
         listOriginalLine = text.splitlines()
         for lineIndex, clockName in listCodeMatch:
@@ -66,6 +63,11 @@ def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
 
 class CheckClockReadsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
+
+    #: std 시계를 읽어도 되는 파일 → 이유.
+    mapExemption = {
+        "Source/Core/Time/WallClock.cpp": "UTC 벽시계의 유일한 자리 — 서버의 기간 · 만료 · 기록 시각은 기준점(epoch)이 있어야 한다. 경과 시간은 MonotonicClock",
+    }
 
     description = "엔진 · 시험 코드가 std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline 을 읽는지 검사"
     buildComment = "Checking that code reads time through MonotonicClock, not std::chrono clocks..."
@@ -78,7 +80,7 @@ class CheckClockReadsGate(LintGate):
         "      지금 시각   MonotonicClock::nowNanoseconds()\n"
         "      걸린 시간   Stopwatch stopwatch; ... stopwatch.getElapsedMilliseconds()\n"
         "      기다림 기한 Deadline::afterMilliseconds( ms ) · isExpired()\n"
-        "  정말 std 시계가 필요하면 Scripts/lint/gate/CheckClockReads.py 의 _kMapExemptFileToReason 에 이유와 함께 적습니다."
+        "  정말 std 시계가 필요하면 Scripts/lint/gate/CheckClockReads.py 의 mapExemption 에 이유와 함께 적습니다."
     )
     selfTestCases = [
         {

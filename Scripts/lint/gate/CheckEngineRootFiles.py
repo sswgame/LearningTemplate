@@ -24,7 +24,7 @@ from common import kDirSourceEngine  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 엔진 루트에 둘 수 있는 파일. 늘리기 전에 그 파일이 기동 · 종료를 엮는 자리인지 묻는다 — 아니면 기능 폴더로 간다.
-_kAllowedRootFileName: frozenset[str] = frozenset(
+_kSetRootFileName: frozenset[str] = frozenset(
     {
         "CMakeLists.txt",
         "README.md",
@@ -52,7 +52,7 @@ def collectUnexpectedRootFiles(repositoryRoot: Path) -> list[str]:
     return sorted(
         filePath.relative_to(repositoryRoot).as_posix()
         for filePath in engineDir.iterdir()
-        if filePath.is_file() and filePath.name not in _kAllowedRootFileName
+        if filePath.is_file() and filePath.name not in _kSetRootFileName
     )
 
 
@@ -79,7 +79,7 @@ class CheckEngineRootFilesGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listViolation = [f"{relativePath}: 엔진 루트의 허용 목록에 없습니다" for relativePath in collectUnexpectedRootFiles(repositoryRoot)]
-        return GateResult(listViolation=listViolation, summary=f"{kDirSourceEngine} 루트 {len(_kAllowedRootFileName)}개 허용")
+        return GateResult(listViolation=listViolation, summary=f"{kDirSourceEngine} 루트 {len(_kSetRootFileName)}개 허용")
 
 
 main = CheckEngineRootFilesGate.run
