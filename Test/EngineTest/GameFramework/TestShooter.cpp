@@ -5,9 +5,14 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDocument.h"
 
 #include "GameFramework/Base/Combat/Weapon.h"
 #include "GameFramework/Base/Combat/WeaponMath.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Input/FirstPersonLook.h"
 #include "GameFramework/Base/Movement/LocomotionMath.h"
 #include "GameFramework/Base/Utility/OrientationUtil.h"
@@ -15,7 +20,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, Shooter3D 입력 맵, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
+// 슈터 키트 — 히트스캔(구 · 상자 · 캡슐), 1인칭 시점, 이동 방향 가르기, Shooter3D 입력 맵 · 플레이어 폰 스키마, 무기의 연사 간격 · 탄창 · 재장전 · 반자동 · 산탄 · 탄 퍼짐(씨앗이 같으면 같은 탄).
 
 using namespace sw;
 
@@ -339,7 +344,7 @@ SW_TEST_CASE( ShooterTest, InputMapBindsEveryGameplayAction )
     SW_EXPECT_TRUE( pLook->_kind == BindingKind::MouseDelta2D );
 
     // 마우스를 움직인 프레임에 Look 이 그 이동량(배율 1)을 낸다.
-    input.postRawEvent( RawInputEvent::makeMouseMove( 12, -4 ) );
+    input.postRawEvent( RawInputEvent::makeMouseRawDelta( 12.0f, -4.0f ) );
     input.beginFrame( 0.016f );
     const float2 look = inputMap.getVector2D( "Look" );
     SW_EXPECT_TRUE( look._x > 0.0f );
@@ -388,4 +393,48 @@ SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
     SW_EXPECT_NEAR_EQUAL( -3.1f, wrapped, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, OrientationUtil::turnTowardAngle( 1.0f, -2.0f, 0.0f ), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( -MathUtil::kHalfPi, OrientationUtil::wrapAngle( 3.0f * MathUtil::kHalfPi ), 1.0e-5f );
+}
+
+/**
+ * @brief [ShooterTest] Shooter3D 플레이어 폰(아레나 씬의 `_autoPossess Player0` 폰)의 이동 · 시선 액션과 버튼 · 아날로그 이름이 모두 입력 맵에 있다
+ * @details 플레이어 조종자는 폰 스키마의 이름을 같은 이름의 입력 맵 액션으로 읽는다 — 없는 이름은 빙의 때 경고 한 줄 뒤 조용히 눌리지 않는다.
+ *          그것을 실행 없이 데이터로 막는다(씬은 실제 로더로 읽는다 — 게임 모듈 타입은 이 시험 실행 파일에 없어 건너뛴다).
+ */
+SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
+{
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    InputMap& inputMap = input.getInputMap();
+    SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
+
+    SceneDocument document;
+    SW_ASSERT_TRUE( document.loadXml( "game/shooter3d/maps/arena.scene.xml" ) );
+    Scene scene{ "ShooterPawnSchema" };
+    SW_ASSERT_TRUE( scene.instantiate( document ) );
+    const PawnComponent* pPlayerPawn = nullptr;
+    scene.getObjectManager()->forEachComponentOfType<PawnComponent>( [&pPlayerPawn]( PawnComponent* pPawn )
+    {
+        if ( pPlayerPawn == nullptr && pPawn->getAutoPossess() == PawnAutoPossess::Player0 )
+            pPlayerPawn = pPawn;
+    } );
+    SW_ASSERT_NOT_NULL( pPlayerPawn );
+
+    SW_EXPECT_TRUE_MSG( inputMap.hasAction( pPlayerPawn->getMoveAction() ), pPlayerPawn->getMoveAction().c_str() );
+    SW_EXPECT_TRUE_MSG( inputMap.hasAction( pPlayerPawn->getLookAction() ), pPlayerPawn->getLookAction().c_str() );
+    // 몸이 읽는 버튼이 스키마에 다 있어야 한다(빠지면 그 버튼은 조종자가 누구든 안 눌린다).
+    const utf8* const arrBodyButton[] = { "Jump", "Sprint", "Fire", "Reload", "SwitchWeapon", "Weapon1", "Weapon2", "Weapon3" };
+    for ( const utf8* pButton : arrBodyButton )
+    {
+        SW_EXPECT_TRUE_MSG( pPlayerPawn->findButton( hashed_string( pButton ) ) >= 0, pButton );
+    }
+    SW_EXPECT_TRUE( pPlayerPawn->findAnalog( hashed_string( "SwitchWeapon" ) ) >= 0 );
+    for ( const hashed_string& button : pPlayerPawn->getButtonNames() )
+    {
+        SW_EXPECT_TRUE_MSG( inputMap.hasAction( button ), button.c_str() );
+    }
+    for ( const hashed_string& analog : pPlayerPawn->getAnalogNames() )
+    {
+        SW_EXPECT_TRUE_MSG( inputMap.hasAction( analog ), analog.c_str() );
+    }
+    input.shutdown();
 }

@@ -1,6 +1,6 @@
 /**
  * @file ShooterPlayerComponent.h
- * @brief 슈터 플레이어 — 이동 · 점프 · 충돌, 무기 셋(연사 · 탄창 · 재장전 · 퍼짐 · 반동), 히트스캔, 체력(`Vitality`), 조준선 · 맞음 표시, 몸(KayKit 캐릭터) · 탄도선.
+ * @brief 슈터 플레이어(폰) — 무기 셋(연사 · 탄창 · 재장전 · 퍼짐 · 반동), 히트스캔, 체력(`Vitality`), 조준선 · 맞음 표시, 몸(KayKit 캐릭터) · 탄도선. 의도만 읽는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,15 +22,18 @@
 namespace sw
 {
     class FirstPersonCameraComponent;
-    class InputMap;
+    class PawnComponent;
+    class ShooterBodyMovementComponent;
     class ShooterDirectorComponent;
 
     /**
      * @class ShooterPlayerComponent
-     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · 1인칭 손에 든 총 · 조준선 스프라이트와 같은 오브젝트)의 게임 규칙입니다.
-     * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 입력 맵의 `Look` 으로 시점을 돌린 뒤라, 그 시점으로
-     *          걷고 쏘고 `setEyePosition` 으로 눈 자리를 넣습니다. 입력은 통합 입력 맵의 액션(`data/shooter.input.xml` — Move · Fire · Jump · Sprint · Reload ·
-     *          SwitchWeapon · Weapon1..3)만 묻습니다. 막는 상자 · 적 자리는 디렉터가 `PrePhysics` 에서 적은 것을 읽기만 합니다.
+     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · 조준선 스프라이트와 같은
+     *        오브젝트)의 게임 규칙입니다.
+     * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 둔 뒤라, 그 시점으로
+     *          걷고 쏘고 `setEyePosition` 으로 눈 자리를 넣습니다. **폰의 의도만 읽습니다**(버튼 Jump · Sprint · Fire · Reload · SwitchWeapon · Weapon1..3, 아날로그
+     *          SwitchWeapon) — 사람(플레이어 조종자가 입력 맵 `data/shooter.input.xml` 에서 만든다)이든 자동 플레이 AI(`ShooterAutoAimControllerComponent`)든 같다.
+     *          걷기 · 점프는 몸 이동(`ShooterBodyMovementComponent` — 적과 같은 코드)이 한다. 막는 상자 · 적 자리는 디렉터가 `PrePhysics` 에서 적은 것을 읽기만 합니다.
      *
      *          **몸**: 플레이 시작에 몸 프리팹(`_bodyPrefab` — 스킨드 메시 · 애니메이터 · 외형 · `ShooterAvatarComponent`)을 세웁니다. 몸이 이 컴포넌트의
      *          상태(발 · 요 · 속도 · 사격 · 맞음 · 쓰러짐 · 무기)를 읽어 스스로 움직이고, 무기는 외형의 MainHand 칸 아이템(`_listWeaponItem`)이 됩니다.
@@ -65,20 +68,24 @@ namespace sw
         /** @brief 세운 몸을 지웁니다(상태 저장 전). 다음 틱 뒤에 다시 세운다. */
         void despawnViews();
 
-        // ---- 디렉터 · 몸이 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
-        float3             getEyePosition() const;
-        const float3&      getFeetPosition() const { return _position; }
+        // ---- 디렉터 · 몸 · 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
+        float3 getEyePosition() const;
+        /** @brief 발 자리입니다(몸 이동의 자리 — 없으면 처음 자리). */
+        float3             getFeetPosition() const;
         float32            getHealth() const { return _vitality.getHealth(); }
         bool               isAlive() const { return _vitality.isAlive(); }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
+        /** @brief 무기 칸 @p weaponIndex(0 소총 · 1 산탄총 · 2 권총)입니다. */
+        const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
         int32              getWeaponIndex() const { return _weaponIndex; }
+        GameObjectHandle   getDirector() const { return _director; }
         /** @brief 무기의 외형 아이템(외형의 MainHand 칸)입니다. */
         hashed_string getWeaponItem( int32 weaponIndex ) const;
         /** @brief 지금 보는 요(라디안, +Z 에서 +X 쪽)입니다. */
         float32 getLookYaw() const { return _lookYaw; }
         /** @brief 지난 틱의 수평 속도(월드, m/s)입니다. */
-        const float3& getMoveVelocity() const { return _moveVelocity; }
-        bool          isOnGround() const { return _bOnGround == SW_TRUE; }
+        float3 getMoveVelocity() const;
+        bool   isOnGround() const;
         /** @brief 마지막으로 쏜 뒤 지난 시간(s)입니다. */
         float32 getTimeSinceShot() const { return _timeSinceShot; }
         /** @brief 맞을 때마다 하나 오르는 수(몸이 움찔 클립을 트는 신호)입니다. */
@@ -116,24 +123,13 @@ namespace sw
             float32 _lifetime{ 0.1f };
         };
 
-        /** @brief 이번 틱의 조작(입력 맵 또는 자동 플레이)입니다. */
-        struct PlayerIntent
-        {
-            float3 _move{};
-            int32  _switchWeapon{ -1 }; ///< 바꿀 무기 번호(-1 = 그대로)
-            uint8  _bJump{ SW_FALSE };
-            uint8  _bSprint{ SW_FALSE };
-            uint8  _bTrigger{ SW_FALSE };
-            uint8  _bJustPressed{ SW_FALSE };
-            uint8  _bReload{ SW_FALSE };
-        };
-
     private:
         void equipWeapons();
-        void readIntent( const InputMap& inputMap, const FirstPersonCameraComponent& camera, PlayerIntent& outIntent ) const;
-        void tickAutoAim( float32 deltaTime, const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, PlayerIntent& outIntent );
-        void movePlayer( const ShooterDirectorComponent& director, const float3& wishDirection, bool bJump, bool bSprint, float32 deltaTime );
-        void fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed );
+        /** @brief 의도의 무기 버튼(Weapon1..3 · SwitchWeapon 과 그 아날로그의 부호 — 다음 / 이전) · Reload 를 무기에 넣습니다. */
+        void applyWeaponIntent( const PawnComponent& pawn );
+        /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
+        ShooterBodyMovementComponent* findMovement() const;
+        void                          fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed );
         /** @brief 광선 하나 — 가장 가까운 적 · 상자 · 바닥을 찾습니다. 적이면 피해를 쌓습니다. 맞은 거리입니다. */
         float32 traceShot( const ShooterDirectorComponent& director, const GameRay& ray, float32 damage, bool& outHitEnemy );
         /** @brief 총구의 월드 자리입니다 — 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle`. 못 찾으면 눈 아래입니다. */
@@ -161,17 +157,7 @@ namespace sw
         string _bodyPrefab;
         PROPERTY( Category = "Player", DisplayName = "Weapon Items", Tooltip = "Appearance item of each weapon (rifle, shotgun, pistol) worn in the MainHand slot" )
         vector<string> _listWeaponItem;
-        PROPERTY( Category = "Movement", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )
-        float32 _walkSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Sprint Speed", Min = 0.0, Units = "m/s" )
-        float32 _sprintSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Jump Speed", Min = 0.0, Units = "m/s" )
-        float32 _jumpSpeed;
-        PROPERTY( Category = "Movement", DisplayName = "Gravity", Min = 0.0, Units = "m/s2" )
-        float32 _gravity;
-        PROPERTY( Category = "Movement", DisplayName = "Radius", Tooltip = "Body radius against the blockers", Min = 0.0, Units = m )
-        float32 _radius;
-        PROPERTY( Category = "Movement", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
+        PROPERTY( Category = "View", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
         float32 _eyeHeight;
         PROPERTY( Category = "Health", DisplayName = "Max Health", Min = 1.0 )
         float32 _maxHealth;
@@ -189,10 +175,6 @@ namespace sw
         float32 _tracerLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Width", Min = 0.0, Units = m )
         float32 _tracerWidth;
-        PROPERTY( Category = "Auto Play", DisplayName = "Auto Engage Distance", Tooltip = "Auto play aims at enemies inside this distance", Min = 0.0, Units = m )
-        float32 _autoEngageDistance;
-        PROPERTY( Category = "Auto Play", DisplayName = "Auto Turn Rate", Tooltip = "How fast auto play turns the view", Min = 0.0, Units = "rad/s" )
-        float32 _autoTurnRate;
 
         WeaponState              _arrWeapon[kWeaponCount];
         Vitality                 _vitality;
@@ -202,9 +184,6 @@ namespace sw
         vector<TracerRequest>    _listPendingTracer;
         GameSoundQueue           _soundQueue; ///< 낼 소리(틱 뒤 — 오디오는 게임 스레드에서)
         GameObjectHandle         _body;
-        float3                   _position; ///< 발
-        float3                   _moveVelocity;
-        float32                  _verticalSpeed;
         float32                  _hitMarkerTimer;
         float32                  _timeSinceShot;
         float32                  _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만)
@@ -214,13 +193,12 @@ namespace sw
         uint32                   _shotCount;
         uint32                   _hitCount;
         uint32                   _hitReactionCount;
-        uint8                    _bOnGround           : 1;
         uint8                    _bWeaponModelDirty   : 1; ///< 틱 뒤에 손에 든 총 모델 · 몸의 무기를 바꾼다
         uint8                    _bFlushScheduled     : 1;
         uint8                    _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임 — 같은 틱 뒤에 남은 공격은 무시한다
         uint8                    _bFirstPerson        : 1;
         uint8                    _bViewModeDirty      : 1; ///< 틱 뒤에 1인칭 / 그 밖 보임을 맞춘다
         uint8                    _bBodyRequested      : 1; ///< 틱 뒤에 몸을 세운다
-        uint8                    _reserved            : 1;
+        uint8                    _reserved            : 2;
     };
 } // namespace sw

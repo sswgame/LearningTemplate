@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 자동 플레이 = AI 조종자의 빙의 — 자동 플레이를 켜면 자동 조준 AI(ShooterAutoAimControllerComponent)가 플레이어 폰을 쥐어 쏘고 맞히며,
+  끄면 플레이어 조종자가 폰을 다시 쥐어 입력 층(가상 키보드)의 키가 먹는다. 몸(ShooterPlayerComponent)에는 자동 플레이 분기가 없다.
+  탐침: PlayerControllerKind 0 플레이어 · 1 AI, ShotCount · EnemyHitCount 는 판을 다시 시작해도 이어 센다.
+  첫 10 초에 스켈레톤은 넷쯤 오고 산탄총 한 발에 하나씩 쓰러진다 — 발 수 문턱은 그 수에 맞춘다.
+  실행: App.exe -scenario=game/shooter3d/automation/autoplay.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.autoplay" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_shooterAutoPlay" value="1"/></At>
+	<!-- 스위치가 바뀐 틱 뒤 플러시가 빙의를 옮긴다 -->
+	<At frame="10"><Expect probe="Shooter3D.PlayerControllerKind" equals="1"/></At>
+	<At frame="600">
+		<Expect probe="Shooter3D.ShotCount" atLeast="3"/>
+		<Expect probe="Shooter3D.EnemyHitCount" atLeast="1"/>
+	</At>
+	<At frame="610"><Variable name="gv_shooterAutoPlay" value="0"/></At>
+	<At frame="620"><Expect probe="Shooter3D.PlayerControllerKind" equals="0"/></At>
+	<!-- 돌려받은 플레이어 조종자에게 키가 먹는다 — 자동 플레이는 권총을 고르지 않으니 3 번 키(Weapon3)로 권총이 되면 사람의 입력이다 -->
+	<At frame="625"><Tap slot="Key.Digit3" hold="1"/></At>
+	<At frame="635">
+		<Expect probe="Shooter3D.PlayerControllerKind" equals="0"/>
+		<Expect probe="Shooter3D.WeaponIndex" equals="2"/>
+		<ExpectLog contains="[Shooter] the player took the body back" atLeast="1" since="1"/>
+		<Pass/>
+	</At>
+</Scenario>

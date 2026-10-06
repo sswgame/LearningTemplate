@@ -25,6 +25,7 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Audio/LipSyncImport.h"
+#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
@@ -830,6 +831,7 @@ namespace sw
         , _packetScratch{ nullptr }
         , _commandStack{ nullptr }
         , _gpuUploadQueue{ nullptr }
+        , _pAutomationRunner{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _listAnimationLodView{}
@@ -837,8 +839,10 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _bQuitRequested{ false }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
+        , _exitCode{ 0 }
         , _profileSession{}
         , _startup{}
         , _pEngineConfig{ nullptr }
@@ -933,6 +937,24 @@ namespace sw
         if ( _bHeadless )
             return true;
 
+        // 자동화 시나리오(`-scenario=<파일>`) — 시나리오는 늘 고정 프레임 시간이다(App 의 `gv_fixedFrameDelta` 를 시나리오 값으로).
+        string scenarioPath;
+        if ( _owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false )
+        {
+            string reportPath;
+            (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath );
+            _pAutomationRunner = make_unique<AutomationRunner>();
+            _pAutomationRunner->startFromPath( scenarioPath, reportPath );
+            if ( _renderThread != nullptr )
+                _renderThread->setScenarioCaptureEnabled( true );
+            if ( _pAutomationRunner->isActive() )
+            {
+                const string fixedDelta = to_string( _pAutomationRunner->getScenario().getFixedDelta() );
+                if ( engine::getGlobalVariableManager().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
+                    SW_LOG_WARNING( "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
+            }
+        }
+
         _profileSession.begin();
 
         MemoryProfiler::captureMemoryLeakBaseline();
@@ -942,6 +964,8 @@ namespace sw
 
     void EngineLoop::shutdown()
     {
+        // 시나리오 실행기는 로그 리스너 · 입력을 빌려 쓴다 — 서비스보다 먼저 내린다.
+        _pAutomationRunner.reset();
         AssetLoadProfiler::get().reportIfRequested( "session" );
         // 단계 본문을 초기화한 것만 역순으로 내린다: 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 이미지 → 태스크 → 셰이더 캐시.
         _startup.shutdownAll();
@@ -1023,8 +1047,29 @@ namespace sw
         return bAllSucceeded;
     }
 
+    void EngineLoop::requestQuit( int32 exitCode )
+    {
+        if ( _bQuitRequested )
+            return;
+        _bQuitRequested = true;
+        _exitCode       = exitCode;
+        SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
+    }
+
+    void EngineLoop::onWindowClosed()
+    {
+        if ( _pAutomationRunner == nullptr )
+            return;
+        const AutomationResult result = _pAutomationRunner->onWindowClosed( _owned._pInputManager.get() );
+        _bQuitRequested               = true;
+        _exitCode                     = static_cast<int32>( result );
+    }
+
     void EngineLoop::beginFrame( float32 deltaSeconds )
     {
+        // 시나리오의 시작 조건 · 가상 입력 붙이기 · 행동 층 단계는 이 프레임의 입력 재생 전이다.
+        if ( _pAutomationRunner != nullptr && _owned._pInputManager != nullptr )
+            _pAutomationRunner->onFrameBegin( *_owned._pInputManager );
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
 
@@ -1172,7 +1217,11 @@ namespace sw
             SW_MEMORY_SCOPE( RenderCpu );
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
-            packet._bValid           = 1;
+            packet._bValid = 1;
+            // 시나리오 `<Screenshot>` 은 다음에 그리는 이 패킷에 싣는다.
+            if ( _pAutomationRunner != nullptr )
+                (void)_pAutomationRunner->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
+
             packet._gameRenderTarget = gameRenderTarget;
             packet._viewportWidth    = vpWidth;
             packet._viewportHeight   = vpHeight;
@@ -1292,6 +1341,14 @@ namespace sw
 
         _memoryBudgetMonitor.onFrameEnd();
 
+        // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
+        if ( _pAutomationRunner != nullptr && _pAutomationRunner->isActive() && _owned._pInputManager != nullptr )
+        {
+            _pAutomationRunner->setCompletedScreenshotCount( _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
+            const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );
+            if ( result != AutomationResult::Running )
+                requestQuit( static_cast<int32>( result ) );
+        }
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).

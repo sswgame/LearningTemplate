@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HarvestValley 조종 시나리오 — 입력 층(가상 키) → 플레이어 조종자 → 농부 폰의 의도 → 디렉터의 규칙, 그리고 자동 플레이 스위치가 빙의를 옮기는 것.
+  App -scenario=game/harvestvalley/automation/control.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="harvestvalley.control" fixedDelta="0.0166667" timeoutFrames="3000" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_farmAutoPlay" value="0"/></At>
+	<!-- 농부는 시작 자리(X 6)에 서고 플레이어 조종자가 쥐었다. -->
+	<At frame="10"><Expect probe="Farm.FarmerControllerKind" equals="0"/><Expect probe="Farm.FarmerX" near="6" tolerance="0.01"/></At>
+	<!-- D 를 반 초 — 걷는 빠르기 4 m/s 라 2 m 오른쪽. -->
+	<At frame="11"><Press slot="Key.D"/></At>
+	<At frame="41"><Release slot="Key.D"/></At>
+	<At frame="45"><Expect probe="Farm.FarmerX" near="8" tolerance="0.2"/></At>
+	<!-- 2 한 번 = 물뿌리개(도구 1). -->
+	<At frame="46"><Tap slot="Key.Digit2" hold="1"/></At>
+	<At frame="50"><Expect probe="Farm.FarmerTool" equals="1"/></At>
+	<!-- 자동 플레이를 켜면 자동 농부 AI 가 농부를 쥐고 밭을 갈고 심는다. -->
+	<At frame="60"><Variable name="gv_farmAutoPlay" value="1"/></At>
+	<At frame="65"><Expect probe="Farm.FarmerControllerKind" equals="1"/></At>
+	<At frame="1800"><Expect probe="Farm.TilledCount" atLeast="1"/><Expect probe="Farm.CropCount" atLeast="1"/></At>
+	<!-- 끄면 플레이어 조종자가 되찾는다. -->
+	<At frame="1801"><Variable name="gv_farmAutoPlay" value="0"/></At>
+	<At frame="1806"><Expect probe="Farm.FarmerControllerKind" equals="0"/></At>
+	<At frame="1810"><Pass/></At>
+</Scenario>

@@ -155,8 +155,6 @@ cd build/Ninja-Debug/Bin
   기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
-- **Shooter3D 의 Q/E 한 번 = 무기 한 칸은 손으로 확인할 것**(2026-10-06 입력 trigger 결함 수정 뒤). 단위 시험(`InputMapTest.Axis1DBindingFollowsTheActionTrigger`)은
-  통과했고, 실기동 키 입력은 백그라운드 세션에서 창 포커스를 얻지 못해 자동으로 넣지 못했다 — 로그 `[Shooter] <무기> - ` 줄이 누를 때마다 한 줄이어야 한다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
   `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
   종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
@@ -287,13 +285,13 @@ cd build/Ninja-Debug/Bin
     버그 리포트 · 시험 패널) · 단축키 편집기 · 환경설정 창 · 모듈 켜고 끄기 · DPI 실물 확인.
   - **중간(M)**: 대역폭 프로파일러 · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(RenderDoc · 보기 모드 — 프로파일러 표 · GPU 타임스탬프 · Tracy 는 들어갔다) · 에디터 C(확장 지점) · 에디터 F
-    (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · UI 시험 입력 흉내 · 패키징 UI · 에디터 자동화 ·
-    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · QA 봇 · 포토 모드 · 리플레이/킬캠 · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
+    (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · 패키징 UI · 시나리오 녹화(실행 중 입력 → `.scenario.xml`) ·
+    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · 포토 모드 · 리플레이/킬캠(바탕인 의도 기록 `.swintent` 은 있다 — 남은 것: 재생 UI · 카메라 · 되감기) · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
     안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
     [넷 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 제약 ·
     파티클/VFX · 텍스처
-    밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 · 탈것/말 ·
+    밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
@@ -333,6 +331,10 @@ cd build/Ninja-Debug/Bin
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
 
+- **의도 기록 · 원격 조종자의 남은 연결(possess-auto C3 뒤).** `NetClientServer` 의 입력 바이트(`ReplicationClient::sendInput` 이 게임이 준 바이트를 싣는 자리)를
+  `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 시험 게임이 생기면(지금 0). 의도 기록을 켜고 `.swintent` 를 쓰는 명령줄 ·
+  에디터 단추와 재생 UI · 킬캠 카메라 · 되감기는 아직 없다(`ControlSystem::setRecording` · `getHistory().saveToFile` · `IntentTrackControllerComponent` 는 있다).
+
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
   (쿨다운 남은 몫은 이미 고침) · B5 넷 입력 항목마다 스탬프 · `viewTick`(지금은 메시지마다 하나라 다시 보낸 옛 입력도 최신으로 판정 — 자리는 있다:
@@ -351,6 +353,11 @@ cd build/Ninja-Debug/Bin
   AbilityArena ← VRoid + menu-music-2. 프리팹 · 데이터 연결까지(안 쓰면 에셋 검증 `orphans`). 건담풍 사람형 메카는 CC0 로 쓸 만한 것이 없다(Quaternius 메카는 동물이 탄
   보행기, OGA Shock Bot 은 리얼풍) → 파이썬으로 SD 메카 부품 메시를 만들어 부품마다 뼈 하나에 붙이고 KayKit 사람형 뼈대 이름에 맞춰 KayKit 애니메이션(CC0)을 쓰는 생성기 +
   MechArena 시험 게임(`GF_MechArena` 키트는 있고 시험만 씀). 건담 고유 요소(V 안테나 · 얼굴 마스크 · 흰 · 파랑 · 빨강 · 노랑 배색)는 피한다.
+  탈것: 말(`MountMovementComponent` · 서부극 `WesternHorseMountComponent`) · 차(`ArcadeVehicleComponent`)는 기본 도형(캡슐 말 · 상자 차)으로만 시험했다 —
+  CC0 말 메시 · 걸음새 애니메이션(Gait 0..4 · Turn)과 차 모델을 찾으면 서부극 · 카트 시험 게임에 붙인다.
+  카트 키트(`Kits/Casual/KartRacing`)의 플레이어 경로를 `ArcadeVehicleComponent::toVehicleInput`(의도 → 모터 입력)으로 바꾸는 것은 카트 시험 게임이 생길 때
+  (지금 키트는 InputMap 을 읽지 않고 `KartRace::resolveInput` 이 이미 "같은 모터에 다른 조종자" 다).
+  물리 차(`WheeledVehicleComponent`)는 바퀴 메시를 바퀴 자세(조향 · 회전 · 서스펜션)로 옮기지 않는다 — 차 모델이 생기면 바퀴 자식 이름 표와 `getVehicleWheelPose` 창구를 더한다.
 
 ### 1-7. Core · 태스크
 
@@ -672,6 +679,11 @@ cd build/Ninja-Debug/Bin
 - **광선이 두 삼각형이 나누는 모서리를 정확히 지나면 Möller–Trumbore 가 양쪽을 다 놓칠 수 있다** — 같은 각도로 나뉜 합성 원기둥 두 겹에서 실제로 났다
   (`CharacterGeometryUtil::intersectRayTriangle` 은 무게중심 여유 1e-5 로 막는다). 합성 형상 시험은 분할 수를 서로 다르게 하고, 면 모양(다각형)이라 반지름이 면 가운데서
   `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.
+- **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
+  App 의 종료 코드는 `EngineLoop::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
+- **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
+  (`Source/Engine/Automation/README.md`). 손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
+  `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
 - **App 의 종료 코드 77 = 이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다**(`RHIInitResult` 의 `BackendNotBuilt` · `DriverUnsupported`). 시험 · `AppRun.py` 는 로그 문구가 아니라 이것으로 건너뛴다 —
   환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 된다(안 적으면 결함으로 진다).
 - **백엔드마다 디바이스를 세우는 시험은 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.
@@ -756,6 +768,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-3. 환경 · 툴체인
 
+- **에디터 로컬 상태는 `Saved/Editor/` 에만 있다 — 다른 PC 의 체크아웃은 한 번 `py -3 Scripts/dev/MoveEditorState.py`**(옛 `Config/Editor/` 의 imgui.ini · 레이아웃 ·
+  팩 안 gv 프리셋을 옮긴다). git 이 무시하는 파일이라 pull 로 옮겨지지 않고, 엔진은 옛 자리를 읽지 않아 안 돌리면 그 PC 의 레이아웃이 기본값으로 돌아간다.
 - **VS Code 실행 인자 GUI 는 `Tools/launch-args`**(프로필 `Profiles/SwEngine.json` — 매크로 · 인자 표 · 캐시 규칙을 바꾸면 이 파일을 고친다). 켜진 인자는 추적되는 `.vscode/settings.json` 의 `cmake.debugConfig` 에 쓰인다. 시험 · 패키징은 `py -3 Tools/launch-args/Scripts/ExtensionTool.py test --integration` · `package` — VS Code 터미널에서 띄우는 VS Code 는 물려받은 `ELECTRON_RUN_AS_NODE` 를 빼야 창으로 뜬다(종료 코드 9).
 - **리눅스 Vulkan 검증 레이어는 시스템 패키지(`vulkan-validationlayers`)다 — vcpkg 포트는 Windows 만**(`"platform": "!linux"`). Windows 만 레이어를 Bin 옆에
   복사하고 `VK_LAYER_PATH` 를 건다(`RuntimeDependencies.cmake` · `VulkanRHIDevice.cpp`). 리눅스 CI(ubuntu-22.04 · clang 14)에서 그 포트가 configure 에서 져 잡 넷이 섰다.
@@ -922,8 +936,8 @@ cd build/Ninja-Debug/Bin
 - **RHI 백엔드 표(이름 · 별칭 · 셰이더 폴더 · 포맷)와 쿡 접미사 표의 정본은 `Config/Engine/CookContract.json`** — `GenerateCookContract.py` 가 C++ X-macro
   (`sw/config/CookContract.gen.h`)를 만들고 Python 은 `Scripts/common/CookContract.py` 로 읽는다. `CheckCookContract` 게이트가 쿠커 함수를 표와 대조한다.
   두 언어에 목록을 따로 적지 말 것(`PackFormat.json` 과 같은 모양). 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)도 여기 —
-  CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 이름 · 별칭을 받고, 그 플랫폼에
-  없는 백엔드면 구성이 선다(예전엔 갈래가 하나도 안 맞으면 백엔드 없는 Engine 이 링크됐다 — `PythonTest_TestRhiBackendTable`).
+  CMake 는 `generated/sw/config/CookContract.cmake` 로 읽는다(`cmake/Engine/RhiBackends.cmake`). `SW_SHIPPING_RHI_BACKEND` 는 표의 이름만 받고(별칭 · 소문자는 구성 실패 —
+  옛 빌드 폴더는 캐시 값을 고칠 것), 그 플랫폼에 없는 백엔드면 구성이 선다(`PythonTest_TestRhiBackendTable`).
 
 - **소스 손 목록은 `Test/EditorTest/CMakeLists.txt` 하나다** — Editor 소스 중 ImGui 없는 것을 고른다(`CheckTestSuites`). Core 는 폴더 GLOB + 플랫폼 폴더 규칙
   (`sw_filterPlatformSources` — `Windows/` · `Linux/` · `Posix/`), RHI 백엔드 장치 소스는 백엔드 폴더 GLOB 이다(`sw_getRhiBackendSources`). `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
@@ -1429,6 +1443,9 @@ cd build/Ninja-Debug/Bin
   떠 있는 창(자기 플랫폼 창)은 플랫폼이 실제 커서로 "커서 아래 뷰포트" 를 넣어 호버가 그리로 간다 — 이름표가 든 뷰포트를 마우스 위치와 함께 넣는다
   (`AddMouseViewportEvent`, `moveMouseToMark` 가 한다). 시험이 그리는 창은 주 뷰포트 안에 둔다(`SetNextWindowViewport`).
   설정 파일을 다시 쓰는 경로(테마 저장)를 지나는 시험은 파일 바이트를 떠 두었다 되돌린다(`input.classicDarkSwatch`).
+  입력 시험이 이 PC 에서만 지면 모니터 배율부터 본다 — 시험은 100 % 와 150 % 에서 다른 스타일 크기를 본다.
+- **테마 적용은 스타일 크기를 ImGui 기본(96 DPI)에서 다시 시작한다**(`EditorThemeInternal::resetSizesToDefault`) — `ScaleAllSizes` 는 테마가 적지 않는
+  크기(도킹 구분선 · 테두리 호버 여백 · 창 최소 크기)까지 곱하므로, 안 그러면 1 이 아닌 배율에서 적용마다 거듭 곱해져 구분선 호버 여백(84 px)이 옆 패널의 클릭을 가로챈다. 시험 `theme.reapplyKeepsSizes`.
 
 - **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
   이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
@@ -1694,10 +1711,22 @@ cd build/Ninja-Debug/Bin
   정확히. 엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 세운다 — 빠뜨리면 첫 `hashed_string` 에서 접근 위반이다(`EngineBootstrap` 앞부분과 같은 순서).
 - **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
+- **입력 · 매핑 · 행동 세 층** — 입력 층(Engine/Input)은 장치 사건만, 매핑(InputMap)은 플레이어 조종자 · 플레이어 뷰 · 명령형 디렉터만, 폰은 `ControlIntent` 만
+  읽는다(`CheckControlBoundary` 허용 표). 네트워크 · 게임플레이 리플레이는 의도를 싣는다. **탑승 = 빙의를 탈것으로 옮기는 것**, 탑승자는 좌석 소켓에 붙어(이동 멈춤 ·
+  자세 파라미터) 피격은 그대로 받는다. 탈것 의도의 연결은 운전석 조종자를 따른다. 명령형 장르(RTS · SRPG · 경영)는 폰이 없다.
+- **가상 입력은 `IVirtualInputSource` 하나로 넣는다** — `InputManager::attachVirtualInput` 이 붙이면 `beginFrame` 이 OS 사건과 같은 자리에서 그 프레임 사건을
+  재생한다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다 — 사람이 같은 기계를 써도 시험이 흔들리지 않는다.
+  엔진 키보드 포커스(개발 콘솔)는 따른다. 바깥 스크립트로 OS 입력(`SendInput`)을 넣지 말 것 — OS 는 사건을 포그라운드 창에만 준다.
 - **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이
   바뀌었으면) 그 번역은 화면에 나오지 않는다. 표 파일은 프로젝트(`*.locproject.json`)가 이름으로 부른다(폴더를 훑지 않아 팩 안에서도 같다). 코드 · 데이터의 글을 고치면
   `App --gather-text` 결과(원문 표 · 번역 표 · `tm/`)를 같이 커밋한다 — `TextGathererTest.RepositoryProjectsAreUpToDate` 가 막는다. 셸 InputMap 을 못 읽으면
-  오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 3).
+  오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 4).
+  `InputReplay` 는 **입력 층 녹화**다(프레임마다 원시 사건 — 키 바인딩 · 포커스까지 재현하는 QA 용, 재생은 가상 입력 원천). 게임플레이 리플레이 · 네트워크가 싣는 것은 행동(의도)이다.
+  의도 기록(`.swintent`)은 시작 상태를 싣지 않는다 — 같은 씬 · 같은 고정 프레임 시간에서만 같은 궤적이고, 로컬 의도도 `quantize` 를 거쳐야 기록 · 원격과 비트까지 같다
+  (`ControlTest.RecordedIntentsReplayTheSameTrajectory`). 조종자가 `produceIntent` 안에서 빙의를 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 몬다 — `ControlSystem::queuePossess`.
+  **자동 플레이 = AI 조종자의 빙의** — 몸 안에 자동 플레이 분기를 두지 않고, 스위치가 바뀌면 디렉터가 틱 뒤 플러시에서 플레이어 폰을 게임의 AI 조종자 ↔ 플레이어 0 의
+  조종자로 옮긴다(Shooter3D `syncAutoPlayPossession`, 시나리오 `autoplay.scenario.xml`). 자동 빙의 `Ai` 가 세운 조종자는 폰과 함께 지워진다(`isSpawnedForPawn`) —
+  아니면 스폰 · 걷기를 되풀이하는 적마다 조종자 오브젝트가 쌓인다.
 
 - **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 
@@ -1857,6 +1886,9 @@ cd build/Ninja-Debug/Bin
   구매가 안 된 줄 안다. 그리고 재생은 **저장된 분개의 다리로** 한다 — 가상 화폐(무상 → 유상 재원) 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 달라 내용 해시가 어긋난다.
 - **여러 키트가 한 트랜잭션에 넣는 쓰기는 기반 `Online/` 에 둔다**(원장 이동 · 우편 넣기 · 제재 · 캠페인) — 키트끼리는 include 하지 못하므로 키트 안에 두면 거래 · 우편 ·
   GM 이 같은 트랜잭션을 만들 수 없다. 키트에는 요청 처리 · 카탈로그 · 클라이언트가 남는다. 온라인 키트의 업무 결과는 응답 몸에, 오류 코드는 공통(`OnlineError`)만.
+- **자동 플레이 = 디렉터가 빙의를 옮긴다**(AbilityArena · HarvestValley) — 틱(PrePhysics) 안에서는 쥔 조종자와 스위치(`isAutoPlayOn`)가 다른지만 보고 `hasPendingSpawn` 으로
+  틱 뒤 플러시를 잡아 거기서 `possess` 한다(빙의 · AI 조종자 세우기는 틱 밖). 쥔 이가 없는 폰(핫 리로드로 AI 오브젝트가 걷힌 뒤)도 다르다고 본다 — 자동 빙의는 한 번뿐이라
+  그 경우를 빼면 폰이 영영 놓인다. 판단(`think`)은 틱 전이라 디렉터의 판 상태를 읽어도 되고, 행동은 폰 버튼으로만 낸다(디렉터가 규칙대로 한다).
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 
@@ -1950,5 +1982,11 @@ cd build/Ninja-Debug/Bin
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
 | `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
 | `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
+| Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |
+| `RtsAiController` · `SrpgAiController` | `RtsAiCommander` · `SrpgAiCommander`(명령형 장르의 AI — 조종자가 아니다) |
+| `NavMeshAgentComponent::_bUpdatePosition` | `_driveMode`(`NavAgentDriveMode` — Transform · CharacterController · SteerOnly) |
+| `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
+| `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |
+| `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.

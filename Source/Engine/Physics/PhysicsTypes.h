@@ -76,6 +76,14 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 바퀴 차(차체 바디에 붙은 탈것 구속) 핸들의 태그입니다. */
+    struct PhysicsVehicleTag
+    {
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 미리 지어 두고 여러 바디가 나눠 쓰는 셰이프 묶음 핸들의 태그입니다. */
     struct PhysicsShapeTag
     {
@@ -88,6 +96,7 @@ namespace sw
     using PhysicsJointHandle     = PhysicsHandle<PhysicsJointTag>;
     using PhysicsCharacterHandle = PhysicsHandle<PhysicsCharacterTag>;
     using PhysicsShapeHandle     = PhysicsHandle<PhysicsShapeTag>;
+    using PhysicsVehicleHandle   = PhysicsHandle<PhysicsVehicleTag>;
 
     /**
      * @brief 바디가 움직이는 방식입니다(유니티 `RigidbodyType2D` · Jolt `EMotionType` · Box2D `b2BodyType`).

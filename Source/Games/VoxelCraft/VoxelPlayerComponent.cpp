@@ -5,18 +5,21 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/ControlIntent.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameSound.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 
+#include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 
 namespace sw
@@ -45,8 +48,90 @@ namespace sw
                     return catalog.findBlockIndex( hashed_string( "cobblestone" ) );
                 return block;
             }
+
+            /** @brief 씬의 첫 복셀 플레이어입니다(탐침 — 프레임 경로가 아니다). */
+            static const VoxelPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
+            {
+                const VoxelPlayerComponent* pFound = nullptr;
+                if ( pManager != nullptr )
+                {
+                    pManager->forEachComponentOfType<VoxelPlayerComponent>( [&pFound]( VoxelPlayerComponent* pPlayer )
+                    {
+                        if ( pFound == nullptr )
+                            pFound = pPlayer;
+                    } );
+                }
+                return pFound;
+            }
+
+            [[nodiscard]] static bool readWalkedDistance( const GameObjectManager* pManager, float64& outValue )
+            {
+                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                const float3 delta = pPlayer->getBody().getPosition() - pPlayer->getStartPosition();
+                outValue           = static_cast<float64>( MathUtil::sqrt( delta._x * delta._x + delta._z * delta._z ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readHotbarSlot( const GameObjectManager* pManager, float64& outValue )
+            {
+                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = pPlayer->getHotbar().getSelectedIndex();
+                return true;
+            }
+
+            [[nodiscard]] static bool readBrokenCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = pPlayer->getBrokenCount();
+                return true;
+            }
+
+            [[nodiscard]] static bool readControlYaw( const GameObjectManager* pManager, float64& outValue )
+            {
+                const VoxelPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                const GameObject*           pOwner  = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
+                const PawnComponent*        pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPawn->getIntent()._controlYaw );
+                return true;
+            }
+
+            /** @brief 플레이어 폰을 누가 쥐었나 — 0 플레이어 조종자, 1 자동 플레이 AI, −1 아무도. */
+            [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
+            {
+                const VoxelPlayerComponent* pPlayer       = findFirstPlayer( pManager );
+                GameObject*                 pOwner        = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
+                GameObjectManager*          pOwnerManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                const PawnComponent*        pPawn         = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr || pOwnerManager == nullptr )
+                    return false;
+                Component* pController = pPawn->isPossessed() ? pOwnerManager->resolveComponent( pPawn->getController() ) : nullptr;
+                if ( pController == nullptr )
+                    outValue = -1.0;
+                else if ( castTo<VoxelAutoPlayControllerComponent>( pController ) != nullptr )
+                    outValue = 1.0;
+                else if ( castTo<PlayerControllerComponent>( pController ) != nullptr )
+                    outValue = 0.0;
+                else
+                    outValue = 2.0;
+                return true;
+            }
         };
     } // namespace
+
+    SW_AUTOMATION_PROBE( voxelWalkedDistance, "VoxelCraft.WalkedDistance", "Horizontal distance of the player body from where it was first placed", &VoxelPlayerComponentInternal::readWalkedDistance );
+    SW_AUTOMATION_PROBE( voxelHotbarSlot, "VoxelCraft.HotbarSlot", "Selected hotbar slot (0-based)", &VoxelPlayerComponentInternal::readHotbarSlot );
+    SW_AUTOMATION_PROBE( voxelBrokenCount, "VoxelCraft.BrokenCount", "Blocks the player has broken", &VoxelPlayerComponentInternal::readBrokenCount );
+    SW_AUTOMATION_PROBE( voxelControlYaw, "VoxelCraft.ControlYaw", "Control yaw of the player pawn (radians)", &VoxelPlayerComponentInternal::readControlYaw );
+    SW_AUTOMATION_PROBE( voxelControllerKind, "VoxelCraft.ControllerKind", "Who possesses the player pawn: 0 player controller, 1 auto play AI, -1 nobody",
+                         &VoxelPlayerComponentInternal::readControllerKind );
 } // namespace sw
 
 namespace sw
@@ -63,9 +148,10 @@ namespace sw
         , _listPendingEdit{}
         , _soundQueue{}
         , _pendingStateBytes{}
+        , _intentSlots{}
+        , _startPosition{ 0.0f, 0.0f, 0.0f }
         , _breakProgress{ 0.0f }
         , _placeCooldown{}
-        , _autoTimer{ 0.0f }
         , _brokenCount{ 0 }
         , _placedCount{ 0 }
         , _bHasTarget{ SW_FALSE }
@@ -96,13 +182,17 @@ namespace sw
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
-        if ( pCamera != nullptr )
+        // 자동 플레이는 플레이어 조종자가 폰을 쥐지 않는다(마우스를 잠그지 않는다) — 시점은 AI 가 정한다(`setAngles` → 조종 회전 요청).
+        PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr )
         {
-            // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 AI 가 정한다.
+            resolveIntentSlots( *pPawn );
+            // 자동 플레이면 플레이어 조종자가 먼저 쥐지 않게 한다(잠금이 한 프레임 걸렸다 풀리지 않게) — 디렉터가 AI 를 빙의시킨다.
             if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
-                pCamera->setMouseLookEnabled( false );
-            pCamera->setAngles( _startYaw, _startPitch );
+                pPawn->setAutoPossess( PawnAutoPossess::None );
         }
+        if ( pCamera != nullptr )
+            pCamera->setAngles( _startYaw, _startPitch );
         if ( pDirector != nullptr && pDirector->isStarted() )
             initializeBody( *pDirector );
         if ( _pendingStateBytes.empty() == false )
@@ -163,24 +253,21 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
+        const PawnComponent*          pPawn     = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
         const VoxelBlockCatalog*      pCatalog  = game::getService<VoxelBlockCatalog>();
-        if ( pCamera == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f )
+        if ( pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f )
             return;
         if ( _bBodyPlaced == SW_FALSE )
             initializeBody( *pDirector );
         const float32 step = MathUtil::min( deltaTime, 0.1f );
 
-        float3              wish{ 0.0f, 0.0f, 0.0f };
-        bool                bJump   = false;
-        bool                bSprint = false;
-        bool                bBreak  = false;
-        bool                bPlace  = false;
-        const InputManager* pInput  = game::getService<InputManager>();
-        if ( pDirector->isAutoPlayOn() || pInput == nullptr )
-            tickAutoPlay( step, *pDirector, *pCamera, wish, bJump, bBreak, bPlace );
-        else
-            tickInput( *pInput, *pCatalog, *pCamera, wish, bJump, bSprint, bBreak, bPlace );
+        float3 wish{ 0.0f, 0.0f, 0.0f };
+        bool   bJump   = false;
+        bool   bSprint = false;
+        bool   bBreak  = false;
+        bool   bPlace  = false;
+        readIntent( *pPawn, *pCatalog, wish, bJump, bSprint, bBreak, bPlace );
 
         const bool bWasOnGround = _body.isOnGround();
         _body.step( pDirector->getWorld(), wish, bJump, bSprint, step );
@@ -214,6 +301,7 @@ namespace sw
     void VoxelPlayerComponent::initializeBody( const VoxelDirectorComponent& director )
     {
         _body.setPosition( director.findSpawnPosition() );
+        _startPosition                      = _body.getPosition();
         _bBodyPlaced                        = SW_TRUE;
         GameObject*                 pOwner  = getOwner();
         FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
@@ -221,57 +309,46 @@ namespace sw
             pCamera->setEyePosition( _body.getEyePosition() );
     }
 
-    void VoxelPlayerComponent::tickInput( const InputManager& input, const VoxelBlockCatalog& catalog, const FirstPersonCameraComponent& camera, float3& outWish,
-                                          bool& outJump, bool& outSprint, bool& outBreak, bool& outPlace )
+    void VoxelPlayerComponent::resolveIntentSlots( const PawnComponent& pawn )
     {
-        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 마우스로 돌렸다(잠금 · Esc 도 거기서).
-        const FirstPersonLook& look    = camera.getLook();
-        const float3           forward = look.getFlatForward();
-        const float3           right   = look.getFlatRight();
-        // 키는 입력 맵(`data/voxel.input.xml`)이 정한다.
-        const InputMap& inputMap = input.getInputMap();
-        const float2    move     = inputMap.getVector2D( hashed_string( "Voxel.Move" ) );
-        outWish                  = outWish + forward * move._y + right * move._x;
-        outJump                  = inputMap.isActionDown( hashed_string( "Voxel.Jump" ) );
-        outSprint                = inputMap.isActionDown( hashed_string( "Voxel.Sprint" ) );
-        outBreak                 = input.isMouseButtonDown( MouseButton::Left );
-        outPlace                 = input.isMouseButtonDown( MouseButton::Right ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
+        constexpr const utf8* kArrSlotName[VoxelHotbar::kSlotCount] = { "Voxel.Slot1", "Voxel.Slot2", "Voxel.Slot3", "Voxel.Slot4", "Voxel.Slot5",
+                                                                        "Voxel.Slot6", "Voxel.Slot7", "Voxel.Slot8", "Voxel.Slot9" };
+        _intentSlots._jump                                          = pawn.findButton( hashed_string( "Voxel.Jump" ) );
+        _intentSlots._sprint                                        = pawn.findButton( hashed_string( "Voxel.Sprint" ) );
+        _intentSlots._break                                         = pawn.findButton( hashed_string( "Voxel.Break" ) );
+        _intentSlots._place                                         = pawn.findButton( hashed_string( "Voxel.Place" ) );
+        _intentSlots._hotbarScroll                                  = pawn.findAnalog( hashed_string( "Voxel.HotbarScroll" ) );
+        for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
+            _intentSlots._arrSlot[slotIndex] = pawn.findButton( hashed_string( kArrSlotName[slotIndex] ) );
+    }
 
-        constexpr const utf8* kArrSlotAction[VoxelHotbar::kSlotCount] = { "Voxel.Slot1", "Voxel.Slot2", "Voxel.Slot3", "Voxel.Slot4", "Voxel.Slot5",
-                                                                          "Voxel.Slot6", "Voxel.Slot7", "Voxel.Slot8", "Voxel.Slot9" };
-        const int32           previousSlot                            = _hotbar.getSelectedIndex();
+    void VoxelPlayerComponent::readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint,
+                                           bool& outBreak, bool& outPlace )
+    {
+        // 이동 축은 조종 요 기준이다 — 1인칭 카메라가 앞 그룹에서 같은 조종 회전으로 시점을 두었다. 위아래 칸은 쓰지 않는다(물에서는 점프가 헤엄).
+        const ControlIntent& intent = pawn.getIntent();
+        const float3         move   = intent.computeWorldMove();
+        outWish                     = float3{ move._x, 0.0f, move._z };
+        outJump                     = pawn.isButtonDown( _intentSlots._jump );
+        outSprint                   = pawn.isButtonDown( _intentSlots._sprint );
+        outBreak                    = pawn.isButtonDown( _intentSlots._break );
+        outPlace                    = pawn.isButtonDown( _intentSlots._place ); // 처음 누름도 누름이다 — 간격은 `_placeCooldown` 이 거른다
+
+        const int32 previousSlot = _hotbar.getSelectedIndex();
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
         {
-            if ( inputMap.wasActionTriggered( hashed_string( kArrSlotAction[slotIndex] ) ) )
+            if ( pawn.wasButtonTriggered( _intentSlots._arrSlot[slotIndex] ) )
                 _hotbar.select( slotIndex );
         }
-        const float32 wheel = input.getMouseWheel();
-        if ( wheel != 0.0f )
-            _hotbar.selectRelative( wheel > 0.0f ? -1 : 1 );
+        const float32 scroll = _intentSlots._hotbarScroll >= 0 ? intent._arrAnalog[_intentSlots._hotbarScroll] : 0.0f;
+        if ( scroll != 0.0f )
+            _hotbar.selectRelative( scroll > 0.0f ? -1 : 1 );
         if ( previousSlot != _hotbar.getSelectedIndex() )
         {
             [[maybe_unused]] const VoxelBlockDef* pBlock = catalog.findBlock( _hotbar.getSelectedSlot()._block );
             SW_LOG_INFO( "[Voxel] slot %#: %# x%#", _hotbar.getSelectedIndex() + 1, pBlock != nullptr ? pBlock->_name.c_str() : "empty",
                          _hotbar.getSelectedSlot()._count );
         }
-    }
-
-    void VoxelPlayerComponent::tickAutoPlay( float32 deltaTime, const VoxelDirectorComponent& director, FirstPersonCameraComponent& camera, float3& outWish,
-                                             bool& outJump, bool& outBreak, bool& outPlace )
-    {
-        // 앞으로 걷다가 막히면 뛰고, 아래를 조금 보며 몇 초마다 앞 블록을 부수고 놓는다. 가끔 방향을 튼다.
-        _autoTimer += deltaTime;
-        const float32 cycle = MathUtil::fmod( _autoTimer, 12.0f );
-        camera.setAngles( camera.getLook().getYaw() + deltaTime * ( cycle < 6.0f ? 0.25f : -0.15f ), -0.35f );
-        outWish = camera.getLook().getFlatForward();
-
-        const VoxelWorld& world = director.getWorld();
-        const float3      ahead = _body.getPosition() + outWish * 0.6f;
-        outJump                 = world.isSolid( static_cast<int32>( MathUtil::floor( ahead._x ) ), static_cast<int32>( MathUtil::floor( _body.getPosition()._y + 0.5f ) ),
-                                                 static_cast<int32>( MathUtil::floor( ahead._z ) ) ) ||
-                  _body.isInWater();
-        outBreak = cycle > 3.0f && cycle < 6.5f;
-        outPlace = cycle > 9.0f && cycle < 9.0f + deltaTime * 1.5f;
     }
 
     void VoxelPlayerComponent::updateTarget( const VoxelDirectorComponent& director, const FirstPersonCameraComponent& camera )

@@ -28,5 +28,11 @@ namespace test
          *          경로에 공백이 있을 수 있어 첫 토큰(실행 파일 경로)은 따옴표로 감싼다.
          */
         [[nodiscard]] static bool launchApp( sw::Process& outProcess, sw::string_view arguments );
+
+        /**
+         * @brief 이 빌드의 활성 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<팩>`)입니다. 못 읽으면 빈 문자열입니다.
+         * @details 게임 프리셋(`Ninja-Debug-<게임>`)마다 App 이 그리는 게임이 다르다 — 게임에 매인 시험(시나리오 · 골든 이미지)이 고른다.
+         */
+        static sw::string readActivePackRoot();
     };
 } // namespace test

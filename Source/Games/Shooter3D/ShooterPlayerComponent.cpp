@@ -4,8 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -20,13 +19,17 @@
 #include "GameFramework/Base/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Base/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameSound.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
+#include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
 
@@ -43,12 +46,16 @@ namespace sw
                                                                                                     "game/shooter3d/models/blaster_h.mesh",
                                                                                                     "game/shooter3d/models/blaster_a.mesh" };
             static constexpr const utf8* kArrWeaponAction[ShooterPlayerComponent::kWeaponCount] = { "Weapon1", "Weapon2", "Weapon3" };
-            static constexpr const utf8* kViewWeaponName                                        = "ViewWeapon";
-            static constexpr const utf8* kCrosshairName                                         = "Crosshair";
-            static constexpr const utf8* kHitMarkerName                                         = "HitMarker";
-            static constexpr const utf8* kMuzzleSocket                                          = "Muzzle";
-            static constexpr const utf8* kBodyMuzzleSocket                                      = "MainHand.Muzzle";
-            static constexpr const utf8* kEyesSocket                                            = "Eyes";
+            // 폰 스키마의 버튼 · 아날로그 이름(플레이어는 같은 이름의 입력 맵 액션, 자동 플레이 AI 는 그 이름을 누른다).
+            static constexpr const utf8* kFireButton         = "Fire";
+            static constexpr const utf8* kReloadButton       = "Reload";
+            static constexpr const utf8* kSwitchWeaponButton = "SwitchWeapon";
+            static constexpr const utf8* kViewWeaponName     = "ViewWeapon";
+            static constexpr const utf8* kCrosshairName      = "Crosshair";
+            static constexpr const utf8* kHitMarkerName      = "HitMarker";
+            static constexpr const utf8* kMuzzleSocket       = "Muzzle";
+            static constexpr const utf8* kBodyMuzzleSocket   = "MainHand.Muzzle";
+            static constexpr const utf8* kEyesSocket         = "Eyes";
 
             static constexpr float4 kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
             static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
@@ -58,8 +65,6 @@ namespace sw
             static constexpr const utf8* kSoundLand     = "Land";
             static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
             static constexpr const utf8* kSoundHitCover = "HitCover";
-
-            static float3 flatten( const float3& value ) { return float3{ value._x, 0.0f, value._z }; }
 
             /** @brief 같은 오브젝트에서 컴포넌트 이름이 @p pName 인 T 입니다. 없으면 nullptr 입니다. */
             template <typename T>
@@ -91,6 +96,85 @@ namespace sw
                 return hashed_string{};
             }
         };
+
+        /** @brief 시나리오 탐침이 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑는다). */
+        struct ShooterPlayerProbeInternal
+        {
+            static const ShooterPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
+            {
+                const ShooterPlayerComponent* pFound = nullptr;
+                if ( pManager == nullptr )
+                    return pFound;
+                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&pFound]( ShooterPlayerComponent* pPlayer )
+                {
+                    if ( pFound == nullptr )
+                        pFound = pPlayer;
+                } );
+                return pFound;
+            }
+
+            /** @brief 첫 슈터 플레이어의 무기 번호(0 소총 · 1 산탄총 · 2 권총)입니다. */
+            [[nodiscard]] static bool readWeaponIndex( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getWeaponIndex() );
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어가 쏜 발 수입니다(판을 다시 시작해도 이어 센다). */
+            [[nodiscard]] static bool readShotCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getShotCount() );
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어의 발 가운데 적을 맞힌 발 수입니다. */
+            [[nodiscard]] static bool readEnemyHitCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getHitCount() );
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어의 폰을 쥔 조종자 — 0 플레이어 · 1 AI(자동 플레이) · −1 없음(그 밖의 조종자도 −1). */
+            [[nodiscard]] static bool readControllerKind( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                const GameObject*             pOwner  = pPlayer != nullptr ? pPlayer->getOwner() : nullptr;
+                const PawnComponent*          pPawn   = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+                if ( pPawn == nullptr )
+                    return false;
+                // 조종자 목록은 등록부에서 — 폰을 쥔 것 하나를 찾는다.
+                outValue = -1.0;
+                for ( ControllerComponent* pController : pManager->getComponentRegistry().getAll<ControllerComponent>() )
+                {
+                    if ( pController == nullptr || pController->getPawn() != pPawn->getHandle() )
+                        continue;
+                    if ( castTo<PlayerControllerComponent>( pController ) != nullptr )
+                        outValue = 0.0;
+                    else if ( castTo<AiControllerComponent>( pController ) != nullptr )
+                        outValue = 1.0;
+                }
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어가 살아 있으면 1 — 쓰러지면 판을 다시 시작해 무기가 0 으로 돌아가므로 무기 단언의 전제입니다. */
+            [[nodiscard]] static bool readAlive( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = pPlayer->isAlive() ? 1.0 : 0.0;
+                return true;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -101,11 +185,6 @@ namespace sw
         , _spawnPosition{ 0.0f, 0.0f, -16.0f }
         , _bodyPrefab{ "game/shooter3d/prefabs/player_body.prefab.xml" }
         , _listWeaponItem{ "blaster_rifle", "blaster_shotgun", "blaster_pistol" }
-        , _walkSpeed{ 5.5f }
-        , _sprintSpeed{ 8.5f }
-        , _jumpSpeed{ 6.0f }
-        , _gravity{ 18.0f }
-        , _radius{ 0.35f }
         , _eyeHeight{ 1.6f }
         , _maxHealth{ 100.0f }
         , _regenDelay{ 4.0f }
@@ -115,8 +194,6 @@ namespace sw
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
         , _tracerWidth{ 0.025f }
-        , _autoEngageDistance{ 7.0f }
-        , _autoTurnRate{ 3.0f }
         , _arrWeapon{}
         , _vitality{}
         , _weaponSockets{}
@@ -125,9 +202,6 @@ namespace sw
         , _listPendingTracer{}
         , _soundQueue{}
         , _body{}
-        , _position{ 0.0f, 0.0f, -16.0f }
-        , _moveVelocity{ 0.0f, 0.0f, 0.0f }
-        , _verticalSpeed{ 0.0f }
         , _hitMarkerTimer{ 0.0f }
         , _timeSinceShot{ 10.0f }
         , _downTimer{ 0.0f }
@@ -137,7 +211,6 @@ namespace sw
         , _shotCount{ 0 }
         , _hitCount{ 0 }
         , _hitReactionCount{ 0 }
-        , _bOnGround{ SW_TRUE }
         , _bWeaponModelDirty{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
         , _bRoundJustRestarted{ SW_FALSE }
@@ -160,19 +233,17 @@ namespace sw
         settings._healthRegenDelay = _regenDelay;
         settings._healthRegenRate  = _regenPerSecond;
         _vitality.initialize( settings );
-        _position                                 = _spawnPosition;
-        _verticalSpeed                            = 0.0f;
-        _weaponIndex                              = 0;
-        _downTimer                                = 0.0f;
-        GameObject*                     pOwner    = getOwner();
-        GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
+        _weaponIndex                            = 0;
+        _downTimer                              = 0.0f;
+        GameObject*                   pOwner    = getOwner();
+        FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
+        ShooterBodyMovementComponent* pMovement = findMovement();
+        if ( pMovement != nullptr )
+            pMovement->teleport( _spawnPosition );
+        else
+            SW_LOG_ERROR( "[Shooter] the player object has no ShooterBodyMovementComponent - the player cannot move" );
         if ( pCamera != nullptr )
         {
-            // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 조준 AI 가 정한다.
-            if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
-                pCamera->setMouseLookEnabled( false );
             pCamera->setAngles( 0.0f, 0.0f );
             pCamera->setEyePosition( getEyePosition() );
             placeOverlay();
@@ -246,7 +317,6 @@ namespace sw
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터.
             _downTimer += step;
-            _moveVelocity = float3{ 0.0f, 0.0f, 0.0f };
             if ( _downTimer >= _downTime )
                 scheduleFlush();
             pCamera->setEyePosition( getEyePosition() );
@@ -254,22 +324,18 @@ namespace sw
             return;
         }
 
-        PlayerIntent        intent;
-        const InputManager* pInput = game::getService<InputManager>();
-        if ( pDirector->isAutoPlayOn() || pInput == nullptr )
-            tickAutoAim( step, *pDirector, *pCamera, intent );
-        else
-            readIntent( pInput->getInputMap(), *pCamera, intent );
-        if ( intent._switchWeapon >= 0 )
-            switchWeapon( intent._switchWeapon );
-        if ( intent._bReload == SW_TRUE && _arrWeapon[_weaponIndex].startReload() )
-            SW_LOG_INFO( "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
-
-        const float3 before = _position;
-        movePlayer( *pDirector, intent._move, intent._bJump == SW_TRUE, intent._bSprint == SW_TRUE, step );
-        _moveVelocity = ShooterPlayerComponentInternal::flatten( _position - before ) * ( 1.0f / step );
-        if ( intent._bTrigger == SW_TRUE || intent._bJustPressed == SW_TRUE )
-            fireWeapon( *pDirector, *pCamera, intent._bJustPressed == SW_TRUE );
+        // 조종자(사람 · 자동 플레이 AI)가 틱 앞에 폰에 넣은 의도만 읽는다. 조종자가 없으면 의도는 0 이다(서 있다).
+        using Internal             = ShooterPlayerComponentInternal;
+        const PawnComponent* pPawn = pOwner->getComponent<PawnComponent>();
+        if ( pPawn != nullptr )
+            applyWeaponIntent( *pPawn );
+        ShooterBodyMovementComponent* pMovement = findMovement();
+        if ( pMovement != nullptr && pMovement->stepMovement( pDirector->getBoxes(), step ) )
+            _soundQueue.queueEvent( Internal::kSoundLand );
+        const bool bTrigger     = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
+        const bool bJustPressed = pPawn != nullptr && pPawn->wasButtonTriggered( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
+        if ( bTrigger || bJustPressed )
+            fireWeapon( *pDirector, *pCamera, bJustPressed );
 
         _lookYaw = pCamera->getLook().getYaw();
         pCamera->setEyePosition( getEyePosition() );
@@ -331,7 +397,31 @@ namespace sw
 
     float3 ShooterPlayerComponent::getEyePosition() const
     {
-        return _position + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight : _eyeHeight, 0.0f };
+        return getFeetPosition() + float3{ 0.0f, _bodyEyeHeight > 0.0f ? _bodyEyeHeight : _eyeHeight, 0.0f };
+    }
+
+    float3 ShooterPlayerComponent::getFeetPosition() const
+    {
+        const ShooterBodyMovementComponent* pMovement = findMovement();
+        return pMovement != nullptr ? pMovement->getFeetPosition() : _spawnPosition;
+    }
+
+    float3 ShooterPlayerComponent::getMoveVelocity() const
+    {
+        const ShooterBodyMovementComponent* pMovement = findMovement();
+        return pMovement != nullptr ? pMovement->getMoveVelocity() : float3{ 0.0f, 0.0f, 0.0f };
+    }
+
+    bool ShooterPlayerComponent::isOnGround() const
+    {
+        const ShooterBodyMovementComponent* pMovement = findMovement();
+        return pMovement == nullptr || pMovement->isOnGround();
+    }
+
+    ShooterBodyMovementComponent* ShooterPlayerComponent::findMovement() const
+    {
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<ShooterBodyMovementComponent>() : nullptr;
     }
 
     hashed_string ShooterPlayerComponent::getWeaponItem( int32 weaponIndex ) const
@@ -356,102 +446,30 @@ namespace sw
         }
     }
 
-    void ShooterPlayerComponent::readIntent( const InputMap& inputMap, const FirstPersonCameraComponent& camera, PlayerIntent& outIntent ) const
+    void ShooterPlayerComponent::applyWeaponIntent( const PawnComponent& pawn )
     {
-        using Internal = ShooterPlayerComponentInternal;
-        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 Look 액션으로 돌렸다(잠금 · Esc 도 거기서).
-        const FirstPersonLook& look = camera.getLook();
-        const float2           move = inputMap.getVector2D( hashed_string( "Move" ) );
-        outIntent._move             = look.getFlatForward() * move._y + look.getFlatRight() * move._x;
-        outIntent._bJump            = inputMap.wasActionTriggered( hashed_string( "Jump" ) ) ? SW_TRUE : SW_FALSE;
-        outIntent._bSprint          = inputMap.isActionDown( hashed_string( "Sprint" ) ) ? SW_TRUE : SW_FALSE;
-        outIntent._bTrigger         = inputMap.isActionDown( hashed_string( "Fire" ) ) ? SW_TRUE : SW_FALSE;
-        outIntent._bJustPressed     = inputMap.wasActionTriggered( hashed_string( "Fire" ) ) ? SW_TRUE : SW_FALSE;
-        outIntent._bReload          = inputMap.wasActionTriggered( hashed_string( "Reload" ) ) ? SW_TRUE : SW_FALSE;
+        using Internal   = ShooterPlayerComponentInternal;
+        int32 nextWeapon = -1;
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            if ( inputMap.wasActionTriggered( hashed_string( Internal::kArrWeaponAction[weaponIndex] ) ) )
-                outIntent._switchWeapon = weaponIndex;
+            if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kArrWeaponAction[weaponIndex] ) ) ) )
+                nextWeapon = weaponIndex;
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "SwitchWeapon" ) ) )
+        // SwitchWeapon 은 축(Q −1 · E +1)이라 버튼으로는 "발동" 만 온다 — 방향은 같은 이름의 아날로그 부호다.
+        const hashed_string switchName( Internal::kSwitchWeaponButton );
+        const int32         analogIndex = pawn.findAnalog( switchName );
+        if ( pawn.wasButtonTriggered( pawn.findButton( switchName ) ) && 0 <= analogIndex && analogIndex < ControlIntent::kAnalogCount )
         {
-            const float32 direction = inputMap.getAxis1D( hashed_string( "SwitchWeapon" ) );
+            const float32 direction = pawn.getIntent()._arrAnalog[analogIndex];
             if ( direction > 0.0f )
-                outIntent._switchWeapon = ( _weaponIndex + 1 ) % kWeaponCount;
+                nextWeapon = ( _weaponIndex + 1 ) % kWeaponCount;
             else if ( direction < 0.0f )
-                outIntent._switchWeapon = ( _weaponIndex + kWeaponCount - 1 ) % kWeaponCount;
+                nextWeapon = ( _weaponIndex + kWeaponCount - 1 ) % kWeaponCount;
         }
-    }
-
-    void ShooterPlayerComponent::tickAutoAim( float32 deltaTime, const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, PlayerIntent& outIntent )
-    {
-        // 가장 가까운 적의 가슴을 천천히 겨누고, 교전 거리 안이고 조준이 맞으면 쏜다. 아레나 가운데를 중심으로 원을 그리며 움직인다.
-        const float3                    eye          = getEyePosition();
-        float32                         bestDistance = MathUtil::kMaxFloat;
-        float3                          aimPoint{ 0.0f, 0.0f, 0.0f };
-        bool                            bHasTarget = false;
-        const vector<ShooterEnemyView>& listView   = director.getEnemyViews();
-        const ShooterEnemyView*         pView      = listView.data();
-        for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
-        {
-            const float3  chest    = pView[viewIndex]._position + float3{ 0.0f, pView[viewIndex]._height * 0.55f, 0.0f };
-            const float32 distance = float3::getDistance( eye, chest );
-            if ( distance < bestDistance )
-            {
-                bestDistance = distance;
-                aimPoint     = chest;
-                bHasTarget   = true;
-            }
-        }
-        outIntent._move = float3{ -_position._z, 0.0f, _position._x } * 0.08f - _position * 0.04f;
-        if ( bHasTarget == false )
-            return;
-
-        const FirstPersonLook& look        = camera.getLook();
-        const float3           toTarget    = ( aimPoint - eye ).normalize();
-        const float32          targetYaw   = MathUtil::atan2( toTarget._x, toTarget._z );
-        const float32          targetPitch = MathUtil::asin( MathUtil::clamp( toTarget._y, -1.0f, 1.0f ) );
-        const float32          yawError    = OrientationUtil::wrapAngle( targetYaw - look.getYaw() );
-        // 사람처럼 돈다 — 오차에 비례해 돌되 각속도 상한을 둔다. 상한이 없으면 표적이 바뀔 때 한 프레임에 수십 도 돌아 3인칭 몸 · 카메라가 튄다.
-        const float32 blend   = MathUtil::min( 1.0f, deltaTime * 8.0f );
-        const float32 maxTurn = _autoTurnRate * deltaTime;
-        const float32 yaw     = OrientationUtil::turnTowardAngle( look.getYaw(), look.getYaw() + yawError * blend, maxTurn );
-        const float32 pitch   = look.getPitch() + MathUtil::clamp( ( targetPitch - look.getPitch() ) * blend, -maxTurn, maxTurn );
-        camera.setAngles( yaw, pitch );
-        const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::kDegreeToRadian && bestDistance < _autoEngageDistance;
-        outIntent._bTrigger     = bAimed ? SW_TRUE : SW_FALSE;
-        outIntent._bJustPressed = bAimed ? SW_TRUE : SW_FALSE;
-        // 가까우면 산탄총, 멀면 소총.
-        const int32 wantedWeapon = bestDistance < 8.0f ? 1 : 0;
-        if ( wantedWeapon != _weaponIndex && _arrWeapon[wantedWeapon].getMagazineAmmo() + _arrWeapon[wantedWeapon].getReserveAmmo() > 0 )
-            outIntent._switchWeapon = wantedWeapon;
-    }
-
-    void ShooterPlayerComponent::movePlayer( const ShooterDirectorComponent& director, const float3& wishDirection, bool bJump, bool bSprint, float32 deltaTime )
-    {
-        float3        move   = ShooterPlayerComponentInternal::flatten( wishDirection );
-        const float32 length = move.getLength();
-        if ( length > 1.0f )
-            move = move * ( 1.0f / length );
-        const float32 speed = bSprint ? _sprintSpeed : _walkSpeed;
-        float3        next  = _position + move * ( speed * deltaTime );
-
-        if ( bJump && _bOnGround == SW_TRUE )
-        {
-            _verticalSpeed = _jumpSpeed;
-            _bOnGround     = SW_FALSE;
-        }
-        _verticalSpeed -= _gravity * deltaTime;
-        next._y += _verticalSpeed * deltaTime;
-        if ( next._y <= 0.0f )
-        {
-            if ( _bOnGround == SW_FALSE )
-                _soundQueue.queueEvent( ShooterPlayerComponentInternal::kSoundLand );
-            next._y        = 0.0f;
-            _verticalSpeed = 0.0f;
-            _bOnGround     = SW_TRUE;
-        }
-        _position = ShooterArenaMath::resolveCircle( director.getBoxes(), next, _radius );
+        if ( nextWeapon >= 0 )
+            switchWeapon( nextWeapon );
+        if ( pawn.wasButtonTriggered( pawn.findButton( hashed_string( Internal::kReloadButton ) ) ) && _arrWeapon[_weaponIndex].startReload() )
+            SW_LOG_INFO( "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 
     void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, bool bJustPressed )
@@ -643,11 +661,11 @@ namespace sw
     void ShooterPlayerComponent::resetRound()
     {
         _vitality.respawn();
-        _downTimer           = 0.0f;
-        _position            = _spawnPosition;
-        _verticalSpeed       = 0.0f;
-        _bOnGround           = SW_TRUE;
-        _bRoundJustRestarted = SW_TRUE;
+        _downTimer                              = 0.0f;
+        _bRoundJustRestarted                    = SW_TRUE;
+        ShooterBodyMovementComponent* pMovement = findMovement();
+        if ( pMovement != nullptr )
+            pMovement->teleport( _spawnPosition );
         for ( WeaponState& weapon : _arrWeapon )
             weapon.addReserveAmmo( weapon.getDef()._maxReserveAmmo );
         GameObject*                 pOwner  = getOwner();
@@ -787,4 +805,15 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         return pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
+                         &ShooterPlayerProbeInternal::readWeaponIndex );
+    SW_AUTOMATION_PROBE( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerProbeInternal::readAlive );
+    SW_AUTOMATION_PROBE( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerProbeInternal::readShotCount );
+    SW_AUTOMATION_PROBE( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerProbeInternal::readEnemyHitCount );
+    SW_AUTOMATION_PROBE( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
+                         &ShooterPlayerProbeInternal::readControllerKind );
 } // namespace sw

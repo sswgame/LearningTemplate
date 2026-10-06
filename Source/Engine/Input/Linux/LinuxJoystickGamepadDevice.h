@@ -33,10 +33,11 @@ namespace sw
 
         void poll( float32 deltaTime ) override;
 
-        bool isConnected() const override { return _bConnected == SW_TRUE; }
-
         bool setVibration( float32 leftMotor, float32 rightMotor ) override;
         void stopVibration() override;
+
+    protected:
+        bool isHardwareConnected() const override { return _bConnected == SW_TRUE; }
 
     private:
         /** @brief /dev/input/js{_deviceIndex} 를 열어 봅니다(실패하면 다음 poll 에서 재시도 타이머로 다시 시도합니다). */

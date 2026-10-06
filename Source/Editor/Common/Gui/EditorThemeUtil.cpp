@@ -120,6 +120,25 @@ namespace sw::editor
                 outConfig._scrollbarRounding = style.ScrollbarRounding * invScale;
                 outConfig._grabRounding      = style.GrabRounding * invScale;
             }
+
+            /**
+             * @brief 스타일의 크기 칸을 ImGui 기본(96 DPI)으로 되돌립니다. 색과 글꼴 크기 · 배율은 그대로 둔다.
+             * @details 주의: `ScaleAllSizes` 는 테마가 적지 않는 크기(도킹 구분선 · 창 테두리 호버 여백 · 창 최소 크기 …)까지 곱한다. 기본에서 다시
+             *          시작하지 않으면 테마를 적용할 때마다 배율이 거듭 곱해져, 150 % 모니터에서 몇 번이면 구분선의 호버 여백이 옆 패널의 클릭을 가로챈다.
+             */
+            static void resetSizesToDefault( ImGuiStyle& outStyle )
+            {
+                ImGuiStyle fresh;
+                for ( int32 colorIndex = 0; colorIndex < ImGuiCol_COUNT; ++colorIndex )
+                {
+                    fresh.Colors[colorIndex] = outStyle.Colors[colorIndex];
+                }
+                fresh.FontSizeBase           = outStyle.FontSizeBase;
+                fresh.FontScaleMain          = outStyle.FontScaleMain;
+                fresh.FontScaleDpi           = outStyle.FontScaleDpi;
+                fresh._NextFrameFontSizeBase = outStyle._NextFrameFontSizeBase;
+                outStyle                     = fresh;
+            }
         };
 
         const EditorThemeInternal::ThemePresetRow* EditorThemeInternal::getPresetRows( uint32& outCount )
@@ -233,6 +252,7 @@ namespace sw::editor
         EditorThemeInternal::setActiveTheme( config );
 
         ImGuiStyle& style = ImGui::GetStyle();
+        EditorThemeInternal::resetSizesToDefault( style );
 
         // 1. 지오메트리 & 레이아웃 메트릭스
         style.WindowRounding    = config._windowRounding;

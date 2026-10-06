@@ -16,6 +16,27 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
   틱을 끄고 턴마다 `advanceTime( 1 )`). 체력 변화는 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 알리고 피해는 `DamageNumberComponent` 로 띄웁니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
+- **Control**(빙의): 조종 대상(폰)과 조종자를 나눈다(언리얼 `APawn` / `AController` · `Possess`). 폰(`PawnComponent`)은 행동 층 의도(`ControlIntent` —
+  이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다 — 입력을 읽어도 되는 파일은 게이트 `CheckControlBoundary` 의 허용 표).
+  조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
+  빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`, 폰이 바라면(`_bLockMouse` — 1인칭) 마우스 잠금 · 잠금 토글 액션
+  `ToggleMouseLock`(Esc), 잠금이 실제로 걸린 동안만 시선을 쌓는다), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
+  1인칭 카메라(`FirstPersonCameraComponent` — 시점 = 같은 오브젝트 폰의 조종 회전 · 피치 한계 · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
+  `FirstPersonCameraMath`)는 폰 쪽이라 이 폴더에 있고 입력을 읽지 않는다 — 코드가 정한 시점(`setAngles`)은 조종 회전 요청(`PawnComponent::requestControlRotation`),
+  반동(`addRecoil`)은 오프셋(`addControlRotationOffset`)으로 조종자에게 넘어간다. 폰이 없으면(관전) 정한 시점을 지킨다.
+  조종 시스템(`ControlSystem`)이 씬 프레임 단계 `FrameSystems`(시작 뒤 · PrePhysics 틱 앞, 게임 스레드)에서 자동 빙의(`PawnAutoPossess`) · 의도 생산을 하고,
+  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 자동 빙의 `Ai` 가 세운 조종자는 폰이 지워질 때 함께 지워진다(`ControllerComponent::isSpawnedForPawn`).
+  플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
+  (의도 → 캐릭터 컨트롤러: 걷기 · 달리기 · 점프 · 가감속 · 몸 방향 `PawnFacingMode`)로 걷고, AI 는 내비 에이전트를 `SteerOnly`(엔진 `NavAgentDriveMode`)로 두어
+  에이전트가 낸 속도를 의도 이동 축으로 넣는다(언리얼 `RequestDirectMove` · 유니티 `updatePosition = false` 와 같은 길). 걷던 중에 목적지만 바꾸면(쫓기) 그 프레임도
+  지금 속도를 쓴다 — 경로를 다시 잡는 프레임마다 서지 않게.
+  **보내고 적는 것은 의도다**(키 바인딩이 달라도 같은 결과): 조종 시스템이 켜진 동안(`setRecording`) 폰마다 틱 고리(`ControlIntentHistory`)에 적고 `.swintent`
+  ('SWIN' · 판 1 · 폰마다 이름 · 시작 틱 · 틱별 `ControlIntent::write`)로 쓴다. 기록 조종자 `IntentTrackControllerComponent` 가 트랙을 틱 순서로 내고(끝나면 원래 조종자에게
+  다음 틱 첫머리에 돌려준다 — `ControlSystem::queuePossess`), 원격 조종자 `RemoteControllerComponent` 가 입력 창 `NetInputReceiveBuffer` 의 틱별 바이트를
+  `ControlIntent::read` 로 낸다(못 받은 틱은 마지막 의도 되풀이, 발동 비트는 지움). 재생은 **같은 씬을 처음부터 같은 고정 프레임 시간으로** 돌릴 때만 같은 궤적이다
+  (시작 상태 · 난수 씨앗은 싣지 않는다 — 자동화 시나리오의 `fixedDelta` 와 같은 조건, 기록할 폰은 이름을 다르게). 시나리오 행동 층 단계(입력 재생 전):
+  `<Intent pawn="Hero" move="0,1" up="0" yaw="1.57" pitch="0" buttons="Fire,Sprint" frames="30"/>`(그 폰을 `IntentTrack.<폰>` 기록 조종자로 잠시 빙의 — 버튼은 첫 프레임 발동 +
+  내내 누름, yaw · pitch 를 빼면 폰의 지금 값) · `<Possess controller="Player" pawn="Horse"/>`(pawn 을 빼면 놓기).
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
@@ -37,14 +58,25 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   파일 쓰기는 `FileUtil::writeFile` 이 원자적), 다른 실행의 칸 기록을 읽어 순번을 잇기, `restoreLatest` · `restoreCheckpoint`. 저장 · 불러오기는 게임이
   넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 체크포인트 · 보스 앞 · 지역 경계 볼륨
   `AutosaveTriggerComponent`(태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번)를 놓는다
+- **Vehicle**(탑승): 타기 = 조종자가 빙의를 탈것으로 옮기는 것. 좌석(`VehicleSeatComponent` — 소켓 또는 좌석 오프셋 · 하차 자리 · 탑승 자세 파라미터 · 운전석)과
+  `MountUtil::mount` / `dismount`(탑승자는 `SocketBindingComponent` 로 좌석에 붙고 폰 이동 · 캐릭터 컨트롤러가 멈춘다, 운전석이면 탑승자의 조종자가 탈것 폰을 쥔다,
+  내리면 하차 자리 — 막혔으면 둘레 여덟 방향 중 빈 곳 — 에서 다시 쥔다). 버튼은 폰의 의도로: 탑승자 쪽 `MountInteractionComponent`(Interact),
+  탈것 쪽 `VehicleExitComponent`(Exit). 말 · 차는 같은 틀이고 의도 → 탈것 이동 규칙만 다르다. 빈 좌석 찾기는 등록부로.
+  탑승 중에도 탑승자 히트박스는 소켓 계층을 따라가 맞는다(무적 없음, 탈것 체력은 탈것의 것). 탑승자가 쓰러지면(`Died`) `RiderDownWatcherComponent`(타는 순간 붙는다)가
+  지금 자리에서 강제 하차(물리 바디가 있으면 물리로). 폰의 의도 연결(`getInputPeer`)은 빙의를 따라가 탈것은 운전석 조종자의 연결이 된다.
+  말 이동 `MountMovementComponent`(의도의 월드 방향 크기 → 걸음새 `MountGait` 서기 · 평보 · 속보 · 구보 · 습보(질주 버튼), 그 방향으로 걸음새마다의 조향 속도만큼
+  돌며 자기 요로 간다, 루트 모션이면 애니메이터 `Gait` · `Turn` 만, 질주 허용 · 걸음새 상한은 키트가). 운전석에서 내리면 탈 때 탈것을 쥐고 있던 조종자(말 AI)가 다시 쥔다.
+  아케이드 차 `ArcadeVehicleComponent`(기존 `ArcadeVehicleMotor` 를 폰 이동으로 — 의도의 월드 이동을 차 방향으로 투영해 앞 성분이 페달 · 옆 성분이 조향(`toVehicleInput`),
+  Drift · Boost · Jump 버튼, 땅은 물리 아래 광선). 의도는 탈것 모두 "가고 싶은 월드 방향" 이라 플레이어 · AI 가 같은 규칙으로 몬다.
+  물리 차 `PhysicsCarComponent`(의도 → 엔진 `WheeledVehicleComponent` 운전 입력 — 같은 투영, 앞으로 가는 중의 뒤 의도는 브레이크 · 거의 서면 후진, HandBrake 버튼).
 - **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
   아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
 - **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
   (`OrthoCameraRigComponent` — 입력 맵 액션 `_panAction`(기본 `Camera.Pan`, 2D 벡터) 이동(초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), `_rotateAction`(기본 `Camera.Rotate`, 1D 축) 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
-  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
-  `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
+  떼어 씬 없이 시험한다. 1인칭 카메라는 폰의 조종 회전을 읽으므로 **Control** 절(`Control/FirstPersonCameraComponent`)에 있다. 시점 자체는 `Input/FirstPersonLook` 이고,
+  몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
   XY 평면 2D 씬의 따라가기 · 흔들림은 `Follow2DCameraComponent`(목표 자리 · 따라가는 비율 · 감쇠 흔들림)
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
   흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
@@ -183,16 +215,17 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `CoopScavenger`: 협동 수집 공포(리썰 컴퍼니 장르) — 할당량 주기(`ScavengerQuota`), 위성 · 하루 시각 · 날씨 · 위협 예산 · 죽음과 시신 회수 · 전멸 손실(`ScavengerExpedition`), 절차 시설 방 그래프 · 고철(`ScavengerFacility`), 운반 칸 · 양손 · 무게(`ScavengerCarry`).
     - `GhostHunt`: 유령 사냥(루이지 맨션 장르) — 손전등 원뿔 · 스트로브 기절 · 흡입 줄다리기 · 강화 단계(`GhostEncounter`), 방 불 켜기 · 열쇠 문 · 가구 보물 · 부 탈출(`GhostMansion`), XML(`GhostCatalog`).
   - **RPG** (`Kits/Rpg/`)
-    - `Overworld`: 타일 걸음 필드 — 칸 조회(`TileMap` — Engine `TileMapXmlData` 그대로 · 걷기 · 조우 칸 · 통과 · 워프), 걸음 이동(`PlayerController` · `PlayerLocomotion`), 존 태그 · 클리어 게이트(`ZoneTracker`). 세이브는 스냅숏 봉투(타일 · 대기 워프는 `PlayerController` 상태 바이트 'OPLC', 플래그는 공유 상태). 무엇을 만나는지는 장르 키트의 지역 표(`MonsterCollector` · `ClassicJrpg`)가 정한다.
+    - `Overworld`: 타일 걸음 필드 — 칸 조회(`TileMap` — Engine `TileMapXmlData` 그대로 · 걷기 · 조우 칸 · 통과 · 워프), 걸음 이동(`OverworldTileMover` · `PlayerLocomotion`), 존 태그 · 클리어 게이트(`ZoneTracker`). 세이브는 스냅숏 봉투(타일 · 대기 워프는 `OverworldTileMover` 상태 바이트 'OPLC', 플래그는 공유 상태). 무엇을 만나는지는 장르 키트의 지역 표(`MonsterCollector` · `ClassicJrpg`)가 정한다.
     - `ClassicJrpg`: 클래식 JRPG(드래곤 퀘스트 3 HD-2D · 씨 오브 스타즈 · 완다링 소드 장르) — 직업 · 주문 · 장비 카탈로그(`JrpgCatalog`), 파티 · 전직 · 여관 · 교회(`JrpgParty`), 라운드제 전투 · 타이밍 공격/방어(`JrpgBattle`), 걸음 수 인카운터(`JrpgEncounter`).
     - `MonsterCollector`: 몬스터 수집(포켓몬 장르) — 종 · 기술 · 성격 · 날씨 카탈로그(`MonsterCollectorCatalog`), 개체값 · 노력치 · 능력치 공식 · 경험치 · 진화(`MonsterInstance`), 우선도 · 스피드 순 1:1 전투 · 피해 공식 · 상성 · 포획(`MonsterBattle`), 트레이너 AI(`MonsterTrainerAi`).
-    - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
+    - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`) · 탈것 이동 연결(`WesternHorseMountComponent` — 질주는 스태미나가 버틸 때만, 겁먹어 떨어뜨리면 강제 하차) · 주인을 따라오는 말 AI(`HorseFollowAiController` — 휘파람), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
     - `WitcherRpg`: 위쳐 RPG(위쳐 3 장르) — 괴물 도감 지식 · 해금된 약점 · 속성 배율(`WitcherBestiary`), 연금술 · 독성 · 변이 혼합물 · 명상 보충 · 오일(`WitcherAlchemy`), 표식 · 대체 시전 · 스태미나 · 아드레날린(`WitcherCombat`), 변이 슬롯 색 맞춤(`WitcherMutagens`), 계약 단서 순서 · 보상 흥정(`WitcherContract`).
   - **전략** (`Kits/Strategy/`)
+    - 명령형 장르(RTS · SRPG · 경영)에는 폰이 없다 — 플레이어 디렉터와 AI 커맨더(`RtsAiCommander` · `SrpgAiCommander`)가 같은 키트 명령 API 를 부른다(행동 층 = 명령).
     - `RealTimeStrategy`: 실시간 전략(스타크래프트 장르) — 유닛 XML(`RtsCatalog`), 명령 · 채취 · 건설 · 생산 · 테크 · 전투 · 안개 · 흐름장 무리 이동(`RtsWorld`),
-      고르기 · 부대(`RtsSelection`), 행동 트리 AI(`RtsAiController`).
+      고르기 · 부대(`RtsSelection`), 행동 트리 AI(`RtsAiCommander`).
     - `CityBuilder`: 도시 건설(파라오 장르) — 건물 · 물자 · 집 단계 XML(`CityCatalog`), 도로망 · 노동 · 순회 일꾼 · 수레 · 시장 · 집 진화 · 이민 · 세금 · 범람(`CitySimulation`).
-    - `TacticsSrpg`: SRPG(SD건담 G제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 XML(`SrpgCatalog`), 전장(`SrpgBattlefield` — `GridReachability` 이동 범위 · ZOC · MAP 병기 · 페이즈/개별 순서), 전투 예측 · 반격 · 지원 · 동기(`SrpgCombat`), 점수 AI(`SrpgAiController`), 승패 · 개발 · `RunMap` 로그라이트 캠페인(`SrpgProgress`).
+    - `TacticsSrpg`: SRPG(SD건담 G제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 XML(`SrpgCatalog`), 전장(`SrpgBattlefield` — `GridReachability` 이동 범위 · ZOC · MAP 병기 · 페이즈/개별 순서), 전투 예측 · 반격 · 지원 · 동기(`SrpgCombat`), 점수 AI(`SrpgAiCommander`), 승패 · 개발 · `RunMap` 로그라이트 캠페인(`SrpgProgress`).
     - `SideScrollConquest`: 횡스크롤 정복(썬즈 오브 발할라 장르) — 1차원 전선 거점 · 건물/일꾼/생산 · 병력 훈련/인구 · 지휘관 부대 명령 · 진형 · 사기 · 성문/성벽 · 충차/사다리 · 점령 → 영토 · 반격 웨이브(`ConquestWorld`).
   - **시뮬레이션 · 생활** (`Kits/Simulation/`)
     - `Farming`: 농장 생활(하베스트 문 장르) — 작물 XML 카탈로그(`CropCatalog` — 계절은 공유 시계의 이름, 씨앗 · 수확물 아이템을 `ItemCatalog` 로),
@@ -456,7 +489,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 여러 자원 비용 | `StatBlock::canAfford` · `trySpend` | 횡스크롤 정복 |
 | 아이템 + 개수 값 목록 | `ItemStackList` | 출하함 · 전리품 · 레시피 · 보상 |
 | 비스듬히 내려다보는 직교 카메라 · 장식 흩뿌리기 | `OrthoCameraRigComponent` · `PropScatterComponent` | ThemeParkTycoon · HarvestValley · NileCity · StarSkirmish |
-| 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent` | Shooter3D · VoxelCraft |
+| 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent`(시점 = 폰의 조종 회전) · `PawnComponent::_bLockMouse`(잠금은 플레이어 조종자) | Shooter3D · VoxelCraft |
 | 피해 숫자 | `DamageNumberComponent::spawnNumber` | 액션 · 어빌리티 |
 | 총 · 탄창 · 재장전 · 탄도 · 피해 공식 | `Combat/` | 슈터 · (배틀로얄 · 서부극 · 기체 대전) |
 | 아이템 · 인벤토리 · 장비 · 전리품 · 제작 · 격자 가방 | `Inventory/` | 배틀로얄 · 위쳐 · 식당 · 생존 공포 · 협동 수집 |
@@ -534,7 +567,8 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 | 2 | `Framework` |
 | 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
 | 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
-| 5 | `Ability` · `Gimmick` · `GameState` |
+| 5 | `Ability` · `Control` · `Gimmick` · `GameState` |
+| 6 | `Vehicle` |
 
 위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
 나누지는 않는다(층은 폴더로만 지킨다).

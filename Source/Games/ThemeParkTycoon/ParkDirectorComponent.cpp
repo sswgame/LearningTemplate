@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
@@ -60,6 +61,26 @@ namespace sw
                 pMesh->setLocalPosition( position );
                 pMesh->setLocalRotation( rotation );
                 return pMesh;
+            }
+        };
+
+        /** @brief 시나리오 탐침 — 첫 공원 디렉터의 손님 수(그림자 장면이 비어 있지 않다는 전제)입니다. */
+        struct ParkDirectorProbeInternal
+        {
+            [[nodiscard]] static bool readGuestCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ParkDirectorComponent* pFound = nullptr;
+                if ( pManager == nullptr )
+                    return false;
+                pManager->forEachComponentOfType<ParkDirectorComponent>( [&pFound]( ParkDirectorComponent* pDirector )
+                {
+                    if ( pFound == nullptr )
+                        pFound = pDirector;
+                } );
+                if ( pFound == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pFound->getSimulation().getGuestCount() );
+                return true;
             }
         };
     } // namespace
@@ -692,4 +713,9 @@ namespace sw
             return -1;
         return _listPlacement[static_cast<size_t>( _selectedPlacement )]._rideIndex;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorProbeInternal::readGuestCount );
 } // namespace sw

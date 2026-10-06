@@ -31,6 +31,7 @@ namespace sw
         , _bPointerEntered{ SW_FALSE }
         , _bPointerLeft{ SW_FALSE }
         , _bHasSubRect{ SW_FALSE }
+        , _bHasPosition{ SW_FALSE }
         , _reserved{ 0 }
     {
         MouseDevice::resetState();
@@ -216,6 +217,12 @@ namespace sw
 
     void MouseDevice::setPosition( int32 x, int32 y )
     {
+        // 첫 위치는 기준점이 없다 — (0, 0) 에서 그 자리까지를 이동으로 내면 시작할 때 1인칭 시점이 수백 픽셀만큼 튄다.
+        if ( _bHasPosition == SW_FALSE )
+        {
+            setPositionWithoutDelta( x, y );
+            return;
+        }
         _delta._x = x - _prevMouse._x;
         _delta._y = y - _prevMouse._y;
         _mouse._x = x;
@@ -229,6 +236,7 @@ namespace sw
         _mouse._y     = y;
         _prevMouse._x = x;
         _prevMouse._y = y;
+        _bHasPosition = SW_TRUE;
     }
 
     void MouseDevice::addRawDelta( float32 dx, float32 dy )

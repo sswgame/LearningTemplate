@@ -67,3 +67,71 @@ SW_TEST_CASE( SceneFrameStepTest, PrePhysicsTickWritesLandInTheApplyStep )
     SW_EXPECT_NEAR_EQUAL( 5.0f, listLocalX[static_cast<size_t>( sw::SceneFrameStep::Navigation )], 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, listLocalX[static_cast<size_t>( sw::SceneFrameStep::Physics )], 1e-5f );
 }
+
+namespace
+{
+    /** @brief 불릴 때마다 단계와 순번을 적는 시험 시스템입니다. 지정한 이름의 시스템을 떼어 볼 수도 있다. */
+    class SceneFrameStepTestSystem final : public sw::ISceneFrameSystem
+    {
+    public:
+        SceneFrameStepTestSystem( sw::vector<int32>& inoutListCall, int32 id, sw::SceneFrameStep& inoutLastStep, const sw::hashed_string& removeKey )
+            : _listCall{ inoutListCall }
+            , _lastStep{ inoutLastStep }
+            , _removeKey{ removeKey }
+            , _callStep{ sw::SceneFrameStep::Count }
+            , _id{ id }
+        {
+        }
+
+        void runBeforeTick( sw::GameObjectManager& manager, float32 /*deltaTime*/ ) override
+        {
+            _listCall.push_back( _id );
+            _callStep = _lastStep;
+            if ( _removeKey.empty() == false )
+                manager.removeFrameSystem( _removeKey );
+        }
+
+        sw::SceneFrameStep getCallStep() const { return _callStep; }
+
+    private:
+        sw::vector<int32>&  _listCall;
+        sw::SceneFrameStep& _lastStep;
+        sw::hashed_string   _removeKey;
+        sw::SceneFrameStep  _callStep;
+        int32               _id;
+    };
+} // namespace
+
+/**
+ * @brief [SceneFrameStepTest] 프레임 시스템은 FrameSystems 단계(시작 뒤 · PrePhysics 틱 앞)에서 붙인 순서대로 돌고, 같은 이름은 거절하며, 도는 중에 자기를 떼어도 된다
+ */
+SW_TEST_CASE( SceneFrameStepTest, FrameSystemsRunInOrderBeforeThePrePhysicsTick )
+{
+    sw::GameObjectManager manager;
+    sw::vector<int32>     listCall;
+    sw::SceneFrameStep    lastStep = sw::SceneFrameStep::Count;
+    manager.setFrameStepObserver( sw::GameObjectManager::FrameStepObserver( [&lastStep]( sw::SceneFrameStep step )
+    { lastStep = step; } ) );
+
+    sw::unique_ptr<SceneFrameStepTestSystem> pFirst    = sw::make_unique<SceneFrameStepTestSystem>( listCall, 1, lastStep, sw::hashed_string( "Second" ) );
+    SceneFrameStepTestSystem*                pRawFirst = pFirst.get();
+    SW_ASSERT_TRUE( manager.addFrameSystem( sw::hashed_string( "First" ), std::move( pFirst ) ) );
+    SW_ASSERT_TRUE( manager.addFrameSystem( sw::hashed_string( "Second" ),
+                                            sw::make_unique<SceneFrameStepTestSystem>( listCall, 2, lastStep, sw::hashed_string{} ) ) );
+    SW_EXPECT_FALSE( manager.addFrameSystem( sw::hashed_string( "Second" ),
+                                             sw::make_unique<SceneFrameStepTestSystem>( listCall, 3, lastStep, sw::hashed_string{} ) ) );
+    SW_EXPECT_TRUE( manager.findFrameSystem( sw::hashed_string( "Second" ) ) != nullptr );
+
+    // 첫 프레임: 첫째가 둘째를 떼지만 둘째는 이번 단계에서 이미 자리를 잃었다 — 첫째만 돈다. 떼인 칸은 단계 끝에 걷힌다.
+    manager.tick( 0.016f );
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listCall.size() );
+    SW_EXPECT_EQUAL( 1, listCall[0] );
+    SW_EXPECT_TRUE( pRawFirst->getCallStep() == sw::SceneFrameStep::FrameSystems );
+    SW_EXPECT_TRUE( manager.findFrameSystem( sw::hashed_string( "Second" ) ) == nullptr );
+    SW_EXPECT_TRUE( static_cast<uint32>( sw::SceneFrameStep::BeginPlay ) < static_cast<uint32>( sw::SceneFrameStep::FrameSystems ) );
+    SW_EXPECT_TRUE( static_cast<uint32>( sw::SceneFrameStep::FrameSystems ) < static_cast<uint32>( sw::SceneFrameStep::TickPrePhysics ) );
+
+    manager.removeFrameSystem( sw::hashed_string( "First" ) );
+    manager.tick( 0.016f );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listCall.size() );
+}

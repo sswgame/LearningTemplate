@@ -1,0 +1,12 @@
+<Prefab formatVersion="0" name="SkeletonAi">
+	<GameObject _schemaVersion="0" _name="SkeletonAi" _bActive="true">
+		<_listComponent>
+			<ShooterEnemyAiControllerComponent _componentName="ShooterEnemyAiControllerComponent"
+			                                   _bActive="true"
+			                                   _possessAtStart="0"
+			                                   _turnRate="6"
+			                                   _arriveDistance="0.3"
+			                                   _retargetDistance="0.5" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

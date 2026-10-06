@@ -33,7 +33,9 @@ namespace sw
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
         , _listDrainedEvent{}
-        , _inputHistory{}
+        , _pVirtualInput{ nullptr }
+        , _virtualFrameIndex{ 0 }
+        , _beginFrameCount{ 0 }
         , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _onActiveDeviceChanged{}
         , _onGamepadConnectionChanged{}
@@ -41,6 +43,7 @@ namespace sw
         , _arrOnTextComposition{}
         , _arrCapturedKeyMask{}
         , _keyboardFocus{ InputKeyboardFocus::Game }
+        , _virtualInputMode{ VirtualInputMode::Exclusive }
         , _pendingHighSurrogate{ 0 }
         , _consumedButtonMask{ 0 }
         , _bInitialized{ SW_FALSE }
@@ -67,7 +70,6 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
-        _inputHistory.clear();
 
         // 1) 표준 키보드 장치를 등록한다
         auto pKeyboard = make_unique<KeyboardDevice>();
@@ -141,6 +143,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
+        _pVirtualInput = nullptr;
         releaseMouseLockMode();
         if ( _bCursorHiddenApplied == SW_TRUE )
         {
@@ -159,7 +162,6 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
-        _inputHistory.clear();
 
         _bInitialized = SW_FALSE;
         SW_LOG_INFO( "InputManager shut down." );
@@ -266,17 +268,21 @@ namespace sw
     void InputManager::beginFrame( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( EngineMisc );
+        ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
 
-        // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다
+        // 1) 등록된 모든 장치의 프레임을 시작하고(이전 프레임 엣지 초기화) 폴링한다. 배타 가상 입력이면 폴링하지 않는다 — 패드 폴링
+        //    (XInput · 조이스틱)이 가상 패드 상태를 실제 패드 값으로 덮는다.
+        const bool bOsSuppressed = isOsInputSuppressed();
         for ( auto& pDev : _listDevice )
         {
             if ( pDev != nullptr )
             {
                 pDev->onFrameBegin( deltaSeconds );
-                pDev->poll( deltaSeconds );
+                if ( bOsSuppressed == false )
+                    pDev->poll( deltaSeconds );
                 pDev->onPolled();
             }
         }
@@ -287,6 +293,20 @@ namespace sw
         // 2) 락프리 큐에 비동기로 들어온 이번 프레임 원시 이벤트를 한꺼번에 꺼낸다
         _listDrainedEvent.clear();
         _queueRawEvent.drain( _listDrainedEvent );
+        // 배타 가상 입력: OS 가 낸 장치 사건 · 창 포커스 사건을 버린다(글자 입력도 — 가상 원천이 `makeTextInput` 으로 낸다).
+        if ( bOsSuppressed )
+            _listDrainedEvent.clear();
+        // 2-1) 가상 입력 원천의 이번 프레임 사건을 OS 사건 뒤에 붙인다 — 같은 재생 자리(3)를 탄다.
+        if ( _pVirtualInput != nullptr )
+        {
+            const size_t firstVirtual = _listDrainedEvent.size();
+            _pVirtualInput->emitFrame( _virtualFrameIndex, _listDrainedEvent );
+            for ( size_t eventIndex = firstVirtual; eventIndex < _listDrainedEvent.size(); ++eventIndex )
+            {
+                _listDrainedEvent[eventIndex]._bSynthetic = SW_TRUE;
+            }
+            ++_virtualFrameIndex;
+        }
 
         // 3) 꺼낸 원시 이벤트를 **들어온 순서대로** 장치에 적용한다(새 프레임 엣지 플래그 설정). 포커스 잃음도 이 순서 안에서
         //    적용해야 그보다 먼저 들어온 키 누름이 리셋 뒤에 되살아나지 않는다(알트탭하면 캐릭터가 계속 달리던 원인).
@@ -446,6 +466,10 @@ namespace sw
 
             case RawInputEventType::GamepadConnectionChanged:
             {
+                // 가상 연결 사건은 가상 세션 동안 패드의 연결 여부를 정한다(실제 연결은 폴링이 정한다).
+                GamepadDevice* pPad = getGamepad( rawEvent._deviceIndex );
+                if ( rawEvent._bSynthetic == SW_TRUE && pPad != nullptr )
+                    pPad->setVirtualConnected( rawEvent._payload._gamepadData._bConnected == SW_TRUE );
                 if ( _onGamepadConnectionChanged.isBound() )
                     _onGamepadConnectionChanged( rawEvent._deviceIndex, rawEvent._payload._gamepadData._bConnected == SW_TRUE );
                 break;
@@ -650,6 +674,9 @@ namespace sw
 
     bool InputManager::isPointerOwnedByGame() const
     {
+        // 배타 가상 입력 중에는 OS 포인터를 게임이 쥐지 않는다(사람이 같은 기계를 쓴다). 잠금 모드(장치 상태)는 남겨 두고 떼면 `syncMouseLock` 이 건다.
+        if ( isOsInputSuppressed() )
+            return false;
         if ( _bWindowFocused == SW_FALSE || _bAltHeld == SW_TRUE || _keyboardFocus != InputKeyboardFocus::Game )
             return false;
         return _pMouse == nullptr || _pMouse->getLockMode() == MouseLockMode::None || _bMouseLockEngaged == SW_TRUE;
@@ -783,58 +810,49 @@ namespace sw
         return pPad != nullptr ? pPad->playVibration( leftMotor, rightMotor, durationSeconds ) : false;
     }
 
-    void InputManager::recordSnapshot( uint32 tickNumber )
+    void InputManager::attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode, bool bResetState )
     {
-        InputSnapshot snapshot{};
-        snapshot._tickNumber = tickNumber;
-
-        // 1) 2D 축 벡터(Move · Look)
-        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Move" ) )
-            snapshot._moveVector = _pInputMap->getVector2D( "Move" );
-        else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            snapshot._moveVector = _pGamepad->getLeftStick();
-
-        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Look" ) )
-            snapshot._lookVector = _pInputMap->getVector2D( "Look" );
-        else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            snapshot._lookVector = _pGamepad->getRightStick();
-
-        // 2) 아날로그 트리거
-        snapshot._leftTrigger  = getGamepadLeftTrigger();
-        snapshot._rightTrigger = getGamepadRightTrigger();
-
-        // 3) 64비트 버튼 · 액션 비트마스크
-        uint64 mask = 0;
-        if ( _pGamepad != nullptr && _pGamepad->isConnected() )
+        if ( pSource == nullptr )
         {
-            for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( GamepadButton::Count ); ++btnIndex )
-            {
-                if ( _pGamepad->isButtonDown( static_cast<GamepadButton>( btnIndex ) ) )
-                    mask |= ( 1ULL << btnIndex );
-            }
+            detachVirtualInput();
+            return;
         }
+        const bool bWasExclusive = isOsInputSuppressed();
+        _pVirtualInput           = pSource;
+        _virtualInputMode        = mode;
+        _virtualFrameIndex       = 0;
+        // 사람이 누르고 있던 것 · 큐에 남은 OS 사건이 첫 프레임에 새지 않게 지운다.
+        if ( bResetState )
+            resetAllDeviceState();
+        const bool bExclusive = mode == VirtualInputMode::Exclusive;
+        if ( bExclusive )
+            _queueRawEvent.clear();
+        if ( bExclusive != bWasExclusive )
+            setGamepadVirtualSession( bExclusive );
+        syncMouseLock();
+        SW_LOG_INFO( "Virtual input attached (%#)", bExclusive ? "exclusive" : "mixed" );
+    }
 
-        if ( _pMouse != nullptr )
+    void InputManager::detachVirtualInput( bool bResetState )
+    {
+        if ( _pVirtualInput == nullptr )
+            return;
+        const bool bWasExclusive = isOsInputSuppressed();
+        _pVirtualInput           = nullptr;
+        if ( bResetState )
+            resetAllDeviceState();
+        if ( bWasExclusive )
+            setGamepadVirtualSession( false );
+        syncMouseLock();
+        SW_LOG_INFO( "Virtual input detached after %# frame(s)", _virtualFrameIndex );
+    }
+
+    void InputManager::setGamepadVirtualSession( bool bVirtual )
+    {
+        for ( auto& pDev : _listDevice )
         {
-            for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( MouseButton::Count ); ++btnIndex )
-            {
-                if ( _pMouse->isButtonDown( static_cast<MouseButton>( btnIndex ) ) )
-                    mask |= ( 1ULL << ( 16 + btnIndex ) );
-            }
+            if ( pDev != nullptr && pDev->getDeviceKind() == InputDeviceKind::Gamepad )
+                static_cast<GamepadDevice*>( pDev.get() )->setVirtualSession( bVirtual );
         }
-
-        if ( _pInputMap != nullptr )
-        {
-            const vector<hashed_string>& listAction  = _pInputMap->getActionNames();
-            const uint32                 actionCount = MathUtil::min( static_cast<uint32>( listAction.size() ), 32u );
-            for ( uint32 actionIndex = 0; actionIndex < actionCount; ++actionIndex )
-            {
-                if ( _pInputMap->isActionDown( listAction[actionIndex] ) )
-                    mask |= ( 1ULL << ( 32 + actionIndex ) );
-            }
-        }
-
-        snapshot._buttonMask = mask;
-        _inputHistory.recordSnapshot( snapshot );
     }
 } // namespace sw

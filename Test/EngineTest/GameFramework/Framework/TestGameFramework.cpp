@@ -12,7 +12,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/InputSnapshot.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -32,6 +31,7 @@
 #include "GameFramework/Base/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Base/Camera/Follow2DCameraComponent.h"
+#include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Data/GameSettings.h"
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
 #include "GameFramework/Base/Framework/GameEvents.h"
@@ -54,7 +54,7 @@
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
+#include "GameFramework/Kits/Rpg/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
 #include "GameFramework/Kits/Rpg/Overworld/ZoneTracker.h"
@@ -162,7 +162,7 @@ namespace
     }
 
     /** @brief 플레이어 컨트롤러 상태의 바이트입니다. */
-    vector<uint8> capturePlayerControllerBytes( const PlayerController& controller )
+    vector<uint8> captureTileMoverBytes( const OverworldTileMover& controller )
     {
         Archive archive;
         controller.writeState( archive );
@@ -1812,95 +1812,6 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
 }
 
 /**
- * @brief [GameFrameworkTest] 넷코드 틱 스냅샷 및 순환 링버퍼 검증
- */
-SW_TEST_CASE( GameFrameworkTest, EnhancedInput_NetcodeSnapshotAndHistoryBuffer )
-{
-    InputSnapshot snapshot{};
-    snapshot._tickNumber   = 128;
-    snapshot._buttonMask   = 0x1F;
-    snapshot._moveVector   = float2{ 1.0f, -0.5f };
-    snapshot._lookVector   = float2{ 0.2f, 0.8f };
-    snapshot._leftTrigger  = 0.75f;
-    snapshot._rightTrigger = 1.0f;
-
-    // 1) 바이너리 직렬화/역직렬화 라운드트립
-    uint8        arrBuffer[InputSnapshot::kSerializedSize];
-    const uint32 bytesWritten = snapshot.serialize( arrBuffer, sizeof( arrBuffer ) );
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, bytesWritten );
-
-    InputSnapshot loaded{};
-    SW_EXPECT_TRUE( loaded.deserialize( arrBuffer, bytesWritten ) );
-    SW_EXPECT_EQUAL( uint32( 128 ), loaded._tickNumber );
-    SW_EXPECT_EQUAL( uint64( 0x1F ), loaded._buttonMask );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._moveVector._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( -0.5f, loaded._moveVector._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, loaded._leftTrigger, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._rightTrigger, 1e-4f );
-
-    // 2) InputHistoryBuffer 링버퍼 검증
-    InputHistoryBuffer history;
-    history.recordSnapshot( snapshot );
-    SW_EXPECT_EQUAL( size_t( 1 ), history.getCount() );
-
-    const InputSnapshot* pFound = history.getSnapshot( 128 );
-    SW_ASSERT_NOT_NULL( pFound );
-    SW_EXPECT_EQUAL( uint32( 128 ), pFound->_tickNumber );
-
-    const InputSnapshot* pLatest = history.getLatestSnapshot();
-    SW_ASSERT_NOT_NULL( pLatest );
-    SW_EXPECT_EQUAL( uint32( 128 ), pLatest->_tickNumber );
-}
-
-/**
- * @brief [GameFrameworkTest] 같은 입력은 언제나 같은 바이트로 직렬화되는지 검증
- * @details 구조체를 통째로 `memcpy` 하면 `_tickNumber` 뒤의 정렬 패딩 4바이트는 아무도
- *          값을 정하지 않으므로, **같은 입력을 두 번 저장해도 파일 바이트가 달라질 수 있다** —
- *          리플레이 비교·체크섬·중복 제거가 성립하지 않고, 네트워크로 나가면 그 자리에 있던
- *          메모리가 함께 나간다. 여기서는 서로 다른 쓰레기로 더럽힌 두 스냅샷에 같은 값을 넣고
- *          같은 바이트가 나오는지 본다.
- */
-SW_TEST_CASE( GameFrameworkTest, EnhancedInput_SnapshotSerializationIsDeterministic )
-{
-    auto fillFields = []( InputSnapshot& outSnapshot )
-    {
-        outSnapshot._tickNumber   = 7;
-        outSnapshot._buttonMask   = 0xDEADBEEFull;
-        outSnapshot._moveVector   = float2{ 0.25f, -0.5f };
-        outSnapshot._lookVector   = float2{ -0.125f, 0.75f };
-        outSnapshot._leftTrigger  = 0.5f;
-        outSnapshot._rightTrigger = 0.25f;
-    };
-
-    // 두 스냅샷의 **저장 공간**을 서로 다른 값으로 더럽힌 뒤 같은 필드를 넣는다.
-    alignas( InputSnapshot ) uint8 arrStorageA[sizeof( InputSnapshot )];
-    alignas( InputSnapshot ) uint8 arrStorageB[sizeof( InputSnapshot )];
-    Memory::set( arrStorageA, 0x00, sizeof( arrStorageA ) );
-    Memory::set( arrStorageB, 0xCD, sizeof( arrStorageB ) );
-
-    InputSnapshot* pSnapshotA = sw_placement_new( arrStorageA ) InputSnapshot{};
-    InputSnapshot* pSnapshotB = sw_placement_new( arrStorageB ) InputSnapshot{};
-    fillFields( *pSnapshotA );
-    fillFields( *pSnapshotB );
-
-    uint8 arrBufferA[InputSnapshot::kSerializedSize]{};
-    uint8 arrBufferB[InputSnapshot::kSerializedSize]{};
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, pSnapshotA->serialize( arrBufferA, sizeof( arrBufferA ) ) );
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, pSnapshotB->serialize( arrBufferB, sizeof( arrBufferB ) ) );
-
-    SW_EXPECT_TRUE( Memory::compare( arrBufferA, arrBufferB, InputSnapshot::kSerializedSize ) == 0 );
-
-    // 직렬화 크기는 구조체 크기와 다르다 — 패딩이 나가지 않기 때문이다.
-    SW_EXPECT_TRUE( InputSnapshot::kSerializedSize < sizeof( InputSnapshot ) );
-
-    // 그리고 그 바이트는 그대로 되읽힌다.
-    InputSnapshot loadedSnapshot{};
-    SW_EXPECT_TRUE( loadedSnapshot.deserialize( arrBufferA, InputSnapshot::kSerializedSize ) );
-    SW_EXPECT_EQUAL( uint64( 0xDEADBEEFull ), loadedSnapshot._buttonMask );
-    SW_EXPECT_NEAR_EQUAL( -0.125f, loadedSnapshot._lookVector._x, 1e-6f );
-}
-
-/**
  * @brief [GameFrameworkTest] 다형적 입력 장치(IInputDevice) 레지스트리 및 범용 InputSlot 무분기 바인딩 검증
  */
 SW_TEST_CASE( GameFrameworkTest, EnhancedInput_PolymorphicDeviceRegistryAndInputSlot )
@@ -2236,7 +2147,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneTagsComeFromTheMapRoleText )
 
 /**
  * @brief [GameFrameworkTest] 한 칸 걷는 동안 상태가 **실제로** `Walk` 다
- * @details `PlayerController::update` 가 걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소하면
+ * @details `OverworldTileMover::update` 가 걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소하면
  *          `Walk` 는 한 프레임도 살지 못하고 바깥에서 한 번도 관측되지 않는다 — 걷는 애니메이션을 고를 근거가
  *          통째로 죽는다. 입력 잠금은 걸음 상태 자체가 한다.
  */
@@ -2265,7 +2176,7 @@ SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration 
  *          부를 때 **세 걸음마다** 난다 — 끄는 값이 켜는 값이 된다. 1 을 넘는 값도 `1/rate` 를 정수로 자르면 0 이 돼
  *          같은 자리로 떨어진다.
  */
-SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounters )
+SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_ZeroEncounterRateNeverEncounters )
 {
     for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
     {
@@ -2318,7 +2229,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
 /**
  * @brief [GameFrameworkTest] 플레이어 컨트롤러 상태 바이트 — 타일 · 걷는 중의 남은 시간 · 조우 걸음 수가 그대로 와서 같은 걸음 · 같은 조우 · 같은 워프가 이어진다. 잘린 바이트는 거절하고 그대로 둔다
  */
-SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController )
+SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSameTileMover )
 {
     TileMap tileMap;
     tileMap.resize( 8, 3 );
@@ -2334,45 +2245,38 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController 
     warp._targetTileY = 4;
     tileMap.setOrUpdateWarp( warp );
 
-    InputManager input;
-    input.initialize();
-    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
-    input.postRawEvent( RawInputEvent::makeKeyDown( Key::D ) ); // 오른쪽을 누른 채로 걷는다
+    // 오른쪽으로 민 채로 걷는다 — 몸은 입력이 아니라 의도를 받는다(입력 맵 → 의도는 `ControlTest` 가 본다).
+    ControlIntent intent;
+    intent._move = float2{ 1.0f, 0.0f };
 
-    PlayerController controller;
+    OverworldTileMover controller;
     controller.setTileMap( &tileMap );
     controller.setEncounterRate( 0.5f ); // 조우 칸 두 걸음마다
     // 0.1 초 프레임 — 걸음(0.18 초)은 두 프레임마다 하나다. 네 프레임 뒤 (3,1) 조우 칸을 걷는 중이다.
     for ( int32 frame = 0; frame < 4; ++frame )
-    {
-        input.beginFrame( 0.1f );
-        controller.update( 0.1f, input );
-        input.endFrame();
-    }
+        controller.update( 0.1f, intent, -1 );
     SW_ASSERT_EQUAL( 3, controller.getTileX() );
     SW_ASSERT_TRUE( controller.getLocomotion().getState() == LocomotionState::Walk );
 
-    const vector<uint8> bytes = capturePlayerControllerBytes( controller );
-    PlayerController    restored;
+    const vector<uint8> bytes = captureTileMoverBytes( controller );
+    OverworldTileMover  restored;
     restored.setTileMap( &tileMap );
     restored.setEncounterRate( 0.5f );
     Archive reader( bytes.data(), bytes.size() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
-    SW_EXPECT_TRUE( capturePlayerControllerBytes( restored ) == bytes );
+    SW_EXPECT_TRUE( captureTileMoverBytes( restored ) == bytes );
     SW_EXPECT_EQUAL( 3, restored.getTileX() );
     SW_EXPECT_TRUE( restored.getLocomotion().getFacing() == FacingDir::Right );
 
     // 같은 프레임을 둘 다 더 돌린다 — (4,1) 에서 조우(두 번째 조우 칸 걸음), (5,1) 에서 워프 대기.
     for ( int32 frame = 0; frame < 4; ++frame )
     {
-        input.beginFrame( 0.1f );
-        controller.update( 0.1f, input );
-        restored.update( 0.1f, input );
-        input.endFrame();
+        controller.update( 0.1f, intent, -1 );
+        restored.update( 0.1f, intent, -1 );
     }
     SW_EXPECT_EQUAL( 5, restored.getTileX() );
-    SW_EXPECT_TRUE( capturePlayerControllerBytes( controller ) == capturePlayerControllerBytes( restored ) );
+    SW_EXPECT_TRUE( captureTileMoverBytes( controller ) == captureTileMoverBytes( restored ) );
     SW_EXPECT_TRUE( controller.consumeEncounterRequest() );
     SW_EXPECT_TRUE( restored.consumeEncounterRequest() );
     string mapPath;
@@ -2382,11 +2286,56 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController 
     SW_EXPECT_STREQ( "town", mapPath.c_str() );
     SW_EXPECT_EQUAL( 2, spawnX );
 
-    PlayerController truncated;
-    Archive          cut( bytes.data(), bytes.size() - 1 );
+    OverworldTileMover truncated;
+    Archive            cut( bytes.data(), bytes.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 1, truncated.getTileX() );
-    input.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 타일 몸은 의도만 받는다 — 이동 축 y 가 위쪽 칸, 데드존 안은 걸음이 아니고, 상호작용 버튼 발동은 걸음보다 먼저다
+ */
+SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_StepsFromTheControlIntent )
+{
+    TileMap tileMap;
+    tileMap.resize( 4, 4 );
+    for ( int32 y = 0; y < 4; ++y )
+    {
+        for ( int32 x = 0; x < 4; ++x )
+            tileMap.setWalkable( x, y, true );
+    }
+
+    OverworldTileMover mover;
+    mover.setTileMap( &tileMap );
+    mover.setEncounterRate( 0.0f );
+
+    // 데드존(0.5) 안 — 걷지 않는다.
+    ControlIntent intent;
+    intent._move = float2{ 0.0f, 0.4f };
+    mover.update( 0.1f, intent, -1 );
+    SW_EXPECT_FALSE( mover.consumeMovedFlag() );
+    SW_EXPECT_EQUAL( 1, mover.getTileY() );
+
+    // y = 1 이면 위쪽(−y) 한 칸이다.
+    intent._move = float2{ 0.0f, 1.0f };
+    mover.update( 0.1f, intent, -1 );
+    SW_EXPECT_TRUE( mover.consumeMovedFlag() );
+    SW_EXPECT_EQUAL( 0, mover.getTileY() );
+    SW_EXPECT_TRUE( mover.getLocomotion().getFacing() == FacingDir::Up );
+
+    // 걸음이 끝난 뒤 상호작용 버튼(자리 2)이 발동하면 같은 틱의 이동보다 먼저 상호작용이다.
+    mover.update( 0.25f, ControlIntent{}, 2 );
+    intent._move = float2{ 1.0f, 0.0f };
+    intent.setButton( 2, true, true );
+    mover.update( 0.01f, intent, 2 );
+    SW_EXPECT_TRUE( mover.consumeInteractRequest() );
+    SW_EXPECT_EQUAL( 1, mover.getTileX() );
+
+    // 다른 자리를 상호작용 버튼으로 넘기면 그 발동은 상호작용이 아니다.
+    mover.update( 0.25f, ControlIntent{}, 2 );
+    mover.update( 0.01f, intent, 3 );
+    SW_EXPECT_FALSE( mover.consumeInteractRequest() );
+    SW_EXPECT_EQUAL( 2, mover.getTileX() );
 }
 
 /**

@@ -53,6 +53,7 @@ namespace sw
             {         BindingKind::Shortcut,        "shortcut", 1,         0},
             {           BindingKind::AnyKey,          "anyKey", 0, kNoRebind},
             {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind},
+            {     BindingKind::MouseWheel1D,      "mouseWheel", 0, kNoRebind},
         };
 
         static_assert( sizeof( kArrBindingKindInfo ) / sizeof( kArrBindingKindInfo[0] ) == static_cast<size_t>( BindingKind::Count ),
@@ -323,6 +324,16 @@ namespace sw
         ActionBinding binding = beginBinding( action, BindingKind::MouseDelta2D, ActionTrigger::Down, layer );
         binding._scale        = sensitivity;
         commitBinding( action, InputActionValueType::Axis2D, binding );
+    }
+
+    void InputMap::bindMouseWheel( const hashed_string& action, float32 scale, const hashed_string& layer )
+    {
+        if ( action.empty() )
+            return;
+
+        ActionBinding binding = beginBinding( action, BindingKind::MouseWheel1D, ActionTrigger::Down, layer );
+        binding._scale        = scale;
+        commitBinding( action, InputActionValueType::Axis1D, binding );
     }
 
     void InputMap::bindVirtualJoystick2D( const hashed_string& action, MouseButton activationButton, float32 radius, float32 deadzone, const hashed_string& layer, float32 outerDeadzone )

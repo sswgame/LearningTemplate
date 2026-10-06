@@ -189,6 +189,30 @@ SW_TEST_CASE( InputManagerTest, NativeEventKeyPressReleaseEdges )
 }
 #endif
 
+/**
+ * @brief [InputManagerTest] 처음 받은 마우스 위치는 이동이 아니다 — 기준점이 없으니 (0, 0) 에서 그 자리까지를 이동량으로 내지 않는다(시작할 때 1인칭 시점이 튀지 않게)
+ */
+SW_TEST_CASE( InputManagerTest, FirstMousePositionIsNotAMove )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseMove( 600, 400 ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 600, input.getMousePosition()._x );
+    SW_EXPECT_EQUAL( 0, input.getMouseDelta()._x );
+    SW_EXPECT_EQUAL( 0, input.getMouseDelta()._y );
+    input.endFrame();
+
+    // 그다음부터는 앞 위치에서의 이동이다.
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseMove( 610, 395 ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_EQUAL( 10, input.getMouseDelta()._x );
+    SW_EXPECT_EQUAL( -5, input.getMouseDelta()._y );
+    input.endFrame();
+    input.shutdown();
+}
+
 #if defined( SW_PLATFORM_WINDOWS )
 SW_TEST_CASE( InputManagerTest, NativeEventMouseMovementAndDelta )
 {
@@ -907,11 +931,9 @@ SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
 }
 
 /**
- * @brief [InputManagerTest] 입력 뮤트(Mute) 및 스냅샷 기록 검증
- * @details 런타임이 쓰는 `recordSnapshot` 경로로 — 버튼을 눌러 프레임을 돌리고 기록시켜 — 확인한다. 히스토리에
- *          스냅샷을 직접 밀어 넣는 백도어로는 실제 경로를 검사하지 못한다.
+ * @brief [InputManagerTest] 입력 뮤트(Mute) — 뮤트 중 사건은 버리고, 풀면 같은 경로가 다시 상태를 만든다
  */
-SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
+SW_TEST_CASE( InputManagerTest, InputMuting )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
@@ -930,17 +952,6 @@ SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
     input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
-
-    input.recordSnapshot( 200 );
-
-    const sw::InputSnapshot* pRecorded = input.getSnapshot( 200 );
-    SW_EXPECT_TRUE( pRecorded != nullptr );
-    if ( pRecorded != nullptr )
-    {
-        // 버튼 마스크는 게임패드가 0..15, 마우스가 16.. 이다 (MouseButton::Left = 0 → 비트 16).
-        SW_EXPECT_EQUAL( 1ULL << 16, pRecorded->_buttonMask );
-        SW_EXPECT_EQUAL( 200u, pRecorded->_tickNumber );
-    }
 
     input.shutdown();
 }
@@ -994,6 +1005,10 @@ SW_TEST_CASE( InputManagerTest, MouseSmoothingAndAcceleration )
     SW_EXPECT_NEAR_EQUAL( 0.5f, input.getMouse()->getSmoothing(), 0.001f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, input.getMouse()->getAcceleration(), 0.001f );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
 
@@ -1226,6 +1241,10 @@ SW_TEST_CASE( InputManagerTest, SmoothMouseDeltaReturnsToZeroWhenMouseStops )
     input.getMouse()->setAcceleration( 1.0f );
 
     // 1프레임: 마우스가 x 로 10 움직인다.
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 0 ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, input.getMouse()->getSmoothDelta()._x, 0.001f );

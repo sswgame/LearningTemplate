@@ -113,6 +113,10 @@ namespace sw
                     {
                         return "[ Mouse Look ]";
                     }
+                    case BindingKind::MouseWheel1D:
+                    {
+                        return "[ Mouse Wheel ]";
+                    }
                     case BindingKind::VirtualJoystick2D:
                     {
                         return string( "[ Drag " ) + slotToGlyph( binding._arrSlot[0], device ) + " ]";
@@ -172,6 +176,7 @@ namespace sw
                     case BindingKind::Axis1DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
                     case BindingKind::Vector2DComposite:
                     case BindingKind::MouseDelta2D:
+                    case BindingKind::MouseWheel1D:
                     case BindingKind::VirtualJoystick2D:
                     case BindingKind::Shortcut:
                     case BindingKind::Count:

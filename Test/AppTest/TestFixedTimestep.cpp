@@ -144,3 +144,28 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
     SW_EXPECT_TRUE_MSG( firstFrame._deltaTime > 0.05f, "start 뒤에 타이머가 돌지 않았다" );
     SW_EXPECT_TRUE_MSG( firstFrame._deltaTime < 0.22f, "start 이전의 시간이 첫 델타에 섞였다" );
 }
+
+/**
+ * @brief [FixedTimestepTest] 덮어쓴 프레임 시간은 벽시계를 무시한다 — 프레임마다 그 시간, 고정 스텝은 정확히 한 번(자동화 시나리오의 1/60)
+ * @details 시나리오 파일이 적는 값(`0.0166667`)은 고정 델타(1/60)보다 아주 조금 크다 — 누산 반올림으로 한 프레임이 0 스텝 · 다음이 2 스텝이 되면
+ *          같은 시나리오가 프레임마다 다른 물리 스텝을 본다.
+ */
+SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
+{
+    FixedTimestep timeline;
+    timeline.configure( 0.1f, 1.0f / 60.0f, 6 );
+    timeline.start();
+
+    for ( const float32 overrideSeconds : { 1.0f / 60.0f, 0.0166667f } )
+    {
+        for ( uint32 frameIndex = 0; frameIndex < 600; ++frameIndex )
+        {
+            // 벽시계를 한 번 크게 흔든다 — 덮어쓴 시간이면 결과가 같아야 한다.
+            if ( frameIndex == 3 )
+                sleepLongerThanAnyClamp();
+            const FrameTime frame = timeline.advance( 1.0f, overrideSeconds );
+            SW_EXPECT_NEAR_EQUAL( overrideSeconds, frame._deltaTime, 1e-6f );
+            SW_EXPECT_EQUAL( 1u, frame._fixedStepCount );
+        }
+    }
+}

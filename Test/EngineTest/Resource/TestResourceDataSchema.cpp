@@ -16,6 +16,7 @@
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioMusic.h"
+#include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartData.h"
@@ -100,6 +101,7 @@ namespace
         static bool isRenderPass( sw::string_view resourceId ) { return startsWith( resourceId, "engine/renderpass/" ) && endsWith( resourceId, ".xml" ); }
         static bool isEngineDefaultAssets( sw::string_view resourceId ) { return endsWith( resourceId, "enginedefaultassets.xml" ); }
         static bool isInputMap( sw::string_view resourceId ) { return endsWith( resourceId, ".input.xml" ); }
+        static bool isAutomationScenario( sw::string_view resourceId ) { return endsWith( resourceId, ".scenario.xml" ); }
         static bool isMaterial( sw::string_view resourceId ) { return endsWith( resourceId, ".material" ); }
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
@@ -169,6 +171,17 @@ namespace
         {
             sw::EngineDefaultAssets data;
             return data.loadFromResource( resourceId );
+        }
+
+        /** @brief 시나리오는 형식(루트 · 루트 속성 · <At>)만 읽는다 — 단계 종류 · 탐침은 그 게임 모듈이 올라온 실기동(AppScenarioTest)이 본다. */
+        static bool loadAutomationScenario( const sw::string& resourceId )
+        {
+            sw::AutomationScenario scenario;
+            sw::string             error;
+            const bool             bLoaded = scenario.loadFromPath( resourceId, error );
+            if ( bLoaded == false )
+                SW_LOG_WARNING( "%#", error.c_str() );
+            return bLoaded;
         }
 
         static bool loadInputMap( const sw::string& resourceId )
@@ -437,6 +450,7 @@ namespace
             {         "renderpass",          &isRenderPass,                                    &loadRenderPass},
             {"enginedefaultassets", &isEngineDefaultAssets,                           &loadEngineDefaultAssets},
             {           "inputmap",            &isInputMap,                                      &loadInputMap},
+            {           "scenario",  &isAutomationScenario,                            &loadAutomationScenario},
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
             {      "camerapresets",       &isCameraPresets,              &loadCatalog<sw::CameraPresetCatalog>},

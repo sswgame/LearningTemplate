@@ -75,8 +75,32 @@
 			                       _separationWeight="2"
 			                       _avoidanceQuality="Medium"
 			                       _turnRate="8"
-			                       _bUpdatePosition="true"
+			                       _driveMode="SteerOnly"
 			                       _bUpdateRotation="false" />
+			<PawnComponent _componentName="PawnComponent"
+			               _bActive="true"
+			               _moveAction="None"
+			               _lookAction="None"
+			               _upAction="None"
+			               _inputLayer="None"
+			               _aiControllerPrefab="game/shooter3d/prefabs/skeleton_ai.prefab.xml"
+			               _maxPitch="1.4"
+			               _autoPossess="Ai"
+			               _bLockMouse="false">
+				<_listButton>
+					<item>Attack</item>
+				</_listButton>
+				<_listAnalog />
+			</PawnComponent>
+			<ShooterBodyMovementComponent _componentName="ShooterBodyMovementComponent"
+			                              _bActive="true"
+			                              _sprintButton="None"
+			                              _jumpButton="None"
+			                              _walkSpeed="3"
+			                              _sprintSpeed="3"
+			                              _jumpSpeed="0"
+			                              _gravity="18"
+			                              _radius="0.45" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

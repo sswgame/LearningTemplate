@@ -112,8 +112,10 @@ Recast 순서(`RecastNavMesh::bakeTile`):
 `ensureNavMesh` 로 지금 마련합니다. 질의(`findPath` · `findNearestPoint` · `raycast`)는 베이크한 종류에 대해 아무 틱에서나 부를 수 있습니다.
 
 **에이전트 갱신 순서**(게임 스레드): 요청(목적지 · 멈춤 · 순간이동 — 에이전트의 틱이 적어 둔 것)과 자리(컨트롤러가 옮긴 자리, 또는 바깥이 0.5 m 넘게 옮긴
-자리 = 순간이동)를 군중에 넣는다 → 종류마다 군중 `update` → 결과를 쓴다(컨트롤러면 `setMoveVelocity`, 아니면 자리 · 진행 방향 요). 목적지에서
-`_stoppingDistance` 안이면 `Arrived` 이고 군중의 목표를 지운다.
+자리 = 순간이동)를 군중에 넣는다 → 종류마다 군중 `update` → 결과를 쓴다. 무엇이 움직이는지는 에이전트의 `_driveMode`(`NavAgentDriveMode`) 하나다:
+`Transform` 은 자리 · 진행 방향 요를 쓰고, `CharacterController` 는 같은 오브젝트의 컨트롤러에 `setMoveVelocity`, `SteerOnly` 는 아무것도 옮기지 않고
+속도만 낸다 — AI 조종자(`GameFramework/Base/Control/AiControllerComponent`)가 그 속도를 의도로 바꾸고 폰 이동이 걸으며, 다음 갱신이 그 자리를 받는다
+(플레이어와 NPC 가 같은 이동 컴포넌트로 걷는 길). 목적지에서 `_stoppingDistance` 안이면 `Arrived` 이고 군중의 목표를 지운다.
 
 **쿠킹.** `App --cook-scenes` 가 표면이 놓인 씬마다(글에 `NavMeshSurfaceComponent` 가 든 씬만 세운다) 플레이를 시작하지 않은 채 세워 `makeCookedEntry` 로
 베이크하고 `<cooked-dir>/<씬 경로의 .navmesh>` 를 씁니다(`SceneNavigationCooker`). 팩 쿠커가 스테이징 폴더째 팩에 싣습니다. 장애물 · 플레이가 세운 것은 들지 않습니다.

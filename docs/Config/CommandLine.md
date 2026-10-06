@@ -39,3 +39,5 @@
 | `-loc-project` | 글 값(`-이름=값`) | 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `LOC_PROJECT` |
 | `-export-po` | 플래그(`-이름`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `EXPORT_PO` |
 | `-import-po` | 글 값(`-이름=값`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `IMPORT_PO` |
+| `-scenario` | 글 값(`-이름=값`) | 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다 (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/README.md`. | `SCENARIO` |
+| `-scenario-report` | 글 값(`-이름=값`) | 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다). | `SCENARIO_REPORT` |

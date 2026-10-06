@@ -1,0 +1,16 @@
+<Prefab formatVersion="0" name="ArenaGruntAi">
+	<GameObject _schemaVersion="0" _name="ArenaGruntAi" _bActive="true">
+		<_listComponent>
+			<ArenaEnemyAiComponent _componentName="ArenaEnemyAiComponent"
+			                       _bActive="true"
+			                       _possessAtStart="0"
+			                       _turnRate="20"
+			                       _arriveDistance="0.3"
+			                       _kind="Grunt"
+			                       _meleeReach="1.4"
+			                       _preferredMin="5"
+			                       _preferredMax="9"
+			                       _fireRange="12" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

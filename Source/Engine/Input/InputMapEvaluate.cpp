@@ -440,6 +440,12 @@ namespace sw
                 outValue._y            = rdy * binding._scale * _mouseSensitivity._y * ( _bInvertY == SW_TRUE ? -1.0f : 1.0f );
                 return ( rdx != 0.0f || rdy != 0.0f );
             }
+            case BindingKind::MouseWheel1D:
+            {
+                const float32 wheel = _pInput->getMouseWheel();
+                outValue            = float2{ wheel * binding._scale, 0.0f };
+                return wheel != 0.0f;
+            }
             case BindingKind::VirtualJoystick2D:
             {
                 const bool bActivationDown = isSlotDown( binding._arrSlot[0] );

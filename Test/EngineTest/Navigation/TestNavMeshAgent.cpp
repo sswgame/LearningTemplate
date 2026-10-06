@@ -37,28 +37,6 @@ namespace
             return pObject;
         }
 
-        /** @brief Static 강체 상자(반 크기 @p halfExtents)입니다. */
-        static sw::GameObject* spawnStaticBody( sw::GameObjectManager& manager, const utf8* pName, const sw::float3& center, const sw::float3& halfExtents )
-        {
-            sw::GameObject*         pObject = manager.createGameObject( sw::hashed_string( pName ) );
-            sw::RigidBodyComponent* pBody   = pObject->addComponent<sw::RigidBodyComponent>();
-            sw::PhysicsShapeDesc3D  box;
-            box._halfExtents = halfExtents;
-            pBody->setShape( box );
-            pBody->setBodyType( sw::PhysicsBodyType::Static );
-            pBody->setLocalPosition( center );
-            return pObject;
-        }
-
-        static sw::NavMeshSurfaceComponent* spawnSurface( sw::GameObjectManager& manager, sw::NavGeometrySource source )
-        {
-            sw::GameObject*              pObject  = manager.createGameObject( sw::hashed_string( "NavSurface" ) );
-            sw::NavMeshSurfaceComponent* pSurface = pObject->addComponent<sw::NavMeshSurfaceComponent>();
-            pSurface->setAgentTypes( { sw::hashed_string( "TestHumanoid" ) } );
-            pSurface->setGeometrySource( source );
-            return pSurface;
-        }
-
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
@@ -71,8 +49,6 @@ namespace
             spawnMeshBox( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 30.0f, 1.0f, 30.0f } );
             spawnMeshBox( manager, "Crates", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 2.0f, 2.0f, 8.0f } );
         }
-
-        static bool isInsideCrates( const sw::float3& position ) { return -1.0f < position._x && position._x < 1.0f && -4.0f < position._z && position._z < 4.0f; }
     };
 } // namespace
 
@@ -85,7 +61,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     sw::GameObjectManager manager;
     manager.getSceneNavigation().setSettings( navtest::makeSettings() );
     Internal::spawnCrateScene( manager );
-    Internal::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
+    navtest::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
     sw::GameObject*     pWalker = manager.createGameObject( sw::hashed_string( "Walker" ) );
     sw::SceneComponent* pRoot   = pWalker->addComponent<sw::SceneComponent>();
     pRoot->setLocalPosition( sw::float3{ -6.0f, 0.0f, 0.0f } );
@@ -105,7 +81,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     for ( uint32 frame = 0; frame < 600 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
         manager.tick( Internal::kFrame );
-        bEnteredCrates = bEnteredCrates || Internal::isInsideCrates( pRoot->getWorldPosition() );
+        bEnteredCrates = bEnteredCrates || navtest::isInsideCrates( pRoot->getWorldPosition() );
     }
     SW_EXPECT_TRUE( pAgent->getMoveStatus() == sw::NavMoveStatus::Arrived );
     SW_EXPECT_FALSE( bEnteredCrates );
@@ -127,15 +103,13 @@ SW_TEST_CASE( NavMeshAgentTest, AgentDrivesACharacterController )
 {
     using Internal = NavMeshAgentTestInternal;
     sw::GameObjectManager manager;
-    manager.getSceneNavigation().setSettings( navtest::makeSettings() );
-    Internal::spawnStaticBody( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 15.0f, 0.5f, 15.0f } );
-    Internal::spawnStaticBody( manager, "Crates", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 1.0f, 1.0f, 4.0f } );
-    Internal::spawnSurface( manager, sw::NavGeometrySource::PhysicsColliders );
+    navtest::spawnPhysicsCrateScene( manager );
     sw::GameObject*                   pWalker     = manager.createGameObject( sw::hashed_string( "Walker" ) );
     sw::CharacterControllerComponent* pController = pWalker->addComponent<sw::CharacterControllerComponent>();
     pController->setLocalPosition( sw::float3{ -6.0f, 0.05f, 0.0f } );
     sw::NavMeshAgentComponent* pAgent = pWalker->addComponent<sw::NavMeshAgentComponent>();
     pAgent->setMaxSpeed( 4.0f );
+    pAgent->setDriveMode( sw::NavAgentDriveMode::CharacterController );
 
     manager.beginPlay();
     Internal::tickFor( manager, 10 );
@@ -144,7 +118,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentDrivesACharacterController )
     for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
     {
         manager.tick( Internal::kFrame );
-        bEnteredCrates = bEnteredCrates || Internal::isInsideCrates( pController->getWorldPosition() );
+        bEnteredCrates = bEnteredCrates || navtest::isInsideCrates( pController->getWorldPosition() );
     }
     SW_EXPECT_TRUE( pAgent->getMoveStatus() == sw::NavMoveStatus::Arrived );
     SW_EXPECT_FALSE( bEnteredCrates );
@@ -169,7 +143,7 @@ SW_TEST_CASE( NavMeshAgentTest, ModifierIgnoresObjectsAndAssignsAreas )
     sw::GameObject* pFloor = manager.findGameObjectByName( sw::hashed_string( "Floor" ) );
     SW_ASSERT_NOT_NULL( pFloor );
     pFloor->addComponent<sw::NavMeshModifierComponent>()->setAreaName( sw::hashed_string( "Mud" ) );
-    Internal::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
+    navtest::spawnSurface( manager, sw::NavGeometrySource::RenderMeshes );
     sw::SceneNavigation& navigation = manager.getSceneNavigation();
     SW_ASSERT_NOT_NULL( navigation.ensureNavMesh( sw::hashed_string( "TestHumanoid" ) ) );
 

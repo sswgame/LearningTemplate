@@ -688,6 +688,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
 {
     constexpr const utf8* kArrExpectedPass[] = {
         "EditorSelfTest|PASS|theme.palette",
+        "EditorSelfTest|PASS|theme.reapplyKeepsSizes",
         "EditorSelfTest|PASS|widgets.helpMarker",
         "EditorSelfTest|PASS|widgets.propertyRow",
         "EditorSelfTest|PASS|dock.corePanelsAreDocked",
@@ -918,6 +919,10 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     constexpr const utf8* kGoldenPlatformSuffix = ".linux";
     constexpr bool        kMissingGoldenFails   = false;
 #endif
+
+    // 기준 그림은 Empty 게임의 벤치 장면이다 — 다른 게임 프리셋의 App 은 자기 첫 씬(아레나 · 공원 …)을 그려 비교할 것이 없다.
+    if ( test::AppTestUtil::readActivePackRoot() != "game/empty" )
+        SW_TEST_SKIP( "golden images are the Empty game's bench scene; this preset runs another game" );
 
     const string goldenDirectory = findGoldenDirectory();
     SW_ASSERT_TRUE_MSG( goldenDirectory.empty() == false, "Test/AppTest/Golden 을 찾지 못했습니다 — 작업 폴더가 build/<프리셋>/Bin 입니까?" );

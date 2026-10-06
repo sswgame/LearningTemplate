@@ -8,102 +8,166 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputReplay.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/VirtualInputScript.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <thread>
 
 // 입력 경로의 튼튼함 — 동시성 스트레스 · 리플레이 라운드트립 · 경계값.
-/**
- * @brief [InputReplayTest] 입력 녹화, 프레임 스크러빙 및 결정론적 재생 검증
- */
-SW_TEST_CASE( InputReplayTest, RecordingAndPlaybackWorkflow )
+namespace
 {
+    struct TestInputRobustnessInternal
+    {
+        static constexpr float32 kFrameSeconds = 1.0f / 60.0f;
+
+        /** @brief 4 프레임에 Space 를 누르고 6 프레임에 떼는 입력을 가상 키보드로 넣어 8 프레임을 녹화한다(녹화는 실제로 적용된 사건). */
+        static void recordSpaceTap( sw::InputManager& input, sw::InputReplay& outReplay )
+        {
+            sw::VirtualInputScript source;
+            SW_EXPECT_TRUE( source.addTap( 4, sw::InputSlot::fromKey( sw::Key::Space ), 2 ) );
+            input.attachVirtualInput( &source );
+            outReplay.startRecording( "jump" );
+            for ( uint32 frame = 0; frame < 8; ++frame )
+            {
+                input.beginFrame( kFrameSeconds );
+                outReplay.recordFrame( kFrameSeconds, input.getLastFrameEvents() );
+                input.endFrame();
+            }
+            outReplay.stopRecording();
+            input.detachVirtualInput();
+        }
+    };
+} // namespace
+
+/**
+ * @brief [InputReplayTest] 녹화는 프레임마다 장치에 적용된 사건을 그 자리(프레임 번호)에 적는다
+ */
+SW_TEST_CASE( InputReplayTest, RecordingKeepsAppliedEventsPerFrame )
+{
+    using Internal = TestInputRobustnessInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
     sw::InputReplay replay;
     SW_EXPECT_FALSE( replay.isRecording() );
-    SW_EXPECT_FALSE( replay.isPlaying() );
+    Internal::recordSpaceTap( input, replay );
 
-    replay.startRecording( "TestReplaySession" );
-    SW_EXPECT_TRUE( replay.isRecording() );
-    SW_EXPECT_EQUAL( "TestReplaySession", replay.getReplayName() );
-
-    // 3프레임 녹화
-    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
-    {
-        sw::InputSnapshot snapshot{};
-        snapshot._tickNumber = frameIndex;
-        snapshot._buttonMask = 1ull << frameIndex;
-
-        sw::vector<sw::RawInputEvent> listEvent;
-        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::A ) );
-
-        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-    }
-
-    replay.stopRecording();
     SW_EXPECT_FALSE( replay.isRecording() );
-    SW_EXPECT_EQUAL( 3u, replay.getFrameCount() );
-    SW_EXPECT_NEAR_EQUAL( 0.048f, replay.getTotalDuration(), 0.001f );
-
-    // 재생 모드 진입
-    replay.play();
-    SW_EXPECT_TRUE( replay.isPlaying() );
-    SW_EXPECT_FALSE( replay.isPaused() );
-    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
-
-    const sw::InputReplayFrame* pFrame0 = replay.getCurrentFrame();
-    SW_EXPECT_TRUE( pFrame0 != nullptr );
-    if ( pFrame0 != nullptr )
+    SW_EXPECT_EQUAL( "jump", replay.getReplayName() );
+    SW_ASSERT_EQUAL( 8u, replay.getFrameCount() );
+    SW_EXPECT_NEAR_EQUAL( 8.0f * Internal::kFrameSeconds, replay.getTotalDuration(), 0.001f );
+    for ( uint32 frame = 0; frame < 8; ++frame )
     {
-        SW_EXPECT_EQUAL( 0u, pFrame0->_tickNumber );
-        SW_EXPECT_EQUAL( 1ull, pFrame0->_snapshot._buttonMask );
-        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pFrame0->_listRawEvent.size() ) );
+        const uint32 expectedCount = ( frame == 4 || frame == 6 ) ? 1u : 0u;
+        SW_EXPECT_EQUAL( expectedCount, static_cast<uint32>( replay.getFrames()[frame]._listRawEvent.size() ) );
     }
-
-    // 일시정지 및 재개
-    replay.pause();
-    SW_EXPECT_TRUE( replay.isPaused() );
-    replay.resume();
-    SW_EXPECT_FALSE( replay.isPaused() );
-
-    replay.stop();
-    SW_EXPECT_FALSE( replay.isPlaying() );
+    SW_EXPECT_TRUE( replay.getFrames()[4]._listRawEvent[0]._type == sw::RawInputEventType::KeyDown );
+    SW_EXPECT_TRUE( replay.getFrames()[6]._listRawEvent[0]._type == sw::RawInputEventType::KeyUp );
+    // 녹화에는 출처 표시를 남기지 않는다 — 재생 때 다시 가상 사건으로 표시된다.
+    SW_EXPECT_TRUE( replay.getFrames()[4]._listRawEvent[0]._bSynthetic == SW_FALSE );
+    input.shutdown();
 }
 
 /**
- * @brief [InputReplayTest] 리플레이 파일은 프레임 · 원시 이벤트를 그대로 되읽고, 다른 판(2)의 파일은 읽지 않는다
- * @details 파일은 `RawInputEvent` 를 구조체째로 적으므로 그 배치가 바뀐 판(3)은 옛 판의 바이트를 지금 배치로 읽으면 안 된다.
+ * @brief [InputReplayTest] 녹화한 사건을 붙여 재생하면 프레임 시간과 상관없이 같은 프레임에 같은 액션이 난다
+ * @details 재생 프레임은 붙인 뒤 `beginFrame` 횟수다 — 벽시계 누산으로 고르면 0.1 초 프레임에서 첫 프레임에 여러 녹화 프레임이 한꺼번에 나온다.
+ */
+SW_TEST_CASE( InputReplayTest, ReplayEmitsRecordedFramesByIndex )
+{
+    using Internal = TestInputRobustnessInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", sw::Key::Space, sw::ActionTrigger::Pressed );
+    sw::InputReplay replay;
+    Internal::recordSpaceTap( input, replay );
+
+    input.attachVirtualInput( &replay );
+    for ( uint32 frame = 0; frame < 8; ++frame )
+    {
+        input.beginFrame( 0.1f );
+        SW_EXPECT_EQUAL( frame == 4, input.getInputMap().wasActionTriggered( "Jump" ) );
+        input.endFrame();
+    }
+    SW_EXPECT_TRUE( replay.isFinished( input.getVirtualFrameIndex() ) );
+    input.detachVirtualInput();
+    input.shutdown();
+}
+
+/**
+ * @brief [InputReplayTest] seekTo 는 그 프레임 직전 장치 상태를 만들고, 상태를 지우지 않고 붙이면 그 프레임부터 이어 낸다
+ */
+SW_TEST_CASE( InputReplayTest, ReplaySeekRebuildsDeviceState )
+{
+    using Internal = TestInputRobustnessInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bind( "Jump", sw::Key::Space, sw::ActionTrigger::Released );
+    sw::InputReplay replay;
+    Internal::recordSpaceTap( input, replay );
+
+    replay.seekTo( input, 5 ); // 4 에 누름 — 5 직전에는 눌린 채
+    SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_EQUAL( 5u, replay.getStartFrameIndex() );
+
+    // 이어 붙이면 원천 프레임 1 이 녹화 프레임 6(뗌)이다.
+    input.attachVirtualInput( &replay, sw::VirtualInputMode::Exclusive, false );
+    input.beginFrame( Internal::kFrameSeconds ); // 녹화 5
+    SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( sw::Key::Space ) );
+    input.endFrame();
+    input.beginFrame( Internal::kFrameSeconds ); // 녹화 6 — 뗌
+    SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( sw::Key::Space ) );
+    SW_EXPECT_TRUE( input.getInputMap().wasActionTriggered( "Jump" ) );
+    input.endFrame();
+    input.detachVirtualInput();
+
+    replay.seekTo( input, 7 ); // 6 에 뗌 — 7 직전에는 떼어짐
+    SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( sw::Key::Space ) );
+    replay.seekTo( input, 99 ); // 끝을 넘으면 끝으로
+    SW_EXPECT_EQUAL( replay.getFrameCount(), replay.getStartFrameIndex() );
+    input.shutdown();
+}
+
+/**
+ * @brief [InputReplayTest] 리플레이 파일은 프레임 · 원시 이벤트를 그대로 되읽고, 다른 판(3)의 파일과 잘린 파일은 읽지 않는다
+ * @details 파일은 `RawInputEvent` 를 구조체째로 적으므로 배치가 바뀐 판은 옛 판의 바이트를 지금 배치로 읽으면 안 된다.
  */
 SW_TEST_CASE( InputReplayTest, FileRoundTripKeepsEventsAndRejectsOtherVersion )
 {
+    using Internal = TestInputRobustnessInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
     sw::InputReplay recorded;
-    recorded.startRecording( "FileRoundTrip" );
-    for ( uint32 frameIndex = 0; frameIndex < 2; ++frameIndex )
-    {
-        sw::InputSnapshot snapshot{};
-        snapshot._tickNumber = frameIndex;
-        sw::vector<sw::RawInputEvent> listEvent;
-        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::D, 0, false, static_cast<uint8>( frameIndex + 1 ) ) );
-        recorded.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-    }
-    recorded.stopRecording();
+    Internal::recordSpaceTap( input, recorded );
 
     const sw::string path = test::makeTempPath( "roundtrip.swreplay" );
     SW_ASSERT_TRUE( recorded.saveToFile( path ) );
 
     sw::InputReplay loaded;
     SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
-    SW_ASSERT_EQUAL( 2u, loaded.getFrameCount() );
-    const sw::InputReplayFrame& lastFrame = loaded.getFrames()[1];
-    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( lastFrame._listRawEvent.size() ) );
-    SW_EXPECT_TRUE( lastFrame._listRawEvent[0]._type == sw::RawInputEventType::KeyDown );
-    SW_EXPECT_TRUE( lastFrame._listRawEvent[0]._payload._keyData._key == sw::Key::D );
-    SW_EXPECT_EQUAL( uint32( 2 ), static_cast<uint32>( lastFrame._listRawEvent[0]._modifierMask ) );
+    SW_EXPECT_EQUAL( "jump", loaded.getReplayName() );
+    SW_ASSERT_EQUAL( 8u, loaded.getFrameCount() );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( loaded.getFrames()[4]._listRawEvent.size() ) );
+    SW_EXPECT_TRUE( loaded.getFrames()[4]._listRawEvent[0]._type == sw::RawInputEventType::KeyDown );
+    SW_EXPECT_TRUE( loaded.getFrames()[4]._listRawEvent[0]._payload._keyData._key == sw::Key::Space );
 
-    // 머리말의 판(매직 4 바이트 뒤 uint32)을 2 로 바꾼 파일은 거절한다.
+    // 읽은 파일로 seekTo 해도 같은 상태다.
+    loaded.seekTo( input, 5 );
+    SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( sw::Key::Space ) );
+    input.shutdown();
+
     sw::vector<uint8> bytes;
     SW_ASSERT_TRUE( sw::FileUtil::readFile( path, bytes ) );
-    const uint32 otherVersion = 2;
+
+    // 잘린 파일(마지막 사건 반쪽)은 거절하고 읽던 리플레이를 그대로 둔다.
+    {
+        SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() - sizeof( sw::RawInputEvent ) / 2 ) );
+        SW_TEST_DEFENSIVE_SCOPE( "truncated replay file" );
+        SW_EXPECT_FALSE( loaded.loadFromFile( path ) );
+        SW_EXPECT_EQUAL( 8u, loaded.getFrameCount() );
+    }
+
+    // 머리말의 판(매직 4 바이트 뒤 uint32)을 3 으로 바꾼 파일은 거절한다.
+    const uint32 otherVersion = 3;
     sw::Memory::copy( bytes.data() + 4, &otherVersion, sizeof( otherVersion ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) );
     sw::InputReplay rejected;
@@ -112,43 +176,6 @@ SW_TEST_CASE( InputReplayTest, FileRoundTripKeepsEventsAndRejectsOtherVersion )
         SW_EXPECT_FALSE( rejected.loadFromFile( path ) );
     }
     SW_EXPECT_EQUAL( 0u, rejected.getFrameCount() );
-}
-
-/**
- * @brief [InputReplayTest] 1프레임 전진/후진 스텝 실행 검증
- */
-SW_TEST_CASE( InputReplayTest, StepForwardAndBackward )
-{
-    sw::InputManager input;
-    SW_EXPECT_TRUE( input.initialize() );
-
-    sw::InputReplay replay;
-    replay.startRecording( "StepSession" );
-
-    for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
-    {
-        sw::InputSnapshot snapshot{};
-        snapshot._tickNumber = frameIndex;
-        sw::vector<sw::RawInputEvent> listEvent;
-        listEvent.push_back( sw::RawInputEvent::makeKeyDown( sw::Key::Space ) );
-        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-    }
-    replay.stopRecording();
-
-    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
-
-    // 1프레임씩 전진
-    replay.stepForward( &input );
-    SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
-
-    replay.stepForward( &input );
-    SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
-
-    // 1프레임 후진
-    replay.stepBackward( &input );
-    SW_EXPECT_EQUAL( 1u, replay.getCurrentFrameIndex() );
-
-    input.shutdown();
 }
 
 /**
@@ -231,43 +258,30 @@ SW_TEST_CASE( InputEdgeCaseTest, GamepadTriggerDeadzoneAppliesInSetAxis )
 }
 
 /**
- * @brief [InputEdgeCaseTest] 리플레이 경계 조건(범위 초과 시킹, 0프레임 후진, 끝 프레임 전진, 손상된 헤더) 검증
+ * @brief [InputEdgeCaseTest] 리플레이 경계 — 빈 리플레이의 탐색 · 재생, 없는 파일
  */
-SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndCorruptedData )
+SW_TEST_CASE( InputEdgeCaseTest, ReplayBoundarySeekingAndMissingFile )
 {
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
     sw::InputReplay replay;
 
-    // 빈 리플레이 상태 안전성 검증
-    replay.play();
-    SW_EXPECT_FALSE( replay.isPlaying() );
-    replay.stepForward( nullptr );
-    replay.stepBackward( nullptr );
-    replay.seek( 100 );
-    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
-    SW_EXPECT_TRUE( replay.getCurrentFrame() == nullptr );
+    // 빈 리플레이: 탐색은 0 에 머물고, 붙여도 아무것도 내지 않고 바로 끝이다.
+    replay.seekTo( input, 100 );
+    SW_EXPECT_EQUAL( 0u, replay.getStartFrameIndex() );
+    SW_EXPECT_TRUE( replay.isFinished( 0 ) );
+    input.attachVirtualInput( &replay );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_TRUE( input.getLastFrameEvents().empty() );
+    input.endFrame();
+    input.detachVirtualInput();
 
-    // 프레임 3개 기록
-    replay.startRecording( "BoundaryTest" );
-    for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
-    {
-        sw::InputSnapshot snapshot{};
-        snapshot._tickNumber = frameIndex;
-        sw::vector<sw::RawInputEvent> listEvent;
-        replay.recordFrame( frameIndex, 0.016f, snapshot, listEvent );
-    }
-    replay.stopRecording();
+    // 녹화 중이 아니면 프레임을 적지 않는다.
+    replay.recordFrame( 0.016f, {} );
+    SW_EXPECT_EQUAL( 0u, replay.getFrameCount() );
 
-    // 범위 초과 시킹 검증 (2로 클램핑)
-    replay.seek( 99999 );
-    SW_EXPECT_EQUAL( 2u, replay.getCurrentFrameIndex() );
-
-    // 0번 프레임에서 stepBackward 시 언더플로 방어
-    replay.seek( 0 );
-    replay.stepBackward( nullptr );
-    SW_EXPECT_EQUAL( 0u, replay.getCurrentFrameIndex() );
-
-    // 손상된 파일 로드 시도
     SW_EXPECT_FALSE( replay.loadFromFile( "non_existent_file.swreplay" ) );
+    input.shutdown();
 }
 
 /**

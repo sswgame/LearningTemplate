@@ -2,23 +2,35 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Inventory/LootTable.h"
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/Progression/Reputation.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Vehicle/MountMovementComponent.h"
+#include "GameFramework/Base/Vehicle/MountUtil.h"
+#include "GameFramework/Base/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/HorseFollowAiController.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHonor.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHorse.h"
+#include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHorseMountComponent.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternHunting.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternLaw.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternSurvival.h"
 
 #include "TestFramework/TestFramework.h"
+
+#include <string>
 
 // 오픈월드 서부극 키트 — 카탈로그, 목격자 신고 · 처치로 막기 · 복면, 수배 감쇠 · 변장 · 추적 단계 · 현상금 지불, 명예 단계 · 할인 · 대사 플래그,
 // 말 유대 · 능력 해금 · 코어에 따른 회복 · 질주 탈진 · 겁, 플레이어 코어의 추위 · 옷 · 음식과 데드아이, 가죽 등급 · 부패 · 매입 값.
@@ -612,4 +624,78 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
     Archive survivalCut( survivalBytes.data(), survivalBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedSurvival.readState( survivalCut ) );
     SW_EXPECT_FALSE( truncatedSurvival.isDeadEyeActive() );
+}
+
+/**
+ * @brief [OpenWorldWesternTest] 말을 탈것 이동에 이으면 질주는 스태미나가 버틸 때만이고(바닥나면 구보로), 겁먹어 떨어뜨리면 탄 사람이 강제로 내리며, 말 AI 는 휘파람에 주인에게 온다
+ */
+SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndComesAtAWhistle )
+{
+    constexpr float32 kDeltaTime = 1.0f / 30.0f;
+    WesternCatalog    catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    WesternHorse horse;
+    SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 99u ) );
+
+    GameObjectManager manager;
+    GameObject*       pHorseObject = manager.createGameObject( hashed_string( "Horse" ) );
+    pHorseObject->addComponent<SceneComponent>();
+    PawnComponent* pHorsePawn = pHorseObject->addComponent<PawnComponent>();
+    pHorsePawn->setButtonNames( vector<hashed_string>{ hashed_string( "Sprint" ) } );
+    MountMovementComponent* pMovement = pHorseObject->addComponent<MountMovementComponent>();
+    pHorseObject->addComponent<VehicleSeatComponent>();
+    WesternHorseMountComponent* pHorseMount = pHorseObject->addComponent<WesternHorseMountComponent>();
+    pHorseMount->bindHorse( &horse );
+    GameObject* pRider = manager.createGameObject( hashed_string( "Rider" ) );
+    pRider->addComponent<SceneComponent>()->setWorldPosition( float3{ 1.0f, 0.0f, 0.0f } );
+    PawnComponent* pRiderPawn = pRider->addComponent<PawnComponent>();
+    auto*          pRiderAi   = manager.createGameObject( hashed_string( "RiderAi" ) )->addComponent<AiControllerComponent>();
+    manager.beginPlay();
+    pRiderAi->possess( *pRiderPawn );
+    SW_ASSERT_TRUE( MountUtil::mount( *pRiderPawn, *pHorseObject->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+
+    // 질주: 스태미나 100 · 초당 20 — 다섯 초 남짓이면 바닥나 구보로 떨어진다.
+    pRiderAi->moveTo( float3{ 0.0f, 0.0f, 10000.0f } );
+    pRiderAi->holdButton( "Sprint", true );
+    bool  bGalloped = false;
+    int32 frame     = 0;
+    for ( ; frame < 600 && pMovement->isGallopAllowed(); ++frame )
+    {
+        manager.tick( kDeltaTime );
+        bGalloped = bGalloped || pMovement->getGait() == MountGait::Gallop;
+    }
+    SW_EXPECT_TRUE( bGalloped );
+    SW_EXPECT_TRUE( horse.getStamina().isExhausted() );
+    SW_EXPECT_TRUE( frame > 100 && frame < 300 );
+    manager.tick( kDeltaTime );
+    SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
+
+    // 겁: 같은 씨앗의 말은 언젠가 떨어뜨린다 — 그 순간 강제 하차, 조종자는 탑승자를 다시 쥔다.
+    WesternHorseReaction reaction = WesternHorseReaction::Calm;
+    for ( int32 attempt = 0; attempt < 12 && reaction != WesternHorseReaction::Bucked; ++attempt )
+        reaction = pHorseMount->frighten( 1.5f );
+    SW_ASSERT_TRUE( reaction == WesternHorseReaction::Bucked );
+    SW_EXPECT_TRUE( pHorseObject->getComponent<VehicleSeatComponent>()->isFree() );
+    SW_EXPECT_TRUE( pRiderAi->getPawn() == pRiderPawn->getHandle() );
+
+    // 말 AI: 탄 사람이 없으면 말을 쥐고, 휘파람이면 멀리서도 주인 곁으로 와서 선다.
+    auto* pHorseAi = manager.createGameObject( hashed_string( "HorseAi" ) )->addComponent<HorseFollowAiController>();
+    pHorseAi->setOwnerObject( pRider->getHandle() );
+    pHorseAi->possess( *pHorsePawn );
+    pRiderAi->unpossess();
+    for ( int32 settleFrame = 0; settleFrame < 90; ++settleFrame ) // 떨어뜨릴 때 달리던 말이 선다
+        manager.tick( kDeltaTime );
+    pRider->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, 0.0f } );
+    pHorseObject->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, -6.0f } ); // 따라가기 거리(8) 안 — 휘파람 없이는 안 온다
+    horse.update( 60.0f, 0.0f );
+    pMovement->setGallopAllowed( true );
+    for ( int32 waitFrame = 0; waitFrame < 30; ++waitFrame )
+        manager.tick( kDeltaTime );
+    SW_EXPECT_TRUE( pHorseObject->getPrimarySceneComponent()->getWorldPosition()._z < -5.5f );
+    pHorseAi->whistle();
+    for ( int32 comeFrame = 0; comeFrame < 300 && pHorseAi->isCalled(); ++comeFrame )
+        manager.tick( kDeltaTime );
+    SW_EXPECT_FALSE( pHorseAi->isCalled() );
+    const float3 horseAt = pHorseObject->getPrimarySceneComponent()->getWorldPosition();
+    SW_EXPECT_TRUE_MSG( MathUtil::abs( horseAt._z ) < 3.5f, ( "horse at z " + std::to_string( horseAt._z ) ).c_str() );
 }

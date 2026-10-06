@@ -23,6 +23,7 @@ sw_addTestExecutable(AppTest
 	SOURCES
 		AppTestUtil.cpp
 		TestAppCook.cpp
+		TestAppScenario.cpp
 		TestAppSmoke.cpp
 		TestDevCommandShipping.cpp
 		TestFixedTimestep.cpp
@@ -31,12 +32,13 @@ sw_addTestExecutable(AppTest
 		Engine
 	LABELS
 		# `nogpu` · `hostgpu` 는 `HOST_SPLIT` 이 붙인다 — `AppTest_NoGPU` 는 실기동 스모크(`AppSmokeTest`)를 빼고,
-		# `AppTest_HostOnly` 는 그것만 돈다(직렬 — 창을 띄우고 GPU 를 잡는다).
+		# `AppTest_HostOnly` 는 그것과 자동화 시나리오(`AppScenarioTest`)만 돈다(직렬 — 창을 띄우고 GPU 를 잡는다).
 		"unit;app"
 	TIMEOUT
 		60
+	# 실기동 스모크 + 자동화 시나리오(AppScenarioTest — 시나리오 수 × 백엔드 넷 × 시나리오마다 수십 초). 시나리오가 늘어 넘치면 HOST_SHARDS 로 나눈다.
 	HOST_TIMEOUT
-		300
+		1200
 )
 
 # 스모크는 **빌드된 App 을 띄운다** — 타깃이 옆에 서 있어야 한다.

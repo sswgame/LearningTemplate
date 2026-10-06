@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 무기 교체 — 입력 층(가상 키보드)으로 E/Q 를 짧게 · 길게 · 같은 프레임에 눌러 무기 번호가 정확히 한 칸씩 바뀌는지 본다.
+  input-trigger 결함(axis1d 가 trigger 를 버려 누르는 동안 매 프레임 바뀜)과 합성 바인딩 같은 프레임 탭 결함의 회귀 그물. 무기: 0 소총 · 1 산탄총 · 2 권총(3 칸 순환).
+  실행: App.exe -scenario=game/shooter3d/automation/weaponswitch.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.weaponswitch" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0">
+		<Variable name="gv_shooterAutoPlay" value="0"/>
+		<Expect probe="Shooter3D.WeaponIndex" equals="0"/>
+	</At>
+	<!-- E 를 한 프레임 -->
+	<At frame="20"><Tap slot="Key.E" hold="1"/></At>
+	<At frame="30"><Expect probe="Shooter3D.WeaponIndex" equals="1"/></At>
+	<!-- E 를 세 프레임 -->
+	<At frame="40"><Tap slot="Key.E" hold="3"/></At>
+	<At frame="50"><Expect probe="Shooter3D.WeaponIndex" equals="2"/></At>
+	<!-- E 를 같은 프레임에 누르고 뗌(초고속 탭) — 한 번으로 인정 -->
+	<At frame="60"><Tap slot="Key.E" hold="0"/></At>
+	<At frame="70"><Expect probe="Shooter3D.WeaponIndex" equals="0"/></At>
+	<!-- Q 를 두 프레임 → 이전 -->
+	<At frame="80"><Tap slot="Key.Q" hold="2"/></At>
+	<At frame="90"><Expect probe="Shooter3D.WeaponIndex" equals="2"/></At>
+	<!-- E 를 1 초(60 프레임) 누른 채 — 그래도 한 칸 -->
+	<At frame="100"><Tap slot="Key.E" hold="60"/></At>
+	<At frame="130"><Expect probe="Shooter3D.WeaponIndex" equals="0"/></At>
+	<At frame="170"><Expect probe="Shooter3D.WeaponIndex" equals="0"/></At>
+	<!-- Q 를 1 초 누른 채 — 한 칸 -->
+	<At frame="180"><Tap slot="Key.Q" hold="60"/></At>
+	<At frame="250"><Expect probe="Shooter3D.WeaponIndex" equals="2"/></At>
+	<!-- 숫자 키는 그 칸으로(Weapon2 = Digit2 → 산탄총) -->
+	<At frame="260"><Tap slot="Key.Digit2" hold="2"/></At>
+	<At frame="270"><Expect probe="Shooter3D.WeaponIndex" equals="1"/></At>
+	<!-- 전제: 그동안 쓰러지지 않았다(쓰러지면 판이 다시 시작해 무기가 0 으로 돌아가 단언이 거짓 실패한다). 교체마다 [Shooter] 줄이 하나씩. -->
+	<At frame="280">
+		<Expect probe="Shooter3D.PlayerAlive" equals="1"/>
+		<ExpectLog contains="[Shooter] " atLeast="7" since="1"/>
+		<Pass/>
+	</At>
+</Scenario>

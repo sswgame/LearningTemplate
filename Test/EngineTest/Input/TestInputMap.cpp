@@ -114,12 +114,36 @@ SW_TEST_CASE( InputMapTest, MouseDeltaLookBinding )
     sw::InputMap& inputMap = input.getInputMap();
     inputMap.bindMouseDelta( "Look", 2.0f );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 10, 5 ) );
     input.beginFrame( 0.016f );
 
     const sw::float2 lookVec = inputMap.getVector2D( "Look" );
     SW_EXPECT_TRUE( lookVec._x != 0.0f || lookVec._y != 0.0f );
 
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] 마우스 휠은 1D 축이다 — 굴린 프레임에만 한 칸 × 배율(위가 +), 다음 프레임은 0
+ */
+SW_TEST_CASE( InputMapTest, MouseWheelIsAnAxisForTheFrameItTurns )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindMouseWheel( "Scroll", 0.5f );
+
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseWheel( -1.0f ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( -0.5f, inputMap.getAxis1D( "Scroll" ), 1.0e-6f );
+    input.endFrame();
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getAxis1D( "Scroll" ), 1.0e-6f );
+    input.endFrame();
     input.shutdown();
 }
 
@@ -134,6 +158,10 @@ SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
     inputMap.bindMouseDelta( "Look", 2.0f );
     const sw::ActionHandle look = inputMap.getActionHandle( "Look" );
 
+    // 첫 위치는 이동이 아니다(기준점) — 원점에 한 번 두고 시작한다.
+    input.postRawEvent( sw::RawInputEvent::makeMouseMove( 0, 0 ) );
+    input.beginFrame( 0.016f );
+    input.endFrame();
     input.postRawEvent( sw::RawInputEvent::makeMouseMove( 30, 0 ) );
     input.beginFrame( 0.016f );
     const sw::float2 raw      = sw::float2{ static_cast<float32>( input.getMouseDelta()._x ), static_cast<float32>( input.getMouseDelta()._y ) };
@@ -619,21 +647,21 @@ SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
         std::initializer_list<const utf8*> _listAction;
     };
     const GameInputMap arrGameMap[] = {
-        {   "game/abilityarena/data/arena.input.xml",{ "Arena.Move", "Arena.Melee", "Arena.Fireball", "Arena.Heal", "Arena.Dash" }                                                     },
+        {   "game/abilityarena/data/arena.input.xml",                                { "Arena.Move", "Arena.Melee", "Arena.Fireball", "Arena.Heal", "Arena.Dash" }                                                     },
         {   "game/harvestvalley/data/farm.input.xml",
          { "Farm.Move", "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext", "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep",
-         "Farm.Status" }                                                                                                                                      },
+         "Farm.Status" }                                                                                                                                                                                               },
         {        "game/nilecity/data/nile.input.xml",
-         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }},
+         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }                                                         },
         {"game/starskirmish/data/skirmish.input.xml",
          { "Camera.Pan", "Skirmish.SpectatorPan", "Skirmish.Slower", "Skirmish.Faster", "Skirmish.Pause", "Skirmish.Status", "Skirmish.AddToSelection",
          "Skirmish.GroupModifier", "Skirmish.AttackMove", "Skirmish.Stop", "Skirmish.Hold", "Skirmish.Command1", "Skirmish.Command2", "Skirmish.Command3",
          "Skirmish.Build.SupplyDepot", "Skirmish.Build.Barracks", "Skirmish.Build.Refinery", "Skirmish.Build.Academy", "Skirmish.Build.Factory",
-         "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                               },
+         "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                                                                                        },
         {       "game/themepark/data/park.input.xml",
          { "Camera.Pan", "Camera.Rotate", "Park.NextRide", "Park.ToggleOpen", "Park.PriceDown", "Park.PriceUp", "Park.FeeDown", "Park.FeeUp", "Park.Build",
-         "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                        },
-        {     "game/voxelcraft/data/voxel.input.xml",                             { "Voxel.Move", "Voxel.Jump", "Voxel.Sprint", "Voxel.Slot1", "Voxel.Slot9" }},
+         "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                                                                                 },
+        {     "game/voxelcraft/data/voxel.input.xml", { "Voxel.Move", "Voxel.Look", "Voxel.Jump", "Voxel.Sprint", "Voxel.Break", "Voxel.Place", "Voxel.HotbarScroll", "Voxel.Slot1", "Voxel.Slot9", "ToggleMouseLock" }},
     };
     for ( const GameInputMap& gameMap : arrGameMap )
     {
@@ -663,6 +691,7 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
     mapSave.bindShortcut( "ShortcutAction", sw::Key::S, sw::ModifierKey::Ctrl | sw::ModifierKey::Shift );
     mapSave.bindAnyKey( "AnyKeyAction" );
     mapSave.bindVirtualJoystick2D( "MoveJoystick", sw::MouseButton::Right, 80.0f, 0.2f, {}, 0.9f );
+    mapSave.bindMouseWheel( "ScrollWheel", 2.0f );
 
     const sw::string savePath = test::makeTempPath( "test_all_user_bindings.xml" );
     SW_EXPECT_TRUE( mapSave.saveUserBindings( savePath ) );
@@ -679,6 +708,10 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
     SW_EXPECT_TRUE( mapLoad.hasAction( "ShortcutAction" ) );
     SW_EXPECT_TRUE( mapLoad.hasAction( "AnyKeyAction" ) );
     SW_EXPECT_TRUE( mapLoad.hasAction( "MoveJoystick" ) );
+    const sw::ActionBinding* pWheelBind = mapLoad.getBinding( "ScrollWheel", 0 );
+    SW_ASSERT_NOT_NULL( pWheelBind );
+    SW_EXPECT_TRUE( pWheelBind->_kind == sw::BindingKind::MouseWheel1D );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pWheelBind->_scale, 0.001f );
 
     const sw::ActionBinding* pJoystickBind = mapLoad.getBinding( "MoveJoystick", 0 );
     if ( pJoystickBind != nullptr )

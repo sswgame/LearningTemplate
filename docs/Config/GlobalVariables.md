@@ -12,6 +12,7 @@
 |---|---|---|---|---|---|
 | `gv_devConsoleExec` | `string` | — | 시험 | 시작 씬이 열린 뒤 개발 콘솔로 돌릴 명령 (; 로 나눔) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_devConsoleOpen` | `int32` | `0` | 시험 | 게임 창 개발 콘솔을 연 채로 시작 (1=열기) | [App.cpp](../../Source/App/App.cpp) |
+| `gv_fixedFrameDelta` | `float32` | `0.0` | 시험 · 배포본에도 | 프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행 | [App.cpp](../../Source/App/App.cpp) |
 | `gv_reloadGameAtFrame` | `int32` | `0` | 시험 | 이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함) | [App.cpp](../../Source/App/App.cpp) |
 | `gv_userSettingsApply` | `string` | — | 시험 · 배포본에도 | 사용자 설정을 메뉴와 같은 길로 바꾼다: "id=value;id=value" (자동화) | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |
 | `gv_userSettingsApplyFrame` | `int32` | `30` | 시험 · 배포본에도 | gv_userSettingsApply 를 적용할 프레임 | [UserSettingsHost.cpp](../../Source/App/UserSettingsHost.cpp) |

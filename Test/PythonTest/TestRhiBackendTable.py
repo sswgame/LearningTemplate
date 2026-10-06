@@ -4,8 +4,8 @@
 RHI 백엔드 표(Config/Engine/CookContract.json rhi_backends)의 CMake 쪽 — `cmake/Engine/RhiBackends.cmake`.
 
 결함 고정: 배포 빌드가 고른 백엔드가 그 플랫폼에 없으면(리눅스 DirectX12) 예전 Engine CMakeLists 는 어느 갈래도 타지 않고 **백엔드 없는 Engine** 을
-링크했다(구성 · 빌드 통과, 실행에서 "백엔드 없음"). 이제 `sw_resolveShippingRhiBackend` 가 구성을 세운다. 이름 · 별칭은 대소문자 무관,
-모르는 이름은 구성 실패. 표의 줄마다 모듈 폴더 · 매니페스트 · 장치 소스 폴더가 실제로 있는지도 본다.
+링크했다(구성 · 빌드 통과, 실행에서 "백엔드 없음"). 이제 `sw_resolveShippingRhiBackend` 가 구성을 세운다. 표의 이름만 받는다 —
+명령줄 별칭(dx12 · vk)이나 대소문자가 다른 이름은 별칭 없이 구성 실패(옛 캐시 값을 고치라는 안내와 함께). 표의 줄마다 모듈 폴더 · 매니페스트 · 장치 소스 폴더가 실제로 있는지도 본다.
 """
 
 from __future__ import annotations
@@ -46,17 +46,20 @@ class RhiBackendTableTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             return runResolveInternal(Path(folder), backendText, platform, listPlatformOfDx12 or ["Windows"])
 
-    def testNameAndAliasesResolveCaseInsensitively(self) -> None:
-        for text, expected in (("DirectX12", "DirectX12"), ("dx12", "DirectX12"), ("D3D11", "DirectX11"), ("vk", "Vulkan"),
-                               ("OPENGL", "OpenGL")):
+    def testTableNamesResolve(self) -> None:
+        for text in ("DirectX11", "DirectX12", "Vulkan", "OpenGL"):
             completed = self.resolveInternal(text)
             self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertIn(f"resolved={expected}", completed.stderr)
+            self.assertIn(f"resolved={text}", completed.stderr)
 
-    def testUnknownNameStopsTheConfigure(self) -> None:
-        completed = self.resolveInternal("DX13")
-        self.assertNotEqual(completed.returncode, 0)
-        self.assertIn("unknown backend 'DX13'", " ".join(completed.stderr.split()))
+    def testAliasesAndUnknownNamesStopTheConfigure(self) -> None:
+        for text in ("dx12", "vk", "OPENGL", "DX13"):
+            completed = self.resolveInternal(text)
+            self.assertNotEqual(completed.returncode, 0, f"{text}: 별칭 · 모르는 이름이 구성을 통과했다")
+            message = " ".join(completed.stderr.split())
+            self.assertIn(f"unknown backend '{text}'", message)
+            self.assertIn("DirectX11, DirectX12, Vulkan, OpenGL", message)
+            self.assertIn("CMakeCache.txt", message)
 
     def testBackendMissingOnThisPlatformStopsTheConfigure(self) -> None:
         completed = self.resolveInternal("DirectX12", platform="Linux")

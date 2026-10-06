@@ -72,6 +72,8 @@ namespace sw
         , _screenshotFrameCounter{ 0 }
         , _screenshotShotCount{ 0 }
         , _budgetFrameCounter{ 0 }
+        , _completedScenarioScreenshotCount{ 0 }
+        , _bScenarioCaptureEnabled{ false }
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
@@ -334,7 +336,7 @@ namespace sw
         // 스크린샷 실행에서만 Present 결과를 텍스처로 받아 둔다. 전체 화면 복사가 한 번 더 붙는다.
         // **프레임마다 맞춘다**: bind() 시점에는 커맨드라인이 아직 전역 변수에 붙기 전일 수 있다.
         if ( _pFrameRenderer != nullptr )
-            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false );
+            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) );
 
         // 렌더 스레드 전체. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
         //
@@ -477,27 +479,41 @@ namespace sw
                 }
                 ++_screenshotShotCount;
                 _bScreenshotTaken = _screenshotShotCount >= shotCount ? SW_TRUE : SW_FALSE;
-                // 기본은 **Present 결과 캡처**, 곧 화면에 나간 그림이다. 캡처가 없으면 Present 가 읽는 첨부로 물러난다.
-                // 첨부 이름을 리터럴로 박지 말 것 — 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍힌다.
                 const string_view attachment{ gv_screenshotAttachment };
                 if ( attachment.empty() == false )
                 {
                     // 중간 단계를 보고 싶다고 이름을 찍어 준 경우. 그 첨부를 그대로 덤프한다.
                     _pFrameRenderer->dumpTransientToPpm( attachment, path );
                 }
-                else if ( _pFrameRenderer->dumpPresentCaptureToPpm( path ) == false )
+                else
                 {
-                    // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다.
-                    // 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
-                    string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
-                    if ( fallback.empty() )
-                        fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-                    _pFrameRenderer->dumpTransientToPpm( fallback, path );
+                    (void)writePresentedImage( path );
                 }
             }
         }
 
+        // 자동화 시나리오의 `<Screenshot>` — 이 패킷(그 게임 프레임)이 그린 그림이다. gv_screenshot 의 대기 프레임 규칙은 걸지 않는다(시나리오가 시작 조건 뒤에 찍는다).
+        if ( packet._screenshotPath.empty() == false )
+        {
+            if ( _pFrameRenderer == nullptr || writePresentedImage( packet._screenshotPath ) == false )
+                SW_LOG_WARNING( "Scenario screenshot was not written: %#", packet._screenshotPath.c_str() );
+            _completedScenarioScreenshotCount.fetch_add( 1, std::memory_order_acq_rel );
+        }
+
         return true;
+    }
+
+    bool RenderThread::writePresentedImage( const string& path )
+    {
+        // 기본은 **Present 결과 캡처**, 곧 화면에 나간 그림이다. 캡처가 없으면 Present 가 읽는 첨부로 물러난다.
+        // 첨부 이름을 리터럴로 박지 말 것 — 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍힌다.
+        if ( _pFrameRenderer->dumpPresentCaptureToPpm( path ) )
+            return true;
+        // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다. 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
+        string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
+        if ( fallback.empty() )
+            fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
+        return _pFrameRenderer->dumpTransientToPpm( fallback, path );
     }
 
     bool RenderThread::ensureContextOnCurrentThread()

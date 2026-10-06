@@ -28,6 +28,7 @@ namespace sw
 
     class AssetManager;
     class AssetStreamingQueue;
+    class AutomationRunner;
     class CameraComponent;
     class CommandLineManager;
     class CommandStack;
@@ -150,10 +151,21 @@ namespace sw
         static unique_ptr<InputMap> createShellInputMap( string_view inputMapPath );
 
         /**
-         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).
+         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
-        bool isQuitRequested() const { return _profileSession.isQuitRequested(); }
+        bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(자동화 시나리오 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
+        void requestQuit( int32 exitCode );
+        /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
+        int32 getExitCode() const { return _exitCode; }
+        /**
+         * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 자동화 시나리오가 돌던 중이면 그 결과로 종료 코드를 정합니다
+         *        (`ExpectExitWithin` 시한 안이면 통과, 아니면 실패 — 시나리오 결과가 프로파일 세션의 종료보다 이긴다).
+         */
+        void onWindowClosed();
+        /** @brief `-scenario` 로 돌고 있는 자동화 실행기입니다(없으면 nullptr). */
+        AutomationRunner* getAutomationRunner() const { return _pAutomationRunner.get(); }
 
         /**
          * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
@@ -248,6 +260,8 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GpuUploadQueue> _gpuUploadQueue;
+        /** @brief `-scenario=<파일>` 의 자동화 실행기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 결과 )` 입니다. */
+        unique_ptr<AutomationRunner> _pAutomationRunner;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
@@ -260,10 +274,13 @@ namespace sw
         bool           _bShellActionsBound;
         bool           _bHeadless;
         bool           _bHeadlessTaskFailed;
+        bool           _bQuitRequested;
         /** @brief RHI 기동 단계의 결과입니다(getRhiInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;
+        /** @brief `requestQuit` 이 정한 종료 코드입니다. */
+        int32 _exitCode;
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;

@@ -177,6 +177,7 @@ namespace sw
         uint8                  _bPointerEntered : 1; /**< 이번 프레임에 포인터가 창 안으로 새로 들어왔는지 여부(엣지). */
         uint8                  _bPointerLeft    : 1; /**< 이번 프레임에 포인터가 창 밖으로 새로 나갔는지 여부(엣지). */
         uint8                  _bHasSubRect     : 1; /**< _clipSubRectXxx 로 지정한 서브 영역 클리핑이 켜져 있는지 여부. */
-        [[maybe_unused]] uint8 _reserved        : 3;
+        uint8                  _bHasPosition    : 1; /**< 위치를 한 번이라도 받았다 — 첫 위치는 기준점이 없어 이동량을 내지 않는다. */
+        [[maybe_unused]] uint8 _reserved        : 2;
     };
 } // namespace sw

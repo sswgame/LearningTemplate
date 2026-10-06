@@ -31,6 +31,9 @@ namespace sw
      * @details 블록(부수고 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를 넘깁니다
      *          (`VoxelCraftGame`). 세운 청크는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews`) — 남은 디렉터는 다음 틱에 청크를 다시 세우고
      *          모두 다시 짓는다(블록은 그대로).
+     *
+     *          **자동 플레이 = AI 조종자의 빙의**: 자동 플레이 스위치(`gv_voxelAutoPlay` · 씬의 `_bAutoPlay`)가 바뀌면 틱 뒤 플러시에서 플레이어 폰을
+     *          `VoxelAutoPlayControllerComponent`(세운 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 쥐어 준다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Director", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
     class VoxelDirectorComponent : public GameDirectorComponent
@@ -63,12 +66,16 @@ namespace sw
         void               tickGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
+        /** @brief 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 입니다 — 베이스가 틱 끝에 플러시를 잡는다. */
+        bool hasPendingSpawn() const override;
 
     private:
         void decorateTerrain();
         void spawnChunks( GameObjectManager& manager );
         void scheduleRebuilds();
         void logStatus( float32 deltaTime );
+        /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자에게 쥐어 줍니다(게임 스레드, 틱 밖). */
+        void syncAutoPlayPossession( GameObjectManager& manager );
 
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
@@ -83,7 +90,9 @@ namespace sw
         float32 _statusLogInterval;
 
         VoxelWorld               _world;
-        vector<GameObjectHandle> _listChunk; ///< 청크 번호(z × 청크 수 X + x) 순
+        vector<GameObjectHandle> _listChunk;          ///< 청크 번호(z × 청크 수 X + x) 순
+        GameObjectHandle         _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(세운 것 — 걷을 목록에 든다)
         float32                  _statusTimer;
+        int8                     _appliedAutoPlay; ///< 플레이어 폰에 맞춰 둔 자동 플레이(−1 아직, 0 끔, 1 켬)
     };
 } // namespace sw

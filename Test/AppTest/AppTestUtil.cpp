@@ -5,6 +5,10 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 
+#include "Engine/Resource/ResourceUtil.h"
+
+#include "sw/config/ConfigConstants.h"
+
 namespace test
 {
     namespace
@@ -51,5 +55,22 @@ namespace test
         command += "\" ";
         command += arguments;
         return outProcess.launch( command );
+    }
+
+    sw::string AppTestUtil::readActivePackRoot()
+    {
+        sw::string packRoot;
+        if ( sw::ResourceUtil::initialize() == false )
+            return packRoot;
+        const sw::string repositoryRoot = sw::FileUtil::getDirectoryPart( sw::ResourceUtil::getRootFolderPath() );
+        sw::string       text;
+        if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::config::kFileRuntimeGameConfig ), text ) == false )
+            return packRoot;
+        const size_t keyIndex = text.find( "\"_packRoot\"" );
+        const size_t open     = keyIndex == sw::string::npos ? sw::string::npos : text.find( '"', text.find( ':', keyIndex ) );
+        const size_t close    = open == sw::string::npos ? sw::string::npos : text.find( '"', open + 1 );
+        if ( close != sw::string::npos )
+            packRoot = text.substr( open + 1, close - open - 1 );
+        return packRoot;
     }
 } // namespace test

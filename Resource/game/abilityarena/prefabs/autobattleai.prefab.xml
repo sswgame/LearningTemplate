@@ -1,0 +1,15 @@
+<Prefab formatVersion="0" name="ArenaAutoBattleAi">
+	<GameObject _schemaVersion="0" _name="ArenaAutoBattleAi" _bActive="true">
+		<_listComponent>
+			<ArenaAutoBattleAiComponent _componentName="ArenaAutoBattleAiComponent"
+			                            _bActive="true"
+			                            _possessAtStart="0"
+			                            _turnRate="20"
+			                            _arriveDistance="0.3"
+			                            _crowdRadius="2.5"
+			                            _crowdCount="3"
+			                            _meleeRange="2"
+			                            _healBelow="0.5" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

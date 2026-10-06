@@ -34,15 +34,29 @@
 			                    _trailColor="0.95,0.8,0.25,1"
 			                    _backgroundColor="0.08,0.08,0.1,0.8"
 			                    _bVisible="false" />
-			<ArenaEnemyControllerComponent _componentName="ArenaEnemyControllerComponent"
-			                               _bActive="true"
-			                               _director="0"
-			                               _kind="Caster"
-			                               _meleeReach="1.4"
-			                               _preferredMin="5"
-			                               _preferredMax="9"
-			                               _fireRange="12"
-			                               _unitRadius="0.5" />
+			<PawnComponent _componentName="PawnComponent"
+			               _bActive="true"
+			               _moveAction="Arena.Move"
+			               _lookAction="None"
+			               _upAction="None"
+			               _inputLayer="None"
+			               _aiControllerPrefab=""
+			               _maxPitch="1.4"
+			               _autoPossess="None">
+				<_listButton>
+					<item>Arena.Melee</item>
+					<item>Arena.Fireball</item>
+					<item>Arena.Heal</item>
+					<item>Arena.Dash</item>
+				</_listButton>
+				<_listAnalog />
+			</PawnComponent>
+			<ArenaUnitComponent _componentName="ArenaUnitComponent"
+			                    _bActive="true"
+			                    _director="0"
+			                    _kind="Caster"
+			                    _facingMode="ControlYaw"
+			                    _unitRadius="0.5" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

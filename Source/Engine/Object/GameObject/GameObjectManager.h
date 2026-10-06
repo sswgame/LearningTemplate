@@ -23,6 +23,7 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
+#include "Engine/Object/GameObject/ISceneFrameSystem.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Object/GameObject/SceneAudio.h"
 #include "Engine/Object/GameObject/SceneFrameStep.h"
@@ -165,6 +166,16 @@ namespace sw
          * @details 진단 · 시험용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
          */
         void setFrameStepObserver( FrameStepObserver observer ) { _frameStepObserver = std::move( observer ); }
+
+        /** @brief 이름 붙은 프레임 시스템(`ISceneFrameSystem`)입니다. 없으면 nullptr 입니다. */
+        ISceneFrameSystem* findFrameSystem( const hashed_string& key ) const;
+        /**
+         * @brief 프레임 시스템을 붙입니다(소유). 같은 이름이 있거나 nullptr 이면 거절하고 false 입니다. 붙인 순서가 `FrameSystems` 단계의 실행 순서입니다.
+         * @details 게임 스레드, 틱 밖에서 부릅니다. 단계가 도는 중에 붙인 것은 다음 프레임부터 돕니다.
+         */
+        [[nodiscard]] bool addFrameSystem( const hashed_string& key, unique_ptr<ISceneFrameSystem> pSystem );
+        /** @brief 프레임 시스템을 떼어 놓습니다(없으면 할 일이 없다). 단계가 도는 중이면 그 단계가 끝난 뒤 놓습니다 — 도는 시스템이 자신을 떼어도 된다. */
+        void removeFrameSystem( const hashed_string& key );
 
         /**
          * @brief 트랜스폼 계층입니다(루트 목록 · 더티 세대 · 플러시 알고리즘). 매니저는 소유하고 tick 의 단계만 정합니다.
@@ -391,6 +402,13 @@ namespace sw
          */
         void stepPhysics( float32 deltaTime );
 
+        /** @brief 붙은 프레임 시스템 하나입니다. */
+        struct FrameSystemEntry
+        {
+            hashed_string                 _key;
+            unique_ptr<ISceneFrameSystem> _pSystem;
+        };
+
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
 #define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
 #include "Engine/Object/GameObject/SceneFrameStepList.xxx"
@@ -425,5 +443,11 @@ namespace sw
         SceneNavigation _sceneNavigation;
         /** @brief 단계마다 돌기 직전에 부르는 관찰자(`setFrameStepObserver`)입니다. 보통 비어 있습니다. */
         FrameStepObserver _frameStepObserver;
+        /** @brief `FrameSystems` 단계가 붙인 순서대로 부르는 시스템입니다. 오브젝트보다 먼저 비웁니다(시스템이 컴포넌트를 가리킬 수 있다). */
+        vector<FrameSystemEntry> _listFrameSystem;
+        /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
+        vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
+        /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
+        bool _bRunningFrameSystems;
     };
 } // namespace sw

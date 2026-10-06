@@ -10,6 +10,10 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Object/Component/Navigation/NavMeshSurfaceComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace navtest
 {
@@ -63,6 +67,47 @@ namespace navtest
         if ( sw::NavMeshBakeUtil::bakeAllTiles( *pNavMesh, geometry, pExtraVolume, pOutStats ) == false )
             return nullptr;
         return pNavMesh;
+    }
+
+    /** @brief Static 강체 상자(반 크기 @p halfExtents)를 씬에 놓습니다. */
+    inline sw::GameObject* spawnStaticBody( sw::GameObjectManager& manager, const utf8* pName, const sw::float3& center, const sw::float3& halfExtents )
+    {
+        sw::GameObject*         pObject = manager.createGameObject( sw::hashed_string( pName ) );
+        sw::RigidBodyComponent* pBody   = pObject->addComponent<sw::RigidBodyComponent>();
+        sw::PhysicsShapeDesc3D  box;
+        box._halfExtents = halfExtents;
+        pBody->setShape( box );
+        pBody->setBodyType( sw::PhysicsBodyType::Static );
+        pBody->setLocalPosition( center );
+        return pObject;
+    }
+
+    /** @brief 종류 "TestHumanoid" 를 @p source 기하로 베이크하는 내비메시 표면을 씬에 놓습니다. */
+    inline sw::NavMeshSurfaceComponent* spawnSurface( sw::GameObjectManager& manager, sw::NavGeometrySource source )
+    {
+        sw::GameObject*              pObject  = manager.createGameObject( sw::hashed_string( "NavSurface" ) );
+        sw::NavMeshSurfaceComponent* pSurface = pObject->addComponent<sw::NavMeshSurfaceComponent>();
+        pSurface->setAgentTypes( { sw::hashed_string( "TestHumanoid" ) } );
+        pSurface->setGeometrySource( source );
+        return pSurface;
+    }
+
+    /**
+     * @brief 강체 바닥(30 × 30, 윗면 y = 0) · 가운데 상자 벽(x −1..1, z −4..4)과 그것을 강체 기하로 베이크하는 표면입니다 — 에이전트가 벽을 돌아가는 장면.
+     * @details 씬 내비게이션의 설정을 시험 표(`makeSettings`)로 바꿉니다.
+     */
+    inline void spawnPhysicsCrateScene( sw::GameObjectManager& manager )
+    {
+        manager.getSceneNavigation().setSettings( makeSettings() );
+        spawnStaticBody( manager, "Floor", sw::float3{ 0.0f, -0.5f, 0.0f }, sw::float3{ 15.0f, 0.5f, 15.0f } );
+        spawnStaticBody( manager, "Crates", sw::float3{ 0.0f, 1.0f, 0.0f }, sw::float3{ 1.0f, 1.0f, 4.0f } );
+        spawnSurface( manager, sw::NavGeometrySource::PhysicsColliders );
+    }
+
+    /** @brief 가운데 상자 벽(x −1..1, z −4..4) 안이면 true 입니다. */
+    inline bool isInsideCrates( const sw::float3& position )
+    {
+        return -1.0f < position._x && position._x < 1.0f && -4.0f < position._z && position._z < 4.0f;
     }
 
     /** @brief 찾는 범위(반지름 × 4, 높이)입니다. */
