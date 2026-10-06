@@ -151,6 +151,18 @@ namespace sw
         GameObjectHandle _gate;
         PROPERTY( Category = "Build", DisplayName = "Auto Build Interval", Tooltip = "Seconds between automatic builds when auto play is on", Min = 1.0, Units = s )
         float32 _autoBuildInterval;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
+        PROPERTY( Category = "Coaster", DisplayName = "Car Count", Tooltip = "Cars in the coaster train", Min = 1 )
+        uint32 _carCount;
+        PROPERTY( Category = "Coaster", DisplayName = "Model Scale", Tooltip = "Scale of the rail, support and car models", Min = 0.0 )
+        float32 _modelScale;
+        PROPERTY( Category = "Ride Camera", DisplayName = "Eye Height", Min = 0.0, Units = m )
+        float32 _rideEyeHeight;
+        PROPERTY( Category = "Ride Camera", DisplayName = "Field Of View", Min = 0.1, Units = rad )
+        float32 _rideFieldOfView;
+        PROPERTY( Category = "Ride Camera", DisplayName = "Far Plane", Min = 1.0, Units = m )
+        float32 _rideFarPlane;
 
         ThemeParkSimulation                _simulation;
         Wallet                             _wallet; ///< 공원 금고 — 키트 하나만 쓰는 게임이라 디렉터가 들고 빌려 준다
