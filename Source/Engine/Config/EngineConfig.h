@@ -56,7 +56,11 @@ namespace sw
         PROPERTY( Min = 0.001, Units = s )
         float32 _maxFrameDeltaTime{ 0.1f };
 
-        /** @brief 고정 주기 업데이트(게임 `fixedUpdate`) 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다. */
+        /**
+         * @brief 고정 주기 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다.
+         * @details 고정 스텝 값의 출처는 이것 하나다 — 게임 `fixedUpdate` 와 씬 물리가 같이 쓴다(물리는 `PhysicsSettings::_subStepCount` 로 이 스텝을 나눈다,
+         *          유니티 `Time.fixedDeltaTime` 과 같다).
+         */
         PROPERTY( Min = 0.001, Units = s )
         float32 _fixedDeltaTime{ 1.0f / 60.0f };
 
@@ -70,5 +74,10 @@ namespace sw
 
         PROPERTY()
         vector<string> _listResourcePriority{ "game", "common", "engine", "editor" }; ///< 리소스 팩 탐색 우선순위(앞이 먼저)
+
+        /** @brief 호스트가 읽은 활성 값을 엔진 안(씬 물리의 고정 스텝 등)에 알립니다. 기동 · 설정 다시 읽기 때 호스트가 부릅니다. */
+        static void setActive( const EngineConfig& config );
+        /** @brief 활성 값입니다. 호스트가 알리기 전에는 기본값입니다. */
+        static const EngineConfig& getActive();
     };
 } // namespace sw

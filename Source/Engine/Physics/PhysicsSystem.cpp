@@ -51,7 +51,7 @@ namespace sw
         if ( JoltPhysicsBackend::initialize() == false )
             return false;
         _bInitialized = true;
-        SW_LOG_INFO( "Physics ready: %# layers, %# materials, step %# s", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._fixedTimeStep );
+        SW_LOG_INFO( "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
         return true;
     }
 

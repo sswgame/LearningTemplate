@@ -188,6 +188,7 @@ namespace sw
             loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
             if ( loop._pEngineConfig == nullptr )
                 return EngineInitResult::Failed;
+            EngineConfig::setActive( *loop._pEngineConfig );
 
             // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
             const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
@@ -964,8 +965,11 @@ namespace sw
                 GameConfig::setActive( *pGameConfig );
             return;
         }
+        if ( configTypeName != EngineConfig::StaticType()->_fullyQualifiedName || _pEngineConfig == nullptr )
+            return;
+        EngineConfig::setActive( *_pEngineConfig );
         // 수직 동기화는 다음에 스왑체인을 만들 때(창 크기 변경 · 백엔드 교체) 적용된다.
-        if ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName && _rhi != nullptr && _pEngineConfig != nullptr )
+        if ( _rhi != nullptr )
             _rhi->setPreferredVSync( _pEngineConfig->_window._bVSync );
     }
 

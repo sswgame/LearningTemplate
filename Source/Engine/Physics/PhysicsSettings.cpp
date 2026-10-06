@@ -55,7 +55,7 @@ namespace sw
             SW_LOG_ERROR( "Physics settings declare %# layers - at most %# are supported", _listLayer.size(), kMaxLayerCount );
             bValid = false;
         }
-        if ( _fixedTimeStep <= 0.0f || _maxStepsPerFrame == 0 || _subStepCount2D == 0 )
+        if ( _subStepCount == 0 || _subStepCount2D == 0 )
         {
             SW_LOG_ERROR( "Physics settings need a positive fixed step, at least one step per frame and one 2D sub-step" );
             bValid = false;

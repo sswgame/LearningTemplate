@@ -119,6 +119,7 @@ namespace
                 host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
                 if ( host._pEngineConfig == nullptr )
                     return sw::EngineInitResult::Failed;
+                sw::EngineConfig::setActive( *host._pEngineConfig );
                 const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
                 if ( pGameConfig == nullptr )
                     return sw::EngineInitResult::Failed;

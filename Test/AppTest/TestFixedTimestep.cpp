@@ -2,6 +2,8 @@
 
 #include "App/FixedTimestep.h"
 
+#include "Engine/Config/EngineConfig.h"
+
 #include "TestFramework/TestFramework.h"
 
 #include <chrono>
@@ -109,9 +111,10 @@ SW_TEST_CASE( FixedTimestepTest, NonPositiveConfigurationFallsBackToDefaults )
     sleepLongerThanAnyClamp();
     const FrameTime frame = timeline.advance();
 
-    SW_EXPECT_NEAR_EQUAL( FixedTimestep::kDefaultMaxFrameDeltaTime, frame._deltaTime, 0.0001f );
-    SW_EXPECT_NEAR_EQUAL( FixedTimestep::kDefaultFixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
-    SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= FixedTimestep::kDefaultMaxFixedStepPerFrame,
+    const EngineConfig defaults{};
+    SW_EXPECT_NEAR_EQUAL( defaults._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( defaults._fixedDeltaTime, frame._fixedDeltaTime, 0.0001f );
+    SW_EXPECT_TRUE_MSG( frame._fixedStepCount <= defaults._maxFixedStepPerFrame,
                         "기본 상한을 넘겨 스텝을 돌렸다" );
     // 기본값 둘의 몫은 6 이다 — 부동소수 나눗셈이라 5 로 떨어질 수 있어 아래를 열어 둔다.
     SW_EXPECT_TRUE( frame._fixedStepCount >= 5u );

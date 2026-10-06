@@ -41,13 +41,6 @@ namespace sw
     class FixedTimestep
     {
     public:
-        /** @brief 설정이 비었을 때 쓰는 시뮬레이션 주기(60Hz)입니다. */
-        static constexpr float32 kDefaultFixedDeltaTime = 1.0f / 60.0f;
-        /** @brief 설정이 비었을 때 쓰는 최대 가변 델타(초)입니다. */
-        static constexpr float32 kDefaultMaxFrameDeltaTime = 0.1f;
-        /** @brief 설정이 비었을 때 쓰는 프레임당 고정 스텝 상한입니다. 두 기본값의 몫과 같습니다. */
-        static constexpr uint32 kDefaultMaxFixedStepPerFrame = 6;
-
         FixedTimestep();
 
         /** @brief 시간 정책을 설정합니다. 0 이하의 값은 기본값으로 되돌립니다. */

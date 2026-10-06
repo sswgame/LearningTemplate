@@ -1,12 +1,10 @@
 <!--
-	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 고정 스텝.
+	물리 설정 표 — 충돌 레이어(순서가 번호 0..31) · 레이어끼리의 충돌 · 물리 재질 · 중력 · 서브스텝(고정 스텝 길이는 EngineConfig._fixedDeltaTime 하나).
 	코드는 이름으로만 고른다(PhysicsSettings::findLayerIndex · findMaterial). 모르는 이름 · 겹친 이름은 읽을 때 오류다.
 	충돌 목록은 대칭으로 읽는다 — 한쪽에만 적어도 둘이 부딪힌다.
 -->
 <PhysicsSettings _gravity="0,-9.81,0"
                  _gravity2D="0,-9.81"
-                 _fixedTimeStep="0.016666668"
-                 _maxStepsPerFrame="4"
                  _subStepCount2D="4">
 	<_listLayer>
 		<PhysicsLayerDef _name="Default">
