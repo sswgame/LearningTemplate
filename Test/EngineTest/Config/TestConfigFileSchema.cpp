@@ -56,16 +56,17 @@ namespace
 
         /** @brief 앞의 줄이 먼저 맞습니다. `Config/Editor/` 는 EditorTest(`EditorConfigFileSchemaTest`)가 본다. 짝은 `Scripts/common/ConfigCatalog.py` 다. */
         static constexpr ConfigKind kArrKind[] = {
-            {"Config/Engine/EngineConfig.json",                                          "", &loadStrict<sw::EngineConfig>},
-            {"Config/Engine/MemoryBudget.json",                                          "",             &loadMemoryBudget},
-            {                   "Config/Game/",                                          "",   &loadStrict<sw::GameConfig>},
-            {                 "Config/Server/",                                          "", &loadStrict<sw::ServerConfig>},
-            {"Config/Engine/CookContract.json",                "CheckCookContract (python)",                       nullptr},
-            {  "Config/Engine/PackFormat.json",            "GeneratePackFormat (configure)",                       nullptr},
-            {  "Config/Engine/PackConfig.json",                       "CookAssets (python)",                       nullptr},
-            {            "Config/Environment/", "SetupEnvironment (python) - machine-local",                       nullptr},
-            {                 "Config/Editor/",   "EditorConfigFileSchemaTest (EditorTest)",                       nullptr},
-            {               "Config/README.md",                              "not a config",                       nullptr},
+            {    "Config/Engine/EngineConfig.json",                                          "", &loadStrict<sw::EngineConfig>},
+            {    "Config/Engine/MemoryBudget.json",                                          "",             &loadMemoryBudget},
+            {                       "Config/Game/",                                          "",   &loadStrict<sw::GameConfig>},
+            {"Config/Server/chat_banned_words.txt",  "ChatWordFilterTest (word list, not keys)",                       nullptr},
+            {                     "Config/Server/",                                          "", &loadStrict<sw::ServerConfig>},
+            {    "Config/Engine/CookContract.json",                "CheckCookContract (python)",                       nullptr},
+            {      "Config/Engine/PackFormat.json",            "GeneratePackFormat (configure)",                       nullptr},
+            {      "Config/Engine/PackConfig.json",                       "CookAssets (python)",                       nullptr},
+            {                "Config/Environment/", "SetupEnvironment (python) - machine-local",                       nullptr},
+            {                     "Config/Editor/",   "EditorConfigFileSchemaTest (EditorTest)",                       nullptr},
+            {                   "Config/README.md",                              "not a config",                       nullptr},
         };
 
         static const ConfigKind* findKind( sw::string_view relativePath )
