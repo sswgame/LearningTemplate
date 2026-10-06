@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    /** @brief 채팅 요청의 결과입니다(키트 오류 코드 = `OnlineMethodRange::kChat` + 값 — 0 은 성공). 와이어 형식이다. */
+    /** @brief 채팅 요청의 결과입니다(응답 몸의 첫 값 — 0 은 성공). 와이어 형식이라 순서를 바꾸지 않는다(끝에만 더한다). */
     enum class ChatResult : uint8
     {
         Ok = 0,
@@ -25,10 +25,10 @@ namespace sw
         Repeated,      ///< 같은 글 반복
         Rejected,      ///< 금칙어(거절 방식일 때)
         TargetOffline, ///< 귓속말 상대가 없다
-        Blocked,       ///< 상대가 나를 막았다 — 보낸 이에게는 TargetOffline 으로 답한다(막힌 것을 드러내지 않는다)
         Invalid,       ///< 빈 글 · 상한 · 잘못된 UTF-8 · 규칙 밖 채널 id
-        Unavailable,   ///< 저장소(기록 읽기)
-        TooManyChannels
+        Unavailable,   ///< 저장소 · 캐시 · 전송
+        TooManyChannels,
+        NotSignedIn ///< 로그인하지 않은 연결(공통 오류 `kUnauthenticated`)
     };
 
     SW_GF_API const utf8* toString( ChatResult result );

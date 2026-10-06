@@ -42,14 +42,14 @@ namespace sw
                 return "Rejected";
             case ChatResult::TargetOffline:
                 return "TargetOffline";
-            case ChatResult::Blocked:
-                return "Blocked";
             case ChatResult::Invalid:
                 return "Invalid";
             case ChatResult::Unavailable:
                 return "Unavailable";
             case ChatResult::TooManyChannels:
                 return "TooManyChannels";
+            case ChatResult::NotSignedIn:
+                return "NotSignedIn";
         }
         return "Unknown";
     }
