@@ -211,6 +211,7 @@ py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a heade
 py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
 py -3 Scripts/lint/report/RunPaddingReport.py                  # per-record size, padding and the reorder floor (libclang)
 py -3 Scripts/lint/report/RunRepeatedConstants.py              # constants/literals defined in more than one place
+py -3 Scripts/lint/report/RunDocStyle.py                       # prose shape per doc: noun chains, nested parens, long sentences, folder trees, coined terms
 py -3 Scripts/lint/report/RunFolderFileCount.py                # folders over 40 code files, single-file Source folders
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
