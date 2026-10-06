@@ -744,6 +744,10 @@ namespace sw
             const LoginResult sanction = evaluateSanction( session._accountId, nowMs, outGrant );
             if ( sanction != LoginResult::Ok )
                 return sanction;
+            // 신원은 비밀을 바꾸기 **전에** 읽는다 — 못 읽으면 빈 신원으로 Ok 를 주지 않고, 클라이언트가 든 토큰도 살려 둔다(validateSession 과 같은 결과).
+            Internal::ProfileRecord profile;
+            if ( Internal::readProfile( _connection, session._accountId, profile ) != ServiceStoreResult::Ok )
+                return LoginResult::StoreUnavailable;
 
             // 재접속마다 비밀을 돌려 바꾼다 — 옛 토큰은 이 커밋으로 죽는다.
             LoginSessionToken rotated;
@@ -763,13 +767,10 @@ namespace sw
 
             _outcome._listOnline.push_back( LoginSessionRef{ session._accountId, token._sessionId, LoginRevokeReason::None } );
             _outcome._listEvent.push_back( LoginEvent{ session._accountId, token._sessionId, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
-            // 신원을 못 읽으면 빈 신원으로 간다 — 결함 의심: 로그인은 Ok 인데 신원이 비고, validateSession 은 같은 실패를 StoreUnavailable 로 돌려준다
-            (void)readIdentity( _connection, session._accountId, outGrant._identity );
-            Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, session._accountId, profile ) == ServiceStoreResult::Ok )
-                outGrant._deletionDueMs = profile._deletionDueMs;
-            outGrant._token       = rotated;
-            outGrant._expiresAtMs = session._expiresAtMs;
+            outGrant._identity      = Internal::makeIdentity( session._accountId, profile );
+            outGrant._deletionDueMs = profile._deletionDueMs;
+            outGrant._token         = rotated;
+            outGrant._expiresAtMs   = session._expiresAtMs;
             return LoginResult::Ok;
         }
         return LoginResult::InvalidToken;

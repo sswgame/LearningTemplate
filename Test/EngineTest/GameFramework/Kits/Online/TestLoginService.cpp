@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
+#include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Online/Server/Account/LoginService.h"
 #include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/FakePlatformLoginProvider.h"
@@ -478,6 +479,48 @@ SW_TEST_CASE( LoginServiceTest, ResumeWithinGraceRotatesTheTokenAndExpiresAfter 
     LoginGrant late;
     SW_EXPECT_TRUE( fixture->resumeSession( resumed._token, 1, 10000 + fixture._settings._reconnectGraceMs, late ) == LoginResult::Expired );
     SW_EXPECT_TRUE( fixture->validateSession( resumed._token, fixture._settings._sessionLifetimeMs, identity ) == LoginResult::Expired );
+}
+
+/**
+ * @brief [LoginServiceTest] 재접속에서 신원을 못 읽으면 실패로 돌려주고 토큰을 돌려 바꾸지 않는다
+ * @details 신원(프로필)을 못 읽은 채 Ok 를 돌려주면 빈 신원으로 로그인되고, 비밀을 바꾼 뒤에 실패를 돌려주면 클라이언트가 든 토큰이 죽는다.
+ *          프로필 레코드를 깨뜨려 읽기를 실패시키고, 되돌린 뒤 같은 토큰으로 다시 이어받을 수 있는지 본다.
+ */
+SW_TEST_CASE( LoginServiceTest, ResumeWithUnreadableIdentityFailsAndKeepsTheToken )
+{
+    using Internal = TestLoginServiceInternal;
+    LoginFixture fixture;
+    uint64       accountId = 0;
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "gwen", "password123" ), 0, &accountId ) == LoginResult::Ok );
+    LoginGrant grant;
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "gwen", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    fixture->markDisconnected( grant._token._sessionId, 1000 );
+
+    const hashed_string profileTable{ "login_account_id" };
+    const string        profileKey = ServiceKeyUtil::makeHex64( accountId );
+    ServiceRecord       original;
+    SW_ASSERT_TRUE( fixture._database.readRecord( profileTable, profileKey, original ) == ServiceStoreResult::Ok );
+    {
+        ServiceTransaction corrupt;
+        corrupt.put( profileTable, profileKey, vector<uint8>{ 0xFF } );
+        SW_ASSERT_TRUE( fixture._database.commit( corrupt ) == ServiceStoreResult::Ok );
+    }
+
+    LoginGrant failed;
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a corrupt account profile is reported while resuming" );
+        SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, 2000, failed ) == LoginResult::StoreUnavailable );
+    }
+    SW_EXPECT_EQUAL( uint64{ 0 }, failed._identity._accountId );
+
+    {
+        ServiceTransaction restore;
+        restore.put( profileTable, profileKey, original._bytes );
+        SW_ASSERT_TRUE( fixture._database.commit( restore ) == ServiceStoreResult::Ok );
+    }
+    LoginGrant resumed;
+    SW_EXPECT_TRUE( fixture->resumeSession( grant._token, 1, 3000, resumed ) == LoginResult::Ok ); // 실패한 시도가 비밀을 바꾸지 않았다
+    SW_EXPECT_EQUAL( string( "gwen" ), resumed._identity._displayName );
 }
 
 SW_TEST_CASE( LoginServiceTest, SessionsSurviveAServiceRestart )
