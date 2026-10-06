@@ -13,6 +13,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
@@ -40,7 +41,7 @@ namespace sw
         StreamConnectionHandle _connection{};
         AccountId              _accountId{ kInvalidAccountId }; ///< 로그인한 연결이면(`bindAccount` 로 붙인 주체)
         uint64                 _remoteKey{ 0 };                 ///< 원격 주소 해시(로그인 전 도배 제한 단위)
-        uint64                 _traceId{ 0 };                   ///< 요청 추적 id(관측 자리)
+        LogTraceId             _traceId{};                      ///< 요청 추적 id(요청 머리 — 없으면 요청 서버가 만든다)
         int64                  _nowMs{ 0 };                     ///< 서버 벽시계(마지막 `tick` 의 시각)
         uint16                 _method{ 0 };
     };
@@ -204,7 +205,6 @@ namespace sw
         unordered_map<AccountId, StreamConnectionHandle> _mapAccountToConnection;
         IStreamTransport*                                _pTransport;
         int64                                            _nowMs;
-        uint64                                           _nextTraceId;
         uint8                                            _bInitialized;
     };
 } // namespace sw

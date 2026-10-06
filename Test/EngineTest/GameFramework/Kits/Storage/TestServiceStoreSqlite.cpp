@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Storage/Server/SqlStore/ServiceStoreFactory.h"
 #include "GameFramework/Kits/Storage/Server/SqlStore/SqlServiceStore.h"
 
-// SQL 서비스 저장소(SQLite) — IServiceStore 계약 여섯(메모리 · PostgreSQL 과 같은 케이스), 다시 띄워도 데이터 · 판이 이어진다, 저장소 공장(memory · sqlite · 없는 드라이버).
+// SQL 서비스 저장소(SQLite) — IServiceStore 계약 일곱(메모리 · PostgreSQL 과 같은 케이스), 다시 띄워도 데이터 · 판이 이어진다, 저장소 공장(memory · sqlite · 없는 드라이버).
 
 using namespace sw;
 

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
+#include "Core/Log/LogContext.h"
 #include "Core/String/StringUtil.h"
 
 #include <algorithm>
@@ -296,14 +297,18 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             bShutdown = _bShutdown == SW_TRUE;
         }
-        if ( bShutdown )
+        work->bindLogContext( LogContext::getCurrent() );
         {
-            MemoryServiceStoreInternal::ClosedConnection closed;
-            work->run( closed );
-        }
-        else
-        {
-            work->run( *_pDatabase );
+            ScopedLogContext scope( work->getLogContext() );
+            if ( bShutdown )
+            {
+                MemoryServiceStoreInternal::ClosedConnection closed;
+                work->run( closed );
+            }
+            else
+            {
+                work->run( *_pDatabase );
+            }
         }
         std::scoped_lock<mutex> lock{ _mutex };
         _listCompleted.push_back( std::move( work ) );
@@ -318,7 +323,10 @@ namespace sw
             listReady.swap( _listCompleted );
         }
         for ( unique_ptr<IServiceStoreWork>& work : listReady )
+        {
+            ScopedLogContext scope( work->getLogContext() ); // 문맥 없는 스레드에서 거둬도 맡긴 요청의 꼬리표로
             work->complete();
+        }
         return static_cast<int32>( listReady.size() );
     }
 

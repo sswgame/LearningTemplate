@@ -6,7 +6,7 @@
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
-// 메모리 서비스 저장소 — 계약 여섯 + 실패 주입(커밋 거절 · 응답 유실 · 읽기 거절), 앞 둘 · 데이터 하나, 내린 뒤 맡긴 일.
+// 메모리 서비스 저장소 — 계약 일곱(로그 문맥 포함) + 실패 주입(커밋 거절 · 응답 유실 · 읽기 거절), 앞 둘 · 데이터 하나, 내린 뒤 맡긴 일.
 
 using namespace sw;
 

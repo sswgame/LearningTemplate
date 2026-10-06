@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 
+#include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
@@ -45,7 +46,6 @@ namespace sw
         , _mapAccountToConnection{}
         , _pTransport{ nullptr }
         , _nowMs{ 0 }
-        , _nextTraceId{ 1 }
         , _bInitialized{ SW_FALSE }
     {
     }
@@ -361,10 +361,11 @@ namespace sw
         callContext._connection     = context._token._handle;
         callContext._accountId      = connection._accountId;
         callContext._remoteKey      = connection._remoteKey;
-        callContext._traceId        = _nextTraceId++;
+        callContext._traceId        = context._traceId;
         callContext._nowMs          = _nowMs;
         callContext._method         = method;
-        BitReader body( context._pBody, context._bodySize );
+        BitReader        body( context._pBody, context._bodySize );
+        ScopedLogContext scope( LogContext{ callContext._traceId, callContext._accountId } ); // 서비스가 맡긴 저장소 일까지 같은 꼬리표
         pService->onServiceRequest( *this, callContext, body );
     }
 

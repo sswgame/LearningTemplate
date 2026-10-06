@@ -1,7 +1,8 @@
 /**
  * @file NetRequest.h
  * @brief 서비스 요청-응답(복제용 RPC 아님) — 요청 id · 시한 · 취소 · 멱등 키. Request · Response · Cancel 프레임 위에 섭니다.
- * @details 와이어(몸은 `BitWriter`): Request = `varuint 요청 id · 16 비트 메서드 · varuint 시한(ms) · 1 비트 키 있음 · [32 × 4 비트 키] · 바이트 정렬 · 몸`,
+ * @details 와이어(몸은 `BitWriter`): Request = `varuint 요청 id · 16 비트 메서드 · varuint 시한(ms) · 1 비트 키 있음 · [32 × 4 비트 키] ·
+ *          1 비트 추적 id 있음 · [32 × 4 비트 추적 id] · 바이트 정렬 · 몸`,
  *          Response = `varuint 요청 id · 8 비트 상태 · 바이트 정렬 · 몸`, Cancel = `varuint 요청 id`. 요청 id 는 클라이언트마다 1 부터 오른다.
  */
 #pragma once
@@ -13,6 +14,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/StreamFrame.h"
 #include "Core/Network/Transport/StreamTypes.h"
@@ -60,6 +62,7 @@ namespace sw
     {
         float64           _timeoutSeconds{ 10.0 }; ///< 클라이언트 시한 — 서버에도 남은 시간을 실어 보낸다
         NetIdempotencyKey _idempotencyKey{};       ///< 상태를 바꾸는 요청(거래 · 구매)은 꼭 채운다
+        LogTraceId        _traceId{};              ///< 요청 추적 id — 비면 보내는 스레드의 로그 문맥(`LogContext::getCurrent`)의 것을 싣는다
     };
 } // namespace sw
 
@@ -95,6 +98,7 @@ namespace sw
     {
         NetRequestToken   _token{};
         NetIdempotencyKey _idempotencyKey{};
+        LogTraceId        _traceId{};              ///< 요청 머리의 추적 id(없으면 서버가 만든다) — 처리기는 {추적 id, 주체} 로그 문맥 안에서 불린다
         uint64            _principalId{ 0 };       ///< `NetRequestServer::setPrincipal` 로 붙인 주체(로그인한 계정) — 없으면 0
         float64           _deadlineSeconds{ 0.0 }; ///< 서버 단조 시계(초)로 이때까지 답하지 않으면 클라이언트는 이미 포기했다
         const uint8*      _pBody{ nullptr };

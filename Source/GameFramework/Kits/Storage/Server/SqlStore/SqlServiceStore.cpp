@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Storage/Server/SqlStore/SqlServiceStore.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Log/LogContext.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -210,22 +211,28 @@ namespace sw
                 ISqlConnection& _connection;
             };
 
-            /** @brief `IServiceStoreWork` 를 풀의 일로 감쌉니다. */
+            /** @brief `IServiceStoreWork` 를 풀의 일로 감쌉니다. 맡긴 스레드의 로그 문맥을 잡아 워커의 `run` · 서비스 스레드의 `complete` 에 다시 건다. */
             class SqlServiceStoreJob final : public ISqlJob
             {
             public:
                 explicit SqlServiceStoreJob( unique_ptr<IServiceStoreWork> work )
                     : _work{ std::move( work ) }
                 {
+                    _work->bindLogContext( LogContext::getCurrent() );
                 }
 
                 void run( ISqlConnection& connection ) override
                 {
+                    ScopedLogContext          scope( _work->getLogContext() );
                     SqlServiceStoreConnection adapter{ connection };
                     _work->run( adapter );
                 }
 
-                void complete() override { _work->complete(); }
+                void complete() override
+                {
+                    ScopedLogContext scope( _work->getLogContext() );
+                    _work->complete();
+                }
 
             private:
                 unique_ptr<IServiceStoreWork> _work;

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 
+#include "Core/Log/LogContext.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
@@ -150,7 +151,9 @@ namespace sw
     {
         QueuedCall call;
         call._bodyBytes.assign( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
-        call._options          = options;
+        call._options = options;
+        if ( call._options._traceId.isValid() == false )
+            call._options._traceId = LogContext::getCurrent()._traceId; // Hello 전에 모았다 보내도 부른 쪽의 추적 id 로
         call._onResponse       = onResponse;
         call._requestId        = _nextRequestId++;
         call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * 1000.0 );

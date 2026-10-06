@@ -2,6 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
@@ -13,7 +14,7 @@
 #include <thread>
 
 // 서비스 요청-응답 — 응답 · 모르는 메서드, 시한(늦은 응답은 무시), 취소, 재접속 뒤 같은 멱등 키는 한 번만 처리, 처리 중인 같은 키는 첫 응답을 같이,
-// 연결별 처리 중 상한(Overloaded) · 연결 끊김(ConnectionLost). 루프백 위의 두 끝점을 한 스레드로 돈다.
+// 연결별 처리 중 상한(Overloaded) · 연결 끊김(ConnectionLost), 요청 머리의 추적 id 와 처리기의 로그 문맥. 루프백 위의 두 끝점을 한 스레드로 돈다.
 
 using namespace sw;
 
@@ -37,11 +38,15 @@ namespace
     struct EchoService final : public INetRequestHandler
     {
         vector<NetRequestToken> _listDeferred{};
+        vector<LogTraceId>      _listTraceId{};        ///< 요청 머리의 추적 id(받은 순)
+        vector<LogContext>      _listHandlerContext{}; ///< 처리기 안의 로그 문맥(받은 순)
         int32                   _callCount{ 0 };
 
         void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override
         {
             ++_callCount;
+            _listTraceId.push_back( context._traceId );
+            _listHandlerContext.push_back( LogContext::getCurrent() );
             if ( context._token._method == 1 )
                 (void)server.respond( context._token, NetRequestStatus::Ok, context._pBody, context._bodySize );
             else
@@ -254,4 +259,35 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
     SW_ASSERT_EQUAL( 3, static_cast<int32>( log._listStatus.size() ) );
     SW_EXPECT_TRUE( log._listStatus[1] == NetRequestStatus::ConnectionLost && log._listStatus[2] == NetRequestStatus::ConnectionLost );
     SW_EXPECT_EQUAL( 0, rig._clientSide._client.getPendingCount() );
+}
+
+SW_TEST_CASE( NetRequestTest, TraceIdTravelsInTheHeadAndWrapsTheHandler )
+{
+    RequestRig  rig( NetRequestServerSettings{}, 7 );
+    ResponseLog log;
+    LogContext  caller;
+    caller._traceId = LogTraceId{ 0xAB, 0xCD };
+    {
+        ScopedLogContext scope( caller ); // 보내는 스레드의 문맥 — 옵션이 비면 이것이 실린다
+        SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 1 }, NetRequestOptions{}, log ) != 0 );
+        NetRequestOptions explicitOptions;
+        explicitOptions._traceId = LogTraceId{ 0x1, 0x2 }; // 옵션에 적은 것이 이긴다
+        SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 2 }, explicitOptions, log ) != 0 );
+    }
+    SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 3 }, NetRequestOptions{}, log ) != 0 ); // 아무 데도 없으면 서버가 만든다
+    SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 4 }, NetRequestOptions{}, log ) != 0 );
+    rig._pair.step( 4 ); // 문맥 밖에서 돈다 — 처리기의 문맥은 서버가 건 것이다
+    SW_ASSERT_EQUAL( 4, static_cast<int32>( rig._echo._listTraceId.size() ) );
+    SW_EXPECT_TRUE( rig._echo._listTraceId[0] == caller._traceId );
+    SW_EXPECT_TRUE( rig._echo._listTraceId[1] == ( LogTraceId{ 0x1, 0x2 } ) );
+    SW_EXPECT_TRUE( rig._echo._listTraceId[2].isValid() );
+    SW_EXPECT_TRUE( rig._echo._listTraceId[2] != rig._echo._listTraceId[3] );
+    for ( int32 index = 0; index < 4; ++index )
+    {
+        const LogContext& handlerContext = rig._echo._listHandlerContext[static_cast<size_t>( index )];
+        SW_EXPECT_TRUE( handlerContext._traceId == rig._echo._listTraceId[static_cast<size_t>( index )] );
+        SW_EXPECT_EQUAL( handlerContext._principalId, uint64( 7 ) );
+    }
+    SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
+    SW_EXPECT_EQUAL( 4, static_cast<int32>( log._listStatus.size() ) );
 }

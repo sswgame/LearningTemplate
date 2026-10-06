@@ -15,6 +15,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -148,6 +149,7 @@ namespace sw
      * @brief 저장 왕복 하나입니다. 입력은 맡기기 전에 이 객체에 복사해 둔다.
      * @details `run` 은 저장소 스레드에서 정확히 한 번(저장소를 내리는 중이면 모든 호출이 Unavailable 인 연결로), 그 뒤 `complete` 가 맡긴 쪽의
      *          `pollCompletions` 에서 정확히 한 번 불린다. `run` 은 서비스 멤버를 만지지 않고, `complete` 는 저장소를 부르지 않는다(필요하면 새 일을 맡긴다).
+     *          저장소는 `submit` 에서 맡긴 스레드의 로그 문맥(요청 추적 id · 주체)을 잡아 `run` · `complete` 동안 다시 건다 — 저장소 스레드의 줄도 같은 요청 꼬리표.
      */
     class SW_GF_API IServiceStoreWork
     {
@@ -160,6 +162,13 @@ namespace sw
 
         virtual void run( IServiceStoreConnection& connection ) = 0;
         virtual void complete()                                 = 0;
+
+        /** @brief 맡긴 스레드의 로그 문맥 — 저장소 구현이 `submit` 에서 잡는다. */
+        void              bindLogContext( const LogContext& context ) { _logContext = context; }
+        const LogContext& getLogContext() const { return _logContext; }
+
+    private:
+        LogContext _logContext{};
     };
 } // namespace sw
 

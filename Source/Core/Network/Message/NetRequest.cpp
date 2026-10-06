@@ -147,6 +147,15 @@ namespace sw
                     _writer.writeBits( static_cast<uint32>( options._idempotencyKey._low >> 32 ), 32 );
                     _writer.writeBits( static_cast<uint32>( options._idempotencyKey._low ), 32 );
                 }
+                const LogTraceId traceId = options._traceId.isValid() ? options._traceId : LogContext::getCurrent()._traceId;
+                _writer.writeBool( traceId.isValid() );
+                if ( traceId.isValid() )
+                {
+                    _writer.writeBits( static_cast<uint32>( traceId._high >> 32 ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceId._high ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceId._low >> 32 ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceId._low ), 32 );
+                }
                 _writer.alignToByte();
                 if ( bodySize > 0 )
                     _writer.writeBytes( pBody, bodySize );
@@ -377,6 +386,15 @@ namespace sw
             key._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
             key._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
         }
+        const bool bHasTraceId = reader.readBool();
+        LogTraceId traceId;
+        if ( bHasTraceId )
+        {
+            traceId._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
+            traceId._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
+        }
+        if ( traceId.isValid() == false )
+            traceId = LogTraceId::makeRandom(); // 클라이언트가 싣지 않았으면 서버가 만든다 — 서버 쪽 줄은 늘 요청마다 갈린다
         if ( reader.hasOverflowed() )
         {
             sendResponse( handle, requestId, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
@@ -446,6 +464,7 @@ namespace sw
                     _mapSerialByRequest[RequestKey{ handle.packed(), requestId }] = inFlight._token._serial;
                     context._token                                                = inFlight._token;
                     context._idempotencyKey                                       = key;
+                    context._traceId                                              = traceId;
                     context._principalId                                          = principalId;
                     context._deadlineSeconds                                      = static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9 + static_cast<float64>( timeoutMilli ) * 1.0e-3;
                     context._pBody                                                = pPayload;
@@ -458,7 +477,8 @@ namespace sw
         {
             case RequestAction::Dispatch:
             {
-                pHandler->onNetRequest( *this, context ); // 어떤 잠금도 쥐지 않은 채
+                ScopedLogContext scope( LogContext{ context._traceId, context._principalId } ); // 처리기 · 그가 맡긴 저장소 일의 줄에 같은 꼬리표
+                pHandler->onNetRequest( *this, context );                                       // 어떤 잠금도 쥐지 않은 채
                 break;
             }
             case RequestAction::Reply:

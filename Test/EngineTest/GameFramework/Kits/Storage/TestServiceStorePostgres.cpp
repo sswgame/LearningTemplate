@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Storage/Server/SqlStore/ServiceStoreFactory.h"
 #include "GameFramework/Kits/Storage/Server/SqlStore/SqlServiceStore.h"
 
-// SQL 서비스 저장소(PostgreSQL) — 메모리 · SQLite 와 같은 IServiceStore 계약 여섯(픽스처마다 무작위 스키마). 서버가 있어야 돈다(SW_TEST_POSTGRES_URL).
+// SQL 서비스 저장소(PostgreSQL) — 메모리 · SQLite 와 같은 IServiceStore 계약 일곱(픽스처마다 무작위 스키마). 서버가 있어야 돈다(SW_TEST_POSTGRES_URL).
 
 using namespace sw;
 

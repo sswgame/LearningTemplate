@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/LogContext.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Base/Online/Store/ServiceIdempotency.h"
@@ -66,6 +67,38 @@ namespace test
 
 namespace test
 {
+    /** @brief 저장소 스레드의 `run` 과 시험 스레드의 `complete` 에서 본 로그 문맥을 적는 일입니다(적은 칸은 거둔 뒤 시험 스레드가 읽는다). */
+    class ServiceStoreLogContextWork final : public sw::IServiceStoreWork
+    {
+    public:
+        ServiceStoreLogContextWork( sw::LogContext* pOutSeenInRun, sw::LogContext* pOutSeenInComplete, int32* pCompletedCount )
+            : _pOutSeenInRun{ pOutSeenInRun }
+            , _pOutSeenInComplete{ pOutSeenInComplete }
+            , _pCompletedCount{ pCompletedCount }
+        {
+        }
+
+        void run( sw::IServiceStoreConnection& connection ) override
+        {
+            (void)connection;
+            *_pOutSeenInRun = sw::LogContext::getCurrent();
+        }
+
+        void complete() override
+        {
+            *_pOutSeenInComplete = sw::LogContext::getCurrent();
+            ++*_pCompletedCount;
+        }
+
+    private:
+        sw::LogContext* _pOutSeenInRun;
+        sw::LogContext* _pOutSeenInComplete;
+        int32*          _pCompletedCount;
+    };
+} // namespace test
+
+namespace test
+{
     /** @brief 계약 케이스 몸들입니다(저장소 스레드). */
     struct ServiceStoreContract
     {
@@ -74,6 +107,26 @@ namespace test
         {
             int32 completedCount = 0;
             store.submit( sw::make_unique<ServiceStoreContractWork>( pRun, &context, &completedCount ) );
+            const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
+            while ( completedCount == 0 && deadline.isExpired() == false )
+            {
+                if ( store.pollCompletions() == 0 )
+                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+            }
+            return completedCount == 1;
+        }
+
+        /**
+         * @brief @p submitter 문맥 안에서 일 하나를 맡기고, 문맥 **밖에서** 거둡니다 — 저장소가 맡긴 쪽 문맥을 잡아 `run`(저장소 스레드) · `complete` 에
+         *        다시 거는지 본다. 정확히 한 번 거뒀으면 true 입니다.
+         */
+        static bool executeLogContextWork( sw::IServiceStore& store, const sw::LogContext& submitter, sw::LogContext& outSeenInRun, sw::LogContext& outSeenInComplete )
+        {
+            int32 completedCount = 0;
+            {
+                sw::ScopedLogContext scope( submitter );
+                store.submit( sw::make_unique<ServiceStoreLogContextWork>( &outSeenInRun, &outSeenInComplete, &completedCount ) );
+            }
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
             while ( completedCount == 0 && deadline.isExpired() == false )
             {
@@ -285,8 +338,27 @@ namespace test
         SW_EXPECT_EQUAL( -1, context._failedStep );                                                                                         \
     }
 
-/** @brief 계약 케이스 여섯을 @p SuiteName 스위트로 만듭니다. */
+/** @brief 로그 문맥 케이스 — 맡긴 스레드의 문맥(추적 id · 주체)이 저장소 스레드의 `run` 과 문맥 없는 스레드의 `complete` 에 그대로 걸린다. */
+#define SW_SERVICE_STORE_CONTRACT_LOG_CONTEXT_CASE( SuiteName, FixtureType )                                                             \
+    SW_TEST_CASE( SuiteName, WorkCarriesTheSubmittersLogContext )                                                                        \
+    {                                                                                                                                    \
+        FixtureType    fixture;                                                                                                          \
+        sw::LogContext submitter;                                                                                                        \
+        submitter._traceId     = sw::LogTraceId{ 0x11, 0x22 };                                                                           \
+        submitter._principalId = 0x42;                                                                                                   \
+        sw::LogContext seenInRun;                                                                                                        \
+        sw::LogContext seenInComplete;                                                                                                   \
+        SW_ASSERT_TRUE( test::ServiceStoreContract::executeLogContextWork( fixture.getStore(), submitter, seenInRun, seenInComplete ) ); \
+        SW_EXPECT_TRUE( seenInRun._traceId == submitter._traceId );                                                                      \
+        SW_EXPECT_EQUAL( seenInRun._principalId, uint64( 0x42 ) );                                                                       \
+        SW_EXPECT_TRUE( seenInComplete._traceId == submitter._traceId );                                                                 \
+        SW_EXPECT_EQUAL( seenInComplete._principalId, uint64( 0x42 ) );                                                                  \
+        SW_EXPECT_TRUE( sw::LogContext::getCurrent().isEmpty() );                                                                        \
+    }
+
+/** @brief 계약 케이스 일곱을 @p SuiteName 스위트로 만듭니다. */
 #define SW_SERVICE_STORE_CONTRACT_SUITE( SuiteName, FixtureType )                                                                \
+    SW_SERVICE_STORE_CONTRACT_LOG_CONTEXT_CASE( SuiteName, FixtureType )                                                         \
     SW_SERVICE_STORE_CONTRACT_CASE( SuiteName, FixtureType, ConditionalPutCreatesOnceAndVersionsNeverRepeat, runConditionalPut ) \
     SW_SERVICE_STORE_CONTRACT_CASE( SuiteName, FixtureType, TransactionIsAllOrNothing, runAllOrNothing )                         \
     SW_SERVICE_STORE_CONTRACT_CASE( SuiteName, FixtureType, RequireVersionGuardsReadSet, runRequireVersion )                     \

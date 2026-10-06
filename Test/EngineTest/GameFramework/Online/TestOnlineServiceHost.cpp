@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
@@ -15,7 +16,7 @@
 
 // 서비스 틀 — 루프백 스트림 위 호스트 + 클라이언트(한 스레드, 결정적). Hello 전 요청 거절 · 판 불일치 · 로그인 확인(익명 메서드는 통과) · 몸 상한 · 주소 도배 제한 ·
 // 늦은 답(토큰) · 닫힌 뒤 답은 버림 · 계정 떼기 → 모든 서비스에 떠남 · 알림은 그 계정에만 · 모두에게 알림 · 멱등 재시도 · 캐시 답과 버스 메시지는 맡긴 · 구독한 서비스로만 ·
-// 공유 끝점 클라이언트 둘.
+// 공유 끝점 클라이언트 둘 · 요청 추적 id 가 클라이언트 문맥에서 서비스의 로그 문맥까지.
 
 using namespace sw;
 
@@ -45,6 +46,8 @@ namespace
             , _listBusMessage{}
             , _listCacheReply{}
             , _cacheKeyToRead{}
+            , _lastLogContext{}
+            , _lastTraceId{}
             , _range{ range }
             , _handledCount{ 0 }
             , _bReadCacheOnTick{ false }
@@ -63,6 +66,8 @@ namespace
         void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
         {
             ++_handledCount;
+            _lastTraceId    = context._traceId;
+            _lastLogContext = LogContext::getCurrent();
             BitWriter answer;
             switch ( static_cast<uint16>( context._method - _range ) )
             {
@@ -132,6 +137,8 @@ namespace
         vector<ServerBusMessage> _listBusMessage;
         vector<EphemeralReply>   _listCacheReply;
         string                   _cacheKeyToRead;
+        LogContext               _lastLogContext; ///< 마지막 요청을 처리할 때의 로그 문맥
+        LogTraceId               _lastTraceId;    ///< 마지막 요청의 추적 id
         uint16                   _range;
         int32                    _handledCount;
         bool                     _bReadCacheOnTick;
@@ -706,4 +713,32 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
     }
     SW_EXPECT_TRUE( bots._arrService[0]._listPushKind.empty() );
     SW_EXPECT_EQUAL( size_t( 1 ), bots._arrService[1]._listPushKind.size() );
+}
+
+SW_TEST_CASE( OnlineServiceHostTest, TraceIdReachesTheServiceLogContextWithTheAccount )
+{
+    HostRig    rig;
+    ClientSide client( rig._network, rig.getPort() );
+    rig._listClient.push_back( &client );
+    rig.step( 10 );
+    (void)rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLogin, 21 );
+    LogContext caller;
+    caller._traceId = LogTraceId{ 0x5, 0x6 };
+    ResponseRecord record;
+    {
+        ScopedLogContext scope( caller ); // 클라이언트 쪽 문맥 — 요청 머리에 실린다
+        BitWriter        body;
+        body.writeVarUint( 0 );
+        (void)client._client.sendRequest( OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kSecure, body, NetRequestOptions{},
+                                          OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &record ) );
+    }
+    for ( int32 attempt = 0; attempt < 50 && record._bAnswered == false; ++attempt )
+    {
+        rig.step( 1 ); // 문맥 밖 — 서비스의 문맥은 호스트가 건 것이다
+    }
+    SW_ASSERT_TRUE( record._bAnswered );
+    SW_EXPECT_TRUE( rig._serviceA._lastTraceId == caller._traceId );
+    SW_EXPECT_TRUE( rig._serviceA._lastLogContext._traceId == caller._traceId );
+    SW_EXPECT_EQUAL( rig._serviceA._lastLogContext._principalId, uint64( 21 ) );
+    SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
 }

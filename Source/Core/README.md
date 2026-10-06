@@ -118,6 +118,9 @@
     출력을 더 붙이려면 `Logger::addOutput` 을 쓴다 — `Logger` 를 고칠 일은 없다.
   - 값 타입(`LogLevel` · `LogEntry` · `LogRecord`)은 `LogTypes.h` 에 있다. 두 층이 함께 쓰므로
     한쪽 헤더에 두면 장치가 파사드를 include 하게 되어 방향이 뒤집힌다.
+  - 로그 문맥(`LogContext` — 스레드 로컬 요청 추적 id 128 비트 · 주체). 문맥이 있는 스레드의 줄에만 `[trace=… acct=…]` 가 붙고(서버 서비스 ·
+    저장소 일), 없는 줄은 바이트가 같다. 비동기 경계는 넘기는 쪽이 복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` 가 그 예).
+    요청 머리(`NetRequestOptions` · `NetRequestContext::_traceId`)가 클라이언트의 추적 id 를 서버까지 싣는다.
 
 ## 플랫폼 의존 코드는 어디에 두는가
 
