@@ -2348,3 +2348,81 @@ SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend could initialize for the scissor test" );
 }
+
+/**
+ * @brief [RHIDeviceTest] 깊이 없는 오프스크린 컬러 타깃 하나를 Load 로 다시 열면 앞 패스의 픽셀이 남는다 — 4백엔드
+ * @details 첫 패스는 지우고 가위 (0,0 16×16) 안만 빨강, 둘째 패스는 같은 타깃을 **Load** 로 열어 가위 (32,32 16×16) 안만 빨강. 두 모서리가 다 빨강이고
+ *          나머지는 첫 패스의 클리어 색이어야 한다. Canvas 패스가 Present 가 그린 캡처 텍스처에 이렇게 얹는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
+{
+    const float32            arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    const sw::RHIScissorRect arrScissor[2]{
+        { 0,  0, 16, 16},
+        {32, 32, 16, 16}
+    };
+    constexpr uint32 kSize = 64;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        FullscreenDrawProbe      probe;
+        SW_ASSERT_TRUE( probe.initialize( *device, arrRed ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        SW_ASSERT_TRUE( pso != 0 );
+        const sw::RHITextureDesc   desc   = makeOffscreenTargetDesc( kSize, kSize );
+        const sw::RHITextureHandle target = pResource->createTexture2D( desc );
+        SW_ASSERT_TRUE( target != 0 );
+
+        sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+        SW_ASSERT_TRUE( cmd != nullptr );
+        cmd->beginCommandList();
+        for ( uint32 passIndex = 0; passIndex < 2; ++passIndex )
+        {
+            // 둘째 패스의 클리어 색은 일부러 다르게 둔다 — Load 를 무시하고 지우면 그 색이 남는다.
+            sw::RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( target, passIndex == 0 ? desc._clearColor : sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f },
+                                      passIndex == 0 ? sw::RHIRenderPassLoadOp::Clear : sw::RHIRenderPassLoadOp::Load );
+            beginInfo._width  = kSize;
+            beginInfo._height = kSize;
+            cmd->beginRenderPass( beginInfo );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( probe._cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+            cmd->setScissorRect( arrScissor[passIndex] );
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+        }
+        cmd->endCommandList();
+        device->executeCommandListImmediate( cmd.get() );
+        device->waitIdle();
+
+        sw::vector<uint8>     pixels;
+        sw::RHITextureMipSpan layout{};
+        SW_ASSERT_TRUE( pResource->readbackTexture2D( target, 0, 0, pixels, layout ) );
+        uint32 wrongCount{ 0 };
+        for ( uint32 row = 0; row < kSize; ++row )
+        {
+            for ( uint32 col = 0; col < kSize; ++col )
+            {
+                bool bExpectRed{ false };
+                for ( const sw::RHIScissorRect& scissor : arrScissor )
+                    bExpectRed = bExpectRed || ( scissor._y <= row && row < scissor._y + scissor._height && scissor._x <= col && col < scissor._x + scissor._width );
+                const uint8* pPixel = findPixel( pixels, layout, col, row );
+                const bool   bRed   = pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80;
+                const bool   bClear = isNear( pPixel[0], 13, 2 ) && isNear( pPixel[1], 13, 2 ) && isNear( pPixel[2], 20, 2 );
+                if ( ( bExpectRed && bRed == false ) || ( bExpectRed == false && bClear == false ) )
+                    ++wrongCount;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( wrongCount == 0, ( label + "Load pass lost earlier pixels: " + sw::to_string( wrongCount ) + " pixels differ" ).c_str() );
+
+        pResource->destroyTexture( target );
+        pResource->destroyPipelineState( pso );
+        probe.shutdown();
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the load-op test" );
+}

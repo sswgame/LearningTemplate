@@ -1255,6 +1255,8 @@ cd build/Ninja-Debug/Bin
   (`RHIDeviceTest.PremultipliedBlendAddsColorWithoutAlphaMultiply` 가 알파 255 로 지킨다).
 - **가위(`setScissorRect`)는 `setViewport` · `beginRenderPass` 가 뷰포트 전체로 되돌린다** — DX11 은 래스터라이저 상태에 늘 켜 두고 뷰포트를 거는 세 자리가 가위도 건다
   (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
+- **Vulkan 의 텍스처 하나짜리 프레임버퍼 렌더 패스는 CLEAR 고정이다** — 깊이 없는 컬러 하나를 Load · DontCare 로 여는 패스는 load op 을 키로 드는 합성 경로로 간다
+  (`RHIDeviceTest.LoadOpKeepsSingleOffscreenTarget`). 새 렌더 패스 경로를 만들면 Load 가 앞 그림을 지우지 않는지 그 시험으로 본다.
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
   대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
   몸 전체가 튀면 프레임별 CSV(Shooter3D `-gv_shooterMotionTrace=<경로>`)로 몸 = 발 자리 · 루트 본 · 요 각속도 · 카메라 이동을 나눠 본다 — 자동 조준이 표적을 바꿀 때
