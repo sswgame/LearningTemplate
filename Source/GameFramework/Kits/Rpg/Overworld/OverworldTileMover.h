@@ -1,75 +1,78 @@
 /**
- * @file PlayerController.h
- * @brief 타일 스텝 플레이어 이동 + locomotion FSM 입니다(Playing 전용 입력).
+ * @file OverworldTileMover.h
+ * @brief 타일을 한 칸씩 걷는 몸(폰 이동) + locomotion FSM 입니다. 입력이 아니라 조종자가 낸 의도(`ControlIntent`)를 받습니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
-#include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 
 namespace sw
 {
+    struct ControlIntent;
+
     class Archive;
-    class InputManager;
-    class InputMap;
     class TileMap;
 
     // ------------------------------------------------------------------------------
-    // 1) PlayerController — 입력 → 한 칸 이동 → 워프/조우/상호작용 플래그
+    // 1) OverworldTileMover — 의도 → 한 칸 이동 → 워프/조우/상호작용 플래그
     //    전환 중에는 setInputEnabled(false)
     // ------------------------------------------------------------------------------
     /**
-     * @brief 이번 걸음에 야생 조우가 나는지 판정합니다. `PlayerController` 가 쓰는 판정 그대로입니다.
+     * @brief 이번 걸음에 야생 조우가 나는지 판정합니다. `OverworldTileMover` 가 쓰는 판정 그대로입니다.
      * @param encounterRate 0 ~ 1. **0 이면 언제나 false** 이고, 1 이상이면 매 걸음 true.
      * @param stepCount 조우 타일을 밟은 누적 걸음 수(1 부터).
      * @details 테스트가 직접 물을 수 있게 `tryStep` 밖에 둡니다. **끄려고 넣은 0 은 끄는 값이어야** 합니다.
      */
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount );
 
-    /** @brief 입력 바인딩 이름 · 스틱 데드존 · 조우율입니다. 게임마다 액션 맵 이름이 다르면 여기서 바꿉니다(코드가 이름을 정하지 않게). */
-    struct PlayerControllerSettings
+    /** @brief 이동 축 데드존 · 조우율입니다. 버튼 · 이동 액션 이름은 폰의 스키마(`PawnComponent`)가 정합니다. */
+    struct OverworldTileMoverSettings
     {
-        hashed_string _moveAction{ "Move" };         ///< 2D 벡터 액션
-        hashed_string _interactAction{ "Interact" }; ///< 눌림 액션
-        float32       _moveDeadZone{ 0.5f };         ///< 이보다 작게 기운 스틱은 걸음으로 치지 않는다
-        float32       _encounterRate{ 0.33f };       ///< 수풀 한 걸음의 조우 확률(주기로 바꿔 쓴다)
+        float32 _moveDeadZone{ 0.5f };   ///< 이보다 작게 기운 이동 축은 걸음으로 치지 않는다
+        float32 _encounterRate{ 0.33f }; ///< 수풀 한 걸음의 조우 확률(주기로 바꿔 쓴다)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 타일 스텝 이동과 워프 · 조우 · 상호작용 요청을 만듭니다. */
-    class SW_GF_API PlayerController
+    /**
+     * @brief 타일 스텝 이동과 워프 · 조우 · 상호작용 요청을 만듭니다.
+     * @details 폰 쪽 코드입니다 — InputMap · InputManager 를 읽지 않고, 그 오브젝트의 폰 의도(`PawnComponent::getIntent`)를 받습니다.
+     *          플레이어 · AI · 기록 재생이 같은 걸음으로 걷습니다.
+     */
+    class SW_GF_API OverworldTileMover
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "OPLC" );
         static constexpr uint32 kStateVersion = 1;
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
-        PlayerController();
+        OverworldTileMover();
 
         /** @brief 충돌 · 워프 조회에 쓸 타일맵을 설정합니다. */
         void setTileMap( TileMap* pTileMap ) { _pTileMap = pTileMap; }
-        /** @brief 이동 · 상호작용 액션을 읽을 InputMap 을 설정합니다. */
-        void setInputMap( InputMap* pInputMap ) { _pInputMap = pInputMap; }
         /**
          * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
          */
-        void                            setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
-        void                            setSettings( const PlayerControllerSettings& settings ) { _settings = settings; }
-        const PlayerControllerSettings& getSettings() const { return _settings; }
+        void                              setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
+        void                              setSettings( const OverworldTileMoverSettings& settings ) { _settings = settings; }
+        const OverworldTileMoverSettings& getSettings() const { return _settings; }
         /** @brief 타일 좌표를 설정합니다. */
         void setPosition( int32 x, int32 y );
         /** @brief 입력 허용 여부를 설정합니다. */
         void setInputEnabled( bool bEnabled ) { _bInputEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
-        /** @brief 입력을 읽고 이동 FSM 을 갱신합니다. */
-        void update( float32 deltaTime, InputManager& input );
+        /**
+         * @brief 의도를 읽고 이동 FSM 을 갱신합니다.
+         * @param intent 이번 틱의 의도 — 이동 축(`_move`, y 가 위쪽 칸)을 데드존으로 네 방향 한 칸으로 읽습니다.
+         * @param interactButton 상호작용 버튼의 자리(`PawnComponent::findButton`) — 그 버튼이 발동하면 상호작용합니다. −1 이면 없음.
+         */
+        void update( float32 deltaTime, const ControlIntent& intent, int32 interactButton );
 
         /** @brief 현재 타일 X 를 반환합니다. */
         int32 getTileX() const { return _tile._x; }
@@ -90,7 +93,7 @@ namespace sw
         void getFacingTile( int32& outX, int32& outY ) const;
         /**
          * @brief 타일 · 이동 상태 · 대기 워프(맵 · 자리) · 조우 걸음 수 · 대기 플래그 · 입력 허용을 씁니다.
-         * @details 타일맵 · 입력 맵(빌림) · 설정은 싣지 않는다. 세이브도 이 바이트다 — 게임 상태는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)로만 저장한다(플래그는 공유 상태가 싣는다).
+         * @details 타일맵(빌림) · 설정은 싣지 않는다. 세이브도 이 바이트다 — 게임 상태는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)로만 저장한다(플래그는 공유 상태가 싣는다).
          */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
@@ -101,19 +104,18 @@ namespace sw
         [[nodiscard]] bool tryStep( int32 deltaX, int32 deltaY );
 
     private:
-        TileMap*                 _pTileMap;
-        InputMap*                _pInputMap;
-        string                   _pendingWarpMap;
-        PlayerLocomotion         _loco;
-        int2                     _tile;             ///< 현재 타일 좌표
-        int2                     _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
-        PlayerControllerSettings _settings;         ///< 이름은 미리 해시해 둔다 — 매 프레임 리터럴을 해시하지 않는다
-        uint32                   _encounterStepCounter;
-        uint8                    _bMoved            : 1;
-        uint8                    _bWarpPending      : 1;
-        uint8                    _bEncounterPending : 1;
-        uint8                    _bInteractPending  : 1;
-        uint8                    _bInputEnabled     : 1;
-        [[maybe_unused]] uint8   _reserved          : 3;
+        TileMap*                   _pTileMap;
+        string                     _pendingWarpMap;
+        PlayerLocomotion           _loco;
+        int2                       _tile;             ///< 현재 타일 좌표
+        int2                       _pendingWarpSpawn; ///< 워프 후 놓일 타일 좌표
+        OverworldTileMoverSettings _settings;
+        uint32                     _encounterStepCounter;
+        uint8                      _bMoved            : 1;
+        uint8                      _bWarpPending      : 1;
+        uint8                      _bEncounterPending : 1;
+        uint8                      _bInteractPending  : 1;
+        uint8                      _bInputEnabled     : 1;
+        [[maybe_unused]] uint8     _reserved          : 3;
     };
 } // namespace sw

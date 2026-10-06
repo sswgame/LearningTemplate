@@ -31,6 +31,7 @@
 #include "GameFramework/Base/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Base/Camera/Follow2DCameraComponent.h"
+#include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Data/GameSettings.h"
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
 #include "GameFramework/Base/Framework/GameEvents.h"
@@ -53,7 +54,7 @@
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 #include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
-#include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
+#include "GameFramework/Kits/Rpg/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Rpg/Overworld/PlayerLocomotion.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
 #include "GameFramework/Kits/Rpg/Overworld/ZoneTracker.h"
@@ -161,7 +162,7 @@ namespace
     }
 
     /** @brief 플레이어 컨트롤러 상태의 바이트입니다. */
-    vector<uint8> capturePlayerControllerBytes( const PlayerController& controller )
+    vector<uint8> captureTileMoverBytes( const OverworldTileMover& controller )
     {
         Archive archive;
         controller.writeState( archive );
@@ -2146,7 +2147,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneTagsComeFromTheMapRoleText )
 
 /**
  * @brief [GameFrameworkTest] 한 칸 걷는 동안 상태가 **실제로** `Walk` 다
- * @details `PlayerController::update` 가 걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소하면
+ * @details `OverworldTileMover::update` 가 걸음을 시작한 그 프레임에 곧바로 `notifyStepFinished()` 로 취소하면
  *          `Walk` 는 한 프레임도 살지 못하고 바깥에서 한 번도 관측되지 않는다 — 걷는 애니메이션을 고를 근거가
  *          통째로 죽는다. 입력 잠금은 걸음 상태 자체가 한다.
  */
@@ -2175,7 +2176,7 @@ SW_TEST_CASE( GameFrameworkTest, PlayerLocomotion_StepStaysInWalkForItsDuration 
  *          부를 때 **세 걸음마다** 난다 — 끄는 값이 켜는 값이 된다. 1 을 넘는 값도 `1/rate` 를 정수로 자르면 0 이 돼
  *          같은 자리로 떨어진다.
  */
-SW_TEST_CASE( GameFrameworkTest, PlayerController_ZeroEncounterRateNeverEncounters )
+SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_ZeroEncounterRateNeverEncounters )
 {
     for ( uint32 stepCount = 1; stepCount <= 30; ++stepCount )
     {
@@ -2228,7 +2229,7 @@ SW_TEST_CASE( GameFrameworkTest, ActionCombatAndOverworldKitsShareOneFacingDir )
 /**
  * @brief [GameFrameworkTest] 플레이어 컨트롤러 상태 바이트 — 타일 · 걷는 중의 남은 시간 · 조우 걸음 수가 그대로 와서 같은 걸음 · 같은 조우 · 같은 워프가 이어진다. 잘린 바이트는 거절하고 그대로 둔다
  */
-SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController )
+SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSameTileMover )
 {
     TileMap tileMap;
     tileMap.resize( 8, 3 );
@@ -2244,45 +2245,38 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController 
     warp._targetTileY = 4;
     tileMap.setOrUpdateWarp( warp );
 
-    InputManager input;
-    input.initialize();
-    input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
-    input.postRawEvent( RawInputEvent::makeKeyDown( Key::D ) ); // 오른쪽을 누른 채로 걷는다
+    // 오른쪽으로 민 채로 걷는다 — 몸은 입력이 아니라 의도를 받는다(입력 맵 → 의도는 `ControlTest` 가 본다).
+    ControlIntent intent;
+    intent._move = float2{ 1.0f, 0.0f };
 
-    PlayerController controller;
+    OverworldTileMover controller;
     controller.setTileMap( &tileMap );
     controller.setEncounterRate( 0.5f ); // 조우 칸 두 걸음마다
     // 0.1 초 프레임 — 걸음(0.18 초)은 두 프레임마다 하나다. 네 프레임 뒤 (3,1) 조우 칸을 걷는 중이다.
     for ( int32 frame = 0; frame < 4; ++frame )
-    {
-        input.beginFrame( 0.1f );
-        controller.update( 0.1f, input );
-        input.endFrame();
-    }
+        controller.update( 0.1f, intent, -1 );
     SW_ASSERT_EQUAL( 3, controller.getTileX() );
     SW_ASSERT_TRUE( controller.getLocomotion().getState() == LocomotionState::Walk );
 
-    const vector<uint8> bytes = capturePlayerControllerBytes( controller );
-    PlayerController    restored;
+    const vector<uint8> bytes = captureTileMoverBytes( controller );
+    OverworldTileMover  restored;
     restored.setTileMap( &tileMap );
     restored.setEncounterRate( 0.5f );
     Archive reader( bytes.data(), bytes.size() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, reader.getRemainingBytes() );
-    SW_EXPECT_TRUE( capturePlayerControllerBytes( restored ) == bytes );
+    SW_EXPECT_TRUE( captureTileMoverBytes( restored ) == bytes );
     SW_EXPECT_EQUAL( 3, restored.getTileX() );
     SW_EXPECT_TRUE( restored.getLocomotion().getFacing() == FacingDir::Right );
 
     // 같은 프레임을 둘 다 더 돌린다 — (4,1) 에서 조우(두 번째 조우 칸 걸음), (5,1) 에서 워프 대기.
     for ( int32 frame = 0; frame < 4; ++frame )
     {
-        input.beginFrame( 0.1f );
-        controller.update( 0.1f, input );
-        restored.update( 0.1f, input );
-        input.endFrame();
+        controller.update( 0.1f, intent, -1 );
+        restored.update( 0.1f, intent, -1 );
     }
     SW_EXPECT_EQUAL( 5, restored.getTileX() );
-    SW_EXPECT_TRUE( capturePlayerControllerBytes( controller ) == capturePlayerControllerBytes( restored ) );
+    SW_EXPECT_TRUE( captureTileMoverBytes( controller ) == captureTileMoverBytes( restored ) );
     SW_EXPECT_TRUE( controller.consumeEncounterRequest() );
     SW_EXPECT_TRUE( restored.consumeEncounterRequest() );
     string mapPath;
@@ -2292,11 +2286,56 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSamePlayerController 
     SW_EXPECT_STREQ( "town", mapPath.c_str() );
     SW_EXPECT_EQUAL( 2, spawnX );
 
-    PlayerController truncated;
-    Archive          cut( bytes.data(), bytes.size() - 1 );
+    OverworldTileMover truncated;
+    Archive            cut( bytes.data(), bytes.size() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
     SW_EXPECT_EQUAL( 1, truncated.getTileX() );
-    input.shutdown();
+}
+
+/**
+ * @brief [GameFrameworkTest] 타일 몸은 의도만 받는다 — 이동 축 y 가 위쪽 칸, 데드존 안은 걸음이 아니고, 상호작용 버튼 발동은 걸음보다 먼저다
+ */
+SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_StepsFromTheControlIntent )
+{
+    TileMap tileMap;
+    tileMap.resize( 4, 4 );
+    for ( int32 y = 0; y < 4; ++y )
+    {
+        for ( int32 x = 0; x < 4; ++x )
+            tileMap.setWalkable( x, y, true );
+    }
+
+    OverworldTileMover mover;
+    mover.setTileMap( &tileMap );
+    mover.setEncounterRate( 0.0f );
+
+    // 데드존(0.5) 안 — 걷지 않는다.
+    ControlIntent intent;
+    intent._move = float2{ 0.0f, 0.4f };
+    mover.update( 0.1f, intent, -1 );
+    SW_EXPECT_FALSE( mover.consumeMovedFlag() );
+    SW_EXPECT_EQUAL( 1, mover.getTileY() );
+
+    // y = 1 이면 위쪽(−y) 한 칸이다.
+    intent._move = float2{ 0.0f, 1.0f };
+    mover.update( 0.1f, intent, -1 );
+    SW_EXPECT_TRUE( mover.consumeMovedFlag() );
+    SW_EXPECT_EQUAL( 0, mover.getTileY() );
+    SW_EXPECT_TRUE( mover.getLocomotion().getFacing() == FacingDir::Up );
+
+    // 걸음이 끝난 뒤 상호작용 버튼(자리 2)이 발동하면 같은 틱의 이동보다 먼저 상호작용이다.
+    mover.update( 0.25f, ControlIntent{}, 2 );
+    intent._move = float2{ 1.0f, 0.0f };
+    intent.setButton( 2, true, true );
+    mover.update( 0.01f, intent, 2 );
+    SW_EXPECT_TRUE( mover.consumeInteractRequest() );
+    SW_EXPECT_EQUAL( 1, mover.getTileX() );
+
+    // 다른 자리를 상호작용 버튼으로 넘기면 그 발동은 상호작용이 아니다.
+    mover.update( 0.25f, ControlIntent{}, 2 );
+    mover.update( 0.01f, intent, 3 );
+    SW_EXPECT_FALSE( mover.consumeInteractRequest() );
+    SW_EXPECT_EQUAL( 2, mover.getTileX() );
 }
 
 /**

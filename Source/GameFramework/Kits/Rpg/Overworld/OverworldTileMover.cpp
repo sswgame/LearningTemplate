@@ -1,17 +1,16 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Rpg/Overworld/PlayerController.h"
+#include "GameFramework/Kits/Rpg/Overworld/OverworldTileMover.h"
 
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/Overworld/TileMap.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "PlayerController" );
+    SW_LOG_CALLER( "OverworldTileMover" );
 
     SW_GF_API bool shouldEncounterOnStep( float32 encounterRate, uint32 stepCount )
     {
@@ -27,9 +26,8 @@ namespace sw
         return period <= 1u || ( stepCount % period ) == 0u;
     }
 
-    PlayerController::PlayerController()
+    OverworldTileMover::OverworldTileMover()
         : _pTileMap{ nullptr }
-        , _pInputMap{ nullptr }
         , _pendingWarpMap{}
         , _loco{}
         , _tile{ 1, 1 }
@@ -45,13 +43,13 @@ namespace sw
     {
     }
 
-    void PlayerController::setPosition( int32 x, int32 y )
+    void OverworldTileMover::setPosition( int32 x, int32 y )
     {
         _tile._x = x;
         _tile._y = y;
     }
 
-    void PlayerController::update( float32 deltaTime, InputManager& input )
+    void OverworldTileMover::update( float32 deltaTime, const ControlIntent& intent, int32 interactButton )
     {
         // 걸음·상호작용이 끝나는 것은 **로코모션 하나가 판정한다.** 여기에 쿨다운을 따로 두거나
         // 걸음을 시작하자마자 `notifyStepFinished()` 로 끝내면 `Walk` 상태가 관측되지 않는다.
@@ -62,11 +60,7 @@ namespace sw
         if ( _loco.canAcceptMoveInput() == false )
             return;
 
-        InputMap* pInputMap = _pInputMap != nullptr ? _pInputMap : &input.getInputMap();
-        if ( pInputMap->getInputManager() != &input )
-            pInputMap->setInputManager( &input );
-
-        if ( pInputMap->wasActionTriggered( _settings._interactAction ) )
+        if ( intent.wasTriggered( interactButton ) )
         {
             _loco.beginInteract();
             _bInteractPending = SW_TRUE;
@@ -75,7 +69,7 @@ namespace sw
 
         int32         deltaX{ 0 };
         int32         deltaY{ 0 };
-        const float2  moveVec  = pInputMap->getVector2D( _settings._moveAction );
+        const float2  moveVec  = intent._move;
         const float32 deadZone = _settings._moveDeadZone;
         if ( moveVec._y > deadZone )
             deltaY = -1;
@@ -94,14 +88,14 @@ namespace sw
             _loco.setFacingFromDelta( deltaX, deltaY );
     }
 
-    bool PlayerController::consumeMovedFlag()
+    bool OverworldTileMover::consumeMovedFlag()
     {
         const bool v = _bMoved != SW_FALSE;
         _bMoved      = SW_FALSE;
         return v;
     }
 
-    bool PlayerController::consumeWarpRequest( string& outMapPath, int32& outSpawnX, int32& outSpawnY )
+    bool OverworldTileMover::consumeWarpRequest( string& outMapPath, int32& outSpawnX, int32& outSpawnY )
     {
         if ( _bWarpPending == SW_FALSE )
             return false;
@@ -113,21 +107,21 @@ namespace sw
         return true;
     }
 
-    bool PlayerController::consumeEncounterRequest()
+    bool OverworldTileMover::consumeEncounterRequest()
     {
         const bool v       = _bEncounterPending != SW_FALSE;
         _bEncounterPending = SW_FALSE;
         return v;
     }
 
-    bool PlayerController::consumeInteractRequest()
+    bool OverworldTileMover::consumeInteractRequest()
     {
         const bool v      = _bInteractPending != SW_FALSE;
         _bInteractPending = SW_FALSE;
         return v;
     }
 
-    void PlayerController::getFacingTile( int32& outX, int32& outY ) const
+    void OverworldTileMover::getFacingTile( int32& outX, int32& outY ) const
     {
         outX = _tile._x;
         outY = _tile._y;
@@ -156,7 +150,7 @@ namespace sw
         }
     }
 
-    void PlayerController::writeState( Archive& outArchive ) const
+    void OverworldTileMover::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeInt2( outArchive, _tile );
         _loco.writeState( outArchive );
@@ -170,9 +164,9 @@ namespace sw
         outArchive << static_cast<uint8>( _bInputEnabled );
     }
 
-    bool PlayerController::readState( Archive& archive )
+    bool OverworldTileMover::readState( Archive& archive )
     {
-        PlayerController restored = *this;
+        OverworldTileMover restored = *this;
         StateArchiveUtil::readInt2( archive, restored._tile );
         if ( restored._loco.readState( archive ) == false )
             return false;
@@ -197,7 +191,7 @@ namespace sw
         return true;
     }
 
-    bool PlayerController::tryStep( int32 deltaX, int32 deltaY )
+    bool OverworldTileMover::tryStep( int32 deltaX, int32 deltaY )
     {
         const int32 nextX = _tile._x + deltaX;
         const int32 nextY = _tile._y + deltaY;

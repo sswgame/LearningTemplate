@@ -26,7 +26,7 @@ namespace sw
 
     // ------------------------------------------------------------------------------
     // 2) PlayerLocomotion — 상태 · 바라보는 방향 · 입력 가능 여부
-    //    실제 타일 좌표는 PlayerController 가 소유
+    //    실제 타일 좌표는 OverworldTileMover 가 소유
     // ------------------------------------------------------------------------------
     /** @brief 타일 스텝 이동 FSM 입니다. */
     class SW_GF_API PlayerLocomotion
@@ -34,7 +34,7 @@ namespace sw
     public:
         /**
          * @brief 한 칸을 밟는 데 걸리는 시간(초)입니다. **여기가 기준입니다.**
-         * @details `PlayerController` 가 다음 입력을 막는 시간도 이 값입니다. 따로 들면 한쪽만 바뀌어
+         * @details `OverworldTileMover` 가 다음 입력을 막는 시간도 이 값입니다. 따로 들면 한쪽만 바뀌어
          *          걷는 연출과 입력 잠금이 어긋납니다.
          */
         static constexpr float32 kStepDuration = 0.18f;
@@ -68,7 +68,7 @@ namespace sw
         void setFacingFromDelta( int32 dx, int32 dy );
         /** @brief 이동 입력을 받을 수 있는지 반환합니다. */
         bool canAcceptMoveInput() const;
-        /** @brief 상태 · 바라보는 방향 · 상태 타이머의 남은 시간을 씁니다(`PlayerController` 상태 안에 실린다). */
+        /** @brief 상태 · 바라보는 방향 · 상태 타이머의 남은 시간을 씁니다(`OverworldTileMover` 상태 안에 실린다). */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );

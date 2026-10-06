@@ -1965,5 +1965,6 @@ cd build/Ninja-Debug/Bin
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
 | `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
 | `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
+| Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
