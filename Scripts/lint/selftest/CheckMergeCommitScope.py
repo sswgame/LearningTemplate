@@ -28,10 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 
 from common import ProcessResult, getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable, runProcess  # noqa: E402
 from PreCommitLint import selectFileScopedStagedInternal  # noqa: E402
-
-#: CMake 등록 정보 (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
-kLintBuildComment = "Checking that a merge commit's hook still checks every file with new content..."
-kLintTimeoutSeconds = 60
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 열 줄짜리 본문 — 두 부모가 서로 다른 줄을 고치면 git 이 자동 병합한다.
 _kBaseText = "".join(f"line {index}\n" for index in range(10))
@@ -101,62 +98,62 @@ def namesInternal(listPath: list[Path]) -> set[str]:
     return {path.name for path in listPath}
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="병합 커밋 검사 범위 음성 테스트")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트 (이 검사는 쓰지 않는다 — CTest 가 준다)")
-    parser.add_argument("--verbose", action="store_true", help="고른 파일을 모두 출력")
-    args = parser.parse_args(argv)
+class CheckMergeCommitScopeGate(LintGate):
+    description = "병합 커밋 검사 범위 음성 테스트 — 훅이 새 내용 파일만 파일 단위로 보는지(임시 git 저장소)"
+    buildComment = "Checking that a merge commit's hook still checks every file with new content..."
+    timeoutSeconds = 60
+    selfTestSkipReason = "린트를 보는 린트 — 조각을 들지 않는다(대상이 린트 폴더 자체다)"
+    violationHeader = "문제"
 
-    errors: list[str] = []
-    tempRoot = Path(tempfile.mkdtemp(prefix="sw_merge_scope_"))
-    try:
-        plainRoot = tempRoot.resolve() / "plain"
-        plainRoot.mkdir()
-        runGitInternal(plainRoot, "init", "-q", "-b", "probe")
-        writeFileInternal(plainRoot, "Source/Plain.cpp", "plain\n")
-        runGitInternal(plainRoot, "add", "-A")
-        if getMergeHeadRevisions(plainRoot):
-            errors.append("병합 중이 아닌데 MERGE_HEAD 를 찾았습니다")
-        if namesInternal(selectFileScopedStagedInternal(plainRoot, getAllStagedFiles(plainRoot))) != {"Plain.cpp"}:
-            errors.append("병합 중이 아닐 때 staged 전체를 넘기지 않습니다")
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--verbose", action="store_true", help="고른 파일을 모두 출력")
 
-        repoRoot = tempRoot.resolve() / "merge"
-        repoRoot.mkdir()
-        buildMergeInternal(repoRoot)
-        listMergeHead = getMergeHeadRevisions(repoRoot)
-        if len(listMergeHead) != 1:
-            errors.append(f"병합 중인데 MERGE_HEAD 를 {len(listMergeHead)}개 읽었습니다(1개여야 한다)")
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        errors: list[str] = []
+        tempRoot = Path(tempfile.mkdtemp(prefix="sw_merge_scope_"))
+        try:
+            plainRoot = tempRoot.resolve() / "plain"
+            plainRoot.mkdir()
+            runGitInternal(plainRoot, "init", "-q", "-b", "probe")
+            writeFileInternal(plainRoot, "Source/Plain.cpp", "plain\n")
+            runGitInternal(plainRoot, "add", "-A")
+            if getMergeHeadRevisions(plainRoot):
+                errors.append("병합 중이 아닌데 MERGE_HEAD 를 찾았습니다")
+            if namesInternal(selectFileScopedStagedInternal(plainRoot, getAllStagedFiles(plainRoot))) != {"Plain.cpp"}:
+                errors.append("병합 중이 아닐 때 staged 전체를 넘기지 않습니다")
 
-        listStaged = getAllStagedFiles(repoRoot)
-        setStaged = namesInternal(listStaged)
-        setScoped = namesInternal(selectFileScopedStagedInternal(repoRoot, listStaged))
-        if args.verbose:
-            print(f"  staged : {sorted(setStaged)}")
-            print(f"  scoped : {sorted(setScoped)}")
+            repoRoot = tempRoot.resolve() / "merge"
+            repoRoot.mkdir()
+            buildMergeInternal(repoRoot)
+            listMergeHead = getMergeHeadRevisions(repoRoot)
+            if len(listMergeHead) != 1:
+                errors.append(f"병합 중인데 MERGE_HEAD 를 {len(listMergeHead)}개 읽었습니다(1개여야 한다)")
 
-        setExpectedStaged = {"TheirsOnly.cpp", "TheirsAdded.cpp", "AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"}
-        if setStaged != setExpectedStaged:
-            errors.append(f"시험 병합의 staged 목록이 예상과 다릅니다: {sorted(setStaged)} (시험 자체가 틀렸다)")
-        for name in ("AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"):
-            if name not in setScoped:
-                errors.append(f"{name}: 병합으로 내용이 새로 생겼는데 검사 대상에서 빠졌습니다 — 검사 없이 커밋된다")
-        for name in ("TheirsOnly.cpp", "TheirsAdded.cpp"):
-            if name in setScoped:
-                errors.append(f"{name}: 한쪽 부모와 내용이 같은데 다시 검사합니다 — 병합 커밋이 느려진다")
-    except RuntimeError as exception:
-        print(f"[CheckMergeCommitScope] 시험 저장소를 만들 수 없습니다: {exception}", file=sys.stderr)
-        return 2
-    finally:
-        removeTreeInternal(tempRoot)
+            listStaged = getAllStagedFiles(repoRoot)
+            setStaged = namesInternal(listStaged)
+            setScoped = namesInternal(selectFileScopedStagedInternal(repoRoot, listStaged))
+            if args.verbose:
+                print(f"  staged : {sorted(setStaged)}")
+                print(f"  scoped : {sorted(setScoped)}")
 
-    if errors:
-        print(f"[CheckMergeCommitScope] 문제 {len(errors)}건", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}")
-        return 1
+            setExpectedStaged = {"TheirsOnly.cpp", "TheirsAdded.cpp", "AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"}
+            if setStaged != setExpectedStaged:
+                errors.append(f"시험 병합의 staged 목록이 예상과 다릅니다: {sorted(setStaged)} (시험 자체가 틀렸다)")
+            for name in ("AutoMerged.cpp", "Conflict.cpp", "AddedInMerge.cpp"):
+                if name not in setScoped:
+                    errors.append(f"{name}: 병합으로 내용이 새로 생겼는데 검사 대상에서 빠졌습니다 — 검사 없이 커밋된다")
+            for name in ("TheirsOnly.cpp", "TheirsAdded.cpp"):
+                if name in setScoped:
+                    errors.append(f"{name}: 한쪽 부모와 내용이 같은데 다시 검사합니다 — 병합 커밋이 느려진다")
+        except RuntimeError as exception:
+            raise GateError(f"시험 저장소를 만들 수 없습니다: {exception}") from exception
+        finally:
+            removeTreeInternal(tempRoot)
 
-    print("[CheckMergeCommitScope] OK (병합 커밋: 새 내용 3개 남김 · 부모와 같은 2개 뺌, 병합 아님: 전체)")
-    return 0
+        return GateResult(listViolation=errors, summary="병합 커밋: 새 내용 3개 남김 · 부모와 같은 2개 뺌, 병합 아님: 전체")
+
+
+main = CheckMergeCommitScopeGate.run
 
 
 if __name__ == "__main__":

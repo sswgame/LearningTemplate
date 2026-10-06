@@ -131,10 +131,9 @@ A gate that takes `--files` picks its files with `addFilesArgument` / `selectTar
 staged subset and the full scan; it never descends into `kNotOurDirNames` — build output and downloaded tools).
 
 **CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
-`Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `add_test` block CMake
-`include()`s at configure time. What differs per lint travels with the lint: a gate declares
-`buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class;
-`selftest/` scripts declare `kLintBuildComment` / `kLintTimeoutSeconds` as module constants. A
+`Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `sw_registerScriptTest` block CMake
+`include()`s at configure time. What differs per lint travels with the lint: a gate — and a `selftest/` script, which is
+a `LintGate` too — declares `buildComment` (the English line ninja prints), `timeoutSeconds` and `listCtestArgument` on its class. A
 `CONFIGURE_DEPENDS` glob watches both folders, so dropping a file in there re-runs configure by itself.
 **A new gate is one file** — no CMake edit, no path constant.
 

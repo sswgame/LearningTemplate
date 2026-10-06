@@ -34,75 +34,71 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from LintCatalog import discoverLintScripts  # noqa: E402
 from LintFixer import findFixerClass  # noqa: E402
-
-#: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
-#: (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
-kLintBuildComment = "Checking that every fixer still rewrites what it must and leaves the rest alone..."
-kLintTimeoutSeconds = 30
+from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="픽서 음성 테스트")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트 (이 검사는 쓰지 않는다 — CTest 가 준다)")
-    parser.add_argument("--verbose", action="store_true", help="변환마다 결과를 모두 출력")
-    args = parser.parse_args(argv)
 
-    errors: list[str] = []
-    checkedPasses = 0
+class CheckFixersAreAliveGate(LintGate):
+    description = "픽서 음성 테스트 — 고쳐야 할 조각을 고치고, 건드리면 안 되는 조각은 그대로 두는지"
+    buildComment = "Checking that every fixer still rewrites what it must and leaves the rest alone..."
+    timeoutSeconds = 30
+    selfTestSkipReason = "린트를 보는 린트 — 조각을 들지 않는다(대상이 린트 폴더 자체다)"
+    violationHeader = "문제"
 
-    listScript = discoverLintScripts("fixer")
-    if not listScript:
-        print("[CheckFixersAreAlive] Scripts/lint/fixer/ 에 픽서가 하나도 없습니다 — 이 검사가 헛돌고 있습니다",
-              file=sys.stderr)
-        return 1
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--verbose", action="store_true", help="변환마다 결과를 모두 출력")
 
-    for script in listScript:
-        fixerClass = findFixerClass(script.module)
-        if fixerClass is None:
-            skipReason = getattr(script.module, "kFixerSkipReason", "")
-            if skipReason:
-                if args.verbose:
-                    print(f"  [{script.name}] 건너뜀 — {skipReason}")
+    def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
+        errors: list[str] = []
+        checkedPasses = 0
+
+        listScript = discoverLintScripts("fixer")
+        if not listScript:
+            raise GateError("Scripts/lint/fixer/ 에 픽서가 하나도 없습니다 — 이 검사가 헛돌고 있습니다")
+
+        for script in listScript:
+            fixerClass = findFixerClass(script.module)
+            if fixerClass is None:
+                skipReason = getattr(script.module, "kFixerSkipReason", "")
+                if skipReason:
+                    if args.verbose:
+                        print(f"  [{script.name}] 건너뜀 — {skipReason}")
+                    continue
+                errors.append(f"{script.name}: `LintFixer` 를 상속한 픽서 클래스가 없습니다 — `fixer/` 에 있는 것은 "
+                              f"픽서여야 합니다 (정말 아니면 `kFixerSkipReason` 에 이유를 적으세요)")
                 continue
-            errors.append(f"{script.name}: `LintFixer` 를 상속한 픽서 클래스가 없습니다 — `fixer/` 에 있는 것은 "
-                          f"픽서여야 합니다 (정말 아니면 `kFixerSkipReason` 에 이유를 적으세요)")
-            continue
 
-        if not fixerClass.listPass:
-            errors.append(f"{script.name}: `listPass` 가 비어 있습니다 — 이 픽서는 아무것도 하지 않습니다")
-            continue
+            if not fixerClass.listPass:
+                errors.append(f"{script.name}: `listPass` 가 비어 있습니다 — 이 픽서는 아무것도 하지 않습니다")
+                continue
 
-        for fixPass in fixerClass.listPass:
-            checkedPasses += 1
-            label = f"{script.name}/{fixPass.done}"
+            for fixPass in fixerClass.listPass:
+                checkedPasses += 1
+                label = f"{script.name}/{fixPass.done}"
 
-            if not fixPass.badSample:
-                errors.append(f"{label}: `badSample` 이 없습니다 — 이 변환이 죽어도 아무도 모릅니다")
-            else:
-                _, bChanged = fixPass.transform(fixPass.badSample)
-                if args.verbose:
-                    print(f"  [{label}] badSample changed={bChanged}")
-                if not bChanged:
-                    errors.append(f"{label}: 고쳐야 할 조각을 그냥 뒀습니다 — 이 변환은 죽었습니다")
+                if not fixPass.badSample:
+                    errors.append(f"{label}: `badSample` 이 없습니다 — 이 변환이 죽어도 아무도 모릅니다")
+                else:
+                    _, bChanged = fixPass.transform(fixPass.badSample)
+                    if args.verbose:
+                        print(f"  [{label}] badSample changed={bChanged}")
+                    if not bChanged:
+                        errors.append(f"{label}: 고쳐야 할 조각을 그냥 뒀습니다 — 이 변환은 죽었습니다")
 
-            if not fixPass.goodSample:
-                errors.append(f"{label}: `goodSample` 이 없습니다 — 오탐이 나도 아무도 모릅니다 "
-                              f"(픽서의 오탐은 빨간 줄이 아니라 소스 변경입니다)")
-            else:
-                _, bChanged = fixPass.transform(fixPass.goodSample)
-                if args.verbose:
-                    print(f"  [{label}] goodSample changed={bChanged}")
-                if bChanged:
-                    errors.append(f"{label}: 건드리면 안 되는 조각을 고쳤습니다 — 규칙이 너무 넓습니다")
+                if not fixPass.goodSample:
+                    errors.append(f"{label}: `goodSample` 이 없습니다 — 오탐이 나도 아무도 모릅니다 "
+                                  f"(픽서의 오탐은 빨간 줄이 아니라 소스 변경입니다)")
+                else:
+                    _, bChanged = fixPass.transform(fixPass.goodSample)
+                    if args.verbose:
+                        print(f"  [{label}] goodSample changed={bChanged}")
+                    if bChanged:
+                        errors.append(f"{label}: 건드리면 안 되는 조각을 고쳤습니다 — 규칙이 너무 넓습니다")
 
-    if errors:
-        print(f"[CheckFixersAreAlive] 문제 {len(errors)}건", file=sys.stderr)
-        for error in errors:
-            print(f"  {error}")
-        return 1
+        return GateResult(listViolation=errors, summary=f"{checkedPasses} passes across {len(listScript)} files")
 
-    print(f"[CheckFixersAreAlive] OK ({checkedPasses} passes across {len(listScript)} files)")
-    return 0
+
+main = CheckFixersAreAliveGate.run
 
 
 if __name__ == "__main__":

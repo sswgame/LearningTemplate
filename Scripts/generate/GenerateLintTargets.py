@@ -37,8 +37,7 @@ kHeader = """# =================================================================
 #
 # 목록의 출처는 `Scripts/lint/gate/` 와 `Scripts/lint/selftest/` 폴더 그 자체이고,
 # 린트마다 다른 값(설명·타임아웃·추가 인자)은 각 린트가 직접 든다:
-#   - 게이트     : `LintGate` 하위 클래스의 buildComment / timeoutSeconds / listCtestArgument
-#   - 셀프테스트 : 모듈 상수 kLintBuildComment / kLintTimeoutSeconds / kLintCtestArguments
+#   `LintGate` 하위 클래스(게이트 · 셀프테스트)의 buildComment / timeoutSeconds / listCtestArgument
 # 새 린트는 폴더에 파일을 놓는 것으로 끝난다 — 이 파일도, CMake 도 고칠 것이 없다.
 # ==============================================================================
 """

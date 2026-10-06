@@ -8,8 +8,8 @@
 `include()` 한다(`Scripts/generate/GenerateLintTargets.py` → `generated/sw/config/LintTargets.cmake`).
 이 저장소가 이미 `Constants.py` → `ConfigVars.cmake` 로 하고 있는 방식 그대로다.
 
-린트마다 다른 것(설명 · 타임아웃 · 추가 인자)은 **린트 자신이 든다** — 게이트는 `LintGate`
-클래스 속성으로, 셀프테스트는 모듈 상수(`kLint*`)로. 표를 여기 모으면 그 표가 또 어긋난다.
+린트마다 다른 것(설명 · 타임아웃 · 추가 인자)은 **린트 자신이 든다** — 게이트 · 셀프테스트 모두 `LintGate`
+클래스 속성으로. 표를 여기 모으면 그 표가 또 어긋난다.
 """
 
 from __future__ import annotations
@@ -29,7 +29,6 @@ from LintGate import LintGate, findGateClass  # noqa: E402
 kRegisteredFolder = ("gate", "selftest")
 
 #: 타임아웃을 따로 적지 않은 린트의 기본값(초).
-kDefaultTimeoutSeconds = 30
 
 _kLintDir = Path(__file__).resolve().parent
 
@@ -110,19 +109,7 @@ def makeLintTarget(script: LintScript) -> LintTarget:
             listCtestArgument=tuple(gateClass.listCtestArgument),
         )
 
-    buildComment = getattr(script.module, "kLintBuildComment", "")
-    if not buildComment:
-        raise ValueError(
-            f"{script.relPath}: `kLintBuildComment` 가 없습니다 — CMake 가 이 린트를 무슨 이름으로 "
-            f"찍을지 알 수 없습니다 (게이트라면 `LintGate` 를 상속하세요)"
-        )
-    return LintTarget(
-        name=script.name,
-        scriptRelPath=script.relPath,
-        buildComment=buildComment,
-        timeoutSeconds=int(getattr(script.module, "kLintTimeoutSeconds", kDefaultTimeoutSeconds)),
-        listCtestArgument=tuple(getattr(script.module, "kLintCtestArguments", ())),
-    )
+    raise ValueError(f"{script.relPath}: `LintGate` 하위 클래스가 없다 — gate/ · selftest/ 의 스크립트는 게이트다(Scripts/lint/LintGate.py)")
 
 
 def discoverLintTargets(folderName: str = "") -> list[LintTarget]:
