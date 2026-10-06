@@ -859,6 +859,8 @@ cd build/Ninja-Debug/Bin
   `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
   vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
   보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
+- **FreeType 는 엔진 직접 의존**(`vcpkg.json` · `ThirdParty/freetype` — imgui[freetype] 과 같은 포트 · 같은 기능): 헤더는 `Engine/Text/FreeType` 에서만,
+  링크는 `Source/Engine/CMakeLists.txt` 에서만(`CheckThirdPartyIsolation`). 임포트 타깃 이름이 `freetype` 그대로라 래퍼 INTERFACE 를 만들지 않고 전역으로 올린다.
 - **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
   재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
   리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).

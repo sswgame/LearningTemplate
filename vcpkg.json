@@ -60,6 +60,7 @@
       "platform": "windows | linux"
     },
     "stb",
+    "freetype",
     "cgltf",
     "meshoptimizer",
     "joltphysics",

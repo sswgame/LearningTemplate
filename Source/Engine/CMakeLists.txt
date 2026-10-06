@@ -206,6 +206,12 @@ target_link_libraries(Engine PRIVATE recastnavigation)
 target_link_libraries(Engine PRIVATE openssl)
 
 # ------------------------------------------------------------------------------
+# 2-5) 글자 래스터화 — FreeType(x64-windows 는 freetype.dll, 리눅스는 정적). 헤더는 Text/FreeType 에서만 include 한다(CheckThirdPartyIsolation.py)
+# — 다른 코드는 엔진 인터페이스(Engine/Text/IFontRasterizer.h)만 본다.
+# ------------------------------------------------------------------------------
+target_link_libraries(Engine PRIVATE freetype)
+
+# ------------------------------------------------------------------------------
 # 3) RHI 링크 — Shipping 은 백엔드 하나를 Engine 에 정적 링크, Dev 는 RHI_* MODULE 을 런타임에 로드
 # 전용 서버 배포본은 RHI 백엔드를 하나도 링크하지 않는다(기동 표의 RHI 단계가 서버에서 돌지 않는다) — 백엔드 소스는 모두 "이 구성이 짓지 않는다".
 # Dev 서버는 RHI_* 모듈을 매니페스트(`_listTarget: ["Client"]`)가 끈다.
