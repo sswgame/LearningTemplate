@@ -26,6 +26,19 @@ namespace sw
         return "Unknown";
     }
 
+    bool PushLimit::isValidProviderId( string_view providerId )
+    {
+        if ( providerId.empty() || providerId.size() > static_cast<size_t>( kMaxProviderIdSize ) )
+            return false;
+        for ( const utf8 ch : providerId )
+        {
+            const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
+            if ( bAllowed == false )
+                return false;
+        }
+        return true;
+    }
+
     bool LiveOpsLimit::isValidKey( string_view key, int32 maxSize )
     {
         if ( key.empty() || key.size() > static_cast<size_t>( maxSize ) )

@@ -46,6 +46,9 @@ namespace sw
 
         /** @brief 열린 이벤트를 받습니다(로그인 뒤). 지역 · 빌드 판은 들어 두었다가 바뀜 알림 때 다시 쓴다. */
         uint64 requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply );
+        /** @brief OS 가 준 푸시 토큰을 등록합니다(로그인 뒤, 토큰이 바뀔 때마다 — 같은 토큰은 덮는다). */
+        uint64 registerDevice( const PushDeviceRegistration& registration, const ReplyDelegate& onReply );
+        uint64 unregisterDevice( string_view providerId, string_view token, const ReplyDelegate& onReply );
 
         const vector<LiveEventState>& getActiveEvents() const { return _listEvent; }
         bool                          hasEventKind( string_view kind ) const;

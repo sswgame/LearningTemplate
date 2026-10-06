@@ -13,25 +13,39 @@
 namespace sw
 {
     LiveOpsServer::LiveOpsServer()
-        : _pService{ nullptr }
+        : _pendingTable{}
+        , _listDeviceCompletionScratch{}
+        , _pService{ nullptr }
+        , _pDispatcher{ nullptr }
         , _pHost{ nullptr }
     {
     }
 
-    void LiveOpsServer::initialize( LiveOpsService* pService ) { _pService = pService; }
+    void LiveOpsServer::initialize( LiveOpsService* pService, PushNotificationDispatcher* pDispatcher )
+    {
+        _pService    = pService;
+        _pDispatcher = pDispatcher;
+    }
 
     void LiveOpsServer::shutdown()
     {
         if ( _pHost != nullptr )
             _pHost->unsubscribeServerBus( LiveOpsBus::kChangedTopic, this );
-        _pHost    = nullptr;
-        _pService = nullptr;
+        _pendingTable.clear();
+        _pHost       = nullptr;
+        _pService    = nullptr;
+        _pDispatcher = nullptr;
     }
 
     uint32 LiveOpsServer::getProtocolVersion() const { return LiveOpsProtocol::kVersion; }
 
     void LiveOpsServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
+        if ( context._method == LiveOpsMethod::kRegisterDevice || context._method == LiveOpsMethod::kUnregisterDevice )
+        {
+            handleDeviceRequest( host, context, body );
+            return;
+        }
         if ( _pService == nullptr )
         {
             (void)host.respondError( context._token, OnlineError::kUnavailable );
@@ -57,10 +71,62 @@ namespace sw
         (void)host.respondOk( context._token, replyBody );
     }
 
+    void LiveOpsServer::handleDeviceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
+    {
+        if ( _pDispatcher == nullptr )
+        {
+            (void)host.respondError( context._token, OnlineError::kUnavailable );
+            return;
+        }
+        PushDeviceRegistration registration;
+        bool                   bBodyOk = false;
+        if ( context._method == LiveOpsMethod::kRegisterDevice )
+        {
+            bBodyOk = LiveOpsProtocol::readDevice( body, registration );
+        }
+        else
+        {
+            bBodyOk = ServiceKeyUtil::readString( body, PushLimit::kMaxProviderIdSize, registration._providerId ) &&
+                      ServiceKeyUtil::readString( body, PushLimit::kMaxTokenSize, registration._token );
+        }
+        if ( bBodyOk == false || body.hasOverflowed() )
+        {
+            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
+            return;
+        }
+        const uint64 tag = _pendingTable.add( context._token );
+        if ( context._method == LiveOpsMethod::kRegisterDevice )
+        {
+            registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계(한도를 넘으면 가장 오래된 것을 밀어낸다)
+            _pDispatcher->registerDevice( context._accountId, registration, tag );
+        }
+        else
+        {
+            _pDispatcher->unregisterDevice( context._accountId, registration._providerId, registration._token, tag );
+        }
+    }
+
     void LiveOpsServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
     {
         if ( _pHost == nullptr )
             attachHost( host );
+        if ( _pDispatcher != nullptr )
+        {
+            _pDispatcher->tick( nowMs );
+            _listDeviceCompletionScratch.clear();
+            _pDispatcher->drainCompletions( _listDeviceCompletionScratch );
+            for ( const PushDeviceCompletion& completion : _listDeviceCompletionScratch )
+            {
+                NetRequestToken token;
+                if ( _pendingTable.take( completion._requestTag, token ) == false )
+                    continue;
+                LiveOpsReply reply;
+                reply._result = completion._result;
+                BitWriter replyBody;
+                LiveOpsProtocol::writeReply( replyBody, reply );
+                (void)host.respondOk( token, replyBody );
+            }
+        }
         if ( _pService == nullptr )
             return;
         _pService->tick( nowMs );

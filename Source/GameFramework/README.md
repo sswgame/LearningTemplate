@@ -383,8 +383,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       게임은 `getActiveEvents` · `hasEventKind` 만 본다).
     - `Server/LiveOps`(`GF_Server_LiveOps`, Server): 열림 판정(`LiveEventRules` — 기간 · 매일/매주 회차(`ServiceScheduler::computeLatestOccurrence`) · 빌드 · 지역 ·
       출시 비율(`RemoteConfig::computeRolloutBucket` — 원격 설정 플래그와 같은 해시)), 로직(`LiveOpsService` — 정의는 영속 `liveops_event` + 감사 줄 한 트랜잭션, 30 초 주기 +
-      버스 `liveops.changed` 재촉, 매개변수 `@<키>` 는 원격 설정 값, 긴급 스위치 `feature.liveops`, 열린 묶음 해시가 바뀌면(회차 경계 포함) 알림), 바인딩(`LiveOpsServer`).
-      바꾸기는 C++ API(GM 도구가 조립에서). 시험: `LiveEventRulesTest` · `LiveOpsServiceTest` · `LiveOpsStreamTest`.
+      버스 `liveops.changed` 재촉, 매개변수 `@<키>` 는 원격 설정 값, 긴급 스위치 `feature.liveops`, 열린 묶음 해시가 바뀌면(회차 경계 포함) 알림), 바인딩(`LiveOpsServer` —
+      푸시 기기 등록 · 해지 메서드도). 푸시(`Push/` — 제공자 계약 `IPushNotificationProvider`, 구현은 `Push/Provider/<제품>/` 안 — 지금은 `Fake` 하나. 실제 제공자 둘은
+      공통 HTTPS 클라이언트 · 운영 비밀(인증서 · 서비스 계정 키) 뒤에 그 폴더에 넣는다. 발송기 `PushNotificationDispatcher` — 계정 도배 제한 · 기기 목록(영속 `liveops_device`,
+      키는 토큰 해시, 계정마다 10 개 — 넘으면 가장 오래된 것) · 무효 토큰은 지움 · 일시 실패는 1 · 2 · 4 · 8 초 물러났다 다섯 번까지 · 이 빌드에 없는 제공자의 기기는 건너뜀).
+      바꾸기는 C++ API(GM 도구가 조립에서). 시험: `LiveEventRulesTest` · `LiveOpsServiceTest` · `LiveOpsStreamTest` · `PushDispatcherTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,

@@ -84,6 +84,50 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 푸시 알림 하나 — 글은 로컬라이제이션 키와 인자(제공자가 키 · 인자를 지원하면 그대로, 아니면 게임이 풀어 넣는다)입니다. */
+    struct PushNotificationMessage
+    {
+        static constexpr int32 kArgumentCount = 4;
+
+        string _titleKey{};
+        string _bodyKey{};
+        string _deepLink{};                    ///< 앱이 열 화면("mailbox" · "event/halloween")
+        string _arrArgument[kArgumentCount]{}; ///< 본문 인자
+        int32  _badgeCount{ -1 };              ///< −1 = 건드리지 않음
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 기기 등록 하나 — 클라이언트가 OS 에서 받은 토큰입니다. */
+    struct PushDeviceRegistration
+    {
+        string _providerId{}; ///< `[0-9a-z_]` 16 바이트 — "fake" · "apns" · "fcm"
+        string _token{};      ///< 256 바이트 이하(값으로만 둔다 — 저장소 키는 토큰 해시)
+        string _locale{};     ///< "ko-KR"
+        int64  _registeredMs{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 푸시의 상한 · 물러남입니다. */
+    struct PushLimit
+    {
+        static constexpr int32 kMaxProviderIdSize   = 16;
+        static constexpr int32 kMaxTokenSize        = 256;
+        static constexpr int32 kMaxLocaleSize       = 16;
+        static constexpr int32 kMaxDevicePerAccount = 10;
+        static constexpr int32 kMaxRetry            = 5;    ///< 일시 실패 · 제공자 늦춤은 다섯 번까지
+        static constexpr int64 kFirstBackoffMs      = 1000; ///< 1 · 2 · 4 · 8 · 16 초
+
+        /** @brief 제공자 id 규칙(`[0-9a-z_]`, 1..16 바이트)인가입니다. */
+        SW_GF_API static bool isValidProviderId( string_view providerId );
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 라이브 운영의 상한입니다. */
     struct LiveOpsLimit
     {

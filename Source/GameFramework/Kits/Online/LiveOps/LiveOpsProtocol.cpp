@@ -140,6 +140,25 @@ namespace sw
         return reader.hasOverflowed() == false;
     }
 
+    void LiveOpsProtocol::writeDevice( BitWriter& outWriter, const PushDeviceRegistration& registration )
+    {
+        ServiceKeyUtil::writeString( outWriter, registration._providerId );
+        ServiceKeyUtil::writeString( outWriter, registration._token );
+        ServiceKeyUtil::writeString( outWriter, registration._locale );
+        outWriter.writeVarInt( registration._registeredMs );
+    }
+
+    bool LiveOpsProtocol::readDevice( BitReader& reader, PushDeviceRegistration& outRegistration )
+    {
+        const bool bTextOk = ServiceKeyUtil::readString( reader, PushLimit::kMaxProviderIdSize, outRegistration._providerId ) &&
+                             ServiceKeyUtil::readString( reader, PushLimit::kMaxTokenSize, outRegistration._token ) &&
+                             ServiceKeyUtil::readString( reader, PushLimit::kMaxLocaleSize, outRegistration._locale );
+        if ( bTextOk == false )
+            return false;
+        outRegistration._registeredMs = reader.readVarInt();
+        return reader.hasOverflowed() == false;
+    }
+
     void LiveOpsProtocol::writeReply( BitWriter& outWriter, const LiveOpsReply& reply )
     {
         outWriter.writeBits( static_cast<uint32>( reply._result ), 8 );

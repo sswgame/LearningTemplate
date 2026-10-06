@@ -32,6 +32,21 @@ namespace sw
         return send( LiveOpsMethod::kGetLiveState, body, onReply );
     }
 
+    uint64 LiveOpsClient::registerDevice( const PushDeviceRegistration& registration, const ReplyDelegate& onReply )
+    {
+        BitWriter body;
+        LiveOpsProtocol::writeDevice( body, registration );
+        return send( LiveOpsMethod::kRegisterDevice, body, onReply );
+    }
+
+    uint64 LiveOpsClient::unregisterDevice( string_view providerId, string_view token, const ReplyDelegate& onReply )
+    {
+        BitWriter body;
+        ServiceKeyUtil::writeString( body, providerId );
+        ServiceKeyUtil::writeString( body, token );
+        return send( LiveOpsMethod::kUnregisterDevice, body, onReply );
+    }
+
     bool LiveOpsClient::hasEventKind( string_view kind ) const
     {
         for ( const LiveEventState& state : _listEvent )
