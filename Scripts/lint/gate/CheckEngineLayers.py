@@ -11,6 +11,9 @@ Engine 레이어 금지 include 검사.
      `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
   4) Source/RuntimeAPI/** 에서 Engine / App / Games 경로 include 금지 — 호스트 ↔ 모듈 계약이 구현을 알면 안 된다.
      (Export/ 의 모듈 매크로가 Editor · GameFramework 로케이터를 끌어오는 것은 계약이라 막지 않는다.)
+  5) 최상위 소스 폴더 사이의 방향(include 경로의 **앞부분**으로 본다): Core 는 아무것도 모르고, App 은 Engine · RuntimeAPI 만(게임 · 에디터는
+     C-ABI 로만), 에디터는 게임 · 키트 · 호스트를 모르고, Server 는 에디터 · 게임 쪽을 모르며, Engine · GameFramework · 게임은 호스트(App · Server)를 모른다.
+  6) 게임은 다른 게임을 include 하지 않는다 — 나눠 쓸 것은 키트 · 기반으로 내린다.
 
 티어는 **include 그래프에서 계산한 것**이다 — 손으로 고른 금지 쌍은 늘릴 기준이 없다. 전체 그래프를
 Tarjan SCC 로 줄이고 위상 순서를 티어로 쓰며, 위반은 경고가 아니라 실패다.
@@ -32,10 +35,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import (  # noqa: E402
     collectSourceFiles,
     kDirSourceApp,
+    kDirSourceCore,
+    kDirSourceEditor,
     kDirSourceEngine,
     kDirSourceGameFramework,
     kDirSourceGames,
     kDirSourceRuntimeAPI,
+    kDirSourceServer,
     kFileEngineServices,
     mapConcurrent,
     normalizePath,
@@ -88,6 +94,19 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
         ("Engine/", kDirSourceEngine, "App/", kDirSourceApp, "Games/", kDirSourceGames),
     ),
 ]
+
+# 최상위 소스 폴더 사이의 방향 — include 경로의 **앞부분**으로 본다(`GameFramework/Kits/Online/Server/` 같은 하위 폴더 이름과 헷갈리지 않게).
+#   Core 는 아무것도 모른다(생성 설정 `sw/` 만). App 은 Engine · RuntimeAPI 만 — 게임 · 에디터는 C-ABI 로만 안다(CLAUDE.md "Target graph").
+#   에디터는 게임 · 키트 · 호스트를 모른다(RuntimeAPI · 위임 · 이벤트로). Server 는 App 의 호스트 부품까지. Engine · GameFramework · 게임은 호스트(App · Server)를 모른다.
+_kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (kDirSourceCore, ("Engine/", "Editor/", "GameFramework/", "Games/", "App/", "Server/", "RuntimeAPI/")),
+    (kDirSourceApp, ("Editor/", "GameFramework/", "Games/", "Server/")),
+    (kDirSourceEditor, ("GameFramework/", "Games/", "App/", "Server/")),
+    (kDirSourceServer, ("Editor/", "GameFramework/", "Games/")),
+    (kDirSourceEngine, ("App/", "Server/")),
+    (kDirSourceGameFramework, ("App/", "Server/")),
+    (kDirSourceGames, ("App/", "Server/", "Editor/")),
+)
 
 # Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
 _kRootLayerName = "<root>"
@@ -220,6 +239,22 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
                 if includeHitsBanInternal(normalizedInclude, bannedPattern):
                     fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
+    listInclude = [normalizePath(includePath) for includePath in _kIncludeRe.findall(text)]
+    for rulePrefix, listBannedPrefix in _kForbiddenPrefixRules:
+        if not startsWithPathComponent(relativeFilePath, rulePrefix):
+            continue
+        for include in listInclude:
+            if include.startswith(listBannedPrefix):
+                fileViolations.append(f'{relativeFilePath}: #include "{include}"  (금지: {rulePrefix} 는 {include.split("/")[0]}/ 를 모른다)')
+    # 게임은 다른 게임을 모른다 — 나눠 쓸 것은 키트 · 기반으로 내린다.
+    if startsWithPathComponent(relativeFilePath, kDirSourceGames):
+        listPart = relativeFilePath.split("/")
+        gameName = listPart[2] if len(listPart) >= 4 else ""
+        for include in listInclude:
+            parts = include.split("/")
+            if len(parts) > 2 and parts[0] == "Games" and gameName and parts[1] != gameName:
+                fileViolations.append(f'{relativeFilePath}: #include "{include}"  (게임 {gameName} -> 다른 게임 {parts[1]})')
+
     if startsWithPathComponent(relativeFilePath, kDirSourceEngine) is False:
         return fileViolations
     gate = CheckEngineLayersGate
@@ -311,6 +346,28 @@ class CheckEngineLayersGate(LintGate):
                 "Source/RuntimeAPI/Service/Probe.h": '#pragma once\n\n#include "Engine/Common/EngineServices.h"\n',
             },
         },
+        {
+            "name": "Core 가 Engine 을 include",
+            "files": {
+                "Source/Engine/Common/Probe.h": "#pragma once\n",
+                "Source/Core/Probe/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Scene/SceneManager.h"\n',
+            },
+        },
+        {
+            # App 은 게임 · 에디터를 C-ABI 로만 안다.
+            "name": "App 이 게임을 include",
+            "files": {
+                "Source/Engine/Common/Probe.h": "#pragma once\n",
+                "Source/App/Probe.cpp": '#include "pch.h"\n\n#include "Games/Alpha/AlphaGame.h"\n',
+            },
+        },
+        {
+            "name": "게임이 다른 게임을 include",
+            "files": {
+                "Source/Engine/Common/Probe.h": "#pragma once\n",
+                "Source/Games/Alpha/AlphaProbe.cpp": '#include "pch.h"\n\n#include "Games/Beta/BetaProbe.h"\n',
+            },
+        },
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
@@ -323,7 +380,12 @@ class CheckEngineLayersGate(LintGate):
             repositoryRoot / kDirSourceGames,
             repositoryRoot / kDirSourceGameFramework,
             repositoryRoot / kDirSourceRuntimeAPI,
+            repositoryRoot / kDirSourceCore,
+            repositoryRoot / kDirSourceApp,
+            repositoryRoot / kDirSourceEditor,
+            repositoryRoot / kDirSourceServer,
         ]
+        scanRoots = [root for root in scanRoots if root.is_dir()]
         allFiles = collectSourceFiles(scanRoots)
 
         violations: list[str] = []

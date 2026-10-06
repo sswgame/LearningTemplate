@@ -30,6 +30,8 @@
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
 
 **아래 티어는 위 티어를 include하지 않습니다.** 같은 티어끼리는 include할 수 있습니다. `CheckEngineLayers.py` 게이트가 이 규칙을 확인하고, 위반은 경고가 아니라 실패입니다.
+
+같은 게이트는 최상위 폴더 방향도 봅니다. Core 는 아무것도 모르고, App 은 Engine 과 RuntimeAPI 만 압니다. Editor 는 게임, 키트, 호스트를 모르고, Server 는 Editor, GameFramework, Games 를 모릅니다. Engine, GameFramework, Games 는 호스트(App, Server)를 모르고, 게임은 다른 게임을 include 하지 않습니다.
 표에 없는 새 최상위 폴더도 실패합니다. 같은 게이트가 Engine에서 `Editor/`, `GameFramework/`, `Games/` 를 include하는 것도 막습니다.
 
 티어마다 알아 둘 점은 다음과 같습니다.
