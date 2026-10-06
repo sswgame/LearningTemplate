@@ -1,14 +1,18 @@
 #include "pch.h"
 
+#include "Engine/Network/EngineNetSecurity.h"
+
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Online/Server/Account/LoginService.h"
+#include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
 
 #include "TestFramework/TestFramework.h"
 
 #include <algorithm>
 
 // 로그인 서비스 — 가입 · 로그인 · 토큰 검증, 틀린 비밀번호 잠금 · 시도 제한, 중복 로그인(밀어내기 · 거절), 재접속 유예 · 토큰 회전 · 만료,
-// 서비스 재시작 뒤 재접속, 서버 둘 동시 로그인, 게임 접속 표(서명 · 서버 · 시한 · 변조), 저장소 실패 주입(반쪽 세션 없음), 해시 매개변수 갱신.
+// 서비스 재시작 뒤 재접속, 서버 둘 동시 로그인, 게임 접속 표(서명 · 서버 · 시한 · 변조), 저장소 실패 주입(반쪽 세션 없음), 해시 매개변수 갱신,
+// 실제 암호(OpenSSL Argon2id · HKDF — NetSecurityLoginCrypto).
 
 using namespace sw;
 
@@ -498,4 +502,46 @@ SW_TEST_CASE( LoginServiceTest, ChangedHashParamsRehashOnNextLogin )
     SW_EXPECT_EQUAL( hashCountBefore + 2, fixture->_crypto._passwordHashCount ); // 옛 매개변수로 확인 + 새 매개변수로 다시
     SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "jack", "password123" ), 1, 10, grant ) == LoginResult::Ok );
     SW_EXPECT_EQUAL( hashCountBefore + 3, fixture->_crypto._passwordHashCount ); // 이제 한 번
+}
+
+SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
+{
+    using Internal = TestLoginServiceInternal;
+    NetSecurityLoginCrypto crypto{ &EngineNetSecurity::getProvider() };
+    LoginSettings          settings; // 기본 Argon2id 매개변수(OWASP 19 MiB · 2 회 · 1 레인)
+    SW_ASSERT_TRUE( crypto.isPasswordHashSupported( settings._passwordHashParams ) );
+
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    LoginService          service;
+    service.initialize( &store, &crypto, settings, Internal::kMasterKey );
+    vector<LoginCompletion> listCompletion;
+
+    service.registerAccount( Internal::makeCredential( "liam", "password123" ), 0, 1 );
+    service.login( Internal::makeCredential( "liam", "wrong-pass" ), 1, 10, 2 );
+    service.login( Internal::makeCredential( "liam", "password123" ), 1, 20, 3 );
+    (void)store.pollCompletions();
+    service.drainCompletions( listCompletion );
+    SW_ASSERT_EQUAL( size_t( 3 ), listCompletion.size() );
+    SW_EXPECT_TRUE( listCompletion[0]._result == LoginResult::Ok );
+    SW_EXPECT_TRUE( listCompletion[1]._result == LoginResult::WrongCredentials );
+    SW_ASSERT_TRUE( listCompletion[2]._result == LoginResult::Ok );
+    const LoginSessionToken token = listCompletion[2]._grant._token;
+
+    listCompletion.clear();
+    service.issueGameTicket( token, "zone-1", 30, 4 );
+    (void)store.pollCompletions();
+    service.drainCompletions( listCompletion );
+    SW_ASSERT_EQUAL( size_t( 1 ), listCompletion.size() );
+    SW_ASSERT_TRUE( listCompletion[0]._result == LoginResult::Ok );
+    NetSecurityLoginCrypto gameCrypto{ &EngineNetSecurity::getProvider() };
+    LoginTicketAuthority   gameAuthority;
+    gameAuthority.initialize( &gameCrypto, Internal::kMasterKey );
+    NetGameTicketClaim claim;
+    SW_EXPECT_TRUE( gameAuthority.verifyTicket( listCompletion[0]._ticket._arrToken, NetGameTicket::kTokenSize, "zone-1", 40, claim ) );
+    SW_EXPECT_EQUAL( token._sessionId, claim._sessionId );
+
+    store.shutdown();
+    (void)store.pollCompletions();
+    service.shutdown();
 }

@@ -233,7 +233,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       세션 토큰(선택자 + 검증자, 저장소엔 다이제스트만 · 상수 시간 비교 · 재접속마다 회전), 재접속 유예 · 절대 수명, 중복 로그인(기본 새 로그인이 옛 세션을 밀어냄 ·
       `RejectNew`, 묘비로 "다른 곳에서 로그인"), 실패 누적 잠금 · 주소마다 시도 제한(`TokenBucketMap`), 없는 계정에도 해시(열거 막기), 게임(UDP) 접속 표
       (`LoginTicketAuthority` — 주 키로 서명한 상태 없는 표 64 B + 표 비밀). 요청은 저장소에 일로 맡기고(`LoginStoreLogic` 이 저장소 스레드에서) 꼬리표로 거둔다.
-      `IAccountDirectory` 구현(이 프로세스에 붙어 있는 계정만). 암호는 `ILoginCrypto` 뒤. 시험: `LoginServiceTest`(메모리 저장소 · 결정적 가짜 암호).
+      `IAccountDirectory` 구현(이 프로세스에 붙어 있는 계정만). 암호는 `ILoginCrypto` 뒤 — 실제 구현 `NetSecurityLoginCrypto`(네트워크 보안 제공자의
+      Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 시험: `LoginServiceTest`(메모리 저장소 · 결정적 가짜 암호 + 실제 암호 한 케이스).
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
