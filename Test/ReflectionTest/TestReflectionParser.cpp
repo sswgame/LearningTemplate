@@ -1523,6 +1523,58 @@ SW_TEST_CASE( ReflectionParserTest, LocalConfigCannotOverrideCommittedDefaults )
 }
 
 /**
+ * @brief [ReflectionParserTest] 깨진 로컬 parser_config.json 은 파서를 세운다 — 기본값으로 대신해 조용히 돌지 않는다
+ * @details 깨진 설정을 빈 객체로 바꾸면 LLVM · SDK 경로가 비어 libclang 오류가 엉뚱한 자리에서 난다. 없는 파일만 선택이다.
+ */
+SW_TEST_CASE( ReflectionParserTest, BrokenLocalConfigStopsTheParser )
+{
+    const sw::string parserExe = findReflectionParserExecutable();
+    if ( parserExe.empty() )
+        SW_TEST_SKIP( "ReflectionParser executable not found (Bin/ · BuildTools/)" );
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+
+    const sw::string projectRoot = sw::ResourceUtil::getProjectFolderPath();
+    const sw::string caseRoot    = test::makeTempPath( "broken_local_config" );
+    const sw::string envDir      = sw::FileUtil::joinPath( caseRoot, "Config/Environment" );
+    const sw::string outGenDir   = sw::FileUtil::joinPath( caseRoot, "gen" );
+    sw::FileUtil::ensureDirectoryExists( envDir );
+    sw::FileUtil::ensureDirectoryExists( outGenDir );
+    for ( const utf8* pName : { "parser_config.defaults.json", "toolchain_config.json" } )
+    {
+        const sw::string source = sw::FileUtil::joinPath( sw::FileUtil::joinPath( projectRoot, "Config/Environment" ), pName );
+        if ( sw::FileUtil::exists( source ) == false )
+            SW_TEST_SKIP( "Config/Environment is not set up on this machine (run Scripts/setup/SetupEnvironment.py)" );
+        SW_ASSERT_TRUE( sw::FileUtil::copyFile( source, sw::FileUtil::joinPath( envDir, pName ) ) );
+    }
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( envDir, "parser_config.json" ), "{ \"paths\": { \"llvm\": \"x\", } \n" ) );
+
+    const sw::string headerPath = sw::FileUtil::joinPath( caseRoot, "BrokenConfigSample.h" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerPath, "#pragma once\n"
+                                                             "#include \"Core/Common/Types.h\"\n"
+                                                             "#include \"Engine/Reflection/ReflectionMacros.h\"\n"
+                                                             "namespace sw\n"
+                                                             "{\n"
+                                                             "    ENUM()\n"
+                                                             "    enum class BrokenConfigSample : uint8\n"
+                                                             "    {\n"
+                                                             "        First,\n"
+                                                             "    };\n"
+                                                             "}\n" ) );
+
+    sw::ProcessOptions options;
+    options._workingDirectory = caseRoot;
+    sw::string  log;
+    const int32 exitCode = sw::Process::execute( makeParserCommand( parserExe, headerPath, outGenDir, projectRoot ), options,
+                                                 SW_DELEGATE_LAMBDA( sw::ProcessOutputDelegate, [&log]( sw::string_view line )
+    {
+        log.append( line.data(), line.size() );
+        log.push_back( '\n' );
+    } ) );
+    SW_EXPECT_TRUE_MSG( exitCode != 0, log.c_str() );
+    SW_EXPECT_TRUE_MSG( log.find( "is not valid JSON" ) != sw::string::npos, log.c_str() );
+}
+
+/**
  * @brief [ReflectionParserTest] 함수 인자의 이름 · 기본 인자, 이벤트(멀티캐스트 델리게이트 PROPERTY)의 인자 이름을 코드젠한다 — 이벤트에 맞지 않는 애노테이션은 멈춘다
  * @details 인자 이름 · 기본 인자는 타입에 남지 않아 소스 토큰에서 읽는다. 이벤트 인자 이름은 별칭(`using ScoreEvent = …`)으로 적어도
  *          그 별칭 선언에서 읽는다. 한 번의 실행에 성한 헤더 하나와 깨진 헤더 둘을 넣는다(깨진 것은 그 헤더만 실패).

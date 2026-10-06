@@ -38,23 +38,37 @@ namespace sw
                 return {};
             }
 
-            /** @brief 설정 파일을 찾아 JSON 으로 읽고, 읽었으면 경로를 남깁니다. 없거나 깨졌으면 null 객체입니다. */
-            static nlohmann::json loadDocument( const string& relPath, vector<string>& inoutListLoadedFile )
+            /**
+             * @brief 설정 파일을 찾아 JSON 으로 읽고, 읽었으면 경로를 남깁니다.
+             * @return 파일이 없거나 비었으면 null 객체와 true(선택 파일), 있는데 못 읽거나 JSON 이 깨졌으면 false 입니다.
+             * @details 깨진 설정을 기본값으로 대신하지 않는다 — 어느 칸이 왜 무시됐는지 남지 않고 libclang 오류가 엉뚱한 자리에서 난다.
+             */
+            [[nodiscard]] static bool loadDocument( const string& relPath, vector<string>& inoutListLoadedFile, nlohmann::json& outDocument )
             {
+                outDocument       = nlohmann::json{};
                 const string path = findConfigFile( relPath );
-                string       text;
-                if ( path.empty() || FileUtil::readTextFile( path, text ) == false || text.empty() )
-                    return nlohmann::json{};
+                if ( path.empty() )
+                    return true;
 
+                string text;
+                if ( FileUtil::readTextFile( path, text ) == false )
+                {
+                    SW_LOG_ERROR( "Parser setting file '%#' exists but cannot be read", path );
+                    return false;
+                }
                 inoutListLoadedFile.push_back( path );
+                if ( text.empty() )
+                    return true;
                 try
                 {
-                    return nlohmann::json::parse( text );
+                    outDocument = nlohmann::json::parse( text );
                 }
-                catch ( const nlohmann::json::parse_error& )
+                catch ( const nlohmann::json::parse_error& exception )
                 {
-                    return nlohmann::json{};
+                    SW_LOG_ERROR( "Parser setting file '%#' is not valid JSON: %#", path, exception.what() );
+                    return false;
                 }
+                return true;
             }
 
             static void appendUnique( vector<string>& inoutListDst, const vector<string>& listSrc )
@@ -380,11 +394,14 @@ namespace sw
         constexpr const utf8* kPlatformParserKey = "";
 #endif
 
-        const nlohmann::json defaultsDoc = ParserConfigInternal::loadDocument( parserpath::kParserConfigDefaults, _listLoadedFile );
+        nlohmann::json defaultsDoc;
+        nlohmann::json rawLocalDoc;
+        if ( ParserConfigInternal::loadDocument( parserpath::kParserConfigDefaults, _listLoadedFile, defaultsDoc ) == false ||
+             ParserConfigInternal::loadDocument( parserpath::kParserConfig, _listLoadedFile, rawLocalDoc ) == false )
+            return false;
         // 로컬은 이 기계에 딸린 키만 받는다(`keepMachineLocalKeys`) — 나머지는 커밋된 기본값이 정한다.
-        const nlohmann::json localDoc = ParserConfigInternal::keepMachineLocalKeys(
-            defaultsDoc, ParserConfigInternal::loadDocument( parserpath::kParserConfig, _listLoadedFile ),
-            ParserConfigInternal::findConfigFile( parserpath::kParserConfig ) );
+        const nlohmann::json localDoc =
+            ParserConfigInternal::keepMachineLocalKeys( defaultsDoc, rawLocalDoc, ParserConfigInternal::findConfigFile( parserpath::kParserConfig ) );
 
         BLOCK( "Load Base Arguments from Config" )
         {
@@ -418,7 +435,9 @@ namespace sw
         string winSdkVer;
         BLOCK( "Load Engine Config" )
         {
-            const nlohmann::json engineDoc = ParserConfigInternal::loadDocument( parserpath::kToolchainConfig, _listLoadedFile );
+            nlohmann::json engineDoc;
+            if ( ParserConfigInternal::loadDocument( parserpath::kToolchainConfig, _listLoadedFile, engineDoc ) == false )
+                return false;
             if ( engineDoc.is_object() )
             {
                 ParserConfigInternal::assignIfPresent( llvmPath, engineDoc, jsonkey::kLlvmPath );
