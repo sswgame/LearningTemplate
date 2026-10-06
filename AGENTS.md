@@ -353,6 +353,11 @@ namespace sw
   - `SW_GLOBAL_VARIABLE` (and its test forms) declares `extern`; it is deliberately external linkage and stays out.
   - `main` and functions declared in a header stay at namespace scope.
 
+## Writing — docs, comments, commit messages
+
+- Docs, comments and commit messages follow `docs/10_WritingDocs.md`: sentence rules (§4) and the term table (§5 —
+  established loanwords and English terms, no coined native words). Log and assert strings stay English.
+
 ## C++ style
 
 - Follow `.clang-format`.

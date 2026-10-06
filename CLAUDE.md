@@ -31,6 +31,9 @@ Documentation and code comments in this repo are written in Korean (`/** @brief 
 other documents link to it. A module README holds that folder's contracts, traps and open work — usage lives in the
 header comments (`/** @brief */`), not in a README. Write docs in Korean and in the present tense; how something came
 to be goes in the commit message, and a past defect is written as a present-tense caution.
+**How to write Korean docs is `docs/10_WritingDocs.md`** — the four document kinds, the module README shape, sentence
+rules, and the term table (keep established loanwords such as 빌드 · 버전 · 슬롯 · 레지스트리; never coin native words).
+Comments and commit messages use the same term table; reword a comment when you touch its function, never by word replacement.
 `Scripts/lint/gate/CheckDocPaths.py` checks every relative link, heading anchor and backticked repository path, and that
 every README is on the map. A placeholder path is written with angle brackets (`Source/Games/<Game>/`).
 
