@@ -128,7 +128,7 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 | `WrapPanel` | 줄이 차면 다음 줄, 줄 높이는 그 줄의 최대 · 칸 간격 · 줄 간격 | WrapBox · flex-wrap · FlowContainer |
 | `ScrollPanel` | 내용 하나를 스크롤 축으로 무한 measure → `-오프셋` 에 놓고 자른다. 오프셋은 `[0, 내용 − 보이는 크기]`, 바뀌면 `kArrange` 만(measure 0). `scrollIntoView` 는 최소한만 옮긴다 | ScrollBox · ScrollView · ScrollContainer |
 
-결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리).
+결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리). 그리기 목록은 `UiCanvasDump::makeDump( list )`(아래 "시험 · 결정성").
 
 스크롤 입력은 `ScrollPanel` 이 사건으로 받는다(UMG ScrollBox · Godot ScrollContainer 와 같은 넷):
 
@@ -503,3 +503,16 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 애니메이션 단계를 돌지 않는다 — `Open` 을 틀지 않아 문서에 적힌 값 그대로 보이고(Open 첫 키가 투명이면 미리보기가 빈다 — `UiDocumentTest.OffscreenScreenDoesNotPlayOpenAnimation`),
   스타일 전환은 시작한 그 프레임에 끝 값으로 맞춘다(`UiStyleTest.OffscreenScreenFinishesTransitionsAtOnce`).
 - 에디터 `UiPreviewPanel` 이 첫 사용처 — 그 텍스처를 ImGui 이미지로 보이고 레이아웃 사각형 · 고른 위젯 · 안전 영역은 ImGui 선으로 얹는다(캔버스를 바꾸지 않는다).
+
+## 시험 · 결정성
+
+| 이 엔진 | 언리얼 | 유니티 |
+|---|---|---|
+| `UiDeterminismTest` — 레이아웃 · 캔버스 덤프 골든 | Automation Screenshot 비교 · Slate 위젯 반사(Widget Reflector) | UI Toolkit 테스트의 레이아웃 단언 |
+
+- **덤프 두 가지**: `UiLayoutDump`(위젯 사각형, 물리 픽셀로 곱해 쓴다)와 `UiCanvasDump`(일괄 · 사각형 종류 · 사각형 · 색 · 텍스처 이름 — 글리프 UV 는 쓰지 않는다,
+  래스터화 순서가 아니라 배치를 견준다). 둘 다 소수 둘째 자리이고 `-0.00` 은 `0.00` 으로 쓴다(부호가 누적 순서를 드러내지 않게).
+- **골든**: 견본 넷(일시정지 `pause.ui.xml` · 옵션 메뉴(시험 스키마) · HUD 견본(시험 안 문서) · 알림)을 해상도 셋(1280×720 · 1920×1080 · 3840×2160) × UI 배율 둘(1 · 1.5)로
+  덤프해 `Test/EngineTest/UI/Golden/<견본>.layout.txt` · `.canvas.txt` 와 견준다(조건마다 새 UI 시스템, 여는 애니메이션이 끝난 뒤). 가짜 래스터라이저라 글꼴 ·
+  FreeType 판이 바뀌어도 그대로다. 레이아웃 · 그리기 규칙을 바꿨으면 `SW_UPDATE_GOLDEN=1` 로 이 스위트를 돌려 다시 쓰고, diff 를 보고 같은 커밋에 넣는다.
+- **순서가 새지 않는다**: 같은 견본을 새 시스템 둘로 지으면 바이트까지 같고, 위젯을 만드는 순서를 섞어도(번호가 달라도) 트리 순서가 같으면 같다.
