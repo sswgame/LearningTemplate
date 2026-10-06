@@ -29,6 +29,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_telemetrySchema` | `string` | `engine/telemetry/engine.telemetry.xml` |  |  | 엔진 텔레메트리 사건 스키마(`TelemetryService`) |
 | `_cultureTable` | `string` | `engine/localization/engine.cultures.json` |  |  | 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`) |
 | `_localizationProject` | `string` | `engine/localization/engine.locproject.json` |  |  | 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트 |
+| `_fontCatalog` | `string` | `engine/fonts/fontcatalog.xml` |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`) |
 | `_defaultForwardPipeline` | `string` | `engine/pipeline/forwardpipeline.xml` |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `string` | `engine/pipeline/deferredpipeline.xml` |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `string` | `engine/renderpass/defaultrenderpass.xml` |  |  | 기본 렌더 패스 바인드 틀 |

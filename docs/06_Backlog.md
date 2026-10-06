@@ -318,8 +318,8 @@ cd build/Ninja-Debug/Bin
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
-- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면: `getFontFallback( culture )` 의 가족 목록으로 CJK ·
-  아랍 글리프 대체를 고르고, `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
+- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면(글꼴 대체는 `FontSystem` 이 이미 읽는다):
+  `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
   `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
   그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
@@ -1700,6 +1700,9 @@ cd build/Ninja-Debug/Bin
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 
+- **글꼴은 `engine/fonts/fontcatalog.xml` 이 정본**(`FontSystem` — 고른 가족 → 문화권 표 `fonts` 의 대체 가족 → 카탈로그 기본 가족). 문화권 표의 가족 이름은
+  카탈로그의 저장소 가족 · 시스템 가족 표에 있어야 쓰이고, 없거나 그 기계에 설치되지 않았으면 처음 한 번 경고하고 건너뛴다(어디에도 없는 글자는 두부 + 경고 한 번).
+  저장소에는 CC0 라틴 글꼴만(결정 R1) — 시스템 글꼴을 쓰는 시험은 글리프 존재 · 사슬만 단언하고, 그 글꼴이 없는 기계에서는 건너뛴다.
 - **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
   앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
   `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.

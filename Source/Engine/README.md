@@ -69,7 +69,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **Input/**: InputManager · InputMap · 장치(Keyboard/Mouse/Gamepad) 추상화. [Input/README.md](Input/README.md)
 - **Localization/**: 문자열 표(원문 · 문화권 번역 · 낡은 번역 판정) · 문화권 데이터 · ICU 메시지 포맷(복수형 · 고르기 · 숫자 · 날짜) · 의사 로컬라이제이션 · `SW_LOCTEXT`. [Localization/README.md](Localization/README.md)
 - **Text/**: 런타임 글자 — 글꼴 래스터라이저 계약(`IFontRasterizer`, 구현은 `Text/FreeType/` 하나 — FreeType 헤더는 거기서만 include 한다,
-  `CheckThirdPartyIsolation.py`) · 단일 채널 SDF 글리프. GPU 를 모르는 티어 5 다. [Text/README.md](Text/README.md)
+  `CheckThirdPartyIsolation.py`) · 단일 채널 SDF 글리프 · 글꼴 서비스(`FontSystem` — 카탈로그 · 시스템 글꼴 · 문화권 대체 사슬). GPU 를 모르는 티어 5 다. [Text/README.md](Text/README.md)
 - **DevTools/**: 개발 도구 — 게임 창 콘솔의 판단(`DevConsoleController`) · 엔진 개발 명령(`EngineDevCommands.cpp`) · 로컬라이제이션 수집 · 가져오기 ·
   내보내기 명령의 본문(`LocalizationTools`, `EngineLoop` 이 명령줄로 부른다). 씬 · 오브젝트 · 대화 에셋을 함께 보므로 티어 7 이다.
 - **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)

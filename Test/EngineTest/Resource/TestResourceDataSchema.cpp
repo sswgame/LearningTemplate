@@ -50,6 +50,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/Text/FontCatalog.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
@@ -129,6 +130,7 @@ namespace
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
         static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
         static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
+        static bool isFontCatalog( sw::string_view resourceId ) { return endsWith( resourceId, "fontcatalog.xml" ); }
         static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kExtension ); }
         static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kExtension ); }
         static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kExtension ); }
@@ -494,6 +496,7 @@ namespace
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
+            {        "fontcatalog",         &isFontCatalog,                  &loadCatalog<sw::FontCatalogDesc>},
             {       "culturetable",        &isCultureTable,        &loadLocalizationDocument<sw::CultureTable>},
             {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},

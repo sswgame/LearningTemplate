@@ -54,7 +54,7 @@ namespace
 
     /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
     constexpr const utf8* kFullDestroyOrder =
-        "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+        "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
         "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineInitStep>& listStep )
@@ -176,7 +176,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownRunsInReverseOfInitialization )
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
@@ -348,7 +348,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "Telemetry SceneRhi LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
@@ -369,7 +369,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Telemetry FrameRenderer RHI UserSettings Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "Telemetry FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
 
@@ -403,7 +403,7 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
 }
 
 /**
- * @brief [EngineInitSequenceTest] 전용 서버(대상 Server)는 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 단계를 돌리지 않고, 씬 · 씬 쿠킹까지는 선다
+ * @brief [EngineInitSequenceTest] 전용 서버(대상 Server)는 창 · RHI · 렌더러 · 플레이어 설정 · 텔레메트리 · 글꼴 단계를 돌리지 않고, 씬 · 씬 쿠킹까지는 선다
  * @details 서버에 GPU 가 없으므로 RHI 단계가 돌면 기동이 실패한다. `initializeAllInternal` 의 대상 검사를 빼면 진다.
  *          해제는 기동이 어디까지 갔든 모든 단계를 돈다(클라이언트 단계의 객체는 만들지 않았으니 null 안전한 해제가 아무것도 하지 않는다).
  */
@@ -414,7 +414,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     SW_ASSERT_TRUE( sequence.initializeAll( recorder, EngineInitTarget::Server ) );
 
     const EngineInitStep arrClientOnly[]   = { EngineInitStep::UserSettings, EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread,
-                                               EngineInitStep::LiveShader, EngineInitStep::SceneRhi, EngineInitStep::Telemetry };
+                                               EngineInitStep::LiveShader, EngineInitStep::SceneRhi, EngineInitStep::Telemetry, EngineInitStep::Fonts };
     bool                 bSceneInitialized = false;
     for ( const EngineInitStep step : recorder._listInitialized )
     {

@@ -84,6 +84,7 @@
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Text/FontSystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -250,6 +251,18 @@ namespace sw
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
+    };
+
+    struct EngineLoop::FontsStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없다 — 기동 오류다. 시스템 대체 가족은 없어도 경고만 한다.
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            return loop._owned._pFontSystem->initialize( defaultAssets._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pFontSystem->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pFontSystem.reset(); }
     };
 
     struct EngineLoop::ShaderCacheStartupStep : EngineInitStepDefaults<EngineLoop>

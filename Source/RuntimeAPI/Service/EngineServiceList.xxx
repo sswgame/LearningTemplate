@@ -59,6 +59,8 @@ SW_ENGINE_SERVICE( _pShaderCache, class, ShaderCache, getShaderCache, Required, 
 SW_ENGINE_SERVICE( _pComponentDefaults, class, ComponentDefaults, getComponentDefaults, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pFrameProfiler, class, FrameProfiler, getFrameProfiler, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pUserSettingsManager, class, UserSettingsManager, getUserSettingsManager, Required, GameVisible, EngineCreated )
+// 글꼴 — 카탈로그 · 면 · 문화권 대체 사슬. 시작은 기동 표의 Fonts 단계(Client 대상)다.
+SW_ENGINE_SERVICE( _pFontSystem, class, FontSystem, getFontSystem, Required, GameVisible, EngineCreated )
 SW_ENGINE_SERVICE( _pPhysicsSystem, class, PhysicsSystem, getPhysicsSystem, Required, GameVisible, EngineCreated )
 // 텔레메트리 — 동의(사용자 설정 telemetry.enabled, 기본 꺼짐)가 없으면 아무것도 모으지 않는다. 게임은 진행 사건을 `record` 한다.
 SW_ENGINE_SERVICE( _pTelemetryService, class, TelemetryService, getTelemetryService, Required, GameVisible, EngineCreated )
