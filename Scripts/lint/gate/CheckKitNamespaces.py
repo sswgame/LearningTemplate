@@ -10,6 +10,13 @@
   3) 키트가 읽는 게임 설정의 사용자 칸(`GameSettings::getCustomProperty*`)은 `<키트>.` 로 시작한다(`Farming.startingGold`).
   4) 키트가 평판 세력 id 로 쓰는 글자 리터럴(`changeValue( "x"` · `…Faction{ "x" }` · `k…FactionId = "x"`)은 키트 이름의 소문자 낱말 접두
      `<접두>.` 로 시작한다(`restaurant.guests` · `western.honor`) — 평판을 나눠 쓰면 세력 id 가 한 이름 공간이다.
+  5) 키트 클래스는 기반 공유 상태(지갑 · 가방 · 플래그 · 일지 · 시계 · 날씨 · 평판 · 땅 · 값 목록)를 값으로 들지 않는다 — 빌린다(`GameStateRefs`).
+     예외는 이유와 함께 `_kOwnershipException` 에(참가자마다의 가방 · 팔릴 목록 · 시뮬레이션 수치), 정의 구조체(`…Def` · `…Recipe` · `…Reward`) 안의 값 목록은 보지 않는다.
+  6) 키트는 빌린 객체의 알림을 꺼내지 않는다(`_pWallet->drainEvents(` · `refs._pX->drainEvents(`) — 알림 버퍼는 소비자 하나라 게임 화면의 것이다.
+  7) 로그 범주(`SW_LOG_CALLER( "x" )`)는 GameFramework · Games 안에서 파일 하나에만 — 키트 · 게임을 섞으면 같은 범주의 로그가 어디서 왔는지 갈리지 않는다.
+     (엔진 · RHI 는 모듈마다 한 범주를 여러 파일이 나눠 쓰는 것이 설계라 보지 않는다.)
+  8) 키트는 전역 변수를 정의하지 않는다(`SW_GLOBAL_VARIABLE…` · `SW_TEST_GLOBAL_VARIABLE…`) — 스위치는 게임 · 엔진의 것이다(섞으면 키트 둘이 같은 이름을 다툰다).
+  9) 게임(`Source/Games/`)도 키를 직접 읽지 않는다 — 입력 맵 액션으로(디버그 키는 엔진 `Debug` 레이어).
 
   python Scripts/lint/gate/CheckKitNamespaces.py [--root <repo>]
 """
@@ -34,6 +41,20 @@ _kActionLiteralRe = re.compile(r"\b(?:wasActionTriggered|isActionDown|wasActionP
 _kCustomPropertyRe = re.compile(r"\bgetCustomProperty\w*\s*\(\s*\"([^\"]*)\"")
 _kFactionLiteralRe = re.compile(r"\bchangeValue\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]*)\"|\b_\w*[Ff]action\w*\s*\{\s*\"([^\"]*)\"|\bk\w*FactionId\s*=\s*\"([^\"]*)\"")
 _kKitPrefix = "Source/GameFramework/Kits/"
+_kGamePrefix = "Source/Games/"
+_kGameFrameworkPrefix = "Source/GameFramework/"
+_kHeldStateRe = re.compile(r"^[ \t]+(Wallet|Inventory|GameFlags|QuestLog|WorldClock|WeatherSystem|ReputationState|LandRegistry|ItemStackList)\s+(_\w+)", re.MULTILINE)
+_kOwnerTypeRe = re.compile(r"\b(?:struct|class)\s+(?:SW_\w+\s+)?(\w+)\s*(?::[^{;]*)?\{")
+_kDefinitionSuffixes = ("Def", "Recipe", "Reward")
+#: (키트 파일, 멤버) → 키트가 값으로 들어도 되는 까닭.
+_kOwnershipException: dict[tuple[str, str], str] = {
+    ("Source/GameFramework/Kits/Action/BattleRoyale/BrMatch.h", "_inventory"): "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
+    ("Source/GameFramework/Kits/Simulation/Farming/FarmShippingBin.h", "_bin"): "팔릴 목록(값 목록 — 가방이 아니다)",
+    ("Source/GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h", "_stock"): "도시 건물의 물자(시뮬레이션 수치 — 플레이어가 드는 것이 아니다)",
+}
+_kBorrowedDrainRe = re.compile(r"(?:\b_p(?:Wallet|QuestLog|Reputation|Flags|Clock|Weather|Inventory|Land)\w*|\brefs\._p\w+)\s*->\s*drainEvents\s*\(")
+_kLogCallerRe = re.compile(r"\bSW_LOG_CALLER\s*\(\s*\"([^\"]*)\"")
+_kGlobalVariableRe = re.compile(r"\bSW_(?:TEST_)?GLOBAL_VARIABLE\w*\s*\(")
 
 
 def decodeTagInternal(hexText: str) -> str:
@@ -57,14 +78,14 @@ def lineOfInternal(text: str, offset: int) -> int:
 class CheckKitNamespacesGate(LintGate):
     """`selfTestCases` 는 이 린트가 반드시 잡아야 하는 조각이다."""
 
-    description = "키트를 섞을 때 부딪히는 이름 공간 검사(상태 표 · 키트 입력 · 키트 설정 칸)"
-    buildComment = "Checking kit namespaces (state tags, kit input, kit settings keys)..."
+    description = "키트를 섞을 때 부딪히는 이름 공간 · 소유 검사(상태 표 · 입력 · 설정 칸 · 세력 · 공유 상태 소유 · 빌린 알림 · 로그 범주 · 전역 변수)"
+    buildComment = "Checking kit namespaces (state tags, input, settings keys, ownership, log callers)..."
     timeoutSeconds = 30
     preCommitPattern = ("Source/*.h", "Source/*.cpp", "Test/*.h", "Test/*.cpp")
     preCommitFileArgument = ""
     violationHeader = "키트 이름 공간 위반"
-    hint = ("상태 표는 새 네 글자로(주석은 값의 작은 끝 바이트), 키트 입력은 설정 칸으로, 키트 설정 칸은 `<키트>.` 접두로 — "
-            "Source/GameFramework/README.md \"키트 여럿을 한 게임에\"")
+    hint = ("상태 표는 새 네 글자로(주석은 값의 작은 끝 바이트), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "
+            "공유 상태는 빌린다(`GameStateRefs`) — Source/GameFramework/README.md \"키트 여럿을 한 게임에\"")
     selfTestCases = [
         {
             "name": "두 파일이 같은 상태 표를 쓴다",
@@ -103,6 +124,37 @@ class CheckKitNamespacesGate(LintGate):
                 "Source/GameFramework/Kits/Simulation/ProbeSim/ProbeSimulation.h": "struct ProbeSettings { hashed_string _reputationFaction{ \"guests\" }; };\n",
             },
         },
+        {
+            "name": "키트 클래스가 공유 지갑을 값으로 든다",
+            "files": {
+                "Source/GameFramework/Kits/Simulation/ProbeSim/ProbeShop.h": "class ProbeShop\n{\nprivate:\n    Wallet _wallet;\n};\n",
+            },
+        },
+        {
+            "name": "키트가 빌린 일지의 알림을 꺼낸다",
+            "files": {
+                "Source/GameFramework/Kits/Rpg/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
+            },
+        },
+        {
+            "name": "두 파일이 같은 로그 범주를 쓴다",
+            "files": {
+                "Source/GameFramework/Kits/Action/ProbeA/ProbeA.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
+                "Source/Games/ProbeGame/ProbeGame.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
+            },
+        },
+        {
+            "name": "키트가 전역 변수를 정의한다",
+            "files": {
+                "Source/GameFramework/Kits/Casual/Probe/ProbeRace.cpp": "SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_probeLaps, 3, \"laps\" );\n",
+            },
+        },
+        {
+            "name": "게임이 키를 직접 읽는다",
+            "files": {
+                "Source/Games/ProbeGame/ProbeDirector.cpp": "void f( const InputManager& input ) { if ( input.wasKeyPressed( Key::Space ) ) {} }\n",
+            },
+        },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
@@ -111,6 +163,7 @@ class CheckKitNamespacesGate(LintGate):
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listFile = self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source", "Test"), suffixes=(".h", ".cpp"))
         mapTagToSite: dict[str, list[str]] = defaultdict(list)
+        mapLogCallerToSite: dict[str, list[str]] = defaultdict(list)
         listViolation: list[str] = []
         for path in listFile:
             relativePath = path.relative_to(repositoryRoot).as_posix()
@@ -127,13 +180,44 @@ class CheckKitNamespacesGate(LintGate):
                         listViolation.append(f"{site}: {match.group(1)} = 0x{hexText} 옆에 네 글자 주석(///< '{decoded}')이 없습니다")
                     elif comment != decoded:
                         listViolation.append(f"{site}: {match.group(1)} 의 주석 '{comment}' 가 값의 바이트 '{decoded}' 와 다릅니다")
-            if not relativePath.startswith(_kKitPrefix):
+            bKit  = relativePath.startswith(_kKitPrefix)
+            bGame = relativePath.startswith(_kGamePrefix)
+            if bKit is False and bGame is False and relativePath.startswith(_kGameFrameworkPrefix) is False:
                 continue
-            # 2) · 3) 키트 — 주석 속 예시는 보지 않는다(글자 리터럴은 남긴다).
+            # 주석 속 예시는 보지 않는다(글자 리터럴은 남긴다).
             code = blankComments(text)
+            # 7) 로그 범주 — GameFramework · Games
+            for match in _kLogCallerRe.finditer(code):
+                mapLogCallerToSite[match.group(1)].append(f"{relativePath}:{lineOfInternal(code, match.start())}")
+            # 9) 게임도 키를 직접 읽지 않는다
+            if bGame:
+                for match in _kRawKeyRe.finditer(code):
+                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 게임이 키를 직접 읽습니다({match.group(0).strip()}) — "
+                                         f"팩의 입력 맵(data/<게임>.input.xml) 액션으로 읽으세요")
+            if bKit is False:
+                continue
+            # 2) · 3) 키트
             for match in _kRawKeyRe.finditer(code):
                 listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 키를 직접 읽습니다({match.group(0).strip()}) — "
                                      f"입력 맵 액션을 키트 설정 칸으로 받으세요")
+            # 5) 기반 공유 상태를 값으로 든다(헤더의 멤버)
+            if relativePath.endswith(".h"):
+                for match in _kHeldStateRe.finditer(code):
+                    member = match.group(2)
+                    listOwner = _kOwnerTypeRe.findall(code, 0, match.start())
+                    ownerName = listOwner[-1] if listOwner else ""
+                    if ownerName.endswith(_kDefinitionSuffixes) or (relativePath, member) in _kOwnershipException:
+                        continue
+                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
+                                         f"`const GameStateRefs&` 로 빌리세요(정말 제 것이면 _kOwnershipException 에 까닭과 함께)")
+            # 6) 빌린 객체의 알림
+            for match in _kBorrowedDrainRe.finditer(code):
+                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "
+                                     f"알림은 게임 화면의 것이다, 상태(getStatus …)를 보세요")
+            # 8) 전역 변수
+            for match in _kGlobalVariableRe.finditer(code):
+                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 전역 변수를 정의합니다 — "
+                                     f"스위치는 게임 · 엔진에, 키트는 설정 칸으로 받으세요")
             for match in _kActionLiteralRe.finditer(code):
                 listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 입력 맵 액션 이름을 글자로 박았습니다 — "
                                      f"키트 설정 칸(hashed_string)으로 받으세요")
@@ -152,6 +236,9 @@ class CheckKitNamespacesGate(LintGate):
         for hexText, listSite in sorted(mapTagToSite.items()):
             if len(listSite) > 1:
                 listViolation.append(f"상태 표 0x{hexText}('{decodeTagInternal(hexText)}')가 둘 이상입니다: {' · '.join(listSite)}")
+        for callerName, listSite in sorted(mapLogCallerToSite.items()):
+            if len(listSite) > 1:
+                listViolation.append(f"로그 범주 '{callerName}' 가 GameFramework · Games 의 파일 둘 이상에 있습니다: {' · '.join(listSite)}")
         return GateResult(listViolation=listViolation, summary=f"{len(listFile)} files, {len(mapTagToSite)} state tags")
 
 
