@@ -181,7 +181,7 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
   오브젝트 상태를 읽는 새 경로는 배치(`ObjectLoadContext::_pBatch` + `finish()`)를 지납니다 — 매니저가 이름을 고유하게 바꾸므로 이름으로 찾으면 동명이인에 떨어집니다.
 
 ### 클래스마다 namespace 블록
-한 파일에 클래스 · 구조체 정의가 여럿이면 정의마다 이름 있는 `namespace` 블록을 따로 둡니다(앞 정의의 `};` 뒤에서 닫고 다시 엽니다) — 에디터에서 클래스 단위로 접히게 하려는 것입니다. 같은 이름의 템플릿 특수화는 한 블록에 두고, 익명 namespace 는 하나로 둡니다. `py -3 Scripts/lint/gate/CheckNamespaceBlocks.py --fix` 가 고치고 같은 게이트가 검사합니다.
+한 파일에 클래스 · 구조체 정의가 여럿이면 정의마다 이름 있는 `namespace` 블록을 따로 둡니다(앞 정의의 `};` 뒤에서 닫고 다시 엽니다) — 에디터에서 클래스 단위로 접히게 하려는 것입니다. 같은 이름의 템플릿 특수화는 한 블록에 두고, 익명 namespace 는 하나로 둡니다. `py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py` 가 고치고 같은 규칙의 게이트(`CheckNamespaceBlocks.py`)가 검사합니다.
 
 ### 상수 — 자리와 이름
 

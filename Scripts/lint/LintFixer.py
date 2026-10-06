@@ -84,6 +84,8 @@ class FixPass:
     - `done`      : 실제로 고쳤을 때 할 말
     - `badSample` : 이 변환이 **반드시 고쳐야 하는** 조각
     - `goodSample`: 이 변환이 **건드리면 안 되는** 조각
+    - `bNeedsPath`: 참이면 변환이 `(텍스트, 저장소 기준 경로)` 를 받는다(include 순서처럼 파일 자리로 판정하는 규칙)
+    - `samplePath`: 그때 조각 둘을 돌릴 가상의 저장소 기준 경로
 
     픽서가 변환을 여럿 들면 **선언 순서대로** 이어 돌린다. 순서가 의미를 갖는 경우가 있어
     (`FormatBranchBraces` 는 if 를 먼저 벗겨야 case 의 문장 수가 부풀지 않는다) 목록 순서가
@@ -95,11 +97,17 @@ class FixPass:
     게이트처럼 "빨간 줄" 이 뜨는 게 아니라 소스가 조용히 바뀐다.
     """
 
-    transform: Callable[[str], tuple[str, bool]]
+    transform: Callable[..., tuple[str, bool]]
     problem: str
     done: str
     badSample: str = ""
     goodSample: str = ""
+    bNeedsPath: bool = False
+    samplePath: str = ""
+
+    def apply(self, text: str, relativePath: str) -> tuple[str, bool]:
+        """변환 한 번 — 경로가 필요한 변환에는 저장소 기준 경로를 함께 넘긴다."""
+        return self.transform(text, relativePath) if self.bNeedsPath else self.transform(text)
 
 
 class LintFixer:
@@ -110,12 +118,14 @@ class LintFixer:
     - `tag`        : 메시지 앞의 `[태그]`. 비우면 `name`.
     - `description`: `--help` 한 줄.
     - `listPass`   : 이 픽서가 하는 변환들 (선언 순서대로 돈다).
+    - `listScopeRelDir`: 비어 있지 않으면 이 저장소 기준 폴더 밑의 파일만 고친다(같은 규칙의 게이트가 보는 범위와 맞춘다).
     """
 
     name: str = ""
     tag: str = ""
     description: str = ""
     listPass: tuple[FixPass, ...] = ()
+    listScopeRelDir: tuple[str, ...] = ()
 
     def __init_subclass__(cls, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -134,6 +144,13 @@ class LintFixer:
         바뀐 것으로 보이고, 진짜 변경이 그 안에 묻힌다.
         """
         try:
+            relativePath = filePath.resolve().relative_to(getProjectRoot().resolve()).as_posix()
+        except ValueError:
+            relativePath = filePath.as_posix()
+        if self.listScopeRelDir and not any(relativePath.startswith(scope + "/") for scope in self.listScopeRelDir):
+            return []
+
+        try:
             with filePath.open("r", encoding="utf-8", errors="strict", newline="") as file:
                 content = file.read()
         except UnicodeDecodeError as error:
@@ -145,7 +162,7 @@ class LintFixer:
         formatted = content
         listHit: list[FixPass] = []
         for fixPass in self.listPass:
-            formatted, bChanged = fixPass.transform(formatted)
+            formatted, bChanged = fixPass.apply(formatted, relativePath)
             if bChanged:
                 listHit.append(fixPass)
 

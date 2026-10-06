@@ -12,7 +12,8 @@
   - 나누는 자리는 앞 정의의 `};` 바로 뒤다. 그 사이의 함수 · 상수 · 주석은 뒤 정의의 블록으로 간다.
   - 나눌 자리가 namespace 를 연 줄과 다른 전처리기 조건(`#if`) 깊이에 있으면 나누지 않는다 — 한쪽 가지에서만 블록이 맞게 된다.
 
-  python Scripts/lint/gate/CheckNamespaceBlocks.py [--fix] [--files <path> ...]
+  python Scripts/lint/gate/CheckNamespaceBlocks.py [--files <path> ...]          # 검사
+  python Scripts/lint/fixer/FormatNamespaceBlocks.py [--files <path> ...]       # 고치기(같은 splitNamespaceBlocks)
 """
 from __future__ import annotations
 
@@ -135,26 +136,17 @@ def findSplitPoints(listMasked: list[str]) -> list[tuple[int, str, str, int]]:
     return listSplit
 
 
-def processFile(filePath: Path, repositoryRoot: Path, checkOnly: bool = True) -> list[str]:
-    try:
-        raw = filePath.read_bytes().decode("utf-8")
-    except (OSError, UnicodeDecodeError):
-        return []
-    newline = "\r\n" if "\r\n" in raw else "\n"
-    text = raw.replace("\r\n", "\n")
-    listLine = text.split("\n")
-    listMasked = maskCodeInternal(text).split("\n")
+def splitNamespaceBlocks(text: str) -> tuple[str, list[tuple[int, str, str, int]]]:
+    """정의마다 namespace 블록을 나눈 글과 나눈 자리(`findSplitPoints`). 줄끝(CRLF)은 지킨다. 나눌 것이 없으면 (원래 글, [])."""
+    newline = "\r\n" if "\r\n" in text else "\n"
+    plainText = text.replace("\r\n", "\n")
+    listLine = plainText.split("\n")
+    listMasked = maskCodeInternal(plainText).split("\n")
     if len(listMasked) != len(listLine):
-        return []
-
+        return text, []
     listSplit = findSplitPoints(listMasked)
     if not listSplit:
-        return []
-
-    relativePath = filePath.relative_to(repositoryRoot).as_posix() if filePath.is_relative_to(repositoryRoot) else str(filePath)
-    if checkOnly:
-        return [f"{relativePath}:{split[3] + 1}: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다 — 정의마다 블록을 나누세요 "
-                f"(`py -3 Scripts/lint/gate/CheckNamespaceBlocks.py --fix --files {relativePath}`)" for split in listSplit]
+        return text, []
 
     mapSplitAfter = {split[0]: split for split in listSplit}
     listOut: list[str] = []
@@ -174,16 +166,36 @@ def processFile(filePath: Path, repositoryRoot: Path, checkOnly: bool = True) ->
             lineIndex = nextIndex
             continue
         lineIndex += 1
+    return "\n".join(listOut).replace("\n", newline), listSplit
 
-    newText = "\n".join(listOut).replace("\n", newline)
-    if newText != raw:
-        filePath.write_bytes(newText.encode("utf-8"))
-    return []
+
+def findViolations(filePath: Path, repositoryRoot: Path) -> list[str]:
+    """파일 하나의 위반 — 읽기만 한다(고치는 것은 `fixText` · `FormatNamespaceBlocks`)."""
+    try:
+        raw = filePath.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    _, listSplit = splitNamespaceBlocks(raw)
+    relativePath = filePath.relative_to(repositoryRoot).as_posix() if filePath.is_relative_to(repositoryRoot) else str(filePath)
+    return [f"{relativePath}:{split[3] + 1}: 한 namespace 블록에 클래스 · 구조체 정의가 여럿입니다 — 정의마다 블록을 나누세요 "
+            f"(`py -3 Scripts/lint/fixer/FormatNamespaceBlocks.py --files {relativePath}`)" for split in listSplit]
+
+
+def fixText(text: str) -> tuple[str, bool]:
+    """픽서 변환(`FixPass.transform`)."""
+    newText, listSplit = splitNamespaceBlocks(text)
+    return newText, bool(listSplit)
+
+
+#: 픽서의 조각 — 게이트의 첫 자가 시험 조각(한 블록에 클래스 둘)과 정의마다 나눈 결과.
+kFixBadSample = "#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n\n    class Beta\n    {\n    };\n} // namespace sw\n"
+kFixGoodSample = ("#pragma once\n\nnamespace sw\n{\n    class Alpha\n    {\n    };\n} // namespace sw\n\nnamespace sw\n{\n"
+                  "    class Beta\n    {\n    };\n} // namespace sw\n")
 
 
 class CheckNamespaceBlocksGate(LintGate):
     """
-    기본은 **검사만** 한다. 고치려면 `--fix` 를 준다(`FormatModified.py` 는 `processFile(..., checkOnly=False)` 를 직접 부른다).
+    검사만 한다 — 고치는 것은 `fixer/FormatNamespaceBlocks.py`(같은 `splitNamespaceBlocks`)와 그것을 부르는 `FormatModified.py`.
     """
 
     description = "클래스마다 namespace 블록 검사"
@@ -213,12 +225,11 @@ class CheckNamespaceBlocksGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--fix", action="store_true", help="보고만 하지 않고 파일을 고칩니다")
         self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listFile = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h", ".cpp", ".inl"))
-        violations = flatMapConcurrent(lambda path: processFile(path, repositoryRoot, checkOnly=not args.fix), listFile)
+        violations = flatMapConcurrent(lambda path: findViolations(path, repositoryRoot), listFile)
         return GateResult(listViolation=violations, summary=f"{len(listFile)} files scanned")
 
 

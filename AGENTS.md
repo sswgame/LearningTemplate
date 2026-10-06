@@ -291,7 +291,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
   not name those headers or types `Internal`.
 - **One class or struct definition per named `namespace` block.** A file that defines
   several classes closes the block after each `};` and reopens it for the next, so each
-  class folds on its own (`CheckNamespaceBlocks.py --fix` does it; template
+  class folds on its own (`fixer/FormatNamespaceBlocks.py` does it; template
   specializations of one name stay together, the anonymous namespace stays one block).
 - Helpers used only inside one `.cpp` go in a **separate** `namespace sw` block
   from the class implementation, so the two regions fold independently:

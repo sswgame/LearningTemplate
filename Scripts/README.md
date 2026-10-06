@@ -71,7 +71,7 @@ Scripts/
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 (줄 단위 규칙 하나 = 클래스 하나)
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 약어는 단어)
-  │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (기본 검사, `--fix` 로 수정)
+  │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
   │     │     ├── CheckCoreNetworkLayers.py   # Core/Network 폴더 층(뿌리 ← Transport · Security ← Connection ← Message ← Replication)
   │     │     ├── CheckEngineServiceBinding.py # 엔진 서비스 표와 바인딩 호스트 대조
@@ -101,8 +101,10 @@ Scripts/
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
   │     │     ├── FormatBranchBraces.py       # if 계열 중괄호 (`--check` 면 검사만)
   │     │     ├── FormatForwardDeclarations.py
+  │     │     ├── FormatIncludeOrder.py       # include 순서 · 중복 (규칙은 gate/CheckIncludeOrder.py)
+  │     │     ├── FormatNamespaceBlocks.py    # 정의마다 namespace 블록 (규칙은 gate/CheckNamespaceBlocks.py)
   │     │     ├── RunClangFormat.py           # clang-format 적용 (`py -3 -m Scripts format`)
-  │     │     └── FormatModified.py           # 작업 트리 변경분에 위 셋 + 인클루드 순서
+  │     │     └── FormatModified.py           # 작업 트리 변경분에 위 픽서들 + clang-format
   │     ├── report/                   # 찍어 줄 뿐, 0 으로 끝난다 (`RunBuildWarnings.py --fail-on` 을 명시했을 때만 예외)
   │     │                             #   보고서 = `LintReport` 하위 클래스(`main = XxxReport.run`) — --root · --preset/--build-dir · --jobs · --filter · --out 은 기반이
   │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다,

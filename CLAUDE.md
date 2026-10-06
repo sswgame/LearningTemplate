@@ -168,7 +168,8 @@ than for a gate — a gate that over-fires prints a red line, a fixer that over-
 ```powershell
 py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
 py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
-py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only; `--fix` to rewrite
+py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only — fixer/FormatIncludeOrder.py rewrites
+py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files <path>  # include order/dupes (same rule as the gate)
 py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games; RuntimeAPI must not include Engine/App
 py -3 Scripts/lint/gate/CheckModuleTargets.py                  # module targets (_listTarget): GF_Server_/GF_Client_ names, dependency and include direction
 py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files

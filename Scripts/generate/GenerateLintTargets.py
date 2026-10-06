@@ -67,7 +67,7 @@ def emitTargetsInternal(listTarget: Sequence[LintTarget]) -> str:
 def emitTestsInternal(listTarget: Sequence[LintTarget]) -> str:
     """CTest 등록 — 라벨은 전부 `lint` 다 (폴더가 성격을 말한다, CLAUDE.md)."""
     listLine: list[str] = [
-        "# CTest 등록. `--fix` 같은 고치는 인자는 주지 않는다 — 게이트는 보고만 한다.",
+        "# CTest 등록. 게이트는 보고만 한다 — 고치는 것은 lint/fixer/ 의 픽서다.",
         "function(sw_registerGeneratedLintTests)",
     ]
     for target in listTarget:

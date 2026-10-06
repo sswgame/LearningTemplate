@@ -79,7 +79,7 @@ class CheckFixersAreAliveGate(LintGate):
                 if not fixPass.badSample:
                     errors.append(f"{label}: `badSample` 이 없습니다 — 이 변환이 죽어도 아무도 모릅니다")
                 else:
-                    _, bChanged = fixPass.transform(fixPass.badSample)
+                    _, bChanged = fixPass.apply(fixPass.badSample, fixPass.samplePath)
                     if args.verbose:
                         print(f"  [{label}] badSample changed={bChanged}")
                     if not bChanged:
@@ -89,7 +89,7 @@ class CheckFixersAreAliveGate(LintGate):
                     errors.append(f"{label}: `goodSample` 이 없습니다 — 오탐이 나도 아무도 모릅니다 "
                                   f"(픽서의 오탐은 빨간 줄이 아니라 소스 변경입니다)")
                 else:
-                    _, bChanged = fixPass.transform(fixPass.goodSample)
+                    _, bChanged = fixPass.apply(fixPass.goodSample, fixPass.samplePath)
                     if args.verbose:
                         print(f"  [{label}] goodSample changed={bChanged}")
                     if bChanged:
