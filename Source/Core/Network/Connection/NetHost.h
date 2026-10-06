@@ -18,6 +18,13 @@
  *          스레드가 `update` 한다). `update` 는 소켓 받기 · 보내기를 **잠금 밖에서** 묶어 하고 잠금 안에서는 패킷 처리만 하므로, 시스템 호출이
  *          보내는 쪽 스레드를 막지 않습니다. `update` 를 부르는 스레드는 한 번에 하나입니다 — 보통 `NetHostThread` 가 맡아 게임 프레임과
  *          상관없이 받기 · 확인 · 재전송 · 유지를 돌립니다(로딩 · 멈춘 프레임에 연결이 끊기지 않는다).
+ *
+ *          **암호화**(`NetHostSettings::_security`, 기본 꺼짐 — `NetHostSecurity.h`): 응답 · 수락에 일회 X25519 공개 키를 싣고, 서버는 상태 없는 도전을 통과한
+ *          응답에만 키를 계산한다. 키 = HKDF(공유 비밀, 소금 = 세션 비밀), 데이터 · 끊기 패킷은 `[종류][연결 값][64 비트 번호][AEAD + 태그]`
+ *          (AAD = 프로토콜 id ‖ 그 머리). 받는 쪽은 1024 재전송 창으로 거르고 **복호가 통과한 뒤에** 번호를 표시한다(먼저 표시하면 위조 패킷이 진짜 번호를 태운다).
+ *          토큰 결속(서버 `INetConnectAuthenticator` · 클라이언트 `NetConnectCredentials`)이면 응답의 세션 비밀 증명 태그가 맞아야 자리를 잡고, 클라이언트는
+ *          수락의 키 확인 태그로 서버가 같은 키를 가졌는지 본다. 방식 · 결속 여부는 프로토콜 id 에 섞여 협상하지 않는다 — 한쪽만이면 `SecurityMismatch`.
+ *          인증기 없는 암호화(일회 키 — 중간자는 못 막는다)는 개발 빌드만: Shipping 서버는 인증기 없이 암호화로 `listen` 하지 못한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,28 +33,34 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Connection/NetHostSecurity.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Security/NetReplayWindow.h"
+#include "Core/Network/Security/NetSessionKeyUtil.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw
 {
+    class INetAead;
     class INetTransport;
 
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
-        uint32  _gameId{ NetProtocol::kDefaultGameId }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
-        uint32  _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
-        uint64  _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
-        float64 _timeout{ 5.0 };
-        float64 _connectTimeout{ 5.0 };
-        float64 _connectRetryInterval{ 0.2 };
-        float64 _sendInterval{ 1.0 / 30.0 }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
-        float64 _keepAliveInterval{ 0.25 };  ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
-        int32   _maxConnections{ 16 };
-        int32   _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷 — 언리얼 `NetSpeed` 기본과 같다). 다 쓰면 메시지는 기다리고 확인 · 유지만 간다. 패킷 하나(1200) 아래는 그 값으로
+        uint32              _gameId{ NetProtocol::kDefaultGameId }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
+        uint32              _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
+        uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
+        float64             _timeout{ 5.0 };
+        float64             _connectTimeout{ 5.0 };
+        float64             _connectRetryInterval{ 0.2 };
+        float64             _sendInterval{ 1.0 / 30.0 }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
+        float64             _keepAliveInterval{ 0.25 };  ///< 보낼 것(메시지 · 재전송 · 확인)이 없으면 이 간격으로만 보낸다(유지 · RTT)
+        int32               _maxConnections{ 16 };
+        int32               _maxBytesPerSecond{ 100000 }; ///< 연결마다 보내는 바이트 상한(토큰 버킷 — 언리얼 `NetSpeed` 기본과 같다). 다 쓰면 메시지는 기다리고 확인 · 유지만 간다. 패킷 하나(1200) 아래는 그 값으로
+        NetSecuritySettings _security{};                  ///< 암호화 · 토큰 결속(기본 꺼짐) — 양쪽이 같아야 연결된다
     };
 } // namespace sw
 
@@ -132,6 +145,7 @@ namespace sw
         static constexpr float64 kChallengeWindowSeconds = 5.0; ///< 도전 값의 시간 칸 — 만든 칸과 다음 칸 동안 통한다
 
         NetHost();
+        ~NetHost();
 
         NetHost( const NetHost& )            = delete;
         NetHost& operator=( const NetHost& ) = delete;
@@ -140,12 +154,15 @@ namespace sw
         void               initialize( INetTransport* pTransport, const NetHostSettings& settings );
         [[nodiscard]] bool listen();
         [[nodiscard]] bool connect( const NetAddress& serverAddress );
+        /** @brief 세션 토큰을 내밀며 연결합니다(토큰 결속 서버). 토큰 · 비밀은 로그인 키트가 TLS 로 받은 것입니다. */
+        [[nodiscard]] bool connect( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
         /**
          * @brief 비동기 연결 — 연결되거나 실패(거절 · 가득 참 · 타임아웃 · 끊음)하면 채워지는 future 를 돌려줍니다. 시작부터 못 하면 이미 채워진 future(Rejected)입니다.
          * @details 결과(와 `then` 후속 작업)는 그 일을 처리한 스레드(`update` · `disconnect` 를 부른 쪽)에서 잠금을 푼 뒤에 채워진다. 다시 `connect` 하면
          *          앞의 future 는 Requested 로 끝난다.
          */
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress );
+        TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
         /** @brief 받기(잠금 밖) → 처리 · 타임아웃 · 보낼 패킷 만들기(잠금 안) → 보내기(잠금 밖)입니다. 한 번에 한 스레드만 부른다. */
         void update( float64 time );
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다(`update` 를 도는 스레드가 부른다). */
@@ -185,6 +202,12 @@ namespace sw
         int32  getClientIndex() const;
         void   collectConnected( vector<int32>& outListConnection ) const;
         uint64 getRejectedPacketCount() const;
+        /** @brief 서버 — 인증기가 이 연결에 준 주체(로그인 계정)입니다. 없으면 0 입니다. */
+        uint64 getConnectionPrincipal( int32 connectionId ) const;
+        /** @brief 복호 · 증명 · 키 확인 실패로 버린 패킷 수입니다(진단 · 시험). */
+        uint64 getAuthenticationFailureCount() const;
+        /** @brief 재전송 방지 창이 버린 패킷 수입니다. */
+        uint64 getReplayRejectedCount() const;
         /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
         uint32 getProtocolId() const;
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다 — 키트가 틱 예산을 셈한다(`NetSendBudget::computeTickBudget`). */
@@ -205,23 +228,40 @@ namespace sw
 
         /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
+        /** @brief 패킷 체크섬(머리 값을 먼저 섞은 FNV-1a)입니다 — 시험 · 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때. */
+        static uint32 computePacketChecksum( uint32 headerId, const uint8* pBody, int32 size );
 
     private:
         /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
         static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 
+        /** @brief 연결 하나의 암호 상태 — 암호화 방식일 때만 있다. */
+        struct SlotSecurity
+        {
+            NetX25519KeyPair     _keyPair{};      ///< 이쪽의 일회 키(클라이언트는 키를 만든 뒤 지운다, 서버는 공개 키만 남긴다 — 수락 재전송)
+            NetSessionKeys       _keys{};         ///< 방향별 키 · IV
+            unique_ptr<INetAead> _sendAead{};     ///< 보내는 방향 키를 박은 AEAD
+            unique_ptr<INetAead> _receiveAead{};  ///< 받는 방향 키를 박은 AEAD
+            NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호
+            uint64               _sendPacketNumber{ 0 };
+            uint64               _principalId{ 0 };                                      ///< 서버 — 인증기가 준 주체
+            uint8                _arrKeyConfirmTag[NetSecurityConstant::kAeadTagSize]{}; ///< 서버 — 수락을 다시 보낼 때 같은 태그
+            uint8                _bKeysReady{ SW_FALSE };
+        };
+
         struct Slot
         {
-            NetConnection      _connection{};
-            NetAddress         _address{};
-            uint64             _clientSalt{ 0 };
-            uint64             _serverSalt{ 0 };
-            float64            _lastReceiveTime{ 0.0 };
-            float64            _lastSendTime{ -1.0 };
-            float64            _connectStartTime{ 0.0 };
-            float64            _sendCredit{ 0.0 };                         ///< 대역폭 몫(바이트) — 0 보다 크면 꽉 찬 패킷을 보낼 수 있다(빚 모양 — 보낸 뒤 음수가 될 수 있다)
-            float64            _lastCreditTime{ -1.0 };                    ///< 몫을 마지막으로 채운 때 — 음수면 아직(연결되면 가득 채운다)
-            NetConnectionState _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
+            unique_ptr<SlotSecurity> _security{}; ///< 암호화 방식일 때만
+            NetConnection            _connection{};
+            NetAddress               _address{};
+            uint64                   _clientSalt{ 0 };
+            uint64                   _serverSalt{ 0 };
+            float64                  _lastReceiveTime{ 0.0 };
+            float64                  _lastSendTime{ -1.0 };
+            float64                  _connectStartTime{ 0.0 };
+            float64                  _sendCredit{ 0.0 };                         ///< 대역폭 몫(바이트) — 0 보다 크면 꽉 찬 패킷을 보낼 수 있다(빚 모양 — 보낸 뒤 음수가 될 수 있다)
+            float64                  _lastCreditTime{ -1.0 };                    ///< 몫을 마지막으로 채운 때 — 음수면 아직(연결되면 가득 채운다)
+            NetConnectionState       _state{ NetConnectionState::Disconnected }; ///< 서버의 자리는 Connecting 을 거치지 않는다(응답이 맞아야 잡는다)
         };
 
         /** @brief 보낼 데이터그램 하나 — 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 입니다. */
@@ -264,18 +304,37 @@ namespace sw
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
         /** @brief 연결 요청을 거절합니다 — 이유와 이 호스트의 프로토콜 id, 요청의 클라이언트 소금(위조 거절을 거르는 값)을 싣는다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
+        /** @brief 클라이언트 — 도전 응답(암호화면 공개 키 · [토큰 · 증명 태그])을 보냅니다. */
+        void sendChallengeResponse( Slot& slot );
+        /** @brief 서버 — 수락(암호화면 공개 키 · 키 확인 태그)을 보냅니다. */
+        void sendAccepted( int32 slotIndex );
+        /** @brief 서버 — 응답의 공개 키 · 토큰 · 증명을 읽고 검증해 키를 만듭니다. 틀리면 거절을 보내고 false. */
+        [[nodiscard]] bool acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<SlotSecurity>& outSecurity );
+        /** @brief 클라이언트 — 수락의 공개 키 · 키 확인 태그를 읽고 키를 만듭니다. 틀리면 연결을 닫고 false. */
+        [[nodiscard]] bool acceptSecureAccepted( BitReader& reader, Slot& slot, int32 slotIndex, uint32 serverIndex );
+        /** @brief 암호화된 데이터 · 끊기 패킷을 짓습니다(@p pPlain 을 봉인). 보낸 데이터그램 바이트 수, 실패면 0 입니다. */
+        int32 sendSealed( Slot& slot, PacketType type, const uint8* pPlain, int32 plainSize );
+        /** @brief 암호화된 데이터 · 끊기 몸(머리 8 바이트 뒤)을 엽니다 — 재전송 창 · 태그 검사. 연 평문은 `_listOpenScratch` 입니다. */
+        [[nodiscard]] bool openSealed( Slot& slot, const uint8* pBody, int32 bodySize );
+        /** @brief 암호화 방식의 데이터 · 끊기 패킷(머리 8 바이트 뒤 몸)을 처리합니다. */
+        void handleSealedPacket( float64 time, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize );
+        /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다 — 역할 · 자격이 정해진 뒤(listen · connect) 프로토콜 id 에 섞는다. */
+        uint32 computeFeatureMask() const;
+        bool   isEncrypted() const { return _settings._security._mode == NetSecurityMode::Encrypted; }
         /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
         void sendFramed( const NetAddress& to, uint32 headerId );
         /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
         void sendPayload( float64 time, Slot& slot );
         /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
-        void refillSendCredit( float64 time, Slot& slot ) const;
-        void closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
-        bool startConnect( const NetAddress& serverAddress );
-        void pushEvent( const NetHostEvent& event );
-        void finishConnect( NetDisconnectReason reason );
-        bool sendMessageLocked( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size );
-        void takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished );
+        void                         refillSendCredit( float64 time, Slot& slot ) const;
+        void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
+        bool                         startConnect( const NetAddress& serverAddress );
+        bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
+        TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
+        void                         pushEvent( const NetHostEvent& event );
+        void                         finishConnect( NetDisconnectReason reason );
+        bool                         sendMessageLocked( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size );
+        void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished );
 
         // 잠금 밖에서.
         void        sendBatch( const OutgoingBatch& batch );
@@ -303,10 +362,16 @@ namespace sw
         OutgoingBatch                 _flushBatch;       ///< `update` 스레드 전용 — 잠금 밖에서 보내는 묶음
         vector<FinishedConnect>       _listDeliver;      ///< `update` 스레드 전용
         vector<uint8>                 _listDrainScratch; ///< `drainInbound` 가 메시지 하나를 꺼내 두는 자리
+        BitWriter                     _plainWriter;      ///< 암호화 — NetConnection 이 쓴 평문 패킷
+        vector<uint8>                 _listSealScratch;  ///< 암호화 — 봉인한 암호문 + 태그
+        vector<uint8>                 _listOpenScratch;  ///< 암호화 — 연 평문
+        NetConnectCredentials         _credentials;      ///< 클라이언트 — 지금 연결에 내미는 것
         NetHostSettings               _settings;
         INetTransport*                _pTransport;
         uint64                        _saltState;
         uint64                        _rejectedPacketCount;
+        uint64                        _authenticationFailureCount;
+        uint64                        _replayRejectedCount;
         uint64                        _mismatchLogCount;
         uint64                        _challengeSecret; ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
         uint32                        _protocolId;
@@ -315,5 +380,6 @@ namespace sw
         int32                         _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리
         uint8                         _bServer;
         uint8                         _bConnectPending;
+        uint8                         _bHasCredentials; ///< 클라이언트 — 자격을 내미는 연결(토큰 결속)
     };
 } // namespace sw

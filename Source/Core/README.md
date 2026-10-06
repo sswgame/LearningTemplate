@@ -70,6 +70,10 @@
     **스레드 안전** — 공개 함수는 잠금 하나로 지켜져 아무 스레드에서나 보내고 꺼낸다. `update` 는 소켓 받기 · 보내기를 잠금 밖에서 묶어 하고(한 번에
     최대 512 개) 잠금 안에서는 패킷 처리만 한다. **비동기 연결** `connectAsync` → `TaskFuture<NetConnectResult>`(연결 · 가득 참 · 거절 · 타임아웃 · 끊음,
     `then` 은 잠금 밖에서). 여러 스레드가 쓰는 동안 연결 통계는 `getConnectionStats`(사본)
+    **암호화**(`NetHostSettings::_security` — `NetHostSecurity.h`, 기본 꺼짐): 응답 · 수락에 일회 X25519 공개 키, 서버는 주소가 확인된 응답에만 키를 계산한다.
+    키 = HKDF(공유 비밀, 소금 = 세션 비밀), 데이터 · 끊기 패킷은 AEAD(nonce = 방향 IV XOR 64 비트 번호, 1024 재전송 창 — 복호 뒤 표시). 토큰 결속(서버
+    `INetConnectAuthenticator` · 클라이언트 `NetConnectCredentials`)이면 응답의 세션 비밀 증명 태그가 맞아야 자리를 잡고 클라이언트는 수락의 키 확인 태그를 본다.
+    암호화 · 결속 여부는 프로토콜 id 에 섞여(`NetProtocolFeature`) 협상하지 않는다 — 한쪽만이면 `SecurityMismatch`. 인증기 없는 암호화는 개발 빌드만(Shipping 서버는 listen 실패)
   - `NetHostThread` — 전용 네트워크 스레드: 소켓을 기다렸다가(`poll` · `WSAPoll`, 최대 2 ms) `update` 를 돌린다. 게임 프레임이 멈춰도 확인 · 유지 · 재전송이
     돌아 끊기지 않고 RTT 에 프레임 길이가 섞이지 않는다. 기다리는 일이라 TaskManager 워커가 아니라 전용 스레드(로그 · 파일 감시와 같은 규칙)
   - `NetParallel` — 서버 키트가 연결(관찰자)마다의 일을 `TaskManager::runParallel` 로 나누는 `NetParallelFor` 와 스레드마다의 작업 자리

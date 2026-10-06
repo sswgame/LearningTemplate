@@ -405,7 +405,9 @@ cd build/Ninja-Debug/Bin
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
   암호 구현은 직접 짜지 않는다 — 라이브러리 하나(OpenSSL 3.6 — vcpkg 에 넣었다, 감싼 폴더는 Engine/Network/OpenSsl)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
-  올렸다. 인증서 · 키 관리(개발용 자체 서명, 배포 설정)와 시험(변조 · 재전송 · 잘못된 키 거절)을 같이. Core 쪽 창구(`Network/Security/` — 제공자 인터페이스 · 재전송 방지 창 · 세션 키 유도)와 OpenSSL 구현(`Engine/Network/OpenSsl` — AEAD · X25519 · HKDF · Argon2id · TLS 1.3 컨텍스트 · 개발용 자체 서명 인증서, `EngineNetSecurity`)은 있다. 스트림 끝점의 TLS 1.3(`StreamEndpointSettings::_security` — 핸드셰이크 뒤 열림, 실패는 SecurityFailure)도 있다. 남은 것: UDP 보안(S4 — 인증기 없는 Encrypted 모드는 개발 빌드만, Shipping 서버는 인증기 없이 listen 하면 기동 오류), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `EngineNetSecurity::createServerTlsContext` 에 넘기는 배선.
+  올렸다. Core 창구(`Network/Security/`) · OpenSSL 구현(`Engine/Network/OpenSsl`, `EngineNetSecurity`) · 스트림 TLS 1.3(`StreamEndpointSettings::_security`) ·
+  UDP 보안(`NetHostSettings::_security` — X25519 + 패킷 AEAD + 재전송 창 + 토큰 결속, 인증기 없는 암호화는 개발 빌드만)은 있다. 남은 것: 암호화 켠 하니스로 서버 틱
+  시간을 재어 3-12 에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `EngineNetSecurity::createServerTlsContext` 에 넘기는 배선.
 - **패킷 압축(2026-10-06 사용자 결정).** 코덱 틀은 Core `Compression`(코덱 id 등록부), LZ4 · zstd · zlib 은 Engine 이 등록한다 — Core 네트워크는 id 로만 쓴다. 작은 UDP 패킷은 일반 압축의 이득이
   작으니 **측정 먼저**: 실제 스냅숏 · 파괴 사건 · 채팅을 모아 (양자화 · 비트 패킹 · 델타 뒤) LZ4 · zstd(학습 사전 포함)의 크기 · 시간을 잰다 → 이기는 종류만 켠다(패킷 머리에 코덱 표식,
   압축 뒤 암호화 순서, 압축 폭탄 상한). 스트림(채팅 기록 · 거래 내역 · 큰 메시지)은 zstd 가 기본 후보.
@@ -1582,6 +1584,9 @@ cd build/Ninja-Debug/Bin
   I/O 스레드를 끝낼 때 완료 포트의 멈춤 표는 깨우기만 쓴다 — `GetQueuedCompletionStatusEx` 는 한 묶음에 표 여럿을 한 스레드에 줘서, 표 수로 끝내면 다른 스레드가 영영 기다린다.
 - **멱등 기억은 연결이 아니라 주체에 묶는다** — 거래 요청이 처리된 뒤 응답 전에 끊기면 클라이언트는 새 연결에서 같은 키로 다시 보낸다. 범위가 연결이면 두 번 처리된다
   (`NetRequestServer::setPrincipal` — 로그인 키트가 붙인다). 처리 중인 키가 다시 오면 처리하지 않고 첫 응답을 같이 받게 한다. 연결이 닫혀도 처리 중 기록은 남겨 늦은 응답을 기억한다.
+- **UDP 암호화는 협상하지 않는다** — 암호화 · 토큰 결속 여부를 프로토콜 id 에 섞어 한쪽만 다르면 `SecurityMismatch` 로 거절한다(평문으로 내려가는 길이 없다).
+  AEAD nonce 는 방향별 IV XOR 64 비트 패킷 번호(감기지 않는다), 재전송 창(1024)은 **복호가 통과한 뒤에** 표시한다 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다.
+  서버는 주소가 확인된(상태 없는 도전을 통과한) 응답에만 X25519 를 계산하고, 토큰 결속이면 세션 비밀의 증명 태그가 맞아야 자리를 잡는다.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 

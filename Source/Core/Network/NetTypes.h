@@ -38,7 +38,7 @@ namespace sw
      */
     struct NetWireVersion
     {
-        static constexpr uint32 kCore = 4; ///< 4: 채널 "신뢰 · 순서 없음" — 채널 값이 바뀌었다(N21b)
+        static constexpr uint32 kCore = 5; ///< 5: 프로토콜 id 에 기능 마스크(암호화 · 토큰 결속), 암호화 패킷 배치
 
         /** @brief 층들의 판을 값 하나로 섞습니다(FNV-1a — 순서도 섞인다). */
         static constexpr uint32 combine( std::initializer_list<uint32> listVersion )
@@ -56,6 +56,17 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 프로토콜 id 에 섞는 기능입니다 — 한쪽만 켜면 프로토콜 id 가 달라 `SecurityMismatch` 로 거절된다(평문으로 내려가는 길이 없다). */
+    struct NetProtocolFeature
+    {
+        static constexpr uint32 kEncrypted  = 1u << 0;                  ///< X25519 + 패킷 AEAD(`NetSecurityMode::Encrypted`)
+        static constexpr uint32 kTokenBound = 1u << 1;                  ///< 세션 토큰 결속(서버 인증기 · 클라이언트 자격)
+        static constexpr uint32 kAllMask    = kEncrypted | kTokenBound; ///< 거절 이유를 가릴 때 돌아보는 범위
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct NetProtocol
      * @brief 프로토콜 id — 게임 id 와 와이어 판(Core 판 + 게임 · 키트 판)을 섞은 값입니다. 패킷 머리 · 체크섬에 들어가 다른 판 · 다른 게임의 패킷을 거른다.
@@ -66,9 +77,10 @@ namespace sw
         /** @brief 연결 요청 · 거절 패킷의 머리 값 — 판을 넘어 읽혀야 하므로 프로토콜 id 대신 이 고정 값으로 싸고, 두 패킷의 배치는 판과 함께 바꾸지 않는다. */
         static constexpr uint32 kHandshakeId = 0x5357484Bu;
 
-        static constexpr uint32 makeProtocolId( uint32 gameId, uint32 wireVersion )
+        /** @brief @p featureMask 는 `NetProtocolFeature` — 양쪽이 같아야 연결된다(협상하지 않는다). */
+        static constexpr uint32 makeProtocolId( uint32 gameId, uint32 wireVersion, uint32 featureMask = 0 )
         {
-            const uint32 protocolId = NetWireVersion::combine( { gameId, NetWireVersion::kCore, wireVersion } );
+            const uint32 protocolId = NetWireVersion::combine( { gameId, NetWireVersion::kCore, wireVersion, featureMask } );
             return protocolId != kHandshakeId ? protocolId : protocolId ^ 1u;
         }
     };
@@ -103,8 +115,10 @@ namespace sw
         Remote,    ///< 저쪽이 끊었다
         Timeout,
         ServerFull,
-        Rejected,       ///< 다른 게임(게임 id 가 다르다) · 시작할 수 없는 연결
-        VersionMismatch ///< 같은 게임의 다른 와이어 판(`NetWireVersion`)
+        Rejected,            ///< 다른 게임(게임 id 가 다르다) · 시작할 수 없는 연결
+        VersionMismatch,     ///< 같은 게임의 다른 와이어 판(`NetWireVersion`)
+        SecurityMismatch,    ///< 한쪽만 암호화 · 토큰 결속이다(협상하지 않는다 — 다운그레이드 없음)
+        AuthenticationFailed ///< 토큰을 모르거나 세션 비밀 증명 · 키 확인이 틀렸다
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );
