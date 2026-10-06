@@ -213,6 +213,19 @@ SW_TEST_CASE( TextFormatterTest, NumbersFollowTheCulture )
 }
 
 /**
+ * @brief [TextFormatterTest] int64 를 넘는 실수의 정수부도 자리가 그대로 남는다 — 0 으로 찍히지 않는다
+ * @details 정수부를 정수로 되읽으면 9.2e18 을 넘는 값은 읽기에 실패한다. 글자 그대로 묶어야 한다.
+ */
+SW_TEST_CASE( TextFormatterTest, DecimalBeyondInt64KeepsItsIntegerDigits )
+{
+    const sw::CultureInfo& english = TextFormatterTestInternal::getCulture( "en" );
+    SW_EXPECT_STREQ( "10,000,000,000,000,000,000", english.formatDecimal( 1e19, 0, 2 ).c_str() );
+    SW_EXPECT_STREQ( "-25,000,000,000,000,000,000", english.formatDecimal( -2.5e19, 0, 0 ).c_str() );
+    SW_EXPECT_STREQ( "1.000.000.000.000.000.000.000", TextFormatterTestInternal::getCulture( "de" ).formatDecimal( 1e21, 0, 0 ).c_str() );
+    SW_EXPECT_STREQ( "-1,234.5", english.formatDecimal( -1234.5, 0, 1 ).c_str() ); // 평소 값은 그대로
+}
+
+/**
  * @brief [TextFormatterTest] 날짜 · 시각 형식은 문화권의 패턴 · 월 이름 · 오전/오후를 쓴다
  */
 SW_TEST_CASE( TextFormatterTest, DatesFollowTheCulture )

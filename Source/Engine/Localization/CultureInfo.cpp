@@ -398,20 +398,27 @@ namespace sw
         string       text;
         if ( value < 0 )
             text.push_back( '-' );
-        for ( uint32 index = 0; index < length; ++index )
-        {
-            const uint32 remaining = length - index;
-            if ( index > 0 && remaining % 3 == 0 )
-                text.append( _groupSeparator );
-            appendDigits( text, string_view( arrBuffer + index, 1 ) );
-        }
+        appendGroupedDigits( text, string_view( arrBuffer, length ) );
         return text;
+    }
+
+    void CultureInfo::appendGroupedDigits( string& inoutText, string_view asciiDigits ) const
+    {
+        const size_t length = asciiDigits.size();
+        for ( size_t index = 0; index < length; ++index )
+        {
+            const size_t remaining = length - index;
+            if ( index > 0 && remaining % 3 == 0 )
+                inoutText.append( _groupSeparator );
+            appendDigits( inoutText, asciiDigits.substr( index, 1 ) );
+        }
     }
 
     uint32 CultureInfo::countVisibleFraction( float64 value, uint32 minFraction, uint32 maxFraction )
     {
-        utf8         arrBuffer[constant::kMaxBuffer64]{};
-        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, value < 0.0 ? -value : value, static_cast<int32>( maxFraction ) );
+        // 고정 소수 표기는 정수부를 다 쓴다(1e308 은 309 자리) — 64 바이트로는 큰 값이 잘려 빈 글이 된다.
+        utf8         arrBuffer[constant::kMaxBuffer512]{};
+        const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer512, value < 0.0 ? -value : value, static_cast<int32>( maxFraction ) );
         string_view  text( arrBuffer, length );
         const size_t dotPos = text.find( '.' );
         if ( dotPos == string_view::npos )
@@ -426,18 +433,22 @@ namespace sw
     {
         const uint32      visible   = countVisibleFraction( value, minFraction, maxFraction );
         const float64     magnitude = value < 0.0 ? -value : value;
-        utf8              arrBuffer[constant::kMaxBuffer64]{};
-        const uint32      length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, magnitude, static_cast<int32>( maxFraction ) );
+        utf8              arrBuffer[constant::kMaxBuffer512]{};
+        const uint32      length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer512, magnitude, static_cast<int32>( maxFraction ) );
         string_view       digits( arrBuffer, length );
         const size_t      dotPos      = digits.find( '.' );
         const string_view integerPart = dotPos == string_view::npos ? digits : digits.substr( 0, dotPos );
 
-        int64 integerValue{ 0 };
-        (void)StringUtil::parseInt64( integerPart, integerValue ); // 정수부는 숫자뿐이다 — 결함 의심: int64 를 넘는 값(≥9.2e18) · inf · NaN 은 실패해 정수부가 0 으로 찍힌다
-        const bool bNegative = value < 0.0 && ( integerValue != 0 || visible > 0 );
-        string     text      = formatInteger( integerValue );
-        if ( bNegative )
-            text.insert( text.begin(), '-' );
+        // 정수부는 정수로 되읽지 않고 글자 그대로 묶는다 — int64 를 넘는 값(≥ 9.2e18)도 자리가 그대로 남는다. inf · nan 은 숫자가 아니라 그대로 쓴다.
+        const bool bAllDigit = integerPart.empty() == false && integerPart.find_first_not_of( "0123456789" ) == string_view::npos;
+        const bool bNonZero  = integerPart.find_first_not_of( '0' ) != string_view::npos;
+        string     text;
+        if ( value < 0.0 && ( bNonZero || visible > 0 ) )
+            text.push_back( '-' );
+        if ( bAllDigit )
+            appendGroupedDigits( text, integerPart );
+        else
+            text.append( integerPart );
         if ( visible > 0 && dotPos != string_view::npos )
         {
             text.append( _decimalSeparator );
