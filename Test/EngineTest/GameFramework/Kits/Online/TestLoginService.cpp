@@ -63,7 +63,7 @@ namespace
         {
             for ( int32 blockIndex = 0; blockIndex * 8 < outSize; ++blockIndex )
             {
-                uint64 hash = 1469598103934665603ull ^ ( seed + static_cast<uint64>( blockIndex ) * sw::HashUtil::kGoldenRatio64 );
+                uint64 hash = sw::HashUtil::kFnvOffset64 ^ ( seed + static_cast<uint64>( blockIndex ) * sw::HashUtil::kGoldenRatio64 );
                 for ( int32 index = 0; index < firstSize; ++index )
                     hash = ( hash ^ pFirst[index] ) * sw::HashUtil::kFnvPrime64;
                 hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;

@@ -79,7 +79,7 @@ namespace
             listReplication.back().initialize( &cluster.getClient( index ), ReplicationClientSettings{} );
         }
 
-        vector<uint64> listHash( kClientCount, 1469598103934665603ull );
+        vector<uint64> listHash( kClientCount, sw::HashUtil::kFnvOffset64 );
         vector<uint8>  buffer;
         for ( uint32 tick = 0; tick < 60; ++tick )
         {
@@ -145,7 +145,7 @@ namespace
         for ( int32 index = 0; index < kClientCount; ++index )
             server.setObserver( index, 1000u + static_cast<uint32>( index ) );
 
-        vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), 1469598103934665603ull );
+        vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), sw::HashUtil::kFnvOffset64 );
         vector<uint8>  buffer;
         for ( uint32 tick = 0; tick < 60; ++tick )
         {

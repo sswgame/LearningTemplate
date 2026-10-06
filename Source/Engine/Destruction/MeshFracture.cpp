@@ -60,7 +60,7 @@ namespace sw
                 Memory::copy( &arrBit[0], &point._x, 4 );
                 Memory::copy( &arrBit[1], &point._y, 4 );
                 Memory::copy( &arrBit[2], &point._z, 4 );
-                uint64 hash = 1469598103934665603ull;
+                uint64 hash = HashUtil::kFnvOffset64;
                 for ( const uint32 bits : arrBit )
                 {
                     hash ^= bits;
