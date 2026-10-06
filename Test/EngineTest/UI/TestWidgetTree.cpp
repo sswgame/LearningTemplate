@@ -113,7 +113,7 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
 
     tree.clearAllDirty();
     sw::WidgetRenderTransform transform{};
-    transform._angleDegrees = 30.0f;
+    transform._angle = sw::MathUtil::toRadian( 30.0f );
     pBox->setOpacity( 0.25f );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) ); // 불투명도는 그림만
     pBox->setRenderTransform( transform );

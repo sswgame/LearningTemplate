@@ -143,7 +143,7 @@ SW_TEST_CASE( UiEventRouteTest, HitTestRespectsRenderTransform )
     fixture._pRoot->setVisibility( sw::WidgetVisibility::SelfHitTestInvisible );
     sw::uitest::TestBoxWidget* pBox = fixture.addBox( *fixture._pRoot, "diamond", 100.0f, 100.0f, 100.0f, 100.0f );
     sw::WidgetRenderTransform  transform{};
-    transform._angleDegrees = 45.0f;
+    transform._angle = sw::MathUtil::toRadian( 45.0f );
     pBox->setRenderTransform( transform );
     sw::uitest::UiTestUtil::placeWidget( *pBox, 100.0f, 100.0f, 100.0f, 100.0f );
 

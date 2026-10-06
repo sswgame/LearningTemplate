@@ -42,7 +42,7 @@ namespace sw
         , _loadingScreen{ kInvalidUiScreenHandle }
         , _fadeScreen{ kInvalidUiScreenHandle }
         , _shownSeconds{ 0.0f }
-        , _spinnerDegrees{ 0.0f }
+        , _spinnerAngle{ 0.0f }
         , _tipRandom{ GameRandom::kDefaultSeed }
     {
     }
@@ -82,7 +82,7 @@ namespace sw
         }
         if ( pScreen->getDesc()._layer != UiLayer::Loading )
             SW_LOG_WARNING( "The loading screen '%#' is not on the Loading layer - it does not cover the other screens", _settings._documentPath.c_str() );
-        _spinnerDegrees = 0.0f;
+        _spinnerAngle = 0.0f;
         applyTip( *pScreen );
         return true;
     }
@@ -95,12 +95,12 @@ namespace sw
             _shownSeconds += deltaSeconds;
             if ( bLoading || _shownSeconds < _settings._minimumSeconds )
             {
-                _spinnerDegrees  = MathUtil::fmod( _spinnerDegrees + kSpinnerDegreesPerSecond * deltaSeconds, 360.0f );
+                _spinnerAngle    = MathUtil::fmod( _spinnerAngle + kSpinnerRadiansPerSecond * deltaSeconds, MathUtil::kPi * 2.0f );
                 Widget* pSpinner = pScreen->getTree().findWidgetByName( hashed_string( kSpinnerWidgetName ) );
                 if ( pSpinner != nullptr )
                 {
                     WidgetRenderTransform transform = pSpinner->getRenderTransform();
-                    transform._angleDegrees         = _spinnerDegrees;
+                    transform._angle                = _spinnerAngle;
                     pSpinner->setRenderTransform( transform );
                 }
             }

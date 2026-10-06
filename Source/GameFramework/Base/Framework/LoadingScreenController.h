@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Core/WidgetTypes.h"
@@ -47,8 +48,8 @@ namespace sw
     class SW_GF_API LoadingScreenController
     {
     public:
-        /** @brief 문서의 이 이름 위젯을 돌린다(초당 도). */
-        static constexpr float32 kSpinnerDegreesPerSecond = 270.0f;
+        /** @brief 문서의 이 이름 위젯을 돌린다(초당 라디안 — 3π/2 = 270°). */
+        static constexpr float32 kSpinnerRadiansPerSecond = MathUtil::kPi * 1.5f;
         /** @brief 로딩 문서에서 돌릴 위젯 · 팁 글 위젯의 이름입니다. */
         static constexpr const utf8* kSpinnerWidgetName = "Spinner";
         static constexpr const utf8* kTipWidgetName     = "Tip";
@@ -101,7 +102,7 @@ namespace sw
         UiScreenHandle        _loadingScreen;
         UiScreenHandle        _fadeScreen;
         float32               _shownSeconds;
-        float32               _spinnerDegrees;
+        float32               _spinnerAngle;
         GameRandom            _tipRandom; ///< 팁 고르기(`setSettings` 가 시드를 다시 건다)
     };
 } // namespace sw

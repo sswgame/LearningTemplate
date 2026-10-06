@@ -92,7 +92,7 @@ namespace sw
     bool WidgetRenderTransform::isIdentity() const
     {
         return _translation._x == 0.0f && _translation._y == 0.0f && _scale._x == 1.0f && _scale._y == 1.0f && _shear._x == 0.0f && _shear._y == 0.0f &&
-               _angleDegrees == 0.0f;
+               _angle == 0.0f;
     }
 
     WidgetGeometry WidgetRenderTransform::applyTo( const WidgetGeometry& geometry ) const
@@ -100,9 +100,8 @@ namespace sw
         if ( isIdentity() )
             return geometry;
         // 로컬 2×2 = 회전 · 기울임 · 배율(배율이 먼저). 열 벡터 a = 로컬 x 축, b = 로컬 y 축.
-        const float32 radians = MathUtil::toRadian( _angleDegrees );
-        const float32 cosine  = MathUtil::cos( radians );
-        const float32 sine    = MathUtil::sin( radians );
+        const float32 cosine = MathUtil::cos( _angle );
+        const float32 sine   = MathUtil::sin( _angle );
         // 기울임 [1 shearX; shearY 1] × 배율 diag(scaleX, scaleY)
         const float2 shearedX{ _scale._x, _shear._y * _scale._x };
         const float2 shearedY{ _shear._x * _scale._y, _scale._y };
@@ -125,7 +124,7 @@ namespace sw
     bool WidgetRenderTransform::operator==( const WidgetRenderTransform& other ) const
     {
         return _translation._x == other._translation._x && _translation._y == other._translation._y && _scale._x == other._scale._x &&
-               _scale._y == other._scale._y && _shear._x == other._shear._x && _shear._y == other._shear._y && _angleDegrees == other._angleDegrees &&
+               _scale._y == other._scale._y && _shear._x == other._shear._x && _shear._y == other._shear._y && _angle == other._angle &&
                _pivot._x == other._pivot._x && _pivot._y == other._pivot._y;
     }
 } // namespace sw

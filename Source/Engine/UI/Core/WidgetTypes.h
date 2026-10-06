@@ -164,8 +164,8 @@ namespace sw
         float2 _scale{ 1.0f, 1.0f };
         PROPERTY( DisplayName = "Shear" )
         float2 _shear{};
-        PROPERTY( DisplayName = "Angle", Units = deg )
-        float32 _angleDegrees{ 0.0f };
+        PROPERTY( DisplayName = "Angle", Units = rad )
+        float32 _angle{ 0.0f }; ///< 회전(라디안, 피벗 둘레 — 엔진의 각도는 모두 라디안이다)
         PROPERTY( DisplayName = "Pivot", Tooltip = "Pivot in the widget's own rect (0..1)" )
         float2 _pivot{ 0.5f, 0.5f };
 
