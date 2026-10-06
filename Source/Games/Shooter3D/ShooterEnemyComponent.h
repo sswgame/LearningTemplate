@@ -1,6 +1,6 @@
 /**
  * @file ShooterEnemyComponent.h
- * @brief 스켈레톤 적 하나 — 땅에서 일어나 플레이어 쪽으로 걸어오며 이웃과 떨어지고 상자를 돌아가고(내비메시 에이전트), 닿으면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
+ * @brief 스켈레톤 적 하나(폰) — 땅에서 일어나 AI 조종자의 의도대로 걸어오고, 휘두르기 버튼이 눌리면 휘두르고, 맞으면 움찔하고, 쓰러집니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -30,10 +30,13 @@ namespace sw
 {
     /**
      * @class ShooterEnemyComponent
-     * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 컴포넌트입니다. 디렉터가 틱 뒤에 세우고 `launch` 로 자리 · 체력 · 빠르기를 줍니다.
-     * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다)과 같은
-     *          오브젝트입니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 자리 · 적 자리 · 막는 상자를 읽고 **자기 오브젝트에만** 씁니다(자리 ·
-     *          요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
+     * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 세우고 `launch` 로 자리 · 체력 · 빠르기를 줍니다.
+     * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent` —
+     *          버튼 `Attack`, 자동 빙의 `Ai` → `ShooterEnemyAiControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
+     *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
+     *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 자리 · 막는 상자를 읽고 **자기 오브젝트에만**
+     *          씁니다(자리 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 자리를 다음 갱신에서 받는다.
+     *          애니메이터 그래프(`data/anim/skeleton.animgraph.json`)는 파라미터 `Move`(0 서기 · 1 걷기 · 2 달리기) ·
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          맞음(`applyDamage`)은 플레이어의 사격이 틱 뒤에 겁니다. 히트박스는 발에서 `_height` 까지의 캡슐(반지름 `_radius`)입니다 —
      *          물리 질의 · 부위 히트박스가 들어오면 그쪽으로 옮긴다(소켓 `Chest` 가 히트박스 중심 자리).
@@ -62,10 +65,13 @@ namespace sw
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
         bool              isRemovable() const { return isDead() && _phaseTime >= _corpseTime; }
         ShooterEnemyPhase getPhase() const { return _phase; }
-        /** @brief 발 자리입니다. */
+        /** @brief 발 자리입니다(몸 이동의 자리 — 틱마다 옮겨 적는다). */
         const float3& getPosition() const { return _position; }
         float32       getRadius() const { return _radius; }
         float32       getHeight() const { return _height; }
+        /** @brief 휘두르기를 시작하고 맞히는 거리입니다(AI 조종자가 `Attack` 을 누르는 거리). */
+        float32          getReach() const { return _reach; }
+        GameObjectHandle getDirector() const { return _director; }
 
     private:
         void enterPhase( ShooterEnemyPhase phase );
@@ -99,15 +105,12 @@ namespace sw
         float32 _corpseTime;
         PROPERTY( Category = "Enemy", DisplayName = "Run Speed", Tooltip = "At or above this chase speed the run clip plays instead of the walk", Min = 0.0, Units = "m/s" )
         float32 _runSpeed;
-        PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to its heading", Min = 0.0, Units = "rad/s" )
+        PROPERTY( Category = "Enemy", DisplayName = "Turn Rate", Tooltip = "How fast the body turns to the control yaw", Min = 0.0, Units = "rad/s" )
         float32 _turnRate;
-        PROPERTY( Category = "Enemy", DisplayName = "Retarget Distance", Tooltip = "The path is asked again when the player moved this far", Min = 0.0, Units = m )
-        float32 _retargetDistance;
         PROPERTY( Category = "Enemy", DisplayName = "Walk Clip Speed", Tooltip = "Below this speed the standing clip plays", Min = 0.0, Units = "m/s" )
         float32 _walkClipSpeed;
 
-        float3            _position;   ///< 발
-        float3            _lastTarget; ///< 내비메시 에이전트에 마지막으로 건 목적지
+        float3            _position; ///< 발
         float32           _yaw;
         float32           _health;
         float32           _maxHealth;

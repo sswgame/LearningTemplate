@@ -72,6 +72,12 @@ namespace sw
         float32 getControlYaw() const { return _controlYaw; }
         float32 getControlPitch() const { return _controlPitch; }
         void    setControlRotation( float32 yaw, float32 pitch );
+        /**
+         * @brief 이 조종자가 폰 하나를 위해 세워졌는지입니다(자동 빙의 `PawnAutoPossess::Ai`). 그런 조종자의 오브젝트는 그 폰이 지워질 때 같이 지워집니다 —
+         *        적이 죽어 걷힐 때마다 조종자 오브젝트가 남지 않게(언리얼 AI 조종자가 폰과 함께 사라지는 것과 같다).
+         */
+        bool isSpawnedForPawn() const { return _bSpawnedForPawn == SW_TRUE; }
+        void setSpawnedForPawn( bool bSpawned ) { _bSpawnedForPawn = bSpawned ? SW_TRUE : SW_FALSE; }
 
         /**
          * @brief 이번 틱의 의도를 씁니다(조종 시스템만 부른다).
@@ -95,7 +101,8 @@ namespace sw
         float32                _controlYaw;
         float32                _controlPitch;
         uint32                 _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
-        uint8                  _bSwitchingPawn : 1;
-        [[maybe_unused]] uint8 _reserved       : 7;
+        uint8                  _bSwitchingPawn  : 1;
+        uint8                  _bSpawnedForPawn : 1; ///< 자동 빙의가 폰 하나를 위해 세웠다(폰과 함께 지운다)
+        [[maybe_unused]] uint8 _reserved        : 6;
     };
 } // namespace sw

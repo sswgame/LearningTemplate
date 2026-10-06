@@ -24,9 +24,13 @@
 
 #include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Base/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Control/ControlSystem.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
+#include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Shooter3D/ShooterEffectComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -143,6 +147,7 @@ namespace sw
         , _listPendingEffect{}
         , _tintCache{}
         , _motionTrace{}
+        , _autoPlayController{}
         , _playerEye{ 0.0f, 1.6f, -16.0f }
         , _playerFeet{ 0.0f, 0.0f, -16.0f }
         , _statusTimer{ 0.0f }
@@ -150,6 +155,7 @@ namespace sw
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _traceFrame{ 0 }
+        , _appliedAutoPlay{ -1 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
         , _bPlayerAlive{ SW_TRUE }
@@ -164,6 +170,12 @@ namespace sw
         collectBoxes();
         startPacing();
         _killCount = 0;
+        // 자동 플레이로 시작하면 플레이어 조종자가 폰을 먼저 쥐지 않게 한다(마우스를 잠갔다 풀지 않게) — 첫 플러시가 자동 조준 AI 에게 쥐어 준다.
+        GameObjectManager* pManager = getObjectManager();
+        const GameObject*  pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
+        PawnComponent*     pPawn    = pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr && isAutoPlayOn() )
+            pPawn->setAutoPossess( PawnAutoPossess::None );
         return true;
     }
 
@@ -243,11 +255,15 @@ namespace sw
 
     bool ShooterDirectorComponent::hasPendingSpawn() const
     {
-        return _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
+        const bool bAutoPlayChanged = _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
+        return _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f || bAutoPlayChanged;
     }
 
     void ShooterDirectorComponent::onViewsDespawned()
     {
+        // 자동 플레이 AI 오브젝트도 걷혔다 — 다시 세울 때 빙의를 다시 맞춘다.
+        _autoPlayController = GameObjectHandle{};
+        _appliedAutoPlay    = -1;
         _listEnemy.clear();
         _effectPool = EffectPool{};
         _tracerPool = EffectPool{};
@@ -447,6 +463,8 @@ namespace sw
         for ( const EffectRequest& effect : _listPendingEffect )
             spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
         _listPendingEffect.clear();
+        if ( _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 ) )
+            syncAutoPlayPossession( manager );
         const bool bPlayerPending = _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
         if ( bPlayerPending )
         {
@@ -459,6 +477,46 @@ namespace sw
             _bAmmoPending = SW_FALSE;
             _pendingHeal  = 0.0f;
         }
+    }
+
+    void ShooterDirectorComponent::syncAutoPlayPossession( GameObjectManager& manager )
+    {
+        const bool     bAutoPlay     = isAutoPlayOn();
+        GameObject*    pPlayerObject = manager.resolveGameObject( _player );
+        PawnComponent* pPawn         = pPlayerObject != nullptr ? pPlayerObject->getComponent<PawnComponent>() : nullptr;
+        _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다 — 매 틱 플러시를 잡지 않게
+        if ( pPawn == nullptr )
+            return;
+        GameObject* pAiObject = manager.resolveGameObject( _autoPlayController );
+        if ( bAutoPlay )
+        {
+            if ( pAiObject == nullptr )
+            {
+                pAiObject = manager.createGameObject( hashed_string( "ShooterAutoPlay" ) );
+                if ( pAiObject == nullptr || pAiObject->addComponent<ShooterAutoAimControllerComponent>() == nullptr )
+                    return;
+                trackSpawned( *pAiObject );
+                _autoPlayController = pAiObject->getHandle();
+            }
+            ShooterAutoAimControllerComponent* pAi = pAiObject->getComponent<ShooterAutoAimControllerComponent>();
+            if ( pAi != nullptr && pAi->getPawn() != pPawn->getHandle() )
+            {
+                pAi->possess( *pPawn );
+                SW_LOG_INFO( "[Shooter] auto play took the player" );
+            }
+            return;
+        }
+        // 끔 — 플레이어 조종자에게 돌려주고 AI 를 걷는다. 이미 다른 조종자(플레이어)가 쥐었으면 그대로.
+        const ShooterAutoAimControllerComponent* pAi = pAiObject != nullptr ? pAiObject->getComponent<ShooterAutoAimControllerComponent>() : nullptr;
+        if ( pPawn->isPossessed() == false || ( pAi != nullptr && pAi->getPawn() == pPawn->getHandle() ) )
+        {
+            PlayerControllerComponent* pPlayer = ControlSystem::findOrCreatePlayerController( manager, 0 );
+            if ( pPlayer != nullptr )
+                pPlayer->possess( *pPawn );
+            SW_LOG_INFO( "[Shooter] the player took the body back" );
+        }
+        if ( pAiObject != nullptr )
+            destroySpawned( manager, _autoPlayController );
     }
 
     void ShooterDirectorComponent::spawnEffectPools( GameObjectManager& manager )
@@ -703,7 +761,7 @@ namespace sw
                 enemyHipsY = hips.getTranslation()._y;
             break;
         }
-        const float3&                           feet = pPlayer->getFeetPosition();
+        const float3                            feet = pPlayer->getFeetPosition();
         StringBuilder<constant::kMaxBuffer1024> row;
         row.appendFormat( "%#,%.5f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", _traceFrame, deltaTime, feet._x, feet._z, pPlayer->getLookYaw(), body._x, body._y, body._z, bodyYaw );
         for ( const float3& bone : arrBone )

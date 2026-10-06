@@ -25,9 +25,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `FirstPersonCameraMath`)는 폰 쪽이라 이 폴더에 있고 입력을 읽지 않는다 — 코드가 정한 시점(`setAngles`)은 조종 회전 요청(`PawnComponent::requestControlRotation`),
   반동(`addRecoil`)은 오프셋(`addControlRotationOffset`)으로 조종자에게 넘어간다. 폰이 없으면(관전) 정한 시점을 지킨다.
   조종 시스템(`ControlSystem`)이 씬 프레임 단계 `FrameSystems`(시작 뒤 · PrePhysics 틱 앞, 게임 스레드)에서 자동 빙의(`PawnAutoPossess`) · 의도 생산을 하고,
-  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
+  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 자동 빙의 `Ai` 가 세운 조종자는 폰이 지워질 때 함께 지워진다(`ControllerComponent::isSpawnedForPawn`).
+  플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
   (의도 → 캐릭터 컨트롤러: 걷기 · 달리기 · 점프 · 가감속 · 몸 방향 `PawnFacingMode`)로 걷고, AI 는 내비 에이전트를 `SteerOnly`(엔진 `NavAgentDriveMode`)로 두어
-  에이전트가 낸 속도를 의도 이동 축으로 넣는다(언리얼 `RequestDirectMove` · 유니티 `updatePosition = false` 와 같은 길).
+  에이전트가 낸 속도를 의도 이동 축으로 넣는다(언리얼 `RequestDirectMove` · 유니티 `updatePosition = false` 와 같은 길). 걷던 중에 목적지만 바꾸면(쫓기) 그 프레임도
+  지금 속도를 쓴다 — 경로를 다시 잡는 프레임마다 서지 않게.
   **보내고 적는 것은 의도다**(키 바인딩이 달라도 같은 결과): 조종 시스템이 켜진 동안(`setRecording`) 폰마다 틱 고리(`ControlIntentHistory`)에 적고 `.swintent`
   ('SWIN' · 판 1 · 폰마다 이름 · 시작 틱 · 틱별 `ControlIntent::write`)로 쓴다. 기록 조종자 `IntentTrackControllerComponent` 가 트랙을 틱 순서로 내고(끝나면 원래 조종자에게
   다음 틱 첫머리에 돌려준다 — `ControlSystem::queuePossess`), 원격 조종자 `RemoteControllerComponent` 가 입력 창 `NetInputReceiveBuffer` 의 틱별 바이트를

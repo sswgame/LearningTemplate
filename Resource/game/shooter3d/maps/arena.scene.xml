@@ -950,9 +950,29 @@
 					               _maxPitch="1.4835298"
 					               _autoPossess="Player0"
 					               _bLockMouse="true">
-						<_listButton />
-						<_listAnalog />
+						<_listButton>
+							<item>Jump</item>
+							<item>Sprint</item>
+							<item>Fire</item>
+							<item>Reload</item>
+							<item>SwitchWeapon</item>
+							<item>Weapon1</item>
+							<item>Weapon2</item>
+							<item>Weapon3</item>
+						</_listButton>
+						<_listAnalog>
+							<item>SwitchWeapon</item>
+						</_listAnalog>
 					</PawnComponent>
+					<ShooterBodyMovementComponent _componentName="ShooterBodyMovementComponent"
+					                              _bActive="true"
+					                              _sprintButton="Sprint"
+					                              _jumpButton="Jump"
+					                              _walkSpeed="5.5"
+					                              _sprintSpeed="8.5"
+					                              _jumpSpeed="6"
+					                              _gravity="18"
+					                              _radius="0.35" />
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0"
@@ -969,11 +989,6 @@
 					                        _director="51"
 					                        _spawnPosition="0,0,-16"
 					                        _bodyPrefab="game/shooter3d/prefabs/player_body.prefab.xml"
-					                        _walkSpeed="5.5"
-					                        _sprintSpeed="8.5"
-					                        _jumpSpeed="6"
-					                        _gravity="18"
-					                        _radius="0.35"
 					                        _eyeHeight="1.6"
 					                        _maxHealth="100"
 					                        _regenDelay="4"

@@ -124,10 +124,13 @@ namespace sw
             return float3{};
         if ( _bDestinationSent == SW_FALSE )
         {
-            // 이번 프레임의 내비게이션 단계가 경로를 잡는다 — 속도는 다음 프레임부터 읽는다.
+            // 이번 프레임의 내비게이션 단계가 경로를 잡는다 — 처음 걸면 속도는 다음 프레임부터 읽는다. 이미 걷던 중(목적지만 바꿈)이면 지금 속도를 그대로
+            // 쓴다 — 쫓는 적이 목적지를 고칠 때마다 한 프레임 서면 걸음이 끊긴다.
+            const bool bWasMoving = agent.hasDestination() && agent.getMoveStatus() == NavMoveStatus::Moving;
             agent.setDestination( _destination );
             _bDestinationSent = SW_TRUE;
-            return float3{};
+            if ( bWasMoving == false )
+                return float3{};
         }
         const NavMoveStatus status = agent.getMoveStatus();
         if ( status == NavMoveStatus::Arrived || status == NavMoveStatus::Failed )

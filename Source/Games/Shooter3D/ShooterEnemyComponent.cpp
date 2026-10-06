@@ -10,9 +10,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterAnimParameter.h"
+#include "Games/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
@@ -22,6 +24,8 @@ namespace sw
     {
         struct ShooterEnemyComponentInternal
         {
+            static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
+            static constexpr float32     kStopFraction = 0.85f;    ///< 손 닿는 거리의 이 비율 — 내비메시 에이전트가 멈추는 거리
         };
     } // namespace
 } // namespace sw
@@ -42,10 +46,8 @@ namespace sw
         , _corpseTime{ 3.0f }
         , _runSpeed{ 3.2f }
         , _turnRate{ 6.0f }
-        , _retargetDistance{ 0.5f }
         , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
-        , _lastTarget{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
         , _health{ 30.0f }
         , _maxHealth{ 30.0f }
@@ -81,16 +83,27 @@ namespace sw
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         notifyHealthChanged( true );
-        // 내비메시 에이전트가 있으면 걷기는 그것이 맡는다 — 몸 요는 이 컴포넌트가 돌린다(휘두를 때 플레이어 쪽을 본다).
+        // 걷기는 몸 이동(플레이어와 같은 코드)이 의도로 한다 — 빠르기는 웨이브마다 달라 걷기 빠르기로 넣는다. 내비메시 에이전트(SteerOnly)는 속도만 낸다:
+        // 최고 속도가 걷기 빠르기와 같아야 AI 조종자가 낸 이동 축(속도 / 최고 속도)이 그 빠르기로 걷는다.
+        ShooterBodyMovementComponent* pMovement = pOwner != nullptr ? pOwner->getComponent<ShooterBodyMovementComponent>() : nullptr;
+        if ( pMovement != nullptr )
+        {
+            pMovement->teleport( position );
+            pMovement->setWalkSpeed( speed );
+            pMovement->setSuspended( true );
+        }
         NavMeshAgentComponent* pAgent = pOwner != nullptr ? pOwner->getComponent<NavMeshAgentComponent>() : nullptr;
         if ( pAgent != nullptr )
         {
             pAgent->setMaxSpeed( speed );
-            pAgent->setStoppingDistance( _reach * 0.85f );
+            pAgent->setStoppingDistance( _reach * ShooterEnemyComponentInternal::kStopFraction );
             pAgent->setRadius( _radius );
             pAgent->warp( position );
         }
-        _lastTarget = float3{ 1.0e9f, 0.0f, 1.0e9f };
+        // 조종 회전도 처음 바라보는 쪽에서 시작한다(AI 조종자가 이어 받는다).
+        PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr )
+            pPawn->requestControlRotation( yaw, 0.0f );
     }
 
     void ShooterEnemyComponent::applyDamage( float32 amount )
@@ -146,17 +159,15 @@ namespace sw
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         _phaseTime += step;
 
-        const float3  target   = pDirector->getPlayerFeet();
-        const float3  toTarget = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
-        const float32 distance = toTarget.getLength();
-        float32       moveCode = ShooterAnimParameter::kMoveIdle;
-        float32       wantYaw  = distance > 1.0e-4f ? MathUtil::atan2( toTarget._x, toTarget._z ) : _yaw;
-        // 내비메시 에이전트(프리팹)가 있으면 상자 더미를 경로로 돌아가고 이웃은 군중이 비킨다. 자리는 에이전트가 쓴다.
-        NavMeshAgentComponent* pAgent = pOwner->getComponent<NavMeshAgentComponent>();
-        if ( pAgent != nullptr )
-            _position = pAgent->getAgentPosition();
-        // 휘두르기 간격 — 사정거리 안에서 쫓는 동안 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::tickRepeat`). 쿨다운은 어느 단계에서도 흐른다.
-        const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && distance < _reach && pDirector->isPlayerAlive();
+        // 판단은 AI 조종자가 했다 — 여기는 폰의 의도(이동 축 · 조종 요 · Attack)만 읽는다.
+        const PawnComponent* pPawn       = pOwner->getComponent<PawnComponent>();
+        const bool           bAttackHeld = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( ShooterEnemyComponentInternal::kAttackButton ) ) );
+        const float32        controlYaw  = pPawn != nullptr ? pPawn->getIntent()._controlYaw : _yaw;
+        const float3         target      = pDirector->getPlayerFeet();
+        const float3         toTarget    = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
+        const float32        distance    = toTarget.getLength();
+        // 휘두르기 간격 — 쫓는 동안 Attack 이 눌려 있으면 간격마다 한 번, 지나친 몫을 잇는다(`Countdown::tickRepeat`). 쿨다운은 어느 단계에서도 흐른다.
+        const bool bWantSwing = _phase == ShooterEnemyPhase::Chasing && bAttackHeld;
         const bool bSwing     = _attackCooldown.tickRepeat( step, _attackInterval, bWantSwing );
         switch ( _phase )
         {
@@ -169,55 +180,7 @@ namespace sw
             case ShooterEnemyPhase::Chasing:
             {
                 if ( bSwing )
-                {
                     enterPhase( ShooterEnemyPhase::Attacking );
-                    break;
-                }
-                if ( distance <= _reach * 0.85f )
-                {
-                    if ( pAgent != nullptr && pAgent->hasDestination() )
-                        pAgent->stop();
-                    break;
-                }
-                if ( pAgent != nullptr )
-                {
-                    const float3 retarget = target - _lastTarget;
-                    const bool   bMoved   = retarget._x * retarget._x + retarget._z * retarget._z > _retargetDistance * _retargetDistance;
-                    if ( bMoved || pAgent->hasDestination() == false )
-                    {
-                        pAgent->setDestination( target );
-                        _lastTarget = target;
-                    }
-                    const float3& velocity = pAgent->getVelocity();
-                    const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
-                    if ( speed > _walkClipSpeed )
-                    {
-                        wantYaw  = MathUtil::atan2( velocity._x, velocity._z );
-                        moveCode = speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
-                    }
-                    break;
-                }
-                // 다가온다 — 이웃과 떨어지고 상자를 돌아간다(밀려난다). 이웃은 디렉터가 적은 이번 프레임의 자리다.
-                float3                          steer    = distance > 1.0e-4f ? toTarget * ( 1.0f / distance ) : float3{ 0.0f };
-                const GameObjectHandle          self     = pOwner->getHandle();
-                const vector<ShooterEnemyView>& listView = pDirector->getEnemyViews();
-                const ShooterEnemyView*         pView    = listView.data();
-                for ( size_t viewIndex = 0; viewIndex < listView.size(); ++viewIndex )
-                {
-                    const float3  away       = float3{ _position._x - pView[viewIndex]._position._x, 0.0f, _position._z - pView[viewIndex]._position._z };
-                    const float32 awayLength = away.getLength();
-                    if ( pView[viewIndex]._object != self && awayLength < 1.2f && awayLength > 1.0e-4f )
-                        steer = steer + away * ( 0.9f / awayLength );
-                }
-                const float32 steerLength = steer.getLength();
-                if ( steerLength > 1.0e-4f )
-                {
-                    steer   = steer * ( 1.0f / steerLength );
-                    wantYaw = MathUtil::atan2( steer._x, steer._z );
-                }
-                const float3 next = ShooterArenaMath::resolveCircle( pDirector->getBoxes(), _position + steer * ( _speed * step ), _radius );
-                _position         = float3{ next._x, 0.0f, next._z };
-                moveCode          = _speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
                 break;
             }
             case ShooterEnemyPhase::Attacking:
@@ -241,23 +204,31 @@ namespace sw
             }
             case ShooterEnemyPhase::Dying:
             {
-                wantYaw = _yaw;
                 break;
             }
         }
 
-        // 몸을 진행 방향 쪽으로 돌린다(일어나는 중 · 쓰러지는 중은 그대로).
+        // 쫓는 동안만 걷는다(일어남 · 휘두름 · 움찔 · 쓰러짐은 제자리) — 플레이어와 같은 몸 이동.
+        float32                       moveCode  = ShooterAnimParameter::kMoveIdle;
+        ShooterBodyMovementComponent* pMovement = pOwner->getComponent<ShooterBodyMovementComponent>();
+        if ( pMovement != nullptr )
+        {
+            pMovement->setSuspended( _phase != ShooterEnemyPhase::Chasing );
+            (void)pMovement->stepMovement( pDirector->getBoxes(), step );
+            _position              = pMovement->getFeetPosition();
+            const float3& velocity = pMovement->getMoveVelocity();
+            const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
+            if ( speed > _walkClipSpeed )
+                moveCode = speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
+        }
+        // 몸을 조종 요 쪽으로 돌린다(일어나는 중 · 움찔 · 쓰러지는 중은 그대로).
         const bool bTurning = _phase == ShooterEnemyPhase::Chasing || _phase == ShooterEnemyPhase::Attacking;
         if ( bTurning )
-            _yaw = OrientationUtil::turnTowardAngle( _yaw, wantYaw, _turnRate * step );
-        // 쫓지 않는 동안(일어남 · 휘두름 · 움찔 · 쓰러짐)은 에이전트를 세운다.
-        if ( pAgent != nullptr && _phase != ShooterEnemyPhase::Chasing && pAgent->hasDestination() )
-            pAgent->stop();
+            _yaw = OrientationUtil::turnTowardAngle( _yaw, controlYaw, _turnRate * step );
         SceneComponent* pScene = pOwner->getPrimarySceneComponent();
         if ( pScene != nullptr )
         {
-            if ( pAgent == nullptr )
-                pScene->setLocalPosition( _position );
+            pScene->setLocalPosition( _position );
             pScene->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
         }
         updateAnimator( moveCode );

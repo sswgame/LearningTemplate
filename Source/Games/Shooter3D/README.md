@@ -12,7 +12,7 @@ cmake --preset Ninja-Debug-Shooter3D
 cmake --build --preset Ninja-Debug-Shooter3D
 cd build/Ninja-Debug-Shooter3D/Bin
 ./App.exe -dx12
-./App.exe -dx12 -gv_shooterAutoPlay=1   # 조준 · 사격 · 이동도 AI(가까우면 산탄총, 멀면 소총 — 8 m 안의 적부터 쏜다)
+./App.exe -dx12 -gv_shooterAutoPlay=1   # 조준 · 사격 · 이동도 AI(가까우면 산탄총, 멀면 소총 — 7 m 안의 적부터 쏜다)
 ./App.exe -dx12 -gv_shooterAutoPlay=1 -gv_navDebugDraw=23  # 내비메시 걷는 면 · 적의 경로를 화면에(16), 편집기 뷰포트에는 선도(1 · 2 · 4)
 ./App.exe -dx12 -gv_cameraPreset=thirdperson   # 시작 카메라 프리셋(firstperson · thirdperson · orbit · cctv) — 프리셋마다 스크린샷을 찍을 때
 ./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/shooter3d/maps/arena.scene.xml"
@@ -23,6 +23,30 @@ cd build/Ninja-Debug-Shooter3D/Bin
 
 몸은 시점 요를 각속도 상한(`ShooterAvatarComponent._turnRate`, 10 rad/s)으로 따라가고, 자동 조준도 3 rad/s 로 돈다 — 상한이 없으면 표적을 바꿀 때 한 프레임에
 수십 도 돌아 3인칭 몸 · 카메라가 튄다.
+
+**시나리오**(`Resource/game/shooter3d/automation/` — 고정 프레임 시간 · 배타 가상 입력, 결과는 종료 코드. `ctest -R AppTest_HostOnly` 가 백엔드마다 돌린다):
+
+```powershell
+./App.exe -dx12 -scenario=game/shooter3d/automation/weaponswitch.scenario.xml   # E/Q · 숫자 키가 무기를 정확히 한 칸씩
+./App.exe -dx12 -scenario=game/shooter3d/automation/closewindow.scenario.xml    # 커서 잠금 · Esc · 창 닫기
+./App.exe -dx12 -scenario=game/shooter3d/automation/autoplay.scenario.xml       # 자동 플레이 = AI 빙의(쏘고 맞힌다), 끄면 플레이어 키가 먹는다
+```
+
+## 조종 — 폰 · 조종자 · 의도
+
+플레이어와 스켈레톤은 **폰**(`PawnComponent` — GameFramework `Base/Control`)이고, 몸은 폰의 의도만 읽습니다. 누가 의도를 내는지는 조종자가 정합니다.
+
+| 폰 | 버튼(스키마) | 몸 이동 | 조종자 |
+|----|--------------|---------|--------|
+| 플레이어(씬의 `Player`) | `Jump · Sprint · Fire · Reload · SwitchWeapon · Weapon1..3`, 아날로그 `SwitchWeapon` | `ShooterBodyMovementComponent` | 사람 = `PlayerControllerComponent`(조종 시스템이 세운다 — 입력 맵의 같은 이름 액션을 읽는다), 자동 플레이 = `ShooterAutoAimControllerComponent` |
+| 스켈레톤(`prefabs/skeleton.prefab.xml`) | `Attack` | `ShooterBodyMovementComponent`(같은 코드) + 내비메시 에이전트 `SteerOnly`(경로 · 군중 회피로 속도만) | `ShooterEnemyAiControllerComponent`(`prefabs/skeleton_ai.prefab.xml` — 자동 빙의 `Ai` 가 세우고 폰과 함께 지운다) |
+
+- **자동 플레이 = AI 조종자의 빙의.** 스위치(`-gv_shooterAutoPlay` · 씬의 `_bAutoPlay` · 에디터 툴바)가 바뀌면 디렉터가 틱 뒤에 플레이어 폰을 자동 조준 AI 에게 쥐어 주고,
+  끄면 플레이어 0 의 조종자에게 돌려줍니다. 플레이어 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다. 자동 조준 AI 는 가까운 적의 가슴에 초점을 두고
+  (3 rad/s), 조준 오차 3° · 7 m 안이면 `Fire`, 8 m 안이면 `Weapon2`(산탄총) 밖이면 `Weapon1`(소총)을 누르고, 아레나 가운데를 도는 나선을 따라 걷습니다.
+- **적의 판단은 조종자에.** 쫓기(플레이어가 0.5 m 넘게 움직이면 경로를 다시) · 손 닿는 거리의 0.85 안에서 서기 · 닿으면 `Attack` 누르기는
+  `ShooterEnemyAiControllerComponent`, 휘두르기 간격 · 맞는 시각 · 움찔 · 쓰러짐은 폰(`ShooterEnemyComponent`)의 규칙입니다.
+- 탐침(시나리오 `<Expect probe>`): `Shooter3D.WeaponIndex` · `PlayerAlive` · `ShotCount` · `EnemyHitCount` · `PlayerControllerKind`(0 플레이어 · 1 AI · −1 없음).
 
 ## 조작 — 입력 맵 `data/shooter.input.xml`
 
@@ -69,15 +93,16 @@ cd build/Ninja-Debug-Shooter3D/Bin
 |------|------|
 | 바닥 · 벽 넷 · 엄폐물 열(나무 상자 더미는 엄폐물의 자식) · 해 · 적 스폰 자리 여덟 · 플레이어 · 디렉터 | 씬(엔티티) — 에디터에서 옮긴다 |
 | 벽 · 엄폐물의 충돌 상자 | `ShooterBlockerComponent`(오브젝트 자리 ± 반 크기) — 디렉터가 플레이 시작에 모은다 |
-| 스켈레톤 · 탄착/섬광 구 · 탄도선 상자 | 프리팹 `prefabs/skeleton.prefab.xml`(스킨드 메시 · 애니메이터 · 외형 · HP 바 · `ShooterEnemyComponent`) · `effect.prefab.xml` · `tracer.prefab.xml` — 효과는 풀(디렉터가 미리 세워 숨겨 두고 꺼내 쓴다) |
+| 스켈레톤 · 탄착/섬광 구 · 탄도선 상자 | 프리팹 `prefabs/skeleton.prefab.xml`(스킨드 메시 · 애니메이터 · 외형 · HP 바 · `ShooterEnemyComponent` · 폰 · 몸 이동 · 내비메시 에이전트) · `skeleton_ai.prefab.xml`(그 AI 조종자) · `effect.prefab.xml` · `tracer.prefab.xml` — 효과는 풀(디렉터가 미리 세워 숨겨 두고 꺼내 쓴다) |
 | 플레이어의 몸 | 프리팹 `prefabs/player_body.prefab.xml`(스킨드 메시 · 애니메이터 · 외형 · `ShooterAvatarComponent`) — 플레이어가 플레이 시작에 세운다. 장비는 `prefabs/kaykit/*` · `prefabs/blaster_*` |
-| 페이싱 · 쓰러뜨린 수 · 효과 풀 · 로그 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
-| 이동 · 점프 · 무기 셋 · 히트스캔(적은 캡슐) · 체력 · 조준선 · 탄도선 요청 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 1인칭 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
+| 페이싱 · 쓰러뜨린 수 · 효과 풀 · 로그 · 자동 플레이 빙의 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
+| 무기 셋 · 히트스캔(적은 캡슐) · 체력 · 조준선 · 탄도선 요청 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 폰 · 몸 이동 · 1인칭 손에 든 총 · 조준선 스프라이트와 같은 오브젝트) |
+| 걷기 · 달리기 · 점프 · 중력 · 상자에 미끄러지기(플레이어 · 적 같이) | `ShooterBodyMovementComponent` — 폰의 의도를 읽는다. 스스로 틱하지 않고 같은 오브젝트의 규칙 컴포넌트가 자기 틱에서 부른다 |
 | 몸이 플레이어를 따르기 · 애니메이터 파라미터 · 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
-| 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(내비메시 에이전트가 상자 더미를 경로로 돌아가고 군중이 이웃을 비킨다) → 휘두르기 → 움찔 → 쓰러짐 |
-| 내비메시 | 씬의 `NavigationSurface`(`NavMeshSurfaceComponent` — 보이는 메시로 Humanoid 베이크) · 플레이어 오브젝트의 `NavMeshModifierComponent`(손에 든 총 · 카메라를 베이크에서 뺀다) · 스켈레톤 프리팹의 `NavMeshAgentComponent`(자리를 쓰고, 몸 요는 적 컴포넌트가 돌린다). 쿠킹은 `maps/arena.navmesh` 를 쓰고 Dev 는 플레이 첫 프레임에 베이크한다 |
+| 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(AI 조종자가 내비메시 에이전트의 경로 · 군중 회피 속도를 이동 의도로) → 휘두르기 → 움찔 → 쓰러짐 |
+| 내비메시 | 씬의 `NavigationSurface`(`NavMeshSurfaceComponent` — 보이는 메시로 Humanoid 베이크) · 플레이어 오브젝트의 `NavMeshModifierComponent`(손에 든 총 · 카메라를 베이크에서 뺀다) · 스켈레톤 프리팹의 `NavMeshAgentComponent`(`SteerOnly` — 속도만 내고 몸 이동이 옮긴 자리를 다음 갱신에서 받는다, 몸 요는 적 컴포넌트가 조종 요 쪽으로 돌린다). 쿠킹은 `maps/arena.navmesh` 를 쓰고 Dev 는 플레이 첫 프레임에 베이크한다 |
 | 1인칭 시점 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(플레이어 오브젝트 — 시점은 같은 오브젝트 `PawnComponent` 의 조종 회전) |
-| 시선 · 마우스 잠금 | GameFramework `PlayerControllerComponent`(조종 시스템이 세운다 — 플레이어 폰 `_autoPossess Player0`). 자동 플레이면 폰을 쥐지 않고 조준 AI 가 `setAngles` 로 시점을 정한다 |
+| 시선 · 마우스 잠금 | GameFramework `PlayerControllerComponent`(조종 시스템이 세운다 — 플레이어 폰 `_autoPossess Player0`). 자동 플레이면 디렉터가 폰을 `ShooterAutoAimControllerComponent` 에게 넘긴다(마우스를 잠그지 않는다) |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어. 1인칭 프리셋이면 플레이어가 몸을 숨기고 손에 든 총 · 조준선을 보인다(그 밖은 반대) |
 | 감시 카메라 · 모니터 | `CctvCamera`(렌더 텍스처 `rendertarget/shooter_cctv`)의 디렉터가 `data/cctv.cameras.xml` 의 `cctv_sweep` 을 쓴다. 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽는다 |
 
@@ -100,9 +125,11 @@ cd build/Ninja-Debug-Shooter3D/Bin
 - `Shooter3DGame` — 무기 카탈로그(`data/weapons.xml`) · 아이템(`data/items.xml`) · 외형 데이터(`data/appearance/`)를 게임 서비스로 걸고, 사운드 이벤트
   (`audio/shooter3d.audioevents.xml`)를 올리고, 첫 씬을 열고, 상태 저장 전에 세운 것을 걷습니다. 소리는 이벤트 이름으로 냅니다 — 착지 · 명중음은
   2D(`Land` · `HitEnemy` · `HitCover`), 적 처치는 그 자리 3D(`EnemyDown` — 레이어 둘, 벽 뒤면 가림). 클립 · 범위 · 쿨다운 · 상한은 이벤트 파일에 있습니다.
-- `ShooterDirectorComponent` · `ShooterPlayerComponent` · `ShooterAvatarComponent` · `ShooterEnemyComponent` · `ShooterEffectComponent` · `ShooterBlockerComponent` — 위 표.
+- `ShooterDirectorComponent` · `ShooterPlayerComponent` · `ShooterBodyMovementComponent` · `ShooterAutoAimControllerComponent` · `ShooterEnemyAiControllerComponent` ·
+  `ShooterAvatarComponent` · `ShooterEnemyComponent` · `ShooterEffectComponent` · `ShooterBlockerComponent` — 위 표.
 - `Resource/game/shooter3d/maps/arena.scene.xml` · `prefabs/` — 엔진 직렬화기가 쓴 파일입니다(손으로 고치면 씬 · 프리팹 형식을 깨기 쉽다 — 에디터로).
 - `textures_raw/crosshair.png` · `hitmarker.png` — Kenney "Starter Kit FPS" 의 스프라이트(CC0), `textures_raw/kaykit_*.png` — KayKit GLB 의 아틀라스.
   `App --import-textures` 가 DDS 로 굽는다. 출처는 `Resource/game/shooter3d/credits.md`.
 
-연사 간격 · 피해 · 퍼짐 · 반동 · 탄창은 전부 `weapons.xml` 에 있습니다. 이동 · 체력 · 적 값은 컴포넌트 PROPERTY(적은 프리팹)입니다.
+연사 간격 · 피해 · 퍼짐 · 반동 · 탄창은 전부 `weapons.xml` 에 있습니다. 이동(몸 이동) · 체력 · 적 값은 컴포넌트 PROPERTY(적은 프리팹)이고, 적의 걷기 빠르기는
+웨이브마다 디렉터가 넣습니다.

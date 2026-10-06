@@ -68,6 +68,11 @@ namespace sw
      *          탄 · 체력으로 바꿉니다. 스켈레톤은 프리팹 `_enemyPrefab` 이고 모습은 외형 프리셋(`_listEnemyPreset` 을 차례로, 정예는 `_eliteEnemyPreset`)
      *          + 스폰 순번 씨앗입니다. 긴장도 신호는 맞은 피해(`reportPlayerDamage`) · 쓰러뜨린 적 · 가까운 적 수 · 탄 부족입니다. 웨이브 번호는
      *          감독의 순환 수 + 1 입니다. 세운 적 · 효과는 핸들로 들고 상태 저장 전에 걷습니다(`despawnViews` — 감독 예산으로 선 적은 같은 스폰 id 로 다시 선다).
+     *          적의 AI 조종자는 적 폰의 자동 빙의가 세우고 폰과 함께 지워진다.
+     *
+     *          **자동 플레이 = AI 조종자의 빙의**: 자동 플레이 스위치(`gv_shooterAutoPlay` · 씬의 `_bAutoPlay` · 에디터 툴바)가 바뀌면 틱 뒤 플러시에서 플레이어 폰을
+     *          `ShooterAutoAimControllerComponent`(세운 오브젝트) 또는 플레이어 0 의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 쥐어 준다.
+     *          플레이어 몸에는 자동 플레이 분기가 없다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
     class ShooterDirectorComponent : public GameDirectorComponent
@@ -117,7 +122,8 @@ namespace sw
         void               tickGame( float32 deltaTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
-        bool               hasPendingSpawn() const override;
+        /** @brief 세울 요청이 쌓였거나 자동 플레이 스위치와 플레이어 폰의 조종자가 어긋났으면 true 입니다 — 베이스가 틱 끝에 플러시를 잡는다. */
+        bool hasPendingSpawn() const override;
 
     private:
         /** @brief 세울 적 하나 — 틱 뒤에 프리팹으로 선다. 자리는 그때 스폰 자리 순번(`_slot`)으로 정한다. */
@@ -166,8 +172,10 @@ namespace sw
         void           spawnEnemy( GameObjectManager& manager, const EnemyRequest& request );
         void           updateEnemies();
         void           updatePlayerView();
-        void           clearEnemies();
-        void           logStatus( float32 deltaTime );
+        /** @brief 플레이어 폰을 자동 플레이 스위치에 맞는 조종자(자동 조준 AI · 플레이어 0)에게 쥐어 줍니다(게임 스레드, 틱 밖). */
+        void syncAutoPlayPossession( GameObjectManager& manager );
+        void clearEnemies();
+        void logStatus( float32 deltaTime );
         /** @brief `-gv_shooterMotionTrace=<경로>` — 지난 프레임에 그려진 플레이어 몸 · 본 · 카메라 · 적 하나의 자리를 CSV 한 줄로 쌓습니다. */
         void appendMotionTrace( float32 deltaTime );
 
@@ -216,8 +224,9 @@ namespace sw
         EffectPool               _tracerPool;
         vector<EnemyRequest>     _listPendingEnemy;
         vector<EffectRequest>    _listPendingEffect;
-        MaterialTintCache        _tintCache;   ///< 효과 색(같은 색은 나눠 쓴다)
-        string                   _motionTrace; ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)
+        MaterialTintCache        _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다)
+        string                   _motionTrace;        ///< 움직임 기록 CSV(진단 — 끝날 때 파일로)
+        GameObjectHandle         _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(세운 것 — 걷을 목록에 든다)
         float3                   _playerEye;
         float3                   _playerFeet;
         float32                  _statusTimer;
@@ -225,6 +234,7 @@ namespace sw
         uint32                   _spawnCursor; ///< 다음 적의 스폰 자리 순번
         uint32                   _killCount;
         uint32                   _traceFrame;       ///< 움직임 기록의 프레임 번호
+        int8                     _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(−1 아직, 0 끔, 1 켬)
         uint8                    _bAmmoPending : 1; ///< 탄 보상 — 틱 뒤에 플레이어 탄을 채운다
         uint8                    _bPacingReady : 1; ///< 프로필 · 스폰 테이블을 읽었다
         uint8                    _bPlayerAlive : 1;

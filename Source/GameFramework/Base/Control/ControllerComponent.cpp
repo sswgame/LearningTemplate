@@ -18,6 +18,7 @@ namespace sw
         , _controlPitch{ 0.0f }
         , _inputPeer{ 0 }
         , _bSwitchingPawn{ SW_FALSE }
+        , _bSpawnedForPawn{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

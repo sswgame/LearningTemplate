@@ -1718,6 +1718,9 @@ cd build/Ninja-Debug/Bin
   `InputReplay` 는 **입력 층 녹화**다(프레임마다 원시 사건 — 키 바인딩 · 포커스까지 재현하는 QA 용, 재생은 가상 입력 원천). 게임플레이 리플레이 · 네트워크가 싣는 것은 행동(의도)이다.
   의도 기록(`.swintent`)은 시작 상태를 싣지 않는다 — 같은 씬 · 같은 고정 프레임 시간에서만 같은 궤적이고, 로컬 의도도 `quantize` 를 거쳐야 기록 · 원격과 비트까지 같다
   (`ControlTest.RecordedIntentsReplayTheSameTrajectory`). 조종자가 `produceIntent` 안에서 빙의를 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 몬다 — `ControlSystem::queuePossess`.
+  **자동 플레이 = AI 조종자의 빙의** — 몸 안에 자동 플레이 분기를 두지 않고, 스위치가 바뀌면 디렉터가 틱 뒤 플러시에서 플레이어 폰을 게임의 AI 조종자 ↔ 플레이어 0 의
+  조종자로 옮긴다(Shooter3D `syncAutoPlayPossession`, 시나리오 `autoplay.scenario.xml`). 자동 빙의 `Ai` 가 세운 조종자는 폰과 함께 지워진다(`isSpawnedForPawn`) —
+  아니면 스폰 · 걷기를 되풀이하는 적마다 조종자 오브젝트가 쌓인다.
 
 - **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 

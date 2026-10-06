@@ -229,8 +229,10 @@ namespace sw
                 pController = findOrCreatePlayerController( manager, 0 );
             else if ( pPawn->getAutoPossess() == PawnAutoPossess::Ai )
                 pController = ControlSystemInternal::createAiController( manager, *pPawn );
-            if ( pController != nullptr )
-                pController->possess( *pPawn );
+            if ( pController == nullptr )
+                continue;
+            pController->setSpawnedForPawn( pPawn->getAutoPossess() == PawnAutoPossess::Ai );
+            pController->possess( *pPawn );
         }
         _listAutoPossessPawn.clear();
     }

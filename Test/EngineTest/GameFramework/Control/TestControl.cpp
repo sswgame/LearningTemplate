@@ -383,6 +383,37 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
 }
 
 /**
+ * @brief [ControlTest] 자동 빙의(Ai)가 폰을 위해 세운 AI 조종자는 그 폰이 지워질 때 같이 지워지고, 손으로 둔 조종자는 남는다
+ * @details 스폰 · 걷기를 되풀이하는 적(슈터의 스켈레톤)마다 조종자 오브젝트가 남으면 판이 길수록 쌓인다.
+ */
+SW_TEST_CASE( ControlTest, SpawnedAiControllerGoesWithItsPawn )
+{
+    using Internal = ControlTestInternal;
+    GameObjectManager manager;
+    GameObject*       pGuardObject  = Internal::spawnPawn( manager, "Guard", float3{} );
+    GameObject*       pStatueObject = Internal::spawnPawn( manager, "Statue", float3{} );
+    pGuardObject->getComponent<PawnComponent>()->setAutoPossess( PawnAutoPossess::Ai );
+    AiControllerComponent* pPlaced = manager.createGameObject( hashed_string( "PlacedAi" ) )->addComponent<AiControllerComponent>();
+    pPlaced->possess( *pStatueObject->getComponent<PawnComponent>() );
+
+    manager.beginPlay();
+    manager.tick( Internal::kDeltaTime );
+    SW_ASSERT_TRUE( pGuardObject->getComponent<PawnComponent>()->isPossessed() );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), manager.getComponentRegistry().getAll<ControllerComponent>().size() );
+    SW_EXPECT_FALSE( pPlaced->isSpawnedForPawn() );
+
+    manager.destroyObject( pGuardObject );
+    manager.destroyObject( pStatueObject );
+    // 조종자 오브젝트는 폰을 지우는 중에 지연 삭제 큐에 든다 — 다음 처리에서 빠진다.
+    manager.processDeferredDestruction();
+    manager.processDeferredDestruction();
+    const ComponentRegistry::View<ControllerComponent> aiView = manager.getComponentRegistry().getAll<ControllerComponent>();
+    SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), aiView.size() );
+    SW_EXPECT_TRUE( aiView[0] == pPlaced );
+    SW_EXPECT_FALSE( pPlaced->getPawn().isValid() );
+}
+
+/**
  * @brief [ControlTest] 조종 시스템은 첫 폰 · 조종자가 붙을 때 매니저에 붙고, 마지막 것이 빠지면 떨어진다
  */
 SW_TEST_CASE( ControlTest, ControlSystemFollowsItsComponents )
