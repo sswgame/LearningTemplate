@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -263,6 +264,7 @@ namespace sw
 
     void UiSystem::processInput( float32 deltaSeconds )
     {
+        const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI };
         if ( _pInput == nullptr )
             return;
         _inputDeltaSeconds = deltaSeconds;
@@ -278,6 +280,7 @@ namespace sw
 
     void UiSystem::update( float32 deltaSeconds, const UiViewport& viewport )
     {
+        const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그림 캐시 · 그리기 목록 · 글 배치 · 글리프 아틀라스가 프레임 안에서 자란다
         _viewport = viewport;
         syncThemeSetting();
         syncDemoScreen();

@@ -105,11 +105,14 @@ namespace sw
     {
         if ( pOld == pNew )
             return 0;
-        static const UiComputedStyle s_empty{};
-        const UiComputedStyle&       oldStyle = pOld != nullptr ? *pOld : s_empty;
-        const UiComputedStyle&       newStyle = pNew != nullptr ? *pNew : s_empty;
-        uint32                       changed  = oldStyle._setMask ^ newStyle._setMask;
-        const uint32                 both     = oldStyle._setMask & newStyle._setMask;
+        // 한쪽이 없으면 다른 쪽이 정한 칸이 모두 바뀐 칸이다. 빈 스타일 정적 객체를 두지 않는다 — 글 칸(글꼴 · 전환)이 힙을 잡아
+        // 처음 부른 프레임의 태그(UI)로 프로세스 끝까지 남는다(AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline).
+        if ( pOld == nullptr || pNew == nullptr )
+            return ( pOld != nullptr ? pOld->_setMask : 0u ) | ( pNew != nullptr ? pNew->_setMask : 0u );
+        const UiComputedStyle& oldStyle = *pOld;
+        const UiComputedStyle& newStyle = *pNew;
+        uint32                 changed  = oldStyle._setMask ^ newStyle._setMask;
+        const uint32           both     = oldStyle._setMask & newStyle._setMask;
         for ( uint32 index = 0; index < static_cast<uint32>( UiStyleField::Count ); ++index )
         {
             const UiStyleField field = static_cast<UiStyleField>( index );
