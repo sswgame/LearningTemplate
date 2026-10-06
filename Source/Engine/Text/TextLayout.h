@@ -80,6 +80,8 @@ namespace sw
         uint16 _maxLines{ 0 };
         PROPERTY( DisplayName = "Wrap", Tooltip = "Break lines to fit the width; off breaks only at newlines" )
         bool _bWrap{ true };
+        /** @brief 문단 방향입니다 — 스타일 데이터가 아니라 위젯이 자기 흐름 방향(`Widget::isRightToLeft`)으로 채운다. 정렬 Start · End 와 양방향 수준이 따른다. */
+        TextDirection _paragraphDirection{ TextDirection::LeftToRight };
     };
 } // namespace sw
 
@@ -119,7 +121,7 @@ namespace sw
     /** @brief 배치 결과입니다. */
     struct TextLayoutResult
     {
-        vector<LaidOutGlyph> _listGlyph{};            ///< 그릴 글리프(줄 바꿈 문자 · 폭 없는 문자는 없다)
+        vector<LaidOutGlyph> _listGlyph{};            ///< 그릴 글리프(줄 바꿈 문자 · 폭 없는 문자는 없다). 줄 안에서는 눈에 보이는 순서(왼쪽 → 오른쪽)
         vector<LaidOutLine>  _listLine{};             ///< 줄
         float2               _size{};                 ///< 가장 넓은 줄 × 줄 높이 합
         uint8                _bTruncated{ SW_FALSE }; ///< 줄 수 · 너비 제한으로 잘렸다
@@ -161,17 +163,24 @@ namespace sw
         void shapeText( string_view text, const TextLayoutStyle& style, const FontFaceChain& chain, const vector<RichTextSpan>* pListSpan );
         /** @brief 글의 한 구간(같은 스타일)을 셰이핑해 스크래치 뒤에 붙입니다. */
         void shapeSegment( string_view text, size_t segmentStart, size_t segmentEnd, const TextLayoutStyle& style, const FontFaceChain& chain, const RichTextSpan* pSpan );
+        /** @brief 글의 양방향 수준을 정해 글리프마다 옮깁니다(`TextBidi`). 모든 수준이 0 이면 false — 줄 안 재배열을 건너뛴다. */
+        bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
         FontSystem&                   _fontSystem;
         SimpleTextShaper              _shaper;
-        vector<ShapingRun>            _listRunScratch;    ///< 런 나누기 결과
-        vector<ShapedGlyph>           _listShapedScratch; ///< 셰이핑 결과(논리 순서)
-        vector<uint8>                 _listBreakScratch;  ///< 글리프마다 뒤의 줄 바꿈 기회(TextLayout.cpp 의 BreakKind)
-        vector<float32>               _listWidthScratch;  ///< 글리프마다 폭(UI 단위, 자간 포함)
-        vector<float32>               _listSizeScratch;   ///< 글리프마다 글꼴 크기(리치 텍스트 크기 배 포함)
-        vector<uint32>                _listColorScratch;  ///< 글리프마다 색(0xFFFFFFFF = 위젯 색)
-        vector<uint8>                 _listFauxScratch;   ///< 글리프마다 가짜 굵게(비트 0) · 기울임(비트 1)
-        unordered_map<uint64, float2> _mapMeasure;        ///< 측정 캐시
-        TextLayoutResult              _measureScratch;    ///< 측정이 쓰는 배치 결과(재사용)
+        vector<ShapingRun>            _listRunScratch;        ///< 런 나누기 결과
+        vector<ShapedGlyph>           _listShapedScratch;     ///< 셰이핑 결과(논리 순서)
+        vector<uint8>                 _listBreakScratch;      ///< 글리프마다 뒤의 줄 바꿈 기회(TextLayout.cpp 의 BreakKind)
+        vector<float32>               _listWidthScratch;      ///< 글리프마다 폭(UI 단위, 자간 포함)
+        vector<float32>               _listSizeScratch;       ///< 글리프마다 글꼴 크기(리치 텍스트 크기 배 포함)
+        vector<uint32>                _listColorScratch;      ///< 글리프마다 색(0xFFFFFFFF = 위젯 색)
+        vector<uint8>                 _listFauxScratch;       ///< 글리프마다 가짜 굵게(비트 0) · 기울임(비트 1)
+        vector<uint32>                _listCodepointScratch;  ///< 글의 코드 포인트(양방향 수준을 정한다 — 폭 없는 방향 제어 포함)
+        vector<uint8>                 _listLevelScratch;      ///< 코드 포인트마다 양방향 수준
+        vector<uint8>                 _listGlyphLevelScratch; ///< 글리프마다 양방향 수준
+        vector<uint8>                 _listLineLevelScratch;  ///< 한 줄의 수준(줄 끝 공백은 문단 수준 · 줄임표 포함)
+        vector<uint32>                _listVisualScratch;     ///< 한 줄의 눈에 보이는 순서(줄 안 논리 번호)
+        unordered_map<uint64, float2> _mapMeasure;            ///< 측정 캐시
+        TextLayoutResult              _measureScratch;        ///< 측정이 쓰는 배치 결과(재사용)
     };
 } // namespace sw

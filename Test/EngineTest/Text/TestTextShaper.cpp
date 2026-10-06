@@ -94,6 +94,26 @@ SW_TEST_CASE( TextShaperTest, KerningAddsToPreviousAdvance )
     SW_EXPECT_NEAR_EQUAL( sw::test::FakeFontRasterizer::kGlyphAdvance, listGlyph[1]._advance, 1e-5f );
 }
 
+/** @brief [TextShaperTest] RTL 런의 커닝은 눈에 보이는 쌍(지금, 앞)으로 지금 글리프의 전진에 더한다 — 배치가 뒤집으면 지금 글리프가 왼쪽이다 */
+SW_TEST_CASE( TextShaperTest, RightToLeftRunKernsVisualPair )
+{
+    sw::test::FakeFontSystemFixture fixture;
+    SW_ASSERT_TRUE( TextShaperTestUtil::initializeAllCoverage( fixture ) );
+    fixture._pRasterizer->setKerning( 0x05D1u, 0x05D0u, -0.1f ); // 눈에 보이는 (ב, א)
+    const sw::FontFaceChain chain = fixture._fontSystem->getFaceChain( sw::FontSpec{} );
+
+    sw::SimpleTextShaper        shaper;
+    sw::vector<sw::ShapedGlyph> listGlyph;
+    sw::ShapingRun              run{};
+    run._text      = "\xD7\x90\xD7\x91"; // 논리 "אב" — 눈에는 "בא"
+    run._face      = chain._arrFace[0];
+    run._direction = sw::TextDirection::RightToLeft;
+    shaper.shape( fixture._fontSystem->getRasterizer(), run, listGlyph );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listGlyph.size() ) );
+    SW_EXPECT_NEAR_EQUAL( sw::test::FakeFontRasterizer::kGlyphAdvance, listGlyph[0]._advance, 1e-5f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, listGlyph[1]._advance, 1e-5f );
+}
+
 /** @brief [TextShaperTest] 면이 바뀌는 곳에서 런을 끊고, 공백(중립)은 앞 런에 붙는다 — "Hi 안녕 OK" 는 셋 */
 SW_TEST_CASE( TextShaperTest, ItemizerSplitsOnFaceCoverage )
 {

@@ -301,6 +301,10 @@ cd build/Ninja-Debug/Bin
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
   (2) 에디터 GameView 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
   키 리바인딩 — 옵션 메뉴의 키 바인딩 창과 함께. (4) 글 입력 칸이 포커스를 쥔 동안 키보드로는 Back · Tab 만 — 칸 안의 커서 키 · Enter 는 글 입력 위젯이 받는다.
+- **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (1) 프레임의 레이아웃 문맥이 문화권을 읽게 — `UiLayoutContext::_bRightToLeft`
+  = `UiLayoutPass::isCultureRightToLeft()`(배율 · 안전 영역을 채우는 자리에서). (2) 글 위젯은 `TextLayoutStyle::_paragraphDirection` 을 자기 `isRightToLeft()` 로 채우고,
+  이미지 위젯에 `_bMirrorInRtl`(화살표 아이콘을 좌우로 뒤집기)을 둔다 — 그림 위젯(4-5)과 함께. (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
+  내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —
   `loadEventLibrary` · `loadMixer` 는 같은 이름이면 바꾸지만 파일 감시(에디터 `FileWatchDispatcher`)에 걸려 있지 않다. (2) 에디터 — 믹서 패널(버스 미터 · 음소거/솔로),
   이벤트 브라우저 · 미리 듣기, 보이스 · 가상화 프로파일러. (3) 긴 음악 스트리밍(지금은 클립을 통째로 디코드해 메모리에 든다 — 3 분 스테레오 ≈ 69 MB float).
@@ -324,8 +328,8 @@ cd build/Ninja-Debug/Bin
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
-- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면(글꼴 대체는 `FontSystem` 이 이미 읽는다):
-  `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
+- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면(글꼴 대체는 `FontSystem` 이,
+  배치 거울은 `UiLayoutPass` 가 이미 읽는다): `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
   `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
   그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
@@ -560,8 +564,9 @@ cd build/Ninja-Debug/Bin
 - **MSDF 글리프**(직접 — 윤곽 모서리 칠하기 · 채널별 거리, 큰 글자의 모서리가 날카롭다) — 지금은 단일 채널 SDF(`Engine/Text/GlyphCache`, FreeType `sdf` 렌더러,
   결정 R2). 아틀라스 페이지가 R8 이라 MSDF 는 RGB 페이지 · 셰이더 median 이 함께 든다.
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
-  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0)
-  (꽂을 자리는 `Engine/Text/ITextShaper` — 런 하나, 같은 글꼴 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다). 들이면 Jolt · Recast · Tracy 처럼
+  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 없음(양방향은 `Engine/Text/TextBidi` 단순판 — 포개진 방향 제어 문자 ·
+  숫자 앞뒤 기호 규칙 미지원) → HarfBuzz(MIT) + SheenBidi(Apache 2.0)
+  (꽂을 자리는 `Engine/Text/ITextShaper` — 런 하나, 같은 글꼴 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다. SheenBidi 는 `TextBidi` 를 대신한다). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
 - **임포터가 1 채널(R8) DDS 를 내는 규칙**(조건: 마스크 · 1 채널 텍스처 에셋이 생기면) — RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는다. `App --import-textures` 의
   규칙 표(`TextureImportConfig.json`)에 R8 출력이 없다.
@@ -1248,6 +1253,9 @@ cd build/Ninja-Debug/Bin
 - **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
 - **UI 위젯은 `WidgetId` 로 들고(포인터는 그 호출 안에서만), 무효화는 이유를 나눠 알린다 — 레이아웃만 부모로 번진다**(레이아웃 경계에서 멈춘다, `Engine/UI/README.md`).
   리플렉션 파생 위젯은 `getTypeInfo()` 를 자기 `StaticType()` 으로 덮어쓴다(RTTI 가 없다 — 빠뜨리면 `castTo` 가 부모 타입으로 본다).
+- **RTL 배치 거울은 두 자리뿐이다** — 패널은 늘 왼쪽에서 오른쪽으로 계산하고, `PanelWidget::arrangeChild` 가 자식 사각형을 패널 너비로 거울(상자 순서 · 캔버스 앵커 ·
+  격자 열이 한 번에), `UiLayoutPass::arrange` 가 슬롯 여백 · 정렬을 부모 방향으로 읽는다. 새 패널에 방향 분기를 넣지 말 것. 글의 양방향은 줄을 나눈 **뒤** 줄마다 뒤집고(L2),
+  수준은 원문 코드 포인트로 정한다(셰이퍼가 버린 RLO · PDF 도 수준을 바꾼다).
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 

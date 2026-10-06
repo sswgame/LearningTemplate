@@ -106,6 +106,12 @@ namespace sw
 
     void PanelWidget::arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
     {
+        if ( isRightToLeft() && mirrorsChildrenInRightToLeft() )
+        {
+            const float2 mirrored{ getGeometry()._size._x - localPosition._x - size._x, localPosition._y };
+            UiLayoutPass::arrange( child, context, getGeometry(), mirrored, size );
+            return;
+        }
         UiLayoutPass::arrange( child, context, getGeometry(), localPosition, size );
     }
 } // namespace sw

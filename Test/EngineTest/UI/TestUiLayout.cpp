@@ -9,6 +9,7 @@
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
 
+#include "EngineTest/LocalizationTestUtil.h"
 #include "EngineTest/UI/UiLayoutTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -434,4 +435,106 @@ SW_TEST_CASE( UiLayoutTest, UiSystemLaysOutScreenTrees )
     SW_EXPECT_NEAR_EQUAL( 280.0f, pLabel->getGeometry()._position._y, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 100.0f, pLabel->getGeometry()._size._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 40.0f, pLabel->getGeometry()._size._y, 0.001f );
+}
+
+/**
+ * @brief [UiLayoutTest] 오른쪽에서 왼쪽 문화권: 가로 상자 순서가 거꾸로, 캔버스 앵커 · 오프셋 x 가 거울(오른쪽 아래 모서리 → 왼쪽 아래), 슬롯 여백 왼 ↔ 오 ·
+ *        정렬 Start ↔ End
+ */
+SW_TEST_CASE( UiLayoutTest, RtlMirrorsBoxCanvasAndAlignment )
+{
+    sw::test::UiLayoutFixture fixture( 400.0f, 300.0f );
+    fixture.getContext()._bRightToLeft = true;
+    sw::CanvasPanel* pCanvas           = fixture.setRoot<sw::CanvasPanel>( "canvas" );
+    sw::BoxPanel*    pRow              = fixture.addPanel<sw::BoxPanel>( pCanvas, "row" );
+    pRow->setSpacing( 10.0f );
+    UiLayoutTestUtil::setAnchors( *pRow, sw::float2{ 0.0f, 0.0f }, sw::float2{ 1.0f, 0.0f }, sw::float2{ 20.0f, 10.0f }, sw::float2{ -10.0f, 40.0f } );
+    fixture.addFixed( pRow, "a", 50.0f, 20.0f );
+    fixture.addFixed( pRow, "b", 70.0f, 20.0f );
+    sw::BoxPanel* pColumn = fixture.addPanel<sw::BoxPanel>( pCanvas, "column" );
+    pColumn->setOrientation( sw::UiOrientation::Vertical );
+    UiLayoutTestUtil::setAnchors( *pColumn, sw::float2{ 0.0f, 0.0f }, sw::float2{ 1.0f, 0.0f }, sw::float2{ 0.0f, 50.0f }, sw::float2{ 0.0f, 150.0f } );
+    sw::Widget* pC = fixture.addFixed( pColumn, "c", 50.0f, 20.0f );
+    sw::Widget* pD = fixture.addFixed( pColumn, "d", 40.0f, 30.0f );
+    UiLayoutTestUtil::setAlignment( *pC, sw::UiAlignment::Start, sw::UiAlignment::Fill, sw::float4{ 10.0f, 0.0f, 0.0f, 0.0f } );
+    UiLayoutTestUtil::setAlignment( *pD, sw::UiAlignment::End, sw::UiAlignment::Fill, sw::float4{} );
+    sw::Widget* pCorner = fixture.addFixed( pCanvas, "corner", 60.0f, 20.0f );
+    UiLayoutTestUtil::setAnchors( *pCorner, sw::float2{ 1.0f, 1.0f }, sw::float2{ 1.0f, 1.0f }, sw::float2{}, sw::float2{} );
+    sw::WidgetLayoutSlot slot = pCorner->getLayoutSlot();
+    slot._bAutoSize           = true;
+    slot._growHorizontal      = sw::UiGrowDirection::Begin;
+    slot._growVertical        = sw::UiGrowDirection::Begin;
+    pCorner->setLayoutSlot( slot );
+    fixture.update();
+    SW_EXPECT_STREQ( "canvas 0.00 0.00 400.00 300.00\n"
+                     "  row 10.00 10.00 370.00 30.00\n"
+                     "    a 330.00 10.00 50.00 30.00\n"
+                     "    b 250.00 10.00 70.00 30.00\n"
+                     "  column 0.00 50.00 400.00 100.00\n"
+                     "    c 340.00 50.00 50.00 20.00\n"
+                     "    d 0.00 70.00 40.00 30.00\n"
+                     "  corner 0.00 280.00 60.00 20.00\n",
+                     fixture.dump().c_str() );
+    SW_EXPECT_TRUE( pRow->isRightToLeft() );
+}
+
+/** @brief [UiLayoutTest] 흐름 방향을 LeftToRight 로 고정한 패널(숫자 칸 · 시계)은 RTL 문화권에서도 자식을 왼쪽부터 놓고, Inherit 으로 되돌리면 배치만 다시 한다 */
+SW_TEST_CASE( UiLayoutTest, FlowDirectionOverrideStaysLtr )
+{
+    sw::test::UiLayoutFixture fixture( 400.0f, 100.0f );
+    fixture.getContext()._bRightToLeft = true;
+    sw::BoxPanel*              pRoot   = fixture.setRoot<sw::BoxPanel>( "box" );
+    sw::BoxPanel*              pInner  = fixture.addPanel<sw::BoxPanel>( pRoot, "inner" );
+    sw::test::TestFixedWidget* pX      = fixture.addFixed( pInner, "x", 50.0f, 20.0f );
+    fixture.addFixed( pInner, "y", 60.0f, 20.0f );
+    fixture.addFixed( pRoot, "z", 30.0f, 20.0f );
+    pInner->setFlowDirection( sw::UiFlowDirection::LeftToRight );
+    fixture.update();
+    SW_EXPECT_STREQ( "box 0.00 0.00 400.00 100.00\n"
+                     "  inner 290.00 0.00 110.00 100.00\n"
+                     "    x 290.00 0.00 50.00 100.00\n"
+                     "    y 340.00 0.00 60.00 100.00\n"
+                     "  z 260.00 0.00 30.00 100.00\n",
+                     fixture.dump().c_str() );
+    SW_EXPECT_TRUE( pRoot->isRightToLeft() );
+    SW_EXPECT_FALSE( pInner->isRightToLeft() );
+    SW_EXPECT_FALSE( pX->isRightToLeft() );
+
+    pInner->setFlowDirection( sw::UiFlowDirection::Inherit );
+    SW_EXPECT_EQUAL( 0u, fixture.update() ); // 크기는 그대로 — 배치만
+    SW_EXPECT_STREQ( "box 0.00 0.00 400.00 100.00\n"
+                     "  inner 290.00 0.00 110.00 100.00\n"
+                     "    x 350.00 0.00 50.00 100.00\n"
+                     "    y 290.00 0.00 60.00 100.00\n"
+                     "  z 260.00 0.00 30.00 100.00\n",
+                     fixture.dump().c_str() );
+    SW_EXPECT_TRUE( pX->isRightToLeft() );
+}
+
+/** @brief [UiLayoutTest] 의사 문화권 qps-plocm(RLO 거울)은 오른쪽에서 왼쪽 문화권이라 배치를 거울로 켜고, en 으로 돌아오면 더러움 없이도 다시 놓는다 */
+SW_TEST_CASE( UiLayoutTest, PseudoMirroredLocaleFlipsLayout )
+{
+    sw::LocalizationManager loc;
+    SW_ASSERT_TRUE( sw::test::LocalizationTestUtil::loadEngineCultures( loc ) );
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
+    SW_ASSERT_TRUE( sw::UiLayoutPass::isCultureRightToLeft( &loc ) );
+
+    sw::test::UiLayoutFixture fixture( 400.0f, 100.0f );
+    fixture.getContext()._bRightToLeft = sw::UiLayoutPass::isCultureRightToLeft( &loc );
+    sw::BoxPanel* pBox                 = fixture.setRoot<sw::BoxPanel>( "box" );
+    fixture.addFixed( pBox, "a", 50.0f, 20.0f );
+    fixture.addFixed( pBox, "b", 70.0f, 20.0f );
+    fixture.update();
+    SW_EXPECT_STREQ( "box 0.00 0.00 400.00 100.00\n"
+                     "  a 350.00 0.00 50.00 100.00\n"
+                     "  b 280.00 0.00 70.00 100.00\n",
+                     fixture.dump().c_str() );
+
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "en" ) );
+    fixture.getContext()._bRightToLeft = sw::UiLayoutPass::isCultureRightToLeft( &loc );
+    SW_EXPECT_EQUAL( 0u, fixture.update() );
+    SW_EXPECT_STREQ( "box 0.00 0.00 400.00 100.00\n"
+                     "  a 0.00 0.00 50.00 100.00\n"
+                     "  b 50.00 0.00 70.00 100.00\n",
+                     fixture.dump().c_str() );
 }

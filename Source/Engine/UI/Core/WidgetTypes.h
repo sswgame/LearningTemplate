@@ -32,6 +32,22 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 위젯의 흐름 방향입니다(UMG FlowDirection · Godot layout_direction). 오른쪽에서 왼쪽이면 패널이 자식 배치를 거울로 놓고 글의 문단 방향이 RTL 입니다.
+     * @details 루트의 Inherit 은 문화권(`LocalizationManager::isRightToLeft` → `UiLayoutContext::_bRightToLeft`)을 따릅니다. 숫자 입력 칸 · 시계처럼
+     *          문화권과 상관없이 왼쪽에서 오른쪽이어야 하는 위젯은 LeftToRight 로 고정합니다.
+     */
+    ENUM()
+    enum class UiFlowDirection : uint8
+    {
+        Inherit,     ///< 부모(루트면 문화권)를 따른다
+        LeftToRight, ///< 왼쪽에서 오른쪽으로 고정
+        RightToLeft  ///< 오른쪽에서 왼쪽으로 고정
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct WidgetDirty
      * @brief 무효화 이유(비트)입니다. 레이아웃과 그리기를 나누는 것이 유지형 UI 의 핵심입니다(언리얼 EInvalidateWidgetReason).
      */

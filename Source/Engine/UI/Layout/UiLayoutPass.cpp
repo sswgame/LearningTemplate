@@ -5,6 +5,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Core/WidgetTree.h"
@@ -37,6 +39,19 @@ namespace sw
                 const UiAlignment placeAlignment = alignment == UiAlignment::Fill ? UiAlignment::Start : alignment;
                 outOffset                        = UiLayoutPass::computeAlignmentOffset( placeAlignment, inner - length );
                 outLength                        = length;
+            }
+
+            /** @brief 오른쪽에서 왼쪽 부모가 읽는 슬롯입니다 — 여백 왼 ↔ 오, 가로 정렬 Start ↔ End(위치 거울은 `PanelWidget::arrangeChild` 가 한다). */
+            static WidgetLayoutSlot makeMirroredSlot( const WidgetLayoutSlot& slot )
+            {
+                WidgetLayoutSlot mirrored = slot;
+                mirrored._padding._x      = slot._padding._z;
+                mirrored._padding._z      = slot._padding._x;
+                if ( slot._horizontalAlignment == UiAlignment::Start )
+                    mirrored._horizontalAlignment = UiAlignment::End;
+                else if ( slot._horizontalAlignment == UiAlignment::End )
+                    mirrored._horizontalAlignment = UiAlignment::Start;
+                return mirrored;
             }
 
             /** @brief 물리 픽셀에 맞춘 변 두 개로 한 축을 고칩니다(@p origin 은 부모 로컬 원점의 화면 좌표). */
@@ -86,6 +101,9 @@ namespace sw
             tree._listLayoutDirtyRoot.clear();
             return 0;
         }
+        // 문화권 방향이 바뀌어 루트의 방향이 달라지면 트리 전체를 다시 놓는다(크기는 그대로 — measure 는 캐시).
+        if ( pRoot->_layoutSerial != 0 && pRoot->_bRightToLeft != resolveRightToLeft( pRoot->getFlowDirection(), context._bRightToLeft ) )
+            pRoot->_dirtyFlags |= WidgetDirty::kArrange;
 
         // 뿌리 목록을 먼저 떼어 둔다 — 걷는 동안 그리기 더러움만 생긴다(arrange 의 기하 변경). 목록 순서대로 처리하고, 이미 위에서 다시 잰 뿌리는
         // 비트가 지워져 건너뛴다. 처리 순서가 어떻든 마지막에 놓인 쪽이 맞다 — 조상이 나중이면 조상이 다시 놓는다.
@@ -164,9 +182,17 @@ namespace sw
         widget._lastSlotPosition = slotPosition;
         widget._lastSlotSize     = slotSize;
 
+        // 흐름 방향: 자기 슬롯(여백 · 정렬)은 부모의 방향으로 읽고, 자기 방향은 자식을 놓을 때 쓴다.
+        const PanelWidget* const pParent            = widget.getParent();
+        const bool               bParentRightToLeft = pParent != nullptr ? pParent->isRightToLeft() : context._bRightToLeft;
+        widget._bRightToLeft                        = resolveRightToLeft( widget.getFlowDirection(), bParentRightToLeft );
+
         float2 position{};
         float2 size{};
-        applySlot( widget.getLayoutSlot(), widget.getDesiredSize(), slotPosition, slotSize, position, size );
+        if ( bParentRightToLeft )
+            applySlot( UiLayoutPassInternal::makeMirroredSlot( widget.getLayoutSlot() ), widget.getDesiredSize(), slotPosition, slotSize, position, size );
+        else
+            applySlot( widget.getLayoutSlot(), widget.getDesiredSize(), slotPosition, slotSize, position, size );
         if ( parentGeometry.isAxisAligned() && context._uiScale > 0.0f )
         {
             UiLayoutPassInternal::snapAxis( parentGeometry._translation._x, context._uiScale, position._x, size._x );
@@ -187,6 +213,12 @@ namespace sw
             pWidget->_dirtyFlags |= UiLayoutPassInternal::kLayoutBits;
         if ( tree.getRoot() != nullptr )
             tree.addLayoutRoot( *tree.getRoot() );
+    }
+
+    bool UiLayoutPass::isCultureRightToLeft( const LocalizationManager* pLocalization )
+    {
+        const LocalizationManager* pCulture = pLocalization != nullptr ? pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
+        return pCulture != nullptr && pCulture->isRightToLeft();
     }
 
     bool UiLayoutPass::isMeasureStale( const Widget& widget )

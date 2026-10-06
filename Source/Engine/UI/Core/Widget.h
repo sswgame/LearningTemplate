@@ -77,6 +77,14 @@ namespace sw
         /** @brief 부모가 이 위젯을 놓는 규칙입니다. 바뀌면 kLayout. */
         void                    setLayoutSlot( const WidgetLayoutSlot& slot );
         const WidgetLayoutSlot& getLayoutSlot() const { return _slot; }
+        /** @brief 흐름 방향입니다. 바뀌면 kArrange — 자기와 자손의 자리를 다시 놓는다(크기는 그대로). */
+        void            setFlowDirection( UiFlowDirection flowDirection );
+        UiFlowDirection getFlowDirection() const { return _flowDirection; }
+        /**
+         * @brief 오른쪽에서 왼쪽으로 배치되는가 — 자기 흐름 방향을 부모(루트면 문화권)로 푼 결과입니다. 마지막 arrange 가 정합니다(놓이기 전에는 false).
+         * @details 이 위젯이 자식을 놓는 방향이고(패널의 거울 배치), 글 위젯의 문단 방향입니다. 자기 슬롯의 여백 · 정렬은 부모의 방향을 따릅니다.
+         */
+        bool isRightToLeft() const { return _bRightToLeft; }
         /** @brief 방향마다 포커스 탐색 규칙입니다. 바뀌어도 무효화하지 않는다(그림 · 자리에 닿지 않는다). */
         void                    setNavigation( const WidgetNavigation& navigation ) { _navigation = navigation; }
         const WidgetNavigation& getNavigation() const { return _navigation; }
@@ -172,7 +180,10 @@ namespace sw
         float32 _opacity;
         PROPERTY( DisplayName = "Visibility" )
         WidgetVisibility _visibility;
+        PROPERTY( DisplayName = "Flow Direction", Tooltip = "Inherit follows the parent (the culture at the root); fix LeftToRight for numbers and clocks" )
+        UiFlowDirection _flowDirection;
         PROPERTY( DisplayName = "Enabled" )
         bool _bEnabled;
+        bool _bRightToLeft; ///< 마지막 arrange 에서 푼 흐름 방향(UiLayoutPass 가 적는다)
     };
 } // namespace sw

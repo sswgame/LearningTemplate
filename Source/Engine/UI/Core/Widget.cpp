@@ -38,7 +38,9 @@ namespace sw
         , _layoutSerial{ 0 }
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
+        , _flowDirection{ UiFlowDirection::Inherit }
         , _bEnabled{ true }
+        , _bRightToLeft{ false }
     {
     }
 
@@ -116,6 +118,14 @@ namespace sw
             return;
         _renderTransform = transform;
         invalidate( WidgetDirty::kTransform );
+    }
+
+    void Widget::setFlowDirection( UiFlowDirection flowDirection )
+    {
+        if ( _flowDirection == flowDirection )
+            return;
+        _flowDirection = flowDirection;
+        invalidate( WidgetDirty::kArrange );
     }
 
     void Widget::setLayoutSlot( const WidgetLayoutSlot& slot )

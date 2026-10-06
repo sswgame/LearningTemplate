@@ -30,8 +30,11 @@ namespace sw
             GlyphMetrics metrics{};
             if ( rasterizer.findGlyphMetrics( run._face, glyph._glyphIndex, metrics ) )
                 glyph._advance = metrics._advance;
+            // 커닝 쌍은 눈에 보이는 (왼쪽, 오른쪽)이고 왼쪽 글리프의 전진에 더한다 — RTL 런은 배치가 뒤집어 지금 글리프가 앞 글리프의 왼쪽에 선다.
             const bool bKerns = bHasPrevious && previousGlyph != 0 && glyph._glyphIndex != 0;
-            if ( bKerns )
+            if ( bKerns && run._direction == TextDirection::RightToLeft )
+                glyph._advance += rasterizer.getKerning( run._face, glyph._glyphIndex, previousGlyph );
+            else if ( bKerns )
                 inoutListGlyph[previousOutput]._advance += rasterizer.getKerning( run._face, previousGlyph, glyph._glyphIndex );
             previousGlyph  = glyph._glyphIndex;
             previousOutput = inoutListGlyph.size();

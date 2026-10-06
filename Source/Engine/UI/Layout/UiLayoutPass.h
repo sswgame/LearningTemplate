@@ -7,12 +7,14 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/UI/Core/WidgetTypes.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 
 namespace sw
 {
     struct WidgetGeometry;
 
+    class LocalizationManager;
     class TextLayoutEngine;
     class Widget;
     class WidgetTree;
@@ -34,6 +36,7 @@ namespace sw
         float2            _viewportSize{};         ///< 뷰포트 크기(UI 단위) — 트리 루트가 놓이는 사각형
         float32           _uiScale{ 1.0f };        ///< UI 단위 → 물리 픽셀. 픽셀 맞춤에 쓴다
         float32           _textScale{ 1.0f };      ///< 글자 크기 배율(gv_uiTextScale) — 글 측정에만 곱한다
+        bool              _bRightToLeft{ false };  ///< 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 루트의 Inherit 이 따른다
     };
 } // namespace sw
 
@@ -66,6 +69,13 @@ namespace sw
          */
         static void arrange( Widget& widget, const UiLayoutContext& context, const WidgetGeometry& parentGeometry, const float2& slotPosition,
                              const float2& slotSize );
+        /** @brief 흐름 방향 @p flowDirection 을 부모의 방향(@p bParentRightToLeft — 루트면 문화권)으로 풉니다. */
+        static bool resolveRightToLeft( UiFlowDirection flowDirection, bool bParentRightToLeft )
+        {
+            return flowDirection == UiFlowDirection::Inherit ? bParentRightToLeft : flowDirection == UiFlowDirection::RightToLeft;
+        }
+        /** @brief 문화권이 오른쪽에서 왼쪽인가입니다(`UiLayoutContext::_bRightToLeft` 를 채운다). @p pLocalization 이 nullptr 이면 바인딩된 엔진 서비스, 그것도 없으면 false. */
+        static bool isCultureRightToLeft( const LocalizationManager* pLocalization = nullptr );
         /** @brief 트리의 모든 위젯을 레이아웃 더러움으로 표시합니다(배율 · 글자 배율 · 글꼴이 바뀜). */
         static void invalidateAllLayout( WidgetTree& tree );
 

@@ -133,6 +133,19 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **패드 오른쪽 스틱**(`UI.Scroll` 행동) — 포커스 경로(포커스가 없으면 포인터가 올라간 경로)로 가고 `_stickSpeed` × 프레임 시간만큼. 쓴 스틱은 먹힌 입력이다.
 - **포커스 탐색** — `UiFocusManager::navigate` 가 옮긴 뒤 조상 패널마다 `scrollIntoView`. 스크롤 패널이 자른(완전히 밖인) 항목도 탐색 후보다(`canScrollIntoView`).
 
+### 흐름 방향 · 오른쪽에서 왼쪽 배치 거울
+
+위젯마다 `_flowDirection`(`Inherit` · `LeftToRight` · `RightToLeft` — UMG FlowDirection · Godot `layout_direction`). `Inherit` 은 부모를, 루트는 문화권
+(`UiLayoutContext::_bRightToLeft` = `UiLayoutPass::isCultureRightToLeft()` — 의사 문화권 `qps-plocm` 도 RTL)을 따른다. 숫자 입력 칸 · 시계는 `LeftToRight` 로 고정한다.
+푼 결과는 arrange 가 위젯에 적고(`isRightToLeft`), 글 위젯은 그것을 문단 방향(`TextLayoutStyle::_paragraphDirection`)으로 넘긴다.
+
+- **두 자리에서만 거울한다.** 패널은 늘 왼쪽에서 오른쪽으로 계산한다. `PanelWidget::arrangeChild` 가 RTL 패널이면 자식 사각형을 패널 너비로 거울(x → 너비 − x − 폭) —
+  상자의 가로 순서 · 캔버스의 앵커와 오프셋(`앵커 x → 1 − 앵커 x`, 오프셋 부호, 커지는 쪽까지) · 격자 열 · 흐름 줄이 한 번에 뒤집힌다. `UiLayoutPass::arrange` 는 자기 슬롯을
+  **부모의** 방향으로 읽어 RTL 이면 여백 왼 ↔ 오 · 가로 정렬 Start ↔ End. 새 패널에 방향 분기를 넣지 않는다.
+- 스크롤 패널은 내용 자리(스크롤 오프셋)를 거울로 놓지 않는다(`mirrorsChildrenInRightToLeft` false) — 내용 안의 패널이 자기 방향으로 거울한다.
+- 방향을 바꾸면 `kArrange`(크기는 그대로 — measure 0). 문화권이 바뀌어 루트의 방향이 달라지면 다음 걷기가 트리 전체를 다시 놓는다.
+- 포커스 탐색 Left · Right 는 화면 기준이라 그대로다(결과 사각형으로 고르므로 거울 배치에 저절로 맞는다). 히트 테스트도 기하를 보므로 따로 할 일이 없다.
+
 ## 배율 · 안전 영역
 
 레이아웃은 **UI 단위**(기준 해상도 1920×1080 의 픽셀)로 하고, 화면에 낼 때 배율을 곱합니다(`UiViewport` — `_size` · `_physicalSize` · `_uiScale` · `_safeInsets`).

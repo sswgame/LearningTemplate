@@ -7,7 +7,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Text/IFontRasterizer.h"
+#include "Engine/Text/TextBidi.h"
 #include "Engine/Text/TextItemizer.h"
 
 namespace sw
@@ -123,6 +125,7 @@ namespace sw
                 hash        = HashUtil::combine( hash, static_cast<uint64>( style._wordBreak ) );
                 hash        = HashUtil::combine( hash, static_cast<uint64>( style._overflow ) );
                 hash        = HashUtil::combine( hash, static_cast<uint64>( style._maxLines ) );
+                hash        = HashUtil::combine( hash, static_cast<uint64>( style._paragraphDirection ) );
                 return HashUtil::combine( hash, style._bWrap ? 1u : 0u );
             }
 
@@ -203,6 +206,11 @@ namespace sw
         , _listSizeScratch{}
         , _listColorScratch{}
         , _listFauxScratch{}
+        , _listCodepointScratch{}
+        , _listLevelScratch{}
+        , _listGlyphLevelScratch{}
+        , _listLineLevelScratch{}
+        , _listVisualScratch{}
         , _mapMeasure{}
         , _measureScratch{}
     {
@@ -276,6 +284,43 @@ namespace sw
         }
     }
 
+    bool TextLayoutEngine::resolveGlyphLevels( string_view text, TextDirection paragraphDirection )
+    {
+        // 수준은 원문 코드 포인트로 정한다 — 셰이퍼가 버린 폭 없는 방향 제어(RLO · PDF)도 수준을 바꾼다. 글리프는 클러스터(원문 바이트)로 짝짓는다.
+        _listGlyphLevelScratch.assign( _listShapedScratch.size(), 0 );
+        _listCodepointScratch.clear();
+        bool   bAnyRightToLeft = paragraphDirection == TextDirection::RightToLeft;
+        size_t offset          = 0;
+        while ( offset < text.size() )
+        {
+            const uint32 codepoint = StringUtil::decodeUtf8( text, offset );
+            bAnyRightToLeft        = bAnyRightToLeft || TextItemizer::isStrongRightToLeft( codepoint ) || codepoint == PseudoLocalizer::kRightToLeftOverride;
+            _listCodepointScratch.push_back( codepoint );
+        }
+        if ( bAnyRightToLeft == false )
+            return false; // LTR 문단에 RTL 문자 · RLO 가 없으면 모든 수준이 0 이다
+        TextBidi::resolveLevels( _listCodepointScratch, paragraphDirection, _listLevelScratch );
+
+        // 클러스터는 논리 순서라 줄지 않는다 — 코드 포인트를 앞으로만 민다. codepointEnd = 지금 코드 포인트 다음 바이트.
+        size_t codepointIndex = 0;
+        size_t codepointEnd   = 0;
+        (void)StringUtil::decodeUtf8( text, codepointEnd );
+        bool bAnyLevel = false;
+        for ( size_t glyphIndex = 0; glyphIndex < _listShapedScratch.size(); ++glyphIndex )
+        {
+            const uint32 cluster = _listShapedScratch[glyphIndex]._cluster;
+            while ( codepointEnd <= cluster && codepointEnd < text.size() )
+            {
+                (void)StringUtil::decodeUtf8( text, codepointEnd );
+                ++codepointIndex;
+            }
+            const uint8 level                  = _listLevelScratch[codepointIndex];
+            _listGlyphLevelScratch[glyphIndex] = level;
+            bAnyLevel                          = bAnyLevel || level != 0;
+        }
+        return bAnyLevel;
+    }
+
     void TextLayoutEngine::layout( string_view text, const TextLayoutStyle& style, float32 maxWidth, TextLayoutResult& outResult, const vector<RichTextSpan>* pListSpan )
     {
         using Internal = TextLayoutInternal;
@@ -290,8 +335,10 @@ namespace sw
         if ( chain._faceCount == 0 )
             return;
         shapeText( text, style, chain, pListSpan );
-        const uint32 glyphCount = static_cast<uint32>( _listShapedScratch.size() );
-        const bool   bWrap      = style._bWrap && maxWidth > 0.0f;
+        const uint32 glyphCount     = static_cast<uint32>( _listShapedScratch.size() );
+        const bool   bReorder       = resolveGlyphLevels( text, style._paragraphDirection );
+        const uint8  paragraphLevel = TextBidi::getParagraphLevel( style._paragraphDirection );
+        const bool   bWrap          = style._bWrap && maxWidth > 0.0f;
 
         // 1) 욕심쟁이 줄 채우기.
         vector<Internal::LineRange> listLine;
@@ -456,9 +503,57 @@ namespace sw
                 lineIndex + 1 < listLine.size() && listLine[lineIndex + 1]._begin < glyphCount ? _listShapedScratch[listLine[lineIndex + 1]._begin]._cluster : static_cast<uint32>( text.size() );
             line._byteCount = nextByte - line._firstByte;
 
-            float32 pen = 0.0f;
-            for ( uint32 index = range._begin; index < end; ++index )
+            // 눈에 보이는 순서: 줄 안 글리프 [첫, end) 뒤에 줄임표(문단 수준)를 논리로 붙이고, 줄 끝 공백은 문단 수준(L1)으로 되돌린 뒤 뒤집는다(L2).
+            const uint32 lineGlyphCount = end - range._begin;
+            const uint32 itemCount      = lineGlyphCount + ( range._bEllipsis ? ellipsis._count : 0u );
+            _listVisualScratch.resize( itemCount );
+            if ( bReorder )
             {
+                _listLineLevelScratch.assign( itemCount, paragraphLevel );
+                for ( uint32 index = 0; index < lineGlyphCount; ++index )
+                {
+                    _listLineLevelScratch[index] = _listGlyphLevelScratch[range._begin + index];
+                }
+                for ( uint32 index = lineGlyphCount; index > 0 && Internal::isTrailingBlank( _listShapedScratch[range._begin + index - 1]._codepoint ); --index )
+                {
+                    _listLineLevelScratch[index - 1] = paragraphLevel;
+                }
+                TextBidi::reorderVisually( _listLineLevelScratch, _listVisualScratch );
+            }
+            else
+            {
+                for ( uint32 index = 0; index < itemCount; ++index )
+                {
+                    _listVisualScratch[index] = index;
+                }
+            }
+
+            // RTL 문단의 끝 공백은 왼쪽 끝으로 간다 — 너비에서 뺀 만큼 왼쪽 밖에서 시작해 보이는 글리프가 [0, 너비] 에 놓이게.
+            float32 pen = 0.0f;
+            if ( TextBidi::isRightToLeftLevel( paragraphLevel ) )
+            {
+                for ( uint32 index = visibleEnd; index < end; ++index )
+                {
+                    pen -= _listWidthScratch[index];
+                }
+            }
+            for ( const uint32 item : _listVisualScratch )
+            {
+                if ( item >= lineGlyphCount )
+                {
+                    LaidOutGlyph glyph{};
+                    glyph._origin      = float2{ pen, line._baseline };
+                    glyph._fontSize    = style._fontSize;
+                    glyph._glyphIndex  = ellipsis._glyphIndex;
+                    glyph._cluster     = end < glyphCount ? _listShapedScratch[end]._cluster : static_cast<uint32>( text.size() );
+                    glyph._face        = ellipsis._face;
+                    glyph._bFauxBold   = chain._bFauxBold;
+                    glyph._bFauxItalic = chain._bFauxItalic;
+                    outResult._listGlyph.push_back( glyph );
+                    pen += ellipsis._width;
+                    continue;
+                }
+                const uint32       index  = range._begin + item;
                 const ShapedGlyph& shaped = _listShapedScratch[index];
                 if ( Internal::isLineBreakCharacter( shaped._codepoint ) == false )
                 {
@@ -473,26 +568,18 @@ namespace sw
                     glyph._face             = shaped._face;
                     glyph._bFauxBold        = ( fauxBits & Internal::kFauxBoldBit ) != 0 ? SW_TRUE : SW_FALSE;
                     glyph._bFauxItalic      = ( fauxBits & Internal::kFauxItalicBit ) != 0 ? SW_TRUE : SW_FALSE;
+                    // RTL 수준의 괄호는 짝 글리프로 그린다(L4). 면에 짝이 없으면 그대로.
+                    const bool   bRightToLeftGlyph = bReorder && TextBidi::isRightToLeftLevel( _listGlyphLevelScratch[index] );
+                    const uint32 mirrored          = bRightToLeftGlyph ? TextBidi::getMirroredCodepoint( shaped._codepoint ) : shaped._codepoint;
+                    if ( mirrored != shaped._codepoint )
+                    {
+                        const uint32 mirroredGlyph = rasterizer.findGlyphIndex( shaped._face, mirrored );
+                        if ( mirroredGlyph != 0 )
+                            glyph._glyphIndex = mirroredGlyph;
+                    }
                     outResult._listGlyph.push_back( glyph );
                 }
                 pen += _listWidthScratch[index];
-            }
-            if ( range._bEllipsis )
-            {
-                pen = trimmed;
-                for ( uint32 dot = 0; dot < ellipsis._count; ++dot )
-                {
-                    LaidOutGlyph glyph{};
-                    glyph._origin      = float2{ pen, line._baseline };
-                    glyph._fontSize    = style._fontSize;
-                    glyph._glyphIndex  = ellipsis._glyphIndex;
-                    glyph._cluster     = end < glyphCount ? _listShapedScratch[end]._cluster : static_cast<uint32>( text.size() );
-                    glyph._face        = ellipsis._face;
-                    glyph._bFauxBold   = chain._bFauxBold;
-                    glyph._bFauxItalic = chain._bFauxItalic;
-                    outResult._listGlyph.push_back( glyph );
-                    pen += ellipsis._width;
-                }
             }
             line._glyphCount = static_cast<uint32>( outResult._listGlyph.size() ) - line._firstGlyph;
             outResult._listLine.push_back( line );
@@ -501,10 +588,12 @@ namespace sw
         }
         outResult._size = float2{ maxLineWidth, lineTop };
 
-        // 4) 정렬 — 상자 너비는 maxWidth(무한이면 가장 넓은 줄). 문단 방향은 아직 LTR 뿐이다(RTL 배치 뒤집기는 뒤 단위).
-        const float32 boxWidth    = maxWidth > 0.0f ? maxWidth : maxLineWidth;
-        const bool    bCenter     = style._alignment == TextAlignment::Center;
-        const bool    bEnd        = style._alignment == TextAlignment::End || style._alignment == TextAlignment::Right;
+        // 4) 정렬 — 상자 너비는 maxWidth(무한이면 가장 넓은 줄). Start · End 는 문단 방향을 따른다(RTL 이면 Start = 오른쪽).
+        const float32 boxWidth   = maxWidth > 0.0f ? maxWidth : maxLineWidth;
+        const bool    bRightPara = TextBidi::isRightToLeftLevel( paragraphLevel );
+        const bool    bCenter    = style._alignment == TextAlignment::Center;
+        const bool    bEnd       = style._alignment == TextAlignment::Right || ( style._alignment == TextAlignment::End && bRightPara == false ) ||
+                          ( style._alignment == TextAlignment::Start && bRightPara );
         const float32 alignFactor = bCenter ? 0.5f : ( bEnd ? 1.0f : 0.0f );
         if ( alignFactor == 0.0f )
             return;

@@ -62,8 +62,14 @@ namespace sw
          * @details 자식의 원하는 크기(`getDesiredSize`)는 같은 걷기의 `computeDesiredSize` 가 이미 쟀습니다. @p size 는 이 패널 자기 크기입니다.
          */
         virtual void arrangeChildren( const UiLayoutContext& context, const float2& size );
-        /** @brief 자식 하나를 이 패널의 로컬 슬롯 사각형에 놓습니다 — 자식 슬롯의 여백 · 정렬을 적용하고 자식의 자식까지 놓습니다(`UiLayoutPass::arrange`). */
+        /**
+         * @brief 자식 하나를 이 패널의 로컬 슬롯 사각형에 놓습니다 — 자식 슬롯의 여백 · 정렬을 적용하고 자식의 자식까지 놓습니다(`UiLayoutPass::arrange`).
+         * @details 패널은 늘 왼쪽에서 오른쪽으로 계산해 넘깁니다. 이 패널이 오른쪽에서 왼쪽이면 여기서 사각형을 패널 너비로 거울합니다
+         *          (x → 너비 − x − 폭: 상자의 가로 순서 · 캔버스의 앵커와 오프셋 · 격자 열 · 흐름 줄이 한 번에 뒤집힌다 — Slate 패널의 FlowDirection 과 같은 결과).
+         */
         void arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size );
+        /** @brief 오른쪽에서 왼쪽일 때 자식 사각형을 거울로 놓는가입니다. 기본 true — 스크롤 패널은 내용 자리가 스크롤 오프셋이라 false. */
+        virtual bool mirrorsChildrenInRightToLeft() const { return true; }
 
     private:
         friend class Widget;
