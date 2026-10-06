@@ -2840,6 +2840,14 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | 9 | **다중 월드 툴 창** 과 그 위의 애니메이션 · 리그 · 프리팹 · 머티리얼 미리보기 창 | Engine(다중 월드) + EditorModule(툴 창 틀 — 창마다 선택 · Undo 범위) | L | 카메라 4 단계 | 언리얼 FPreviewScene · Asset Editor Toolkit, 유니티 Prefab Stage |
 | 10 | **UI 문서 디자이너**(4 차 8-5 다음) | EditorModule — 팔레트 → 끌어 놓기 · 앵커 손잡이 | L | 4 차 · 9 | 언리얼 UMG 디자이너 · 유니티 UI Builder |
 
+백로그에서 옮긴 세부 사항입니다.
+
+- **1 프로젝트 설정 창.** 생성 메타데이터 `docs/Config/ConfigReference.json`(파일, 필드, 타입, 기본값, 범위, 설명)을 읽어 `Config/` 와 팩 설정 파일을 찾아 엽니다.
+  고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고, 기본값과 같은 값은 파일에서 지웁니다(설정 파일에는 다른 값만).
+- **5 GM 도구 패널.** GF_Admin 의 `AdminClient` 로 조회, 지급, 제재, 감사 열람을 합니다.
+- **7 카탈로그 편집기.** 카탈로그 계약 하나가 `ResourceDataSchemaTest` 의 종류 테이블을 대체합니다. enum 이름 테이블은 `CityCatalog.cpp` 의 하드코딩 개수를 포함해 25 곳에 흩어져 있습니다.
+- 에디터에 이미 있는 것(전역 변수 테이블, 커맨드 팔레트, 핫 리로드, Undo, Play 와 한 프레임 진행, InputReplay, 기즈모, 미니덤프, RenderTargetPanel, 프로파일러 패널과 Tracy 연결)은 다시 만들지 않습니다.
+
 이 표는 옛 백로그 1-4 의 "에디터 · 개발 편의 기능" 묶음과 대기열의 에디터 패널 이름들을 대신합니다. 단계 1 ~ 5 가 끝나도 이 표에 남은 줄은 [백로그](../06_Backlog.md) 1-4 로 옮기고 이 문서를 지웁니다.
 
 ---
