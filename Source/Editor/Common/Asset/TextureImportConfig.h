@@ -104,22 +104,23 @@ namespace sw::editor
          *
          *          맨 **끝**의 캐치올은 정상이고 흔한 쓰임입니다(`Fallback_Default`). 그래서 "비어 있다" 가 아니라 **"비어 있는데
          *          뒤에 뭔가 더 있다"** 를 봅니다.
-         *
-         *          이 함수가 있는 또 다른 이유는 `rules` 배열을 관대하게 파싱하기 때문입니다. 객체가 아닌 원소는 필드를 하나도
-         *          읽지 못해 **캐치올이 되고** 뒤를 모두 가립니다. 그 동작은 일부러 유지하되(에디터 전용, 손으로 적는 파일) 결과는
-         *          드러나게 알립니다.
          */
         size_t findShadowingRuleIndex() const;
 
     private:
-        void parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule );
         /**
-         * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 깔아 줍니다.
-         * @details **찾지 못하면 경고를 남깁니다.** 프리셋 쪽과 규칙 쪽이 함께 씁니다. `inherits` 에 오타가 있거나 부모를 아래쪽에
-         *          적으면(찾기는 그 시점까지 파싱된 것만 봅니다) 상속이 통째로 사라진 채 기본값으로 임포트되므로, 조용히 넘어가면
-         *          아무도 알 수 없습니다.
+         * @brief 프리셋 · 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키 · 모르는 swizzle 이면 오류를 남기고 false 입니다.
+         * @details 키 표는 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc`(생성 문서 `docs/Config/TextureImportConfig.md`).
          */
-        void applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const;
+        [[nodiscard]] static bool parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule, string_view context );
+        /**
+         * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 깔아 줍니다. `inherits` 가 없으면 아무것도 하지 않고 true 입니다.
+         * @details 찾기는 그 시점까지 파싱된 프리셋만 봅니다 — 오타이거나 부모를 아래쪽에 적었으면 오류를 남기고 false 입니다
+         *          (상속이 통째로 사라진 채 기본값으로 임포트되면 아무도 알 수 없다).
+         */
+        [[nodiscard]] bool applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const;
+        /** @brief 반쯤 읽은 표를 남기지 않게 비우고 false 를 돌려줍니다. */
+        bool clearAndFail();
 
     private:
         map<string, TextureImportRule> _mapPreset;

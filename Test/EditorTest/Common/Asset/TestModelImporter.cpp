@@ -521,8 +521,9 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, missingRule, result ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::editor::ModelImporter::makeClipDataPath( copiedPath ), R"({ "clips": { "Walking_Z": { "loop": true } } })" ) );
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
-    // 모르는 규칙 키 · 코덱은 설정 오류다.
+    // 모르는 규칙 키 · 뿌리 키 · 코덱은 설정 오류다.
     sw::editor::ModelImportConfig config;
+    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rulez": [] })" ) );
     SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
     SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
     SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );

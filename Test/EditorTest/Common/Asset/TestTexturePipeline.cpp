@@ -384,107 +384,77 @@ namespace sw::editor
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] 찾지 못한 inherits 는 조용히 넘어가지 않는다
-     * @details `inherits` 해석은 프리셋 쪽과 규칙 쪽이 한 자리를 쓰고, 못 찾으면 경고를 남긴다. 그냥 넘어가면
-     *          이름 오타나 **부모를 아래쪽에 적는 것**(찾기는 그 시점까지 파싱된 프리셋만 본다)이 상속을 통째로
-     *          지우고, 그 텍스처는 아무 말 없이 기본값으로 임포트된다.
+     * @brief [EditorTexturePipelineTest] 찾지 못한 inherits 는 로드 오류다 — 반쯤 읽은 표를 남기지 않는다
+     * @details 이름 오타나 **부모를 아래쪽에 적는 것**(찾기는 그 시점까지 파싱된 프리셋만 본다)이 상속을 통째로 지운 채 기본값으로 임포트되면
+     *          아무도 알 수 없다. 프리셋 쪽 · 규칙 쪽 모두 같다.
      */
-    SW_TEST_CASE( EditorTexturePipelineTest, UnresolvedInheritsIsReported )
+    SW_TEST_CASE( EditorTexturePipelineTest, UnresolvedInheritsIsALoadError )
     {
-        // 1) 오타, 2) 부모를 뒤에 적기 — 둘 다 같은 결과다.
-        const sw::string_view kJson = R"({
-            "presets": {
-                "Base_UI": { "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "srgb": true },
-                "Uses_Later": { "inherits": "Declared_Below", "generate_mips": false },
-                "Declared_Below": { "format": "BC5_UNORM" }
-            },
-            "rules": [
-                { "name": "Typo_Rule", "inherits": "Base_UI_TYPO", "include_patterns": ["*.png"] }
-            ]
-        })";
-
-        sw::vector<sw::string> listWarning;
-        sw::DelegateHandle     handle = sw::Logger::addGlobalListener(
-            SW_DELEGATE_LAMBDA( sw::LogWrittenDelegate, [&listWarning]( const sw::LogEntry& entry )
-            {
-            if ( entry._level == sw::LogLevel::Warning )
-                listWarning.push_back( entry._message );
-        } ) );
-
-        TextureImportConfig config;
-        const bool          bLoaded = config.loadFromJsonString( kJson );
-        sw::Logger::removeGlobalListener( handle );
-
-        // 하나 실패했다고 설정 전체를 버리지는 않는다 — 나머지 규칙은 살아야 한다.
-        SW_ASSERT_TRUE( bLoaded );
-
-        size_t inheritWarningCount = 0;
-        for ( const sw::string& message : listWarning )
+        SW_TEST_DEFENSIVE_SCOPE( "inherits 가 없는 프리셋을 가리키는 설정을 일부러 읽는다" );
+        const sw::string_view arrJson[] = {
+            // 부모를 뒤에 적기
+            R"({ "presets": { "Uses_Later": { "inherits": "Declared_Below" }, "Declared_Below": { "format": "BC5_UNORM" } } })",
+            // 규칙의 오타
+            R"({ "presets": { "Base_UI": { "format": "B8G8R8A8_UNORM" } }, "rules": [ { "name": "Typo_Rule", "inherits": "Base_UI_TYPO" } ] })",
+        };
+        for ( const sw::string_view json : arrJson )
         {
-            if ( message.find( "inherits" ) != sw::string::npos )
-                ++inheritWarningCount;
+            test::ScopedLogCollector logs;
+            TextureImportConfig      config;
+            SW_EXPECT_FALSE_MSG( config.loadFromJsonString( json ), sw::string( json ) );
+            SW_EXPECT_TRUE( config.getPresets().empty() );
+            SW_EXPECT_TRUE( config.getRules().empty() );
+            SW_EXPECT_TRUE_MSG( logs.countContaining( "inherits" ) >= 1u, sw::string( json ) + logs.joined() );
         }
-        // 못 찾은 것이 둘(Uses_Later 의 전방 참조, Typo_Rule 의 오타)이다.
-        SW_EXPECT_EQUAL( size_t( 2 ), inheritWarningCount );
-
-        // 그리고 실제로 상속받은 값이 하나도 없다 — 경고가 가리키는 것이 이것이다.
-        // `_inherits` 는 **요청한 이름**을 그대로 남긴다(무엇을 원했는지가 진단에 필요하다).
-        // 상속이 정말 일어났는지는 **값**으로 확인한다.
-        const auto itUsesLater = config.getPresets().find( "Uses_Later" );
-        SW_ASSERT_TRUE( itUsesLater != config.getPresets().end() );
-        SW_EXPECT_EQUAL( sw::string( "Declared_Below" ), itUsesLater->second._inherits );
-        SW_EXPECT_EQUAL( sw::string( "BC7_UNORM" ), itUsesLater->second._format ); // 부모의 BC5 가 아니라 기본값
-
-        SW_ASSERT_EQUAL( size_t( 1 ), config.getRules().size() );
-        SW_EXPECT_EQUAL( sw::string( "Typo_Rule" ), config.getRules()[0]._name );
-        SW_EXPECT_EQUAL( sw::string( "BC7_UNORM" ), config.getRules()[0]._format ); // Base_UI 의 BGRA8 이 아니라 기본값
-        SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::RGBA ), static_cast<uint8>( config.getRules()[0]._swizzle ) );
-
-        // 멀쩡한 프리셋은 그대로다 — 위 거부가 과잉이 아님을 못 박는다.
-        const auto itBaseUi = config.getPresets().find( "Base_UI" );
-        SW_ASSERT_TRUE( itBaseUi != config.getPresets().end() );
-        SW_EXPECT_EQUAL( sw::string( "B8G8R8A8_UNORM" ), itBaseUi->second._format );
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] 규칙 배열의 **관대한 파싱을 유지**하되, 그 결과를 짚어 준다
-     * @details `rules` 배열은 객체가 아닌 원소도 그대로 규칙으로 만든다 — 에디터에서만 쓰이는 손으로
-     *          적는 파일이라 그 관대함을 **일부러 둔다**(`TextureImportConfig.cpp` 주석 참고). 이 케이스는
-     *          그 결정을 못박는 동시에, 그때 무슨 일이 일어나는지도 못박는다:
-     *          필드를 하나도 못 읽은 규칙은 **조건이 없어 모든 경로에 매칭**되고, 매칭은 "첫 승" 이라
-     *          **그 뒤 규칙이 전부 죽는다.** 그 사실을 `findShadowingRuleIndex` 가 짚는다.
-     * @note 그러므로 이 케이스가 깨졌다면 둘 중 하나다 — 파싱을 엄격하게 바꿨거나(그러면 결정을
-     *       뒤집은 것이니 `TextureImportConfig.cpp` 주석도 같이 고칠 것), 가리는 규칙을 못 찾게 됐거나.
+     * @brief [EditorTexturePipelineTest] 모르는 키 · 모르는 swizzle · 객체 아닌 규칙 · 뿌리의 모르는 키는 로드 오류다(기본값으로 조용히 가지 않는다)
+     * @details 객체 아닌 원소를 규칙으로 받으면 조건 없는 규칙이 되어 뒤 규칙을 모두 가리고, 모르는 swizzle 을 RGBA 로 읽으면 채널이 뒤바뀐 채 임포트된다.
      */
-    SW_TEST_CASE( EditorTexturePipelineTest, LenientRuleParsingIsKeptButShadowingIsReported )
+    SW_TEST_CASE( EditorTexturePipelineTest, InvalidRuleIsALoadError )
     {
-        // 두 번째 원소가 객체가 아니다 — 손으로 적다 흔히 나는 실수다.
+        SW_TEST_DEFENSIVE_SCOPE( "틀린 임포트 설정을 일부러 읽는다" );
+        const sw::string_view arrJson[] = {
+            R"({ "rules": [ { "fromat": "BC7_UNORM" } ] })",
+            R"({ "rules": [ { "swizzle": "XYZW" } ] })",
+            R"({ "rules": [ 3 ] })",
+            R"({ "rulez": [] })",
+            R"({ "presets": { "Base": { "srgbb": true } } })",
+        };
+        for ( const sw::string_view json : arrJson )
+        {
+            TextureImportConfig config;
+            SW_EXPECT_FALSE_MSG( config.loadFromJsonString( json ), sw::string( json ) );
+            SW_EXPECT_TRUE( config.getRules().empty() );
+            SW_EXPECT_TRUE( config.getPresets().empty() );
+        }
+    }
+
+    /**
+     * @brief [EditorTexturePipelineTest] 중간의 조건 없는 규칙은 뒤 규칙을 가린다 — 로드는 되고, 진단이 그 자리를 짚는다
+     * @details 매칭은 "첫 승" 이라 무엇에나 맞는 규칙이 중간에 있으면 그 뒤 규칙은 절대 선택되지 않는다. 형식은 맞으니 오류가 아니라 경고다.
+     */
+    SW_TEST_CASE( EditorTexturePipelineTest, MidListCatchAllRuleShadowingIsReported )
+    {
         const sw::string_view kJson = R"({
             "rules": [
                 { "name": "Normal_Maps", "include_patterns": ["*_n.*"] },
-                "this is not an object",
+                { "name": "Catch_All" },
                 { "name": "UI_Textures", "include_paths": ["ui/"] }
             ]
         })";
 
-        TextureImportConfig config;
+        test::ScopedLogSuppressor suppressor;
+        TextureImportConfig       config;
         SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
-
-        // 1) 관대함은 그대로다 — 망가진 원소도 규칙 한 줄이 된다(엄격하게 바꿨다면 2가 된다).
         SW_ASSERT_EQUAL( size_t( 3 ), config.getRules().size() );
-        SW_EXPECT_TRUE_MSG( config.getRules()[1]._name.empty(),
-                            "객체가 아닌 원소에서 이름이 나왔습니다 — 파싱이 예상과 다릅니다" );
-
-        // 2) 그 규칙은 조건이 없어 **무엇에나** 매칭된다.
         SW_EXPECT_TRUE( TextureImportConfig::isCatchAllRule( config.getRules()[1] ) );
-
-        // 3) 그래서 뒤의 UI_Textures 는 영원히 선택되지 않는다 — 진단이 바로 그 자리를 가리킨다.
         SW_EXPECT_EQUAL( size_t( 1 ), config.findShadowingRuleIndex() );
 
         TextureImportRule matched;
         SW_ASSERT_TRUE( config.findMatchingRule( "ui/button.png", matched ) );
-        SW_EXPECT_TRUE_MSG( matched._name.empty(),
-                            "가려져 있어야 할 UI_Textures 가 선택됐습니다 — 매칭 규칙이 바뀌었습니다" );
+        SW_EXPECT_EQUAL( sw::string( "Catch_All" ), matched._name );
     }
 
     /**

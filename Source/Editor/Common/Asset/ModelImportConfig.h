@@ -34,13 +34,7 @@ namespace sw::editor
      * @struct ModelImportRule
      * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)입니다.
      * @details 적용 순서는 `translation` 다음 `recenter` 입니다(스킨드 모델에는 둘 다 쓸 수 없습니다 — 바인드 행렬이 어긋납니다).
-     *          애니메이션 키(JSON): `animations`(불, 기본 참) · `clips`(가져올 클립 이름 배열, 비면 모두 — 원본에 없는 이름은 임포트 오류) ·
-     *          `animation_codec`(코덱 이름, `AnimCodecRegistry` 에 없는 이름은 설정 오류) · `animation_sample_rate`(초당 표본) ·
-     *          `animation_precision` · `animation_shell_distance`(미터, `AnimCodecSettings`) · `root_motion_bone`(루트 모션 트랙이 될 본 — 비면 없음) ·
-     *          `attachments`(불, 기본 참 — 본 아래 스킨 없는 메시를 따로 임포트).
-     *          파쇄 키(JSON): `fracture`(객체 — 있으면 `.mesh` 옆에 `.fracture` 를 쓴다, 스킨 없는 메시만): `pattern`("uniform" · "clustered" ·
-     *          "slices") · `volume`("mesh" 닫힌 메시 · "bounds" · "hull" — 닫히지 않은 모델의 대리 부피) · `pieces` · `seed` · `levels`(묶음 레벨마다 수, 위 → 아래) · `impact_point`(숫자 셋) · `cluster_radius` · `cluster_fraction` ·
-     *          `slices`(축마다 칸 수 셋) · `slice_jitter` · `interior_color`(숫자 넷) · `interior_uv_scale` · `max_hull_points`. 모르는 키 · 틀린 값은 설정 오류입니다.
+     *          키는 `ModelImportConfig.cpp` 의 `kArrModelImport…KeyDoc` 표 — 생성 문서 `docs/Config/ModelImportConfig.md`. 모르는 키 · 틀린 값은 설정 오류입니다.
      */
     struct ModelImportRule
     {
