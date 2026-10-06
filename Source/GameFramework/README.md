@@ -472,8 +472,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 
 알림을 꺼내는 `drainEvents( outListEvent )` 는 기반 · 키트 모두 **받는 쪽 목록 뒤에 붙이고 자기 목록을 비웁니다**(바꿔치기하지 않는다). 매 프레임 같은 목록을 다시 쓰는 쪽은 먼저 `clear()` 합니다.
 
-키트 하나는 장르 묶음 아래 `Kits/<묶음>/<이름>/CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<이름>)` 한 줄, `Kits/CMakeLists.txt` 의 `add_subdirectory(<묶음>/<이름>)`,
-같은 폴더의 매니페스트 `GF_<이름>.module.json`(이름 · 버전 · `_kind: Kit` · 의존 · 플랫폼 · 구성 · 대상 `_listTarget` — `Source/Games/README.md`)입니다. 시험 실행 파일은 켜진 키트를 레지스트리로 링크합니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
+키트 하나는 장르 묶음 아래 `Kits/<묶음>/<이름>/CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<이름>)` 한 줄과
+같은 폴더의 매니페스트 `GF_<이름>.module.json`(이름 · 버전 · `_kind: Kit` · 의존 · 플랫폼 · 구성 · 대상 `_listTarget` — `Source/Games/README.md`)입니다(키트 목록은 매니페스트다 — `Kits/CMakeLists.txt` 는 그것을 의존 순서로 들어간다). 시험 실행 파일은 켜진 키트를 레지스트리로 링크합니다. 엔진 없이 돌릴 수 있는 규칙(계산 · 데이터)은
 컴포넌트가 아닌 보통 클래스로 두어 시험이 씬 없이 부르게 합니다 — 지금의 키트 넷이 그렇게 되어 있습니다.
 
 ### 클라이언트 · 서버로 나뉘는 기능 — 한 기능 = 최대 세 모듈
