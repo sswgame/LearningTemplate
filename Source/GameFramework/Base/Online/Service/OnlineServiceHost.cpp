@@ -8,6 +8,7 @@
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Guard/RequestLimits.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
+#include "GameFramework/Base/Online/Store/ServiceStore.h"
 
 namespace sw
 {
@@ -158,6 +159,8 @@ namespace sw
             for ( const ServerBusMessage& message : _listBusScratch )
                 dispatchServerBusMessage( message );
         }
+        if ( _settings._pServiceStore != nullptr )
+            (void)_settings._pServiceStore->pollCompletions(); // 끝난 저장 일의 complete 가 맡긴 서비스를 부른다 — 서비스 틱보다 먼저
         for ( IOnlineService* pService : _listService )
             pService->onServiceTick( *this, nowMs );
     }

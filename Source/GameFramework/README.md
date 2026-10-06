@@ -255,7 +255,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   - **온라인 서비스** (`Kits/Online/` — 서버 전용은 `Kits/Online/Server/<키트>`, 모듈 `GF_Server_<키트>`. 서버 키트는 같은 기능의 공유 키트만 include 한다)
     - `Account`(`GF_Account`, Client · Server): 계정 와이어 타입(`AccountTypes.h` — 결과 · 끝난 까닭 · 세션 토큰 · 게임 접속 표 · 클라이언트 정보 · 연동 요약 ·
       빌드 판 비교 `AccountUtil::compareBuild`), 외부 로그인 표를 얻는 쪽(`PlatformLoginClient.h` — `IPlatformLoginClient` · 시스템 브라우저 `IExternalBrowser` ·
-      가짜, PC 는 `LoopbackPkceLoginClient` — 시스템 브라우저 + 127.0.0.1 리다이렉트 + PKCE S256 · state · nonce, 표 = `id_token|nonce`).
+      가짜, PC 는 `LoopbackPkceLoginClient` — 시스템 브라우저 + 127.0.0.1 리다이렉트 + PKCE S256 · state · nonce, 표 = `id_token|nonce`),
+      와이어(`AccountProtocol.h` — 메서드 · 알림 `kPushRevoked` · 코덱 `AccountWire`), 클라이언트(`AccountClient` — 다시 연결되면 토큰으로 재접속을 먼저 보내고
+      그동안의 세션 요청은 그 뒤에, 밀려남 알림이면 토큰을 버린다 · `makeConnectCredentials` 로 UDP 자격), 게스트 장치 비밀(`AccountDeviceSecret` — 로컬 저장 Encrypted).
     - `Server/Account`(`GF_Server_Account`, Server): 로그인 서비스 — 계정(소금 + 느린 해시 Argon2id, 매개변수는 레코드에 — 바뀌면 다음 로그인에 다시 해시),
       게스트(장치 비밀 다이제스트 → 계정) · 연동(이름 · 외부 계정을 "없어야 함" 으로 — 다른 계정 것이면 `AlreadyLinked`, 자동 합치기 없음) · 외부 로그인
       (`Platform/PlatformLoginProvider.h` — 맡기고 거두는 확인, 가짜 `FakePlatformLoginProvider`; 제공자는 데이터 `PlatformLoginProviderSettings` →
@@ -280,6 +282,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       큰 것 안의 후보를 실력 거리 순으로 넣어 자리를 정확히 채우고, 큰 표부터 실력 합이 낮은 팀에(파티는 쪼개지 않음 — 나눌 수 없으면 그 닻은 이번에 건너뜀),
       기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정은 아직 없다(백로그 1-7).
       시험: `MatchMakerTest`.
+      Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
+      메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로),
+      UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
+      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지).
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,

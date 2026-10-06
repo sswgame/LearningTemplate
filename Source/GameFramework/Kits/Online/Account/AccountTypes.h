@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -105,6 +106,26 @@ namespace sw
         uint8 _arrToken[kTokenSize]{};
         uint8 _arrSecret[kSecretSize]{};
         int64 _expiresAtMs{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 로그인 · 재접속의 결과입니다. */
+    struct LoginGrant
+    {
+        AccountIdentity   _identity{};
+        LoginSessionToken _token{};
+        string            _sanctionReasonCode{};                    ///< AccountSuspended — 사유 코드
+        string            _storeUrl{};                              ///< UpdateRequired · 권장 — 원격 설정의 상점 주소
+        int64             _expiresAtMs{ 0 };                        ///< 세션의 절대 시한
+        int64             _retryAfterMs{ 0 };                       ///< AccountLocked · RateLimited — 이만큼 뒤에
+        int64             _sanctionUntilMs{ 0 };                    ///< AccountSuspended — 끝 시각(영구 정지는 `ServiceSanctionState::kPermanentMs`)
+        int64             _deletionDueMs{ 0 };                      ///< 탈퇴 예약 — 0 이 아니면 이 때 지운다(취소할 수 있다)
+        uint64            _replacedSessionId{ 0 };                  ///< KickExisting 으로 밀어낸 옛 세션(없으면 0)
+        LoginRevokeReason _revokeReason{ LoginRevokeReason::None }; ///< Revoked — 왜
+        uint8             _bCreated{ SW_FALSE };                    ///< 게스트 · 외부 로그인이 새 계정을 만들었다
+        uint8             _bUpdateRecommended{ SW_FALSE };          ///< 권장 빌드보다 낮다(로그인은 됐다)
     };
 } // namespace sw
 
