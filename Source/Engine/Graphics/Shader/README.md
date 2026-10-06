@@ -101,6 +101,8 @@ Shader/
   않는다. `GpuInstance` 원소 정의는 `instancedata.hlsli` 하나.
 - **구조버퍼 원소는 `float4` 단위로 짠다**(float3 을 섞으면 std430 때문에 GL 만 어긋난다). GL(ARB_gl_spirv)은 구조버퍼를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절하고 그 배치는
   조용히 물러난다 — 머티리얼은 픽셀 단계에서만 읽는다. GL 은 SPIR-V 라 bindless 텍스처가 불가, DX11 은 SM5.0 이라 버퍼로 텍스처를 못 넘긴다 — 머티리얼 텍스처는 t5..t8 고정 슬롯.
+- **GL 타깃(SPIR-V)은 구조버퍼를 `Uniform` 저장 클래스 + `BufferBlock` 데코레이션으로 냅니다.** 리플렉션이 StorageBuffer 클래스만 보면 구조버퍼를 상수버퍼로 잘못 분류하므로 `ShaderReflectionSpirv` 가 `BufferBlock` 을 따로 봅니다.
+- **컴파일러 동작(옵션 · DXC 버전)을 바꿔 실험할 때는 `ShaderCompiler` 디스크 캐시와 `cook.stamp` 를 지웁니다.** 소스가 그대로면 내용 해시도 그대로라 아무것도 다시 쿠킹하지 않습니다.
 
 
 ---

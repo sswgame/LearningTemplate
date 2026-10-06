@@ -549,6 +549,7 @@ py -3 Scripts/dev/RunBackendSmoke.py                                            
   `MaterialCache` · `TextureCache` 는 일부러 다르다(소유 · 디바이스 기억 · acquire 순서) — 맞추지 말 것. 두 캐시의 `clear()` 는 GPU 자원을 놓지 않는다(RHI shutdown 이 먼저라 안전).
 - **`Material` · `MaterialInstance` · `Mesh` 는 Engine 의 `create()` 로만 만든다**(모듈이 `make_shared` 하면 제어 블록이 모듈 DLL 에 살아 종료 세그폴트). 팩토리 안에서는 `sw::make_shared`.
 - **DDS 의 `dwFourCC` 는 D3DFMT 정수일 수 있다**(레거시 부동소수점). 스플래시는 32bpp 비압축만 받는다 — `splash.dds` 를 BC 로 저장하지 말 것. `.hdr` 은 부동소수점으로 읽어 BC6H_UF16 · RGBA16F 로만 임포트한다(규칙 포맷이 8 비트면 실패) — Debug DirectXTex 의 BC6H 는 BC7 처럼 느리다, 큰 원본은 Release App 으로.
+- **`MeshUtil::createPrimitive` 는 부를 때마다 새 메시를, `MeshUtil::acquirePrimitive` 는 공유 메시를 줍니다.** 같은 도형을 나눠 쓸 컴포넌트는 `acquirePrimitive` 를 씁니다. 컴포넌트마다 새 메시를 만들면 같은 도형도 배치와 정점 버퍼가 컴포넌트 수만큼 생깁니다(벤치는 배치를 일부러 나누려고 `createPrimitive` 를 씁니다).
 
 ## 더 볼 곳
 

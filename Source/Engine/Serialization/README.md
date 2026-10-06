@@ -51,3 +51,4 @@
   `ContainerReadResult` 로 같다 — 자리를 알면 그 원소 · 항목만 빼고 칸 실패(`FieldFailed`), 모르면 멈춘다(`StreamBroken`: 바이너리의 enum 아닌 값 실패 · 넣을 칸 없는 원소).
 - **직렬화 출력이 그대로인지는 덤프로 본다** — `SW_SERIALIZATION_DUMP_DIR=<폴더>` 로 `SerializationRoundTripTest.DumpEveryResourceObjectState` **하나만** 돌리면 씬 · 프리팹의
   오브젝트 상태를 세 형식으로 덤프한다. 고치기 전 · 후 덤프의 `diff -r` 이 비어야 한다. 실제 데이터의 쓰기 → 되읽기 → 쓰기 고정점은 `…EveryResourceComponentRewritesToTheSameBytes`.
+- **JSON 은 시퀀스를 배열, 맵을 오브젝트로 쓰고, 값 구조체 원소는 타입 래핑 없이 본문만 쓰고 읽습니다.** `{ "TypeName": {...} }` 래핑은 런타임 타입이 필요한 소유 포인터(다형) 원소에만 씁니다. 래핑을 짐작해 벗기는 리더 분기를 되살리지 않습니다.
