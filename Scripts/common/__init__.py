@@ -13,6 +13,8 @@ Scripts/common package
   - CookContract: 쿠킹 표(Config/Engine/CookContract.json — RHI 백엔드 · 쿡 접미사)를 읽은 객체(CookContractSpec) — 쿠커와 헤더 생성기가 공유
   - Parallel: 동시 처리 한 자리 — 워커 수 정책과 map/flatMap 패턴 (스레드인 이유도 여기 적혀 있다)
   - TranslationUnits: 컴파일 DB 에서 TU 를 골라 자식 프로세스로 훑는 자리 (RunClangTidy · RunBuildWarnings 공용)
+  - ConfigCatalog: 설정 파일 목록(층 · 읽는 곳 · 언제 · 배포본 · 커밋) — docs/Config 생성과 CheckConfigReference 게이트가 같이 읽는다
+  - ConfigReference: 설정 참조 문서(docs/Config)를 코드(PROPERTY · ConfigKeyDoc · 전역 변수 · ArgumentList · CMake 옵션)에서 만든다
 """
 
 from __future__ import annotations

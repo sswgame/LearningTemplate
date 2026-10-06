@@ -23,7 +23,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _name{};
+        string _name{}; ///< 키트가 찾는 저장소 이름(`accounts` · `trades`)
         /** @brief 드라이버 이름(`postgres` · `sqlite` · `memory`)입니다. 해석은 서버 전용 모듈이 합니다. */
         PROPERTY()
         string _driver{ "memory" };
@@ -45,7 +45,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _name{};
+        string _name{}; ///< 키트가 찾는 캐시 이름(`presence` · `sessions`)
         /** @brief 드라이버 이름(`resp` · `memory`)입니다. */
         PROPERTY()
         string _driver{ "memory" };

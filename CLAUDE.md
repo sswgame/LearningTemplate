@@ -44,8 +44,9 @@ cmake --build --preset Ninja-Debug
   `SW_TARGET_TYPE` (`Game` · `Client` · `Server` — the Unreal TargetType slot; empty = Shipping→Client, else Game; code reads only
   `SW_WITH_CLIENT_CODE` / `SW_WITH_SERVER_CODE` / `sw::build::kTargetName`, and only inside `.cpp` bodies — split code goes into modules by `_listTarget`),
   `SW_ACTIVE_GAME` (which `Source/Games/<name>` builds as `SWGame`, and which game preset `Config/Game/<name>.json` — pack root,
-  gamesettings, startup scene — the runtime reads; Shipping bakes that file in), `SW_SHIPPING_RHI_BACKEND` (the one RHI backend
-  Shipping links statically — declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),
+  window title — the runtime reads; Shipping bakes that file in; the startup scene is the pack's `data/gamesettings.xml`),
+  `SW_SHIPPING_RHI_BACKEND` (the one RHI backend Shipping links statically, a cook-table name such as `DirectX12` —
+  declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),
   `SW_REQUIRE_REFLECTION`, `SW_ENABLE_PCH`, `SW_USE_SCCACHE`.
 
 ## Test
@@ -176,6 +177,8 @@ py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning 
 py -3 Scripts/lint/gate/CheckTargetMacros.py                   # platform/arch/compiler via SW_* macros, never compiler built-ins
 py -3 Scripts/lint/gate/CheckStdFilesystemIsolation.py         # std::filesystem only inside Core/File/Std (engine code asks FileUtil)
 py -3 Scripts/lint/gate/CheckTextureFolders.py                 # textures/ holds DDS only; source images live in textures_raw/
+py -3 Scripts/lint/gate/CheckConfigReference.py                # docs/Config matches the code; every config file is in ConfigCatalog.py
+py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs/Config after changing a config field, gv, argument or SW_* option
 py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
 py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
