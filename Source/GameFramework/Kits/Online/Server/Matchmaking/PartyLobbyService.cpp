@@ -751,8 +751,8 @@ namespace sw
                 {
                     submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorId, request._partyId ) ) );
                     refreshIndexTtl( party );
-                    notifyParty( party, kInvalidAccountId );
                 }
+                notifyParty( party, kInvalidAccountId ); // 만든 사람에게도 — 클라이언트의 "내 파티" 는 알림이 정본
                 break;
             }
             case PartyLobbyOperation::PartyInvite:

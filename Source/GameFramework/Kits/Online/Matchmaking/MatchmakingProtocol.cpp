@@ -4,6 +4,7 @@
 
 #include "Core/Network/BitStream.h"
 
+#include "GameFramework/Base/Online/Directory/ServerRecord.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -12,7 +13,6 @@ namespace sw
     {
         struct MatchmakingProtocolInternal
         {
-            static constexpr int32 kMaxNameSize    = 64; ///< 서버 주소 · 지역(서버 기록과 같은 상한 안)
             static constexpr int32 kMaxTicketCount = MatchmakingLimit::kMaxTeamCount * MatchmakingLimit::kMaxTeamSize;
 
             static void writeAccounts( BitWriter& outWriter, const vector<AccountId>& listAccount )
@@ -209,7 +209,7 @@ namespace sw
         outTicket._partyId        = reader.readVarUint();
         outTicket._originServerId = reader.readVarUint();
         outTicket._enqueuedMs     = reader.readVarInt();
-        return ServiceKeyUtil::readString( reader, MatchmakingProtocolInternal::kMaxNameSize, outTicket._region ) &&
+        return ServiceKeyUtil::readString( reader, ServerRecord::kMaxNameSize, outTicket._region ) &&
                MatchmakingProtocolInternal::readMembers( reader, outTicket._listMember );
     }
 
@@ -232,7 +232,7 @@ namespace sw
         using Internal     = MatchmakingProtocolInternal;
         outMatch._matchId  = reader.readVarUint();
         const bool bTextOk = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIdSize, outMatch._modeId ) &&
-                             ServiceKeyUtil::readString( reader, Internal::kMaxNameSize, outMatch._region );
+                             ServiceKeyUtil::readString( reader, ServerRecord::kMaxNameSize, outMatch._region );
         if ( bTextOk == false )
             return false;
         outMatch._averageRating = static_cast<int32>( reader.readVarInt() );
@@ -278,7 +278,7 @@ namespace sw
         outAssignment._matchId  = reader.readVarUint();
         outAssignment._serverId = reader.readVarUint();
         const bool bTextOk      = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIdSize, outAssignment._modeId ) &&
-                             ServiceKeyUtil::readString( reader, Internal::kMaxNameSize, outAssignment._address );
+                             ServiceKeyUtil::readString( reader, ServerRecord::kMaxAddressSize, outAssignment._address );
         if ( outcome >= static_cast<uint32>( MatchQueueOutcome::Count ) || bTextOk == false )
             return false;
         outAssignment._outcome = static_cast<MatchQueueOutcome>( outcome );
