@@ -43,7 +43,7 @@ _kListGenericName = (
     "TranslateAccelerator", "SetWindowsHookEx", "SystemParametersInfo", "GetMonitorInfo", "EnumDisplaySettings",
     "EnumDisplaySettingsEx", "EnumDisplayDevices", "ChangeDisplaySettings", "ChangeDisplaySettingsEx",
     # 자원 · 대화 상자 · 글꼴
-    "LoadCursor", "LoadCursorFromFile", "LoadIcon", "LoadImage", "LoadBitmap", "LoadString", "LoadMenu", "LoadAccelerators",
+    "LoadCursor", "LoadCursorFromFile", "LoadIcon", "MAKEINTRESOURCE","LoadImage", "LoadBitmap", "LoadString", "LoadMenu", "LoadAccelerators",
     "MessageBox", "MessageBoxEx", "DialogBoxParam", "CreateDialogParam", "DrawText", "DrawTextEx", "TextOut", "CreateFont",
     "CreateFontIndirect", "GetObject", "GetTextExtentPoint32", "GetTextMetrics", "CreateDC", "AddFontResource",
     "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",

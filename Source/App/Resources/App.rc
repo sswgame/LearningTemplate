@@ -1,0 +1,3 @@
+// 실행 파일 아이콘(Scripts/dev/MakeBrandImages.py 가 그린 app.ico). id 1 은 Engine 의 창 클래스가 LoadIconW 로 찾는다
+// (constant::window::kAppIconResourceId — Source/Engine/Window/Windows/Win32Window.h).
+1 ICON "app.ico"

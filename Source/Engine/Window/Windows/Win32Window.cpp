@@ -41,6 +41,9 @@ namespace sw
         wc.style       = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         wc.lpfnWndProc = wndProc;
         wc.hInstance   = hInstance;
+        // 실행 파일(App.exe)의 아이콘 리소스. hInstance 는 프로세스 exe 라 Engine.dll 안에서도 App.exe 리소스를 찾는다 — 없으면 nullptr(기본 아이콘).
+        wc.hIcon   = LoadIconW( hInstance, MAKEINTRESOURCEW( constant::window::kAppIconResourceId ) );
+        wc.hIconSm = wc.hIcon;
         // IDC_* 는 TCHAR 매크로(A 판 포인터 모양의 정수 자원 id)라 W 판에 맞게 넘긴다.
         wc.hCursor       = LoadCursorW( nullptr, reinterpret_cast<LPCWSTR>( IDC_ARROW ) );
         wc.lpszClassName = L"SWEngineWindowClass_OWNDC";

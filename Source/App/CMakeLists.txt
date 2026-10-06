@@ -42,6 +42,11 @@ endif()
 
 add_executable(App ${APP_SOURCES})
 sw_embedProcessManifest(App)
+if(WIN32)
+	# 실행 파일 아이콘(.rc). RC 컴파일러는 DetectToolchain 이 llvm-rc 로 정해 둔다. 리눅스에는 RC 가 없어 WIN32 안에서만 켠다.
+	enable_language(RC)
+	target_sources(App PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Resources/App.rc")
+endif()
 set_target_properties(App PROPERTIES FOLDER "Source/App")
 
 target_include_directories(App PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
