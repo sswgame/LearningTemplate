@@ -41,7 +41,7 @@ build/Ninja-Release/Bin/App.exe -gv_tracy=1 -gv_tracyMemory=1  # + 할당 · 해
 
 켜면 엔진 `FrameProfiler` 도 함께 켜집니다 — 카운터(`SW_PROFILE_COUNT`)가 프레임 합으로 Tracy 그래프에 나가는 길이 그 표입니다.
 
-## 비용 (2026-10-05, Release, 16 스레드 PC — 다른 워크트리 빌드가 돌던 중이라 잡음이 크다)
+## 비용 (Release, 16 스레드)
 
 `-gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=600`, 켬 · 끔을 번갈아 3 판씩, 뷰어는 붙이지 않음(Tracy 가 메모리에 쌓는 상태).
 프레임당 CPU 구간 약 53 개 + GPU 구간 7 개가 나간다.
@@ -52,8 +52,7 @@ build/Ninja-Release/Bin/App.exe -gv_tracy=1 -gv_tracyMemory=1  # + 할당 · 해
 | Vulkan | 589 / 778 / 795 us | 589 / 679 / 697 us |
 
 - p50 은 같은 히스토그램 칸(±9 %) 안이다 — 구간 하나의 비용(큐 기록 수십 ns)이 프레임에서 보이지 않는다. RT.Frame p50 은 DX12 에서 한 칸 위(294 → 327 us).
-- 평균 · 벽시계는 **켠 쪽이 빨랐다** — 끈 판에만 1~5 ms 히치(p99 3.9~5.8 ms)가 있었다. Tracy 는 타이머 해상도를 바꾸지 않는다(소스 확인). 수집 스레드가
-  코어를 깨워 두는 전원 상태 차이로 보지만 확인하지 못했다 — "켜면 빨라진다" 로 읽지 말 것. 꺼진 상태는 DLL 조차 없으므로 원래 바이너리와 같다.
+- 평균 · 벽시계는 판마다 1~5 ms 히치로 흔들린다 — 켜고 끈 차이로 읽지 않는다. Tracy 는 타이머 해상도를 바꾸지 않고, 꺼진 상태는 DLL 조차 없어 원래 바이너리와 같다.
 
 ## 뷰어(Tracy 서버) — 같은 판 0.13.1 을 받아 쓴다
 
@@ -106,7 +105,7 @@ build/Ninja-Release/Bin/App.exe -gv_tracy=1 -gv_tracyMemory=1  # + 할당 · 해
   Tracy 가 없는 빌드에서도 같습니다.
 - **"Open Tracy"**: Tracy 출력을 켜고(`ProfilerBackend::startTracy`) 뷰어를 `-a 127.0.0.1 -p <포트>` 로 띄웁니다(`EditorTracyLauncher`). 뷰어는
   `-gv_tracyViewerPath=<파일 또는 폴더>` → `Tools/Tracy/tracy-profiler.exe` 순서로 찾습니다.
-- **뷰어를 에디터 도킹 창으로 넣지 않은 이유**(2026-10-05 조사): Tracy 뷰어(`profiler/` + `server/`, 0.13.1 기준 약 23 만 줄)는 vcpkg 포트가 라이브러리로
+- **뷰어를 에디터 도킹 창으로 넣지 않는다**: Tracy 뷰어(`profiler/` + `server/`, 0.13.1 기준 약 23 만 줄)는 vcpkg 포트가 라이브러리로
   설치하지 않고(GUI 도구는 실행 파일만), 빌드에 capstone · freetype · zstd · nfd · PPQSort · md4c · base64 · tidy-html5 · usearch · pugixml · libcurl · glfw 와
   **자기가 고정하고 패치한 ImGui**(CPM 으로 받는 판 + Tracy 저장소의 imgui-loader 패치 + freetype 렌더러 + 자체 백엔드)를 씁니다. 우리 ImGui(vcpkg 1.92 docking) 하나로 맞추려면 뷰어 소스를
   저장소에 들여와 판 차이를 손으로 맞춰야 하고, 의존 열 개 남짓이 vcpkg 에 더해집니다 — 한 프로세스에 ImGui 두 벌은 금지라 그대로 넣을 수도 없습니다.
