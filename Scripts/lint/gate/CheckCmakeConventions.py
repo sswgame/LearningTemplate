@@ -12,7 +12,10 @@ Python 과 같은 이유로 여기 있다 — C++ 게이트는 `.cmake` 를 열�
 
 - `function()` / `macro()` 이름은 `sw_camelCase`
 - `option()` 이름은 `SW_UPPER_SNAKE_CASE`
-- 함수 안 지역 변수는 `camelCase` — `_` 로 시작하지 않는다
+- 함수 안 지역 변수는 `camelCase` — `_` 로 시작하지 않는다(쓰는 자리 `${_x}` · `IN LISTS _x` · `if(_x)` 와 만드는 자리 둘 다 본다)
+- `SHARED` · `MODULE` 라이브러리는 팩토리(`sw_addModuleLibrary` — `cmake/Engine/ModuleTargets.cmake`)와 Engine 자신만 만든다
+- 파일 스코프에서 CMake 내장 경로를 다른 이름에 그대로 담지 않는다(별칭 금지 — `${CMAKE_BINARY_DIR}` 를 그대로 쓴다)
+- `if(COMMAND sw_…)` 가드를 두지 않는다 — 우리 함수는 include 순서로 늘 정의돼 있다(가드가 있으면 정의 순서를 고친다)
 
 **서드파티는 보지 않는다.** `ThirdParty/` 와 `Tools/vcpkg/` 는 남의 규칙으로 쓰인 코드다.
 """
@@ -42,6 +45,37 @@ _kOptionRe = re.compile(r'^\s*option\s*\(\s*([A-Za-z0-9_]+)', re.IGNORECASE)
 #: 역참조되므로, 어느 명령이 만들었든 이 한 줄에 걸린다.
 _kSetRe = re.compile(r'^\s*set\s*\(\s*([A-Za-z0-9_]+)')
 _kDereferenceRe = re.compile(r'\$\{(_[A-Za-z0-9_]+)\}')
+
+#: 역참조(`${_x}`) 없이 이름만으로 쓰는 자리 — `foreach(x IN LISTS _x)` · `if(_x)` · `if(NOT _x)`. 이름만 쓰이는 지역 변수는
+#: 위 한 줄로는 잡히지 않는다(`_allHeaders` · `_hasReflect` 가 그 사각에서 살았다).
+_kBareUseRe = re.compile(r'\bIN\s+LISTS\s+(_[A-Za-z0-9_]+)|^\s*(?:else)?if\s*\(\s*(?:NOT\s+)?(_[A-Za-z0-9_]+)\b', re.IGNORECASE)
+
+#: 변수를 **만드는** 자리 — 명령마다 결과 변수의 자리가 달라 명령별로 한 줄씩.
+_kListLocalCreateRe: tuple[re.Pattern[str], ...] = (
+    re.compile(r'^\s*(?:set|foreach)\s*\(\s*(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*list\s*\(\s*[A-Z_]+\s+(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*file\s*\(\s*(?:GLOB|GLOB_RECURSE)\s+(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*file\s*\(\s*(?:STRINGS|READ)\s+\S+\s+(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*(?:get_filename_component|get_property|get_target_property)\s*\(\s*(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*math\s*\(\s*EXPR\s+(_[A-Za-z0-9_]+)', re.IGNORECASE),
+    re.compile(r'^\s*string\s*\((?!\s*JSON\b).*\s(_[A-Za-z0-9_]+)\s*\)\s*$', re.IGNORECASE),
+)
+
+#: `add_library(<이름> SHARED|MODULE|${종류} …)` — 모듈 라이브러리는 팩토리만 만든다.
+_kModuleLibraryRe = re.compile(r'^\s*add_library\s*\(\s*\S+\s+(SHARED|MODULE|\$\{)', re.IGNORECASE)
+#: 팩토리(`sw_addModuleLibrary`)와 Engine 자신(Dev 에서는 DLL, Shipping 에서는 정적 — 팩토리가 부르는 쪽이 아니다).
+_kModuleLibraryAllowedPaths = ("cmake/Engine/ModuleTargets.cmake", "Source/Engine/CMakeLists.txt")
+
+#: 파일 스코프의 `set(<이름> "${CMAKE_…_DIR}")` — 값 전체가 내장 경로 하나(별칭).
+_kPathAliasRe = re.compile(
+    r'^\s*set\s*\(\s*([A-Za-z0-9_]+)\s+"?\$\{((?:CMAKE_(?:CURRENT_)?(?:SOURCE|BINARY|LIST)_DIR)|PROJECT_(?:SOURCE|BINARY)_DIR)\}"?\s*\)',
+    re.IGNORECASE)
+
+#: vcpkg 포트 툴체인 영역 — 손대지 않는 영역이라 별칭 · 가드 규칙을 들이대지 않는다(따로 도는 CMake 프로세스가 읽는다).
+_kVcpkgToolchainPrefix = "cmake/Modules/Toolchain/Vcpkg/"
+
+#: `if(COMMAND sw_…)` — 우리 함수의 정의 여부를 묻는 가드.
+_kCommandGuardRe = re.compile(r'^\s*(?:else)?if\s*\(.*\bCOMMAND\s+sw_', re.IGNORECASE)
 
 #: `sw_camelCase` — `sw_` 다음이 소문자로 시작하고 밑줄이 더 없다.
 _kFunctionNameRe = re.compile(r'^sw_[a-z][a-zA-Z0-9]*$')
@@ -90,6 +124,15 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
             bInFunction = False
             continue
 
+        if _kModuleLibraryRe.match(line) and relPath not in _kModuleLibraryAllowedPaths:
+            listViolation.append(f"{relPath}:{lineNumber} SHARED · MODULE 라이브러리는 sw_addModuleLibrary 로 만든다 — cmake/Engine/ModuleTargets.cmake")
+
+        if _kCommandGuardRe.match(line) and not relPath.startswith(_kVcpkgToolchainPrefix):
+            listViolation.append(f"{relPath}:{lineNumber} if(COMMAND sw_…) 가드 — 우리 함수는 include 순서로 늘 정의돼 있다, 가드 대신 정의 순서를 고친다")
+
+        if not bInFunction and not relPath.startswith(_kVcpkgToolchainPrefix) and (aliasMatch := _kPathAliasRe.match(line)):
+            listViolation.append(f"{relPath}:{lineNumber} '{aliasMatch.group(1)}' 는 ${{{aliasMatch.group(2)}}} 의 별칭 — 별칭 없이 그 내장 변수를 그대로 쓴다")
+
         if optionMatch := _kOptionRe.match(line):
             name = optionMatch.group(1)
             if not _kOptionNameRe.match(name):
@@ -105,6 +148,8 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
         listCandidate = _kDereferenceRe.findall(line)
         if setMatch := _kSetRe.match(line):
             listCandidate.append(setMatch.group(1))
+        listCandidate += [name for match in _kBareUseRe.finditer(line) for name in match.groups() if name]
+        listCandidate += [match.group(1) for pattern in _kListLocalCreateRe if (match := pattern.match(line))]
 
         for name in listCandidate:
             if not name.startswith("_") or name in setReported:
@@ -130,7 +175,8 @@ class CheckCmakeConventionsGate(LintGate):
     preCommitPattern = ("*.cmake", "*CMakeLists.txt")
     preCommitFileArgument = "--files"
     violationHeader = "CMake 명명 규칙 위반"
-    hint = "  AGENTS.md '### CMake': function/macro 는 sw_camelCase, option 은 SW_UPPER_SNAKE_CASE, 함수 내부 변수는 '_' 없는 camelCase."
+    hint = ("  AGENTS.md '### CMake': function/macro 는 sw_camelCase, option 은 SW_UPPER_SNAKE_CASE, 함수 내부 변수는 '_' 없는 camelCase,\n"
+            "  모듈 라이브러리는 sw_addModuleLibrary, 내장 경로 별칭 · if(COMMAND sw_…) 가드 금지.")
     selfTestCases = [
         {
             "name": "sw_ 없는 function",
@@ -146,6 +192,26 @@ class CheckCmakeConventionsGate(LintGate):
                 "cmake/Probe/BadLocal.cmake":
                     "function(sw_doProbe)\n\tset(_probeValue 1)\nendfunction()\n"
             },
+        },
+        {
+            # 역참조 없이 이름만 쓰이는 지역 변수 — 만드는 자리(file GLOB_RECURSE) · 쓰는 자리(IN LISTS)
+            "name": "역참조 없는 '_' 지역 변수",
+            "files": {
+                "cmake/Probe/BareLocal.cmake":
+                    "function(sw_probe)\n\tfile(GLOB_RECURSE _allHeaders \"*.h\")\n\tforeach(h IN LISTS _allHeaders)\n\tendforeach()\nendfunction()\n"
+            },
+        },
+        {
+            "name": "팩토리 밖 MODULE 라이브러리",
+            "files": {"Source/Probe/CMakeLists.txt": "add_library(ProbeModule MODULE probe.cpp)\n"},
+        },
+        {
+            "name": "내장 경로 별칭",
+            "files": {"cmake/Probe/Alias.cmake": "set(sw_output_directory \"${CMAKE_BINARY_DIR}\")\n"},
+        },
+        {
+            "name": "if(COMMAND sw_…) 가드",
+            "files": {"cmake/Probe/Guard.cmake": "if(COMMAND sw_probe)\n\tsw_probe()\nendif()\n"},
         },
     ]
 
