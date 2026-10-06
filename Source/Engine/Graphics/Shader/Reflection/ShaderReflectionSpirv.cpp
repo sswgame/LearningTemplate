@@ -3,6 +3,7 @@
 #include "Core/Container/unordered_set.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
+#include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
 
 namespace sw
 {
@@ -10,39 +11,6 @@ namespace sw
     {
         struct ShaderReflectionSpirvInternal
         {
-            static constexpr uint32 kSpirvMagic         = 0x07230203u;
-            static constexpr uint32 kOpName             = 5u;
-            static constexpr uint32 kOpEntryPoint       = 15u;
-            static constexpr uint32 kOpMemberName       = 6u;
-            static constexpr uint32 kOpDecorate         = 71u;
-            static constexpr uint32 kOpMemberDecorate   = 72u;
-            static constexpr uint32 kOpTypeBool         = 20u;
-            static constexpr uint32 kOpTypeInt          = 21u;
-            static constexpr uint32 kOpTypeFloat        = 22u;
-            static constexpr uint32 kOpTypeVector       = 23u;
-            static constexpr uint32 kOpTypeMatrix       = 24u;
-            static constexpr uint32 kOpTypeImage        = 25u;
-            static constexpr uint32 kOpTypeSampler      = 26u;
-            static constexpr uint32 kOpTypeSampledImage = 27u;
-            static constexpr uint32 kOpTypeArray        = 28u;
-            static constexpr uint32 kOpTypeRuntimeArray = 29u;
-            static constexpr uint32 kOpTypeStruct       = 30u;
-            static constexpr uint32 kOpTypePointer      = 32u;
-            static constexpr uint32 kOpConstant         = 43u;
-            static constexpr uint32 kOpVariable         = 59u;
-
-            static constexpr uint32 kDecorationBufferBlock   = 3u; ///< SPIR-V 1.3 이하: Uniform 클래스 + BufferBlock = SSBO
-            static constexpr uint32 kDecorationLocation      = 30u;
-            static constexpr uint32 kExecutionModelVertex    = 0u;
-            static constexpr uint32 kStorageClassInput       = 1u;
-            static constexpr uint32 kDecorationArrayStride   = 6u;
-            static constexpr uint32 kDecorationBinding       = 33u;
-            static constexpr uint32 kDecorationDescriptorSet = 34u;
-            static constexpr uint32 kDecorationOffset        = 35u;
-
-            static constexpr uint32 kStorageClassUniformConstant = 0u;
-            static constexpr uint32 kStorageClassUniform         = 2u;
-            static constexpr uint32 kStorageClassStorageBuffer   = 12u;
 
             struct SpirvType
             {
@@ -161,7 +129,7 @@ namespace sw
 
         const uint32* pWords    = reinterpret_cast<const uint32*>( bytecode.data() );
         const size_t  wordCount = bytecode.size() / 4;
-        if ( pWords[0] != ShaderReflectionSpirvInternal::kSpirvMagic )
+        if ( pWords[0] != spirv::kMagic )
         {
             SW_LOG_WARNING( "Not a SPIR-V module (bad magic)." );
             return {};
@@ -198,18 +166,18 @@ namespace sw
             if ( instructionWordCount == 0 || offset + instructionWordCount > wordCount )
                 break;
 
-            if ( opcode == ShaderReflectionSpirvInternal::kOpEntryPoint && instructionWordCount >= 3 )
+            if ( opcode == spirv::kOpEntryPoint && instructionWordCount >= 3 )
             {
                 executionModel = pWords[offset + 1];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpName && instructionWordCount >= 3 )
+            else if ( opcode == spirv::kOpName && instructionWordCount >= 3 )
             {
                 const uint32 target = pWords[offset + 1];
                 const utf8*  pStr   = reinterpret_cast<const utf8*>( &pWords[offset + 2] );
                 const size_t maxLen = static_cast<size_t>( instructionWordCount - 2 ) * 4;
                 mapName[target]     = string( pStr, strnlen( pStr, maxLen ) );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberName && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpMemberName && instructionWordCount >= 4 )
             {
                 const uint32 target                = pWords[offset + 1];
                 const uint32 memberIndex           = pWords[offset + 2];
@@ -217,76 +185,76 @@ namespace sw
                 const size_t maxLen                = static_cast<size_t>( instructionWordCount - 3 ) * 4;
                 mapMemberName[target][memberIndex] = string( pStr, strnlen( pStr, maxLen ) );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpDecorate && instructionWordCount >= 3 )
+            else if ( opcode == spirv::kOpDecorate && instructionWordCount >= 3 )
             {
                 const uint32 target     = pWords[offset + 1];
                 const uint32 decoration = pWords[offset + 2];
-                if ( decoration == ShaderReflectionSpirvInternal::kDecorationBinding && instructionWordCount >= 4 )
+                if ( decoration == spirv::kDecorationBinding && instructionWordCount >= 4 )
                     mapBinding[target] = pWords[offset + 3];
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationDescriptorSet && instructionWordCount >= 4 )
+                else if ( decoration == spirv::kDecorationDescriptorSet && instructionWordCount >= 4 )
                     mapDescriptorSet[target] = pWords[offset + 3];
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationArrayStride && instructionWordCount >= 4 )
+                else if ( decoration == spirv::kDecorationArrayStride && instructionWordCount >= 4 )
                     mapArrayStride[target] = pWords[offset + 3];
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationBufferBlock )
+                else if ( decoration == spirv::kDecorationBufferBlock )
                     uniqueBufferBlockType.insert( target );
-                else if ( decoration == ShaderReflectionSpirvInternal::kDecorationLocation && instructionWordCount >= 4 )
+                else if ( decoration == spirv::kDecorationLocation && instructionWordCount >= 4 )
                     mapLocation[target] = pWords[offset + 3];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpMemberDecorate && instructionWordCount >= 5 )
+            else if ( opcode == spirv::kOpMemberDecorate && instructionWordCount >= 5 )
             {
                 const uint32 target      = pWords[offset + 1];
                 const uint32 memberIndex = pWords[offset + 2];
                 const uint32 decoration  = pWords[offset + 3];
-                if ( decoration == ShaderReflectionSpirvInternal::kDecorationOffset )
+                if ( decoration == spirv::kDecorationOffset )
                     mapMemberOffset[target][memberIndex] = pWords[offset + 4];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeBool && instructionWordCount >= 2 )
+            else if ( opcode == spirv::kOpTypeBool && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Bool, 32, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeInt && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpTypeInt && instructionWordCount >= 4 )
             {
                 const uint32 id         = pWords[offset + 1];
                 const uint32 width      = pWords[offset + 2];
                 const uint32 signedness = pWords[offset + 3];
                 mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ signedness ? ShaderReflectionSpirvInternal::SpirvType::Kind::Int : ShaderReflectionSpirvInternal::SpirvType::Kind::Uint, width, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeFloat && instructionWordCount >= 3 )
+            else if ( opcode == spirv::kOpTypeFloat && instructionWordCount >= 3 )
             {
                 const uint32 id    = pWords[offset + 1];
                 const uint32 width = pWords[offset + 2];
                 mapType[id]        = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Float, width, 1, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeVector && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpTypeVector && instructionWordCount >= 4 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 compType = pWords[offset + 2];
                 const uint32 count    = pWords[offset + 3];
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Vector, 32, count, compType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeMatrix && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpTypeMatrix && instructionWordCount >= 4 )
             {
                 const uint32 id         = pWords[offset + 1];
                 const uint32 columnType = pWords[offset + 2];
                 const uint32 count      = pWords[offset + 3];
                 mapType[id]             = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Matrix, 32, count, columnType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeImage && instructionWordCount >= 2 )
+            else if ( opcode == spirv::kOpTypeImage && instructionWordCount >= 2 )
             {
                 // OpTypeImage: result, sampled type, Dim, Depth, Arrayed, MS, Sampled(1 = 샘플, 2 = 스토리지), Format.
                 // Sampled 를 _count 에 담아 두면 리소스 분류가 RWTexture(스토리지 이미지)를 가릴 수 있다.
                 const uint32 sampled        = instructionWordCount >= 8 ? pWords[offset + 7] : 0;
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Image, 0, sampled, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampler && instructionWordCount >= 2 )
+            else if ( opcode == spirv::kOpTypeSampler && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler, 0, 0, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeSampledImage && instructionWordCount >= 2 )
+            else if ( opcode == spirv::kOpTypeSampledImage && instructionWordCount >= 2 )
             {
                 mapType[pWords[offset + 1]] = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::SampledImage, 0, 0, 0, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeArray && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpTypeArray && instructionWordCount >= 4 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 elemType = pWords[offset + 2];
@@ -295,13 +263,13 @@ namespace sw
                 const uint32 length   = ( lenIt != mapConstantValue.end() ) ? lenIt->second : 0;
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Array, 0, length, elemType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeRuntimeArray && instructionWordCount >= 3 )
+            else if ( opcode == spirv::kOpTypeRuntimeArray && instructionWordCount >= 3 )
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 elemType = pWords[offset + 2];
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray, 0, 0, elemType, 0, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypeStruct && instructionWordCount >= 2 )
+            else if ( opcode == spirv::kOpTypeStruct && instructionWordCount >= 2 )
             {
                 const uint32                             id = pWords[offset + 1];
                 ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {}, 0 };
@@ -309,19 +277,19 @@ namespace sw
                     st._listMemberTypeId.push_back( pWords[offset + wordIndex] );
                 mapType[id] = std::move( st );
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpTypePointer && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpTypePointer && instructionWordCount >= 4 )
             {
                 const uint32 id           = pWords[offset + 1];
                 const uint32 storageClass = pWords[offset + 2];
                 const uint32 subType      = pWords[offset + 3];
                 mapType[id]               = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer, 0, 0, subType, storageClass, {}, 0 };
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpConstant && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpConstant && instructionWordCount >= 4 )
             {
                 // 32비트 정수 상수만(배열 길이). 타입 확인은 생략한다. 길이 id 로 조회할 때만 쓴다.
                 mapConstantValue[pWords[offset + 2]] = pWords[offset + 3];
             }
-            else if ( opcode == ShaderReflectionSpirvInternal::kOpVariable && instructionWordCount >= 4 )
+            else if ( opcode == spirv::kOpVariable && instructionWordCount >= 4 )
             {
                 const uint32 typeId       = pWords[offset + 1];
                 const uint32 resultId     = pWords[offset + 2];
@@ -420,8 +388,8 @@ namespace sw
             // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
             // 둘 다 봐야 한다. 앞쪽만 보면 GL 용 SPIR-V 의 StructuredBuffer 가 상수버퍼로 분류돼, 바인더가 그것을 CB 슬롯으로
             // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).
-            bool bIsStorageBuffer = ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassStorageBuffer );
-            if ( bIsStorageBuffer == false && var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform &&
+            bool bIsStorageBuffer = ( var._storageClass == spirv::kStorageClassStorageBuffer );
+            if ( bIsStorageBuffer == false && var._storageClass == spirv::kStorageClassUniform &&
                  blockTypeId != 0 && uniqueBufferBlockType.find( blockTypeId ) != uniqueBufferBlockType.end() )
                 bIsStorageBuffer = true;
 
@@ -431,7 +399,7 @@ namespace sw
             // ConstantBuffer 종류의 "가짜 CB" 슬롯(멤버 이름이 원소 구조체 필드와 겹침)을 만들어
             // 엔진 CB 버퍼에 엉뚱한 오프셋으로 값을 덮어쓸 수 있다. 아래 리소스 루프가 StructuredBuffer 로
             // 올바르게 분류해 따로 처리한다.
-            if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform && bIsStorageBuffer == false )
+            if ( var._storageClass == spirv::kStorageClassUniform && bIsStorageBuffer == false )
             {
                 ShaderBufferInfo buf{};
                 buf._name          = name;
@@ -505,9 +473,9 @@ namespace sw
             res._bindCount     = bIsArray ? 0u : 1u; ///< 무제한 배열([])은 0. DX 리플렉션의 BindCount 와 같은 뜻
             if ( bIsStorageBuffer )
                 res._type = "StorageBuffer";
-            else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniform )
+            else if ( var._storageClass == spirv::kStorageClassUniform )
                 res._type = "ConstantBuffer";
-            else if ( var._storageClass == ShaderReflectionSpirvInternal::kStorageClassUniformConstant )
+            else if ( var._storageClass == spirv::kStorageClassUniformConstant )
             {
                 // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
                 res._type      = "TextureOrSampler";
@@ -524,11 +492,11 @@ namespace sw
 
         // 정점 입력 — Input 저장 클래스에 Location 이 붙은 변수. DXC 는 `in.var.<SEMANTIC>` 로 이름을 남기고
         // 시스템 값(SV_VertexID 등)은 BuiltIn 이라 Location 이 없다.
-        if ( executionModel == ShaderReflectionSpirvInternal::kExecutionModelVertex )
+        if ( executionModel == spirv::kExecutionModelVertex )
         {
             for ( const auto& [id, var] : mapVariable )
             {
-                if ( var._storageClass != ShaderReflectionSpirvInternal::kStorageClassInput )
+                if ( var._storageClass != spirv::kStorageClassInput )
                     continue;
                 auto locationIt = mapLocation.find( id );
                 if ( locationIt == mapLocation.end() )

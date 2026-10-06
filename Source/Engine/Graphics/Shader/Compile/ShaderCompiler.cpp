@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #if defined( SW_HAS_DXC_API )
@@ -108,18 +109,11 @@ namespace sw
              */
             static void patchSpirvBuiltinsForOpenGL( vector<uint8>& ioBytecode )
             {
-                constexpr uint32 kOpDecorate           = 71;
-                constexpr uint32 kOpMemberDecorate     = 72;
-                constexpr uint32 kDecorationBuiltIn    = 11;
-                constexpr uint32 kBuiltInVertexId      = 5;
-                constexpr uint32 kBuiltInInstanceId    = 6;
-                constexpr uint32 kBuiltInVertexIndex   = 42;
-                constexpr uint32 kBuiltInInstanceIndex = 43;
                 if ( ioBytecode.size() < 20 || ( ioBytecode.size() % 4 ) != 0 )
                     return;
                 uint32*      pWord     = reinterpret_cast<uint32*>( ioBytecode.data() );
                 const size_t wordCount = ioBytecode.size() / 4;
-                if ( pWord[0] != 0x07230203u )
+                if ( pWord[0] != spirv::kMagic )
                     return;
                 size_t offset = 5;
                 while ( offset < wordCount )
@@ -129,16 +123,16 @@ namespace sw
                     if ( length == 0 || offset + length > wordCount )
                         break;
                     uint32* pValue = nullptr;
-                    if ( opcode == kOpDecorate && length >= 4 && pWord[offset + 2] == kDecorationBuiltIn )
+                    if ( opcode == spirv::kOpDecorate && length >= 4 && pWord[offset + 2] == spirv::kDecorationBuiltIn )
                         pValue = &pWord[offset + 3];
-                    else if ( opcode == kOpMemberDecorate && length >= 5 && pWord[offset + 3] == kDecorationBuiltIn )
+                    else if ( opcode == spirv::kOpMemberDecorate && length >= 5 && pWord[offset + 3] == spirv::kDecorationBuiltIn )
                         pValue = &pWord[offset + 4];
                     if ( pValue != nullptr )
                     {
-                        if ( *pValue == kBuiltInInstanceIndex )
-                            *pValue = kBuiltInInstanceId;
-                        else if ( *pValue == kBuiltInVertexIndex )
-                            *pValue = kBuiltInVertexId;
+                        if ( *pValue == spirv::kBuiltInInstanceIndex )
+                            *pValue = spirv::kBuiltInInstanceId;
+                        else if ( *pValue == spirv::kBuiltInVertexIndex )
+                            *pValue = spirv::kBuiltInVertexId;
                     }
                     offset += length;
                 }
