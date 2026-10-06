@@ -253,6 +253,15 @@ function(sw_getDynamicModules OUT_VAR)
 	set(${OUT_VAR} "${listModule}" PARENT_SCOPE)
 endfunction()
 
+# 레지스트리의 동적 모듈(KINDS 로 고른 것, 생략하면 전부)이 TARGET_NAME 보다 먼저 지어지게 한다 — 런타임에 올리는 것은 링크로 이어지지 않는다.
+function(sw_addDynamicModuleDependencies TARGET_NAME)
+	cmake_parse_arguments(ARG "" "" "KINDS" ${ARGN})
+	sw_getDynamicModules(listModule KINDS ${ARG_KINDS})
+	if(listModule)
+		add_dependencies(${TARGET_NAME} ${listModule})
+	endif()
+endfunction()
+
 # 등록을 **잊을 수 없게** 한다 — 구성 마지막에 한 번 대조합니다.
 #
 # 레지스트리는 규칙이지 강제가 아니다. `EditorModule` 은 실제로 아무 데도 등록되지 않은 채
@@ -305,12 +314,9 @@ function(sw_configureAppDependencies TARGET_NAME)
 		return()
 	endif()
 
-	# 1) 동적 모듈은 App 보다 먼저 빌드되어야 한다 — App 이 런타임에 로드하기 때문이다.
-	#    이름을 적지 않는다: 레지스트리가 답한다(위 "동적 모듈 레지스트리").
+	# 1) 동적 모듈은 App 보다 먼저 빌드되어야 한다 — App 이 런타임에 로드하기 때문이다. 이름을 적지 않는다: 레지스트리가 답한다.
+	sw_addDynamicModuleDependencies(${TARGET_NAME})
 	sw_getDynamicModules(listDynamicModule)
-	foreach(mod IN LISTS listDynamicModule)
-		add_dependencies(${TARGET_NAME} ${mod})
-	endforeach()
 
 	# 2) Shipping 은 게임을 정적으로 링크하고, App 이 서면 에셋을 쿠킹한다.
 	#    (Dev 는 delay-load 라 링크하지 않는다 — 빌드 순서는 위 1) 이 이미 걸어 두었다.)

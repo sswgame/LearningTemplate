@@ -61,6 +61,8 @@ cmake/
 | `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`BuildOptions.cmake`) |
 | `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
+| `sw_deployRuntimeDependencies` | 실행 파일 옆 런타임 DLL(DXC · Debug 검증 레이어 · Tracy)을 구성에 맞게 골라 복사 (`BuildLayout.cmake`) |
+| `sw_addDynamicModuleDependencies` | 레지스트리의 동적 모듈(종류로 고름)이 그 타깃보다 먼저 지어지게 한다 — App · 시험이 이름을 적지 않는다 |
 | `sw_configureAppDependencies` | App 타겟의 RHI 모듈, SWGame 딜레이로드/정적링크, CookAssets 의존성 자동 구성 |
 | `sw_addRhiBackendModule` | RHI 그래픽스 백엔드(`RHI_DX11` 등) MODULE 타겟 정의 및 공통 속성 바인딩 |
 | `sw_registerDynamicModule` / `sw_getDynamicModules` | 동적 모듈 레지스트리. **모듈 이름을 적는 곳은 타겟을 만드는 자리 하나뿐이다** — App·EngineTest·SmokeTest 는 목록을 묻는다 (`KINDS rhi` 처럼 종류로 고른다) |
