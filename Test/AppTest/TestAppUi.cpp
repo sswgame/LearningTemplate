@@ -264,7 +264,7 @@ SW_TEST_CASE( AppUiTest, DemoScreenMatchesAcrossBackends )
 #if defined( SW_SHIPPING )
     constexpr const utf8* kArrBackendSwitch[] = { "" };
 #else
-    #define SW_APP_UI_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) "-" FirstAlias,
+    #define SW_APP_UI_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
     constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_UI_BACKEND_SWITCH ) };
     #undef SW_APP_UI_BACKEND_SWITCH
 #endif

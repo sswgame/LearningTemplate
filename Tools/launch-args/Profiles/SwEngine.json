@@ -29,7 +29,7 @@
                 "rows_key": "rhi_backends",
                 "name_key": "command_line_argument",
                 "label_key": "name",
-                "spellings_key": "aliases",
+                "spellings_key": "command_line_name",
                 "default_key": "default_rhi_backend"
             }
         ]

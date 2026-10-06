@@ -172,7 +172,7 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
 
 
 def resolveTargetRhi(cliRhi: str = "", projectRoot: Path | None = None) -> str:
-    """타깃 RHI 의 셰이더 폴더를 정합니다: CLI > EngineConfig.json `_window._defaultRHI` > 표의 기본 백엔드. 이름은 표의 별칭으로 푼다.
+    """타깃 RHI 의 셰이더 폴더를 정합니다: CLI > EngineConfig.json `_window._defaultRHI` > 표의 기본 백엔드. 이름은 표의 백엔드 이름(EngineConfig 값) 또는 명령줄 이름(`dx12` · `vk` …)으로 푼다.
 
     기본 RHI 를 적는 곳은 EngineConfig(없으면 쿠킹 표의 `default_rhi_backend`) 하나다 — 팩 설정에 따로 두지 않는다.
     """
@@ -682,7 +682,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cooked-dir", type=str, default="", help="프리팹·씬 쿠킹 산출물 스테이징 디렉터리 (기본: build/*/Bin/Cooked)")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
-    parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.name for backend in _gCookContract.listBackend)} 또는 그 별칭)")
+    parser.add_argument("--target-rhi", type=str, default="", help=f"타깃 RHI 백엔드 ({', '.join(backend.commandLineName for backend in _gCookContract.listBackend)} 또는 백엔드 이름)")
     parser.add_argument("--cook-shaders", action="store_true", help="패킹 전 App.exe --cook-shaders 를 실행하여 셰이더 일괄 사전 빌드")
     parser.add_argument("--verify-shaders", action="store_true", help="쿠킹된 셰이더가 현재 소스에서 나온 것인지 확인하고, 아니면 쿠킹을 중단")
     parser.add_argument("--build-target", type=str, default="",

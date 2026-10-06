@@ -36,8 +36,7 @@ def makeHeaderText(spec: CookContractSpec) -> str:
     """생성 헤더의 전체 글입니다."""
     listBackendRow = [
         ", ".join(
-            [backend.name, f'"{backend.shaderFolder}"', backend.shaderTarget, backend.commandLineArgument]
-            + [f'"{alias}"' for alias in backend.listAlias]
+            [backend.name, f'"{backend.shaderFolder}"', backend.shaderTarget, backend.commandLineArgument, f'"{backend.commandLineName}"']
         )
         for backend in spec.listBackend
     ]
@@ -66,9 +65,9 @@ def makeHeaderText(spec: CookContractSpec) -> str:
 
 /**
  * @brief RHI 백엔드 표입니다. 줄 순서 = RHIBackend 열거값입니다.
- * @details X( Backend, ShaderFolder, ShaderTarget, CommandLineArgument, aliases... )
+ * @details X( Backend, ShaderFolder, ShaderTarget, CommandLineArgument, CommandLineName )
  *          Backend = RHIBackend 열거자, ShaderFolder = 셰이더 바이너리 폴더 이름, ShaderTarget = ShaderTargetFormat 열거자,
- *          CommandLineArgument = CommandLineArgument 열거자, aliases = 명령줄 · 셰이더 폴더 · 쿠커가 받는 이름(소문자 문자열).
+ *          CommandLineArgument = CommandLineArgument 열거자, CommandLineName = 명령줄 플래그 · 쿠커가 받는 백엔드마다 하나뿐인 이름(소문자 문자열).
  */
 {emitMacroInternal("SW_RHI_BACKEND_TABLE", listBackendRow)}
 
@@ -100,8 +99,7 @@ def makeCMakeText(spec: CookContractSpec) -> str:
         listLine += [f"set({prefix}_MODULE {backend.moduleName})",
                      f"set({prefix}_SOURCE_FOLDER {backend.sourceFolder})",
                      f"set({prefix}_GRAPHICS_LIBS {backend.graphicsLibs})",
-                     f"set({prefix}_SHIPPING_DEFINE {backend.shippingDefine})",
-                     f"set({prefix}_ALIASES {' '.join(backend.listAlias)})"]
+                     f"set({prefix}_SHIPPING_DEFINE {backend.shippingDefine})"]
     return "\n".join(listLine) + "\n"
 
 

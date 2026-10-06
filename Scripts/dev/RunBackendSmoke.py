@@ -11,7 +11,7 @@
 판정: 각 실행이 exit 0 이고, 로그의 [Error] 수와 PPM 의 평균 RGB·"배경이 아닌 픽셀 수" 를 표로 낸다.
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
 
-백엔드는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 첫 별칭 플래그(-dx11 / -dx12 / -vk / -gl)로 고른다.
+백엔드는 쿠킹 표(Config/Engine/CookContract.json)의 줄마다 명령줄 이름 플래그(-dx11 / -dx12 / -vk / -gl)로 고른다.
 `-gv_rhiBackend=<이름|숫자>`(예: `Vulkan`)도 같은 RHIBackendUtil::findCommandLineBackend 를 지난다.
 """
 from __future__ import annotations
@@ -64,9 +64,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     outDir = args.out or tree.path / "smoke"
     outDir.mkdir(parents=True, exist_ok=True)
 
-    # (백엔드 이름, 스위치) — 쿠킹 표의 줄 순서, 스위치는 그 줄의 첫 별칭(`kBackendSwitch`).
-    listBackend = [(backend.name, kBackendSwitch[backend.listAlias[0]]) for backend in CookContractSpec.load().listBackend
-                   if backend.listAlias[0] in args.backends]
+    # (백엔드 이름, 스위치) — 쿠킹 표의 줄 순서, 스위치는 그 줄의 명령줄 이름(`kBackendSwitch`).
+    listBackend = [(backend.name, kBackendSwitch[backend.commandLineName]) for backend in CookContractSpec.load().listBackend
+                   if backend.commandLineName in args.backends]
 
     bFailed = False
     listResult = []

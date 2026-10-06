@@ -174,10 +174,24 @@ SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
 }
 
 /**
- * @brief [CommandLineTest] RHI 백엔드 CLI 플래그와 별칭
+ * @brief [CommandLineTest] RHI 백엔드 CLI 플래그는 백엔드마다 철자 하나다(`dx11` · `dx12` · `vk` · `gl`) — 옛 철자(`vulkan`)는 아무것도 켜지 않는다
  */
-SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndAliases )
+SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlags )
 {
+    {
+        sw::CommandLineManager cmdManager;
+        cmdManager.initialize();
+        utf8* argv[] = {
+            const_cast<utf8*>( "TestApp.exe" ),
+            const_cast<utf8*>( "vk" ),
+        };
+        cmdManager.parse( 2, argv );
+
+        bool bVk{ false };
+        SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk ) );
+        SW_EXPECT_TRUE( bVk );
+    }
+
     {
         sw::CommandLineManager cmdManager;
         cmdManager.initialize();
@@ -187,9 +201,9 @@ SW_TEST_CASE( CommandLineTest, RHIBackendCommandLineFlagsAndAliases )
         };
         cmdManager.parse( 2, argv );
 
-        bool bVk{ false };
-        SW_EXPECT_TRUE( cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk ) );
-        SW_EXPECT_TRUE( bVk );
+        bool       bVk{ false };
+        const bool bProvided = cmdManager.getArgument( sw::CommandLineArgument::VULKAN, bVk );
+        SW_EXPECT_FALSE_MSG( bProvided && bVk, "the old spelling 'vulkan' still selects Vulkan" );
     }
 
     {

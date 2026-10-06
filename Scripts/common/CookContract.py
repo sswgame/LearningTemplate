@@ -33,7 +33,7 @@ class RhiBackendSpec:
     shaderFolder: str
     shaderTarget: str
     commandLineArgument: str
-    listAlias: tuple[str, ...]
+    commandLineName: str
     moduleName: str
     sourceFolder: str
     graphicsLibs: str
@@ -132,14 +132,14 @@ class CookContractSpec:
 
     @property
     def mapBackendSwitch(self) -> dict[str, str]:
-        """App 의 백엔드 스위치 — 짧은 이름(첫 별칭) → `-<짧은 이름>`(`ArgumentList.xxx` 의 RHI 줄이 별칭을 받는다). 표 순서 그대로."""
-        return {backend.listAlias[0]: f"-{backend.listAlias[0]}" for backend in self.listBackend}
+        """App 의 백엔드 스위치 — 명령줄 이름 → `-<명령줄 이름>`(`ArgumentList.xxx` 의 RHI 줄이 그 이름 하나만 받는다). 표 순서 그대로."""
+        return {backend.commandLineName: f"-{backend.commandLineName}" for backend in self.listBackend}
 
     def findBackend(self, text: str) -> RhiBackendSpec | None:
-        """별칭 · 백엔드 이름(대소문자 무시)으로 줄을 찾습니다. 모르면 None."""
+        """백엔드 이름(대소문자 무시 — EngineConfig · CMake 값) 또는 명령줄 이름으로 줄을 찾습니다. 모르면 None."""
         key = text.strip().lower()
         for backend in self.listBackend:
-            if key == backend.name.lower() or key in backend.listAlias:
+            if key in (backend.name.lower(), backend.commandLineName):
                 return backend
         return None
 
@@ -150,7 +150,7 @@ def makeBackendInternal(row: dict) -> RhiBackendSpec:
         shaderFolder=str(row["shader_folder"]),
         shaderTarget=str(row["shader_target"]),
         commandLineArgument=str(row["command_line_argument"]),
-        listAlias=tuple(str(alias) for alias in row["aliases"]),
+        commandLineName=str(row["command_line_name"]),
         moduleName=str(row["module"]),
         sourceFolder=str(row["source_folder"]),
         graphicsLibs=str(row["graphics_libs"]),
@@ -160,11 +160,9 @@ def makeBackendInternal(row: dict) -> RhiBackendSpec:
                        backend.graphicsLibs, backend.shippingDefine):
         if not _kIdentifierPattern.match(identifier):
             raise ValueError(f"rhi_backends '{backend.name}': '{identifier}' 는 C++ 식별자가 아닙니다")
-    for lowerName in (backend.shaderFolder, *backend.listAlias):
+    for lowerName in (backend.shaderFolder, backend.commandLineName):
         if not _kLowerNamePattern.match(lowerName):
             raise ValueError(f"rhi_backends '{backend.name}': '{lowerName}' 는 소문자 이름이 아닙니다")
-    if backend.shaderFolder not in backend.listAlias:
-        raise ValueError(f"rhi_backends '{backend.name}': 별칭에 셰이더 폴더 '{backend.shaderFolder}' 가 없습니다")
     return backend
 
 
@@ -203,10 +201,10 @@ def makeAssetKindInternal(row: dict) -> AssetKindSpec:
 
 
 def validateInternal(spec: CookContractSpec) -> None:
-    """표 전체 규칙 — 이름 · 폴더 · 별칭이 백엔드끼리 겹치지 않고, 긴 접미사가 짧은 것보다 먼저 온다."""
+    """표 전체 규칙 — 이름 · 폴더 · 명령줄 이름이 백엔드끼리 겹치지 않고, 긴 접미사가 짧은 것보다 먼저 온다."""
     mapOwnerByName: dict[str, str] = {}
     for backend in spec.listBackend:
-        for name in {backend.name.lower(), backend.shaderFolder, *backend.listAlias, backend.moduleName, backend.sourceFolder,
+        for name in {backend.name.lower(), backend.shaderFolder, backend.commandLineName, backend.moduleName, backend.sourceFolder,
                      backend.graphicsLibs, backend.shippingDefine}:
             owner = mapOwnerByName.setdefault(name, backend.name)
             if owner != backend.name:

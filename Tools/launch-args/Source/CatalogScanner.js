@@ -194,7 +194,10 @@ function parseArgumentText(relativePath, text, profile, mapJson) {
                 continue;
             }
             for (const row of listRow) {
-                const listSpelling = Array.isArray(row[tableGroup.spellingsKey]) ? row[tableGroup.spellingsKey].filter((item) => typeof item === 'string') : [];
+                // 철자 칸은 문자열 하나(`command_line_name`)이거나 문자열 배열이다.
+                const spellingValue = row[tableGroup.spellingsKey];
+                const listSpelling = Array.isArray(spellingValue) ? spellingValue.filter((item) => typeof item === 'string')
+                    : (typeof spellingValue === 'string' ? [spellingValue] : []);
                 if (typeof row[tableGroup.nameKey] !== 'string' || listSpelling.length === 0) {
                     result.listProblem.push(`${tableGroup.file}: a "${tableGroup.rowsKey}" row lacks "${tableGroup.nameKey}" or "${tableGroup.spellingsKey}"`);
                     continue;

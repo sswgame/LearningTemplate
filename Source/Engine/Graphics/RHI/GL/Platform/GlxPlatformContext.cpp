@@ -190,7 +190,7 @@ namespace sw
 
         if ( ctx == nullptr )
         {
-            SW_LOG_ERROR( "Failed to create GLX context (WSLg often lacks GL 4.x — use -vulkan)" );
+            SW_LOG_ERROR( "Failed to create GLX context (WSLg often lacks GL 4.x — use -vk)" );
             return false;
         }
         if ( glXMakeCurrent( pDpy, win, ctx ) == 0 )

@@ -11,10 +11,10 @@
 | `-W` | 숫자 값(`-이름=값`) | 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다 | `WIDTH` |
 | `-H` | 숫자 값(`-이름=값`) | 창 클라이언트 영역 너비 · 높이(픽셀) — EngineConfig · 플레이어 해상도보다 이긴다 | `HEIGHT` |
 | `-vsync` | 플래그(`-이름`) | 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다 | `VSYNC` |
-| `-dx11` · `-d3d11` · `-directx11` | 플래그(`-이름`) | DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름 | `DIRECTX_11` |
-| `-dx12` · `-d3d12` · `-directx12` | 플래그(`-이름`) | DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름 | `DIRECTX_12` |
-| `-vk` · `-vulkan` · `-spirv` | 플래그(`-이름`) | Vulkan 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름 | `VULKAN` |
-| `-gl` · `-opengl` | 플래그(`-이름`) | OpenGL 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름 | `OPENGL` |
+| `-dx11` | 플래그(`-이름`) | DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `DIRECTX_11` |
+| `-dx12` | 플래그(`-이름`) | DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `DIRECTX_12` |
+| `-vk` | 플래그(`-이름`) | Vulkan 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `VULKAN` |
+| `-gl` | 플래그(`-이름`) | OpenGL 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`) | `OPENGL` |
 | `-EnableEditor` | 플래그(`-이름`) | 에디터 모듈을 올린다(Dev 만) — 없으면 에디터 없이 게임만 뜬다 | `ENABLE_EDITOR` |
 | `-lang` | 글 값(`-이름=값`) | 시작 언어(`ko_kr` · `en_us` …) | `LANGUAGE` |
 | `-cook-shaders` | 플래그(`-이름`) | 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스) | `COOK_SHADERS` |

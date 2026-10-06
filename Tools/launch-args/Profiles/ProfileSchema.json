@@ -98,7 +98,7 @@
                             "rows_key": { "type": "string" },
                             "name_key": { "type": "string", "default": "name" },
                             "label_key": { "type": "string" },
-                            "spellings_key": { "type": "string", "default": "spellings" },
+                            "spellings_key": { "type": "string", "default": "spellings", "description": "Key of a row holding its spelling (a string) or spellings (an array of strings)." },
                             "default_key": { "type": "string", "description": "Key of the JSON file naming the default choice (shown only)." }
                         }
                     }
