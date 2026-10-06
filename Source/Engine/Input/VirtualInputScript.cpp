@@ -41,8 +41,10 @@ namespace sw
             {
                 if ( slot._controlIndex >= static_cast<uint16>( MouseButton::Count ) )
                     return false;
-                const MouseButton button = static_cast<MouseButton>( slot._controlIndex );
-                addEvent( frameIndex, bDown ? RawInputEvent::makeMouseButtonDown( button ) : RawInputEvent::makeMouseButtonUp( button ) );
+                const MouseButton button  = static_cast<MouseButton>( slot._controlIndex );
+                const int2        pointer = findPointerPosition( frameIndex );
+                addEvent( frameIndex, bDown ? RawInputEvent::makeMouseButtonDown( button, pointer._x, pointer._y )
+                                            : RawInputEvent::makeMouseButtonUp( button, pointer._x, pointer._y ) );
                 return true;
             }
             case InputDeviceKind::Gamepad:
@@ -72,6 +74,22 @@ namespace sw
     void VirtualInputScript::addMouseDelta( uint32 frameIndex, float32 deltaX, float32 deltaY )
     {
         addEvent( frameIndex, RawInputEvent::makeMouseRawDelta( deltaX, deltaY ) );
+    }
+
+    void VirtualInputScript::addMousePosition( uint32 frameIndex, int32 x, int32 y )
+    {
+        addEvent( frameIndex, RawInputEvent::makeMouseMove( x, y ) );
+    }
+
+    int2 VirtualInputScript::findPointerPosition( uint32 frameIndex ) const
+    {
+        for ( size_t index = _listEntry.size(); index > 0; --index )
+        {
+            const VirtualInputScriptEntry& entry = _listEntry[index - 1];
+            if ( entry._frameIndex <= frameIndex && entry._event._type == RawInputEventType::MouseMove )
+                return int2{ entry._event._payload._mouseData._x, entry._event._payload._mouseData._y };
+        }
+        return int2{};
     }
 
     void VirtualInputScript::addGamepadAxis( uint32 frameIndex, uint16 axisIndex, float32 value, uint8 padIndex )

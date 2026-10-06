@@ -154,6 +154,8 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0"/>)",
         R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
+        R"(<MousePosition x="1.5" y="0.5"/>)",
+        R"(<MousePosition x="0.5"/>)",
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -183,6 +185,14 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         sw::AutomationRunner runner;
         SW_EXPECT_FALSE_MSG( runner.startFromText( pFile ), pFile );
         SW_EXPECT_TRUE( runner.getResult() == sw::AutomationResult::LoadError );
+    }
+
+    // <MousePosition> 은 엔진 단계다(등록표의 엔진 단계 목록에 있어야 "모르는 단계" 가 아니다) — 창이 없는 시험에서는 커서를 놓을 자리가 없다는 오류.
+    {
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="0"><MousePosition x="0.5" y="0.5"/></At></Scenario>)" ) );
+        SW_EXPECT_TRUE( Internal::run( runner, input, 5 ) == sw::AutomationResult::LoadError );
+        SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "no window to place the pointer" ) != sw::string::npos, runner.getFinishReason().c_str() );
     }
     input.shutdown();
 }

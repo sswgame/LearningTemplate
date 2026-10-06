@@ -49,6 +49,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `Press` · `Release` | `slot`(`InputSlotUtil` 글 — `Key.E` · `Mouse.Left` · `Gamepad.A` · `Gamepad1.A`) | 가상 사건 | 입력 |
 | `Tap` | `slot`, `hold`(프레임, 기본 1, 0 = 같은 프레임에 뗌) | 누름 + hold 뒤 뗌 | 입력 |
 | `MouseDelta` | `x` · `y`(픽셀) | `MouseRawDelta` | 입력 |
+| `MousePosition` | `x` · `y`(창 클라이언트 영역의 비율 0..1 — 시작할 때 창 크기로 픽셀) | 커서를 옮김(`MouseMove`). 뒤의 마우스 버튼은 이 자리에서 눌린다(없으면 (0, 0)) — 커서 아래를 고르는 조작(RTS 선택 · 배치) | 입력 |
 | `GamepadAxis` | `axis` · `value` · `pad` | 축 | 입력 |
 | `Text` | `value` | 글자 입력 | 입력 |
 | `Variable` | `name` · `value` | 전역 변수(gv) 값 설정 — 모르는 변수는 읽기 오류 | 환경 |
