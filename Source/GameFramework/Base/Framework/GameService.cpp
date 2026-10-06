@@ -44,10 +44,19 @@ namespace sw
         {
             SW_GAMESERVICE_API void bindRawLocalService( uint64 typeHash, void* pService )
             {
-                if ( pService != nullptr )
-                    s_mapLocalService[typeHash] = pService;
-                else
+                if ( pService == nullptr )
+                {
                     s_mapLocalService.erase( typeHash );
+                    return;
+                }
+                const auto it = s_mapLocalService.find( typeHash );
+                if ( it != s_mapLocalService.end() && it->second != pService )
+                {
+                    // 같은 타입을 둘이 걸면 나중 것이 앞 것을 소리 없이 덮는다 — 키트 둘이 같은 카탈로그 타입을 서비스로 쓰는 조립이다.
+                    SW_LOG_ERROR( "Game local service %# is already bound to another instance - unbind it first (two kits share one service type)", typeHash );
+                    return;
+                }
+                s_mapLocalService[typeHash] = pService;
             }
 
             SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash )

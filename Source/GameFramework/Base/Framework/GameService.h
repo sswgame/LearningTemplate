@@ -61,6 +61,10 @@ namespace sw
          */
         SW_GAMESERVICE_API bool areGameServicesBound();
 
+        /**
+         * @brief 게임 로컬 서비스(게임 인스턴스가 든 카탈로그 등)를 겁니다. 같은 타입이 이미 다른 인스턴스에 걸려 있으면 알리고 걸지 않습니다 —
+         *        먼저 `unbindLocalService` 로 풉니다(핫 리로드: 옛 인스턴스가 `onShutdown` 에서 푼다).
+         */
         template <typename T>
         void bindLocalService( T* pService )
         {
