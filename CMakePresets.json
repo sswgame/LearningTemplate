@@ -427,6 +427,9 @@
       "output": {
         "outputOnFailure": true
       },
+      "execution": {
+        "jobs": 4
+      },
       "filter": {
         "include": {
           "label": "lint"

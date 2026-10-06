@@ -904,6 +904,8 @@ cd build/Ninja-Debug/Bin
   매니페스트가 끌어오는 vcpkg 포트의 `share/<포트>/copyright` 를 모은다(설치 트리를 워크트리끼리 나눠 써 트리 전체가 아니라 `vcpkg/status` 의 의존 닫힘).
   vcpkg 밖에서 들인 코드(저장소에 복사한 헤더 등)는 여기 저절로 들어가지 않는다 — 그런 것을 들이면 그 고지를 같이 넣는다.
 
+- **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
+  게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
 - **스크립트 시험은 `sw_registerScriptTest`** — 파이썬 단위 시험 · QA · 린트가 같은 속성 철자. 시험 실행 파일 폴더는 `Test/` 아래 CMakeLists 가 있으면 저절로 들어간다.
 - **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
   쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
