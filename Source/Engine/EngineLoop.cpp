@@ -837,8 +837,10 @@ namespace sw
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
         , _bHeadlessTaskFailed{ false }
+        , _bQuitRequested{ false }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
+        , _exitCode{ 0 }
         , _profileSession{}
         , _startup{}
         , _pEngineConfig{ nullptr }
@@ -1021,6 +1023,15 @@ namespace sw
         if ( bExclusive )
             device.unbindGraphicsContext();
         return bAllSucceeded;
+    }
+
+    void EngineLoop::requestQuit( int32 exitCode )
+    {
+        if ( _bQuitRequested )
+            return;
+        _bQuitRequested = true;
+        _exitCode       = exitCode;
+        SW_LOG_INFO( "Quit requested (exit code %#)", exitCode );
     }
 
     void EngineLoop::beginFrame( float32 deltaSeconds )

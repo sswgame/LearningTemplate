@@ -33,12 +33,13 @@ namespace sw
         _timer.startTimer();
     }
 
-    FrameTime FixedTimestep::advance( float32 timeScale )
+    FrameTime FixedTimestep::advance( float32 timeScale, float32 overrideFrameSeconds )
     {
         _timer.updateTimer();
+        const float32 elapsedSeconds = overrideFrameSeconds > 0.0f ? overrideFrameSeconds : _timer.getDeltaTime();
 
         FrameTime frameTime{};
-        frameTime._deltaTime      = MathUtil::min( _timer.getDeltaTime(), _maxFrameDeltaTime ) * MathUtil::max( timeScale, 0.0f );
+        frameTime._deltaTime      = MathUtil::min( elapsedSeconds, _maxFrameDeltaTime ) * MathUtil::max( timeScale, 0.0f );
         frameTime._fixedDeltaTime = _fixedDeltaTime;
 
         _accumulator += frameTime._deltaTime;

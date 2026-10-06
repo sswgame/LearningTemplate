@@ -68,6 +68,12 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_reloadGameAtFrame, 0, "이 프레임에 게임 모듈 핫 리로드를 요청한다 (0=사용 안 함)" );
 #endif
+    /**
+     * @brief `-gv_fixedFrameDelta=<초>`: 0 보다 크면 프레임마다 벽시계 대신 그 시간을 흘립니다(자동화 시나리오 · 픽셀 비교 · 재현). 0 이면 실시간입니다.
+     * @details 고정 스텝(물리 · fixedUpdate)도 이 시간으로 나뉩니다 — 1/60 이면 프레임마다 정확히 한 스텝입니다. 시나리오(`-scenario`)는 이 값을 시나리오의
+     *          `fixedDelta` 로 둡니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
 } // namespace sw
 
 namespace sw
@@ -396,14 +402,14 @@ namespace sw
 #if !defined( SW_SHIPPING )
             runPendingDevConsoleExec();
 #endif
-            // 프로파일 실행(-gv_profileFrames=N)은 목표 프레임을 채우면 스스로 끝난다.
+            // 프로파일 실행(-gv_profileFrames=N) · 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`).
             if ( _engineLoop.isQuitRequested() )
             {
                 _window->requestClose();
                 break;
             }
 
-            const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get() );
+            const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get(), gv_fixedFrameDelta );
 
             // 사용자 설정의 화면 변경(창 방식 · 해상도 · VSync)은 OS 리사이즈와 같은 자리 — 프레임을 시작하기 전 — 에서 한다.
             _userSettingsHost.tick( frameTime._deltaTime );
@@ -463,6 +469,11 @@ namespace sw
     {
         // 환경 탓(백엔드가 이 빌드에 없다 · 드라이버가 기능을 안 준다)은 시험 · 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
         return RHIInitResultUtil::isUnusableHere( _engineLoop.getRhiInitResult() ) ? kRhiUnusableHereExitCode : -1;
+    }
+
+    int32 App::getExitCode() const
+    {
+        return _engineLoop.getExitCode();
     }
 
     void App::pollReloadHotkeys( [[maybe_unused]] float32 deltaTime )

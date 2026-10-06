@@ -2277,6 +2277,14 @@
    "source": "Source/GameFramework/Base/Framework/GameInstanceBase.cpp"
   },
   {
+   "name": "gv_fixedFrameDelta",
+   "type": "float32",
+   "default": "0.0",
+   "kind": "시험 · 배포본에도",
+   "description": "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행",
+   "source": "Source/App/App.cpp"
+  },
+  {
    "name": "gv_foliageDensity",
    "type": "float32",
    "default": "1.0",

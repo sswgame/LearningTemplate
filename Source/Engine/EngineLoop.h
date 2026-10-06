@@ -150,10 +150,14 @@ namespace sw
         static unique_ptr<InputMap> createShellInputMap( string_view inputMapPath );
 
         /**
-         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채운 경우).
+         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
-        bool isQuitRequested() const { return _profileSession.isQuitRequested(); }
+        bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested(); }
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(자동화 시나리오 · 도구). 여럿이면 처음 것의 코드를 씁니다. */
+        void requestQuit( int32 exitCode );
+        /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
+        int32 getExitCode() const { return _exitCode; }
 
         /**
          * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
@@ -260,10 +264,13 @@ namespace sw
         bool           _bShellActionsBound;
         bool           _bHeadless;
         bool           _bHeadlessTaskFailed;
+        bool           _bQuitRequested;
         /** @brief RHI 기동 단계의 결과입니다(getRhiInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;
+        /** @brief `requestQuit` 이 정한 종료 코드입니다. */
+        int32 _exitCode;
 
         /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
         FrameProfileSession _profileSession;
