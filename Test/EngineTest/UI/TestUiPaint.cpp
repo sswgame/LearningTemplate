@@ -368,6 +368,36 @@ SW_TEST_CASE( UiPaintTest, ImagePathPaintsAnImageQuad )
 }
 
 /**
+ * @brief [UiPaintTest] 화면 그리기를 막으면(에디터 멈춤 · Simulate — 게임 update 가 돌지 않는다) 그리기 목록이 비고, 화면 상태(로딩 화면이 떠 있음)는 그대로다
+ * @details 게임이 연 로딩 화면은 게임 update 가 닫는다. 에디터가 멈춰 있으면 그 update 가 돌지 않아 첫 Play 전까지 로딩 화면이 게임 뷰를 덮었다.
+ */
+SW_TEST_CASE( UiPaintTest, OnScreenSuppressionHidesScreensButKeepsTheirState )
+{
+    sw::UiSystem                     ui;
+    sw::unique_ptr<sw::OverlayPanel> root = sw::make_unique<sw::OverlayPanel>();
+    (void)UiPaintFixture::addBox( *root, "spinner", sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+    sw::UiScreenDesc desc{};
+    desc._layer = sw::UiLayer::Loading;
+    (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( desc, std::move( root ) ) );
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+    SW_EXPECT_TRUE( ui.isLoadingScreenShown() );
+
+    ui.setOnScreenSuppressed( true );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_TRUE( ui.getCanvas()._listQuad.empty() );
+    SW_EXPECT_TRUE( ui.isLoadingScreenShown() ); // 상태는 그대로 — 게임 update 가 다시 돌면 닫힌다
+
+    ui.setOnScreenSuppressed( false );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() );
+}
+
+/**
  * @brief [UiPaintTest] UiSystem 의 그리기 목록 내용 번호는 내용이 바뀔 때만 오르고, 탐색 입력 방식이면 포커스 위젯 둘레에 테두리 사각형이 하나 더 든다
  * @details 변이: `UiSystem::paintScreens` 의 같은 내용 확인을 빼면 바뀐 것이 없는 프레임에도 번호가 올라 진다.
  */

@@ -234,6 +234,13 @@ namespace sw
         bool isGameInputBlocked() const;
         /** @brief Loading 층 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중은 뺀다) — 자동화의 "씬 플레이 중" 은 이것이 걷힌 뒤다. */
         bool isLoadingScreenShown() const;
+        /**
+         * @brief 화면(로딩 · HUD · 메뉴) 그리기와 포인터 입력을 막거나 풉니다. 화면 상태(스택 · 포커스)는 그대로이고 오프스크린 미리보기는 그대로 그린다.
+         * @details 게임 update 가 돌지 않는 동안(에디터 멈춤 · Simulate) 호스트가 켠다 — 그 화면을 닫을 게임 코드가 돌지 않으므로 그리면 편집 화면을 덮은 채 남는다
+         *          (언리얼 에디터 뷰포트도 PIE 전에는 UMG 위젯이 없다).
+         */
+        void setOnScreenSuppressed( bool bSuppressed ) { _bOnScreenSuppressed = bSuppressed ? SW_TRUE : SW_FALSE; }
+        bool isOnScreenSuppressed() const { return _bOnScreenSuppressed == SW_TRUE; }
         /** @brief 활성 화면이 OS 커서를 바라면 true 입니다(플레이어 조종자가 마우스 잠금을 쉰다). */
         bool wantsCursor() const;
         /** @brief @p inputMap 의 행동 @p action 을 지금 누르는 물리 입력이 모두 UI 가 먹은 것이면 true 입니다(플레이어 조종자가 묻는다). */
@@ -437,14 +444,14 @@ namespace sw
         uint32                       _nextPushOrder;
         uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 글 판
         UiInputMode                  _inputMode;
-        InputGlyphStyle              _glyphStyle;             ///< 마지막으로 본 입력 장치 종류(`refreshInputGlyphs`)
-        uint8                        _bPauseRequested    : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
-        uint8                        _bPendingClose      : 1; ///< 닫기를 요청한 화면이 있다
-        uint8                        _bPointerKnown      : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        uint8                        _bStickHeld         : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
-        uint8                        _bMousePixelKnown   : 1; ///< `_lastMousePixel` 을 한 번 읽었다
-        uint8                        _bTextRevisionKnown : 1; ///< `_textRevision` 을 한 번 읽었다
-        uint8                        _bGlyphStyleKnown   : 1; ///< `_glyphStyle` 을 한 번 읽었다
-        [[maybe_unused]] uint8       _reserved           : 1;
+        InputGlyphStyle              _glyphStyle;              ///< 마지막으로 본 입력 장치 종류(`refreshInputGlyphs`)
+        uint8                        _bPauseRequested     : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
+        uint8                        _bPendingClose       : 1; ///< 닫기를 요청한 화면이 있다
+        uint8                        _bPointerKnown       : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
+        uint8                        _bStickHeld          : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
+        uint8                        _bMousePixelKnown    : 1; ///< `_lastMousePixel` 을 한 번 읽었다
+        uint8                        _bTextRevisionKnown  : 1; ///< `_textRevision` 을 한 번 읽었다
+        uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었다
+        uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기 · 포인터 입력을 막는다(`setOnScreenSuppressed`)
     };
 } // namespace sw

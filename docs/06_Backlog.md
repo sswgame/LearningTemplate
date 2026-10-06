@@ -1513,6 +1513,8 @@ cd build/Ninja-Debug/Bin
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
 - **엔진 float4x4 는 행 벡터 규약의 행 우선 저장이다 — 메모리가 곧 ImGuizmo 배열이다**(이동 _41 · _42 · _43 = [12] · [13] · [14]). 전치해서 넘기면 기즈모가
   물체를 원점 · 카메라 눈 자리로 본다. `ImGuizmo::Enable( false )` 는 끌기 상태까지 지우므로 프레임마다 부를 때는 끌고 있는 동안 건너뛴다(`gameView.gizmoMovesTheSelection`).
+- **게임 update 가 멈춘 동안(에디터 멈춤 · Simulate) 게임이 연 화면은 닫힐 길이 없다** — 그 동안 `UiSystem::setOnScreenSuppressed` 로 화면 UI 를 그리지 않는다
+  (`ModuleHost::beginFrame`). 상태(스택 · `isLoadingScreenShown`)는 그대로다.
 - **에디터 카메라는 씬 오브젝트다** — 피킹 · 계층처럼 씬 오브젝트를 훑는 기능은 `CameraRole::Editor` 를 뺀다(레이가 그 카메라 자리에서 출발해 늘 가장 가깝다).
 - **위젯 크기에 픽셀 상수를 쓰지 않는다** — `GetFrameHeight` · 글자 폭에서 잰다. 24 px 고정 단추가 150 % 에서 잘렸다(`hierarchy.visibilityToggleFits`).
   이름표 줄 바꿈은 `EditorWidgets::drawClampedLabel`(공백 · `_` · `-` · `.` 뒤에서 먼저, 넘치면 말줄임 + 툴팁) — ImGui TextWrap 은 공백만 본다.
