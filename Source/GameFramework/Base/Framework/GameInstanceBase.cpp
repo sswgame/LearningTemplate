@@ -19,6 +19,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Utility/GameTimeScale.h"
 
 #include "GameFramework/Base/Framework/ComponentStateStore.h"
 #include "GameFramework/Base/Framework/GameEventUtil.h"
@@ -223,8 +224,10 @@ namespace sw
         // 로딩 중 = 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이다. 페이드를 먼저 넘기고, 로딩 화면이 닫히면 페이드 인을 건다.
         const SceneManager* pSceneManager = game::getService<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
-        _screenTransition.update( deltaTime );
-        _pLoadingScreen->update( deltaTime, bLoading, _screenTransition.fade() );
+        // 페이드 · 로딩 화면은 실제 시간 — 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
+        const float32 realDeltaTime = GameTimeScale::getUnscaledDeltaTime( deltaTime );
+        _screenTransition.update( realDeltaTime );
+        _pLoadingScreen->update( realDeltaTime, bLoading, _screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
         onUpdate( deltaTime );

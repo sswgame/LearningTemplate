@@ -169,3 +169,21 @@ SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
         }
     }
 }
+
+/**
+ * @brief [FixedTimestepTest] 시간 배율 0(정지 메뉴)이어도 실제 경과(`_unscaledDeltaTime`)는 흐른다 — UI · 화면 전환 페이드가 그 값으로 돈다
+ * @details 게임 시간만 있으면 정지 메뉴가 뜬 동안 로딩 페이드가 반쯤 검은 채로 멈춘다. 실제 경과도 최대 델타로 자른다.
+ */
+SW_TEST_CASE( FixedTimestepTest, UnscaledDeltaIgnoresTheTimeScale )
+{
+    FixedTimestep timeline;
+    timeline.configure( 0.1f, 1.0f / 60.0f, 6 );
+    timeline.start();
+    const FrameTime paused = timeline.advance( 0.0f, 0.02f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, paused._deltaTime, 1e-6f );
+    SW_EXPECT_EQUAL( 0u, paused._fixedStepCount );
+    SW_EXPECT_NEAR_EQUAL( 0.02f, paused._unscaledDeltaTime, 1e-6f );
+    const FrameTime fast = timeline.advance( 4.0f, 0.5f );
+    SW_EXPECT_NEAR_EQUAL( 0.1f, fast._unscaledDeltaTime, 1e-6f ); // 최대 델타로 자른 값, 배율은 곱하지 않는다
+    SW_EXPECT_NEAR_EQUAL( 0.4f, fast._deltaTime, 1e-5f );
+}

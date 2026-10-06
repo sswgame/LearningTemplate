@@ -31,5 +31,12 @@ namespace sw
         static void removePauseRequest();
         /** @brief 지금 걸린 정지 요청 수입니다. */
         static uint32 getPauseRequestCount();
+        /**
+         * @brief 호스트가 이번 프레임의 실제 경과(배율 · 정지와 무관, 최대 델타로 자름)를 적습니다(App 루프 — `FrameTime::_unscaledDeltaTime`).
+         * @details 게임이 멈춰도 도는 것 — 런타임 UI(정지 메뉴의 애니메이션 · 탐색 반복) · 화면 전환 페이드 · 로딩 화면 — 이 읽습니다(유니티 `Time.unscaledDeltaTime`).
+         */
+        static void setUnscaledDeltaTime( float32 deltaSeconds );
+        /** @brief 이번 프레임의 실제 경과입니다. 호스트가 적은 적이 없으면(시험 하니스 · 다른 호스트) @p fallbackDeltaSeconds 입니다. */
+        static float32 getUnscaledDeltaTime( float32 fallbackDeltaSeconds );
     };
 } // namespace sw

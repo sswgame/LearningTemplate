@@ -93,6 +93,7 @@
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
@@ -1142,7 +1143,7 @@ namespace sw
             _owned._pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
-            _owned._pUiSystem->processInput( deltaSeconds );
+            _owned._pUiSystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -1283,7 +1284,7 @@ namespace sw
             }
             const UiViewport viewport =
                 _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
-            _owned._pUiSystem->update( deltaTime, viewport );
+            _owned._pUiSystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).

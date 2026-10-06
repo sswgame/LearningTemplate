@@ -20,12 +20,15 @@ namespace sw
         float32 _deltaTime;
         /** @brief 고정 스텝 하나의 길이(초)입니다. */
         float32 _fixedDeltaTime;
+        /** @brief 최대 델타로 자른 이번 프레임의 실제 경과(초) — 시간 배율 · 정지를 곱하지 않은 값입니다(UI · 화면 전환). */
+        float32 _unscaledDeltaTime;
         /** @brief 이번 프레임에 돌려야 하는 고정 스텝 수입니다. 상한에서 잘립니다. */
         uint32 _fixedStepCount;
 
         FrameTime()
             : _deltaTime{ 0.0f }
             , _fixedDeltaTime{ 0.0f }
+            , _unscaledDeltaTime{ 0.0f }
             , _fixedStepCount{ 0 }
         {
         }

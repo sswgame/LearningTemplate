@@ -39,8 +39,9 @@ namespace sw
         const float32 elapsedSeconds = overrideFrameSeconds > 0.0f ? overrideFrameSeconds : _timer.getDeltaTime();
 
         FrameTime frameTime{};
-        frameTime._deltaTime      = MathUtil::min( elapsedSeconds, _maxFrameDeltaTime ) * MathUtil::max( timeScale, 0.0f );
-        frameTime._fixedDeltaTime = _fixedDeltaTime;
+        frameTime._unscaledDeltaTime = MathUtil::min( elapsedSeconds, _maxFrameDeltaTime );
+        frameTime._deltaTime         = frameTime._unscaledDeltaTime * MathUtil::max( timeScale, 0.0f );
+        frameTime._fixedDeltaTime    = _fixedDeltaTime;
 
         _accumulator += frameTime._deltaTime;
 
