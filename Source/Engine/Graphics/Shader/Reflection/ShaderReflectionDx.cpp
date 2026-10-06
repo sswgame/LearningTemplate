@@ -357,7 +357,7 @@ namespace sw
                 if ( s_bTried == false )
                 {
                     s_bTried      = true;
-                    HMODULE hDll  = LoadLibraryA( "dxcompiler.dll" );
+                    HMODULE hDll  = LoadLibraryW( L"dxcompiler.dll" );
                     s_pDxCompiler = static_cast<void*>( hDll );
                     if ( s_pDxCompiler != nullptr )
                     {

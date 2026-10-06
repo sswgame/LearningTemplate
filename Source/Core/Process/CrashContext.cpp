@@ -144,7 +144,11 @@ namespace sw
             if ( pPath == nullptr || pText == nullptr || length == 0 )
                 return;
 #if defined( SW_PLATFORM_WINDOWS )
-            const HANDLE hFile = CreateFileA( pPath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
+            // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다(StringUtil::utf8ToUtf16 은 할당한다).
+            utf16 arrWidePath[constant::kMaxBuffer1024]{};
+            if ( MultiByteToWideChar( CP_UTF8, 0, pPath, -1, arrWidePath, static_cast<int32>( constant::kMaxBuffer1024 ) ) == 0 )
+                return;
+            const HANDLE hFile = CreateFileW( arrWidePath, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr );
             if ( hFile == INVALID_HANDLE_VALUE )
                 return;
             DWORD written{ 0 };

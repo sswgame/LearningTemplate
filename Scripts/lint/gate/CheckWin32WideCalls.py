@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Win32 의 문자 집합 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)을 부르는 곳을 잡는다 — `W` 판을 이름으로 부른다.
+"""Win32 의 문자 집합 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)과 `A` 판을 부르는 곳을 잡는다 — `W` 판을 이름으로 부른다.
 
 Win32 는 문자열을 받는 함수마다 `xxxA`(ANSI 코드 페이지) · `xxxW`(UTF-16) 두 벌을 두고, 일반 이름 `xxx` 는 `UNICODE` 정의에
 따라 둘 중 하나로 바뀌는 **매크로**다. 이 저장소는 `UNICODE` 를 정의하지 않으므로 일반 이름은 늘 `A` 다. 창 클래스 ·
@@ -8,7 +8,8 @@ Win32 는 문자열을 받는 함수마다 `xxxA`(ANSI 코드 페이지) · `xxx
 `WM_NCCREATE` · `WM_SETTEXT` 의 UTF-16 제목을 ANSI 로 읽어 첫 글자에서 끊는다(창 제목이 "S" 한 글자).
 
 문자열은 `utf8` 로 들고 경계에서 UTF-16 으로 바꾸므로 TCHAR 전환으로 얻는 것이 없다 — 일반 이름은 부르지 않고 `W` 를 쓴다.
-`A` 가 꼭 필요하면(ASCII 리터럴만 받는 자리) `A` 를 이름으로 부른다. 그것은 이 게이트가 막지 않는다.
+`A` 판을 이름으로 부르는 것도 막는다: `A` 판은 문자열을 ANSI 코드 페이지로 읽어, UTF-8 경로(한글 사용자 폴더 · 설치 경로)를 깨뜨린다.
+예외는 `_kSetAnsiAllowed`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 자리)뿐이다.
 `->GetMessage(` · `.GetMessage(` 처럼 멤버로 부르는 같은 이름(COM 인터페이스 메서드)은 보지 않는다. 주석 · 문자열 안의 언급도 보지 않는다.
 
   python Scripts/lint/gate/CheckWin32WideCalls.py [--root <repo>] [--files a.cpp b.h]
@@ -69,12 +70,17 @@ _kListGenericName = (
     "FillConsoleOutputCharacter", "WriteConsoleOutput", "WriteConsoleOutputCharacter",
 )
 
-#: 일반 이름을 함수처럼 부르는 자리입니다. 더 긴 이름의 일부(`DefWindowProcW` · `myGetMessage`)는 빠집니다.
-_kGenericCallRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kListGenericName) + r")\s*\(")
+#: `A` 판을 이름으로 불러도 되는 일반 이름입니다. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
+_kSetAnsiAllowed = frozenset({
+    "OutputDebugString",  # 디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다
+})
+
+#: 일반 이름 또는 그 `A` 판을 함수처럼 부르는 자리입니다. 더 긴 이름의 일부(`DefWindowProcW` · `myGetMessage`)는 빠집니다.
+_kGenericCallRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kListGenericName) + r")(A?)\s*\(")
 
 
 def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
-    """Win32 일반 이름을 부르는 줄을 위반 문자열로 돌려줍니다."""
+    """Win32 일반 이름 · `A` 판을 부르는 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
     for path, text in readTextFiles(listPath):
@@ -89,25 +95,29 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
                 if prefix.endswith("->") or prefix.endswith("."):
                     continue
                 name = match.group(1)
+                bAnsi = match.group(2) == "A"
+                if bAnsi and name in _kSetAnsiAllowed:
+                    continue
                 originalLine = listOriginalLine[lineIndex - 1].strip()
-                listViolation.append(f"{relative}:{lineIndex}: {name} -> {name}W  | {originalLine}")
+                called = name + match.group(2)
+                listViolation.append(f"{relative}:{lineIndex}: {called} -> {name}W  | {originalLine}")
     return listViolation
 
 
 class CheckWin32WideCallsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    description = "Win32 API 를 문자 집합 일반 이름(A/W 매크로)이 아니라 W 판 이름으로 부르는지 검사"
+    description = "Win32 API 를 문자 집합 일반 이름(A/W 매크로) · A 판이 아니라 W 판 이름으로 부르는지 검사"
     buildComment = "Checking that Win32 calls name the W variant..."
     timeoutSeconds = 30
     preCommitPattern = tuple(f"{root}/*" for root in _kListScanRoot)
     preCommitFileArgument = "--files"
-    violationHeader = "Win32 문자 집합 일반 이름 호출"
+    violationHeader = "Win32 문자 집합 일반 이름 · A 판 호출"
     hint = (
         "  이 저장소는 UNICODE 를 정의하지 않습니다 — 일반 이름(DefWindowProc · LoadCursor · CreateFile …)은 ANSI(A) 판입니다.\n"
         "  W 판을 이름으로 부르십시오(DefWindowProcW · LoadCursorW · CreateFileW). 문자열은 StringUtil::utf8ToUtf16 으로 넘깁니다.\n"
         "  TCHAR 자원 매크로(IDC_ARROW · IDI_APPLICATION)는 A 판 포인터 모양의 정수 id 라 W 판에는 reinterpret_cast<LPCWSTR>( IDC_ARROW ) 로 넘깁니다.\n"
-        "  ASCII 리터럴만 받는 자리에서 A 가 필요하면 A 판을 이름으로 부릅니다(이 게이트는 막지 않습니다)."
+        "  A 판(LoadLibraryExA · CreateFileA …)은 UTF-8 경로를 ANSI 로 읽어 한글 경로에서 실패합니다 — W 판 + StringUtil::utf8ToUtf16 으로 넘깁니다."
     )
     selfTestCases = [
         {
@@ -126,6 +136,14 @@ class CheckWin32WideCallsGate(LintGate):
             "files": {"Test/Probe/ProbeCursor.cpp": "void probe() { HCURSOR hCursor = ::LoadCursor( nullptr, IDC_ARROW ); }\n"},
         },
         {
+            "name": "UTF-8 경로를 A 판에 넘긴다(LoadLibraryExA)",
+            "files": {
+                "Source/Probe/ProbeLoad.cpp": (
+                    "void* probe( const sw::string& path ) { return LoadLibraryExA( path.c_str(), nullptr, 0 ); }\n"
+                ),
+            },
+        },
+        {
             "name": "비교 연산자 뒤의 GetModuleHandle(ReflectionParser)",
             "files": {"Tools/ReflectionParser/ProbeModule.cpp": "bool probe( void* p ) { return p > GetModuleHandle( nullptr ); }\n"},
         },
@@ -136,7 +154,7 @@ class CheckWin32WideCallsGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findGenericWin32Calls(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 Win32 일반 이름(A/W 매크로) 호출")
+        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 Win32 일반 이름(A/W 매크로) · A 판 호출")
 
 
 main = CheckWin32WideCallsGate.run

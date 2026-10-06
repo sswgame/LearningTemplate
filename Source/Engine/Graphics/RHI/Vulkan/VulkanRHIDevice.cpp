@@ -145,8 +145,9 @@ namespace sw
                 string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
-                    SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", execDir.c_str() );
-                    SetEnvironmentVariableA( "VK_LAYER_PATH", execDir.c_str() );
+                    const wstring wideExecDir = StringUtil::utf8ToUtf16( execDir.c_str() );
+                    SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", wideExecDir.c_str() );
+                    SetEnvironmentVariableW( L"VK_LAYER_PATH", wideExecDir.c_str() );
                 }
                 else
                 {
@@ -154,7 +155,7 @@ namespace sw
                     if ( StringUtil::isNullOrEmpty( pVulkanSdkEnv ) == false )
                     {
                         string sdkBinPath = FileUtil::joinPath( pVulkanSdkEnv, "Bin" );
-                        SetEnvironmentVariableA( "VK_ADD_LAYER_PATH", sdkBinPath.c_str() );
+                        SetEnvironmentVariableW( L"VK_ADD_LAYER_PATH", StringUtil::utf8ToUtf16( sdkBinPath.c_str() ).c_str() );
                     }
                 }
             }

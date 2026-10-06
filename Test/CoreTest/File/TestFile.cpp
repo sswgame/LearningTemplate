@@ -3,6 +3,7 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
@@ -309,6 +310,36 @@ SW_TEST_CASE( FileTest, LoadedImageRangeContainsTheAddress )
 
     SW_EXPECT_FALSE( sw::ModuleImageUtil::findLoadedImageRange( nullptr, pBegin, pEnd ) );
 }
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [FileTest] 경로에 한글이 든 폴더의 DLL 도 올라온다
+ * @details 경로는 UTF-8 로 들고 다닌다. Win32 의 A 판(`LoadLibraryExA` · `SetDllDirectoryA`)에 그대로 넘기면 OS 가 ANSI 코드 페이지로 읽어
+ *          비-ASCII 글자가 깨지고 "파일 없음" 으로 진다 — 한글 사용자 폴더 · 한글 설치 경로에서 모듈이 하나도 안 올라온다.
+ *          시스템 폴더의 `version.dll`(의존이 시스템 DLL 뿐)을 한글 이름 임시 폴더에 복사해 그 경로로 올린다.
+ */
+SW_TEST_CASE( FileTest, DynamicLibraryLoadsFromANonAsciiFolder )
+{
+    utf16        arrSystemDir[MAX_PATH]{};
+    const uint32 systemDirLength = GetSystemDirectoryW( arrSystemDir, MAX_PATH );
+    SW_ASSERT_TRUE( systemDirLength > 0 && systemDirLength < MAX_PATH );
+
+    const sw::string sourcePath = sw::FileUtil::joinPath( sw::StringUtil::utf16ToUtf8( arrSystemDir ), "version.dll" );
+    const sw::string folder     = test::makeTempDirectory( "SwModuleLoad_한글 폴더" );
+    const sw::string copyPath   = sw::FileUtil::joinPath( folder, "version.dll" );
+    SW_ASSERT_TRUE( sw::FileUtil::copyFile( sourcePath, copyPath ) );
+
+    void* pHandle = sw::ModuleImageUtil::loadDynamicLibrary( copyPath );
+    SW_ASSERT_TRUE_MSG( pHandle != nullptr, copyPath.c_str() );
+
+    // 같은 이름의 시스템 DLL 이 아니라 복사한 그 파일이 올라왔다.
+    utf16 arrLoadedPath[MAX_PATH]{};
+    (void)GetModuleFileNameW( static_cast<HMODULE>( pHandle ), arrLoadedPath, MAX_PATH );
+    const sw::string loadedPath = sw::StringUtil::utf16ToUtf8( arrLoadedPath );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::pathsEqualNormalized( loadedPath, copyPath ), loadedPath.c_str() );
+    sw::ModuleImageUtil::unloadDynamicLibrary( pHandle );
+}
+#endif
 
 /**
  * @brief [FileTest] 쓰기는 원자적이다: 다 쓴 뒤 바꿔 끼우고, 같은 폴더에 임시 파일을 남기지 않는다.
