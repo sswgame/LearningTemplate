@@ -17,6 +17,15 @@ when an item is done, delete it, and move what is worth keeping to where it belo
 History lives in `git log`; the full old backlog with every dated "recently finished" entry is
 `git show 7ce95fc8:docs/06_Backlog.md`.
 
+## How work is split, verified and pushed lives in docs/11_Workflow.md
+
+**Read [docs/11_Workflow.md](docs/11_Workflow.md) before starting a batch.** It holds the rules that used to live only in one PC's memory:
+worktrees (`py -3 -m Scripts worktree-make <name>` / `worktree-remove`) and the single integrator, at most two concurrent builds
+(helpers build at below-normal priority, per-game presets only at the end of a batch), what to verify per batch vs. per big step,
+push-after-verification with a short Korean result report, not waiting on CI (`py -3 -m Scripts ci-jobs` when the user reports a
+failure), deciding by comparison with commercial engines and recording it in docs/09 (ask only about law, licences, public actions,
+cost), the commit message format, and replying to the user in Korean.
+
 ## Conventions live in AGENTS.md
 
 **Read [AGENTS.md](AGENTS.md) before writing any C++, CMake, or Python in this repo.** It is the
@@ -242,8 +251,8 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
   (`-fsyntax-only`, real build flags from the compile DB) in ~1.5 min per preset, and defaults to
   sweeping Debug · Release · Shipping because **the warning set differs per configuration**.
   The build you just ran already reports warnings your own change introduced (it recompiled exactly the
-  affected TUs); this answers the other question — what is left in the tree. Run it when finishing a
-  chunk of work, not on every edit. **A warning in the build log can also be an old one replayed by
+  affected TUs); this answers the other question — what is left in the tree. Run the full sweep only when
+  the user asks for it (docs/11_Workflow.md), not on every edit or commit. **A warning in the build log can also be an old one replayed by
   sccache** (a cache hit replays the recorded stderr) — the tell is that the source line clang prints
   does not match that line number in the file. `SCCACHE_RECACHE=1` forces a real compile; this report
   never goes through the cache, so when the two disagree, the report is right.
