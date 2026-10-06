@@ -111,7 +111,8 @@ Scripts/
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
-  │     │     └── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
+  │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
+  │     │     └── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
