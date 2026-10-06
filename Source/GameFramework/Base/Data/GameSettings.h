@@ -20,8 +20,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @brief 씬 흐름 · 기본 세이브 · 다국어 · 입력과 범용 게임플레이 튜닝 설정입니다.
-     * @details 리소스 경로 칸은 도메인을 포함한 전역 id 입니다(`game/<팩>/maps/start.scene.xml`). `GameInstanceBase` 가 읽은 뒤 게임 서비스로 묶고
-     *          다국어 · 입력 맵을 적용하며, 씬 칸은 `getFirstScene` · `getEntranceScene`, 세이브 경로는 경로 없는 `saveStateToFile` 이 씁니다.
+     * @details 리소스 경로 필드는 도메인을 포함한 전역 id 입니다(`game/<팩>/maps/start.scene.xml`). `GameInstanceBase` 가 읽은 뒤 게임 서비스로 묶고
+     *          다국어 · 입력 맵을 적용하며, 씬 필드는 `getFirstScene` · `getEntranceScene`, 세이브 경로는 경로 없는 `saveStateToFile` 이 씁니다.
      */
     REFLECT()
     struct SW_GF_API GameSettings

@@ -1,10 +1,10 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # 전역 변수 (`-gv_*`)
 
 [설정 색인](README.md)
 
-명령줄 `-gv_<이름>=<값>` · 에디터 Global Variables 패널 · 개발 콘솔로 바꾼다. 종류: **일반**(에디터 목록 · 프리셋 · 명령줄, 배포본 포함) · **시험**(배포본에서 등록되지 않아 기본값으로만 읽힌다) · **시험 · 배포본에도**(배포 실행 파일을 스크립트가 조종하는 스위치). 사용자 설정이 값을 넣는 변수는 `UserSettingsVariables.cpp` 에 있고, 기동 때는 명령줄 `-gv_*` 가 플레이어 값을 이긴다(`docs/07_Configuration.md` 우선순위).
+값은 명령줄 `-gv_<이름>=<값>`, 에디터의 Global Variables 패널, 개발 콘솔로 바꿉니다. 종류는 셋입니다. **일반** 은 배포본에도 있습니다. **시험** 은 배포본에서 등록되지 않아 기본값으로만 읽힙니다. **시험 · 배포본에도** 는 스크립트가 배포 실행 파일을 조종할 때 쓰는 스위치입니다. 사용자 설정이 값을 넣는 변수는 `UserSettingsVariables.cpp` 에 있고, 시작할 때는 명령줄 `-gv_*` 가 플레이어 값보다 우선합니다(`docs/07_Configuration.md`).
 
 ## `Source/App`
 
@@ -54,7 +54,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_editorRegistryDump` | `bool` | `false` | 시험 | 기동 때 에디터 등록부(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프 | [EditorRegistryDump.cpp](../../Source/Editor/SelfTest/EditorRegistryDump.cpp) |
+| `gv_editorRegistryDump` | `bool` | `false` | 시험 | 시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프 | [EditorRegistryDump.cpp](../../Source/Editor/SelfTest/EditorRegistryDump.cpp) |
 | `gv_editorSelfTest` | `string` | — | 시험 | 에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함) | [EditorSelfTest.cpp](../../Source/Editor/SelfTest/EditorSelfTest.cpp) |
 | `gv_editorSelfTestReport` | `string` | — | 시험 | 에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만) | [EditorSelfTest.cpp](../../Source/Editor/SelfTest/EditorSelfTest.cpp) |
 
@@ -134,11 +134,11 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 칸 수(앞쪽 보이는 칸 안에서 돈다) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
-| `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 칸 수(칸마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
+| `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
+| `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UiScale.cpp](../../Source/Engine/UI/Layout/UiScale.cpp) |
-| `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UiDemoScreen.cpp](../../Source/Engine/UI/Debug/UiDemoScreen.cpp) |
-| `gv_uiOptionsMenu` | `bool` | `false` | 시험 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screens/OptionsMenuScreen.cpp) |
+| `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UiDemoScreen.cpp](../../Source/Engine/UI/Debug/UiDemoScreen.cpp) |
+| `gv_uiOptionsMenu` | `bool` | `false` | 시험 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screens/OptionsMenuScreen.cpp) |
 
 ## `Source/Engine/UserSettings`
 
@@ -204,7 +204,7 @@
 | `gv_benchCharacters` | `int32` | `0` | 시험 | 벤치 스킨드 캐릭터 수 (0=사용 안 함, KayKit 기사 · Idle/Walking_A) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCharacterStagger` | `int32` | `0` | 시험 | 벤치 캐릭터 시작 시각을 흩는다 (0=모두 0 초) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchCombat` | `int32` | `0` | 시험 | 벤치 전투 연출 (0=사용 안 함, KayKit 스켈레톤 — 알림 · 히트 존 · 래그돌 · 칼 떨어뜨리기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
-| `gv_benchCrowdShare` | `int32` | `0` | 시험 | 벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchCrowdShare` | `int32` | `0` | 시험 | 벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchFaces` | `int32` | `0` | 시험 | 벤치 시험 머리 수 (0=사용 안 함, 모프 · 표정 · 립싱크 · 깜빡임 · 시선) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchGround` | `int32` | `0` | 시험 | 격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchInstanced` | `int32` | `0` | 시험 | 1 이면 큐브를 GameObject 없이 메시 인스턴스 배치로 만든다 (기본 0) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
@@ -222,7 +222,7 @@
 | `gv_benchRig` | `int32` | `0` | 시험 · 배포본에도 | 후처리 리그 데모 기사 수 (0=사용 안 함, 발 디딤 · 시선 · 왼손 IK · 망토 스프링) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigEnabled` | `int32` | `1` | 시험 · 배포본에도 | 리그 데모의 PoseModifierComponent 를 켤지 (0=대조군) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
 | `gv_benchRigView` | `int32` | `0` | 시험 · 배포본에도 | 리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤) | [BenchSceneRig.cpp](../../Source/Games/Empty/BenchSceneRig.cpp) |
-| `gv_benchSpawnChurn` | `int32` | `0` | 시험 | 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchSpawnChurn` | `int32` | `0` | 시험 | 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTickMovers` | `int32` | `0` | 시험 | 큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTransparent` | `int32` | `25` | 시험 · 배포본에도 | 벤치 큐브 중 투명으로 만들 비율 (퍼센트) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchUiMarkers` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |

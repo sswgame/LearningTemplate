@@ -84,7 +84,7 @@
 - [cmake](../cmake/README.md) — CMake 계층과 헬퍼 함수(`CheckCmakeReadme` 가 검사)
 - [Scripts](../Scripts/README.md) — 파이썬 도구, 린트 폴더(gate, fixer, report, selftest), 커밋 훅
   - [Scripts/generate](../Scripts/generate/README.md), [Scripts/setup](../Scripts/setup/README.md)
-- [Tools](../Tools/README.md) — [ReflectionParser](../Tools/ReflectionParser/README.md), [Blender 내보내기](../Tools/DCC/Blender/README.md), [VS Code 실행 인자 GUI](../Tools/launch-args/README.md), 온라인 부하 테스트 봇(`Tools/OnlineLoadBot`, 설명은 Tools README 안)
+- [Tools](../Tools/README.md) — [ReflectionParser](../Tools/ReflectionParser/README.md), [Blender 내보내기](../Tools/DCC/Blender/README.md), [VS Code 실행 인자 GUI](../Tools/launch-args/README.md), [온라인 부하 테스트 봇](../Tools/OnlineLoadBot/README.md)
 - [Config](../Config/README.md) — 설정 파일의 두 계층
 - [Resource](../Resource/README.md) — 리소스 경로, 소문자 규칙, 텍스처 규칙, [Empty 게임 팩](../Resource/game/empty/README.md)
 - [Test](../Test/README.md) — 테스트 실행 파일, 라벨, 스위트 규칙, QA 러너

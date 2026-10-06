@@ -276,7 +276,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "옵션 메뉴 문서 — 설정 스키마에서 탭 · 행을 짓는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다)"
+       "description": "옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다)"
       },
       {
        "name": "_uiPauseMenu",
@@ -1209,7 +1209,7 @@
        "min": "0.0",
        "max": "",
        "units": "",
-       "description": "입력 칸 · 버튼 모서리 둥글기(픽셀)"
+       "description": "입력 필드와 버튼의 모서리 둥글기(픽셀)"
       },
       {
        "name": "_themeTabRounding",
@@ -1581,7 +1581,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "묶음 레벨마다 묶음 수(위 → 아래), 비면 뿌리 하나"
+       "description": "클러스터 레벨마다 클러스터 수(위 → 아래), 비면 뿌리 하나"
       },
       {
        "name": "impact_point",
@@ -1608,7 +1608,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "clustered: 반경 안에 놓을 씨앗 몫(0..1)"
+       "description": "clustered: 반경 안에 놓을 씨앗 비율(0..1)"
       },
       {
        "name": "slices",
@@ -1617,7 +1617,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "slices: 축마다 칸 수"
+       "description": "slices: 축마다 셀 수"
       },
       {
        "name": "slice_jitter",
@@ -1626,7 +1626,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "slices: 칸 크기에 대한 흔들림(0..0.5)"
+       "description": "slices: 셀 크기에 대한 흔들림(0..0.5)"
       },
       {
        "name": "interior_color",
@@ -1722,7 +1722,7 @@
        "min": "0",
        "max": "65535",
        "units": "",
-       "description": "운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 평문 · 인증 없음) 포트입니다. 0 이면 열지 않습니다. 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대)."
+       "description": "운영 HTTP 엔드포인트(`/metrics`, `/healthz`, `/readyz`. 평문이고 인증 없음) 포트입니다. 0 이면 열지 않습니다. 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대)."
       },
       {
        "name": "_opsListenAddress",
@@ -1731,7 +1731,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "운영 끝점이 받을 주소입니다 — 기본 `127.0.0.1`(이 기계만). 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것)."
+       "description": "운영 엔드포인트가 받을 주소입니다. 기본 `127.0.0.1` 은 이 기계만 받습니다. 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것)."
       },
       {
        "name": "_tickRateHz",
@@ -2014,7 +2014,7 @@
    "type": "int32",
    "default": "0",
    "kind": "시험",
-   "description": "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)",
+   "description": "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
@@ -2158,7 +2158,7 @@
    "type": "int32",
    "default": "0",
    "kind": "시험",
-   "description": "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)",
+   "description": "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)",
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
@@ -2182,7 +2182,7 @@
    "type": "int32",
    "default": "0",
    "kind": "시험 · 배포본에도",
-   "description": "UI 벤치 — 프레임마다 글을 바꾸는 칸 수(앞쪽 보이는 칸 안에서 돈다)",
+   "description": "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)",
    "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
   },
   {
@@ -2198,7 +2198,7 @@
    "type": "int32",
    "default": "0",
    "kind": "시험 · 배포본에도",
-   "description": "UI 벤치 — 격자 칸 수(칸마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)",
+   "description": "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)",
    "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
   },
   {
@@ -2358,7 +2358,7 @@
    "type": "bool",
    "default": "false",
    "kind": "시험",
-   "description": "기동 때 에디터 등록부(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프",
+   "description": "시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프",
    "source": "Source/Editor/SelfTest/EditorRegistryDump.cpp"
   },
   {
@@ -2870,7 +2870,7 @@
    "type": "bool",
    "default": "false",
    "kind": "시험 · 배포본에도",
-   "description": "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
+   "description": "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
    "source": "Source/Engine/UI/Debug/UiDemoScreen.cpp"
   },
   {
@@ -2878,7 +2878,7 @@
    "type": "bool",
    "default": "false",
    "kind": "시험 · 배포본에도",
-   "description": "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷)",
+   "description": "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷)",
    "source": "Source/Engine/UI/Screens/OptionsMenuScreen.cpp"
   },
   {
@@ -3080,7 +3080,7 @@
     "cook-shaders"
    ],
    "value": "플래그(`-이름`)",
-   "description": "셰이더를 모든 백엔드 바이너리로 굽고 끝낸다(헤드리스)"
+   "description": "셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스)"
   },
   {
    "name": "COOK_SCENES",
@@ -3088,7 +3088,7 @@
     "cook-scenes"
    ],
    "value": "플래그(`-이름`)",
-   "description": "씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)"
+   "description": "씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다. 쓸 폴더는 `-cooked-dir=<폴더>` 다(CookAssets.py 가 부른다)"
   },
   {
    "name": "COOKED_DIR",
@@ -3096,7 +3096,7 @@
     "cooked-dir"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)"
+   "description": "`-cook-scenes` 가 쿠킹 결과를 쓸 폴더"
   },
   {
    "name": "SERVER_CONFIG",
@@ -3168,7 +3168,7 @@
     "bake-retarget"
    ],
    "value": "글 값(`-이름=값`)",
-   "description": "리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스)."
+   "description": "리타깃 베이크. 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스)."
   },
   {
    "name": "RENDER_PORTRAITS",
@@ -3402,7 +3402,7 @@
    "type": "BOOL",
    "default": "OFF",
    "choices": [],
-   "description": "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용",
+   "description": "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용",
    "presets": [
     "CI-Debug",
     "CI-Debug-ASAN",

@@ -43,11 +43,13 @@ SW_REGISTER_ARGUMENT( ENABLE_EDITOR, false, false, "EnableEditor" )
 // 시작 언어(`ko_kr` · `en_us` …)
 SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 
-// 셰이더를 모든 백엔드 바이너리로 굽고 끝낸다(헤드리스)
+// 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스)
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
 
-// 씬 · 프리팹을 바이너리(SCN1 · PFB2)로 굽고 끝낸다 — `-cooked-dir=<폴더>` 가 쓸 곳(CookAssets.py 가 부른다)
+// 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다. 쓸 폴더는 `-cooked-dir=<폴더>` 다(CookAssets.py 가 부른다)
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
+
+// `-cook-scenes` 가 쿠킹 결과를 쓸 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, "", false, "cooked-dir" )
 
 // 전용 서버(Server)의 운영 설정 파일(`ServerConfig`) — 비우면 `Config/Server/<SW_ACTIVE_GAME>.json`. Shipping 도 디스크에서 읽는다.
@@ -70,7 +72,7 @@ SW_REGISTER_ARGUMENT( CHECK_MODELS, false, false, "check-models" )
 // 음성(`voice/` 폴더의 .wav · .ogg)을 분석해 곁에 비즘 트랙(`.visemes.json`)을 쓴다 — 립싱크 오프라인 분석(엔진 일, 헤드리스).
 SW_REGISTER_ARGUMENT( IMPORT_LIPSYNC, false, false, "import-lipsync" )
 
-// 리타깃 굽기 — 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>`. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 굽고 끝낸다(헤드리스).
+// 리타깃 베이크. 값은 `<프로필 *.retarget.json>,<원본 .animclip>,<출력 .animclip>` 이다. 프로필의 두 스켈레톤으로 원본 클립을 옮겨 베이크하고 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( BAKE_RETARGET, "", false, "bake-retarget" )
 
 // 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits).

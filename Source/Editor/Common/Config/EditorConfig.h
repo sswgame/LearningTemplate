@@ -40,7 +40,7 @@ namespace sw::editor
         float32 _themeWindowRounding{ 4.0f }; ///< 창 모서리 둥글기(픽셀)
 
         PROPERTY( Min = 0.0 )
-        float32 _themeFrameRounding{ 3.0f }; ///< 입력 칸 · 버튼 모서리 둥글기(픽셀)
+        float32 _themeFrameRounding{ 3.0f }; ///< 입력 필드와 버튼의 모서리 둥글기(픽셀)
 
         PROPERTY( Min = 0.0 )
         float32 _themeTabRounding{ 4.0f }; ///< 탭 모서리 둥글기(픽셀)

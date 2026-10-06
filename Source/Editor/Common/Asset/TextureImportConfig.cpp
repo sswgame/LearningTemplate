@@ -17,7 +17,7 @@ namespace sw::editor
             {"presets",   "object", "", "프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다"},
             {  "rules", "object[]", "",             "규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에"},
         };
-        /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 칸은 `inherits` 의 값, 그것도 없으면 기본값입니다. */
+        /** @brief 프리셋 · 규칙 하나입니다. 적지 않은 필드는 `inherits` 의 값, 그것도 없으면 기본값입니다. */
         static constexpr ConfigKeyDoc kArrTextureImportRuleKeyDoc[] = {
             {            "name",   "string",          "",                               "규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다"},
             {        "inherits",   "string",          "",                       "값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류"},

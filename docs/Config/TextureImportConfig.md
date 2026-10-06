@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # TextureImportConfig
 
@@ -13,26 +13,26 @@
 | 배포본 | 없음(임포트는 Dev 만) |
 | 커밋 | 한다 |
 
-JSON 키는 아래 표의 키 그대로입니다. 모르는 키는 로드 오류입니다 — 읽기 코드가 이 표(`ConfigKeyDoc`)로 검사합니다.
+JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 오류이고, 읽기 코드가 이 테이블(`ConfigKeyDoc`)로 검사합니다.
 
-## 칸
+## 필드
 
 파일 뿌리입니다.
 
-정본: [`Source/Editor/Common/Asset/TextureImportConfig.cpp`](../../Source/Editor/Common/Asset/TextureImportConfig.cpp)
+원본: [`Source/Editor/Common/Asset/TextureImportConfig.cpp`](../../Source/Editor/Common/Asset/TextureImportConfig.cpp)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `presets` | `object` | — |  |  | 프리셋 이름 → 규칙(아래 키). 위에서 아래로 읽으니 부모 프리셋을 먼저 적는다 |
 | `rules` | `object[]` | — |  |  | 규칙 목록(아래 키). 첫 매칭이 이긴다 — 조건 없는 규칙은 맨 끝에 |
 
 ## `kArrTextureImportRuleKeyDoc`
 
-프리셋 · 규칙 하나입니다. 적지 않은 칸은 `inherits` 의 값, 그것도 없으면 기본값입니다.
+프리셋 · 규칙 하나입니다. 적지 않은 필드는 `inherits` 의 값, 그것도 없으면 기본값입니다.
 
-정본: [`Source/Editor/Common/Asset/TextureImportConfig.cpp`](../../Source/Editor/Common/Asset/TextureImportConfig.cpp)
+원본: [`Source/Editor/Common/Asset/TextureImportConfig.cpp`](../../Source/Editor/Common/Asset/TextureImportConfig.cpp)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `name` | `string` | — |  |  | 규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다 |
 | `inherits` | `string` | — |  |  | 값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류 |
