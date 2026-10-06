@@ -416,6 +416,20 @@ function(sw_addGameFrameworkKit KIT_NAME)
 	)
 endfunction()
 
+# 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의 공유 키트(GF_<X>)를 링크합니다.
+# 키트는 다시 올릴 수 있는 모듈이라(Dev) 공유 키트 DLL 도 GameFramework.dll 처럼 **지연 로드**해야 한다 — 바로 링크하면 OS 로더가
+# Bin 의 원본 DLL 을 따로 올려, 모듈 호스트가 올린 그림자 사본과 이미지가 둘이 된다(LiveReloadManager 가 "bound to a stale ... image" 로 멈춘다).
+function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
+	if(NOT TARGET ${KIT_NAME} OR NOT TARGET ${SHARED_KIT_NAME})
+		message(FATAL_ERROR "sw_linkSharedKit: target '${KIT_NAME}' or '${SHARED_KIT_NAME}' does not exist")
+	endif()
+	target_link_libraries(${KIT_NAME} PUBLIC ${SHARED_KIT_NAME})
+	get_target_property(kitType ${KIT_NAME} TYPE)
+	if(WIN32 AND kitType STREQUAL "SHARED_LIBRARY")
+		sw_addDelayloadHook(${KIT_NAME} DLLS ${SHARED_KIT_NAME}.dll)
+	endif()
+endfunction()
+
 # 게임 팩 모듈(SWGame) 타겟을 정의하고 링크 및 리플렉션/딜레이로드를 구성합니다.
 function(sw_addGameModule TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "HEADERS;EXCLUDE" ${ARGN})
