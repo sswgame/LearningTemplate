@@ -1,0 +1,9 @@
+<UiThemeCatalog _defaultTheme="default">
+	<_listTheme>
+		<UiThemeDesc _name="default">
+			<_listStyleSheet>
+				<item>engine/ui/styles/default.uistyle.xml</item>
+			</_listStyleSheet>
+		</UiThemeDesc>
+	</_listTheme>
+</UiThemeCatalog>

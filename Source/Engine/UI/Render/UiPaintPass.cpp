@@ -9,6 +9,7 @@
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
 {
@@ -16,14 +17,14 @@ namespace sw
     {
         struct UiPaintPassInternal
         {
-            /** @brief 이 위젯만 다시 칠하게 하는 무효화입니다(스타일 걷기 전에는 `kStyle` 도 — 상태 겉모습이 위젯 칸이다). */
+            /** @brief 이 위젯만 다시 칠하게 하는 무효화입니다. `kStyle` 은 스타일 걷기가 먼저 비우고 필요하면 `kPaint` 를 건다 — 걷기 없이 칠하는 쪽(시험)의 몫으로 남긴다. */
             static constexpr uint32 kSelfPaintBits = WidgetDirty::kPaint | WidgetDirty::kTransform | WidgetDirty::kStyle | WidgetDirty::kVisibility;
             /** @brief 자손까지 다시 칠하게 하는 무효화입니다 — 불투명도 · 렌더 변환은 자손 캐시에 구워져 있다. */
             static constexpr uint32 kSubtreePaintBits = WidgetDirty::kTransform | WidgetDirty::kVisibility;
             /** @brief 걷기가 끝나면 지우는 비트입니다. */
             static constexpr uint32 kClearBits = kSelfPaintBits;
 
-            /** @brief 포커스 테두리 색입니다(스타일의 `focusRing` 이 생기기 전의 고정 값). */
+            /** @brief 포커스 테두리 색입니다(위젯의 계산된 스타일이 `_focusRingColor` 를 정하지 않았을 때). */
             static constexpr float32 kFocusRingRed   = 1.0f;
             static constexpr float32 kFocusRingGreen = 0.78f;
             static constexpr float32 kFocusRingBlue  = 0.2f;
@@ -60,10 +61,13 @@ namespace sw
         using Internal                 = UiPaintPassInternal;
         const WidgetGeometry& geometry = widget.getGeometry();
         CanvasBrush           ring{};
-        ring._color        = float4{};
-        ring._borderColor  = float4{ Internal::kFocusRingRed, Internal::kFocusRingGreen, Internal::kFocusRingBlue, 1.0f };
-        ring._borderWidth  = Internal::kFocusRingWidth;
-        ring._cornerRadius = float4{ Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius };
+        ring._color                   = float4{};
+        const UiComputedStyle* pStyle = widget.getComputedStyle();
+        ring._borderColor             = pStyle != nullptr && pStyle->has( UiStyleField::FocusRingColor )
+                                          ? pStyle->_value._focusRingColor
+                                          : float4{ Internal::kFocusRingRed, Internal::kFocusRingGreen, Internal::kFocusRingBlue, 1.0f };
+        ring._borderWidth             = Internal::kFocusRingWidth;
+        ring._cornerRadius            = float4{ Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius, Internal::kFocusRingRadius };
         painter.pushTransform( makeWidgetTransform( geometry ) );
         painter.fillRect( float2{ -Internal::kFocusRingOutset, -Internal::kFocusRingOutset },
                           float2{ geometry._size._x + 2.0f * Internal::kFocusRingOutset, geometry._size._y + 2.0f * Internal::kFocusRingOutset }, ring );
@@ -95,7 +99,7 @@ namespace sw
         WidgetPaintCache& cache        = *widget._paintCache;
         uint32            paintedCount = 0;
 
-        painter.pushOpacity( widget.getOpacity() );
+        painter.pushOpacity( widget.computeEffectiveOpacity() );
         if ( bSelfDirty )
         {
             repaintCache( widget, context, painter, outCanvas, cache._under, false );

@@ -87,6 +87,7 @@ namespace sw
         mutable TextLayoutResult    _layoutCache;    ///< 마지막 칠하기의 배치
         mutable float32             _layoutWidth;    ///< 그 배치의 너비
         mutable float32             _layoutFontSize; ///< 그 배치의 글꼴 크기(글자 배율 포함)
+        mutable const void*         _pLayoutStyle;   ///< 그 배치를 만든 계산된 스타일(바뀌면 다시 배치 — 글꼴이 바뀐다)
         mutable bool                _bLayoutValid;   ///< 배치 캐시가 지금 글 · 스타일의 것이다
         mutable bool                _bLayoutRtl;     ///< 그 배치의 문단 방향
         mutable bool                _bRichParsed;    ///< `_richText` 가 지금 글의 것이다

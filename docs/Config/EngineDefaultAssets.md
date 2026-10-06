@@ -32,6 +32,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_localizationProject` | `string` | `engine/localization/engine.locproject.json` |  |  | 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트 |
 | `_fontCatalog` | `string` | `engine/fonts/fontcatalog.xml` |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`) |
 | `_uiScaleSettings` | `string` | `engine/ui/uiscale.xml` |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다) |
+| `_uiThemes` | `string` | `engine/ui/uithemes.xml` |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다) |
 | `_defaultForwardPipeline` | `string` | `engine/pipeline/forwardpipeline.xml` |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `string` | `engine/pipeline/deferredpipeline.xml` |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `string` | `engine/renderpass/defaultrenderpass.xml` |  |  | 기본 렌더 패스 바인드 틀 |

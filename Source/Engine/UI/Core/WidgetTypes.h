@@ -68,6 +68,25 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct UiStyleState
+     * @brief 스타일 선택자의 상태(`:hover` …) 비트입니다. 위젯이 `Widget::computeStyleStates` 로 답하고, `:focus-visible` 은 스타일 걷기가 입력 방식으로 더합니다.
+     */
+    struct UiStyleState
+    {
+        static constexpr uint32 kNone         = 0;
+        static constexpr uint32 kHover        = SW_BIT( 0 ); ///< 포인터가 이 위젯(또는 자손) 위에 있다
+        static constexpr uint32 kPressed      = SW_BIT( 1 ); ///< 누른 채(버튼)
+        static constexpr uint32 kFocus        = SW_BIT( 2 ); ///< 포커스를 쥐었다
+        static constexpr uint32 kFocusVisible = SW_BIT( 3 ); ///< 포커스를 쥐었고 입력 방식이 탐색이다(포커스 테두리가 보이는 때)
+        static constexpr uint32 kDisabled     = SW_BIT( 4 ); ///< 자기나 조상이 꺼졌다
+        static constexpr uint32 kChecked      = SW_BIT( 5 ); ///< 켜진 체크 상자
+        static constexpr uint32 kSelected     = SW_BIT( 6 ); ///< 고른 항목(목록 · 콤보 선택지)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct UiRect
      * @brief 축 정렬 사각형입니다(UI 단위, y 는 아래가 +). 포커스 탐색 · 자르기 판정이 씁니다.
      */

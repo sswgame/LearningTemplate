@@ -29,4 +29,5 @@ JSON 키는 아래 칸 이름 그대로입니다(앞의 `_` 포함). 적지 않�
 | `_userSettingsSchema` | `string` | — |  |  | 엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다. |
 | `_telemetrySchema` | `string` | — |  |  | 엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마(팩 상대 경로, 예: `data/mygame.telemetry.xml`)입니다. 비면 없습니다. |
 | `_uiScaleSettings` | `string` | — |  |  | 엔진 기본(`engine/ui/uiscale.xml`) 대신 쓸 런타임 UI 배율 규칙(팩 상대 경로, 예: `data/uiscale.xml`)입니다. 비면 엔진 기본입니다. |
+| `_uiThemes` | `string` | — |  |  | 엔진 기본(`engine/ui/uithemes.xml`) 대신 쓸 런타임 UI 테마 목록(팩 상대 경로, 예: `data/uithemes.xml`)입니다. 비면 엔진 기본입니다. |
 | `_mapUserSettingDefault` | `map<string, string>` | — |  |  | 게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다. 플레이어가 바꾸지 않은 값만 따라갑니다. 모르는 id · 받을 수 없는 값은 기동 오류로 알립니다(`UserSettingsManager::setGameDefault`). |

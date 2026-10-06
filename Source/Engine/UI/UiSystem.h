@@ -24,9 +24,13 @@
 #include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Style/UiStyleSheetCache.h"
+#include "Engine/UI/Style/UiTheme.h"
 
 namespace sw
 {
+    struct UiStyleSheetAsset;
+
     class FontSystem;
     class InputManager;
     class InputMap;
@@ -114,14 +118,28 @@ namespace sw
         {
             UiScreenDesc          desc{};
             vector<UiBindingDesc> listBinding{};
-            unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding );
+            vector<string>        listStyleSheet{};
+            unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
             if ( root == nullptr )
                 return kInvalidUiScreenHandle;
-            return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ) );
+            return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
         }
         /** @brief UI 문서 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다 — 핫 리로드 · 진단). */
         UiDocumentCache&       getDocumentCache() { return _documentCache; }
         const UiDocumentCache& getDocumentCache() const { return _documentCache; }
+
+        // --- 스타일 · 테마 ---------------------------------------------------------------
+        /** @brief 스타일 시트 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다). */
+        UiStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
+        /** @brief 고를 수 있는 테마를 겁니다(기동 단계 `Ui` — `engine/ui/uithemes.xml` · 게임 프리셋 `_uiThemes`). 기본 테마로 바꿉니다. */
+        void                  setThemeCatalog( const UiThemeCatalog& catalog );
+        const UiThemeCatalog& getThemeCatalog() const { return _themeCatalog; }
+        /**
+         * @brief 테마를 고릅니다 — 모든 화면의 스타일 묶음을 테마 시트 → 문서 시트로 다시 걸고 트리 전체를 다시 맞춥니다. 모르는 이름이면 false 입니다.
+         * @details 읽지 못한 시트는 오류를 남기고 뺍니다(나머지 시트로 그린다).
+         */
+        [[nodiscard]] bool   setTheme( const hashed_string& name );
+        const hashed_string& getThemeName() const { return _themeName; }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
@@ -182,10 +200,14 @@ namespace sw
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
-        /** @brief 문서를 캐시에서 찾아 위젯 트리를 짓습니다. 실패하면 오류를 로그에 남기고 nullptr 입니다. */
-        unique_ptr<Widget> instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding );
-        /** @brief 문서로 지은 화면에 문서 경로 · 바인딩을 적고 올립니다. */
-        UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding );
+        /** @brief 문서를 캐시에서 찾아 위젯 트리를 짓습니다. 스타일 시트는 문서와 조각(끼운 순서)의 것을 모읍니다. 실패하면 오류를 로그에 남기고 nullptr 입니다. */
+        unique_ptr<Widget> instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding, vector<string>& outListStyleSheet );
+        /** @brief 문서로 지은 화면에 문서 경로 · 바인딩 · 스타일 시트를 적고 올립니다. */
+        UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding, vector<string> listStyleSheet );
+        /** @brief 화면의 스타일 묶음을 지금 테마 시트 → 화면 시트로 다시 걸고 트리 전체를 다시 맞추게 합니다. */
+        void rebuildStyleSet( UiScreen& screen );
+        /** @brief 시트들을 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 뺀다). */
+        void appendStyleSheets( const vector<string>& listPath, vector<shared_ptr<const UiStyleSheetAsset>>& inoutListSheet );
         /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 자리가 실제로 바뀐 이동만). */
         void updateInputMode();
         /** @brief UI 행동을 활성 화면으로 보냅니다(탐색 · 스틱 · 확인 · 뒤로 · 탭). */
@@ -230,6 +252,9 @@ namespace sw
     private:
         vector<unique_ptr<UiScreen>> _listScreen; ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
         UiDocumentCache              _documentCache;
+        UiStyleSheetCache            _styleSheetCache;
+        UiThemeCatalog               _themeCatalog;
+        hashed_string                _themeName; ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
         UiFocusManager               _focus;
         UiPointerState               _pointer;
         UiInputConsumption           _consumption;

@@ -37,6 +37,10 @@ namespace sw
         const float4& getContentPadding() const { return _contentPadding; }
         /** @brief 그림자(색 · 흐림 · 밀림)를 바꿉니다. 알파 0 이면 그리지 않는다. kPaint. */
         void setShadow( const float4& color, float32 blur, const float2& offset );
+        /** @brief 지금 쓰는 안쪽 여백입니다 — 계산된 스타일이 `_padding` 을 정했으면 그것, 아니면 자기 칸. */
+        float4 computeEffectivePadding() const;
+        /** @brief 지금 칠할 배경입니다 — 상태 브러시(`getBackgroundBrush`) 위에 계산된 스타일이 정한 칸(배경색 · 모서리 · 테두리)을 얹는다. */
+        UiBrush computeEffectiveBrush() const;
 
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;

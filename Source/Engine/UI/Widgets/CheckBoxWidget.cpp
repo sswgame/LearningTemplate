@@ -33,7 +33,12 @@ namespace sw
         if ( _bChecked == bChecked )
             return;
         _bChecked = bChecked;
-        invalidate( WidgetDirty::kPaint );
+        invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :checked
+    }
+
+    uint32 CheckBoxWidget::computeStyleStates() const
+    {
+        return ButtonWidget::computeStyleStates() | ( _bChecked ? UiStyleState::kChecked : UiStyleState::kNone );
     }
 
     void CheckBoxWidget::handleClick()

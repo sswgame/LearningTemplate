@@ -261,6 +261,15 @@
        "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다)"
       },
       {
+       "name": "_uiThemes",
+       "type": "string",
+       "default": "engine/ui/uithemes.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다)"
+      },
+      {
        "name": "_defaultForwardPipeline",
        "type": "string",
        "default": "engine/pipeline/forwardpipeline.xml",
@@ -868,6 +877,15 @@
        "max": "",
        "units": "",
        "description": "엔진 기본(`engine/ui/uiscale.xml`) 대신 쓸 런타임 UI 배율 규칙(팩 상대 경로, 예: `data/uiscale.xml`)입니다. 비면 엔진 기본입니다."
+      },
+      {
+       "name": "_uiThemes",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 기본(`engine/ui/uithemes.xml`) 대신 쓸 런타임 UI 테마 목록(팩 상대 경로, 예: `data/uithemes.xml`)입니다. 비면 엔진 기본입니다."
       },
       {
        "name": "_mapUserSettingDefault",

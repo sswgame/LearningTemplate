@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/UiSystem.h"
 
 namespace sw
@@ -16,6 +17,8 @@ namespace sw
         , _desc{ desc }
         , _documentPath{}
         , _listBinding{}
+        , _listStyleSheet{}
+        , _styleSet{}
         , _mapCommandToHandler{}
         , _pUiSystem{ nullptr }
         , _handle{ kInvalidUiScreenHandle }

@@ -42,6 +42,8 @@ namespace sw
         string _fontCatalog{ "engine/fonts/fontcatalog.xml" }; ///< 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`)
         PROPERTY()
         string _uiScaleSettings{ "engine/ui/uiscale.xml" }; ///< 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다)
+        PROPERTY()
+        string _uiThemes{ "engine/ui/uithemes.xml" }; ///< 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다)
 
         PROPERTY()
         string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" }; ///< 포워드 렌더 파이프라인(프레임 그래프)

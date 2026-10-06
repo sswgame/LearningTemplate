@@ -5,6 +5,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Render/UiPaintPass.h"
+#include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
 {
@@ -40,6 +41,7 @@ namespace sw
         , _layoutCache{}
         , _layoutWidth{ 0.0f }
         , _layoutFontSize{ 0.0f }
+        , _pLayoutStyle{ nullptr }
         , _bLayoutValid{ false }
         , _bLayoutRtl{ false }
         , _bRichParsed{ false }
@@ -101,8 +103,13 @@ namespace sw
 
     TextLayoutStyle TextWidget::makeLayoutStyle( float32 textScale ) const
     {
-        TextLayoutStyle style     = _style;
-        style._fontSize           = _style._fontSize * ( textScale > 0.0f ? textScale : 1.0f );
+        TextLayoutStyle        style  = _style;
+        const UiComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle != nullptr && pStyle->has( UiStyleField::Font ) )
+            style._font = pStyle->_value._font;
+        if ( pStyle != nullptr && pStyle->has( UiStyleField::FontSize ) )
+            style._fontSize = pStyle->_value._fontSize;
+        style._fontSize           = style._fontSize * ( textScale > 0.0f ? textScale : 1.0f );
         style._paragraphDirection = isRightToLeft() ? TextDirection::RightToLeft : TextDirection::LeftToRight;
         return style;
     }
@@ -141,25 +148,30 @@ namespace sw
     {
         if ( context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty() )
             return;
-        const TextLayoutStyle style = makeLayoutStyle( context._textScale );
-        const float32         width = getGeometry()._size._x;
-        const bool            bRtl  = style._paragraphDirection == TextDirection::RightToLeft;
-        if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl )
+        const TextLayoutStyle  style  = makeLayoutStyle( context._textScale );
+        const float32          width  = getGeometry()._size._x;
+        const bool             bRtl   = style._paragraphDirection == TextDirection::RightToLeft;
+        const UiComputedStyle* pStyle = getComputedStyle();
+        if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle )
         {
             context._pTextLayout->layout( getPlainText(), style, width, _layoutCache, getSpans() );
             _layoutWidth    = width;
             _layoutFontSize = style._fontSize;
             _bLayoutRtl     = bRtl;
+            _pLayoutStyle   = pStyle;
             _bLayoutValid   = true;
         }
 
+        // 글 칸은 계산된 스타일이 정했으면(물려받은 것 포함) 그것, 아니면 자기 칸이다.
+        const bool       bHasStyle = pStyle != nullptr;
+        const float4     color     = bHasStyle && pStyle->has( UiStyleField::TextColor ) ? pStyle->_value._textColor : _color;
         CanvasGlyphStyle glyphStyle{};
-        glyphStyle._outlineColor = _outlineColor;
-        glyphStyle._outlineWidth = _outlineWidth;
+        glyphStyle._outlineColor = bHasStyle && pStyle->has( UiStyleField::TextOutlineColor ) ? pStyle->_value._textOutlineColor : _outlineColor;
+        glyphStyle._outlineWidth = bHasStyle && pStyle->has( UiStyleField::TextOutlineWidth ) ? pStyle->_value._textOutlineWidth : _outlineWidth;
         for ( const LaidOutGlyph& glyph : _layoutCache._listGlyph )
         {
             glyphStyle._fontSize    = glyph._fontSize;
-            glyphStyle._color       = glyph._colorRgba == TextWidgetInternal::kWidgetColor ? _color : TextWidgetInternal::unpackColor( glyph._colorRgba, _color._w );
+            glyphStyle._color       = glyph._colorRgba == TextWidgetInternal::kWidgetColor ? color : TextWidgetInternal::unpackColor( glyph._colorRgba, color._w );
             glyphStyle._bFauxBold   = glyph._bFauxBold;
             glyphStyle._bFauxItalic = glyph._bFauxItalic;
             (void)painter.drawGlyph( glyph._origin, glyph._face, glyph._glyphIndex, glyphStyle, *context._pGlyphCache, context._frameIndex );

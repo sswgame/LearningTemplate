@@ -46,6 +46,8 @@ namespace sw
         void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
         void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
         void   handleClick() override;
+        /** @brief 버튼 상태에 켜짐(`:checked`)을 더합니다. */
+        uint32 computeStyleStates() const override;
 
     private:
         CheckedDelegate _onCheckedChanged;

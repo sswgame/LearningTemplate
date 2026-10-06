@@ -39,7 +39,6 @@ namespace sw
         /** @brief 지금까지 클릭된 수입니다(시험 · 디버그). */
         uint32 getClickCount() const { return _clickCount; }
         bool   isPressed() const { return _bPressed; }
-        bool   isHovered() const { return _bHovered; }
         /** @brief 클릭하면 화면에 보낼 명령입니다. 비면 명령을 내지 않습니다. */
         const hashed_string& getCommand() const { return _command; }
         void                 setCommand( const hashed_string& command ) { _command = command; }
@@ -49,7 +48,8 @@ namespace sw
 
         UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override;
         UiReply onActionEvent( const UiActionEvent& event, UiRoutePhase phase ) override;
-        void    onHoverChanged( bool bHovered ) override;
+        /** @brief 기본 상태에 누름(`:pressed`)을 더합니다. */
+        uint32 computeStyleStates() const override;
 
     protected:
         const UiBrush& getBackgroundBrush() const override;
@@ -68,6 +68,5 @@ namespace sw
         PROPERTY( DisplayName = "Command", Tooltip = "Command sent to the screen when clicked (UiScreen::onCommand)" )
         hashed_string _command;
         bool          _bPressed; ///< 이 버튼 위에서 눌렀고 아직 떼지 않았다(포인터를 잡았다)
-        bool          _bHovered;
     };
 } // namespace sw

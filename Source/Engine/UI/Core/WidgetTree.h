@@ -83,6 +83,7 @@ namespace sw
         friend class UiLayoutPass;
         friend class UiPaintPass;
         friend class UiScreen;
+        friend class UiStylePass;
 
         /** @brief 번호 · 이름을 올립니다(`Widget::attachToTree` 가 부른다). */
         void registerWidget( Widget& widget );

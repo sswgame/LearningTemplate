@@ -36,7 +36,6 @@ namespace sw
         , _disabledBrush{ ButtonWidgetInternal::makeBrush( 0.16f, 0.4f ) }
         , _command{}
         , _bPressed{ false }
-        , _bHovered{ false }
     {
         setBackground( ButtonWidgetInternal::makeBrush( 0.16f, 0.95f ) );
         setContentPadding( float4{ 16.0f, 8.0f, 16.0f, 8.0f } );
@@ -63,7 +62,7 @@ namespace sw
             return _disabledBrush;
         if ( _bPressed )
             return _pressedBrush;
-        if ( _bHovered )
+        if ( isHovered() )
             return _hoveredBrush;
         return BorderPanel::getBackgroundBrush();
     }
@@ -76,13 +75,13 @@ namespace sw
         if ( event._kind == UiPointerEventKind::Down )
         {
             _bPressed = true;
-            invalidate( WidgetDirty::kPaint );
+            invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
             return UiReply::makeHandled().capturePointer().requestFocus( getId() );
         }
         if ( event._kind == UiPointerEventKind::Up && _bPressed )
         {
             _bPressed = false;
-            invalidate( WidgetDirty::kPaint );
+            invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
             // 누른 위젯 = 뗀 위젯일 때만 클릭이다(밖으로 끌고 나가 떼면 취소).
             float2 local{};
             if ( getGeometry().inverseTransformPoint( event._position, local ) && getGeometry().containsLocal( local ) )
@@ -100,12 +99,9 @@ namespace sw
         return UiReply::makeHandled();
     }
 
-    void ButtonWidget::onHoverChanged( bool bHovered )
+    uint32 ButtonWidget::computeStyleStates() const
     {
-        if ( _bHovered == bHovered )
-            return;
-        _bHovered = bHovered;
-        invalidate( WidgetDirty::kPaint );
+        return Widget::computeStyleStates() | ( _bPressed ? UiStyleState::kPressed : UiStyleState::kNone );
     }
 
     void ButtonWidget::handleClick()

@@ -9,6 +9,7 @@
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Render/UiPaintPass.h"
+#include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
 {
@@ -28,6 +29,8 @@ namespace sw
         , _slot{}
         , _navigation{}
         , _paintCache{}
+        , _computedStyle{}
+        , _styleAncestorKey{ 0 }
         , _geometry{}
         , _desiredSize{}
         , _lastAvailableSize{}
@@ -43,6 +46,7 @@ namespace sw
         , _flowDirection{ UiFlowDirection::Inherit }
         , _bEnabled{ true }
         , _bRightToLeft{ false }
+        , _bHovered{ false }
     {
     }
 
@@ -159,6 +163,25 @@ namespace sw
         return _pTree != nullptr && _pTree->getFocusedWidget() == _id;
     }
 
+    uint32 Widget::computeStyleStates() const
+    {
+        uint32 states = UiStyleState::kNone;
+        if ( _bHovered )
+            states |= UiStyleState::kHover;
+        if ( hasFocus() )
+            states |= UiStyleState::kFocus;
+        if ( isEnabledInHierarchy() == false )
+            states |= UiStyleState::kDisabled;
+        return states;
+    }
+
+    float32 Widget::computeEffectiveOpacity() const
+    {
+        if ( _computedStyle != nullptr && _computedStyle->has( UiStyleField::Opacity ) )
+            return _opacity * _computedStyle->_value._opacity;
+        return _opacity;
+    }
+
     UiReply Widget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
     {
         (void)event;
@@ -224,7 +247,8 @@ namespace sw
             return;
         pTree->registerWidget( *this );
         // 떨어져 있는 동안 쌓인 무효화를 트리의 목록으로 옮긴다(새 위젯은 생성자에서 레이아웃 · 그리기 · 스타일이 더럽다).
-        const uint32 pendingDirty = _dirtyFlags & ~( WidgetDirty::kChildLayout | WidgetDirty::kLayoutRoot );
+        // 스타일은 늘 다시 맞춘다 — 선택자가 조상을 보므로 다른 자리에 붙으면 결과가 달라진다.
+        const uint32 pendingDirty = ( _dirtyFlags & ~( WidgetDirty::kChildLayout | WidgetDirty::kLayoutRoot ) ) | WidgetDirty::kStyle;
         _dirtyFlags               = WidgetDirty::kNone;
         pTree->notifyDirty( *this, pendingDirty );
         onAttachedToTree();

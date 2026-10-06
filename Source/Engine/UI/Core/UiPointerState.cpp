@@ -98,6 +98,7 @@ namespace sw
                 Widget* pWidget = _pHoverTree->findWidgetById( _hoverPath._listWidget[index - 1] );
                 if ( pWidget == nullptr )
                     continue;
+                pWidget->_bHovered = false;
                 pWidget->invalidate( WidgetDirty::kStyle );
                 pWidget->onHoverChanged( false );
             }
@@ -110,6 +111,7 @@ namespace sw
                 Widget* pWidget = pTree->findWidgetById( newPath._listWidget[index] );
                 if ( pWidget == nullptr )
                     continue;
+                pWidget->_bHovered = true;
                 pWidget->invalidate( WidgetDirty::kStyle );
                 pWidget->onHoverChanged( true );
             }

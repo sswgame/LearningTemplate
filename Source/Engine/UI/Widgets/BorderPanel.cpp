@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
 {
@@ -48,10 +49,34 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
+    float4 BorderPanel::computeEffectivePadding() const
+    {
+        const UiComputedStyle* pStyle = getComputedStyle();
+        return pStyle != nullptr && pStyle->has( UiStyleField::Padding ) ? pStyle->_value._padding : _contentPadding;
+    }
+
+    UiBrush BorderPanel::computeEffectiveBrush() const
+    {
+        UiBrush                brush  = getBackgroundBrush();
+        const UiComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle == nullptr )
+            return brush;
+        if ( pStyle->has( UiStyleField::BackgroundColor ) )
+            brush._color = pStyle->_value._backgroundColor;
+        if ( pStyle->has( UiStyleField::CornerRadius ) )
+            brush._cornerRadius = pStyle->_value._cornerRadius;
+        if ( pStyle->has( UiStyleField::BorderWidth ) )
+            brush._borderWidth = pStyle->_value._borderWidth;
+        if ( pStyle->has( UiStyleField::BorderColor ) )
+            brush._borderColor = pStyle->_value._borderColor;
+        return brush;
+    }
+
     float2 BorderPanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
     {
-        const float32 padX = _contentPadding._x + _contentPadding._z;
-        const float32 padY = _contentPadding._y + _contentPadding._w;
+        const float4  padding = computeEffectivePadding();
+        const float32 padX    = padding._x + padding._z;
+        const float32 padY    = padding._y + padding._w;
         if ( getChildCount() == 0 )
             return float2{ padX, padY };
         Widget&       child        = *getChild( 0 );
@@ -68,18 +93,23 @@ namespace sw
     {
         if ( getChildCount() == 0 )
             return;
-        const float2 inner{ MathUtil::max( 0.0f, size._x - _contentPadding._x - _contentPadding._z ),
-                            MathUtil::max( 0.0f, size._y - _contentPadding._y - _contentPadding._w ) };
-        arrangeChild( context, *getChild( 0 ), float2{ _contentPadding._x, _contentPadding._y }, inner );
+        const float4 padding = computeEffectivePadding();
+        const float2 inner{ MathUtil::max( 0.0f, size._x - padding._x - padding._z ), MathUtil::max( 0.0f, size._y - padding._y - padding._w ) };
+        arrangeChild( context, *getChild( 0 ), float2{ padding._x, padding._y }, inner );
     }
 
     void BorderPanel::paint( CanvasPainter& painter, const UiPaintContext& context ) const
     {
         (void)context;
-        const float2&  size  = getGeometry()._size;
-        const UiBrush& brush = getBackgroundBrush();
-        if ( _shadowColor._w > 0.0f )
-            painter.drawShadow( float2{}, size, brush._cornerRadius, _shadowColor, _shadowBlur, _shadowOffset );
+        const float2&          size        = getGeometry()._size;
+        const UiBrush          brush       = computeEffectiveBrush();
+        const UiComputedStyle* pStyle      = getComputedStyle();
+        const bool             bHasStyle   = pStyle != nullptr;
+        const float4           shadowColor = bHasStyle && pStyle->has( UiStyleField::ShadowColor ) ? pStyle->_value._shadowColor : _shadowColor;
+        const float32          shadowBlur  = bHasStyle && pStyle->has( UiStyleField::ShadowBlur ) ? pStyle->_value._shadowBlur : _shadowBlur;
+        const float2           shadowShift = bHasStyle && pStyle->has( UiStyleField::ShadowOffset ) ? pStyle->_value._shadowOffset : _shadowOffset;
+        if ( shadowColor._w > 0.0f )
+            painter.drawShadow( float2{}, size, brush._cornerRadius, shadowColor, shadowBlur, shadowShift );
         if ( brush.isInvisible() == false )
             painter.fillRect( float2{}, size, brush.makeCanvasBrush() );
     }

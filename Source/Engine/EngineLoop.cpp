@@ -858,13 +858,22 @@ namespace sw
             // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
             if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
                 return EngineInitResult::Failed;
-            // UI 문서 캐시를 에셋 캐시 등록부에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
+            // UI 문서 · 스타일 시트 캐시를 에셋 캐시 등록부에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
             loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
+            loop._owned._pAssetManager->registerAssetCache( &ui.getStyleSheetCache() );
+            // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
+            const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes )
+                                                                    : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiThemes );
+            UiThemeCatalog themes{};
+            if ( themes.loadFromResource( themePath ) == false )
+                return EngineInitResult::Failed;
+            ui.setThemeCatalog( themes );
             return EngineInitResult::Succeeded;
         }
         static void shutdown( EngineLoop& loop )
         {
             UiSystem& ui = *loop._owned._pUiSystem;
+            loop._owned._pAssetManager->unregisterAssetCache( &ui.getStyleSheetCache() );
             loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
             ui.shutdown();
         }

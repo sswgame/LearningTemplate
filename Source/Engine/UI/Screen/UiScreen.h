@@ -19,6 +19,7 @@
 
 namespace sw
 {
+    class UiStyleSet;
     class UiSystem;
     class Widget;
 
@@ -105,6 +106,10 @@ namespace sw
         const string& getDocumentPath() const { return _documentPath; }
         /** @brief 문서에서 뗀 바인딩 식입니다(위젯 번호가 채워진 것 — 바인딩 단계가 겁니다). */
         const vector<UiBindingDesc>& getBindings() const { return _listBinding; }
+        /** @brief 문서(와 그 조각)가 건 스타일 시트 경로입니다(테마 시트 뒤에 붙는다). */
+        const vector<string>& getStyleSheets() const { return _listStyleSheet; }
+        /** @brief 이 화면의 스타일 묶음(테마 → 문서 시트)입니다. 올리기 전이면 nullptr 입니다. */
+        UiStyleSet* getStyleSet() const { return _styleSet.get(); }
 
         /** @brief 명령 @p command 를 받을 함수를 겁니다. 같은 명령에 다시 걸면 바꿉니다. */
         void registerCommand( const hashed_string& command, const UiCommandDelegate& handler );
@@ -130,8 +135,10 @@ namespace sw
 
         WidgetTree                                                               _tree;
         UiScreenDesc                                                             _desc;
-        string                                                                   _documentPath; ///< 지은 문서(코드로 지었으면 빈 글)
-        vector<UiBindingDesc>                                                    _listBinding;  ///< 문서에서 뗀 바인딩 식
+        string                                                                   _documentPath;   ///< 지은 문서(코드로 지었으면 빈 글)
+        vector<UiBindingDesc>                                                    _listBinding;    ///< 문서에서 뗀 바인딩 식
+        vector<string>                                                           _listStyleSheet; ///< 문서 · 조각이 건 스타일 시트
+        unique_ptr<UiStyleSet>                                                   _styleSet;       ///< 테마 → 문서 시트 묶음(UiSystem 이 건다)
         unordered_map<hashed_string, UiCommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
         UiSystem*                                                                _pUiSystem; ///< 올린 시스템(올리기 전 nullptr)
         UiScreenHandle                                                           _handle;

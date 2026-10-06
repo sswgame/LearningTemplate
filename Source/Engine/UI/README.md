@@ -232,3 +232,39 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 데이터 검사: `ResourceDataSchemaTest` 가 저장소의 모든 `*.ui.xml` 을 읽어 위젯 트리까지 짓습니다. 글 수집은 엔진 현지화 프로젝트의 `assetRoots` 에 `engine/ui`
   (`TextWidget::_text` 가 `Meta = "Localizable"`, 바인딩 식은 수집하지 않는다).
 - 캐시는 `UiSystem` 이 소유하고 기동 단계 `Ui` 가 에셋 캐시 등록부(종류 `UiDocument`)에 올립니다.
+
+## 스타일 · 테마 (`Style/` · `*.uistyle.xml`)
+
+| 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
+|---|---|---|---|
+| `*.uistyle.xml` · `UiStyleSheetLoader` · 선택자 · 특정도 | Slate 스타일 세트(코드) · UMG 스타일 에셋 | USS(선택자 · 특정도 · 변수 · 의사 클래스) | `Theme`(타입 · 변형) |
+| `WidgetStyle` · `UiComputedStyle` · `UiStyleSet` · `UiStylePass` | `FSlateWidgetStyle` | 계산된 스타일(`resolvedStyle`) | 테마 덮어쓰기 |
+| `UiThemeCatalog` · `UiSystem::setTheme` | 스타일 세트 바꾸기 | 테마 스타일 시트(TSS) | `Control.theme` |
+
+```xml
+<UiStyleSheet _schemaVersion="1">
+	<Variable _name="accent" _value="0.25,0.5,1,1" />                          <!-- 이 시트의 $변수(적는 자리는 어디든) -->
+	<Rule _selector="ButtonWidget.primary:hover" _backgroundColor="$accent" />  <!-- 속성 이름 = WidgetStyle PROPERTY -->
+	<Rule _selector="BorderPanel.window TextWidget" _textColor="0.92,0.93,0.95,1" />
+	<Rule _selector="TextWidget.title" _fontSize="32">
+		<_font _weight="Bold" />                                                <!-- 구조체 칸은 자식 원소 — 적은 안쪽 칸만 -->
+	</Rule>
+</UiStyleSheet>
+```
+
+- **칸**(`WidgetStyle`): 배경색 · 모서리 · 테두리 두께/색 · 그림자 색/밀림/흐림 · 여백 · 글꼴 · 글자 크기 · 글 색 · 외곽선 색/두께 · 포커스 테두리 색 · 불투명도 · 전환(7-2).
+  칸 번호(`UiStyleField`)와 칸 표(`UiStyleFieldTable` — 레이아웃에 닿는가 · 자손 그림에 구워지는가 · 물려받는가)가 PROPERTY 순서와 짝입니다(`UiStyleTest.FieldTableMatchesReflection`).
+- **선택자**: `타입? .클래스* #이름? :상태*` 를 빈 칸(자손 결합자 — 아무 조상)으로 잇습니다. 타입은 **정확한 타입**만 맞습니다(파생 아님 — USS 와 같다).
+  상태는 `hover` · `pressed` · `focus` · `focus-visible`(포커스 + 탐색 입력 방식) · `disabled`(자기나 조상이 꺼짐) · `checked` · `selected` — 위젯이
+  `Widget::computeStyleStates` 로 답합니다(버튼이 누름, 체크 상자가 켜짐을 더한다). `>` · `+` · `*` · `[속성]` 은 쓰지 않습니다(로드 오류).
+- **특정도**: (#이름 수, .클래스 + :상태 수, 타입 수) 사전 순, 같으면 테마 시트 → 문서 시트 순서, 시트 안에서는 뒤가 이깁니다.
+- **상속**: 글 칸(글꼴 · 크기 · 글 색 · 외곽선)은 부모가 정한 값을 물려받고 자기 규칙이 덮습니다. 나머지는 규칙이 정한 칸만.
+- **위젯 칸과의 관계**: 계산된 스타일은 "정한 칸" 비트를 듭니다. 위젯은 **스타일이 정한 칸이면 그것, 아니면 자기 칸**(코드 세터 · 문서 속성 · 버튼의 상태 브러시 —
+  시트 없는 화면의 기본 겉모습)을 씁니다. 겉모습을 데이터로 바꾸는 길은 시트이고, 위젯 칸은 그 기본값입니다.
+- **나눠 쓰기**: 계산된 스타일 = f(맞은 규칙, 부모의 계산된 스타일) 이라 같은 조건의 위젯은 한 객체를 나눠 씁니다(버튼 100 개 → 1).
+- **걷기**(`UiStylePass` — 레이아웃 앞, 구간 `GT.Ui.Style` · 카운터 `Ui.StyleWidgets`): `kStyle` 인 위젯(상태 · 클래스 · 이름 · 트리에 붙음)만 다시 맞춥니다.
+  자손으로는 계산된 스타일이 바뀌었거나 그 위젯이 맞는 "조상 쪽 선택자 조각" 이 바뀌었을 때만 내려갑니다 — 호버 하나에 트리 전체가 돌지 않습니다.
+  바뀐 칸이 여백 · 글꼴 · 크기면 `kLayout`, 불투명도면 `kTransform`(자손 그림까지), 그 밖은 `kPaint` 입니다.
+- **테마**(`UiThemeCatalog` — `engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes` 가 덮어쓴다): 이름 → 시트들. 모든 화면에 테마 시트 → 문서(와 조각) 시트 순서로 겁니다.
+  `UiSystem::setTheme( 이름 )` 은 모든 화면을 다시 맞춥니다. 엔진 기본 테마 `default` = `engine/ui/styles/default.uistyle.xml`.
+- 문서는 `<_listStyleSheet>` 로 자기 시트를 겁니다(조각 문서의 시트도 모인다). 시트는 `UiStyleSheetCache`(종류 `UiStyleSheet`)가 경로로 듭니다.

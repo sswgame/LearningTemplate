@@ -22,6 +22,9 @@
 #include "Engine/UI/Debug/UiDemoScreen.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
+#include "Engine/UI/Style/UiStylePass.h"
+#include "Engine/UI/Style/UiStyleSet.h"
+#include "Engine/UI/Style/UiStyleSheet.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
@@ -122,6 +125,9 @@ namespace sw
         : IModuleUnloadListener{}
         , _listScreen{}
         , _documentCache{}
+        , _styleSheetCache{}
+        , _themeCatalog{}
+        , _themeName{}
         , _focus{}
         , _pointer{}
         , _consumption{}
@@ -227,6 +233,18 @@ namespace sw
         _viewport = viewport;
         syncDemoScreen();
         applyPendingCloses();
+        // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).
+        {
+            SW_PROFILE_SCOPE( "GT.Ui.Style" );
+            const bool bNavigation   = _inputMode == UiInputMode::Navigation;
+            uint32     restyledCount = 0;
+            for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            {
+                if ( screen->_styleSet != nullptr )
+                    restyledCount += UiStylePass::update( screen->getTree(), *screen->_styleSet, bNavigation );
+            }
+            SW_PROFILE_COUNT( "Ui.StyleWidgets", restyledCount );
+        }
         // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.Ui.Layout" );
@@ -246,6 +264,7 @@ namespace sw
             return kInvalidUiScreenHandle;
         SW_ASSERT( screen->_pUiSystem == nullptr );
         screen->_pUiSystem = this;
+        rebuildStyleSet( *screen );
         screen->_handle    = _nextScreenHandle++;
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
@@ -268,7 +287,8 @@ namespace sw
         _bPendingClose     = SW_TRUE;
     }
 
-    unique_ptr<Widget> UiSystem::instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding )
+    unique_ptr<Widget> UiSystem::instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding,
+                                                      vector<string>& outListStyleSheet )
     {
         string                                  error;
         const shared_ptr<const UiDocumentAsset> document = _documentCache.findOrLoad( documentPath, error );
@@ -284,14 +304,86 @@ namespace sw
             return {};
         }
         outDesc = document->_screenDesc;
+        // 스타일 시트 — 문서 것 다음 조각 것(너비 우선, 이미 본 문서 · 시트는 건너뛴다). 조각은 짓기가 이미 캐시에 올렸다.
+        vector<string> listDocument{ document->_path };
+        for ( size_t index = 0; index < listDocument.size(); ++index )
+        {
+            string                                  fragmentError;
+            const shared_ptr<const UiDocumentAsset> current = _documentCache.findOrLoad( listDocument[index], fragmentError );
+            if ( current == nullptr )
+                continue;
+            for ( const string& sheet : current->_listStyleSheet )
+            {
+                if ( std::find( outListStyleSheet.begin(), outListStyleSheet.end(), sheet ) == outListStyleSheet.end() )
+                    outListStyleSheet.push_back( sheet );
+            }
+            for ( const string& fragment : current->_listFragment )
+            {
+                if ( std::find( listDocument.begin(), listDocument.end(), fragment ) == listDocument.end() )
+                    listDocument.push_back( fragment );
+            }
+        }
         return root;
     }
 
-    UiScreenHandle UiSystem::pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding )
+    UiScreenHandle UiSystem::pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding, vector<string> listStyleSheet )
     {
-        screen->_documentPath = FileUtil::normalizePath( documentPath );
-        screen->_listBinding  = std::move( listBinding );
+        screen->_documentPath   = FileUtil::normalizePath( documentPath );
+        screen->_listBinding    = std::move( listBinding );
+        screen->_listStyleSheet = std::move( listStyleSheet );
         return pushScreen( std::move( screen ) );
+    }
+
+    void UiSystem::setThemeCatalog( const UiThemeCatalog& catalog )
+    {
+        _themeCatalog = catalog;
+        if ( _themeCatalog._defaultTheme.empty() == false && setTheme( _themeCatalog._defaultTheme ) == false )
+            SW_LOG_ERROR( "[Ui] Default UI theme '%#' is not in the theme catalog", _themeCatalog._defaultTheme.c_str() );
+    }
+
+    bool UiSystem::setTheme( const hashed_string& name )
+    {
+        if ( _themeCatalog.findTheme( name ) == nullptr )
+        {
+            SW_LOG_WARNING( "[Ui] Unknown UI theme '%#'", name.c_str() );
+            return false;
+        }
+        _themeName = name;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            rebuildStyleSet( *screen );
+        return true;
+    }
+
+    void UiSystem::appendStyleSheets( const vector<string>& listPath, vector<shared_ptr<const UiStyleSheetAsset>>& inoutListSheet )
+    {
+        for ( const string& path : listPath )
+        {
+            string                                    error;
+            const shared_ptr<const UiStyleSheetAsset> sheet = _styleSheetCache.findOrLoad( path, error );
+            if ( sheet == nullptr )
+            {
+                SW_LOG_ERROR( "[Ui] Style sheet is not loaded: %#", error.c_str() );
+                continue;
+            }
+            inoutListSheet.push_back( sheet );
+        }
+    }
+
+    void UiSystem::rebuildStyleSet( UiScreen& screen )
+    {
+        vector<shared_ptr<const UiStyleSheetAsset>> listSheet;
+        const UiThemeDesc*                          pTheme = _themeName.empty() ? nullptr : _themeCatalog.findTheme( _themeName );
+        if ( pTheme != nullptr )
+            appendStyleSheets( pTheme->_listStyleSheet, listSheet );
+        appendStyleSheets( screen._listStyleSheet, listSheet );
+        if ( screen._styleSet == nullptr )
+            screen._styleSet = make_unique<UiStyleSet>();
+        screen._styleSet->setSheets( std::move( listSheet ) );
+        // 트리 전체를 다시 맞춘다 — 루트의 kStyle 은 계산이 바뀐 만큼 자손으로 내려간다. 규칙이 바뀌었으니 자손도 모두 표시한다.
+        vector<Widget*> listWidget;
+        screen.getTree().collectWidgetsInDocumentOrder( listWidget );
+        for ( Widget* pWidget : listWidget )
+            pWidget->invalidate( WidgetDirty::kStyle );
     }
 
     UiScreen* UiSystem::findScreen( UiScreenHandle handle ) const
@@ -340,7 +432,12 @@ namespace sw
     {
         if ( _inputMode == mode )
             return;
-        _inputMode        = mode;
+        _inputMode = mode;
+        // :focus-visible 은 입력 방식을 따른다 — 포커스 위젯을 다시 맞춘다.
+        WidgetTree* pFocusTree = _focus.getFocusedTree();
+        Widget*     pFocused   = pFocusTree != nullptr ? pFocusTree->findWidgetById( _focus.getFocusedWidget() ) : nullptr;
+        if ( pFocused != nullptr )
+            pFocused->invalidate( WidgetDirty::kStyle );
         UiScreen* pActive = getActiveScreen();
         if ( mode == UiInputMode::Navigation && pActive != nullptr && _focus.getFocusedTree() != &pActive->getTree() )
             restoreFocus( *pActive );

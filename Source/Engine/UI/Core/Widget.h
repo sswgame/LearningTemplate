@@ -19,6 +19,7 @@
 namespace sw
 {
     struct TypeInfo;
+    struct UiComputedStyle;
     struct UiLayoutContext;
     struct UiPaintContext;
     struct WidgetPaintCache;
@@ -135,6 +136,19 @@ namespace sw
         /** @brief 포인터가 들어왔다 · 나갔다(알림). 상태 스타일 무효화(kStyle)는 부르는 쪽이 이미 했다. */
         virtual void onHoverChanged( bool bHovered );
 
+        // --- 스타일 ---------------------------------------------------------------
+        /** @brief 포인터가 이 위젯(또는 자손) 위에 있는가입니다(호버 경로 — 스타일 `:hover`). */
+        bool isHovered() const { return _bHovered; }
+        /**
+         * @brief 스타일 선택자가 보는 이 위젯의 상태(`UiStyleState` 비트)입니다. 기본은 호버 · 포커스 · 꺼짐이고, 누름 · 켜짐 · 고름은 그 위젯이 더합니다.
+         * @details 상태가 바뀌면 위젯이 `kStyle` 을 겁니다(스타일 걷기가 다시 계산한다).
+         */
+        virtual uint32 computeStyleStates() const;
+        /** @brief 계산된 스타일입니다(스타일 걷기가 정한다 — 스타일 시트 규칙과 부모에서 물려받은 글 칸). 걷기 전이면 nullptr 입니다. */
+        const UiComputedStyle* getComputedStyle() const { return _computedStyle.get(); }
+        /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 걷기가 쓴다). */
+        float32 computeEffectiveOpacity() const;
+
     protected:
         /**
          * @brief 원하는 크기를 잽니다(레이아웃 measure). 패널은 여기서 자식을 `UiLayoutPass::measure` 로 잽니다. 기본은 0 입니다.
@@ -159,6 +173,8 @@ namespace sw
         friend class WidgetTree;
         friend class UiLayoutPass;
         friend class UiPaintPass;
+        friend class UiPointerState;
+        friend class UiStylePass;
 
         /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다 — 번호를 이름표에 올리고 밀린 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );
@@ -177,7 +193,9 @@ namespace sw
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
 
-        unique_ptr<WidgetPaintCache> _paintCache; ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
+        unique_ptr<WidgetPaintCache>      _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
+        shared_ptr<const UiComputedStyle> _computedStyle;    ///< 계산된 스타일(같은 조건의 위젯이 나눠 쓴다 — `UiStylePass` 가 정한다)
+        uint64                            _styleAncestorKey; ///< 이 위젯이 맞는 "조상 쪽" 선택자 조각의 해시 — 바뀌면 자손을 다시 맞춘다(`UiStylePass`)
 
         WidgetGeometry _geometry;          ///< 마지막 arrange 결과
         float2         _desiredSize;       ///< 마지막 measure 결과
@@ -199,5 +217,6 @@ namespace sw
         PROPERTY( DisplayName = "Enabled" )
         bool _bEnabled;
         bool _bRightToLeft; ///< 마지막 arrange 에서 푼 흐름 방향(UiLayoutPass 가 적는다)
+        bool _bHovered;     ///< 호버 경로 안이다(UiPointerState 가 적는다)
     };
 } // namespace sw
