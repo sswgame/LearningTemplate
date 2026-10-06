@@ -195,6 +195,8 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 
 ## 함정과 주의
 
+- **보기 모드 define 은 조명을 하는 모든 셰이더가 읽는다.** Unlit 을 toon 만 읽어 기본 파이프라인에서 Lit 과 픽셀이 하나도 다르지 않았다.
+  셰이더를 더하면 `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 디퍼드는 G버퍼 알베도 알파(셰이딩 모델 `SW_GBUFFER_SHADING`)로 조명 패스에 넘긴다(조명 패스에는 뷰 모드 변형이 없다). `RenderPassGpuTest.UnlitViewModeChangesThePicture` 가 포워드와 디퍼드를 본다.
 ### 쿠킹과 산출물
 
 **`.hlsl` 이나 `.hlsli` 를 고쳤으면 `App.exe --cook-shaders` 를 다시 돌리세요.** 빌드는 HLSL을 쿠킹하지 않습니다. 개발 빌드는 낡은 매니페스트를 버리고 런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 쿠킹된 바이너리를 봅니다.

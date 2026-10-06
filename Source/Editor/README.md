@@ -400,6 +400,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 
 ## 함정 · 계약
 
+- **에디터 실행의 스크린샷은 게임 뷰 그림이다.** `-EnableEditor` 에서 `-gv_screenshot` 과 시나리오 `<Screenshot>` 은 Present 캡처가 게임 뷰 렌더 타깃을 복사한 것이라 에디터 UI 는 들어가지 않는다.
+- **위젯 크기에 픽셀 상수를 쓰지 않는다.** `GetFrameHeight` 와 글자 폭에서 잰다. 24 px 고정 단추가 150 % 배율에서 잘렸다(자체 시험 `hierarchy.visibilityToggleFits`).
+  이름표 줄 바꿈은 `EditorWidgets::drawClampedLabel` 을 쓴다(공백, `_`, `-`, `.` 뒤에서 먼저 바꾸고 넘치면 말줄임과 툴팁). ImGui TextWrap 은 공백만 본다.
+- **에디터 동작을 바꾸면 에디터 시나리오로 확인한다.** 시나리오 자리와 단계는 [Automation README](../Engine/Automation/README.md) "에디터 시나리오" 절이다.
 - **에디터 아이콘은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` 이 원본이다** — 아이콘을 더하면 `GenerateEditorIcons.py` 로 폰트 · 헤더를 다시 만들고 함께
   커밋한다(`CheckEditorIcons`). 구멍 윤곽(cut)은 채움 하나 안에만 둔다 — 밖으로 나가거나 구멍끼리 겹치면 그 부분이 반대로 칠해진다. 코드에서는
   `editoricon::k…` 상수만 쓴다(목록 순서가 코드포인트다). 아이콘 세트도 CC0 급 · 이 저장소 것만 — Font Awesome 같은 CC BY · OFL 세트는 넣지 않는다.
