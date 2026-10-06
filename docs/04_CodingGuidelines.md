@@ -1,6 +1,6 @@
 # 📝 코딩 규칙 — 한국어 예시 모음
 
-**규칙의 정본은 [AGENTS.md](../AGENTS.md) 입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
+**규칙의 원본은 [AGENTS.md](../AGENTS.md) 입니다.** 이 문서는 규칙을 다시 적지 않고, AGENTS.md 의 절마다 "이렇게 쓴다 / 이렇게 쓰지 않는다" 예시를
 한국어 설명과 함께 모읍니다. 둘이 갈리면 AGENTS.md 가 맞습니다. 규칙을 더하거나 바꿀 때는 AGENTS.md 를 고치고, 예시가 필요하면 같은 커밋에서 여기에 더합니다.
 규칙은 `Scripts/lint/` 의 게이트 · 픽서가 강제합니다(목록은 [Scripts/README.md](../Scripts/README.md)).
 
@@ -20,7 +20,7 @@ private:
     static constexpr uint32         kMaxTask = 64;  // 상수 kPascalCase
     vector<Task*>               _listTask;      // 가변 배열 list + 단수
     unordered_map<uint32, Task*> _mapIdToTask;  // 연관 컨테이너 map
-    unordered_set<uint32>       _uniqueIds;     // 집합은 unique — 복수를 쓰는 유일한 자리
+    unordered_set<uint32>       _uniqueIds;     // 집합은 unique — 복수를 쓰는 유일한 경우
     Task*                           _pCurrent;      // 포인터 p, 이중 포인터 pp
     uint8                           _bRunning : 1;  // bool 성격 멤버 _b
 };
@@ -65,9 +65,9 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 #include "Core/Concurrency/ThreadName.h"            // 짝 헤더
 
-#include "Core/Common/Defines.h"                    // 그다음 범위별 묶음(빈 줄로 가른다)
+#include "Core/Common/Defines.h"                    // 그다음 범위별 그룹(빈 줄로 나눈다)
 
-#if defined( SW_PLATFORM_WINDOWS )                  // 플랫폼 include 는 맨 뒤 사슬 하나 — 갈래 안에서 프로젝트 헤더, 빈 줄, 시스템 헤더
+#if defined( SW_PLATFORM_WINDOWS )                  // 플랫폼 include 는 맨 뒤 분기 하나 — 분기 안에서 프로젝트 헤더, 빈 줄, 시스템 헤더
     #include "Core/Common/PlatformOsHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -102,7 +102,7 @@ private:
 | `#ifdef _WIN32` · `#if defined( __linux__ )` | `#if defined( SW_PLATFORM_WINDOWS )` · `#elif defined( SW_PLATFORM_LINUX )` |
 | `#ifdef __clang__` · `#if defined( _M_X64 )` | `#if defined( SW_COMPILER_CLANG )` · `#if defined( SW_X64 )` |
 | `SW_COMPILER_MSVC` 로 `__forceinline` 가르기 | `SW_PLATFORM_WINDOWS`(clang-cl 도 MS 확장을 쓴다 — `Core/Common/Macros.h` `SW_INLINE`) |
-| 헤더 클래스 모양을 `SW_WITH_SERVER_CODE` 로 가르기 | `.cpp` 본문에서만 `#if defined( SW_WITH_SERVER_CODE )`, 나뉘는 기능은 모듈 `GF_<X>` · `GF_Server_<X>` · `GF_Client_<X>` 로 |
+| 헤더 클래스 구조를 `SW_WITH_SERVER_CODE` 로 가르기 | `.cpp` 본문에서만 `#if defined( SW_WITH_SERVER_CODE )`, 나뉘는 기능은 모듈 `GF_<X>` · `GF_Server_<X>` · `GF_Client_<X>` 로 |
 
 시각 · 메모리 · 참조:
 
@@ -116,7 +116,7 @@ Foo* pFoo = sw_new Foo( arg );                              // 맨 new Foo 대�
 sw_placement_new( pMemory ) Foo( arg );                     // 맨 new ( pMemory ) Foo 대신
 uint8* pBuffer = sw_new_array<uint8>( size );
 
-GameObjectHandle _targetHandle;                             // 프레임을 넘겨 드는 참조는 핸들
+GameObjectHandle _targetHandle;                             // 프레임을 넘겨 보관하는 참조는 핸들
 GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때마다 풀고, 사라졌으면 nullptr
 ```
 
@@ -162,7 +162,7 @@ namespace sw                                    // 구현은 다른 블록 — �
 
 여러 번역 단위가 쓰는 헬퍼는 `XxxUtil` 정적 구조체 헤더(`SerializerUtil` · `MaterialUtil`)이고, 파일에 클래스가 여럿이면 클래스마다 `namespace` 블록을 닫고 다시 엽니다.
 
-## 6. 문법 모양 — [AGENTS.md › C++ style](../AGENTS.md#c-style)
+## 6. 문법 형태 — [AGENTS.md › C++ style](../AGENTS.md#c-style)
 
 ```cpp
 if ( pObject == nullptr )                       // 한 줄 if 는 중괄호 없이, 포인터는 nullptr 와 비교
@@ -175,7 +175,7 @@ if ( _bValid == false )                         // !_bValid 대신
 }
 else
 {
-    _count = 0;                                 // 한 갈래가 여러 줄이면 모든 갈래에 중괄호
+    _count = 0;                                 // 한 분기가 여러 줄이면 모든 분기에 중괄호
 }
 
 for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도 중괄호
