@@ -5,12 +5,16 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Document/UiBindingDesc.h"
 
 namespace sw
 {
@@ -65,6 +69,10 @@ namespace sw
      * @brief 활성화 가능한 화면 하나입니다(언리얼 CommonUI `UCommonActivatableWidget`). 위젯 트리 하나를 소유합니다.
      * @details 맨 위의 포커스 받는 화면이 입력을 받습니다(`UiSystem` 의 "활성 화면"). 다른 화면이 덮으면 그때의 포커스 위젯을 기억했다가
      *          다시 활성이 되면 돌려줍니다. 닫기(`close`)는 지연입니다 — 사건 처리 중에 닫아도 이번 경로가 끝난 뒤에 지워집니다.
+     *
+     *          **명령**: 트리의 위젯이 낸 명령(버튼의 `_command` — 클릭 · `UI.Accept`)은 `onCommand` 로 옵니다. 기본은 `registerCommand` 로 건 함수를
+     *          부르는 것이고, C++ 화면 클래스는 덮어씁니다(유니티 UI Toolkit 의 컨트롤러가 이름으로 위젯을 찾아 거는 것과 같은 자리).
+     *          문서로 연 화면(`UiSystem::openScreen`)은 그 문서 경로와 문서에서 뗀 바인딩 식을 듭니다.
      */
     class SW_API UiScreen
     {
@@ -89,6 +97,21 @@ namespace sw
         bool isClosing() const { return _bClosing == SW_TRUE; }
         /** @brief 이 화면을 닫습니다(지연). `UiSystem::closeScreen` 과 같습니다. */
         void close();
+        /** @brief 이 화면을 지은 문서 경로입니다(코드로 지은 화면이면 빈 글). */
+        const string& getDocumentPath() const { return _documentPath; }
+        /** @brief 문서에서 뗀 바인딩 식입니다(위젯 번호가 채워진 것 — 바인딩 단계가 겁니다). */
+        const vector<UiBindingDesc>& getBindings() const { return _listBinding; }
+
+        /** @brief 명령 @p command 를 받을 함수를 겁니다. 같은 명령에 다시 걸면 바꿉니다. */
+        void registerCommand( const hashed_string& command, const UiCommandDelegate& handler );
+        /** @brief 명령 @p command 의 함수를 뗍니다. */
+        void unregisterCommand( const hashed_string& command );
+
+        /**
+         * @brief 트리의 위젯 @p source 가 명령 @p command 를 냈을 때 불립니다. 처리했으면 true 입니다.
+         * @details 기본은 `registerCommand` 로 건 함수를 부릅니다. 아무도 처리하지 않으면 경고 한 줄(문서의 명령 이름 오타가 조용히 묻히지 않게).
+         */
+        virtual bool onCommand( const hashed_string& command, Widget& source );
 
         /**
          * @brief `UI.Back` 을 아무 위젯도 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
@@ -99,12 +122,19 @@ namespace sw
     private:
         friend class UiSystem;
 
-        WidgetTree     _tree;
-        UiScreenDesc   _desc;
-        UiSystem*      _pUiSystem; ///< 올린 시스템(올리기 전 nullptr)
-        UiScreenHandle _handle;
-        WidgetId       _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯 — 다시 활성이 되면 돌려준다
-        uint32         _pushOrder;   ///< 같은 층 안 쌓인 순서(클수록 위)
-        uint8          _bClosing;
+        /** @brief 트리가 넘긴 명령을 `onCommand` 로 보냅니다(트리의 명령 함수). */
+        void dispatchCommand( const hashed_string& command, Widget& source );
+
+    private:
+        WidgetTree                                                               _tree;
+        UiScreenDesc                                                             _desc;
+        string                                                                   _documentPath; ///< 지은 문서(코드로 지었으면 빈 글)
+        vector<UiBindingDesc>                                                    _listBinding;  ///< 문서에서 뗀 바인딩 식
+        unordered_map<hashed_string, UiCommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
+        UiSystem*                                                                _pUiSystem; ///< 올린 시스템(올리기 전 nullptr)
+        UiScreenHandle                                                           _handle;
+        WidgetId                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯 — 다시 활성이 되면 돌려준다
+        uint32                                                                   _pushOrder;   ///< 같은 층 안 쌓인 순서(클수록 위)
+        uint8                                                                    _bClosing;
     };
 } // namespace sw

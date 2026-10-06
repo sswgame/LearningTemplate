@@ -68,6 +68,11 @@ namespace sw
         const utf8* getName() const;
         /** @brief 엘리먼트 텍스트입니다. 노드가 유효하면 빈 문자열이어도 nullptr 이 아닙니다. */
         const utf8* getText() const;
+        /**
+         * @brief 파싱한 원문에서 이 노드가 시작하는 바이트 위치입니다(오류에 줄 번호를 적을 때). 알 수 없으면(만든 노드 · 무효 노드) -1 입니다.
+         * @details 줄 번호는 `XmlDocument::computeLineNumber( 원문, 위치 )` 로 셉니다.
+         */
+        int64 getSourceOffset() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
         const utf8* findAttribute( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /**
@@ -251,6 +256,8 @@ namespace sw
          *          부르는 쪽(씬 · 프리팹)은 이것으로 구문 오류와 없는 파일을 가린다.
          */
         const string& getLastError() const { return _lastError; }
+        /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XmlNode::getSourceOffset` 이 모를 때). */
+        static uint32 computeLineNumber( string_view text, int64 offset );
 
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(기본은 대소문자 무시). */
         XmlNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;

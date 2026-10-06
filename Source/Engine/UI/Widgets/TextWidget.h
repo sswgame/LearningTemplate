@@ -70,7 +70,7 @@ namespace sw
         void invalidateText();
 
     private:
-        PROPERTY( DisplayName = "Text", Tooltip = "Text, or a localization key once text binding (6-2) resolves it" )
+        PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Text, or a localization key once text binding (6-2) resolves it" )
         string _text;
         PROPERTY( DisplayName = "Style" )
         TextLayoutStyle _style;

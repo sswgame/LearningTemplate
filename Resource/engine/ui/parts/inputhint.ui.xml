@@ -1,0 +1,6 @@
+<UiDocument _schemaVersion="1">
+	<BoxPanel _spacing="8">
+		<TextWidget _name="Glyph" _text="{bind:_acceptGlyph}" />
+		<TextWidget _name="Label" _text="Select" />
+	</BoxPanel>
+</UiDocument>

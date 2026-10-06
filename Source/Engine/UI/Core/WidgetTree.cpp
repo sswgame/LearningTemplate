@@ -37,6 +37,7 @@ namespace sw
         , _listLayoutDirtyRoot{}
         , _listPaintDirty{}
         , _listStyleDirty{}
+        , _commandHandler{}
         , _pFocusManager{ nullptr }
         , _focusedWidget{ kInvalidWidgetId }
         , _layoutUiScale{ 0.0f }
@@ -146,6 +147,13 @@ namespace sw
         outListWidget.clear();
         if ( _root != nullptr )
             WidgetTreeInternal::collectRecursive( *_root, outListWidget );
+    }
+
+    void WidgetTree::dispatchCommand( const hashed_string& command, Widget& source )
+    {
+        if ( command.empty() || _commandHandler.isBound() == false )
+            return;
+        _commandHandler( command, source );
     }
 
     void WidgetTree::registerWidget( Widget& widget )

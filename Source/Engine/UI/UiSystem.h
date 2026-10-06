@@ -17,6 +17,8 @@
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetNavigation.h"
 #include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Document/UiBindingDesc.h"
+#include "Engine/UI/Document/UiDocumentCache.h"
 #include "Engine/UI/Input/UiInputConsumption.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Layout/UiScale.h"
@@ -100,6 +102,27 @@ namespace sw
         UiScreen* getActiveScreen() const;
         uint32    getScreenCount() const { return static_cast<uint32>( _listScreen.size() ); }
 
+        // --- 문서 ---------------------------------------------------------------
+        /**
+         * @brief UI 문서 @p documentPath 로 화면을 지어 올립니다 — 문서의 `UiScreenDesc` 로, 바인딩 식은 화면이 듭니다(`UiScreen::getBindings`).
+         * @return 읽지 못하거나 지을 수 없으면(모르는 타입 · 속성 · 값) 무효 핸들이고, 오류(파일 · 줄)를 로그에 남깁니다.
+         */
+        [[nodiscard]] UiScreenHandle openScreen( string_view documentPath ) { return openScreen<UiScreen>( documentPath ); }
+        /** @brief 문서를 C++ 화면 클래스 @p ScreenType(`onCommand` · `onBack` 을 덮어쓴 것 — 생성자는 `( const UiScreenDesc&, unique_ptr<Widget> )`)으로 엽니다. */
+        template <typename ScreenType>
+        [[nodiscard]] UiScreenHandle openScreen( string_view documentPath )
+        {
+            UiScreenDesc          desc{};
+            vector<UiBindingDesc> listBinding{};
+            unique_ptr<Widget>    root = instantiateDocument( documentPath, desc, listBinding );
+            if ( root == nullptr )
+                return kInvalidUiScreenHandle;
+            return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ) );
+        }
+        /** @brief UI 문서 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다 — 핫 리로드 · 진단). */
+        UiDocumentCache&       getDocumentCache() { return _documentCache; }
+        const UiDocumentCache& getDocumentCache() const { return _documentCache; }
+
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
         bool isGameInputBlocked() const;
@@ -159,6 +182,10 @@ namespace sw
         uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) override;
 
     private:
+        /** @brief 문서를 캐시에서 찾아 위젯 트리를 짓습니다. 실패하면 오류를 로그에 남기고 nullptr 입니다. */
+        unique_ptr<Widget> instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding );
+        /** @brief 문서로 지은 화면에 문서 경로 · 바인딩을 적고 올립니다. */
+        UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding );
         /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다. */
         void updateInputMode();
         /** @brief UI 행동을 활성 화면으로 보냅니다(탐색 · 스틱 · 확인 · 뒤로 · 탭). */
@@ -200,6 +227,7 @@ namespace sw
 
     private:
         vector<unique_ptr<UiScreen>> _listScreen; ///< 그리기 순서(층 → 쌓인 순서). 입력은 역순.
+        UiDocumentCache              _documentCache;
         UiFocusManager               _focus;
         UiPointerState               _pointer;
         UiInputConsumption           _consumption;

@@ -3,6 +3,7 @@
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -294,6 +295,14 @@ namespace sw
     {
         const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
         return pNode.child_value();
+    }
+
+    int64 XmlNode::getSourceOffset() const
+    {
+        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        if ( pNode.empty() )
+            return -1;
+        return static_cast<int64>( pNode.offset_debug() );
     }
 
     const utf8* XmlNode::findAttribute( const utf8* pName, bool bIgnoreCaseKeys ) const
@@ -661,6 +670,20 @@ namespace sw
             return loadFile( path );
         }
         return loadResource( path, pOutAbsPath );
+    }
+
+    uint32 XmlDocument::computeLineNumber( string_view text, int64 offset )
+    {
+        if ( offset < 0 )
+            return 0;
+        const size_t end  = MathUtil::min( static_cast<size_t>( offset ), text.size() );
+        uint32       line = 1;
+        for ( size_t index = 0; index < end; ++index )
+        {
+            if ( text[index] == '\n' )
+                ++line;
+        }
+        return line;
     }
 
     XmlNode XmlDocument::getRoot( const utf8* pName, bool bIgnoreCaseKeys ) const

@@ -856,10 +856,18 @@ namespace sw
             UiSystem& ui = *loop._owned._pUiSystem;
             ui.setScaleSettings( scaleSettings );
             // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-            return ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) ? EngineInitResult::Succeeded
-                                                                                                                           : EngineInitResult::Failed;
+            if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
+                return EngineInitResult::Failed;
+            // UI 문서 캐시를 에셋 캐시 등록부에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
+            loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
+            return EngineInitResult::Succeeded;
         }
-        static void shutdown( EngineLoop& loop ) { loop._owned._pUiSystem->shutdown(); }
+        static void shutdown( EngineLoop& loop )
+        {
+            UiSystem& ui = *loop._owned._pUiSystem;
+            loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
+            ui.shutdown();
+        }
         static void destroy( EngineLoop& loop ) { loop._owned._pUiSystem.reset(); }
     };
 

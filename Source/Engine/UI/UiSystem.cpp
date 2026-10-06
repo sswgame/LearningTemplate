@@ -2,6 +2,7 @@
 
 #include "Engine/UI/UiSystem.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -18,6 +19,8 @@
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Document/UiDocument.h"
+#include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
@@ -117,6 +120,7 @@ namespace sw
     UiSystem::UiSystem()
         : IModuleUnloadListener{}
         , _listScreen{}
+        , _documentCache{}
         , _focus{}
         , _pointer{}
         , _consumption{}
@@ -257,6 +261,32 @@ namespace sw
             return;
         pScreen->_bClosing = SW_TRUE;
         _bPendingClose     = SW_TRUE;
+    }
+
+    unique_ptr<Widget> UiSystem::instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding )
+    {
+        string                                  error;
+        const shared_ptr<const UiDocumentAsset> document = _documentCache.findOrLoad( documentPath, error );
+        if ( document == nullptr )
+        {
+            SW_LOG_ERROR( "[Ui] Screen document is not loaded: %#", error.c_str() );
+            return {};
+        }
+        unique_ptr<Widget> root = UiDocumentLoader::instantiate( *document, _documentCache, outListBinding, error );
+        if ( root == nullptr )
+        {
+            SW_LOG_ERROR( "[Ui] Screen document cannot be built: %#", error.c_str() );
+            return {};
+        }
+        outDesc = document->_screenDesc;
+        return root;
+    }
+
+    UiScreenHandle UiSystem::pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding )
+    {
+        screen->_documentPath = FileUtil::normalizePath( documentPath );
+        screen->_listBinding  = std::move( listBinding );
+        return pushScreen( std::move( screen ) );
     }
 
     UiScreen* UiSystem::findScreen( UiScreenHandle handle ) const

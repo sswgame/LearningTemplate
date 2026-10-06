@@ -22,7 +22,7 @@ namespace sw
      * @brief 브러시(색 · 둥근 모서리 · 9-슬라이스)로 그림을 칠합니다. 그림이 없으면 브러시 색의 상자입니다.
      * @details 원하는 크기 = `_imageSize`(0 이면 텍스처 픽셀 크기, 그림도 없으면 0 — 슬롯 덮어쓰기로 정한다). `_bMirrorInRtl` 이면 오른쪽에서 왼쪽 배치에서
      *          그림을 좌우로 뒤집습니다(화살표 · 진행 방향 아이콘 — UMG 의 Flip For Right To Left Flow Direction).
-     *          `_imagePath` 를 텍스처로 푸는 것은 문서 로드(5-1)의 일입니다 — 지금은 코드가 `setImage` 로 넘깁니다.
+     *          UI 문서는 `_imagePath` 를 칸에 읽어 두기만 합니다 — 텍스처로 푸는 길(디바이스가 필요하다)은 백로그이고, 지금은 코드가 `setImage` 로 넘깁니다.
      */
     REFLECT( Category = "UI", DisplayName = "Image", Tooltip = "Draws a texture or a solid box with a brush" )
     class SW_API ImageWidget : public Widget

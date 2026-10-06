@@ -298,7 +298,7 @@ cd build/Ninja-Debug/Bin
     패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
 - **런타임 UI 그리기의 남은 것(runtime-ui 4-5 뒤, `Engine/UI/README.md`).** (1) `ImageWidget::_imagePath` 를 텍스처로 푸는 길 — `TextureCache::acquire` 는 디바이스가
-  있어야 해 게임 스레드의 위젯이 부를 수 없다(머티리얼처럼 패킷 앞에서 올리는 길이 필요 — 문서 로드 5-1 과 함께). 지금은 코드가 `setImage`. (2) 렌더 변환(`setRenderTransform`)은
+  있어야 해 게임 스레드의 위젯이 부를 수 없다(머티리얼처럼 패킷 앞에서 올리는 길이 필요). UI 문서(5-1)는 경로를 칸에 읽어 두기만 한다 — 지금 그림은 코드가 `setImage`. (2) 렌더 변환(`setRenderTransform`)은
   `kTransform` 만 걸어 다음 레이아웃이 기하에 다시 얹지 않는다 — 회전 · 배율 애니메이션(7-1) 전에 `kTransform` 이 그 위젯을 배치 뿌리로 적게.
 - **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.

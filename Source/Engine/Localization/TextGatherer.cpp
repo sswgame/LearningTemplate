@@ -406,7 +406,8 @@ namespace sw
                         if ( isStringProperty( property ) == false )
                             return;
                         const string_view value = readPropertyValue( node, property );
-                        if ( value.empty() )
+                        // `{` 로 시작하는 값은 UI 문서의 바인딩 식이다(`{bind:_health}`) — 글이 아니다.
+                        if ( value.empty() || value.front() == '{' )
                             return;
                         const string context = string( pType->_name.c_str() ) + "." + property._name.c_str();
                         if ( property._metadata.findCustomMeta( hashed_string( TextGatherer::kMetaLocalizable ) ) != nullptr )

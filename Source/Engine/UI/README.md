@@ -178,3 +178,46 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 안전 영역: `SafeZonePanel` 이 뷰포트 안전 영역과 겹치는 만큼 자식을 안쪽으로 민다. PC 는 0 이고 `gv_uiDebugSafeZone`(0..0.1 — 각 변 비율, 언리얼
   `r.DebugSafeZone.TitleRatio`)으로 흉내 낸다. 화면 문서의 기본 루트는 `SafeZonePanel > CanvasPanel` 입니다.
 - `UiSystem::computeViewport( 물리 크기, 창 배율 )` 이 뷰포트를, `makeLayoutContext()` 가 레이아웃 문맥을 만든다 — `EngineLoop` 가 프레임마다 앞의 것을 `update` 에 넘긴다.
+
+## 문서 (`Document/` · `*.ui.xml`)
+
+| 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
+|---|---|---|---|
+| `*.ui.xml` · `UiDocumentLoader` · `UiDocumentCache` | UMG 위젯 블루프린트 | UXML · `VisualTreeAsset` | `.tscn` |
+| `UserWidget`(조각) | 위젯 블루프린트 안의 위젯 | UXML `Template` 인스턴스 | 씬 인스턴스 |
+| `_command` → `UiScreen::onCommand` · `registerCommand` | 버튼 `OnClicked` 바인딩 | 컨트롤러가 `Q<Button>( "name" ).clicked` | 시그널 연결 |
+
+화면은 데이터로 짓습니다 — 구조(문서)와 겉모습(스타일 시트, 5-2)을 나눕니다(유니티 UXML · USS 와 같은 나눔, 형식은 둘 다 엔진 XML 하나).
+
+```xml
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _bPausesGame="true" _defaultFocus="Resume" />     <!-- 없으면 기본값 -->
+	<SafeZonePanel>                                                <!-- 루트 위젯 정확히 하나 -->
+		<CanvasPanel>
+			<ButtonWidget _name="Resume" _command="Resume">          <!-- 원소 = 위젯 타입, 속성 = PROPERTY -->
+				<_slot _offsetMin="100,100" _offsetMax="300,160" />  <!-- 구조체 칸 = 자식 원소 -->
+				<TextWidget _text="Resume" />                        <!-- 위젯 타입인 자식 원소 = 자식 위젯 -->
+			</ButtonWidget>
+			<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>
+```
+
+- **읽기**(`UiDocumentLoader::parse` — 파일마다 한 번, `UiDocumentCache` 가 경로로 든다): 위젯 원소 이름은 리플렉션 타입(`Widget` 파생), 속성 · 구조체 자식 원소는
+  그 타입의 PROPERTY 입니다(씬 파일과 같은 `XmlSerializer`). 모르는 원소 · 속성 · 열거자 · 읽지 못한 값, 위젯 타입이 아닌 원소, 패널이 아닌 위젯의 자식은
+  **로드 오류**입니다 — 문구는 `<경로>:<줄>: <이유>`. 옛 형식 리더는 없습니다(`_schemaVersion` 1).
+- **바인딩 식**: `{` 로 시작하는 속성 값(`_text="{bind:_health}"`, 구조체 칸 안도)은 값으로 읽지 않고 `UiBindingDesc`(위젯 번호 · 프로퍼티 경로 `_slot._widthOverride` ·
+  식 원문 · 줄)로 뗍니다. 화면이 들고(`UiScreen::getBindings`) 바인딩 단계가 겁니다.
+- **짓기**(`UiDocumentLoader::instantiate` — 화면을 열 때마다): 위젯은 리플렉션 기본 생성자(`$ctor`)로 짓습니다 — 위젯 타입은 `Widget` 하나만 상속하는 사슬이고
+  `getTypeInfo()` 를 덮어써야 합니다(아니면 짓기 오류).
+- **조각**(`UserWidget`): `_document` 문서의 루트 위젯을 자식으로 끼우고, 조각 안의 이름을 `"<조각 위젯 이름>.<안쪽 이름>"` 으로 감쌉니다 — 같은 조각을 두 번 써도
+  `A.Label` · `B.Label` 로 갈립니다(조각 안의 조각은 `C.Inner.Label`). 조각이 돌고 돌아 자기를 다시 부르면 짓기 오류입니다. `UserWidget` 원소에 자식 위젯을 적으면 로드 오류.
+- **명령**: 버튼(`ButtonWidget` — 누르고 같은 버튼 위에서 떼기, 또는 포커스 + `UI.Accept`)의 `_command` 는 화면의 `onCommand( 이름, 위젯 )` 으로 갑니다. 기본은
+  `registerCommand` 로 건 함수, C++ 화면 클래스는 덮어씁니다(`UiSystem::openScreen<내 화면>( 경로 )`). 아무도 처리하지 않은 명령은 경고 한 줄.
+- **열기**: `UiSystem::openScreen( 경로 )` — 문서의 `UiScreenDesc` 로 화면을 지어 올립니다. 실패하면 무효 핸들과 오류 로그.
+- **쓰기**(`UiDocumentWriter::write` — 에디터 미리보기의 저장): 읽고 다시 쓰면 같은 문서입니다. 기본값과 같은 칸은 쓰지 않고(위젯 타입의 기본값 인스턴스와 글로 견준다),
+  조각은 원소만, 바인딩 식은 식 그대로 씁니다. 속성 순서는 리플렉션 순서(기반 타입 먼저) — 손으로 쓰는 문서도 그 순서로 적습니다.
+- 데이터 검사: `ResourceDataSchemaTest` 가 저장소의 모든 `*.ui.xml` 을 읽어 위젯 트리까지 짓습니다. 글 수집은 엔진 현지화 프로젝트의 `assetRoots` 에 `engine/ui`
+  (`TextWidget::_text` 가 `Meta = "Localizable"`, 바인딩 식은 수집하지 않는다).
+- 캐시는 `UiSystem` 이 소유하고 기동 단계 `Ui` 가 에셋 캐시 등록부(종류 `UiDocument`)에 올립니다.

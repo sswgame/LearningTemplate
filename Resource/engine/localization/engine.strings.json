@@ -1,6 +1,34 @@
 {
     "culture": "en",
     "entries": {
+        "Options": {
+            "source": "Options",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Paused": {
+            "source": "Paused",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Resume": {
+            "source": "Resume",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Select": {
+            "source": "Select",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/parts/inputhint.ui.xml"
+            ]
+        },
         "settings.accessibility.colorVision": {
             "source": "Color Vision Mode",
             "context": "Options menu label",

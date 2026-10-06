@@ -1,0 +1,23 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window" _contentPadding="24,24,24,24">
+				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMax="0,0" _bAutoSize="true" _growHorizontal="Both" _growVertical="Both" />
+				<_background _color="0.125,0.125,0.25,0.875" _cornerRadius="8,8,8,8" />
+				<BoxPanel _spacing="12" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="Paused" />
+					<ButtonWidget _name="Resume" _styleClass="primary" _contentPadding="16,8,16,8" _command="Resume">
+						<_background _color="0.25,0.5,1,1" _cornerRadius="6,6,6,6" />
+						<TextWidget _text="Resume" />
+					</ButtonWidget>
+					<ButtonWidget _name="Options" _contentPadding="16,8,16,8" _command="OpenOptions">
+						<_background _color="0.25,0.25,0.25,1" _cornerRadius="6,6,6,6" />
+						<TextWidget _text="Options" />
+					</ButtonWidget>
+					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>
