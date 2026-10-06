@@ -469,3 +469,54 @@ details.group > summary .count {
 .exclusive-row select {
   flex: 1;
 }
+
+/* ---------- 분류(태그) 필터 ---------- */
+.filter-line {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.filter-label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+#tagChipList {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-chip {
+  padding: 0 7px;
+  border: 1px solid var(--vscode-widget-border, var(--vscode-input-border, transparent));
+  border-radius: 10px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.tag-chip.on {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.tag-chip .count {
+  opacity: 0.75;
+}
+
+select.input.small {
+  padding: 0 2px;
+  font-size: 11px;
+}
+
+.filter-line.single #tagChipList,
+.filter-line.single .filter-label {
+  display: none;
+}

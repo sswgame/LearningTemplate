@@ -42,7 +42,26 @@
   <section class="filter-bar" id="filterBar">
     <input class="input" id="searchInput" type="search" placeholder="이름 · 설명 검색">
     <label class="chip"><input type="checkbox" id="enabledOnlyToggle"> 켜진 것만</label>
-    <label class="chip"><input type="checkbox" id="hideTaggedToggle"> 태그 붙은 것 숨기기</label>
+    <label class="chip" title="묶음 안의 순서">정렬
+      <select class="input small" id="sortSelect">
+        <option value="nameAscending">이름 ↑</option>
+        <option value="nameDescending">이름 ↓</option>
+        <option value="enabledFirst">켜진 것 먼저</option>
+        <option value="source">소스 순서</option>
+      </select>
+    </label>
+    <div class="filter-line" id="tagFilterLine">
+      <span class="filter-label">분류</span>
+      <span id="tagChipList"></span>
+      <span class="spacer"></span>
+      <label class="chip" title="목록을 무엇으로 묶을지">묶기
+        <select class="input small" id="groupBySelect">
+          <option value="module">모듈별</option>
+          <option value="tag">분류별</option>
+          <option value="none">묶지 않음</option>
+        </select>
+      </label>
+    </div>
   </section>
 
   <section class="tab-page" data-page="globalVariable">

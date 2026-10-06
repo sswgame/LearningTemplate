@@ -335,7 +335,8 @@ class CatalogScanner {
 
     /**
      * @brief 읽어 둔 결과를 합쳐 카탈로그를 만듭니다.
-     * @return `{ listGlobalVariable, listArgument, listExclusiveGroup, listProblem }` — 전역 변수는 이름 순, 인자는 파일 순입니다.
+     * @return `{ listGlobalVariable, listTag, listArgument, listExclusiveGroup, listProblem }` — 전역 변수는 이름 순, 인자는 파일 순,
+     *         `listTag` 는 프로필 매크로 순서의 `[{ tag, label, count }]`(같은 태그는 하나, 빈 태그 = 일반)입니다.
      */
     makeCatalog() {
         const listGlobalVariable = [];
@@ -364,6 +365,12 @@ class CatalogScanner {
                 this._resolveEnum(variable, mapEnum, listProblem);
         }
 
+        const listTag = [];
+        for (const macro of this._profile.globalVariable.listMacro) {
+            if (listTag.some((item) => item.tag === macro.tag) === false)
+                listTag.push({ tag: macro.tag, label: macro.label, count: listGlobalVariable.filter((variable) => variable.tag === macro.tag).length });
+        }
+
         const listExclusiveGroup = [];
         for (const group of this._profile.argument.listExclusiveGroup) {
             const json = this._mapJson.get(group.file);
@@ -372,6 +379,7 @@ class CatalogScanner {
         }
         return {
             listGlobalVariable,
+            listTag,
             listArgument: this._argumentResult.listArgument,
             listExclusiveGroup,
             listProblem: listProblem.concat(this._argumentResult.listProblem),

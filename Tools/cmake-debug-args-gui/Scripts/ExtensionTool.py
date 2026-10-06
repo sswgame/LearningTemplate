@@ -80,7 +80,11 @@ def runUnitTestInternal(codePath: Path) -> int:
     environment = dict(makeCleanEnvironmentInternal(), ELECTRON_RUN_AS_NODE="1")
     listTestPath = [str(_kExtensionRoot / "Test" / name) for name in _kListUnitTest]
     print(f"[unit] {codePath} --test ({len(listTestPath)} files)", flush=True)
-    return subprocess.run([str(codePath), "--test", *listTestPath], env=environment, cwd=_kExtensionRoot).returncode
+    # Code.exe 는 GUI 실행 파일이라 콘솔을 물려주면 출력이 사라질 수 있다 — 받아서 직접 찍는다.
+    result = subprocess.run([str(codePath), "--test", *listTestPath], env=environment, cwd=_kExtensionRoot, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    return result.returncode
 
 
 def findCmakeToolsInternal() -> Path | None:

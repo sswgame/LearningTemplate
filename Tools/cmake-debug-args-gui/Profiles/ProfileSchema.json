@@ -24,7 +24,8 @@
                                 "additionalProperties": false,
                                 "properties": {
                                     "name": { "type": "string" },
-                                    "tag": { "type": "string", "description": "Free label shown as a badge and matched by rules[].match.tag." }
+                                    "tag": { "type": "string", "description": "Classification key: the view filters and groups by it, rules[].match.tag matches it. Empty = untagged." },
+                                    "label": { "type": "string", "description": "Name shown for the tag (badge, filter chip, group). Default: the tag, or a generic label when empty." }
                                 }
                             }
                         ]

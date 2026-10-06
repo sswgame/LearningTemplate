@@ -61,10 +61,21 @@
                 tab.addEventListener('click', () => this._selectTab(tab.dataset.tab));
             findElement('searchInput').value = this._uiState.search;
             findElement('enabledOnlyToggle').checked = this._uiState.bEnabledOnly;
-            findElement('hideTaggedToggle').checked = this._uiState.bHideTagged;
+            findElement('groupBySelect').value = this._uiState.groupBy;
+            findElement('sortSelect').value = this._uiState.sort;
+            findElement('sortSelect').addEventListener('change', (event) => {
+                this._updateUiState({ sort: event.target.value });
+                this._applySort(true);
+            });
             findElement('searchInput').addEventListener('input', (event) => this._updateUiState({ search: event.target.value }));
             findElement('enabledOnlyToggle').addEventListener('change', (event) => this._updateUiState({ bEnabledOnly: event.target.checked }));
-            findElement('hideTaggedToggle').addEventListener('change', (event) => this._updateUiState({ bHideTagged: event.target.checked }));
+            findElement('groupBySelect').addEventListener('change', (event) => {
+                this._updateUiState({ groupBy: event.target.value });
+                if (this._catalog !== null) {
+                    this._renderCatalog();
+                    this._applyState();
+                }
+            });
 
             findElement('copyButton').addEventListener('click', () => postIntent('copyCommandLine', {}));
             findElement('debugButton').addEventListener('click', () => postIntent('debug', {}));
@@ -134,7 +145,7 @@
         /** @brief 저장된 화면 설정을 읽습니다. 없으면 기본값입니다. */
         _restoreUiState() {
             const saved = vscodeApi.getState();
-            const uiState = { tab: 'globalVariable', search: '', bEnabledOnly: false, bHideTagged: false, listCollapsedGroup: [] };
+            const uiState = { tab: 'globalVariable', search: '', bEnabledOnly: false, listHiddenTag: [], groupBy: 'module', sort: 'nameAscending', listCollapsedGroup: [] };
             if (saved !== null && typeof saved === 'object')
                 Object.assign(uiState, saved);
             return uiState;
@@ -154,6 +165,7 @@
             for (const page of document.querySelectorAll('.tab-page'))
                 page.classList.toggle('active', page.dataset.page === tabName);
             findElement('filterBar').hidden = tabName !== 'globalVariable' && tabName !== 'argument';
+            findElement('tagFilterLine').hidden = tabName !== 'globalVariable';
             this._uiState.tab = tabName;
             vscodeApi.setState(this._uiState);
         }
@@ -165,24 +177,73 @@
         /** @brief 전역 변수 · 인자 · 배타 묶음 행을 처음부터 만듭니다. */
         _renderCatalog() {
             this._mapRow.clear();
+            this._renderTagChipList();
             this._renderGlobalVariableList();
             this._renderExclusiveGroupList();
             this._renderArgumentList();
         }
 
-        /** @brief 전역 변수를 모듈(과 변형) 묶음으로 나눠 그립니다. */
+        /** @brief 프로필의 분류(태그)마다 켜고 끄는 칩을 그립니다. 분류가 하나뿐이면 줄을 숨깁니다. */
+        _renderTagChipList() {
+            const container = findElement('tagChipList');
+            container.replaceChildren();
+            const listTag = this._catalog.listTag.filter((item) => item.count > 0);
+            findElement('tagFilterLine').classList.toggle('single', listTag.length < 2);
+            for (const tagInfo of listTag) {
+                const chip = createElement('button', 'tag-chip', tagInfo.label);
+                chip.appendChild(createElement('span', 'count', ` ${tagInfo.count}`));
+                chip.title = tagInfo.tag === '' ? '태그 없는 변수' : `태그 ${tagInfo.tag} — 누르면 숨기기 · 보이기`;
+                chip.classList.toggle('on', this._uiState.listHiddenTag.includes(tagInfo.tag) === false);
+                chip.addEventListener('click', () => {
+                    const bHidden = this._uiState.listHiddenTag.includes(tagInfo.tag);
+                    const listHiddenTag = this._uiState.listHiddenTag.filter((tag) => tag !== tagInfo.tag);
+                    if (bHidden === false)
+                        listHiddenTag.push(tagInfo.tag);
+                    chip.classList.toggle('on', bHidden);
+                    this._updateUiState({ listHiddenTag });
+                });
+                container.appendChild(chip);
+            }
+        }
+
+        /** @brief 태그의 표시 이름입니다(카탈로그 `listTag`, 없으면 태그 글). */
+        _makeTagLabel(tag) {
+            const tagInfo = this._catalog.listTag.find((item) => item.tag === tag);
+            if (tagInfo !== undefined)
+                return tagInfo.label;
+            return tag === '' ? '일반' : tag;
+        }
+
+        /** @brief 전역 변수를 모듈(과 변형) 또는 분류(태그) 묶음으로 나눠 그립니다(`묶기` 고르기). */
         _renderGlobalVariableList() {
             const container = findElement('globalVariableList');
             container.replaceChildren();
+            const bByTag = this._uiState.groupBy === 'tag';
+            const bUngrouped = this._uiState.groupBy === 'none';
             const mapGroup = new Map();
+            const listGroupOrder = bByTag ? this._catalog.listTag.map((item) => `\u0000tag/${item.tag}`) : [];
             for (const variable of this._catalog.listGlobalVariable) {
-                const groupKey = variable.variantName === '' ? variable.moduleName : `${variable.moduleName}/${variable.variantName}`;
+                let groupKey;
+                if (bUngrouped)
+                    groupKey = '\u0000all';
+                else if (bByTag)
+                    groupKey = `\u0000tag/${variable.tag}`;
+                else
+                    groupKey = variable.variantName === '' ? variable.moduleName : `${variable.moduleName}/${variable.variantName}`;
                 if (mapGroup.has(groupKey) === false)
                     mapGroup.set(groupKey, []);
                 mapGroup.get(groupKey).push(variable);
             }
-            for (const groupKey of Array.from(mapGroup.keys()).sort()) {
-                const body = this._appendGroup(container, groupKey, this._makeGroupLabel(groupKey));
+            const listGroupKey = bByTag ? listGroupOrder.filter((key) => mapGroup.has(key)).concat(Array.from(mapGroup.keys()).filter((key) => listGroupOrder.includes(key) === false)) : Array.from(mapGroup.keys()).sort();
+            for (const groupKey of listGroupKey) {
+                let groupLabel;
+                if (bUngrouped)
+                    groupLabel = '전체';
+                else if (bByTag)
+                    groupLabel = this._makeTagLabel(groupKey.slice('\u0000tag/'.length));
+                else
+                    groupLabel = this._makeGroupLabel(groupKey);
+                const body = this._appendGroup(container, groupKey, groupLabel);
                 for (const variable of mapGroup.get(groupKey))
                     body.appendChild(this._createEntryRow(`gv:${variable.name}|${variable.variantName}`, 'globalVariable', variable));
             }
@@ -274,8 +335,11 @@
             head.append(checkbox, nameElement);
             if (bUnknown === false) {
                 head.appendChild(createElement('span', 'badge', kind === 'argument' ? entry.valueKind : entry.typeName));
-                if (kind === 'globalVariable' && entry.tag !== '')
-                    head.appendChild(createElement('span', 'badge tag', entry.tag));
+                if (kind === 'globalVariable' && entry.tag !== '') {
+                    const tagBadge = createElement('span', 'badge tag', entry.tag);
+                    tagBadge.title = this._makeTagLabel(entry.tag);
+                    head.appendChild(tagBadge);
+                }
                 if (kind === 'argument' && entry.listSpelling.length > 1)
                     nameElement.title += `\n철자: ${entry.listSpelling.map((spelling) => this._makeFlagText(spelling)).join(' · ')}`;
             }
@@ -396,6 +460,66 @@
             this._syncPresetList();
             this._applyEmptyStates();
             this._applyFilter();
+            this._applySort(false);
+        }
+
+        /** @brief 행의 정렬 이름입니다. 인자는 화면에 보이는 철자, 전역 변수는 이름입니다. */
+        _makeSortName(record) {
+            if (record.kind === 'argument' && record.bUnknown === false)
+                return record.entry.listSpelling[0].toLowerCase();
+            return record.entry.name.toLowerCase();
+        }
+
+        /**
+         * @brief 고른 정렬대로 묶음 안의 행 순서를 맞춥니다.
+         * @param bForce 정렬을 바꾼 직후면 true 입니다. 아니면 글을 치는 칸이 든 묶음은 건너뜁니다(행이 옮겨져 포커스를 잃지 않게).
+         */
+        _applySort(bForce) {
+            if (this._catalog === null || this._state === null)
+                return;
+            const sort = this._uiState.sort;
+            const selection = this._state.selection;
+            const isEnabled = (record) => {
+                const selectionMap = record.kind === 'globalVariable' ? selection.globalVariable : selection.argument;
+                return selectionMap[record.entry.name] !== undefined && selectionMap[record.entry.name].bEnabled;
+            };
+            const compareByName = (left, right) => this._makeSortName(left).localeCompare(this._makeSortName(right), undefined, { numeric: true });
+            const compareBySource = (left, right) => {
+                if (left.bUnknown !== right.bUnknown)
+                    return left.bUnknown ? 1 : -1;
+                if (left.bUnknown)
+                    return compareByName(left, right);
+                if (left.entry.relativePath !== right.entry.relativePath)
+                    return left.entry.relativePath < right.entry.relativePath ? -1 : 1;
+                return left.entry.lineNumber - right.entry.lineNumber;
+            };
+            const mapCompare = new Map([
+                ['nameAscending', compareByName],
+                ['nameDescending', (left, right) => compareByName(right, left)],
+                ['enabledFirst', (left, right) => (Number(isEnabled(right)) - Number(isEnabled(left))) || compareByName(left, right)],
+                ['source', compareBySource],
+            ]);
+            const compare = mapCompare.has(sort) ? mapCompare.get(sort) : compareByName;
+            const mapRecordByElement = new Map();
+            for (const record of this._mapRow.values()) {
+                if (record.kind !== 'group')
+                    mapRecordByElement.set(record.element, record);
+            }
+            for (const body of document.querySelectorAll('.group-body')) {
+                if (bForce === false && body.contains(document.activeElement))
+                    continue;
+                const listRecord = [];
+                for (const element of body.children) {
+                    if (mapRecordByElement.has(element))
+                        listRecord.push(mapRecordByElement.get(element));
+                }
+                const listSorted = listRecord.slice().sort(compare);
+                const bSameOrder = listSorted.every((record, index) => record === listRecord[index]);
+                if (bSameOrder)
+                    continue;
+                for (const record of listSorted)
+                    body.appendChild(record.element);
+            }
         }
 
         /** @brief 처음 켤 때 들어갈 값을 화면에 미리 보입니다(확장의 `makeInitialValue` 와 같은 규칙). */
@@ -536,11 +660,12 @@
                 const bEnabled = selectionMap[entry.name] !== undefined && selectionMap[entry.name].bEnabled;
                 const haystack = `${entry.name} ${record.bUnknown ? '' : `${entry.description} ${(entry.listSpelling || []).join(' ')}`}`.toLowerCase();
                 const bSearchMiss = searchText !== '' && haystack.includes(searchText) === false;
-                const bTagged = record.kind === 'globalVariable' && record.bUnknown === false && entry.tag !== '';
+                // 켜 둔 항목은 분류 필터로 숨기지 않는다 — 넘기고 있는 것이 보이지 않으면 안 된다.
+                const bTagHidden = record.kind === 'globalVariable' && record.bUnknown === false && this._uiState.listHiddenTag.includes(entry.tag);
                 const bHidden = (record.bHiddenByContext === true && bEnabled === false)
                     || bSearchMiss
                     || (this._uiState.bEnabledOnly && bEnabled === false)
-                    || (this._uiState.bHideTagged && bTagged && bEnabled === false);
+                    || (bTagHidden && bEnabled === false);
                 record.element.hidden = bHidden;
             }
             for (const details of document.querySelectorAll('details.group')) {

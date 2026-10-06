@@ -15,6 +15,8 @@ const path = require('path');
 
 /** @brief 값 종류 이름입니다. 프로필 `type_map` 의 값이 이 중 하나입니다. */
 const kValueKindSet = new Set(['bool', 'int', 'float', 'string', 'enum']);
+/** @brief 태그가 없는 매크로(일반 변수)의 기본 표시 이름입니다. 프로필 `macros[].label` 이 덧씁니다. */
+const kUntaggedLabel = '일반';
 /** @brief 알림 무게입니다. */
 const kRuleLevelSet = new Set(['info', 'warning', 'unavailable']);
 
@@ -78,10 +80,12 @@ function normalizeProfile(raw) {
     const globalIndexJson = isPlainObjectInternal(globalJson.argument_index) ? globalJson.argument_index : {};
     const listGlobalMacro = [];
     for (const item of Array.isArray(globalJson.macros) ? globalJson.macros : []) {
-        if (typeof item === 'string')
-            listGlobalMacro.push({ name: item, tag: '' });
-        else if (isPlainObjectInternal(item) && typeof item.name === 'string')
-            listGlobalMacro.push({ name: item.name, tag: readStringInternal(item.tag, '') });
+        if (typeof item === 'string') {
+            listGlobalMacro.push({ name: item, tag: '', label: kUntaggedLabel });
+        } else if (isPlainObjectInternal(item) && typeof item.name === 'string') {
+            const tag = readStringInternal(item.tag, '');
+            listGlobalMacro.push({ name: item.name, tag, label: readStringInternal(item.label, tag === '' ? kUntaggedLabel : tag) });
+        }
         else
             listProblem.push('global_variable.macros: each item is a macro name or { name, tag }');
     }

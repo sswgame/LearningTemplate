@@ -123,6 +123,10 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.equal(findVariable('gv_tracyViewerPath').valueKind, ValueKind.String, 'sw::string maps through the profile type_map');
     assert.equal(findVariable('gv_benchMeshes').variantName, 'Empty');
 
+    assert.deepEqual(catalog.listTag.map((tagInfo) => tagInfo.tag), ['', 'test', 'test-shipped'], 'tags in profile macro order');
+    assert.equal(catalog.listTag[0].label, '일반');
+    assert.equal(catalog.listTag.reduce((sum, tagInfo) => sum + tagInfo.count, 0), catalog.listGlobalVariable.length, 'every variable falls in exactly one tag');
+
     const width = catalog.listArgument.find((argument) => argument.name === 'WIDTH');
     assert.deepEqual(width.listSpelling, ['W']);
     assert.equal(width.group, kGeneralGroup);

@@ -4,9 +4,9 @@
     "global_variable": {
         "files": [ "Source/**/*.{cpp,h,inl}" ],
         "macros": [
-            { "name": "SW_GLOBAL_VARIABLE", "tag": "" },
-            { "name": "SW_TEST_GLOBAL_VARIABLE", "tag": "test" },
-            { "name": "SW_TEST_GLOBAL_VARIABLE_SHIPPED", "tag": "test-shipped" }
+            { "name": "SW_GLOBAL_VARIABLE", "tag": "", "label": "일반" },
+            { "name": "SW_TEST_GLOBAL_VARIABLE", "tag": "test", "label": "테스트 (Shipping 제외)" },
+            { "name": "SW_TEST_GLOBAL_VARIABLE_SHIPPED", "tag": "test-shipped", "label": "테스트 (Shipping 포함)" }
         ],
         "argument_index": { "type": 0, "name": 1, "default_value": 2, "description": 3 },
         "name_prefix": "gv_",
