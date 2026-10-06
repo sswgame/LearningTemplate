@@ -22,7 +22,7 @@ Scripts/lint/gate/CheckDocPaths.py
 `.gitignore` 가 무시하는 자리(내려받은 도구 · 생성 파일 — `Config/Environment/toolchain_config.json`)와 설정 목록
 (`Scripts/common/ConfigCatalog.py`)이 `bOptional` 로 적은 설정 파일은 없어도 맞다.
 `<` · `*` · `{` · `…` · `$` 가 든 것은 모양이지 경로가 아니라 보지 않는다.
-`docs/06_Backlog.md` 는 규칙 1 만 본다 — 할 일 목록은 아직 없는 파일 · 옛 경로를 적는 자리다.
+`docs/06_Backlog.md` 와 `docs/plans/` 의 계획 문서는 규칙 1 만 본다 — 할 일 목록과 계획은 아직 없는 파일 · 옛 경로를 적는 자리다.
 """
 
 from __future__ import annotations
@@ -55,6 +55,9 @@ _kStemExtension: tuple[str, ...] = (".h", ".cpp", ".xxx", ".inl", ".py", ".md", 
 
 #: 규칙 1 만 보는 문서.
 _kLinkOnlyDocument: frozenset[str] = frozenset({"docs/06_Backlog.md"})
+
+#: 규칙 1 만 보는 폴더 — 다음 세션 계획(`docs/plans/`)은 만들 파일을 적는다.
+_kLinkOnlyFolder: tuple[str, ...] = ("docs/plans/",)
 
 #: 없어도 맞는 설정 파일 — 설정 목록(`ConfigCatalog`)이 `bOptional` 로 적은 줄(기본값과 다른 값이 있을 때만 만드는 파일 등).
 #: 목록이 정본이라 여기에 따로 적지 않는다.
@@ -116,7 +119,7 @@ class CheckDocPathsGate(LintGate):
     preCommitPattern = ("*.md",)
     preCommitFileArgument = "--files"
     violationHeader = "문서가 없는 자리를 가리킵니다"
-    hint = ("  파일을 옮겼으면 문서의 경로를 새 자리로, 지웠으면 그 문장을 지우세요. 아직 없는 파일을 적는 것은 백로그의 일입니다.\n"
+    hint = ("  파일을 옮겼으면 문서의 경로를 새 자리로, 지웠으면 그 문장을 지우세요. 아직 없는 파일을 적는 것은 백로그와 계획 문서(docs/plans/)의 일입니다.\n"
             "  파일을 옮기거나 지운 커밋은 문서를 건드리지 않아 훅이 이 게이트를 돌리지 않습니다 — `ctest -L lint` 가 전체를 봅니다.")
     selfTestCases = [
         {
@@ -179,7 +182,7 @@ class CheckDocPathsGate(LintGate):
         for documentPath in listDocument:
             relDocument = documentPath.relative_to(repositoryRoot).as_posix()
             documentDir = documentPath.parent
-            bLinkOnly = relDocument in _kLinkOnlyDocument
+            bLinkOnly = relDocument in _kLinkOnlyDocument or relDocument.startswith(_kLinkOnlyFolder)
             listBaseDir = [documentDir, *[parent for parent in documentDir.parents if repositoryRoot in (parent, *parent.parents) and parent != repositoryRoot]]
             for baseDir in listBaseDir:
                 if baseDir not in mapChildDir:
