@@ -463,6 +463,8 @@ namespace sw
 
             _engineLoop.endFrame();
         }
+        // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
+        _engineLoop.onWindowClosed();
     }
 
     int32 App::getInitFailureExitCode() const

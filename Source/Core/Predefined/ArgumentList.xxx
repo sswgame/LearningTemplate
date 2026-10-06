@@ -93,3 +93,9 @@ SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, "", false, "import-po" )
 
 // 크래시 보고 프로세스 `--crash-reporter=<묶음 폴더>` 는 이 목록에 없다 — App 의 main 이 엔진을 세우기 전에 읽고 끝낸다(`CrashReportService::runReporterFromCommandLine`).
+
+// 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
+// (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/README.md`.
+SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )
+// 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다).
+SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )

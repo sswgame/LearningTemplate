@@ -28,6 +28,7 @@ namespace sw
 
     class AssetManager;
     class AssetStreamingQueue;
+    class AutomationRunner;
     class CameraComponent;
     class CommandLineManager;
     class CommandStack;
@@ -158,6 +159,13 @@ namespace sw
         void requestQuit( int32 exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
         int32 getExitCode() const { return _exitCode; }
+        /**
+         * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 자동화 시나리오가 돌던 중이면 그 결과로 종료 코드를 정합니다
+         *        (`ExpectExitWithin` 시한 안이면 통과, 아니면 실패 — 시나리오 결과가 프로파일 세션의 종료보다 이긴다).
+         */
+        void onWindowClosed();
+        /** @brief `-scenario` 로 돌고 있는 자동화 실행기입니다(없으면 nullptr). */
+        AutomationRunner* getAutomationRunner() const { return _pAutomationRunner.get(); }
 
         /**
          * @brief 셸 디버그 InputMap 에서 해당 액션이 이번 프레임에 발동했는지 반환합니다.
@@ -252,6 +260,8 @@ namespace sw
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
         unique_ptr<GpuUploadQueue> _gpuUploadQueue;
+        /** @brief `-scenario=<파일>` 의 자동화 실행기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 결과 )` 입니다. */
+        unique_ptr<AutomationRunner> _pAutomationRunner;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
