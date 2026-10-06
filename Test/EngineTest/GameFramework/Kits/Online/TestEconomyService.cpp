@@ -59,7 +59,10 @@ namespace
             (void)_offers.loadFromXmlText( R"(<OfferCatalog><Offer id="potion" maxCount="5"><Price currency="cur.gold" amount="10"/><Grant asset="item.potion" amount="1"/></Offer>
                 <Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
                                            "offer" );
+#if !defined( SW_SHIPPING )
+            // 가짜 검증기는 개발 전용이라 Shipping 의 경제 서비스는 그것이 든 등록부를 거절한다(ShippingRefusesDevelopmentValidator).
             (void)_receipts.registerValidator( &_fake );
+#endif
             EconomyServiceSettings settings;
             settings._pCurrencyCatalog = &_currencies;
             settings._pOfferCatalog    = &_offers;
@@ -151,6 +154,9 @@ SW_TEST_CASE( EconomyServiceTest, MissingSignInOrKeyIsRefusedAndCounted )
 
 SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
 {
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the fake receipt validator is development-only and refused by a shipping economy service" );
+#else
     EconomyServiceFixture fixture;
     EconomyCall           call = fixture.makeCall( EconomyMethod::kRedeemReceipt );
     call._redeem._storeName    = "fake";
@@ -166,4 +172,32 @@ SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
     SW_EXPECT_EQUAL( capture._reply._productId, string( "gem100" ) );
     SW_ASSERT_EQUAL( capture._reply._listBalance.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( capture._reply._listBalance[0]._amount, int64( 100 ) );
+#endif
+}
+
+/**
+ * @brief [EconomyServiceTest] 개발 전용 검증기(가짜 스토어)가 든 등록부는 Shipping 에서 초기화를 거절하고, 개발 빌드에서는 받는다
+ */
+SW_TEST_CASE( EconomyServiceTest, ShippingRefusesDevelopmentValidator )
+{
+    CurrencyCatalog          currencies;
+    OfferCatalog             offers;
+    FakeReceiptValidator     fake;
+    ReceiptValidatorRegistry receipts;
+    MemoryServiceDatabase    database;
+    MemoryServiceStore       store{ &database };
+    EconomyService           service;
+    SW_ASSERT_TRUE( receipts.registerValidator( &fake ) );
+    EconomyServiceSettings settings;
+    settings._pCurrencyCatalog = &currencies;
+    settings._pOfferCatalog    = &offers;
+    settings._pReceiptRegistry = &receipts;
+#if defined( SW_SHIPPING )
+    SW_TEST_DEFENSIVE_SCOPE( "a shipping economy service refuses a development-only receipt validator" );
+    SW_EXPECT_FALSE( service.initialize( &store, settings ) );
+#else
+    SW_EXPECT_TRUE( service.initialize( &store, settings ) );
+#endif
+    service.shutdown();
+    store.shutdown();
 }

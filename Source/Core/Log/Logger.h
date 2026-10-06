@@ -232,7 +232,7 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
 
 #if !defined( SW_LOG_COMPILED_VERBOSITY )
     #if defined( SW_SHIPPING )
-    /// @brief 배포본은 Warning 까지만 컴파일합니다. Info · Trace 는 호출 자체가 사라집니다.
+    /// @brief 배포본은 Warning 까지만 컴파일합니다. Info · Trace 는 호출 자체가 사라집니다. 전용 서버 배포본은 Info 까지다(`cmake/Engine/BuildLayout.cmake` 가 정의).
         #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_WARNING
     #elif defined( SW_DEBUG )
         #define SW_LOG_COMPILED_VERBOSITY SW_LOG_VERBOSITY_TRACE

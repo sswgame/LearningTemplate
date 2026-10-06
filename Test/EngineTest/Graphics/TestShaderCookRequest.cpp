@@ -29,6 +29,8 @@
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
 
+#include "EngineTest/HostTargetTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 namespace
@@ -310,6 +312,8 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryViewModeVariantOfEveryMeshPassTypeIsRe
 SW_TEST_CASE( ShaderCookRequestTest, CookedManifestHoldsEveryRequest )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    if ( test::HostTargetTestUtil::isServerOnlyBuild() )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
 
     sw::vector<sw::ShaderCookRequest> listRequest;
     sw::ShaderCookDriver::collectAllRequests( sw::ResourceUtil::getRootFolderPath(), listRequest );

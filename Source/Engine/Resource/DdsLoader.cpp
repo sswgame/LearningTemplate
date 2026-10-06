@@ -116,6 +116,9 @@ namespace sw
 
     bool DdsLoader::loadFromResource( string_view relativePath, DdsImageData& outImage )
     {
+        // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 없는 것으로 치고 오류를 남기지 않는다(ResourceUtil::setHostTarget).
+        if ( ResourceUtil::isExcludedForHost( relativePath ) )
+            return false;
         vector<uint8> bytes;
         if ( ResourceUtil::readBinaryResource( relativePath, bytes ) == false || bytes.empty() )
         {

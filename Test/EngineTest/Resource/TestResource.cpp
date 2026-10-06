@@ -15,6 +15,8 @@
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
+#include "EngineTest/HostTargetTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -415,6 +417,8 @@ SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
 SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "engine/textures/perlin.dds" ) )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::DdsImageData image;
     // **도메인까지 적은 engine 리소스**를 쓴다. 도메인 없는 "textures/splash.dds" 는 editor 도메인 에셋이라
     // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
@@ -557,6 +561,8 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseLookupNormalizesPath )
 SW_TEST_CASE( ResourceTest, AssetStreamingQueueDataRequest )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "engine/textures/perlin.dds" ) )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::AssetStreamingQueue queue;
     queue.initialize();
 

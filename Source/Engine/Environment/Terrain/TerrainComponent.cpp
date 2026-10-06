@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -206,6 +207,12 @@ namespace sw
     {
         using Internal = TerrainComponentInternal;
         if ( _splatTexturePath.empty() )
+        {
+            _heightfield.setSplat( 0, 0, {} );
+            return;
+        }
+        // 전용 서버의 패키지에는 텍스처가 없다 — 층 질의는 레이어 0 이다(경고를 남기지 않는다).
+        if ( ResourceUtil::isExcludedForHost( _splatTexturePath ) )
         {
             _heightfield.setSplat( 0, 0, {} );
             return;
