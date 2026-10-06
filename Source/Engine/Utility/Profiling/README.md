@@ -139,15 +139,6 @@ Vulkan의 보정 확장 `VK_EXT_calibrated_timestamps` 는 아직 쓰지 않습�
 백엔드를 교체하면 새 컨텍스트를 엽니다. Tracy의 컨텍스트 번호는 1바이트라서 교체 255번까지 지원합니다.
 타임스탬프 슬롯 배치(패스 14개와 컴퓨트, 프레임 슬롯)는 `FrameRendererUtil` 을 따릅니다. 슬롯을 넘는 패스는 엔진 표와 Tracy 모두에 나오지 않습니다.
 
-### VSync가 정해지는 순서
-
-VSync는 `EngineConfig._window._bVSync`(기본 `false`), 플레이어 사용자 설정 `display.vsync`(기본값과 다르게 저장했을 때), 명령줄 `-vsync` 순서로 정해지고 뒤의 것이 이깁니다.
-Present 경로는 `IRHIDevice::isVSyncEnabled()` 를 읽습니다. 실행 중에는 `UserSettingsHost` 가 렌더 스레드를 멈춘 뒤 `IRHIDevice::setVSync` 로 바꿉니다.
-
-- DX11과 DX12는 `Present( 0, 0 )` 만으로는 VSync가 꺼지지 않습니다. 스왑체인의 `ALLOW_TEARING` 플래그와 Present 플래그가 짝이어야 하고, `ResizeBuffers` 에도 같은 플래그를 다시 넘겨야 합니다(`RHI/DX/RHIDxgiTearing.h`).
-  그래서 DXGI 스왑체인은 티어링을 지원하면 항상 `ALLOW_TEARING` 으로 만듭니다.
-- Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인 present 모드(FIFO, MAILBOX, IMMEDIATE)가 그 역할을 합니다.
-
 ### 측정 비용
 
 Release, 16 스레드에서 `-gv_benchMeshes=8 -gv_benchAnimate=0 -gv_profileFrames=600` 으로 Tracy를 켜고 끈 상태를 번갈아 3번씩 측정했습니다. 뷰어는 붙이지 않았습니다(Tracy가 메모리에 쌓는 상태).
@@ -206,6 +197,8 @@ Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 
 
 ## 더 볼 곳
 
+- 측정할 때 지킬 것과 지난 측정에서 얻은 교훈: [검증과 측정](../../../../docs/08_Verification.md)의 "측정 · 프로파일" 절
+- VSync가 정해지는 순서와 백엔드별로 끄는 법: [RHI README](../../Graphics/RHI/README.md)의 "VSync" 절
 - 성능 회귀 검사: `py -3 -m Scripts perf --app <App 경로>` (`Scripts/qa/PerfRegression.py`). 게임마다 Release 프레임 p50과 p99를 이 기계의 기준과 비교합니다.
 - 메모리 예산: `Config/Engine/MemoryBudget.json`, `-gv_memoryReport`
 - GPU 타임스탬프: `Graphics/Renderer/Frame/GpuTimelineExporter`, `IRHIDevice::readTimestamps`
