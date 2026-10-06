@@ -10,6 +10,7 @@ SWCOOK 3
 980c18c4c174d3fb engine:postoutline.hlsli
 9e8ef007673671c1 engine:lighting.hlsli
 9ee00d8a59ae021e engine:common.hlsli
+a16db7b2113a3424 engine:colorvision.hlsli
 bebc217123811acb engine:binding.hlsli
 d43a994c10ab331e engine:instancedata.hlsli
 f653f249d0845efc engine:lighting2d.hlsli
