@@ -278,7 +278,7 @@ namespace sw
         MailboxCall work      = call;
         work._nowMs           = call._nowMs != 0 ? call._nowMs : _nowMs;
         const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( make_unique<MailboxRequestWork>( this, work, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callId ) );
+        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, work, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callId ) );
     }
 
     void MailboxService::completeCall( uint64 callId, const MailboxReply& reply )

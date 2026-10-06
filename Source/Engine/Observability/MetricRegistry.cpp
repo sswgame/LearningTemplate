@@ -293,7 +293,7 @@ namespace sw
             }
             case Kind::Histogram:
             {
-                pSeries->_histogram = make_unique<MetricHistogram>( *pUpperBound );
+                pSeries->_histogram = sw::make_unique<MetricHistogram>( *pUpperBound );
                 break;
             }
         }
