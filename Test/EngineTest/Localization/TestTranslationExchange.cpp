@@ -160,6 +160,29 @@ SW_TEST_CASE( TranslationExchangeTest, GatherPrefillsFromTranslationMemory )
 }
 
 /**
+ * @brief [TranslationExchangeTest] 번역 메모리가 깨졌으면 PO 내보내기는 그 문화권을 쓰지 않고 실패로 알린다 — 빈 메모리로 내보내지 않는다
+ * @details 빈 메모리로 내보내면 옛 원문(fuzzy 의 previous) · 제안이 조용히 빠진 PO 가 번역가에게 간다.
+ */
+SW_TEST_CASE( TranslationExchangeTest, ExportWithBrokenMemoryFailsAndWritesNothing )
+{
+    const sw::string folder      = test::makeTempDirectory( "loc_po_broken_tm" );
+    const sw::string projectPath = TranslationExchangeTestInternal::writeProject( folder );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "tm/ko.tm.json" ), "{ \"culture\": \"ko\", \"entries\": [ " ) );
+
+    sw::vector<sw::LocalizationExchangeResult> listResult;
+    test::ScopedLogCollector                   collector;
+    bool                                       bExported{ true };
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a broken translation memory stops the PO export of that culture" );
+        bExported = sw::LocalizationTools::exportProjectPo( projectPath, listResult );
+    }
+    SW_EXPECT_FALSE( bExported );
+    SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( listResult[0]._path ) );
+    SW_EXPECT_TRUE_MSG( collector.countContaining( "ko.tm.json" ) > 0, collector.joined().c_str() );
+}
+
+/**
  * @brief [TranslationExchangeTest] PO 내보내기 → 번역가가 고침 → 가져오기: 맥락 · 메모가 왕복하고, fuzzy 는 검토 표시, 옛 원문의 번역은 낡은 것으로 들어온다
  */
 SW_TEST_CASE( TranslationExchangeTest, ExportEditImportRoundTrip )
