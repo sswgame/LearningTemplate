@@ -1,17 +1,36 @@
 /**
  * @file EditorScenarioSteps.cpp
- * @brief 자동화 시나리오의 에디터 단계(`EditorClick` · `EditorText`) — 에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로 ImGui 사건으로 넣는다.
- * @details 게임 뷰 입력은 가상 입력 장치(`<Tap>` …)로, 에디터 패널 입력은 이 단계로 — 두 창구가 한 시나리오 파일에서 같이 쓰인다. 에디터 모듈이 올라온 실행
- *          (`-EnableEditor`)에서만 등록되므로, 에디터 없이 이 단계를 쓰면 시작할 때 읽기 오류다.
+ * @brief 자동화 시나리오의 에디터 단계(`EditorClick` · `EditorText` · `EditorKey` · `EditorExpectObject` · `EditorExpectDockLayout`)와 에디터 탐침(`Editor.*`).
+ * @details 에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로 ImGui 사건으로 넣는다. 게임 뷰 입력은 가상 입력 장치(`<Tap>` …)로, 에디터 패널 입력은
+ *          이 단계로 — 두 창구가 한 시나리오 파일에서 같이 쓰인다. 에디터 모듈이 올라온 실행(`-EnableEditor`)에서만 등록되므로, 에디터 없이 이 단계 · 탐침을
+ *          쓰면 시작할 때 읽기 오류다. 플레이 · 저장 · 열기 같은 에디터 명령은 엔진 `DevCommand` 단계로 부른다(`play` · `stop` · `editor <커맨드 id>` · `scene.saveAs`).
  */
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Window/IWindow.h"
+
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -19,6 +38,11 @@ namespace sw::editor
     {
         struct EditorScenarioStepsInternal
         {
+            /** @brief `EditorExpectDockLayout` 의 도크 칸 최소 변(px) 기본값입니다 — 이보다 좁은 칸은 탭 글자도 못 담는다. */
+            static constexpr float32 kDefaultMinDockNodeSide = 24.0f;
+            /** @brief 창 · 도크 사각형 비교의 픽셀 허용치입니다. */
+            static constexpr float32 kPixelTolerance = 1.0f;
+
             /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 봅니다. 위젯 이름표를 적기 시작한다(이름표는 켜진 뒤 그린 위젯만 적힌다). */
             static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
             {
@@ -35,7 +59,7 @@ namespace sw::editor
                         return false;
                     }
                 }
-                if ( step.findAttribute( pRequired ) == nullptr )
+                if ( pRequired != nullptr && step.findAttribute( pRequired ) == nullptr )
                 {
                     outError = step.describe() + ": needs " + pRequired + "=\"…\"";
                     return false;
@@ -44,6 +68,25 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p defaultValue 입니다. 형식이 틀리면 false 입니다. */
+            [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32 defaultValue, uint32& outValue )
+            {
+                const string* pText = step.findAttribute( name );
+                int32         value = 0;
+                if ( pText == nullptr )
+                {
+                    outValue = defaultValue;
+                    return true;
+                }
+                if ( StringUtil::parseInt( string_view{ *pText }, value ) == false || value < 0 )
+                    return false;
+                outValue = static_cast<uint32>( value );
+                return true;
+            }
+
+            // ------------------------------------------------------------------------------
+            // EditorClick · EditorText · EditorKey — ImGui 입력
+            // ------------------------------------------------------------------------------
             static bool validateClick( const AutomationStep& step, string& outError )
             {
                 if ( validate( step, { "mark", "button" }, "mark", outError ) == false )
@@ -73,7 +116,10 @@ namespace sw::editor
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                     return true;
                 }
+                // 누름과 뗌을 두 프레임으로 — 뗌 앞에서 다시 이름표 위로 옮긴다(플랫폼이 그 사이 실제 커서를 넣는다).
                 EditorSelfTestInput::setMouseButton( button, true );
+                EditorSelfTestInput::waitNextFrame();
+                (void)EditorSelfTestInput::moveMouseToMark( mark );
                 EditorSelfTestInput::setMouseButton( button, false );
                 return true;
             }
@@ -83,9 +129,317 @@ namespace sw::editor
                 EditorSelfTestInput::typeText( *step.findAttribute( "value" ) );
                 return true;
             }
+
+            /** @brief "Ctrl+Z" 를 ImGuiKey 들로 풉니다(마지막이 키, 앞은 수정자). 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool parseKeyChord( string_view chord, vector<int32>& outListKey )
+            {
+                outListKey.clear();
+                size_t begin = 0;
+                while ( begin <= chord.size() )
+                {
+                    const size_t      plus  = chord.find( '+', begin );
+                    const size_t      end   = plus == string_view::npos ? chord.size() : plus;
+                    const string_view token = chord.substr( begin, end - begin );
+                    int32             key   = 0;
+                    if ( token.empty() || EditorSelfTestInput::findKeyByName( token, key ) == false )
+                        return false;
+                    outListKey.push_back( key );
+                    if ( plus == string_view::npos )
+                        break;
+                    begin = plus + 1;
+                }
+                return outListKey.empty() == false;
+            }
+
+            static bool validateKey( const AutomationStep& step, string& outError )
+            {
+                if ( validate( step, { "key" }, "key", outError ) == false )
+                    return false;
+                vector<int32> listKey;
+                if ( parseKeyChord( *step.findAttribute( "key" ), listKey ) == false )
+                {
+                    outError = step.describe() + ": unknown key '" + *step.findAttribute( "key" ) + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 수정자를 누르고 키를 눌렀다 뗀 뒤 수정자를 거꾸로 뗀다 — ImGui 가 사건을 프레임에 나눠 흘리므로 한 단계로 된다. */
+            static bool runKey( AutomationRunner& /*runner*/, const AutomationStep& step )
+            {
+                vector<int32> listKey;
+                (void)parseKeyChord( *step.findAttribute( "key" ), listKey ); // 검사에서 봤다
+                for ( const int32 key : listKey )
+                {
+                    EditorSelfTestInput::setKey( key, true );
+                }
+                for ( size_t index = listKey.size(); index > 0; --index )
+                {
+                    EditorSelfTestInput::setKey( listKey[index - 1], false );
+                }
+                return true;
+            }
+
+            // ------------------------------------------------------------------------------
+            // EditorExpectObject — 활성 씬에 그 이름의 오브젝트가 몇 개인지(그 컴포넌트를 가진 것만 셀 수도 있다)
+            // ------------------------------------------------------------------------------
+            static bool validateExpectObject( const AutomationStep& step, string& outError )
+            {
+                if ( validate( step, { "name", "count", "component", "selected" }, "name", outError ) == false )
+                    return false;
+                uint32 value = 0;
+                if ( readCount( step, "count", 1, value ) == false || readCount( step, "selected", 0, value ) == false || value > 1 )
+                {
+                    outError = step.describe() + ": count must be a whole number and selected 0 or 1";
+                    return false;
+                }
+                const string* pComponent = step.findAttribute( "component" );
+                TypeRegistry* pRegistry  = editor::getService<TypeRegistry>();
+                if ( pComponent != nullptr && ( pRegistry == nullptr || pRegistry->findType( hashed_string( *pComponent ) ) == nullptr ) )
+                {
+                    outError = step.describe() + ": unknown component type '" + *pComponent + "'";
+                    return false;
+                }
+                return true;
+            }
+
+            static bool runExpectObject( AutomationRunner& runner, const AutomationStep& step )
+            {
+                uint32 expectedCount = 1;
+                uint32 bSelected     = 0;
+                (void)readCount( step, "count", 1, expectedCount ); // 검사에서 봤다
+                (void)readCount( step, "selected", 0, bSelected );
+                const hashed_string name( *step.findAttribute( "name" ) );
+                GameObjectManager*  pManager = editor::getActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    runner.recordFailure( step, "no active scene" );
+                    return true;
+                }
+
+                vector<GameObject*> listObject;
+                const string*       pComponent = step.findAttribute( "component" );
+                TypeRegistry*       pRegistry  = editor::getService<TypeRegistry>();
+                if ( pComponent != nullptr && pRegistry != nullptr )
+                    EditorSceneCommands::collectObjectsWithComponent( *pManager, pRegistry->findType( hashed_string( *pComponent ) ), listObject );
+                else
+                    pManager->getAllGameObjects( listObject );
+
+                EditorContext* pContext   = EditorContext::get();
+                uint32         foundCount = 0;
+                uint32         pickCount  = 0;
+                for ( const GameObject* pObj : listObject )
+                {
+                    if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->getName().isEqual( name, NameCase::CaseSensitive ) == false )
+                        continue;
+                    ++foundCount;
+                    if ( pContext != nullptr && pContext->getEditorSelection().hasObject( pObj ) )
+                        ++pickCount;
+                }
+                if ( foundCount != expectedCount )
+                {
+                    runner.recordFailure( step, "found " + to_string( foundCount ) + " object(s), expected " + to_string( expectedCount ) );
+                    return true;
+                }
+                if ( bSelected != 0 && pickCount == 0 )
+                    runner.recordFailure( step, "the object is not selected" );
+                return true;
+            }
+
+            // ------------------------------------------------------------------------------
+            // EditorExpectDockLayout — 메인 뷰포트가 창과 같고, 보이는 도크 칸이 모두 화면 안 · 최소 변 이상, 창이 최소 크기 이상
+            // ------------------------------------------------------------------------------
+            static const ImGuiDockNode* findMainDockspace()
+            {
+                const ImGuiViewport* pMain       = ImGui::GetMainViewport();
+                ImGuiDockContext&    dockContext = ImGui::GetCurrentContext()->DockContext;
+                for ( int32 nodeIndex = 0; nodeIndex < dockContext.Nodes.Data.Size; ++nodeIndex )
+                {
+                    const ImGuiDockNode* pNode     = static_cast<const ImGuiDockNode*>( dockContext.Nodes.Data[nodeIndex].val_p );
+                    const bool           bMainRoot = pNode != nullptr && pNode->ParentNode == nullptr && pNode->IsDockSpace() && pNode->HostWindow != nullptr &&
+                                           pNode->HostWindow->Viewport == pMain;
+                    if ( bMainRoot )
+                        return pNode;
+                }
+                return nullptr;
+            }
+
+            static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf )
+            {
+                if ( pNode == nullptr || pNode->IsVisible == false )
+                    return;
+                if ( pNode->IsLeafNode() )
+                {
+                    outListLeaf.push_back( pNode );
+                    return;
+                }
+                collectVisibleLeaves( pNode->ChildNodes[0], outListLeaf );
+                collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
+            }
+
+            static bool validateDockLayout( const AutomationStep& step, string& outError )
+            {
+                if ( validate( step, { "minNodeSize" }, nullptr, outError ) == false )
+                    return false;
+                uint32 value = 0;
+                if ( readCount( step, "minNodeSize", 0, value ) == false )
+                {
+                    outError = step.describe() + ": minNodeSize must be pixels";
+                    return false;
+                }
+                return true;
+            }
+
+            static bool runDockLayout( AutomationRunner& runner, const AutomationStep& step )
+            {
+                uint32 minNodeSide = 0;
+                (void)readCount( step, "minNodeSize", 0, minNodeSide ); // 검사에서 봤다
+                const float32 minSide = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
+
+                const IWindow* pWindow = IWindow::getActiveWindow();
+                if ( pWindow == nullptr || ImGui::GetCurrentContext() == nullptr )
+                {
+                    runner.recordFailure( step, "no window or ImGui context" );
+                    return true;
+                }
+                const bool bAboveMinimum = pWindow->getWidth() >= pWindow->getMinimumClientWidth() && pWindow->getHeight() >= pWindow->getMinimumClientHeight();
+                if ( bAboveMinimum == false )
+                    runner.recordFailure( step, "the window (" + to_string( pWindow->getWidth() ) + "x" + to_string( pWindow->getHeight() ) +
+                                                    ") shrank below the editor minimum size" );
+
+                const ImGuiViewport* pMain         = ImGui::GetMainViewport();
+                const float32        widthDelta    = pMain->Size.x - static_cast<float32>( pWindow->getWidth() );
+                const float32        heightDelta   = pMain->Size.y - static_cast<float32>( pWindow->getHeight() );
+                const bool           bSameAsWindow = -kPixelTolerance <= widthDelta && widthDelta <= kPixelTolerance && -kPixelTolerance <= heightDelta &&
+                                           heightDelta <= kPixelTolerance;
+                if ( bSameAsWindow == false )
+                    runner.recordFailure( step, "the main viewport does not match the window client size" );
+
+                const ImGuiDockNode* pRoot = findMainDockspace();
+                if ( pRoot == nullptr || pRoot->Size.x <= 0.0f || pRoot->Size.y <= 0.0f )
+                {
+                    runner.recordFailure( step, "no main dockspace" );
+                    return true;
+                }
+                vector<const ImGuiDockNode*> listLeaf;
+                collectVisibleLeaves( pRoot, listLeaf );
+                const ImVec2 workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
+                for ( const ImGuiDockNode* pLeaf : listLeaf )
+                {
+                    const bool bInside = pMain->WorkPos.x - kPixelTolerance <= pLeaf->Pos.x && pMain->WorkPos.y - kPixelTolerance <= pLeaf->Pos.y &&
+                                         pLeaf->Pos.x + pLeaf->Size.x <= workMax.x + kPixelTolerance && pLeaf->Pos.y + pLeaf->Size.y <= workMax.y + kPixelTolerance;
+                    const utf8* pWindowName = ( pLeaf->VisibleWindow != nullptr ) ? pLeaf->VisibleWindow->Name : "(empty)";
+                    if ( bInside == false )
+                        runner.recordFailure( step, string( "dock node '" ) + pWindowName + "' lies outside the main viewport" );
+                    if ( pLeaf->Size.x < minSide || pLeaf->Size.y < minSide )
+                        runner.recordFailure( step, string( "dock node '" ) + pWindowName + "' is " + to_string( pLeaf->Size.x ) + "x" + to_string( pLeaf->Size.y ) +
+                                                        " px - below the minimum side" );
+                }
+                return true;
+            }
+
+            // ------------------------------------------------------------------------------
+            // 탐침 — `<Expect probe="Editor.*">`
+            // ------------------------------------------------------------------------------
+            [[nodiscard]] static bool readPlayState( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( static_cast<uint32>( EditorPlaySession::getState() ) );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSceneDirty( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = pContext->getWorkspace().isSceneDirty() ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readObjectCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObjectManager* pActive = editor::getActiveObjectManager();
+                if ( pActive == nullptr )
+                    return false;
+                uint32 count = 0;
+                pActive->forEachGameObject( [&count]( const GameObject* pObj )
+                {
+                    if ( pObj != nullptr && pObj->isPendingDestroy() == false )
+                        ++count;
+                } );
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelectionCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pContext->getEditorSelection().getSelectedObjectCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readHierarchyVisibleRoots( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext*        pContext = EditorContext::get();
+                const HierarchyPanel* pHierarchy =
+                    pContext != nullptr ? static_cast<const HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) ) : nullptr;
+                if ( pHierarchy == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pHierarchy->getVisibleRootCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readNoSearchResultHintShown( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = EditorWidgets::wasFilteredNoResultHintDrawnRecently() ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readThemePreset( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( static_cast<uint32>( EditorThemeUtil::getActiveTheme()._preset ) );
+                return true;
+            }
+
+            /** @brief 액센트 색을 0xRRGGBB 정수로(채널마다 0..255 반올림) — `equals` 로 정확히 견줄 수 있다. */
+            [[nodiscard]] static bool readAccentColor( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const Color4& accent = EditorThemeUtil::getAccentColor();
+                const uint32  red    = static_cast<uint32>( accent._r * 255.0f + 0.5f );
+                const uint32  green  = static_cast<uint32>( accent._g * 255.0f + 0.5f );
+                const uint32  blue   = static_cast<uint32>( accent._b * 255.0f + 0.5f );
+                outValue             = static_cast<float64>( ( red << 16 ) | ( green << 8 ) | blue );
+                return true;
+            }
+
+            [[nodiscard]] static bool readUiScale( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
+                return true;
+            }
         };
     } // namespace
 
     SW_AUTOMATION_STEP( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, false );
     SW_AUTOMATION_STEP( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText, false );
+    SW_AUTOMATION_STEP( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey, false );
+    SW_AUTOMATION_STEP( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
+                        &EditorScenarioStepsInternal::validateExpectObject, false );
+    SW_AUTOMATION_STEP( editorExpectDockLayout, "EditorExpectDockLayout", &EditorScenarioStepsInternal::runDockLayout,
+                        &EditorScenarioStepsInternal::validateDockLayout, false );
+
+    SW_AUTOMATION_PROBE( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &EditorScenarioStepsInternal::readPlayState );
+    SW_AUTOMATION_PROBE( editorSceneDirty, "Editor.SceneDirty", "1 while the edited scene has unsaved changes", &EditorScenarioStepsInternal::readSceneDirty );
+    SW_AUTOMATION_PROBE( editorObjectCount, "Editor.ObjectCount", "Objects in the active scene", &EditorScenarioStepsInternal::readObjectCount );
+    SW_AUTOMATION_PROBE( editorSelectionCount, "Editor.SelectionCount", "Selected objects", &EditorScenarioStepsInternal::readSelectionCount );
+    SW_AUTOMATION_PROBE( editorHierarchyVisibleRoots, "Editor.HierarchyVisibleRoots", "Root rows the Hierarchy showed in the last frame (after its filter)",
+                         &EditorScenarioStepsInternal::readHierarchyVisibleRoots );
+    SW_AUTOMATION_PROBE( editorNoSearchResultHintShown, "Editor.NoSearchResultHintShown", "1 when a panel drew its zero-results hint for a search this or last frame",
+                         &EditorScenarioStepsInternal::readNoSearchResultHintShown );
+    SW_AUTOMATION_PROBE( editorThemePreset, "Editor.ThemePreset", "Active theme preset: 0 ModernDark, 1 DeepCharcoal, 2 MidnightBlue, 3 ClassicDark",
+                         &EditorScenarioStepsInternal::readThemePreset );
+    SW_AUTOMATION_PROBE( editorAccentColor, "Editor.AccentColor", "Accent color as 0xRRGGBB", &EditorScenarioStepsInternal::readAccentColor );
+    SW_AUTOMATION_PROBE( editorUiScale, "Editor.UiScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUiScale );
 } // namespace sw::editor

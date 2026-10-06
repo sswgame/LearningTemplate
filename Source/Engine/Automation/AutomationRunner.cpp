@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -184,6 +185,7 @@ namespace sw
         , _bListeningLog{ SW_FALSE }
         , _reserved{ 0 }
     {
+        AutomationEnvironmentSteps::ensureLinked();
         AutomationWindowSteps::ensureLinked();
         UiAutomationSteps::ensureLinked();
     }

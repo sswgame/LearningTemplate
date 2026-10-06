@@ -10,6 +10,7 @@
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/String/StringUtil.h"
+    #include "Core/String/TagID.h"
 
     #include "Engine/Common/EngineServices.h"
     #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -71,6 +72,23 @@ namespace sw
                 }
                 pRootNode->teleportTo( position );
                 outReply = "teleported " + listArgument[0];
+                return true;
+            }
+
+            static bool runTagAdd( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 2 || listArgument[1].empty() )
+                    return false;
+                Scene*             pScene   = engine::areEngineServicesBound() ? engine::getSceneManager().getActiveScene() : nullptr;
+                GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( listArgument[0] ) ) : nullptr;
+                if ( pObject == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' in the active scene";
+                    return false;
+                }
+                pObject->addTag( TagID::request( listArgument[1] ) );
+                outReply = "tagged " + listArgument[0] + " with " + listArgument[1];
                 return true;
             }
 
@@ -205,6 +223,7 @@ namespace sw
                     &EngineDevCommandsInternal::runTimeScale );
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene",
                     &EngineDevCommandsInternal::runTeleport );
+    SW_DEV_COMMAND( TagAdd, "tag.add", "tag.add <object> <tag>", "Add a gameplay tag to a named object of the active scene", &EngineDevCommandsInternal::runTagAdd );
     SW_DEV_COMMAND( Autoplay, "autoplay", "autoplay [on|off]", "Show or switch the game's autoplay (AI drives the player - SW_GAME_AUTOPLAY)",
                     &EngineDevCommandsInternal::runAutoplay );
     SW_DEV_COMMAND( AnimationRewind, "anim.rewind", "anim.rewind [on|off]", "Show or switch animation rewind recording (gv_animationRewind)",

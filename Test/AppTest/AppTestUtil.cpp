@@ -88,12 +88,17 @@ namespace test
         return packRoot;
     }
 
-    int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines )
+    int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines, sw::string_view extraArguments )
     {
         const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
         const sw::string outputBase = "Saved/Automation/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend;
         (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
         sw::string arguments = "-scenario=" + scenarioPath + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
+        if ( extraArguments.empty() == false )
+        {
+            arguments += " ";
+            arguments += extraArguments;
+        }
 
         sw::Process process;
         if ( launchApp( process, arguments ) == false )

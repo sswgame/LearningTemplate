@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 ① 기본 작업 흐름 — 새 씬 → Hierarchy "+ Create" → 오른쪽 클릭 메뉴로 컴포넌트 붙이기 → 인스펙터에서 이름 고치기 → 되돌리기 · 다시 실행 →
+  다른 이름으로 저장 → 새 씬 → 다시 열어 값 확인 → 에디터 안 플레이 시작 · 정지(편집 씬이 그대로).
+  패널 입력은 ImGui 사건(EditorClick · EditorText · EditorKey), 메뉴 · 대화상자가 필요한 명령은 개발 명령(DevCommand — 저장 대화상자 대신 scene.saveAs).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/workflow.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOnEveryBackend 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.workflow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<!-- 에디터가 첫 씬을 다 열고 패널을 한 번씩 그릴 때까지 기다린 뒤 빈 씬에서 시작한다 -->
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="80">
+		<EditorExpectObject name="GameObject" count="0"/>
+		<Expect probe="Editor.PlayState" equals="0"/>
+	</At>
+
+	<!-- 1) 오브젝트 만들기 — 만든 오브젝트가 선택된다 -->
+	<At frame="90"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="100"><EditorExpectObject name="GameObject" selected="1"/></At>
+
+	<!-- 2) 컴포넌트 붙이기 — 선택한 줄을 오른쪽 클릭 → Add Component → 검색 → 항목 -->
+	<At frame="110"><EditorClick mark="hierarchy.selectedRow" button="1"/></At>
+	<At frame="120"><EditorClick mark="hierarchy.addComponent"/></At>
+	<At frame="130"><EditorClick mark="hierarchy.addComponent.search"/></At>
+	<At frame="140"><EditorText value="PointLight"/></At>
+	<At frame="150"><EditorClick mark="hierarchy.addComponent.PointLightComponent"/></At>
+	<At frame="165"><EditorExpectObject name="GameObject" component="PointLightComponent"/></At>
+
+	<!-- 3) 인스펙터에서 값 고치기 — 이름 칸을 눌러 전부 고르고 새 이름 + Enter -->
+	<At frame="175"><EditorClick mark="inspector.name"/></At>
+	<At frame="185"><EditorKey key="Ctrl+A"/></At>
+	<At frame="195"><EditorText value="Lamp"/></At>
+	<At frame="205"><EditorKey key="Enter"/></At>
+	<At frame="220">
+		<EditorExpectObject name="Lamp" component="PointLightComponent"/>
+		<Expect probe="Editor.SceneDirty" equals="1"/>
+	</At>
+
+	<!-- 4) 되돌리기(단축키) · 다시 실행(커맨드) -->
+	<At frame="230"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="245">
+		<EditorExpectObject name="Lamp" count="0"/>
+		<EditorExpectObject name="GameObject" component="PointLightComponent"/>
+	</At>
+	<At frame="250"><DevCommand line="editor edit.redo"/></At>
+	<At frame="260"><EditorExpectObject name="Lamp" component="PointLightComponent"/></At>
+
+	<!-- 5) 저장 → 새 씬 → 다시 열기 -->
+	<At frame="270"><DevCommand line="scene.saveAs Saved/Automation/editor.workflow/workflow.scene.xml"/></At>
+	<At frame="280">
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+		<DevCommand line="editor scene.new"/>
+	</At>
+	<At frame="295"><EditorExpectObject name="Lamp" count="0"/></At>
+	<At frame="300"><DevCommand line="scene.open Saved/Automation/editor.workflow/workflow.scene.xml"/></At>
+	<At frame="360">
+		<EditorExpectObject name="Lamp" component="PointLightComponent"/>
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+	</At>
+
+	<!-- 6) 에디터 안 플레이 시작 · 정지 — 정지하면 편집 씬이 그대로다 -->
+	<At frame="370"><DevCommand line="play"/></At>
+	<At frame="420"><Expect probe="Editor.PlayState" equals="1"/></At>
+	<At frame="430"><DevCommand line="stop"/></At>
+	<At frame="460">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<EditorExpectObject name="Lamp" component="PointLightComponent"/>
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>

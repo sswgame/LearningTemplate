@@ -45,9 +45,11 @@ namespace test
         /**
          * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 종료 코드를 돌려줍니다.
          * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
+         *          @p extraArguments 는 명령줄 끝에 붙는다(에디터 시나리오의 `-EnableEditor`).
          * @return 띄우지 못하면 `kNotLaunchedExitCode`, 시한을 넘겨 죽였으면 -1
          */
-        static int32 runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines );
+        static int32 runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines,
+                                  sw::string_view extraArguments = {} );
         /** @brief 이 기계에서 돌릴 수 없어 건너뛸 종료 코드(13 건너뜀 · 77 백엔드 없음 · 못 띄움)면 true 입니다. */
         static bool isSkippedExitCode( int32 exitCode );
     };

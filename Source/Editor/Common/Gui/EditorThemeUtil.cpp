@@ -3,6 +3,7 @@
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -222,6 +223,21 @@ namespace sw::editor
     const EditorThemeConfig& EditorThemeUtil::getActiveTheme()
     {
         return EditorThemeInternal::activeTheme();
+    }
+
+    bool EditorThemeUtil::findPresetByConfigId( string_view configId, EditorThemePreset& outPreset )
+    {
+        uint32                                           rowCount{ 0 };
+        const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
+        for ( uint32 index = 0; index < rowCount; ++index )
+        {
+            if ( StringUtil::equals( configId, pRow[index]._pConfigId, true ) )
+            {
+                outPreset = pRow[index]._preset;
+                return true;
+            }
+        }
+        return false;
     }
 
     void EditorThemeUtil::applyPreset( EditorThemePreset preset )

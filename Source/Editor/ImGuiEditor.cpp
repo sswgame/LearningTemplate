@@ -680,6 +680,21 @@ namespace sw::editor
             if ( bDpiMoved )
                 EditorThemeUtil::setDpiScale( fontScaleDpi );
         }
+        // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔 · 시나리오 `<Variable>` · gv 패널) 바로 따른다 — 0 으로 돌리면 다시 모니터 DPI 를 따른다.
+        {
+            const bool    bFixedUiScale = gv_editorUiScale > 0.0f;
+            const float32 wantedScale   = bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
+                                                                                                                                 : 1.0f;
+            const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUiScale;
+            const bool    bFixedMoved   = bFixedUiScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            if ( bModeChanged || bFixedMoved )
+            {
+                ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
+                ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
+                EditorThemeUtil::setDpiScale( wantedScale );
+                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI" );
+            }
+        }
         ImGuizmo::BeginFrame();
         // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.
         ImGuizmo::Enable( false );

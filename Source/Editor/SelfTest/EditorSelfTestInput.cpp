@@ -17,13 +17,15 @@ namespace sw::editor
                 MousePos,
                 MouseButton,
                 Text,
+                Key,
+                FrameBreak, ///< 여기까지를 이번 프레임에 넣고 나머지는 다음 프레임에 넣는다
             };
 
             struct PendingEvent
             {
                 string    _text;
                 float2    _position{};
-                int32     _code{ 0 }; ///< 버튼 번호, 마우스 위치면 뷰포트 id(0 = 알리지 않음)
+                int32     _code{ 0 }; ///< 버튼 번호 · ImGuiKey, 마우스 위치면 뷰포트 id(0 = 알리지 않음)
                 EventKind _kind{ EventKind::MousePos };
                 uint8     _bDown{ SW_FALSE };
             };
@@ -102,6 +104,8 @@ namespace sw::editor
         }
     }
 
+    bool EditorSelfTestMarks::isEnabled() { return EditorSelfTestInputInternal::getState()._bEnabled; }
+
     void EditorSelfTestInput::moveMouse( const float2& position, uint32 viewportId )
     {
         EditorSelfTestInputInternal::PendingEvent event;
@@ -128,6 +132,53 @@ namespace sw::editor
         EditorSelfTestInputInternal::push( std::move( event ) );
     }
 
+    void EditorSelfTestInput::waitNextFrame()
+    {
+        EditorSelfTestInputInternal::PendingEvent event;
+        event._kind = EditorSelfTestInputInternal::EventKind::FrameBreak;
+        EditorSelfTestInputInternal::push( std::move( event ) );
+    }
+
+    void EditorSelfTestInput::setKey( int32 imguiKey, bool bDown )
+    {
+        EditorSelfTestInputInternal::PendingEvent event;
+        event._kind  = EditorSelfTestInputInternal::EventKind::Key;
+        event._code  = imguiKey;
+        event._bDown = bDown ? SW_TRUE : SW_FALSE;
+        EditorSelfTestInputInternal::push( std::move( event ) );
+    }
+
+    bool EditorSelfTestInput::findKeyByName( string_view name, int32& outImguiKey )
+    {
+        struct ModifierName
+        {
+            const utf8* _pName;
+            int32       _key;
+        };
+        constexpr ModifierName kArrModifier[] = {
+            { "Ctrl",  ImGuiMod_Ctrl},
+            {"Shift", ImGuiMod_Shift},
+            {  "Alt",   ImGuiMod_Alt},
+        };
+        for ( const ModifierName& modifier : kArrModifier )
+        {
+            if ( name == modifier._pName )
+            {
+                outImguiKey = modifier._key;
+                return true;
+            }
+        }
+        for ( int32 key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_NamedKey_END; ++key )
+        {
+            if ( name == ImGui::GetKeyName( static_cast<ImGuiKey>( key ) ) )
+            {
+                outImguiKey = key;
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool EditorSelfTestInput::moveMouseToMark( string_view key )
     {
         EditorSelfTestMark mark;
@@ -142,9 +193,13 @@ namespace sw::editor
         vector<EditorSelfTestInputInternal::PendingEvent>& listEvent = EditorSelfTestInputInternal::getState()._listEvent;
         if ( listEvent.empty() )
             return;
-        ImGuiIO& io = ImGui::GetIO();
+        ImGuiIO& io            = ImGui::GetIO();
+        size_t   consumedCount = 0;
         for ( const EditorSelfTestInputInternal::PendingEvent& event : listEvent )
         {
+            ++consumedCount;
+            if ( event._kind == EditorSelfTestInputInternal::EventKind::FrameBreak )
+                break;
             switch ( event._kind )
             {
                 case EditorSelfTestInputInternal::EventKind::MousePos:
@@ -165,8 +220,17 @@ namespace sw::editor
                     io.AddInputCharactersUTF8( event._text.c_str() );
                     break;
                 }
+                case EditorSelfTestInputInternal::EventKind::Key:
+                {
+                    io.AddKeyEvent( static_cast<ImGuiKey>( event._code ), event._bDown != SW_FALSE );
+                    break;
+                }
+                case EditorSelfTestInputInternal::EventKind::FrameBreak:
+                {
+                    break;
+                }
             }
         }
-        listEvent.clear();
+        listEvent.erase( listEvent.begin(), listEvent.begin() + static_cast<ptrdiff_t>( consumedCount ) );
     }
 } // namespace sw::editor

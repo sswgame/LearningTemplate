@@ -34,6 +34,12 @@ namespace sw::editor
                 return ImGui::CalcTextSize( text.data(), text.data() + text.size() ).x;
             }
 
+            /** @brief 검색어가 있는 0 건 안내를 마지막으로 그린 ImGui 프레임입니다(0 = 그린 적 없음). */
+            static uint32& filteredHintFrame()
+            {
+                static uint32 s_frame = 0;
+                return s_frame;
+            }
 
             static ImVec4 toIm( const Color4& c )
             {
@@ -272,6 +278,7 @@ namespace sw::editor
             drawEmptyHint( "No matches." );
             return;
         }
+        EditorWidgetsInternal::filteredHintFrame() = static_cast<uint32>( ImGui::GetFrameCount() );
 
         // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
         ImGui::TextDisabled( "No matches for \"%.*s\".", static_cast<int32>( filter.size() ), filter.data() );
@@ -282,6 +289,12 @@ namespace sw::editor
         return EditorWidgetsInternal::noSearchResultHintCount();
     }
 
+    bool EditorWidgets::wasFilteredNoResultHintDrawnRecently()
+    {
+        const uint32 frame = EditorWidgetsInternal::filteredHintFrame();
+        const uint32 now   = static_cast<uint32>( ImGui::GetFrameCount() );
+        return frame != 0 && frame <= now && now - frame <= 1;
+    }
 
     void EditorWidgets::drawCountLabel( uint32 visible, uint32 total, const utf8* pUnit )
     {

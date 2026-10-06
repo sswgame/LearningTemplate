@@ -10,6 +10,7 @@
 | `AutomationRunner` | 실행기 — 시작 조건 · 단계 검사 · 입력 단계를 가상 입력(`VirtualInputScript`)으로 · 단언 · 끝 · 요약 줄 · JSON 보고 |
 | `AutomationProbe` | 탐침 등록표 — `<Expect probe="…">` 가 읽는 이름 붙은 값. 게임 · 키트가 `SW_AUTOMATION_PROBE` 한 줄로 등록 |
 | `AutomationStepRegistry` | 엔진 밖 단계 종류의 등록표 — GameFramework(행동 층) · 에디터(ImGui) · 플랫폼(창 메시지)이 `SW_AUTOMATION_STEP` 로 더한다 |
+| `AutomationEnvironmentSteps` | 환경 단계 — 개발 명령 한 줄(`DevCommand`) · 창 크기(`ResizeWindow`) |
 
 ## 실행
 
@@ -58,6 +59,8 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `Screenshot` | `file`(상대면 `Saved/Automation/<이름>/`) | 다음에 그리는 렌더 패킷에 실어 그 프레임의 화면(Present 결과)을 PPM 으로 | 결과 |
 | `ExpectImage` | `file` · `metric` · `region`(`x0,y0,x1,y1` 0..1) · `ratio`(darkFraction, 기본 0.7) · `reference`(differentFrom) + 비교 하나 | 영역 지표 단언 — 스크린샷이 써질 때까지 기다린다(최대 30 프레임) | 결과 |
 | `CloseWindow` | `withinSeconds`(기본 10) | 창 닫기 요청 — 그 시간 안에 루프가 끝나야 통과 | 환경 |
+| `DevCommand` | `line`(개발 명령 한 줄 — `play` · `stop` · `editor <커맨드 id>` · `scene.saveAs <경로>` · `tag.add <오브젝트> <태그>` …) | 개발 명령(`SW_DEV_COMMAND`)을 부른다 — 모르는 명령은 읽기 오류, 명령이 false 면 실패. Shipping 에는 없다(언리얼 자동화의 콘솔 명령 실행) | 환경 |
+| `ResizeWindow` | `width` · `height`(픽셀) | 창을 창 모드의 그 클라이언트 크기로 — 창의 최소 크기보다 작으면 거기서 멈춘다(`AutomationEnvironmentSteps`) | 환경 |
 | `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
 | `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
@@ -117,6 +120,25 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 |---|---|---|
 | `EditorClick` | `mark`(에디터 자체 시험 이름표 — `EditorSelfTestMarks::note`) · `button`(0..4) | 그 위젯 가운데로 마우스를 옮겨 누르고 뗀다 |
 | `EditorText` | `value` | ImGui 에 글자 입력 |
+| `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter` · `Escape` · `Backspace` · `Ctrl+Z`) | 수정자를 누르고 키를 눌렀다 뗀다(단축키 · 입력 칸 확정) |
+| `EditorExpectObject` | `name` · `count`(기본 1) · `component`(타입 — 그 컴포넌트를 가진 것만) · `selected`(1 = 선택돼 있어야) | 활성 씬의 그 이름 오브젝트 수를 단언 |
+| `EditorExpectDockLayout` | `minNodeSize`(px, 기본 24) | 창이 에디터 최소 크기 이상, 메인 뷰포트 = 창, 보이는 도크 칸이 모두 화면 안 · 최소 변 이상 |
+
+| 탐침 | 값 |
+|---|---|
+| `Editor.PlayState` | 0 정지 · 1 플레이 · 2 일시 정지 |
+| `Editor.SceneDirty` | 미저장 변경이 있으면 1 |
+| `Editor.ObjectCount` · `Editor.SelectionCount` | 활성 씬 오브젝트 수 · 선택 수 |
+| `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
+| `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 · 지난 프레임에 그렸으면 1 |
+| `Editor.ThemePreset` · `Editor.AccentColor` · `Editor.UiScale` | 테마 프리셋(0 ModernDark … 3 ClassicDark) · 액센트 0xRRGGBB · UI 배율 |
+
+위젯 이름표: `hierarchy.create` · `hierarchy.filter` · `hierarchy.selectedRow` · `hierarchy.activeToggle` · `hierarchy.addComponent` · `hierarchy.addComponent.search` ·
+`hierarchy.addComponent.<타입>` · `inspector.name` · `theme.swatch.violet`. 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄.
+
+**에디터 시나리오는 `Resource/engine/automation/editor/`** — `AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 `-EnableEditor` 로 백엔드마다 돌리고,
+사용자 에디터 상태(`Saved/Editor`)를 앞뒤로 바이트째 되돌린다. 시작 조건은 `Immediately`(에디터의 편집 씬은 플레이를 시작하지 않는다)이고 패널이 한 번씩
+그려지도록 첫 단계를 60 프레임쯤 뒤에 둔다. 에디터 동작을 바꿨으면 이 시나리오로 확인한다 — 작업 흐름(`workflow`) · 화면(`screen`) · Hierarchy 검색(`hierarchyfilter`).
 
 에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로(Win32 메시지를 ImGui 백엔드가 직접 받는다) 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
 이 단계를 쓰는 시나리오는 시작할 때 위젯 이름표 적기를 켭니다.

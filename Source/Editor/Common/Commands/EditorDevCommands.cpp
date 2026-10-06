@@ -4,12 +4,15 @@
  */
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -104,6 +107,65 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 명령 인자 경로를 절대 경로로 바꿉니다(상대면 작업 폴더 기준 — 시나리오 산출물과 같은 `Saved/`). */
+            [[nodiscard]] static bool resolveScenePath( const string& path, string& outAbsolutePath )
+            {
+                if ( path.empty() )
+                    return false;
+                if ( FileUtil::isAbsolutePath( path ) )
+                {
+                    outAbsolutePath = path;
+                    return true;
+                }
+                return FileUtil::makeAbsolutePath( path, outAbsolutePath );
+            }
+
+            static bool runSaveSceneAs( const vector<string>& listArgument, string& outReply )
+            {
+                string absolutePath;
+                if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
+                    return false;
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );
+                if ( EditorAssetCommands::saveActiveScene( absolutePath ) == false )
+                {
+                    outReply = "could not save the active scene to '" + absolutePath + "'";
+                    return false;
+                }
+                outReply = "saved " + absolutePath;
+                return true;
+            }
+
+            static bool runOpenScene( const vector<string>& listArgument, string& outReply )
+            {
+                string absolutePath;
+                if ( listArgument.size() != 1 || resolveScenePath( listArgument[0], absolutePath ) == false )
+                    return false;
+                // 미저장 씬이면 대화상자를 띄우는 길(tryOpenScene)이 아니라 바로 연다 — 무인 실행에서 대화상자는 아무도 닫지 않는다.
+                if ( EditorAssetCommands::loadScene( absolutePath ) == false )
+                {
+                    outReply = "could not open '" + absolutePath + "'";
+                    return false;
+                }
+                outReply = "opening " + absolutePath;
+                return true;
+            }
+
+            static bool runTheme( const vector<string>& listArgument, string& outReply )
+            {
+                EditorThemePreset preset = EditorThemePreset::ModernDark;
+                if ( listArgument.size() != 1 )
+                    return false;
+                if ( EditorThemeUtil::findPresetByConfigId( listArgument[0], preset ) == false )
+                {
+                    outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
+                    return false;
+                }
+                // 적용만 한다 — 설정 파일에 쓰지 않는다(시험 · 시나리오가 사용자 설정을 바꾸지 않게). 대화상자에서 고르면 저장된다.
+                EditorThemeUtil::applyPreset( preset );
+                outReply = "theme " + listArgument[0];
+                return true;
+            }
+
             static bool runSelectType( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager  = editor::getActiveObjectManager();
@@ -189,6 +251,12 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runSimulate );
     SW_DEV_COMMAND( Pause, "pause", "pause", "Pause the play session", &EditorDevCommandsInternal::runPause );
     SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorDevCommandsInternal::runStop );
+    SW_DEV_COMMAND( SaveSceneAs, "scene.saveAs", "scene.saveAs <path>", "Save the active scene to a file (relative paths start at the working folder)",
+                    &EditorDevCommandsInternal::runSaveSceneAs );
+    SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>", "Open a scene file without the unsaved-changes prompt (relative paths start at the working folder)",
+                    &EditorDevCommandsInternal::runOpenScene );
+    SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <preset>", "Apply an editor theme preset for this session (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)",
+                    &EditorDevCommandsInternal::runTheme );
     SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );

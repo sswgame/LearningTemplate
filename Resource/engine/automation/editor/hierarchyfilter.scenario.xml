@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 ③ Hierarchy 검색 — 검색 칸을 눌러 치면 `tag:` 필터가 부모 태그로 자식 태그를 찾고(대소문자 무시), 없는 태그는 0 건 안내를 그린다.
+  태그는 개발 명령 tag.add 로 단다(태그 편집 위젯은 이 시나리오의 대상이 아니다).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/hierarchyfilter.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOnEveryBackend 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.hierarchyfilter" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="80"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="90"><DevCommand line="tag.add GameObject Scenario.Probe.Child"/></At>
+
+	<!-- 부모 태그로 자식 태그를 찾는다 -->
+	<At frame="100"><EditorClick mark="hierarchy.filter"/></At>
+	<At frame="110"><EditorText value="tag:Scenario.Probe"/></At>
+	<At frame="125">
+		<Expect probe="Editor.HierarchyVisibleRoots" equals="1"/>
+		<Expect probe="Editor.NoSearchResultHintShown" equals="0"/>
+	</At>
+
+	<!-- 지우고 소문자로 — 대소문자를 가리지 않는다 -->
+	<At frame="130"><EditorKey key="Ctrl+A"/></At>
+	<At frame="135"><EditorKey key="Backspace"/></At>
+	<At frame="140"><EditorText value="tag:scenario.probe.child"/></At>
+	<At frame="155"><Expect probe="Editor.HierarchyVisibleRoots" equals="1"/></At>
+
+	<!-- 없는 태그 — 루트가 없고 0 건 안내를 그린다 -->
+	<At frame="160"><EditorKey key="Ctrl+A"/></At>
+	<At frame="165"><EditorKey key="Backspace"/></At>
+	<At frame="170"><EditorText value="tag:Scenario.Missing"/></At>
+	<At frame="185">
+		<Expect probe="Editor.HierarchyVisibleRoots" equals="0"/>
+		<Expect probe="Editor.NoSearchResultHintShown" equals="1"/>
+	</At>
+
+	<!-- 칸을 비우면 다시 보인다 -->
+	<At frame="190"><EditorKey key="Ctrl+A"/></At>
+	<At frame="195"><EditorKey key="Backspace"/></At>
+	<At frame="210">
+		<Expect probe="Editor.HierarchyVisibleRoots" atLeast="1"/>
+		<Expect probe="Editor.NoSearchResultHintShown" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>
