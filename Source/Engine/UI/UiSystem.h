@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/UI/Binding/UiBindingConverterRegistry.h"
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetNavigation.h"
@@ -125,6 +126,9 @@ namespace sw
                 return kInvalidUiScreenHandle;
             return pushDocumentScreen( sw::make_unique<ScreenType>( desc, std::move( root ) ), documentPath, std::move( listBinding ), std::move( listStyleSheet ) );
         }
+        /** @brief 바인딩 변환기 표입니다(`{bind:필드, converter=이름}`). 게임 · 키트가 자기 변환기를 더한다 — 모듈이 내려가면 그 함수는 걷힌다. */
+        UiBindingConverterRegistry&       getBindingConverters() { return _bindingConverters; }
+        const UiBindingConverterRegistry& getBindingConverters() const { return _bindingConverters; }
         /** @brief UI 문서 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다 — 핫 리로드 · 진단). */
         UiDocumentCache&       getDocumentCache() { return _documentCache; }
         const UiDocumentCache& getDocumentCache() const { return _documentCache; }
@@ -269,6 +273,8 @@ namespace sw
         bool dispatchPointerEvent( const UiPointerEvent& event );
         /** @brief 점 아래의 맨 위 화면입니다(막는 화면 아래로는 내려가지 않는다). 없으면 nullptr 입니다. */
         UiScreen* findPointerScreen( const float2& point ) const;
+        /** @brief 바인딩 단계 — 화면마다 바인딩 집합을 돌린다(걸리지 않았으면 걸고, 바뀐 소스의 칸만 쓴다). */
+        void updateBindings();
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
         /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
@@ -289,6 +295,7 @@ namespace sw
         UiThemeCatalog               _themeCatalog;
         hashed_string                _themeName;          ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
         vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면(다음 update 가 다시 연다)
+        UiBindingConverterRegistry   _bindingConverters;
         UiFocusManager               _focus;
         UiPointerState               _pointer;
         UiInputConsumption           _consumption;

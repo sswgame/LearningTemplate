@@ -18,6 +18,7 @@
 
 namespace sw
 {
+    struct PropertyInfo;
     struct TypeInfo;
     struct UiComputedStyle;
     struct UiLayoutContext;
@@ -116,6 +117,14 @@ namespace sw
         /** @brief 글리프 아틀라스를 쓰는 위젯이면 true 입니다(글 위젯) — 아틀라스 페이지를 비우면(세대가 오르면) 그림 캐시를 다시 칠한다. */
         virtual bool usesGlyphAtlas() const { return false; }
 
+        // --- 바인딩 ---------------------------------------------------------------
+        /**
+         * @brief 바인딩이 칸 @p property(경로의 맨 위 칸)에 리플렉션으로 값을 썼다 — 세터를 거치지 않았으므로 그 칸의 세터와 같은 무효화를 합니다.
+         * @details 기본은 `Widget` 의 칸(불투명도 · 변환 → kTransform, 보임 → kVisibility, 슬롯 → kLayout …)을 알고, 모르는 칸은 kLayout | kPaint(보수적)입니다.
+         *          파생은 그리기만 바뀌는 칸(색)과 캐시를 가진 칸(글 · 범위)을 덮어씁니다. 칸 종류를 PROPERTY 메타로 적지 않는 이유: 커스텀 메타는 Shipping 에서 지워진다.
+         */
+        virtual void onBoundPropertyChanged( const PropertyInfo& property );
+
         // --- 포커스 ---------------------------------------------------------------
         /** @brief 포커스를 받을 수 있는 종류인가 — 버튼 · 슬라이더 · 입력 칸이 true. 꺼졌거나 안 보이면 받지 않는다(트리가 따로 본다). */
         virtual bool supportsFocus() const { return false; }
@@ -167,6 +176,11 @@ namespace sw
         virtual void onAttachedToTree();
         /** @brief 트리에서 떨어지기 직전이다(바인딩 · 애니메이션을 뗀다). */
         virtual void onDetachedFromTree();
+        /**
+         * @brief 사용자 입력이 칸 @p propertyName 의 값을 바꿨다고 화면에 알립니다 — 양방향 바인딩이 소스(뷰모델 · 설정)에 되씁니다.
+         * @details 슬라이더 · 체크 · 콤보 · 글 입력 칸이 사용자 입력 길에서 부릅니다(코드가 세터로 바꾼 값은 알리지 않는다). 화면 밖 트리면 아무것도 하지 않습니다.
+         */
+        void notifyValueEdited( const hashed_string& propertyName );
 
     private:
         friend class PanelWidget;

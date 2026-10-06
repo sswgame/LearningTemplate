@@ -241,7 +241,7 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   그 타입의 PROPERTY 입니다(씬 파일과 같은 `XmlSerializer`). 모르는 원소 · 속성 · 열거자 · 읽지 못한 값, 위젯 타입이 아닌 원소, 패널이 아닌 위젯의 자식은
   **로드 오류**입니다 — 문구는 `<경로>:<줄>: <이유>`. 옛 형식 리더는 없습니다(`_schemaVersion` 1).
 - **바인딩 식**: `{` 로 시작하는 속성 값(`_text="{bind:_health}"`, 구조체 칸 안도)은 값으로 읽지 않고 `UiBindingDesc`(위젯 번호 · 프로퍼티 경로 `_slot._widthOverride` ·
-  식 원문 · 줄)로 뗍니다. 화면이 들고(`UiScreen::getBindings`) 바인딩 단계가 겁니다.
+  식 원문 · 줄)로 뗍니다. 화면이 들고(`UiScreen::getBindings`) 바인딩 단계가 겁니다(아래 "데이터 바인딩").
 - **짓기**(`UiDocumentLoader::instantiate` — 화면을 열 때마다): 위젯은 리플렉션 기본 생성자(`$ctor`)로 짓습니다 — 위젯 타입은 `Widget` 하나만 상속하는 사슬이고
   `getTypeInfo()` 를 덮어써야 합니다(아니면 짓기 오류).
 - **조각**(`UserWidget`): `_document` 문서의 루트 위젯을 자식으로 끼우고, 조각 안의 이름을 `"<조각 위젯 이름>.<안쪽 이름>"` 으로 감쌉니다 — 같은 조각을 두 번 써도
@@ -299,3 +299,35 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   스크롤 패널 오프셋은 **이름으로** 이어 갑니다(새 트리를 바로 한 번 맞추고 재 둔 뒤 — 오프셋은 내용 크기 안으로 묶인다). 화면 서술(층 · 모달)은 그대로입니다.
 - 스타일 시트가 바뀌면 그 시트를 쓰는 화면의 묶음만 다시 걸고 위젯을 다시 맞춥니다(트리 · 위젯 번호 그대로).
 - Shipping 은 파일 감시가 없을 뿐 길은 같습니다(캐시의 다시 읽기 함수 하나).
+
+## 데이터 바인딩 (`Binding/`)
+
+| 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
+|---|---|---|---|
+| `UiViewModel` + `notifyFieldChanged` · `setField` | UMG MVVM `UMVVMViewModelBase` + FieldNotify(`UE_MVVM_SET_PROPERTY_VALUE`) | 런타임 바인딩 데이터 소스 + 변경 추적 | 시그널 |
+| `{bind:필드}` · `mode=TwoWay` | MVVM 바인딩(OneWay · TwoWay) | `DataBinding` `bindingMode` | 시그널 양쪽 연결 |
+| `converter=` · `UiBindingConverterRegistry` | 변환 함수(Conversion Function) | `ConverterGroup` | (코드) |
+| `{poll:필드}`(개발 편의) | UMG 옛 속성 바인딩(매 프레임 함수) | `updateTrigger = EveryUpdate` | `_process` 에서 읽기 |
+
+게임 상태를 위젯에 넣는 길은 **뷰모델**입니다 — 게임 코드는 위젯을 찾지 않고 뷰모델 필드에 값을 넣어 알리고, 문서의 식이 그 필드를 위젯 칸에 잇습니다.
+
+```xml
+<SliderWidget _value="{bind:_volume, mode=TwoWay}" />              <!-- 사용자가 움직이면 뷰모델에 되쓴다 -->
+<TextWidget _text="{bind:_ammo, format=Hud.Ammo}" />               <!-- 현지화 패턴 "Ammo: {value}" -->
+<TextWidget _text="{bind:_health, converter=Percent}" />           <!-- 0.75 → "75%" -->
+<ProgressBarWidget _percent="{bind:_health}" />
+```
+
+- **뷰모델**(`UiViewModel`): 필드는 리플렉션 PROPERTY 입니다. 파생은 `REFLECT()` 를 달고 `getTypeInfo()` 를 덮어씁니다(위젯과 같다 — 기반은 `UiViewModel` 하나만,
+  칸 오프셋이 객체 시작 기준이다). 세터는 `setField( _health, value, "_health" )` — 같은 값이면 알리지 않습니다. 알림은 번호로 남아 한 프레임에 여러 번 알려도
+  칸은 한 번 쓰고, 화면 여럿이 한 뷰모델을 볼 수 있습니다. 소유는 게임 — `UiScreen::setViewModel` 로 걸고, 뷰모델이 먼저 지워지면 바인딩이 놓습니다.
+- **바인딩 단계**(`UiSystem::update` 의 레이아웃 앞, 구간 `GT.Ui.Bind`): 화면마다 `UiBindingSet` 이 걸리지 않았으면 식을 풀어 걸고 모든 칸을 쓰며, 걸려 있으면
+  알린 필드에 묶인 칸만 리플렉션으로 씁니다. 쓴 뒤 위젯의 `onBoundPropertyChanged` 가 그 칸의 세터와 같은 무효화를 합니다(글 · 크기 칸은 레이아웃, 색 칸은 그리기만).
+  칸 종류를 PROPERTY 메타로 적지 않습니다 — 커스텀 메타는 Shipping 에서 지워진다.
+- **타입 검사는 걸 때**: 갈래(불리언 · 숫자 · 글 · 그 밖)가 맞지 않고 변환기도 없으면 오류(`<문서>:<줄>: binding '<식>' on <칸>: <이유>` — 로그 + `getErrors`)이고 그 식은
+  걸리지 않습니다. 불리언 ↔ 숫자는 바꾸고, 무엇이든 글로는 바꾸며(리플렉션 글 표기), 글 → 숫자는 바꾸지 않습니다. 색 · 벡터 · 열거형은 같은 타입끼리만.
+- **양방향**: 슬라이더 · 체크 · 콤보 · 글 입력 칸이 사용자 입력 길에서 `notifyValueEdited` 를 부르면 소스에 되쓰고 알립니다. 그 알림으로 같은 칸에 다시 쓰지 않습니다
+  (같은 필드의 다른 바인딩은 받는다). 변환기 · 형식이 든 식은 양방향일 수 없습니다.
+- **변환기**: 이름으로 찾습니다(`UiSystem::getBindingConverters`). 엔진 기본 `Percent` · `Invert` · `NotEmpty` · `IsZero` · `Seconds`(m:ss). 게임이 더한 변환기는
+  그 모듈이 내려갈 때 걷히고 화면은 다시 겁니다.
+- **폴링**(`{poll:필드}`): 알림 없이 매 프레임 값을 견줍니다 — 개발 편의입니다. 견준 수가 프로파일 카운터 `Ui.PollBindings` 로 보이고, Shipping 에서 걸면 경고 한 줄.

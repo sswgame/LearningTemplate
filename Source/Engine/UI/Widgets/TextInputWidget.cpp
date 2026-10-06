@@ -6,6 +6,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Core/UiEvents.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -93,6 +94,16 @@ namespace sw
         refreshDisplay();
     }
 
+    void TextInputWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        if ( property._name == hashed_string( "_text" ) || property._name == hashed_string( "_hintText" ) )
+        {
+            refreshDisplay();
+            return;
+        }
+        BorderPanel::onBoundPropertyChanged( property );
+    }
+
     void TextInputWidget::refreshDisplay()
     {
         const bool bHint = _text.empty() && _composition.empty();
@@ -116,6 +127,7 @@ namespace sw
         {
             refreshDisplay();
             _onTextChanged.broadcast( _text );
+            notifyValueEdited( "_text" );
         }
         return UiReply::makeHandled();
     }
@@ -149,7 +161,10 @@ namespace sw
         }
         refreshDisplay();
         if ( bChanged )
+        {
             _onTextChanged.broadcast( _text );
+            notifyValueEdited( "_text" );
+        }
         return UiReply::makeHandled();
     }
 

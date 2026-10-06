@@ -6,6 +6,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Core/UiEvents.h"
 
 namespace sw
@@ -62,6 +63,29 @@ namespace sw
         _onValueChanged.broadcast( _value );
     }
 
+    void SliderWidget::setValueFromUser( float32 value )
+    {
+        const float32 previous = _value;
+        setValue( value );
+        if ( _value != previous )
+            notifyValueEdited( "_value" );
+    }
+
+    void SliderWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        const hashed_string& name = property._name;
+        if ( name == hashed_string( "_value" ) || name == hashed_string( "_minValue" ) || name == hashed_string( "_maxValue" ) || name == hashed_string( "_step" ) )
+        {
+            // 세터(`setRange` · `setValue`)와 같은 묶기 — 알림은 부르지 않는다(바인딩이 쓴 값이다).
+            _maxValue = MathUtil::max( _minValue, _maxValue );
+            _step     = MathUtil::max( 0.0f, _step );
+            _value    = MathUtil::clamp( _value, _minValue, _maxValue );
+            invalidate( WidgetDirty::kPaint );
+            return;
+        }
+        Widget::onBoundPropertyChanged( property );
+    }
+
     float32 SliderWidget::computeFraction() const
     {
         const float32 range = _maxValue - _minValue;
@@ -91,14 +115,14 @@ namespace sw
                 if ( event._button != MouseButton::Left )
                     return UiReply::makeUnhandled();
                 _bDragging = true;
-                setValue( computeValueAt( event._position ) );
+                setValueFromUser( computeValueAt( event._position ) );
                 return UiReply::makeHandled().capturePointer().requestFocus( getId() );
             }
             case UiPointerEventKind::Move:
             {
                 if ( _bDragging == false )
                     return UiReply::makeUnhandled();
-                setValue( computeValueAt( event._position ) );
+                setValueFromUser( computeValueAt( event._position ) );
                 return UiReply::makeHandled();
             }
             case UiPointerEventKind::Up:
@@ -127,7 +151,7 @@ namespace sw
         const float32 step = _step > 0.0f ? _step : ( _maxValue - _minValue ) * SliderWidgetInternal::kDefaultStepFraction;
         // 화면 왼쪽 = 최소(오른쪽에서 왼쪽이면 최대) — 행동 방향은 화면 기준이다.
         const bool bDecrease = bLeft != isRightToLeft();
-        setValue( _value + ( bDecrease ? -step : step ) );
+        setValueFromUser( _value + ( bDecrease ? -step : step ) );
         return UiReply::makeHandled();
     }
 
@@ -192,6 +216,18 @@ namespace sw
             return;
         _percent = clamped;
         invalidate( WidgetDirty::kPaint );
+    }
+
+    void ProgressBarWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        const hashed_string& name = property._name;
+        if ( name == hashed_string( "_percent" ) || name == hashed_string( "_fillColor" ) || name == hashed_string( "_backgroundColor" ) )
+        {
+            _percent = MathUtil::saturate( _percent );
+            invalidate( WidgetDirty::kPaint );
+            return;
+        }
+        Widget::onBoundPropertyChanged( property );
     }
 
     void ProgressBarWidget::setFillColor( const float4& color )

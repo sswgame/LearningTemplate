@@ -3,6 +3,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Style/WidgetStyle.h"
@@ -92,6 +93,22 @@ namespace sw
             return;
         _bRichText = bRichText;
         invalidateText();
+    }
+
+    void TextWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        const hashed_string& name = property._name;
+        if ( name == hashed_string( "_color" ) || name == hashed_string( "_outlineColor" ) || name == hashed_string( "_outlineWidth" ) )
+        {
+            invalidate( WidgetDirty::kPaint );
+            return;
+        }
+        if ( name == hashed_string( "_text" ) || name == hashed_string( "_style" ) || name == hashed_string( "_bRichText" ) )
+        {
+            invalidateText();
+            return;
+        }
+        Widget::onBoundPropertyChanged( property );
     }
 
     void TextWidget::invalidateText()

@@ -35,6 +35,8 @@ namespace sw
         ~CheckBoxWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(체크는 그리기만). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 값을 바꿉니다(알림은 부르지 않는다 — 코드가 정한 값). kPaint. */
         void             setChecked( bool bChecked );

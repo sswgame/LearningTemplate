@@ -36,6 +36,8 @@ namespace sw
         ~TextInputWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(글 · 힌트는 보이는 글을 다시). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         bool supportsFocus() const override { return true; }
         bool supportsTextInput() const override { return true; }

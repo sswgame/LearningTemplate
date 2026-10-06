@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 
 namespace sw
@@ -41,10 +42,21 @@ namespace sw
         return ButtonWidget::computeStyleStates() | ( _bChecked ? UiStyleState::kChecked : UiStyleState::kNone );
     }
 
+    void CheckBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        if ( property._name == hashed_string( "_bChecked" ) )
+        {
+            invalidate( WidgetDirty::kPaint );
+            return;
+        }
+        ButtonWidget::onBoundPropertyChanged( property );
+    }
+
     void CheckBoxWidget::handleClick()
     {
         setChecked( _bChecked == false );
         _onCheckedChanged.broadcast( _bChecked );
+        notifyValueEdited( "_bChecked" );
         ButtonWidget::handleClick();
     }
 

@@ -6,9 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Render/UiPaintPass.h"
+#include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -238,6 +240,31 @@ namespace sw
 
     void Widget::onDetachedFromTree()
     {
+    }
+
+    void Widget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        const hashed_string& name = property._name;
+        _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 묶기(불투명도 칸이 아니면 그대로다)
+        if ( name == hashed_string( "_opacity" ) || name == hashed_string( "_renderTransform" ) )
+            invalidate( WidgetDirty::kTransform );
+        else if ( name == hashed_string( "_visibility" ) )
+            invalidate( WidgetDirty::kVisibility );
+        else if ( name == hashed_string( "_bEnabled" ) )
+            invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint );
+        else if ( name == hashed_string( "_styleClass" ) )
+            invalidate( WidgetDirty::kStyle );
+        else if ( name == hashed_string( "_flowDirection" ) )
+            invalidate( WidgetDirty::kArrange );
+        else
+            invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint );
+    }
+
+    void Widget::notifyValueEdited( const hashed_string& propertyName )
+    {
+        UiScreen* pScreen = _pTree != nullptr ? _pTree->getScreen() : nullptr;
+        if ( pScreen != nullptr )
+            pScreen->onWidgetValueEdited( *this, propertyName );
     }
 
     void Widget::attachToTree( WidgetTree* pTree, PanelWidget* pParent )

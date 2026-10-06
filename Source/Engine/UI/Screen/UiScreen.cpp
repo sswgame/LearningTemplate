@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/UI/Binding/UiBindingSet.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/UiSystem.h"
@@ -19,6 +20,7 @@ namespace sw
         , _listBinding{}
         , _listStyleSheet{}
         , _styleSet{}
+        , _bindingSet{}
         , _mapCommandToHandler{}
         , _pUiSystem{ nullptr }
         , _handle{ kInvalidUiScreenHandle }
@@ -28,6 +30,7 @@ namespace sw
     {
         _tree._pScreen = this;
         _tree.setRoot( std::move( root ) );
+        _bindingSet = make_unique<UiBindingSet>( *this );
     }
 
     UiScreen::~UiScreen() = default;
@@ -43,6 +46,27 @@ namespace sw
             _pUiSystem->closeScreen( _handle );
         else
             _bClosing = SW_TRUE;
+    }
+
+    void UiScreen::addBinding( const UiBindingDesc& binding )
+    {
+        _listBinding.push_back( binding );
+        _bindingSet->markRebind();
+    }
+
+    void UiScreen::setViewModel( UiViewModel* pViewModel )
+    {
+        _bindingSet->setViewModel( pViewModel );
+    }
+
+    UiViewModel* UiScreen::getViewModel() const
+    {
+        return _bindingSet->getViewModel();
+    }
+
+    void UiScreen::onWidgetValueEdited( Widget& widget, const hashed_string& propertyName )
+    {
+        _bindingSet->onWidgetValueEdited( widget, propertyName );
     }
 
     bool UiScreen::onBack()

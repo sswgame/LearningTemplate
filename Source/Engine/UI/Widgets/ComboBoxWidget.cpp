@@ -7,6 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -110,6 +111,18 @@ namespace sw
         refreshLabel();
     }
 
+    void ComboBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
+    {
+        if ( property._name == hashed_string( "_listOption" ) || property._name == hashed_string( "_selectedIndex" ) )
+        {
+            if ( _selectedIndex != invalid_index::kUint32 && _selectedIndex >= _listOption.size() )
+                _selectedIndex = invalid_index::kUint32;
+            refreshLabel();
+            return;
+        }
+        ButtonWidget::onBoundPropertyChanged( property );
+    }
+
     void ComboBoxWidget::refreshLabel()
     {
         _pLabel->setText( _selectedIndex != invalid_index::kUint32 ? string_view{ _listOption[_selectedIndex] } : string_view{} );
@@ -123,7 +136,10 @@ namespace sw
         const bool bChanged = index != _selectedIndex;
         setSelectedIndex( index );
         if ( bChanged )
+        {
             _onSelectionChanged.broadcast( index );
+            notifyValueEdited( "_selectedIndex" );
+        }
     }
 
     void ComboBoxWidget::handleClick()

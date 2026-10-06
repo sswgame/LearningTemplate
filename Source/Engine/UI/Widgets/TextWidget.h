@@ -34,6 +34,8 @@ namespace sw
         ~TextWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(색 · 외곽선은 그리기만, 글 · 스타일은 배치 캐시를 버리고 레이아웃). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 글을 바꿉니다(현지화 키 풀기는 6-2). 바뀌면 kLayout. */
         void          setText( string_view text );

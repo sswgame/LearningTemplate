@@ -38,6 +38,8 @@ namespace sw
         ~ComboBoxWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(항목 · 고른 자리는 보이는 글을 다시). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 항목들을 바꿉니다(고른 자리가 범위 밖이면 없음). */
         void                  setOptions( const vector<string>& listOption );

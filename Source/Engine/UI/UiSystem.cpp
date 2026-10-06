@@ -16,6 +16,8 @@
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
+#include "Engine/UI/Binding/UiBindingSet.h"
+#include "Engine/UI/Binding/UiViewModel.h"
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
@@ -132,6 +134,7 @@ namespace sw
         , _themeCatalog{}
         , _themeName{}
         , _listReopenDocument{}
+        , _bindingConverters{}
         , _focus{}
         , _pointer{}
         , _consumption{}
@@ -251,6 +254,7 @@ namespace sw
         syncDemoScreen();
         reopenClosedScreens();
         applyPendingCloses();
+        updateBindings();
         // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).
         {
             SW_PROFILE_SCOPE( "GT.Ui.Style" );
@@ -595,6 +599,19 @@ namespace sw
     {
         (void)outKeepImageMapped;
         uint32 closedCount = 0;
+        // 내려가는 모듈의 변환기 함수 · 뷰모델은 바인딩이 놓는다(화면은 산다 — 다음 바인딩 단계가 다시 건다).
+        const bool bConverterRemoved = _bindingConverters.removeCodeWithin( pBegin, pEnd ) > 0;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            const UiViewModel* pViewModel = screen->getViewModel();
+            if ( pViewModel != nullptr && IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( pViewModel ), pBegin, pEnd ) )
+            {
+                SW_LOG_WARNING( "[Ui] Screen %# released its view model for module reload - the game sets it again after the reload", screen->_handle );
+                screen->setViewModel( nullptr );
+            }
+            else if ( bConverterRemoved )
+                screen->getBindingSet().markRebind();
+        }
         for ( uint32 index = static_cast<uint32>( _listScreen.size() ); index > 0; --index )
         {
             if ( UiSystemInternal::usesCodeWithin( *_listScreen[index - 1], pBegin, pEnd ) == false )
@@ -611,6 +628,22 @@ namespace sw
         if ( closedCount > 0 )
             refreshActiveScreen();
         return closedCount;
+    }
+
+    void UiSystem::updateBindings()
+    {
+        SW_PROFILE_SCOPE( "GT.Ui.Bind" );
+        UiBindingContext context{};
+        context._pLocalization = _pLocalization != nullptr ? _pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
+        context._pConverters   = &_bindingConverters;
+        uint32 polledCount     = 0;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            UiBindingSet& bindingSet = screen->getBindingSet();
+            bindingSet.update( screen->getBindings(), context );
+            polledCount += bindingSet.getPolledCount();
+        }
+        SW_PROFILE_COUNT( "Ui.PollBindings", polledCount );
     }
 
     void UiSystem::processPointer()

@@ -36,6 +36,8 @@ namespace sw
         ~SliderWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(값 · 범위는 값을 범위로 묶고 그리기만). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         bool supportsFocus() const override { return true; }
 
@@ -54,6 +56,8 @@ namespace sw
         void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
 
     private:
+        /** @brief 사용자 입력(끌기 · 좌우 행동)으로 값을 바꿉니다 — 바뀌면 양방향 바인딩에 알린다(`notifyValueEdited`). */
+        void setValueFromUser( float32 value );
         /** @brief 화면 점을 값으로 바꿉니다(트랙 위 비율 — 오른쪽에서 왼쪽이면 뒤집는다). */
         float32 computeValueAt( const float2& screenPoint ) const;
         /** @brief 지금 값의 트랙 위 비율(0..1)입니다. */
@@ -89,6 +93,8 @@ namespace sw
         ~ProgressBarWidget() override;
 
         const TypeInfo* getTypeInfo() const override;
+        /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(비율은 0..1 로 묶고, 비율 · 색은 그리기만). */
+        void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
         /** @brief 비율(0..1로 묶는다)을 바꿉니다. kPaint. */
         void    setPercent( float32 percent );

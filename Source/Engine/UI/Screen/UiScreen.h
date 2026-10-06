@@ -19,8 +19,10 @@
 
 namespace sw
 {
+    class UiBindingSet;
     class UiStyleSet;
     class UiSystem;
+    class UiViewModel;
     class Widget;
 
     /** @brief 화면 층입니다. 위 층이 아래 층 위에 그려지고 입력을 먼저 받습니다(CommonUI 의 레이어 · Godot CanvasLayer). */
@@ -110,6 +112,18 @@ namespace sw
         const vector<string>& getStyleSheets() const { return _listStyleSheet; }
         /** @brief 이 화면의 스타일 묶음(테마 → 문서 시트)입니다. 올리기 전이면 nullptr 입니다. */
         UiStyleSet* getStyleSet() const { return _styleSet.get(); }
+        /** @brief 바인딩 식 하나를 더합니다(코드로 지은 화면 — 문서 화면은 `UiSystem::openScreen` 이 넣는다). 다음 바인딩 단계가 다시 겁니다. */
+        void addBinding( const UiBindingDesc& binding );
+        /**
+         * @brief 뷰모델을 겁니다(nullptr 이면 뗀다). 다음 바인딩 단계가 식을 다시 걸고 모든 칸을 씁니다.
+         * @details 소유는 게임입니다. 화면보다 먼저 지우면 바인딩이 그 뷰모델을 놓습니다(위젯 값은 마지막 값으로 남는다).
+         */
+        void                setViewModel( UiViewModel* pViewModel );
+        UiViewModel*        getViewModel() const;
+        UiBindingSet&       getBindingSet() { return *_bindingSet; }
+        const UiBindingSet& getBindingSet() const { return *_bindingSet; }
+        /** @brief 트리의 위젯 @p widget 의 칸 @p propertyName 을 사용자 입력이 바꿨다(`Widget::notifyValueEdited`) — 양방향 바인딩이 소스에 되씁니다. */
+        void onWidgetValueEdited( Widget& widget, const hashed_string& propertyName );
 
         /** @brief 명령 @p command 를 받을 함수를 겁니다. 같은 명령에 다시 걸면 바꿉니다. */
         void registerCommand( const hashed_string& command, const UiCommandDelegate& handler );
@@ -139,6 +153,7 @@ namespace sw
         vector<UiBindingDesc>                                                    _listBinding;    ///< 문서에서 뗀 바인딩 식
         vector<string>                                                           _listStyleSheet; ///< 문서 · 조각이 건 스타일 시트
         unique_ptr<UiStyleSet>                                                   _styleSet;       ///< 테마 → 문서 시트 묶음(UiSystem 이 건다)
+        unique_ptr<UiBindingSet>                                                 _bindingSet;     ///< 바인딩 식을 푼 것(뷰모델 · 설정과 위젯 칸을 잇는다)
         unordered_map<hashed_string, UiCommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
         UiSystem*                                                                _pUiSystem; ///< 올린 시스템(올리기 전 nullptr)
         UiScreenHandle                                                           _handle;
