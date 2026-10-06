@@ -212,12 +212,25 @@ namespace sw
 
     uint32 ModuleImageUtil::bindDelayLoadImportsOfLoadedModules()
     {
+        // 묶기가 지연 로드 DLL 을 새로 올린다(서버 키트 → 공유 키트) — 새로 올라온 이미지의 지연 import 도 묶어야 하므로, 새 이미지가 없을 때까지 돈다.
+        vector<void*> listBound;
         vector<void*> listHandle;
-        collectLoadedModuleHandles( listHandle );
-        uint32 failedCount{ 0 };
-        for ( void* pHandle : listHandle )
-            failedCount += bindDelayLoadImports( pHandle );
-        return failedCount;
+        uint32        failedCount{ 0 };
+        for ( ;; )
+        {
+            collectLoadedModuleHandles( listHandle );
+            bool bBoundAny{ false };
+            for ( void* pHandle : listHandle )
+            {
+                if ( std::find( listBound.begin(), listBound.end(), pHandle ) != listBound.end() )
+                    continue;
+                listBound.push_back( pHandle );
+                failedCount += bindDelayLoadImports( pHandle );
+                bBoundAny = true;
+            }
+            if ( bBoundAny == false )
+                return failedCount;
+        }
     }
 
     void ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )
