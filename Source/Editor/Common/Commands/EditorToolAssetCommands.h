@@ -72,7 +72,11 @@ namespace sw::editor
         static ToolAssetLoadResult loadSequence( sw::SequenceAsset& outAsset, string_view path );
         /** @brief 시퀀서 JSON을 씁니다. */
         [[nodiscard]] static bool saveSequence( const sw::SequenceAsset& asset, string_view path );
-        /** @brief 선택 인스턴스와 프리팹 CDO를 비교해 오버라이드 목록을 채웁니다. */
+        /**
+         * @brief 선택 인스턴스와 프리팹 CDO를 비교해 오버라이드 목록을 채웁니다.
+         * @details 프리팹 경로는 @p prefabPath, 비면 인스턴스가 온 프리팹입니다. 둘 다 없으면 목록이 빕니다 — 포커스된 에셋은 보지 않습니다
+         *          (종류가 다를 수 있다. Prefab Editor 는 포커스가 프리팹일 때만 넘긴다).
+         */
         static void collectPrefabOverrides( sw::GameObject* pInstance, string_view prefabPath, string& outPrefabPath,
                                             string& outInstanceName, vector<PrefabOverrideItem>& outOverride,
                                             vector<string>& outNestedPrefab );

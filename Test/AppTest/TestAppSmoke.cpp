@@ -713,6 +713,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
         "EditorSelfTest|PASS|contentBrowser.treeDoesNotReadTheDiskEveryFrame",
+        "EditorSelfTest|PASS|prefab.ignoresOtherFocusedAssets",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

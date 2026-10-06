@@ -3,13 +3,18 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowserPanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
@@ -308,6 +313,39 @@ namespace sw::editor
                     }
                 }
             }
+
+            // ------------------------------------------------------------------------------
+            // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다(D16)
+            // Prefab Editor 가 그 경로로 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남겼다.
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runPrefabIgnoresOtherFocusedAssets( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kFocusedMaterialPath = "engine/materials/defaultmaterial.material";
+
+                EditorContext*     pContext = EditorContext::get();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestNotAPrefab" ) );
+                if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                EditorWorkspace& workspace  = pContext->getWorkspace();
+                const string     savedFocus = workspace.getFocusedAssetPath();
+                workspace.setFocusedAssetPath( kFocusedMaterialPath );
+
+                string                     prefabPath;
+                string                     instanceName;
+                vector<PrefabOverrideItem> listOverride;
+                vector<string>             listNestedPrefab;
+                EditorToolAssetCommands::collectPrefabOverrides( pObj, {}, prefabPath, instanceName, listOverride, listNestedPrefab );
+                (void)context.expect( prefabPath.empty(), "a focused material was taken as the prefab of a non-prefab object" );
+                (void)context.expect( listOverride.empty(), "a non-prefab object has prefab overrides" );
+
+                workspace.setFocusedAssetPath( savedFocus.c_str() );
+                pManager->destroyObject( pObj );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -317,4 +355,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::runDeleteRefreshesTheList );
     SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
+    SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
 } // namespace sw::editor

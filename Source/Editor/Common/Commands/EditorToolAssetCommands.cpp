@@ -232,8 +232,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( outPrefabPath.empty() && pInstance != nullptr && pContext != nullptr )
             outPrefabPath = pContext->getWorkspace().getGameObjectPrefabPath( pInstance->getObjectId() );
-        if ( outPrefabPath.empty() && pContext != nullptr )
-            outPrefabPath = pContext->getWorkspace().getFocusedAssetPath();
+        // 포커스된 에셋으로 넘어가지 않는다 — 머티리얼 · 씬일 수 있어 프리팹으로 읽으면 [Error] 를 남긴다. 프리팹 포커스는 부르는 쪽이 종류를 보고 넘긴다.
 
         AssetManager* pResources = editor::getService<AssetManager>();
         if ( pResources == nullptr || outPrefabPath.empty() )
