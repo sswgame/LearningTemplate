@@ -29,6 +29,20 @@
 		<bind source="key" code="LeftShift"/>
 	</action>
 
+	<!-- 바라보는 블록 부수기(누르고 있기) · 놓기(누르고 있으면 간격마다). -->
+	<action name="Voxel.Break" layer="Gameplay" trigger="Down">
+		<bind source="mouse" code="Left"/>
+	</action>
+
+	<action name="Voxel.Place" layer="Gameplay" trigger="Down">
+		<bind source="mouse" code="Right"/>
+	</action>
+
+	<!-- 핫바 넘기기 — 휠 위(+)가 앞 칸. 폰의 아날로그 칸이다. -->
+	<action name="Voxel.HotbarScroll" layer="Gameplay">
+		<mouseWheel scale="1"/>
+	</action>
+
 	<action name="Voxel.Slot1" layer="Gameplay" trigger="Pressed">
 		<bind source="key" code="Digit1"/>
 	</action>

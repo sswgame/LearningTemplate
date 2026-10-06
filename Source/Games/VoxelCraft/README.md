@@ -11,6 +11,7 @@ cmake --build --preset Ninja-Debug-VoxelCraft
 cd build/Ninja-Debug-VoxelCraft/Bin
 ./App.exe -dx12
 ./App.exe -dx12 -gv_voxelAutoPlay=1     # 걷고 뛰고 부수고 놓기도 AI
+./App.exe -dx12 -scenario=game/voxelcraft/automation/control.scenario.xml   # 조종 시나리오 — 종료 코드 0 이 통과
 ./App.exe -dx12 -EnableEditor "-gv_editorStartupScene=game/voxelcraft/maps/island.scene.xml"
 ```
 
@@ -36,7 +37,8 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 |------|------|
 | 블록 월드 · 지형 짓기 · 꾸미기(광석 · 눈) · 블록 바꾸기 · 청크 다시 짓기 지시 · 로그 | `VoxelDirectorComponent`(씬에 하나) — 월드(`VoxelWorld`)를 든다 |
 | 청크 하나의 불투명 · 물 메시 | 프리팹 `prefabs/chunk.prefab.xml` 의 `VoxelChunkComponent` — 디렉터가 청크마다(8 × 8) 세우고, 메시는 컴포넌트가 절차로 짓는다 |
-| 몸 · 걷기 · 헤엄 · 부수기 · 놓기 · 핫바 · 자동 플레이 | `VoxelPlayerComponent` — 플레이어 오브젝트(카메라와 같은 오브젝트) |
+| 몸 · 걷기 · 헤엄 · 부수기 · 놓기 · 핫바 | `VoxelPlayerComponent` — 플레이어 오브젝트(카메라와 같은 오브젝트). 입력을 읽지 않고 같은 오브젝트 `PawnComponent` 의 의도만 읽는다(버튼 `Voxel.Jump · Sprint · Break · Place · Slot1..9`, 아날로그 `Voxel.HotbarScroll` — 휠) |
+| 자동 플레이 | `VoxelAutoPlayControllerComponent` — AI 조종자. 스위치(`gv_voxelAutoPlay` · 툴바)가 바뀌면 디렉터가 틱 뒤에 플레이어 폰을 이것 또는 플레이어 조종자에게 쥐어 준다 |
 | 1인칭 시점 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트 — 시점은 그 오브젝트 `PawnComponent` 의 조종 회전) |
 | 시선(`Voxel.Look`) · 마우스 잠금(`ToggleMouseLock` — Esc) | GameFramework `PlayerControllerComponent`(조종 시스템이 세운다 — 플레이어 폰 `_autoPossess Player0`) |
 | 바라보는 블록 표시(반투명 큐브 · 부수는 동안 네 단계로 진해짐 · 에디터 게임 뷰 테두리) | `VoxelHighlightComponent`(`BlockHighlight` 오브젝트) |
@@ -54,7 +56,8 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 ## 파일 · 에셋
 
 - `VoxelCraftGame` — 블록 카탈로그(`Resource/game/voxelcraft/data/blocks.xml`)를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 청크를 걷습니다.
-- `VoxelDirectorComponent` · `VoxelChunkComponent` · `VoxelPlayerComponent` · `VoxelHighlightComponent` — 위 표.
+- `VoxelDirectorComponent` · `VoxelChunkComponent` · `VoxelPlayerComponent` · `VoxelAutoPlayControllerComponent` · `VoxelHighlightComponent` — 위 표.
+- `Resource/game/voxelcraft/automation/control.scenario.xml` — 가상 키 · 마우스로 걷기 · 핫바 · 시선 · 부수기, 자동 플레이를 켜고 끄면 빙의가 오가는지(탐침 `VoxelCraft.*`).
 - `Resource/game/voxelcraft/maps/island.scene.xml` · `prefabs/chunk.prefab.xml` — 엔진 직렬화기가 쓴 파일입니다.
 - `textures_raw/blocks.png` → `textures/blocks.dds` — Kenney Voxel Pack 타일(128 px) 4 × 4 아틀라스(`App --import-textures`, 출처는 `credits.md`).
 - `sounds/` — 부수기 · 놓기 · 착지 효과음.

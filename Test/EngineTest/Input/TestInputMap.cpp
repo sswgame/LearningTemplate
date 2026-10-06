@@ -647,21 +647,21 @@ SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
         std::initializer_list<const utf8*> _listAction;
     };
     const GameInputMap arrGameMap[] = {
-        {   "game/abilityarena/data/arena.input.xml",{ "Arena.Move", "Arena.Melee", "Arena.Fireball", "Arena.Heal", "Arena.Dash" }                                                     },
+        {   "game/abilityarena/data/arena.input.xml",                                { "Arena.Move", "Arena.Melee", "Arena.Fireball", "Arena.Heal", "Arena.Dash" }                                                     },
         {   "game/harvestvalley/data/farm.input.xml",
          { "Farm.Move", "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext", "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep",
-         "Farm.Status" }                                                                                                                                      },
+         "Farm.Status" }                                                                                                                                                                                               },
         {        "game/nilecity/data/nile.input.xml",
-         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }},
+         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }                                                         },
         {"game/starskirmish/data/skirmish.input.xml",
          { "Camera.Pan", "Skirmish.SpectatorPan", "Skirmish.Slower", "Skirmish.Faster", "Skirmish.Pause", "Skirmish.Status", "Skirmish.AddToSelection",
          "Skirmish.GroupModifier", "Skirmish.AttackMove", "Skirmish.Stop", "Skirmish.Hold", "Skirmish.Command1", "Skirmish.Command2", "Skirmish.Command3",
          "Skirmish.Build.SupplyDepot", "Skirmish.Build.Barracks", "Skirmish.Build.Refinery", "Skirmish.Build.Academy", "Skirmish.Build.Factory",
-         "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                               },
+         "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                                                                                        },
         {       "game/themepark/data/park.input.xml",
          { "Camera.Pan", "Camera.Rotate", "Park.NextRide", "Park.ToggleOpen", "Park.PriceDown", "Park.PriceUp", "Park.FeeDown", "Park.FeeUp", "Park.Build",
-         "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                        },
-        {     "game/voxelcraft/data/voxel.input.xml",                             { "Voxel.Move", "Voxel.Jump", "Voxel.Sprint", "Voxel.Slot1", "Voxel.Slot9" }},
+         "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                                                                                 },
+        {     "game/voxelcraft/data/voxel.input.xml", { "Voxel.Move", "Voxel.Look", "Voxel.Jump", "Voxel.Sprint", "Voxel.Break", "Voxel.Place", "Voxel.HotbarScroll", "Voxel.Slot1", "Voxel.Slot9", "ToggleMouseLock" }},
     };
     for ( const GameInputMap& gameMap : arrGameMap )
     {

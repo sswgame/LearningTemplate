@@ -12,11 +12,15 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
+#include "GameFramework/Base/Control/ControlSystem.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
 
+#include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelChunkComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
@@ -57,7 +61,9 @@ namespace sw
         , _statusLogInterval{ 5.0f }
         , _world{}
         , _listChunk{}
+        , _autoPlayController{}
         , _statusTimer{ 0.0f }
+        , _appliedAutoPlay{ -1 }
     {
     }
 
@@ -79,6 +85,52 @@ namespace sw
     void VoxelDirectorComponent::onViewsDespawned()
     {
         _listChunk.clear();
+        // 자동 플레이 AI 오브젝트도 걷혔다 — 다시 세울 때 빙의를 다시 맞춘다.
+        _autoPlayController = GameObjectHandle{};
+        _appliedAutoPlay    = -1;
+    }
+
+    bool VoxelDirectorComponent::hasPendingSpawn() const
+    {
+        return _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
+    }
+
+    void VoxelDirectorComponent::syncAutoPlayPossession( GameObjectManager& manager )
+    {
+        const bool     bAutoPlay     = isAutoPlayOn();
+        GameObject*    pPlayerObject = manager.resolveGameObject( _player );
+        PawnComponent* pPawn         = pPlayerObject != nullptr ? pPlayerObject->getComponent<PawnComponent>() : nullptr;
+        _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다 — 매 틱 플러시를 잡지 않게
+        if ( pPawn == nullptr )
+            return;
+        GameObject* pAiObject = manager.resolveGameObject( _autoPlayController );
+        if ( bAutoPlay )
+        {
+            if ( pAiObject == nullptr )
+            {
+                pAiObject = manager.createGameObject( hashed_string( "VoxelAutoPlay" ) );
+                if ( pAiObject == nullptr || pAiObject->addComponent<VoxelAutoPlayControllerComponent>() == nullptr )
+                    return;
+                trackSpawned( *pAiObject );
+                _autoPlayController = pAiObject->getHandle();
+            }
+            VoxelAutoPlayControllerComponent* pAi = pAiObject->getComponent<VoxelAutoPlayControllerComponent>();
+            if ( pAi != nullptr && pAi->getPawn() != pPawn->getHandle() )
+                pAi->possess( *pPawn );
+            SW_LOG_INFO( "[Voxel] auto play took the player" );
+            return;
+        }
+        // 끔 — 플레이어 조종자에게 돌려주고 AI 를 걷는다. 이미 다른 조종자(플레이어)가 쥐었으면 그대로.
+        const VoxelAutoPlayControllerComponent* pAi = pAiObject != nullptr ? pAiObject->getComponent<VoxelAutoPlayControllerComponent>() : nullptr;
+        if ( pPawn->isPossessed() == false || ( pAi != nullptr && pAi->getPawn() == pPawn->getHandle() ) )
+        {
+            PlayerControllerComponent* pPlayer = ControlSystem::findOrCreatePlayerController( manager, 0 );
+            if ( pPlayer != nullptr )
+                pPlayer->possess( *pPawn );
+            SW_LOG_INFO( "[Voxel] the player took the body back" );
+        }
+        if ( pAiObject != nullptr )
+            destroySpawned( manager, _autoPlayController );
     }
 
     bool VoxelDirectorComponent::applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block )
@@ -192,6 +244,8 @@ namespace sw
     {
         if ( bRespawnViews )
             spawnChunks( manager );
+        if ( hasPendingSpawn() )
+            syncAutoPlayPossession( manager );
     }
 
     void VoxelDirectorComponent::spawnChunks( GameObjectManager& manager )

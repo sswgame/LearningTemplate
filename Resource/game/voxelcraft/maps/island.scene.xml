@@ -48,8 +48,24 @@
 					               _maxPitch="1.4835298"
 					               _autoPossess="Player0"
 					               _bLockMouse="true">
-						<_listButton />
-						<_listAnalog />
+						<_listButton>
+							<item>Voxel.Jump</item>
+							<item>Voxel.Sprint</item>
+							<item>Voxel.Break</item>
+							<item>Voxel.Place</item>
+							<item>Voxel.Slot1</item>
+							<item>Voxel.Slot2</item>
+							<item>Voxel.Slot3</item>
+							<item>Voxel.Slot4</item>
+							<item>Voxel.Slot5</item>
+							<item>Voxel.Slot6</item>
+							<item>Voxel.Slot7</item>
+							<item>Voxel.Slot8</item>
+							<item>Voxel.Slot9</item>
+						</_listButton>
+						<_listAnalog>
+							<item>Voxel.HotbarScroll</item>
+						</_listAnalog>
 					</PawnComponent>
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
