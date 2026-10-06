@@ -22,14 +22,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import getProjectRoot  # noqa: E402
+from common import getProjectRoot, runProcess  # noqa: E402
 from common.AppRun import (kBackendSwitch, kSkipExitCode, findBuildDirOfApp, findUsableBackends, loadGameTable,  # noqa: E402
                            readCMakeCacheValue, runApp)
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
@@ -67,13 +66,12 @@ def describeGpuInternal() -> dict:
         return {"gpu": "", "driver": ""}
     command = ("Get-CimInstance Win32_VideoController | Sort-Object AdapterRAM -Descending | Select-Object -First 1 Name,DriverVersion"
                " | ConvertTo-Json")
+    output = runProcess(["powershell", "-NoProfile", "-Command", command], timeoutSeconds=30).stdout
     try:
-        output = subprocess.run(["powershell", "-NoProfile", "-Command", command], capture_output=True, text=True, timeout=30,
-                                check=False).stdout
         record = json.loads(output) if output.strip() else {}
-        return {"gpu": record.get("Name", "") or "", "driver": record.get("DriverVersion", "") or ""}
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+    except ValueError:
         return {"gpu": "", "driver": ""}
+    return {"gpu": record.get("Name", "") or "", "driver": record.get("DriverVersion", "") or ""}
 
 
 def describeDeviceMismatchInternal(record: dict) -> str:

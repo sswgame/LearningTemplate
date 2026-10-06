@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -17,6 +16,7 @@ from .ClangFormat import resolveClangFormat
 from .Constants import kCppAllExtensions
 from .Parallel import runUntilNonZero
 from .Paths import getProjectRoot, normalizePath
+from .Process import ProcessResult, runProcess
 
 
 def resolveGitExecutable() -> str | None:
@@ -63,21 +63,12 @@ def ensureGitOnPath() -> str | None:
     return gitPath
 
 
-def runGit(args: Sequence[str],
-           *,
-           cwd: Path | None = None,
-           check: bool = False) -> subprocess.CompletedProcess:
+def runGit(args: Sequence[str], *, cwd: Path | None = None) -> ProcessResult:
     """
-    Git 명령어를 실행하고 결과를 반환합니다.
+    Git 명령어를 실행하고 결과를 반환합니다(출력은 UTF-8 — 한글 경로 · 커밋 메시지가 시스템 코드 페이지로 깨지지 않게).
     """
     gitExe = resolveGitExecutable() or "git"
-    return subprocess.run(
-        [gitExe, *args],
-        cwd=str(cwd) if cwd is not None else None,
-        capture_output=True,
-        text=True,
-        check=check,
-    )
+    return runProcess([gitExe, *args], cwd=cwd)
 
 
 _kStagedFileArgument = ["diff", "--cached", "--name-only", "--diff-filter=ACM"]
@@ -91,7 +82,7 @@ def listGitFilesInternal(projectRoot: Path, listGitArgument: list[str], extensio
     """
     fileSet: set[Path] = set()
     gitResult = runGit(listGitArgument, cwd=projectRoot)
-    if gitResult.returncode != 0:
+    if gitResult.returnCode != 0:
         return fileSet
     for rawLine in gitResult.stdout.splitlines():
         if line := rawLine.strip():
@@ -116,7 +107,7 @@ def getMergeHeadRevisions(root: Path | None = None) -> list[str]:
     """
     projectRoot = root or getProjectRoot()
     gitResult = runGit(["rev-parse", "--git-path", "MERGE_HEAD"], cwd=projectRoot)
-    if gitResult.returncode != 0:
+    if gitResult.returnCode != 0:
         return []
     mergeHeadPath = Path(gitResult.stdout.strip())
     if not mergeHeadPath.is_absolute():
@@ -132,7 +123,7 @@ def mapBlobByPathInternal(projectRoot: Path, listGitArgument: list[str], blobFie
     """`ls-files -s -z` · `ls-tree -r -z` 출력을 {저장소 기준 경로: blob id} 로 읽습니다. 병합 미해결 칸(stage 1~3)은 뺀다."""
     gitResult = runGit(listGitArgument, cwd=projectRoot)
     mapBlob: dict[str, str] = {}
-    if gitResult.returncode != 0:
+    if gitResult.returnCode != 0:
         return mapBlob
     bIndex = listGitArgument[0] == "ls-files"
     for entry in gitResult.stdout.split("\0"):
@@ -243,8 +234,7 @@ def runClangFormatBatch(files: Sequence[Path | str],
         else:
             command.append("-i")
         command.extend(batch)
-        result = subprocess.run(command, cwd=str(projectRoot), check=False)
-        return result.returncode
+        return runProcess(command, cwd=projectRoot, bCapture=False).returnCode
 
     # clang-format 은 자식 프로세스라 코어 수를 넘겨 띄우면 서로 경합한다 (Parallel 의 프로세스 정책).
     return runUntilNonZero(runSingleBatchInternal, batches)

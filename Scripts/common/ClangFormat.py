@@ -16,7 +16,6 @@ from __future__ import annotations
 import json
 import platform
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -24,6 +23,7 @@ from .Archive import ensureCachedDownload, resolveToolsSubdir, toolsCacheDir
 from .Config import loadSearchPaths, loadToolchainConfig
 from .Constants import kKeyClangFormatVersion, kKeyLlvmPath, kKeyLlvmToolsSubdir
 from .Paths import normalizePath
+from .Process import runProcess
 
 _kClangFormatWin = "clang-format.exe"
 _kClangFormatPosix = "clang-format"
@@ -40,11 +40,8 @@ def pinnedClangFormatVersion() -> str:
 
 def clangFormatVersionOf(path: Path | str) -> str:
     """`clang-format --version` 이 찍는 버전 문자열을 뽑습니다. 못 뜨면 빈 문자열."""
-    try:
-        completed = subprocess.run([str(path), "--version"], capture_output=True, text=True, timeout=20)
-    except (OSError, subprocess.SubprocessError):
-        return ""
-    if completed.returncode != 0:
+    completed = runProcess([path, "--version"], timeoutSeconds=20)
+    if not completed.bSucceeded:
         return ""
     for token in (completed.stdout or "").split():
         if token and token[0].isdigit():

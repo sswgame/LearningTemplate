@@ -9,13 +9,13 @@ from __future__ import annotations
 import os
 import platform
 import shutil
-import subprocess
 from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
 from common import (
     ToolSpec,
+    runProcess,
     ensureCachedDownload,
     extractTarSafe,
     extractZipSafe,
@@ -137,7 +137,7 @@ def findMsvcPath() -> str:
             "-requires", "Microsoft.VisualStudio.Component.VC.Tools",
             "-property", "installationPath",
         ]
-        vsPath = subprocess.check_output(command, text=True, encoding="utf-8", errors="replace").strip()
+        vsPath = runProcess(command).stdout.strip()
         if vsPath:
             msvcBase = Path(vsPath) / "VC" / "Tools" / "MSVC"
             if msvcBase.is_dir():

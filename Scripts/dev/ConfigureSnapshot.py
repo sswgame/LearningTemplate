@@ -33,7 +33,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -41,7 +40,7 @@ from typing import Any, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common import getProjectRoot  # noqa: E402
+from common import getProjectRoot, runProcess  # noqa: E402
 
 _kTag = "ConfigureSnapshot"
 #: 이 도구가 File API 에 남기는 질의 — 클라이언트 이름을 따로 둬 VS Code 등 다른 클라이언트의 질의와 섞이지 않게 한다.
@@ -140,9 +139,8 @@ def snapshotTargetInternal(replyDir: Path, jsonFile: str, repositoryRoot: Path, 
 
 
 def snapshotCtestInternal(buildDir: Path, repositoryRoot: Path) -> dict[str, Any]:
-    completed = subprocess.run(["ctest", "--show-only=json-v1"], cwd=str(buildDir), capture_output=True,
-                               encoding="utf-8", errors="replace", check=False)
-    if completed.returncode != 0:
+    completed = runProcess(["ctest", "--show-only=json-v1"], cwd=buildDir)
+    if completed.returnCode != 0:
         return {"error": completed.stderr.strip()}
     data = json.loads(completed.stdout)
     mapTest: dict[str, Any] = {}

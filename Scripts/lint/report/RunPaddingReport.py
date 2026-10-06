@@ -44,14 +44,13 @@ import ctypes
 import json
 import os
 import shlex
-import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-from common import TranslationUnitSweep, getProjectRoot  # noqa: E402
+from common import TranslationUnitSweep, getProjectRoot, runProcess  # noqa: E402
 
 _kDefaultPreset = "Ninja-Debug"
 _kTag = "RunPaddingReport"
@@ -516,17 +515,14 @@ def runUnitInternal(entry: dict, sourceRoot: Path, listExtraDefine: tuple[str, .
         "libclang": str(libClangPath), "arguments": listArgument, "file": str(entry.get("file", "")),
         "directory": str(entry.get("directory", "")), "sourceRoot": str(sourceRoot),
     }
-    try:
-        completed = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--parse-unit"],
-                                   input=json.dumps(request), capture_output=True, text=True, encoding="utf-8",
-                                   errors="replace", timeout=900)
-    except subprocess.TimeoutExpired:
+    completed = runProcess([sys.executable, Path(__file__).resolve(), "--parse-unit"], stdinText=json.dumps(request), timeoutSeconds=900)
+    if completed.bTimedOut:
         return json.dumps({"error": f"{entry.get('file')}: 시간 초과(900s)"}, ensure_ascii=False) + "\n"
-    if completed.returncode != 0:
-        lastLine = (completed.stderr or "").strip().splitlines()[-1:] or ["(출력 없음)"]
-        return json.dumps({"error": f"{entry.get('file')}: 파서 프로세스 종료 코드 {completed.returncode} — {lastLine[0]}"},
+    if completed.returnCode != 0:
+        lastLine = completed.stderr.strip().splitlines()[-1:] or ["(출력 없음)"]
+        return json.dumps({"error": f"{entry.get('file')}: 파서 프로세스 종료 코드 {completed.returnCode} — {lastLine[0]}"},
                           ensure_ascii=False) + "\n"
-    return completed.stdout or ""
+    return completed.stdout
 
 
 def makeProbeEntriesInternal(repositoryRoot: Path, listHeader: list[Path], listEntry: list[dict],

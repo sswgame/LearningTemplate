@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -32,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지 · LintGate
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import getProcessWorkerCount, mapConcurrent  # noqa: E402
+from common import getProcessWorkerCount, mapConcurrent, runProcess  # noqa: E402
 from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 
 #: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
@@ -55,11 +54,8 @@ def runCaseInternal(script: LintScript, case: dict) -> tuple[int, str]:
 
 def runLintInternal(script: LintScript, root: Path, extraArgs: list[str]) -> tuple[int, str]:
     """린트를 **실제 진입점으로** 돌립니다 (import 가 아니라 프로세스로 — 전역 캐시 오염을 피한다)."""
-    result = subprocess.run(
-        [sys.executable, str(script.scriptPath), "--root", str(root), *extraArgs],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-    )
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
+    result = runProcess([sys.executable, script.scriptPath, "--root", root, *extraArgs])
+    return result.returnCode, result.output
 
 
 def main(argv: list[str] | None = None) -> int:

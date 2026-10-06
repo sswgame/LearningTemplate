@@ -13,7 +13,6 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -21,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import (
     ToolSpec,
+    runProcess,
     autoBootstrapEnabled,
     ensureGitOnPath,
     findToolRoot,
@@ -59,31 +59,31 @@ def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str, gitExe: str) -> None:
     if not commit:
         return
     gitProbe = runGit(["-C", str(vcpkgRoot), "rev-parse", "--is-inside-work-tree"])
-    if gitProbe.returncode != 0 or gitProbe.stdout.strip() != "true":
+    if gitProbe.returnCode != 0 or gitProbe.stdout.strip() != "true":
         print(f"[SetupVcpkg] Skip pin (not a git work tree): {vcpkgRoot}", file=sys.stderr)
         return
 
     head = runGit(["-C", str(vcpkgRoot), "rev-parse", "HEAD"])
     resolved = runGit(["-C", str(vcpkgRoot), "rev-parse", commit])
     if (
-        head.returncode == 0
-        and resolved.returncode == 0
+        head.returnCode == 0
+        and resolved.returnCode == 0
         and head.stdout.strip() == resolved.stdout.strip()
     ):
         return
 
     print(f"[SetupVcpkg] Pinning {vcpkgRoot} to {commit}", file=sys.stderr)
     checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
-    if checkout.returncode == 0:
+    if checkout.returnCode == 0:
         return
     fetch = runGit(["-C", str(vcpkgRoot), "fetch", "--depth", "1", "origin", commit])
-    if fetch.returncode != 0:
+    if fetch.returnCode != 0:
         sys.stderr.write(
             f"[SetupVcpkg] Could not fetch {commit} ({fetch.stderr.strip() or checkout.stderr.strip()})\n"
         )
         return
     checkout = runGit(["-C", str(vcpkgRoot), "checkout", "--detach", commit])
-    if checkout.returncode != 0:
+    if checkout.returnCode != 0:
         sys.stderr.write(f"[SetupVcpkg] checkout {commit} failed: {checkout.stderr.strip()}\n")
 
 
@@ -113,9 +113,9 @@ def runBootstrapScriptInternal(vcpkgRoot: Path) -> bool:
         sys.stderr.write(f"[SetupVcpkg Error] bootstrap script missing: {bootstrap}\n")
         return False
     print(f"[SetupVcpkg] Running {bootstrap.name} in {vcpkgRoot} (no vcpkg executable for this OS)...", file=sys.stderr)
-    process = subprocess.run(platformScriptCommand(bootstrap), cwd=str(vcpkgRoot), capture_output=True, text=True, check=False)
-    if process.returncode != 0 or not hasVcpkgExecutable(vcpkgRoot):
-        sys.stderr.write(f"[SetupVcpkg Error] bootstrap failed (exit {process.returncode}):\n"
+    process = runProcess(platformScriptCommand(bootstrap), cwd=vcpkgRoot)
+    if process.returnCode != 0 or not hasVcpkgExecutable(vcpkgRoot):
+        sys.stderr.write(f"[SetupVcpkg Error] bootstrap failed (exit {process.returnCode}):\n"
                          f"{process.stderr.strip() or process.stdout.strip()}\n")
         return False
     return True
@@ -135,7 +135,7 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
     print(f"[SetupVcpkg] Using git: {gitExe}", file=sys.stderr)
 
     clone = runGit(["clone", gitUrl, str(toolsDir)])
-    if clone.returncode != 0:
+    if clone.returnCode != 0:
         sys.stderr.write(
             f"[SetupVcpkg Error] git clone failed:\n{clone.stderr.strip() or clone.stdout.strip()}\n"
         )
@@ -144,7 +144,7 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
 
     if gitCommit:
         checkout = runGit(["-C", str(toolsDir), "checkout", "--detach", gitCommit])
-        if checkout.returncode != 0:
+        if checkout.returnCode != 0:
             sys.stderr.write(
                 f"[SetupVcpkg Error] checkout {gitCommit} failed:\n{checkout.stderr.strip()}\n"
             )
@@ -161,12 +161,10 @@ def bootstrapVcpkgInternal(toolsDir: Path, gitUrl: str, gitCommit: str, gitExe: 
         return False
 
     print(f"[SetupVcpkg] Running {bootstrap.name}...", file=sys.stderr)
-    bootstrapProcess = subprocess.run(
-        bootstrapCmd, cwd=str(toolsDir), capture_output=True, text=True, check=False
-    )
-    if bootstrapProcess.returncode != 0:
+    bootstrapProcess = runProcess(bootstrapCmd, cwd=toolsDir)
+    if bootstrapProcess.returnCode != 0:
         sys.stderr.write(
-            f"[SetupVcpkg Error] bootstrap failed (exit {bootstrapProcess.returncode}):\n"
+            f"[SetupVcpkg Error] bootstrap failed (exit {bootstrapProcess.returnCode}):\n"
             f"{bootstrapProcess.stderr.strip() or bootstrapProcess.stdout.strip()}\n"
         )
         removeIncompleteVcpkgTreeInternal(toolsDir)

@@ -24,14 +24,13 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from collections import Counter
 import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import TranslationUnitSweep, getProjectRoot
+from common import TranslationUnitSweep, getProjectRoot, runProcess
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
@@ -71,11 +70,8 @@ def findClangTidy() -> str:
     candidates.append("/usr/bin/clang-tidy")
 
     for candidate in candidates:
-        try:
-            subprocess.run([candidate, "--version"], capture_output=True, check=True)
+        if runProcess([candidate, "--version"]).bSucceeded:
             return candidate
-        except (OSError, subprocess.CalledProcessError):
-            continue
     print("[RunClangTidy] clang-tidy 를 찾지 못했습니다. LLVM 설치를 확인하세요.")
     print("[RunClangTidy] 찾아본 곳:")
     for candidate in candidates:
@@ -91,12 +87,10 @@ def runOne(tidyExe: str, buildDir: Path, sourceFile: str) -> str:
     # `#pragma once` 가 같은 파일로 보지 못해 **"redefinition of ..." 오류가 쏟아진다.**
     # 코드 결함이 아니라 전부 이 설정 때문이다.
     command = [tidyExe, "-p", str(buildDir), "--quiet", "--extra-arg-before=/Y-", sourceFile]
-    try:
-        completed = subprocess.run(command, capture_output=True, text=True,
-                                   encoding="utf-8", errors="replace", timeout=900)
-    except subprocess.TimeoutExpired:
+    completed = runProcess(command, timeoutSeconds=900)
+    if completed.bTimedOut:
         return f"{sourceFile}: [RunClangTidy] 시간 초과(900s) — 건너뜁니다\n"
-    return completed.stdout or ""
+    return completed.stdout
 
 
 def summarize(diagnosticText: str) -> None:
@@ -128,10 +122,9 @@ def summarize(diagnosticText: str) -> None:
 
 def getClangTidyVersionInternal(tidyExe: str) -> str:
     """clang-tidy 가 스스로 보고하는 버전 한 줄. 못 얻으면 사유를 돌려준다."""
-    try:
-        completed = subprocess.run([tidyExe, "--version"], capture_output=True, check=True, text=True)
-    except (OSError, subprocess.CalledProcessError) as exception:
-        return f"버전 확인 실패: {exception}"
+    completed = runProcess([tidyExe, "--version"])
+    if not completed.bSucceeded:
+        return f"버전 확인 실패: {completed.stderr.strip() or completed.returnCode}"
     for line in completed.stdout.splitlines():
         if "version" in line.lower():
             return line.strip()

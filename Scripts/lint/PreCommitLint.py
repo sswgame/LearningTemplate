@@ -42,6 +42,7 @@ from common import (
     getStagedCppFiles,
     listFilesUnlikeEveryParent,
     runClangFormatBatch,
+    runGit,
     runShaderCook,
 )
 
@@ -170,15 +171,9 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
     print("  - 모든 RHI 백엔드(DirectX 12, Vulkan, DirectX 11) 컴파일 검증 통과.")
 
-    import subprocess
-    gitCmd = subprocess.run(
-        ["git", "status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"],
-        capture_output=True,
-        text=True,
-        cwd=str(projectRoot),
-    )
-    if gitCmd.returncode == 0 and gitCmd.stdout.strip():
-        subprocess.run(["git", "add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=str(projectRoot))
+    gitCmd = runGit(["status", "--porcelain", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
+    if gitCmd.returnCode == 0 and gitCmd.stdout.strip():
+        runGit(["add", "Resource/engine/shaders/bin/", "Resource/common/shaders/bin/"], cwd=projectRoot)
         print("  - 갱신된 RHI별 바이너리(.dxil, .spv, .dxbc)를 자동으로 Git Stage에 추가했습니다.")
 
     return True

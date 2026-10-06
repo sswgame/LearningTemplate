@@ -23,12 +23,11 @@ from __future__ import annotations
 
 import argparse
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, mapConcurrent  # noqa: E402
+from common import getProjectRoot, mapConcurrent, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
@@ -46,8 +45,7 @@ def findTestExecutables(buildDir: Path) -> tuple[Path, list[Path]]:
 
 def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[str]:
     """그 실행 파일에서 패턴이 고르는 케이스 이름들(`Suite.Case`)."""
-    result = subprocess.run([str(executable), "--test_list", f"--test_filter={pattern}"], cwd=workingDir,
-                            capture_output=True, text=True, encoding="utf-8", errors="replace")
+    result = runProcess([executable, "--test_list", f"--test_filter={pattern}"], cwd=workingDir)
     return [f"{match.group(1)}.{match.group(2)}" for line in result.stdout.splitlines() if (match := _kListedCaseRe.match(line))]
 
 
@@ -93,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     for executable, _ in listSelection:
         command = [str(executable), f"--test_filter={args.pattern}", *listExtra]
         print(f"\n[RunTests] ({workingDir}) {' '.join(command)}", flush=True)
-        if subprocess.run(command, cwd=workingDir).returncode != 0:
+        if runProcess(command, cwd=workingDir, bCapture=False).returnCode != 0:
             listFailed.append(executable.name)
 
     print()

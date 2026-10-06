@@ -19,7 +19,6 @@ import argparse
 import os
 import shutil
 import stat
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -27,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — PreCommitLint
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable  # noqa: E402
+from common import ProcessResult, getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable, runProcess  # noqa: E402
 from PreCommitLint import selectFileScopedStagedInternal  # noqa: E402
 
 #: CMake 등록 정보 (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
@@ -38,12 +37,12 @@ kLintTimeoutSeconds = 60
 _kBaseText = "".join(f"line {index}\n" for index in range(10))
 
 
-def runGitInternal(repoRoot: Path, *listArgument: str, bCheck: bool = True) -> subprocess.CompletedProcess:
+def runGitInternal(repoRoot: Path, *listArgument: str, bCheck: bool = True) -> ProcessResult:
     """사용자 · 전역 설정과 무관하게 같은 결과를 내도록 신원 · 줄끝 · 서명을 고정해서 git 을 부릅니다."""
     command = [resolveGitExecutable() or "git", "-c", "user.name=lint-selftest", "-c", "user.email=lint@selftest",
                "-c", "core.autocrlf=false", "-c", "commit.gpgsign=false", *listArgument]
-    result = subprocess.run(command, cwd=str(repoRoot), capture_output=True, text=True)
-    if bCheck and result.returncode != 0:
+    result = runProcess(command, cwd=repoRoot)
+    if bCheck and result.returnCode != 0:
         raise RuntimeError(f"git {' '.join(listArgument)} 실패: {result.stderr.strip()}")
     return result
 

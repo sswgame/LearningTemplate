@@ -16,12 +16,11 @@
 import argparse
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import CookContractSpec, getProjectRoot
+from common import CookContractSpec, getProjectRoot, runProcess
 
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
 
@@ -74,14 +73,13 @@ def main():
             if os.path.exists(ppm):
                 os.remove(ppm)
             cmd = [app, "-" + flag] + extra + ["-gv_benchMeshes=%d" % args.meshes, "-gv_profileFrames=%d" % frames, "-gv_screenshot=" + ppm]
-            with open(log, "wb") as log_file:
-                proc = subprocess.run(cmd, cwd=bin_dir, stdout=log_file, stderr=subprocess.STDOUT, timeout=180)
+            proc = runProcess(cmd, cwd=Path(bin_dir), timeoutSeconds=180, stdoutPath=Path(log))
             with open(log, "rb") as log_file:
                 errors = log_file.read().count(b"[Error]")
             stats = readPpmStatsInternal(ppm) if os.path.exists(ppm) else None
-            ok = proc.returncode == 0 and stats is not None and stats[1] > 0
+            ok = proc.bSucceeded and stats is not None and stats[1] > 0
             failed |= ok is False
-            results.append((kind, name, proc.returncode, errors, stats))
+            results.append((kind, name, proc.returnCode, errors, stats))
 
     print("%-7s %-10s %5s %7s %-20s %s" % ("path", "backend", "exit", "errors", "mean RGB", "non-bg px"))
     for kind, name, code, errors, stats in results:

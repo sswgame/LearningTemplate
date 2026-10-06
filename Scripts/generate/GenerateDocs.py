@@ -7,14 +7,13 @@ Doxygen 문서 생성.
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 import webbrowser
 from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot
+from common import getProjectRoot, runProcess
 
 
 def generateDocs(*, openBrowser: bool = False) -> int:
@@ -31,15 +30,14 @@ def generateDocs(*, openBrowser: bool = False) -> int:
         return 0
 
     print("Doxygen 실행 중...")
-    try:
-        subprocess.run(["doxygen", "Doxyfile"], cwd=rootDir, check=True)
-    except FileNotFoundError:
+    result = runProcess(["doxygen", "Doxyfile"], cwd=rootDir, bCapture=False)
+    if not result.bLaunched:
         print(
             "오류: 'doxygen' 명령을 찾을 수 없습니다. Doxygen이 설치되어 있고 시스템 PATH에 추가되어 있는지 확인하세요."
         )
         return 1
-    except subprocess.CalledProcessError as exception:
-        print(f"오류: Doxygen 실행 실패 (종료 코드 {exception.returncode})")
+    if result.returnCode != 0:
+        print(f"오류: Doxygen 실행 실패 (종료 코드 {result.returnCode})")
         return 1
 
     print("Doxygen 문서 생성이 완료되었습니다.")
