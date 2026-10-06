@@ -61,6 +61,9 @@ namespace sw
         , _cycleAction{}
         , _panAction{ "Camera.Pan" }
         , _rotateAction{ "Camera.Rotate" }
+        , _lookAction{ "Camera.Look" }
+        , _lookHoldAction{ "Camera.LookHold" }
+        , _zoomAction{ "Camera.Zoom" }
         , _bReadInput{ true }
         , _catalog{}
         , _director{}
@@ -180,14 +183,14 @@ namespace sw
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
         CameraModeInput       input;
+        // 장치는 입력 맵이 정한다(게임의 `Camera.Look` · `Camera.LookHold` · `Camera.Zoom` — 맵에 없으면 그 조작은 0).
         if ( inputDef._lookSensitivity > 0.0f )
         {
-            const int2 mouseDelta = pInput->getMouseDelta();
-            input._lookDelta      = float2{ static_cast<float32>( mouseDelta._x ), static_cast<float32>( mouseDelta._y ) };
-            input._bLookHeld      = pInput->isMouseButtonDown( MouseButton::Right ) ? SW_TRUE : SW_FALSE;
+            input._lookDelta = inputMap.getVector2D( _lookAction );
+            input._bLookHeld = inputMap.isActionDown( _lookHoldAction ) ? SW_TRUE : SW_FALSE;
         }
-        if ( inputDef._zoomStep > 0.0f )
-            input._zoomNotches = pInput->getMouseWheel();
+        if ( inputDef._zoomStep > 0.0f && inputMap.wasActionTriggered( _zoomAction ) ) // 휠은 굴린 프레임, 패드 버튼 축은 누름 · 반복마다 한 칸
+            input._zoomNotches = inputMap.getAxis1D( _zoomAction );
         if ( inputDef._panSpeed > 0.0f )
         {
             // 모드 입력의 팬은 (앞, 오른쪽) — 액션의 (x 오른쪽, y 앞)을 바꿔 넣는다.

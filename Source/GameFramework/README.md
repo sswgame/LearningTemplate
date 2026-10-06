@@ -18,6 +18,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   쓰는 예는 `Source/Games/AbilityArena`
 - **Control**(빙의): 조종 대상(폰)과 조종자를 나눈다(언리얼 `APawn` / `AController` · `Possess`). 폰(`PawnComponent`)은 행동 층 의도(`ControlIntent` —
   이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다 — 입력을 읽어도 되는 파일은 게이트 `CheckControlBoundary` 의 허용 표).
+  허용 표의 파일(조종자 · 플레이어 뷰 카메라 · 명령형 디렉터)도 장치를 직접 묻지 않는다 — 클릭 · 끌기 · 시점 · 확대는 입력 맵 액션(`Camera.Look` · `Camera.LookHold` ·
+  `Camera.Zoom` · `Skirmish.Select` · `Nile.Place` …, 게임패드 바인딩 포함)으로 읽고, 장치 조회는 커서 화면 위치(`InputManager::getMousePositionNormalized` —
+  언리얼 `GetMousePosition` 자리) 하나뿐이다(같은 게이트가 GameFramework · Games 전체에서 막는다).
   조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
   빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`, 폰이 바라면(`_bLockMouse` — 1인칭) 마우스 잠금 · 잠금 토글 액션
   `ToggleMouseLock`(Esc), 잠금이 실제로 걸린 동안만 시선을 쌓는다), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
@@ -74,7 +77,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
   아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
 - **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
-  (`OrthoCameraRigComponent` — 입력 맵 액션 `_panAction`(기본 `Camera.Pan`, 2D 벡터) 이동(초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), `_rotateAction`(기본 `Camera.Rotate`, 1D 축) 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
+  (`OrthoCameraRigComponent` — 입력 맵 액션 `_panAction`(기본 `Camera.Pan`, 2D 벡터) 이동(초점 범위 묶기), `_zoomAction`(기본 `Camera.Zoom`, 1D 축 — 휠 · 패드 D 패드, 발화한 프레임에만) 확대(`setOrthoHeight` 도 같은 범위), `_rotateAction`(기본 `Camera.Rotate`, 1D 축) 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(커서 아래 고르기)). 계산은 `OrthoCameraRigMath` 로
   떼어 씬 없이 시험한다. 1인칭 카메라는 폰의 조종 회전을 읽으므로 **Control** 절(`Control/FirstPersonCameraComponent`)에 있다. 시점 자체는 `Input/FirstPersonLook` 이고,
   몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
   XY 평면 2D 씬의 따라가기 · 흔들림은 `Follow2DCameraComponent`(목표 자리 · 따라가는 비율 · 감쇠 흔들림)
@@ -454,8 +457,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 카메라 시점은 코드가 아니라 `<CameraPresets>` XML 이다(Cinemachine 가상 카메라 + Custom Blends, 언리얼 카메라 모드의 자리). 예시는
 `Resource/engine/cameras/default.cameras.xml` · `Resource/game/shooter3d/data/shooter.cameras.xml`(1인칭 · 3인칭 · 궤도 · CCTV).
 
-- **프리셋 하나 = 섹션 원소 몇 개.** `<View>`(모드 · 피치 · 요 · 거리 · 오프셋 · `aim`/`lookAt`) · `<Lens>` · `<Damping>` · `<BlendIn>` · `<Input>`(마우스 감도 ·
-  휠 배율 · 이동 속도 · Q/E 회전 칸 · 오른쪽 버튼 끌기) · `<Confiner>`(피치 · 줌 범위, 상자) · `<Framing>`(화면 위치 · 데드존 · 소프트존 · look-ahead · 그룹 맞추기) ·
+- **프리셋 하나 = 섹션 원소 몇 개.** `<View>`(모드 · 피치 · 요 · 거리 · 오프셋 · `aim`/`lookAt`) · `<Lens>` · `<Damping>` · `<BlendIn>` · `<Input>`(시점 감도 ·
+  확대 배율 · 이동 속도 · Q/E 회전 칸 · 누른 동안만 시점 — 장치는 `CameraDirectorComponent` 의 액션 `Camera.Look` · `Camera.LookHold` · `Camera.Zoom` · `Camera.Pan` · `Camera.Rotate`) · `<Confiner>`(피치 · 줌 범위, 상자) · `<Framing>`(화면 위치 · 데드존 · 소프트존 · look-ahead · 그룹 맞추기) ·
   `<Collision>`(스프링 암) · `<Noise>`(펄린 손떨림) · `<Sweep>`(CCTV 요 훑기). 섹션마다 구조체 하나(`CameraViewDef` …). XML 의 각은 도, 정의는 라디안이다.
   모르는 속성 · 원소 · 열거자는 경고한다(`ResourceDataSchemaTest` 가 `*.cameras.xml` 을 읽는다).
 - **모드**(`CameraMode.h` — 컴포넌트를 모르는 순수 계산): `Fixed`(CCTV — 자리 고정, 각 · 점 · 대상을 보고 훑는다) · `OrthoTopDown` · `Orbit` · `Follow` · `FirstPerson` ·

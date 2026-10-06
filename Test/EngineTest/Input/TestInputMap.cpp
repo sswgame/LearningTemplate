@@ -656,7 +656,7 @@ SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
 }
 
 /**
- * @brief [InputMapTest] 게임 팩의 입력 맵은 게임 코드가 묻는 액션을 모두 키에 묶는다 — 게임 코드는 원시 키를 묻지 않는다(`CheckKitNamespaces`)
+ * @brief [InputMapTest] 게임 팩의 입력 맵은 게임 코드가 묻는 액션을 모두 키에 묶는다 — 게임 코드는 원시 키 · 버튼 · 휠을 묻지 않는다(`CheckControlBoundary`)
  * @details 액션이 맵에 없거나 바인딩이 없으면 그 조작이 소리 없이 죽는다(축은 0, 눌림은 false). 게임마다 코드가 묻는 이름 전부를 본다.
  */
 SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
@@ -672,15 +672,16 @@ SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
          { "Farm.Move", "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext", "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep",
          "Farm.Status" }                                                                                                                                                                                               },
         {        "game/nilecity/data/nile.input.xml",
-         { "Camera.Pan", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }                                                         },
+         { "Camera.Pan", "Camera.Zoom", "Nile.Place", "Nile.Demolish", "Nile.NextTool", "Nile.PrevTool", "Nile.RoadTool", "Nile.Pause", "Nile.Slower", "Nile.Faster", "Nile.ToggleAutoPlan", "Nile.Status" }           },
         {"game/starskirmish/data/skirmish.input.xml",
-         { "Camera.Pan", "Skirmish.SpectatorPan", "Skirmish.Slower", "Skirmish.Faster", "Skirmish.Pause", "Skirmish.Status", "Skirmish.AddToSelection",
+         { "Camera.Pan", "Camera.Zoom", "Skirmish.Select", "Skirmish.Order", "Skirmish.SpectatorPan", "Skirmish.Slower", "Skirmish.Faster", "Skirmish.Pause", "Skirmish.Status", "Skirmish.AddToSelection",
          "Skirmish.GroupModifier", "Skirmish.AttackMove", "Skirmish.Stop", "Skirmish.Hold", "Skirmish.Command1", "Skirmish.Command2", "Skirmish.Command3",
          "Skirmish.Build.SupplyDepot", "Skirmish.Build.Barracks", "Skirmish.Build.Refinery", "Skirmish.Build.Academy", "Skirmish.Build.Factory",
          "Skirmish.Build.Starport", "Skirmish.Build.Bunker", "Skirmish.Group0", "Skirmish.Group9", "Skirmish.JumpToSelection" }                                                                                        },
         {       "game/themepark/data/park.input.xml",
-         { "Camera.Pan", "Camera.Rotate", "Park.NextRide", "Park.ToggleOpen", "Park.PriceDown", "Park.PriceUp", "Park.FeeDown", "Park.FeeUp", "Park.Build",
+         { "Camera.Pan", "Camera.Rotate", "Camera.Zoom", "Park.NextRide", "Park.ToggleOpen", "Park.PriceDown", "Park.PriceUp", "Park.FeeDown", "Park.FeeUp", "Park.Build",
          "Park.Ride", "Park.Thoughts", "Park.Status" }                                                                                                                                                                 },
+        {    "game/shooter3d/data/shooter.input.xml",                                                                                                { "CycleCamera", "Camera.Look", "Camera.LookHold", "Camera.Zoom" }},
         {     "game/voxelcraft/data/voxel.input.xml", { "Voxel.Move", "Voxel.Look", "Voxel.Jump", "Voxel.Sprint", "Voxel.Break", "Voxel.Place", "Voxel.HotbarScroll", "Voxel.Slot1", "Voxel.Slot9", "ToggleMouseLock" }},
     };
     for ( const GameInputMap& gameMap : arrGameMap )

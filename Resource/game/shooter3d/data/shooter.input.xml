@@ -3,7 +3,8 @@
   Shooter3D 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstanceBase 가 통합 맵(InputManager::getInputMap)에 읽는다.
   게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩).
   Look 은 마우스 이동량(폰의 _lookAction — 플레이어 조종자가 조종 회전에 더한다), ToggleMouseLock 은 플레이어 조종자의 _mouseLockAction,
-  CycleCamera 는 시점 카메라 디렉터의 _cycleAction 이 읽는다.
+  CycleCamera 는 시점 카메라 디렉터의 _cycleAction, Camera.Look · Camera.LookHold · Camera.Zoom 은 그 디렉터의 _lookAction · _lookHoldAction · _zoomAction
+  (궤도 프리셋 — 오른쪽 버튼을 누른 동안 시점, 휠 확대)이 읽는다.
 -->
 <InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
 	<layers>
@@ -51,5 +52,16 @@
 	</action>
 	<action name="Weapon3" layer="Gameplay" trigger="Pressed">
 		<bind source="key" code="Digit3"/>
+	</action>
+	<action name="Camera.Look" layer="Gameplay">
+		<mouseDelta scale="1"/>
+	</action>
+	<action name="Camera.LookHold" layer="Gameplay" trigger="Down">
+		<bind source="mouse" code="Right"/>
+	</action>
+	<!-- 확대 — 휠(굴린 칸만큼), 패드 D 패드 위 · 아래(누름 · 반복마다 한 칸). -->
+	<action name="Camera.Zoom" layer="Gameplay">
+		<mouseWheel scale="1"/>
+		<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
 	</action>
 </InputMap>

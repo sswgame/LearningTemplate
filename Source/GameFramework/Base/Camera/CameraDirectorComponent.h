@@ -108,7 +108,13 @@ namespace sw
         hashed_string _panAction;
         PROPERTY( Category = "Camera", DisplayName = "Rotate Action", Tooltip = "InputMap action (1D axis, Pressed) whose sign steps presets with a rotate step" )
         hashed_string _rotateAction;
-        PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed mouse, wheel and keys to presets with an <Input> section" )
+        PROPERTY( Category = "Camera", DisplayName = "Look Action", Tooltip = "InputMap action (2D movement, e.g. mouse delta) that orbits presets with a look sensitivity" )
+        hashed_string _lookAction;
+        PROPERTY( Category = "Camera", DisplayName = "Look Hold Action", Tooltip = "InputMap action held to orbit presets that look only while held" )
+        hashed_string _lookHoldAction;
+        PROPERTY( Category = "Camera", DisplayName = "Zoom Action", Tooltip = "InputMap action (1D axis, wheel notches; up is closer) that zooms presets with a zoom step" )
+        hashed_string _zoomAction;
+        PROPERTY( Category = "Camera", DisplayName = "Read Input", Tooltip = "Feed the look, zoom, pan and rotate actions to presets with an <Input> section" )
         bool _bReadInput;
 
         CameraPresetCatalog          _catalog;
