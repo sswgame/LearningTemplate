@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -92,6 +93,7 @@ namespace sw::editor
                 startSession( _pendingSession );
                 ImGui::CloseCurrentPopup();
             }
+            EditorSelfTestMarks::note( "gameView.playAnyway" );
             ImGui::SameLine();
             if ( ImGui::Button( "Cancel" ) )
                 ImGui::CloseCurrentPopup();
@@ -148,13 +150,17 @@ namespace sw::editor
             EditorWidgets::drawChip( "Playing", editor::style::kOk );
             EditorWidgets::drawTooltip( "현재 게임 실행 중" );
         }
-        else if ( ImGui::Button( "Play" ) )
+        else
         {
-            _pendingSession = PendingSession::Play;
-            if ( bSceneDirty && EditorPlaySession::isStopped() )
-                _bConfirmUnsavedPlay = true;
-            else
-                startSession( PendingSession::Play );
+            if ( ImGui::Button( "Play" ) )
+            {
+                _pendingSession = PendingSession::Play;
+                if ( bSceneDirty && EditorPlaySession::isStopped() )
+                    _bConfirmUnsavedPlay = true;
+                else
+                    startSession( PendingSession::Play );
+            }
+            EditorSelfTestMarks::note( "gameView.play" );
         }
         if ( currentState != PlaySessionState::Playing || bSimulating )
             EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
@@ -210,6 +216,7 @@ namespace sw::editor
             if ( pObjectManager != nullptr && pContext != nullptr )
                 pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
         }
+        EditorSelfTestMarks::note( "gameView.stop" );
         EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
     }
 

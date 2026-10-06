@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -371,6 +372,7 @@ namespace sw::editor
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
+        EditorSelfTestMarks::note( "gameView.canvas" ); // 시나리오가 게임 뷰 가운데를 누른다(뷰포트 피킹)
 
         CameraComponent* pCamera = EditorViewportClientInternal::getRenderedCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };

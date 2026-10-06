@@ -118,7 +118,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 
 | 단계 | 속성 | 하는 일 |
 |---|---|---|
-| `EditorClick` | `mark`(에디터 자체 시험 이름표 — `EditorSelfTestMarks::note`) · `button`(0..4) | 그 위젯 가운데로 마우스를 옮겨 누르고 뗀다 |
+| `EditorClick` | `mark`(에디터 자체 시험 이름표 — `EditorSelfTestMarks::note`) · `button`(0..4) · `mods`(`ctrl` · `shift` · `alt`, `+` 로 잇는다) | 그 위젯 가운데로 마우스를 옮겨 누르고 다음 프레임에 뗀다(수정자는 그동안 눌러 둔다) |
 | `EditorText` | `value` | ImGui 에 글자 입력 |
 | `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter` · `Escape` · `Backspace` · `Ctrl+Z`) | 수정자를 누르고 키를 눌렀다 뗀다(단축키 · 입력 칸 확정) |
 | `EditorExpectObject` | `name` · `count`(기본 1) · `component`(타입 — 그 컴포넌트를 가진 것만) · `selected`(1 = 선택돼 있어야) | 활성 씬의 그 이름 오브젝트 수를 단언 |
@@ -132,9 +132,13 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
 | `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 · 지난 프레임에 그렸으면 1 |
 | `Editor.ThemePreset` · `Editor.AccentColor` · `Editor.UiScale` | 테마 프리셋(0 ModernDark … 3 ClassicDark) · 액센트 0xRRGGBB · UI 배율 |
+| `Editor.SelectedIsEditorCamera` | 첫 선택이 화면을 그리는 에디터 카메라면 1 |
+| `Editor.UndoCount` · `Editor.UndoIndex` | 되돌리기 스택의 명령 수 · 위치 |
+| `Editor.LoadingScreenShown` | 런타임 UI 가 로딩 화면을 보이면 1 |
 
-위젯 이름표: `hierarchy.create` · `hierarchy.filter` · `hierarchy.selectedRow` · `hierarchy.activeToggle` · `hierarchy.addComponent` · `hierarchy.addComponent.search` ·
-`hierarchy.addComponent.<타입>` · `inspector.name` · `theme.swatch.violet`. 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄.
+위젯 이름표: `hierarchy.create` · `hierarchy.filter` · `hierarchy.selectedRow` · `hierarchy.row.<이름>` · `hierarchy.toggle.<이름>` · `hierarchy.activeToggle` ·
+`hierarchy.addComponent` · `hierarchy.addComponent.search` · `hierarchy.addComponent.<타입>` · `inspector.name` · `gameView.canvas` · `gameView.play` ·
+`gameView.playAnyway`(저장 안 된 씬 확인 상자) · `gameView.stop` · `theme.swatch.violet`. 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄.
 
 **에디터 시나리오는 `Resource/engine/automation/editor/`** — `AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 `-EnableEditor` 로 백엔드마다 돌리고,
 사용자 에디터 상태(`Saved/Editor`)를 앞뒤로 바이트째 되돌린다. 시작 조건은 `Immediately`(에디터의 편집 씬은 플레이를 시작하지 않는다)이고 패널이 한 번씩

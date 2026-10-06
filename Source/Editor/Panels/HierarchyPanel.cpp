@@ -453,6 +453,8 @@ namespace sw::editor
                                                           "Inactive - click to activate" ) )
                     pObj->setActive( bActive == false );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
 
                 // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
@@ -484,6 +486,8 @@ namespace sw::editor
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
                 if ( bSelected )
                     EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
                 if ( ImGui::IsItemClicked() )
                 {
