@@ -236,6 +236,9 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 **모듈 판별 규칙은 `--source-root` 기준 상대 경로로 맞추세요.** `parser_config` 의 `parsing.module_rules` 와 `default_module` 을 절대 경로로 맞추면 상위 폴더 이름에 걸려 다른 모듈로 분류됩니다.
 
+**설정 파일이 깨지면 파서가 멈춥니다.** `parser_config.json` · `toolchain_config.json` 을 못 읽거나 JSON 이 깨졌으면 파일 경로와 파서 오류를 남기고 실패합니다(`ParserConfig::load`).
+기본값으로 대신 돌면 LLVM · SDK 경로가 비어 libclang 오류가 엉뚱한 자리에서 나기 때문입니다. 파일이 없는 것만 선택입니다.
+
 **`REFLECT_BODY()` 안에 주석을 넣지 마세요.** 매크로 본문의 주석 줄에 줄 이음(`\`)이 빠지면 전처리가 깨집니다.
 
 **생성기에게 메모리 레이아웃을 재게 하지 마세요.** 생성기의 clang 인자에는 `SW_DEBUG` 와 `_DEBUG` 가 없어서, Debug 빌드의 레이아웃을 모릅니다.
