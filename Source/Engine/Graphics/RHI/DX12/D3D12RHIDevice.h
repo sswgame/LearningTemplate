@@ -400,8 +400,6 @@ namespace sw
                        "루트 파라미터 배치가 shaderslot::dx12 예산 계산과 어긋난다" );
         /// @brief 슬롯 테이블 하나의 최대 원소 수입니다(t 테이블과 u 테이블 중 큰 쪽).
         static constexpr uint32 kMaxSlotTableSize = shaderslot::kSrvSlotCount > shaderslot::kComputeUavSlotCount ? shaderslot::kSrvSlotCount : shaderslot::kComputeUavSlotCount;
-        /** @brief setComputeRootConstants 용량(dword)입니다. 루트 상수 크기이며 네 백엔드 공통 안전값이기도 합니다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = shaderslot::kRootConstantDwords;
 
         /// @brief 오프스크린 텍스처와 RTV · SRV 핸들입니다.
         struct OffscreenTextureRecord

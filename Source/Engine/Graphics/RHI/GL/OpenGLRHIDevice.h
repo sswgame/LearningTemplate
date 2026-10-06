@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
@@ -209,7 +210,6 @@ namespace sw
 
         /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
          *         shaderslot::kRootConstantDwords(DX12 · Vulkan 의 루트 · 푸시 상수 크기)입니다. */
-        static constexpr uint32 kMaxComputeRootConstantDwords = 64;
 
         /// @brief 드로우 때 바인드할 버퍼 · 텍스처 슬롯입니다.
         struct BindlessResourceRecord
@@ -371,7 +371,7 @@ namespace sw
         uint32               _timestampFrameIndex;
         RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
 
-        uint32 _arrComputeRootConstantShadow[kMaxComputeRootConstantDwords];
+        uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 
         RHIHandleTable<OpenGLPipelineStateRecord> _pipelineStates;
         vector<OpenGLRenderPassRecord>            _listRenderPass;

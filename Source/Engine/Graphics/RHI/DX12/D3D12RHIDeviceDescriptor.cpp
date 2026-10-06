@@ -152,7 +152,7 @@ namespace sw
         arrParam[kRootConstantsParam].ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
         arrParam[kRootConstantsParam].Constants.ShaderRegister = shaderslot::kRootConstantRegister;
         arrParam[kRootConstantsParam].Constants.RegisterSpace  = shaderslot::kRootConstantSpace;
-        arrParam[kRootConstantsParam].Constants.Num32BitValues = kMaxComputeRootConstantDwords;
+        arrParam[kRootConstantsParam].Constants.Num32BitValues = shaderslot::kRootConstantDwords;
         arrParam[kRootConstantsParam].ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
 
         // 정적 샘플러 세트 s0..s7 (bindingslots.hlsli 4, 언리얼의 정적 샘플러와 같은 자리). 셰이더는 g_SwSamplers[SW_SAMPLER_*].

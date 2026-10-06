@@ -639,10 +639,10 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE || num32BitValues == 0 || pData == nullptr )
             return;
-        if ( destOffsetIn32BitValues >= OpenGLRHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = OpenGLRHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = ( num32BitValues > maxCount ) ? maxCount : num32BitValues;
 
         if ( _pDevice->ensureComputeRootConstantUbo() == false )

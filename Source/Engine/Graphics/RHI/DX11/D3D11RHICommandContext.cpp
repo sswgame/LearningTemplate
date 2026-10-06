@@ -468,10 +468,10 @@ namespace sw
     {
         if ( _pContext == nullptr || num32BitValues == 0 || pData == nullptr )
             return;
-        if ( destOffsetIn32BitValues >= D3D11RHIDevice::kMaxComputeRootConstantDwords )
+        if ( destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
 
-        const uint32 maxCount = D3D11RHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
         if ( _pDevice->ensureRootConstantCb( *_pState ) == false )
             return;

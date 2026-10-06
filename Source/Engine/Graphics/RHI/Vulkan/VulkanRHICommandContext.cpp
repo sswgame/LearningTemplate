@@ -887,9 +887,9 @@ namespace sw
         VkCommandBuffer cmd = commandBuffer();
         const bool      bCanPush =
             ( cmd != VK_NULL_HANDLE && _pDevice->_pipelineLayout != VK_NULL_HANDLE && pData != nullptr && num32BitValues > 0 );
-        if ( bCanPush == false || destOffsetIn32BitValues >= VulkanRHIDevice::kMaxComputeRootConstantDwords )
+        if ( bCanPush == false || destOffsetIn32BitValues >= shaderslot::kRootConstantDwords )
             return;
-        const uint32 maxCount = VulkanRHIDevice::kMaxComputeRootConstantDwords - destOffsetIn32BitValues;
+        const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
 
         constexpr VkShaderStageFlags kPushStages =

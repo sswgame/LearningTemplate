@@ -902,3 +902,41 @@ SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSl
         SW_EXPECT_TRUE_MSG( defineCount == 1 && bInContract, ( sw::string( pMacro ) + " 정의가 bindingslots.hlsli 하나가 아니다: " + listDefiner ).c_str() );
     }
 }
+
+/**
+ * @brief [ShaderBindingValidatorTest] 루트 상수 dword 수는 네 백엔드가 셰이더 계약(shaderslot::kRootConstantDwords) 하나를 읽는다
+ * @details 백엔드가 상한을 숫자로 따로 적으면(DX11 · GL 64, DX12 · Vulkan 16) 오프셋 16 이상의 쓰기가 백엔드마다 다르게 된다 — 셰이더는 16 dword 만 읽는다.
+ *          백엔드 소스에 루트 상수 상한을 숫자 리터럴로 정의한 줄이 없어야 한다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
+{
+    const sw::string       rhiFolder = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "Source/Engine/Graphics/RHI" );
+    sw::vector<sw::string> listFile;
+    sw::FileUtil::collectFiles( rhiFolder, ".h", listFile, true );
+    sw::FileUtil::collectFiles( rhiFolder, ".cpp", listFile, true );
+    SW_ASSERT_TRUE( listFile.size() >= 20 );
+    sw::string listOffender;
+    for ( const sw::string& path : listFile )
+    {
+        sw::string text;
+        SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+        size_t lineStart = 0;
+        while ( lineStart < text.size() )
+        {
+            size_t lineEnd = text.find( '\n', lineStart );
+            lineEnd        = lineEnd == sw::string::npos ? text.size() : lineEnd;
+            const sw::string_view line( text.data() + lineStart, lineEnd - lineStart );
+            const size_t          equal = line.find( '=' );
+            if ( line.find( "constexpr" ) != sw::string_view::npos && line.find( "RootConstant" ) != sw::string_view::npos && equal != sw::string_view::npos )
+            {
+                size_t valueStart = equal + 1;
+                while ( valueStart < line.size() && line[valueStart] == ' ' )
+                    ++valueStart;
+                if ( valueStart < line.size() && line[valueStart] >= '0' && line[valueStart] <= '9' )
+                    listOffender += sw::FileUtil::getFileNamePart( path ) + " ";
+            }
+            lineStart = lineEnd + 1;
+        }
+    }
+    SW_EXPECT_TRUE_MSG( listOffender.empty(), ( "루트 상수 상한을 숫자로 따로 적은 백엔드: " + listOffender ).c_str() );
+}
