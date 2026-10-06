@@ -246,6 +246,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       마이그레이션은 `Resource/common/sql/servicestore/`), `ServiceStoreFactory`(서버 설정의 저장소 항목 → 저장소, `memory` 는 기반 메모리 구현).
       PostgreSQL 드라이버(`Driver/Postgres/` — libpq 를 아는 유일한 폴더, `?` → `$n` 준비문 캐시 · 이진 결과 · SQLSTATE 로 제약 · 직렬화 실패 · 끊김을 가름, 비밀번호는 접속 글이 아니라 따로).
       시험: `ServiceStoreSqliteTest`(메모리와 같은 계약 여섯 `ServiceStoreContract.h` · 다시 띄우기 · 공장), `ServiceStorePostgresTest` · `SqlDriverPostgresTest`(서버가 있을 때만 — `SW_TEST_POSTGRES_URL`).
+    - `Server/CacheStore`(`GF_Server_CacheStore`, Server): 휘발성 저장 계약(기반 `IEphemeralStore`)의 RESP2 드라이버(`Driver/Resp/` — hiredis 없이 직접: 인코더 · 증분 파서 ·
+      연결, 명령 연결 하나(파이프라인 — 답은 보낸 순서) + 구독 연결 하나, 선택 TLS), `CacheStoreFactory`(서버 설정의 캐시 항목 → 앞, `memory` 는 기반 메모리 구현,
+      끝점 `host:port?prefix=&timeoutMs=&tls=&ca=`). **명령은 Valkey(리눅스) · Garnet(윈도우)이 모두 지원하는 것만**: `AUTH` · `GET` · `SET [PX] [NX|XX]` · `DEL` · `PEXPIRE` ·
+      `INCRBY` · `WATCH` · `UNWATCH` · `MULTI` · `EXEC` · `ZADD` · `ZINCRBY` · `ZREM` · `ZSCORE` · `ZREVRANK` · `ZREVRANGE … WITHSCORES` · `PUBLISH` · `SUBSCRIBE` · `UNSUBSCRIBE`
+      (Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션은 쓰지 않는다). 비교 후 쓰기는 `WATCH → GET → MULTI/EXEC`(그 GET 답까지 뒤 요청을 내보내지 않는다), 고정 창 카운터는
+      `MULTI · SET k 0 PX ttl NX · INCRBY · EXEC`(새 키에만 만료). 끊김 · 시한이면 기다리던 요청이 정확히 한 번 `Unavailable` 이고 다음 요청이 다시 연결한다(물러남 100 ms → 5 s).
+      시험: `RespCodecTest`, `RespEphemeralStoreFakeServerTest`(가짜 서버에 계약 여덟 + 끊김 · 시한 · AUTH · TLS · 다시 구독), `EphemeralStoreRespTest`(실제 서버 — `SW_TEST_RESP_URL`).
 
 ## 카메라: 프리셋 데이터 + 모드 + 블렌드 + 뷰 타깃
 

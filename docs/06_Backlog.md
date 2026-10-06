@@ -399,7 +399,7 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, 드라이버 `GF_Server_CacheStore`(RESP), PostgreSQL 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
@@ -1607,6 +1607,11 @@ cd build/Ninja-Debug/Bin
   서버는 주소가 확인된(상태 없는 도전을 통과한) 응답에만 X25519 를 계산하고, 토큰 결속이면 세션 비밀의 증명 태그가 맞아야 자리를 잡는다.
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
+
+- **캐시(RESP)는 Valkey · Garnet 공통 부분집합만 쓴다**(`GF_Server_CacheStore` README 의 명령 표) — Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션을 쓰면 Garnet(윈도우 서버)에서 갈린다.
+  계약 시험 `EphemeralStoreRespTest` 를 두 서버에 같이 돌려 지킨다. 서버가 없는 PC 는 가짜 RESP 서버(`FakeRespServer.h` — 루프백, 앞이 돌 때 같이 돈다)로 같은 계약을 돌린다.
+  캐시는 잃어도 되는 것만 — 정본은 `IServiceStore`. 끊김을 보기 전에 맡긴 첫 요청은 `Unavailable` 이다(다시 맡기면 다시 연결한다).
+- **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
 - **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이
   바뀌었으면) 그 번역은 화면에 나오지 않는다. 표 파일은 프로젝트(`*.locproject.json`)가 이름으로 부른다(폴더를 훑지 않아 팩 안에서도 같다). 코드 · 데이터의 글을 고치면
