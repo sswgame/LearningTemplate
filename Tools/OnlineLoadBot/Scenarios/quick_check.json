@@ -1,0 +1,25 @@
+{
+    "_name": "quick_check",
+    "_botCount": 300,
+    "_rampUpSeconds": 2,
+    "_durationSeconds": 30,
+    "_seed": 3,
+    "_region": "kr",
+    "_listStep": [
+        { "_action": "login", "_mode": "guest" },
+        { "_action": "directory_status" },
+        { "_action": "liveops_state" },
+        { "_action": "chat_join", "_channel": "world.quick" },
+        { "_action": "social_presence", "_status": "online", "_activity": "lobby" },
+        { "_action": "repeat", "_count": 3, "_listStep": [
+            { "_action": "chat_send", "_channel": "world.quick", "_text": "quick {bot} #{seq}" },
+            { "_action": "wait", "_minMs": 200, "_maxMs": 500 }
+        ] },
+        { "_action": "chat_history", "_channel": "world.quick", "_count": 20 },
+        { "_action": "leaderboard_top", "_board": "kills", "_count": 20 },
+        { "_action": "party_create" },
+        { "_action": "matchmaking_queue", "_mode": "solo" },
+        { "_action": "wait_match", "_timeoutMs": 20000 },
+        { "_action": "logout" }
+    ]
+}

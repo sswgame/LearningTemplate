@@ -436,6 +436,11 @@ cd build/Ninja-Debug/Bin
   **라이브 운영**: `GF_LiveOps` · `GF_Server_LiveOps`(기간 이벤트 · 원격 설정 값 · 경계 알림 · 푸시 제공자 계약 · 기기 등록 · 발송기 · 가짜 제공자 · 바인딩 · 클라이언트)가
   들어갔다. 남은 것: 실제 푸시 제공자 둘(`Push/Provider/<제품>/` — 공통 HTTPS 클라이언트 위 HTTP/2 · 토큰 인증, 인증서 · 서비스 계정 키는 운영 비밀 — 외부 계정 · 비용이라
   사용자 결정 전에는 하지 않는다), A/B 실험(원격 설정 출시 비율 + 지표), 이벤트 운영 화면(GF_Admin 패널), 서버 실행 파일에 라이브 운영 조립, 우편 · 이벤트에서 "오프라인이면 푸시" 잇기(게임 조립).
+  **부하 시험 봇**: `Tools/OnlineLoadBot`(키트 클라이언트 그대로 · 공유 끝점 연결 수천 · 시나리오 JSON · 지연 백분위 · `--local-server` 한 프로세스 서버 조립)이 들어갔다.
+  남은 것: 첫 측정 — Release · 서버 한 대 · 봇 1000/5000 으로 `chat_and_match` · `login_storm` 을 돌려 동작별 p99 와 서버 틱 p99 를 적을 것(채팅 world 채널 수천 명의
+  알림 수 · 정산 일의 길이 · 매처 대기 p99 가 위 키트 항목의 판단 근거). 참고(2026-10-06, Debug · `--local-server` — 봇과 서버가 한 스레드라 서로의 시간을 잰다):
+  `quick_check` 봇 300 → 4200 동작 · 28 초 · 오류 0, chat_send p50 377 ms · p99 1081 ms, 채팅 알림 185548. 전용 서버(`Server`)가 온라인 서비스를 조립하면 `--server` 로
+  같은 시나리오를 돌린다(봇 머신 따로).
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 공유 `GF_Account`(와이어 타입)와 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴가 들어갔다.
   외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
   (구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 제공자 호스트에 필요), 애플 client secret JWT ·
@@ -445,7 +450,7 @@ cd build/Ninja-Debug/Bin
   **거래**: 공유 `GF_Trade` · 서버 `GF_Server_Trade`(`TradeService` — 상태 기계 · 거래 레코드 · 원장 분개 하나로 정산 · 재시작 복구 · 시한)와 스트림 바인딩이 들어갔다.
   **서버 여럿**: 접속 상태(`OnlinePresence` — 캐시 `presence:` 키, 시한 60 초 · 30 초마다 다시 적기)와 버스(`account.revoke` 로 다른 서버의 옛 세션 닫기 · `push.<서버>` 로
   다른 서버의 계정에게 알림)가 들어갔다(`OnlineMultiServerTest`). 계정 · 거래 몫의 남은 것: 게임 UDP 접속 표 서명 키(로그인 · 게임 서버 공유, 지금 서버 설정 파일)의
-  배포 · 교체 절차, 인스턴스 아이템(지금 거래 다리는 가산 자산만 — 인벤토리 인스턴스 상태 칸은 거절), 부하 시험 봇, 실제 지연(루프백이 아닌 망)에서의 버스 · 캐시 왕복 측정.
+  배포 · 교체 절차, 인스턴스 아이템(지금 거래 다리는 가산 자산만 — 인벤토리 인스턴스 상태 칸은 거절), 실제 지연(루프백이 아닌 망)에서의 버스 · 캐시 왕복 측정.
   **경제 · 우편함 · GM**: `GF_Economy`/`GF_Server_Economy`(화폐 · 상품 카탈로그 · 구매 · 영수증 계약 + 가짜 제공자 · 서비스 · 클라이언트 · Wallet/Inventory 거울 — 로컬 지갑은
   원장 사본), `GF_Mailbox`/`GF_Server_Mailbox`(수령 = 원장 이동 · 모두 받기 · 만료 쓸기 · 전체 우편 캠페인 — 기반 `Online/Mail/ServiceMailCampaign`), `GF_Admin`/`GF_Server_Admin`
   (권한 등급 넷 · 모든 조작이 효과와 같은 트랜잭션의 감사 줄 · 환불 회수 빚)이 들어갔다. 남은 것 — ① 영수증 제공자 셋(`Receipt/Provider/<제품>/`): Apple(App Store Server API —
@@ -1689,6 +1694,8 @@ cd build/Ninja-Debug/Bin
 - **온라인 서비스의 내리는 순서는 하나 — 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시**(실제 서버 · 시험 하니스 `OnlineTestServer::addKit` 모두). 키트 `shutdown` 은
   빌려 준 것을 모두 거둔다(저장 일 · 라우터 `cancel` · 접속 상태 `IAccountPresence::cancel` · 버스 구독). 늦게 내려가는 서비스는 호스트 `shutdown` 이 `onHostShutdown` 으로
   떼어 두므로 사라진 호스트를 부르지 않는다 — 선언 순서로 맞추던 시험은 서버가 먼저 사라진 뒤 바인딩이 호스트의 `unsubscribeServerBus` 를 불렀다.
+- **부하 시험 봇은 키트 클라이언트 그대로**(`Tools/OnlineLoadBot`) — 끝점 하나에 연결 수천(공유 끝점 모드), 시나리오는 데이터(모르는 키 · 값은 오류), 백분위는 표본 정렬로
+  정확히. 엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 세운다 — 빠뜨리면 첫 `hashed_string` 에서 접근 위반이다(`EngineBootstrap` 앞부분과 같은 순서).
 - **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
 - **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이

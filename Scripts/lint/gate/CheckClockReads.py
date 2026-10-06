@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
+_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser", "Tools/OnlineLoadBot")
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 #: std 시계를 읽어도 되는 파일 → 이유.
@@ -127,7 +127,7 @@ class CheckClockReadsGate(LintGate):
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findClockReads(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 std::chrono 시계 읽기")
+        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser · Tools/OnlineLoadBot 의 std::chrono 시계 읽기")
 
 
 main = CheckClockReadsGate.run

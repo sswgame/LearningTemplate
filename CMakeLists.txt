@@ -86,6 +86,11 @@ else()
 	sw_declareUnbuiltDirectory("${CMAKE_SOURCE_DIR}/Source/Games")
 endif()
 
+# 온라인 부하 시험 봇 — 개발 도구. 클라이언트 · 서버 키트가 함께 있는 개발 구성(Game 타깃)에서만 짓는다(배포물 · Client · Server 타깃에 없다).
+if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFRAMEWORK OR SW_BUILD_GAME))
+	add_subdirectory(Tools/OnlineLoadBot)
+endif()
+
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verifyDynamicModuleRegistry()

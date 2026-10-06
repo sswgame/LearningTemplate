@@ -16,6 +16,13 @@
 file(GLOB_RECURSE swEngineTestSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 sw_excludeSourcesOfInactiveKits(swEngineTestSource)
 sw_getDynamicModules(swEngineTestKit KINDS kit)
+# 부하 시험 봇(Tools/OnlineLoadBot)은 개발 · Game 타깃에서만 지어진다 — 없는 구성에서는 그 시험을 뺀다.
+set(swEngineTestTool "")
+if(TARGET OnlineLoadBotCore)
+	list(APPEND swEngineTestTool OnlineLoadBotCore)
+else()
+	sw_excludeUnbuiltSources(swEngineTestSource "/TestOnlineLoadBot\\.cpp$")
+endif()
 
 sw_addTestExecutable(EngineTest
 	HOST_SPLIT
@@ -25,6 +32,7 @@ sw_addTestExecutable(EngineTest
 		Engine
 		GameFramework
 		${swEngineTestKit}
+		${swEngineTestTool}
 	LABELS
 		"unit;engine"
 	TIMEOUT
