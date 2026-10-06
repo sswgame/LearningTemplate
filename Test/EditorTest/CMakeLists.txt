@@ -31,6 +31,7 @@ sw_addTestExecutable(EditorTest
 		Common/Commands/TestEditorGlobalVariableCommands.cpp
 		Common/Workspace/TestEditorLayoutStore.cpp
 		Common/Widgets/TestEditorListFilter.cpp
+		Common/Widgets/TestEditorNodeGraph.cpp
 		Common/Commands/TestEditorLogCommands.cpp
 		Common/Gui/TestEditorPanelDocument.cpp
 		Common/Workspace/TestEditorRegistry.cpp
