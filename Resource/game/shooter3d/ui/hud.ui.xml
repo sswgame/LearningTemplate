@@ -2,28 +2,30 @@
 	<UiScreenDesc _layer="Hud" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">
 		<CanvasPanel _visibility="SelfHitTestInvisible">
-			<ImageWidget _name="Crosshair" _visibility="HitTestInvisible" _imagePath="game/shooter3d/textures/crosshair.dds" _imageSize="32,32">
+			<ImageWidget _name="Crosshair" _visibility="{bind:_crosshairVisibility}" _imagePath="game/shooter3d/textures/crosshair.dds" _imageSize="32,32">
 				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-16,-16" _offsetMax="16,16" />
 				<_brush _color="1,1,1,0.9" />
 			</ImageWidget>
-			<ImageWidget _name="HitMarker" _visibility="Collapsed" _imagePath="game/shooter3d/textures/hitmarker.dds" _imageSize="48,48">
+			<ImageWidget _name="HitMarker" _visibility="{bind:_hitMarkerVisibility}" _imagePath="game/shooter3d/textures/hitmarker.dds" _imageSize="48,48">
 				<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-24,-24" _offsetMax="24,24" />
 				<_brush _color="1,0.35,0.3,1" />
 			</ImageWidget>
-			<TextWidget _name="Health" _styleClass="hud" _visibility="HitTestInvisible">
+			<TextWidget _name="Health" _text="{bind:_health}" _styleClass="hud" _visibility="HitTestInvisible" _bLocalized="false">
 				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-120" _offsetMax="368,-84" />
 			</TextWidget>
-			<ProgressBarWidget _name="HealthBar" _visibility="HitTestInvisible" _fillColor="0.85,0.25,0.25,1" _backgroundColor="0,0,0,0.55">
+			<ProgressBarWidget _name="HealthBar" _percent="{bind:_healthRatio}" _visibility="HitTestInvisible" _fillColor="0.85,0.25,0.25,1" _backgroundColor="0,0,0,0.55">
 				<_slot _anchorMin="0,1" _anchorMax="0,1" _offsetMin="48,-76" _offsetMax="368,-56" />
 			</ProgressBarWidget>
-			<TextWidget _name="WeaponName" _styleClass="hud" _visibility="HitTestInvisible">
+			<TextWidget _name="WeaponName" _text="{bind:_weaponName}" _styleClass="hud" _visibility="HitTestInvisible">
 				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-120" _offsetMax="-48,-84" />
 				<_style _alignment="End" />
 			</TextWidget>
-			<TextWidget _name="Ammo" _styleClass="hud" _visibility="HitTestInvisible">
-				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="-448,-84" _offsetMax="-48,-48" />
-				<_style _alignment="End" />
-			</TextWidget>
+			<BoxPanel _name="Ammo" _spacing="8" _orientation="Horizontal" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,1" _anchorMax="1,1" _offsetMin="0,-84" _offsetMax="-48,-48" _bAutoSize="true" _growHorizontal="Begin" />
+				<TextWidget _name="MagazineAmmo" _text="{bind:_magazineAmmo}" _styleClass="hud" _bLocalized="false" />
+				<TextWidget _text="/" _styleClass="hud" _bLocalized="false" />
+				<TextWidget _name="ReserveAmmo" _text="{bind:_reserveAmmo}" _styleClass="hud" _bLocalized="false" />
+			</BoxPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
 </UiDocument>

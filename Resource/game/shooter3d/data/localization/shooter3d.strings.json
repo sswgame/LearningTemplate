@@ -1,6 +1,13 @@
 {
     "culture": "en",
     "entries": {
+        "/": {
+            "source": "/",
+            "context": "TextWidget._text",
+            "origins": [
+                "game/shooter3d/ui/hud.ui.xml"
+            ]
+        },
         "Assault Blaster": {
             "source": "Assault Blaster",
             "context": "Item name",

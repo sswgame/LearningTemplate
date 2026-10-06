@@ -191,8 +191,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (기본 `engine/ui/loading.ui.xml`)를 Loading 층에 띄우고(입력을 막는다 · Back 으로 닫히지 않는다 · `Spinner` 를 돌리고 `Tip` 에 팁 하나), 로드가 끝나고 최소 표시 시간
   (0.5 초 — 깜박임 방지)이 지나면 닫고 페이드 인을 건다. `ScreenFade` 의 알파는 Overlay 층(입력 없음)의 전체 화면 검은 패널 불투명도로 그린다
   (`GameInstanceBase::getScreenTransition` — Lyra `ULoadingScreenManager` 자리). Framework(층 2)라 UI 층(4)이 아니라 이 폴더에 있다 — Engine UI 만 쓴다.
-- **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`, `HudControllerComponent`(오브젝트가 플레이하는 동안 HUD 문서를 Hud 층에 연다 — 게임이
-  `findWidget<T>( 이름 )` 으로 값을 넣는다, 언리얼 `AHUD` 자리),
+- **UI**: 장르 무관 UI 컴포넌트 — `DialogueRunnerComponent`, `HudControllerComponent`(오브젝트가 플레이하는 동안 HUD 문서를 Hud 층에 열고 자기
+  `HudViewModel` 을 건다 — 게임은 뷰모델 세터만 부르고 문서의 `{bind:필드}` 가 위젯에 잇는다, 언리얼 `AHUD` + MVVM 뷰모델 자리),
   `HealthBarComponent`, `DamageNumberComponent`. HP 바 · 데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 크기 · 머리 위 오프셋
   `_worldOffset` · 피벗은 그 컴포넌트의 데이터)에 위젯을 넣어 그린다 — 거리와 상관없이 같은 크기 · 선명한 글자(HP 바는 겹친 진행 막대 둘, 숫자는 스타일
   클래스 `damage` 의 글 위젯). 값은 틱 뒤 큐에서 넣는다(위젯은 게임 스레드만). `spawnNumber` 가 마커 · 숫자를 함께 붙인다. HP 바는 `HealthListenerComponent`(Combat)를 상속해 체력 시스템의 알림(`HealthChangedEvent` — 다시 두기 · 바뀜 · 쓰러짐)을 받는다 —

@@ -40,9 +40,9 @@ namespace sw
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총 · 조준선을 보이고, 아니면 반대입니다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이입니다(없으면 `_eyeHeight`).
      *
-     *          **HUD**: 같은 오브젝트의 `HudControllerComponent` 가 연 문서(`game/shooter3d/ui/hud.ui.xml`)의 위젯을 이름으로 찾아 틱 뒤에 값을 넣습니다 — 조준선(1인칭 ·
-     *          살아 있을 때) · 맞음 표시(맞힌 직후 · 1인칭) · 체력 막대 · 체력 수 · 탄약(탄창 / 예비) · 무기 이름(무기 표의 이름을 현지화 표로 — `getStringByText`).
-     *          값 바인딩(뷰모델)이 들어오면 `updateHud` 가 그 바인딩 자리입니다.
+     *          **HUD**: 같은 오브젝트의 `HudControllerComponent` 의 뷰모델(`HudViewModel`)에 틱 뒤에 값을 넣습니다 — 조준선(1인칭 · 살아 있을 때) ·
+     *          맞음 표시(맞힌 직후 · 1인칭) · 체력 · 탄약(탄창 · 예비) · 무기 이름(무기 표의 이름 = 현지화 키). 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
+     *          `{bind:필드}` 가 잇는다 — 이 컴포넌트는 위젯 이름을 모른다.
      *
      *          **탄도선 · 총구 섬광**: 총구(1인칭이면 손에 든 총 × 무기 소켓 `Muzzle`, 아니면 몸 외형의 `MainHand.Muzzle`)에서 맞은 자리까지의 상자 ·
      *          섬광 구를 디렉터의 풀에서 꺼냅니다 — 에디터 없이 App 에서도 보입니다.
@@ -141,7 +141,7 @@ namespace sw
         void   switchWeapon( int32 weaponIndex );
         /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 봅니다. */
         bool queryFirstPerson() const;
-        /** @brief 같은 오브젝트의 HUD 화면에 조준선 · 맞음 표시 보임과 체력 · 탄약 · 무기 이름을 넣습니다(게임 스레드 — 틱 뒤). HUD 가 없으면 아무것도 하지 않는다. */
+        /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선 · 맞음 표시 보임과 체력 · 탄약 · 무기 이름을 넣습니다(게임 스레드 — 틱 뒤). HUD 가 없으면 아무것도 하지 않는다. */
         void updateHud();
         void resetRound();
         void scheduleFlush();

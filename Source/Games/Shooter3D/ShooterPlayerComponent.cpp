@@ -5,7 +5,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
-#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
@@ -15,9 +14,6 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Widgets/SliderWidget.h"
-#include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Base/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
@@ -58,13 +54,6 @@ namespace sw
             static constexpr const utf8* kMuzzleSocket       = "Muzzle";
             static constexpr const utf8* kBodyMuzzleSocket   = "MainHand.Muzzle";
             static constexpr const utf8* kEyesSocket         = "Eyes";
-            // HUD 문서(game/shooter3d/ui/hud.ui.xml)의 위젯 이름.
-            static constexpr const utf8* kHudCrosshair  = "Crosshair";
-            static constexpr const utf8* kHudHitMarker  = "HitMarker";
-            static constexpr const utf8* kHudHealth     = "Health";
-            static constexpr const utf8* kHudHealthBar  = "HealthBar";
-            static constexpr const utf8* kHudAmmo       = "Ammo";
-            static constexpr const utf8* kHudWeaponName = "WeaponName";
 
             static constexpr float4 kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
             static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
@@ -87,13 +76,6 @@ namespace sw
                         pFound = pComponent;
                 } );
                 return pFound;
-            }
-
-            /** @brief HUD 위젯을 보이거나(클릭은 받지 않는다) 접습니다. 없으면 아무것도 하지 않는다. */
-            static void setHudWidgetShown( Widget* pWidget, bool bShown )
-            {
-                if ( pWidget != nullptr )
-                    pWidget->setVisibility( bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed );
             }
 
             /** @brief 아이템의 외형에서 소켓 에셋을 가진 첫 부품의 소켓 에셋입니다(무기의 총구). 없으면 빈 이름입니다. */
@@ -644,36 +626,20 @@ namespace sw
 
     void ShooterPlayerComponent::updateHud()
     {
-        using Internal                       = ShooterPlayerComponentInternal;
-        const GameObject*             pOwner = getOwner();
-        const HudControllerComponent* pHud   = pOwner != nullptr ? pOwner->getComponent<HudControllerComponent>() : nullptr;
-        if ( pHud == nullptr || pHud->getScreen() == nullptr )
+        GameObject*             pOwner = getOwner();
+        HudControllerComponent* pHud   = pOwner != nullptr ? pOwner->getComponent<HudControllerComponent>() : nullptr;
+        if ( pHud == nullptr )
             return;
-        // 조준선은 1인칭에서만(다른 시점에서는 몸이 보인다), 맞음 표시는 맞힌 직후 1인칭에서만.
-        const bool bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
-        Internal::setHudWidgetShown( pHud->findWidget( hashed_string( Internal::kHudCrosshair ) ), bCrosshair );
-        Internal::setHudWidgetShown( pHud->findWidget( hashed_string( Internal::kHudHitMarker ) ), bCrosshair && _hitMarkerTimer > 0.0f );
-
-        const float32      health     = MathUtil::max( 0.0f, _vitality.getHealth() );
-        ProgressBarWidget* pHealthBar = pHud->findWidget<ProgressBarWidget>( hashed_string( Internal::kHudHealthBar ) );
-        if ( pHealthBar != nullptr )
-            pHealthBar->setPercent( _vitality.getHealthRatio() );
-        TextWidget* pHealth = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudHealth ) );
-        if ( pHealth != nullptr )
-            pHealth->setText( to_string( static_cast<int32>( MathUtil::ceil( health ) ) ) );
-
+        // 값만 넣는다 — 위젯은 HUD 문서의 바인딩이 잇는다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만(다른 시점에서는 몸이 보인다),
+        // 맞음 표시는 맞힌 직후 1인칭에서만. 무기 이름은 무기 표의 이름(원문)이 현지화 키다 — 글 위젯이 문화권으로 푼다.
+        HudViewModel& hud        = pHud->getViewModel();
+        const bool    bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
+        hud.setCrosshairShown( bCrosshair );
+        hud.setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
+        hud.setHealth( _vitality.getHealth(), _vitality.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
-        TextWidget*        pAmmo  = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudAmmo ) );
-        if ( pAmmo != nullptr )
-            pAmmo->setText( to_string( weapon.getMagazineAmmo() ) + " / " + to_string( weapon.getReserveAmmo() ) );
-        // 무기 이름은 무기 표의 이름(원문)이 현지화 키다 — 지금 문화권의 글로(표에 없으면 원문).
-        TextWidget* pWeaponName = pHud->findWidget<TextWidget>( hashed_string( Internal::kHudWeaponName ) );
-        if ( pWeaponName != nullptr )
-        {
-            const string&              name          = weapon.getDef()._name;
-            const LocalizationManager* pLocalization = game::getService<LocalizationManager>();
-            pWeaponName->setText( pLocalization != nullptr ? pLocalization->getStringByText( name, name.c_str() ) : name.c_str() );
-        }
+        hud.setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
+        hud.setWeaponName( weapon.getDef()._name );
     }
 
     void ShooterPlayerComponent::resetRound()

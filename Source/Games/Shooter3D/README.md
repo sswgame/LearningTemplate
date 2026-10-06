@@ -97,7 +97,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 플레이어의 몸 | 프리팹 `prefabs/player_body.prefab.xml`(스킨드 메시 · 애니메이터 · 외형 · `ShooterAvatarComponent`) — 플레이어가 플레이 시작에 세운다. 장비는 `prefabs/kaykit/*` · `prefabs/blaster_*` |
 | 페이싱 · 쓰러뜨린 수 · 효과 풀 · 로그 · 자동 플레이 빙의 | `ShooterDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 무기 셋 · 히트스캔(적은 캡슐) · 체력 · 탄도선 요청 | `ShooterPlayerComponent` — 플레이어 오브젝트(카메라 · 폰 · 몸 이동 · 1인칭 손에 든 총 · HUD 와 같은 오브젝트) |
-| HUD(조준선 · 맞음 표시 · 체력 · 탄약 · 무기 이름) | 플레이어 오브젝트의 `HudControllerComponent` 가 `ui/hud.ui.xml` 을 Hud 층에 열고, `ShooterPlayerComponent::updateHud` 가 틱 뒤에 이름으로 위젯 값을 넣는다(무기 이름은 `getStringByText`). 적 HP 바는 스켈레톤 프리팹의 화면 마커(`WidgetComponent`) + `HealthBarComponent` |
+| HUD(조준선 · 맞음 표시 · 체력 · 탄약 · 무기 이름) | 플레이어 오브젝트의 `HudControllerComponent` 가 `ui/hud.ui.xml` 을 Hud 층에 열고, `ShooterPlayerComponent::updateHud` 가 틱 뒤에 그 `HudViewModel` 에 값을 넣는다 — 위젯은 문서의 `{bind:필드}` 가 잇는다(무기 이름은 현지화 키 그대로 — 글 위젯이 문화권으로 푼다). 적 HP 바는 스켈레톤 프리팹의 화면 마커(`WidgetComponent`) + `HealthBarComponent` |
 | 걷기 · 달리기 · 점프 · 중력 · 상자에 미끄러지기(플레이어 · 적 같이) | `ShooterBodyMovementComponent` — 폰의 의도를 읽는다. 스스로 틱하지 않고 같은 오브젝트의 규칙 컴포넌트가 자기 틱에서 부른다 |
 | 몸이 플레이어를 따르기 · 애니메이터 파라미터 · 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
 | 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(AI 조종자가 내비메시 에이전트의 경로 · 군중 회피 속도를 이동 의도로) → 휘두르기 → 움찔 → 쓰러짐 |

@@ -27,7 +27,7 @@ namespace sw
      *
      *          막대 위젯은 `onBeginPlay` 에서 코드로 짓습니다(화면 마커는 한 트리에 모이므로 위젯 이름을 쓰지 않고 자식 순서로 찾는다). 값은 이번 프레임의
      *          틱 **뒤에** 넣습니다(틱 직후 큐 — 위젯은 게임 스레드만 고친다). 같은 오브젝트에 `WidgetComponent` 가 없으면 경고 한 번 뒤 계산만 합니다.
-     *          값 바인딩(뷰모델)이 들어오면 막대 값 넣기(`refreshWidgets`)가 그 바인딩이 된다.
+     *          막대는 뷰모델 바인딩이 아니라 코드가 값을 넣습니다 — 화면 마커는 오브젝트마다 하나라 뷰모델 · 문서를 두면 마커 수만큼 생기고, 값이 컴포넌트 칸에 이미 있다.
      */
     REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP bar drawn by the object's screen-marker WidgetComponent" )
     class SW_GF_API HealthBarComponent : public HealthListenerComponent
