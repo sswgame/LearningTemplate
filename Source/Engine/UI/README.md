@@ -117,5 +117,10 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 | `BoxPanel` | 주축: Auto 는 원하는 크기, 남은 것은 Fill 에 채우기 비대로 · 교차축: 슬롯 정렬 · 간격 | HorizontalBox/VerticalBox · flex-direction · HBox/VBox |
 | `OverlayPanel` | 모든 자식이 패널 전체를 슬롯으로(정렬 · 여백) | Overlay · (겹침) · Container |
 | `CanvasPanel` | 변 = 앵커 × 패널 크기 + 오프셋, 자동 크기는 커지는 쪽으로 · z 순서(`collectPaintOrder`) | Canvas Panel 앵커 · position absolute · 앵커/오프셋 |
+| `GridPanel` | 열 · 행 트랙 Auto · Fixed · Fill(`UiGridTrack`), 넓이 2 이상은 모자란 만큼을 덮은 Auto 트랙에 고르게 — CSS Grid 의 단순판. 열을 먼저 정하고 그 너비로 다시 재 행을 정한다 | GridPanel · (grid 없음) · GridContainer |
+| `WrapPanel` | 줄이 차면 다음 줄, 줄 높이는 그 줄의 최대 · 칸 간격 · 줄 간격 | WrapBox · flex-wrap · FlowContainer |
+| `ScrollPanel` | 내용 하나를 스크롤 축으로 무한 measure → `-오프셋` 에 놓고 자른다. 오프셋은 `[0, 내용 − 보이는 크기]`, 바뀌면 `kArrange` 만(measure 0). `scrollIntoView` 는 최소한만 옮긴다 | ScrollBox · ScrollView · ScrollContainer |
 
 결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리).
+
+스크롤 입력(휠 · 막대 끌기 · 패드 오른쪽 스틱 `UI.Scroll`)은 사건 경로가 `ScrollPanel::scrollBy` · `setScrollOffset` 을 부르는 자리다 — 레이아웃은 API 만 준다.
