@@ -940,15 +940,24 @@
 					                          _bActive="true"
 					                          _areaName=""
 					                          _bIgnoreFromBuild="true" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Move"
+					               _lookAction="Look"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4835298"
+					               _autoPossess="Player0"
+					               _bLockMouse="true">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0"
 					                            _pitch="0"
 					                            _maxPitch="1.4835298"
-					                            _mouseSensitivity="0.0022"
-					                            _lookAction="Look"
-					                            _bMouseLook="true"
-					                            _bLockMouse="true"
 					                            _fieldOfViewY="1.3089969"
 					                            _nearPlane="0.05"
 					                            _farPlane="120"

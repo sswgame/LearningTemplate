@@ -66,6 +66,12 @@ namespace sw
         bool                   isPossessed() const { return _controller.isValid(); }
         /** @brief 조종 회전에 더할 것(반동 · 피격 흔들림)을 쌓습니다 — 조종자가 다음 틱의 조종 회전에 넣습니다. 틱 안 여러 컴포넌트가 불러도 된다(원자적 합). */
         void addControlRotationOffset( float32 deltaYaw, float32 deltaPitch );
+        /**
+         * @brief 조종 회전을 이 값(라디안, 피치는 위가 +)으로 두라고 요청합니다 — 다음 틱 전에 조종 시스템이 조종자(없으면 이 폰의 의도)에 넣습니다.
+         * @details 시작 시점 · 코드가 정한 시선에 씁니다. 앞서 쌓인 오프셋은 버립니다(부른 쪽이 지금 시점에서 계산한 값이 이미 그것을 담는다).
+         *          틱 안에서 불러도 된다(원자적). 한 틱에 여러 번이면 마지막 것입니다.
+         */
+        void requestControlRotation( float32 yaw, float32 pitch );
 
         const vector<hashed_string>& getButtonNames() const { return _listButton; }
         void                         setButtonNames( const vector<hashed_string>& listButton ) { _listButton = listButton; }
@@ -79,7 +85,10 @@ namespace sw
         float32                      getMaxPitch() const { return _maxPitch; }
         PawnAutoPossess              getAutoPossess() const { return _autoPossess; }
         void                         setAutoPossess( PawnAutoPossess autoPossess ) { _autoPossess = autoPossess; }
-        const string&                getAiControllerPrefab() const { return _aiControllerPrefab; }
+        /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지입니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
+        bool          wantsMouseLock() const { return _bLockMouse; }
+        void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
+        const string& getAiControllerPrefab() const { return _aiControllerPrefab; }
         /** @brief 이 폰의 의도를 내는 네트워크 연결입니다(0 = 로컬). 빙의를 따라갑니다 — 탈것은 운전석 조종자의 연결입니다. */
         uint32 getInputPeer() const { return _inputPeer; }
 
@@ -92,6 +101,10 @@ namespace sw
         void clearMotion();
         /** @brief 쌓인 조종 회전 오프셋(요 · 피치)을 꺼내고 0 으로 돌립니다. */
         float2 consumeControlRotationOffset();
+        /** @brief `requestControlRotation` 이 남긴 값을 꺼냅니다. 없으면 false 입니다. */
+        bool consumeControlRotationRequest( float2& outRotation );
+        /** @brief 조종자 없는 폰의 조종 회전에 요청 · 오프셋을 넣습니다(피치는 상한에서 자른다) — 쥔 이가 없어도 코드가 정한 시선 · 반동이 남는다. */
+        void applyPendingControlRotation();
 
     private:
         PROPERTY( Category = "Control", DisplayName = "Buttons", Tooltip = "Intent button names in bit order (an InputMap action of the same name drives each for a player)" )
@@ -112,11 +125,16 @@ namespace sw
         float32 _maxPitch;
         PROPERTY( Category = "Control", DisplayName = "Auto Possess", Tooltip = "Who takes this pawn when play starts without a controller" )
         PawnAutoPossess _autoPossess;
+        PROPERTY( Category = "Control", DisplayName = "Lock Mouse", Tooltip = "Lock and hide the cursor while a player possesses this pawn (first person); the player's mouse lock action toggles it" )
+        bool _bLockMouse;
 
         ControlIntent          _intent;
         ComponentHandle        _controller;           ///< 쥔 조종자 컴포넌트
         atomic<int32>          _yawOffsetUnits;       ///< 쌓인 요 오프셋(`kRotationOffsetUnitsPerRadian` 단위 고정소수점)
         atomic<int32>          _pitchOffsetUnits;     ///< 쌓인 피치 오프셋
+        atomic<int32>          _requestedYawUnits;    ///< 요청된 조종 요(오프셋과 같은 단위)
+        atomic<int32>          _requestedPitchUnits;  ///< 요청된 조종 피치
+        atomic<bool>           _bRotationRequested;   ///< 요청 값이 남아 있다(값을 쓴 뒤 release 로 세운다)
         uint32                 _inputPeer;            ///< 의도를 내는 연결(0 = 로컬)
         uint8                  _bAutoPossessDone : 1; ///< 자동 빙의를 한 번 시도했다(실패해도 다시 하지 않는다)
         [[maybe_unused]] uint8 _reserved         : 7;

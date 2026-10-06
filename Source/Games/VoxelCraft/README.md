@@ -37,7 +37,8 @@ cd build/Ninja-Debug-VoxelCraft/Bin
 | 블록 월드 · 지형 짓기 · 꾸미기(광석 · 눈) · 블록 바꾸기 · 청크 다시 짓기 지시 · 로그 | `VoxelDirectorComponent`(씬에 하나) — 월드(`VoxelWorld`)를 든다 |
 | 청크 하나의 불투명 · 물 메시 | 프리팹 `prefabs/chunk.prefab.xml` 의 `VoxelChunkComponent` — 디렉터가 청크마다(8 × 8) 세우고, 메시는 컴포넌트가 절차로 짓는다 |
 | 몸 · 걷기 · 헤엄 · 부수기 · 놓기 · 핫바 · 자동 플레이 | `VoxelPlayerComponent` — 플레이어 오브젝트(카메라와 같은 오브젝트) |
-| 1인칭 시점 · 마우스 잠금 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트) |
+| 1인칭 시점 | GameFramework `FirstPersonCameraComponent`(같은 오브젝트 — 시점은 그 오브젝트 `PawnComponent` 의 조종 회전) |
+| 시선(`Voxel.Look`) · 마우스 잠금(`ToggleMouseLock` — Esc) | GameFramework `PlayerControllerComponent`(조종 시스템이 세운다 — 플레이어 폰 `_autoPossess Player0`) |
 | 바라보는 블록 표시(반투명 큐브 · 부수는 동안 네 단계로 진해짐 · 에디터 게임 뷰 테두리) | `VoxelHighlightComponent`(`BlockHighlight` 오브젝트) |
 | 모습 | `materials/blocks.material`(블록 아틀라스) · `water.material`(유리와 같은 블렌드 + 아틀라스). 블록 표시는 엔진 유리 머티리얼의 단계별 인스턴스 |
 

@@ -17,6 +17,7 @@ namespace sw
 {
     class GameObjectManager;
     class InputManager;
+    class PlayerControllerComponent;
 
     /**
      * @class ControlSystem
@@ -37,6 +38,11 @@ namespace sw
         static ControlSystem& ensureFor( GameObjectManager& manager );
         /** @brief @p manager 의 조종 시스템입니다. 없으면 nullptr 입니다(씬을 비우는 중에도 nullptr — 시스템이 먼저 떨어진다). */
         static ControlSystem* find( const GameObjectManager& manager );
+        /**
+         * @brief 로컬 플레이어 @p playerIndex 의 조종자입니다. 없으면 오브젝트 하나를 세워 만듭니다(언리얼 GameMode 가 플레이어마다 PlayerController 를 세우는 자리).
+         * @details 게임 스레드, 틱 밖에서 부릅니다(오브젝트를 만든다). 자동 빙의 · 자동 플레이를 끌 때 플레이어에게 폰을 돌려주는 곳이 씁니다.
+         */
+        static PlayerControllerComponent* findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex );
         /** @brief 폰 · 조종자가 하나도 등록되어 있지 않으면 시스템을 뗍니다. */
         static void releaseIfUnused( GameObjectManager& manager );
 

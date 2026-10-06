@@ -31,7 +31,8 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 액션 | 기본 바인딩 | 하는 일 |
 |------|-------------|---------|
 | `Move` | WASD · 왼쪽 스틱 | 이동 |
-| `Look` | 마우스 이동량(`<mouseDelta>`) | 시점 — 1인칭 카메라의 `_lookAction`(마우스는 창 가운데에 잠긴다, Esc 로 풀고 다시 잠근다) |
+| `Look` | 마우스 이동량(`<mouseDelta>`) | 시점 — 플레이어 폰의 `_lookAction`, 플레이어 조종자가 조종 회전에 더하고 1인칭 카메라가 그것을 따른다(마우스는 창 가운데에 잠긴다) |
+| `ToggleMouseLock` | Esc | 마우스 잠금을 풀고 다시 건다(플레이어 조종자의 `_mouseLockAction` — 폰의 `_bLockMouse`) |
 | `Fire` | 왼쪽 버튼 · RB | 쏘기(소총은 누르고 있으면 연사, 산탄총 · 권총은 누를 때마다) |
 | `Jump` · `Sprint` | Space · LeftShift | 점프 · 달리기 |
 | `Reload` | R | 재장전(빈 탄창은 저절로) |
@@ -75,12 +76,13 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 몸이 플레이어를 따르기 · 애니메이터 파라미터 · 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
 | 적 하나 | `ShooterEnemyComponent` — 일어나기 → 쫓기(내비메시 에이전트가 상자 더미를 경로로 돌아가고 군중이 이웃을 비킨다) → 휘두르기 → 움찔 → 쓰러짐 |
 | 내비메시 | 씬의 `NavigationSurface`(`NavMeshSurfaceComponent` — 보이는 메시로 Humanoid 베이크) · 플레이어 오브젝트의 `NavMeshModifierComponent`(손에 든 총 · 카메라를 베이크에서 뺀다) · 스켈레톤 프리팹의 `NavMeshAgentComponent`(자리를 쓰고, 몸 요는 적 컴포넌트가 돌린다). 쿠킹은 `maps/arena.navmesh` 를 쓰고 Dev 는 플레이 첫 프레임에 베이크한다 |
-| 1인칭 시점 · 마우스 잠금 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(플레이어 오브젝트) |
+| 1인칭 시점 · 손에 든 총 자리 | GameFramework `FirstPersonCameraComponent`(플레이어 오브젝트 — 시점은 같은 오브젝트 `PawnComponent` 의 조종 회전) |
+| 시선 · 마우스 잠금 | GameFramework `PlayerControllerComponent`(조종 시스템이 세운다 — 플레이어 폰 `_autoPossess Player0`). 자동 플레이면 폰을 쥐지 않고 조준 AI 가 `setAngles` 로 시점을 정한다 |
 | 화면에 나가는 시점 | `ViewCamera` 오브젝트(우선순위 10)의 `CameraDirectorComponent` — 프리셋 `data/shooter.cameras.xml`, 대상은 플레이어. 1인칭 프리셋이면 플레이어가 몸을 숨기고 손에 든 총 · 조준선을 보인다(그 밖은 반대) |
 | 감시 카메라 · 모니터 | `CctvCamera`(렌더 텍스처 `rendertarget/shooter_cctv`)의 디렉터가 `data/cctv.cameras.xml` 의 `cctv_sweep` 을 쓴다. 북쪽 벽 `CctvMonitor` 가 그 텍스처를 읽는다 |
 
 **틱.** 디렉터는 `TickGroup::PrePhysics` 에서 쓰러진 적을 세고(처치 수 · 효과음 · 감독의 예산 자리) 시체를 걷고 이번 프레임의 적 자리 · 플레이어 자리를 적습니다.
-1인칭 카메라도 `PrePhysics` 에서 `Look` 으로 시점을 돌립니다. 플레이어 · 적은 기본 그룹(`DuringPhysics`)에서 그것을 **읽기만** 하고 자기 오브젝트에만 씁니다.
+1인칭 카메라도 `PrePhysics` 에서 폰의 조종 회전(틱 앞 조종 시스템 단계가 `Look` 으로 돌린 것)으로 시점을 둡니다. 플레이어 · 적은 기본 그룹(`DuringPhysics`)에서 그것을 **읽기만** 하고 자기 오브젝트에만 씁니다.
 몸(`ShooterAvatarComponent`)은 `PostPhysics` 에서 플레이어를 읽고 자기 자리 · 애니메이터를 씁니다. 다른 오브젝트에 쓰는 일 — 적에 피해, 플레이어에 피해,
 효과 · 탄도선 꺼내기, 효과음, 손에 든 총 · 몸의 무기 바꾸기, 몸 보이기 — 은 쌓아 두고 `executeOrDeferPostTick` 으로 틱 뒤 게임 스레드에서 합니다.
 애니메이션은 틱 뒤에 평가되고, 외형 컴포넌트가 몸의 포즈가 끝난 프레임에 무기 · 투구 자리를 고칩니다.

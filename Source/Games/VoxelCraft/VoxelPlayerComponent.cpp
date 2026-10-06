@@ -11,7 +11,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameSound.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
@@ -96,13 +97,12 @@ namespace sw
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        // 자동 플레이는 플레이어 조종자가 폰을 쥐지 않는다(마우스를 잠그지 않는다) — 시점은 AI 가 정한다(`setAngles` → 조종 회전 요청).
+        PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr && pDirector != nullptr && pDirector->isAutoPlayOn() )
+            pPawn->setAutoPossess( PawnAutoPossess::None );
         if ( pCamera != nullptr )
-        {
-            // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 AI 가 정한다.
-            if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
-                pCamera->setMouseLookEnabled( false );
             pCamera->setAngles( _startYaw, _startPitch );
-        }
         if ( pDirector != nullptr && pDirector->isStarted() )
             initializeBody( *pDirector );
         if ( _pendingStateBytes.empty() == false )
@@ -224,7 +224,7 @@ namespace sw
     void VoxelPlayerComponent::tickInput( const InputManager& input, const VoxelBlockCatalog& catalog, const FirstPersonCameraComponent& camera, float3& outWish,
                                           bool& outJump, bool& outSprint, bool& outBreak, bool& outPlace )
     {
-        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 마우스로 돌렸다(잠금 · Esc 도 거기서).
+        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 폰의 조종 회전으로 두었다(Voxel.Look · 잠금 · Esc 는 플레이어 조종자).
         const FirstPersonLook& look    = camera.getLook();
         const float3           forward = look.getFlatForward();
         const float3           right   = look.getFlatRight();

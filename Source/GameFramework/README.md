@@ -19,7 +19,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 - **Control**(빙의): 조종 대상(폰)과 조종자를 나눈다(언리얼 `APawn` / `AController` · `Possess`). 폰(`PawnComponent`)은 행동 층 의도(`ControlIntent` —
   이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다).
   조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
-  빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
+  빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`, 폰이 바라면(`_bLockMouse` — 1인칭) 마우스 잠금 · 잠금 토글 액션
+  `ToggleMouseLock`(Esc), 잠금이 실제로 걸린 동안만 시선을 쌓는다), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
+  1인칭 카메라(`FirstPersonCameraComponent` — 시점 = 같은 오브젝트 폰의 조종 회전 · 피치 한계 · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
+  `FirstPersonCameraMath`)는 폰 쪽이라 이 폴더에 있고 입력을 읽지 않는다 — 코드가 정한 시점(`setAngles`)은 조종 회전 요청(`PawnComponent::requestControlRotation`),
+  반동(`addRecoil`)은 오프셋(`addControlRotationOffset`)으로 조종자에게 넘어간다. 폰이 없으면(관전) 정한 시점을 지킨다.
   조종 시스템(`ControlSystem`)이 씬 프레임 단계 `FrameSystems`(시작 뒤 · PrePhysics 틱 앞, 게임 스레드)에서 자동 빙의(`PawnAutoPossess`) · 의도 생산을 하고,
   조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
   (의도 → 캐릭터 컨트롤러: 걷기 · 달리기 · 점프 · 가감속 · 몸 방향 `PawnFacingMode`)로 걷고, AI 는 내비 에이전트를 `SteerOnly`(엔진 `NavAgentDriveMode`)로 두어
@@ -58,8 +62,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   아래 **World** 절의 시계 · 날씨 · 지역 그래프 · 플래그 · 질의와 같은 폴더다
 - **Camera**(카메라 컴포넌트): 비스듬히 내려다보는 직교 카메라
   (`OrthoCameraRigComponent` — 입력 맵 액션 `_panAction`(기본 `Camera.Pan`, 2D 벡터) 이동(초점 범위 묶기), 휠 확대(`setOrthoHeight` 도 같은 범위), `_rotateAction`(기본 `Camera.Rotate`, 1D 축) 90° 회전(단계 0 이면 끈다), 다른 컴포넌트가 앞 틱 그룹에서 넣는 원근 시점 덮어쓰기, 화면 점 → 땅 점 `findGroundPoint`(마우스 고르기)). 계산은 `OrthoCameraRigMath` 로
-  떼어 씬 없이 시험한다. 1인칭 카메라(`FirstPersonCameraComponent` — 마우스(또는 입력 맵 액션 `_lookAction`) 시점 · 피치 한계 · 마우스 잠금(Esc) · 눈 자리(카메라의 부모 공간) · 손에 든 뷰 모델 자리, 계산은
-  `FirstPersonCameraMath`). 시점 자체는 `Input/FirstPersonLook` 이고, 몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
+  떼어 씬 없이 시험한다. 1인칭 카메라는 폰의 조종 회전을 읽으므로 **Control** 절(`Control/FirstPersonCameraComponent`)에 있다. 시점 자체는 `Input/FirstPersonLook` 이고,
+  몸을 움직이는 게임 컴포넌트가 같은 오브젝트의 뒤 그룹에서 시점을 읽고 눈 자리를 넣는다.
   XY 평면 2D 씬의 따라가기 · 흔들림은 `Follow2DCameraComponent`(목표 자리 · 따라가는 비율 · 감쇠 흔들림)
 - **Camera**: 데이터 카메라 — 프리셋(`CameraPresetDef` · `CameraPresetCatalog`), 모드 계산(`CameraMode` — 입력 · 제약 · 프레이밍 · 스프링 암 · 훑기),
   흔들림(`CameraShake` — 펄린 손떨림 · 충격), 암 충돌 질의(`ICameraCollisionProbe`), 포즈 섞기(`blendPoses`, 곡선은 엔진 `BlendCurveSpec` · `evaluateBlendWeight`) · 블렌드 진행(`CameraPoseBlender`), 상태 기계
@@ -472,7 +476,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 여러 자원 비용 | `StatBlock::canAfford` · `trySpend` | 횡스크롤 정복 |
 | 아이템 + 개수 값 목록 | `ItemStackList` | 출하함 · 전리품 · 레시피 · 보상 |
 | 비스듬히 내려다보는 직교 카메라 · 장식 흩뿌리기 | `OrthoCameraRigComponent` · `PropScatterComponent` | ThemeParkTycoon · HarvestValley · NileCity · StarSkirmish |
-| 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent` | Shooter3D · VoxelCraft |
+| 1인칭 카메라 · 손에 든 모델 · 마우스 잠금 | `FirstPersonCameraComponent`(시점 = 폰의 조종 회전) · `PawnComponent::_bLockMouse`(잠금은 플레이어 조종자) | Shooter3D · VoxelCraft |
 | 피해 숫자 | `DamageNumberComponent::spawnNumber` | 액션 · 어빌리티 |
 | 총 · 탄창 · 재장전 · 탄도 · 피해 공식 | `Combat/` | 슈터 · (배틀로얄 · 서부극 · 기체 대전) |
 | 아이템 · 인벤토리 · 장비 · 전리품 · 제작 · 격자 가방 | `Inventory/` | 배틀로얄 · 위쳐 · 식당 · 생존 공포 · 협동 수집 |

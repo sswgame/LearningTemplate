@@ -2,11 +2,14 @@
 
 #include "GameFramework/Base/Control/PawnComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Control/ControlSystem.h"
 #include "GameFramework/Base/Control/ControllerComponent.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
 
 namespace sw
 {
@@ -42,10 +45,14 @@ namespace sw
         , _aiControllerPrefab{}
         , _maxPitch{ 1.4f }
         , _autoPossess{ PawnAutoPossess::None }
+        , _bLockMouse{ false }
         , _intent{}
         , _controller{}
         , _yawOffsetUnits{ 0 }
         , _pitchOffsetUnits{ 0 }
+        , _requestedYawUnits{ 0 }
+        , _requestedPitchUnits{ 0 }
+        , _bRotationRequested{ false }
         , _inputPeer{ 0 }
         , _bAutoPossessDone{ SW_FALSE }
         , _reserved{ 0 }
@@ -92,6 +99,16 @@ namespace sw
         _pitchOffsetUnits.fetch_add( static_cast<int32>( deltaPitch * scale ), std::memory_order_relaxed );
     }
 
+    void PawnComponent::requestControlRotation( float32 yaw, float32 pitch )
+    {
+        const float32 scale = PawnComponentInternal::kRotationOffsetUnitsPerRadian;
+        _requestedYawUnits.store( static_cast<int32>( OrientationUtil::wrapAngle( yaw ) * scale ), std::memory_order_relaxed );
+        _requestedPitchUnits.store( static_cast<int32>( pitch * scale ), std::memory_order_relaxed );
+        _yawOffsetUnits.store( 0, std::memory_order_relaxed );
+        _pitchOffsetUnits.store( 0, std::memory_order_relaxed );
+        _bRotationRequested.store( true, std::memory_order_release );
+    }
+
     void PawnComponent::clearMotion()
     {
         const float32 yaw     = _intent._controlYaw;
@@ -107,5 +124,28 @@ namespace sw
         const int32   yawUnits   = _yawOffsetUnits.exchange( 0, std::memory_order_relaxed );
         const int32   pitchUnits = _pitchOffsetUnits.exchange( 0, std::memory_order_relaxed );
         return float2{ static_cast<float32>( yawUnits ) / scale, static_cast<float32>( pitchUnits ) / scale };
+    }
+
+    bool PawnComponent::consumeControlRotationRequest( float2& outRotation )
+    {
+        if ( _bRotationRequested.exchange( false, std::memory_order_acquire ) == false )
+            return false;
+        const float32 scale = PawnComponentInternal::kRotationOffsetUnitsPerRadian;
+        outRotation         = float2{ static_cast<float32>( _requestedYawUnits.load( std::memory_order_relaxed ) ) / scale,
+                              static_cast<float32>( _requestedPitchUnits.load( std::memory_order_relaxed ) ) / scale };
+        return true;
+    }
+
+    void PawnComponent::applyPendingControlRotation()
+    {
+        float2 requested{};
+        if ( consumeControlRotationRequest( requested ) )
+        {
+            _intent._controlYaw   = requested._x;
+            _intent._controlPitch = requested._y;
+        }
+        const float2 offset   = consumeControlRotationOffset();
+        _intent._controlYaw   = OrientationUtil::wrapAngle( _intent._controlYaw + offset._x );
+        _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch, _maxPitch );
     }
 } // namespace sw

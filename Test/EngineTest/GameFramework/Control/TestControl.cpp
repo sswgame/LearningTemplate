@@ -16,6 +16,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/VirtualInputScript.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
@@ -33,6 +34,7 @@
 #include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Control/ControlIntentHistory.h"
 #include "GameFramework/Base/Control/ControlSystem.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Base/Control/IntentTrackControllerComponent.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
@@ -167,6 +169,20 @@ namespace
             const AutomationResult result = runner.onFrameEnd( input );
             input.endFrame();
             return result;
+        }
+    };
+
+    struct ControlViewTestInternal
+    {
+        /** @brief 카메라 · 폰(시점 액션 "Look") · 1인칭 카메라를 가진 1인칭 폰입니다. */
+        static GameObject* spawnFirstPersonPawn( GameObjectManager& manager, bool bLockMouse )
+        {
+            GameObject* pObject = manager.createGameObject( hashed_string( "Viewer" ) );
+            pObject->addComponent<CameraComponent>();
+            PawnComponent* pPawn = pObject->addComponent<PawnComponent>();
+            pPawn->setLockMouse( bLockMouse );
+            pObject->addComponent<FirstPersonCameraComponent>();
+            return pObject;
         }
     };
 } // namespace
@@ -724,6 +740,60 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAi )
 }
 
 /**
+ * @brief [ControlTest] 1인칭 카메라는 폰의 조종 회전을 따른다 — 마우스(Look 액션 × 감도) · 코드가 정한 시점(setAngles → 요청) · 반동(오프셋)이 모두 조종자를 거쳐 카메라에 든다
+ */
+SW_TEST_CASE( ControlTest, FirstPersonCameraFollowsTheControlRotation )
+{
+    using Internal = ControlTestInternal;
+    using View     = ControlViewTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bindMouseDelta( "Look", 3.0f ); // 배율 3 — 액션 값이 원시 이동량의 세 배다
+    {
+        GameObjectManager manager;
+        GameObject*       pViewer = View::spawnFirstPersonPawn( manager, false );
+        auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pViewer->getComponent<PawnComponent>() );
+        FirstPersonCameraComponent* pRig    = pViewer->getComponent<FirstPersonCameraComponent>();
+        const PawnComponent*        pPawn   = pViewer->getComponent<PawnComponent>();
+        const CameraComponent*      pCamera = pViewer->getComponent<CameraComponent>();
+        Internal::tick( manager, input );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, pRig->getLook().getYaw(), 1.0e-6f );
+
+        // 마우스 오른쪽 10 px — Look 30 × 감도 = 조종 요, 카메라가 같은 틱(PrePhysics)에 그 값을 시점으로 둔다.
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 10.0f, 0.0f ) ) );
+        input.beginFrame( Internal::kDeltaTime );
+        const float32 lookX = input.getInputMap().getVector2D( "Look" )._x;
+        manager.tick( Internal::kDeltaTime );
+        input.endFrame();
+        SW_EXPECT_NEAR_EQUAL( 30.0f, lookX, 1.0e-4f );
+        const float32 expectedYaw = lookX * pPlayer->getLookSensitivity();
+        SW_EXPECT_NEAR_EQUAL( expectedYaw, pPlayer->getControlYaw(), 1.0e-5f );
+        SW_EXPECT_NEAR_EQUAL( pPawn->getIntent()._controlYaw, pRig->getLook().getYaw(), 1.0e-6f );
+        SW_EXPECT_NEAR_EQUAL( expectedYaw, pRig->getLook().getYaw(), 1.0f / ControlIntent::kAngleStepsPerRadian );
+        SW_EXPECT_NEAR_EQUAL( pRig->getLook().getYaw(), pCamera->getLocalRotation()._y, 1.0e-5f );
+
+        // 코드가 정한 시점은 다음 틱부터 조종자의 값이다 — 카메라가 조종 회전으로 덮어써도 남는다.
+        pRig->setAngles( 1.0f, -0.3f );
+        Internal::tick( manager, input );
+        SW_EXPECT_NEAR_EQUAL( 1.0f, pPlayer->getControlYaw(), 1.0e-4f );
+        SW_EXPECT_NEAR_EQUAL( -0.3f, pPlayer->getControlPitch(), 1.0e-4f );
+        SW_EXPECT_NEAR_EQUAL( -0.3f, pRig->getLook().getPitch(), 1.0e-3f );
+
+        // 반동은 오프셋으로 쌓여 한 번만 든다.
+        pRig->addRecoil( 0.1f, 0.0f );
+        Internal::tick( manager, input );
+        Internal::tick( manager, input );
+        SW_EXPECT_NEAR_EQUAL( -0.2f, pPlayer->getControlPitch(), 1.0e-3f );
+        SW_EXPECT_NEAR_EQUAL( -0.2f, pRig->getLook().getPitch(), 1.0e-3f );
+        manager.endPlay();
+    }
+    input.shutdown();
+}
+
+/**
  * @brief [ControlTest] 시나리오 `<Possess>` 는 조종자의 빙의를 옮기고(앞 폰은 풀린다), pawn 이 없으면 놓게 한다
  */
 SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
@@ -762,6 +832,76 @@ SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
         SW_EXPECT_TRUE( result == AutomationResult::Passed );
         SW_EXPECT_FALSE( pHorse->isPossessed() );
         SW_EXPECT_TRUE( pPlayer->findPawn() == nullptr );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] 잠금을 바라는 폰을 쥐면 플레이어 조종자가 커서를 잠그고, 잠금 토글 액션(Esc)이 풀고 다시 걸며, 놓으면 푼다 — 잠금이 쉬는 동안(개발 콘솔)은 시선이 쌓이지 않는다
+ */
+SW_TEST_CASE( ControlTest, PlayerControllerTogglesTheMouseLockOfItsPawn )
+{
+    using Internal = ControlTestInternal;
+    using View     = ControlViewTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    input.getInputMap().bindMouseDelta( "Look" );
+    input.getInputMap().bind( "ToggleMouseLock", Key::Escape );
+    SW_ASSERT_NOT_NULL( input.getMouse() );
+    {
+        GameObjectManager manager;
+        GameObject*       pViewer = View::spawnFirstPersonPawn( manager, true );
+        auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pViewer->getComponent<PawnComponent>() );
+        SW_EXPECT_TRUE( pPlayer->isMouseLockRequested() );
+        SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::LockedInCenter );
+        SW_EXPECT_FALSE( input.getMouse()->isCursorVisible() );
+
+        // 잠금이 걸린 동안은 시선이 쌓인다.
+        const float32 step = 40.0f * pPlayer->getLookSensitivity();
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 40.0f, 0.0f ) ) );
+        Internal::tick( manager, input );
+        SW_EXPECT_NEAR_EQUAL( step, pPlayer->getControlYaw(), 1.0e-5f );
+        // 개발 콘솔이 키보드를 쥐었다 — 잠금은 요청돼 있지만 쉬고 있으니 마우스를 움직여도 시점이 돌지 않는다(포커스 밖 · Alt 도 같은 조건).
+        input.setKeyboardFocus( InputKeyboardFocus::DevConsole );
+        SW_EXPECT_FALSE( input.isMouseLockActive() );
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeMouseRawDelta( 40.0f, 0.0f ) ) );
+        Internal::tick( manager, input );
+        SW_EXPECT_NEAR_EQUAL( step, pPlayer->getControlYaw(), 1.0e-5f );
+        input.setKeyboardFocus( InputKeyboardFocus::Game );
+
+        // Esc — 풀린다. 한 번 더 — 다시 잠긴다.
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::Escape ) ) );
+        Internal::tick( manager, input );
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::Escape ) ) );
+        Internal::tick( manager, input );
+        SW_EXPECT_FALSE( pPlayer->isMouseLockRequested() );
+        SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
+        SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::Escape ) ) );
+        Internal::tick( manager, input );
+        SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::Escape ) ) );
+        Internal::tick( manager, input );
+        SW_EXPECT_TRUE( pPlayer->isMouseLockRequested() );
+        SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::LockedInCenter );
+
+        // 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않는다 — 잠금 요청만 보고 시선을 쌓는다.
+        VirtualInputScript script;
+        script.addMouseDelta( 1, 40.0f, 0.0f );
+        input.attachVirtualInput( &script, VirtualInputMode::Exclusive );
+        Internal::tick( manager, input );
+        Internal::tick( manager, input );
+        input.detachVirtualInput();
+        SW_EXPECT_NEAR_EQUAL( 2.0f * step, pPlayer->getControlYaw(), 1.0e-5f );
+
+        // 놓으면 건 잠금을 푼다.
+        pPlayer->unpossess();
+        SW_EXPECT_FALSE( pPlayer->isMouseLockRequested() );
+        SW_EXPECT_TRUE( input.getMouse()->getLockMode() == MouseLockMode::None );
+        SW_EXPECT_TRUE( input.getMouse()->isCursorVisible() );
+        manager.endPlay();
     }
     input.shutdown();
 }

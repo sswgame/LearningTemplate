@@ -2,6 +2,8 @@
 
 #include "GameFramework/Base/Control/ControlSystem.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -15,6 +17,7 @@
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
 
 namespace sw
 {
@@ -29,22 +32,6 @@ namespace sw
             {
                 static const hashed_string kKey{ "ControlSystem" };
                 return kKey;
-            }
-
-            /** @brief 로컬 플레이어 @p playerIndex 의 조종자입니다. 없으면 하나 세웁니다. */
-            static PlayerControllerComponent* findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex )
-            {
-                for ( PlayerControllerComponent* pPlayer : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
-                {
-                    if ( pPlayer != nullptr && pPlayer->getPlayerIndex() == playerIndex )
-                        return pPlayer;
-                }
-                // 언리얼 GameMode 가 플레이어마다 PlayerController 를 세우는 것과 같다 — 씬에 없으면 만든다.
-                GameObject*                pObject = manager.createGameObject( hashed_string( "PlayerController" ) );
-                PlayerControllerComponent* pPlayer = pObject != nullptr ? pObject->addComponent<PlayerControllerComponent>() : nullptr;
-                if ( pPlayer != nullptr )
-                    pPlayer->setPlayerIndex( playerIndex );
-                return pPlayer;
             }
 
             /** @brief @p pawn 을 쥘 AI 조종자를 세웁니다 — 폰의 프리팹이 있으면 그것(그 안의 AI 조종자), 없으면 기본 AI 조종자 하나. */
@@ -108,6 +95,21 @@ namespace sw
             manager.removeFrameSystem( ControlSystemInternal::getFrameSystemKey() );
     }
 
+    PlayerControllerComponent* ControlSystem::findOrCreatePlayerController( GameObjectManager& manager, uint32 playerIndex )
+    {
+        for ( PlayerControllerComponent* pPlayer : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
+        {
+            if ( pPlayer != nullptr && pPlayer->getPlayerIndex() == playerIndex )
+                return pPlayer;
+        }
+        // 언리얼 GameMode 가 플레이어마다 PlayerController 를 세우는 것과 같다 — 씬에 없으면 만든다.
+        GameObject*                pObject = manager.createGameObject( hashed_string( "PlayerController" ) );
+        PlayerControllerComponent* pPlayer = pObject != nullptr ? pObject->addComponent<PlayerControllerComponent>() : nullptr;
+        if ( pPlayer != nullptr )
+            pPlayer->setPlayerIndex( playerIndex );
+        return pPlayer;
+    }
+
     InputManager* ControlSystem::findInputManager() const
     {
         return _pInputOverride != nullptr ? _pInputOverride : game::getService<InputManager>();
@@ -143,7 +145,10 @@ namespace sw
         {
             PawnComponent* pPawn = pawnView[pawnIndex];
             if ( pPawn != nullptr && pPawn->isPossessed() == false )
+            {
                 pPawn->clearMotion();
+                pPawn->applyPendingControlRotation();
+            }
         }
         const ComponentRegistry::View<ControllerComponent> controllerView = manager.getComponentRegistry().getAll<ControllerComponent>();
         for ( size_t controllerIndex = 0; controllerIndex < controllerView.size(); ++controllerIndex )
@@ -152,8 +157,13 @@ namespace sw
             PawnComponent*       pPawn       = pController != nullptr && pController->isActive() ? pController->findPawn() : nullptr;
             if ( pPawn == nullptr )
                 continue;
-            const float2 offset = pPawn->consumeControlRotationOffset();
-            pController->setControlRotation( pController->getControlYaw() + offset._x, pController->getControlPitch() + offset._y );
+            // 코드가 정한 시선(요청)이 먼저, 그 뒤에 쌓인 반동(오프셋) — 요청은 그 앞의 오프셋을 이미 버렸다.
+            float2 requested{};
+            if ( pPawn->consumeControlRotationRequest( requested ) )
+                pController->setControlRotation( requested._x, requested._y );
+            const float2  offset = pPawn->consumeControlRotationOffset();
+            const float32 pitch  = MathUtil::clamp( pController->getControlPitch() + offset._y, -pPawn->getMaxPitch(), pPawn->getMaxPitch() );
+            pController->setControlRotation( OrientationUtil::wrapAngle( pController->getControlYaw() + offset._x ), pitch );
             ControlIntent intent{};
             pController->produceIntent( context, *pPawn, intent );
             intent._controlYaw   = pController->getControlYaw();
@@ -216,7 +226,7 @@ namespace sw
                 continue;
             ControllerComponent* pController = nullptr;
             if ( pPawn->getAutoPossess() == PawnAutoPossess::Player0 )
-                pController = ControlSystemInternal::findOrCreatePlayerController( manager, 0 );
+                pController = findOrCreatePlayerController( manager, 0 );
             else if ( pPawn->getAutoPossess() == PawnAutoPossess::Ai )
                 pController = ControlSystemInternal::createAiController( manager, *pPawn );
             if ( pController != nullptr )

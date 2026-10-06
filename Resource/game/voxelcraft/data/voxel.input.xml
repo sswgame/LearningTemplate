@@ -12,6 +12,15 @@
 		<vector2d up="W" down="S" left="A" right="D"/>
 	</action>
 
+	<!-- 시점 — 폰의 _lookAction(플레이어 조종자가 조종 회전에 더한다). 잠금 토글은 플레이어 조종자의 _mouseLockAction. -->
+	<action name="Voxel.Look" layer="Gameplay">
+		<mouseDelta scale="1"/>
+	</action>
+
+	<action name="ToggleMouseLock" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="Escape"/>
+	</action>
+
 	<action name="Voxel.Jump" layer="Gameplay" trigger="Down">
 		<bind source="key" code="Space"/>
 	</action>

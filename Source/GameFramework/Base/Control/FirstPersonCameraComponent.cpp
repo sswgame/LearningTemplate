@@ -1,19 +1,18 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Camera/CameraMode.h"
 #include "GameFramework/Base/Camera/CameraPoseUtil.h"
-#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Control/ControlIntent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Utility/OrientationUtil.h"
 
 namespace sw
 {
@@ -26,21 +25,10 @@ namespace sw
         return eyePosition + right * offset._x + up * offset._y + forward * offset._z;
     }
 
-    FirstPersonLook FirstPersonCameraMath::computeLookAfterMouse( const FirstPersonLook& look, float32 deltaX, float32 deltaY, float32 sensitivity )
-    {
-        FirstPersonLook turned = look;
-        turned.addMouseDelta( deltaX, deltaY, sensitivity );
-        return turned;
-    }
-
     FirstPersonCameraComponent::FirstPersonCameraComponent()
         : _yaw{ 0.0f }
         , _pitch{ 0.0f }
         , _maxPitch{ 85.0f * MathUtil::kDegreeToRadian }
-        , _mouseSensitivity{ 0.0022f }
-        , _lookAction{}
-        , _bMouseLook{ true }
-        , _bLockMouse{ true }
         , _fieldOfViewY{ 75.0f * MathUtil::kDegreeToRadian }
         , _nearPlane{ 0.05f }
         , _farPlane{ 120.0f }
@@ -49,11 +37,6 @@ namespace sw
         , _viewModelYawOffset{ 0.0f }
         , _look{}
         , _eyePosition{ 0.0f, 0.0f, 0.0f }
-        , _bMouseLocked{ SW_FALSE }
-        , _bLockApplied{ SW_FALSE }
-        , _bLockApplyPending{ SW_FALSE }
-        , _bLockInitialized{ SW_FALSE }
-        , _reserved{ 0 }
     {
         setCanEverTick( true );
     }
@@ -61,54 +44,27 @@ namespace sw
     void FirstPersonCameraComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 마우스로 돌린 시점을 몸을 움직이는 컴포넌트(같은 오브젝트, 뒤 그룹)가 같은 프레임에 쓴다.
+        // 조종 회전(조종 시스템 단계 — 틱 앞)을 몸을 움직이는 컴포넌트(같은 오브젝트, 뒤 그룹)가 같은 프레임에 쓴다.
         setTickGroup( TickGroup::PrePhysics );
         _look.setMaxPitch( _maxPitch );
-        _look.setAngles( _yaw, _pitch );
+        // 시작 시점은 폰의 조종 회전으로도 넘긴다 — 조종자가 쥐면 이 값에서 이어 간다.
+        setAngles( _yaw, _pitch );
         // 눈은 카메라가 놓인 자리에서 시작한다 — 몸을 움직이는 컴포넌트가 첫 틱에 넣는다.
         GameObject*            pOwner  = getOwner();
         const CameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera != nullptr )
             _eyePosition = pCamera->getLocalPosition();
-        _bLockInitialized = SW_FALSE;
         applyToCamera();
-    }
-
-    void FirstPersonCameraComponent::onEndPlay()
-    {
-        // 이 컴포넌트가 잠갔으면 푼다(끝은 틱 밖 — 게임 스레드).
-        if ( _bLockApplied == SW_TRUE )
-            applyMouseLock( false );
-        _bMouseLocked = SW_FALSE;
-        Component::onEndPlay();
     }
 
     void FirstPersonCameraComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        const InputManager* pInput = game::getService<InputManager>();
-        if ( _bMouseLook && pInput != nullptr )
+        const PawnComponent* pPawn = findPawn();
+        if ( pPawn != nullptr )
         {
-            updateMouseLock( *pInput );
-            // 잠금이 쉬는 동안(포커스 밖 · Alt · 개발 콘솔 · 클릭 전)에는 시점을 돌리지 않는다 — 풀린 커서를 움직일 때 화면이 따라 돌면 안 된다.
-            const bool bReadMouse = _bLockMouse == false || ( _bMouseLocked == SW_TRUE && pInput->isMouseLockActive() );
-            if ( bReadMouse )
-            {
-                if ( _lookAction.empty() == false )
-                {
-                    const float2 lookDelta = pInput->getInputMap().getVector2D( _lookAction );
-                    addMouseDelta( lookDelta._x, lookDelta._y );
-                }
-                else
-                {
-                    const int2 mouseDelta = pInput->getMouseDelta();
-                    addMouseDelta( static_cast<float32>( mouseDelta._x ), static_cast<float32>( mouseDelta._y ) );
-                }
-            }
-        }
-        else if ( _bLockApplied == SW_TRUE )
-        {
-            scheduleMouseLockApply(); // 마우스 시점을 껐다 — 잠갔던 것을 푼다
+            const ControlIntent& intent = pPawn->getIntent();
+            _look.setAngles( intent._controlYaw, intent._controlPitch );
         }
         applyToCamera();
     }
@@ -122,23 +78,22 @@ namespace sw
     void FirstPersonCameraComponent::setAngles( float32 yaw, float32 pitch )
     {
         _look.setAngles( yaw, pitch );
+        PawnComponent* pPawn = findPawn();
+        if ( pPawn != nullptr )
+            pPawn->requestControlRotation( _look.getYaw(), _look.getPitch() );
         applyToCamera();
     }
 
     void FirstPersonCameraComponent::addRecoil( float32 pitchKick, float32 yawKick )
     {
+        const float32 yawBefore   = _look.getYaw();
+        const float32 pitchBefore = _look.getPitch();
         _look.addRecoil( pitchKick, yawKick );
+        // 폰이 있으면 실제로 돈 양(피치 한계에서 잘린 뒤)을 조종 회전에도 쌓는다 — 다음 틱의 시점이 조종자의 값으로 돌아와도 반동이 남는다.
+        PawnComponent* pPawn = findPawn();
+        if ( pPawn != nullptr )
+            pPawn->addControlRotationOffset( OrientationUtil::wrapAngle( _look.getYaw() - yawBefore ), _look.getPitch() - pitchBefore );
         applyToCamera();
-    }
-
-    void FirstPersonCameraComponent::addMouseDelta( float32 deltaX, float32 deltaY )
-    {
-        _look = FirstPersonCameraMath::computeLookAfterMouse( _look, deltaX, deltaY, _mouseSensitivity );
-    }
-
-    void FirstPersonCameraComponent::setMouseLookEnabled( bool bEnabled )
-    {
-        _bMouseLook = bEnabled;
     }
 
     void FirstPersonCameraComponent::setViewModel( const hashed_string& componentName, const float3& offset, float32 yawOffset )
@@ -178,53 +133,10 @@ namespace sw
         pViewModel->setLocalRotation( float3{ 0.0f, _viewModelYawOffset, 0.0f } );
     }
 
-    void FirstPersonCameraComponent::updateMouseLock( const InputManager& input )
+    PawnComponent* FirstPersonCameraComponent::findPawn() const
     {
-        if ( _bLockMouse == false )
-            return;
-        if ( _bLockInitialized == SW_FALSE )
-        {
-            _bLockInitialized = SW_TRUE;
-            _bMouseLocked     = SW_TRUE;
-            scheduleMouseLockApply();
-        }
-        if ( input.wasKeyPressed( Key::Escape ) )
-        {
-            _bMouseLocked = _bMouseLocked == SW_TRUE ? SW_FALSE : SW_TRUE;
-            scheduleMouseLockApply();
-        }
-    }
-
-    void FirstPersonCameraComponent::scheduleMouseLockApply()
-    {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || _bLockApplyPending == SW_TRUE )
-            return;
-        _bLockApplyPending = SW_TRUE;
-        // 입력 매니저의 잠금 · 커서는 게임 스레드의 것이다 — 틱 안이면 틱 뒤로 미룬다. 그 사이 컴포넌트가 사라질 수 있으니 핸들로 다시 찾는다.
-        const ComponentHandle self = getHandle();
-        pManager->executeOrDeferPostTick( [pManager, self]()
-        {
-            FirstPersonCameraComponent* pCamera = static_cast<FirstPersonCameraComponent*>( pManager->resolveComponent( self ) );
-            if ( pCamera == nullptr )
-                return;
-            pCamera->_bLockApplyPending = SW_FALSE;
-            pCamera->applyMouseLock( pCamera->_bMouseLook && pCamera->_bMouseLocked == SW_TRUE );
-        } );
-    }
-
-    void FirstPersonCameraComponent::applyMouseLock( bool bLocked )
-    {
-        InputManager* pInput = game::getService<InputManager>();
-        if ( pInput == nullptr )
-            return;
-        const bool bApplied = _bLockApplied == SW_TRUE;
-        if ( bLocked == bApplied )
-            return;
-        pInput->setMouseLockMode( bLocked ? MouseLockMode::LockedInCenter : MouseLockMode::None );
-        pInput->setCursorVisible( bLocked == false );
-        _bLockApplied = bLocked ? SW_TRUE : SW_FALSE;
+        GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
     }
 
     MeshComponent* FirstPersonCameraComponent::findViewModel() const

@@ -38,14 +38,24 @@
 					                 _priority="0"
 					                 _role="Game"
 					                 _bOrthographic="false" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Voxel.Move"
+					               _lookAction="Voxel.Look"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4835298"
+					               _autoPossess="Player0"
+					               _bLockMouse="true">
+						<_listButton />
+						<_listAnalog />
+					</PawnComponent>
 					<FirstPersonCameraComponent _componentName="FirstPersonCameraComponent"
 					                            _bActive="true"
 					                            _yaw="0.6"
 					                            _pitch="-0.2"
 					                            _maxPitch="1.4835298"
-					                            _mouseSensitivity="0.0022"
-					                            _bMouseLook="true"
-					                            _bLockMouse="true"
 					                            _fieldOfViewY="1.3089969"
 					                            _nearPlane="0.05"
 					                            _farPlane="220"

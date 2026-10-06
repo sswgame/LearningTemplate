@@ -2,21 +2,17 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
-#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
-#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 1인칭 카메라 — 뷰 모델 자리 · 마우스 시점과 피치 한계 · 컴포넌트가 같은 오브젝트의 카메라와 뷰 모델을 두는 것.
+// 1인칭 카메라 — 뷰 모델 자리 · 컴포넌트가 같은 오브젝트의 카메라와 뷰 모델을 두는 것(시점 = 폰의 조종 회전은 ControlTest).
 
 using namespace sw;
 
@@ -46,27 +42,6 @@ SW_TEST_CASE( FirstPersonCameraTest, ViewModelSitsAtTheOffsetFromTheEye )
     SW_EXPECT_NEAR_EQUAL( offset.getLength(), toModel.getLength(), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( offset._z, toModel.dot( look.getForward() ), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( offset._x, toModel.dot( look.getFlatRight() ), 1.0e-4f );
-}
-
-/**
- * @brief [FirstPersonCameraTest] 마우스를 오른쪽으로 끌면 요가 감도만큼 늘고, 아래로 끌면 아래를 보며, 피치는 한계에서 멈춘다
- */
-SW_TEST_CASE( FirstPersonCameraTest, MouseTurnsAndPitchStopsAtTheLimit )
-{
-    FirstPersonLook look;
-    look.setAngles( 0.0f, 0.0f );
-    const FirstPersonLook right = FirstPersonCameraMath::computeLookAfterMouse( look, 100.0f, 0.0f, 0.002f );
-    SW_EXPECT_NEAR_EQUAL( 0.2f, right.getYaw(), 1.0e-5f );
-    SW_EXPECT_NEAR_EQUAL( 0.0f, right.getPitch(), 1.0e-6f );
-
-    const FirstPersonLook down = FirstPersonCameraMath::computeLookAfterMouse( look, 0.0f, 50.0f, 0.002f );
-    SW_EXPECT_NEAR_EQUAL( -0.1f, down.getPitch(), 1.0e-5f );
-
-    look.setMaxPitch( 1.0f );
-    const FirstPersonLook floor = FirstPersonCameraMath::computeLookAfterMouse( look, 0.0f, 100000.0f, 0.002f );
-    SW_EXPECT_NEAR_EQUAL( -1.0f, floor.getPitch(), 1.0e-6f );
-    const FirstPersonLook sky = FirstPersonCameraMath::computeLookAfterMouse( look, 0.0f, -100000.0f, 0.002f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, sky.getPitch(), 1.0e-6f );
 }
 
 /**
@@ -117,11 +92,10 @@ SW_TEST_CASE( FirstPersonCameraTest, ComponentDrivesItsCameraAndViewModel )
     SW_EXPECT_NEAR_EQUAL( forward._z, muzzle._z, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pOther->getLocalPosition()._x, 1.0e-6f ); // 이름이 다른 메시는 그대로
 
-    // 마우스로 돌리면 카메라도 다음에 둘 때 따라간다.
-    const float32 yawBefore = pRig->getLook().getYaw();
-    pRig->addMouseDelta( 50.0f, 0.0f );
-    pRig->applyToCamera();
-    SW_EXPECT_TRUE( pRig->getLook().getYaw() > yawBefore );
+    // 폰이 없는 카메라(관전)는 코드가 정한 시점을 지킨다 — 틱이 지나도 그대로, 카메라도 따라간다.
+    pRig->setAngles( 0.9f, 0.0f );
+    pRig->onTick( 1.0f / 60.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.9f, pRig->getLook().getYaw(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( pRig->getLook().getYaw(), pCamera->getLocalRotation()._y, 1.0e-5f );
 }
 
@@ -173,45 +147,4 @@ SW_TEST_CASE( FirstPersonCameraTest, CameraFollowsItsParentWhenTheEyeIsLocal )
     pRig->setEyePosition( eye );
     SW_EXPECT_NEAR_EQUAL( -2.0f + 0.2f, pCamera->getWorldPosition()._x, 1.0e-4f );
     manager.endPlay();
-}
-
-/**
- * @brief [FirstPersonCameraTest] 시점 액션이 정해지면 원시 마우스가 아니라 입력 맵 액션의 값(바인딩 배율까지)으로 돈다
- */
-SW_TEST_CASE( FirstPersonCameraTest, LookActionTurnsTheViewThroughTheInputMap )
-{
-    InputManager input;
-    SW_ASSERT_TRUE( input.initialize() );
-    game::bindLocalService<InputManager>( &input );
-    // 배율 3 — 원시 마우스로 읽으면 같은 이동이 세 배 덜 돈다.
-    input.getInputMap().bindMouseDelta( "Look", 3.0f );
-
-    GameObjectManager manager;
-    GameObject*       pObject = manager.createGameObject( hashed_string( "Player" ) );
-    SW_ASSERT_NOT_NULL( pObject );
-    SW_ASSERT_NOT_NULL( pObject->addComponent<CameraComponent>() );
-    FirstPersonCameraComponent* pRig = pObject->addComponent<FirstPersonCameraComponent>();
-    SW_ASSERT_NOT_NULL( pRig );
-    pRig->setLookAction( hashed_string( "Look" ) );
-    manager.beginPlay();
-    pRig->onTick( 0.016f ); // 첫 틱은 잠금을 정한다
-
-    const float32 yawBefore = pRig->getLook().getYaw();
-    input.postRawEvent( RawInputEvent::makeMouseMove( 10, 0 ) );
-    input.beginFrame( 0.016f );
-    pRig->onTick( 0.016f );
-    const float32 turned = pRig->getLook().getYaw() - yawBefore;
-    // 입력 맵의 Look 값(이동량 × 배율 3)만큼 돌았다 — 원시 마우스 이동량으로 돌았다면 세 배 덜 돈다.
-    const float2          lookValue = input.getInputMap().getVector2D( "Look" );
-    const int2            rawDelta  = input.getMouseDelta();
-    const FirstPersonLook viaAction = FirstPersonCameraMath::computeLookAfterMouse( FirstPersonLook{}, lookValue._x, 0.0f, 0.0022f );
-    const FirstPersonLook viaRaw    = FirstPersonCameraMath::computeLookAfterMouse( FirstPersonLook{}, static_cast<float32>( rawDelta._x ), 0.0f, 0.0022f );
-    SW_ASSERT_TRUE( rawDelta._x != 0 );
-    SW_EXPECT_NEAR_EQUAL( 3.0f * static_cast<float32>( rawDelta._x ), lookValue._x, 1.0e-4f );
-    SW_EXPECT_NEAR_EQUAL( viaAction.getYaw(), turned, 1.0e-5f );
-    SW_EXPECT_TRUE( MathUtil::abs( viaRaw.getYaw() - turned ) > 1.0e-4f );
-
-    manager.endPlay();
-    game::unbindLocalService<InputManager>();
-    input.shutdown();
 }

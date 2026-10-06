@@ -16,6 +16,7 @@
 #include "GameFramework/Base/Control/ControlSystem.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Framework/GameEventUtil.h"
+#include "GameFramework/Base/Framework/GameService.h"
 
 namespace sw
 {
@@ -27,11 +28,15 @@ namespace sw
     PlayerControllerComponent::PlayerControllerComponent()
         : _viewBlend{}
         , _playerIndex{ 0 }
-        , _lookSensitivity{ 0.0025f }
+        , _lookSensitivity{ 0.0022f }
         , _bManageViewTarget{ true }
+        , _mouseLockAction{ "ToggleMouseLock" }
         , _pushedLayer{}
         , _previousPawn{}
         , _warnedPawn{}
+        , _bMouseLockRequested{ SW_FALSE }
+        , _bMouseLockApplied{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -43,6 +48,11 @@ namespace sw
 
     void PlayerControllerComponent::onUnregister( GameObjectManager& manager )
     {
+        // 씬을 비우는 중이면 조종 시스템이 먼저 떨어져 놓기(onUnpossessed)가 오지 않는다 — 건 잠금은 여기서 푼다.
+        InputManager* pInput = _bMouseLockApplied == SW_TRUE ? findInputManager( manager ) : nullptr;
+        if ( pInput != nullptr )
+            applyMouseLock( *pInput, false );
+        _bMouseLockRequested = SW_FALSE;
         manager.getComponentRegistry().remove<PlayerControllerComponent>( this );
         ControllerComponent::onUnregister( manager );
     }
@@ -52,12 +62,24 @@ namespace sw
         outIntent = ControlIntent{};
         if ( context._pInput == nullptr )
             return;
-        const InputMap& inputMap = context._pInput->getInputMap();
+        InputManager&   input    = *context._pInput;
+        const InputMap& inputMap = input.getInputMap();
+        bool            bLook    = true;
+        if ( pawn.wantsMouseLock() )
+        {
+            if ( _mouseLockAction.empty() == false && inputMap.wasActionTriggered( _mouseLockAction ) )
+            {
+                _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
+                applyMouseLock( input, _bMouseLockRequested == SW_TRUE );
+            }
+            // 잠금이 실제로 걸린 동안만 시선을 쌓는다. 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않으니 잠금 요청만 본다.
+            bLook = _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOsInputSuppressed() );
+        }
         if ( pawn.getMoveAction().empty() == false )
             outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
         if ( pawn.getUpAction().empty() == false )
             outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
-        if ( pawn.getLookAction().empty() == false )
+        if ( bLook && pawn.getLookAction().empty() == false )
         {
             const float2  look  = inputMap.getVector2D( pawn.getLookAction() );
             const float32 yaw   = getControlYaw() + look._x * _lookSensitivity;
@@ -98,6 +120,8 @@ namespace sw
                 _warnedPawn = pawn.getHandle();
                 warnMissingActions( pawn, *pInput );
             }
+            _bMouseLockRequested = pawn.wantsMouseLock() ? SW_TRUE : SW_FALSE;
+            applyMouseLock( *pInput, _bMouseLockRequested == SW_TRUE );
         }
         if ( _bManageViewTarget )
         {
@@ -116,6 +140,9 @@ namespace sw
         InputManager*        pInput   = pSystem != nullptr ? pSystem->findInputManager() : nullptr;
         if ( pInput != nullptr && _pushedLayer.empty() == false )
             pInput->getInputMap().popLayer( _pushedLayer );
+        _bMouseLockRequested = SW_FALSE;
+        if ( pInput != nullptr )
+            applyMouseLock( *pInput, false );
         _pushedLayer  = hashed_string{};
         _previousPawn = pawn.getOwner() != nullptr ? pawn.getOwner()->getHandle() : GameObjectHandle{};
         if ( isSwitchingPawn() == false )
@@ -136,6 +163,23 @@ namespace sw
             if ( inputMap.getActionHandle( name ).isValid() == false )
                 SW_LOG_WARNING( "Pawn '%#' intent analog '%#' has no InputMap action - a player cannot drive it", pPawnName, name.c_str() );
         }
+        if ( pawn.wantsMouseLock() && _mouseLockAction.empty() == false && inputMap.getActionHandle( _mouseLockAction ).isValid() == false )
+            SW_LOG_WARNING( "Pawn '%#' locks the mouse but the InputMap has no '%#' action - the player cannot release the cursor", pPawnName, _mouseLockAction.c_str() );
+    }
+
+    void PlayerControllerComponent::applyMouseLock( InputManager& input, bool bLocked )
+    {
+        if ( bLocked == ( _bMouseLockApplied == SW_TRUE ) )
+            return;
+        input.setMouseLockMode( bLocked ? MouseLockMode::LockedInCenter : MouseLockMode::None );
+        input.setCursorVisible( bLocked == false );
+        _bMouseLockApplied = bLocked ? SW_TRUE : SW_FALSE;
+    }
+
+    InputManager* PlayerControllerComponent::findInputManager( const GameObjectManager& manager )
+    {
+        const ControlSystem* pSystem = ControlSystem::find( manager );
+        return pSystem != nullptr ? pSystem->findInputManager() : game::getService<InputManager>();
     }
 
     void PlayerControllerComponent::sendPossessionChanged( const GameObjectHandle& pawnObject )

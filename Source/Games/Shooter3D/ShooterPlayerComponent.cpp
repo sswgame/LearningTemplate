@@ -21,7 +21,8 @@
 #include "GameFramework/Base/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Base/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Camera/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/FirstPersonCameraComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/GameSound.h"
 #include "GameFramework/Base/Inventory/ItemCatalog.h"
@@ -206,11 +207,12 @@ namespace sw
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
+        // 자동 플레이는 플레이어 조종자가 폰을 쥐지 않는다(마우스를 잠그지 않는다) — 시점은 조준 AI 가 정한다(`setAngles` → 조종 회전 요청).
+        PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
+        if ( pPawn != nullptr && pDirector != nullptr && pDirector->isAutoPlayOn() )
+            pPawn->setAutoPossess( PawnAutoPossess::None );
         if ( pCamera != nullptr )
         {
-            // 자동 플레이는 마우스를 잠그지 않는다 — 시점은 조준 AI 가 정한다.
-            if ( pDirector != nullptr && pDirector->isAutoPlayOn() )
-                pCamera->setMouseLookEnabled( false );
             pCamera->setAngles( 0.0f, 0.0f );
             pCamera->setEyePosition( getEyePosition() );
             placeOverlay();
@@ -397,7 +399,7 @@ namespace sw
     void ShooterPlayerComponent::readIntent( const InputMap& inputMap, const FirstPersonCameraComponent& camera, PlayerIntent& outIntent ) const
     {
         using Internal = ShooterPlayerComponentInternal;
-        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 Look 액션으로 돌렸다(잠금 · Esc 도 거기서).
+        // 시점은 같은 오브젝트의 1인칭 카메라가 앞 그룹에서 폰의 조종 회전으로 두었다(Look 액션 · 잠금 · Esc 는 플레이어 조종자).
         const FirstPersonLook& look = camera.getLook();
         const float2           move = inputMap.getVector2D( hashed_string( "Move" ) );
         outIntent._move             = look.getFlatForward() * move._y + look.getFlatRight() * move._x;
