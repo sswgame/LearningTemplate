@@ -1400,7 +1400,7 @@ cd build/Ninja-Debug/Bin
   목록을 지운다).
 - **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
-- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": `EditorConfig.json`(전체 재생성 — 테마만), 손으로 정하는 경로는 읽기 전용 `editortooldefaults.json`. Game View 클리어 색은
+- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": `EditorConfig.json`(전체 재생성 — 테마만), 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. Game View 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
   되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.
   WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
@@ -1678,6 +1678,7 @@ cd build/Ninja-Debug/Bin
   규칙의 예외). 화면 변경은 적용기가 요청만 쌓고 App 이 프레임 맨 앞에서 렌더 스레드를 기다린 뒤 한다 — 창 크기는 `App::onResize` 한 길로 스왑체인에 닿는다.
 - **GameSettings** 는 `GameInstanceBase::initialize` 가 서비스로 묶는다. 언어 코드는 `LocalizationManager::normalizeLanguageCode` 의 철자 하나. 로컬라이제이션 조회의 `const utf8*` 는 추가 전용
   `LocalizedTextArena` 에 있어 영구 유효하다. 대화 핀 번호(`nodeId * 100 + offset`)는 디스크 포맷이고 주인은 `DialogueGraphAsset` 하나다.
+  gamesettings 의 모르는 원소는 로드 오류 — 커스텀 값은 `<custom><prop key>` 안에만. 게임 설정 파일 이름은 `path::kGameSettingsFile` 하나(프리셋 칸 없음).
 - **어빌리티 시스템** — 다른 오브젝트로 가는 적용 · 이벤트는 `applyGameplayEffectSpecToTarget` · `sendGameplayEventToTarget` 로만(틱 중이면 틱 직후로 미룬다 —
   남의 `applyGameplayEffectSpecToSelf` 를 틱 안에서 직접 부르면 미루지 않는다). 활성 이펙트 · 스펙은 `unique_ptr` 목록이고 콜백 도중 지우기는 표시만 한다
   (`ScopedListLock` 이 풀릴 때 지운다) — 콜백이 목록을 늘리거나 줄여도 도는 포인터가 산다. 게임 모듈의 어빌리티는 컴포넌트의 `IModuleUnloadListener` 가 모듈을
@@ -1826,6 +1827,7 @@ cd build/Ninja-Debug/Bin
 | 옛 이름 | 지금 이름 |
 |---|---|
 | `PendingKill` · `markPendingKill` | `PendingDestroy` · `markPendingDestroy` |
+| `GameConfig::_gameSettingsFile` · `EngineConfig::_engineDefaultAssets` · `EditorToolDefaults::_configFolder` 외 11 칸 | `path::kGameSettingsFile` · `path::kEngineDefaultAssets` · `config::kDirConfig(Editor)` · `EditorUtil::k…FileName` |
 | 렌더 그래프 wave / 틱 wave | level / stage(`GT.Scene.tick.stages`) |
 | `precede` · `succeed` | `runBefore` · `runAfter` |
 | lane | queue |

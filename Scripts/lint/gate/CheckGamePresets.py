@@ -5,7 +5,7 @@ Scripts/lint/gate/CheckGamePresets.py
 
 게임마다 프리셋(`Config/Game/<게임 폴더 이름>.json`)이 있고, 그것이 실제 팩을 가리키는지 검사합니다.
 
-빌드는 `SW_ACTIVE_GAME` 으로 프리셋 파일을 골라 팩 루트 · gamesettings · 시작 씬을 정합니다(Shipping 은 그 파일을 구워 넣는다).
+빌드는 `SW_ACTIVE_GAME` 으로 프리셋 파일을 골라 팩 루트 · 시작 씬을 정합니다(Shipping 은 그 파일을 구워 넣는다).
 프리셋이 없으면 그 게임을 고른 configure 가 멈추고, 팩 루트가 틀리면 그 게임은 다른 게임의 팩이나 빈 팩을 읽는다.
 
 검사 규칙:
@@ -117,7 +117,7 @@ class CheckGamePresetsGate(LintGate):
     preCommitPattern = ("Config/Game/*", "Source/Games/*/CMakeLists.txt", "Resource/game/*")
     preCommitFileArgument = ""
     violationHeader = "게임 프리셋 위반"
-    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`) · `_gameSettingsFile` · `_startupScene` 을 적습니다. "
+    hint = ("  `Config/Game/<게임 폴더 이름>.json` 에 `_packRoot`(`game/<폴더>`) · `_startupScene` 을 적습니다. "
             "게임 폴더를 지웠으면 그 프리셋도 지웁니다.")
     selfTestCases = [
         {

@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
@@ -14,6 +13,8 @@
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Utility/Json/ConfigKeyDoc.h"
 #include "Engine/Utility/Json/JsonDocument.h"
+
+#include "sw/config/ConfigConstants.h"
 
 namespace sw::editor
 {
@@ -376,12 +377,9 @@ namespace sw::editor
 
     string ModelImportConfig::makeDefaultConfigPath()
     {
-        const EditorToolDefaults defaults{};
-        const string             projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorUtil::getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
-
-        const string configDir = FileUtil::joinPath( FileUtil::joinPath( projectRoot, defaults._configFolder ), defaults._editorConfigFolder );
-        return FileUtil::joinPath( configDir, defaults._modelImportConfigFile );
+        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorUtil::kModelImportConfigFileName );
     }
 } // namespace sw::editor

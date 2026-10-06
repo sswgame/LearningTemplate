@@ -231,8 +231,7 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            const bool bEngineDefaultAssetsLoaded = ( loop._pEngineConfig->_engineDefaultAssets.empty() == false ) ? loop._owned._pEngineDefaultAssets->loadFromResource( loop._pEngineConfig->_engineDefaultAssets )
-                                                                                                                   : loop._owned._pEngineDefaultAssets->loadFromResource();
+            const bool bEngineDefaultAssetsLoaded = loop._owned._pEngineDefaultAssets->loadFromResource( path::kEngineDefaultAssets );
             if ( bEngineDefaultAssetsLoaded == false )
                 SW_LOG_WARNING( "Engine data could not be read - using built-in defaults" );
 

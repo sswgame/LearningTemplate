@@ -94,6 +94,7 @@ Config/Editor/*.local.json
 Config/Editor/AnimGraph.json
 Config/Editor/DialogueGraphEditor.json
 Config/Editor/AnimGraphData.json
+Config/Editor/DialogueGraphData.json
 Config/Editor/SpriteClip.json
 
 # Runtime editor layouts & caches

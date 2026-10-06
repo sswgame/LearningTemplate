@@ -1511,6 +1511,25 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_OutOfBoundsQueriesSafety )
 }
 
 /**
+ * @brief [GameFrameworkTest] gamesettings 의 표준 칸 철자가 틀린 원소는 커스텀 값이 되지 않고 로드 오류다 — `<custom>` · `<Defaults>` 는 읽힌다
+ */
+SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
+{
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "철자가 틀린 gamesettings 를 일부러 읽는다" );
+        GameSettings settings;
+        SW_EXPECT_FALSE( settings.loadFromXmlText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
+        SW_EXPECT_TRUE( settings._mapCustomProperty.empty() );
+    }
+    GameSettings settings;
+    SW_ASSERT_TRUE( settings.loadFromXmlText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><custom><prop key=\"party\">3</prop></custom>"
+                                              "<Defaults /></GameSettings>",
+                                              "ok" ) );
+    SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap );
+    SW_EXPECT_EQUAL( 3, settings.getCustomPropertyInt( "party", 0 ) );
+}
+
+/**
  * @brief [GameFrameworkTest] GameSettings 범용 커스텀 프로퍼티 저장소 및 타입별 조회 헬퍼 검증
  */
 SW_TEST_CASE( GameFrameworkTest, GameSettings_CustomPropertyParsingAndQuery )

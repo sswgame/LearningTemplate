@@ -67,9 +67,15 @@ namespace sw
 
         /** @brief 리소스 경로(XML)에서 부트스트랩 테이블을 로드합니다. */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath = {} );
+        /** @brief `loadFromResource` 의 XML 글 판입니다(시험). 먼저 비우고 읽습니다. */
+        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
 
     private:
-        /** @brief `<GameSettings>` 루트의 표준 칸과 커스텀 칸을 읽습니다(`GameDataXml::loadFile`). */
+        /**
+         * @brief `<GameSettings>` 루트의 표준 칸과 커스텀 칸을 읽습니다(`GameDataXml::loadFile`).
+         * @details 표준 칸 · `<custom>` · `<Defaults>`(`ComponentDefaults` 가 같은 파일을 읽는다) 밖의 원소는 로드 오류입니다 — 커스텀 값은
+         *          `<custom><prop key="…">` 안에만 둡니다(표준 칸 철자가 틀리면 커스텀 값이 되어 조용히 사라지지 않게).
+         */
         [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
     };
 } // namespace sw

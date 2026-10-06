@@ -14,8 +14,8 @@
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) EditorToolDefaults: 맵 · 아틀라스 · 폰트 시드와 설정 폴더 · 도구 파일 이름
-    //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig)
+    // 1) EditorToolDefaults: 맵 · 아틀라스 · 폰트 시드
+    //    사람이 적는 파일이고, 앱은 다시 쓰지 않는다(앱이 쓰는 것은 EditorConfig). 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`)다
     // ------------------------------------------------------------------------------
 
     /**
@@ -37,11 +37,6 @@ namespace sw::editor
         float32 _fontSize{ 16.0f };
         PROPERTY()
         float4 _clearColor{ 0.12f, 0.15f, 0.18f, 1.0f }; ///< Game View 렌더 타깃 클리어 색
-
-        PROPERTY()
-        string _editorFolder{ "editor" };
-        PROPERTY()
-        string _fontsFolder{ "fonts" };
 
         PROPERTY()
         vector<string> _listBaseFont{
@@ -66,35 +61,6 @@ namespace sw::editor
             "NotoSansKR-Regular.otf",
             "DroidSansFallbackFull.ttf",
         };
-
-        // ------------------------------------------------------------------------------
-        // 설정 폴더와 도구 파일 이름. 사람이 정하고, 앱은 다시 쓰지 않는다.
-        //
-        // EditorConfig 는 테마를 바꿀 때마다 `saveToHost()` 가 **통째로 다시 만들므로** 손으로 적는 값을 거기 두지 않는다.
-        // 경계는 "무슨 내용인가" 가 아니라 **"누가 쓰는가"** 다. 앱이 쓰는 것만 EditorConfig 에 둔다.
-        // ------------------------------------------------------------------------------
-        PROPERTY()
-        string _configFolder{ "Config" };
-        PROPERTY()
-        string _editorConfigFolder{ "Editor" };
-
-        PROPERTY()
-        string _imguiIniFile{ "imgui.ini" };
-        PROPERTY()
-        string _windowsIniFile{ "windows.ini" };
-
-        PROPERTY()
-        string _animGraphSettingsFile{ "AnimGraph.json" };
-        PROPERTY()
-        string _animGraphDataFile{ "AnimGraphData.json" };
-        PROPERTY()
-        string _dialogueGraphDataFile{ "DialogueGraphData.json" };
-        PROPERTY()
-        string _spriteClipFile{ "SpriteClip.json" };
-        PROPERTY()
-        string _textureImportConfigFile{ "TextureImportConfig.json" };
-        PROPERTY()
-        string _modelImportConfigFile{ "ModelImportConfig.json" };
 
         /**
          * @brief 실행 중에 다시 읽을 애셋 확장자입니다. **비우면 처리기가 있는 확장자 전부**를 봅니다.

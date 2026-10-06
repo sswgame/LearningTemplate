@@ -80,9 +80,7 @@ namespace sw
         const GameConfig& gameCfg = GameConfig::getActive();
         if ( gameCfg._packRoot.empty() == false )
             _bootstrap._packRoot = gameCfg._packRoot;
-        const string_view gameSettingsFile =
-            gameCfg._gameSettingsFile.empty() ? string_view( "data/gamesettings.xml" ) : string_view( gameCfg._gameSettingsFile );
-        if ( _bootstrap.load( gameSettingsFile ) == false )
+        if ( _bootstrap.load( path::kGameSettingsFile ) == false )
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
         game::bindLocalService<GameSettings>( &_bootstrap._data );
         applyBootstrap();

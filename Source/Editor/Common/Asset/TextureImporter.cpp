@@ -11,11 +11,12 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
+
+#include "sw/config/ConfigConstants.h"
 
 #if defined( TileShape )
     #undef TileShape
@@ -425,7 +426,7 @@ namespace sw::editor
         // `App --import-textures` 로 임포트된 것이 같은 판정을 받는다. 내용이 그대로면(저장만 다시 했다) 임포트하지 않는다.
         // 설정 파일이 없으면 기본 규칙이다. 깨졌으면 로드가 알리고 기본 규칙으로 임포트한다.
         TextureImportConfig config{};
-        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( getEditorToolDefaults()._textureImportConfigFile.c_str() ) );
+        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( EditorUtil::kTextureImportConfigFileName ) );
         const AssetImportSummary summary = importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {
@@ -471,12 +472,9 @@ namespace sw::editor
 
     string TextureImporter::makeDefaultImportConfigPath()
     {
-        const EditorToolDefaults defaults{};
-        const string             projectRoot = EditorUtil::getProjectRootPath();
+        const string projectRoot = EditorUtil::getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
-
-        const string configDir = FileUtil::joinPath( FileUtil::joinPath( projectRoot, defaults._configFolder ), defaults._editorConfigFolder );
-        return FileUtil::joinPath( configDir, defaults._textureImportConfigFile );
+        return FileUtil::joinPath( FileUtil::joinPath( projectRoot, config::kDirConfigEditor ), EditorUtil::kTextureImportConfigFileName );
     }
 } // namespace sw::editor

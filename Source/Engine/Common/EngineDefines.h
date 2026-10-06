@@ -64,6 +64,8 @@ namespace sw
 
         /** @brief 엔진 셸 부트스트랩 XML 입니다(Resource 기준 상대 경로). */
         inline constexpr const utf8* kEngineDefaultAssets = "engine/data/enginedefaultassets.xml";
+        /** @brief 팩 상대 게임 설정 파일입니다(`GameSettings`). 게임마다 이 이름 하나다(엔진 `render2d.xml` 덮어쓰기와 같은 약속). */
+        inline constexpr const utf8* kGameSettingsFile = "data/gamesettings.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
         inline constexpr const utf8* kMetaExtension = ".meta";
     } // namespace path

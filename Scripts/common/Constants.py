@@ -10,6 +10,8 @@ from __future__ import annotations
 # --- 1. Config Directories & Files (설정 디렉터리 및 JSON/XML 파일 경로) -------
 # =============================================================================
 
+kDirConfig = "Config"
+kDirConfigEditor = "Config/Editor"
 kDirConfigEnv = "Config/Environment"
 kFileToolchainConfig = "toolchain_config.json"
 kFileParserConfig = "parser_config.json"
@@ -19,7 +21,7 @@ kFileSearchPathsDefaults = "search_paths.defaults.json"
 
 kFileRuntimeEngineConfig = "Config/Engine/EngineConfig.json"
 kFileRuntimeEditorConfig = "Config/Editor/EditorConfig.json"
-# 게임 프리셋 폴더 — 게임마다 `<SW_ACTIVE_GAME>.json` 하나(팩 루트 · gamesettings · 시작 씬). 활성 게임이 어느 것을 쓸지 고른다.
+# 게임 프리셋 폴더 — 게임마다 `<SW_ACTIVE_GAME>.json` 하나(팩 루트 · 시작 씬). 활성 게임이 어느 것을 쓸지 고른다.
 kDirRuntimeGamePreset = "Config/Game"
 # 전용 서버 운영 설정 폴더 — `<SW_ACTIVE_GAME>.json`(ServerConfig). Shipping 도 굽지 않고 디스크에서 읽는다.
 kDirRuntimeServerPreset = "Config/Server"

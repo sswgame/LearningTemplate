@@ -7,7 +7,9 @@ namespace sw::config
     // -------------------------------------------------------------------------
     // 1) 디렉터리 경로
     // -------------------------------------------------------------------------
-    inline constexpr const utf8* kDirConfigEnv = "@SW_DIR_CONFIG_ENV@";
+    inline constexpr const utf8* kDirConfig       = "@SW_DIR_CONFIG@";        ///< 호스트 설정 폴더(프로젝트 루트 기준)
+    inline constexpr const utf8* kDirConfigEditor = "@SW_DIR_CONFIG_EDITOR@"; ///< 사람이 쓰는 에디터 설정 폴더
+    inline constexpr const utf8* kDirConfigEnv    = "@SW_DIR_CONFIG_ENV@";
 
     // -------------------------------------------------------------------------
     // 2) 설정 및 리플렉션 도구 파일 경로

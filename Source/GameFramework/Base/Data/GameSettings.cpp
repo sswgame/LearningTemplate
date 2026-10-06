@@ -81,7 +81,13 @@ namespace sw
         return GameDataXml::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
     }
 
-    bool GameSettings::loadRoot( const XmlNode& root, [[maybe_unused]] string_view sourceName )
+    bool GameSettings::loadFromXmlText( string_view xmlText, string_view sourceName )
+    {
+        *this = GameSettings{};
+        return GameDataXml::loadText( *this, &GameSettings::loadRoot, xmlText, sourceName, "GameSettings" );
+    }
+
+    bool GameSettings::loadRoot( const XmlNode& root, string_view sourceName )
     {
         root.takeChildText( "startMap", _startMap );
         root.takeChildText( "titleScene", _titleScene );
@@ -92,7 +98,7 @@ namespace sw
         root.takeChildText( "fallbackLanguage", _fallbackLanguage );
         root.takeChildText( "inputMap", _inputMap );
 
-        // 표준 필드 이외의 모든 태그는 _mapCustomProperty 에 자동 보관
+        bool bUnknownElement = false;
         for ( XmlNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
@@ -121,10 +127,14 @@ namespace sw
                 continue;
             }
 
-            const utf8* pText = child.getText();
-            if ( pText != nullptr )
-                _mapCustomProperty[pName] = pText;
+            // 컴포넌트 기본값 — `ComponentDefaults` 가 같은 파일을 읽는다.
+            if ( StringUtil::equals( pName, "Defaults" ) )
+                continue;
+            SW_LOG_ERROR( "GameSettings %#: unknown element <%#> - custom values go under <custom><prop key=\"...\">", sourceName, pName );
+            bUnknownElement = true;
         }
+        if ( bUnknownElement )
+            return false;
 
         SW_LOG_INFO( "Loaded from %# (start=%#)", sourceName, _startMap );
         return true;

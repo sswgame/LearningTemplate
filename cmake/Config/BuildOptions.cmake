@@ -113,8 +113,10 @@ endif()
 option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
-set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성화할 Source/Games 게임 팩 (Empty)")
-set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS Empty)
+set(SW_ACTIVE_GAME "Empty" CACHE STRING "활성화할 Source/Games 게임 팩 — 게임을 바꿀 때는 이 값이 아니라 프리셋(Ninja-Debug-<게임>)을 고른다")
+file(GLOB swGamePresetFiles RELATIVE "${CMAKE_SOURCE_DIR}/Config/Game" "${CMAKE_SOURCE_DIR}/Config/Game/*.json")
+string(REPLACE ".json" "" swGameNames "${swGamePresetFiles}")
+set_property(CACHE SW_ACTIVE_GAME PROPERTY STRINGS ${swGameNames})
 
 # ------------------------------------------------------------------------------
 # 4) 컴파일 PDB · compile_commands.json · 플래그 INTERFACE 초기화

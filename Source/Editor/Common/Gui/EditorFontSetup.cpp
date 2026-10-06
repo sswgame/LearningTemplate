@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -57,21 +58,19 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( pFileName ) )
                     return {};
 
-                const EditorToolDefaults& data       = editor::getEditorToolDefaults();
-                const string              editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
+                const string editorRoot = ResourceUtil::getDomainFolderPath( path::kEditorPack );
                 if ( editorRoot.empty() == false )
                 {
-                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, data._fontsFolder ), pFileName );
+                    const string candidate = FileUtil::joinPath( FileUtil::joinPath( editorRoot, editor::EditorUtil::kFontsFolderName ), pFileName );
                     if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }
 
                 const string& resourceRoot = ResourceUtil::getRootFolderPath();
-                if ( resourceRoot.empty() == false && data._editorFolder.empty() == false )
+                if ( resourceRoot.empty() == false )
                 {
                     const string candidate = FileUtil::joinPath(
-                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, data._editorFolder ), data._fontsFolder ),
-                        pFileName );
+                        FileUtil::joinPath( FileUtil::joinPath( resourceRoot, path::kEditorPack ), editor::EditorUtil::kFontsFolderName ), pFileName );
                     if ( FileUtil::isRegularFile( candidate ) )
                         return candidate;
                 }

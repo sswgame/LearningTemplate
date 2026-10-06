@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -18,6 +17,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
+
+#include "sw/config/ConfigConstants.h"
 
 namespace sw::editor
 {
@@ -38,15 +39,12 @@ namespace sw::editor
 
     string EditorUtil::getEditorConfigDirectory()
     {
-        const EditorToolDefaults& editorToolDefaults = getEditorToolDefaults();
-        const string              projectRoot        = getProjectRootPath();
+        const string projectRoot = getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
 
-        const string configDir =
-            FileUtil::joinPath( FileUtil::joinPath( projectRoot, editorToolDefaults._configFolder ), editorToolDefaults._editorConfigFolder );
-        const string markerFile = FileUtil::joinPath( configDir, editorToolDefaults._imguiIniFile );
-        FileUtil::ensureParentDirectoryExists( markerFile );
+        const string configDir = FileUtil::joinPath( projectRoot, config::kDirConfigEditor );
+        FileUtil::ensureDirectoryExists( configDir );
         return configDir;
     }
 

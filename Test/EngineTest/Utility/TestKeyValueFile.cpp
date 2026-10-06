@@ -204,14 +204,12 @@ SW_TEST_CASE( KeyValueFileTest, GameConfigActiveManagement )
     const sw::GameConfig oldActive = sw::GameConfig::getActive();
 
     sw::GameConfig customConfig{};
-    customConfig._packRoot         = "game/custom_pack";
-    customConfig._gameSettingsFile = "data/custom_gamesettings.xml";
+    customConfig._packRoot = "game/custom_pack";
 
     sw::GameConfig::setActive( customConfig );
 
     const sw::GameConfig& retrieved = sw::GameConfig::getActive();
     SW_EXPECT_EQUAL( sw::string( "game/custom_pack" ), retrieved._packRoot );
-    SW_EXPECT_EQUAL( sw::string( "data/custom_gamesettings.xml" ), retrieved._gameSettingsFile );
 
     // 이전 상태 복구
     sw::GameConfig::setActive( oldActive );

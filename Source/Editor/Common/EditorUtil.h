@@ -24,6 +24,22 @@ namespace sw::editor
         //    Resource의 부모가 프로젝트 루트. 설정 폴더는 없으면 생성
         // ------------------------------------------------------------------------------
         /**
+         * @brief 에디터가 쓰는 파일 이름입니다. 이름은 코드가 정하고 설정 파일이 바꾸지 않는다 — 설정 파일이 제 위치 ·
+         *        이웃 파일 이름을 정하면 그 설정 파일을 찾는 길이 순환한다.
+         */
+        static constexpr const utf8* kImguiIniFileName              = "imgui.ini";
+        static constexpr const utf8* kWindowsIniFileName            = "windows.ini";
+        static constexpr const utf8* kAnimGraphCanvasFileName       = "AnimGraph.json";           ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kDialogueGraphCanvasFileName   = "DialogueGraphEditor.json"; ///< 노드 에디터 캔버스 상태
+        static constexpr const utf8* kAnimGraphDocumentFileName     = "AnimGraphData.json";       ///< 경로 없는 애니 그래프 문서
+        static constexpr const utf8* kDialogueGraphDocumentFileName = "DialogueGraphData.json";   ///< 경로 없는 대화 그래프 문서
+        static constexpr const utf8* kSpriteClipDocumentFileName    = "SpriteClip.json";          ///< 경로 없는 스프라이트 클립 문서
+        static constexpr const utf8* kTextureImportConfigFileName   = "TextureImportConfig.json";
+        static constexpr const utf8* kModelImportConfigFileName     = "ModelImportConfig.json";
+        /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
+        static constexpr const utf8* kFontsFolderName = "fonts";
+
+        /**
          * @brief 프로젝트 루트(<Project>, Resource 의 부모)를 반환합니다.
          * @return 해석에 실패하면 빈 문자열
          */

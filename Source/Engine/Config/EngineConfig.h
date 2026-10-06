@@ -53,9 +53,6 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _engineDefaultAssets{ "engine/data/enginedefaultassets.xml" }; ///< 엔진 셸 부트스트랩 XML(리소스 경로)
-
-        PROPERTY()
         WindowConfig _window; ///< 창·백엔드 설정
 
         /** @brief 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다. */

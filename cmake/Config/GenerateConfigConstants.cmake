@@ -9,12 +9,12 @@ include_guard(GLOBAL)
 # 1~3. Constants.py 의 상수를 CMake 변수로 (SW_GENERATED_CMAKE_VARS 도 거기서 정한다)
 include("${CMAKE_CURRENT_LIST_DIR}/LoadConfigConstants.cmake")
 
-# 3-1. 활성 게임의 프리셋(Config/Game/<SW_ACTIVE_GAME>.json) — 팩 루트 · gamesettings · 시작 씬. 게임을 바꾸는 것은 프리셋을 바꾸는 것이다.
+# 3-1. 활성 게임의 프리셋(Config/Game/<SW_ACTIVE_GAME>.json) — 팩 루트 · 시작 씬. 게임을 바꾸는 것은 프리셋을 바꾸는 것이다.
 set(SW_FILE_RUNTIME_GAME_CONFIG "${SW_DIR_RUNTIME_GAME_PRESET}/${SW_ACTIVE_GAME}.json")
 if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 	message(FATAL_ERROR
 		"SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no game preset ${SW_FILE_RUNTIME_GAME_CONFIG}\n"
-		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot, _gameSettingsFile, _startupScene)")
+		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot, _startupScene)")
 endif()
 # 3-2. 전용 서버 운영 설정(Config/Server/<SW_ACTIVE_GAME>.json, ServerConfig) — 굽지 않고 Server 가 디스크에서 읽는다. 서버가 없는 게임은 파일이 없어도 된다.
 set(SW_FILE_RUNTIME_SERVER_CONFIG "${SW_DIR_RUNTIME_SERVER_PRESET}/${SW_ACTIVE_GAME}.json")
