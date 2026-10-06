@@ -327,6 +327,8 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 **핫 리로드를 넘어 살아야 하는 상태는 Engine이나 App에 둡니다.** 모듈 안의 정적 변수는 DLL이 교체되면 사라집니다. 그래서 `CommandStack` 은 `EngineLoop` 이 소유합니다.
 
 **엔진 창은 `WindowResizeEvent` 를 발행하지 않습니다.** 크기 변경은 델리게이트로 알립니다.
+`Win32Window` 의 `WM_SIZE` 처리 중에는 OS가 같은 스레드에서 창 프로시저를 다시 부를 수 있습니다. 그래서 `_bResizing` 이 중첩된 `onResize` 를 막고, 리사이즈 경로를 고칠 때도 이 가드를 지나게 둡니다.
+다른 스레드(렌더 스레드)와의 경합은 `RenderThread::waitIdle()` 이 막습니다.
 
 **서비스 테스트는 줄에 적은 `visibility` 값 자체의 오류를 잡지 못합니다.** `EngineServiceTest` 의 기댓값도 같은 X-macro에서 만들기 때문입니다. 줄의 `visibility` 값은 사람이 검토합니다.
 

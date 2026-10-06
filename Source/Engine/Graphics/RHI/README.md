@@ -212,3 +212,12 @@ RTV 힙은 **디바이스가 소유합니다**(DX12). 오프스크린 렌더타�
   "아직 안 쓰는 기능" 은 시험과 함께 남긴다(인덱스 드로우의 유일한 검증은 `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`, `createIndexBuffer` 는 순수 가상).
 - **RHI 백엔드의 .cpp 는 `Graphics/RHI/<백엔드 폴더>/` 에 두면 끝이다**(모듈 · Shipping 이 폴더로 가져간다). 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
+- **GL 자원 생성과 상수버퍼 갱신은 렌더 스레드 밖(게임 스레드)에서도 불리므로 `ScopedOpenGLContext` 로 감쌉니다.** 감싸지 않으면 `glGen*` 이 오류도 로그도 없이 쓸 수 없는 이름을 남깁니다.
+- **`transitionBuffer` 는 상태가 그대로면 아무것도 하지 않습니다.** 같은 버퍼를 컴퓨트 둘이 이어서 쓰고 읽을 때는 `IRHICommandList::uavBarrier` 를 넣습니다(DX11 은 의도적으로 no-op).
+- **DRED 의 `PageFault VA=0` 은 하드웨어 고장이 아니라 엔진이 null 디스크립터나 리소스를 넘겼다는 신호입니다.** 엔진 결함인지 드라이버인지는 같은 재현을 다른 백엔드로 돌려 가립니다.
+  "X 는 하나뿐이라 공유해도 된다" 는 주석의 전제는 X 를 여럿으로 만드는 변경(병렬 기록)이 들어오면 다시 봅니다.
+- **디바이스가 행 상태이면 `Reset()` · `GetBuffer()` 가 실패하므로 반환값을 보고 그 프레임을 건너뜁니다.** 백버퍼 목록은 하나라도 만들지 못하면 통째로 비웁니다. 크기만 보는 가드는 null 원소를 통과시킵니다.
+- **bindless 인덱스는 종류별 API(`unregisterBindlessTexture` · `unregisterBindlessResource`)로 반납합니다.** DX11, GL, Vulkan 은 텍스처와 버퍼가 다른 인덱스 공간이라(DX12 만 힙 하나) 텍스처 인덱스를 버퍼 쪽에 반납하면 살아 있는 버퍼 슬롯이 비게 됩니다
+  (`RHIDeviceTest.BindlessTextureReleaseKeepsBufferIndices`). 인덱스 충돌이 의심되면 register 와 unregister 양쪽에 인덱스와 소유자를 찍는 추적부터 넣습니다.
+- **백엔드 파일 이름은 엔진 인터페이스 어휘(`SwapChain` · `CommandContext`)를 쓰고 네 백엔드가 같은 이름을 갖습니다.** 한 클래스를 여러 TU 로 나누면 소유 클래스 이름을 접두로 남기고(`D3D12RHIResourceFactoryPipeline.cpp`),
+  그 개념이 없는 백엔드는 빈 파일을 만들지 않고 README 에 이유를 적습니다. 백엔드 공용 자료구조는 `Support/` 폴더로 묶고, 가장 약한 백엔드에 맞춰 축을 정하지 않습니다. 백버퍼 상태는 `transitionTo` 로만 바꿉니다.

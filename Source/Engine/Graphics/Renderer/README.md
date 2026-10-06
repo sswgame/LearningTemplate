@@ -230,3 +230,5 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
 - **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
   빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
+- **프레임 앞 컴퓨트 순서는 인스턴스 애니메이션(`instanceanim.hlsl`) → 컬링(`gpucull.hlsl`)입니다.** 뒤집히면 컬링이 회전 전 바운드로 판정합니다. 컴퓨트가 쓰기 전에 대상 버퍼를 UAV 상태로 전이합니다.
+- **`RenderGraphBarrier` 추론이 프레임마다 리소스 상태를 잊는 것은 의도입니다.** 전이는 그래프 밖(선언하지 않은 `registerPassTexture` · 리드백)에서도 일어나므로 지난 프레임의 상태를 이으면 필요한 배리어를 건너뜁니다. 줄이는 것은 한 프레임 안의 중복뿐입니다.

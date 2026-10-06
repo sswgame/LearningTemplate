@@ -357,6 +357,7 @@ struct MyComponent : public Component
   (`paths.*` · `parser_args.extra` · `parser_args.force_include`)만 받는다. `findReflectionParserExecutable` 은 `BuildTools` 를 먼저 본다 — `Bin` 의 옛 사본을 돌린 결과는 지금 답이 아니다.
   Shipping 은 Info 로그가 없으므로 도구의 사용법 · 덤프는 stdout 으로.
 - **`AnnotationMeta.txt` 의 `flag.X` 한 줄이 단독 토큰과 `X = true` 를 함께 등록한다.** `ArgumentList.xxx` 의 `bUseDefaultValue` 를 켜면 주지 않은 인자에도 `getArgument` 가 true 다.
+- **모듈 판별(`parser_config` 의 `parsing.module_rules` · `default_module`)은 `--source-root` 기준 상대 경로로 맞춥니다.** 절대 경로로 맞추면 상위 폴더 이름에 걸려 오분류됩니다.
 
 ## 더 볼 곳
 
