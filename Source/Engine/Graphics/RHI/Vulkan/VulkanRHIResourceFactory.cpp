@@ -329,7 +329,7 @@ namespace sw
             return;
         // 렌더 스레드의 기록 상태(`_recordingState` 의 묶인 정점 · 인덱스 버퍼)는 여기서 지우지 않는다. 이 함수는 게임 스레드에서도 불리는데 그 값은
         // 렌더 스레드만 쓴다(여기서 쓰면 경쟁이다). 핸들은 세대가 있어 다시 쓰이지 않으므로 지운 핸들은 드로우에서 풀리지 않고,
-        // 정점 버퍼는 풀스크린 버퍼로 떨어진다(bindVertexBuffers).
+        // 그 드로우는 버리고 알린다(`bindMeshVertexBufferForDraw` · `RHIDrawDiagnostics`).
         {
             std::unique_lock<std::shared_mutex> registryLock{ _pDevice->_bindlessMutex };
             _pDevice->_mapCbSlotSize.erase( buffer );

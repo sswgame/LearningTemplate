@@ -84,8 +84,8 @@ namespace sw
          */
         bool bindActiveGraphicsPipeline();
 
-        /** @brief 메시 VB(없으면 풀스크린 정점버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 겁니다. 모든 드로우 진입점이 이것을 씁니다. */
-        void bindMeshVertexBufferOrFallback();
+        /** @brief 메시 VB(없으면 풀스크린 정점버퍼)를 바인딩 0 에, 인스턴스 슬롯 스트림(없으면 바인딩 0 의 버퍼)을 바인딩 1 에 겁니다. 모든 드로우 진입점이 이것을 쓰고, false(건 메시 VB 가 부서졌다 · 커맨드 버퍼 없음)면 드로우를 버립니다. */
+        [[nodiscard]] bool bindMeshVertexBufferForDraw();
 
         VulkanRHIDevice* _pDevice;
         /// @brief 이 컨텍스트가 기록할 버퍼입니다. nullptr 이면 디바이스가 지금 연 버퍼를 따라갑니다.

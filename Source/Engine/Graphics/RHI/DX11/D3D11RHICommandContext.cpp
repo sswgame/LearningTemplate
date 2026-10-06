@@ -7,6 +7,7 @@
 
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/Support/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -332,10 +333,22 @@ namespace sw
         if ( pVs == nullptr )
             return false;
 
-        // 메시가 자기 정점 버퍼를 걸었으면 그것을, 아니면 장치의 공용 버퍼를 쓴다.
-        ID3D11Buffer* pVb    = _pState->_boundMeshVb != 0 ? _pDevice->resolveBuffer( _pState->_boundMeshVb ) : _pDevice->_vertexBuffer.Get();
-        UINT          stride = _pState->_boundMeshVb != 0 ? _pState->_boundMeshStride : static_cast<UINT>( sizeof( RHIVertex ) );
-        UINT          offset = _pState->_boundMeshVb != 0 ? _pState->_boundMeshOffset : 0;
+        // 메시가 자기 정점 버퍼를 걸었으면 그것을, 아니면 장치의 공용 버퍼를 쓴다. 건 버퍼가 부서졌으면(세대가 달라 풀리지 않는다) 드로우를 버린다 —
+        // IASetVertexBuffers 를 건너뛰면 직전 드로우의 버퍼로 그린다.
+        ID3D11Buffer* pVb    = _pDevice->_vertexBuffer.Get();
+        UINT          stride = static_cast<UINT>( sizeof( RHIVertex ) );
+        UINT          offset = 0;
+        if ( _pState->_boundMeshVb != 0 )
+        {
+            pVb = _pDevice->resolveBuffer( _pState->_boundMeshVb );
+            if ( pVb == nullptr )
+            {
+                RHIDrawDiagnostics::reportDestroyedVertexBuffer( "DX11", _pState->_boundMeshVb );
+                return false;
+            }
+            stride = _pState->_boundMeshStride;
+            offset = _pState->_boundMeshOffset;
+        }
         if ( pVb != nullptr )
             _pContext->IASetVertexBuffers( 0, 1, &pVb, &stride, &offset );
         bindInstanceSlotStream();
