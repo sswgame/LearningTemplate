@@ -75,18 +75,18 @@ def runMergeInternal(basePath: Path, oursPath: Path, theirsPath: Path, outputPat
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Semantic diff and three-way merge for XML assets")
+    parser = argparse.ArgumentParser(description="XML 에셋의 의미 비교 · 3-way 병합")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    diffParser = subparsers.add_parser("diff", help="semantic diff of two versions")
+    diffParser = subparsers.add_parser("diff", help="두 판의 의미 비교")
     diffParser.add_argument("before", type=Path)
     diffParser.add_argument("after", type=Path)
-    mergeParser = subparsers.add_parser("merge", help="three-way merge")
+    mergeParser = subparsers.add_parser("merge", help="3-way 병합")
     mergeParser.add_argument("base", type=Path)
     mergeParser.add_argument("ours", type=Path)
     mergeParser.add_argument("theirs", type=Path)
-    mergeParser.add_argument("-o", "--output", type=Path, default=None, help="where to write (default: overwrite ours)")
-    mergeParser.add_argument("--prefer", choices=("ours", "theirs"), default=None, help="resolve conflicts to this side")
-    gitMergeParser = subparsers.add_parser("git-merge", help="git merge driver: %%O %%A %%B %%P")
+    mergeParser.add_argument("-o", "--out", type=Path, default=None, help="쓸 자리(기본: ours 를 덮어쓴다)")
+    mergeParser.add_argument("--prefer", choices=("ours", "theirs"), default=None, help="충돌을 이쪽으로 푼다")
+    gitMergeParser = subparsers.add_parser("git-merge", help="git 병합 드라이버: %%O %%A %%B %%P")
     gitMergeParser.add_argument("base", type=Path)
     gitMergeParser.add_argument("ours", type=Path)
     gitMergeParser.add_argument("theirs", type=Path)
@@ -98,7 +98,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if args.command == "diff":
         return runDiffInternal(args.before, args.after)
     if args.command == "merge":
-        return runMergeInternal(args.base, args.ours, args.theirs, args.output or args.ours, args.prefer, str(args.ours))
+        return runMergeInternal(args.base, args.ours, args.theirs, args.out or args.ours, args.prefer, str(args.ours))
     if args.command == "git-merge":
         return runMergeInternal(args.base, args.ours, args.theirs, args.ours, None, args.path or str(args.ours))
     # git-diff: git 은 비교가 끝나면 종료 코드를 보지 않는다 — 차이가 있어도 0 으로 끝낸다(1 이면 `git diff` 가 멈춘다).

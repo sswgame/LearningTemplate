@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot  # noqa: E402
 from common import BuildTree  # noqa: E402
-from common.AppRun import kBackendSwitch, kSkipExitCode, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
 #: 기준에 없는 구간은 비교하지 않으므로(`compareInternal` 은 기준을 돈다) 새로 뜬 기준부터 잡힌다.
@@ -89,17 +89,15 @@ def compareInternal(baseline: dict[str, dict[str, float]], measured: dict[str, d
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Per-game frame-time p50/p99 against a stored per-machine baseline (Release)")
-    parser.add_argument("--app", type=Path, required=True)
-    parser.add_argument("--game", default=None, help="default: SW_ACTIVE_GAME of the App's build")
-    parser.add_argument("--backend", default="dx12", choices=list(kBackendSwitch))
-    parser.add_argument("--frames", type=int, default=600, help="measured frames per run (after the 60-frame warm-up)")
-    parser.add_argument("--runs", type=int, default=3)
-    parser.add_argument("--record", action="store_true", help="store this machine's baseline")
-    parser.add_argument("--tolerance-p50", type=float, default=0.15)
-    parser.add_argument("--tolerance-p99", type=float, default=0.35)
-    parser.add_argument("--floor-us", type=float, default=150.0, help="absolute slack added to every limit")
-    parser.add_argument("--allow-debug", action="store_true", help="measure a non-Release build anyway (numbers mean little)")
+    parser = argparse.ArgumentParser(description="게임마다 프레임 시간 p50/p99 를 이 기계의 기준과 견준다(Release)")
+    addAppRunArguments(parser, bMultipleBackends=False)
+    parser.add_argument("--frames", type=int, default=600, help="한 번에 재는 프레임 수(60 프레임 워밍업 뒤)")
+    parser.add_argument("--runs", type=int, default=3, help="돌리는 횟수(중앙값을 쓴다)")
+    parser.add_argument("--record", action="store_true", help="이 기계의 기준을 남긴다")
+    parser.add_argument("--tolerance-p50", type=float, default=0.15, help="p50 · 평균의 허용 비율")
+    parser.add_argument("--tolerance-p99", type=float, default=0.35, help="p99 의 허용 비율")
+    parser.add_argument("--floor-us", type=float, default=150.0, help="모든 한계에 더하는 절대 여유(us)")
+    parser.add_argument("--allow-debug", action="store_true", help="Release 가 아닌 빌드도 잰다(숫자는 의미가 적다)")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
@@ -108,10 +106,10 @@ def main(listArgument: list[str] | None = None) -> int:
     buildType = appTree.readCacheValue("CMAKE_BUILD_TYPE")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Perf] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
+        print(f"[Perf] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     if buildType != "Release" and not args.allow_debug:
-        print(f"[Perf] {appTree.name} is a {buildType} build - measure Release (or pass --allow-debug)", file=sys.stderr)
+        print(f"[Perf] {appTree.name} 은 {buildType} 빌드다 — Release 로 재십시오(또는 --allow-debug)", file=sys.stderr)
         return 1
 
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend]]
@@ -138,15 +136,15 @@ def main(listArgument: list[str] | None = None) -> int:
         }
         baselinePath.parent.mkdir(parents=True, exist_ok=True)
         baselinePath.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        print(f"[Perf] baseline recorded for {entryKey} -> {baselinePath.relative_to(repositoryRoot)}", flush=True)
+        print(f"[Perf] 기준을 남겼다 {entryKey} -> {baselinePath.relative_to(repositoryRoot)}", flush=True)
         return 0
 
     entry = document["machines"].get(entryKey)
     if entry is None:
-        print(f"[Perf] no baseline for this machine ({entryKey}) - record one with --record", flush=True)
+        print(f"[Perf] 이 기계의 기준이 없다({entryKey}) — --record 로 남기십시오", flush=True)
         return kSkipExitCode
     if entry.get("frames") != args.frames or entry.get("arguments") != listAppArgument:
-        print("[Perf] the baseline was measured with other arguments - re-record it", flush=True)
+        print("[Perf] 기준이 다른 인자로 재어졌다 — 다시 남기십시오", flush=True)
         return 1
     tolerance = {"p50_us": args.tolerance_p50, "p99_us": args.tolerance_p99, "avg_us": args.tolerance_p50}
     listRegression, listNote = compareInternal(entry["scopes"], measured, tolerance, args.floor_us)

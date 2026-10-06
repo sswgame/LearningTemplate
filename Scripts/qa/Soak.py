@@ -4,7 +4,7 @@
 봇 플레이 장시간 실행(soak) — 시험 게임의 자동 플레이를 오래 돌리며 메모리 · 핸들 증가와 프레임 p99 를 본다.
 
     py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10
-    py -3 -m Scripts soak --app <App> --backend vk --minutes 30 --report soak.json
+    py -3 -m Scripts soak --app <App> --backend vk --minutes 30 --out soak.json
 
 App 은 `-gv_profileSeconds=<분 × 60>` 으로 그 시간을 재고 스스로 끝난다(프레임 수로 끊으면 장면마다 몇 초인지 모른다). 그동안 이 스크립트가
 밖에서 자원을 잰다(사유 메모리 · 작업 집합 · 핸들 · GDI/USER 객체). 판정:
@@ -26,30 +26,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot  # noqa: E402
 from common import BuildTree  # noqa: E402
-from common.AppRun import kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 kMegabyte = 1024.0 * 1024.0
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Long autoplay run with memory/handle growth and frame-time checks")
-    parser.add_argument("--app", type=Path, required=True)
-    parser.add_argument("--game", default=None, help="default: SW_ACTIVE_GAME of the App's build")
-    parser.add_argument("--backend", default="dx12", choices=list(kBackendSwitch))
-    parser.add_argument("--minutes", type=float, default=10.0)
-    parser.add_argument("--sample-seconds", type=float, default=5.0)
-    parser.add_argument("--warmup-fraction", type=float, default=0.25, help="leading part of the run left out of the growth slope")
-    parser.add_argument("--max-private-mb-per-minute", type=float, default=2.0)
-    parser.add_argument("--max-handles-per-minute", type=float, default=10.0)
-    parser.add_argument("--max-p99-ms", type=float, default=0.0, help="0 = report only")
-    parser.add_argument("--report", type=Path, default=None, help="write the samples and verdict as JSON")
+    parser = argparse.ArgumentParser(description="자동 플레이를 오래 돌려 메모리 · 핸들 증가와 프레임 시간을 본다")
+    addAppRunArguments(parser, bMultipleBackends=False)
+    parser.add_argument("--minutes", type=float, default=10.0, help="돌리는 시간(분)")
+    parser.add_argument("--sample-seconds", type=float, default=5.0, help="자원 표본 간격(초)")
+    parser.add_argument("--warmup-fraction", type=float, default=0.25, help="증가 기울기에서 빼는 앞부분 비율")
+    parser.add_argument("--max-private-mb-per-minute", type=float, default=2.0, help="사유 메모리 증가 한계(MB/분)")
+    parser.add_argument("--max-handles-per-minute", type=float, default=10.0, help="핸들 증가 한계(개/분)")
+    parser.add_argument("--max-p99-ms", type=float, default=0.0, help="GT · RT 프레임 p99 한계(ms, 0 = 보고만)")
+    parser.add_argument("--out", type=Path, default=None, help="표본과 판정을 JSON 으로 쓸 파일")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
     gameName = args.game or BuildTree.ofApp(args.app).readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Soak] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
+        print(f"[Soak] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     seconds = max(10, int(args.minutes * 60))
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]
@@ -58,7 +56,7 @@ def main(listArgument: list[str] | None = None) -> int:
 
     listFailure: list[str] = []
     if result.bBackendUnusable:
-        print(f"[Soak] {args.backend} is unusable on this machine", flush=True)
+        print(f"[Soak] {args.backend} 는 이 기계에서 못 돈다", flush=True)
         return 77
     if not result.bClean:
         detail = result.listErrorLine[:3] if result.listErrorLine else [f"exit {result.exitCode}, timed out={result.bTimedOut}"]
@@ -98,7 +96,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if wall is not None:
         print(f"[Soak] wall: {wall[0]} frames in {wall[1] / 1000.0:.0f} s = {wall[2]} us/frame", flush=True)
 
-    if args.report is not None:
+    if args.out is not None:
         report = {
             "game": gameName, "backend": args.backend, "seconds": seconds, "exit_code": result.exitCode,
             "private_mb_per_minute": privateSlope, "working_set_mb_per_minute": workingSetSlope,
@@ -107,7 +105,7 @@ def main(listArgument: list[str] | None = None) -> int:
             "samples": [sample.__dict__ for sample in result.listSample],
             "failures": listFailure,
         }
-        args.report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        args.out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
     for failure in listFailure:
         print(f"[Soak] FAIL {failure}", flush=True)

@@ -12,6 +12,7 @@ QA 러너 셋(`Scripts/qa/GoldenImages.py` · `Soak.py` · `PerfRegression.py`)�
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -26,6 +27,16 @@ from .CookContract import CookContractSpec
 
 #: 백엔드 짧은 이름 → App 스위치. 표는 Config/Engine/CookContract.json(별칭의 첫 이름이 짧은 이름이다, 표 순서).
 kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
+
+
+def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bool, defaultBackend: str = "dx12") -> None:
+    """App 을 돌리는 QA · dev 스크립트의 공통 인자 — `--app`(빌드된 App), `--game`(기본: 그 빌드의 SW_ACTIVE_GAME), 백엔드(표: CookContract.json)."""
+    parser.add_argument("--app", type=Path, required=True, help="빌드된 App 실행 파일(그 빌드가 게임을 정한다)")
+    parser.add_argument("--game", default=None, help="게임 이름(기본: App 빌드의 SW_ACTIVE_GAME)")
+    if bMultipleBackends:
+        parser.add_argument("--backends", nargs="+", default=list(kBackendSwitch), choices=list(kBackendSwitch), help="돌릴 백엔드들")
+    else:
+        parser.add_argument("--backend", default=defaultBackend, choices=list(kBackendSwitch), help="돌릴 백엔드")
 
 #: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드
 #: (`kRhiUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).

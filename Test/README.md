@@ -224,7 +224,7 @@ Cleanup은 등록한 역순으로 실행됩니다. AssetManager 전체 shutdown�
 py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe
 py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe --record --runs 3   # 기준을 새로 뜬다
 # soak: 자동 플레이를 오래 — 메모리 · 핸들 증가 기울기와 프레임 p99
-py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --report soak.json
+py -3 -m Scripts soak --app build/Ninja-Debug-NileCity/Bin/App.exe --minutes 10 --out soak.json
 # 성능 회귀: Release 에서만 — 이 기계의 기준(Test/Qa/Perf)과 p50 · p99
 py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 # 로더 퍼징: 시드 고정 변이(EngineTest 의 nogpu 스위트) — 오래 사냥할 때

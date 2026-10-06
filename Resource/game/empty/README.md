@@ -3,7 +3,7 @@
 
 # 환경 쇼케이스: maps/envshowcase.scene.xml — 지형 · 호수 · 강 · 풀 · 나무.
 #   App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"
-#   원본: heightfields_raw/ · textures_raw/ (Scripts/dev/GenerateTerrainShowcase.py) · models_raw/ (Kenney Nature Kit, CC0)
+#   원본: heightfields_raw/ · textures_raw/ (Scripts/dev/MakeTerrainShowcase.py) · models_raw/ (Kenney Nature Kit, CC0)
 
 ## 툰 쇼케이스 (`maps/toonshowcase.scene.xml`)
 

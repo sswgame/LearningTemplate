@@ -11,7 +11,7 @@ SW Engine 통합 에셋 쿠커:
   2. Packs:   Resource/ 폴더 내 에셋을 4KB 섹터 정렬 .pack 아카이브로 패킹 (SWPK)
 
 사용법:
-  py -3 Scripts/generate/CookAssets.py [--all] [--output <dir>]
+  py -3 Scripts/generate/CookAssets.py [--all] [--out <dir>]
   py -3 Scripts/generate/CookAssets.py --prefabs-only
   py -3 Scripts/generate/CookAssets.py --scenes-only
   py -3 Scripts/generate/CookAssets.py --packs-only
@@ -678,7 +678,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prefabs-only", action="store_true", help="프리팹 · 씬 바이너리만 쿠킹(같은 엔진 실행이 둘 다 쿠킹한다)")
     parser.add_argument("--scenes-only", action="store_true", help="씬 바이너리(.scene.bin)만 쿠킹")
     parser.add_argument("--packs-only", action="store_true", help="리소스 팩(.pack)만 쿠킹")
-    parser.add_argument("--output", type=str, default="", help="팩 출력 디렉터리")
+    parser.add_argument("--out", type=str, default="", help="팩 출력 디렉터리")
     parser.add_argument("--cooked-dir", type=str, default="", help="프리팹·씬 쿠킹 산출물 스테이징 디렉터리 (기본: build/*/Bin/Cooked)")
     parser.add_argument("--config", type=str, default="", help="PackConfig.json 경로")
     parser.add_argument("--include-debug-names", action="store_true", help="팩 내부에 파일 경로 디버그 문자열 포함")
@@ -739,7 +739,7 @@ def cookInternal(args: argparse.Namespace) -> int:
                     print(f"                   ... 외 {len(problems) - 20}건", file=sys.stderr)
                 print("                   해결: build/Ninja-Debug/Bin/App.exe --cook-shaders", file=sys.stderr)
                 return 1
-        outDir = Path(args.output) if args.output else resolveDefaultOutputDir(projectRoot, "Packs")
+        outDir = Path(args.out) if args.out else resolveDefaultOutputDir(projectRoot, "Packs")
         if args.build_target:
             listExcluded = _gCookContract.mapExcludedKindByTarget.get(args.build_target, ())
             print(f"[CookAssets] Build target: {args.build_target} (excluded asset kinds: {', '.join(listExcluded) or 'none'})")

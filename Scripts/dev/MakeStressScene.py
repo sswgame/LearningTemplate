@@ -12,8 +12,8 @@
 메시 생성 몫이 한 종류에만 쏠려 실제 씬과 다른 그림이 나온다.
 
 사용법:
-  py -3 Scripts/dev/GenerateStressScene.py --count 4000
-  py -3 Scripts/dev/GenerateStressScene.py --count 8000 --out Resource/game/empty/maps/stress8000.scene.xml
+  py -3 Scripts/dev/MakeStressScene.py --count 4000
+  py -3 Scripts/dev/MakeStressScene.py --count 8000 --out Resource/game/empty/maps/stress8000.scene.xml
 
 만들어진 씬은 **커밋하지 않는다**(`Resource/` 는 배포되는 콘텐츠 트리다). 재고 나서 지운다.
 """

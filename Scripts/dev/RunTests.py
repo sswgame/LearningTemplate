@@ -49,7 +49,7 @@ def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run tests by suite/case name in the right executable and folder.")
+    parser = argparse.ArgumentParser(description="스위트 · 케이스 이름으로 시험을 그 케이스가 사는 실행 파일 · 폴더에서 돌린다")
     parser.add_argument("pattern", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
     addBuildTreeArguments(parser)
     parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")

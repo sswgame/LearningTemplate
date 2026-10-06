@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot, runProcess  # noqa: E402
 from common import BuildTree  # noqa: E402
-from common.AppRun import kBackendSwitch, kSkipExitCode, findUsableBackends, loadGameTable, runApp  # noqa: E402
+from common.AppRun import addAppRunArguments, kBackendSwitch, kSkipExitCode, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
 
@@ -136,14 +136,12 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Golden-image regression of the test games' autoplay on every RHI backend")
-    parser.add_argument("--app", type=Path, required=True, help="the built App executable (its build decides the game)")
-    parser.add_argument("--game", default=None, help="game name (default: SW_ACTIVE_GAME of the App's build)")
-    parser.add_argument("--backends", nargs="+", default=list(kBackendSwitch), choices=list(kBackendSwitch))
-    parser.add_argument("--record", action="store_true", help="capture new references instead of comparing")
-    parser.add_argument("--runs", type=int, default=3, help="runs per backend when recording (the spread sets the tolerance)")
-    parser.add_argument("--diff-dir", type=Path, default=None, help="where failing captures are kept")
-    parser.add_argument("--extra-arg", action="append", default=[], help="extra App argument for this run only (not recorded) - e.g. -gv_viewMode=2 to see that a broken frame fails")
+    parser = argparse.ArgumentParser(description="시험 게임 자동 플레이의 골든 이미지 회귀 — RHI 백엔드마다")
+    addAppRunArguments(parser, bMultipleBackends=True)
+    parser.add_argument("--record", action="store_true", help="견주지 않고 새 기준을 뜬다")
+    parser.add_argument("--runs", type=int, default=3, help="기준을 뜰 때 백엔드마다 돌리는 횟수(흩어짐이 허용 오차를 정한다)")
+    parser.add_argument("--diff-dir", type=Path, default=None, help="실패한 캡처를 남길 폴더")
+    parser.add_argument("--extra-arg", action="append", default=[], help="이번 실행에만 더할 App 인자(기준에 안 남는다) — 예: -gv_viewMode=2 로 깨진 화면이 지는지 본다")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
@@ -151,10 +149,10 @@ def main(listArgument: list[str] | None = None) -> int:
     gameName = args.game or appTree.readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Golden] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
+        print(f"[Golden] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     if not args.app.is_file():
-        print(f"[Golden] App not found: {args.app}", file=sys.stderr)
+        print(f"[Golden] App 이 없습니다: {args.app}", file=sys.stderr)
         return 1
     game = dict(table["games"][gameName], extra_arguments=list(args.extra_arg))
     goldenDir = repositoryRoot / kGoldenRelativeDir / gameName
@@ -165,7 +163,7 @@ def main(listArgument: list[str] | None = None) -> int:
     listBackend = [backend for backend in args.backends if backend in listUsable]
     for backend in args.backends:
         if backend not in listUsable:
-            print(f"[Golden] {gameName} {backend:5} SKIP     not linked into this build", flush=True)
+            print(f"[Golden] {gameName} {backend:5} SKIP     이 빌드에 링크되지 않았다", flush=True)
     mapStatus: dict[str, str] = {}
     with tempfile.TemporaryDirectory(prefix="sw_golden_") as tempDir:
         for backend in listBackend:
@@ -179,7 +177,7 @@ def main(listArgument: list[str] | None = None) -> int:
     if any(status == "fail" for status in mapStatus.values()):
         return 1
     if not any(status in ("pass", "recorded") for status in mapStatus.values()):
-        print(f"[Golden] {gameName}: nothing was compared", flush=True)
+        print(f"[Golden] {gameName}: 견준 것이 없다", flush=True)
         return kSkipExitCode
     return 0
 

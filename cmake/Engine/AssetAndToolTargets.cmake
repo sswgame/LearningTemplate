@@ -65,7 +65,7 @@ else()
 	set(SW_COOK_HOST_TARGET App)
 endif()
 # 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 팩에 넣지 않는다.
-set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>"
+set(swCookArgs --all --out "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>"
 	--build-target "${SW_TARGET_TYPE}")
 if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND swCookArgs --verify-shaders)

@@ -13,13 +13,14 @@
 결과는 결정적이다(고정 씨앗) — 다시 돌려도 같은 바이트다. 강 경로(씬의 `_listRiverPoint`)를 끝에 출력한다.
 
 사용법:
-  py -3 Scripts/dev/GenerateTerrainShowcase.py
+  py -3 Scripts/dev/MakeTerrainShowcase.py
   build/Ninja-Debug/Bin/App.exe --import-heightfields
   build/Ninja-Release/Bin/App.exe --import-textures
 """
 
 from __future__ import annotations
 
+import argparse
 import math
 import pathlib
 import struct
@@ -205,7 +206,8 @@ def writeDetailTextureInternal(resourceRoot: pathlib.Path) -> None:
     writePngInternal(resourceRoot / "engine/textures_raw/terrain/terrain_detail.png", kSize, kSize, 8, 6, detailRows)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="지형 쇼케이스의 절차 생성 원본(높이맵 · 스플랫 · 디테일 텍스처)을 Resource/ 에 쓴다").parse_args(argv)
     resourceRoot = getProjectRoot() / "Resource"
     writeTerrainSourcesInternal(resourceRoot)
     writeDetailTextureInternal(resourceRoot)
