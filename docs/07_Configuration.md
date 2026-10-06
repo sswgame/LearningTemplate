@@ -14,7 +14,7 @@
 | 플레이어가 옵션 메뉴에서 바꾸는 것 | 스키마 `*.settings.xml` + 플레이어 파일 `usersettings.json` | `UserSettingsSchema` | 스키마는 팩, 값은 플레이어 PC | 메뉴 적용 |
 | 메모리 예산 | `Config/Engine/MemoryBudget.json` | `ConfigKeyDoc` 표 | 안 읽음 | 아니오 |
 | 사람이 정하는 에디터 도구 값 · 임포트 규칙 | `Config/Editor/*.json`(커밋) | `EditorToolDefaults` · 임포트 키 표 | 없음 | 일부 |
-| 에디터가 저장하는 상태(도킹 · 레이아웃 · 캔버스 · 테마 · gv 프리셋) | `Saved/Editor/` — 앱이 쓰고 git 이 무시한다. 사람이 고치지 않는다 | — | 없음 | — |
+| 에디터가 저장하는 상태(도킹 · 레이아웃 · 캔버스 · 테마 · gv 프리셋) | `Saved/Editor/` — 앱이 쓰고 git 이 무시한다. 사람이 고치지 않는다. 옛 자리(`Config/Editor/` 의 imgui.ini 등)에 상태가 남은 체크아웃은 PC 마다 한 번 `py -3 Scripts/dev/MoveEditorState.py` | — | 없음 | — |
 | 개발 머신 경로(LLVM · SDK · 파서 플래그) | `Config/Environment/*.json`(로컬, git 무시 — 시드는 `*.defaults.json`) | 파이썬 | 없음 | — |
 | 전용 서버 운영(주소 · 포트 · 틱 · 저장소 · TLS) | `Config/Server/<게임>.json` | `ServerConfig` | **디스크에서 읽음**(운영자가 고친다) | 아니오 |
 | 비밀(DB 비밀번호 · 캐시 AUTH · 키 암호) | **환경 변수** — 설정 파일에는 그 이름만(`_secretEnvironment` 칸) | — | 운영 환경 | — |

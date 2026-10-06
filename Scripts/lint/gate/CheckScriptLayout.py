@@ -55,7 +55,7 @@ _kRule: tuple[FolderRule, ...] = (
     FolderRule("lint/report", r"^Run[A-Z]\w+$", "LintReport"),
     FolderRule("generate", r"^(Generate|Cook)[A-Z]\w+$"),
     FolderRule("setup", r"^(Setup|Install|Add)[A-Z]\w+$", bLibraryExempt=True),
-    FolderRule("dev", r"^(Run|Compare|Make|Configure|Sample|Store|List|Ci)[A-Z]\w*$"),
+    FolderRule("dev", r"^(Run|Compare|Make|Move|Configure|Sample|Store|List|Ci)[A-Z]\w*$"),
 )
 
 
