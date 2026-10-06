@@ -82,8 +82,18 @@ namespace sw
         void undo();
         /** @brief 취소한 명령을 다시 실행합니다. */
         void redo();
-        /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. */
+        /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. 맡긴 내역(`parkHistory`)은 그대로입니다. */
         void clear();
+        /**
+         * @brief 지금 내역(명령 · 위치)을 맡겨 두고 스택을 비웁니다. 이미 맡긴 것이 있으면 버리고 새로 맡깁니다.
+         * @details 에디터가 Play 를 시작할 때 부릅니다 — 플레이 중 편집은 Stop 이 스냅샷으로 되돌리므로 그 동안의 기록은 쓰지 않지만, Play 전 편집은
+         *          Stop 뒤에도 되돌릴 수 있어야 합니다(유니티 · 언리얼과 같다). 맡긴 명령도 모듈을 내릴 때 같은 규칙(`releaseCodeWithin`)으로 정리합니다.
+         */
+        void parkHistory();
+        /** @brief 맡긴 내역을 되돌려 놓습니다(지금 내역은 버린다). 맡긴 것이 없으면 비우기만 합니다. Stop 이 씬을 되돌린 뒤 부릅니다. */
+        void unparkHistory();
+        /** @brief 맡긴 내역이 있으면 true 입니다. */
+        bool hasParkedHistory() const { return _bHistoryParked; }
         /** @brief 취소할 명령의 레이블을 반환합니다. */
         const string& peekUndoLabel() const;
         /** @brief 다시 실행할 명령의 레이블을 반환합니다. */
@@ -123,17 +133,24 @@ namespace sw
         static bool holdsCodeWithin( const Command& cmd, const void* pBegin, const void* pEnd );
         /** @brief 실행할 것이 있는 명령인지 봅니다(undo · redo 둘 다 있거나 트랜잭션 묶음). */
         static bool isExecutable( const Command& cmd );
+        /**
+         * @brief @p inoutListCommand 에서 [@p pBegin, @p pEnd) 의 코드를 쥔 명령을 떼고 @p inoutIndex(되돌린 것 · 아직인 것의 경계)를 맞춥니다. 뗀 수를 돌려줍니다.
+         */
+        static uint32 dropCommandsWithin( vector<Command>& inoutListCommand, size_t& inoutIndex, const void* pBegin, const void* pEnd );
 
     private:
         vector<Command>    _listCommand;
         vector<Command>    _listPendingTransactionCommand;
+        vector<Command>    _listParkedCommand; ///< 맡긴 내역(`parkHistory`)
         ObjectEditListener _objectEditListener;
         string             _transactionLabel;
         string             _lastCoalesceKey;
         string             _empty;
         size_t             _index;
+        size_t             _parkedIndex; ///< 맡긴 내역의 위치
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
         bool   _bIsExecuting;
+        bool   _bHistoryParked; ///< 맡긴 내역이 있다
     };
 } // namespace sw

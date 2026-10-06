@@ -65,6 +65,53 @@ SW_TEST_CASE( CommandStackTest, PushUndoRedoAndBranch )
 }
 
 /**
+ * @brief [CommandStackTest] 맡긴 내역(에디터 Play 동안)은 되찾으면 개수 · 위치가 그대로이고, 맡긴 동안의 기록은 버려진다
+ * @details 에디터가 Play 를 시작할 때 스택을 통째로 비워 Play 전 편집을 되돌릴 수 없었다(유니티 · 언리얼은 Stop 뒤에도 되돌린다).
+ */
+SW_TEST_CASE( CommandStackTest, ParkedHistoryComesBackIntact )
+{
+    CommandStack stack;
+    int32        value{ 0 };
+    auto         makeIncrement = [&value]( const utf8* pLabel )
+    {
+        CommandStack::Command command;
+        command._label = pLabel;
+        command._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+         {
+            ++value;
+        } );
+        command._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [&value]()
+         {
+            --value;
+        } );
+        return command;
+    };
+    stack.push( makeIncrement( "first" ) );
+    stack.push( makeIncrement( "second" ) );
+    stack.undo();
+    SW_EXPECT_EQUAL( size_t{ 2 }, stack.getCommandCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
+
+    stack.parkHistory();
+    SW_EXPECT_TRUE( stack.hasParkedHistory() );
+    SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCommandCount() );
+    SW_EXPECT_FALSE( stack.canUndo() );
+    stack.push( makeIncrement( "during play" ) ); // 맡긴 동안의 기록 — 되찾을 때 버린다
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+
+    stack.unparkHistory();
+    SW_EXPECT_FALSE( stack.hasParkedHistory() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, stack.getCommandCount() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCurrentIndex() );
+    SW_EXPECT_EQUAL( sw::string( "first" ), sw::string( stack.peekUndoLabel().c_str() ) );
+    SW_EXPECT_EQUAL( sw::string( "second" ), sw::string( stack.peekRedoLabel().c_str() ) );
+
+    // 맡긴 것이 없으면 되찾기는 비우기만 한다
+    stack.unparkHistory();
+    SW_EXPECT_EQUAL( size_t{ 0 }, stack.getCommandCount() );
+}
+
+/**
  * @brief [CommandStackTest] 전역 싱글톤 CommandStack 및 다단계 Undo/Redo 체인 검증
  */
 SW_TEST_CASE( CommandStackTest, GlobalSingletonAndMultiStepChain )

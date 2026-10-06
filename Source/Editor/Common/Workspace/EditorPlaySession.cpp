@@ -416,8 +416,10 @@ namespace sw::editor
         const PlaySessionState previous = pData->_state;
         pData->_state                   = state;
 
+        // 편집 내역은 Play 동안 맡겨 두고 Stop 뒤 되찾는다(아래 갈래). 플레이 중 편집은 Stop 이 스냅샷으로 되돌리므로 그 동안의 기록은 버린다 —
+        // 플레이 ↔ 일시정지 사이는 비우기만 한다.
         CommandStack* pCommandStack = editor::getService<CommandStack>();
-        if ( pCommandStack != nullptr )
+        if ( pCommandStack != nullptr && previous != PlaySessionState::Stopped && state != PlaySessionState::Stopped )
             pCommandStack->clear();
 
         // **멈춤을 떠날 때 · 멈춤으로 돌아올 때로 가른다(목표 상태가 무엇이든).** Stopped → Playing 만 월드를 켜면, 멈춤에서
@@ -425,6 +427,8 @@ namespace sw::editor
         // 멈춤 → 일시정지는 일시정지 상태로 플레이를 시작한다(스냅샷 · 시작은 하고 씬은 틱하지 않는다).
         if ( previous == PlaySessionState::Stopped )
         {
+            if ( pCommandStack != nullptr )
+                pCommandStack->parkHistory();
             captureSnapshot( *pData );
             EditorPlaySessionInternal::setWorldPlaying( true );
             // 카메라 위치에서 시작 — 플레이어가 조종하는 세션만. 월드가 시작한 뒤(onBeginPlay 가 스폰 자리를 정한 뒤)에 옮긴다.
@@ -436,6 +440,9 @@ namespace sw::editor
             pData->_bStartMovePending = SW_FALSE;
             EditorPlaySessionInternal::setWorldPlaying( false );
             restoreSnapshot( *pData );
+            // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤라 맡긴 명령의 대상(id)이 다시 맞는다.
+            if ( pCommandStack != nullptr )
+                pCommandStack->unparkHistory();
         }
     }
 

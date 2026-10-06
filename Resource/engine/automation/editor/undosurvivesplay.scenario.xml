@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Play 전의 편집 내역이 Stop 뒤에도 남아 되돌릴 수 있다(panel-audit D4). 저장 안 된 씬이라 Play 를 누르면 확인 상자가 뜬다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/undosurvivesplay.scenario.xml -dx12
+-->
+<Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="75"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="90"><Expect probe="Editor.UndoCount" equals="1"/></At>
+	<At frame="95"><EditorClick mark="gameView.play"/></At>
+	<At frame="110"><EditorClick mark="gameView.playAnyway"/></At>
+	<At frame="140"><Expect probe="Editor.PlayState" equals="1"/></At>
+	<At frame="145"><EditorClick mark="gameView.stop"/></At>
+	<At frame="170">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+		<Expect probe="Editor.UndoIndex" equals="1"/>
+		<EditorExpectObject name="GameObject"/>
+	</At>
+	<At frame="175"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="190">
+		<Expect probe="Editor.UndoIndex" equals="0"/>
+		<EditorExpectObject name="GameObject" count="0"/>
+		<Pass/>
+	</At>
+</Scenario>
