@@ -303,9 +303,9 @@ namespace sw::editor
                 EditorThemeUtil::saveToConfig();
                 if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
                     (void)context.expect( false, "could not restore the editor config file" );
-                if ( probe._bConfigExisted == false )
-                    // 되돌리기 — 결함 의심: 못 지우면 시험 테마가 사용자 설정에 남는데 알리지 않는다(위 writeFile 은 expect 로 알린다)
-                    (void)FileUtil::tryRemoveFile( getEditorConfigPath() );
+                // 원래 없던 파일은 지운다 — 못 지우면 시험 테마가 사용자 설정에 남으므로 위 쓰기 실패처럼 시험 실패로 알린다.
+                if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
+                    (void)context.expect( false, "could not remove the editor config file the test created" );
                 probe = SwatchProbe{};
                 moveMouseAway();
                 return EditorSelfTestStep::Done;
