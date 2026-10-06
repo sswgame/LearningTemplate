@@ -81,6 +81,7 @@ The essentials, which hold on every machine:
 
 ```powershell
 py -3 Scripts/setup/SetupEnvironment.py       # toolchain (LLVM/Ninja/sccache) bootstrap
+py -3 Scripts/setup/SetupSccache.py --config-only  # after adding/removing a git worktree (configure also does it)
 py -3 Scripts/setup/SetupVcpkg.py --install   # vcpkg manifest restore
 cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug
@@ -92,6 +93,9 @@ cmake --build --preset Ninja-Debug
   not by re-configuring one folder (two jobs sharing a build folder break each other's builds). `Ninja-Debug` is the Empty game.
   Dedicated-server presets `*-Server` (`Ninja-Debug-Server`, `Ninja-Shipping-Server`, `WSL-*-Server`, `CI-Shipping-Server`) build the
   Server target; the `*-Shipping` presets are the Client target.
+- sccache is shared by every git worktree: `basedirs` (= this repo + all worktree roots, written by `SetupSccache.py` into
+  sccache's own config file) strips the root from cache keys, and the cache dir is the main repo's `build/sccache_cache`.
+  Windows PCH (`/Yu`) is never cached — configure with `-DSW_ENABLE_PCH=OFF` when a worktree should reuse another's objects.
 - Outputs: `build/<preset>/Bin`. Compile DB: `build/<preset>/compile_commands.json` (`.clangd` points at `Ninja-Debug`).
 - Key cache options (all `SW_*`, declared in `cmake/Config/BuildOptions.cmake`): `SW_SHIPPING_BUILD`,
   `SW_TARGET_TYPE` (`Game` · `Client` · `Server` — the Unreal TargetType slot; empty = Shipping→Client, else Game; code reads only

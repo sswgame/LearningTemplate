@@ -117,6 +117,8 @@ kKeyNinjaDownloadUrls = "ninja_download_urls"
 kKeySccacheToolsSubdir = "sccache_tools_subdir"
 kKeySccacheSearchRoots = "sccache_search_roots"
 kKeySccacheDownloadUrls = "sccache_download_urls"
+kKeySccacheVersion = "sccache_version"
+kKeySccacheSha256 = "sccache_sha256"
 
 kKeyLlvmToolsSubdir = "llvm_tools_subdir"
 kKeyLlvmSearchRoots = "llvm_search_roots"

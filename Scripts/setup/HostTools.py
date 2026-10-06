@@ -18,7 +18,6 @@ from common import (
     ToolSpec,
     runProcess,
     ensureCachedDownload,
-    extractTarSafe,
     extractZipSafe,
     findFirstExistingFileInBinDirs,
     findFirstExistingFileRecursive,
@@ -26,9 +25,6 @@ from common import (
     kKeyNinjaDownloadUrls,
     kKeyNinjaSearchRoots,
     kKeyNinjaToolsSubdir,
-    kKeySccacheDownloadUrls,
-    kKeySccacheSearchRoots,
-    kKeySccacheToolsSubdir,
     kKeyVcpkgInstalledRel,
     loadSearchPaths,
     normalizePath,
@@ -191,23 +187,34 @@ def setupBuildToolInternal(toolName: str,
                            subdirKey: str,
                            searchRootsKey: str,
                            downloadUrlsKey: str,
-                           extractFunc: Callable[[Path, Path, Path, str], None]) -> str:
+                           extractFunc: Callable[[Path, Path, Path, str], None],
+                           *,
+                           acceptExe: Callable[[Path], bool] | None = None,
+                           sha256Key: str = "") -> str:
     """
     공통 도구(Ninja, Sccache 등) 탐색 및 다운로드 추상화 함수.
+
+    - `acceptExe` : 찾은 실행 파일을 쓸지 고른다(버전 핀) — 거절하면 찾지 못한 것으로 보고 받는다.
+    - `sha256Key` : search_paths 의 `{플랫폼: 해시}` 키 — 받은 압축 파일을 그 해시로 검사한다.
     """
     import logging
     logger = logging.getLogger("SetupEnvironment")
     logger.info(f"[{toolName}] Checking {toolName}...")
-    
+
     search = loadSearchPaths()
     toolsDir = resolveToolsSubdir(subdirKey, search)
     localExePath = toolsDir / exeName
+
+    def isUsableInternal(root: Path) -> bool:
+        exePath = root if root.is_file() else root / exeName
+        return exePath.is_file() and (acceptExe is None or acceptExe(exePath))
+
     spec = ToolSpec(
         name=toolName,
         tools_subdir_key=subdirKey,
         search_roots_key=searchRootsKey,
         bin_names=(exeName, exeName.replace(".exe", "") if platform.system() == "Windows" else exeName),
-        validate_func=lambda root: root.is_file() or (root / exeName).is_file(),
+        validate_func=isUsableInternal,
     )
     if found := findToolRoot(spec, search, logger=logger):
         resolvedExe = found if found.is_file() else (found / exeName if (found / exeName).is_file() else found)
@@ -221,10 +228,11 @@ def setupBuildToolInternal(toolName: str,
     logger.info(f"[{toolName}] Downloading into {toolsDir}")
     toolsDir.mkdir(parents=True, exist_ok=True)
     archiveName = url.rsplit("/", 1)[-1]
+    expectedHash = (search.get(sha256Key) or {}).get(platformKey()) if sha256Key else None
     archivePath = ensureCachedDownload(
-        url, toolsCacheDir() / archiveName, minSize=50_000, label=toolName
+        url, toolsCacheDir() / archiveName, minSize=50_000, label=toolName, sha256=expectedHash
     )
-    
+
     try:
         extractFunc(archivePath, toolsDir, localExePath, exeName)
         if localExePath.is_file():
@@ -240,31 +248,11 @@ def setupBuildToolInternal(toolName: str,
 def setupNinja() -> str:
     """시스템 PATH 또는 search_paths.json에서 Ninja 빌드 도구를 탐색하며, 없을 경우 다운로드하여 Tools/Ninja에 설치합니다."""
     exeName = "ninja.exe" if platform.system() == "Windows" else "ninja"
-    
+
     def extractNinjaInternal(archive: Path, destDir: Path, localExe: Path, exe: str) -> None:
         extractZipSafe(archive, destDir)
-        
+
     return setupBuildToolInternal(
         "SetupNinja", exeName, kKeyNinjaToolsSubdir,
         kKeyNinjaSearchRoots, kKeyNinjaDownloadUrls, extractNinjaInternal
-    )
-
-
-def setupSccache() -> str:
-    """시스템 PATH 또는 search_paths.json에서 sccache(컴파일 캐시)를 탐색하며, 없을 경우 다운로드하여 Tools/Sccache에 설치합니다."""
-    exeName = "sccache.exe" if platform.system() == "Windows" else "sccache"
-    
-    def extractSccacheInternal(archive: Path, destDir: Path, localExe: Path, exe: str) -> None:
-        tempExtDir = toolsCacheDir() / "sccache_extracted"
-        if tempExtDir.is_dir():
-            shutil.rmtree(tempExtDir, ignore_errors=True)
-        extractTarSafe(archive, tempExtDir, mode="r:gz")
-
-        if extractedExe := next((cand for cand in tempExtDir.rglob(exe) if cand.is_file()), None):
-            shutil.copy2(extractedExe, localExe)
-        shutil.rmtree(tempExtDir, ignore_errors=True)
-        
-    return setupBuildToolInternal(
-        "SetupSccache", exeName, kKeySccacheToolsSubdir,
-        kKeySccacheSearchRoots, kKeySccacheDownloadUrls, extractSccacheInternal
     )

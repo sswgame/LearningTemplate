@@ -34,3 +34,20 @@ LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진�
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **오랜만에 쓰는 WSL 클론은 많이 뒤처져 있을 수 있습니다.** 실패가 이번 변경 탓인지 보려면 패치 없는 HEAD 로 기준선을 먼저 잽니다. 클론은 `git fetch … main` 뒤 `git reset --hard FETCH_HEAD` 로 맞추고 stash 를 쌓지 않습니다.
   리눅스 전용 파일은 Windows 빌드가 컴파일하지 않으므로 고쳤으면 반드시 WSL 에서 빌드합니다.
+- **워크트리 사이 sccache 적중은 basedirs 와 PCH OFF 가 둘 다 있어야 난다**(2026-10-07, 같은 커밋 · Ninja-Debug · 둘째 워크트리). 0.8.1 + PCH ON 은 적중 0 / 2442(2355 가 `/Fp` 로 캐시 불가),
+  0.18 + basedirs 없음 + PCH OFF 는 181 / 2358(첫 워크트리 안의 자기 적중과 같은 수 — 워크트리 사이 0), 0.18 + basedirs + PCH OFF 는 2282 / 2358 = 96.8 %(1354 s → 294 s).
+  PCH OFF 첫 빌드는 PCH ON 보다 몇 배 느려(289 s 대 1281 ~ 1388 s, 같은 조건은 아님) 기본은 PCH ON 그대로다.
+
+## sccache — 워크트리 사이의 캐시 (`SetupSccache.py`)
+- 버전은 `Config/Environment/search_paths.defaults.json` 의 `sccache_version` · `sccache_sha256` 이 고정한다. 찾은 sccache 의 버전이 다르면 받아서 `Tools/Sccache` 를
+  바꾼다(서버를 먼저 멈춘다 — **빌드가 하나라도 돌면 바꾸지 않고** 옛 실행 파일로 계속 짓는다). `Tools/Sccache` 는 워크트리 모두의 junction 이라 한 번 바꾸면 모두 바뀐다.
+- **경로 무관 캐시**: sccache 0.14+ 의 `basedirs`(ccache `CCACHE_BASEDIR` 와 같은 생각 — 캐시 키를 만들 때 가장 긴 루트 접두를 지운다)에 이 저장소와
+  `git worktree list` 의 모든 루트를 적는다. 캐시 폴더도 하나(주 저장소 `build/sccache_cache`) — 프리셋은 `SCCACHE_DIR` 을 정하지 않는다(정하면 서버를 띄운
+  워크트리의 폴더가 캐시가 된다). 설정은 sccache 의 기본 설정 파일(`SCCACHE_CONF`, 없으면 `%APPDATA%/Mozilla/sccache/config/config` · `~/.config/sccache/config`)에
+  쓴다 — 첫 줄 표지가 없는(손으로 쓴) 파일은 건드리지 않는다.
+- **워크트리를 만들거나 지운 뒤**: 그 워크트리에서 `cmake --preset …` 을 돌리면 `SetupEnvironment` 가 목록을 다시 쓴다. configure 전에 맞추려면
+  `py -3 Scripts/setup/SetupSccache.py --config-only`. 목록이 바뀌었고 빌드가 돌지 않으면 서버를 멈춘다(다음 컴파일이 새 설정으로 띄운다).
+  빌드가 돌면 멈추지 않는다 — 서버가 쉬다 내려간 뒤(600 초) 적용된다. 지금 서버가 쓰는 루트는 `sccache --show-stats` 의 `Base directories` 줄.
+- **PCH 를 켠 Windows 빌드는 거의 캐시되지 않는다** — clang-cl 의 `/Yu` · `/Fp` 는 0.18 도 캐시하지 못한다(Ninja-Debug 2442 요청 중 2355 가 "Non-cacheable: /Fp").
+  워크트리 사이의 적중을 보려면 `-DSW_ENABLE_PCH=OFF` 로 구성한다(같은 커밋의 둘째 워크트리 적중 96.8 % — 아래 함정 절의 측정).
+- 다른 워크트리에서 적중한 오브젝트는 그 워크트리의 경로를 품는다(`/Z7` 디버그 정보의 소스 경로 · `__FILE__`) — 키에서만 경로를 지운다.

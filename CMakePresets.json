@@ -13,8 +13,7 @@
       },
       "environment": {
         "VCPKG_BINARY_SOURCES": "clear;files,${sourceDir}/build/vcpkg_cache,readwrite",
-        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg",
-        "SCCACHE_DIR": "${sourceDir}/build/sccache_cache"
+        "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/Modules/Toolchain/Vcpkg"
       }
     },
     {

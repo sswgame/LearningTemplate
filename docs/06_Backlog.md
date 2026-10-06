@@ -448,6 +448,9 @@
 - **규칙 예외 감사(2026-10-07)에서 정한 넷의 적용** — 두 플랫폼 공통 명시적 경고 목록, `(void)` 이유 주석은 `[[nodiscard]]` 실패 가능 함수에만,
   백엔드 명령줄 철자 하나씩(`-dx12` · `-dx11` · `-vk` · `-gl` — 지금은 `CookContract.json` 의 `aliases` 가 여럿을 받는다), 출처를 모르는 리소스 교체.
   결정과 근거는 [결정 기록](09_Decisions.md) 5-2.
+- **PCH 를 끈 Windows Debug 에 `-Wsign-conversion` 경고 31 건**(2026-10-07, `9f595052e`): `Core` 의 `Memory.h:296` · `vector.h:525/897/1004/1010` ·
+  `unordered_map.h:551` 템플릿 본문이 `char` → `unsigned char` · `int` → `uint32/size_t` 로 인스턴스화되는 곳. PCH 를 켜면 안 보인다. 부르는 쪽(인스턴스화한 TU)을
+  찾아 고친 뒤 `RunBuildWarnings.py --preset Ninja-Debug` 를 PCH 끈 빌드 폴더로 확인한다.
 - **커버리지 안내 퍼저(`LoaderFuzzer`)는 아직 한 번도 지어지지 않았다**(2026-10-06 들임, 리눅스 전용 — 이 PC 는 WSL 을 쓰지 않았다). 첫 `fuzz.yml` 실행
   (밤 또는 `workflow_dispatch`)이 구성 · 링크(`-fsanitize=fuzzer-no-link` 엔진 + ASan, `-fsanitize=fuzzer` 실행 파일)와 대상마다 60 초가 끝나는지 본다.
   지면 그 실행의 주석 · 아티팩트(`fuzz-findings`)로 고친다.

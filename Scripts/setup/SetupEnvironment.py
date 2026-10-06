@@ -61,9 +61,9 @@ from setup.HostTools import (
     findMsvcPath,
     findWindowsSdkPath,
     setupNinja,
-    setupSccache,
 )
 from setup.SetupLlvm import findLibClangDllPath, isMinimalLlvmRoot
+from setup.SetupSccache import applySccacheConfig, isPinnedSccache, setupSccache
 
 
 def asDictInternal(value: Any) -> dict:
@@ -198,8 +198,12 @@ class EnvironmentSetupManager:
             self.existing_config,
             kKeySccachePath,
             lambda: normalizePath(setupSccache() or ""),
+            validate=lambda cached: Path(cached).is_file() and isPinnedSccache(Path(cached)),
         )
         sccachePath = normalizePath(str(sccacheFound)) if sccacheFound else ""
+        if sccachePath:
+            # 워크트리를 더하면 configure 가 여기를 지나며 basedirs 를 넓힌다.
+            self.safeCallInternal("SetupSccacheConfig", applySccacheConfig, self.project_root, Path(sccachePath))
 
         return vcpkgPath, ninjaPath, sccachePath
 
