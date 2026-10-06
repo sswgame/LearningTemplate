@@ -126,5 +126,16 @@ namespace sw
         [[nodiscard]] virtual bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) = 0;
         /** @brief PEM 인증서(첫 장)의 DER SHA-256 을 소문자 16 진 64 자로 줍니다. */
         [[nodiscard]] virtual bool computeCertificateSha256( const string& certificatePem, string& outHex ) = 0;
+        /** @brief SHA-256 다이제스트(32 B)입니다 — PKCE 코드 확인 · 내용 해시. */
+        [[nodiscard]] virtual bool computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) = 0;
+        /**
+         * @brief 서명을 확인합니다(외부 로그인 ID 토큰). 키 구성 요소가 틀렸거나 서명이 맞지 않으면 false 입니다.
+         * @details ES256 서명은 JWS 형식(r ‖ s, 64 B)이다. RSA 는 2048 비트 미만 키를 거절한다.
+         */
+        [[nodiscard]] virtual bool verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) = 0;
+        /** @brief 서명 키 쌍을 만듭니다 — 비밀 키는 PEM(PKCS#8), 공개 키는 구성 요소. 시험의 가짜 발급자 · 개발 서버가 쓴다. */
+        [[nodiscard]] virtual bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) = 0;
+        /** @brief PEM 비밀 키로 서명합니다(ES256 은 r ‖ s 64 B) — 클라이언트 비밀 JWT(애플) · 시험 발급자. */
+        [[nodiscard]] virtual bool signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) = 0;
     };
 } // namespace sw

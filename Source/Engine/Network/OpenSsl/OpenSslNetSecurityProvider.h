@@ -25,5 +25,9 @@ namespace sw
         unique_ptr<ITlsContext> createTlsContext( const TlsContextSettings& settings, string& outError ) override;
         [[nodiscard]] bool      createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override;
         [[nodiscard]] bool      computeCertificateSha256( const string& certificatePem, string& outHex ) override;
+        [[nodiscard]] bool      computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override;
+        [[nodiscard]] bool      verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override;
+        [[nodiscard]] bool      createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override;
+        [[nodiscard]] bool      signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) override;
     };
 } // namespace sw

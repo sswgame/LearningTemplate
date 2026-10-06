@@ -7,6 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 namespace sw
 {
@@ -65,6 +66,26 @@ namespace sw
 
         /** @brief 비밀 키를 0 으로 지웁니다(컴파일러가 지우지 못하게 volatile 쓰기). */
         SW_API void wipe();
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 서명 알고리즘입니다(외부 로그인 ID 토큰 · 클라이언트 비밀 JWT). JWS 이름: RS256 · ES256. */
+    enum class NetSignatureAlgorithm : uint8
+    {
+        RsaPkcs1Sha256 = 0, ///< RS256 — RSASSA-PKCS1-v1_5 + SHA-256
+        EcdsaP256Sha256     ///< ES256 — P-256 + SHA-256, 서명은 r ‖ s(각 32 B, JWS 형식 — DER 아님)
+    };
+
+    /** @brief 공개 키의 구성 요소입니다(JWK 의 n · e 또는 x · y — 모두 빅 엔디언 바이트). */
+    struct NetPublicKey
+    {
+        vector<uint8>         _modulus{};  ///< RSA n
+        vector<uint8>         _exponent{}; ///< RSA e
+        vector<uint8>         _x{};        ///< EC P-256 x(32 B)
+        vector<uint8>         _y{};        ///< EC P-256 y(32 B)
+        NetSignatureAlgorithm _algorithm{ NetSignatureAlgorithm::RsaPkcs1Sha256 };
     };
 } // namespace sw
 

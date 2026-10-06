@@ -88,6 +88,38 @@ namespace
             (void)outHex;
             return false;
         }
+        bool computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override
+        {
+            (void)pData;
+            (void)dataSize;
+            (void)pOutDigest;
+            return false;
+        }
+        bool verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override
+        {
+            (void)publicKey;
+            (void)pData;
+            (void)dataSize;
+            (void)pSignature;
+            (void)signatureSize;
+            return false;
+        }
+        bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override
+        {
+            (void)algorithm;
+            (void)outPrivateKeyPem;
+            (void)outPublicKey;
+            return false;
+        }
+        bool signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) override
+        {
+            (void)algorithm;
+            (void)privateKeyPem;
+            (void)pData;
+            (void)dataSize;
+            (void)outSignatureBytes;
+            return false;
+        }
 
         vector<uint8> _secret{};
         vector<uint8> _salt{};

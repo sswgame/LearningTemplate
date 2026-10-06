@@ -418,6 +418,10 @@ cd build/Ninja-Debug/Bin
   대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
   작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 공유 `GF_Account`(와이어 타입)와 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴가 들어갔다.
+  외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
+  (구글 · 애플 · 카카오 · 네이버 · 스팀 — 앱 등록 · client id 는 쓰는 게임이 생기면), 호스트 이름 해석(Core 주소는 IPv4 뿐 — 실제 제공자 호스트에 필요), 애플 client secret JWT ·
+  탈퇴 때 토큰 철회(`Provider/Apple/`), 모바일 SDK 클라이언트, OS 브라우저 열기(`IExternalBrowser` 구현 — 게임 몫)가 남았다. 텔레메트리의 `IHttpClient`(Engine, 막는 창구 · 기본 Null)를
+  이 HTTP 클라이언트로 잇는 일도 남았다(Engine 은 GameFramework 를 모른다 — 게임이 어댑터).
   남은 것: `AccountClient` · 스트림 바인딩 · UDP 접속 인증기.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는

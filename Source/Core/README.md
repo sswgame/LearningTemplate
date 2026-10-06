@@ -20,7 +20,7 @@
 - **Container/**: 표준 컨테이너 별칭(`vector.h` · `unordered_map.h` …) · `span` · `VectorUtil`(`removeAtSwap` 등) · `sparse_set` · `DynamicBitset` · `PagedArray`(주소가 옮겨지지 않는 청크 배열) ·
   `InlineAllocator`(SBO) · 핸들(`SlotHandle` · `SlotHandleTable` · `GameObjectHandle` · `ComponentHandle`) · `RegistrationList`(등록부의 공통 모양 —
   중복 거절 · 정렬 · 이름 찾기 · 이름 사본)
-- **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID`
+- **String/**: `StringUtil` · `StringBuilder` · `fixed_string` · `hashed_string` · `formatString` · `string_splitter` · `TagID` · `Base64Util`(표준 · URL 안전)
 - **Delegate/**: `Delegate`
 - **Event/**: `EventDispatcher` · `EventType`(엔진 예약 이벤트 ID — 이벤트 타입은 그 개념이 사는 층에 둔다)
 - **Module/**: `ModuleImageUtil` — 동적 라이브러리(모듈 이미지)의 단일 자리: 이름(접두어 · 확장자 · 디버그 심볼) · 올리기 · 심볼 · 이미지 범위 · 의존 고정, 그리고 그 이미지의 코드를 쥔 등록을 떼고 내리기(`unloadModuleImage`). `IModuleUnloadListener`(`ModuleUnloadListener.h`) — 모듈 이미지를 내리기 전에 그 코드(델리게이트 스텁 · vtable)를 떼야 하는 등록부의 공통 계약과 목록.
@@ -30,7 +30,7 @@
   (zlib · zstd · LZ4 코덱은 외부 라이브러리를 쓰므로 `Engine/Compression` 에 있다)
 - **Network/**: 네트워크 공통 계층 — 장르를 모른다. 장르별 방식(권위 서버 복제 · 락스텝 · 롤백 · 턴 중계 · MMO 관심 영역)은 GameFramework 의 `GF_Net*` 키트(DLL)로
   얹어, 싱글 게임은 그 키트를 링크하지 않는다.
-  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) · `Security/`(암호 창구 `INetSecurityProvider` — AEAD · X25519 · HKDF · Argon2id · 메모리 TLS 세션, 구현은 Engine 의 OpenSSL ·
+  폴더가 층이다 — 뿌리(`NetTypes` · `BitStream`) ← `Transport/`(전송 · 루프백 · UDP · 회선 흉내) · `Security/`(암호 창구 `INetSecurityProvider` — AEAD · X25519 · HKDF · Argon2id · SHA-256 · 서명 RS256/ES256(확인 · 서명 · 키 쌍) · 메모리 TLS 세션, 구현은 Engine 의 OpenSSL ·
   `NetReplayWindow` 재전송 방지 창 · `NetSessionKeyUtil` 세션 키 유도) ← `Connection/`(`NetConnection` · `NetHost` ·
   `NetHostThread` · `SequenceBuffer`) ← `Message/`(`NetMessage` · `NetSendBudget`) ← `Replication/`(키트가 나눠 쓰는 복제 부품 — `NetPrioritizer` · `NetParallel` · `TickRingBuffer` · `NetInputWindow` ·
   `NetClock` · `InterpolationBuffer`).

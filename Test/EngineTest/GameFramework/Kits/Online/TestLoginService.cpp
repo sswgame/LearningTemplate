@@ -733,7 +733,10 @@ SW_TEST_CASE( LoginServiceTest, PlatformLoginCreatesThenReuses )
     LoginFixture              fixture;
     FakePlatformLoginProvider provider{ "fake" };
     SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
-    SW_EXPECT_FALSE( fixture->_service->registerPlatformProvider( &provider ) ); // 같은 이름 둘
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a second provider with the same name is refused with an error log" );
+        SW_EXPECT_FALSE( fixture->_service->registerPlatformProvider( &provider ) ); // 같은 이름 둘
+    }
 
     LoginGrant first;
     SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77:Hero Name!", 0, first ) == LoginResult::Ok );

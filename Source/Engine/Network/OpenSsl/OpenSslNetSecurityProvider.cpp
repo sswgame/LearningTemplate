@@ -7,10 +7,13 @@
 
 #include <cstring>
 #include <openssl/bio.h>
+#include <openssl/bn.h>
 #include <openssl/core_names.h>
+#include <openssl/ecdsa.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
+#include <openssl/param_build.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
@@ -371,6 +374,119 @@ namespace sw
             SSL_CTX* _pContext;
             TlsRole  _role;
         };
+
+        /** @brief 서명 확인 · 서명 · 키 쌍 — EVP_PKEY 를 JWK 구성 요소에서 만들고 ES256 의 r ‖ s 와 DER 를 오간다. */
+        struct OpenSslSignatureInternal
+        {
+            static constexpr int32 kEcCoordinateSize = 32;
+            static constexpr int32 kMinRsaBits       = 2048;
+
+            /** @brief 공개 키 구성 요소에서 EVP_PKEY 를 만듭니다. 실패하면 nullptr. */
+            static EVP_PKEY* createPublicKey( const NetPublicKey& publicKey )
+            {
+                OSSL_PARAM_BLD* pBuilder = OSSL_PARAM_BLD_new();
+                if ( pBuilder == nullptr )
+                    return nullptr;
+                BIGNUM*       pModulus  = nullptr;
+                BIGNUM*       pExponent = nullptr;
+                vector<uint8> pointBytes;
+                const utf8*   pKeyType = "RSA";
+                bool          bBuilt   = false;
+                if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
+                {
+                    pModulus  = BN_bin2bn( publicKey._modulus.data(), static_cast<int32>( publicKey._modulus.size() ), nullptr );
+                    pExponent = BN_bin2bn( publicKey._exponent.data(), static_cast<int32>( publicKey._exponent.size() ), nullptr );
+                    bBuilt    = publicKey._modulus.empty() == false && publicKey._exponent.empty() == false && pModulus != nullptr && pExponent != nullptr &&
+                             OSSL_PARAM_BLD_push_BN( pBuilder, OSSL_PKEY_PARAM_RSA_N, pModulus ) == 1 &&
+                             OSSL_PARAM_BLD_push_BN( pBuilder, OSSL_PKEY_PARAM_RSA_E, pExponent ) == 1;
+                }
+                else
+                {
+                    pKeyType              = "EC";
+                    const bool bSizeOk    = static_cast<int32>( publicKey._x.size() ) == kEcCoordinateSize && static_cast<int32>( publicKey._y.size() ) == kEcCoordinateSize;
+                    utf8       arrGroup[] = "prime256v1";
+                    if ( bSizeOk )
+                    {
+                        pointBytes.push_back( 0x04 ); // 압축하지 않은 점
+                        pointBytes.insert( pointBytes.end(), publicKey._x.begin(), publicKey._x.end() );
+                        pointBytes.insert( pointBytes.end(), publicKey._y.begin(), publicKey._y.end() );
+                    }
+                    bBuilt = bSizeOk && OSSL_PARAM_BLD_push_utf8_string( pBuilder, OSSL_PKEY_PARAM_GROUP_NAME, arrGroup, 0 ) == 1 &&
+                             OSSL_PARAM_BLD_push_octet_string( pBuilder, OSSL_PKEY_PARAM_PUB_KEY, pointBytes.data(), pointBytes.size() ) == 1;
+                }
+                OSSL_PARAM*   pParams  = bBuilt ? OSSL_PARAM_BLD_to_param( pBuilder ) : nullptr;
+                EVP_PKEY_CTX* pContext = pParams != nullptr ? EVP_PKEY_CTX_new_from_name( nullptr, pKeyType, nullptr ) : nullptr;
+                EVP_PKEY*     pKey     = nullptr;
+                const bool    bMade    = pContext != nullptr && EVP_PKEY_fromdata_init( pContext ) == 1 && EVP_PKEY_fromdata( pContext, &pKey, EVP_PKEY_PUBLIC_KEY, pParams ) == 1;
+                if ( bMade == false )
+                {
+                    EVP_PKEY_free( pKey );
+                    pKey = nullptr;
+                }
+                EVP_PKEY_CTX_free( pContext );
+                OSSL_PARAM_free( pParams );
+                OSSL_PARAM_BLD_free( pBuilder );
+                BN_free( pModulus );
+                BN_free( pExponent );
+                return pKey;
+            }
+
+            /** @brief r ‖ s(64 B)를 DER ECDSA 서명으로 바꿉니다. */
+            [[nodiscard]] static bool convertRawToDer( const uint8* pSignature, int32 signatureSize, vector<uint8>& outDer )
+            {
+                if ( signatureSize != kEcCoordinateSize * 2 )
+                    return false;
+                ECDSA_SIG* pSignatureObject = ECDSA_SIG_new();
+                BIGNUM*    pR               = BN_bin2bn( pSignature, kEcCoordinateSize, nullptr );
+                BIGNUM*    pS               = BN_bin2bn( pSignature + kEcCoordinateSize, kEcCoordinateSize, nullptr );
+                const bool bSet             = pSignatureObject != nullptr && pR != nullptr && pS != nullptr && ECDSA_SIG_set0( pSignatureObject, pR, pS ) == 1;
+                if ( bSet == false )
+                {
+                    BN_free( pR );
+                    BN_free( pS );
+                    ECDSA_SIG_free( pSignatureObject );
+                    return false;
+                }
+                const int32 derSize = i2d_ECDSA_SIG( pSignatureObject, nullptr );
+                bool        bDone   = derSize > 0;
+                if ( bDone )
+                {
+                    outDer.resize( static_cast<size_t>( derSize ) );
+                    uint8* pCursor = outDer.data();
+                    bDone          = i2d_ECDSA_SIG( pSignatureObject, &pCursor ) == derSize;
+                }
+                ECDSA_SIG_free( pSignatureObject );
+                return bDone;
+            }
+
+            /** @brief DER ECDSA 서명을 r ‖ s(64 B)로 바꿉니다. */
+            [[nodiscard]] static bool convertDerToRaw( const vector<uint8>& der, vector<uint8>& outRaw )
+            {
+                const uint8* pCursor          = der.data();
+                ECDSA_SIG*   pSignatureObject = d2i_ECDSA_SIG( nullptr, &pCursor, static_cast<int32>( der.size() ) );
+                if ( pSignatureObject == nullptr )
+                    return false;
+                const BIGNUM* pR = nullptr;
+                const BIGNUM* pS = nullptr;
+                ECDSA_SIG_get0( pSignatureObject, &pR, &pS );
+                outRaw.assign( static_cast<size_t>( kEcCoordinateSize * 2 ), 0 );
+                const bool bDone = BN_bn2binpad( pR, outRaw.data(), kEcCoordinateSize ) == kEcCoordinateSize &&
+                                   BN_bn2binpad( pS, outRaw.data() + kEcCoordinateSize, kEcCoordinateSize ) == kEcCoordinateSize;
+                ECDSA_SIG_free( pSignatureObject );
+                return bDone;
+            }
+
+            [[nodiscard]] static bool readBignumParam( EVP_PKEY* pKey, const utf8* pName, vector<uint8>& outBytes )
+            {
+                BIGNUM* pNumber = nullptr;
+                if ( EVP_PKEY_get_bn_param( pKey, pName, &pNumber ) != 1 || pNumber == nullptr )
+                    return false;
+                outBytes.assign( static_cast<size_t>( BN_num_bytes( pNumber ) ), 0 );
+                const bool bDone = BN_bn2bin( pNumber, outBytes.data() ) == static_cast<int32>( outBytes.size() );
+                BN_free( pNumber );
+                return bDone;
+            }
+        };
     } // namespace
 } // namespace sw
 
@@ -607,5 +723,114 @@ namespace sw
             X509_free( pCertificate );
         }
         return bComputed;
+    }
+
+    bool OpenSslNetSecurityProvider::computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
+    {
+        if ( pOutDigest == nullptr || dataSize < 0 || ( pData == nullptr && dataSize > 0 ) )
+            return false;
+        uint32 digestSize = 0;
+        return EVP_Digest( pData, static_cast<size_t>( dataSize ), pOutDigest, &digestSize, EVP_sha256(), nullptr ) == 1 && digestSize == 32;
+    }
+
+    bool OpenSslNetSecurityProvider::verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize )
+    {
+        using Internal = OpenSslSignatureInternal;
+        if ( pSignature == nullptr || signatureSize <= 0 || dataSize < 0 )
+            return false;
+        EVP_PKEY* pKey = Internal::createPublicKey( publicKey );
+        if ( pKey == nullptr )
+        {
+            ERR_clear_error();
+            return false;
+        }
+        const bool    bRsa      = publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256;
+        const bool    bStrongOk = bRsa == false || EVP_PKEY_get_bits( pKey ) >= Internal::kMinRsaBits;
+        vector<uint8> derSignatureBytes;
+        const bool    bShapeOk    = bRsa || Internal::convertRawToDer( pSignature, signatureSize, derSignatureBytes );
+        const uint8*  pChecked    = bRsa ? pSignature : derSignatureBytes.data();
+        const size_t  checkedSize = bRsa ? static_cast<size_t>( signatureSize ) : derSignatureBytes.size();
+        EVP_MD_CTX*   pDigest     = EVP_MD_CTX_new();
+        const bool    bVerified   = bStrongOk && bShapeOk && pDigest != nullptr && EVP_DigestVerifyInit( pDigest, nullptr, EVP_sha256(), nullptr, pKey ) == 1 &&
+                               EVP_DigestVerify( pDigest, pChecked, checkedSize, pData, static_cast<size_t>( dataSize ) ) == 1;
+        EVP_MD_CTX_free( pDigest );
+        EVP_PKEY_free( pKey );
+        ERR_clear_error(); // 틀린 서명은 정상 흐름이다 — 오류 큐를 남기지 않는다
+        return bVerified;
+    }
+
+    bool OpenSslNetSecurityProvider::createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey )
+    {
+        using Internal          = OpenSslSignatureInternal;
+        outPublicKey            = NetPublicKey{};
+        outPublicKey._algorithm = algorithm;
+        utf8       arrCurve[]   = "P-256";
+        const bool bRsa         = algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256;
+        EVP_PKEY*  pKey         = nullptr;
+        if ( bRsa )
+            pKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "RSA", static_cast<size_t>( Internal::kMinRsaBits ) );
+        else
+            pKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
+        bool bMade = pKey != nullptr;
+        if ( bMade && algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
+        {
+            bMade = Internal::readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_N, outPublicKey._modulus ) &&
+                    Internal::readBignumParam( pKey, OSSL_PKEY_PARAM_RSA_E, outPublicKey._exponent );
+        }
+        else if ( bMade )
+        {
+            uint8  arrPoint[1 + Internal::kEcCoordinateSize * 2];
+            size_t pointSize = 0;
+            bMade            = EVP_PKEY_get_octet_string_param( pKey, OSSL_PKEY_PARAM_ENCODED_PUBLIC_KEY, arrPoint, sizeof( arrPoint ), &pointSize ) == 1 &&
+                    pointSize == sizeof( arrPoint ) && arrPoint[0] == 0x04;
+            if ( bMade )
+            {
+                outPublicKey._x.assign( arrPoint + 1, arrPoint + 1 + Internal::kEcCoordinateSize );
+                outPublicKey._y.assign( arrPoint + 1 + Internal::kEcCoordinateSize, arrPoint + sizeof( arrPoint ) );
+            }
+        }
+        BIO* pKeyBio = bMade ? BIO_new( BIO_s_mem() ) : nullptr;
+        bMade        = bMade && pKeyBio != nullptr && PEM_write_bio_PrivateKey( pKeyBio, pKey, nullptr, nullptr, 0, nullptr, nullptr ) == 1;
+        if ( bMade )
+        {
+            BUF_MEM* pKeyBuffer = nullptr;
+            BIO_get_mem_ptr( pKeyBio, &pKeyBuffer );
+            outPrivateKeyPem.assign( pKeyBuffer->data, pKeyBuffer->length );
+        }
+        else
+        {
+            SW_LOG_ERROR( "Could not create a signing key pair: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+        }
+        BIO_free( pKeyBio );
+        EVP_PKEY_free( pKey );
+        return bMade;
+    }
+
+    bool OpenSslNetSecurityProvider::signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes )
+    {
+        using Internal = OpenSslSignatureInternal;
+        outSignatureBytes.clear();
+        if ( dataSize < 0 || ( pData == nullptr && dataSize > 0 ) )
+            return false;
+        BIO*        pKeyBio    = BIO_new_mem_buf( privateKeyPem.data(), static_cast<int32>( privateKeyPem.size() ) );
+        EVP_PKEY*   pKey       = pKeyBio != nullptr ? PEM_read_bio_PrivateKey( pKeyBio, nullptr, nullptr, nullptr ) : nullptr;
+        const bool  bTypeOk    = pKey != nullptr && EVP_PKEY_is_a( pKey, algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 ? "RSA" : "EC" ) == 1;
+        EVP_MD_CTX* pDigest    = EVP_MD_CTX_new();
+        size_t      signedSize = 0;
+        bool        bSigned    = bTypeOk && pDigest != nullptr && EVP_DigestSignInit( pDigest, nullptr, EVP_sha256(), nullptr, pKey ) == 1 &&
+                       EVP_DigestSign( pDigest, nullptr, &signedSize, pData, static_cast<size_t>( dataSize ) ) == 1;
+        vector<uint8> signature( signedSize, 0 );
+        bSigned = bSigned && EVP_DigestSign( pDigest, signature.data(), &signedSize, pData, static_cast<size_t>( dataSize ) ) == 1;
+        signature.resize( signedSize );
+        if ( bSigned && algorithm == NetSignatureAlgorithm::EcdsaP256Sha256 )
+            bSigned = Internal::convertDerToRaw( signature, outSignatureBytes );
+        else if ( bSigned )
+            outSignatureBytes = std::move( signature );
+        if ( bSigned == false )
+            SW_LOG_ERROR( "Could not sign: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+        EVP_MD_CTX_free( pDigest );
+        EVP_PKEY_free( pKey );
+        BIO_free( pKeyBio );
+        return bSigned;
     }
 } // namespace sw

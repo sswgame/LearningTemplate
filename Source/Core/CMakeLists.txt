@@ -70,6 +70,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/ModuleBuildId.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/Process.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Process/ShutdownSignal.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/String/Base64Util.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/StringUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/TagID.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/String/hashed_string.cpp"

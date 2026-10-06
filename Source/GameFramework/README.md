@@ -121,6 +121,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (`ThreadedLocalStore` 전용 스레드 하나 · `MemoryLocalStore` 그 자리 실행), 장치 키(`LocalDeviceKeyProvider` — Windows DPAPI · 리눅스 0600, 실수 · 가벼운 변조 막기만),
   공장(`LocalStoreFactory` — file · memory, 키트가 올리는 이름: `GF_SqlStore` 의 sqlite). 경로는 Core `UserDataPath`(사용자 설정과 같은 한 곳).
   시험: `LocalStoreMemoryTest` · `LocalStoreFileTest` · `LocalStoreSqliteTest`(같은 계약 아홉 `LocalStoreContract.h`).
+  `Online/Http`: 최소 HTTP/1.1(`HttpClient` — 맡기고 거두는 요청 · 연결마다 하나 · 호스트마다 TLS 컨텍스트 · 시한 · 몸 상한 · chunked, `HttpServer` — 루프백 리다이렉트 ·
+  시험 서버, `HttpMessageParser` · `HttpUrl` · `HttpUtil` 폼/퍼센트). 바깥 HTTPS(외부 로그인 JWKS · 토큰 · 프로필, 영수증 검증, 푸시)용 — 호스트 이름 해석은 아직 없다
+  (IPv4 · localhost). 시험: `HttpTest`.
   `Online/Ledger`: 원장 — 계정 · 맡김 · 발행 · 소각 보유자 사이의 복식 이동(다리 전부 또는 없음), 잔액은 판 조건 레코드, 분개 키가 멱등 키, 보유자별 내역,
   보존 검사(`LedgerAudit` — 보유 = 발행 − 소각). 환불 회수만 계정 잔액을 음수(빚)로 만들 수 있고(`_bAllowDebt`), 빚이 있는 동안 그 재화는 쓰지 못한다.
   거래 · 우편 · 상점 · GM 지급이 `Ledger::stageTransfer` 로 자기 트랜잭션에 붙인다. 시험: `LedgerTest`.
@@ -251,10 +254,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         보낸 것을 틱 N + 1 이 받는다. 시험: `NetSimHarnessTest`.
   - **온라인 서비스** (`Kits/Online/` — 서버 전용은 `Kits/Online/Server/<키트>`, 모듈 `GF_Server_<키트>`. 서버 키트는 같은 기능의 공유 키트만 include 한다)
     - `Account`(`GF_Account`, Client · Server): 계정 와이어 타입(`AccountTypes.h` — 결과 · 끝난 까닭 · 세션 토큰 · 게임 접속 표 · 클라이언트 정보 · 연동 요약 ·
-      빌드 판 비교 `AccountUtil::compareBuild`).
+      빌드 판 비교 `AccountUtil::compareBuild`), 외부 로그인 표를 얻는 쪽(`PlatformLoginClient.h` — `IPlatformLoginClient` · 시스템 브라우저 `IExternalBrowser` ·
+      가짜, PC 는 `LoopbackPkceLoginClient` — 시스템 브라우저 + 127.0.0.1 리다이렉트 + PKCE S256 · state · nonce, 표 = `id_token|nonce`).
     - `Server/Account`(`GF_Server_Account`, Server): 로그인 서비스 — 계정(소금 + 느린 해시 Argon2id, 매개변수는 레코드에 — 바뀌면 다음 로그인에 다시 해시),
       게스트(장치 비밀 다이제스트 → 계정) · 연동(이름 · 외부 계정을 "없어야 함" 으로 — 다른 계정 것이면 `AlreadyLinked`, 자동 합치기 없음) · 외부 로그인
-      (`Platform/PlatformLoginProvider.h` — 맡기고 거두는 확인, 가짜 `FakePlatformLoginProvider`), 한 계정에 외부 계정 여럿 · 마지막 로그인 수단은 해제 불가,
+      (`Platform/PlatformLoginProvider.h` — 맡기고 거두는 확인, 가짜 `FakePlatformLoginProvider`; 제공자는 데이터 `PlatformLoginProviderSettings` →
+      공통 구현 `OidcLoginProvider`(JWT RS256 · ES256 · iss · aud · exp · nonce, `JwksKeyCache` — 회전 때 재조회 · 다운이면 캐시로) · `ProfileApiLoginProvider`
+      (액세스 토큰 → 프로필 API 의 주체 경로), 주체 id 만 키 — 이메일은 쓰지 않는다), 한 계정에 외부 계정 여럿 · 마지막 로그인 수단은 해제 불가,
       빌드 판(원격 설정 최소 · 권장 · 상점 주소), 로그인 · 재접속 직전 제재 확인(`Online/Sanction`), 탈퇴(유예 30 일 · 취소 · 쓸기 — 원장 · 감사는 남김),
       세션 토큰(선택자 + 검증자, 저장소엔 다이제스트만 · 상수 시간 비교 · 재접속마다 회전), 재접속 유예 · 절대 수명, 중복 로그인(기본 새 로그인이 옛 세션을 밀어냄 ·
       `RejectNew`, 묘비로 "다른 곳에서 로그인"), 실패 누적 잠금 · 주소마다 시도 제한(`TokenBucketMap`), 없는 계정에도 해시(열거 막기), 게임(UDP) 접속 표

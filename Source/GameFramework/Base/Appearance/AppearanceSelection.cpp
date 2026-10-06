@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Appearance/AppearanceSelection.h"
 
 #include "Core/Network/BitStream.h"
+#include "Core/String/Base64Util.h"
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Appearance/AppearanceDatabase.h"
@@ -18,14 +19,13 @@ namespace sw
     {
         struct AppearanceSelectionInternal
         {
-            static constexpr uint32      kMaxCount      = 1024; ///< 읽을 때 개수 상한(망가진 · 악의적인 입력이 큰 할당을 만들지 않게)
-            static constexpr int32       kKindBits      = 2;
-            static constexpr int32       kSliderBits    = 16;
-            static constexpr int32       kColorBits     = 8;
-            static constexpr int32       kDamageBits    = 8;
-            static constexpr int32       kVersionBits   = 8;
-            static constexpr uint32      kChecksumBytes = 4;
-            static constexpr const utf8* kBase64Url     = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+            static constexpr uint32 kMaxCount      = 1024; ///< 읽을 때 개수 상한(망가진 · 악의적인 입력이 큰 할당을 만들지 않게)
+            static constexpr int32  kKindBits      = 2;
+            static constexpr int32  kSliderBits    = 16;
+            static constexpr int32  kColorBits     = 8;
+            static constexpr int32  kDamageBits    = 8;
+            static constexpr int32  kVersionBits   = 8;
+            static constexpr uint32 kChecksumBytes = 4;
 
             static uint32 toHash32( const hashed_string& name ) { return name.empty() ? 0u : static_cast<uint32>( name.getHash() ); }
 
@@ -199,52 +199,6 @@ namespace sw
                     outValues.setValue( value );
                 }
                 return reader.hasOverflowed() == false;
-            }
-
-            static string encodeBase64Url( const vector<uint8>& bytes )
-            {
-                string text;
-                uint32 buffer           = 0;
-                int32  bufferedBitCount = 0;
-                for ( const uint8 byte : bytes )
-                {
-                    buffer = ( buffer << 8 ) | byte;
-                    bufferedBitCount += 8;
-                    while ( bufferedBitCount >= 6 )
-                    {
-                        bufferedBitCount -= 6;
-                        text += kBase64Url[( buffer >> bufferedBitCount ) & 0x3fu];
-                    }
-                }
-                if ( bufferedBitCount > 0 )
-                    text += kBase64Url[( buffer << ( 6 - bufferedBitCount ) ) & 0x3fu];
-                return text;
-            }
-
-            static bool decodeBase64Url( string_view text, vector<uint8>& outBytes )
-            {
-                outBytes.clear();
-                uint32 buffer           = 0;
-                int32  bufferedBitCount = 0;
-                for ( const utf8 character : text )
-                {
-                    const utf8* pFound = nullptr;
-                    for ( const utf8* pCursor = kBase64Url; *pCursor != '\0'; ++pCursor )
-                    {
-                        if ( *pCursor == character )
-                            pFound = pCursor;
-                    }
-                    if ( pFound == nullptr )
-                        return false;
-                    buffer = ( buffer << 6 ) | static_cast<uint32>( pFound - kBase64Url );
-                    bufferedBitCount += 6;
-                    if ( bufferedBitCount >= 8 )
-                    {
-                        bufferedBitCount -= 8;
-                        outBytes.push_back( static_cast<uint8>( ( buffer >> bufferedBitCount ) & 0xffu ) );
-                    }
-                }
-                return true;
             }
 
             static void addFallback( AppearanceSelectionReport& outReport, const hashed_string& slot, const hashed_string& requested, const hashed_string& fallback,
@@ -578,14 +532,14 @@ namespace sw
         {
             bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
         }
-        return AppearanceSelectionInternal::encodeBase64Url( bytes );
+        return Base64Util::encodeUrl( bytes.data(), bytes.size() );
     }
 
     bool AppearanceShareCode::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason )
     {
         using Internal = AppearanceSelectionInternal;
         vector<uint8> bytes;
-        if ( Internal::decodeBase64Url( StringUtil::trim( code ), bytes ) == false || bytes.size() <= Internal::kChecksumBytes )
+        if ( Base64Util::decodeUrl( StringUtil::trim( code ), bytes ) == false || bytes.size() <= Internal::kChecksumBytes )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "not a share code";

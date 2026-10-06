@@ -262,3 +262,44 @@ SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsA
     SW_EXPECT_TRUE( EngineNetSecurity::createServerTlsContext( "server.cert.pem", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
 }
+
+SW_TEST_CASE( NetSecurityProviderTest, Sha256MatchesFips180Vector )
+{
+    INetSecurityProvider& provider  = EngineNetSecurity::getProvider();
+    const utf8            arrText[] = "abc";
+    uint8                 arrDigest[NetSecurityConstant::kSha256Size];
+    SW_ASSERT_TRUE( provider.computeSha256( reinterpret_cast<const uint8*>( arrText ), 3, arrDigest ) );
+    const vector<uint8> expected = fromHex( "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" );
+    SW_EXPECT_EQUAL( 0, std::memcmp( arrDigest, expected.data(), expected.size() ) );
+}
+
+SW_TEST_CASE( NetSecurityProviderTest, SignaturesVerifyAndRejectTamperingAndOtherKeys )
+{
+    INetSecurityProvider&       provider       = EngineNetSecurity::getProvider();
+    const NetSignatureAlgorithm arrAlgorithm[] = { NetSignatureAlgorithm::RsaPkcs1Sha256, NetSignatureAlgorithm::EcdsaP256Sha256 };
+    const utf8                  arrMessage[]   = "header.payload";
+    const uint8*                pMessage       = reinterpret_cast<const uint8*>( arrMessage );
+    const int32                 messageSize    = static_cast<int32>( sizeof( arrMessage ) - 1 );
+    for ( const NetSignatureAlgorithm algorithm : arrAlgorithm )
+    {
+        string       privateKeyPem;
+        NetPublicKey publicKey;
+        SW_ASSERT_TRUE( provider.createSigningKeyPair( algorithm, privateKeyPem, publicKey ) );
+        vector<uint8> signature;
+        SW_ASSERT_TRUE( provider.signData( algorithm, privateKeyPem, pMessage, messageSize, signature ) );
+        if ( algorithm == NetSignatureAlgorithm::EcdsaP256Sha256 )
+            SW_EXPECT_EQUAL( size_t( 64 ), signature.size() ); // JWS 형식 r ‖ s
+        SW_EXPECT_TRUE( provider.verifySignature( publicKey, pMessage, messageSize, signature.data(), static_cast<int32>( signature.size() ) ) );
+        SW_EXPECT_FALSE( provider.verifySignature( publicKey, pMessage, messageSize - 1, signature.data(), static_cast<int32>( signature.size() ) ) );
+        vector<uint8> tampered = signature;
+        tampered[tampered.size() / 2] ^= 0x01;
+        SW_EXPECT_FALSE( provider.verifySignature( publicKey, pMessage, messageSize, tampered.data(), static_cast<int32>( tampered.size() ) ) );
+        string       otherPem;
+        NetPublicKey otherKey;
+        SW_ASSERT_TRUE( provider.createSigningKeyPair( algorithm, otherPem, otherKey ) );
+        SW_EXPECT_FALSE( provider.verifySignature( otherKey, pMessage, messageSize, signature.data(), static_cast<int32>( signature.size() ) ) );
+        NetPublicKey wrongAlgorithm = publicKey; // 같은 바이트를 다른 알고리즘 키로 — 키를 만들지 못하거나 서명이 맞지 않는다
+        wrongAlgorithm._algorithm   = algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 ? NetSignatureAlgorithm::EcdsaP256Sha256 : NetSignatureAlgorithm::RsaPkcs1Sha256;
+        SW_EXPECT_FALSE( provider.verifySignature( wrongAlgorithm, pMessage, messageSize, signature.data(), static_cast<int32>( signature.size() ) ) );
+    }
+}
