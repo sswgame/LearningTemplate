@@ -40,6 +40,7 @@
 
 ### 토대 · 경계 · 실행 파일
 - [Source/Core](../Source/Core/README.md) — 토대 라이브러리(로그 · 메모리 · 컨테이너 · 압축 · 네트워크 공통 계층)
+- [Source/Core/Network](../Source/Core/Network/README.md) — 네트워크 공통 계층(전송 · 연결 · 메시지 · 복제 부품)
 - [Source/Core/Task](../Source/Core/Task/README.md) — 워커 풀 · 태스크 그래프 · `TaskFuture`
 - [Source/RuntimeAPI](../Source/RuntimeAPI/README.md) — App ↔ 모듈 C-ABI 계약 · 서비스 표
 - [Source/App](../Source/App/README.md) — 실행 파일 · 프레임 순서 · 헤드리스 실행 · 모듈 내리기
