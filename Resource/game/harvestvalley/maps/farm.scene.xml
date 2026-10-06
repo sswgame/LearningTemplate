@@ -683,6 +683,30 @@
 					                 _director="35"
 					                 _heightOffset="0.5"
 					                 _kind="Farmer" />
+					<PawnComponent _componentName="PawnComponent"
+					               _bActive="true"
+					               _moveAction="Farm.Move"
+					               _lookAction="None"
+					               _upAction="None"
+					               _inputLayer="None"
+					               _aiControllerPrefab=""
+					               _maxPitch="1.4"
+					               _autoPossess="Player0">
+						<_listButton>
+							<item>Farm.Tool1</item>
+							<item>Farm.Tool2</item>
+							<item>Farm.Tool3</item>
+							<item>Farm.Tool4</item>
+							<item>Farm.SeedPrev</item>
+							<item>Farm.SeedNext</item>
+							<item>Farm.Use</item>
+							<item>Farm.Ship</item>
+							<item>Farm.Buy</item>
+							<item>Farm.Sleep</item>
+							<item>Farm.Status</item>
+						</_listButton>
+						<_listAnalog />
+					</PawnComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -727,6 +751,8 @@
 					                       _cameraRig="1"
 					                       _shippingBin="5"
 					                       _shop="6"
+					                       _farmer="33"
+					                       _autoFarmerPrefab="game/harvestvalley/prefabs/autofarmer.prefab.xml"
 					                       _playerStart="6,0,-1.2"
 					                       _bAutoPlay="false" />
 				</_listComponent>

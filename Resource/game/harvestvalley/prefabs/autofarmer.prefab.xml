@@ -1,0 +1,15 @@
+<Prefab formatVersion="0" name="FarmAutoFarmer">
+	<GameObject _schemaVersion="0" _name="FarmAutoFarmer" _bActive="true">
+		<_listComponent>
+			<FarmAutoFarmerAiComponent _componentName="FarmAutoFarmerAiComponent"
+			                           _bActive="true"
+			                           _possessAtStart="0"
+			                           _turnRate="20"
+			                           _arriveDistance="0.15"
+			                           _actionInterval="0.25"
+			                           _cultivateLimit="32"
+			                           _buyBatch="6"
+			                           _standTolerance="0.2" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
