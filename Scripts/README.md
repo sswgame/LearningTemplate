@@ -129,6 +129,7 @@ Scripts/
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8)
+  │     │     ├── CheckScriptCommonHelpers.py # common 의 한 자리(runProcess · BuildTree · writeGeneratedFile · 콘솔)를 비켜 가는 호출
   │     │     ├── CheckHeaderSelfContained.py # staged 헤더가 혼자 서는지 — 빌드 폴더가 있을 때만, CTest 린트에는 안 든다(ctestSkipReason)
   │     │     ├── CheckPythonMinimumVersion.py # CI 의 파이썬에서도 파싱되는지
   │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
