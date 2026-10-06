@@ -214,23 +214,38 @@ def diffSnapshots(beforePath: Path, afterPath: Path) -> list[str]:
     return listLine
 
 
+def iterTraceSpansInternal(listEvent: list[dict]) -> list[tuple[str, float]]:
+    """
+    (이름 @ 위치, 길이 us) 목록. CMake 의 google-trace 는 시작(`B`) · 끝(`E`) 짝으로 적는다 — 스레드마다 쌓아 짝을 맞춘다.
+    한 이벤트로 적힌 것(`X`, `dur`)도 받는다.
+    """
+    listSpan: list[tuple[str, float]] = []
+    mapStack: dict[tuple[object, object], list[tuple[str, float]]] = defaultdict(list)
+    for event in listEvent:
+        phase = event.get("ph")
+        location = (event.get("args") or {}).get("location", "")
+        key = f"{event.get('name', '')} @ {location}"
+        stack = mapStack[(event.get("pid"), event.get("tid"))]
+        if phase == "X":
+            listSpan.append((key, float(event.get("dur", 0.0))))
+        elif phase == "B":
+            stack.append((key, float(event.get("ts", 0.0))))
+        elif phase == "E" and stack:
+            beginKey, beginUs = stack.pop()
+            listSpan.append((beginKey, float(event.get("ts", 0.0)) - beginUs))
+    return listSpan
+
+
 def summarizeProfile(tracePath: Path, top: int) -> list[str]:
-    """`--profiling-format=google-trace` 출력에서 위치(파일:줄)별 포함 시간을 큰 순서로."""
+    """`--profiling-format=google-trace` 출력에서 위치(파일:줄)별 포함 시간을 큰 순서로(맨 위는 `configure @` — 전체)."""
     listEvent = json.loads(tracePath.read_text(encoding="utf-8"))
     if isinstance(listEvent, dict):
         listEvent = listEvent.get("traceEvents", [])
     mapDuration: dict[str, float] = defaultdict(float)
     mapCount: dict[str, int] = defaultdict(int)
-    totalUs = 0.0
-    for event in listEvent:
-        if event.get("ph") != "X":
-            continue
-        location = (event.get("args") or {}).get("location", "")
-        key = f"{event.get('name', '')} @ {location}"
-        mapDuration[key] += float(event.get("dur", 0.0))
+    for key, durationUs in iterTraceSpansInternal(listEvent):
+        mapDuration[key] += durationUs
         mapCount[key] += 1
-        if event.get("name") == "project" or not location:
-            totalUs = max(totalUs, float(event.get("dur", 0.0)))
     listRow = sorted(mapDuration.items(), key=lambda item: item[1], reverse=True)[:top]
     return [f"{duration / 1000.0:9.1f} ms  x{mapCount[key]:<5d} {key}" for key, duration in listRow]
 

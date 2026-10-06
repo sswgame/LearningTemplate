@@ -65,6 +65,19 @@ class ConfigureSnapshotTest(unittest.TestCase):
         self.assertTrue(listLine[0].strip().startswith("3.0 ms"))
         self.assertIn("x2", listLine[0])
 
+    def testProfileReadsBeginEndPairs(self) -> None:
+        # CMake 의 google-trace 는 시작(B) · 끝(E) 짝으로 적는다 — 짝을 맞추지 않으면 표가 빈다.
+        listEvent = [{"ph": "B", "name": "configure", "pid": 1, "tid": 0, "ts": 0},
+                     {"ph": "B", "name": "execute_process", "pid": 1, "tid": 0, "ts": 100, "args": {"location": "a.cmake:3"}},
+                     {"ph": "E", "pid": 1, "tid": 0, "ts": 2100},
+                     {"ph": "E", "pid": 1, "tid": 0, "ts": 5000}]
+        with tempfile.TemporaryDirectory() as folder:
+            tracePath = Path(folder) / "trace.json"
+            tracePath.write_text(json.dumps(listEvent), encoding="utf-8")
+            listLine = ConfigureSnapshot.summarizeProfile(tracePath, 5)
+        self.assertEqual([line.split()[0] for line in listLine], ["5.0", "2.0"])
+        self.assertIn("execute_process @ a.cmake:3", listLine[1])
+
 
 if __name__ == "__main__":
     unittest.main()
