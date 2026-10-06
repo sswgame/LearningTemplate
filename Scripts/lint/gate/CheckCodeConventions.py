@@ -39,6 +39,7 @@ import re
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
@@ -1565,46 +1566,43 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
 
 # --- 5. 공개 API 및 진입점 ---------------------------------------------------
 
-def checkDuplicateHelperNamesInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+def reportDuplicateSitesInternal(mapNameToSite: dict[str, list[tuple[str, int]]],
+                                 makeViolation: Callable[[str, str, int, list[str]], ConventionViolation]) -> list[ConventionViolation]:
+    """같은 이름이 두 파일 이상에 있으면 자리마다 위반 하나 — 다른 파일 목록을 메시지에 넣는다."""
+    violations: list[ConventionViolation] = []
+    for name, listSite in mapNameToSite.items():
+        uniqueFiles = sorted({relPath for relPath, _ in listSite})
+        if len(uniqueFiles) < 2:
+            continue
+        for relPath, lineNum in listSite:
+            violations.append(makeViolation(name, relPath, lineNum, [other for other in uniqueFiles if other != relPath]))
+    return violations
+
+
+def reportDuplicateHelperNamesInternal(listFacts: list[CrossFileFacts]) -> list[ConventionViolation]:
     """
     여러 .cpp 가 같은 `XxxInternal` 헬퍼 이름을 쓰는지 검사합니다 (유니티 빌드 재정의 충돌 예방).
 
     익명 네임스페이스는 **번역 단위** 단위로만 이름을 가립니다. 유니티 빌드는 .cpp 를 묶어 하나의 TU 로 만들므로,
     묶인 파일들이 같은 이름을 쓰면 재정의 오류가 납니다. 파일 단위 검사로는 잡히지 않아 전체 스캔에서만 봅니다.
     """
-    mapNameToFile: dict[str, list[tuple[str, int]]] = {}
-    for filePath in filesToScan:
-        if filePath.suffix.lower() != ".cpp":
-            continue
-        try:
-            content = readSourceTextInternal(filePath, "utf-8", "ignore")
-        except OSError:
-            continue
-        try:
-            relPath = normalizePath(filePath.relative_to(projectRoot))
-        except ValueError:
-            relPath = normalizePath(filePath)
-        for match in _kAnonHelperStructRe.finditer(content):
-            lineNum = content.count("\n", 0, match.start()) + 1
-            mapNameToFile.setdefault(match.group(1), []).append((relPath, lineNum))
+    mapNameToSite: dict[str, list[tuple[str, int]]] = {}
+    for facts in listFacts:
+        for helperName, lineNum in facts.listHelperSite:
+            mapNameToSite.setdefault(helperName, []).append((facts.relPath, lineNum))
 
-    violations: list[ConventionViolation] = []
-    for helperName, listSite in mapNameToFile.items():
-        uniqueFiles = sorted({relPath for relPath, _ in listSite})
-        if len(uniqueFiles) < 2:
-            continue
-        for relPath, lineNum in listSite:
-            others = [other for other in uniqueFiles if other != relPath]
-            violations.append(ConventionViolation(
-                file_path=relPath,
-                line_number=lineNum,
-                rule_category="Naming/DuplicateInternalHelper",
-                message=(f"'{helperName}' 이 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
-                         "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 익명 네임스페이스라도 재정의로 충돌합니다."),
-                snippet=f"struct {helperName}",
-                suggested_fix="헬퍼 이름을 클래스가 아니라 **이 TU(파일)** 기준으로 지으세요 (예: VulkanRHIResourceFactoryPipelineInternal).",
-            ))
-    return violations
+    def makeViolationInternal(helperName: str, relPath: str, lineNum: int, others: list[str]) -> ConventionViolation:
+        return ConventionViolation(
+            file_path=relPath,
+            line_number=lineNum,
+            rule_category="Naming/DuplicateInternalHelper",
+            message=(f"'{helperName}' 이 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
+                     "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 익명 네임스페이스라도 재정의로 충돌합니다."),
+            snippet=f"struct {helperName}",
+            suggested_fix="헬퍼 이름을 클래스가 아니라 **이 TU(파일)** 기준으로 지으세요 (예: VulkanRHIResourceFactoryPipelineInternal).",
+        )
+
+    return reportDuplicateSitesInternal(mapNameToSite, makeViolationInternal)
 
 
 
@@ -1647,7 +1645,7 @@ def findBareAnonymousConstantsInternal(content: str) -> list[tuple[str, int]]:
     return listFound
 
 
-def checkDuplicateAnonymousConstantsInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+def reportDuplicateAnonymousConstantsInternal(listFacts: list[CrossFileFacts]) -> list[ConventionViolation]:
     """
     여러 .cpp 가 익명 네임스페이스 바로 안에 같은 이름의 상수를 두는지 검사합니다 (유니티 빌드 재정의 충돌 예방).
 
@@ -1655,39 +1653,22 @@ def checkDuplicateAnonymousConstantsInternal(filesToScan: list[Path], projectRoo
     `XxxInternal` 구조체 안 상수와 함수 지역 상수는 그 구조체 · 함수가 가리므로 보지 않는다. 파일 짝이 필요해 전체 스캔에서만 돈다.
     """
     mapNameToSite: dict[str, list[tuple[str, int]]] = {}
-    for filePath in filesToScan:
-        if filePath.suffix.lower() != ".cpp":
-            continue
-        try:
-            content = readSourceTextInternal(filePath, "utf-8", "ignore")
-        except OSError:
-            continue
-        if "namespace" not in content:
-            continue
-        try:
-            relPath = normalizePath(filePath.relative_to(projectRoot))
-        except ValueError:
-            relPath = normalizePath(filePath)
-        for constantName, lineNum in findBareAnonymousConstantsInternal(content):
-            mapNameToSite.setdefault(constantName, []).append((relPath, lineNum))
+    for facts in listFacts:
+        for constantName, lineNum in facts.listAnonymousConstantSite:
+            mapNameToSite.setdefault(constantName, []).append((facts.relPath, lineNum))
 
-    violations: list[ConventionViolation] = []
-    for constantName, listSite in mapNameToSite.items():
-        uniqueFiles = sorted({relPath for relPath, _ in listSite})
-        if len(uniqueFiles) < 2:
-            continue
-        for relPath, lineNum in listSite:
-            others = [other for other in uniqueFiles if other != relPath]
-            violations.append(ConventionViolation(
-                file_path=relPath,
-                line_number=lineNum,
-                rule_category="Naming/DuplicateAnonymousConstant",
-                message=(f"익명 네임스페이스의 상수 '{constantName}' 가 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
-                         "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 재정의로 충돌합니다."),
-                snippet=constantName,
-                suggested_fix="이 TU 의 `XxxInternal` 구조체 안 `static constexpr` 로 옮기거나, 이름을 이 파일에 맞게 바꾸세요.",
-            ))
-    return violations
+    def makeViolationInternal(constantName: str, relPath: str, lineNum: int, others: list[str]) -> ConventionViolation:
+        return ConventionViolation(
+            file_path=relPath,
+            line_number=lineNum,
+            rule_category="Naming/DuplicateAnonymousConstant",
+            message=(f"익명 네임스페이스의 상수 '{constantName}' 가 다른 .cpp 와 이름이 겹칩니다 ({', '.join(others)}). "
+                     "유니티 빌드는 .cpp 를 한 TU 로 묶으므로 재정의로 충돌합니다."),
+            snippet=constantName,
+            suggested_fix="이 TU 의 `XxxInternal` 구조체 안 `static constexpr` 로 옮기거나, 이름을 이 파일에 맞게 바꾸세요.",
+        )
+
+    return reportDuplicateSitesInternal(mapNameToSite, makeViolationInternal)
 
 
 _kHeaderTypeHeadRe = re.compile(r"^(\s*)(class|struct)\s+(?:SW_\w+\s+|[A-Z]\w*_API\s+)?([A-Z]\w*)\b")
@@ -1832,7 +1813,7 @@ _kWiderIntDeclRe = re.compile(
 _kAnyStringLiteralRe = re.compile(r'"(?:[^"\\]|\\.)*"')
 
 
-def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+def reportBitfieldBooleanLiteralsInternal(listFacts: list[CrossFileFacts]) -> list[ConventionViolation]:
     """
     `uint8` 불리언 멤버(`_b*`)에 `SW_TRUE`/`SW_FALSE` 대신 생 `1`/`0` 이나 `true`/`false` 를 쓴 자리를 찾습니다.
 
@@ -1847,29 +1828,10 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     mapU8: set[str] = set()
     mapBool: set[str] = set()
     mapWiderInt: set[str] = set()
-    for filePath in filesToScan:
-        try:
-            lines = readSourceTextInternal(filePath, "utf-8", "ignore").splitlines()
-        except OSError:
-            continue
-        for line in lines:
-            # 세 선언 정규식 모두 `_b` 이름(`_kBoolNamePattern`)을 요구한다.
-            if "_b" not in line:
-                continue
-            stripped = line.strip()
-            if stripped.startswith(("//", "*", "/*")):
-                continue
-            match = _kU8BoolDeclRe.match(line)
-            if match is not None:
-                mapU8.add(match.group(1))
-                continue
-            match = _kBoolDeclRe.match(line)
-            if match is not None:
-                mapBool.add(match.group(1))
-                continue
-            match = _kWiderIntDeclRe.match(line)
-            if match is not None:
-                mapWiderInt.add(match.group(1))
+    for facts in listFacts:
+        mapU8 |= facts.uniqueU8BoolName
+        mapBool |= facts.uniqueBoolName
+        mapWiderInt |= facts.uniqueWiderIntName
 
     names = sorted(mapU8 - mapBool - mapWiderInt, key=len, reverse=True)
     if not names:
@@ -1883,23 +1845,8 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
     )
 
     violations: list[ConventionViolation] = []
-    for filePath in filesToScan:
-        try:
-            content = readSourceTextInternal(filePath, "utf-8", "ignore")
-        except OSError:
-            continue
-        try:
-            relPath = normalizePath(filePath.relative_to(projectRoot))
-        except ValueError:
-            relPath = normalizePath(filePath)
-        if "_b" not in content:
-            continue
-        for lineNum, line in enumerate(content.splitlines(), start=1):
-            if "_b" not in line:
-                continue
-            stripped = line.strip()
-            if stripped.startswith(("//", "*", "/*")):
-                continue
+    for facts in listFacts:
+        for lineNum, line, stripped in facts.listBoolCandidateLine:
             literalSpans = [m.span() for m in _kAnyStringLiteralRe.finditer(line)]
             for pattern in patterns:
                 for match in pattern.finditer(line):
@@ -1908,7 +1855,7 @@ def checkBitfieldBooleanLiteralsInternal(filesToScan: list[Path], projectRoot: P
                     literal = match.group(2)
                     wanted = "SW_FALSE" if literal in ("0", "false") else "SW_TRUE"
                     violations.append(ConventionViolation(
-                        file_path=relPath,
+                        file_path=facts.relPath,
                         line_number=lineNum,
                         rule_category="Style/BitfieldBoolean",
                         message=(f"'{match.group(1)}' 는 uint8 불리언인데 '{literal}' 을(를) 씁니다. "
@@ -2083,6 +2030,102 @@ class CtorScanClass:
     relPath: str
     listMember: list[CtorScanMember] = field(default_factory=list)
     listConstructor: list[CtorScanConstructor] = field(default_factory=list)
+
+
+@dataclass
+class CrossFileFacts:
+    """
+    교차 파일 검사 다섯이 파일 하나에서 쓰는 것 — 워커가 파일별 검사와 함께 만들고, 부모가 파일 순서대로 합친다(프로세스 사이로 피클된다).
+
+    파일을 읽고 줄을 훑는 일은 파일마다 따로라 워커에서 돈다. 부모에 남는 것은 이름 표 합치기 · 클래스 밖 생성자 붙이기뿐이다.
+    """
+
+    relPath: str
+    listHelperSite: list[tuple[str, int]] = field(default_factory=list)
+    listAnonymousConstantSite: list[tuple[str, int]] = field(default_factory=list)
+    listHeaderInitializerViolation: list[ConventionViolation] = field(default_factory=list)
+    uniqueU8BoolName: set[str] = field(default_factory=set)
+    uniqueBoolName: set[str] = field(default_factory=set)
+    uniqueWiderIntName: set[str] = field(default_factory=set)
+    listBoolCandidateLine: list[tuple[int, str, str]] = field(default_factory=list)   # (줄 번호, 줄, strip 한 줄)
+    bHasCtorScan: bool = False
+    listCtorClass: list[CtorScanClass] = field(default_factory=list)
+    listCtorOutOfLine: list[tuple[tuple[str, ...], CtorScanConstructor]] = field(default_factory=list)
+    listEnumName: list[str] = field(default_factory=list)
+    listRecordName: list[str] = field(default_factory=list)
+    listAlias: list[tuple[str, str]] = field(default_factory=list)
+
+
+#: 비트필드 불리언 2 단계가 볼 수 있는 줄 — 세 정규식 모두 `(?<![A-Za-z0-9_])` 뒤 `_b[A-Z]` 로 시작하는 이름을 요구한다(그 상위 집합).
+_kBoolNameStartRe = re.compile(r"(?<![A-Za-z0-9_])_b[A-Z]")
+
+
+def relPathOfInternal(filePath: Path, projectRoot: Path) -> str:
+    try:
+        return normalizePath(filePath.relative_to(projectRoot))
+    except ValueError:
+        return normalizePath(filePath)
+
+
+def collectCrossFileFactsInternal(filePath: Path, projectRoot: Path) -> CrossFileFacts:
+    """파일 하나에서 교차 파일 검사 다섯이 쓰는 것을 모읍니다. 읽기 · 디코드는 검사들과 같다(`utf-8` · `ignore`)."""
+    facts = CrossFileFacts(relPath=relPathOfInternal(filePath, projectRoot))
+    suffix = filePath.suffix.lower()
+    try:
+        content = readSourceTextInternal(filePath, "utf-8", "ignore")
+    except OSError:
+        return facts
+
+    if suffix == ".cpp":
+        for match in _kAnonHelperStructRe.finditer(content):
+            facts.listHelperSite.append((match.group(1), content.count("\n", 0, match.start()) + 1))
+        if "namespace" in content:
+            facts.listAnonymousConstantSite = findBareAnonymousConstantsInternal(content)
+
+    # 헤더와 짝 .cpp 둘만 보는 검사라 파일 하나 안에서 끝난다.
+    if suffix == ".h":
+        facts.listHeaderInitializerViolation = checkHeaderMemberInitializersInternal([filePath], projectRoot)
+
+    if "_b" in content:
+        for lineNum, line in enumerate(content.splitlines(), start=1):
+            if "_b" not in line:
+                continue
+            stripped = line.strip()
+            if stripped.startswith(("//", "*", "/*")):
+                continue
+            if match := _kU8BoolDeclRe.match(line):
+                facts.uniqueU8BoolName.add(match.group(1))
+            elif match := _kBoolDeclRe.match(line):
+                facts.uniqueBoolName.add(match.group(1))
+            elif match := _kWiderIntDeclRe.match(line):
+                facts.uniqueWiderIntName.add(match.group(1))
+            if _kBoolNameStartRe.search(line):
+                facts.listBoolCandidateLine.append((lineNum, line, stripped))
+
+    if suffix in kCppAllExtensions:
+        listLine = stripCodeForCtorScanInternal(content)
+        listCondition = blankPreprocessorLinesInternal(listLine)
+        text = "\n".join(listLine)
+        facts.bHasCtorScan = True
+        facts.listEnumName = _kCtorEnumDeclRe.findall(text)
+        facts.listRecordName = _kCtorRecordNameRe.findall(text)
+        facts.listAlias = _kCtorAliasRe.findall(text) + [(name, target) for target, name in _kCtorTypedefRe.findall(text)]
+        facts.listCtorClass, facts.listCtorOutOfLine = scanCtorFileInternal(facts.relPath, listLine, listCondition)
+    return facts
+
+
+def checkFileAndCollectFactsInternal(filePath: Path, rootDir: Path) -> list[tuple[list[ConventionViolation], CrossFileFacts]]:
+    """
+    전체 스캔의 워커가 파일 하나에 하는 일 전부 — 파일별 규칙 + 교차 파일 사실. 파일은 한 번만 읽는다(`SourceTextCache`).
+    프로세스로 넘기려고 모듈 최상위에 둔다. 이 프로세스에서 돌 때(파일이 적을 때)는 부모의 캐시를 잠깐 비켜 두었다가 되돌린다.
+    """
+    global _s_textCache
+    previousCache = _s_textCache
+    _s_textCache = SourceTextCache()
+    try:
+        return [(checkFileConventionsInternal(filePath, rootDir), collectCrossFileFactsInternal(filePath, rootDir))]
+    finally:
+        _s_textCache = previousCache
 
 
 def findMatchingCloseInternal(text: str, openIndex: int) -> int:
@@ -2279,19 +2322,19 @@ def scanCtorFileInternal(relPath: str, listLine: list[str], listCondition: list[
     return listClass, listOutOfLine
 
 
-def collectCtorScalarNamesInternal(mapPathToLine: dict[Path, list[str]]) -> set[str]:
+def collectCtorScalarNamesInternal(listFacts: list[CrossFileFacts]) -> set[str]:
     """
     기본 초기화가 값을 정하지 않는 타입 이름 — 내장 타입 · 열거형 · 그것들의 별칭. 같은 이름이 레코드로도 선언돼 있으면 뺀다.
     """
     uniqueEnum: set[str] = set()
     uniqueRecord: set[str] = set()
     listAlias: list[tuple[str, str]] = []
-    for listLine in mapPathToLine.values():
-        text = "\n".join(listLine)
-        uniqueEnum.update(_kCtorEnumDeclRe.findall(text))
-        uniqueRecord.update(_kCtorRecordNameRe.findall(text))
-        listAlias.extend(_kCtorAliasRe.findall(text))
-        listAlias.extend((name, target) for target, name in _kCtorTypedefRe.findall(text))
+    for facts in listFacts:
+        if facts.bHasCtorScan is False:
+            continue
+        uniqueEnum.update(facts.listEnumName)
+        uniqueRecord.update(facts.listRecordName)
+        listAlias.extend(facts.listAlias)
 
     uniqueScalar = set(_kCtorScalarBuiltinName) | uniqueEnum
     mapAliasToTarget: dict[str, set[str]] = {}
@@ -2334,7 +2377,7 @@ def isCtorScalarTypeTextInternal(typeText: str, uniqueScalar: set[str]) -> bool:
     return all(word.split("::")[-1] in uniqueScalar for word in listWord)
 
 
-def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], projectRoot: Path) -> list[ConventionViolation]:
+def reportConstructorInitializesEveryFieldInternal(filesToScan: list[Path], listFacts: list[CrossFileFacts]) -> list[ConventionViolation]:
     """
     생성자가 있는 클래스에서 값이 정해지지 않는 필드(스칼라 · 포인터 · 열거형 · 비트필드)가 헤더 기본값도, 생성자 초기화 목록도 없는지 검사합니다.
 
@@ -2342,34 +2385,19 @@ def checkConstructorInitializesEveryFieldInternal(filesToScan: list[Path], proje
     - `X() = default` 인 클래스는 그런 필드에 헤더 기본값이 있어야 한다 — 비트필드는 헤더 기본값을 가질 수 없으니 생성자를 쓴다.
     `alignas` 를 단 원시 저장 배열(인라인 버퍼)은 일부러 비워 둔 것이라 보지 않는다.
     """
-    mapPathToLine: dict[Path, list[str]] = {}
-    mapPathToCondition: dict[Path, list[CtorConditionStack]] = {}
-    for filePath in filesToScan:
-        if filePath.suffix.lower() not in kCppAllExtensions:
-            continue
-        try:
-            content = readSourceTextInternal(filePath, "utf-8", "ignore")
-        except OSError:
-            continue
-        listLine = stripCodeForCtorScanInternal(content)
-        mapPathToCondition[filePath] = blankPreprocessorLinesInternal(listLine)
-        mapPathToLine[filePath] = listLine
-    uniqueScalar = collectCtorScalarNamesInternal(mapPathToLine)
+    uniqueScalar = collectCtorScalarNamesInternal(listFacts)
 
     # 폴더 → (파일 이름 줄기 → 클래스). 클래스 밖 생성자는 같은 폴더의 줄기만 보므로 폴더로 먼저 가른다 — 트리 전체 열쇠를 생성자마다
     # 훑으면 생성자 수 × 파일 수다.
     mapDirToStemClass: dict[Path, dict[str, list[CtorScanClass]]] = {}
     listOutOfLineSite: list[tuple[Path, tuple[str, ...], CtorScanConstructor]] = []
     listAllClass: list[CtorScanClass] = []
-    for filePath, listLine in mapPathToLine.items():
-        try:
-            relPath = normalizePath(filePath.relative_to(projectRoot))
-        except ValueError:
-            relPath = normalizePath(filePath)
-        listClass, listOutOfLine = scanCtorFileInternal(relPath, listLine, mapPathToCondition[filePath])
-        listAllClass.extend(listClass)
-        mapDirToStemClass.setdefault(filePath.parent, {}).setdefault(filePath.stem, []).extend(listClass)
-        listOutOfLineSite.extend((filePath, chain, constructor) for chain, constructor in listOutOfLine)
+    for filePath, facts in zip(filesToScan, listFacts):
+        if facts.bHasCtorScan is False:
+            continue
+        listAllClass.extend(facts.listCtorClass)
+        mapDirToStemClass.setdefault(filePath.parent, {}).setdefault(filePath.stem, []).extend(facts.listCtorClass)
+        listOutOfLineSite.extend((filePath, chain, constructor) for chain, constructor in facts.listCtorOutOfLine)
 
     # 클래스 밖 생성자를 그 클래스에 붙인다: 같은 파일, 또는 같은 폴더에서 이름이 파일 이름의 앞부분인 헤더(FrameRendererCompute.cpp → FrameRenderer.h).
     for filePath, chain, constructor in listOutOfLineSite:
@@ -3115,19 +3143,19 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
     # 전체 스캔의 대상 고르기는 게이트 · 픽서와 같은 걷기(`collectRepositoryFiles` — 빌드 산출물 · 내려받은 도구로 내려가지 않는다).
     filesToScan = collectRepositoryFiles(projectRoot, kLintTargetRelDirs, suffixes=kCppAllExtensions,
                                          excludedDirNames=kNotOurDirNames | _kExcludedDirNames)
-    # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`, 7.5 → 2.3 s).
-    allViolations.extend(
-        flatMapInProcesses(functools.partial(checkFileConventionsInternal, rootDir=projectRoot), filesToScan)
-    )
+    # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`).
+    # 교차 파일 검사의 파일별 몫(읽기 · 줄 훑기 · 클래스 스캔)도 같은 워커가 한 번에 한다 — 부모에는 합치기만 남는다.
+    listFacts: list[CrossFileFacts] = []
+    for fileViolations, facts in flatMapInProcesses(functools.partial(checkFileAndCollectFactsInternal, rootDir=projectRoot), filesToScan):
+        allViolations.extend(fileViolations)
+        listFacts.append(facts)
 
-    # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다 (스테이지 파일 검사에는 상대편 파일이 없다).
-    # **셋을 동시에 돌려 봤지만 재고 되돌렸다**(6.66s → 6.72s, 3회). 셋 다 정규식이라 GIL 을 놓지 않아
-    # 스레드로 겹치지 않는다 — 파일마다 나누는 위쪽 루프와 성질이 다르다. 다시 제안하기 전에 그 숫자를 볼 것.
-    allViolations.extend(checkDuplicateHelperNamesInternal(filesToScan, projectRoot))
-    allViolations.extend(checkDuplicateAnonymousConstantsInternal(filesToScan, projectRoot))
-    allViolations.extend(checkHeaderMemberInitializersInternal(filesToScan, projectRoot))
-    allViolations.extend(checkBitfieldBooleanLiteralsInternal(filesToScan, projectRoot))
-    allViolations.extend(checkConstructorInitializesEveryFieldInternal(filesToScan, projectRoot))
+    # 파일 하나만 봐서는 알 수 없는 검사 — 전체 스캔일 때만 돈다(스테이지 파일 검사에는 상대편 파일이 없다). 이 순서가 보고 순서다.
+    allViolations.extend(reportDuplicateHelperNamesInternal(listFacts))
+    allViolations.extend(reportDuplicateAnonymousConstantsInternal(listFacts))
+    allViolations.extend(violation for facts in listFacts for violation in facts.listHeaderInitializerViolation)
+    allViolations.extend(reportBitfieldBooleanLiteralsInternal(listFacts))
+    allViolations.extend(reportConstructorInitializesEveryFieldInternal(filesToScan, listFacts))
 
     return allViolations
 
