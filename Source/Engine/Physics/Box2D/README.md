@@ -1,17 +1,23 @@
-# Box2D 백엔드 (2D 물리)
+# Box2D 백엔드 — 2D 물리
 
-`IPhysicsScene2D` 의 Box2D v3 구현입니다. `<box2d/...>` 헤더를 include 해도 되는 유일한 폴더입니다(`CheckThirdPartyIsolation.py`).
-규칙 · 쓰는 법은 [상위 README](../README.md) 0 절.
+`IPhysicsScene2D` 를 Box2D v3 로 구현한 폴더입니다. `<box2d/...>` 헤더를 include 할 수 있는 곳은 이 폴더뿐입니다(`CheckThirdPartyIsolation.py`).
+물리를 쓰는 방법과 규칙은 [Physics](../README.md)에 있습니다. 이 문서는 Box2D 백엔드만의 사정을 다룹니다.
 
 | 파일 | 내용 |
 |---|---|
-| `Box2DPhysicsBackend.h` | 씬 만들기(전역 상태 없음). Box2D 헤더를 include 하지 않는다 |
-| `Box2DPhysicsScene` | 바디 · 셰이프(사슬 포함) · 레이어 거름(범주 비트) · 쌍 예외(필터 관절) · 이벤트(접촉 · 센서 · 부딪힘) |
-| `Box2DPhysicsSceneQuery.cpp` | 관절(용접 · 회전 · 거리 · 직선 — Cone 은 오류) · 캐릭터 무버 · 레이 / 셰이프 캐스트 · 겹침 |
-| `Box2DUtil.h` | 수학 타입 변환 · 사용자 값 · 셰이프 id 키 |
+| `Box2DPhysicsBackend.h` | 씬 생성. 전역 상태가 없고, Box2D 헤더를 include 하지 않습니다 |
+| `Box2DPhysicsScene` | 바디, 셰이프(사슬 포함), 레이어 필터, 쌍 예외, 이벤트 |
+| `Box2DPhysicsSceneQuery.cpp` | 관절, 캐릭터 무버, 레이 캐스트, 셰이프 캐스트, 겹침 질의 |
+| `Box2DUtil.h` | 수학 타입 변환, 사용자 값, 셰이프 id 키 |
 
-- 월드는 한 스레드로 돈다(솔버 워커가 서로를 바쁘게 기다리는 구조라 공유 작업 풀에 넘기지 않는다).
-- 월드에 붙는 관절은 씬이 드는 정적 바디(원점)에 붙인다. 위치 모터는 관절 스프링(목표 각 · 거리)이다.
-- 충격량: 시작은 부딪힘 이벤트의 다가온 속도 × 유효 질량 × (1 + 반발), 유지는 마지막 서브 스텝의 `normalImpulse` × 서브 스텝 수
-  (`totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다).
-- 캐릭터는 `b2World_CollideMover` → `b2SolvePlanes` → `b2World_CastMover` 를 다섯 번까지 되풀이하고, 캡슐을 조금 내려 디딤을 찾는다.
+엔진 레이어는 Box2D 의 범주 비트로 바꾸고, 바디 쌍의 충돌 예외는 필터 관절로 구현합니다. 이벤트는 접촉, 센서, 부딪힘 이벤트를 모읍니다.
+레이 캐스트 결과의 재질 이름은 셰이프의 `userMaterialId` 에 넣어 둔 재질 번호로 찾습니다.
+
+**스레드.** 월드는 한 스레드로 돕니다. Box2D 의 솔버 워커들은 서로를 바쁘게 기다리는 구조라, 공유 작업 풀에 넘기면 교착 상태가 될 수 있습니다.
+
+**관절.** 용접, 회전, 거리, 직선 관절을 지원하고, 원뿔(Cone) 관절은 오류입니다. 월드에 붙는 관절은 씬이 가지고 있는 원점의 정적 바디에 붙입니다. 위치 모터는 목표 각이나 거리로 당기는 관절 스프링입니다.
+
+**충격량.** 시작 이벤트의 충격량은 부딪힘 이벤트의 다가온 속도 × 유효 질량 × (1 + 반발)입니다. 유지 이벤트는 마지막 서브 스텝의 `normalImpulse` 에 서브 스텝 수를 곱합니다.
+`totalNormalImpulse` 는 이완 반복까지 더한 값이라 약 두 배이므로 쓰지 않습니다.
+
+**캐릭터 무버.** `b2World_CollideMover`, `b2SolvePlanes`, `b2World_CastMover` 를 최대 다섯 번 되풀이하고, 캡슐을 조금 내려 디딤 바닥을 찾습니다.
