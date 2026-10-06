@@ -192,7 +192,7 @@ namespace sw::editor
 
         // 1. Splash matching
         TextureImportRule splashRule;
-        SW_ASSERT_TRUE( config.findMatchingRule( "editor/textures_raw/splash.jpg", splashRule ) );
+        SW_ASSERT_TRUE( config.findMatchingRule( "editor/textures_raw/splash.png", splashRule ) );
         SW_EXPECT_EQUAL( string( "Editor_Splash" ), splashRule._name );
         SW_EXPECT_EQUAL( string( "B8G8R8A8_UNORM" ), splashRule._format );
         SW_EXPECT_EQUAL( static_cast<uint8>( TextureSwizzle::BGRA ), static_cast<uint8>( splashRule._swizzle ) );
@@ -227,16 +227,16 @@ namespace sw::editor
     SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureImporterEndToEnd )
     {
         SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-        const string rawSplashPath = sw::ResourceUtil::getResourcePath( "textures_raw/splash.jpg" );
+        const string rawSplashPath = sw::ResourceUtil::getResourcePath( "textures_raw/splash.png" );
         if ( rawSplashPath.empty() )
         {
             // If textures_raw is not yet set in Resource priority, test direct path
-            const string directPath = "Resource/editor/textures_raw/splash.jpg";
+            const string directPath = "Resource/editor/textures_raw/splash.png";
             if ( FileUtil::exists( directPath ) == false )
                 return;
         }
 
-        const string srcPath = rawSplashPath.empty() ? "Resource/editor/textures_raw/splash.jpg" : rawSplashPath;
+        const string srcPath = rawSplashPath.empty() ? "Resource/editor/textures_raw/splash.png" : rawSplashPath;
 
         // 1. Decode raw image via ImageUtil
         RawImageData rawImage;
@@ -579,7 +579,7 @@ namespace sw::editor
             problemText += problem;
             problemText += "\n";
         }
-        SW_EXPECT_TRUE( summary._sourceCount > 0 ); // editor/textures_raw/splash.jpg
+        SW_EXPECT_TRUE( summary._sourceCount > 0 ); // editor/textures_raw/splash.png
         SW_EXPECT_TRUE_MSG( summary.isClean(), problemText.c_str() );
         SW_EXPECT_EQUAL( 0u, summary._importedCount );
     }
@@ -589,7 +589,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( TextureImportStampTest, RawPathMapsToTheTexturesFolder )
     {
-        SW_EXPECT_STREQ( "editor/textures/splash.dds", TextureImporter::makeImportedTexturePath( "editor/textures_raw/splash.jpg" ).c_str() );
+        SW_EXPECT_STREQ( "editor/textures/splash.dds", TextureImporter::makeImportedTexturePath( "editor/textures_raw/splash.png" ).c_str() );
         SW_EXPECT_STREQ( "D:/r/game/x/textures/ui/hud/icon.dds", TextureImporter::makeImportedTexturePath( "D:\\r\\game\\x\\textures_raw\\ui\\hud\\icon.png" ).c_str() );
         SW_EXPECT_TRUE( TextureImporter::makeImportedTexturePath( "engine/textures/white.png" ).empty() );
         SW_EXPECT_TRUE( TextureImporter::makeImportedTexturePath( "engine/my_textures_raw_backup/a.png" ).empty() );

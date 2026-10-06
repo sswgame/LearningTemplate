@@ -77,7 +77,7 @@ namespace sw::editor
         [[nodiscard]] bool loadFromJsonString( string_view jsonString );
 
         /**
-         * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.jpg")에 처음으로 일치하는 규칙을 찾습니다.
+         * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.png")에 처음으로 일치하는 규칙을 찾습니다.
          * @return 일치하는 규칙을 찾으면 true
          */
         bool findMatchingRule( string_view relativePath, TextureImportRule& outRule ) const;

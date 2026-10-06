@@ -78,13 +78,6 @@ def isCreditedAssetInternal(relPath: str, setAllPath: set[str]) -> bool:
 class CheckResourceCreditsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    #: 저장소 경로 → 크레딧 표에 아직 없는 까닭.
-    mapExemption = {
-        "Resource/editor/textures_raw/splash.jpg": "출처 기록 없음 — 저장소에서 만든 이미지로 교체 예정(사용자 결정 4)",
-        "Resource/engine/textures/perlin.dds": "출처 기록 없음 — 저장소에서 만든 잡음 텍스처로 교체 예정(사용자 결정 4)",
-        "Resource/engine/textures/random/grass.dds": "출처 기록 없음 — 저장소에서 만든 텍스처로 교체 예정(사용자 결정 4)",
-    }
-
     description = "Resource 의 원본 자산이 도메인 credits.md 에 있고 라이선스가 CC0 1.0 · 이 저장소인지 검사"
     buildComment = "Checking that source assets are listed in credits.md with an allowed license..."
     timeoutSeconds = 30

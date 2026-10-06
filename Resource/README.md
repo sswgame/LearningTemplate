@@ -38,7 +38,7 @@
 
 런타임은 DDS만 읽습니다. BC 압축과 밉맵이 이미 끝난 파일입니다. 그래서 `textures/` 폴더에는 `.dds` 와 데이터 파일(`.sprite.json`, `.meta`)만 둡니다.
 
-원본 이미지(PNG, JPG, TGA, HDR 등)는 같은 도메인의 `textures_raw/` 에 같은 상대 경로로 둡니다. 예를 들어 `editor/textures_raw/splash.jpg` 를 임포트하면 `editor/textures/splash.dds` 가 됩니다.
+원본 이미지(PNG, JPG, TGA, HDR 등)는 같은 도메인의 `textures_raw/` 에 같은 상대 경로로 둡니다. 예를 들어 `editor/textures_raw/splash.png` 를 임포트하면 `editor/textures/splash.dds` 가 됩니다.
 포맷, sRGB, 밉맵 규칙은 `Config/Editor/TextureImportConfig.json` 이 정합니다. 쿠킹할 때 `textures_raw/` 는 팩에서 뺍니다.
 
 원본을 고쳤다면 이렇게 합니다.

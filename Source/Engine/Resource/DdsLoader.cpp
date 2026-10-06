@@ -29,8 +29,8 @@ namespace sw
 
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
-        // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 DDS 다섯 개
-        // (`engine/textures/perlin.dds` · `skybox/env*.dds`)가 전부 이 모양이다.
+        // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 임포터는 DX10 머리를 쓰므로
+        // 이 모양은 밖에서 들여온 DDS 에만 있다(`ResourceTest.DdsLoaderReadsD3dFormatIntegerFourCc`).
         constexpr uint32 kD3dFmt_R16F          = 111;
         constexpr uint32 kD3dFmt_G16R16F       = 112;
         constexpr uint32 kD3dFmt_A16B16G16R16F = 113;

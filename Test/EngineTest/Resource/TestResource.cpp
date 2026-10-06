@@ -424,10 +424,47 @@ SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
     // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
     SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
     SW_EXPECT_TRUE( image.isValid() );
-    SW_EXPECT_EQUAL( 64u, image._width );
-    SW_EXPECT_EQUAL( 64u, image._height );
-    // 이 파일의 dwFourCC 는 0x71 — 네 글자 코드가 아니라 **D3DFMT_A16B16G16R16F(113) 정수**다.
-    // 스위치가 이 값을 못 알아보면 `_dxgiFormat == 0` 인 채로 남으므로 여기서 값을 못 박는다.
+    // `engine/textures_raw/perlin.png`(Scripts/dev/MakeNoiseTexture.py, 256 × 256)를 임포트 규칙 Fallback_Default(BC7 · sRGB · 밉)로 가져온 것.
+    SW_EXPECT_EQUAL( 256u, image._width );
+    SW_EXPECT_EQUAL( 256u, image._height );
+    SW_EXPECT_EQUAL( 99u, image._dxgiFormat ); // DXGI_FORMAT_BC7_UNORM_SRGB
+    SW_EXPECT_TRUE( image._mipCount > 1u );
+}
+
+/**
+ * @brief [ResourceTest] dwFourCC 에 D3DFMT 정수(113 = A16B16G16R16F)를 넣은 옛 DDS 도 포맷을 알아본다
+ * @details D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름 대신 `D3DFORMAT` 정수를 dwFourCC 에 넣었다(0x71 같은 작은 수).
+ *          이 저장소의 임포터는 DX10 머리를 쓰므로 그런 파일이 저장소에 없다 — 머리를 직접 만들어 스위치를 지킨다.
+ *          스위치가 이 값을 못 알아보면 `_dxgiFormat == 0` 이라 로드가 실패한다.
+ */
+SW_TEST_CASE( ResourceTest, DdsLoaderReadsD3dFormatIntegerFourCc )
+{
+    // 4 × 4 텍셀 × 8 바이트(RGBA16F) 본문을 붙인 최소 DDS.
+    constexpr size_t  kHeaderBytes = 4 + 124;
+    sw::vector<uint8> bytes;
+    bytes.resize( kHeaderBytes + 4 * 4 * 8, 0 );
+
+    uint8* p           = bytes.data();
+    auto   writeUint32 = []( uint8* pDst, uint32 value )
+    {
+        pDst[0] = static_cast<uint8>( value & 0xFF );
+        pDst[1] = static_cast<uint8>( ( value >> 8 ) & 0xFF );
+        pDst[2] = static_cast<uint8>( ( value >> 16 ) & 0xFF );
+        pDst[3] = static_cast<uint8>( ( value >> 24 ) & 0xFF );
+    };
+
+    writeUint32( p + 0, 0x20534444 );  // "DDS "
+    writeUint32( p + 4, 124 );         // dwSize
+    writeUint32( p + 12, 4 );          // dwHeight
+    writeUint32( p + 16, 4 );          // dwWidth
+    writeUint32( p + 76, 32 );         // ddspf.dwSize
+    writeUint32( p + 80, 0x00000004 ); // ddspf.dwFlags = DDPF_FOURCC
+    writeUint32( p + 84, 113 );        // ddspf.dwFourCC = D3DFMT_A16B16G16R16F(정수)
+
+    sw::DdsImageData image;
+    SW_ASSERT_TRUE( sw::DdsLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
+    SW_EXPECT_TRUE( image.isValid() );
+    SW_EXPECT_EQUAL( 4u, image._width );
     SW_EXPECT_EQUAL( 10u, image._dxgiFormat ); // DXGI_FORMAT_R16G16B16A16_FLOAT
 }
 
