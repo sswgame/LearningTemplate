@@ -219,7 +219,7 @@ namespace sw::editor
         ImGui::SetNextWindowViewport( ImGui::GetWindowViewport()->ID );
         if ( desc._maxWidth > 0.0f )
         {
-            ImGui::SetNextWindowSizeConstraints( ImVec2{ 0.0f, 0.0f }, ImVec2{ desc._maxWidth, MathUtil::MaxFloat } );
+            ImGui::SetNextWindowSizeConstraints( ImVec2{ 0.0f, 0.0f }, ImVec2{ desc._maxWidth, MathUtil::kMaxFloat } );
             flags &= ~ImGuiWindowFlags_NoScrollbar;
             flags |= ImGuiWindowFlags_HorizontalScrollbar;
         }
