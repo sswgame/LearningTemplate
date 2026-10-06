@@ -3261,7 +3261,7 @@
     "Vulkan",
     "OpenGL"
    ],
-   "description": "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름 · 별칭)",
+   "description": "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)",
    "presets": []
   },
   {

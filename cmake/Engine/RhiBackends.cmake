@@ -23,24 +23,22 @@ function(sw_getAllRhiBackendSources OUT_VAR)
 	set(${OUT_VAR} ${listAll} PARENT_SCOPE)
 endfunction()
 
-# 이름 · 별칭(대소문자 무관 — "DirectX12" · "dx12" · "vk")을 백엔드 이름으로. 모르는 이름이면 구성을 세운다.
-function(sw_resolveRhiBackendName TEXT OUT_VAR)
-	string(TOLOWER "${TEXT}" lowerText)
-	foreach(name IN LISTS SW_RHI_BACKEND_NAMES)
-		string(TOLOWER "${name}" lowerName)
-		if(lowerText STREQUAL lowerName OR lowerText IN_LIST SW_RHI_BACKEND_${name}_ALIASES)
-			set(${OUT_VAR} ${name} PARENT_SCOPE)
-			return()
-		endif()
-	endforeach()
-	message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' — one of ${SW_RHI_BACKEND_NAMES} or their aliases (Config/Engine/CookContract.json)")
+# 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 별칭(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
+function(sw_checkRhiBackendName TEXT)
+	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
+		string(REPLACE ";" ", " listName "${SW_RHI_BACKEND_NAMES}")
+		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${listName} "
+			"(Config/Engine/CookContract.json rhi_backends). An existing build folder keeps the old cache value: "
+			"re-configure with -DSW_SHIPPING_RHI_BACKEND=<name> or edit it in CMakeCache.txt")
+	endif()
 endfunction()
 
-# 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 풀고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
+# 배포 빌드가 Engine 에 넣을 백엔드 — 이름을 확인하고, 이 플랫폼(sw_platform_name)에 그 백엔드가 있는지 본다. 없으면 구성을 세운다.
 # 플랫폼은 그 백엔드 모듈의 매니페스트(_listPlatform)가 정본이다. 주의: 배포 구성에서는 모듈이 꺼져 있으므로(`_listConfiguration`) 활성 여부가
 # 아니라 플랫폼 칸을 본다 — 이 확인이 없으면 그 플랫폼에 없는 백엔드를 고른 Engine 이 백엔드 없이 링크된다.
 function(sw_resolveShippingRhiBackend TEXT OUT_VAR)
-	sw_resolveRhiBackendName("${TEXT}" backendName)
+	sw_checkRhiBackendName("${TEXT}")
+	set(backendName ${TEXT})
 	set(moduleName ${SW_RHI_BACKEND_${backendName}_MODULE})
 	get_property(listPlatform GLOBAL PROPERTY SW_MODULE_${moduleName}_PLATFORMS)
 	if(NOT sw_platform_name IN_LIST listPlatform)

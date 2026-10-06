@@ -7,7 +7,7 @@
         "",
         "rhi_backends: 줄 순서 = RHIBackend 열거값(Config/RHIBackendType.h, static_assert 로 맞춘다).",
         "  name = RHIBackend 열거자, shader_folder = Resource/**/shaders/bin/<폴더>, shader_target = ShaderTargetFormat 열거자,",
-        "  command_line_argument = CommandLineArgument 열거자, aliases = 명령줄 · 셰이더 폴더 · 쿠커 --target-rhi · CMake SW_SHIPPING_RHI_BACKEND 가 받는 이름(소문자),",
+        "  command_line_argument = CommandLineArgument 열거자, aliases = 명령줄 · 셰이더 폴더 · 쿠커 --target-rhi 가 받는 이름(소문자 — CMake SW_SHIPPING_RHI_BACKEND 는 name 만 받는다),",
         "  module = RHI_* 모듈 이름(매니페스트 · 타깃), source_folder = Source/Engine/Graphics/RHI/<폴더>(그 아래 .cpp 가 그 백엔드의 장치 소스 전부),",
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listPlatform 이 정본이다.",

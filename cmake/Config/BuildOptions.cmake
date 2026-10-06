@@ -51,15 +51,15 @@ if(SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_BUILD_GAME)
 	message(FATAL_ERROR "SW_TARGET_TYPE=Server needs SW_BUILD_GAME=ON — the dedicated server runs the game module")
 endif()
 
-# 배포 빌드가 Engine 에 정적으로 넣는 RHI 백엔드 하나 — 쿠킹 표(Config/Engine/CookContract.json rhi_backends)의 이름이나 별칭(대소문자 무관).
+# 배포 빌드가 Engine 에 정적으로 넣는 RHI 백엔드 하나 — 쿠킹 표(Config/Engine/CookContract.json rhi_backends)의 이름 그대로(별칭 · 소문자는 구성 실패).
 # 기본은 표의 default_rhi_backend, Windows 밖은 Vulkan(project() 전이라 WIN32 대신 CMAKE_HOST_WIN32 — 교차 컴파일은 지원하지 않는다).
 # Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Engine/RhiBackends.cmake).
 file(READ "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" swCookContractText)
 string(JSON swContractDefaultRhi GET "${swCookContractText}" default_rhi_backend)
 if(CMAKE_HOST_WIN32)
-	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름 · 별칭)")
+	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 else()
-	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름 · 별칭)")
+	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 endif()
 set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL)
 
