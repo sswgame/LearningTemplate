@@ -186,6 +186,12 @@ namespace sw
         float4 _casterTint;
         PROPERTY( Category = "Look", DisplayName = "Projectile Color", Meta = "Color", Tooltip = "Colour of the projectile sphere" )
         float4 _projectileTint;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
+        PROPERTY( Category = "Combat", DisplayName = "Unit Radius", Tooltip = "Projectiles start this far outside the caster body", Min = 0.0, Units = m )
+        float32 _unitRadius;
+        PROPERTY( Category = "Combat", DisplayName = "Projectile Radius", Min = 0.0, Units = m )
+        float32 _projectileRadius;
 
         vector<ArenaUnit>        _listUnit;
         vector<ArenaUnitView>    _listUnitView;

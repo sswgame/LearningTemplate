@@ -29,12 +29,9 @@ namespace sw
     {
         struct ArenaDirectorComponentInternal
         {
-            static constexpr float32 kStatusLogInterval = 5.0f; ///< 상태 로그 간격(s)
-            static constexpr uint32  kStateTag          = FourCcUtil::make( "ARNA" );
-            static constexpr uint32  kStateVersion      = 1;
-            static constexpr float32 kUnitRadius        = 0.5f; ///< 투사체가 쏜 쪽 몸 밖에서 나오는 거리
-            static constexpr float32 kProjectileRadius  = 0.25f;
-            static constexpr int32   kProjectileTint    = 3; ///< `applyTint` 의 투사체 번호(앞 셋은 `ArenaUnitKind` 순)
+            static constexpr uint32 kStateTag       = FourCcUtil::make( "ARNA" );
+            static constexpr uint32 kStateVersion   = 1;
+            static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞 셋은 `ArenaUnitKind` 순)
 
             static constexpr const utf8* kSoundWave       = "game/abilityarena/sounds/maximize_001.ogg";
             static constexpr const utf8* kSoundPlayerFell = "game/abilityarena/sounds/error_004.ogg";
@@ -79,6 +76,9 @@ namespace sw
         , _gruntTint{ 1.0f, 0.5f, 0.45f, 1.0f }
         , _casterTint{ 0.8f, 0.55f, 1.0f, 1.0f }
         , _projectileTint{ 1.0f, 0.6f, 0.1f, 1.0f }
+        , _statusLogInterval{ 5.0f }
+        , _unitRadius{ 0.5f }
+        , _projectileRadius{ 0.25f }
         , _listUnit{}
         , _listUnitView{}
         , _listProjectile{}
@@ -225,7 +225,6 @@ namespace sw
     void ArenaDirectorComponent::launchProjectile( const AbilitySystemComponent& from, const float3& facing, const GameplayEffectSpec& spec,
                                                    const GameplayEffectSpec& extraSpec, float32 speed, float32 range ) const
     {
-        using Internal                 = ArenaDirectorComponentInternal;
         const GameObject*    pFrom     = from.getOwner();
         const ArenaUnitView* pFromView = pFrom != nullptr ? findUnitView( pFrom->getHandle() ) : nullptr;
         GameObjectManager*   pManager  = getObjectManager();
@@ -235,7 +234,7 @@ namespace sw
         ProjectileRequest request;
         request._spec        = spec;
         request._extraSpec   = extraSpec;
-        request._position    = pFromView->_position + facing * ( Internal::kUnitRadius + Internal::kProjectileRadius );
+        request._position    = pFromView->_position + facing * ( _unitRadius + _projectileRadius );
         request._velocity    = facing * speed;
         request._range       = range;
         request._bFromPlayer = from.hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
@@ -487,7 +486,7 @@ namespace sw
     void ArenaDirectorComponent::logStatus( float32 deltaTime )
     {
         _statusLogTimer += deltaTime;
-        if ( _statusLogTimer < ArenaDirectorComponentInternal::kStatusLogInterval )
+        if ( _statusLogTimer < _statusLogInterval )
             return;
         _statusLogTimer             = 0.0f;
         GameObjectManager* pManager = getObjectManager();

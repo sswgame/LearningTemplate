@@ -33,17 +33,18 @@ namespace sw
                 {    "Arena.Heal",     ArenaDirectorComponent::kInputHeal},
                 {    "Arena.Dash",     ArenaDirectorComponent::kInputDash},
             };
-
-            static constexpr float32 kCrowdRadius = 2.5f; ///< 자동 전투가 "둘러싸였다" 고 보는 거리(m)
-            static constexpr uint32  kCrowdCount  = 3;
-            static constexpr float32 kMeleeRange  = 2.0f; ///< 자동 전투가 근접으로 바꾸는 거리(m)
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    ArenaPlayerControllerComponent::ArenaPlayerControllerComponent() = default;
+    ArenaPlayerControllerComponent::ArenaPlayerControllerComponent()
+        : _crowdRadius{ 2.5f }
+        , _crowdCount{ 3 }
+        , _meleeRange{ 2.0f }
+    {
+    }
 
     void ArenaPlayerControllerComponent::tickController( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem,
                                                          float3& inoutPosition )
@@ -82,7 +83,6 @@ namespace sw
     void ArenaPlayerControllerComponent::tickAutoPlay( float32 deltaTime, const ArenaDirectorComponent& director, AbilitySystemComponent& abilitySystem,
                                                        float3& inoutPosition )
     {
-        using Internal            = ArenaPlayerControllerComponentInternal;
         const float32 healthRatio = abilitySystem.getAttributeValue( CombatAttributes::health() ) /
                                     MathUtil::max( 1.0f, abilitySystem.getAttributeValue( CombatAttributes::maxHealth() ) );
         if ( healthRatio < 0.5f )
@@ -104,11 +104,11 @@ namespace sw
         {
             const ArenaUnitView& view    = pView[viewIndex];
             const bool           bNearby = view._kind != ArenaUnitKind::Player && view._bAlive == SW_TRUE &&
-                                 float3::getDistance( view._position, inoutPosition ) < Internal::kCrowdRadius;
+                                 float3::getDistance( view._position, inoutPosition ) < _crowdRadius;
             if ( bNearby )
                 ++nearbyEnemyCount;
         }
-        if ( nearbyEnemyCount >= Internal::kCrowdCount )
+        if ( nearbyEnemyCount >= _crowdCount )
         {
             setFacing( float3{ 0.0f, 0.0f, 0.0f } - getFacing() );
             tapInput( abilitySystem, ArenaDirectorComponent::kInputDash );
@@ -119,7 +119,7 @@ namespace sw
             moveTowards( abilitySystem, getFacing(), deltaTime, inoutPosition );
             return;
         }
-        if ( distance > Internal::kMeleeRange )
+        if ( distance > _meleeRange )
         {
             tapInput( abilitySystem, ArenaDirectorComponent::kInputFireball );
             moveTowards( abilitySystem, toTarget, deltaTime, inoutPosition );
