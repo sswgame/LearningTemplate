@@ -230,3 +230,169 @@ GPU 타임스탬프 칸(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스
   셰이더에 `SW_PASS_GBUFFER` 를 얹는다(출력은 양쪽 다 구조체).
 - **인스턴스 배치를 든 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 변화(`onOwnerActiveInHierarchyChanged` · `_bActive` 의 `onPropertyChanged`)에 `markAllEntriesDirty` 를 부른다.**
   빌더는 `MeshComponent` 와 같은 규칙(`Component::isActive`)으로 소유 컴포넌트가 꺼진 배치를 뺀다 — 더티를 찍지 않으면 부분 수집이 지난 프레임 후보를 그대로 쓴다.
+
+## 옮겨 온 내용 — 다시 쓰기 전
+
+아래는 Graphics README 에서 원문 그대로 옮겨 온 절이다. 이 문서를 다시 쓰는 단위가 본문에 녹여 없앤다.
+
+### 패스 입력 역할 계약 — 파이프라인 XML 의 선언이 곧 바인딩이다
+
+풀스크린 패스(Lighting · SSAO · Bloom · Outline · TAA · Tonemap · Present)는 XML 의 `_listInput` 을 **역할 이름으로
+전부 건다**(`FrameRenderer::registerDeclaredInputs`). 첨부 이름·포맷 → 역할은 `resolveRenderPassInputRole` 하나가
+정한다: 고정 역할 이름(GBufferAlbedo · GBufferNormal · ShadowMap · AOColor)은 그 역할, 그 밖의 깊이는 SceneDepth,
+나머지 컬러는 SourceColor. 셰이더는 역할 이름으로 읽는다(`g_SourceColorIndex` · `g_AmbientOcclusionIndex` …).
+타깃은 선언한 출력 중 첫 번째로 존재하는 것이다.
+
+`RenderPassInputSignature`(Pipeline/, 타입마다의 목록은 `RenderPassTypeInfo` 표의 칸)가 타입마다 읽는 역할의 필수/선택 목록이고, `RenderPipelineAsset::validate` 4번
+검사가 로드 시점에 대조한다 — 계약에 없는 역할을 선언하면 "선언만 있고 바인딩되지 않는 입력", 필수 역할이 빠지면
+"셰이더가 kInvalidIndex 를 읽습니다", SourceColor 가 둘이면 오류. 새 역할이 필요하면 (1) enum 과
+이름표, (2) 패스 종류 표(`RenderPassTypeInfo`)의 계약 칸, (3) PassCB 의 `g_<Role>Index`, (4) 에뮬 슬롯 표(`swSampleIndex` · `commitBindlessTextureBindings`)
+네 곳이다. `FrameRenderer::setInputRoleEnabled( role, false )` 는 그 역할을 걸지 않는 쇼 플래그다(테스트가 켬/끔을 비교한다).
+
+### GPUScene 인스턴스드 드로우 (언리얼 방식)
+
+메시 드로우는 per-instance world/material 을 **영속 구조버퍼**(`SwInstanceData` — 정의는 `instancedata.hlsli` 하나로 그래픽스와 컴퓨트
+셋이 함께 쓴다, C++ `GpuInstance` 와 128 바이트 레이아웃 일치)에서 읽고, 배치당 간접 드로우 하나로 그린다(같은 PSO 의 배치들은 멀티 드로우 하나). VS 는 입력 어셈블러가 주는
+인스턴스 슬롯(`SW_INSTANCESLOT` — 간접 인자의 startInstance(배치 시작) + 서수)으로 `swLoadInstance( input.instanceSlot )`
+를 불러 월드 행렬과 `materialIndex` 를 얻어 PS 에 넘기고, PS 는 `SW_MATERIAL( materialIndex )` 로 셰이더 타입별 머티리얼
+버퍼 `g_SwMaterials`(t9) 의 원소를 읽는다.
+`g_SwInstancesIndex` 가 `kInvalidIndex` 면 `g_World`/`g_MaterialIndex` 폴백(풀스크린 · 픽스처 드로우). 인스턴스·머티리얼 버퍼는 **4백엔드가
+같은 슬롯(t4/t9)** 을 쓰고 백엔드는 그 슬롯을 어떻게 거는지만 다르다:
+
+| 백엔드 | t4/t9 구조버퍼를 거는 방법 |
+|--------|--------------------|
+| DX12   | t/u 슬롯 **디스크립터 테이블** — 등록 때 오프라인(CPU) 힙에 만든 뷰를 드로우/디스패치 직전 `flushSlotTables` 가 온라인 힙 블록에 `CopyDescriptors` 해 루트 테이블로 건다(언리얼 `FD3D12DescriptorCache`). CB 만 루트 CBV. 텍스처 배열은 힙 시작 테이블(t0 space1). 루트 예산 25/64 dword (`shaderslot::dx12`). SM6.6 힙 인덱싱은 쓰지 않는다 |
+| DX11   | `StructuredBuffer` SRV — `createStructuredBuffer` 가 SRV 생성, `VS/PSSetShaderResources` |
+| OpenGL | SSBO `glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 슬롯)` |
+| Vulkan | 슬롯 세트(set 0, binding 16+슬롯 STORAGE_BUFFER). 바인딩이 바뀐 드로우 직전 **커맨드 버퍼 자신의 풀 묶음**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`)에서 세트를 할당해 쓴다(`flushSlotSet`) — 락 없음, 버퍼가 펜스를 지나 재사용될 때 통째로 리셋. 텍스처 배열·immutable sampler 는 set 1 |
+
+- 드로우가 인스턴스를 찾는 길은 아래 "씬 드로우 경로" 절(인스턴스 슬롯 스트림 → 가시 목록 → 인스턴스 버퍼)이다.
+
+## 소유와 수명 — 누가 만들고, 누가 놓고, 누가 빌리는가
+
+"누가 소유하고 누가 빌리는지" 를 타입에 둔다. 그렇지 않으면 RT 가 만든 값을 GT 가 덮어쓰고, 스냅샷이 해제된
+머티리얼을 읽고, 게임 모듈이 만든 객체를 엔진이 모듈 사후에 놓는다. 아래가 규칙이고 타입과 린트가 지킨다 — 문서만 믿지 말 것.
+
+| 객체 | 만드는 곳 · 소유 | 렌더 스레드가 보는 방식 |
+|---|---|---|
+| `Mesh` | `Mesh::create*()` (Engine) · `MeshComponent` 의 `shared_ptr` | 스냅샷 배치가 `shared_ptr` 로 **함께 소유**, `upload()` 에서 역참조 |
+| `Material` | `Material::create()` (Engine) · `MaterialCache` 의 `shared_ptr` + 참조 수 | 스냅샷 배치·원소가 `shared_ptr` 로 함께 소유 |
+| `MaterialInstance` | `MaterialInstance::create()` (Engine) · `MeshComponent` 의 `shared_ptr` | 위와 같음. `updateRhi` 를 RT 가 부른다 |
+| `Texture2D` | `TextureCache` 의 `unique_ptr` + 참조 수 | 보지 않는다 — 머티리얼이 **SRV 인덱스(값)** 로 실어 준다 |
+| GPU 핸들(버퍼·텍스처) | `IRHIResourceFactory` | 파괴는 디바이스 해제 큐가 **펜스 뒤로 미룬다**(DX12·Vulkan). CPU 객체가 먼저 죽어도 된다 |
+| `GpuSceneSnapshot` | GT `GpuSceneBuilder::exportCpuSnapshot` 이 프레임마다 만들어 `RenderFramePacket` 에 싣는다 | RT `GpuScene::adoptCpuSnapshot` 이 통째로 받는다 |
+| GPU 슬롯·컬 뷰·간접 개수 | RT `GpuScene` 이 `upload()` 에서 만든다 | 스냅샷 타입에 없으므로 **옮겨질 수 없다** |
+
+규칙 일곱:
+
+1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣는다.** 스냅샷·패킷의 멤버는 `shared_ptr` 이거나 값이다.
+   생포인터는 키(`GpuMaterialElementKey`) 같은 **정체성**에만 쓴다 — 키는 비교만 하고 역참조하지 않는다.
+2. **한쪽만 만드는 값은 그쪽 타입에만 있다.** 옮겨지는 것은 `GpuSceneSnapshot` 하나로 묶고, `export`/`adopt` 는 그
+   타입을 통째로 옮긴다. 필드를 손으로 골라 복사하는 함수를 다시 만들지 말 것.
+   만드는 쪽(`GpuSceneBuilder`)과 받는 쪽(`GpuScene`)은 **다른 클래스**다 — RT 가 씬을 읽거나 GT 가 GPU 핸들을
+   만지는 코드는 컴파일되지 않는다. 씬 직접 경로(`FrameRenderer::execute( pScene )`)도 자기 빌더로 같은 길을 탄다.
+3. **모듈 경계를 넘어 소유될 수 있는 객체는 Engine 의 `create()` 로만 태어난다 — 컴파일러가 지킨다.**
+   `shared_ptr` 의 제어 블록은 `make_shared` 를 부른 DLL 에 산다. 그래서 Material · MaterialInstance · Mesh 의
+   생성자는 `create()` 만 만들 수 있는 열쇠(`CreateKey`)를 요구한다: 모듈에서 `make_shared` 해도, 스택에 값으로
+   두어도 **컴파일되지 않는다.** 덤으로 "shared 로 소유되지 않은 머티리얼" 이 존재할 수 없어 스냅샷이 언제나
+   `shared_from_this` 로 소유를 빌릴 수 있다. (`Material*` 인자는 ADL 로 `std::make_shared` 를 끌어오므로
+   Engine 안에서도 `sw::make_shared` 로 한정한다.)
+4. **놓는 순서는 디바이스보다 먼저.** 기동 표에서 FrameRenderer 단계가 RHI 단계 뒤에 서므로, 역순 종료에서 스냅샷 소유를
+   먼저 놓고 디바이스를 내린다. 소멸자에 맡기면 디바이스 사후에 GPU 자원을 돌려주려 한다.
+
+5. **핸들 값은 디바이스 안에서만 정체성이다.** 새 디바이스의 첫 PSO·버퍼·디스크립터는 옛 디바이스와 **같은 번호**를
+   받는다(할당 순서가 결정적이다). 핸들 값으로 "그대로인가" 를 판단하는 캐시 — `FramePassContext` 의 마지막 바인딩,
+   `RenderGraphExecutionContext` 의 리소스 상태 — 는 디바이스를 내릴 때 함께 잊는다(`resetBindingCache` · `reset`).
+   GPU 버퍼를 드는 객체는 핸들을 맨몸으로 들지 말고 **`RHIResidentBuffer`**(핸들 · 디바이스)로 든다 — `isResident()` 가
+   "올라가 있다" 를, `getLiveDevice()` 가 해제해도 되는 디바이스만 돌려준다. 값이 남아 있다는 것만으로 "살아 있는
+   디바이스의 것" 임이 보장되는 이유는 아래 5-1 이다.
+
+5-1. **GPU 자원을 드는 객체는 `RHIRenderResource` 를 상속한다 — 예외 없이.** 언리얼 `FRenderResource` 와 같은 자리다.
+   태어날 때 전역 등록부에 자기를 넣고, 디바이스 수명 이벤트가 목록 전체에 밀어 넣는다:
+   `IRHIDevice::shutdown()` 이 **자원을 내리기 전에**(종료 1 단계) `releaseAllFor( this )`, `~IRHIDevice` 가 안전망으로
+   `forgetAllFor( this )`, 새 디바이스가 선 직후 `EngineLoop` 이 `initAllFor( device )`.
+   지금 상속하는 것은 `Mesh` · `Material` · `MaterialInstance` · `Texture2D` 넷이다.
+   **바깥에서 캐시를 훑어 일괄 해제·일괄 재생성하는 함수를 다시 만들지 말 것** — 목록에서 빠진 것이 조용히 틀린다.
+   통보 중에 남이 파괴될 수 있으므로(머티리얼이 텍스처 참조를 놓으면 그 자리에서 `Texture2D` 가 죽는다) 등록부는
+   부르기 직전에 "아직 있나" 를 잠금 아래에서 다시 묻는다.
+6. **게임 모듈이 씬 오브젝트를 들 때는 핸들이다.** 상태 복원(모듈 리로드 · RHI 교체)은 씬을 통째로 지우고 다시
+   만든다. 생포인터는 죽은 주소가 되고 `ComponentHandle` 은 nullptr 로 끝난다. 절차 생성물은 스냅샷에 싣지 말고
+   `onBeforeStateSerialize` 에서 걷고 `onAfterStateDeserialize` 에서 다시 만든다(`BenchScene`).
+
+7. **GPU 리소스는 그리기 전에 만든다.** 렌더 스레드는 그리기만 한다. 게임 스레드가 "이번 프레임에 그릴 것" 을
+   알고 있으므로 스냅샷을 내보내기 전에 `GpuUploadQueue` 로 넘겨 워커가 병렬로 만든다(`-gv_gpuUploadQueue=0` 으로
+   끌 수 있다). 워커 생성 가능 여부는 백엔드가 답한다(`_bThreadSafeResourceCreation`) — OpenGL 은 컨텍스트가
+   스레드에 묶여 큐가 받지 않고 렌더 스레드가 그 프레임에 만든다. 큐는 **앞당기는 장치**이지 유일한 통로가 아니다: 큐가 못 다룬 것은 렌더
+   스레드가 그 자리에서 만든다(`Mesh::initRhi` 는 멱등이다).
+
+무엇이 무엇을 지키는가: 옮겨지는 값의 집합은 `GpuSceneSnapshot` **타입**이, 생성·소유 방식은 **패스키 생성자**가
+컴파일 시점에 지킨다. C++ 가 못 막는 것은 "옮겨지는 구조체에 원시 포인터 필드를 추가하는 것" 하나이고, 그것만
+`Scripts/lint/gate/CheckRenderOwnership.py` 가 본다(CTest `lint` 라벨 · pre-commit).
+재현·회귀 테스트: `RenderPassGpuTest.MaterialLifetimeFollowsPacket` (ASAN 프리셋에서 해제 후 사용을 잡는다),
+`RenderPassGpuTest.RendererSurvivesDeviceRecreate` (디바이스 재생성 뒤 유리 큐브).
+헤드리스 재현: `-gv_rhiSwapAtFrame=30 -gv_rhiSwapTo=<0..3>` (DX11=0 · DX12=1 · Vulkan=2 · GL=3) 과 `-gv_screenshotFrame=100`.
+
+## 설계 메모 — 언리얼과 같은 것, 다른 것
+
+남은 일은 [docs/06_Backlog.md](../../../../docs/06_Backlog.md) 의 그래픽스 절이 정본입니다. 여기에는 구조와 주의만 둡니다.
+
+**언리얼과 같은 자리:**
+
+- **Present PSO 는 대상 포맷마다 하나.** PSO 의 렌더 타깃 포맷은 바인딩된 타깃의 실제 포맷(`IRHIResourceFactory::getTextureFormat( handle )` ·
+  `IRHIDevice::getBackBufferFormat()`)에서 뽑는다. `buildPresentPsoVariants` 가 셋업에서 백버퍼 · 오프스크린 포맷을 미리 만들고,
+  기록 중의 `ensurePresentPso` 는 조회만 한다 — PSO 생성은 락 없는 핸들 표 · Vulkan 렌더패스 캐시를 건드리므로 태스크 워커에서 만들면 안 된다.
+- **Vulkan 슬롯 세트 풀은 커맨드 버퍼 쌍이 들고 다닌다**(`VulkanDescriptorPoolSet`, 언리얼 `FVulkanDescriptorPoolSetContainer`). 쌍이 GPU 펜스를
+  지나 돌아온 뒤 `beginCommandList` 가 통째로 리셋한다 — 할당 경로에 락이 없다.
+- **DX12 루트 시그니처 25/64 dword**: CB 는 루트 CBV, t/u 슬롯은 디스크립터 테이블(`flushSlotTables` 가 바뀐 테이블만 온라인 힙 블록에 복사).
+  `ShaderBindingValidatorTest.Dx12RootSignatureFitsBudget` 가 계약에서 예산을 계산한다.
+- **패스 상수버퍼는 드로우마다 슬롯을 받는다**(`PassConstantRing`, 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼). 한 버퍼를 드로우들이
+  나눠 쓰면 GPU 는 제출 뒤에 읽으므로 모두 마지막 값을 본다 — `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 둘로 고정한다.
+- **머티리얼 원소는 영속 ID**(GPUScene 식): 처음 본 쌍에만 자리를 주고, 안 쓰이면 지연 회수하되 **자리를 옮기지 않는다**(인스턴스에 적힌
+  materialIndex 가 엉뚱한 원소를 가리키게 된다). `GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`.
+- **머티리얼 폴백 버퍼는 stride 마다 하나**(`ensureMaterialFallbackBuffers`, stride 는 `ShaderBindingSlot::_elementStride`) — SRV 의 구조 stride 는
+  셰이더 선언과 같아야 한다(RDG 더미 버퍼와 같은 규칙).
+- **인스턴스 원소 레이아웃은 시험이 대조한다.** `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의
+  stride · 필드 오프셋을 `GpuInstance` 와, 컴퓨트 쪽 이름(`g_Instances` · `g_InstancesRW`)까지 같은 표로 본다.
+- **투명 순서의 정본은 CPU 한 곳**(`GpuSceneBuilder::sortTransparent` — 정렬 레이어 키 → 깊이 → 후보 번호). GPU 컬링이 투명 배치를 압축한 뒤
+  `instancesort.hlsl` 은 깊이를 다시 재지 않고 **인스턴스 번호 오름차순**으로 되돌린다(배치 안의 인스턴스가 CPU 순서로 놓이므로). 깊이는 직교 카메라에서
+  시선 축, 원근에서 거리다(`Render2DSettings::computeTransparentSortAxis`) — [2D/README.md](../2D/README.md).
+- **2D 빛은 3D 와 같은 빛 목록(t12)이다**(`SW_LIGHT_TYPE_POINT2D` · `GLOBAL2D` · 그 뒤의 `SHADOW2D` 가림막 토막). 빛 받는 스프라이트(`sprite2dlit.hlsl` + `lighting2d.hlsli`)만
+  읽고 3D 조명 식(`swShadeLights`)은 건너뛴다 — 3D 빛이 하나도 없으면 키라이트로 폴백한다. 2D 게임은 `forward2dpipeline.xml`(그림자 맵 · 톤맵 없음, `-gv_renderPipeline`).
+- **스프라이트 프레임 · 색은 인스턴스 칸**(`GpuInstance::_sprite` = `GpuSpriteInstanceData` 16 바이트 — 프레임 · 색 · 픽셀 스냅, Custom Primitive Data 자리). 배치 키를
+  건드리지 않아 같은 텍스처의 스프라이트는 한 드로우다. 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)이고 UV 는 메시의 것이다
+  (`RenderPassGpuTest.SpriteFramesAndTintsArePerInstance`).
+- **값이 실제로 바뀔 때만 일한다.** 상수버퍼 · 바인딩 상태(DX12 슬롯 테이블 · Vulkan 슬롯 세트)는 내용이 달라질 때만 버전을 올리고 다시 만든다 —
+  같은 값을 다시 넣는 호출이 흔하다.
+
+**의도적으로 다른 것:**
+
+- **트랜지언트 메모리 앨리어싱 없음.** 각 트랜지언트를 개별 텍스처로 프레임 내내 든다(정확성이 아니라 메모리 차이).
+- **DX12 에 PSO 디스크 캐시가 없다**(`ID3D12PipelineLibrary`). Vulkan 은 종료 때 파이프라인 캐시를 저장한다.
+- **배리어는 레벨 프롤로그가 한꺼번에 발행한다**(`RenderGraph::setLevelPrologue`). 그래프에서 스플릿 배리어를 뽑지 않는다 — 단순하고 병렬 기록에
+  안전한 대신 세밀한 겹침을 포기했다.
+- **텍스처 배열 용량은 고정** + 펜스 뒤 인덱스 재사용. 스트리밍 · 축출은 디스크립터가 아니라 텍스처 스트리밍의 일이다.
+- **GL 은 결합 샘플러뿐**(ARB_gl_spirv 는 분리 샘플러 불가)이라 슬롯의 샘플러를 엔진이 정한다. DX11/GL 은 텍스처를 슬롯에 걸므로 머티리얼 경계가 곧 배치 경계다.
+
+## 씬 드로우 경로 — 정점 풀 · 배치 표 · 인스턴스 슬롯 스트림
+
+같은 PSO·머티리얼(버퍼·CB·텍스처·원소 수)의 연속 배치는 `drawIndirect( args, offset, count )` 한 번(멀티 드로우)이다.
+배치마다 다른 값은 드로우 호출이 아니라 **데이터**가 준다:
+- `GpuMeshVertexPool` — 씬 메시 정점을 한 정점 버퍼에 이어 붙인다. 간접 인자의 `startVertex` 가 풀 오프셋. 메시 집합이 같으면
+  다시 만들지 않는다. 못 든 메시는 자기 버퍼(멀티 드로우엔 못 묶인다).
+- `g_SwBatches`(t13, `GpuBatchInfo` 32바이트) — 배치의 인스턴스 시작·모프 풀 시작·정점 풀 시작·VAT 표 시작. 패스당 한 번 건다. 컬링 t1 과 같은 버퍼.
+- `g_SwVertexAnimation`(t14, `GpuVertexAnimationPool`) — 정점 애니메이션(VAT) 표. 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) + 프레임 × 정점
+  float4(위치, 팔면체 노멀을 담은 정수). 정점 셰이더(`swLoadAnimatedVertex`)가 VAT 시계(PassCB `g_SwVertexAnimationTime` = 게임 스레드 군중 시계) +
+  인스턴스의 `vertexAnimationPhase` 로 두 프레임을 골라 보간한다 — 먼 군중이 CPU 포즈 · GPU 스키닝 없이 인스턴스마다 다른 위상으로 한 드로우.
+- 인스턴스 슬롯 스트림(정점 슬롯 1, `SW_INSTANCESLOT`, uint, 인스턴스 스텝) — `0,1,2,…`. 간접 인자의 `startInstance` 가 배치 시작이라
+  입력 어셈블러가 네 API 모두 `startInstance + i` 를 준다. 정점 셰이더는 `swLoadInstance( input.instanceSlot )` 로 자기 인스턴스를,
+  `inst.meshBatchIndex` 로 배치 표를 읽는다. **SV_InstanceID 는 쓰지 않는다**(startInstance 포함 여부가 API 마다 달라서).
+- 루트 상수는 그룹당 하나(`g_SwMaterialCount`, `setGraphicsRootConstants` — DX12 루트 상수 / Vulkan 푸시 상수 / DX11·GL 은 b2 에뮬).
+
+**API 차이 하나는 남는다 — SV_VertexID.** Vulkan·GL 은 startVertex 를 포함하고 D3D 는 드로우 안의 0 기반 번호다.
+`binding.hlsli` 의 `swComputeMorphElement` 가 흡수하고 `RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대를 고정한다.
+**버린 설계**: DX12 커맨드 시그니처의 루트 상수 주입 + Vulkan/GL DrawIndex — 그림은 맞지만 DX12 ExecuteIndirect 가 호출당 두 배
+느려진다(런타임 패치). 비용은 상태 변경이 아니라 호출 수라 정렬 순서로는 줄지 않는다.
+진단: `-gv_drawMerge=0`(배치마다 호출) · `-gv_vertexPool=0`(메시마다 정점 버퍼).
+
+- **새 디바이스는 첫 PSO · 버퍼에 옛 것과 같은 번호를 준다** — 디바이스를 넘어 사는 캐시는 `releasePassResources` · `shutdown` 에서 잊는다. 머티리얼 등록부 비우기는 그룹 목록과
+  셰이더 경로 → 인덱스 맵을 같이(한쪽만 비우면 투명이 알파 0 으로 사라진다). 재생성 판정은 bindless 인덱스가 아니라 세대가 든 핸들로(DX11 · GL 은 인덱스를 즉시 회수한다).

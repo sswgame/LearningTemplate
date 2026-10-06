@@ -110,3 +110,81 @@ Shader/
 - [Graphics/README.md](../README.md) — 바인딩 계약 표와 셰이더 작성 규칙
 - `Resource/engine/shaders/bindingslots.hlsli` — 슬롯 번호 정본
 - `Resource/engine/shaders/binding.hlsli` — 셰이더가 include 하는 바인딩 선언
+
+## 옮겨 온 내용 — 다시 쓰기 전
+
+아래는 Graphics README 에서 원문 그대로 옮겨 온 절이다. 이 문서를 다시 쓰는 단위가 본문에 녹여 없앤다.
+
+## 리플렉션 구동 셰이더 바인딩
+
+**셰이더(.hlsl)만 고치면 된다.** C++ 에 미러 struct 없음 — 엔진이 `ShaderReflection` 으로 셰이더가
+선언한 CB 멤버/텍스처 이름·레지스터를 읽어 바인딩한다.
+
+```text
+PSO desc → ShaderBindingLayoutCache.getOrBuild(desc, backend)   (컴파일 → 리플렉션 → 레이아웃, 캐시)
+                    ↓
+FrameRenderer: 패스마다 FrameResourceRegistry 에 "ShadowMap"/"SceneColor"/... 등록,
+               PassConstantValues 에 g_ViewProj/g_World/... 값 채움
+                    ↓
+드로우 직전 ShaderParameterBinder::bindGraphics(layout, registry, values, ...)
+   - PassCB(b0)  : 리플렉션 멤버 오프셋에 값 기록 → 엔진 CB 슬롯 업로드 → bindConstantBuffer (패스마다 한 번)
+   - g_SwMaterials(t9): 셰이더 타입별 StructuredBuffer<SwMaterialData> — GpuScene 이 Material/MaterialInstance 버퍼를
+                    리플렉션 stride 로 채워 배치 전에 bindStructuredBuffer. PS 는 인스턴스의 _materialIndex 로 원소를 읽는다
+   - 텍스처       : g_<Name>Index 멤버는 registry 에서 자동 채움 (DX12/VK 텍스처 배열)
+                    비네이티브(DX11/GL)는 bindShaderResource(srv, 리플렉션 t#)
+   - MaterialCB(b1): 인스턴스 버퍼가 없는 픽스처(fullscreentriangle) 만 — Material 버퍼를 상수버퍼로 건다
+   - 샘플러       : 정적 세트 s0..s7 (SW_SAMPLER_*, `swSampleIndexWith`) — DX12 정적 샘플러 / Vulkan immutable / DX11 s9..s15 샘플러 상태 / GL 은 결합 샘플러라 samplerId 무시.
+                    엔진 텍스처 슬롯(t0..t3)은 네 백엔드가 계약 샘플러 하나(`SW_ENGINE_TEXTURE_SAMPLER` = 선형 · 클램프)로 읽는다
+   - RW 텍스처    : 컴퓨트 전용 `swStoreRwTexture2D( index, texelPosition, value )` — DX12/VK 배열(registerBindlessTextureUav 인덱스), DX11/GL u4..u7 서수
+   - 루트 상수    : `SW_ROOT_CONSTANTS_BEGIN … SW_ROOT_CONSTANTS_END` + `SW_ROOT( field )` ← setComputeRootConstants (16 dword)
+```
+
+### 바인딩 모델과 백엔드 쪽 구현
+
+- 언리얼 GPUScene 방식이다 — 셰이더는 네 백엔드에서 똑같이 `register(b#/t#/u#)` 로 선언하고, 드로우마다 바뀌는 데이터는 슬롯이 아니라 버퍼의 원소다
+  (인스턴스 `g_SwInstances` t4 를 `SV_InstanceID` 로, 머티리얼 `g_SwMaterials` t9 를 인스턴스의 `_materialIndex` 로). 그래서 바인딩은 패스 · 배치 단위로만 일어난다.
+  SM6.6 `ResourceDescriptorHeap` 은 쓰지 않는다.
+- 텍스처만 백엔드가 갈린다 — DX12 · Vulkan 은 무제한 배열 `g_SwBindlessTex2D[]`(DX12 t0 space1 · Vulkan set 1)을 인덱스로 고르고, DX11 · GL 은 t0..t8 슬롯에 드로우 직전 건다.
+- DX12: 루트 시그니처 하나(b0..b2 루트 CBV · t0..t9 슬롯 테이블 · u0..u3 슬롯 테이블 · 텍스처 배열 테이블 · 루트 상수 16 dword · 정적 샘플러 s0..s7 — 25/64 dword,
+  `shaderslot::dx12`). 언리얼 `FD3D12DescriptorCache` 처럼 등록 때 오프라인 힙에 만든 뷰를 드로우 · 디스패치 직전 온라인 힙 블록에 복사해 테이블로 건다(`flushSlotTables`).
+- Vulkan: set 0 이 슬롯 세트(binding = 종류별 시프트 + 번호: b 0..15 · t 16..31 · u 32..47, DXC `-fvk-*-shift`). 바인딩이 바뀐 드로우 직전 커맨드 버퍼 자신의
+  풀 묶음(`VulkanDescriptorPoolSet` — 펜스 뒤 통째로 리셋, 락 없음)에서 세트 하나를 할당한다(`flushSlotSet`). set 1 은 텍스처 배열 + immutable sampler.
+- 렌더타깃 포맷은 PSO 의 일부다 — 백버퍼에 그리는 PSO 는 디바이스가 실제 채택한 포맷(`getBackBufferFormat`, Vulkan 은 서피스와 협상)으로, 오프스크린은
+  `getTextureFormat` 으로 만든다(`FrameRenderer::ensurePresentPso`).
+- 상수버퍼는 `draw()` 인자가 아니라 `bindConstantBuffer( index, shaderslot::k*ConstantBuffer )` 로만 건다.
+- 머티리얼 원소 레이아웃의 정본은 셰이더다 — `Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride · 오프셋을 맞추고, SPIR-V 는
+  `-fvk-use-dx-layout` 으로 DX 와 같은 패킹을 쓴다. 인스턴스마다 자기 머티리얼 원소를 가지므로 DX12 · Vulkan 은 배치를 셰이더 타입 단위로 합친다
+  (`GpuSceneBuilder::setMergeBatchesAcrossMaterials`).
+- bindless 인덱스는 GPU 펜스 뒤에 다시 쓴다(실행 중인 프레임이 새 리소스를 읽지 않게). 머티리얼 없는 배치는 0 으로 채운 폴백 원소를 걸어 DX12 루트 SRV 가 빈 채로 나가지 않는다.
+- OpenGL 은 SPIR-V 의 `InstanceIndex` · `VertexIndex` 를 `InstanceId` · `VertexId` 로 바꿔 쿠킹한다 — 주의: ARB_gl_spirv 는 앞의 둘을 지원하지 않아 바꾸지 않으면 인스턴스 id 가 0 으로 읽힌다.
+- `ShaderBindingValidator::validate` 가 PSO 레이아웃 빌드 · 쿠킹 · 시험(`ShaderBindingValidatorTest.AllCookedShadersMatchContract`, nogpu)에서 쿠킹된 바이너리의 리플렉션을
+  계약과 대조한다 — 셰이더 선언 · 헤더 · 백엔드 상수 어느 쪽이 어긋나도 이름과 숫자로 실패한다.
+
+| 파일 | 역할 |
+|------|------|
+| `Shader/Binding/ShaderBindingSlots.h` | 슬롯·공간·Vulkan 시프트 상수 (C++ 측). `Resource/engine/shaders/bindingslots.hlsli` 를 include 해 정본을 공유 |
+| `Shader/Binding/ShaderBindingLayout.{h,cpp}` | 스테이지별 `ShaderReflectionData` 병합 → 이름/레지스터/CB멤버 조회 + 지문 |
+| `Shader/Binding/ShaderBindingLayoutCache.{h,cpp}` | (경로+define+백엔드) 키 캐시. 핫리로드 시 `invalidateByShaderPath` |
+| `Renderer/Frame/FrameResourceRegistry.{h,cpp}` | 패스 스코프 이름→{텍스처/버퍼, bindless 인덱스} |
+| `Renderer/Frame/ShaderParameterBinder.{h,cpp}` | `bindGraphics` + `PassConstantValues` (대형 미러 struct 대체) |
+| `Resource/engine/shaders/binding.hlsli` | PassCB(b0) + `g_SwInstances`(t4) + `SW_MATERIAL_BEGIN/END`(→ `g_SwMaterials` t9) + 텍스처 배열/슬롯 분기 + `swSampleShadow/Source/...` 헬퍼 (4백엔드) |
+
+**셰이더 작성 규칙**: `#include "binding.hlsli"` → `g_ViewProj` 등 PassCB 필드와 `SampleXxx(uv)` 를 바로
+쓴다. 새 엔진 텍스처가 필요하면 `binding.hlsli` PassCB 에 `uint g_<Name>Index;` 추가 + 엔진이
+`FrameResourceRegistry` 에 `"<Name>"` 등록. `#if VULKAN/OPENGL` 분기 금지 — `binding.hlsli` 가 처리한다.
+
+**머티리얼은 한 스테이지에서만 읽는다.** GL(ARB_gl_spirv)은 구조버퍼(`g_SwMaterials`)를 정점 · 픽셀 두 단계에서 읽으면 링크를 거절한다. 보통은 픽셀이 읽고,
+정점을 옮기는 셰이더(식생 `foliage.hlsl` · 물 `water.hlsl`)는 정점이 읽어 픽셀이 쓸 값을 보간 칸으로 넘긴다 — 머티리얼 스키마는 픽셀에서 못 찾으면 정점
+스테이지에서 찾는다(`Material::ensureShaderLayout`, `RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`). 그림자 · 깊이 프리패스는 머티리얼 셰이더가 아니라
+`shadowdepth.hlsl` 이 그리므로 정점 변형을 모른다 — 머티리얼 define `MATERIAL_SHADOW_CAST_OFF` 는 그림자에서, `MATERIAL_VERTEX_DEFORM` 은 깊이 프리패스에서 그 드로우를
+뺀다(클립 밖 한 점으로 모은다).
+
+**정점을 받는 셰이더는 `SwVertexInput`(common.hlsli) 하나만 쓴다.** DX 는 시맨틱 이름으로 묶지만 Vulkan·GL 은
+**선언 순서로 location** 을 매긴다 — `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col 이 노멀을 읽는다.
+리플렉션이 정점 입력(시맨틱·location)을 읽고
+`ShaderBindingValidator` 5번 규칙이 `constant::arrVertexAttribute` 와 대조하므로, 어긋난 바이너리는 nogpu 테스트에서
+이름과 숫자로 떨어진다.
+
+**`ShaderBindingLayoutCache::getOrBuild`는 반드시 실제 디바이스의 `backend`를 받는다** (전역 `gv_rhiBackend`
+사용 금지) — 한 프로세스에 여러 `IRHIDevice` 가 공존하면(멀티 백엔드 파리티 테스트 등) 전역값이 실제
+디바이스와 어긋나 엉뚱한 셰이더 변형을 리플렉션한다.

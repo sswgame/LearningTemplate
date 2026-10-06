@@ -212,3 +212,124 @@ RTV 힙은 **디바이스가 소유합니다**(DX12). 오프스크린 렌더타�
   "아직 안 쓰는 기능" 은 시험과 함께 남긴다(인덱스 드로우의 유일한 검증은 `RHIDeviceTest.IndexedIndirectDrawReadsInstanceSlotStream`, `createIndexBuffer` 는 순수 가상).
 - **RHI 백엔드의 .cpp 는 `Graphics/RHI/<백엔드 폴더>/` 에 두면 끝이다**(모듈 · Shipping 이 폴더로 가져간다). 파일은 `<Backend>RHIDevice` · `…DeviceInit` · `…DeviceSubmission` 축으로. 백엔드는 별도 MODULE DLL 이라 Engine
   전역 변수를 extern 으로 못 쓴다 — 정책은 Engine, 메커니즘은 디바이스.
+
+## 옮겨 온 내용 — 다시 쓰기 전
+
+아래는 Graphics README 에서 원문 그대로 옮겨 온 절이다. 이 문서를 다시 쓰는 단위가 본문에 녹여 없앤다.
+
+## 프레임 스트림 vs 커맨드 리스트 (헷갈리기 쉬운 용어)
+
+기록 대상은 둘입니다. **디바이스가 소유한 프레임 스트림**(`getFrameStreamContext`, `beginFrame` 이 열고 `endFrame` 이 제출)과
+**패스마다 만드는 커맨드 리스트**(`createCommandList`)입니다. `IRHICommandContext` 는 `IRHICommandList` 와 같은 기록 API 를 쓰되
+기록 범위가 없는 쪽(`beginCommandList`/`endCommandList` 는 no-op)입니다.
+
+| 무엇 | 얻는 곳 | 쓰는 곳 |
+|------|---------|---------|
+| 프레임 스트림 컨텍스트 | `IRHIDevice::getFrameStreamContext()` | Present · 오프스크린 경로 · 프레임 단위 작업 |
+| 커맨드 리스트 | `IRHIDevice::createCommandList()` → `executeCommandList` | FrameRenderer 가 그래프 패스를 기록(병렬 레벨이면 여러 스레드) |
+| 즉시 제출 | `executeCommandListImmediate` | 프레임 밖 일회성 작업(스모크 · 업로드 · 썸네일) |
+
+`executeCommandList` 는 프레임 스트림을 그 지점에서 잘라 [앞 세그먼트][이 리스트][새 세그먼트] 순서로 잇고 `endFrame` 에서 한 번에
+제출합니다 — 같은 큐의 제출 순서가 곧 실행 순서입니다. 백엔드별 리스트의 실체:
+
+- DX11/DX12: 리스트가 자기 네이티브 Deferred Context(`FinishCommandList`) · `ID3D12GraphicsCommandList` + 얼로케이터를 소유한다.
+- Vulkan: 리스트가 커맨드 풀 + 커맨드 버퍼 쌍을 디바이스 풀에서 빌리고 GPU 펜스를 지난 뒤 돌려준다(풀은 외부 동기화 대상이라 리스트마다 따로).
+- OpenGL: 커맨드 버퍼 개념이 없는 스레드 종속 상태 머신이라 리스트가 컨텍스트를 감싸 즉시 GL 을 부를 뿐이다(병렬 기록 없음).
+
+기록 중의 상수버퍼 갱신은 리스트로 갑니다(`IRHICommandList::updateConstantBuffer`). `IRHIResourceFactory::updateConstantBuffer` 는 기록 밖 전용입니다.
+
+## 백엔드 성숙도 (패리티)
+
+Windows에서 **DX11 · DX12 · Vulkan · OpenGL**은 Device / 프레임 스트림 / 커맨드 리스트 / Resource / SwapChain 경로에서 **같은 구현 수준**이다.
+
+| | Vulkan | DX11 | GL | DX12 |
+|--|:------:|:----:|:--:|:----:|
+| Device / Resource | ● | ● | ● | ● |
+| 프레임 스트림 + 커맨드 리스트 | ● | ● | ● | ● |
+| CommandContext (draw/barrier/…) | ● | ● | ● | ● |
+| SwapChain | `VulkanRHISwapChain` | `D3D11RHISwapChain` | 없음(컨텍스트) | `D3D12RHISwapChain` |
+| Bindless 텍스처 배열 | set 1 텍스처 배열 | 에뮬(t 슬롯) | 에뮬(t 슬롯) | `_bBindlessRootSignature`(t0 space1 테이블) |
+
+**의도적 차이(패리티 예외):**
+
+- `prepareTextureForShaderRead` · `transitionBuffer` — DX12/VK 는 배리어 · 레이아웃 전이. DX11 은 상태 전이가 없는 대신 **해저드를 푼다**
+  (읽기 전에 PS SRV 슬롯을 비우고, 읽기 상태로 돌리는 버퍼를 CS UAV 슬롯에서 뗀다 — 안 떼면 런타임이 SRV 를 NULL 로 강제하고 경고만 낸다).
+  GL 은 `glMemoryBarrier`
+- Exclusive graphics context thread — DX11/GL만
+- Native bindless sampling — DX12/VK 는 무제한 텍스처 배열 + 인덱스; DX11/GL 은 bind-at-draw 로 기능 동등. 버퍼(인스턴스·머티리얼 데이터)는 4 백엔드가 같은 StructuredBuffer 슬롯을 쓴다
+- Vulkan 만 렌더패스 객체를 미리 만들어 캐시한다(`VulkanRHIRenderPassCache`). `createRenderPass(desc)` 는 첨부가 없으면 거절한다
+
+프레임 수명주기(`beginFrame`/`endFrame`/`resize`)는 `IRHIDevice` 에 있고, 창의 백버퍼는
+`<백엔드>RHISwapChain` 이 소유합니다 — 백버퍼·이미지 인덱스·리소스 상태·동기화 객체·present 가
+한 객체에 모여 있습니다. 이것은 가상 인터페이스가 아니라 **백엔드 내부의 구체 클래스**입니다 — 백엔드 밖에서
+스왑체인을 다형적으로 다룰 이유가 없고, 가상 인터페이스로 만들면 상태 없는 껍데기가 됩니다. GL 에는 없습니다
+(`SwapBuffers(HDC)` 가 present 의 전부이고 그 HDC 는 스레드 바인딩에도 쓰이므로 스왑체인이 아니라 컨텍스트입니다).
+
+## 자주 하는 실수
+
+| 실수 | 결과 |
+|------|------|
+| Caps의 bindless = 실제 native | DX12는 `supportsNativeBindlessSampling()` → `_bBindlessRootSignature` 확인 |
+| DebugDrawQueue = GPU 즉시 드로우 | 큐 API; 화면 표시는 Editor GameView 등 소비 측 |
+| 프레임 스트림 컨텍스트 = 커맨드 리스트 | 프레임 스트림은 디바이스가 소유하고 `endFrame` 에서 제출되며, 리스트는 패스마다 만들어 `executeCommandList` 로 잇는다 — 위 표 참고 |
+| gen/머티리얼 XML을 코드에 하드코딩 | `Resource/engine/` 파이프라인·머티리얼 에셋 사용 |
+| DX11/GL `prepareTextureForShaderRead` · `transitionBuffer` 를 빈 함수로 두기 | DX11 은 슬롯 해저드(SRV ↔ RTV · UAV)를 여기서 풀고 GL 은 메모리 배리어를 낸다 — 비우면 그 백엔드만 0 을 읽는다 |
+| 명령줄에 백엔드를 안 주고 원하는 백엔드로 돌았다고 믿기 | 명령줄이 고르지 않으면 `EngineConfig` 의 `_defaultRHI` 가 이긴다. `-dx11` / `-dx12` / `-vk` / `-gl`(또는 `-gv_rhiBackend=Vulkan` 처럼 열거자 이름 · 숫자 — 모르는 이름이면 기동이 멈춘다)로 명시하고, 로그의 백엔드 이름으로 확인한다 |
+| 백엔드 패리티를 "실행 성공" 으로 판정 | `RenderPassGpuTest.FrameRendererParityAllBackends` 는 SceneColor 를 읽어 큐브 픽셀과 평균을 비교한다 — 픽셀을 보지 않는 스모크는 아무것도 증명하지 않는다 |
+
+**주의 — OpenGL 클립 규약.** GL 은 `glClipControl`(오프스크린 `GL_UPPER_LEFT` · 기본 프레임버퍼 `GL_LOWER_LEFT`, `GL_ZERO_TO_ONE`)로 DX 규약에 맞춘다.
+있는지는 함수 포인터로 판단한다 — `#ifdef GL_CLIP_CONTROL` 같은 토큰은 없어서 그렇게 감싸면 블록이 통째로 빠진다. 안 걸리면 화면이 상하 반전되고
+깊이 정밀도가 절반이 된다. 패리티 시험은 비대칭 장면에서 **그려진 픽셀의 무게중심이 위쪽인지**를 단언한다(평균 · 픽셀 수는 반전에 무관하다).
+
+## 성능을 잴 때 — 먼저 VSync 를 확인한다
+
+**프레임 시간이 주사율에 붙어 있으면 CPU 측정은 전부 무의미하다.** VSync 는 설정(`EngineConfig._window._bVSync`) → 플레이어 사용자 설정
+(`display.vsync` 를 기본값과 다르게 저장했을 때, 사용자 폴더의 `usersettings.json`) → CLI 순으로 정해지고, 프레젠트 경로는 `IRHIDevice::isVSyncEnabled()`
+를 읽는다. 실행 중 변경은 `IRHIDevice::setVSync`(렌더 스레드를 멈춘 뒤 — `UserSettingsHost`)이고, DXGI 스왑체인은 그래서 티어링을 지원하면 늘
+`ALLOW_TEARING` 으로 만든다. 잴 때는 `-vsync=0` 이나 `-gv_userSettingsFile=<빈 시험용 경로>` 로 사용자 파일의 영향을 뺀다.
+
+- 기본은 **꺼짐**(`Config/Engine/EngineConfig.json` 의 `"_bVSync": false`). 켜서 재려면 `-vsync`.
+- DX11·DX12 는 `Present( 0, 0 )` 만으로는 안 꺼진다 — 스왑체인 `ALLOW_TEARING` 플래그와 Present 플래그가
+  **짝**이어야 하고, `ResizeBuffers` 도 같은 플래그를 다시 넘겨야 한다(`RHI/DX/RHIDxgiTearing.h`).
+- Vulkan 은 present 호출에 동기화 인자가 없다 — **스왑체인 present 모드**(FIFO/MAILBOX/IMMEDIATE)가 그 자리다.
+- **의심되면 숫자를 나눠 보라.** `1 / RT.Frame` 이 모니터 주사율과 같으면 vsync 에 붙어 있는 것이다.
+
+## 검증 절차 (바인딩·백엔드를 건드렸다면 전부)
+
+```powershell
+cmake --build --preset Ninja-Debug
+build/Ninja-Debug/Bin/App.exe --cook-shaders                                   # 쿠킹된 바이너리 + reflection.manifest 갱신 (계약 테스트가 이걸 읽는다)
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=ShaderBindingValidatorTest.*   # 계약 + 네 백엔드 리플렉션 레이아웃 일치
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=RHIDeviceTest.*               # 컴퓨트 RW 텍스처 쓰기→읽기(4 백엔드) 포함
+build/Ninja-Debug/Bin/EngineTest.exe --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*   # 스냅샷 규칙 · 그래프 · 픽셀 패리티(FrameRendererParityAllBackends)
+py -3 Scripts/dev/RunBackendSmoke.py                                                # 실제 앱 경로: 네 백엔드 PPM 평균·큐브 픽셀 수
+```
+
+- 백엔드는 `-dx11 / -dx12 / -vk / -gl` 플래그로 고른다(안 주면 `EngineConfig` 의 `_defaultRHI`).
+- `-gv_rhiBackBufferFormat=1` 은 B8G8R8A8 백버퍼를 요청한다 — 백버퍼 PSO 가 `getBackBufferFormat()` 을 따르는지(Vulkan 렌더패스 호환) 이걸로 본다.
+  로그의 `백버퍼 포맷: 요청 → 채택` 줄이 실제 채택값이다.
+- DX11/DX12 디버그 레이어 메시지는 프레임 끝에 `[Error]` 로 로그에 나온다(`flushDebugMessages`). 스모크 로그의 `[Error]` 수가 0 이 아니면 읽어라.
+- **OpenGL 도 같다.** 비-Shipping 은 디버그 컨텍스트(`WGL_CONTEXT_DEBUG_BIT_ARB`) + KHR_debug 콜백이라 GL 오류가
+  `[Error]`, 중간 심각도가 `[Warning]` 으로 나온다(알림은 끈다).
+- Vulkan 렌더패스는 `VulkanRHIRenderPassCache::RenderPassSpec` + `createRenderPassFromSpec` 한 자리에서만 만든다(스왑체인 CLEAR/LOAD · 오프스크린 ·
+  PSO 호환 · 합성 · desc 여섯 자리가 그것을 채운다). 첨부/의존성을 손으로 적는 자리를 다시 만들지 말 것.
+- 셰이더 .hlsli 를 고쳤으면 반드시 `--cook-shaders` 를 다시 돌린다 — 개발 빌드 런타임은 매니페스트가 지금 소스에서 나온 것이 아니면(`cook.stamp` 내용 해시)
+  런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 쿠킹된 바이너리 · 매니페스트를 본다.
+- **스왑체인·프레젠트를 건드렸으면 창을 실제로 흔들어야 한다.** `ResizeBuffers` 의 플래그가 생성 때와
+  어긋나면 그 뒤의 Present 가 `INVALID_CALL` 이 되는데, 리사이즈를 안 하면 영원히 드러나지 않는다.
+  확인은 스크린샷 크기로 한다 — 창을 700×520 으로 바꾸고 `-gv_screenshot` 을 찍으면 PPM 헤더가
+  `684 481`(클라이언트 영역)로 따라와야 하고, 로그의 `[Error]` 는 0 이어야 한다.
+- **빌드 로그를 grep 해서는 경고를 셀 수 없다.** 경고는 그 TU 가 컴파일되는 순간에만 나오고, ninja 는
+  바뀌지 않은 파일을 다시 컴파일하지 않는다 — 경고를 들여온 그 빌드 이후로는 영원히 안 보인다.
+  `py -3 Scripts/lint/report/RunBuildWarnings.py` 가 트리 전체에 다시 물어본다(기본이 Debug · Release · Shipping
+  셋이다 — 구성마다 경고 집합이 다르다). **0 이 정답이다.**
+
+- **GPU 자원을 든 객체의 마지막 소유는 게임 스레드가 아무 때나 놓는다 — 핸들 반환은 `IRHIDevice::releaseHandle` 로.** GpuScene 후보 · 걷은 뷰가 마지막 소유가 되면
+  소멸이 수집 잡 안에서 일어나고, 그때 렌더 스레드가 병렬 기록 중이면 bindless 표가 바뀐다(핫 리로드한 StarSkirmish · VoxelCraft · Shooter3D 가 Debug 단언으로 죽었다).
+  `releaseHandle` 은 렌더 스레드가 프레임을 들고 있으면 그 프레임 뒤(RT 의 `flushDeferredHandleReleases`)로 미룬다(언리얼 `FDeferredCleanupInterface`).
+  `Material` · `MaterialInstance` · `Texture2D` · `Mesh` 가 쓴다 — 새로 GPU 자원을 드는 객체도 팩터리를 직접 부르지 말고 이것으로 내린다(`Mesh` 만 빠져 있어 지형 LOD 교체가
+  DX11 버퍼 SRV 표를 기록과 겹쳐 썼다). 주의: `sw::unordered_map::erase` 는 없는 키여도 쓰기다(DataRaceDetector 가 잡는다).
+
+- **GPU 자원 수명은 `RHIRenderResource` 등록부에 통보로 밀어 넣는다**(`Mesh` · `Material` · `MaterialInstance` · `Texture2D`). 디바이스가 살아 있으면 `releaseRhi`, 이미 없으면
+  `forgetRhi`(여기서 destroy 하면 UAF), 교체 뒤에는 `initAllFor( device )` 한 줄. `initRhi` 는 멱등. 디바이스 세대 번호 · `shutdownAllGpu` · `reinitializeAll` 을 되살리지 말 것.
+  동사 표는 `AGENTS.md`. `Material::forgetRhi` 는 `releaseRhi` 와 같은 상태를 남겨야 한다(빌린 텍스처 목록이 남으면 t5..t8 서수가 밀린다).

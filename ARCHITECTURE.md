@@ -55,7 +55,7 @@ GameFramework 기반 폴더의 층은 [Source/GameFramework/README.md](Source/Ga
 - 데이터는 지금 형식으로만 읽습니다. 이름이나 형식을 바꾸면 `Resource/` 데이터를 다시 쓰고, 별칭(`Alias` · `ValueAlias`)은 다시 쓸 수 없는 데이터(배포한 세이브)가
   생긴 뒤에만 씁니다. 모르는 이름은 텍스트 형식에서 알리고 건너뛰고, 바이너리 형식에서 거절합니다(`SchemaMigrate.h`). `ResourceDataSchemaTest` 가 지킵니다.
 - 렌더링은 `RenderPassAsset`(바인딩 틀 — `renderpass/`)과 `RenderPipelineAsset`(패스 순서 — `pipeline/`)으로 나뉘고, `FrameRenderer` 가 파이프라인으로
-  `RenderGraph` 를 지어 정렬합니다. 셰이더 바인딩 계약의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다([Graphics/README.md](Source/Engine/Graphics/README.md)).
+  `RenderGraph` 를 지어 정렬합니다. 셰이더 바인딩 계약의 정본은 `Resource/engine/shaders/bindingslots.hlsli` 하나입니다([Shader/README.md](Source/Engine/Graphics/Shader/README.md)).
 - 리플렉션 코드젠: 헤더의 `REFLECT` · `PROPERTY` · `FUNCTION` · `ENUM` 을 `Tools/ReflectionParser` 가 읽어 `*.gen.cpp` 를 만듭니다. 씬 로드 · 인스펙터 · 핫리로드 ·
   이름으로 컴포넌트 만들기가 모두 그 `TypeInfo` 를 씁니다([Reflection/README.md](Source/Engine/Reflection/README.md) · [ReflectionParser](Tools/ReflectionParser/README.md)).
 
@@ -80,7 +80,7 @@ vcpkg 매니페스트(`vcpkg.json`)가 정본이고 `Scripts/setup/SetupVcpkg.py
 
 - **렌더 패킷은 자기가 역참조하는 것을 소유한다.** 게임 스레드가 만든 메시 · 머티리얼 · 인스턴스는 `shared_ptr` 로 `GpuSceneSnapshot` 에 실려 렌더 스레드로 간다.
   생포인터를 싣지 않고, 렌더에 실리는 객체는 Engine 의 `create()` 로 만든다(모듈 DLL 이 만든 `shared_ptr` 은 모듈이 내려간 뒤 놓을 수 없다).
-  규칙은 [Graphics/README.md](Source/Engine/Graphics/README.md) "소유와 수명", 검사는 `Scripts/lint/gate/CheckRenderOwnership.py`.
+  규칙은 [Renderer/README.md](Source/Engine/Graphics/Renderer/README.md) "소유와 수명", 검사는 `Scripts/lint/gate/CheckRenderOwnership.py`.
 - **모듈 리로드는 App 의 것이다.** 감시 · 그림자 복사 · 교체(`LiveReloadManager`)는 `Source/App/Module/` 에 있고 Shipping 에서는 파일째 빠진다. Engine 은 지연 로드 훅이 묻는
   `IModuleHandleProvider` 하나만 안다. 모듈 DLL 은 씬이 사라지고 서비스는 남은 구간(`EngineLoop::setOnScenesReleased`)에서만 내린다([App/README.md](Source/App/README.md)).
 - **렌더 스레드는 씬을 읽지 않는다.** 게임 스레드가 만든 스냅샷(`GpuSceneSnapshot`)이 유일한 통로다([Renderer/README.md](Source/Engine/Graphics/Renderer/README.md)).
