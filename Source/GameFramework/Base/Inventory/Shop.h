@@ -3,6 +3,7 @@
  * @brief 지갑과 가게 — 통화 여럿인 지갑, XML 가게 카탈로그(재고 · 가격 · 배율 · 재입고 · 잠금 조건), 사기 · 팔기 · 시세(많이 팔면 값이 떨어지고 날마다 회복)입니다.
  * @details 식당 경영(재료 사기 · 요리 팔기) · JRPG 상점 · 리썰 컴퍼니 터미널(매입률) · 생활 게임(출하 시세)이 같은 규칙을 씁니다.
  *          아이템은 기존 `Inventory` · `ItemCatalog` 를 그대로 씁니다. 가격이 적히지 않은 재고는 `ItemDef::_value` 입니다.
+ *          이 파일은 오프라인 · 로컬 상점입니다 — 온라인(서버 권위) 게임의 상점은 GF_Economy(원장 위)이고 지갑은 원장의 읽기 사본(`EconomyMirror`)입니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
