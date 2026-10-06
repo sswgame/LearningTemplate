@@ -6418,8 +6418,8 @@ SW_TEST_CASE( RenderPassGpuTest, VertexStageMaterialSchemaIsUsed )
         const sw::shared_ptr<sw::Material> water = sw::Material::create();
         SW_ASSERT_TRUE( water->initialize( device.get(), "engine/materials/water.material" ) );
         SW_EXPECT_TRUE_MSG( water->ensureShaderLayout( device.get() ), device->getBackendName() );
-        // water.hlsl 의 SwMaterialData — float4 여덟 = 128 바이트, wave1 은 16 바이트 자리다.
-        SW_EXPECT_EQUAL( 128u, water->getElementStride() );
+        // water.hlsl 의 SwMaterialData — float4 아홉(파도 중력 waveParams 포함) = 144 바이트, wave1 은 16 바이트 자리다.
+        SW_EXPECT_EQUAL( 144u, water->getElementStride() );
         const sw::MaterialProperty* pWave = water->findProperty( sw::hashed_string( "wave1" ) );
         SW_ASSERT_NOT_NULL( pWave );
         SW_EXPECT_EQUAL( 16u, pWave->_offset );

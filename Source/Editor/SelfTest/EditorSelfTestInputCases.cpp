@@ -252,9 +252,11 @@ namespace sw::editor
                 {
                     case 0:
                     {
-                        SwatchProbe& probe    = getSwatchProbe();
-                        probe._theme          = EditorThemeUtil::getActiveTheme();
-                        probe._bConfigExisted = FileUtil::readFile( getEditorConfigPath(), probe._configBytes );
+                        SwatchProbe& probe = getSwatchProbe();
+                        probe._theme       = EditorThemeUtil::getActiveTheme();
+                        // 파일이 없을 수 있다(Saved/Editor 는 git 무시 — 새 체크아웃) — 없으면 읽지 않는다(readFile 은 없는 파일을 오류로 남긴다).
+                        const string configPath = getEditorConfigPath();
+                        probe._bConfigExisted   = FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes );
                         EditorThemeUtil::applyPreset( EditorThemePreset::ClassicDark );
                         EditorMenuBar::openThemeDialog();
                         return EditorSelfTestStep::Continue;
@@ -301,6 +303,8 @@ namespace sw::editor
                 EditorThemeUtil::saveToConfig();
                 if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
                     (void)context.expect( false, "could not restore the editor config file" );
+                if ( probe._bConfigExisted == false )
+                    (void)FileUtil::tryRemoveFile( getEditorConfigPath() );
                 probe = SwatchProbe{};
                 moveMouseAway();
                 return EditorSelfTestStep::Done;
