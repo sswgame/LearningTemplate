@@ -10,9 +10,6 @@ namespace sw
     {
         struct CoasterTrainInternal
         {
-            static constexpr float32 kStillSpeed    = 0.3f;  ///< 이보다 느리면 "거의 멈춤"
-            static constexpr float32 kStallSeconds  = 3.0f;  ///< 체인 · 스테이션 · 부스터 밖에서 이만큼 거의 멈춰 있으면 멈춤
-            static constexpr float32 kWarmupSeconds = 0.5f;  ///< 출발 직후의 G 는 재지 않는다(첫 차분이 없다)
             static constexpr float32 kDropThreshold = 2.0f;  ///< 이만큼 넘게 내려가야 낙하다(m)
             static constexpr float32 kDropRecovery  = 1.0f;  ///< 바닥에서 이만큼 올라오면 낙하가 끝났다(m)
             static constexpr float32 kInversionUpY  = -0.2f; ///< 좌석 위의 y 가 이보다 작으면 뒤집혔다
@@ -182,7 +179,7 @@ namespace sw
             travelled += MathUtil::abs( speed ) * deltaTime;
             stats._maxSpeed = MathUtil::max( stats._maxSpeed, MathUtil::abs( speed ) );
 
-            if ( time > CoasterTrainInternal::kWarmupSeconds )
+            if ( time > params._gForceWarmupSeconds )
             {
                 const CoasterGForce& gForce = train.getGForce();
                 stats._maxVerticalG         = MathUtil::max( stats._maxVerticalG, gForce._vertical );
@@ -239,8 +236,8 @@ namespace sw
             }
 
             const bool bDriven = ( frame._flags & CoasterTrainInternal::kDrivenFlags ) != 0;
-            stillTime          = ( MathUtil::abs( speed ) < CoasterTrainInternal::kStillSpeed && bDriven == false ) ? stillTime + deltaTime : 0.0f;
-            if ( stillTime > CoasterTrainInternal::kStallSeconds )
+            stillTime          = ( MathUtil::abs( speed ) < params._stallSpeed && bDriven == false ) ? stillTime + deltaTime : 0.0f;
+            if ( stillTime > params._stallSeconds )
             {
                 stats._bStalled = SW_TRUE;
                 break;

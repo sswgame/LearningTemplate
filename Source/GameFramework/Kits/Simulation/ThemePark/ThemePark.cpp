@@ -23,7 +23,6 @@ namespace sw
             static constexpr float32 kLeaveHappiness     = 0.15f;
             static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
             static constexpr float32 kQueueUnhappiness   = 0.002f; ///< 줄에서 초당 줄어드는 행복
-            static constexpr float32 kWanderRadius       = 6.0f;
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -511,7 +510,7 @@ namespace sw
                 return;
             }
             const float32 angle  = nextRandom() * 2.0f * MathUtil::kPi;
-            const float32 radius = nextRandom() * ThemeParkInternal::kWanderRadius;
+            const float32 radius = nextRandom() * _settings._wanderRadius;
             const float3  anchor = _listRide.empty() ? _settings._gatePosition
                                                      : _listRide[static_cast<size_t>( nextRandom() * static_cast<float32>( _listRide.size() ) ) % _listRide.size()]._entrance;
             startWalking( guest, anchor + float3{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius } );

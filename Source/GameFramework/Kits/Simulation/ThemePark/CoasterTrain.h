@@ -30,7 +30,10 @@ namespace sw
         float32 _boosterAcceleration{ 9.0f };
         float32 _brakeSpeed{ 5.0f }; ///< 브레이크가 내리는 속도
         float32 _brakeDeceleration{ 10.0f };
-        float32 _fixedStep{ 1.0f / 240.0f }; ///< 적분 간격 — `step` 은 프레임 시간을 이 간격으로 나눠 돈다
+        float32 _fixedStep{ 1.0f / 240.0f };  ///< 적분 간격 — `step` 은 프레임 시간을 이 간격으로 나눠 돈다
+        float32 _stallSpeed{ 0.3f };          ///< 승차 평가: 이보다 느리면 "거의 멈춤"(m/s)
+        float32 _stallSeconds{ 3.0f };        ///< 승차 평가: 체인 · 스테이션 · 부스터 밖에서 이만큼 거의 멈춰 있으면 멈춤(s)
+        float32 _gForceWarmupSeconds{ 0.5f }; ///< 승차 평가: 출발 직후 이만큼은 G 를 재지 않는다(첫 차분이 없다, s)
     };
 } // namespace sw
 

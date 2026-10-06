@@ -20,9 +20,8 @@ namespace sw
     {
         struct RestaurantSimulationInternal
         {
-            static constexpr float32 kMinCookTimeScale = 0.3f;
-            static constexpr float32 kMinDemand        = 0.05f;
-            static constexpr float32 kMinutesPerHour   = 60.0f;
+            static constexpr float32 kMinDemand      = 0.05f;
+            static constexpr float32 kMinutesPerHour = 60.0f;
 
             static bool isSeated( const RestaurantCustomer& customer )
             {
@@ -797,7 +796,7 @@ namespace sw
             if ( order._remaining <= 0.0f )
             {
                 const RecipeDef* pRecipe   = pDish != nullptr ? findRecipe( *pDish ) : nullptr;
-                const float32    timeScale = MathUtil::max( RestaurantSimulationInternal::kMinCookTimeScale,
+                const float32    timeScale = MathUtil::max( _settings._minCookTimeScale,
                                                             1.0f - _settings._cookSpeedPerLevel * static_cast<float32>( level - 1 ) );
                 order._remaining           = MathUtil::max( kStepMinutes, ( pRecipe != nullptr ? pRecipe->_time : 0.0f ) * timeScale );
             }

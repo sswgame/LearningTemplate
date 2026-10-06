@@ -126,6 +126,7 @@ namespace sw
         float3  _gatePosition{};                 ///< 손님이 들어오고 나가는 정문
         float32 _guestArrivalPerMinute{ 12.0f }; ///< 평가 500 · 입장료 0 일 때의 손님 도착률
         float32 _walkSpeed{ 2.5f };              ///< 걷는 속도(m/s) — 걷는 시간은 거리 / 속도
+        float32 _wanderRadius{ 6.0f };           ///< 탈 것이 없을 때 놀이기구 입구 둘레로 돌아다니는 반지름(m)
         float32 _queuePatience{ 90.0f };         ///< 줄에서 이만큼 넘게 기다리면 나온다(s)
         float32 _energyDrainPerSecond{ 1.0f / 480.0f };
         float32 _nauseaRecoveryPerSecond{ 1.0f / 120.0f };

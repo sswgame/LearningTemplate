@@ -42,6 +42,7 @@ namespace sw
         float32       _priceElasticity{ 1.0f };                  ///< 가격 / 기본 가격이 1 오를 때 줄어드는 수요 몫
         float32       _preferredWeight{ 3.0f };                  ///< 좋아하는 분류의 요리를 고르는 배율(0 이면 그 분류는 시키지 않는다)
         float32       _reputationArrivalScale{ 0.001f };         ///< 평판 1 당 손님 배율 증가
+        float32       _minCookTimeScale{ 0.3f };                 ///< 숙련도가 올라도 조리 시간은 레시피 시간의 이 몫 아래로 줄지 않는다
         float32       _cookSpeedPerLevel{ 0.1f };                ///< 요리사 레벨 1 당 조리 시간 감소 몫(최소 30 %)
         float32       _marketVolatility{ 0.2f };                 ///< 날마다 시장 사는 값이 ±이만큼 흔들린다
         float32       _qualityWeight{ 0.6f };                    ///< 만족도 = 품질 몫 × 이것 + (1 − 기다림 몫) × (1 − 이것)
