@@ -24,6 +24,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다 — 걷는 폰은 `CharacterPawnMovementComponent`
   (의도 → 캐릭터 컨트롤러: 걷기 · 달리기 · 점프 · 가감속 · 몸 방향 `PawnFacingMode`)로 걷고, AI 는 내비 에이전트를 `SteerOnly`(엔진 `NavAgentDriveMode`)로 두어
   에이전트가 낸 속도를 의도 이동 축으로 넣는다(언리얼 `RequestDirectMove` · 유니티 `updatePosition = false` 와 같은 길).
+  **보내고 적는 것은 의도다**(키 바인딩이 달라도 같은 결과): 조종 시스템이 켜진 동안(`setRecording`) 폰마다 틱 고리(`ControlIntentHistory`)에 적고 `.swintent`
+  ('SWIN' · 판 1 · 폰마다 이름 · 시작 틱 · 틱별 `ControlIntent::write`)로 쓴다. 기록 조종자 `IntentTrackControllerComponent` 가 트랙을 틱 순서로 내고(끝나면 원래 조종자에게
+  다음 틱 첫머리에 돌려준다 — `ControlSystem::queuePossess`), 원격 조종자 `RemoteControllerComponent` 가 입력 창 `NetInputReceiveBuffer` 의 틱별 바이트를
+  `ControlIntent::read` 로 낸다(못 받은 틱은 마지막 의도 되풀이, 발동 비트는 지움). 재생은 **같은 씬을 처음부터 같은 고정 프레임 시간으로** 돌릴 때만 같은 궤적이다
+  (시작 상태 · 난수 씨앗은 싣지 않는다 — 자동화 시나리오의 `fixedDelta` 와 같은 조건, 기록할 폰은 이름을 다르게). 시나리오 행동 층 단계(입력 재생 전):
+  `<Intent pawn="Hero" move="0,1" up="0" yaw="1.57" pitch="0" buttons="Fire,Sprint" frames="30"/>`(그 폰을 `IntentTrack.<폰>` 기록 조종자로 잠시 빙의 — 버튼은 첫 프레임 발동 +
+  내내 누름, yaw · pitch 를 빼면 폰의 지금 값) · `<Possess controller="Player" pawn="Horse"/>`(pawn 을 빼면 놓기).
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.

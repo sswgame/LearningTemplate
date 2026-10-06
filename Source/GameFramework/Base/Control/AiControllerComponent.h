@@ -45,11 +45,11 @@ namespace sw
         void setFocus( const float3& worldPoint );
         /** @brief 초점을 지웁니다 — 움직이는 쪽을 봅니다. */
         void clearFocus();
-        /** @brief 이번 틱에 버튼을 한 번 누릅니다(발동 + 누름). 폰 스키마에 없는 이름이면 할 일이 없습니다. */
+        /** @brief 다음에 내는 의도에서 버튼을 한 번 누릅니다(발동 + 누름) — `think` 안 · 밖 어디서든. 폰 스키마에 없는 이름이면 할 일이 없습니다. */
         void pressButton( const hashed_string& name );
         /** @brief 버튼을 누르고 있거나(@p bHeld) 뗍니다 — 다시 부를 때까지 유지합니다. */
         void holdButton( const hashed_string& name, bool bHeld );
-        /** @brief 이번 틱의 아날로그 값입니다. */
+        /** @brief 다음에 내는 의도의 아날로그 값입니다(그 한 틱만 — `think` 안 · 밖 어디서든). */
         void setAnalog( const hashed_string& name, float32 value );
         /** @brief 이동 상태입니다 — 내비 에이전트가 있으면 그 상태, 없으면 목적지가 있으면 Moving, 닿았으면 Arrived. */
         NavMoveStatus getMoveStatus() const;

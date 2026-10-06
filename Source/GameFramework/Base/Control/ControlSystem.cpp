@@ -10,6 +10,7 @@
 #include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Control/ControlAutomationSteps.h"
 #include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
@@ -72,9 +73,13 @@ namespace sw
 namespace sw
 {
     ControlSystem::ControlSystem()
-        : _listAutoPossessPawn{}
+        : _history{}
+        , _listAutoPossessPawn{}
+        , _listQueuedPossess{}
         , _pInputOverride{ nullptr }
         , _tick{ 0 }
+        , _bRecording{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -83,6 +88,8 @@ namespace sw
         ControlSystem* pSystem = find( manager );
         if ( pSystem != nullptr )
             return *pSystem;
+        // 시나리오 단계(Intent · Possess) 등록자가 정적 링크에서 빠지지 않게 그 .cpp 를 붙든다.
+        ControlAutomationSteps::ensureLinked();
         unique_ptr<ControlSystem> pNew = make_unique<ControlSystem>();
         pSystem                        = pNew.get();
         (void)manager.addFrameSystem( ControlSystemInternal::getFrameSystemKey(), std::move( pNew ) );
@@ -106,8 +113,23 @@ namespace sw
         return _pInputOverride != nullptr ? _pInputOverride : game::getService<InputManager>();
     }
 
+    void ControlSystem::setRecording( bool bRecording, int32 capacityTicks )
+    {
+        if ( bRecording && _bRecording == SW_FALSE )
+            _history.initialize( capacityTicks );
+        _bRecording = bRecording ? SW_TRUE : SW_FALSE;
+    }
+
+    void ControlSystem::queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn )
+    {
+        QueuedPossess& queued = _listQueuedPossess.emplace_back();
+        queued._controller    = controller;
+        queued._pawn          = pawn;
+    }
+
     void ControlSystem::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
     {
+        applyQueuedPossess( manager );
         autoPossess( manager );
 
         ControlFrameContext context{};
@@ -139,7 +161,36 @@ namespace sw
             intent.quantize();
             pPawn->applyIntent( intent );
         }
+        if ( _bRecording == SW_TRUE )
+            recordIntents( manager );
         ++_tick;
+    }
+
+    void ControlSystem::applyQueuedPossess( GameObjectManager& manager )
+    {
+        for ( size_t queuedIndex = 0; queuedIndex < _listQueuedPossess.size(); ++queuedIndex )
+        {
+            const QueuedPossess  queued      = _listQueuedPossess[queuedIndex];
+            ControllerComponent* pController = static_cast<ControllerComponent*>( manager.resolveComponent( queued._controller ) );
+            if ( pController == nullptr )
+                continue;
+            PawnComponent* pPawn = queued._pawn.isValid() ? static_cast<PawnComponent*>( manager.resolveComponent( queued._pawn ) ) : nullptr;
+            if ( pPawn != nullptr )
+                pController->possess( *pPawn );
+            else
+                pController->unpossess();
+        }
+        _listQueuedPossess.clear();
+    }
+
+    void ControlSystem::recordIntents( GameObjectManager& manager )
+    {
+        for ( PawnComponent* pPawn : manager.getComponentRegistry().getAll<PawnComponent>() )
+        {
+            const GameObject* pOwner = pPawn != nullptr ? pPawn->getOwner() : nullptr;
+            if ( pOwner != nullptr )
+                _history.record( _tick, pPawn->getHandle(), pOwner->getName(), pPawn->getIntent() );
+        }
     }
 
     void ControlSystem::autoPossess( GameObjectManager& manager )

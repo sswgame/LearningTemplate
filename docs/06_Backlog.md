@@ -333,6 +333,10 @@ cd build/Ninja-Debug/Bin
   - 에디터: 기믹 회로 그래프 편집 창(노드 · 배선 · 검증 오류 표시, 대상 오브젝트 고르기) — 지금은 인스펙터의 목록 편집뿐.
   - 네트워크: 회로 상태 바이트(`GimmickCircuit::saveState`)를 `NetClientServer` 스냅샷 · `RollbackSession` 상태에 싣기(모양은 준비됨, 배선 없음).
 
+- **의도 기록 · 원격 조종자의 남은 연결(possess-auto C3 뒤).** `NetClientServer` 의 입력 바이트(`ReplicationClient::sendInput` 이 게임이 준 바이트를 싣는 자리)를
+  `ControlIntent::write` 로, 서버 폰은 `RemoteControllerComponent` 로 — 폰을 쓰는 넷 시험 게임이 생기면(지금 0). 의도 기록을 켜고 `.swintent` 를 쓰는 명령줄 ·
+  에디터 단추와 재생 UI · 킬캠 카메라 · 되감기는 아직 없다(`ControlSystem::setRecording` · `getHistory().saveToFile` · `IntentTrackControllerComponent` 는 있다).
+
 - **CS2 식 서브틱 입력(2026-10-05 제안 — 넷 게임이 생기면; 지금 넷 키트를 쓰는 시험 게임은 0).** `RawInputEvent` · `NativeWindowEvent` 에 시각이 없다(`MSG::time` 을 버림).
   B1 사건 시각 + 입력 리플레이 판 4 · B2 프레임 안 자리와 그 순간까지의 시선 누적(시계 주입) · B3 `InputMap` 이 행동별 "누른 순간" 을 준다 · B4 클릭 순간의 시선으로 발사
   (쿨다운 남은 몫은 이미 고침) · B5 넷 입력 항목마다 스탬프 · `viewTick`(지금은 메시지마다 하나라 다시 보낸 옛 입력도 최신으로 판정 — 자리는 있다:
@@ -1706,6 +1710,8 @@ cd build/Ninja-Debug/Bin
   `App --gather-text` 결과(원문 표 · 번역 표 · `tm/`)를 같이 커밋한다 — `TextGathererTest.RepositoryProjectsAreUpToDate` 가 막는다. 셸 InputMap 을 못 읽으면
   오류를 알리고 빈 맵이다(손 바인딩으로 바꿔 끼우지 않는다). 입력 리플레이 파일은 `RawInputEvent` 를 통째로 적으므로 배치가 바뀌면 `kReplayVersion` 을 올린다(지금 4).
   `InputReplay` 는 **입력 층 녹화**다(프레임마다 원시 사건 — 키 바인딩 · 포커스까지 재현하는 QA 용, 재생은 가상 입력 원천). 게임플레이 리플레이 · 네트워크가 싣는 것은 행동(의도)이다.
+  의도 기록(`.swintent`)은 시작 상태를 싣지 않는다 — 같은 씬 · 같은 고정 프레임 시간에서만 같은 궤적이고, 로컬 의도도 `quantize` 를 거쳐야 기록 · 원격과 비트까지 같다
+  (`ControlTest.RecordedIntentsReplayTheSameTrajectory`). 조종자가 `produceIntent` 안에서 빙의를 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 몬다 — `ControlSystem::queuePossess`.
 
 - **통합 `InputMap` 은 `InputManager::beginFrame` 이 갱신한다** — 게임 코드가 `update()` 를 다시 부르면 한 프레임에 두 번 흐른다(Input README 예제가 그랬다).
 

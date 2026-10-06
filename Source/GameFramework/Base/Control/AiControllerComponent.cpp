@@ -47,9 +47,10 @@ namespace sw
     void AiControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
     {
         using Internal = AiControllerComponentInternal;
-        _pending       = ControlIntent{};
+        // 틱 사이(think 밖)에 부른 pressButton · setAnalog 도 이번 의도에 싣는다 — 낸 뒤에 비운다.
         think( context, pawn );
         outIntent = _pending;
+        _pending  = ControlIntent{};
         outIntent._buttonDown |= _heldButtonMask;
 
         const GameObject*     pPawnOwner = pawn.getOwner();

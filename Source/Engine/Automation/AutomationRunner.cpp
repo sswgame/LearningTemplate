@@ -157,6 +157,7 @@ namespace sw
         , _finishReason{}
         , _logMutex{}
         , _logListenerHandle{}
+        , _pObjectManagerOverride{ nullptr }
         , _exitDeadlineSeconds{ 0.0 }
         , _nextStepIndex{ 0 }
         , _logFrameIndex{ 0 }
@@ -208,6 +209,8 @@ namespace sw
 
     GameObjectManager* AutomationRunner::findActiveObjectManager() const
     {
+        if ( _pObjectManagerOverride != nullptr )
+            return _pObjectManagerOverride;
         if ( engine::areEngineServicesBound() == false )
             return nullptr;
         Scene* pScene = engine::getSceneManager().getActiveScene();

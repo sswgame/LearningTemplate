@@ -91,8 +91,10 @@ namespace sw
         const string&             getFinishReason() const { return _finishReason; }
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const { return _outputDirectory; }
-        /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). */
+        /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
         GameObjectManager* findActiveObjectManager() const;
+        /** @brief 활성 씬 대신 @p pManager 를 봅니다(시험 · 도구 — 씬 없이 매니저를 손으로 돌릴 때). nullptr 이면 활성 씬입니다. */
+        void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
         /** @brief 결과 이름(`PASS` · `FAIL` · `LOAD ERROR` · `TIMEOUT` · `SKIP`)입니다. */
         static const utf8* getResultName( AutomationResult result );
@@ -120,7 +122,8 @@ namespace sw
         string                    _finishReason;
         mutex                     _logMutex; ///< `_listLogLine` — 로그는 아무 스레드에서나 온다
         DelegateHandle            _logListenerHandle;
-        float64                   _exitDeadlineSeconds; ///< `ExpectExitWithin` 이 정한 벽시계 시한(단조 시계 초). 0 이면 기다리지 않는다
+        GameObjectManager*        _pObjectManagerOverride; ///< `setObjectManager` — nullptr 이면 활성 씬
+        float64                   _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한(단조 시계 초). 0 이면 기다리지 않는다
         size_t                    _nextStepIndex;
         atomic<uint32>            _logFrameIndex; ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
         uint32                    _frameIndex;

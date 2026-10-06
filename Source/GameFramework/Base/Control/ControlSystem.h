@@ -10,6 +10,7 @@
 
 #include "Engine/Object/GameObject/ISceneFrameSystem.h"
 
+#include "GameFramework/Base/Control/ControlIntentHistory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -48,12 +49,40 @@ namespace sw
         /** @brief 지금까지 돈 틱 수입니다(기록 · 네트워크 창의 틱 번호). */
         uint32 getTick() const { return _tick; }
 
+        /**
+         * @brief 의도 기록을 켜거나 끕니다. 켤 때 기록을 비우고 폰마다 @p capacityTicks 틱 고리를 잡습니다 — 그 뒤 틱마다 모든 폰의 의도(폰에 넣은 값)를 적는다.
+         * @details 끄면 기록은 남는다(`getHistory` 로 읽어 `.swintent` 로 쓴다).
+         */
+        void                        setRecording( bool bRecording, int32 capacityTicks = ControlIntentHistory::kDefaultCapacityTicks );
+        bool                        isRecording() const { return _bRecording == SW_TRUE; }
+        const ControlIntentHistory& getHistory() const { return _history; }
+        /**
+         * @brief 다음 틱 첫머리에 @p controller 가 @p pawn 을 쥐게 합니다(@p pawn 이 무효면 놓게). 조종자가 의도를 내는 중(`produceIntent`)에 빙의를 옮길 때 —
+         *        그 자리에서 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 같은 폰을 몰거나 아무도 몰지 않는다.
+         */
+        void queuePossess( const ComponentHandle& controller, const ComponentHandle& pawn );
+
     private:
         /** @brief 자동 빙의가 걸린 채 쥔 이가 없는 폰을 플레이어 0 · AI 조종자에게 쥐어 줍니다. */
         void autoPossess( GameObjectManager& manager );
+        /** @brief `queuePossess` 로 미룬 빙의를 넣은 순서대로 합니다. */
+        void applyQueuedPossess( GameObjectManager& manager );
+        /** @brief 틱마다 모든 폰의 의도를 기록에 넣습니다. */
+        void recordIntents( GameObjectManager& manager );
 
+        /** @struct QueuedPossess @brief 다음 틱 첫머리로 미룬 빙의 하나입니다. */
+        struct QueuedPossess
+        {
+            ComponentHandle _controller{};
+            ComponentHandle _pawn{}; ///< 무효면 놓는다
+        };
+
+        ControlIntentHistory    _history;
         vector<ComponentHandle> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(등록부를 도는 동안 오브젝트를 만들지 않게 모은다)
+        vector<QueuedPossess>   _listQueuedPossess;
         InputManager*           _pInputOverride;
         uint32                  _tick;
+        uint8                   _bRecording : 1;
+        [[maybe_unused]] uint8  _reserved   : 7;
     };
 } // namespace sw

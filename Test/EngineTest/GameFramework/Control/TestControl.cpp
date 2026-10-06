@@ -5,9 +5,14 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
+#include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/Message/NetSendBudget.h"
+#include "Core/Network/Replication/NetInputWindow.h"
 
+#include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -26,9 +31,12 @@
 #include "GameFramework/Base/Control/AiControllerComponent.h"
 #include "GameFramework/Base/Control/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Control/ControlIntent.h"
+#include "GameFramework/Base/Control/ControlIntentHistory.h"
 #include "GameFramework/Base/Control/ControlSystem.h"
+#include "GameFramework/Base/Control/IntentTrackControllerComponent.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Control/RemoteControllerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -112,6 +120,54 @@ namespace
         }
 
         static float3 findFeet( const GameObject& object ) { return object.getComponent<CharacterControllerComponent>()->getWorldPosition(); }
+    };
+
+    struct ControlRecordTestInternal
+    {
+        static constexpr uint32 kTickCount = 120;
+
+        /** @brief 아날로그 "Throttle" 을 가진 폰입니다. */
+        static PawnComponent* spawnAnalogPawn( GameObjectManager& manager, const utf8* pName )
+        {
+            PawnComponent* pPawn = ControlTestInternal::spawnPawn( manager, pName, float3{} )->getComponent<PawnComponent>();
+            pPawn->setAnalogNames( vector<hashed_string>{ hashed_string( "Throttle" ) } );
+            return pPawn;
+        }
+
+        /** @brief 비스듬한 목적지 · 초점으로 도는 AI 를 쥐어 줍니다 — 이동 축 · 조종 회전이 0 · ±1 이 아닌 값이 된다. */
+        static AiControllerComponent* possessWithWanderingAi( GameObjectManager& manager, PawnComponent& pawn )
+        {
+            auto* pAi = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+            pAi->possess( pawn );
+            pAi->moveTo( float3{ 7.0f, 0.0f, 9.0f } );
+            pAi->setFocus( float3{ -3.0f, 1.0f, 5.0f } );
+            return pAi;
+        }
+
+        /** @brief 매 틱 아날로그를 0.7 · −0.33 으로 번갈아 넣습니다. */
+        static void setThrottle( AiControllerComponent& ai, uint32 tick ) { ai.setAnalog( "Throttle", ( tick % 2 ) == 0 ? 0.7f : -0.33f ); }
+
+        /** @brief 보내는 창이 쓴 묶음을 받는 버퍼가 읽습니다(종류 바이트 하나를 앞에 둔 셈으로 예산을 센다). */
+        static bool deliver( const NetInputSendWindow& window, NetInputReceiveBuffer& buffer )
+        {
+            BitWriter     writer;
+            NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
+            budget.reserveBits( 8 );
+            (void)window.write( writer, budget );
+            BitReader reader( writer.getBytes().data(), writer.getByteCount() );
+            return buffer.read( reader );
+        }
+
+        /** @brief 실행기를 EngineLoop 와 같은 순서로 한 프레임 돌립니다. */
+        static AutomationResult runFrame( AutomationRunner& runner, GameObjectManager& manager, InputManager& input )
+        {
+            runner.onFrameBegin( input );
+            input.beginFrame( ControlTestInternal::kDeltaTime );
+            manager.tick( ControlTestInternal::kDeltaTime );
+            const AutomationResult result = runner.onFrameEnd( input );
+            input.endFrame();
+            return result;
+        }
     };
 } // namespace
 
@@ -406,4 +462,306 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
     SW_EXPECT_TRUE_MSG( ( float3{ feet._x, 0.0f, feet._z } - float3{ 6.0f, 0.0f, 0.0f } ).getLength() < 0.8f,
                         ( "walker ended at " + std::to_string( feet._x ) + ", " + std::to_string( feet._z ) ).c_str() );
     manager.endPlay();
+}
+
+/**
+ * @brief [ControlTest] 아날로그를 섞은 AI 조종 120 틱을 기록 → .swintent 바이트 → 같은 장면 새 매니저에서 기록 조종자로 재생하면 매 틱 자리 · 의도가 비트까지 같다
+ */
+SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
+{
+    using Internal = ControlRecordTestInternal;
+    vector<float3> listRecordedPosition;
+    vector<uint8>  fileBytes;
+    {
+        GameObjectManager manager;
+        PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
+        ControlSystem::ensureFor( manager ).setRecording( true );
+        manager.beginPlay();
+        AiControllerComponent* pAi = Internal::possessWithWanderingAi( manager, *pPawn );
+        for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
+        {
+            Internal::setThrottle( *pAi, tick );
+            manager.tick( ControlTestInternal::kDeltaTime );
+            listRecordedPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
+        }
+        const ControlIntentHistory& history = ControlSystem::find( manager )->getHistory();
+        SW_ASSERT_EQUAL( 1, history.getTrackCount() );
+        SW_EXPECT_EQUAL( Internal::kTickCount, history.getTrack( 0 )._lastTick - history.getTrack( 0 )._firstTick + 1 );
+        // 아날로그가 실제로 실렸다(0.7 → 양자화 값).
+        SW_EXPECT_NEAR_EQUAL( 0.7f, history.findIntent( 0, history.getTrack( 0 )._firstTick )->_arrAnalog[0], 1.0f / ControlIntent::kAxisSteps );
+        BitWriter writer;
+        history.write( writer );
+        fileBytes = writer.releaseBytes();
+        manager.endPlay();
+    }
+
+    ControlIntentHistory loaded;
+    string               error;
+    BitReader            reader( fileBytes.data(), static_cast<int32>( fileBytes.size() ) );
+    SW_ASSERT_TRUE_MSG( loaded.read( reader, error ), error.c_str() );
+    {
+        GameObjectManager               manager;
+        PawnComponent*                  pPawn  = Internal::spawnAnalogPawn( manager, "Runner" );
+        IntentTrackControllerComponent* pTrack = manager.createGameObject( hashed_string( "Replay" ) )->addComponent<IntentTrackControllerComponent>();
+        manager.beginPlay();
+        pTrack->possess( *pPawn );
+        SW_ASSERT_TRUE( pTrack->loadTrack( loaded, "Runner" ) );
+        SW_ASSERT_EQUAL( Internal::kTickCount, pTrack->getTrackLength() );
+        for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
+        {
+            manager.tick( ControlTestInternal::kDeltaTime );
+            const float3 position = ControlTestInternal::findPosition( *pPawn->getOwner() );
+            const float3 recorded = listRecordedPosition[tick];
+            SW_EXPECT_TRUE_MSG( position._x == recorded._x && position._y == recorded._y && position._z == recorded._z,
+                                ( "tick " + std::to_string( tick ) + " replay " + std::to_string( position._x ) + "," + std::to_string( position._z ) + " recorded " +
+                                  std::to_string( recorded._x ) + "," + std::to_string( recorded._z ) )
+                                    .c_str() );
+            SW_EXPECT_TRUE( pPawn->getIntent() == *loaded.findIntent( 0, tick ) );
+        }
+        // 끝난 뒤에는 멈춘 채 쥐고 있다(돌려주기를 걸지 않았다).
+        SW_EXPECT_FALSE( pTrack->isPlaying() );
+        manager.tick( ControlTestInternal::kDeltaTime );
+        SW_EXPECT_TRUE( pPawn->getController() == pTrack->getHandle() );
+        SW_EXPECT_NEAR_EQUAL( 0.0f, pPawn->getIntent()._move._y, 1.0e-6f );
+        manager.endPlay();
+    }
+}
+
+/**
+ * @brief [ControlTest] 의도 기록 파일이 왕복한다 — 폰마다 시작 틱이 달라도 같은 의도, 머리는 'SWIN', 판이 다르거나 잘렸으면 거절
+ */
+SW_TEST_CASE( ControlTest, IntentFileRoundTrips )
+{
+    ControlIntentHistory history;
+    history.initialize( 64 );
+    const ComponentHandle first  = ComponentHandle::makeOwned( 11, 12 );
+    const ComponentHandle second = ComponentHandle::makeOwned( 21, 22 );
+    for ( uint32 tick = 100; tick < 110; ++tick )
+    {
+        ControlIntent intent;
+        intent._move       = float2{ 0.1f * static_cast<float32>( tick - 100 ), -0.5f };
+        intent._controlYaw = 0.25f * static_cast<float32>( tick - 100 );
+        intent.setButton( 3, ( tick % 2 ) == 0, tick == 100 );
+        intent.quantize();
+        history.record( tick, first, "Walker", intent );
+        if ( tick >= 104 )
+        {
+            intent._moveUp = 1.0f;
+            history.record( tick, second, "Swimmer", intent );
+        }
+    }
+
+    const string path = test::makeTempPath( "control.swintent" );
+    SW_ASSERT_TRUE( history.saveToFile( path ) );
+    ControlIntentHistory loaded;
+    string               error;
+    SW_ASSERT_TRUE_MSG( loaded.loadFromFile( path, error ), error.c_str() );
+    (void)FileUtil::tryRemoveFile( path );
+
+    SW_ASSERT_EQUAL( 2, loaded.getTrackCount() );
+    const int32 walker  = loaded.findTrack( "Walker" );
+    const int32 swimmer = loaded.findTrack( "Swimmer" );
+    SW_ASSERT_TRUE( walker >= 0 && swimmer >= 0 );
+    // 가장 이른 시작이 0 — 늦게 연 트랙은 그만큼 뒤에서 시작한다.
+    SW_EXPECT_EQUAL( 0u, loaded.getTrack( walker )._firstTick );
+    SW_EXPECT_EQUAL( 4u, loaded.getTrack( swimmer )._firstTick );
+    for ( uint32 tick = 100; tick < 110; ++tick )
+    {
+        SW_ASSERT_NOT_NULL( loaded.findIntent( walker, tick - 100 ) );
+        SW_EXPECT_TRUE( *loaded.findIntent( walker, tick - 100 ) == *history.findIntent( 0, tick ) );
+    }
+    vector<ControlIntent> listSwimmer;
+    SW_ASSERT_TRUE( loaded.copyTrack( swimmer, listSwimmer ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 6 ), listSwimmer.size() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, listSwimmer[0]._moveUp, 1.0e-6f );
+
+    BitWriter writer;
+    history.write( writer );
+    vector<uint8> bytes = writer.releaseBytes();
+    SW_ASSERT_TRUE( bytes.size() > 8 );
+    SW_EXPECT_TRUE( bytes[0] == 'S' && bytes[1] == 'W' && bytes[2] == 'I' && bytes[3] == 'N' );
+    SW_EXPECT_EQUAL( static_cast<uint8>( ControlIntentHistory::kVersion ), bytes[4] );
+
+    vector<uint8> otherVersion = bytes;
+    otherVersion[4]            = static_cast<uint8>( ControlIntentHistory::kVersion + 1 );
+    BitReader versionReader( otherVersion.data(), static_cast<int32>( otherVersion.size() ) );
+    SW_EXPECT_FALSE( loaded.read( versionReader, error ) );
+    SW_EXPECT_EQUAL( 0, loaded.getTrackCount() );
+
+    BitReader truncatedReader( bytes.data(), static_cast<int32>( bytes.size() ) - 6 );
+    SW_EXPECT_FALSE( loaded.read( truncatedReader, error ) );
+    SW_EXPECT_EQUAL( 0, loaded.getTrackCount() );
+}
+
+/**
+ * @brief [ControlTest] 로컬 의도를 입력 창(NetInputSendWindow → 묶음 셋 중 하나 잃음 → NetInputReceiveBuffer)으로 보내면 두 틱 늦게 도는 원격 조종자 폰이
+ *        로컬 폰과 매 틱 같은 자리다. 못 받은 틱은 마지막 의도를 되풀이하고 발동 비트는 지운다
+ */
+SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
+{
+    using Internal                    = ControlRecordTestInternal;
+    static constexpr uint32 kLagTicks = 2;
+    const NetInputFormat    format{ 0, ControlIntent::kMaxSerializedBytes, 32, SW_FALSE };
+    NetInputSendWindow      window;
+    NetInputReceiveBuffer   buffer;
+    window.initialize( 64, format );
+    buffer.initialize( 64, format, NetInputWindowMode::FollowNewest );
+
+    GameObjectManager localManager;
+    GameObjectManager remoteManager;
+    PawnComponent*    pLocalPawn  = Internal::spawnAnalogPawn( localManager, "Local" );
+    PawnComponent*    pRemotePawn = Internal::spawnAnalogPawn( remoteManager, "Remote" );
+    auto*             pRemote     = remoteManager.createGameObject( hashed_string( "Remote" ) )->addComponent<RemoteControllerComponent>();
+    pRemote->setReceiveBuffer( &buffer );
+    localManager.beginPlay();
+    remoteManager.beginPlay();
+    AiControllerComponent* pAi = Internal::possessWithWanderingAi( localManager, *pLocalPawn );
+    pRemote->possess( *pRemotePawn );
+
+    vector<float3> listLocalPosition;
+    for ( uint32 tick = 0; tick < 90; ++tick )
+    {
+        Internal::setThrottle( *pAi, tick );
+        if ( tick == 10 )
+            pAi->pressButton( "Jump" );
+        localManager.tick( ControlTestInternal::kDeltaTime );
+        listLocalPosition.push_back( ControlTestInternal::findPosition( *pLocalPawn->getOwner() ) );
+        BitWriter intentWriter;
+        pLocalPawn->getIntent().write( intentWriter );
+        SW_ASSERT_TRUE( window.push( tick, intentWriter.getBytes().data(), intentWriter.getByteCount() ) );
+        // 묶음 셋 중 하나를 잃는다 — 다음 묶음이 확인 안 된 틱부터 다시 싣는다.
+        if ( ( tick % 3 ) != 1 )
+        {
+            SW_ASSERT_TRUE( Internal::deliver( window, buffer ) );
+            window.acknowledge( buffer.getFirstMissingTick() );
+        }
+        if ( tick < kLagTicks )
+            continue;
+        const uint32 remoteTick = tick - kLagTicks;
+        remoteManager.tick( ControlTestInternal::kDeltaTime );
+        const float3 remotePosition = ControlTestInternal::findPosition( *pRemotePawn->getOwner() );
+        const float3 localPosition  = listLocalPosition[remoteTick];
+        SW_EXPECT_TRUE_MSG( remotePosition._x == localPosition._x && remotePosition._z == localPosition._z,
+                            ( "tick " + std::to_string( remoteTick ) + " remote " + std::to_string( remotePosition._x ) + "," + std::to_string( remotePosition._z ) +
+                              " local " + std::to_string( localPosition._x ) + "," + std::to_string( localPosition._z ) )
+                                .c_str() );
+        if ( remoteTick == 10 )
+            SW_EXPECT_TRUE( pRemotePawn->wasButtonTriggered( 0 ) );
+    }
+    SW_EXPECT_EQUAL( 0u, pRemote->getMissingTickCount() );
+
+    // 더 받지 못한 틱까지 가면 마지막 의도를 되풀이한다(발동 비트는 지운다).
+    while ( pRemote->getNextInputTick() < 90 )
+    {
+        remoteManager.tick( ControlTestInternal::kDeltaTime );
+    }
+    const ControlIntent lastIntent = pRemotePawn->getIntent();
+    remoteManager.tick( ControlTestInternal::kDeltaTime );
+    SW_EXPECT_EQUAL( 1u, pRemote->getMissingTickCount() );
+    SW_EXPECT_TRUE( pRemotePawn->getIntent()._move._x == lastIntent._move._x && pRemotePawn->getIntent()._move._y == lastIntent._move._y );
+    SW_EXPECT_EQUAL( 0u, pRemotePawn->getIntent()._buttonTriggered );
+    pRemote->setReceiveBuffer( nullptr );
+}
+
+/**
+ * @brief [ControlTest] 시나리오 `<Intent>` 는 입력 맵 없이 폰을 기록 조종자로 몬다 — 앞으로 가는 AI 와 같은 자리로 30 프레임 걷고(첫 프레임에 Jump 발동),
+ *        끝나면 원래 플레이어 조종자에게 돌아가 멈춘다. 모르는 속성은 읽기 오류다
+ */
+SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAi )
+{
+    using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        GameObjectManager manager;
+        GameObject*       pHero   = Internal::spawnPawn( manager, "Hero", float3{} );
+        GameObject*       pTwin   = Internal::spawnPawn( manager, "Twin", float3{ 10.0f, 0.0f, 0.0f } );
+        auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        auto*             pAi     = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        PawnComponent* pHeroPawn = pHero->getComponent<PawnComponent>();
+        pPlayer->possess( *pHeroPawn );
+        pAi->possess( *pTwin->getComponent<PawnComponent>() );
+        pAi->moveTo( float3{ 10.0f, 0.0f, 1000.0f } );
+
+        AutomationRunner runner;
+        runner.setObjectManager( &manager );
+        SW_ASSERT_TRUE( runner.startFromText( "<Scenario name=\"control.intent\">"
+                                              "<At frame=\"0\"><Intent pawn=\"Hero\" move=\"0,1\" yaw=\"0\" buttons=\"Jump\" frames=\"30\"/></At>"
+                                              "<At frame=\"40\"><Pass/></At>"
+                                              "</Scenario>" ) );
+        AutomationResult result = AutomationResult::Running;
+        for ( uint32 frame = 0; frame < 60 && result == AutomationResult::Running; ++frame )
+        {
+            result                  = ControlRecordTestInternal::runFrame( runner, manager, input );
+            const float3 heroAt     = Internal::findPosition( *pHero );
+            const float3 twinAt     = Internal::findPosition( *pTwin );
+            const bool   bIntentRun = frame < 30;
+            if ( bIntentRun )
+            {
+                SW_EXPECT_TRUE_MSG( heroAt._z == twinAt._z && heroAt._x == twinAt._x - 10.0f,
+                                    ( "frame " + std::to_string( frame ) + " hero z " + std::to_string( heroAt._z ) + " twin z " + std::to_string( twinAt._z ) ).c_str() );
+                SW_EXPECT_TRUE( pHeroPawn->isButtonDown( 0 ) );
+                SW_EXPECT_EQUAL( frame == 0, pHeroPawn->wasButtonTriggered( 0 ) );
+            }
+            else
+            {
+                SW_EXPECT_TRUE( pHeroPawn->getController() == pPlayer->getHandle() );
+                SW_EXPECT_NEAR_EQUAL( 0.0f, pHeroPawn->getIntent()._move._y, 1.0e-6f );
+            }
+        }
+        SW_EXPECT_TRUE( result == AutomationResult::Passed );
+        // 30 프레임 × 4 m/s × 1/60 s = 2 m 에서 멈췄다.
+        SW_EXPECT_NEAR_EQUAL( 2.0f, Internal::findPosition( *pHero )._z, 1.0e-3f );
+
+        AutomationRunner badRunner;
+        badRunner.setObjectManager( &manager );
+        SW_ASSERT_TRUE( badRunner.startFromText( "<Scenario name=\"control.bad\"><At frame=\"0\"><Intent pawn=\"Hero\" speed=\"1\"/></At></Scenario>" ) );
+        SW_EXPECT_TRUE( ControlRecordTestInternal::runFrame( badRunner, manager, input ) == AutomationResult::LoadError );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [ControlTest] 시나리오 `<Possess>` 는 조종자의 빙의를 옮기고(앞 폰은 풀린다), pawn 이 없으면 놓게 한다
+ */
+SW_TEST_CASE( ControlTest, ScenarioPossessStepMovesPossession )
+{
+    using Internal = ControlTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        GameObjectManager manager;
+        PawnComponent*    pHero   = Internal::spawnPawn( manager, "Hero", float3{} )->getComponent<PawnComponent>();
+        PawnComponent*    pHorse  = Internal::spawnPawn( manager, "Horse", float3{} )->getComponent<PawnComponent>();
+        auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pHero );
+
+        AutomationRunner runner;
+        runner.setObjectManager( &manager );
+        SW_ASSERT_TRUE( runner.startFromText( "<Scenario name=\"control.possess\">"
+                                              "<At frame=\"5\"><Possess controller=\"Player\" pawn=\"Horse\"/></At>"
+                                              "<At frame=\"8\"><Possess controller=\"Player\"/></At>"
+                                              "<At frame=\"10\"><Pass/></At>"
+                                              "</Scenario>" ) );
+        AutomationResult result = AutomationResult::Running;
+        for ( uint32 frame = 0; frame < 30 && result == AutomationResult::Running; ++frame )
+        {
+            result = ControlRecordTestInternal::runFrame( runner, manager, input );
+            if ( frame == 4 )
+                SW_EXPECT_TRUE( pHero->getController() == pPlayer->getHandle() );
+            if ( frame == 5 )
+            {
+                SW_EXPECT_TRUE( pHorse->getController() == pPlayer->getHandle() );
+                SW_EXPECT_FALSE( pHero->isPossessed() );
+            }
+        }
+        SW_EXPECT_TRUE( result == AutomationResult::Passed );
+        SW_EXPECT_FALSE( pHorse->isPossessed() );
+        SW_EXPECT_TRUE( pPlayer->findPawn() == nullptr );
+    }
+    input.shutdown();
 }

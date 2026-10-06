@@ -57,6 +57,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `CloseWindow` | `withinSeconds`(기본 10) | 창 닫기 요청 — 그 시간 안에 루프가 끝나야 통과 | 환경 |
 | `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
+| `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
 | 그 밖 | — | 등록표(`AutomationStepRegistry`)에서 이름으로 찾는다 | |
 
 - **모르는 엘리먼트 · 모르는 속성 · 형식이 틀린 값 · 모르는 탐침 · 모르는 gv 는 읽기 오류(11)** — 조용히 버리지 않습니다. 단계 종류 · 탐침 검사는
