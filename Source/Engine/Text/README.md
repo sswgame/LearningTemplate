@@ -41,3 +41,13 @@
 - **기동**: 서비스 `engine::getFontSystem()`, 기동 단계 `Fonts`(Client 대상 — 전용 서버는 열지 않는다, 쿠킹(Headless)이면 열지 않는다). 기본 가족을 못 열면 기동 실패다.
   시험 하네스는 이 단계를 세우지 않는다 — 글꼴 시험은 자기 `FontSystem`(가짜 래스터라이저 `Test/EngineTest/Text/FakeFontRasterizer.h`)을 만든다.
   게임 · 시험은 파일 대신 메모리 글꼴을 `registerMemoryFontFile` 로 같은 경로에 등록할 수 있다.
+
+## 글리프 아틀라스(`GlyphAtlas`) · 글리프 캐시(`GlyphCache`)
+
+- 아틀라스는 **CPU 바이트 페이지**(R8, 1024², 최대 8 장)입니다. GPU 를 모릅니다 — 렌더러가 프레임마다 `takeUploads` 로 쓴 구간의 **바이트 사본**을 받아
+  자기 텍스처에 올립니다(렌더 스레드는 사본만 본다). 새 페이지 · 비운 페이지는 전체 한 건(`_bWholePage`), 그 밖은 쓴 글리프 사각형마다 한 건.
+- 패킹은 스카이라인(bottom-left — 윗변이 가장 낮은 자리, 같으면 좁은 마디)이고 결정적입니다(같은 순서 = 같은 자리). 글리프 사이 1 텍셀 여백.
+- 가득 차면 **이번 프레임에 안 쓴 가장 오래된 페이지 하나**를 비웁니다(언리얼 폰트 캐시 플러시의 페이지 단위판). 세대(`getGeneration`)가 오르고,
+  `GlyphCache` 는 그 페이지의 글리프를 표에서 지워 다음 조회에서 다시 래스터화합니다. 한 프레임이 페이지를 다 쓰면 그 글자는 그 프레임에 안 보이고 경고합니다.
+- `GlyphCache` 는 `FontSystem` 이 시작에서 만듭니다(`getGlyphCache()`). 래스터 크기는 `SdfRasterParams`(48 px/em, spread 6 px) 하나 — 화면 크기는 SDF 가 늘린다.
+  돌려준 `CachedGlyph*` 는 다음 `findOrAddGlyph` 까지만 유효합니다(밀집 해시 표). 프로파일 카운터 `Text.GlyphsRasterized`.

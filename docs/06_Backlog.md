@@ -551,6 +551,8 @@ cd build/Ninja-Debug/Bin
 - **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
 - **MMO 갱신 확인을 `NetConnection` 전달 통지로**: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
 
+- **MSDF 글리프**(직접 — 윤곽 모서리 칠하기 · 채널별 거리, 큰 글자의 모서리가 날카롭다) — 지금은 단일 채널 SDF(`Engine/Text/GlyphCache`, FreeType `sdf` 렌더러,
+  결정 R2). 아틀라스 페이지가 R8 이라 MSDF 는 RGB 페이지 · 셰이더 median 이 함께 든다.
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
   `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.

@@ -73,6 +73,7 @@ namespace sw
 
     FontSystem::FontSystem( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization )
         : _rasterizer{ std::move( rasterizer ) }
+        , _glyphCache{}
         , _catalog{}
         , _mapOpenedFamilyFace{}
         , _mapOpenedFile{}
@@ -104,6 +105,7 @@ namespace sw
         if ( _rasterizer == nullptr )
             return false;
         _catalog                     = std::move( catalog );
+        _glyphCache                  = make_unique<GlyphCache>( *_rasterizer );
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
         const FontFaceId defaultFace = openFamilyFace( _catalog._defaultFamily, FontWeight::Regular, FontSlant::Upright, bFauxBold, bFauxItalic );
@@ -118,6 +120,7 @@ namespace sw
 
     void FontSystem::shutdown()
     {
+        _glyphCache.reset();
         if ( _rasterizer != nullptr )
         {
             for ( const auto& [key, face] : _mapOpenedFile )

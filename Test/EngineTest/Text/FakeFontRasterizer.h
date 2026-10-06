@@ -58,12 +58,14 @@ namespace sw::test
     public:
         static constexpr float32 kGlyphAdvance = 0.5f;  ///< 글자 전진(em)
         static constexpr float32 kSpaceAdvance = 0.25f; ///< 공백 전진(em)
-        static constexpr uint32  kSdfSize      = 4;     ///< SDF 한 변(래스터 픽셀)
+        static constexpr uint32  kSdfSize      = 4;     ///< SDF 한 변의 기본값(래스터 픽셀)
 
         /** @brief 그 경로로 열릴 면의 설정을 적습니다. 적지 않은 경로는 모든 코드 포인트를 가진 기본 설정입니다. */
         void setFaceConfig( const string& path, const FakeFontFaceConfig& config ) { _mapConfigByPath[path] = config; }
         /** @brief 두 코드 포인트 사이 커닝(em)을 적습니다(모든 면 공통). */
         void setKerning( uint32 leftCodepoint, uint32 rightCodepoint, float32 kerning ) { _mapKerning[makePairKey( leftCodepoint, rightCodepoint )] = kerning; }
+        /** @brief SDF 비트맵 한 변을 바꿉니다(아틀라스를 빨리 채우는 시험). */
+        void setSdfSize( uint32 size ) { _sdfSize = size; }
         /** @brief 지금까지 래스터화한 횟수입니다. */
         uint32 getRasterizeCount() const { return _rasterizeCount; }
         /** @brief 지금까지 연 면 수입니다(같은 파일을 두 번 열지 않는지 본다). */
@@ -141,10 +143,10 @@ namespace sw::test
                 outBitmap._height = 0;
                 return true;
             }
-            outBitmap._bytes.assign( static_cast<size_t>( kSdfSize ) * kSdfSize, static_cast<uint8>( 128 ) );
-            outBitmap._width     = kSdfSize;
-            outBitmap._height    = kSdfSize;
-            outBitmap._bearingPx = float2{ 0.0f, static_cast<float32>( kSdfSize ) };
+            outBitmap._bytes.assign( static_cast<size_t>( _sdfSize ) * _sdfSize, static_cast<uint8>( 128 ) );
+            outBitmap._width     = _sdfSize;
+            outBitmap._height    = _sdfSize;
+            outBitmap._bearingPx = float2{ 0.0f, static_cast<float32>( _sdfSize ) };
             return true;
         }
 
@@ -156,6 +158,7 @@ namespace sw::test
         unordered_map<uint64, float32>                _mapKerning{};
         FontFaceId                                    _nextFaceId{ 1 };
         uint32                                        _rasterizeCount{ 0 };
+        uint32                                        _sdfSize{ kSdfSize };
         uint32                                        _loadCount{ 0 };
     };
 } // namespace sw::test

@@ -15,6 +15,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/FontCatalog.h"
+#include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/TextTypes.h"
 
@@ -105,6 +106,8 @@ namespace sw
         bool isInitialized() const { return _bInitialized; }
         /** @brief 래스터라이저입니다. 시작 전에는 부르지 않습니다. */
         IFontRasterizer& getRasterizer() { return *_rasterizer; }
+        /** @brief 글리프 캐시(SDF 아틀라스)입니다. 시작 전에는 부르지 않습니다. */
+        GlyphCache& getGlyphCache() { return *_glyphCache; }
         /** @brief 읽은 카탈로그입니다. */
         const FontCatalogDesc& getCatalog() const { return _catalog; }
         /** @brief 한 번만 남긴 경고(못 찾은 가족 · 글리프 없는 코드 포인트)의 수입니다 — 경고가 되풀이되지 않는지 시험이 봅니다. */
@@ -129,6 +132,7 @@ namespace sw
         };
 
         unique_ptr<IFontRasterizer>             _rasterizer;
+        unique_ptr<GlyphCache>                  _glyphCache; ///< 시작에서 만들고 종료에서 놓는다(래스터라이저를 빌린다)
         FontCatalogDesc                         _catalog;
         unordered_map<uint64, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (가족 · 굵기 · 기울기) → 연 면
         unordered_map<uint64, FontFaceId>       _mapOpenedFile;       ///< (경로 · 면 번호) → 연 면
