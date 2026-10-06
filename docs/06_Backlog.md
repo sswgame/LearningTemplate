@@ -1511,6 +1511,7 @@ cd build/Ninja-Debug/Bin
 ### 3-8. 에디터
 
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
+- **에디터 카메라는 씬 오브젝트다** — 피킹 · 계층처럼 씬 오브젝트를 훑는 기능은 `CameraRole::Editor` 를 뺀다(레이가 그 카메라 자리에서 출발해 늘 가장 가깝다).
 - **위젯 크기에 픽셀 상수를 쓰지 않는다** — `GetFrameHeight` · 글자 폭에서 잰다. 24 px 고정 단추가 150 % 에서 잘렸다(`hierarchy.visibilityToggleFits`).
   이름표 줄 바꿈은 `EditorWidgets::drawClampedLabel`(공백 · `_` · `-` · `.` 뒤에서 먼저, 넘치면 말줄임 + 툴팁) — ImGui TextWrap 은 공백만 본다.
 

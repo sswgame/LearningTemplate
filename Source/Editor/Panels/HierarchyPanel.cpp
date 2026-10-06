@@ -18,7 +18,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorCamera.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -668,9 +670,12 @@ namespace sw::editor
                 ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
                 pendingSkipRow = 0;
             };
+            // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다(저장에서도 빠진다) — 목록에 내지 않는다.
+            const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
+            const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             for ( GameObject* pObj : _listSceneObject )
             {
-                if ( pObj == nullptr || pObj->getParent() != nullptr )
+                if ( pObj == nullptr || pObj->getParent() != nullptr || pObj == pEditorCameraObject )
                     continue;
                 const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
                 if ( bMatches == false )

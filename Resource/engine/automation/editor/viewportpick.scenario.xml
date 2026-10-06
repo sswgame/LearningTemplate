@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 뷰포트(게임 뷰)를 눌러도 화면을 그리는 에디터 카메라가 골라지지 않는다. 에디터 카메라는 씬 오브젝트라
+  기본 반지름 구가 레이 시작점을 감싸 늘 가장 가까웠다(panel-audit D1).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/viewportpick.scenario.xml -dx12
+-->
+<Scenario name="editor.viewportpick" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="60"><EditorClick mark="gameView.canvas"/></At>
+	<At frame="75"><Expect probe="Editor.SelectedIsEditorCamera" equals="0"/></At>
+	<At frame="80"><Pass/></At>
+</Scenario>
