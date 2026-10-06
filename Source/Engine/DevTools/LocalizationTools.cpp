@@ -588,10 +588,16 @@ namespace sw
                 bAllWritten = false;
                 continue;
             }
-            TextGatherReport  ignored;
+            // 번역 메모리가 깨졌으면 그 문화권은 내보내지 않는다(번역 표와 같다) — 빈 메모리로 내보내면 옛 원문 · 제안이 조용히 빠진 PO 가 나간다.
+            TextGatherReport  memoryReport;
             TranslationMemory memory;
-            // 못 읽으면 빈 메모리로 내보낸다 — 결함 의심: 읽기 문제가 ignored 보고에 묻혀 알리지 않는다
-            (void)LocalizationToolsInternal::loadMemory( LocalizationToolsInternal::makeMemoryPath( absolute, culture ), culture, memory, ignored );
+            if ( LocalizationToolsInternal::loadMemory( LocalizationToolsInternal::makeMemoryPath( absolute, culture ), culture, memory, memoryReport ) == false )
+            {
+                for ( const TextGatherIssue& issue : memoryReport._listIssue )
+                    SW_LOG_ERROR( "[ExportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
+                bAllWritten = false;
+                continue;
+            }
             const PortableObjectFile file = LocalizationToolsInternal::makePortableObject( project, culture, mapSource, translation, memory, result );
             const string             text = file.toText();
             string                   existing;
@@ -652,7 +658,11 @@ namespace sw
         TranslationMemory memory;
         const string      memoryPath = LocalizationToolsInternal::makeMemoryPath( absolute, culture );
         if ( LocalizationToolsInternal::loadMemory( memoryPath, culture, memory, memoryReport ) == false )
+        {
+            for ( const TextGatherIssue& issue : memoryReport._listIssue )
+                SW_LOG_ERROR( "[ImportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
             return false;
+        }
 
         for ( const PortableObjectEntry& poEntry : file._listEntry )
         {
