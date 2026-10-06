@@ -3,6 +3,7 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -17,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Popups/EditorPopupManager.h"
+#include "Editor/Popups/QuickLauncherLayout.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -203,6 +205,21 @@ namespace sw::editor
         resultsDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( resultsDesc ) )
         {
+            // 열 자리는 이번 목록의 가장 넓은 종류 표시와 글자 크기에서 정한다(고정 x 는 배율 · 글꼴이 바뀌면 겹친다). 종류는 몇 가지뿐이라 바뀔 때만 잰다.
+            float32       widestBadgeWidth{ 0.0f };
+            const string* pMeasuredCategory{ nullptr };
+            for ( const QuickLauncherItem* pItem : listFiltered )
+            {
+                if ( pMeasuredCategory != nullptr && *pMeasuredCategory == pItem->_category )
+                    continue;
+                pMeasuredCategory = &pItem->_category;
+                fixed_string<constant::kMaxBuffer32> badge;
+                formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
+                widestBadgeWidth = MathUtil::max( widestBadgeWidth, ImGui::CalcTextSize( badge.c_str() ).x );
+            }
+            const QuickLauncherRowLayout layout = QuickLauncherLayoutUtil::makeRowLayout( ImGui::GetContentRegionAvail().x, widestBadgeWidth, ImGui::GetFrameHeight(),
+                                                                                          ImGui::GetTextLineHeight(), ImGui::GetStyle().ItemSpacing.x );
+
             for ( int32 itemIndex = 0; itemIndex < filteredCount; ++itemIndex )
             {
                 const QuickLauncherItem* pItem     = listFiltered[static_cast<size_t>( itemIndex )];
@@ -213,7 +230,8 @@ namespace sw::editor
                 ImVec2        cursor    = ImGui::GetCursorScreenPos();
                 ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
                 const float32 availW    = ImGui::GetContentRegionAvail().x;
-                const float32 itemH     = 34.0f;
+                const float32 itemH     = layout._rowHeight;
+                const float32 textY     = cursor.y + layout._textOffsetY;
 
                 if ( bSelected )
                 {
@@ -227,14 +245,16 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer32> badge;
                 formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
 
-                pDrawList->AddText( ImVec2( cursor.x + 8.0f, cursor.y + 8.0f ), ImGui::ColorConvertFloat4ToU32( categoryColor ),
-                                    badge.c_str() );
+                pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), ImGui::ColorConvertFloat4ToU32( categoryColor ), badge.c_str() );
 
-                pDrawList->AddText( ImVec2( cursor.x + 95.0f, cursor.y + 8.0f ), IM_COL32( 240, 240, 245, 255 ),
-                                    pItem->_title.c_str() );
+                // 긴 이름은 경로 열 앞에서, 긴 경로는 줄 끝에서 자른다.
+                pDrawList->PushClipRect( ImVec2( cursor.x + layout._titleX, cursor.y ), ImVec2( cursor.x + layout._titleClipRight, cursor.y + itemH ), true );
+                pDrawList->AddText( ImVec2( cursor.x + layout._titleX, textY ), IM_COL32( 240, 240, 245, 255 ), pItem->_title.c_str() );
+                pDrawList->PopClipRect();
 
-                pDrawList->AddText( ImVec2( cursor.x + 300.0f, cursor.y + 8.0f ), IM_COL32( 150, 155, 170, 200 ),
-                                    pItem->_detail.c_str() );
+                pDrawList->PushClipRect( ImVec2( cursor.x + layout._detailX, cursor.y ), ImVec2( cursor.x + availW, cursor.y + itemH ), true );
+                pDrawList->AddText( ImVec2( cursor.x + layout._detailX, textY ), IM_COL32( 150, 155, 170, 200 ), pItem->_detail.c_str() );
+                pDrawList->PopClipRect();
 
                 if ( ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) ) )
                 {
