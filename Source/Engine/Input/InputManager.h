@@ -17,7 +17,6 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/IVirtualInputSource.h"
-#include "Engine/Input/InputSnapshot.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 
@@ -207,33 +206,31 @@ namespace sw
         bool playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex = 0 );
 
         // ------------------------------------------------------------------------------
-        // 7) 롤백 · 리플레이 입력 스냅샷 버퍼(Input Snapshot & History)
-        // ------------------------------------------------------------------------------
-        void                      recordSnapshot( uint32 tickNumber );
-        const InputSnapshot*      getSnapshot( uint32 tickNumber ) const { return _inputHistory.getSnapshot( tickNumber ); }
-        const InputSnapshot*      getLatestSnapshot() const { return _inputHistory.getLatestSnapshot(); }
-        const InputHistoryBuffer& getInputHistory() const { return _inputHistory; }
-
-        // ------------------------------------------------------------------------------
-        // 7-1) 가상 입력(Virtual Input) — 시험 · 시나리오 · 리플레이가 OS 사건과 같은 자리로 넣는다
+        // 7) 가상 입력(Virtual Input) — 시험 · 시나리오 · 입력 리플레이가 OS 사건과 같은 자리로 넣는다
         // ------------------------------------------------------------------------------
         /**
          * @brief 가상 입력 원천을 붙입니다(빌려 쓴다 — 떼기 전까지 살아 있어야 한다). 이미 붙어 있으면 바꿉니다. 프레임 번호는 0 부터 다시 셉니다.
          * @details 붙이는 순간 모든 장치 상태를 지웁니다 — 사람이 누르고 있던 키가 시험 첫 프레임에 남지 않게. 배타 모드면 붙어 있는 동안
          *          OS 키 · 마우스 · 패드 사건과 패드 폴링, 창 포커스 사건, 커서 가두기 · 가운데 되돌리기를 하지 않고, 패드 연결은 가상
          *          연결 사건이 정합니다. 엔진 키보드 포커스(`setKeyboardFocus` — 개발 콘솔)는 가상 키에도 그대로 걸립니다.
+         * @param bResetState false 면 장치 상태를 지우지 않습니다 — `InputReplay::seekTo` 로 만든 상태에서 이어 재생할 때.
          */
-        void attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode = VirtualInputMode::Exclusive );
+        void attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode = VirtualInputMode::Exclusive, bool bResetState = true );
         /**
          * @brief 가상 입력을 뗍니다. 커서 잠금을 지금 상태에 맞춰 다시 적용합니다.
          * @param bResetState 참이면 장치 상태를 지웁니다(가상 키가 눌린 채 남지 않게). 재생으로 만든 상태를 남기려면 false.
          */
-        void detachVirtualInput( bool bResetState = true );
-        bool isVirtualInputAttached() const { return _pVirtualInput != nullptr; }
+        void                 detachVirtualInput( bool bResetState = true );
+        bool                 isVirtualInputAttached() const { return _pVirtualInput != nullptr; }
+        IVirtualInputSource* getVirtualInput() const { return _pVirtualInput; }
         /** @brief 배타 가상 입력이 붙어 OS 입력을 무시하는 중이면 true 입니다. */
         bool isOsInputSuppressed() const { return _pVirtualInput != nullptr && _virtualInputMode == VirtualInputMode::Exclusive; }
         /** @brief 붙인 뒤 지난 `beginFrame` 수 — 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
         uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
+        /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 사건입니다(배타 가상 입력이면 가상 사건만). 입력 녹화가 읽습니다. 다음 `beginFrame` 까지 유효합니다. */
+        const vector<RawInputEvent>& getLastFrameEvents() const { return _listDrainedEvent; }
+        /** @brief 지금까지 `beginFrame` 을 부른 횟수입니다(프레임마다 한 번 읽는 쪽이 같은 프레임을 두 번 읽지 않게). */
+        uint32 getBeginFrameCount() const { return _beginFrameCount; }
 
         // ------------------------------------------------------------------------------
         // 8) 플랫폼 네이티브 이벤트 처리와 접근성 제어
@@ -328,9 +325,9 @@ namespace sw
         GamepadDevice*                       _pGamepad;             /**< 0번 게임패드 편의 API 용 캐시 포인터(1~3번은 getGamepad(index) 로 조회). */
         unique_ptr<InputMap>                 _pInputMap;            /**< 이 InputManager 에 연결된 기본 InputMap 인스턴스. */
         vector<RawInputEvent>                _listDrainedEvent;     /**< beginFrame() 에서 큐를 비워 담아 두는 임시 버퍼(매 프레임 재사용). */
-        InputHistoryBuffer                   _inputHistory;         /**< 롤백 · 리플레이용 프레임별 입력 스냅샷 링 버퍼. */
         IVirtualInputSource*                 _pVirtualInput;        /**< 붙인 가상 입력 원천(빌림). nullptr 이면 OS 입력만. */
         uint32                               _virtualFrameIndex;    /**< 붙인 뒤 `beginFrame` 횟수 — 원천에 넘기는 프레임 번호. */
+        uint32                               _beginFrameCount;      /**< `beginFrame` 을 부른 횟수. */
         InputGlyphStyle                      _activeGlyphStyle;     /**< 마지막으로 조작이 감지된 장치 종류(UI 글리프 자동 전환용). */
         ActiveDeviceChangedDelegate          _onActiveDeviceChanged;
         GamepadConnectionDelegate            _onGamepadConnectionChanged;

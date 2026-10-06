@@ -33,9 +33,9 @@ namespace sw
         , _pGamepad{ nullptr }
         , _pInputMap{ nullptr }
         , _listDrainedEvent{}
-        , _inputHistory{}
         , _pVirtualInput{ nullptr }
         , _virtualFrameIndex{ 0 }
+        , _beginFrameCount{ 0 }
         , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
         , _onActiveDeviceChanged{}
         , _onGamepadConnectionChanged{}
@@ -70,7 +70,6 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
-        _inputHistory.clear();
 
         // 1) 표준 키보드 장치를 등록한다
         auto pKeyboard = make_unique<KeyboardDevice>();
@@ -163,7 +162,6 @@ namespace sw
         _queueRawEvent.clear();
         _droppedRawEventCount.store( 0, std::memory_order_relaxed );
         _listDrainedEvent.clear();
-        _inputHistory.clear();
 
         _bInitialized = SW_FALSE;
         SW_LOG_INFO( "InputManager shut down." );
@@ -270,6 +268,7 @@ namespace sw
     void InputManager::beginFrame( float32 deltaSeconds )
     {
         SW_MEMORY_SCOPE( EngineMisc );
+        ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
         if ( droppedCount > 0 )
             SW_LOG_WARNING( "Raw input event queue full (capacity=%d). %d event(s) dropped in previous frame.", static_cast<int32>( _queueRawEvent.capacity() ), droppedCount );
@@ -811,7 +810,7 @@ namespace sw
         return pPad != nullptr ? pPad->playVibration( leftMotor, rightMotor, durationSeconds ) : false;
     }
 
-    void InputManager::attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode )
+    void InputManager::attachVirtualInput( IVirtualInputSource* pSource, VirtualInputMode mode, bool bResetState )
     {
         if ( pSource == nullptr )
         {
@@ -823,7 +822,8 @@ namespace sw
         _virtualInputMode        = mode;
         _virtualFrameIndex       = 0;
         // 사람이 누르고 있던 것 · 큐에 남은 OS 사건이 첫 프레임에 새지 않게 지운다.
-        resetAllDeviceState();
+        if ( bResetState )
+            resetAllDeviceState();
         const bool bExclusive = mode == VirtualInputMode::Exclusive;
         if ( bExclusive )
             _queueRawEvent.clear();
@@ -854,60 +854,5 @@ namespace sw
             if ( pDev != nullptr && pDev->getDeviceKind() == InputDeviceKind::Gamepad )
                 static_cast<GamepadDevice*>( pDev.get() )->setVirtualSession( bVirtual );
         }
-    }
-
-    void InputManager::recordSnapshot( uint32 tickNumber )
-    {
-        InputSnapshot snapshot{};
-        snapshot._tickNumber = tickNumber;
-
-        // 1) 2D 축 벡터(Move · Look)
-        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Move" ) )
-            snapshot._moveVector = _pInputMap->getVector2D( "Move" );
-        else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            snapshot._moveVector = _pGamepad->getLeftStick();
-
-        if ( _pInputMap != nullptr && _pInputMap->hasAction( "Look" ) )
-            snapshot._lookVector = _pInputMap->getVector2D( "Look" );
-        else if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-            snapshot._lookVector = _pGamepad->getRightStick();
-
-        // 2) 아날로그 트리거
-        snapshot._leftTrigger  = getGamepadLeftTrigger();
-        snapshot._rightTrigger = getGamepadRightTrigger();
-
-        // 3) 64비트 버튼 · 액션 비트마스크
-        uint64 mask = 0;
-        if ( _pGamepad != nullptr && _pGamepad->isConnected() )
-        {
-            for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( GamepadButton::Count ); ++btnIndex )
-            {
-                if ( _pGamepad->isButtonDown( static_cast<GamepadButton>( btnIndex ) ) )
-                    mask |= ( 1ULL << btnIndex );
-            }
-        }
-
-        if ( _pMouse != nullptr )
-        {
-            for ( uint32 btnIndex = 0; btnIndex < static_cast<uint32>( MouseButton::Count ); ++btnIndex )
-            {
-                if ( _pMouse->isButtonDown( static_cast<MouseButton>( btnIndex ) ) )
-                    mask |= ( 1ULL << ( 16 + btnIndex ) );
-            }
-        }
-
-        if ( _pInputMap != nullptr )
-        {
-            const vector<hashed_string>& listAction  = _pInputMap->getActionNames();
-            const uint32                 actionCount = MathUtil::min( static_cast<uint32>( listAction.size() ), 32u );
-            for ( uint32 actionIndex = 0; actionIndex < actionCount; ++actionIndex )
-            {
-                if ( _pInputMap->isActionDown( listAction[actionIndex] ) )
-                    mask |= ( 1ULL << ( 32 + actionIndex ) );
-            }
-        }
-
-        snapshot._buttonMask = mask;
-        _inputHistory.recordSnapshot( snapshot );
     }
 } // namespace sw

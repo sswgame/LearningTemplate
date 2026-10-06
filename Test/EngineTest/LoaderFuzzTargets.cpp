@@ -16,7 +16,6 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Input/InputSnapshot.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
@@ -210,11 +209,6 @@ namespace test
                 TileMapXmlData data;
                 (void)data.loadFromXml( asText( pData, size ) );
             }
-            static void runInputSnapshot( const uint8* pData, size_t size )
-            {
-                InputSnapshot snapshot;
-                (void)snapshot.deserialize( pData, static_cast<uint32>( size ) );
-            }
             static void runStringPool( const uint8* pData, size_t size )
             {
                 StringPool pool;
@@ -359,13 +353,6 @@ namespace test
                 appendResourceSeeds( ".tilemap.xml", 2, outListSeed );
                 appendTextSeed( "<TileMap width=\"4\" height=\"2\" tileSize=\"16\"><Layer name=\"Ground\">1,1,1,1,0,0,2,2</Layer></TileMap>", outListSeed );
             }
-            static void seedInputSnapshot( vector<vector<uint8>>& outListSeed )
-            {
-                InputSnapshot snapshot;
-                vector<uint8> bytes( 256, 0 );
-                outListSeed.push_back( bytes );
-                (void)snapshot;
-            }
             static void seedStringPool( vector<vector<uint8>>& outListSeed )
             {
                 StringPool pool;
@@ -408,7 +395,6 @@ namespace test
             {          "Sequence",           &LoaderFuzzTargetsInternal::runSequence,        &LoaderFuzzTargetsInternal::seedSequence,  true},
             {       "StringTable",        &LoaderFuzzTargetsInternal::runStringTable,     &LoaderFuzzTargetsInternal::seedStringTable,  true},
             {           "TileMap",            &LoaderFuzzTargetsInternal::runTileMap,         &LoaderFuzzTargetsInternal::seedTileMap,  true},
-            {     "InputSnapshot",      &LoaderFuzzTargetsInternal::runInputSnapshot,   &LoaderFuzzTargetsInternal::seedInputSnapshot, false},
             {        "StringPool",         &LoaderFuzzTargetsInternal::runStringPool,      &LoaderFuzzTargetsInternal::seedStringPool, false},
             {               "Wav",                &LoaderFuzzTargetsInternal::runWav,             &LoaderFuzzTargetsInternal::seedWav, false},
             {               "Ogg",                &LoaderFuzzTargetsInternal::runOgg,             &LoaderFuzzTargetsInternal::seedOgg, false},

@@ -907,11 +907,9 @@ SW_TEST_CASE( InputManagerTest, TimedGamepadVibration )
 }
 
 /**
- * @brief [InputManagerTest] 입력 뮤트(Mute) 및 스냅샷 기록 검증
- * @details 런타임이 쓰는 `recordSnapshot` 경로로 — 버튼을 눌러 프레임을 돌리고 기록시켜 — 확인한다. 히스토리에
- *          스냅샷을 직접 밀어 넣는 백도어로는 실제 경로를 검사하지 못한다.
+ * @brief [InputManagerTest] 입력 뮤트(Mute) — 뮤트 중 사건은 버리고, 풀면 같은 경로가 다시 상태를 만든다
  */
-SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
+SW_TEST_CASE( InputManagerTest, InputMuting )
 {
     sw::InputManager input;
     SW_EXPECT_TRUE( input.initialize() );
@@ -930,17 +928,6 @@ SW_TEST_CASE( InputManagerTest, InputMutingAndSnapshotRecording )
     input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left ) );
     input.beginFrame( 0.016f );
     SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Left ) );
-
-    input.recordSnapshot( 200 );
-
-    const sw::InputSnapshot* pRecorded = input.getSnapshot( 200 );
-    SW_EXPECT_TRUE( pRecorded != nullptr );
-    if ( pRecorded != nullptr )
-    {
-        // 버튼 마스크는 게임패드가 0..15, 마우스가 16.. 이다 (MouseButton::Left = 0 → 비트 16).
-        SW_EXPECT_EQUAL( 1ULL << 16, pRecorded->_buttonMask );
-        SW_EXPECT_EQUAL( 200u, pRecorded->_tickNumber );
-    }
 
     input.shutdown();
 }

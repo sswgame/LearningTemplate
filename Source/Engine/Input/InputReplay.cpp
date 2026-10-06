@@ -4,9 +4,11 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/VirtualInputScript.h"
 
 namespace sw
 {
@@ -27,22 +29,37 @@ namespace sw
         };
 
         /**
-         * @brief 지금 쓰는 리플레이 파일 판입니다.
+         * @brief 지금 쓰는 리플레이 파일 판입니다. 프레임마다 `deltaTime(float32) · eventCount(uint32) · RawInputEvent × n` 입니다.
          * @details `RawInputEvent` 를 구조체째로 적으므로 그 배치가 바뀌면 판을 올립니다(다른 판은 읽지 않습니다).
          */
-        constexpr uint32 kReplayVersion = 3;
+        constexpr uint32 kReplayVersion = 4;
+
+        struct InputReplayInternal
+        {
+            template <typename T>
+            static void appendBytes( vector<uint8>& outBytes, const T& value )
+            {
+                const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
+                outBytes.insert( outBytes.end(), pBytes, pBytes + sizeof( T ) );
+            }
+
+            template <typename T>
+            [[nodiscard]] static bool readBytes( const uint8*& pCursor, const uint8* pEnd, T& outValue )
+            {
+                if ( static_cast<size_t>( pEnd - pCursor ) < sizeof( T ) )
+                    return false;
+                Memory::copy( &outValue, pCursor, sizeof( T ) );
+                pCursor += sizeof( T );
+                return true;
+            }
+        };
     } // namespace
 
     InputReplay::InputReplay()
         : _listFrame{}
         , _replayName{}
-        , _currentPlaybackIndex{ 0 }
-        , _playbackSpeed{ 1.0f }
-        , _accumulatedTime{ 0.0f }
+        , _startFrameIndex{ 0 }
         , _bRecording{ SW_FALSE }
-        , _bPlaying{ SW_FALSE }
-        , _bPaused{ SW_FALSE }
-        , _bLoop{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -50,25 +67,25 @@ namespace sw
     void InputReplay::startRecording( string_view replayName )
     {
         _listFrame.clear();
-        _replayName           = replayName.empty() ? "NewReplay" : string( replayName );
-        _currentPlaybackIndex = 0;
-        _accumulatedTime      = 0.0f;
-        _bRecording           = SW_TRUE;
-        _bPlaying             = SW_FALSE;
-        _bPaused              = SW_FALSE;
+        _replayName      = replayName.empty() ? "NewReplay" : string( replayName );
+        _startFrameIndex = 0;
+        _bRecording      = SW_TRUE;
         SW_LOG_INFO( "Started recording input replay: %#", _replayName.c_str() );
     }
 
-    void InputReplay::recordFrame( uint32 tickNumber, float32 deltaTime, const InputSnapshot& snapshot, const vector<RawInputEvent>& listEvent )
+    void InputReplay::recordFrame( float32 deltaTime, const vector<RawInputEvent>& listEvent )
     {
         if ( _bRecording == SW_FALSE )
             return;
 
         InputReplayFrame frame{};
-        frame._tickNumber   = tickNumber;
         frame._deltaTime    = deltaTime;
-        frame._snapshot     = snapshot;
         frame._listRawEvent = listEvent;
+        // 녹화한 사건은 재생 때 다시 가상 사건으로 표시된다 — 파일에는 원래 출처를 남기지 않는다.
+        for ( RawInputEvent& event : frame._listRawEvent )
+        {
+            event._bSynthetic = SW_FALSE;
+        }
         _listFrame.push_back( std::move( frame ) );
     }
 
@@ -81,141 +98,36 @@ namespace sw
         SW_LOG_INFO( "Stopped recording input replay: %# (Total %d frames recorded)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
     }
 
-    void InputReplay::play()
+    void InputReplay::emitFrame( uint32 frameIndex, vector<RawInputEvent>& outListEvent )
     {
-        if ( _listFrame.empty() )
+        const uint32 recordedIndex = frameIndex + _startFrameIndex;
+        if ( recordedIndex >= _listFrame.size() )
             return;
-
-        _bRecording           = SW_FALSE;
-        _bPlaying             = SW_TRUE;
-        _bPaused              = SW_FALSE;
-        _currentPlaybackIndex = 0;
-        _accumulatedTime      = 0.0f;
-        SW_LOG_INFO( "Started playback of input replay: %#", _replayName.c_str() );
+        const vector<RawInputEvent>& listEvent = _listFrame[recordedIndex]._listRawEvent;
+        outListEvent.insert( outListEvent.end(), listEvent.begin(), listEvent.end() );
     }
 
-    void InputReplay::pause()
+    void InputReplay::seekTo( InputManager& input, uint32 frameIndex )
     {
-        if ( _bPlaying == SW_TRUE )
-            _bPaused = SW_TRUE;
-    }
-
-    void InputReplay::resume()
-    {
-        if ( _bPlaying == SW_TRUE )
-            _bPaused = SW_FALSE;
-    }
-
-    void InputReplay::stop()
-    {
-        _bPlaying             = SW_FALSE;
-        _bPaused              = SW_FALSE;
-        _currentPlaybackIndex = 0;
-        _accumulatedTime      = 0.0f;
-    }
-
-    void InputReplay::stepForward( InputManager* pInput )
-    {
-        if ( _listFrame.empty() )
-            return;
-
-        if ( _currentPlaybackIndex < _listFrame.size() )
-        {
-            const InputReplayFrame& frame = _listFrame[_currentPlaybackIndex];
-            if ( pInput != nullptr )
-            {
-                for ( const RawInputEvent& event : frame._listRawEvent )
-                    pInput->postRawEvent( event );
-            }
-            ++_currentPlaybackIndex;
-        }
-        else if ( _bLoop == SW_TRUE )
-        {
-            _currentPlaybackIndex = 0;
-        }
-    }
-
-    void InputReplay::stepBackward( InputManager* pInput )
-    {
-        if ( _listFrame.empty() )
-            return;
-
-        if ( _currentPlaybackIndex > 0 )
-        {
-            --_currentPlaybackIndex;
-            // 원시 이벤트는 KeyDown/KeyUp 처럼 방향이 있는 상태 전이라, 목표 프레임의 이벤트만
-            // 그대로 다시 넣으면(정방향 의미) 뒤로 탐색할 때 눌림 상태가 고착될 수 있다.
-            // 장치 상태를 리셋한 뒤 0번 프레임부터 목표 프레임까지 순서대로 재생해 재구성한다.
-            resyncUpTo( pInput, _currentPlaybackIndex + 1 );
-        }
-    }
-
-    void InputReplay::resyncUpTo( InputManager* pInput, uint32 exclusiveEndIndex ) const
-    {
-        if ( pInput == nullptr )
-            return;
-
-        pInput->resetAllDeviceState();
-
-        const uint32 endIndex = exclusiveEndIndex < _listFrame.size() ? exclusiveEndIndex : static_cast<uint32>( _listFrame.size() );
+        const uint32 endIndex = MathUtil::min( frameIndex, getFrameCount() );
+        // 원시 사건은 누름 · 뗌처럼 방향이 있는 전이라 목표 프레임만 다시 넣으면 상태가 틀린다 — 처음부터 그 프레임 직전까지 다시 재생한다.
+        input.detachVirtualInput();
+        VirtualInputScript prefix;
         for ( uint32 index = 0; index < endIndex; ++index )
         {
-            const InputReplayFrame& frame = _listFrame[index];
-            for ( const RawInputEvent& event : frame._listRawEvent )
-                pInput->postRawEvent( event );
-            pInput->beginFrame( frame._deltaTime );
-            pInput->endFrame();
+            for ( const RawInputEvent& event : _listFrame[index]._listRawEvent )
+            {
+                prefix.addEvent( index, event );
+            }
         }
-    }
-
-    void InputReplay::seek( uint32 frameIndex )
-    {
-        if ( _listFrame.empty() )
-            return;
-
-        if ( frameIndex >= _listFrame.size() )
-            _currentPlaybackIndex = static_cast<uint32>( _listFrame.size() - 1 );
-        else
-            _currentPlaybackIndex = frameIndex;
-    }
-
-    void InputReplay::updatePlayback( float32 deltaTime, InputManager* pInput )
-    {
-        if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE || _listFrame.empty() )
-            return;
-
-        _accumulatedTime += deltaTime * _playbackSpeed;
-
-        while ( _currentPlaybackIndex < _listFrame.size() )
+        input.attachVirtualInput( &prefix );
+        for ( uint32 index = 0; index < endIndex; ++index )
         {
-            const InputReplayFrame& frame = _listFrame[_currentPlaybackIndex];
-            if ( _accumulatedTime < frame._deltaTime )
-                break;
-
-            _accumulatedTime -= frame._deltaTime;
-
-            if ( pInput != nullptr )
-            {
-                for ( const RawInputEvent& event : frame._listRawEvent )
-                    pInput->postRawEvent( event );
-            }
-
-            ++_currentPlaybackIndex;
+            input.beginFrame( _listFrame[index]._deltaTime );
+            input.endFrame();
         }
-
-        if ( _currentPlaybackIndex >= _listFrame.size() )
-        {
-            if ( _bLoop == SW_TRUE )
-            {
-                _currentPlaybackIndex = 0;
-                _accumulatedTime      = 0.0f;
-            }
-            else
-            {
-                _bPlaying = SW_FALSE;
-                SW_LOG_INFO( "Finished playback of input replay: %#", _replayName.c_str() );
-            }
-        }
+        input.detachVirtualInput( false );
+        _startFrameIndex = endIndex;
     }
 
     bool InputReplay::saveToFile( string_view filePath ) const
@@ -225,9 +137,7 @@ namespace sw
         header._version    = kReplayVersion;
         header._nameLength = static_cast<uint32>( _replayName.size() );
         header._frameCount = static_cast<uint32>( _listFrame.size() );
-
-        const uint8* pHeaderBytes = reinterpret_cast<const uint8*>( &header );
-        bytes.insert( bytes.end(), pHeaderBytes, pHeaderBytes + sizeof( ReplayHeader ) );
+        InputReplayInternal::appendBytes( bytes, header );
 
         if ( header._nameLength > 0 )
         {
@@ -237,28 +147,11 @@ namespace sw
 
         for ( const InputReplayFrame& frame : _listFrame )
         {
-            const uint32  tickNumber = frame._tickNumber;
-            const float32 deltaTime  = frame._deltaTime;
-            const uint8*  pTick      = reinterpret_cast<const uint8*>( &tickNumber );
-            const uint8*  pDt        = reinterpret_cast<const uint8*>( &deltaTime );
-            bytes.insert( bytes.end(), pTick, pTick + sizeof( uint32 ) );
-            bytes.insert( bytes.end(), pDt, pDt + sizeof( float32 ) );
-
-            uint8        arrSnapshotBuf[InputSnapshot::kSerializedSize]{};
-            uint32       snapSize  = frame._snapshot.serialize( arrSnapshotBuf, sizeof( arrSnapshotBuf ) );
-            const uint8* pSnapSize = reinterpret_cast<const uint8*>( &snapSize );
-            bytes.insert( bytes.end(), pSnapSize, pSnapSize + sizeof( uint32 ) );
-            if ( snapSize > 0 )
-                bytes.insert( bytes.end(), arrSnapshotBuf, arrSnapshotBuf + snapSize );
-
-            const uint32 eventCount = static_cast<uint32>( frame._listRawEvent.size() );
-            const uint8* pCount     = reinterpret_cast<const uint8*>( &eventCount );
-            bytes.insert( bytes.end(), pCount, pCount + sizeof( uint32 ) );
-
+            InputReplayInternal::appendBytes( bytes, frame._deltaTime );
+            InputReplayInternal::appendBytes( bytes, static_cast<uint32>( frame._listRawEvent.size() ) );
             for ( const RawInputEvent& event : frame._listRawEvent )
             {
-                const uint8* pEventBytes = reinterpret_cast<const uint8*>( &event );
-                bytes.insert( bytes.end(), pEventBytes, pEventBytes + sizeof( RawInputEvent ) );
+                InputReplayInternal::appendBytes( bytes, event );
             }
         }
 
@@ -272,91 +165,59 @@ namespace sw
     bool InputReplay::loadFromFile( string_view filePath )
     {
         vector<uint8> bytes;
-        if ( FileUtil::readFile( filePath, bytes ) == false || bytes.size() < sizeof( ReplayHeader ) )
+        if ( FileUtil::readFile( filePath, bytes ) == false )
             return false;
 
         const uint8* pCursor = bytes.data();
         const uint8* pEnd    = bytes.data() + bytes.size();
 
         ReplayHeader header{};
-        Memory::copy( &header, pCursor, sizeof( ReplayHeader ) );
-        pCursor += sizeof( ReplayHeader );
-
+        if ( InputReplayInternal::readBytes( pCursor, pEnd, header ) == false )
+            return false;
         if ( header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P' )
             return false;
 
         // 판이 다르면 프레임 배치도 다르다. 읽어 봐야 엉뚱한 값이 나오므로 여기서 멈춘다.
         if ( header._version != kReplayVersion )
         {
-            SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#",
-                            header._version, kReplayVersion, filePath );
+            SW_LOG_WARNING( "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
+            return false;
+        }
+        if ( static_cast<size_t>( pEnd - pCursor ) < header._nameLength )
+        {
+            SW_LOG_WARNING( "Input replay is truncated in its name — refusing to load: %#", filePath );
             return false;
         }
 
-        _replayName.clear();
-        if ( header._nameLength > 0 && pCursor + header._nameLength <= pEnd )
-        {
-            _replayName.assign( reinterpret_cast<const utf8*>( pCursor ), header._nameLength );
-            pCursor += header._nameLength;
-        }
+        string replayName;
+        replayName.assign( reinterpret_cast<const utf8*>( pCursor ), header._nameLength );
+        pCursor += header._nameLength;
 
-        _listFrame.clear();
-        _listFrame.reserve( header._frameCount );
-
+        vector<InputReplayFrame> listFrame;
+        listFrame.reserve( header._frameCount );
         for ( uint32 frameIndex = 0; frameIndex < header._frameCount; ++frameIndex )
         {
-            if ( pCursor + sizeof( uint32 ) + sizeof( float32 ) + sizeof( uint32 ) > pEnd )
-                break;
-
             InputReplayFrame frame{};
-            Memory::copy( &frame._tickNumber, pCursor, sizeof( uint32 ) );
-            pCursor += sizeof( uint32 );
-            Memory::copy( &frame._deltaTime, pCursor, sizeof( float32 ) );
-            pCursor += sizeof( float32 );
-
-            uint32 snapSize = 0;
-            Memory::copy( &snapSize, pCursor, sizeof( uint32 ) );
-            pCursor += sizeof( uint32 );
-
-            if ( snapSize > 0 && pCursor + snapSize <= pEnd )
+            uint32           eventCount = 0;
+            // 잘린 프레임에서 멈춘다 — 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
+            if ( InputReplayInternal::readBytes( pCursor, pEnd, frame._deltaTime ) == false || InputReplayInternal::readBytes( pCursor, pEnd, eventCount ) == false ||
+                 static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount )
             {
-                // 깨진 프레임에서 멈춘다 — 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
-                if ( frame._snapshot.deserialize( pCursor, snapSize ) == false )
-                {
-                    SW_LOG_WARNING( "Input replay has a corrupt frame - refusing to load: %#", filePath );
-                    return false;
-                }
-                pCursor += snapSize;
+                SW_LOG_WARNING( "Input replay is truncated at frame %# — refusing to load: %#", frameIndex, filePath );
+                return false;
             }
-
-            if ( pCursor + sizeof( uint32 ) > pEnd )
-                break;
-
-            uint32 eventCount = 0;
-            Memory::copy( &eventCount, pCursor, sizeof( uint32 ) );
-            pCursor += sizeof( uint32 );
-
-            frame._listRawEvent.reserve( eventCount );
-            for ( uint32 eventIndex = 0; eventIndex < eventCount; ++eventIndex )
+            frame._listRawEvent.resize( eventCount );
+            for ( RawInputEvent& event : frame._listRawEvent )
             {
-                if ( pCursor + sizeof( RawInputEvent ) > pEnd )
-                    break;
-
-                RawInputEvent event{};
-                Memory::copy( &event, pCursor, sizeof( RawInputEvent ) );
-                pCursor += sizeof( RawInputEvent );
-                frame._listRawEvent.push_back( event );
+                (void)InputReplayInternal::readBytes( pCursor, pEnd, event );
             }
-
-            _listFrame.push_back( std::move( frame ) );
+            listFrame.push_back( std::move( frame ) );
         }
 
-        _currentPlaybackIndex = 0;
-        _accumulatedTime      = 0.0f;
-        _bRecording           = SW_FALSE;
-        _bPlaying             = SW_FALSE;
-        _bPaused              = SW_FALSE;
-
+        _listFrame       = std::move( listFrame );
+        _replayName      = std::move( replayName );
+        _startFrameIndex = 0;
+        _bRecording      = SW_FALSE;
         SW_LOG_INFO( "Successfully loaded replay: %# (%d frames)", _replayName.c_str(), static_cast<int32>( _listFrame.size() ) );
         return true;
     }
@@ -365,34 +226,17 @@ namespace sw
     {
         _listFrame.clear();
         _replayName.clear();
-        _currentPlaybackIndex = 0;
-        _accumulatedTime      = 0.0f;
-        _bRecording           = SW_FALSE;
-        _bPlaying             = SW_FALSE;
-        _bPaused              = SW_FALSE;
+        _startFrameIndex = 0;
+        _bRecording      = SW_FALSE;
     }
 
     float32 InputReplay::getTotalDuration() const
     {
         float32 totalSec = 0.0f;
         for ( const InputReplayFrame& frame : _listFrame )
+        {
             totalSec += frame._deltaTime;
+        }
         return totalSec;
-    }
-
-    float32 InputReplay::getCurrentPlaybackTime() const
-    {
-        float32      currentSec = 0.0f;
-        const size_t limit      = _currentPlaybackIndex < _listFrame.size() ? _currentPlaybackIndex : _listFrame.size();
-        for ( size_t index = 0; index < limit; ++index )
-            currentSec += _listFrame[index]._deltaTime;
-        return currentSec;
-    }
-
-    const InputReplayFrame* InputReplay::getCurrentFrame() const
-    {
-        if ( _listFrame.empty() || _currentPlaybackIndex >= _listFrame.size() )
-            return nullptr;
-        return &_listFrame[_currentPlaybackIndex];
     }
 } // namespace sw

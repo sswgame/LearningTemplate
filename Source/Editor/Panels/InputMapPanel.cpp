@@ -218,6 +218,7 @@ namespace sw::editor
         , _testVibRight{ 0.5f }
         , _simStick{}
         , _plotOffset{ 0 }
+        , _recordedBeginFrameCount{ 0 }
         , _capturingBindIndex{ 0 }
         , _newActionValueType{ 0 }
         , _simKeyToInject{ 1 }
@@ -275,9 +276,15 @@ namespace sw::editor
             _plotOffset = ( _plotOffset + 1 ) % kPlotSampleCount;
         }
 
-        // 리플레이 재생 업데이트
-        if ( _replay.isPlaying() && pInput != nullptr )
-            _replay.updatePlayback( ImGui::GetIO().DeltaTime, pInput );
+        // 입력 녹화 — 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 사건을 적는다.
+        if ( _replay.isRecording() && pInput != nullptr && pInput->getBeginFrameCount() != _recordedBeginFrameCount )
+        {
+            _recordedBeginFrameCount = pInput->getBeginFrameCount();
+            _replay.recordFrame( ImGui::GetIO().DeltaTime, pInput->getLastFrameEvents() );
+        }
+        // 재생(가상 입력으로 붙인 리플레이)이 끝나면 뗀다.
+        if ( pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() ) )
+            pInput->detachVirtualInput();
 
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
         {
@@ -940,6 +947,7 @@ namespace sw::editor
         InputManager* pInput = getService<InputManager>();
 
         ImGui::Text( "Input Replay Recorder & Deterministic QA Playback" );
+        ImGui::TextDisabled( "Playback attaches the replay as exclusive virtual input: recorded frame n is applied on the n-th input frame." );
         ImGui::Separator();
 
         EditorWidgets::drawTextField( "Replay File", _replayFilePath, 260.0f );
@@ -954,13 +962,22 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Load Replay" ) )
         {
+            if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
+                pInput->detachVirtualInput();
             if ( _replay.loadFromFile( _replayFilePath.c_str() ) == false )
                 SW_LOG_ERROR( "Could not load input replay '%#'", _replayFilePath.c_str() );
+        }
+
+        if ( pInput == nullptr )
+        {
+            EditorWidgets::drawEmptyHint( "InputManager service is not available." );
+            return;
         }
 
         ImGui::Separator();
 
         // 녹화 제어
+        const bool bPlaying = pInput->getVirtualInput() == &_replay;
         if ( _replay.isRecording() )
         {
             EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
@@ -970,62 +987,55 @@ namespace sw::editor
             if ( ImGui::Button( "■ Stop Recording" ) )
                 _replay.stopRecording();
         }
-        else
+        else if ( bPlaying == false )
         {
             if ( ImGui::Button( "● Start Recording" ) )
+            {
                 _replay.startRecording( "GameplaySession" );
+                _recordedBeginFrameCount = pInput->getBeginFrameCount();
+            }
         }
 
         ImGui::Separator();
 
-        // 재생 제어
+        // 재생 제어 — 재생은 붙이기, 일시정지는 그 프레임으로 seekTo(상태 재현 뒤 뗌), 탐색도 seekTo.
         ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
-
-        if ( _replay.isPlaying() )
+        const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
+        if ( bPlaying )
         {
             if ( ImGui::Button( "⏸ Pause" ) )
-                _replay.pause();
+                _replay.seekTo( *pInput, currentFrame );
             ImGui::SameLine();
             if ( ImGui::Button( "⏹ Stop" ) )
-                _replay.stop();
+                _replay.seekTo( *pInput, 0 );
         }
-        else if ( _replay.isPaused() )
-        {
-            if ( ImGui::Button( "▶ Resume" ) )
-                _replay.resume();
-            ImGui::SameLine();
-            if ( ImGui::Button( "⏹ Stop" ) )
-                _replay.stop();
-        }
-        else
+        else if ( _replay.isRecording() == false && _replay.getFrameCount() > 0 )
         {
             if ( ImGui::Button( "▶ Play Replay" ) )
-                _replay.play();
+            {
+                if ( currentFrame >= _replay.getFrameCount() )
+                    _replay.seekTo( *pInput, 0 );
+                pInput->attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
+            }
+            ImGui::SameLine();
+            if ( ImGui::Button( "⏮ Step Back" ) && currentFrame > 0 )
+                _replay.seekTo( *pInput, currentFrame - 1 );
+            ImGui::SameLine();
+            if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
+                _replay.seekTo( *pInput, currentFrame + 1 );
+
+            int32       frameIdx  = static_cast<int32>( currentFrame );
+            const int32 maxFrames = static_cast<int32>( _replay.getFrameCount() );
+            if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
+                _replay.seekTo( *pInput, static_cast<uint32>( frameIdx ) );
         }
 
-        ImGui::SameLine();
-        if ( ImGui::Button( "⏮ Step Back" ) )
-            _replay.stepBackward( pInput );
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "⏭ Step Forward (1 Frame)" ) )
-            _replay.stepForward( pInput );
-
-        int32       frameIdx  = static_cast<int32>( _replay.getCurrentFrameIndex() );
-        const int32 maxFrames = _replay.getFrameCount() > 0 ? static_cast<int32>( _replay.getFrameCount() - 1 ) : 0;
-        if ( ImGui::SliderInt( "Timeline Frame", &frameIdx, 0, maxFrames ) )
-            _replay.seek( static_cast<uint32>( frameIdx ) );
-
-        const InputReplayFrame* pCurrentFrame = _replay.getCurrentFrame();
-        if ( pCurrentFrame != nullptr )
+        if ( currentFrame < _replay.getFrameCount() )
         {
+            const InputReplayFrame&               frame = _replay.getFrames()[currentFrame];
             fixed_string<constant::kMaxBuffer128> frameBuf;
-            formatstring( frameBuf.data(), frameBuf.capacity(),
-                          "Frame #%u | DeltaTime: %#s | ButtonMask: 0x%X | Events: %d",
-                          pCurrentFrame->_tickNumber,
-                          Fmt( static_cast<float64>( pCurrentFrame->_deltaTime ), Format().precision( 4 ) ),
-                          static_cast<uint32>( pCurrentFrame->_snapshot._buttonMask ),
-                          static_cast<int32>( pCurrentFrame->_listRawEvent.size() ) );
+            formatstring( frameBuf.data(), frameBuf.capacity(), "Frame #%u | DeltaTime: %#s | Events: %d", currentFrame,
+                          Fmt( static_cast<float64>( frame._deltaTime ), Format().precision( 4 ) ), static_cast<int32>( frame._listRawEvent.size() ) );
             EditorThemeUtil::textInfo( frameBuf.c_str() );
         }
     }

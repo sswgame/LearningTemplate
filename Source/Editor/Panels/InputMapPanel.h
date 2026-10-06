@@ -88,6 +88,7 @@ namespace sw::editor
         float32                _testVibRight;
         float2                 _simStick;
         uint32                 _plotOffset;
+        uint32                 _recordedBeginFrameCount; ///< 마지막으로 녹화한 입력 프레임(`InputManager::getBeginFrameCount`) — 같은 프레임을 두 번 적지 않는다
         uint32                 _capturingBindIndex;
         int32                  _newActionValueType;
         int32                  _simKeyToInject;

@@ -12,7 +12,6 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Input/InputSnapshot.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -1809,95 +1808,6 @@ SW_TEST_CASE( GameFrameworkTest, EnhancedInput_ActionBufferAndCommandSequence )
     listHadouken.push_back( "Attack" );
 
     SW_EXPECT_FALSE( map.wasCommandSequenceTriggered( listHadouken, 0.35f ) );
-}
-
-/**
- * @brief [GameFrameworkTest] 넷코드 틱 스냅샷 및 순환 링버퍼 검증
- */
-SW_TEST_CASE( GameFrameworkTest, EnhancedInput_NetcodeSnapshotAndHistoryBuffer )
-{
-    InputSnapshot snapshot{};
-    snapshot._tickNumber   = 128;
-    snapshot._buttonMask   = 0x1F;
-    snapshot._moveVector   = float2{ 1.0f, -0.5f };
-    snapshot._lookVector   = float2{ 0.2f, 0.8f };
-    snapshot._leftTrigger  = 0.75f;
-    snapshot._rightTrigger = 1.0f;
-
-    // 1) 바이너리 직렬화/역직렬화 라운드트립
-    uint8        arrBuffer[InputSnapshot::kSerializedSize];
-    const uint32 bytesWritten = snapshot.serialize( arrBuffer, sizeof( arrBuffer ) );
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, bytesWritten );
-
-    InputSnapshot loaded{};
-    SW_EXPECT_TRUE( loaded.deserialize( arrBuffer, bytesWritten ) );
-    SW_EXPECT_EQUAL( uint32( 128 ), loaded._tickNumber );
-    SW_EXPECT_EQUAL( uint64( 0x1F ), loaded._buttonMask );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._moveVector._x, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( -0.5f, loaded._moveVector._y, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 0.75f, loaded._leftTrigger, 1e-4f );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, loaded._rightTrigger, 1e-4f );
-
-    // 2) InputHistoryBuffer 링버퍼 검증
-    InputHistoryBuffer history;
-    history.recordSnapshot( snapshot );
-    SW_EXPECT_EQUAL( size_t( 1 ), history.getCount() );
-
-    const InputSnapshot* pFound = history.getSnapshot( 128 );
-    SW_ASSERT_NOT_NULL( pFound );
-    SW_EXPECT_EQUAL( uint32( 128 ), pFound->_tickNumber );
-
-    const InputSnapshot* pLatest = history.getLatestSnapshot();
-    SW_ASSERT_NOT_NULL( pLatest );
-    SW_EXPECT_EQUAL( uint32( 128 ), pLatest->_tickNumber );
-}
-
-/**
- * @brief [GameFrameworkTest] 같은 입력은 언제나 같은 바이트로 직렬화되는지 검증
- * @details 구조체를 통째로 `memcpy` 하면 `_tickNumber` 뒤의 정렬 패딩 4바이트는 아무도
- *          값을 정하지 않으므로, **같은 입력을 두 번 저장해도 파일 바이트가 달라질 수 있다** —
- *          리플레이 비교·체크섬·중복 제거가 성립하지 않고, 네트워크로 나가면 그 자리에 있던
- *          메모리가 함께 나간다. 여기서는 서로 다른 쓰레기로 더럽힌 두 스냅샷에 같은 값을 넣고
- *          같은 바이트가 나오는지 본다.
- */
-SW_TEST_CASE( GameFrameworkTest, EnhancedInput_SnapshotSerializationIsDeterministic )
-{
-    auto fillFields = []( InputSnapshot& outSnapshot )
-    {
-        outSnapshot._tickNumber   = 7;
-        outSnapshot._buttonMask   = 0xDEADBEEFull;
-        outSnapshot._moveVector   = float2{ 0.25f, -0.5f };
-        outSnapshot._lookVector   = float2{ -0.125f, 0.75f };
-        outSnapshot._leftTrigger  = 0.5f;
-        outSnapshot._rightTrigger = 0.25f;
-    };
-
-    // 두 스냅샷의 **저장 공간**을 서로 다른 값으로 더럽힌 뒤 같은 필드를 넣는다.
-    alignas( InputSnapshot ) uint8 arrStorageA[sizeof( InputSnapshot )];
-    alignas( InputSnapshot ) uint8 arrStorageB[sizeof( InputSnapshot )];
-    Memory::set( arrStorageA, 0x00, sizeof( arrStorageA ) );
-    Memory::set( arrStorageB, 0xCD, sizeof( arrStorageB ) );
-
-    InputSnapshot* pSnapshotA = sw_placement_new( arrStorageA ) InputSnapshot{};
-    InputSnapshot* pSnapshotB = sw_placement_new( arrStorageB ) InputSnapshot{};
-    fillFields( *pSnapshotA );
-    fillFields( *pSnapshotB );
-
-    uint8 arrBufferA[InputSnapshot::kSerializedSize]{};
-    uint8 arrBufferB[InputSnapshot::kSerializedSize]{};
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, pSnapshotA->serialize( arrBufferA, sizeof( arrBufferA ) ) );
-    SW_EXPECT_EQUAL( InputSnapshot::kSerializedSize, pSnapshotB->serialize( arrBufferB, sizeof( arrBufferB ) ) );
-
-    SW_EXPECT_TRUE( Memory::compare( arrBufferA, arrBufferB, InputSnapshot::kSerializedSize ) == 0 );
-
-    // 직렬화 크기는 구조체 크기와 다르다 — 패딩이 나가지 않기 때문이다.
-    SW_EXPECT_TRUE( InputSnapshot::kSerializedSize < sizeof( InputSnapshot ) );
-
-    // 그리고 그 바이트는 그대로 되읽힌다.
-    InputSnapshot loadedSnapshot{};
-    SW_EXPECT_TRUE( loadedSnapshot.deserialize( arrBufferA, InputSnapshot::kSerializedSize ) );
-    SW_EXPECT_EQUAL( uint64( 0xDEADBEEFull ), loadedSnapshot._buttonMask );
-    SW_EXPECT_NEAR_EQUAL( -0.125f, loadedSnapshot._lookVector._x, 1e-6f );
 }
 
 /**
