@@ -60,6 +60,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `MountUtil::mount` / `dismount`(탑승자는 `SocketBindingComponent` 로 좌석에 붙고 폰 이동 · 캐릭터 컨트롤러가 멈춘다, 운전석이면 탑승자의 조종자가 탈것 폰을 쥔다,
   내리면 하차 자리 — 막혔으면 둘레 여덟 방향 중 빈 곳 — 에서 다시 쥔다). 버튼은 폰의 의도로: 탑승자 쪽 `MountInteractionComponent`(Interact),
   탈것 쪽 `VehicleExitComponent`(Exit). 말 · 차는 같은 틀이고 의도 → 탈것 이동 규칙만 다르다. 빈 좌석 찾기는 등록부로.
+  탑승 중에도 탑승자 히트박스는 소켓 계층을 따라가 맞는다(무적 없음, 탈것 체력은 탈것의 것). 탑승자가 쓰러지면(`Died`) `RiderDownWatcherComponent`(타는 순간 붙는다)가
+  지금 자리에서 강제 하차(물리 바디가 있으면 물리로). 폰의 의도 연결(`getInputPeer`)은 빙의를 따라가 탈것은 운전석 조종자의 연결이 된다.
 - **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).

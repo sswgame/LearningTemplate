@@ -20,6 +20,7 @@
 #include "GameFramework/Base/Control/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Control/ControllerComponent.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
@@ -149,6 +150,9 @@ namespace sw
             return MountResult::NoSocket;
         }
         Internal::setRiderPose( *pRider, seat.getRiderPoseParameter(), true );
+        // 탑승자가 쓰러지면 강제 하차 — 규칙이라 타는 순간 붙인다.
+        if ( pRider->getComponent<RiderDownWatcherComponent>() == nullptr )
+            (void)pRider->addComponent<RiderDownWatcherComponent>();
 
         seat._occupant = pRider->getHandle();
         if ( seat.isDriverSeat() )
@@ -171,9 +175,11 @@ namespace sw
         SceneComponent* pVehicleRoot = pVehicle != nullptr ? pVehicle->getPrimarySceneComponent() : nullptr;
         SceneComponent* pRiderRoot   = pRider->getPrimarySceneComponent();
 
-        // 소켓에서 뗀다(지금 월드 자리를 지킨다). 강제가 아니면 하차 자리로 옮긴다.
-        SocketBindingComponent* pBinding = pRider->getComponent<SocketBindingComponent>();
-        if ( pBinding != nullptr )
+        // 소켓에서 뗀다(지금 월드 자리를 지킨다). 강제(쓰러짐)면 물리 바디(래그돌)가 있으면 물리로 떨어지고 걷기를 켜지 않는다.
+        // 강제가 아니면 하차 자리로 옮긴다.
+        SocketBindingComponent* pBinding           = pRider->getComponent<SocketBindingComponent>();
+        const bool              bReleasedToPhysics = bForced && pBinding != nullptr && pBinding->release( SocketReleaseMode::Physics );
+        if ( pBinding != nullptr && bReleasedToPhysics == false )
             (void)pBinding->release( SocketReleaseMode::Animated );
         if ( bForced == false && pVehicleRoot != nullptr && pRiderRoot != nullptr )
         {
@@ -185,7 +191,8 @@ namespace sw
             pRiderRoot->setLocalRotation( rotation );
         }
         Internal::setRiderPose( *pRider, pSeat->getRiderPoseParameter(), false );
-        Internal::setRiderMovementSuspended( *pRider, false );
+        if ( bReleasedToPhysics == false )
+            Internal::setRiderMovementSuspended( *pRider, false );
 
         // 운전석이면 탔을 때의 조종자가 탑승자를 다시 쥔다(탈것 폰은 놓여 의도 0 — 선다).
         ControllerComponent* pController = pSeat->_occupantController.isValid()

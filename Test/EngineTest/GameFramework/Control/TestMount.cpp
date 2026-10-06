@@ -12,13 +12,18 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
+#include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsQuery.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"
 
+#include "GameFramework/Base/Combat/HealthListenerComponent.h"
 #include "GameFramework/Base/Control/AiControllerComponent.h"
 #include "GameFramework/Base/Control/CharacterPawnMovementComponent.h"
 #include "GameFramework/Base/Control/ControlSystem.h"
@@ -26,6 +31,7 @@
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Vehicle/MountInteractionComponent.h"
 #include "GameFramework/Base/Vehicle/MountUtil.h"
+#include "GameFramework/Base/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleExitComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleSeatComponent.h"
 
@@ -274,4 +280,123 @@ SW_TEST_CASE( MountTest, SeatTakenAndTooFarAreRefused )
     SW_EXPECT_FALSE( MountUtil::dismount( *pSecond->getComponent<PawnComponent>(), false ) );
     SW_EXPECT_TRUE( MountUtil::dismount( *pFirst->getComponent<PawnComponent>(), false ) );
     SW_EXPECT_TRUE( pFirstAi->getPawn() == pFirst->getComponent<PawnComponent>()->getHandle() );
+}
+
+/**
+ * @brief [MountTest] 탑승 중에도 탑승자의 히트박스는 소켓 계층을 따라가 그대로 맞는다(탑승 중 무적 없음) — 차가 움직인 뒤 탑승자 자리로 쏜 광선이 탑승자 히트박스에 닿는다
+ */
+SW_TEST_CASE( MountTest, RiderStillTakesHitsWhileMounted )
+{
+    using Internal = MountTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    Internal::bindKeys( input );
+    {
+        GameObjectManager manager;
+        Internal::spawnFloor( manager );
+        GameObject* pRider   = Internal::spawnRider( manager, "Rider", float3{ 0.0f, 0.05f, 0.0f } );
+        GameObject* pVehicle = Internal::spawnVehicle( manager, "Car", float3{ 1.5f, 0.0f, 0.0f } );
+        // 히트박스 — 탑승자 루트 아래 키네마틱 상자(애니메이션을 따르는 히트박스와 같은 종류).
+        GameObject*         pHitbox = manager.createGameObject( hashed_string( "RiderHitbox" ) );
+        RigidBodyComponent* pBody   = pHitbox->addComponent<RigidBodyComponent>();
+        PhysicsShapeDesc3D  box;
+        box._halfExtents = float3{ 0.3f, 0.9f, 0.3f };
+        pBody->setShape( box );
+        pBody->setBodyType( PhysicsBodyType::Kinematic );
+        pBody->setLocalPosition( float3{ 0.0f, 0.9f, 0.0f } );
+        SW_ASSERT_TRUE( pBody->attachToComponent( pRider->getPrimarySceneComponent() ) );
+        auto* pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pRider->getComponent<PawnComponent>() );
+        Internal::tick( manager, input );
+        SW_ASSERT_TRUE( MountUtil::mount( *pRider->getComponent<PawnComponent>(), *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+
+        (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
+        for ( uint32 frame = 0; frame < 30; ++frame )
+            Internal::tick( manager, input );
+        const float3           feet   = Internal::findPosition( *pRider );
+        const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
+        SW_ASSERT_NOT_NULL( pScene );
+        IPhysicsScene3D::CastHit hit;
+        const bool               bHit = pScene->raycast( float3{ feet._x - 3.0f, feet._y + 0.9f, feet._z }, float3{ 1.0f, 0.0f, 0.0f }, 6.0f, PhysicsQueryFilter{}, hit );
+        SW_ASSERT_TRUE( bHit );
+        SW_EXPECT_EQUAL( pHitbox->getObjectId(), hit._userData );
+        SW_EXPECT_TRUE( feet._z > 4.0f );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [MountTest] 탑승자가 쓰러지면(체력 신호 Died) 하차 자리를 찾지 않고 지금 자리에서 강제로 내리고, 조종자가 탑승자를 다시 쥔다
+ */
+SW_TEST_CASE( MountTest, ForcedDismountWhenTheRiderGoesDown )
+{
+    using Internal = MountTestInternal;
+    GameObjectManager manager;
+    Internal::spawnFloor( manager );
+    GameObject* pRider   = Internal::spawnRider( manager, "Rider", float3{ 0.0f, 0.05f, 0.0f } );
+    GameObject* pVehicle = Internal::spawnVehicle( manager, "Horse", float3{ 1.5f, 0.0f, 0.0f } );
+    auto*       pAi      = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+    manager.beginPlay();
+    pAi->possess( *pRider->getComponent<PawnComponent>() );
+    manager.tick( Internal::kDeltaTime );
+    SW_ASSERT_TRUE( MountUtil::mount( *pRider->getComponent<PawnComponent>(), *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+    SW_EXPECT_NOT_NULL( pRider->getComponent<RiderDownWatcherComponent>() );
+    manager.tick( Internal::kDeltaTime );
+    const float3 seated = Internal::findPosition( *pRider );
+
+    HealthChangedEvent hurt;
+    hurt._ratio = 0.4f;
+    HealthListenerComponent::broadcast( *pRider, hurt );
+    SW_EXPECT_FALSE( pVehicle->getComponent<VehicleSeatComponent>()->isFree() ); // 다친 것만으로는 내리지 않는다
+
+    HealthChangedEvent down;
+    down._ratio = 0.0f;
+    down._kind  = HealthChangeKind::Died;
+    HealthListenerComponent::broadcast( *pRider, down );
+    SW_EXPECT_TRUE( pVehicle->getComponent<VehicleSeatComponent>()->isFree() );
+    SW_EXPECT_TRUE( pAi->getPawn() == pRider->getComponent<PawnComponent>()->getHandle() );
+    const float3 dropped = Internal::findPosition( *pRider );
+    SW_EXPECT_NEAR_EQUAL( seated._x, dropped._x, 1.0e-3f ); // 하차 자리(왼쪽 2 m)가 아니라 그 자리
+    SW_EXPECT_NEAR_EQUAL( seated._z, dropped._z, 1.0e-3f );
+}
+
+/**
+ * @brief [MountTest] 폰의 연결은 빙의를 따라간다 — 운전석에 타면 탈것의 의도 연결이 운전석 조종자의 것이 되고, 승객은 빙의를 옮기지 않으며, 내리면 돌아온다
+ */
+SW_TEST_CASE( MountTest, InputPeerFollowsTheDriver )
+{
+    using Internal = MountTestInternal;
+    GameObjectManager manager;
+    Internal::spawnFloor( manager );
+    GameObject*           pDriver    = Internal::spawnRider( manager, "Driver", float3{ 0.0f, 0.05f, 0.0f } );
+    GameObject*           pPassenger = Internal::spawnRider( manager, "Passenger", float3{ 0.0f, 0.05f, 1.0f } );
+    GameObject*           pVehicle   = Internal::spawnVehicle( manager, "Car", float3{ 1.5f, 0.0f, 0.0f } );
+    VehicleSeatComponent* pBackSeat  = pVehicle->addComponent<VehicleSeatComponent>();
+    pBackSeat->setDriverSeat( false );
+    pBackSeat->setSeatOffset( float3{ 0.0f, 1.0f, -1.0f } );
+    auto* pDriverRemote    = manager.createGameObject( hashed_string( "DriverRemote" ) )->addComponent<AiControllerComponent>();
+    auto* pPassengerRemote = manager.createGameObject( hashed_string( "PassengerRemote" ) )->addComponent<AiControllerComponent>();
+    pDriverRemote->setInputPeer( 7 );
+    pPassengerRemote->setInputPeer( 9 );
+    manager.beginPlay();
+    PawnComponent& driverPawn    = *pDriver->getComponent<PawnComponent>();
+    PawnComponent& passengerPawn = *pPassenger->getComponent<PawnComponent>();
+    PawnComponent& vehiclePawn   = *pVehicle->getComponent<PawnComponent>();
+    pDriverRemote->possess( driverPawn );
+    pPassengerRemote->possess( passengerPawn );
+    SW_EXPECT_EQUAL( 7u, driverPawn.getInputPeer() );
+    SW_EXPECT_EQUAL( 0u, vehiclePawn.getInputPeer() );
+
+    SW_ASSERT_TRUE( MountUtil::mount( driverPawn, *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+    SW_EXPECT_EQUAL( 7u, vehiclePawn.getInputPeer() );
+    SW_EXPECT_EQUAL( 0u, driverPawn.getInputPeer() );
+    SW_ASSERT_TRUE( MountUtil::mount( passengerPawn, *pBackSeat ) == MountResult::Mounted );
+    SW_EXPECT_EQUAL( 7u, vehiclePawn.getInputPeer() );
+    SW_EXPECT_EQUAL( 9u, passengerPawn.getInputPeer() );
+
+    SW_EXPECT_TRUE( MountUtil::dismount( driverPawn, false ) );
+    SW_EXPECT_EQUAL( 0u, vehiclePawn.getInputPeer() );
+    SW_EXPECT_EQUAL( 7u, driverPawn.getInputPeer() );
 }

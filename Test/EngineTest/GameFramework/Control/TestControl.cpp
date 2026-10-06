@@ -242,6 +242,7 @@ SW_TEST_CASE( ControlTest, PlayerAndAiWithTheSameIntentMoveTheSame )
     InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D );
+    input.getInputMap().bind( "Jump", Key::Space );
     SW_ASSERT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) ) );
 
     {
@@ -281,6 +282,7 @@ SW_TEST_CASE( ControlTest, PossessionMovesViewTargetAndInputLayer )
     SW_ASSERT_TRUE( input.initialize() );
     // 걷기 바인딩은 걷는 폰의 레이어에 있다 — 레이어 스택이 비지 않으면 스택에 든 레이어(와 늘 켜진 레이어)만 읽힌다.
     input.getInputMap().bindVector2D( "Move", Key::W, Key::S, Key::A, Key::D, 0.0f, "OnFoot" );
+    input.getInputMap().bind( "Jump", Key::Space );
     {
         GameObjectManager manager;
         GameObject*       pCameraObject = manager.createGameObject( hashed_string( "PlayerCamera" ) );

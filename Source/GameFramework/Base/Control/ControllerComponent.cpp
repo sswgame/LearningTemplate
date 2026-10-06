@@ -16,6 +16,7 @@ namespace sw
         , _pawn{}
         , _controlYaw{ 0.0f }
         , _controlPitch{ 0.0f }
+        , _inputPeer{ 0 }
         , _bSwitchingPawn{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -71,6 +72,7 @@ namespace sw
         }
         _pawn            = pawn.getHandle();
         pawn._controller = getHandle();
+        pawn._inputPeer  = _inputPeer; // 폰의 연결은 빙의를 따라간다 — 탈것은 운전석 조종자의 연결
         _controlYaw      = pawn.getIntent()._controlYaw;
         _controlPitch    = pawn.getIntent()._controlPitch;
         onPossessed( pawn );
@@ -102,6 +104,7 @@ namespace sw
         if ( pPawn->_controller == getHandle() )
         {
             pPawn->_controller = ComponentHandle{};
+            pPawn->_inputPeer  = 0;
             pPawn->clearMotion();
         }
         onUnpossessed( *pPawn );
@@ -114,6 +117,14 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         return pManager != nullptr ? static_cast<PawnComponent*>( pManager->resolveComponent( _pawn ) ) : nullptr;
+    }
+
+    void ControllerComponent::setInputPeer( uint32 inputPeer )
+    {
+        _inputPeer           = inputPeer;
+        PawnComponent* pPawn = findPawn();
+        if ( pPawn != nullptr )
+            pPawn->_inputPeer = inputPeer;
     }
 
     void ControllerComponent::setControlRotation( float32 yaw, float32 pitch )

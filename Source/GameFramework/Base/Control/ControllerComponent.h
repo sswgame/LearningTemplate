@@ -64,6 +64,11 @@ namespace sw
         PawnComponent*         findPawn() const;
         const ComponentHandle& getPawn() const { return _pawn; }
 
+        /** @brief 이 조종자의 의도가 오는 네트워크 연결입니다(0 = 로컬). 쥔 폰의 `getInputPeer` 가 이것을 따라갑니다 — 탈것은 운전석 조종자의 연결이 된다. */
+        uint32 getInputPeer() const { return _inputPeer; }
+        /** @brief 연결을 바꿉니다(원격 조종자). 쥔 폰이 있으면 그 폰의 연결도 바뀝니다. */
+        void setInputPeer( uint32 inputPeer );
+
         float32 getControlYaw() const { return _controlYaw; }
         float32 getControlPitch() const { return _controlPitch; }
         void    setControlRotation( float32 yaw, float32 pitch );
@@ -89,6 +94,7 @@ namespace sw
         ComponentHandle        _pawn; ///< 쥔 폰 컴포넌트
         float32                _controlYaw;
         float32                _controlPitch;
+        uint32                 _inputPeer; ///< 의도가 오는 연결(0 = 로컬)
         uint8                  _bSwitchingPawn : 1;
         [[maybe_unused]] uint8 _reserved       : 7;
     };
