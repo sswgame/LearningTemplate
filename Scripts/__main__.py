@@ -56,6 +56,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("llvm", "setup.SetupLlvm", "LLVM/Clang 탐색 및 설정"),
     Subcommand("cook", "generate.CookAssets", "프리팹, 씬, 리소스 팩 일괄 쿠킹"),
     Subcommand("lint", "lint.PreCommitLint", "Staged 파일 대상 사전 커밋 린트 검사"),
+    Subcommand("lint-suite", "lint.RunLintSuite", "린트 전체(게이트 + 셀프테스트)를 빌드 폴더 없이 동시에 돌리고 린트마다 시간을 남긴다"),
     Subcommand("format", "lint.fixer.FormatClangFormat", "C++ 코드 clang-format 자동 포맷팅"),
     Subcommand("docs", "generate.GenerateDocs", "Doxygen API 레퍼런스 문서 생성"),
     Subcommand("test", "dev.RunTests", "스위트 · 케이스 이름으로 테스트 실행 (실행 파일 · 작업 폴더를 대신 찾는다)"),

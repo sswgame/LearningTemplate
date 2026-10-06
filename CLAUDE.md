@@ -117,7 +117,7 @@ over staged files only). **The folder says what a script does to you** — that 
 | `lint/report/` | prints, you decide (one `LintReport` subclass per script) | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
-`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py`, `LintFixer.py` and `LintReport.py`
+`PreCommitLint.py` and `RunLintSuite.py` stay at `lint/` because they orchestrate all four; `LintGate.py`, `LintFixer.py` and `LintReport.py`
 stay there because every gate, fixer and report inherits from them (a report owns `--root` · `--preset`/`--build-dir` · `--jobs` ·
 `--filter` · `--out` through the base; `selftest/CheckReportsRun.py` checks every report still starts).
 
@@ -145,6 +145,8 @@ that touches only `.cmake`, `.py` or data still runs every gate whose pattern ma
 A gate whose whole-tree run takes minutes sets `ctestSkipReason`: it is not registered as a CTest lint and runs
 only in the commit hook (and directly) — the reason names the place that does run it over the whole tree
 (`CheckHeaderSelfContained`: the daily `header-self-contained` CI workflow).
+Whole-tree gates (`preCommitFileArgument = ""`) start first as child processes and run alongside the file-argument gates;
+their output is printed in gate order, so the hook's floor is its slowest whole-tree gate — prefer `--files` for a new gate.
 **A merge commit checks only new content file by file**: while `MERGE_HEAD` exists, the file-argument gates,
 the fixers and clang-format get only the staged files whose blob differs from that path in *every* parent
 (conflict resolutions, auto-merged files) — a file byte-identical to one parent was checked when that parent
@@ -195,6 +197,7 @@ py -3 Scripts/lint/report/RunRepeatedConstants.py              # constants/liter
 py -3 Scripts/lint/report/RunFolderFileCount.py                # folders over 40 code files, single-file Source folders
 py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
 py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
+py -3 Scripts/lint/RunLintSuite.py [--hook-sample 1,10]         # every gate + self-test without a build dir, with timings (what the CI lint job runs)
 py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules still bite? (CI gate)
 ```
 

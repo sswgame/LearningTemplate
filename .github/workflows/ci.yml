@@ -31,7 +31,7 @@ env:
 
 jobs:
   lint:
-    name: Code Conventions & Include Linter
+    name: Lints (gates + self-tests)
     runs-on: ubuntu-22.04
 
     steps:
@@ -40,9 +40,17 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Run Code Conventions Check
+    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자) — 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다. 시간 표는 단계 요약 · 아티팩트로.
+    - name: Run all lints (gates + self-tests) with timings
       run: |
-        python3 Scripts/lint/gate/CheckCodeConventions.py
+        python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
+
+    - name: Upload lint timings
+      if: always()
+      uses: actions/upload-artifact@v6
+      with:
+        name: lint-timing
+        path: lint-timing.json
 
   build:
     name: ${{ matrix.name }}
