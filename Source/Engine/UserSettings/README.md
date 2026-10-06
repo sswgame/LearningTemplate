@@ -76,6 +76,8 @@
 
 ## 메뉴 UI 가 부르는 것
 
+런타임 UI 문서는 이 API 를 직접 부르지 않고 설정 바인딩 `{setting:id}` 로 잇습니다(값 · 범위 · 선택지 · 사용 가능 · 보류 값 · 변경 통보 — `Engine/UI/README.md` "사용자 설정").
+
 ```cpp
 UserSettingsManager& settings = *game::getService<UserSettingsManager>();   // 엔진 · 에디터는 engine::getUserSettingsManager()
 for ( const UserSettingCategoryDef& category : settings.getCategories() )   // 탭: category._textKey 로 로컬라이즈

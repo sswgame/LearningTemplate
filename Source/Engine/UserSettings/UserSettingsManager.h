@@ -229,8 +229,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 7) 통보 · 등록부 · 화면 요청
         // ------------------------------------------------------------------------------
-        DelegateHandle              registerEventListener( const UserSettingEventListener& listener );
-        void                        unregisterEventListener( const DelegateHandle& handle );
+        DelegateHandle registerEventListener( const UserSettingEventListener& listener );
+        void           unregisterEventListener( const DelegateHandle& handle );
+        /** @brief 변경 통보를 받는 리스너가 하나라도 있는가(화면이 닫힐 때 뗐는지 시험이 본다). */
+        bool                        hasEventListener() const { return _onEvent.isBound(); }
         UserSettingApplierRegistry& getRegistry() { return _registry; }
         const UserSettingsTargets&  getTargets() const { return _engineAppliers.getTargets(); }
         /** @brief 화면 설정의 지금 요청입니다(기동 때 창 · 스왑체인을 만드는 쪽이 읽습니다). */

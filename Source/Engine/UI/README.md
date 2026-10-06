@@ -308,6 +308,7 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 | `{bind:필드}` · `mode=TwoWay` | MVVM 바인딩(OneWay · TwoWay) | `DataBinding` `bindingMode` | 시그널 양쪽 연결 |
 | `converter=` · `UiBindingConverterRegistry` | 변환 함수(Conversion Function) | `ConverterGroup` | (코드) |
 | `{poll:필드}`(개발 편의) | UMG 옛 속성 바인딩(매 프레임 함수) | `updateTrigger = EveryUpdate` | `_process` 에서 읽기 |
+| `{setting:id}` | Lyra `GameSettingRegistry` 의 설정 ↔ 위젯 | (직접) | `ProjectSettings` 를 코드로 |
 
 게임 상태를 위젯에 넣는 길은 **뷰모델**입니다 — 게임 코드는 위젯을 찾지 않고 뷰모델 필드에 값을 넣어 알리고, 문서의 식이 그 필드를 위젯 칸에 잇습니다.
 
@@ -340,3 +341,20 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   글 위젯은 다시 풀고 kLayout(글 길이가 바뀐다). 형식 바인딩(`format=`)도 같은 프레임에 다시 포맷합니다. 오른쪽에서 왼쪽 문화권이면 레이아웃이 거울로 놓습니다.
 - 코드는 **키를 넣습니다**(`setText( "Menu.Start" )`). `SW_LOCTEXT` 로 미리 푼 글을 넣으면 언어를 바꿔도 그대로입니다. 플레이어가 친 글처럼 풀면 안 되는 글은
   `setLocalized( false )` — 글 입력 칸은 친 글을 풀지 않고 힌트만 풉니다.
+
+### 사용자 설정
+
+`{setting:설정 id}` 는 `UserSettingsManager`(옵션 메뉴 백엔드)를 소스로 씁니다 — 기본 양방향입니다(옵션 줄은 값을 바꾸는 것이 일이다).
+
+```xml
+<SliderWidget _value="{setting:audio.master}" />          <!-- 값 + 범위 · 눈금(_minValue · _maxValue · _step)은 설정 정의에서 -->
+<ComboBoxWidget _selectedIndex="{setting:video.mode}" />  <!-- 선택지(_listOption) = 선택지의 글 키(없으면 값) -->
+<CheckBoxWidget _bChecked="{setting:video.vsync}" />      <!-- enabledWhen 이 거짓이면 위젯을 끈다 -->
+```
+
+- 읽기: `getValue`(보류 값 우선). 칸이 `_value` 이고 위젯에 `_minValue` · `_maxValue` · `_step` 이 있으면 정의의 범위를, 칸이 `_selectedIndex` 이고 `_listOption` 이
+  있으면 선택지를 값보다 먼저 씁니다(칸 이름이 같은 위젯이면 모두 — 슬라이더 · 콤보를 따로 알지 않는다). `isSettingEnabled` 는 위젯 사용 가능으로.
+- 쓰기(사용자 입력): 설정 타입에 맞는 `setPending*Value`. 결과는 보지 않고 다음 바인딩 단계가 설정 값을 다시 읽습니다 — 눈금으로 고쳐 받았으면(Clamped) 고친 값이,
+  거절됐으면(Rejected · Disabled) 원래 값이 보입니다. 키 바인딩 겹침(Conflict)은 옵션 메뉴의 키 바인딩 창(8-2) 몫입니다.
+- 다른 곳의 변경(되돌리기 · 기본값 · 확인 카운트다운의 자동 되돌림)은 변경 통보(`registerEventListener`)로 받습니다 — 사용 가능이 다른 설정에 기대므로 통보가 오면
+  그 화면의 설정 바인딩을 모두 다시 읽습니다. 리스너는 바인딩 집합(= 화면)이 지워질 때 뗍니다. 시험은 `UiSystem::setUserSettings` 로 자기 매니저를 넘깁니다.

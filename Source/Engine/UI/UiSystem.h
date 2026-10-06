@@ -37,6 +37,7 @@ namespace sw
     class InputMap;
     class LocalizationManager;
     class TextLayoutEngine;
+    class UserSettingsManager;
     class WidgetComponent;
 
     /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
@@ -225,6 +226,8 @@ namespace sw
         uint64 getCanvasRevision() const { return _canvasRevision; }
         /** @brief 문화권 출처를 정합니다(시험이 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
+        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다(시험이 자기 것을 넘긴다). nullptr 이면 바인딩된 엔진 서비스입니다. 화면 바인딩은 다시 걸린다. */
+        void setUserSettings( UserSettingsManager* pSettings );
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
         /** @brief vtable 이 [@p pBegin, @p pEnd) 안인 화면 · 위젯이 든 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
@@ -308,6 +311,7 @@ namespace sw
         InputManager*                _pInput;
         FontSystem*                  _pFontSystem;
         const LocalizationManager*   _pLocalization; ///< 문화권 출처(nullptr = 엔진 서비스)
+        UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처(nullptr = 엔진 서비스)
         unique_ptr<TextLayoutEngine> _textLayout;
         UiScaleSettings              _scaleSettings;
         UiViewport                   _viewport;

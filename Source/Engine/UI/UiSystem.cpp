@@ -143,6 +143,7 @@ namespace sw
         , _pInput{ nullptr }
         , _pFontSystem{ nullptr }
         , _pLocalization{ nullptr }
+        , _pUserSettings{ nullptr }
         , _textLayout{}
         , _scaleSettings{}
         , _viewport{}
@@ -639,6 +640,7 @@ namespace sw
         UiBindingContext context{};
         context._pLocalization = findLocalization();
         context._pConverters   = &_bindingConverters;
+        context._pSettings     = _pUserSettings != nullptr ? _pUserSettings : engine::getBoundEngineServices()._pUserSettingsManager;
         // 글 판 — 언어를 바꾸거나 표를 다시 읽으면 오른다. 정수 하나 비교라 매 프레임 본다(언리얼 FTextLocalizationManager 의 TextRevision).
         const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
@@ -665,6 +667,13 @@ namespace sw
             polledCount += bindingSet.getPolledCount();
         }
         SW_PROFILE_COUNT( "Ui.PollBindings", polledCount );
+    }
+
+    void UiSystem::setUserSettings( UserSettingsManager* pSettings )
+    {
+        _pUserSettings = pSettings;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            screen->getBindingSet().markRebind();
     }
 
     const LocalizationManager* UiSystem::findLocalization() const
