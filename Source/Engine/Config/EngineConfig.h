@@ -14,15 +14,12 @@ namespace sw
 
     /**
      * @struct WindowConfig
-     * @brief 주 창과 기본 렌더링 백엔드 설정입니다.
+     * @brief 주 창과 기본 렌더링 백엔드 설정입니다. 창 제목은 게임 프리셋(`GameConfig::_windowTitle`)이 정합니다.
      */
     REFLECT()
     struct SW_API WindowConfig
     {
         REFLECT_BODY();
-
-        PROPERTY()
-        string _title{ "SWEngine" }; ///< 창 제목
 
         PROPERTY()
         string _clearColor{ "0.12 0.15 0.18 1.0" }; ///< 백버퍼 클리어 색(공백 또는 쉼표로 구분한 RGBA)

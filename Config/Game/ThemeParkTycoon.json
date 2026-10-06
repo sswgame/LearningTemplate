@@ -1,3 +1,4 @@
 {
-    "_packRoot": "game/themepark"
+    "_packRoot": "game/themepark",
+    "_windowTitle": "Theme Park Tycoon"
 }

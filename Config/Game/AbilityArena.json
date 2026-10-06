@@ -1,3 +1,4 @@
 {
-    "_packRoot": "game/abilityarena"
+    "_packRoot": "game/abilityarena",
+    "_windowTitle": "Ability Arena"
 }

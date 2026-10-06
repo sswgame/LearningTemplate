@@ -232,7 +232,7 @@ namespace sw
         if ( _window == nullptr )
         {
             _window = IWindow::createPlatformWindow();
-            if ( _window == nullptr || _window->initializeWindow( engineConfig._window._title.c_str(), width, height ) == false )
+            if ( _window == nullptr || _window->initializeWindow( GameConfig::getActive()._windowTitle.c_str(), width, height ) == false )
             {
                 SW_LOG_ERROR( "Failed to create platform window!" );
                 return false;

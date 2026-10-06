@@ -1,3 +1,4 @@
 {
-    "_packRoot": "game/voxelcraft"
+    "_packRoot": "game/voxelcraft",
+    "_windowTitle": "Voxel Craft"
 }

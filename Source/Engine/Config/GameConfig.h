@@ -20,6 +20,9 @@ namespace sw
         PROPERTY()
         string _packRoot{}; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
 
+        PROPERTY()
+        string _windowTitle{ "SWEngine" }; ///< 주 창 제목 — 게임마다 다르다(언리얼 ProjectName 자리). 창은 팩을 마운트하기 전에 생긴다
+
         /** @brief 엔진 스키마에 덧붙이는 게임의 사용자 설정 스키마(팩 상대 경로, 예: `data/usersettings.settings.xml`)입니다. 비면 없습니다. */
         PROPERTY()
         string _userSettingsSchema{};
