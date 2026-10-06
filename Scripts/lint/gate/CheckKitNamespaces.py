@@ -3,7 +3,7 @@
 """
 여러 장르 키트를 한 게임에 섞을 때 소리 없이 부딪히는 이름 공간을 막는다.
 
-  1) 상태 형식 표(`k...Tag = FourCcUtil::make( "ABCD" )`)는 저장소(Source · Test)에서 하나뿐이다. 한 상태에 키트 여럿의 구간이 실리면 표가
+  1) 상태 형식 표(`k...Tag = FourCcUtil::make( "ABCD" )`)는 린트 대상(`kLintTargetRelDirs`)에서 하나뿐이다. 한 상태에 키트 여럿의 구간이 실리면 표가
      곧 구간 이름이다 — 같은 표 둘이면 한쪽 구간을 다른 쪽이 읽는다. 16 진 리터럴 표(`k...Tag = 0x…`)는 바이트 순서를 손으로 맞추는 것이라 금지
      (`FourCcUtil::make` 하나 — constants D2).
   2) 키트(`Source/GameFramework/Kits/`)는 키를 직접 읽지 않고(`isKeyDown` · `Key::W`) 입력 맵 액션 이름을 글자로 박지 않는다 — 액션 이름은
@@ -32,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments  # noqa: E402
+from common import blankComments, kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*(?:sw::)?FourCcUtil::make\s*\(\s*\"([^\"\n]{4})\"\s*\)")
@@ -157,7 +157,7 @@ class CheckKitNamespacesGate(LintGate):
         pass
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listFile = self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source", "Test"), suffixes=(".h", ".cpp"))
+        listFile = self.selectTargetFiles(repositoryRoot, None, listScanRoot=kLintTargetRelDirs, suffixes=(".h", ".cpp"))
         mapTagToSite: dict[str, list[str]] = defaultdict(list)
         mapLogCallerToSite: dict[str, list[str]] = defaultdict(list)
         listViolation: list[str] = []

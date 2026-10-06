@@ -34,7 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 
@@ -69,9 +69,9 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
                 ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Storage/Server/SqlStore/CMakeLists.txt"),
 )
 
-_kListSourceRoot = ("Source", "Test", "Tools")
+_kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
-_kListCmakeRoot = ("Source", "Test", "Tools", "cmake")
+_kListCmakeRoot = kLintTargetRelDirs + ("cmake",)
 _kCmakeSuffixes = (".cmake",)
 _kCmakeFileNames = ("CMakeLists.txt",)
 

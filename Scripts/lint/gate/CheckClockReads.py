@@ -28,10 +28,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
+from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser", "Tools/OnlineLoadBot")
+_kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 #: std 시계를 읽어도 되는 파일 → 이유.
@@ -123,11 +123,11 @@ class CheckClockReadsGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools/ReflectionParser 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findClockReads(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser · Tools/OnlineLoadBot 의 std::chrono 시계 읽기")
+        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 std::chrono 시계 읽기")
 
 
 main = CheckClockReadsGate.run

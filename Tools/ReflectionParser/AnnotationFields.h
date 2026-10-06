@@ -51,7 +51,10 @@ namespace sw
         AnnotationValue _value;
         AnnotationEmit  _emit;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 2) 스코프 — 애노테이션 계약 한 벌 + 필드 표
     // ------------------------------------------------------------------------------
@@ -77,7 +80,10 @@ namespace sw
             return nullptr;
         }
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 수집 DTO 타입의 스코프를 돌려줍니다. 네 DTO 에 대해서만 정의됩니다. */
     template <typename TParsed>
     const AnnotationScope<TParsed>& getAnnotationScope();

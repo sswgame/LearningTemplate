@@ -26,14 +26,20 @@ namespace sw
         string _field; ///< 정규 필드명: ReadOnly, Category, Server, …
         Kind   _kind{ Kind::Flag };
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief AnnotationMeta.txt 의 `kind.Field = 별칭…` 한 줄입니다. 필드 표와 대조할 때 씁니다. */
     struct AnnotationMetaEntry
     {
         string            _scope; ///< 섹션 이름: REFLECT | ENUM | PROPERTY | FUNCTION
         AnnotationBinding _binding;
     };
+} // namespace sw
 
+namespace sw
+{
     /** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
     inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
     {

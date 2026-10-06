@@ -20,7 +20,10 @@ namespace test
         uint8 _b{ 0 };
         uint8 _a{ 0 };
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 되읽은 이미지 한 장(`RenderPassGpuTest`).
      * @details `getPixel` 이 RGBA 로 준다 — 되읽기 · 행 포인터 계산 · BGRA 뒤집기를 케이스마다 손으로 들면, 백엔드마다 스왑체인 형식이

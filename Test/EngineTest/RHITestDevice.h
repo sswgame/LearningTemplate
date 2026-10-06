@@ -92,7 +92,10 @@ namespace test
         sw::unique_ptr<sw::IRHIDevice> _device;
         sw::RHIBackend                 _backend{ sw::RHIBackend::DirectX11 };
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 백엔드 목록을 차례로 세워 도는 범위 — `for ( test::RHITestDevice& device : sweep )` 의 몸통은 **서는 백엔드마다** 한 번 돈다.
      * @details 서지 않는 백엔드(이 빌드 · 호스트에 없거나 초기화 실패)는 건너뛴다. 다음 백엔드를 세우기 전에 앞 디바이스를 내리고, 다 돌면

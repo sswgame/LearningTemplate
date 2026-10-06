@@ -29,13 +29,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
+from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
 _kCheckHeader = "Source/Core/Common/TargetMacroCheck.h"
 
-_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
+_kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
 #: 내장 매크로 → 대신 쓸 것.
@@ -167,14 +167,14 @@ class CheckTargetMacrosGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools/ReflectionParser 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         # 예외 파일이 사라지면(이름이 바뀌면) 예외도 함께 낡는다 — 조용히 넘기지 않는다.
         if not (repositoryRoot / _kCheckHeader).is_file():
             raise GateError(f"{_kCheckHeader} 가 없습니다 — 내장 매크로를 읽어도 되는 유일한 파일입니다. 옮겼다면 이 게이트의 _kCheckHeader 를 고치십시오.")
         violations = findBuiltinMacroUses(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 내장 매크로 · 지원하지 않는 플랫폼 매크로")
+        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 내장 매크로 · 지원하지 않는 플랫폼 매크로")
 
 
 main = CheckTargetMacrosGate.run

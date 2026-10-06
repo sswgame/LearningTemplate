@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: X11 매크로를 정의하는 시스템 헤더의 접두어입니다.
@@ -39,7 +39,7 @@ _kX11MacroUndef = "Core/Common/X11MacroUndef.h"
 #: X11 을 include 하는 TU 가 함께 include 하면 안 되는 서드파티 헤더 접두어입니다.
 _kListThirdPartyPrefix = ("Jolt/", "box2d/", "acl/", "rtm/", "Recast", "Detour", "DetourCrowd/", "tracy/", "Tracy")
 
-_kListSourceRoot = ("Source", "Test", "Tools")
+_kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
 _kTranslationUnitSuffixes = (".c", ".cc", ".cpp", ".cxx")
 

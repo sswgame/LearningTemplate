@@ -15,7 +15,10 @@ namespace test
         const utf8* _pName{ nullptr };
         sw::string  _value;
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 자식 한 번의 결과. */
     struct ChildRunResult
     {

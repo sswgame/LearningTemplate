@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 한 줄 안에 로그 호출과 `<식별자>.data()` 가 같이 있는 모양만 본다.
@@ -34,7 +34,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kLogCallRe = re.compile(r"\bSW_LOG_[A-Z_]+\s*\(")
 _kViewDataRe = re.compile(r"\b[A-Za-z_]\w*\s*\.\s*data\s*\(\s*\)")
 
-_kListScanRoot = ("Source", "Tools")
+_kListScanRoot = kLintTargetRelDirs
 
 
 def findLogViewArguments(repositoryRoot: Path, listTargetFile: list[str] | None) -> list[str]:
@@ -85,11 +85,11 @@ class CheckLogViewArgumentGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Tools 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findLogViewArguments(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Tools 의 로그 인자 .data()")
+        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 로그 인자 .data()")
 
 
 main = CheckLogViewArgumentGate.run

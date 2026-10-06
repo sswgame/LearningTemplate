@@ -24,6 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 지연 로드를 정해도 되는 유일한 파일(저장소 상대).
@@ -52,7 +53,7 @@ class CheckDelayLoadSitesGate(LintGate):
     ]
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listPath = [path for path in self.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source", "cmake", "Test", "Tools"),
+        listPath = [path for path in self.selectTargetFiles(repositoryRoot, None, listScanRoot=kLintTargetRelDirs + ("cmake",),
                                                            suffixes=(".txt", ".cmake"))
                     if path.name == "CMakeLists.txt" or path.suffix == ".cmake"]
         topLevel = repositoryRoot / "CMakeLists.txt"

@@ -14,7 +14,10 @@ namespace test
         int32      _line;
         sw::string _message;
     };
+} // namespace test
 
+namespace test
+{
     class TestContext
     {
     public:

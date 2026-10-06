@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectRepositoryFiles  # noqa: E402
+from common import collectRepositoryFiles, kLintTargetRelDirs  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 문서 안의 `` `sw_foo` `` — 백틱에 싸인 함수 이름.
@@ -64,7 +64,7 @@ def collectDefinedFunctionInternal(cmakeRoot: Path, repositoryRoot: Path) -> set
     # 저장소 루트를 그대로 걸으면 `Tools/vcpkg` 를 통째로 걷는다 — 그것만으로 3초다. 걷기는 `collectRepositoryFiles`(내려받은 도구 ·
     # 빌드 폴더로 내려가지 않는다).
     listPath = collectRepositoryFiles(repositoryRoot, (cmakeRoot.relative_to(repositoryRoot).as_posix(),), suffixes=(".cmake",))
-    listPath += collectRepositoryFiles(repositoryRoot, ("Source", "Test", "ThirdParty", "Tools/ReflectionParser"), suffixes=(".cmake",),
+    listPath += collectRepositoryFiles(repositoryRoot, kLintTargetRelDirs + ("ThirdParty",), suffixes=(".cmake",),
                                        fileNames=("CMakeLists.txt",))
 
     rootListFile = repositoryRoot / "CMakeLists.txt"

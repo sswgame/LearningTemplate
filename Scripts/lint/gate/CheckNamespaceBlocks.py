@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import flatMapConcurrent  # noqa: E402
+from common import flatMapConcurrent, kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kNamespaceRe = re.compile(r"^(\s*)namespace(?:\s+([\w:]+))?\s*(\{)?\s*$")
@@ -244,7 +244,7 @@ class CheckNamespaceBlocksGate(LintGate):
         self.addFilesArgument(parser)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        listFile = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=("Source",), suffixes=(".h", ".cpp", ".inl"))
+        listFile = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=(".h", ".cpp", ".inl"))
         violations = flatMapConcurrent(lambda path: findViolations(path, repositoryRoot), listFile)
         return GateResult(listViolation=violations, summary=f"{len(listFile)} files scanned")
 

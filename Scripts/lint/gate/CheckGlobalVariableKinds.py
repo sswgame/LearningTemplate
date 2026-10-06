@@ -29,10 +29,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, normalizePath  # noqa: E402
+from common import collectSourceFiles, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
+_kListScanRoot = kLintTargetRelDirs
 _kExternMacro = "SW_EXTERN_GLOBAL_VARIABLE"
 _kCallRe = re.compile(r"\b(SW_GLOBAL_VARIABLE|SW_TEST_GLOBAL_VARIABLE_SHIPPED|SW_TEST_GLOBAL_VARIABLE|SW_EXTERN_GLOBAL_VARIABLE)\s*\(")
 _kIdentifierRe = re.compile(r"[A-Za-z_]\w*")

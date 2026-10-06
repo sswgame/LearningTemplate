@@ -73,7 +73,10 @@ namespace test
         bool              _bOpen{ false };  /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */
         sw::hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 시험의 패스 콜백이 적는다 */
     };
+} // namespace test
 
+namespace test
+{
     /**
      * @brief 병렬 기록을 지원한다고 답하고, 만든 커맨드 리스트와 제출 순서만 적는 디바이스입니다.
      * @details `_maxCreatable` 개를 만든 뒤로는 `createCommandList` 가 nullptr 를 준다 — 디바이스가 죽거나 메모리가 바닥난 것처럼.

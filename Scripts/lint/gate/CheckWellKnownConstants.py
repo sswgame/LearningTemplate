@@ -31,10 +31,11 @@ from typing import NamedTuple
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
+from common import blankCommentsAndLiterals, kLintProductRelDirs, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-_kListScanRoot = ("Source", "Tools/ReflectionParser", "Resource/engine/shaders", "Resource/common/shaders")
+# 시험은 기대값을 리터럴로 적는 곳이라 뺀다(kLintProductRelDirs).
+_kListScanRoot = kLintProductRelDirs + ("Resource/engine/shaders", "Resource/common/shaders")
 _kSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx", ".hlsl", ".hlsli")
 
 #: 리플렉션 메타데이터 줄 — 파서가 리터럴만 읽는다.
@@ -122,7 +123,7 @@ class CheckWellKnownConstantsGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Tools/ReflectionParser · 셰이더 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 시험을 뺀 린트 대상 · 셰이더 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         # 집이 사라지면(옮기면) 예외도 함께 낡는다 — 조용히 넘기지 않는다. 시험용 가짜 저장소(자기 시험)는 집이 없어도 된다.
@@ -132,7 +133,7 @@ class CheckWellKnownConstantsGate(LintGate):
                     if not (repositoryRoot / home).is_file():
                         raise GateError(f"{home} 가 없습니다 — '{rule.label}' 의 집입니다. 옮겼다면 이 게이트의 homes 를 고치십시오.")
         violations = findWellKnownLiterals(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Tools/ReflectionParser · 셰이더의 잘 알려진 상수 리터럴")
+        return GateResult(listViolation=violations, summary=f"{' · '.join(kLintProductRelDirs)} · 셰이더의 잘 알려진 상수 리터럴")
 
 
 main = CheckWellKnownConstantsGate.run

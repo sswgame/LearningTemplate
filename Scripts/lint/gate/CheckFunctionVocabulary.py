@@ -37,11 +37,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import mapConcurrent  # noqa: E402
+from common import kLintTargetRelDirs, mapConcurrent  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
-_kScanRoots = ("Source", "Test", "Tools/ReflectionParser")
+_kScanRoots = kLintTargetRelDirs
 _kHeaderSuffix = (".h", ".hpp", ".inl")
 
 # 선언 한 줄: [지정자]* 반환형 이름( ... — 대입(`=`)이 앞에 오면 호출부이므로 뺀다.

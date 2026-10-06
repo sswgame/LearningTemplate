@@ -24,7 +24,10 @@ namespace test
          */
         static bool isLeftOutOfServerPackage( sw::string_view resourceId ) { return isServerOnlyBuild() && sw::ResourceUtil::hasResource( resourceId ) == false; }
     };
+} // namespace test
 
+namespace test
+{
     /** @brief 시험 동안 호스트 타깃(`ResourceUtil::setHostTarget`)을 바꾸고 끝에 하네스 값(빈 값 — 아무것도 빼지 않는다)으로 되돌립니다. */
     struct ScopedHostTarget
     {

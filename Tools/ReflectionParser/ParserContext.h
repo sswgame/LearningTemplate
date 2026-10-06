@@ -17,7 +17,10 @@ namespace sw
         const string* _pPath;
         const string* _pContent;
     };
+} // namespace sw
 
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // ParserContext — CXIndex / CXTranslationUnit 수명
     // ------------------------------------------------------------------------------

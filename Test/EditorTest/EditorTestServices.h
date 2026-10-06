@@ -30,7 +30,10 @@ namespace sw::editor
         ScopedWorkspaceService( const ScopedWorkspaceService& )            = delete;
         ScopedWorkspaceService& operator=( const ScopedWorkspaceService& ) = delete;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 스코프 동안 커맨드 스택을 지역 서비스로 걸어 둡니다. */
     class ScopedCommandStackService
     {
@@ -41,7 +44,10 @@ namespace sw::editor
         ScopedCommandStackService( const ScopedCommandStackService& )            = delete;
         ScopedCommandStackService& operator=( const ScopedCommandStackService& ) = delete;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 스코프 동안 씬 매니저를 지역 서비스로 걸어 둡니다 — `editor::getActiveScene()` 과 핸들 풀기(`findGameObject`)가 답하게 됩니다. */
     class ScopedSceneManagerService
     {
@@ -52,7 +58,10 @@ namespace sw::editor
         ScopedSceneManagerService( const ScopedSceneManagerService& )            = delete;
         ScopedSceneManagerService& operator=( const ScopedSceneManagerService& ) = delete;
     };
+} // namespace sw::editor
 
+namespace sw::editor
+{
     /** @brief 스코프 동안 전역 변수 매니저를 지역 서비스로 걸어 둡니다 — 프리셋 저장 · 불러오기가 이 매니저를 봅니다. */
     class ScopedGlobalVariableManagerService
     {

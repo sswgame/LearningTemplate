@@ -25,10 +25,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
+from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
+_kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 
 #: `UNICODE` 에 따라 `A` · `W` 로 바뀌는 Win32 일반 이름(함수 매크로)입니다. 새로 쓰는 API 가 여기 없으면 더합니다.
@@ -150,11 +150,11 @@ class CheckWin32WideCallsGate(LintGate):
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 Source · Test · Tools/ReflectionParser 전체)")
+        self.addFilesArgument(parser, "검사할 특정 파일 (생략 시 린트 대상 뿌리 전체)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         violations = findGenericWin32Calls(repositoryRoot, args.files)
-        return GateResult(listViolation=violations, summary="Source · Test · Tools/ReflectionParser 의 Win32 일반 이름(A/W 매크로) · A 판 호출")
+        return GateResult(listViolation=violations, summary=f"{' · '.join(_kListScanRoot)} 의 Win32 일반 이름(A/W 매크로) · A 판 호출")
 
 
 main = CheckWin32WideCallsGate.run

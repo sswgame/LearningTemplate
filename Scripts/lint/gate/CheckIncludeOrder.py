@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import (collectRepositoryFiles, flatMapConcurrent, getProjectRoot, kCppAllExtensions, kCppSourceExtensions,  # noqa: E402
-                    kLintTargetRelDirs)
+                    kLintTargetBaseDirNames, kLintTargetRelDirs)
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
@@ -50,7 +50,7 @@ def buildHeaderLookupInternal(repositoryRoot: Path, baseName: str) -> dict[str, 
 
 
 def buildHeaderLookupMap(repositoryRoot: Path) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
-    return tuple(buildHeaderLookupInternal(repositoryRoot, baseName) for baseName in ("Source", "Test", "Tools"))
+    return tuple(buildHeaderLookupInternal(repositoryRoot, baseName) for baseName in kLintTargetBaseDirNames)
 
 
 _kConditionalOpenRe = re.compile(r'^\s*#\s*(?:if|ifdef|ifndef)\b(.*)$')

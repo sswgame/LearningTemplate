@@ -19,14 +19,20 @@ namespace sw
     struct DummyBase
     {
     };
+} // namespace sw
 
+namespace sw
+{
     struct DummyActor
     {
         int32   _hp{ 0 };
         string  _name = "";
         float32 _speed{ 0.0f };
     };
+} // namespace sw
 
+namespace sw
+{
     enum class DummyType : int64
     {
         None  = 0,
@@ -58,7 +64,10 @@ namespace sw
         uint8      _guard2{ 0xCD };
         uint8      _guard3{ 0xEF };
     };
+} // namespace sw
 
+namespace sw
+{
     struct ComplexData
     {
         int32              _id    = 101;

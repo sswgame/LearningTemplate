@@ -29,7 +29,10 @@ namespace sw::editortest
         string _lastText;
         int32  _previewCount = 0;
     };
+} // namespace sw::editortest
 
+namespace sw::editortest
+{
     /** @brief 이름과 메서드는 GameFramework 의 대사 러너와 같고 메타는 없는 컴포넌트입니다. 미리보기가 골라서는 안 됩니다. */
     REFLECT()
     class DialogueRunnerComponent : public Component

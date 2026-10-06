@@ -43,6 +43,7 @@ kDirSourceApp = "Source/App"
 kDirSourceEditor = "Source/Editor"
 kDirSourceCore = "Source/Core"
 kDirSourceRuntimeAPI = "Source/RuntimeAPI"
+kDirSourceServer = "Source/Server"
 
 kFileReflectBuiltins = "Source/Engine/Reflection/ReflectBuiltins.xxx"
 kFileEngineServices = "Engine/Common/EngineServices.h"
@@ -146,11 +147,20 @@ kEnvSwVcpkgAutoBootstrap = "SW_VCPKG_AUTO_BOOTSTRAP"
 # --- 6. Lint & Formatting Targets (린트 및 포맷팅 대상 디렉터리 SSOT) --------
 # =============================================================================
 
+#: 우리가 쓴 C++ 의 뿌리 — 이름 · include 순서 · 픽서 · clang-format · 코드 게이트가 모두 이것을 본다. 게이트마다 따로 적지 않는다
+#: (`selftest/CheckLintScanRoots` 가 막는다). 새 C++ 도구 폴더(`Tools/<이름>`)를 만들면 여기 한 줄.
 kLintTargetRelDirs: tuple[str, ...] = (
     "Source",
     "Test",
     "Tools/ReflectionParser",
+    "Tools/OnlineLoadBot",
 )
+
+#: `kLintTargetRelDirs` 에서 시험을 뺀 뿌리 — 제품 코드(엔진 · 도구)만 보는 규칙이 쓴다.
+kLintProductRelDirs: tuple[str, ...] = tuple(root for root in kLintTargetRelDirs if root != "Test")
+
+#: `kLintTargetRelDirs` 의 맨 앞 폴더 이름(`Source` · `Test` · `Tools`) — include 경로의 기준 폴더를 찾는 게이트가 쓴다.
+kLintTargetBaseDirNames: tuple[str, ...] = tuple(dict.fromkeys(root.split("/")[0] for root in kLintTargetRelDirs))
 
 #: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다. 저장소를 훑는 린트는 이 이름의 폴더로 내려가지 않습니다
 #: (`collectRepositoryFiles`). 빌드 산출물과, 부트스트랩이 `Tools/` 아래로 내려받는 외부 도구(vcpkg · LLVM · sccache ·
@@ -170,4 +180,8 @@ kNotOurDirNames: frozenset[str] = frozenset({
     "_cache",
     "_deps",
 })
+
+#: 저장소에 있지만 우리 코드가 아닌 것까지 뺀 이름 — 내려받은 도구 · 빌드(`kNotOurDirNames`) + 저장소 안 서드파티.
+#: 파일 종류만 보는 게이트(널 바이트 · 파이썬 판)는 이것으로 뺀다. `Tools` 를 통째로 빼지 않는다 — 우리 도구가 그 아래 있다.
+kNotOurCodeDirNames: frozenset[str] = kNotOurDirNames | frozenset({"ThirdParty"})
 

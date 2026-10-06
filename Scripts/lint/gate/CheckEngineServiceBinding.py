@@ -41,12 +41,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectRepositoryFiles  # noqa: E402
+from common import collectRepositoryFiles, kLintTargetRelDirs  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kServiceListPath = "Source/RuntimeAPI/Service/EngineServiceList.xxx"
 # 호스트를 찾을 곳. `bindEngineServices(` 를 부르는 파일이 호스트다 — 이름을 적지 않는다.
-_kHostSearchRoot = ("Source", "Test", "Tools")
+_kHostSearchRoot = kLintTargetRelDirs
 
 _kRequiredRow = re.compile(
     r"^\s*SW_ENGINE_SERVICE(?P<const>_CONST)?\s*\(\s*(?P<member>_p\w+)\s*,[^,]+,[^,]+,[^,]+,"

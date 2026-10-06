@@ -26,7 +26,10 @@ namespace sw
          */
         string _stampPath;
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @brief 산출물이 기대는 파일 하나 — 입력이 include 한 헤더와 그것을 본 쓰기 시각입니다(스탬프의 `dep <시각> <경로>` 줄).
      * @details 산출물은 입력 헤더만이 아니라 그 헤더가 include 한 헤더에도 기댄다 — `PROPERTY() ScoreList _scores;` 의 컨테이너 종류는 다른 헤더의
@@ -38,7 +41,10 @@ namespace sw
         string _path;      /**< 절대 경로(슬래시) */
         uint64 _writeTime; /**< 본 쓰기 시각. 이번 실행이 시작된 뒤에 바뀐 것은 0 — 다음 실행이 다시 본다 */
     };
+} // namespace sw
 
+namespace sw
+{
     struct GeneratedFileUtil
     {
         /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로 셋을 만듭니다. */
@@ -77,7 +83,10 @@ namespace sw
         /** @brief CMake 가 구성 때 심어 둔 빈 자리 표시자(또는 등록이 하나도 없는 파서 산출물)인지 봅니다. */
         static bool isPlaceholder( const string_view generatedText, const ParserConfig& config );
     };
+} // namespace sw
 
+namespace sw
+{
     /**
      * @class IncrementalCheck
      * @brief "이 입력의 산출물은 최신인가" 를 답합니다. 도구 쪽 시각은 시작할 때 한 번만 잽니다.

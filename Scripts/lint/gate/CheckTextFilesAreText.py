@@ -36,7 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # Scripts/lint — LintGate
 
-from common import kNotOurDirNames  # noqa: E402
+from common import kNotOurCodeDirNames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 텍스트로 다뤄야 하는 확장자. 여기 없는 것(이미지·폰트·바이너리 에셋)은 검사하지 않는다.
@@ -65,7 +65,7 @@ kTextSuffix = (
 )
 
 #: 검사에서 빼는 경로 조각 — 남의 코드이거나 생성물이다.
-kExcludedDirName = kNotOurDirNames | {"ThirdParty", "Tools"}
+kExcludedDirName = kNotOurCodeDirNames
 
 
 def describeNulLocationInternal(data: bytes, index: int) -> tuple[int, str]:

@@ -32,21 +32,21 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kNotOurDirNames, mapConcurrent  # noqa: E402
+from common import kLintProductRelDirs, kNotOurCodeDirNames, mapConcurrent  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 # 검사 대상 확장자 — X-macro 목록 파일.
 _kDataSuffix = ".xxx"
 
 # 대상 파일을 찾는 루트 (저장소 기준).
-_kScanRoots = ("Source", "Tools")
+_kScanRoots = kLintProductRelDirs
 
 # 참조를 찾을 때 읽는 루트와 확장자.
 _kReferenceRoots = ("Source", "Tools", "cmake", "Scripts", "Config")
 _kReferenceSuffix = (".cpp", ".h", ".hpp", ".c", ".cmake", ".py", ".txt", ".in", ".json", ".xxx")
 
 #: 걷지 않는 폴더 — 우리 코드가 아닌 것(`kNotOurDirNames`: 빌드 · 내려받은 외부 도구) + 저장소 안의 서드파티.
-_kExcludedDirName = kNotOurDirNames | {"ThirdParty"}
+_kExcludedDirName = kNotOurCodeDirNames
 
 # include 이 `Source/` 를 루트로 쓰는 타깃과, 자기 디렉터리를 쓰는 타깃이 둘 다 있다.
 _kIncludeRootDir = "Source"

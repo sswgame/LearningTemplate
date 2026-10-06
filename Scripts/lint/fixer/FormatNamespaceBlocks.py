@@ -23,7 +23,7 @@ from LintFixer import FixPass, LintFixer  # noqa: E402
 
 class FormatNamespaceBlocksFixer(LintFixer):
     description = "정의마다 namespace 블록을 나눈다(CheckNamespaceBlocks 의 규칙)"
-    listScopeRelDir = ("Source",)   # 게이트가 보는 범위
+    listScopeRelDir = common.kLintTargetRelDirs   # 게이트가 보는 범위
     listPass = (
         FixPass(transform=CheckNamespaceBlocks.fixText, problem="한 namespace 블록에 정의가 여럿이다", done="정의마다 namespace 블록을 나눴다",
                 badSample=CheckNamespaceBlocks.kFixBadSample, goodSample=CheckNamespaceBlocks.kFixGoodSample),

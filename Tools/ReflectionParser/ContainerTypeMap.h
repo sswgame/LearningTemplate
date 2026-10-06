@@ -21,7 +21,10 @@ namespace sw
         string        _type; ///< Vector | Map | UnorderedMap | …
         ContainerKind _kind{ ContainerKind::Sequence };
     };
+} // namespace sw
 
+namespace sw
+{
     class ContainerTypeMap
     {
     public:

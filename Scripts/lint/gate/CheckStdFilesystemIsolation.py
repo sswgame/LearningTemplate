@@ -23,13 +23,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: `std::filesystem` 을 써도 되는 유일한 폴더입니다.
 _kAllowedRoot = "Source/Core/File/Std/"
 
-_kListSourceRoot = ("Source", "Test", "Tools")
+_kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"](experimental/)?filesystem[>"]')

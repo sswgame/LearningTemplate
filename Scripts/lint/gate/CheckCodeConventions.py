@@ -52,6 +52,7 @@ from common import (  # noqa: E402
     kCppHeaderExtensions,
     kCppSourceExtensions,
     kLintTargetRelDirs,
+    kNotOurCodeDirNames,
     kNotOurDirNames,
     normalizePath,
 )
@@ -362,7 +363,7 @@ def getExactPathMapInternal(projectRoot: Path) -> dict[str, str]:
     global _s_exactPathMap
     if not _s_exactPathMap:
         newMap = {}
-        for fullPath in collectRepositoryFiles(projectRoot, ("Source", "Test", "Tools"), suffixes=set(kCppAllExtensions) | {".inl"}):
+        for fullPath in collectRepositoryFiles(projectRoot, kLintTargetRelDirs, suffixes=set(kCppAllExtensions) | {".inl"}):
             relRoot = fullPath.relative_to(projectRoot).as_posix()
             rel = relRoot.split("/", 1)[1]
             newMap[rel.lower()] = rel
@@ -3099,7 +3100,7 @@ def runConventionsCheck(rootDir: Path | None = None,
 
 
 #: 검사하지 않는 폴더 이름(저장소 아래 경로의 폴더 하나와 같을 때).
-_kExcludedDirNames: frozenset[str] = frozenset({"ThirdParty", "build", ".vcpkg"})
+_kExcludedDirNames: frozenset[str] = kNotOurCodeDirNames | frozenset({".vcpkg"})
 
 
 def checkFileTargetInternal(target: tuple[Path, Path]) -> list[ConventionViolation]:
