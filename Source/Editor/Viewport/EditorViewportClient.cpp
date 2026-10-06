@@ -385,6 +385,11 @@ namespace sw::editor
             EditorViewportClientInternal::storeColumnMajor( arrView, pCamera->getViewMatrix() );
             EditorViewportClientInternal::storeColumnMajor( arrProj, pCamera->getProjectionMatrix( aspect ) );
 
+            // 격자 · 시각화 · 자 · 통계 · 방향 큐브는 창 그리기 목록에 그린다 — 캔버스로 자르지 않으면 화면 밖으로 뻗은 선(카메라 절두체 등)이
+            // 탭 · 툴바 위까지 그려진다. 기즈모는 ImGuizmo 가 같은 사각형(SetRect)으로 자른다.
+            ImDrawList*  pCanvasDrawList = ImGui::GetWindowDrawList();
+            const ImVec2 canvasMax{ imagePos.x + canvasSize._x, imagePos.y + canvasSize._y };
+            pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             if ( _toolbarSettings._bShowGrid )
                 drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
 
@@ -408,6 +413,7 @@ namespace sw::editor
             EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
+            pCanvasDrawList->PopClipRect();
 
             processPicking( canvasPos, canvasSize, pCamera );
 
@@ -418,11 +424,13 @@ namespace sw::editor
                 drawGizmo( arrView, arrProj, canvasPos, canvasSize );
             }
 
+            pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             if ( _toolbarSettings._bShowStats )
                 drawStatsOverlay( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
 
             if ( _toolbarSettings._bShowOrientationCube )
                 drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
+            pCanvasDrawList->PopClipRect();
 
             string droppedAssetPath;
             if ( EditorWidgets::acceptAssetDrop( droppedAssetPath ) )

@@ -716,6 +716,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|prefab.ignoresOtherFocusedAssets",
         "EditorSelfTest|PASS|globalVariables.groupsStack",
         "EditorSelfTest|PASS|panels.toolWindowsOpenAtAUsableSize",
+        "EditorSelfTest|PASS|gameView.overlaysStayInsideTheCanvas",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

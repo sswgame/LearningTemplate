@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
@@ -489,6 +490,89 @@ namespace sw::editor
                 probe._openStep = 0;
                 return EditorSelfTestStep::Continue;
             }
+
+            // ------------------------------------------------------------------------------
+            // gameView.overlaysStayInsideTheCanvas — 게임 뷰의 격자 · 시각화 선은 캔버스(게임 뷰 이미지) 사각형으로 잘린다(D22)
+            // 창 그리기 목록에 자르지 않고 그려 카메라 절두체 선이 탭 · 툴바 위까지 뻗었다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
+            // 한다(격자는 기본으로 켜져 있다).
+            // ------------------------------------------------------------------------------
+            /** @brief @p pDrawList 에서 텍스처가 @p textureId 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false. */
+            static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureId, int32& outCommandIndex, ImVec4& outRect )
+            {
+                for ( int32 commandIndex = 0; commandIndex < pDrawList->CmdBuffer.Size; ++commandIndex )
+                {
+                    const ImDrawCmd& command = pDrawList->CmdBuffer[commandIndex];
+                    if ( command.ElemCount == 0 || command.GetTexID() != textureId )
+                        continue;
+                    ImVec4 rect{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, -MathUtil::kMaxFloat, -MathUtil::kMaxFloat };
+                    for ( uint32 elemIndex = 0; elemIndex < command.ElemCount; ++elemIndex )
+                    {
+                        const ImDrawIdx  vertexIndex = pDrawList->IdxBuffer[static_cast<int32>( command.IdxOffset + elemIndex )];
+                        const ImDrawVert vertex      = pDrawList->VtxBuffer[static_cast<int32>( command.VtxOffset + vertexIndex )];
+                        rect.x                       = MathUtil::min( rect.x, vertex.pos.x );
+                        rect.y                       = MathUtil::min( rect.y, vertex.pos.y );
+                        rect.z                       = MathUtil::max( rect.z, vertex.pos.x );
+                        rect.w                       = MathUtil::max( rect.w, vertex.pos.y );
+                    }
+                    outCommandIndex = commandIndex;
+                    outRect         = rect;
+                    return true;
+                }
+                return false;
+            }
+
+            static EditorSelfTestStep runOverlaysStayInsideTheCanvas( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kGameViewTitle   = "Game View";
+                constexpr uint32      kMaxStepCount    = 30;
+                constexpr float32     kRectTolerancePx = 1.0f;
+
+                EditorContext* pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    ImGui::SetWindowFocus( kGameViewTitle ); // 가운데 탭이 다른 도구로 가려져 있으면 게임 뷰가 그려지지 않는다
+                    return EditorSelfTestStep::Continue;
+                }
+
+                const EditorGameView& view         = pContext->getGameView();
+                const ImTextureID     textureId    = reinterpret_cast<ImTextureID>( view._pTextureId );
+                const ImGuiContext&   imguiContext = *ImGui::GetCurrentContext();
+                int32                 imageCommandIndex{ -1 };
+                ImVec4                canvasRect{};
+                const ImDrawList*     pCanvasDrawList{ nullptr };
+                for ( const ImGuiWindow* pWindow : imguiContext.Windows )
+                {
+                    const bool bInGameView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
+                                             StringUtil::startsWith( pWindow->RootWindow->Name, kGameViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
+                    if ( bInGameView && view._pTextureId != nullptr && findImageCommand( pWindow->DrawList, textureId, imageCommandIndex, canvasRect ) )
+                    {
+                        pCanvasDrawList = pWindow->DrawList;
+                        break;
+                    }
+                }
+                if ( pCanvasDrawList == nullptr )
+                {
+                    if ( stepIndex < kMaxStepCount )
+                        return EditorSelfTestStep::Continue;
+                    (void)context.expect( false, "the game view image was not drawn" );
+                    return EditorSelfTestStep::Done;
+                }
+
+                // 이미지 다음 명령이 오버레이(격자부터)다 — 캔버스와 같은 사각형으로 잘려 있어야 한다.
+                bool bFoundCanvasClip{ false };
+                for ( int32 commandIndex = imageCommandIndex + 1; commandIndex < pCanvasDrawList->CmdBuffer.Size; ++commandIndex )
+                {
+                    const ImVec4& clip  = pCanvasDrawList->CmdBuffer[commandIndex].ClipRect;
+                    const bool    bSame = MathUtil::abs( clip.x - canvasRect.x ) <= kRectTolerancePx && MathUtil::abs( clip.y - canvasRect.y ) <= kRectTolerancePx &&
+                                       MathUtil::abs( clip.z - canvasRect.z ) <= kRectTolerancePx && MathUtil::abs( clip.w - canvasRect.w ) <= kRectTolerancePx;
+                    bFoundCanvasClip = bFoundCanvasClip || bSame;
+                }
+                (void)context.expect( bFoundCanvasClip, "the viewport overlays are not clipped to the game view canvas" );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -501,4 +585,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
     SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::runToolWindowsOpenAtAUsableSize );
+    SW_EDITOR_SELF_TEST( GameViewOverlayClip, "gameView.overlaysStayInsideTheCanvas", 1500, &EditorSelfTestPanelCasesInternal::runOverlaysStayInsideTheCanvas );
 } // namespace sw::editor
