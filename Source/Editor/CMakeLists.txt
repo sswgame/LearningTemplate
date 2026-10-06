@@ -38,9 +38,3 @@ sw_addModuleLibrary(EditorModule
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).
 set_target_properties(EditorModule PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
-
-# Vulkan 백엔드 TU: Types.h 별칭이 PCH 와 union 멤버에서 충돌하므로 그 파일만 PCH 에서 뺀다.
-set_source_files_properties(
-	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/Render/ImGuiVulkanRendererBackend.cpp"
-	PROPERTIES SKIP_PRECOMPILE_HEADERS ON
-)
