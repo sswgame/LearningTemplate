@@ -90,6 +90,12 @@ namespace sw
          *          바꿀 수 없어 `kNoRebindSlot` 입니다.
          */
         static uint32 getRebindSlotIndex( BindingKind kind );
+        /**
+         * @brief 이번 프레임의 **이동량**을 내는 종류(마우스 이동 · 휠)인지 묻습니다.
+         * @details 이동량은 [-1, 1] 로 묶지 않고, 액션 값 단계의 전역 축 반전(`setInvertX/Y`)도 걸지 않습니다 — 휠 두 칸은 2 이고
+         *          시점 반전이 확대 · 핫바 방향을 뒤집지 않습니다(마우스 이동의 반전은 그 바인딩 평가가 한 번 건다).
+         */
+        static bool isRelative( BindingKind kind );
     };
 } // namespace sw
 
@@ -310,7 +316,13 @@ namespace sw
          * @param trigger 액션 발화(`wasActionTriggered`) 규칙입니다. 축 값(`getAxis1D`)은 trigger 와 관계없이 누르는 동안 읽힙니다 —
          *                축을 매 프레임 읽는 쓰임은 `Down`, 누를 때마다 한 칸씩 넘기는 쓰임(무기 교체)은 `Pressed` 입니다.
          */
-        void    bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer = {},
+        void bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer = {},
+                                  ActionTrigger trigger = ActionTrigger::Down );
+        /**
+         * @brief 위와 같되 슬롯 둘로 — 게임패드 버튼 둘(D 패드 위 · 아래로 확대)처럼 키가 아닌 장치도 한 축으로 묶습니다.
+         * @details 두 슬롯은 같은 장치여야 저장됩니다(`<axis1d source="gamepad">`). 언리얼 Enhanced Input 의 Axis1D 액션에 버튼 둘(한쪽 Negate)과 같은 자리입니다.
+         */
+        void    bindAxis1DComposite( const hashed_string& action, InputSlot negativeSlot, InputSlot positiveSlot, const hashed_string& layer = {},
                                      ActionTrigger trigger = ActionTrigger::Down );
         float32 getAxis1D( const hashed_string& action ) const;
 

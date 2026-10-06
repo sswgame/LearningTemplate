@@ -148,6 +148,26 @@ SW_TEST_CASE( InputMapTest, MouseWheelIsAnAxisForTheFrameItTurns )
 }
 
 /**
+ * @brief [InputMapTest] 휠은 이동량이다 — 한 프레임 세 칸은 3 이고(±1 로 묶이지 않는다), 시점 반전(InvertX)이 확대 방향을 뒤집지 않는다(이름 · 핸들 조회 둘 다)
+ */
+SW_TEST_CASE( InputMapTest, MouseWheelIsNotClampedOrInvertedByLook )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bindMouseWheel( "Zoom" );
+    inputMap.setInvertX( true );
+    const sw::ActionHandle zoom = inputMap.getActionHandle( "Zoom" );
+
+    SW_ASSERT_TRUE( input.postRawEvent( sw::RawInputEvent::makeMouseWheel( 3.0f ) ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, inputMap.getAxis1D( "Zoom" ), 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, inputMap.getVector2D( zoom )._x, 1.0e-6f );
+    input.endFrame();
+    input.shutdown();
+}
+
+/**
  * @brief [InputMapTest] 마우스 이동량은 픽셀 단위 상대값이다 — 액션 값이 [-1, 1] 로 묶이지 않고(이름 · 핸들 조회 둘 다), 축 반전은 한 번만 걸린다
  */
 SW_TEST_CASE( InputMapTest, MouseDeltaIsNotClampedAndInvertsOnce )
@@ -1111,6 +1131,67 @@ SW_TEST_CASE( InputMapTest, Axis1DBindingFollowsTheActionTrigger )
     const sw::ActionBinding* pUserSprint = reloadedUser.getBinding( "Sprint", 0 );
     SW_ASSERT_NOT_NULL( pUserSprint );
     SW_EXPECT_TRUE( pUserSprint->_trigger == sw::ActionTrigger::Down );
+
+    input.shutdown();
+}
+
+/**
+ * @brief [InputMapTest] `<axis1d source="gamepad">` 은 게임패드 버튼 둘을 한 축으로 묶는다 — 휠과 같은 액션(카메라 확대)을 패드로도 낸다
+ * @details 정의 저장(편집기) · 유저 바인딩 저장을 거쳐도 패드 버튼 · 패드 번호가 남고, 패드 표기에 나온다(키보드 표기에는 안 나온다).
+ */
+SW_TEST_CASE( InputMapTest, Axis1DBindsTwoGamepadButtons )
+{
+    const sw::string definitionPath = test::makeTempPath( "axis_gamepad.input.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( definitionPath, "<InputMap defaultLayer=\"Gameplay\">\n"
+                                                                 "\t<layers><layer name=\"Gameplay\" enabled=\"1\"/></layers>\n"
+                                                                 "\t<action name=\"Zoom\" layer=\"Gameplay\">\n"
+                                                                 "\t\t<mouseWheel scale=\"1\"/>\n"
+                                                                 "\t\t<axis1d source=\"gamepad\" negative=\"DPadDown\" positive=\"DPadUp\" pad=\"1\"/>\n"
+                                                                 "\t</action>\n"
+                                                                 "</InputMap>\n" ) );
+
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    SW_ASSERT_TRUE( inputMap.loadFromResource( definitionPath ) );
+
+    const sw::ActionBinding* pAxis = inputMap.getBinding( "Zoom", 0 );
+    SW_ASSERT_NOT_NULL( pAxis );
+    SW_EXPECT_TRUE( pAxis->_kind == sw::BindingKind::Axis1DComposite );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[0] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadDown, 1 ) );
+    SW_EXPECT_TRUE( pAxis->_arrSlot[1] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadUp, 1 ) );
+
+    // (축은 휠보다 먼저 읽힌다 — 바인딩 0) 1 번 패드의 D 패드 위 = +1, 0 번 패드는 이 바인딩에 닿지 않는다.
+    input.postRawEvent( sw::RawInputEvent::makeGamepadButtonDown( sw::GamepadButton::DPadUp, 1 ) );
+    input.postRawEvent( sw::RawInputEvent::makeGamepadButtonDown( sw::GamepadButton::DPadDown, 0 ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, inputMap.getAxis1D( "Zoom" ), 1.0e-5f );
+    input.endFrame();
+    input.postRawEvent( sw::RawInputEvent::makeGamepadButtonUp( sw::GamepadButton::DPadUp, 1 ) );
+    input.postRawEvent( sw::RawInputEvent::makeGamepadButtonUp( sw::GamepadButton::DPadDown, 0 ) );
+    input.beginFrame( 0.016f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, inputMap.getAxis1D( "Zoom" ), 1.0e-5f );
+    input.endFrame();
+
+    const sw::string gamepadGlyph = inputMap.getGlyphForAction( "Zoom", sw::InputGlyphStyle::GamepadXbox );
+    SW_EXPECT_TRUE_MSG( gamepadGlyph.find( " / " ) != sw::string::npos, gamepadGlyph.c_str() );
+    SW_EXPECT_TRUE( inputMap.getGlyphForAction( "Zoom", sw::InputGlyphStyle::KeyboardMouse ) == "[ Mouse Wheel ]" );
+
+    const sw::string savedDefinitionPath = test::makeTempPath( "axis_gamepad_saved.input.xml" );
+    SW_ASSERT_TRUE( inputMap.saveToResource( savedDefinitionPath ) );
+    sw::InputMap reloadedDefinition;
+    SW_ASSERT_TRUE( reloadedDefinition.loadFromResource( savedDefinitionPath ) );
+    const sw::ActionBinding* pReloaded = reloadedDefinition.getBinding( "Zoom", 0 );
+    SW_ASSERT_NOT_NULL( pReloaded );
+    SW_EXPECT_TRUE( pReloaded->_arrSlot[1] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadUp, 1 ) );
+
+    const sw::string userPath = test::makeTempPath( "axis_gamepad_user.xml" );
+    SW_ASSERT_TRUE( inputMap.saveUserBindings( userPath ) );
+    sw::InputMap reloadedUser;
+    SW_ASSERT_TRUE( reloadedUser.loadUserBindings( userPath ) );
+    const sw::ActionBinding* pUser = reloadedUser.getBinding( "Zoom", 0 );
+    SW_ASSERT_NOT_NULL( pUser );
+    SW_EXPECT_TRUE( pUser->_arrSlot[0] == sw::InputSlot::fromGamepadButton( sw::GamepadButton::DPadDown, 1 ) );
 
     input.shutdown();
 }

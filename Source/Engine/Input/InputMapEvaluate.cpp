@@ -147,7 +147,7 @@ namespace sw
 
                 if ( bRawDown )
                 {
-                    float2& accumulator = binding._kind == BindingKind::MouseDelta2D ? relativeValue : totalAccumValue;
+                    float2& accumulator = BindingKinds::isRelative( binding._kind ) ? relativeValue : totalAccumValue;
                     accumulator._x += bindingValue._x;
                     accumulator._y += bindingValue._y;
                 }

@@ -137,6 +137,9 @@ const sw::float2 move = inputMap.getVector2D( "Move" );
 를 씁니다(예: `Resource/game/shooter3d/data/shooter.input.xml`). **마우스 이동량(`MouseDelta2D`)은 픽셀 단위 상대값이라 액션 값이 [-1, 1] 로 묶이지 않습니다** —
 축 · 버튼 · 스틱 몫만 반전 뒤 묶이고(또는 원으로), 이동량은 그 위에 더해집니다. 축 반전은 이동량에 한 번만 걸립니다.
 **마우스 휠(`MouseWheel1D`)은 1D 축**입니다 — 굴린 프레임에만 한 칸 × `scale`(위가 +)이고 다음 프레임은 0 입니다(핫바 넘기기 — 언리얼 Mouse Wheel Axis).
+휠도 이동량이라 묶이지 않고(한 프레임 세 칸은 3) 시점 반전(`setInvertX`)이 확대 · 핫바 방향을 뒤집지 않습니다(`BindingKinds::isRelative`).
+`<axis1d source="gamepad" negative="DPadDown" positive="DPadUp" [pad]/>` 는 게임패드 버튼 둘을 한 축으로 묶습니다 — 휠과 같은 액션(`Camera.Zoom`)을
+패드로도 냅니다(언리얼 Enhanced Input 의 Axis1D 액션 + 한쪽 Negate 버튼). `source` 를 적지 않으면 키 이름입니다.
 액션의 `trigger` 는 `<bind>` · `<chord>` · `<axis1d>` 에 갑니다 — `<axis1d>` 는 적지 않으면 `Down`(축을 매 프레임 읽는 쓰임)이고 `Pressed` 면 누를 때마다
 한 번 발화합니다(무기 교체). 축 값(`getAxis1D`)은 trigger 와 관계없이 누르는 동안 읽힙니다. 연속 값(`vector2d` · `stick` · `mouseDelta`)은 `Down` 고정이라 다른 trigger 는 로드 경고입니다.
 

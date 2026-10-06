@@ -98,6 +98,8 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
+                        if ( isKeyboardOrMouseSlot( binding._arrSlot[0] ) == false )
+                            return {};
                         return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
                     }
                     case BindingKind::Vector2DComposite:
@@ -173,8 +175,13 @@ namespace sw
                     {
                         return "[ Any Button ]";
                     }
-                    case BindingKind::Axis1DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
-                    case BindingKind::Vector2DComposite:
+                    case BindingKind::Axis1DComposite:
+                    {
+                        if ( binding._arrSlot[0]._deviceKind != InputDeviceKind::Gamepad )
+                            return {};
+                        return string( "[ " ) + slotToGlyph( binding._arrSlot[0], device ) + " / " + slotToGlyph( binding._arrSlot[1], device ) + " ]";
+                    }
+                    case BindingKind::Vector2DComposite: // 키보드 · 마우스 전용 종류 — 게임패드 표기가 없다
                     case BindingKind::MouseDelta2D:
                     case BindingKind::MouseWheel1D:
                     case BindingKind::VirtualJoystick2D:

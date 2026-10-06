@@ -38,22 +38,23 @@ namespace sw
             const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
             uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯(`BindingKinds::kNoRebindSlot` = 키 하나로는 못 바꾼다).
+            bool        _bRelative;         ///< 이번 프레임 이동량이다(묶지 않고 액션 값 단계에서 반전하지 않는다 — `BindingKinds::isRelative`).
         };
 
         constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
 
         // 종류를 더하면 **여기 한 줄**이다. 빠뜨리면 아래 static_assert 가 컴파일을 세운다.
         constexpr BindingKindInfo kArrBindingKindInfo[] = {
-            {       BindingKind::SingleSlot,          "single", 1,         0},
-            {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind},
-            {BindingKind::Vector2DComposite,        "vector2d", 4, kNoRebind},
-            {   BindingKind::GamepadStick2D,           "stick", 0, kNoRebind},
-            {            BindingKind::Chord,           "chord", 2,         1},
-            {     BindingKind::MouseDelta2D,      "mouseDelta", 0, kNoRebind},
-            {         BindingKind::Shortcut,        "shortcut", 1,         0},
-            {           BindingKind::AnyKey,          "anyKey", 0, kNoRebind},
-            {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind},
-            {     BindingKind::MouseWheel1D,      "mouseWheel", 0, kNoRebind},
+            {       BindingKind::SingleSlot,          "single", 1,         0, false},
+            {  BindingKind::Axis1DComposite,          "axis1d", 2, kNoRebind, false},
+            {BindingKind::Vector2DComposite,        "vector2d", 4, kNoRebind, false},
+            {   BindingKind::GamepadStick2D,           "stick", 0, kNoRebind, false},
+            {            BindingKind::Chord,           "chord", 2,         1, false},
+            {     BindingKind::MouseDelta2D,      "mouseDelta", 0, kNoRebind,  true},
+            {         BindingKind::Shortcut,        "shortcut", 1,         0, false},
+            {           BindingKind::AnyKey,          "anyKey", 0, kNoRebind, false},
+            {BindingKind::VirtualJoystick2D, "virtualJoystick", 1, kNoRebind, false},
+            {     BindingKind::MouseWheel1D,      "mouseWheel", 0, kNoRebind,  true},
         };
 
         static_assert( sizeof( kArrBindingKindInfo ) / sizeof( kArrBindingKindInfo[0] ) == static_cast<size_t>( BindingKind::Count ),
@@ -120,6 +121,12 @@ namespace sw
     {
         const BindingKindInfo* pInfo = findBindingKindInfo( kind );
         return ( pInfo != nullptr ) ? pInfo->_conflictSlotCount : 0;
+    }
+
+    bool BindingKinds::isRelative( BindingKind kind )
+    {
+        const BindingKindInfo* pInfo = findBindingKindInfo( kind );
+        return pInfo != nullptr && pInfo->_bRelative;
     }
 
     InputMap::InputMap()
@@ -241,12 +248,17 @@ namespace sw
 
     void InputMap::bindAxis1DComposite( const hashed_string& action, Key negativeKey, Key positiveKey, const hashed_string& layer, ActionTrigger trigger )
     {
+        bindAxis1DComposite( action, InputSlot::fromKey( negativeKey ), InputSlot::fromKey( positiveKey ), layer, trigger );
+    }
+
+    void InputMap::bindAxis1DComposite( const hashed_string& action, InputSlot negativeSlot, InputSlot positiveSlot, const hashed_string& layer, ActionTrigger trigger )
+    {
         if ( action.empty() )
             return;
 
         ActionBinding binding = beginBinding( action, BindingKind::Axis1DComposite, trigger, layer );
-        binding._arrSlot[0]   = InputSlot::fromKey( negativeKey );
-        binding._arrSlot[1]   = InputSlot::fromKey( positiveKey );
+        binding._arrSlot[0]   = negativeSlot;
+        binding._arrSlot[1]   = positiveSlot;
         commitBinding( action, InputActionValueType::Axis1D, binding );
     }
 
@@ -255,16 +267,19 @@ namespace sw
         const ActionEntry* pEntry = findAction( action );
         if ( pEntry == nullptr )
             return 0.0f;
-        float32 val = 0.0f;
+        float32 bounded  = 0.0f;
+        float32 relative = 0.0f;
         for ( const ActionBinding& binding : pEntry->_listBinding )
         {
             float2 bVal{ 0.0f, 0.0f };
-            if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bVal ) )
-                val += bVal._x;
+            if ( isBindingLayerActive( binding ) == false || evaluateBindingDown( binding, bVal ) == false )
+                continue;
+            float32& accumulator = BindingKinds::isRelative( binding._kind ) ? relative : bounded;
+            accumulator += bVal._x;
         }
         if ( _bInvertX == SW_TRUE )
-            val = -val;
-        return val < -1.0f ? -1.0f : ( val > 1.0f ? 1.0f : val );
+            bounded = -bounded;
+        return MathUtil::clamp( bounded, -1.0f, 1.0f ) + relative;
     }
 
     void InputMap::bindVector2D( const hashed_string& action, Key up, Key down, Key left, Key right, float32 deadzone, const hashed_string& layer )
@@ -308,7 +323,7 @@ namespace sw
             float2 bindingValue{ 0.0f, 0.0f };
             if ( isBindingLayerActive( binding ) && evaluateBindingDown( binding, bindingValue ) )
             {
-                float2& accumulator = binding._kind == BindingKind::MouseDelta2D ? relative : bounded;
+                float2& accumulator = BindingKinds::isRelative( binding._kind ) ? relative : bounded;
                 accumulator._x += bindingValue._x;
                 accumulator._y += bindingValue._y;
             }
