@@ -360,6 +360,8 @@ namespace sw
         void syncThemeSetting();
         /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
         void syncDemoScreen();
+        /** @brief `gv_benchUiWidgets` 를 보고 벤치 화면(`UiBenchScreen`)을 열고 닫습니다(칸 수가 바뀌면 다시 짓는다). */
+        void syncBenchScreen();
         /** @brief `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발 스위치 — 스크린샷 · 네 백엔드 확인). */
         void syncOptionsMenuSwitch();
         /** @brief 화면이 없을 때 `UI.Pause` 가 오면 일시정지 메뉴를 엽니다. */
@@ -424,6 +426,7 @@ namespace sw
         UiNavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UiScreenHandle               _activeScreen;
         UiScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
+        UiScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면(없으면 무효)
         UiScreenHandle               _markerScreen;        ///< 화면 마커를 담는 Hud 화면(없으면 무효)
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
         vector<UiScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호(프레임마다 다시 쓴다)

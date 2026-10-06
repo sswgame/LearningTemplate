@@ -23,6 +23,7 @@
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Debug/UiBenchScreen.h"
 #include "Engine/UI/Debug/UiDemoScreen.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
@@ -167,6 +168,7 @@ namespace sw
         , _stickDirection{ UiNavigationDirection::Next }
         , _activeScreen{ kInvalidUiScreenHandle }
         , _demoScreen{ kInvalidUiScreenHandle }
+        , _benchScreen{ kInvalidUiScreenHandle }
         , _markerScreen{ kInvalidUiScreenHandle }
         , _listWidgetComponent{}
         , _listTickScratch{}
@@ -235,6 +237,7 @@ namespace sw
         _listWidgetComponent.clear();
         _markerScreen = kInvalidUiScreenHandle;
         _demoScreen   = kInvalidUiScreenHandle;
+        _benchScreen  = kInvalidUiScreenHandle;
         _focus.clearFocus();
         while ( _listScreen.empty() == false )
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
@@ -278,6 +281,7 @@ namespace sw
         _viewport = viewport;
         syncThemeSetting();
         syncDemoScreen();
+        syncBenchScreen();
         syncOptionsMenuSwitch();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
@@ -1440,6 +1444,18 @@ namespace sw
             return;
         // 실행 중에 바꾼 값 — 모르는 이름은 setTheme 이 경고하고 지금 테마를 둔다(게임 테마 목록이 그 이름을 두지 않았다).
         (void)setTheme( hashed_string( setting ) );
+    }
+
+    void UiSystem::syncBenchScreen()
+    {
+        const uint32         wanted  = gv_benchUiWidgets > 0 ? static_cast<uint32>( gv_benchUiWidgets ) : 0u;
+        const UiBenchScreen* pBench  = static_cast<const UiBenchScreen*>( findScreen( _benchScreen ) );
+        const uint32         current = pBench != nullptr ? pBench->getCellCount() : 0u;
+        if ( wanted == current )
+            return;
+        if ( pBench != nullptr )
+            closeScreen( _benchScreen );
+        _benchScreen = wanted > 0 ? pushScreen( UiBenchScreen::create( wanted ) ) : kInvalidUiScreenHandle;
     }
 
     void UiSystem::syncDemoScreen()

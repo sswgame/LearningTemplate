@@ -26,6 +26,8 @@
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UI/World/WidgetComponent.h"
 
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Framework/MaterialTintCache.h"
@@ -203,6 +205,13 @@ namespace sw
      *          0.05% 흔들린다).
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchAnimate, 1, "벤치의 시간 구동 변화(회전·상하 이동·스케일) (0=멈춤, 픽셀 비교 검증용)" );
+
+    /**
+     * @brief `-gv_benchUiMarkers=K` — 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen — 숫자 글)를 붙입니다(데미지 숫자 광역 경우).
+     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UiBenchScreen`)와 함께 `GT.Ui.*` 로 잰다.
+     *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼입니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_benchMovePercent=<퍼센트>` — 프레임마다 위치·스케일을 다시 쓰는 큐브의 비율 (기본 100 = 전부).
@@ -776,6 +785,19 @@ namespace sw
         if ( gv_benchAnimate != 0 )
             pMesh->setGpuSpinSeed( index + 1u );
         pMesh->setVisible( true );
+
+        if ( gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers ) )
+        {
+            WidgetComponent* pMarker = pObject->addComponent<WidgetComponent>();
+            if ( pMarker != nullptr )
+            {
+                unique_ptr<TextWidget> number = make_unique<TextWidget>();
+                number->setText( to_string( 100u + index % 900u ) );
+                pMarker->setSpace( WidgetSpace::Screen );
+                pMarker->setWorldOffset( float3{ 0.0f, 1.0f, 0.0f } );
+                pMarker->setContent( std::move( number ) );
+            }
+        }
 
         // 틱 무버 — 첫 번째만 틱 안에서 위치·스케일을 쓴다(게임플레이의 보통 모양). 나머지는 틱만 돌아,
         // 한 오브젝트에 틱 컴포넌트가 여럿일 때의 디스패치 비용을 잰다.

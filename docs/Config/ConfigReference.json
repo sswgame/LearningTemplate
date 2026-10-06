@@ -2178,6 +2178,30 @@
    "source": "Source/Games/Empty/BenchScene.cpp"
   },
   {
+   "name": "gv_benchUiChurn",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "UI 벤치 — 프레임마다 글을 바꾸는 칸 수(앞쪽 보이는 칸 안에서 돈다)",
+   "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
+  },
+  {
+   "name": "gv_benchUiMarkers",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)",
+   "source": "Source/Games/Empty/BenchScene.cpp"
+  },
+  {
+   "name": "gv_benchUiWidgets",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험 · 배포본에도",
+   "description": "UI 벤치 — 격자 칸 수(칸마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)",
+   "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
+  },
+  {
    "name": "gv_benchViews",
    "type": "int32",
    "default": "0",
