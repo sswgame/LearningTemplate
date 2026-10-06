@@ -1511,6 +1511,8 @@ cd build/Ninja-Debug/Bin
 ### 3-8. 에디터
 
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
+- **위젯 크기에 픽셀 상수를 쓰지 않는다** — `GetFrameHeight` · 글자 폭에서 잰다. 24 px 고정 단추가 150 % 에서 잘렸다(`hierarchy.visibilityToggleFits`).
+  이름표 줄 바꿈은 `EditorWidgets::drawClampedLabel`(공백 · `_` · `-` · `.` 뒤에서 먼저, 넘치면 말줄임 + 툴팁) — ImGui TextWrap 은 공백만 본다.
 
 - **에디터가 UI 스레드에서 놓는 GPU 자원(ImGui 텍스처 · 게임 뷰 렌더 타깃)은 `EditorDrawReleaseQueue` 에 맡긴다** — 렌더 스레드는 같은 draw 스냅샷을 여러 패킷에
   다시 그리므로 UI 스레드에서 읽은 펜스 값으로는 모자란다. 그 스냅샷 번호 이상을 그리는 프레임에서 `IRHIDevice::enqueueGpuRelease`(렌더 스레드에서만)로 넘긴다.

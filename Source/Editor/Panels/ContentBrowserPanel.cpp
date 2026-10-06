@@ -35,6 +35,9 @@ namespace sw::editor
     {
         struct ContentBrowserPanelInternal
         {
+            /** @brief 타일 이름 줄 수 — 넘치면 마지막 줄을 말줄임한다(`EditorWidgets::drawClampedLabel`). */
+            static constexpr uint32 kTileLabelLineCount = 2;
+
             static ImVec4 colorForAsset( string_view path, bool bIsDirectory = false )
             {
                 const Color4 c = EditorThemeUtil::getAssetColorForPath( path, bIsDirectory );
@@ -714,8 +717,9 @@ namespace sw::editor
 
         const int32 itemCount = static_cast<int32>( listVisible.size() );
         const int32 rowCount  = ( itemCount + columns - 1 ) / columns;
-        // 버튼과 줄바꿈된 이름 줄(셀 + 텍스트 줄)
-        const float32 rowHeight = cell + ImGui::GetTextLineHeightWithSpacing() + paddingY;
+        // 버튼과 이름 줄(셀 + 이름 줄 수 — drawClampedLabel 은 늘 그 줄 수만큼 자리를 잡는다)
+        const float32 rowHeight = cell + ImGui::GetTextLineHeight() * static_cast<float32>( ContentBrowserPanelInternal::kTileLabelLineCount ) +
+                                  ImGui::GetStyle().ItemSpacing.y + paddingY;
 
         ImGuiListClipper clipper;
         clipper.Begin( rowCount, rowHeight );
@@ -758,9 +762,7 @@ namespace sw::editor
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
 
-                    ImGui::PushTextWrapPos( ImGui::GetCursorPos().x + cell );
-                    ImGui::TextUnformatted( entry._name.c_str() );
-                    ImGui::PopTextWrapPos();
+                    EditorWidgets::drawClampedLabel( entry._name, cell, ContentBrowserPanelInternal::kTileLabelLineCount );
                     ImGui::EndGroup();
 
                     ImGui::PopStyleColor( 2 );

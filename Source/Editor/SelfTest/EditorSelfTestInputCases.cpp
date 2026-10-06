@@ -21,6 +21,7 @@
 
 #include "sw/config/ConfigConstants.h"
 
+#include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -309,10 +310,56 @@ namespace sw::editor
                 moveMouseAway();
                 return EditorSelfTestStep::Done;
             }
+
+            // --------------------------------------------------------------------------------------------------
+            // hierarchy.visibilityToggleFits — Hierarchy 가시성 토글이 아이콘을 담는다(폭이 글꼴 · DPI 배율을 따른다)
+            // --------------------------------------------------------------------------------------------------
+            static uint64& getToggleProbeObjectId()
+            {
+                static uint64 s_objectId = 0;
+                return s_objectId;
+            }
+
+            static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
+            {
+                EditorContext*     pContext = EditorContext::get();
+                GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
+                uint64& objectId = getToggleProbeObjectId();
+                if ( context.getStepIndex() == 0 )
+                {
+                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만든다.
+                    GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
+                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                        return EditorSelfTestStep::Done;
+                    objectId = pObj->getObjectId();
+                    return EditorSelfTestStep::Continue;
+                }
+
+                EditorSelfTestMark mark{};
+                if ( context.expect( EditorSelfTestMarks::find( "hierarchy.activeToggle", mark ), "the hierarchy visibility toggle left no mark" ) )
+                {
+                    const float32 width     = mark._max._x - mark._min._x;
+                    const float32 height    = mark._max._y - mark._min._y;
+                    const float32 iconWidth = ImGui::CalcTextSize( ICON_FA_EYE_SLASH ).x;
+                    string        what{ "the visibility toggle (" };
+                    what += to_string( width ) + " px) is narrower than its icon (" + to_string( iconWidth ) + " px)";
+                    (void)context.expect( width >= iconWidth, what.c_str() );
+                    (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
+                }
+                GameObject* pObj = pManager->findGameObjectById( objectId );
+                if ( pObj != nullptr )
+                    pManager->destroyObject( pObj );
+                objectId = 0;
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
     SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::runHierarchySearchTyping );
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
     SW_EDITOR_SELF_TEST( ClassicDarkSwatch, "input.classicDarkSwatch", 1020, &EditorSelfTestInputCasesInternal::runClassicDarkSwatch );
+    SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::runVisibilityToggleFits );
 } // namespace sw::editor

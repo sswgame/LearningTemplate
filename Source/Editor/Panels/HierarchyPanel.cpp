@@ -25,6 +25,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -440,10 +441,12 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectId ) );
 
-                // 1) 가시성 토글 아이콘(눈)
-                bool bActive = pObj->isActiveInHierarchy();
-                if ( ImGui::Button( bActive ? "[V]" : "[.]", ImVec2{ 24.0f, 0.0f } ) )
+                // 1) 가시성 토글(눈) — 정사각 아이콘 단추라 DPI 배율을 받는다
+                const bool bActive = pObj->isActiveInHierarchy();
+                if ( EditorWidgets::drawToggleIconButton( "##active", bActive, ICON_FA_EYE, ICON_FA_EYE_SLASH, "Visible - click to deactivate",
+                                                          "Inactive - click to activate" ) )
                     pObj->setActive( bActive == false );
+                EditorSelfTestMarks::note( "hierarchy.activeToggle" );
                 ImGui::SameLine();
 
                 // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
