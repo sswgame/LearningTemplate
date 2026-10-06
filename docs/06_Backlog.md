@@ -766,6 +766,7 @@ cd build/Ninja-Debug/Bin
 - **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
 - **Win32 는 W 판을 이름으로 부른다** — 이 저장소는 UNICODE 를 정의하지 않아 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)은 A 판이다. W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목이 "S" 한 글자였다(`WindowTest.TitleReachesTheOsAsUtf16`). 게이트 `CheckWin32WideCalls.py`, `IDC_*` 는 `reinterpret_cast<LPCWSTR>` 로 넘긴다. 전역 UNICODE 정의(언리얼)는 대상마다 정의가 빠지면 말없이 A 로 돌아가 택하지 않았다.
 - **A 판도 부르지 않는다 — 실행 파일 매니페스트에 기대지 않는다** — 모든 실행 파일은 `WindowsProcess.manifest` 의 `activeCodePage=UTF-8` 로 ANSI 코드 페이지가 UTF-8 이라 A 판에 UTF-8 경로를 넘겨도 지금은 통한다(한글 폴더 시험 `FileTest.DynamicLibraryLoadsFromANonAsciiFolder` · `CrashReportTest.ReportFolderWithANonAsciiNameReceivesTheFiles` 가 고치기 전에도 통과). 매니페스트가 없는 호스트(남의 프로세스에 올라간 Engine.dll · 1903 이전 Windows)에서는 깨지므로 `CheckWin32WideCalls` 가 A 판 호출도 막는다(예외 `OutputDebugStringA`). 크래시 경로는 힙 없이 스택 버퍼 + `MultiByteToWideChar` 로 바꾼다.
+- **X11 창 제목은 `_NET_WM_NAME`(UTF8_STRING)까지 적는다** — `XStoreName` 은 Latin-1 이라 한글 제목이 깨진다. 확인 시험은 없다(WindowTest 는 host 스위트라 CI 가 못 돌리고, 시험 실행 파일이 libX11 을 직접 링크하지 않는다) — 리눅스 기계에서 `xprop _NET_WM_NAME` 으로 본다.
   올라온 이미지는 이름이 아니라 주소로 찾는다(`ModuleBuildId::find( &함수 )._modulePath`) — `Engine.dll` 을 글자로 찾던 시험이 리눅스(`Lib/libEngine.so`)에서
   늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
 - **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).

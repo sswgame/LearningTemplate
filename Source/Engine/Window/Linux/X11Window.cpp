@@ -60,7 +60,14 @@ namespace sw
             _restoreX, _restoreY, width, height,
             1, black, white );
 
-        XStoreName( pDisplay, win, pTitle != nullptr ? pTitle : "" );
+        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다 — 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
+        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 옛 창 관리자 몫).
+        const utf8* pTitleText = pTitle != nullptr ? pTitle : "";
+        XStoreName( pDisplay, win, pTitleText );
+        const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
+        const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
+        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( pTitleText ),
+                         static_cast<int32>( StringUtil::strlen( pTitleText ) ) );
 
         Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
         XSetWMProtocols( pDisplay, win, &wmDeleteMessage, 1 );
