@@ -9,6 +9,7 @@ Windows Defender 제외 목록에 등록하고 파일 잠금을 해제합니다.
 
 from __future__ import annotations
 
+import argparse
 import ctypes
 import sys
 from pathlib import Path
@@ -87,7 +88,8 @@ def addDefenderExclusions() -> None:
     input("\n엔터 키를 누르면 창이 닫힙니다...")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="Windows Defender 실시간 감시에서 이 저장소 · 빌드 도구를 뺀다(관리자 권한을 요청한다) — 인자 없음").parse_args(argv)
     if sys.platform != "win32":
         print("[안내] 이 스크립트는 Windows 전용입니다.")
         return 0

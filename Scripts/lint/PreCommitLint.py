@@ -21,6 +21,7 @@ C++ 파일이 staged 됐을 때만 돌리면 **`.cmake` 나 `.py` 만 커밋할 
 
 from __future__ import annotations
 
+import argparse
 import sys
 from fnmatch import fnmatch
 from pathlib import Path
@@ -177,7 +178,8 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
     return True
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="Git staged 파일에 커밋 전 검사(게이트 · 픽서 · clang-format · 셰이더)를 돌린다 — 인자 없음").parse_args(argv)
 
     projectRoot = getProjectRoot()
     allStagedFiles = getAllStagedFiles(projectRoot)

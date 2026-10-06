@@ -193,6 +193,11 @@ py -3 -m Scripts vcpkg                # vcpkg 탐색 및 부트스트랩 (SetupV
 py -3 -m Scripts llvm                 # LLVM/Clang 탐색 및 설정 (SetupLlvm)
 py -3 -m Scripts format               # C++ 코드 clang-format 자동 포맷팅 (FormatClangFormat) — 파일을 고르면 `--files a.cpp b.h`(게이트와 같은 철자)
 py -3 -m Scripts lint                 # Staged 파일 대상 사전 커밋 린트 검사 (PreCommitLint)
+py -3 -m Scripts gate                 # lint/gate/ 의 이름 목록 — 폴더 명령 넷은 이름 표가 아니라 폴더를 훑는다
+py -3 -m Scripts gate CheckEngineLayers --files Source/Engine/Scene/Scene.h   # 게이트 하나
+py -3 -m Scripts fix FormatIncludeOrder --files Source/Engine/Scene/Scene.cpp # 픽서 하나(lint/fixer/)
+py -3 -m Scripts report RunBuildScriptInventory   # 보고서 하나(lint/report/)
+py -3 -m Scripts selftest CheckLintsAreAlive      # 셀프테스트 하나(lint/selftest/)
 py -3 -m Scripts docs                 # Doxygen API 레퍼런스 문서 생성 (GenerateDocs)
 py -3 -m Scripts test SceneTest.*     # 스위트 · 케이스 이름으로 테스트 실행 (RunTests)
 py -3 -m Scripts validate-assets      # 에셋 검증 표 (ValidateAssets) — `--severity error` 는 게이트와 같은 판정

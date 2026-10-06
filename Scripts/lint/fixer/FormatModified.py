@@ -9,6 +9,7 @@ Git 작업 트리에서 수정되거나 새로 추가된(Untracked 포함) C++ �
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -28,7 +29,8 @@ from common import getModifiedCppFiles, getProjectRoot, runClangFormatBatch
 kFixerSkipReason = "픽서가 아니라 픽서 넷(include 순서 · namespace 블록 · 전방 선언 · 분기 중괄호)과 clang-format 을 순서대로 부르는 조율자다"
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    argparse.ArgumentParser(description="작업 트리의 변경된 C++ 파일에 픽서 넷과 clang-format 을 순서대로 — 인자 없음").parse_args(argv)
 
     projectRoot = getProjectRoot()
     modifiedFiles = getModifiedCppFiles(projectRoot)
