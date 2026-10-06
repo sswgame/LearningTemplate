@@ -26,9 +26,11 @@
 #include "GameFramework/Base/Combat/HealthListenerComponent.h"
 #include "GameFramework/Base/Control/AiControllerComponent.h"
 #include "GameFramework/Base/Control/CharacterPawnMovementComponent.h"
+#include "GameFramework/Base/Control/ControlIntent.h"
 #include "GameFramework/Base/Control/ControlSystem.h"
 #include "GameFramework/Base/Control/PawnComponent.h"
 #include "GameFramework/Base/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Vehicle/ArcadeVehicleComponent.h"
 #include "GameFramework/Base/Vehicle/MountInteractionComponent.h"
 #include "GameFramework/Base/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Base/Vehicle/MountUtil.h"
@@ -140,6 +142,20 @@ namespace
         }
 
         static float3 findPosition( const GameObject& object ) { return object.getPrimarySceneComponent()->getWorldPosition(); }
+
+        /** @brief 아케이드 차 — 루트 · 폰(버튼 Exit) · 운전석 · 내리기 버튼 · 아케이드 차 이동입니다. */
+        static GameObject* spawnKart( GameObjectManager& manager, const utf8* pName, const float3& position )
+        {
+            GameObject*     pObject = manager.createGameObject( hashed_string( pName ) );
+            SceneComponent* pRoot   = pObject->addComponent<SceneComponent>();
+            pRoot->setWorldPosition( position );
+            pObject->addComponent<PawnComponent>()->setButtonNames( vector<hashed_string>{ hashed_string( "Exit" ) } );
+            VehicleSeatComponent* pSeat = pObject->addComponent<VehicleSeatComponent>();
+            pSeat->setSeatOffset( float3{ 0.0f, 0.6f, 0.0f } );
+            pObject->addComponent<VehicleExitComponent>();
+            pObject->addComponent<ArcadeVehicleComponent>();
+            return pObject;
+        }
     };
 
     struct MountHorseTestInternal
@@ -522,6 +538,89 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         Internal::tapKey( manager, input, Key::F );
         SW_EXPECT_TRUE( pPlayer->getPawn() == pPlayerRider->getComponent<PawnComponent>()->getHandle() );
         SW_EXPECT_TRUE( pHorseAi->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [MountTest] 아케이드 차는 의도로 간다 — 앞 의도 60 프레임이면 앞으로 달리고, 옆 의도를 섞으면 그쪽으로 돈다, 뒤 의도는 브레이크 · 후진
+ */
+SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
+{
+    ControlIntent forward;
+    forward._move                     = float2{ 0.0f, 1.0f };
+    const ArcadeVehicleInput straight = ArcadeVehicleComponent::toVehicleInput( forward, 0.0f, -1, -1, -1 );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, straight._throttle, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, straight._steer, 1.0e-6f );
+    // 차가 오른쪽(+X)을 보고 있으면 같은 의도(+Z 로 가고 싶다)는 왼쪽 조향이다.
+    const ArcadeVehicleInput turned = ArcadeVehicleComponent::toVehicleInput( forward, MathUtil::kHalfPi, -1, -1, -1 );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, turned._throttle, 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, turned._steer, 1.0e-5f );
+
+    using Internal = MountTestInternal;
+    GameObjectManager manager;
+    Internal::spawnFloor( manager );
+    GameObject* pCar = manager.createGameObject( hashed_string( "Kart" ) );
+    pCar->addComponent<SceneComponent>();
+    pCar->addComponent<PawnComponent>();
+    ArcadeVehicleComponent* pVehicle = pCar->addComponent<ArcadeVehicleComponent>();
+    auto*                   pDriver  = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AiControllerComponent>();
+    manager.beginPlay();
+    pDriver->possess( *pCar->getComponent<PawnComponent>() );
+    pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
+    for ( uint32 frame = 0; frame < 60; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pVehicle->getMotor().getForwardSpeed() > 5.0f );
+    SW_EXPECT_TRUE( Internal::findPosition( *pCar )._z > 3.0f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pVehicle->getMotor().getYaw(), 1.0e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::findPosition( *pCar )._y, 1.0e-3f ); // 땅은 물리 바닥(윗면 0)
+
+    // 오른쪽 앞의 목적지 — 차가 오른쪽으로 돈다.
+    pDriver->moveTo( float3{ 100.0f, 0.0f, Internal::findPosition( *pCar )._z + 100.0f } );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE( pVehicle->getMotor().getYaw() > 0.1f );
+}
+
+/**
+ * @brief [MountTest] 플레이어(E 로 타고 W)와 AI(mount 로 타고 앞의 목적지)가 같은 의도로 아케이드 차를 몰면 매 프레임 같은 선을 간다
+ */
+SW_TEST_CASE( MountTest, PlayerAndAiDriveTheSameLine )
+{
+    using Internal = MountTestInternal;
+    InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    Internal::bindKeys( input );
+    {
+        GameObjectManager manager;
+        Internal::spawnFloor( manager );
+        GameObject* pPlayerRider = Internal::spawnRider( manager, "PlayerRider", float3{ -6.0f, 0.05f, 0.0f } );
+        GameObject* pAiRider     = Internal::spawnRider( manager, "AiRider", float3{ 6.0f, 0.05f, 0.0f } );
+        GameObject* pPlayerKart  = Internal::spawnKart( manager, "PlayerKart", float3{ -4.5f, 0.0f, 0.0f } );
+        GameObject* pAiKart      = Internal::spawnKart( manager, "AiKart", float3{ 7.5f, 0.0f, 0.0f } );
+        auto*       pPlayer      = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
+        auto*       pAi          = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+        ControlSystem::ensureFor( manager ).setInputManager( &input );
+        manager.beginPlay();
+        pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
+        pAi->possess( *pAiRider->getComponent<PawnComponent>() );
+        Internal::tick( manager, input );
+        Internal::tapKey( manager, input, Key::E );
+        SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerKart->getComponent<PawnComponent>()->getHandle() );
+        SW_ASSERT_TRUE( MountUtil::mount( *pAiRider->getComponent<PawnComponent>(), *pAiKart->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+        pAi->moveTo( float3{ 7.5f, 0.0f, 1000.0f } );
+
+        (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
+        for ( uint32 frame = 0; frame < 60; ++frame )
+        {
+            Internal::tick( manager, input );
+            const float3 playerAt = Internal::findPosition( *pPlayerKart );
+            const float3 aiAt     = Internal::findPosition( *pAiKart );
+            SW_EXPECT_TRUE_MSG( playerAt._z == aiAt._z && playerAt._x + 12.0f == aiAt._x,
+                                ( "frame " + std::to_string( frame ) + " player " + std::to_string( playerAt._z ) + " ai " + std::to_string( aiAt._z ) ).c_str() );
+        }
+        SW_EXPECT_TRUE( Internal::findPosition( *pAiKart )._z > 5.0f );
+        SW_EXPECT_NEAR_EQUAL( Internal::findPosition( *pAiKart )._z, Internal::findPosition( *pAiRider )._z, 1.0e-3f );
     }
     input.shutdown();
 }
