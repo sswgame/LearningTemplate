@@ -56,7 +56,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments  # noqa: E402
+from common import blankComments, collectRepositoryFiles  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTestRoot = "Test"
@@ -84,11 +84,16 @@ _kEngineNamespaceRe = re.compile(r"\bengine::\w+")
 _kDocBlockTagRe = re.compile(r"@brief\s+\[(\w+)\]")
 
 
+def listTestSourceInternal(rootDir: Path) -> list[Path]:
+    """`Test/` 아래 .cpp 전부(빌드 산출물 · 생성 폴더로는 내려가지 않는다 — `collectRepositoryFiles`)."""
+    return collectRepositoryFiles(rootDir, (_kTestRoot,), suffixes=(".cpp",))
+
+
 def collectCases(rootDir: Path) -> tuple[list[tuple[str, str, str]], list[str]]:
     """(스위트, 케이스, 저장소 상대 경로) 전부와, 파싱이 놓친 자리."""
     out: list[tuple[str, str, str]] = []
     missed: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         parsed = list(_kCaseRe.finditer(text))
@@ -104,7 +109,7 @@ def collectMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]], list[str]
     """(스위트 -> (파일, 이유), 오류들). 선언은 그 스위트가 사는 파일에 둔다."""
     out: dict[str, tuple[str, str]] = {}
     errors: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         parsed = list(_kMarkerRe.finditer(text))
@@ -124,7 +129,7 @@ def collectEnvironmentMarkers(rootDir: Path) -> tuple[dict[str, tuple[str, str]]
     """(스위트 -> (파일, 이유), 오류들) — `SW_TEST_REQUIRES_ENVIRONMENT` 선언."""
     out: dict[str, tuple[str, str]] = {}
     errors: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         text = path.read_text(encoding="utf-8", errors="ignore")
         parsed = list(_kEnvironmentMarkerRe.finditer(text))
@@ -205,7 +210,7 @@ def checkCoreTestIsEngineFree(rootDir: Path) -> list[str]:
 def checkTestDocBlocks(rootDir: Path) -> list[str]:
     """태그(`@brief [스위트]`)를 단 doc 블록이 자기 `SW_TEST_CASE` 바로 위에 있고 태그가 그 스위트인지 봅니다."""
     errors: list[str] = []
-    for path in sorted((rootDir / _kTestRoot).rglob("*.cpp")):
+    for path in listTestSourceInternal(rootDir):
         relPath = path.relative_to(rootDir).as_posix()
         lines = path.read_text(encoding="utf-8", errors="ignore").split("\n")
         lineIndex = 0

@@ -24,7 +24,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath, readTextFiles  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kNetworkPrefix = "Core/Network/"
@@ -76,7 +76,7 @@ def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> 
     listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=("Source/Core/Network",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
     fileCount = 0
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         if relative.startswith(_kSourceNetworkPrefix) is False:
             continue

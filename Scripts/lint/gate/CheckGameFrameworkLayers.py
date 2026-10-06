@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, kDirSourceGameFramework, readTextFiles  # noqa: E402
+from common import collectSourceFiles, kDirSourceGameFramework  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
@@ -241,7 +241,7 @@ class CheckGameFrameworkLayersGate(LintGate):
             raise GateError(f"GameFramework 경로 없음: {gameFrameworkDir}")
         listPath = collectSourceFiles([gameFrameworkDir])
         listViolation: list[str] = []
-        for path, text in readTextFiles(listPath, errors="strict"):
+        for path, text in LintGate.readFiles(listPath, errors="strict"):
             listViolation.extend(checkFileInternal(path.relative_to(repositoryRoot).as_posix(), text))
         return GateResult(listViolation=listViolation, summary=f"{len(listPath)} files, {len(_kBaseTier)} base folders")
 

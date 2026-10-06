@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, normalizePath, readTextFiles  # noqa: E402
+from common import collectSourceFiles, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
@@ -93,7 +93,7 @@ def collectUses(repositoryRoot: Path) -> tuple[list[GlobalVariableUse], list[Glo
     listExtern: list[GlobalVariableUse] = []
     listPath = collectSourceFiles([repositoryRoot / r for r in _kListScanRoot], {".cpp", ".h", ".inl"})
     # 매크로 이름이 없는 파일은 주석 · 문자열을 지워 봐야 나올 것이 없다 — 천여 파일 중 수십 개만 남는다.
-    for path, rawText in readTextFiles(listPath, mustContain="GLOBAL_VARIABLE"):
+    for path, rawText in LintGate.readFiles(listPath, mustContain="GLOBAL_VARIABLE"):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         if "/ThirdParty/" in f"/{relative}":
             continue

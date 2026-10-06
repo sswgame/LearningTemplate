@@ -221,13 +221,14 @@ class LintGate:
                                     excludedDirNames=excludedDirNames, bAnySuffix=bAnySuffix)
 
     @staticmethod
-    def readFiles(listPath: Iterable[Path], *, mustContain: str | None = None) -> list[tuple[Path, str]]:
+    def readFiles(listPath: Iterable[Path], *, encoding: str = "utf-8", errors: str = "replace",
+                  mustContain: str | None = None) -> list[tuple[Path, str]]:
         """
         게이트가 파일 내용을 읽는 **창구** — 지금은 `common.readTextFiles`(동시 읽기 · `mustContain` 앞 거르기)를 그대로 부른다.
         한 번 읽어 여러 게이트가 나눠 쓰기 · 내용 해시 캐시를 얹을 자리는 이 메서드와 `selectTargetFiles` 둘이다 — 게이트가 `open()` ·
         `read_text()` 를 직접 부르면 그 최적화를 비켜 간다.
         """
-        return readTextFiles(listPath, mustContain=mustContain)
+        return readTextFiles(listPath, encoding=encoding, errors=errors, mustContain=mustContain)
 
     @staticmethod
     def printListInternal(lines: list[str], maxShown: int) -> None:

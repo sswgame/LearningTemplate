@@ -25,7 +25,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source", "Test", "Tools/ReflectionParser")
@@ -83,7 +83,7 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
     """Win32 일반 이름 · `A` 판을 부르는 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         if _kGenericCallRe.search(text) is None:
             continue
         relative = normalizePath(str(path.relative_to(repositoryRoot)))

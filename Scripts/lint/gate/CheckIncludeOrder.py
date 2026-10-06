@@ -19,7 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectRepositoryFiles, collectSourceFiles, flatMapConcurrent, getLintSearchDirs, kCppSourceExtensions  # noqa: E402
+from common import collectRepositoryFiles, flatMapConcurrent, kCppAllExtensions, kCppSourceExtensions, kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s+([<"])([^>"]+)[>"]', re.MULTILINE)
@@ -356,11 +356,7 @@ class CheckIncludeOrderGate(LintGate):
                             help="검사할 파일 (생략 시 전체). 헤더 조회표는 어차피 전체를 봐야 만들어진다")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        if args.files:
-            allFiles = [Path(item).resolve() for item in args.files]
-            allFiles = [path for path in allFiles if path.is_file()]
-        else:
-            allFiles = collectSourceFiles(getLintSearchDirs(repositoryRoot))
+        allFiles = self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=kLintTargetRelDirs, suffixes=kCppAllExtensions)
 
         sourceHeaderMap, testHeaderMap, toolsHeaderMap = buildHeaderLookupMap(repositoryRoot)
 

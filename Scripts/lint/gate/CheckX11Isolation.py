@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath, readTextFiles  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: X11 매크로를 정의하는 시스템 헤더의 접두어입니다.
@@ -86,7 +86,7 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
 def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
     listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         listViolation.extend(findViolationsInFile(relative, text))
     return listViolation

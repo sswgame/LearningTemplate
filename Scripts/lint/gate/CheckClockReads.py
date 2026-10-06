@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · gate
 
-from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source", "Test", "Tools/ReflectionParser", "Tools/OnlineLoadBot")
@@ -46,7 +46,7 @@ def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
     """예외 밖에서 std 시계 이름을 쓰는 줄과, 더는 std 시계를 읽지 않는 예외 파일을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         bExempt = relative in _kMapExemptFileToReason
         listCodeMatch: list[tuple[int, str]] = []

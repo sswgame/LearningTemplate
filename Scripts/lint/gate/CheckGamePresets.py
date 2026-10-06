@@ -27,11 +27,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common import kDirRuntimeGamePreset, kDirSourceGames  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-#: 게임 프리셋 폴더(Constants.py 의 kDirRuntimeGamePreset 와 같다).
-_kPresetFolder = "Config/Game"
-_kGamesFolder = "Source/Games"
+_kPresetFolder = kDirRuntimeGamePreset
+_kGamesFolder = kDirSourceGames
 #: 기본 게임 — CMake 프리셋 `Ninja-Debug` 가 그것이다.
 _kDefaultGame = "Empty"
 _kGamePresetPrefix = "Ninja-Debug-"

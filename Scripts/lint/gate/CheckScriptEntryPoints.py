@@ -26,7 +26,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import readTextFiles  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 콘솔을 UTF-8 로 맞추는 패키지 — import 하는 것만으로 맞춰진다.
@@ -85,7 +84,7 @@ class ScriptModuleGraph:
         self._mapStemToPath: dict[str, list[Path]] = {}
         self._mapPathToReach: dict[Path, bool] = {}
         self.listParseError: list[str] = []
-        for path, text in readTextFiles(listPath):
+        for path, text in LintGate.readFiles(listPath):
             resolved = path.resolve()
             try:
                 tree = ast.parse(text, filename=str(path))

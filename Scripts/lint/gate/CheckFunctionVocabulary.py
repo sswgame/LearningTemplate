@@ -166,20 +166,6 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
     return violations
 
 
-def collectHeadersInternal(repositoryRoot: Path, explicitFiles: list[str] | None) -> list[Path]:
-    # `--files` 를 빈 목록으로 준 것(= staged 헤더 없음)과 아예 주지 않은 것(= 전수 검사)은 다르다.
-    if explicitFiles is not None:
-        return [Path(one).resolve() for one in explicitFiles if one.endswith(_kHeaderSuffix)]
-    found: list[Path] = []
-    for scanRoot in _kScanRoots:
-        rootPath = repositoryRoot / scanRoot
-        if not rootPath.is_dir():
-            continue
-        for suffix in _kHeaderSuffix:
-            found.extend(rootPath.rglob(f"*{suffix}"))
-    return sorted(found)
-
-
 class CheckFunctionVocabularyGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
 
@@ -221,7 +207,9 @@ class CheckFunctionVocabularyGate(LintGate):
         parser.add_argument("--files", nargs="*", default=None, help="이 파일들만 검사 (pre-commit 용)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        headers = collectHeadersInternal(repositoryRoot, args.files)
+        # `--files` 를 빈 목록으로 준 것(= staged 헤더 없음)과 아예 주지 않은 것(= 전수 검사)은 다르다.
+        headers = [] if args.files == [] else self.selectTargetFiles(repositoryRoot, args.files, listScanRoot=_kScanRoots,
+                                                                     suffixes=_kHeaderSuffix)
         if not headers:
             return GateResult(summary="검사할 헤더가 없습니다")
 

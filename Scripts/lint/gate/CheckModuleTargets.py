@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath, readTextFiles  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kTargetWords = ("Client", "Server")
@@ -158,7 +158,7 @@ def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) ->
     resolvedRoot = repositoryRoot.resolve()
     listPath = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         owner = findOwner(listAllOwner, relative)
         if owner is None:

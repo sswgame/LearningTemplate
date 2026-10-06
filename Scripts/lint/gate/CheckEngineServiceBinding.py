@@ -41,7 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectRepositoryFiles, readTextFiles  # noqa: E402
+from common import collectRepositoryFiles  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kServiceListPath = "Source/RuntimeAPI/Service/EngineServiceList.xxx"
@@ -94,7 +94,7 @@ def findBindingHosts(rootDir: Path) -> list[Path]:
     """`bindEngineServices(` 를 부르는 소스 파일들. 선언만 있는 헤더·정의 파일은 뺀다."""
     listHost: list[Path] = []
     listPath = collectRepositoryFiles(rootDir, _kHostSearchRoot, suffixes=(".cpp",))
-    for path, text in readTextFiles(listPath, errors="ignore", mustContain="bindEngineServices"):
+    for path, text in LintGate.readFiles(listPath, errors="ignore", mustContain="bindEngineServices"):
         if _kBindCall.search(text) is None:
             continue
         # 정의 자신(EngineServices.cpp)은 채우는 쪽이 아니다.

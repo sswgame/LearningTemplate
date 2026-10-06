@@ -45,14 +45,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 from common import (  # noqa: E402
     collectRepositoryFiles,
-    collectSourceFiles,
-    flatMapConcurrent,
     flatMapInProcesses,
-    getLintSearchDirs,
     getProjectRoot,
     kCppAllExtensions,
     kCppHeaderExtensions,
     kCppSourceExtensions,
+    kLintTargetRelDirs,
+    kNotOurDirNames,
     normalizePath,
 )
 from LintGate import GateResult, LintGate  # noqa: E402
@@ -3108,8 +3107,9 @@ def runConventionsCheckInternal(rootDir: Path | None, specificFiles: list[str] |
         allViolations.extend(flatMapInProcesses(checkFileTargetInternal, listTarget))
         return allViolations
 
-    searchDirs = getLintSearchDirs(projectRoot)
-    filesToScan = collectSourceFiles(searchDirs, excludeSubdirs=_kExcludedDirNames)
+    # 전체 스캔의 대상 고르기는 게이트 · 픽서와 같은 걷기(`collectRepositoryFiles` — 빌드 산출물 · 내려받은 도구로 내려가지 않는다).
+    filesToScan = collectRepositoryFiles(projectRoot, kLintTargetRelDirs, suffixes=kCppAllExtensions,
+                                         excludedDirNames=kNotOurDirNames | _kExcludedDirNames)
     # 파일별 검사는 파이썬 정규식이 대부분이라 스레드로는 한 코어다 — 프로세스 덩어리로 나눈다(`flatMapInProcesses`, 7.5 → 2.3 s).
     allViolations.extend(
         flatMapInProcesses(functools.partial(checkFileConventionsInternal, rootDir=projectRoot), filesToScan)

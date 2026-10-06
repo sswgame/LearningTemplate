@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath, readTextFiles  # noqa: E402
+from common import normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 
@@ -81,7 +81,7 @@ def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | No
     """백엔드 폴더 밖에서 감싼 라이브러리 헤더를 include 하는 줄입니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         for lineNumber, line in enumerate(text.splitlines(), start=1):
             match = _kIncludeRe.match(line)
@@ -115,7 +115,7 @@ def findLinkViolations(repositoryRoot: Path, listFileArgument: list[str] | None)
     listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListCmakeRoot, suffixes=_kCmakeSuffixes,
                                           fileNames=_kCmakeFileNames)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         if relative.startswith("ThirdParty/"):
             continue

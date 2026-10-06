@@ -31,7 +31,7 @@ from typing import NamedTuple
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals, normalizePath, readTextFiles  # noqa: E402
+from common import blankCommentsAndLiterals, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source", "Tools/ReflectionParser", "Resource/engine/shaders", "Resource/common/shaders")
@@ -77,7 +77,7 @@ def findWellKnownLiterals(repositoryRoot: Path, listTargetFile: list[str] | None
     """집 밖에서 잘 알려진 상수를 리터럴로 쓴 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
-    for path, text in readTextFiles(listPath):
+    for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         listRule = [rule for rule in _kListRule if relative not in rule.homes and rule.pattern.search(text) is not None]
         if not listRule:
