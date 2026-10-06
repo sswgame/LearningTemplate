@@ -11,6 +11,7 @@
  *          고정 걸음 + 씨앗 난수(아이템)라 같은 입력이면 같은 판입니다(락스텝 — 입력은 `writeInput` · `readInput`).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -155,7 +156,7 @@ namespace sw
     class SW_GF_API TrampolineArena
     {
     public:
-        static constexpr uint32 kStateTag     = 0x41525450u; ///< 'PTRA'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "PTRA" );
         static constexpr uint32 kStateVersion = 1;
 
         TrampolineArena();

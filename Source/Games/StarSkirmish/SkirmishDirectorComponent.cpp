@@ -2,6 +2,7 @@
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -31,9 +32,9 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f;        ///< 이보다 짧게 끌면 클릭
-            static constexpr int32   kUnitLookCategory = 5;           ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
-            static constexpr uint32  kStateTag         = 0x534D5452u; ///< 'RTMS'
+            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭
+            static constexpr int32   kUnitLookCategory = 5;    ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr uint32  kStateTag         = FourCcUtil::make( "RTMS" );
             static constexpr uint32  kStateVersion     = 2;
 
             // 사운드 이벤트 이름(starskirmish.audioevents.xml).

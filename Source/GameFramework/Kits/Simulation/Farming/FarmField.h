@@ -3,6 +3,7 @@
  * @brief 밭 — 칸마다 갈기 · 물 · 작물 · 자람을 들고, 하루가 넘어갈 때 자람 · 시듦 · 비를 처리합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -65,7 +66,7 @@ namespace sw
     class SW_GF_API FarmField
     {
     public:
-        static constexpr uint32 kStateTag     = 0x444C4646u; ///< 'FFLD'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "FFLD" );
         static constexpr uint32 kStateVersion = 1;
 
         FarmField();

@@ -11,6 +11,7 @@
  *          흔들기 · 폭탄 · 총통 · 보너스 패 · 고박 · 첫 뻑 보너스는 아직 없습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -173,7 +174,7 @@ namespace sw
     class SW_GF_API MatgoGame
     {
     public:
-        static constexpr uint32 kStateTag     = 0x47544D43u; ///< 'CMTG'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CMTG" );
         static constexpr uint32 kStateVersion = 1;
 
         MatgoGame();

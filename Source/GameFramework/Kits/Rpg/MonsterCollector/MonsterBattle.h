@@ -5,6 +5,7 @@
  * @details 모든 난수는 씨앗 하나의 `GameRandom` 에서 나옵니다 — 씨앗과 명령이 같으면 같은 전투입니다(리플레이 · 시험 · 넷 턴 릴레이).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -143,7 +144,7 @@ namespace sw
     class SW_GF_API MonsterBattle
     {
     public:
-        static constexpr uint32 kStateTag        = 0x5442434Du; ///< 'MCBT'
+        static constexpr uint32 kStateTag        = FourCcUtil::make( "MCBT" );
         static constexpr uint32 kStateVersion    = 1;
         static constexpr int32  kPlayerSide      = 0;
         static constexpr int32  kFoeSide         = 1;

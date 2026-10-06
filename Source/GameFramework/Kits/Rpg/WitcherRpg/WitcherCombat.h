@@ -4,6 +4,7 @@
  *        기반 `ElementChart` 상태이상), 아드레날린 포인트(적중으로 쌓이고 피격으로 준다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
@@ -62,7 +63,7 @@ namespace sw
     class SW_GF_API WitcherCombat
     {
     public:
-        static constexpr uint32 kStateTag     = 0x424D4357u; ///< 'WCMB'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WCMB" );
         static constexpr uint32 kStateVersion = 1;
 
         WitcherCombat();

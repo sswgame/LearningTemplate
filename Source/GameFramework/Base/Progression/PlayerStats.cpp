@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Progression/PlayerStats.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -20,7 +21,7 @@ namespace sw
     {
         struct PlayerStatsInternal
         {
-            static constexpr uint32 kStateTag     = 0x54415453u; ///< 'STAT'
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "STAT" );
             static constexpr uint32 kStateVersion = 1;
         };
     } // namespace

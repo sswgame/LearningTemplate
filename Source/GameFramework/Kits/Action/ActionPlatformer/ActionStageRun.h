@@ -5,6 +5,7 @@
  * @details 시간은 `update` 로만 흐릅니다(고정 걸음이면 결정적). 목숨이 0 이 되면 게임 오버 — `restartStage` 로 스테이지 처음부터(시간 · 수집 · 피격도 처음부터)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -53,7 +54,7 @@ namespace sw
     class SW_GF_API ActionStageRun
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54535041u; ///< 'APST'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "APST" );
         static constexpr uint32 kStateVersion = 1;
 
         ActionStageRun();

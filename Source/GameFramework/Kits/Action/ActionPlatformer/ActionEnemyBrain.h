@@ -5,6 +5,7 @@
  * @details 순찰 → 조준 → 사격 → 쉬기 같은 플랫포머 졸개 · 보스 패턴이 이것으로 충분합니다. 난수가 없고 프레임으로만 가서 결정적입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
@@ -39,7 +40,7 @@ namespace sw
     class SW_GF_API ActionEnemyBrain
     {
     public:
-        static constexpr uint32 kStateTag     = 0x42455041u; ///< 'APEB'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "APEB" );
         static constexpr uint32 kStateVersion = 1;
 
         ActionEnemyBrain();

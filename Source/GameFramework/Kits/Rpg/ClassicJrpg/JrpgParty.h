@@ -4,6 +4,7 @@
  *        경험치 · 골드 분배, 여관(살아 있는 멤버 회복) · 교회(부활), 지갑 · 인벤토리(기반 ShopState 와 그대로 쓴다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -104,7 +105,7 @@ namespace sw
     class SW_GF_API JrpgParty
     {
     public:
-        static constexpr uint32 kStateTag            = 0x5954504Au; ///< 'JPTY'
+        static constexpr uint32 kStateTag            = FourCcUtil::make( "JPTY" );
         static constexpr uint32 kStateVersion        = 1;
         static constexpr int32  kMaxMembers          = 4;
         static constexpr int32  kInnerMax            = 100;

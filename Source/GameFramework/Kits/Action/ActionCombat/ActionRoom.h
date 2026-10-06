@@ -3,6 +3,7 @@
  * @brief 던전 · 보스 룸용 실시간 클리어 게이트 전투입니다(던그리드 스타일 아이디어).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -109,7 +110,7 @@ namespace sw
     class SW_GF_API ActionRoom
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4D4F5241u; ///< 'AROM'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );
         static constexpr uint32 kStateVersion = 1;
 
         /** @brief 비활성(None) · 게이트 닫힘으로 시작합니다. */

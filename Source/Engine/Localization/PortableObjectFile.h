@@ -46,8 +46,8 @@ namespace sw
     class SW_API PortableObjectFile
     {
     public:
-        static constexpr const utf8* kFileExtension = ".po";
-        static constexpr const utf8* kFolderName    = "po";
+        static constexpr const utf8* kExtension  = ".po";
+        static constexpr const utf8* kFolderName = "po";
 
         /** @brief PO 글을 읽습니다. 틀린 줄이면 @p pOutError 에 `줄: 이유` 를 적고 false 입니다. */
         [[nodiscard]] bool parse( string_view text, string* pOutError = nullptr );

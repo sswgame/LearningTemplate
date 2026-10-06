@@ -5,6 +5,7 @@
  *          아이템은 기존 `Inventory` · `ItemCatalog` 를 그대로 씁니다. 가격이 적히지 않은 재고는 `ItemDef::_value` 입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -52,7 +53,7 @@ namespace sw
     class SW_GF_API Wallet
     {
     public:
-        static constexpr uint32 kStateTag     = 0x544C4157u; ///< 'WALT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WALT" );
         static constexpr uint32 kStateVersion = 1;
 
         /** @brief 통화를 적지 않으면 쓰는 "Gold" 입니다. */

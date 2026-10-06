@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneDocument.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
@@ -29,10 +30,10 @@ namespace sw
             static constexpr const utf8* kPrefab        = "prefab";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
-            static constexpr uint32      kSceneBinMagic = 0x53434E31u; // 'SCN1'
+            static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
             // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXml`).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kSceneBinVersion = 3;
+            static constexpr uint32 kBinVersion = 3;
 
             /**
              * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
@@ -256,7 +257,7 @@ namespace sw
 
         uint32 magic{ 0 };
         arch >> magic;
-        if ( magic != SceneDocumentInternal::kSceneBinMagic )
+        if ( magic != SceneDocumentInternal::kBinMagic )
         {
             SW_LOG_ERROR( "Bad binary magic: %#", absPath );
             return false;
@@ -264,10 +265,10 @@ namespace sw
 
         uint32 version{ 0 };
         arch >> version;
-        if ( version != SceneDocumentInternal::kSceneBinVersion )
+        if ( version != SceneDocumentInternal::kBinVersion )
         {
             SW_LOG_ERROR( "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                          SceneDocumentInternal::kSceneBinVersion );
+                          SceneDocumentInternal::kBinVersion );
             return false;
         }
 
@@ -318,8 +319,8 @@ namespace sw
     bool SceneDocument::saveBinary( string_view path ) const
     {
         Archive arch;
-        arch << SceneDocumentInternal::kSceneBinMagic;
-        arch << SceneDocumentInternal::kSceneBinVersion;
+        arch << SceneDocumentInternal::kBinMagic;
+        arch << SceneDocumentInternal::kBinVersion;
         arch << _name;
         arch << static_cast<uint32>( _listSceneObjectNode.size() );
 

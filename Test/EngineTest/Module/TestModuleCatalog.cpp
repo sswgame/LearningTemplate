@@ -272,7 +272,7 @@ SW_TEST_CASE( ModuleCatalogTest, EveryRepositoryManifestParses )
     uint32 manifestCount = 0;
     for ( const sw::string& filePath : listFile )
     {
-        if ( sw::StringUtil::endsWith( filePath, sw::ModuleCatalog::kManifestSuffix, true ) == false )
+        if ( sw::StringUtil::endsWith( filePath, sw::ModuleCatalog::kManifestExtension, true ) == false )
             continue;
         sw::string text;
         SW_ASSERT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );

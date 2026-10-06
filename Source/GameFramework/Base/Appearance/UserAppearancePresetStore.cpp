@@ -74,14 +74,14 @@ namespace sw
                 int32 version = KeyValueFile::getInt( inoutMap, "formatVersion", 0 );
                 if ( version == 0 )
                     version = KeyValueFile::getInt( inoutMap, "version", 0 );
-                if ( version <= 0 || version > UserAppearancePresetStore::kFormatVersion )
+                if ( version <= 0 || version > UserAppearancePresetStore::kVersion )
                     return false;
                 if ( version == 1 )
                 {
                     upgradeFromVersion1( inoutMap );
                     version = 2;
                 }
-                return version == UserAppearancePresetStore::kFormatVersion;
+                return version == UserAppearancePresetStore::kVersion;
             }
         };
     } // namespace
@@ -186,7 +186,7 @@ namespace sw
     {
         using Internal = UserAppearancePresetStoreInternal;
         KeyValueMap map;
-        map["formatVersion"] = to_string( kFormatVersion );
+        map["formatVersion"] = to_string( kVersion );
         map["presetCount"]   = to_string( static_cast<int32>( _listPreset.size() ) );
         for ( size_t index = 0; index < _listPreset.size(); ++index )
         {

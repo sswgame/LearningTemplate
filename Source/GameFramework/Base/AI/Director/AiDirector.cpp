@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/AI/Director/AiDirector.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -26,7 +27,7 @@ namespace sw
             static constexpr const utf8* kArrBlockName[]     = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
             /** @brief 스폰 감독의 씨앗을 감독 씨앗에서 떼어 낼 때 섞는 값입니다(같은 씨앗이 두 수열에서 같은 수를 내지 않게). */
             static constexpr uint32 kSpawnSeedSalt  = 0x5bd1e995u;
-            static constexpr uint32 kStateTag       = 0x52444941u; ///< 'AIDR'
+            static constexpr uint32 kStateTag       = FourCcUtil::make( "AIDR" );
             static constexpr uint32 kStateVersion   = 1;
             static constexpr uint32 kPoolMinBytes   = 20; ///< 풀 하나의 최소 바이트(타이머 · 예산 · 마지막 고른 시각 · 골라 둔 것 · 항목 수)
             static constexpr uint32 kEncounterBytes = 8;  ///< 항목 하나(마지막 시각 · 횟수)

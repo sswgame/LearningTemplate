@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/ModelImporter.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
@@ -63,8 +64,8 @@ namespace sw::editor
             /** @brief 머티리얼이 쓰는 내장 이미지를 꺼내 두는 원본 텍스처 폴더 이름입니다(텍스처 임포트가 옆 `textures/` 의 DDS 로 만든다). */
             static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief GLB 머리 · 청크 머리 크기와 표식("glTF" · "JSON")입니다. */
-            static constexpr uint32 kGlbMagic           = 0x46546C67u;
-            static constexpr uint32 kGlbJsonChunkType   = 0x4E4F534Au;
+            static constexpr uint32 kGlbMagic           = FourCcUtil::make( "glTF" );
+            static constexpr uint32 kGlbJsonChunkType   = FourCcUtil::make( "JSON" );
             static constexpr size_t kGlbHeaderSize      = 12;
             static constexpr size_t kGlbChunkHeaderSize = 8;
             /** @brief meshopt_optimizeOverdraw 가 정점 캐시 효율을 얼마나 잃어도 되는지입니다(라이브러리 권장값). */

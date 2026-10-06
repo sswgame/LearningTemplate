@@ -3,6 +3,7 @@
  * @brief 칸 인벤토리 — 겹치기 · 무게 한도 · 칸 옮기기 · 나누기 · 정렬 · 내구도입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -48,7 +49,7 @@ namespace sw
     class SW_GF_API Inventory
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54564E49u; ///< 'INVT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "INVT" );
         static constexpr uint32 kStateVersion = 1;
 
         Inventory();

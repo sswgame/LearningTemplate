@@ -3,6 +3,7 @@
  * @brief 솔리테어(클론다이크) — 7 열 · 파운데이션 4 · 스톡 · 웨이스트, 옮기기 규칙 검사, 1 장/3 장 뽑기, 자동 완료, 되돌리기입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -51,7 +52,7 @@ namespace sw
     class SW_GF_API KlondikeGame
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E4C4B43u; ///< 'CKLN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CKLN" );
         static constexpr uint32 kStateVersion = 1;
 
         KlondikeGame();

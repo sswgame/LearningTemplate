@@ -83,7 +83,7 @@ namespace sw::editor
         {
             for ( const string& filePath : listFile )
             {
-                if ( StringUtil::endsWith( filePath, LocalizationProject::kFileSuffix, true ) )
+                if ( StringUtil::endsWith( filePath, LocalizationProject::kExtension, true ) )
                     outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath ) );
             }
         }

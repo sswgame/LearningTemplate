@@ -6,6 +6,7 @@
  *          (높이를 무시하는 XZ 원뿔)입니다. 흡입 중 도망 방향은 씨앗 고정 `GameRandom` 이 정해 같은 씨앗 · 같은 입력이면 같은 싸움입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -96,7 +97,7 @@ namespace sw
     class SW_GF_API GhostEncounter
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E454847u; ///< 'GHEN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GHEN" );
         static constexpr uint32 kStateVersion = 1;
 
         GhostEncounter();

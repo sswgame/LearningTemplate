@@ -4,6 +4,7 @@
  *        직원(고용 · 급여 · 숙련), 시장 시세, 재료 신선도, 별점 이동 평균, 일 결산입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/deque.h"
@@ -197,7 +198,7 @@ namespace sw
     {
     public:
         static constexpr float32 kStepMinutes  = 1.0f;
-        static constexpr uint32  kStateTag     = 0x4D495352u; ///< 'RSIM'
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "RSIM" );
         static constexpr uint32  kStateVersion = 1;
 
         RestaurantSimulation();

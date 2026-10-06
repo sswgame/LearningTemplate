@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
@@ -24,9 +25,9 @@ namespace sw
         SW_LOG_CALLER( "ShaderReflectionLibrary" );
 
         /// @brief 'SRFM' 매니페스트 매직입니다.
-        constexpr uint32 kManifestMagic = 0x4D465253;
+        constexpr uint32 kMagic = FourCcUtil::make( "SRFM" );
         /// @brief 매니페스트 포맷 버전입니다. 쿠킹하는 쪽과 읽는 쪽이 같은 파일에 있으므로 한 곳만 올리면 됩니다.
-        constexpr uint32 kManifestVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
+        constexpr uint32 kVersion = 2; ///< 2: 구조버퍼 원소 레이아웃(_listStructuredElement) 추가
 
         void writeReflectionInternal( Archive& archive, const ShaderReflectionData& reflection )
         {
@@ -210,7 +211,7 @@ namespace sw
             archive >> magic;
             archive >> version;
             archive >> entryCount;
-            if ( magic != kManifestMagic || version != kManifestVersion )
+            if ( magic != kMagic || version != kVersion )
             {
                 SW_LOG_WARNING( "리플렉션 매니페스트 형식이 맞지 않습니다 (magic=%# version=%#): %#", magic, version, manifestRelative.c_str() );
                 return false;
@@ -254,8 +255,8 @@ namespace sw
         { return pLhs->first < pRhs->first; } );
 
         Archive archive;
-        archive << kManifestMagic;
-        archive << kManifestVersion;
+        archive << kMagic;
+        archive << kVersion;
         archive << static_cast<uint32>( listEntry.size() );
         for ( const EntryMap::value_type* pEntry : listEntry )
         {

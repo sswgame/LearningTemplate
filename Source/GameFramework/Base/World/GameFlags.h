@@ -4,6 +4,7 @@
  * @details 지역 잠금(`AreaGraph`) · 대화 분기 · 퀘스트 조건이 같은 조건식을 읽습니다. 세이브는 이름 순 목록으로 내보내 늘 같은 순서로 적힙니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -46,8 +47,8 @@ namespace sw
     class SW_GF_API GameFlags
     {
     public:
-        static constexpr int32  kMaxConditionDepth = 32;          ///< 괄호 · `!` 중첩 상한(잘못된 식이 스택을 다 쓰지 않게)
-        static constexpr uint32 kStateTag          = 0x47414C46u; ///< 'FLAG'
+        static constexpr int32  kMaxConditionDepth = 32; ///< 괄호 · `!` 중첩 상한(잘못된 식이 스택을 다 쓰지 않게)
+        static constexpr uint32 kStateTag          = FourCcUtil::make( "FLAG" );
         static constexpr uint32 kStateVersion      = 1;
 
         GameFlags();

@@ -4,6 +4,7 @@
  *        진화(레벨 · 아이템 · 친밀도), 파티 6 · 박스 보관입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -150,7 +151,7 @@ namespace sw
     class SW_GF_API MonsterStorage
     {
     public:
-        static constexpr uint32 kStateTag     = 0x5453434Du; ///< 'MCST'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCST" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kPartySize    = 6;
 

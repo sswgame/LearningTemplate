@@ -40,7 +40,7 @@ namespace sw
     class SW_GF_API UserAppearancePresetStore : public SaveGame
     {
     public:
-        static constexpr int32 kFormatVersion = 2;
+        static constexpr int32 kVersion = 2;
 
         UserAppearancePresetStore();
 

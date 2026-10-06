@@ -33,7 +33,7 @@ namespace sw
     class SW_API TranslationMemory
     {
     public:
-        static constexpr const utf8* kFileSuffix     = ".tm.json";
+        static constexpr const utf8* kExtension      = ".tm.json";
         static constexpr const utf8* kFolderName     = "tm";
         static constexpr float32     kFuzzyThreshold = 0.75f;
 

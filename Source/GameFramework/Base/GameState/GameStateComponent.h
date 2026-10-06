@@ -3,6 +3,7 @@
  * @brief 키트 디렉터 여럿이 나눠 쓰는 판 상태(지갑 · 플래그 · 시계 · 퀘스트 일지 · 평판 · 가방 · 날씨 · 땅)를 든 컴포넌트입니다 — 언리얼 Lyra 의 GameState 액터 + GameState 컴포넌트 자리.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
@@ -77,7 +78,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x54535447u; ///< 'GTST'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GTST" );
         static constexpr uint32 kStateVersion = 1;
 
         GameStateComponent();

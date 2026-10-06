@@ -3,6 +3,7 @@
  * @brief 평판 · 호감도 — 세력(또는 NPC)마다 값 · 범위 · 단계, 연결된 세력(돕는 쪽의 적은 미워한다), 하루마다 기준값으로 돌아가기입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -99,7 +100,7 @@ namespace sw
     class SW_GF_API ReputationState
     {
     public:
-        static constexpr uint32 kStateTag     = 0x55504552u; ///< 'REPU'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "REPU" );
         static constexpr uint32 kStateVersion = 1;
 
         ReputationState();

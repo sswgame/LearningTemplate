@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
@@ -1218,7 +1219,7 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )
     SW_EXPECT_TRUE( readStore.isEmpty() );
 
     Archive huge;
-    huge << ComponentStateStore::kFormatVersion;
+    huge << ComponentStateStore::kVersion;
     huge << uint32( 0xFFFFFFFFu );
     Archive hugeReader( huge.getData(), huge.getSize() );
     SW_EXPECT_FALSE( readStore.read( hugeReader ) );
@@ -1238,7 +1239,7 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     // 봉투(SWST v3 · 토큰) 안의 씬 섹션 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
     const uint8 arrSceneSection[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
     Archive     envelopeBytes;
-    envelopeBytes << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 3 ) << static_cast<uint64>( 0 );
+    envelopeBytes << sw::FourCcUtil::make( "SWST" ) << static_cast<uint32>( 3 ) << static_cast<uint64>( 0 );
     envelopeBytes.writeSection( arrSceneSection, static_cast<uint32>( sizeof( arrSceneSection ) ) );
 
     // 할당한 바이트 누계로 본다 — 운영체제가 큰 예약을 받아 주면 그 reserve 는 실패하지 않고 조용히 수십 GB 를 잡는다.
@@ -1280,7 +1281,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
 
     // 봉투 v1 — 토큰도 id 도 없던 판.
     Archive envelopeV1;
-    envelopeV1 << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 1 );
+    envelopeV1 << sw::FourCcUtil::make( "SWST" ) << static_cast<uint32>( 1 );
     envelopeV1.writeSection( arrBare, static_cast<uint32>( sizeof( arrBare ) ) );
     envelopeV1.writeSection( nullptr, 0 );
     SW_EXPECT_FALSE( instance.deserializeState( envelopeV1.getData(), static_cast<uint32>( envelopeV1.getSize() ) ) );

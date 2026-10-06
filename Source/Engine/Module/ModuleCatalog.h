@@ -156,7 +156,7 @@ namespace sw
     {
     public:
         /** @brief 매니페스트 파일 이름 끝입니다(`GF_Voxel.module.json`). */
-        static constexpr const utf8* kManifestSuffix = ".module.json";
+        static constexpr const utf8* kManifestExtension = ".module.json";
         /** @brief 빌드가 매니페스트를 복사해 두는 실행 파일 옆 폴더 이름입니다. */
         static constexpr const utf8* kCatalogFolder = "Modules";
 

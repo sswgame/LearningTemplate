@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -271,8 +272,8 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
 SW_TEST_CASE( PrefabOverridesTest, CookedSceneOfAnotherVersionIsRefused )
 {
     sw::Archive arch;
-    arch << static_cast<uint32>( 0x53434E31u ); // 'SCN1'
-    arch << static_cast<uint32>( 2 );           // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id(덮어쓴 것 칸이 없다)
+    arch << sw::FourCcUtil::make( "SCN1" );
+    arch << static_cast<uint32>( 2 ); // v2: 이름 · 프리팹 · GUID · XML · 바이너리 상태 · 파일 id(덮어쓴 것 칸이 없다)
     arch << sw::string( "OldCooked" );
     arch << static_cast<uint32>( 1 );
     arch << sw::string( "Plain" ) << sw::string() << sw::string()

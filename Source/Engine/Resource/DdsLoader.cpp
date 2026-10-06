@@ -2,6 +2,7 @@
 
 #include "Engine/Resource/DdsLoader.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -21,15 +22,15 @@ namespace sw
         constexpr uint32 kDdpfRgb    = 0x00000040;
 
         // DXT 계열 FourCC 코드
-        constexpr uint32 kFourCC_DXT1 = 0x31545844;
-        constexpr uint32 kFourCC_DXT2 = 0x32545844;
-        constexpr uint32 kFourCC_DXT3 = 0x33545844;
-        constexpr uint32 kFourCC_DXT4 = 0x34545844;
-        constexpr uint32 kFourCC_DXT5 = 0x35545844;
-        constexpr uint32 kFourCC_ATI1 = 0x31495441;
-        constexpr uint32 kFourCC_BC4U = 0x55344342;
-        constexpr uint32 kFourCC_ATI2 = 0x32495441;
-        constexpr uint32 kFourCC_BC5U = 0x55354342;
+        constexpr uint32 kFourCC_DXT1 = FourCcUtil::make( "DXT1" );
+        constexpr uint32 kFourCC_DXT2 = FourCcUtil::make( "DXT2" );
+        constexpr uint32 kFourCC_DXT3 = FourCcUtil::make( "DXT3" );
+        constexpr uint32 kFourCC_DXT4 = FourCcUtil::make( "DXT4" );
+        constexpr uint32 kFourCC_DXT5 = FourCcUtil::make( "DXT5" );
+        constexpr uint32 kFourCC_ATI1 = FourCcUtil::make( "ATI1" );
+        constexpr uint32 kFourCC_BC4U = FourCcUtil::make( "BC4U" );
+        constexpr uint32 kFourCC_ATI2 = FourCcUtil::make( "ATI2" );
+        constexpr uint32 kFourCC_BC5U = FourCcUtil::make( "BC5U" );
 
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를

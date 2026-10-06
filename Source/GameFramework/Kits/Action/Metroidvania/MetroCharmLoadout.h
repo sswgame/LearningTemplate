@@ -4,6 +4,7 @@
  * @details 할로우 나이트의 부적 · 블라스퍼머스의 묵주 구슬 · 더 라스트 페이스의 문양이 같은 규칙입니다. 능력치는 기반 `StatBlock` 이라 이름은 게임이 정합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -37,7 +38,7 @@ namespace sw
     class SW_GF_API MetroCharmLoadout
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4D48434Du; ///< 'MCHM'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHM" );
         static constexpr uint32 kStateVersion = 1;
 
         MetroCharmLoadout();

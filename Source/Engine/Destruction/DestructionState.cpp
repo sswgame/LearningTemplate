@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -16,9 +17,9 @@ namespace sw
     {
         struct DestructionStateInternal
         {
-            static constexpr uint32 kSnapshotMagic   = 0x53574453u; ///< 'SWDS'
-            static constexpr uint32 kSnapshotVersion = 1;
-            static constexpr uint32 kNoActiveNode    = 0xFFFFFFFFu;
+            static constexpr uint32 kMagic        = FourCcUtil::make( "SWDS" );
+            static constexpr uint32 kVersion      = 1;
+            static constexpr uint32 kNoActiveNode = 0xFFFFFFFFu;
 
             /** @brief 0/1 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
@@ -593,8 +594,8 @@ namespace sw
     {
         using Internal = DestructionStateInternal;
         BitWriter writer;
-        writer.writeUint32( Internal::kSnapshotMagic );
-        writer.writeVarUint( Internal::kSnapshotVersion );
+        writer.writeUint32( Internal::kMagic );
+        writer.writeVarUint( Internal::kVersion );
         writer.writeVarUint( _listNodeBroken.size() );
         writer.writeVarUint( _listLinkBroken.size() );
         writer.writeVarUint( _listLeafAnchored.size() );
@@ -629,7 +630,7 @@ namespace sw
             return false;
         const FractureGraph& graph = *_pGraph;
         BitReader            reader( pData, static_cast<int32>( size ) );
-        if ( reader.readUint32() != Internal::kSnapshotMagic || reader.readVarUint() != Internal::kSnapshotVersion )
+        if ( reader.readUint32() != Internal::kMagic || reader.readVarUint() != Internal::kVersion )
             return false;
         const uint64 nodeCount = reader.readVarUint();
         const uint64 linkCount = reader.readVarUint();

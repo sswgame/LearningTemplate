@@ -3,6 +3,7 @@
  * @brief 들고 다니는 칸 — 칸 수(기본 4) · 양손 아이템(드는 동안 다른 것을 줍지 못한다) · 무게에 따른 이동 속도 감소입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -32,7 +33,7 @@ namespace sw
     class SW_GF_API ScavengerCarry
     {
     public:
-        static constexpr uint32 kStateTag     = 0x41434353u; ///< 'SCCA'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "SCCA" );
         static constexpr uint32 kStateVersion = 1;
 
         ScavengerCarry();

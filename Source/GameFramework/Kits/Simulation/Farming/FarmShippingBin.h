@@ -3,6 +3,7 @@
  * @brief 출하함입니다 — 넣은 것은 하루가 끝날 때 팔립니다(하베스트 문의 출하 상자). 가방 · 지갑은 빌립니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -26,7 +27,7 @@ namespace sw
     class SW_GF_API FarmShippingBin
     {
     public:
-        static constexpr uint32 kStateTag     = 0x50485346u; ///< 'FSHP'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "FSHP" );
         static constexpr uint32 kStateVersion = 1;
 
         FarmShippingBin();

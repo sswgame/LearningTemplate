@@ -9,6 +9,7 @@
  *          공격 방향은 기술 시작 때 상대 쪽으로 고정됩니다(추적 기술은 매 프레임 상대를 따라간다) — 그래서 횡이동으로 각을 벌리면 직선 기술이 빗나갑니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -174,7 +175,7 @@ namespace sw
     class SW_GF_API FightingMatch
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4D544746u; ///< 'FGTM'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "FGTM" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kPlayerCount  = 2;
         static constexpr int32  kDraw         = 2; ///< 라운드 · 대전 결과의 무승부

@@ -3,6 +3,7 @@
  * @brief 강화 · 변이 슬롯 — 스킬 슬롯 묶음(레벨로 열림)마다 변이원 슬롯 하나, 같은 묶음에 색이 맞는 스킬마다 변이원 보너스가 오릅니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -36,7 +37,7 @@ namespace sw
     class SW_GF_API WitcherMutagens
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54554D57u; ///< 'WMUT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WMUT" );
         static constexpr uint32 kStateVersion = 1;
 
         WitcherMutagens();

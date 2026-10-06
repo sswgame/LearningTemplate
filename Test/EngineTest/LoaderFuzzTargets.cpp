@@ -351,7 +351,7 @@ namespace test
             }
             static void seedStringTable( vector<vector<uint8>>& outListSeed )
             {
-                appendResourceSeeds( SourceStringTable::kFileSuffix, 2, outListSeed );
+                appendResourceSeeds( SourceStringTable::kExtension, 2, outListSeed );
                 appendTextSeed( R"({"culture":"en","entries":{"Menu.Start":{"source":"Start","maxLength":12},"Greeting":{"source":"Hi {name}"}}})", outListSeed );
             }
             static void seedTileMap( vector<vector<uint8>>& outListSeed )

@@ -4,6 +4,7 @@
  *        데드아이(시간 둔화 배율 · 표시 개수)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -36,7 +37,7 @@ namespace sw
     class SW_GF_API WesternSurvival
     {
     public:
-        static constexpr uint32  kStateTag     = 0x56525357u; ///< 'WSRV'
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "WSRV" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kCoreMax      = 100.0f;
 

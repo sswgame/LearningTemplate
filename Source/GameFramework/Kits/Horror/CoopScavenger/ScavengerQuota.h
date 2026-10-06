@@ -3,6 +3,7 @@
  * @brief 할당량 주기 — 마감까지 남은 날 · 이번 할당량 · 채운 양, 마감 판정(채우면 다음 할당량 · 보너스, 못 채우면 게임 오버)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
@@ -30,7 +31,7 @@ namespace sw
     class SW_GF_API ScavengerQuota
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54514353u; ///< 'SCQT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "SCQT" );
         static constexpr uint32 kStateVersion = 1;
 
         ScavengerQuota();

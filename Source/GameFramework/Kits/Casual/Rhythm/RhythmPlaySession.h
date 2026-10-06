@@ -3,6 +3,7 @@
  * @brief 건반 리듬 한 판 — 레인 대기열 · 누르기/떼기 판정(`TimingJudge`) · 롱노트 · 놓침 · 콤보 · 점수 · 라이프 · 정확도 · 등급 · 오토플레이 · 입력 기록입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -114,7 +115,7 @@ namespace sw
     class SW_GF_API RhythmPlaySession
     {
     public:
-        static constexpr uint32 kStateTag     = 0x50594852u; ///< 'RHYP'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "RHYP" );
         static constexpr uint32 kStateVersion = 1;
 
         RhythmPlaySession();

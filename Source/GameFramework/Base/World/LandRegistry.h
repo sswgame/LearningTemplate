@@ -3,6 +3,7 @@
  * @brief 공유 땅 — 칸마다 그 칸을 쓰는 키트(주인)와 지나갈 수 있는지를 듭니다. 땅에 무언가 놓는 키트는 놓기 전에 얻고(`claimRect`) 치우면 놓습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -28,7 +29,7 @@ namespace sw
     class SW_GF_API LandRegistry
     {
     public:
-        static constexpr uint32 kStateTag     = 0x444E414Cu; ///< 'LAND'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "LAND" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr uint16 kNoOwner      = 0;
 

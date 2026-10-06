@@ -10,6 +10,7 @@
  *            그래서 기체를 바꾸면 다음 격추에 바뀐 기체의 코스트가 게이지에서 빠진다(통계는 조종사 단위로 모아 읽는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -215,7 +216,7 @@ namespace sw
     class SW_GF_API MechArenaWorld
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4148434Du; ///< 'MCHA'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );
         static constexpr uint32 kStateVersion = 1;
 
         MechArenaWorld();

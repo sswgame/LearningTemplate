@@ -5,6 +5,7 @@
  *          받은 쪽에서 `applyAction` 으로 같은 순서대로 넣으면 모두 같은 판이 됩니다(덱은 같은 씨앗으로 섞는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -125,7 +126,7 @@ namespace sw
     class SW_GF_API PokerTable
     {
     public:
-        static constexpr uint32 kStateTag     = 0x524B5043u; ///< 'CPKR'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CPKR" );
         static constexpr uint32 kStateVersion = 1;
 
         PokerTable();

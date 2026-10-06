@@ -3,6 +3,7 @@
  * @brief 법 집행 — 범죄 목격(시야 콜백) · 신고까지의 시간 · 목격자 처치/위협 · 지역별 현상금과 수배 단계 · 시간과 변장에 따른 감쇠 · 현상금 지불 · 보안관 추적 단계입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -121,7 +122,7 @@ namespace sw
     class SW_GF_API WesternLawState
     {
     public:
-        static constexpr uint32 kStateTag     = 0x57414C57u; ///< 'WLAW'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WLAW" );
         static constexpr uint32 kStateVersion = 1;
 
         WesternLawState();

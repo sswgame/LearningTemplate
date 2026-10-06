@@ -3,6 +3,7 @@
  * @brief 택틱스 SRPG 의 진행 — 작전 승패 조건(적 전멸 · 지휘관 격파 · 지점 도달 · 턴 버티기 · 턴 제한 · 아군 지휘관), 로그라이트 작전 지도(기반 `RunMap`)와 명단(레벨 · 개발이 이어진다)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -81,7 +82,7 @@ namespace sw
     class SW_GF_API SrpgCampaign
     {
     public:
-        static constexpr uint32 kStateTag     = 0x50435253u; ///< 'SRCP'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "SRCP" );
         static constexpr uint32 kStateVersion = 1;
 
         SrpgCampaign();

@@ -2,6 +2,7 @@
 
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -39,7 +40,7 @@ namespace sw
         struct ShooterDirectorComponentInternal
         {
             static constexpr float32 kStatusInterval = 5.0f;
-            static constexpr uint32  kStateTag       = 0x544F4853u; ///< 'SHOT'
+            static constexpr uint32  kStateTag       = FourCcUtil::make( "SHOT" );
             static constexpr uint32  kStateVersion   = 3;
             /** @brief 이 거리(m) 안의 적이 "가까운 적" 신호입니다. */
             static constexpr float32 kNearDistance = 7.0f;

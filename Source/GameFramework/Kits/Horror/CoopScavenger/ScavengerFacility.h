@@ -3,6 +3,7 @@
  * @brief 시설 — 씨앗으로 방 그래프(정문 · 방 · 문 · 잠긴 문 · 고리 통로 · 화재 출구)를 지어 기반 `AreaGraph` 에 담고, 고철(가치 · 무게 · 양손)을 방마다 놓습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -49,7 +50,7 @@ namespace sw
     class SW_GF_API ScavengerFacility
     {
     public:
-        static constexpr uint32 kStateTag      = 0x43464353u; ///< 'SCFC'
+        static constexpr uint32 kStateTag      = FourCcUtil::make( "SCFC" );
         static constexpr uint32 kStateVersion  = 1;
         static constexpr uint32 kMinScrapBytes = 29; ///< 고철 하나가 쓰는 가장 적은 바이트(이름 둘 · 무게 · 번호 · 가치 · 시신 · 날 · 양손)
 

@@ -6,6 +6,7 @@
  *          아이템 표시는 "지도에 그려진 방 · 아직 방문하지 않은 방 · 아직 줍지 않은 것" 셋을 모두 만족할 때만입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -38,7 +39,7 @@ namespace sw
     class SW_GF_API MetroMapState
     {
     public:
-        static constexpr uint32 kStateTag     = 0x50414D4Du; ///< 'MMAP'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MMAP" );
         static constexpr uint32 kStateVersion = 1;
 
         MetroMapState();

@@ -2,6 +2,7 @@
 
 #include "Games/NileCity/NileDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -34,8 +35,8 @@ namespace sw
         {
             static constexpr int32   kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
             static constexpr int32   kWalkerKindCount  = 3;
-            static constexpr float32 kRoadTileScale    = 4.8f;        ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
-            static constexpr uint32  kStateTag         = 0x454C494Eu; ///< 'NILE'
+            static constexpr float32 kRoadTileScale    = 4.8f; ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
+            static constexpr uint32  kStateTag         = FourCcUtil::make( "NILE" );
             static constexpr uint32  kStateVersion     = 3;
             static constexpr float32 kSecondsPerMonth  = 20.0f; ///< 실제 초 — 시간 배속이 곱해진다
 

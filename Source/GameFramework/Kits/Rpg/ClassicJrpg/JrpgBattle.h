@@ -5,6 +5,7 @@
  * @details 모든 난수는 씨앗 하나의 `GameRandom` 입니다 — 씨앗 · 명령 · 타이밍 입력이 같으면 같은 전투입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -172,7 +173,7 @@ namespace sw
     class SW_GF_API JrpgBattle
     {
     public:
-        static constexpr uint32 kStateTag       = 0x4C54424Au; ///< 'JBTL'
+        static constexpr uint32 kStateTag       = FourCcUtil::make( "JBTL" );
         static constexpr uint32 kStateVersion   = 1;
         static constexpr int32  kEnemyActorBase = 100; ///< TurnOrder 의 적 번호 = 이것 + 자리
         static constexpr int32  kDefendPriority = 1;

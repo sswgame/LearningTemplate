@@ -14,6 +14,7 @@
  *          높이의 월드 값(최저 · 최고)과 넓이는 에셋이 아니라 `TerrainComponent` 가 줍니다(언리얼 랜드스케이프의 Z 스케일 자리).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -26,7 +27,7 @@ namespace sw
      */
     struct SW_API HeightfieldData
     {
-        static constexpr uint32 kMagic         = 0x46485753u; ///< 'S' 'W' 'H' 'F'
+        static constexpr uint32 kMagic         = FourCcUtil::make( "SWHF" );
         static constexpr uint32 kVersion       = 1u;
         static constexpr uint32 kFlagHoleMask  = 1u;
         static constexpr uint32 kMaxResolution = 8193u;

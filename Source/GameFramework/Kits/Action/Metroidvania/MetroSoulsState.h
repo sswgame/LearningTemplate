@@ -6,6 +6,7 @@
  *          전리품은 기반 `LootCatalog` 를 씨앗이 있는 `GameRandom` 으로 굴립니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -82,7 +83,7 @@ namespace sw
     class SW_GF_API MetroSoulsState
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4C4F534Du; ///< 'MSOL'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MSOL" );
         static constexpr uint32 kStateVersion = 1;
 
         MetroSoulsState();

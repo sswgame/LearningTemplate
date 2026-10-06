@@ -5,6 +5,7 @@
  *          같은 능력 집합이면 늘 같은 설정입니다(결정적). 세이브는 `GameFlags` 하나로 충분합니다 — `restoreFromFlags` 가 플래그에서 능력을 되살립니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -26,7 +27,7 @@ namespace sw
     class SW_GF_API MetroAbilitySet
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4C42414Du; ///< 'MABL'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MABL" );
         static constexpr uint32 kStateVersion = 1;
 
         MetroAbilitySet();

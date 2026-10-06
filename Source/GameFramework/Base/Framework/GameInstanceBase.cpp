@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Framework/GameInstanceBase.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
@@ -29,7 +30,7 @@ namespace sw
     {
         struct StateEnvelopeInternal
         {
-            static constexpr uint32 kMagic = 0x53575354u; // 'SWST' (SW State Snapshot)
+            static constexpr uint32 kMagic = FourCcUtil::make( "SWST" );
             /**
              * @brief 봉투 버전입니다. 읽기도 이 판만 받습니다. 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
              *        섹션은 씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태(`ComponentStateStore`) 셋입니다.

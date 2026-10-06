@@ -6,6 +6,7 @@
  *          좌표는 +Y 위, 오른쪽은 앞 × 위의 반대(앞이 +Z 면 오른쪽이 +X)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -54,7 +55,7 @@ namespace sw
     class SW_GF_API AdventureTargeting
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54475441u; ///< 'ATGT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "ATGT" );
         static constexpr uint32 kStateVersion = 1;
 
         AdventureTargeting();

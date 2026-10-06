@@ -13,6 +13,7 @@
  *          순위 진행값 = (바퀴 − 1) × 길이 + 중심선 거리. 거리는 지금 사이에 있는 두 문의 거리로 잘라, 문을 건너뛴 차가 앞선 것처럼 보이지 않게 합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -179,7 +180,7 @@ namespace sw
     class SW_GF_API KartRace
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4341524Bu; ///< 'KRAC'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KRAC" );
         static constexpr uint32 kStateVersion = 1;
 
         KartRace();

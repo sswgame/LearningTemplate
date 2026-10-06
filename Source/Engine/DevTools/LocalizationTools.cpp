@@ -103,7 +103,7 @@ namespace sw
             static string makeMemoryPath( string_view projectPath, string_view culture )
             {
                 return LocalizationProject::makeSiblingPath( projectPath, string( TranslationMemory::kFolderName ) + "/" + CultureTable::normalizeCode( culture ) +
-                                                                              TranslationMemory::kFileSuffix );
+                                                                              TranslationMemory::kExtension );
             }
 
             /** @brief 번역 메모리를 읽습니다(없으면 빈 메모리). 못 읽으면 문제로 알리고 false 입니다. */
@@ -351,7 +351,7 @@ namespace sw
                 continue;
             for ( const string& filePath : listFile )
             {
-                if ( StringUtil::endsWith( filePath, LocalizationProject::kFileSuffix, true ) )
+                if ( StringUtil::endsWith( filePath, LocalizationProject::kExtension, true ) )
                     outListProjectPath.push_back( FileUtil::normalizeSeparators( filePath ) );
             }
         }
@@ -574,7 +574,7 @@ namespace sw
         {
             LocalizationExchangeResult& result = outListResult.emplace_back();
             result._culture                    = culture;
-            result._path                       = LocalizationProject::makeSiblingPath( absolute, string( PortableObjectFile::kFolderName ) + "/" + culture + PortableObjectFile::kFileExtension );
+            result._path                       = LocalizationProject::makeSiblingPath( absolute, string( PortableObjectFile::kFolderName ) + "/" + culture + PortableObjectFile::kExtension );
             const string     translationPath   = LocalizationProject::makeTranslationPath( absolute, culture );
             TranslationTable translation;
             translation.setCulture( culture );

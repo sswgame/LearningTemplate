@@ -6,6 +6,7 @@
  *          `_staminaRecoverLevel` 까지 다시 찰 때까지 아무 행동도 스태미나를 쓰지 못합니다(야생의 숨결의 붉은 바퀴).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
@@ -70,7 +71,7 @@ namespace sw
     class SW_GF_API AdventureVitals
     {
     public:
-        static constexpr uint32 kStateTag         = 0x54495641u; ///< 'AVIT'
+        static constexpr uint32 kStateTag         = FourCcUtil::make( "AVIT" );
         static constexpr uint32 kStateVersion     = 1;
         static constexpr int32  kQuartersPerHeart = 4;
 

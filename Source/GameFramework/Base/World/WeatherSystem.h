@@ -3,6 +3,7 @@
  * @brief 날씨 — 계절마다 가중치로 다음 날씨를 고르고, 정한 시간 동안 이어지다 부드럽게 넘어가며, 젖음 · 바람 · 안개 같은 값을 섞어 줍니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -77,7 +78,7 @@ namespace sw
     class SW_GF_API WeatherSystem
     {
     public:
-        static constexpr uint32 kStateTag     = 0x52485457u; ///< 'WTHR'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WTHR" );
         static constexpr uint32 kStateVersion = 1;
 
         WeatherSystem();

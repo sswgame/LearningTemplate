@@ -5,6 +5,7 @@
  *          `Shield`). 같은 씨앗 · 같은 걸음이면 같은 자리에 같은 것이 나옵니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -91,7 +92,7 @@ namespace sw
         friend class XmlCatalog<PartyItemSpawner>;
 
     public:
-        static constexpr uint32 kStateTag     = 0x50534950u; ///< 'PISP'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "PISP" );
         static constexpr uint32 kStateVersion = 1;
 
         PartyItemSpawner();

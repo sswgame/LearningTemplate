@@ -177,9 +177,9 @@ namespace sw
         if ( sourcePath.empty() == false )
         {
             const string fileName = FileUtil::getFileNamePart( sourcePath );
-            if ( StringUtil::equals( fileName, outManifest._name + kManifestSuffix, false ) == false )
+            if ( StringUtil::equals( fileName, outManifest._name + kManifestExtension, false ) == false )
             {
-                outError = where + ": the file must be named '" + outManifest._name + kManifestSuffix + "'";
+                outError = where + ": the file must be named '" + outManifest._name + kManifestExtension + "'";
                 return false;
             }
         }
@@ -324,7 +324,7 @@ namespace sw
         std::sort( listFile.begin(), listFile.end() );
         for ( const string& filePath : listFile )
         {
-            if ( StringUtil::endsWith( filePath, kManifestSuffix, true ) == false )
+            if ( StringUtil::endsWith( filePath, kManifestExtension, true ) == false )
                 continue;
             string text;
             if ( FileUtil::readTextFile( filePath, text ) == false )

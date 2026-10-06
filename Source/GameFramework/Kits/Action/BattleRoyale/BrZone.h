@@ -3,6 +3,7 @@
  * @brief 자기장 — 단계마다 다음 원을 지금 원 안에서 씨앗 난수로 고르고(맵 경계 · 금지 지형 콜백), 기다렸다 줄이며, 자리마다 안 · 밖과 피해를 답합니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -75,7 +76,7 @@ namespace sw
     class SW_GF_API BrZone
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E5A5242u; ///< 'BRZN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "BRZN" );
         static constexpr uint32 kStateVersion = 1;
 
         BrZone();

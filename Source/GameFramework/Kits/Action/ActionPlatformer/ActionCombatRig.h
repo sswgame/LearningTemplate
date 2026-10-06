@@ -6,6 +6,7 @@
  *          기술은 자기 히트스톱만 줄입니다. 맞았는지(히트박스 겹침)는 게임이 보고 `registerMeleeContact` 로 알려 줍니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -77,7 +78,7 @@ namespace sw
     class SW_GF_API ActionCombatRig
     {
     public:
-        static constexpr uint32  kStateTag     = 0x52435041u; ///< 'APCR'
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "APCR" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kFrameTime    = 1.0f / 60.0f; ///< 한 프레임(탄 · 총 시간)
 

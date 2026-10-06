@@ -6,6 +6,7 @@
  *          부른 시각입니다 — 너무 이르면(창 밖) 패리가 아니라 그냥 맞습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
@@ -49,7 +50,7 @@ namespace sw
     class SW_GF_API MetroDuelist
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4555444Du; ///< 'MDUE'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MDUE" );
         static constexpr uint32 kStateVersion = 1;
 
         MetroDuelist();

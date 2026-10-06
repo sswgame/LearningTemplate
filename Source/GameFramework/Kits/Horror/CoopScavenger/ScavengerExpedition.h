@@ -4,6 +4,7 @@
  *        시설 · 고철 운반 · 위협(기반 SpawnDirector 실내 · 실외) · 죽음과 시신 회수 · 벌금 · 전멸 손실 · 회사 매입 · 할당량 · 터미널 상점(기반 ShopState/Wallet)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -127,7 +128,7 @@ namespace sw
     public:
         static constexpr const utf8* kShipAreaId    = "ship";
         static constexpr const utf8* kOutsideAreaId = "outside";
-        static constexpr uint32      kStateTag      = 0x58454353u; ///< 'SCEX'
+        static constexpr uint32      kStateTag      = FourCcUtil::make( "SCEX" );
         static constexpr uint32      kStateVersion  = 1;
 
         ScavengerExpedition();

@@ -3,6 +3,7 @@
  * @brief 마을 밭 디렉터 — 공유 상태(`GameStateComponent`)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 공유 지갑에 팔고 다시 심습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
@@ -31,7 +32,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag      = 0x4D46564Du; ///< 'MVFM'
+        static constexpr uint32  kStateTag      = FourCcUtil::make( "MVFM" );
         static constexpr uint32  kStateVersion  = 1;
         static constexpr int32   kFieldWidth    = 4;
         static constexpr int32   kFieldHeight   = 2;

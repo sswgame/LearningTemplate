@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorSnapshot.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -11,7 +12,7 @@ namespace sw
     {
         struct HorrorSnapshotInternal
         {
-            static constexpr uint32  kMagic         = 0x44424431u; ///< "DBD1"
+            static constexpr uint32  kMagic         = FourCcUtil::make( "DBD1" );
             static constexpr int32   kMaxCount      = 255;
             static constexpr float32 kWorldHalfSize = 1000.0f;
             static constexpr float32 kPositionStep  = 0.01f;

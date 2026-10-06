@@ -6,6 +6,7 @@
  *          그래프 · 플래그 · 전리품 표 · 카탈로그는 빌려 씁니다(저택보다 오래 살아야 한다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -103,7 +104,7 @@ namespace sw
     class SW_GF_API GhostMansion
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E4D4847u; ///< 'GHMN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GHMN" );
         static constexpr uint32 kStateVersion = 1;
 
         GhostMansion();

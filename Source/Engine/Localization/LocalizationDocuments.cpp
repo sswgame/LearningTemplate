@@ -452,6 +452,6 @@ namespace sw
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )
     {
-        return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kFileSuffix );
+        return makeSiblingPath( projectPath, CultureTable::normalizeCode( culture ) + TranslationTable::kExtension );
     }
 } // namespace sw

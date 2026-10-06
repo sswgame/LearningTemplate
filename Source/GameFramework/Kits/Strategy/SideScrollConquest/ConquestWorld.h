@@ -7,6 +7,7 @@
  *          서 있는 동안 상대편은 지나지 못합니다 — 그 성문에 자기편 사다리가 걸쳐 있으면 넘습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -148,7 +149,7 @@ namespace sw
     class SW_GF_API ConquestWorld
     {
     public:
-        static constexpr uint32 kStateTag     = 0x57514E43u; ///< 'CNQW'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CNQW" );
         static constexpr uint32 kStateVersion = 1;
 
         ConquestWorld();

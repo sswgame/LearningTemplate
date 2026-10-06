@@ -3,6 +3,7 @@
  * @brief 타일 스텝 플레이어 이동 + locomotion FSM 입니다(Playing 전용 입력).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -46,7 +47,7 @@ namespace sw
     class SW_GF_API PlayerController
     {
     public:
-        static constexpr uint32 kStateTag     = 0x434C504Fu; ///< 'OPLC'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "OPLC" );
         static constexpr uint32 kStateVersion = 1;
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */

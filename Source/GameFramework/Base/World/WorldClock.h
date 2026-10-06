@@ -3,6 +3,7 @@
  * @brief 게임 시계 — 하루 길이 · 시간 배율 · 멈춤, 시 · 분 · 날 · 계절 · 해, 새벽 · 낮 · 해질녘 · 밤, 햇빛 세기, 잠자기(그 시각까지 건너뛰기)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -70,7 +71,7 @@ namespace sw
     class SW_GF_API WorldClock
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4B4F4C43u; ///< 'CLOK'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CLOK" );
         static constexpr uint32 kStateVersion = 1;
 
         WorldClock();

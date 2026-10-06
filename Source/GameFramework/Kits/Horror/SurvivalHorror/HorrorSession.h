@@ -5,6 +5,7 @@
  * @details 시간은 `update` 로만 흐르고 난수를 쓰지 않습니다(결정적). 지도는 게임이 가진 `AreaGraph` 를 빌려 씁니다(방문 상태는 그쪽에 남는다).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -88,7 +89,7 @@ namespace sw
     class SW_GF_API HorrorSession
     {
     public:
-        static constexpr uint32 kStateTag     = 0x53455348u; ///< 'HSES'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "HSES" );
         static constexpr uint32 kStateVersion = 1;
 
         HorrorSession();

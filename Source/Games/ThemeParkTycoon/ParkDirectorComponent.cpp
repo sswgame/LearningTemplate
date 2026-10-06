@@ -2,6 +2,7 @@
 
 #include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -32,8 +33,8 @@ namespace sw
     {
         struct ParkDirectorComponentInternal
         {
-            static constexpr float32 kRailSpacing     = 2.0f;        ///< 레일 조각 간격(m)
-            static constexpr uint32  kStateTag        = 0x4B524150u; ///< 'PARK'
+            static constexpr float32 kRailSpacing     = 2.0f; ///< 레일 조각 간격(m)
+            static constexpr uint32  kStateTag        = FourCcUtil::make( "PARK" );
             static constexpr uint32  kStateVersion    = 2;
             static constexpr float32 kSupportSpacing  = 8.0f; ///< 기둥 간격(m)
             static constexpr uint32  kCarCount        = 4;

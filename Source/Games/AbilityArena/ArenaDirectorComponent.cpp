@@ -2,6 +2,7 @@
 
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -28,8 +29,8 @@ namespace sw
     {
         struct ArenaDirectorComponentInternal
         {
-            static constexpr float32 kStatusLogInterval = 5.0f;        ///< 상태 로그 간격(s)
-            static constexpr uint32  kStateTag          = 0x414E5241u; ///< 'ARNA'
+            static constexpr float32 kStatusLogInterval = 5.0f; ///< 상태 로그 간격(s)
+            static constexpr uint32  kStateTag          = FourCcUtil::make( "ARNA" );
             static constexpr uint32  kStateVersion      = 1;
             static constexpr float32 kUnitRadius        = 0.5f; ///< 투사체가 쏜 쪽 몸 밖에서 나오는 거리
             static constexpr float32 kProjectileRadius  = 0.25f;

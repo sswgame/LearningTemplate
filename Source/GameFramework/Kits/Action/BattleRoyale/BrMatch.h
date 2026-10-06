@@ -4,6 +4,7 @@
  *        팀 전원 기절 = 전멸, 자기장 피해, 보급 상자, 남은 인원 · 킬 피드 알림입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -102,7 +103,7 @@ namespace sw
     class SW_GF_API BrMatch
     {
     public:
-        static constexpr uint32  kStateTag     = 0x544D5242u; ///< 'BRMT'
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "BRMT" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kFixedStep    = 0.1f;
 

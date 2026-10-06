@@ -3,6 +3,7 @@
  * @brief 걸음 수 인카운터 — 걸음마다 지역 확률로 조우를 굴리고, 조우 뒤 유예 걸음 동안은 굴리지 않으며, 무리는 가중치로 고릅니다(드래곤 퀘스트).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
@@ -22,7 +23,7 @@ namespace sw
     class SW_GF_API JrpgEncounterWalker
     {
     public:
-        static constexpr uint32 kStateTag       = 0x434E454Au; ///< 'JENC'
+        static constexpr uint32 kStateTag       = FourCcUtil::make( "JENC" );
         static constexpr uint32 kStateVersion   = 1;
         static constexpr int32  kNoEncounterYet = 0x3fffffff;
 

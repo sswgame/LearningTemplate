@@ -7,6 +7,7 @@
  *          나뉘지만, 그래프는 "어디로 이어지는가" 를, 이 카탈로그는 "무엇으로 여는가" 를 적습니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -183,7 +184,7 @@ namespace sw
     class SW_GF_API AdventureDungeonState
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E474441u; ///< 'ADGN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "ADGN" );
         static constexpr uint32 kStateVersion = 1;
 
         AdventureDungeonState();

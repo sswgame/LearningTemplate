@@ -3,6 +3,7 @@
  * @brief 생물과 함께 만드는 마을 — 칸 격자의 오브젝트, 서식지 맞추기(회전 허용), 시간대 · 날씨에 따른 방문(결정적), 호감도 · 부탁, 능력으로 세계 편집, 집 배정, 매력도입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -166,7 +167,7 @@ namespace sw
     class SW_GF_API CreatureTown
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4E575443u; ///< 'CTWN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CTWN" );
         static constexpr uint32 kStateVersion = 1;
 
         CreatureTown();

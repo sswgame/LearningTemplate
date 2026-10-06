@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Framework/Autosave.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -22,7 +23,7 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr uint32      kInfoTag       = 0x56415341u; ///< 'ASAV'
+            static constexpr uint32      kInfoTag       = FourCcUtil::make( "ASAV" );
             static constexpr uint32      kInfoVersion   = 1;
             static constexpr const utf8* kInfoExtension = ".info";
             static constexpr int32       kMaxSlotCount  = 64;

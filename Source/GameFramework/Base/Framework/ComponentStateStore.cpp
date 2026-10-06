@@ -57,7 +57,7 @@ namespace sw
 
     void ComponentStateStore::write( Archive& outArchive ) const
     {
-        outArchive << kFormatVersion;
+        outArchive << kVersion;
         outArchive << static_cast<uint32>( _listEntry.size() );
         for ( const Entry& entry : _listEntry )
         {
@@ -74,7 +74,7 @@ namespace sw
         uint32 count   = 0;
         archive >> version;
         archive >> count;
-        if ( archive.isError() || version != kFormatVersion )
+        if ( archive.isError() || version != kVersion )
             return false;
         // 파일이 말한 개수를 그대로 잡지 않는다 — 깨진 값 하나가 수십 기가를 요구한다.
         if ( static_cast<uint64>( count ) * ComponentStateStoreInternal::kMinEntryBytes > archive.getRemainingBytes() )

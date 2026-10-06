@@ -3,6 +3,7 @@
  * @brief 계약 — 위쳐 감각으로 단서 찾기(조사 지점 · 발견 순서 · 단계의 단서를 모두 찾으면 다음 단계, 기반 `QuestLog` 에 진행 알림)와 보상 흥정(분노 게이지 — 너무 올리면 결렬)입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -59,7 +60,7 @@ namespace sw
     class SW_GF_API WitcherInvestigation
     {
     public:
-        static constexpr uint32      kStateTag       = 0x564E4957u; ///< 'WINV'
+        static constexpr uint32      kStateTag       = FourCcUtil::make( "WINV" );
         static constexpr uint32      kStateVersion   = 1;
         static constexpr const utf8* kClueNotifyKind = "Clue";
         static constexpr const utf8* kStepNotifyKind = "Investigate";
@@ -119,7 +120,7 @@ namespace sw
     class SW_GF_API WitcherHaggle
     {
     public:
-        static constexpr uint32 kStateTag     = 0x47414857u; ///< 'WHAG'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WHAG" );
         static constexpr uint32 kStateVersion = 1;
 
         WitcherHaggle();

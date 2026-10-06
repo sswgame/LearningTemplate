@@ -12,6 +12,7 @@
  *          - 얼음을 쓰면 물이 얼고, 타는 칸은 꺼진다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -78,7 +79,7 @@ namespace sw
     class SW_GF_API AdventureElementGrid
     {
     public:
-        static constexpr uint32 kStateTag     = 0x4D4C4541u; ///< 'AELM'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "AELM" );
         static constexpr uint32 kStateVersion = 1;
 
         AdventureElementGrid();

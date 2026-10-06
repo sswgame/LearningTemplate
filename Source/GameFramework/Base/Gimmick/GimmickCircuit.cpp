@@ -2,6 +2,7 @@
 
 #include "GameFramework/Base/Gimmick/GimmickCircuit.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
@@ -13,7 +14,7 @@ namespace sw
     {
         struct GimmickCircuitInternal
         {
-            static constexpr uint32 kStateMagic   = 0x434B4D47u; // "GMKC"
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "GMKC" );
             static constexpr uint32 kStateVersion = 1u;
 
             static uint64 hashBytes( uint64 hash, const void* pData, size_t size )
@@ -447,7 +448,7 @@ namespace sw
         using Internal = GimmickCircuitInternal;
         outBytes.clear();
         outBytes.reserve( 32 + _listNode.size() * 16 + _listFloatState.size() * 4 + _listIntState.size() * 4 );
-        Internal::writeValue( outBytes, Internal::kStateMagic );
+        Internal::writeValue( outBytes, Internal::kStateTag );
         Internal::writeValue( outBytes, Internal::kStateVersion );
         Internal::writeValue( outBytes, _layoutHash );
         Internal::writeValue( outBytes, _stepIndex );
@@ -479,7 +480,7 @@ namespace sw
         const bool bHeader = bytes.size() == expectedSize && Internal::readValue( bytes, offset, magic ) && Internal::readValue( bytes, offset, version ) &&
                              Internal::readValue( bytes, offset, layoutHash ) && Internal::readValue( bytes, offset, stepIndex ) &&
                              Internal::readValue( bytes, offset, accumulator );
-        if ( bHeader == false || magic != Internal::kStateMagic || version != Internal::kStateVersion || layoutHash != _layoutHash )
+        if ( bHeader == false || magic != Internal::kStateTag || version != Internal::kStateVersion || layoutHash != _layoutHash )
             return false;
         _stepIndex          = stepIndex;
         _timer._accumulator = accumulator;

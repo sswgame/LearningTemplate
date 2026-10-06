@@ -37,7 +37,7 @@ namespace sw
             vector<uint8> _bytes{};
         };
 
-        static constexpr uint32 kFormatVersion = 1;
+        static constexpr uint32 kVersion = 1;
 
         ComponentStateStore();
 

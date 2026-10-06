@@ -4,6 +4,7 @@
  *        변이 혼합물은 효과 동안 묶임), 칼에 바른 오일의 적중 횟수입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -56,7 +57,7 @@ namespace sw
     class SW_GF_API WitcherAlchemy
     {
     public:
-        static constexpr uint32 kStateTag     = 0x434C4157u; ///< 'WALC'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WALC" );
         static constexpr uint32 kStateVersion = 1;
 
         WitcherAlchemy();

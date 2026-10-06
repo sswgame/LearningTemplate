@@ -2,6 +2,7 @@
 
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputManager.h"
@@ -27,7 +28,7 @@ namespace sw
         struct VoxelPlayerComponentInternal
         {
             static constexpr const utf8* kSoundLand    = "game/voxelcraft/sounds/footstep_grass_000.ogg";
-            static constexpr uint32      kStateTag     = 0x52594C50u; ///< 'PLYR'
+            static constexpr uint32      kStateTag     = FourCcUtil::make( "PLYR" );
             static constexpr uint32      kStateVersion = 1;
             static constexpr const utf8* kSoundBreak   = "game/voxelcraft/sounds/impact_soft_medium_000.ogg";
             static constexpr const utf8* kSoundPlace   = "game/voxelcraft/sounds/impact_plank_medium_001.ogg";

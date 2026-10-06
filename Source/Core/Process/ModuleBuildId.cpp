@@ -2,6 +2,7 @@
 
 #include "Core/Process/ModuleBuildId.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -39,7 +40,7 @@ namespace sw
                 utf8  _arrPdbPath[1];
             };
 
-            static constexpr DWORD kRsdsSignature = 0x53445352u; // "RSDS"
+            static constexpr DWORD kRsdsSignature = FourCcUtil::make( "RSDS" );
 #elif defined( SW_PLATFORM_LINUX )
             struct BuildIdQuery
             {

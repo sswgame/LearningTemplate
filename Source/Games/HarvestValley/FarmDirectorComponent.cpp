@@ -2,6 +2,7 @@
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -41,9 +42,9 @@ namespace sw
             static constexpr float32 kNearDistance       = 1.7f; ///< 출하함 · 가게 옆으로 치는 거리(m)
             static constexpr float32 kAutoActionInterval = 0.25f;
             static constexpr float32 kRainChance         = 0.25f;
-            static constexpr int32   kAutoCultivateLimit = 32;          ///< 자동 농부가 가꾸는 칸 수(체력이 하루에 감당하는 만큼)
-            static constexpr float32 kCameraFollow       = 0.4f;        ///< 카메라 초점이 밭 가운데에서 농부 쪽으로 가는 비율
-            static constexpr uint32  kStateTag           = 0x4D524146u; ///< 'FARM'
+            static constexpr int32   kAutoCultivateLimit = 32;   ///< 자동 농부가 가꾸는 칸 수(체력이 하루에 감당하는 만큼)
+            static constexpr float32 kCameraFollow       = 0.4f; ///< 카메라 초점이 밭 가운데에서 농부 쪽으로 가는 비율
+            static constexpr uint32  kStateTag           = FourCcUtil::make( "FARM" );
             static constexpr uint32  kStateVersion       = 2;
 
             static constexpr float3 kDefaultShippingBinPosition{ 13.4f, 0.0f, 1.0f };

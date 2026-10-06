@@ -21,7 +21,7 @@ namespace sw
         struct RemoteConfigInternal
         {
             static constexpr uint64 kRecordVersion   = 1;
-            static constexpr uint64 kSnapshotVersion = 1;
+            static constexpr uint64 kVersion         = 1;
             static constexpr int32  kTypeBitCount    = 2;
             static constexpr int32  kListPageSize    = 256;
             static constexpr int32  kMaxKeySize      = 128;
@@ -260,7 +260,7 @@ namespace sw
                 ++visibleCount;
             (void)key;
         }
-        outWriter.writeVarUint( RemoteConfigInternal::kSnapshotVersion );
+        outWriter.writeVarUint( RemoteConfigInternal::kVersion );
         outWriter.writeVarUint( visibleCount );
         for ( const auto& [key, entry] : _mapEntry )
         {
@@ -273,7 +273,7 @@ namespace sw
 
     bool RemoteConfig::readClientSnapshot( BitReader& reader )
     {
-        if ( reader.readVarUint() != RemoteConfigInternal::kSnapshotVersion )
+        if ( reader.readVarUint() != RemoteConfigInternal::kVersion )
             return false;
         const uint64 count = reader.readVarUint();
         if ( count > static_cast<uint64>( RemoteConfigInternal::kMaxSnapshotKeys ) )

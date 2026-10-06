@@ -21,7 +21,7 @@ namespace sw
             static constexpr int64  kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
             static constexpr int64  kRetryMs        = 5000;
             static constexpr int32  kMaxJobIdSize   = 128;
-            static constexpr uint64 kFormatVersion  = 1;
+            static constexpr uint64 kVersion        = 1;
             static constexpr uint32 kStateRunning   = 0;
             static constexpr uint32 kStateSucceeded = 1;
             static constexpr uint32 kStateFailed    = 2;
@@ -47,7 +47,7 @@ namespace sw
             static vector<uint8> encode( const RunRecord& record )
             {
                 BitWriter writer;
-                writer.writeVarUint( kFormatVersion );
+                writer.writeVarUint( kVersion );
                 writer.writeVarUint( record._serverId );
                 writer.writeVarInt( record._startMs );
                 writer.writeVarInt( record._endMs );
@@ -58,7 +58,7 @@ namespace sw
             [[nodiscard]] static bool decode( const vector<uint8>& bytes, RunRecord& outRecord )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kFormatVersion )
+                if ( reader.readVarUint() != kVersion )
                     return false;
                 outRecord._serverId = reader.readVarUint();
                 outRecord._startMs  = reader.readVarInt();

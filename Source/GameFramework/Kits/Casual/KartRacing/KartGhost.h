@@ -43,7 +43,7 @@ namespace sw
         static constexpr uint8 kButtonBoost   = 1u << 1;
         static constexpr uint8 kButtonJump    = 1u << 2;
         static constexpr uint8 kButtonUseItem = 1u << 3;
-        static constexpr uint8 kFormatVersion = 1;
+        static constexpr uint8 kVersion       = 1;
 
         KartGhost();
 

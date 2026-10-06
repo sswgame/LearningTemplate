@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -30,7 +32,7 @@ namespace sw
     class GameStateProbeDirector : public GameDirectorComponent
     {
     public:
-        static constexpr uint32 kStateTag     = 0x42505347u; ///< 'GSPB'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "GSPB" );
         static constexpr int64  kStartingGold = 100;
 
         GameStateInitResult _initResult{ GameStateInitResult::AlreadyInitialized };

@@ -3,6 +3,7 @@
  * @brief 퀘스트 일지 — 받기(선행 · 레벨 · 반복), 목표 진행 알림, 단계 넘기기, 선택지, 시간 제한, 완료 · 실패 · 포기, 보상 알림입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -91,8 +92,8 @@ namespace sw
     class SW_GF_API QuestLog
     {
     public:
-        static constexpr int32  kMaxChainedStages = 32;          ///< 한 번에 넘어가는 단계 수 상한(서로 가리키는 단계가 멈추게)
-        static constexpr uint32 kStateTag         = 0x474F4C51u; ///< 'QLOG'
+        static constexpr int32  kMaxChainedStages = 32; ///< 한 번에 넘어가는 단계 수 상한(서로 가리키는 단계가 멈추게)
+        static constexpr uint32 kStateTag         = FourCcUtil::make( "QLOG" );
         static constexpr uint32 kStateVersion     = 1;
 
         QuestLog();

@@ -3,6 +3,7 @@
  * @brief 괴물 도감 — 읽기 · 처치 · 조사로 오르는 지식 단계, 해금된 약점만 보여 주기, 기반 `ElementChart` 로 오일 · 폭탄 · 표식의 속성 배율입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -44,7 +45,7 @@ namespace sw
     class SW_GF_API WitcherBestiary
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54534257u; ///< 'WBST'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "WBST" );
         static constexpr uint32 kStateVersion = 1;
 
         WitcherBestiary();

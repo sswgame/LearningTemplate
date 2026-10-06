@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
@@ -13,7 +14,7 @@ namespace sw
     {
         struct FightingMatchInternal
         {
-            static constexpr uint32  kStateMagic    = 0x54484746u; ///< "FGHT"
+            static constexpr uint32  kStateTag      = FourCcUtil::make( "FGHT" );
             static constexpr int32   kStateVersion  = 2;
             static constexpr uint16  kButtonMask    = 0x0F; ///< 1 바이트 입력에 싣는 버튼 4 개
             static constexpr int32   kMaxCounter    = 1 << 20;
@@ -1075,7 +1076,7 @@ namespace sw
     {
         // 롤백은 프레임마다 · 되감아 다시 돌 때마다 저장한다 — 링 슬롯의 버퍼를 이어받아 쓰고 돌려준다(새로 잡지 않는다).
         BitWriter writer{ std::move( outBuffer ) };
-        writer.writeUint32( FightingMatchInternal::kStateMagic );
+        writer.writeUint32( FightingMatchInternal::kStateTag );
         writer.writeVarInt( FightingMatchInternal::kStateVersion );
         FightingMatchInternal::writeCounter( writer, _frame );
         FightingMatchInternal::writeCounter( writer, _lastRoundWinner );
@@ -1117,7 +1118,7 @@ namespace sw
     bool FightingMatch::loadState( const vector<uint8>& buffer )
     {
         BitReader reader( buffer.data(), static_cast<int32>( buffer.size() ) );
-        if ( reader.readUint32() != FightingMatchInternal::kStateMagic || reader.readVarInt() != FightingMatchInternal::kStateVersion )
+        if ( reader.readUint32() != FightingMatchInternal::kStateTag || reader.readVarInt() != FightingMatchInternal::kStateVersion )
             return false;
         const int32 frame           = FightingMatchInternal::readCounter( reader );
         const int32 lastRoundWinner = FightingMatchInternal::readCounter( reader );

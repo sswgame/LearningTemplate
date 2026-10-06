@@ -1869,3 +1869,17 @@ SW_TEST_CASE( SceneTest, SceneDocumentReadsValuesOnlyFromAttributes )
     SW_EXPECT_STREQ( "Entity", document._listSceneObjectNode[0]._name.c_str() );
     SW_EXPECT_TRUE( document._listSceneObjectNode[0]._prefab.empty() );
 }
+
+/**
+ * @brief [SceneTest] 쿠킹된 씬(.scene.bin)의 앞 네 바이트는 표식 글자 순서 그대로("SCN1")다 — 4 글자 표식의 바이트 순서는 하나다(FourCcUtil)
+ */
+SW_TEST_CASE( SceneTest, BinarySceneStartsWithMagicInFileOrder )
+{
+    sw::SceneDocument document;
+    const sw::string  path = test::makeTempPath( "magic_order.scene.bin" );
+    SW_ASSERT_TRUE( document.saveBinary( path ) );
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( path, bytes ) );
+    SW_ASSERT_TRUE( bytes.size() >= 4 );
+    SW_EXPECT_EQUAL( sw::string( "SCN1" ), sw::string( reinterpret_cast<const utf8*>( bytes.data() ), 4 ) );
+}

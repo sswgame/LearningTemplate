@@ -3,6 +3,7 @@
  * @brief 말 한 마리 — 유대 단계(타기 · 손질 · 먹이 · 달래기 경험치) · 단계별 능력 해금 · 체력 · 스태미나 게이지(기반 `ResourceGauge`)와 코어 · 질주 · 겁먹음입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -56,7 +57,7 @@ namespace sw
     class SW_GF_API WesternHorse
     {
     public:
-        static constexpr uint32  kStateTag      = 0x53524857u; ///< 'WHRS'
+        static constexpr uint32  kStateTag      = FourCcUtil::make( "WHRS" );
         static constexpr uint32  kStateVersion  = 1;
         static constexpr float32 kCoreMax       = 100.0f;
         static constexpr float32 kFearThreshold = 1.0f;

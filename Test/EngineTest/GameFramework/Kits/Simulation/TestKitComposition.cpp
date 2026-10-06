@@ -7,6 +7,8 @@
  */
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -109,7 +111,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x4D46434Bu; ///< 'KCFM'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KCFM" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kFieldWidth   = 2;
 
@@ -233,7 +235,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x4E54434Bu; ///< 'KCTN'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KCTN" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kTownSize     = 6;
         static constexpr int64  kOrchardPrice = 50;
@@ -415,7 +417,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x5443434Bu; ///< 'KCCT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KCCT" );
         static constexpr uint32 kStateVersion = 1;
 
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
@@ -523,7 +525,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x4B53434Bu; ///< 'KCSK'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "KCSK" );
         static constexpr uint32 kStateVersion = 1;
 
         const TypeInfo*  getTypeInfo() const override { return StaticType(); }

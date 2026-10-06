@@ -4,6 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/Common/FourCcUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -31,7 +33,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = 0x544B434Du; ///< 'MCKT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MCKT" );
         static constexpr uint32 kStateVersion = 1;
 
         int32                            _value{ 0 };              ///< PROPERTY 가 아닌 판 상태

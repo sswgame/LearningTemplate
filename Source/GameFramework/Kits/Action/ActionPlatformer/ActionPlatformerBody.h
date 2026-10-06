@@ -7,6 +7,7 @@
  *          기반 몸에 돌려줍니다. 고정 틱(권장 1/60)으로 부르면 결정적입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -106,7 +107,7 @@ namespace sw
     class SW_GF_API ActionPlatformerBody
     {
     public:
-        static constexpr uint32 kStateTag     = 0x44425041u; ///< 'APBD'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "APBD" );
         static constexpr uint32 kStateVersion = 1;
 
         ActionPlatformerBody();

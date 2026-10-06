@@ -354,3 +354,17 @@ SW_TEST_CASE( CompressionTest, AbsurdUncompressedSizeIsRejectedBeforeAllocating 
     pHead->_uncompressedSize = sw::CompressionStream::kMaxUncompressedSize;
     SW_EXPECT_TRUE( sw::CompressionStream::verifyHeader( attack.data(), attack.size(), parsed ) );
 }
+
+/**
+ * @brief [CompressionTest] 압축 스트림의 앞 네 바이트는 표식 글자 순서 그대로("SWCS")다
+ * @details 4 글자 표식을 16 진으로 손으로 적으면 바이트 순서가 둘로 갈린다('SWHF' 는 파일 순서, 'SWCS' 는 거꾸로 "SCWS" 로 써졌다).
+ *          표식은 FourCcUtil 하나로 만들어 리틀 엔디언으로 쓰면 파일에 글자 순서대로 남는다(DDS · glTF 와 같은 규약).
+ */
+SW_TEST_CASE( CompressionTest, StreamStartsWithMagicInFileOrder )
+{
+    const sw::string  original = "four character code";
+    sw::vector<uint8> compressedStream;
+    SW_ASSERT_TRUE( sw::CompressionStream::compressBuffer( original.data(), original.size(), compressedStream ) );
+    SW_ASSERT_TRUE( compressedStream.size() >= 4 );
+    SW_EXPECT_EQUAL( sw::string( "SWCS" ), sw::string( reinterpret_cast<const utf8*>( compressedStream.data() ), 4 ) );
+}

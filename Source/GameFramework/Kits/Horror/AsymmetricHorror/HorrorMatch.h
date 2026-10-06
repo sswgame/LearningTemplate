@@ -11,6 +11,7 @@
  *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` · `moveKiller` 로 — 키트가 상태에 맞는 속도를 곱합니다(벽 충돌은 게임이).
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -228,7 +229,7 @@ namespace sw
     class SW_GF_API HorrorMatch
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54414D48u; ///< 'HMAT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "HMAT" );
         static constexpr uint32 kStateVersion = 1;
 
         HorrorMatch();

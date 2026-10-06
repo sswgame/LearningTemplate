@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/FractureComponentBase.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
@@ -78,8 +79,8 @@ namespace sw
             static constexpr uint32  kBakeAfterStillFrames = 30;
             static constexpr float32 kMoveEpsilon          = 1.0e-4f;
             static constexpr uint32  kMaxPolygonPoint2D    = 8;
-            static constexpr float32 kSpawnGraceTime       = 0.3f;        ///< 갓 태어난 조각끼리의 부딪힘을 피해로 보지 않는 시간(초)
-            static constexpr uint32  kSnapshotMagic        = 0x53574653u; ///< 'SWFS' — 네트워크 스냅숏(상태 + 그룹 자세)
+            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 태어난 조각끼리의 부딪힘을 피해로 보지 않는 시간(초)
+            static constexpr uint32  kMagic                = FourCcUtil::make( "SWFS" );
 
             /** @brief 잎 껍질 점을 오브젝트 원점 기준으로(무게 중심 + 줄인 껍질) × 배율. */
             static void makeLeafHull( const FractureAsset& asset, uint32 leaf, float32 scale, float32 shrink, vector<float3>& outListPoint )
@@ -1570,7 +1571,7 @@ namespace sw
         vector<FractureGroupPose> listPose;
         collectGroupPoses( listPose );
         BitWriter writer;
-        writer.writeUint32( Internal::kSnapshotMagic );
+        writer.writeUint32( Internal::kMagic );
         writer.writeBlob( stateBytes.data(), static_cast<int32>( stateBytes.size() ) );
         writer.writeVarUint( listPose.size() );
         for ( const FractureGroupPose& pose : listPose )
@@ -1659,7 +1660,7 @@ namespace sw
         using Internal         = FractureComponentBaseInternal;
         const utf8* pOwnerName = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
         BitReader   reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( reader.readUint32() != Internal::kSnapshotMagic )
+        if ( reader.readUint32() != Internal::kMagic )
         {
             SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
             return;

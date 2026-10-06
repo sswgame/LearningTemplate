@@ -12,7 +12,7 @@ namespace sw
     {
         struct ServiceAuditLogInternal
         {
-            static constexpr uint64 kFormatVersion  = 1;
+            static constexpr uint64 kVersion        = 1;
             static constexpr int32  kMaxActorSize   = 128;
             static constexpr int32  kMaxActionSize  = 64;
             static constexpr int32  kMaxSubjectSize = 128;
@@ -33,7 +33,7 @@ namespace sw
             static vector<uint8> encode( const ServiceAuditEntry& entry )
             {
                 BitWriter writer;
-                writer.writeVarUint( kFormatVersion );
+                writer.writeVarUint( kVersion );
                 ServiceKeyUtil::writeString( writer, entry._actor );
                 ServiceKeyUtil::writeString( writer, entry._action );
                 ServiceKeyUtil::writeString( writer, entry._subject );
@@ -47,7 +47,7 @@ namespace sw
             [[nodiscard]] static bool decode( const vector<uint8>& bytes, ServiceAuditEntry& outEntry )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( reader.readVarUint() != kFormatVersion )
+                if ( reader.readVarUint() != kVersion )
                     return false;
                 bool bRead = ServiceKeyUtil::readString( reader, kMaxActorSize, outEntry._actor );
                 bRead      = bRead && ServiceKeyUtil::readString( reader, kMaxActionSize, outEntry._action );

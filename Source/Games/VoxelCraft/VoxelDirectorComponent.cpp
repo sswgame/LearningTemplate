@@ -2,6 +2,7 @@
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 
+#include "Core/Common/FourCcUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -28,7 +29,7 @@ namespace sw
         struct VoxelDirectorComponentInternal
         {
             static constexpr float32 kStatusInterval = 5.0f;
-            static constexpr uint32  kStateTag       = 0x4C584F56u; ///< 'VOXL'
+            static constexpr uint32  kStateTag       = FourCcUtil::make( "VOXL" );
             static constexpr uint32  kStateVersion   = 1;
 
             static uint32 hashCoord( int32 x, int32 y, int32 z )

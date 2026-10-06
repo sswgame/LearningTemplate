@@ -36,7 +36,7 @@ namespace sw
             static bool isSpoolFile( string_view path )
             {
                 const string name = FileUtil::getFileNamePart( path );
-                return StringUtil::startsWith( name, TelemetryService::kSpoolFilePrefix ) && StringUtil::endsWith( name, TelemetryService::kSpoolFileExtension );
+                return StringUtil::startsWith( name, TelemetryService::kSpoolFilePrefix ) && StringUtil::endsWith( name, TelemetryService::kSpoolExtension );
             }
 
             /** @brief 지난 실행이 남긴 파일의 순서 — 시각(초), 같으면 이름. */
@@ -459,7 +459,7 @@ namespace sw
     string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::kMaxBuffer256> name;
-        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context._sessionId.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolFileExtension );
+        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context._sessionId.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
         return FileUtil::joinPath( _spoolFolder, name.c_str() );
     }
 

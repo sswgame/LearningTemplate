@@ -4,6 +4,7 @@
  *        데이터로 적은 카드 효과(피해 · 방어 · 뽑기 · 에너지)와 차례대로 의도를 실행하는 적 하나입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
@@ -120,7 +121,7 @@ namespace sw
     class SW_GF_API DeckBattle
     {
     public:
-        static constexpr uint32 kStateTag     = 0x54424443u; ///< 'CDBT'
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "CDBT" );
         static constexpr uint32 kStateVersion = 1;
 
         DeckBattle();

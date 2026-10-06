@@ -6,6 +6,7 @@
  *          주사위는 씨앗 난수라 같은 씨앗이면 같은 싸움입니다.
  */
 #pragma once
+#include "Core/Common/FourCcUtil.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -63,8 +64,8 @@ namespace sw
     class SW_GF_API HorrorEncounter
     {
     public:
-        static constexpr int32  kMonsterActorId = 1000000;     ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
-        static constexpr uint32 kStateTag       = 0x434E4548u; ///< 'HENC'
+        static constexpr int32  kMonsterActorId = 1000000; ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
+        static constexpr uint32 kStateTag       = FourCcUtil::make( "HENC" );
         static constexpr uint32 kStateVersion   = 1;
 
         HorrorEncounter();

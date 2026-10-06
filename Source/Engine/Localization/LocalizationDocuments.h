@@ -54,7 +54,7 @@ namespace sw
     class SW_API SourceStringTable
     {
     public:
-        static constexpr const utf8* kFileSuffix = ".strings.json";
+        static constexpr const utf8* kExtension = ".strings.json";
 
         [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
@@ -111,7 +111,7 @@ namespace sw
     class SW_API TranslationTable
     {
     public:
-        static constexpr const utf8* kFileSuffix = ".translation.json";
+        static constexpr const utf8* kExtension = ".translation.json";
 
         [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
@@ -167,7 +167,7 @@ namespace sw
     class SW_API LocalizationProject
     {
     public:
-        static constexpr const utf8* kFileSuffix = ".locproject.json";
+        static constexpr const utf8* kExtension = ".locproject.json";
 
         [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
