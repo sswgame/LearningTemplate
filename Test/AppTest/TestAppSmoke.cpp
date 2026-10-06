@@ -714,6 +714,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
         "EditorSelfTest|PASS|contentBrowser.treeDoesNotReadTheDiskEveryFrame",
         "EditorSelfTest|PASS|prefab.ignoresOtherFocusedAssets",
+        "EditorSelfTest|PASS|globalVariables.groupsStack",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

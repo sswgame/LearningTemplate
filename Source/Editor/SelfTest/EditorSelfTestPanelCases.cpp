@@ -18,6 +18,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
+#include <imgui_internal.h>
 
 namespace sw::editor
 {
@@ -346,6 +347,49 @@ namespace sw::editor
                 pManager->destroyObject( pObj );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // globalVariables.groupsStack — 모듈별 묶음 표는 자기 행 수만큼만 차지한다(D19). 묶음 표가 혼자 스크롤하면 패널 높이를 다 차지해
+            // 다음 모듈이 바깥 스크롤 아래로 밀려났다. 이 프레임에 그려진 변수 표(Pin … Reset 다섯 열)가 둘 이상이고, 어느 것도 자기 스크롤 창이 없어야 한다.
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runGlobalVariableGroupsStack( EditorSelfTestContext& context )
+            {
+                constexpr const utf8* kPanelId      = "global_variables";
+                constexpr uint32      kMaxStepCount = 30;
+
+                EditorContext* pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                const uint32 stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    return EditorSelfTestStep::Continue;
+                }
+
+                ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
+                uint32        tableCount{ 0 };
+                uint32        scrollingTableCount{ 0 };
+                for ( int32 tableIndex = 0; tableIndex < imguiContext.Tables.GetMapSize(); ++tableIndex )
+                {
+                    ImGuiTable* pTable = imguiContext.Tables.TryGetMapData( tableIndex );
+                    if ( pTable == nullptr || pTable->LastFrameActive != imguiContext.FrameCount || pTable->ColumnsCount != 5 )
+                        continue;
+                    const string_view firstName{ ImGui::TableGetColumnName( pTable, 0 ) };
+                    const string_view lastName{ ImGui::TableGetColumnName( pTable, 4 ) };
+                    if ( firstName != "Pin" || lastName != "Reset" )
+                        continue;
+                    ++tableCount;
+                    if ( pTable->InnerWindow != pTable->OuterWindow )
+                        ++scrollingTableCount;
+                }
+                if ( tableCount < 2 && stepIndex < kMaxStepCount )
+                    return EditorSelfTestStep::Continue; // 패널이 처음 그려지기를 기다린다
+                (void)context.expect( tableCount >= 2, "the global variables panel did not draw two module groups" );
+                (void)context.expect( scrollingTableCount == 0, "a module group table scrolls on its own and takes the whole panel height" );
+                (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -356,4 +400,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
+    SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
 } // namespace sw::editor
