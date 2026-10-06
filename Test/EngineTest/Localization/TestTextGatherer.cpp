@@ -305,3 +305,24 @@ SW_TEST_CASE( TextGathererTest, RepositoryProjectsAreUpToDate )
         SW_EXPECT_TRUE_MSG( result._report.hasErrors() == false, ( projectPath + " has gather errors" ).c_str() );
     }
 }
+
+/**
+ * @brief [TextGathererTest] 번역의 리치 텍스트 태그 열이 원문과 다르면 보고한다 — "[b]Start[/b]" 의 번역 "시작" 은 굵게를 잃었다
+ */
+SW_TEST_CASE( TextGathererTest, TranslationTagMismatchIsReported )
+{
+    const sw::string repositoryRoot = test::makeTempDirectory( "loc_gather_tags" );
+    const sw::string codeFolder     = sw::FileUtil::joinPath( repositoryRoot, "Code" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( codeFolder ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ),
+                                                 R"(auto a = SW_LOCTEXT( "Menu", "Start", "[b]Start[/b]" ); auto b = SW_LOCTEXT( "Menu", "Quit", "[b]Quit[/b]" );)" ) );
+    const sw::string locFolder   = sw::FileUtil::joinPath( repositoryRoot, "Loc" );
+    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko" ])", R"("codeRoots": [ "Code" ])" );
+    LocalizationTestUtil::writeSourceTable( locFolder, "en", R"("Menu.Start": { "source": "[b]Start[/b]" }, "Menu.Quit": { "source": "[b]Quit[/b]" })" );
+    LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" }, "Menu.Quit": { "text": "[b]종료[/b]" })" );
+
+    sw::LocalizationGatherResult result;
+    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( result._report._listIssue, "ko:Menu.Start", false ) );
+    SW_EXPECT_FALSE( TextGathererTestInternal::hasIssueContaining( result._report._listIssue, "ko:Menu.Quit", false ) );
+}

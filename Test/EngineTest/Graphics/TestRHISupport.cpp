@@ -690,3 +690,55 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
     SW_TEST_SKIP( "Info logs are compiled out in this configuration" );
 #endif
 }
+
+/**
+ * @brief [RHITextureRegionUploadTest] 영역 업로드 검사 하나가 네 백엔드의 규칙이다 — 행 바이트 · 밉 크기 · 범위 · 포맷 · 데이터 크기
+ * @details 64×32 R8 텍스처(밉 2 — 밉 1 은 32×16) · 면 2 로 갈래마다 하나씩. 더하기가 넘치는 x + width 도 밖으로 본다.
+ */
+SW_TEST_CASE( RHITextureRegionUploadTest, ValidationAcceptsInsideAndRejectsTheRest )
+{
+    uint8                          arrByte[16 * 8 * 4]{};
+    sw::RHITextureRegionUploadDesc good{};
+    good._pData      = arrByte;
+    good._sizeBytes  = 16 * 8;
+    good._x          = 16;
+    good._y          = 8;
+    good._width      = 16;
+    good._height     = 8;
+    good._mip        = 1;
+    good._arraySlice = 1;
+
+    uint32 rowBytes{ 0 };
+    SW_EXPECT_TRUE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, good, rowBytes ) );
+    SW_EXPECT_EQUAL( 16u, rowBytes );
+    sw::RHITextureRegionUploadDesc rgba = good;
+    rgba._sizeBytes                     = 16 * 8 * 4;
+    SW_EXPECT_TRUE( sw::validateTextureRegionUpload( sw::RHIFormat::R8G8B8A8_UNORM, 64, 32, 2, 2, rgba, rowBytes ) );
+    SW_EXPECT_EQUAL( 64u, rowBytes );
+
+    SW_TEST_DEFENSIVE_SCOPE( "validateTextureRegionUpload logs every rejection" );
+    sw::RHITextureRegionUploadDesc bad = good;
+    bad._x                             = 17; // 밉 1 은 32 폭 — 17 + 16 > 32
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad        = good;
+    bad._x     = 1;
+    bad._width = sw::invalid_index::kUint32; // x + width 가 넘친다
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad      = good;
+    bad._mip = 2;
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad             = good;
+    bad._arraySlice = 2;
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad         = good;
+    bad._height = 0;
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad            = good;
+    bad._sizeBytes = 16 * 8 - 1;
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    bad        = good;
+    bad._pData = nullptr;
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::R8_UNORM, 64, 32, 2, 2, bad, rowBytes ) );
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::BC4_UNORM, 64, 32, 2, 2, good, rowBytes ) );
+    SW_EXPECT_FALSE( sw::validateTextureRegionUpload( sw::RHIFormat::D24_UNORM_S8_UINT, 64, 32, 2, 2, good, rowBytes ) );
+}

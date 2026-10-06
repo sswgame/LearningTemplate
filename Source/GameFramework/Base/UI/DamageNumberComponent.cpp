@@ -4,11 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/SpriteClipCache.h"
+#include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/UI/Widgets/TextWidget.h"
+#include "Engine/UI/World/WidgetComponent.h"
 
 #include "GameFramework/Base/Utility/LifeSpanUtil.h"
 
@@ -20,12 +21,8 @@ namespace sw
         , _currentLife{ 0.0f }
         , _floatSpeed{ 0.0f }
         , _alpha{ 0.0f }
-        , _glyphSize{ 0.3f, 0.4f }
         , _color{ 1.0f, 0.85f, 0.25f, 1.0f }
-        , _digitClipPath{ "engine/textures/ui/digits.sprite.json" }
-        , _sortingLayer{ "WorldUI" }
-        , _digitClip{}
-        , _spriteBatch{}
+        , _bWarnedNoWidgetComponent{ false }
     {
     }
 
@@ -38,15 +35,22 @@ namespace sw
         // 새로 만든 숫자는 0 이다. 알파는 흐른 수명에서 다시 구한다.
         _currentLife = MathUtil::max( _currentLife, 0.0f );
         _alpha       = computeAlpha();
-        acquireGlyphSprites();
-        layoutSprites();
-    }
 
-    void DamageNumberComponent::onEndPlay()
-    {
-        _spriteBatch.shutdown();
-        _digitClip.reset();
-        Component::onEndPlay();
+        // 글 위젯을 화면 마커에 넣는다. 끝날 때는 마커가 위젯을 지운다 — 다시 시작하면 다시 짓는다.
+        WidgetComponent* pWidget = findWidgetComponent();
+        if ( pWidget != nullptr && pWidget->getContent() == nullptr )
+        {
+            unique_ptr<TextWidget> text = sw::make_unique<TextWidget>();
+            text->setStyleClass( kStyleClass );
+            text->setVisibility( WidgetVisibility::HitTestInvisible );
+            pWidget->setContent( std::move( text ) );
+        }
+        else if ( pWidget == nullptr && getOwner() != nullptr && _bWarnedNoWidgetComponent == false )
+        {
+            _bWarnedNoWidgetComponent = true;
+            SW_LOG_WARNING( "Damage number on '%#' has no WidgetComponent on its object - the number is not drawn", getOwner()->getName().c_str() );
+        }
+        refreshWidget();
     }
 
     void DamageNumberComponent::onTick( float32 deltaTime )
@@ -71,56 +75,33 @@ namespace sw
             SceneComponent* pSceneComp = pOwner->getPrimarySceneComponent();
             if ( pSceneComp != nullptr )
             {
-                // 위로 떠오른다 — 월드 위다(돌아가거나 커진 부모 아래에서도).
+                // 위로 떠오른다 — 월드 위다(돌아가거나 커진 부모 아래에서도). 마커가 이 점을 따라간다.
                 float3 pos = pSceneComp->getWorldPosition();
                 pos._y += _floatSpeed * deltaTime;
                 pSceneComp->setWorldPosition( pos );
             }
         }
-        scheduleLayout();
+        scheduleRefresh();
     }
 
     void DamageNumberComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        if ( hasBegunPlay() == false )
-            return;
-        // 글리프 클립 경로를 바꾸면(인스펙터 · 에셋 핫 리로드 알림 — 값이 같아도) 클립을 다시 잡고 스프라이트를 새 아틀라스로 다시 만든다.
-        // 스프라이트를 만드는 것은 구조 변경이라 틱 밖에서 한다.
-        static const hashed_string s_digitClipPathName( "_digitClipPath" );
-        if ( propertyName == s_digitClipPathName )
-        {
-            GameObject*        pOwner   = getOwner();
-            GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-            if ( pManager != nullptr )
-            {
-                const ComponentHandle handle = getHandle();
-                pManager->executeOrDeferPostTick( [pManager, handle]()
-                {
-                    Component* pComponent = pManager->resolveComponent( handle );
-                    if ( pComponent == nullptr )
-                        return;
-                    DamageNumberComponent* pDamage = static_cast<DamageNumberComponent*>( pComponent );
-                    pDamage->acquireGlyphSprites();
-                    pDamage->layoutSprites();
-                } );
-                return;
-            }
-        }
-        layoutSprites();
+        if ( hasBegunPlay() )
+            refreshWidget();
     }
 
     void DamageNumberComponent::onOwnerActiveInHierarchyChanged()
     {
         if ( hasBegunPlay() )
-            layoutSprites();
+            refreshWidget();
     }
 
     void DamageNumberComponent::setDamageValue( int32 value )
     {
         _damageValue = value;
         if ( hasBegunPlay() )
-            scheduleLayout();
+            scheduleRefresh();
     }
 
     void DamageNumberComponent::spawnNumber( GameObjectManager& manager, const float3& position, int32 value )
@@ -134,6 +115,10 @@ namespace sw
             SceneComponent* pNumberRoot = pNumber->addComponent<SceneComponent>();
             if ( pNumberRoot != nullptr )
                 pNumberRoot->setWorldPosition( position );
+            // 숫자 가운데가 그 점에 온다.
+            WidgetComponent* pMarker = pNumber->addComponent<WidgetComponent>();
+            if ( pMarker != nullptr )
+                pMarker->setPivot( float2{ 0.5f, 0.5f } );
             DamageNumberComponent* pNumberUi = pNumber->addComponent<DamageNumberComponent>();
             if ( pNumberUi == nullptr )
                 return;
@@ -147,28 +132,19 @@ namespace sw
     {
         _color = color;
         if ( hasBegunPlay() )
-            scheduleLayout();
+            scheduleRefresh();
     }
 
-    uint32 DamageNumberComponent::makeGlyphFrames( int32 value, int32 ( &outArrFrame )[kMaxGlyphCount] )
+    WidgetComponent* DamageNumberComponent::findWidgetComponent() const
     {
-        // 오른쪽 자리부터 뽑아 뒤집는다. 자리마다 절댓값을 뽑으므로 INT32_MIN 의 부호를 뒤집다 넘치는 일이 없다.
-        int32  arrReversed[kMaxGlyphCount] = {};
-        uint32 digitCount                  = 0;
-        int32  remaining                   = value;
-        do
-        {
-            const int32 digit         = remaining % 10;
-            arrReversed[digitCount++] = ( digit < 0 ) ? -digit : digit;
-            remaining /= 10;
-        } while ( remaining != 0 && digitCount < kMaxGlyphCount );
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr ? pOwner->getComponent<WidgetComponent>() : nullptr;
+    }
 
-        uint32 glyphCount = 0;
-        if ( value < 0 )
-            outArrFrame[glyphCount++] = kMinusGlyphFrame;
-        for ( uint32 digitIndex = digitCount; digitIndex > 0 && glyphCount < kMaxGlyphCount; --digitIndex )
-            outArrFrame[glyphCount++] = arrReversed[digitIndex - 1];
-        return glyphCount;
+    const TextWidget* DamageNumberComponent::findTextWidget() const
+    {
+        const WidgetComponent* pWidget = findWidgetComponent();
+        return pWidget != nullptr ? castTo<TextWidget>( pWidget->getContent() ) : nullptr;
     }
 
     float32 DamageNumberComponent::computeAlpha() const
@@ -176,19 +152,7 @@ namespace sw
         return LifeSpanUtil::computeFade( _currentLife, _lifeTime );
     }
 
-    void DamageNumberComponent::acquireGlyphSprites()
-    {
-        _spriteBatch.shutdown();
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
-        // 클립을 못 읽으면 로더가 이유를 남겼다. 숫자 없이 수명만 돈다(오브젝트는 그대로 지워진다).
-        _digitClip = SpriteClipCache::acquire( _digitClipPath );
-        _spriteBatch.setSorting( _sortingLayer, 0 );
-        if ( _digitClip != nullptr && pManager != nullptr && _spriteBatch.initialize( *pManager, _digitClip->_atlasPath, kMaxGlyphCount ) == false )
-            SW_LOG_WARNING( "Damage number sprites could not be created" );
-    }
-
-    void DamageNumberComponent::scheduleLayout()
+    void DamageNumberComponent::scheduleRefresh()
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
@@ -200,37 +164,21 @@ namespace sw
         {
             Component* pComponent = pManager->resolveComponent( handle );
             if ( pComponent != nullptr )
-                static_cast<DamageNumberComponent*>( pComponent )->layoutSprites();
+                static_cast<DamageNumberComponent*>( pComponent )->refreshWidget();
         } );
     }
 
-    void DamageNumberComponent::layoutSprites()
+    void DamageNumberComponent::refreshWidget()
     {
-        if ( _spriteBatch.isInitialized() == false || _digitClip == nullptr )
+        WidgetComponent* pWidget = findWidgetComponent();
+        if ( pWidget == nullptr )
             return;
-        const GameObject*     pOwner  = getOwner();
-        const SceneComponent* pAnchor = ( pOwner != nullptr ) ? pOwner->getPrimarySceneComponent() : nullptr;
-        const bool            bShown  = isActive() && pAnchor != nullptr;
-        _spriteBatch.setVisible( bShown );
-        if ( bShown == false )
+        pWidget->setHidden( isActive() == false );
+        TextWidget* pText = castTo<TextWidget>( pWidget->getContent() );
+        if ( pText == nullptr )
             return;
-
-        int32         arrFrame[kMaxGlyphCount] = {};
-        const uint32  glyphCount               = makeGlyphFrames( _damageValue, arrFrame );
-        const float3  center                   = pAnchor->getWorldPosition();
-        const float32 advance                  = _glyphSize._x;
-        const float32 firstX                   = center._x - advance * 0.5f * static_cast<float32>( glyphCount - 1 );
-        const float4  tint{ _color._x, _color._y, _color._z, _color._w * MathUtil::saturate( _alpha ) };
-        for ( uint32 glyphIndex = 0; glyphIndex < kMaxGlyphCount; ++glyphIndex )
-        {
-            const SpriteClipFrame* pFrame = ( glyphIndex < glyphCount ) ? _digitClip->findFrame( arrFrame[glyphIndex] ) : nullptr;
-            if ( pFrame == nullptr )
-            {
-                _spriteBatch.setEntryVisible( glyphIndex, false );
-                continue;
-            }
-            const float3 glyphCenter{ firstX + advance * static_cast<float32>( glyphIndex ), center._y, center._z };
-            _spriteBatch.setEntry( glyphIndex, SpriteInstanceBatch::makeQuadWorld( glyphCenter, _glyphSize._x, _glyphSize._y ), pFrame->_uvRect, tint );
-        }
+        pText->setText( to_string( _damageValue ) );
+        pText->setColor( float4{ _color._x, _color._y, _color._z, 1.0f } );
+        pText->setOpacity( MathUtil::saturate( _color._w * _alpha ) );
     }
 } // namespace sw

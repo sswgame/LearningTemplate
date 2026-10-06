@@ -95,6 +95,7 @@ namespace sw
         , _focusMax{ 0.0f, 0.0f, 0.0f }
         , _panAction{ "Camera.Pan" }
         , _rotateAction{ "Camera.Rotate" }
+        , _zoomAction{ "Camera.Zoom" }
         , _bInputEnabled{ true }
         , _bClampFocus{ false }
         , _rotateTime{ 0.15f }
@@ -143,7 +144,7 @@ namespace sw
         const InputManager* pInput = game::getService<InputManager>();
         if ( pInput == nullptr )
             return;
-        // 키는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` — 맵에 없으면 움직이지 않는다).
+        // 장치는 입력 맵이 정한다(게임의 `Camera.Pan` · `Camera.Rotate` · `Camera.Zoom` — 맵에 없으면 움직이지 않는다).
         const InputMap& inputMap     = pInput->getInputMap();
         const float2    panInput     = inputMap.getVector2D( _panAction );
         const float32   forwardInput = panInput._y;
@@ -159,7 +160,9 @@ namespace sw
             const float32 rotateInput = inputMap.getAxis1D( _rotateAction );
             _yaw += rotateInput > 0.0f ? _rotateStep : ( rotateInput < 0.0f ? -_rotateStep : 0.0f );
         }
-        _orthoHeight = OrthoCameraRigMath::computeZoomedHeight( _orthoHeight, pInput->getMouseWheel(), _zoomStep, _minOrthoHeight, _maxOrthoHeight );
+        // 확대는 발화한 프레임에만 — 휠은 굴린 프레임(Down), 패드 버튼 축은 누름 · 반복(`trigger="Repeat"`)마다 한 칸이다(누르는 동안 매 프레임이 아니다).
+        if ( inputMap.wasActionTriggered( _zoomAction ) )
+            _orthoHeight = OrthoCameraRigMath::computeZoomedHeight( _orthoHeight, inputMap.getAxis1D( _zoomAction ), _zoomStep, _minOrthoHeight, _maxOrthoHeight );
     }
 
     void OrthoCameraRigComponent::setOrthoHeight( float32 orthoHeight )

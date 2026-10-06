@@ -5,6 +5,7 @@
 		<item name="uvRect" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 1.0 1.0" displayName="UV Rect" group="Sprite"/>
 		<item name="albedoMap" type="Texture2D" displayName="Sprite Texture" group="Sprite"/>
 		<item name="pointFilter" type="Bool" shaderType="Uint" defaultValue="1" displayName="Point Filter (pixel art)" group="Sprite"/>
+		<item name="premultipliedTexture" type="Bool" shaderType="Uint" defaultValue="0" displayName="Premultiplied Texture (world UI render target)" group="Sprite"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 	</_permutations>

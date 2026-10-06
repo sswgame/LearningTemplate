@@ -1,0 +1,53 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
+	<_listAnimation>
+		<UiAnimation _name="Open">
+			<_listTrack>
+				<UiAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="0" _curve="Linear" />
+						<UiAnimationKey _time="0.15" _value="1" _curve="EaseOut" />
+					</_listKey>
+				</UiAnimationTrack>
+				<UiAnimationTrack _widget="Window" _property="_renderTransform._translation">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="0,24" _curve="Linear" />
+						<UiAnimationKey _time="0.2" _value="0,0" _curve="EaseOut" />
+					</_listKey>
+				</UiAnimationTrack>
+			</_listTrack>
+		</UiAnimation>
+		<UiAnimation _name="Close">
+			<_listTrack>
+				<UiAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="1" _curve="Linear" />
+						<UiAnimationKey _time="0.12" _value="0" _curve="EaseIn" />
+					</_listKey>
+				</UiAnimationTrack>
+			</_listTrack>
+		</UiAnimation>
+	</_listAnimation>
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMax="0,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
+				<BoxPanel _spacing="12" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="Paused" />
+					<ButtonWidget _name="Resume" _styleClass="primary" _command="Resume">
+						<TextWidget _text="Resume" />
+					</ButtonWidget>
+					<ButtonWidget _name="Options" _command="OpenOptions">
+						<TextWidget _text="Options" />
+					</ButtonWidget>
+					<UserWidget _name="Hint" _document="engine/ui/parts/inputhint.ui.xml" />
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>

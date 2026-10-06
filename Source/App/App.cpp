@@ -410,6 +410,7 @@ namespace sw
             }
 
             const FrameTime frameTime = _fixedTimestep.advance( GameTimeScale::get(), gv_fixedFrameDelta );
+            GameTimeScale::setUnscaledDeltaTime( frameTime._unscaledDeltaTime ); // 정지 메뉴 · 페이드는 게임이 멈춰도 돈다
 
             // 사용자 설정의 화면 변경(창 방식 · 해상도 · VSync)은 OS 리사이즈와 같은 자리 — 프레임을 시작하기 전 — 에서 한다.
             _userSettingsHost.tick( frameTime._deltaTime );

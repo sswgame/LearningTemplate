@@ -25,6 +25,29 @@ namespace sw
             }
             return GL_TRIANGLES;
         }
+
+        /**
+         * @brief 범위 동안 GL_SCISSOR_TEST 를 끄고 끝나면 setScissorRect 가 걸어 둔 상태로 되돌립니다.
+         * @details glBlitFramebuffer 는 가위를 따른다 — D3D · Vulkan 의 복사는 가위를 모르므로 blitTexture 는 가위 없이 옮긴다.
+         */
+        struct ScopedScissorTestOff
+        {
+            uint8 _bRestore;
+
+            explicit ScopedScissorTestOff( const OpenGLRecordingState& state )
+                : _bRestore{ state._bScissorEnabled }
+            {
+                if ( _bRestore == SW_TRUE )
+                    glDisable( GL_SCISSOR_TEST );
+            }
+            ~ScopedScissorTestOff()
+            {
+                if ( _bRestore == SW_TRUE )
+                    glEnable( GL_SCISSOR_TEST );
+            }
+            ScopedScissorTestOff( const ScopedScissorTestOff& )            = delete;
+            ScopedScissorTestOff& operator=( const ScopedScissorTestOff& ) = delete;
+        };
     } // namespace
 
     OpenGLRHICommandContext::OpenGLRHICommandContext( OpenGLRHIDevice* pDevice )
@@ -38,6 +61,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || ( src == 0 && dst == 0 ) )
             return;
 
+        const ScopedScissorTestOff scissorOff{ _pDevice->_recordingState };
         if ( src == 0 )
         {
             // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 **아래**라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
@@ -127,7 +151,9 @@ namespace sw
         if ( pRecord->_bEnableBlend )
         {
             glEnable( GL_BLEND );
-            glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+            // 알파 채널은 One/InvSrcAlpha — DX11 · DX12 · Vulkan 과 같은 규칙이다(glBlendFunc 하나면 알파에도 SrcAlpha 가 곱해져 GL 만 알파가 달라진다).
+            const GLenum colorSource = ( pRecord->_bPremultipliedAlpha == SW_TRUE ) ? GL_ONE : GL_SRC_ALPHA;
+            glBlendFuncSeparate( colorSource, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
         }
         else
             glDisable( GL_BLEND );
@@ -218,6 +244,9 @@ namespace sw
         _pDevice->_recordingState._renderTargetHeight   = targetHeight;
         _pDevice->_recordingState._bDefaultFramebuffer  = fbo == 0 ? SW_TRUE : SW_FALSE;
         glViewport( 0, 0, static_cast<GLsizei>( targetWidth ), static_cast<GLsizei>( targetHeight ) );
+        // 가위 = 패스 전체(IRHICommandList 규약). 아래 클리어보다 먼저다 — glClear 는 가위를 따른다(D3D · Vulkan 의 클리어는 따르지 않는다).
+        glDisable( GL_SCISSOR_TEST );
+        _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
 
         if ( bHasDepth || bDepthOnly )
         {
@@ -627,6 +656,23 @@ namespace sw
                     static_cast<GLint>( originY ),
                     static_cast<GLsizei>( viewport._width ),
                     static_cast<GLsizei>( viewport._height ) );
+        // 가위 = 뷰포트(IRHICommandList 규약). 삼각형은 이미 뷰포트로 잘리므로 가위 시험을 끄는 것이 같은 결과다.
+        glDisable( GL_SCISSOR_TEST );
+        _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
+    }
+
+    void OpenGLRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        if ( _pDevice->_bInitialized == SW_FALSE )
+            return;
+        // 가위도 뷰포트와 같은 창 좌표다 — 기본 프레임버퍼(GL_LOWER_LEFT)는 y 를 아래 원점으로 뒤집고, 오프스크린 FBO(GL_UPPER_LEFT)는 그대로다.
+        const OpenGLRecordingState& state   = _pDevice->_recordingState;
+        const int64                 originY = ( state._bDefaultFramebuffer == SW_TRUE && state._renderTargetHeight > 0 )
+                                                ? static_cast<int64>( state._renderTargetHeight ) - rect._y - rect._height
+                                                : static_cast<int64>( rect._y );
+        glEnable( GL_SCISSOR_TEST );
+        glScissor( static_cast<GLint>( rect._x ), static_cast<GLint>( originY ), static_cast<GLsizei>( rect._width ), static_cast<GLsizei>( rect._height ) );
+        _pDevice->_recordingState._bScissorEnabled = SW_TRUE;
     }
 
     void OpenGLRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )

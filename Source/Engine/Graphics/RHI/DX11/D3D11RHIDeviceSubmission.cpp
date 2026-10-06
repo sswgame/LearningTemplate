@@ -199,8 +199,11 @@ namespace sw
         viewport.MaxDepth = kDefaultViewportMaxDepth;
         viewport.TopLeftX = kDefaultViewportX;
         viewport.TopLeftY = kDefaultViewportY;
+        // 래스터라이저 상태가 가위를 늘 켜 두므로 뷰포트와 같은 가위를 함께 건다(IRHICommandList::setViewport 규약).
+        const D3D11_RECT        scissor{ 0, 0, static_cast<LONG>( _swapChain.getWidth() ), static_cast<LONG>( _swapChain.getHeight() ) };
         std::scoped_lock<mutex> lock{ _immediateContextMutex };
         _deviceContext->RSSetViewports( 1, &viewport );
+        _deviceContext->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D11RHIDevice::endFrame( bool vsync, bool bPresent )

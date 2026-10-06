@@ -1,6 +1,6 @@
 /**
  * @file OrthoCameraRigComponent.h
- * @brief 비스듬히 내려다보는 직교 카메라 리그 — 초점 둘레를 도는 시점, WASD · 방향키 이동(범위 제한), 휠 확대, Q/E 90° 회전, 외부 시점 덮어쓰기,
+ * @brief 비스듬히 내려다보는 직교 카메라 리그 — 초점 둘레를 도는 시점, 이동(범위 제한) · 확대 · 90° 회전(입력 맵 `Camera.Pan` · `Camera.Zoom` · `Camera.Rotate`), 외부 시점 덮어쓰기,
  *        화면 점 → 땅 점(마우스 고르기).
  */
 #pragma once
@@ -146,7 +146,9 @@ namespace sw
         hashed_string _panAction;
         PROPERTY( Category = "Rig", DisplayName = "Rotate Action", Tooltip = "InputMap action (1D axis, Pressed) whose sign steps the yaw; missing from the map: no rotation" )
         hashed_string _rotateAction;
-        PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read the pan / rotate actions and the wheel" )
+        PROPERTY( Category = "Rig", DisplayName = "Zoom Action", Tooltip = "InputMap action (1D axis, wheel notches; up zooms in); missing from the map: no zoom" )
+        hashed_string _zoomAction;
+        PROPERTY( Category = "Rig", DisplayName = "Input Enabled", Tooltip = "Read the pan / rotate / zoom actions" )
         bool _bInputEnabled;
         PROPERTY( Category = "Rig", DisplayName = "Clamp Focus", Tooltip = "Keep the panned focus inside Focus Min / Max (X and Z)" )
         bool _bClampFocus;

@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/voxelcraft",
-    "_windowTitle": "Voxel Craft"
+    "_windowTitle": "Voxel Craft",
+    "_bUiPauseMenu": true
 }

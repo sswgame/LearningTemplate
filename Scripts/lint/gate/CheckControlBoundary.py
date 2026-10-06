@@ -12,6 +12,11 @@
 파일은 아래 허용 표에 이유와 함께 있어야 한다. 폰 쪽 파일(`Base/Control` · `Base/Vehicle` 의 `*MovementComponent*` · `*VehicleComponent*` ·
 `Pawn*`)은 허용 표에 넣을 수도 없다 — 경계의 핵심이다.
 
+허용 표에 든 파일도 **입력 층을 직접 묻지 않는다**(언리얼 Enhanced Input — 게임 코드는 Input Action 만 읽는다): 키 · 마우스 버튼 · 휠 ·
+이동량 · 패드 조회(`isKeyDown` · `wasMouseButtonPressed` · `getMouseWheel` · `getMouseDelta` · `getMouse()` · `getGamepad()` …)는 GameFramework ·
+Games 어디서든 위반이고, 클릭 · 끌기 · 시점 · 확대는 입력 맵 액션(`Camera.Look` · `Camera.Zoom` · `Skirmish.Select` …)으로 읽는다.
+남는 장치 조회는 **커서 화면 위치 하나** — `getMousePositionNormalized()`(언리얼 `GetMousePosition` 자리, 커서 아래 땅 고르기)뿐이다.
+
   python Scripts/lint/gate/CheckControlBoundary.py [--root <repo>] [--files a.cpp b.h]
 """
 
@@ -37,6 +42,18 @@ _kInputReadRe = re.compile(
     r"|\bgetService\s*<\s*InputManager\s*>"
     r"|\bgetInputMap\s*\(\s*\)"
 )
+
+# 입력 층(장치)을 직접 묻는 조회 — `InputManager` 의 키 · 버튼 · 휠 · 이동량 · 패드 창구와 장치 꺼내기. 액션이 아니라 장치를 읽는다.
+# 커서 화면 위치(`getMousePositionNormalized`)만 뺀다 — 이름이 `getMousePosition` 으로 시작해도 `(` 가 바로 붙어야 걸린다.
+_kListRawInputQuery = (
+    "isKeyDown", "wasKeyPressed", "wasKeyReleased",
+    "isMouseButtonDown", "wasMouseButtonPressed", "wasMouseButtonReleased",
+    "getMousePosition", "getMouseDelta", "getMouseWheel", "isPointerOverRect",
+    "getGamepadLeftTrigger", "getGamepadRightTrigger",
+    "getKeyboard", "getMouse", "getGamepad", "getDevice",
+    "getLastFrameEvents", "wasAnyInputPressed",
+)
+_kRawInputQueryRe = re.compile(r"(?:\.|->)\s*(" + "|".join(_kListRawInputQuery) + r")\s*\(")
 
 # 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
 _kAllowedReader: dict[str, str] = {
@@ -94,6 +111,11 @@ def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
         except OSError:
             continue
         for lineIndex, line in enumerate(text.splitlines(), start=1):
+            rawMatch = _kRawInputQueryRe.search(line)
+            if rawMatch:
+                violations.append(f"[Control Boundary] {relative}:{lineIndex}: reads the input device ({rawMatch.group(1)}) — read an InputMap action "
+                                  f"instead (only the cursor position, getMousePositionNormalized, is a device query): {line.strip()}")
+                continue
             if not _kInputReadRe.search(line):
                 continue
             if isPawnSideInternal(relative) or not findAllowReasonInternal(relative):
@@ -105,7 +127,8 @@ def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
 class CheckControlBoundaryGate(LintGate):
     """입력을 읽는 파일은 허용 표에만 — 폰은 의도만 읽는다."""
 
-    description = "GameFramework · Games 에서 입력(InputManager · InputMap)을 읽는 파일이 허용 표(플레이어 조종자 · 플레이어 뷰 · 명령 조종자)에 있는지 검사"
+    description = ("GameFramework · Games 에서 입력(InputManager · InputMap)을 읽는 파일이 허용 표(플레이어 조종자 · 플레이어 뷰 · 명령 조종자)에 있는지, "
+                   "그리고 어디서도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 직접 묻지 않는지 검사")
     buildComment = "Checking that only controllers, player views and command directors read input..."
     timeoutSeconds = 15
     preCommitPattern = ("Source/GameFramework/*", "Source/Games/*")
@@ -114,7 +137,9 @@ class CheckControlBoundaryGate(LintGate):
     hint = (
         "  폰(몸 · 이동 · 탈것)은 PawnComponent::getIntent() 의 ControlIntent 만 읽습니다.\n"
         "  입력 → 액션 → 의도는 PlayerControllerComponent 가 만들고, AI 는 AiControllerComponent 로 같은 의도를 냅니다.\n"
-        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 _kAllowedReader 에 이유와 함께 한 줄."
+        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 _kAllowedReader 에 이유와 함께 한 줄.\n"
+        "  허용 파일도 장치를 직접 묻지 않습니다 — 클릭 · 끌기 · 시점 · 확대는 입력 맵(*.input.xml)에 액션을 두고 InputMap 으로 읽고,\n"
+        "  커서 화면 위치만 InputManager::getMousePositionNormalized() 로 읽습니다."
     )
     selfTestCases = [
         {
@@ -132,6 +157,30 @@ class CheckControlBoundaryGate(LintGate):
             "name": "기반 폰 이동이 InputManager 를 include",
             "files": {
                 "Source/GameFramework/Base/Control/ProbeMovementComponent.cpp": "#include \"Engine/Input/InputManager.h\"\n",
+            },
+        },
+        {
+            "name": "허용 표의 명령 조종자가 마우스 버튼을 직접 물음",
+            "files": {
+                "Source/Games/StarSkirmish/SkirmishDirectorComponent.cpp": (
+                    "void SkirmishDirectorComponent::updateDrag( const InputManager& input )\n"
+                    "{\n"
+                    "    if ( input.wasMouseButtonPressed( MouseButton::Left ) )\n"
+                    "        startDrag();\n"
+                    "}\n"
+                ),
+            },
+        },
+        {
+            "name": "허용 표의 플레이어 뷰 카메라가 휠을 직접 물음",
+            "files": {
+                "Source/GameFramework/Base/Camera/ProbeCameraComponent.cpp": "    zoom( pInput->getMouseWheel() );\n",
+            },
+        },
+        {
+            "name": "허용 표 밖 게임 코드가 장치에서 패드를 꺼냄",
+            "files": {
+                "Source/Games/Probe/ProbeComponent.cpp": "    const GamepadDevice* pPad = pInput->getGamepad( 0 );\n",
             },
         },
     ]

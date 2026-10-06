@@ -62,6 +62,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_canvasTestPattern` | `bool` | `false` | 시험 | 주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자 | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_crashTest` | `int32` | `0` | 시험 · 배포본에도 | 일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_dumpReflection` | `string` | — | 시험 | 첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
 | `gv_navDebugDraw` | `int32` | `0` | 일반 | 내비메시 디버그 — 선(편집기 뷰포트): 1 폴리곤 테두리 · 2 에이전트 경로 · 4 에이전트 속도 · 8 장애물, 16 걷는 면 · 경로를 게임 화면의 메시로 (31 = 모두, 0 = 끔) | [EngineLoop.cpp](../../Source/Engine/EngineLoop.cpp) |
@@ -129,6 +130,16 @@
 |---|---|---|---|---|---|
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 
+## `Source/Engine/UI`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 칸 수(앞쪽 보이는 칸 안에서 돈다) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
+| `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 칸 수(칸마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UiBenchScreen.cpp](../../Source/Engine/UI/Debug/UiBenchScreen.cpp) |
+| `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UiScale.cpp](../../Source/Engine/UI/Layout/UiScale.cpp) |
+| `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UiDemoScreen.cpp](../../Source/Engine/UI/Debug/UiDemoScreen.cpp) |
+| `gv_uiOptionsMenu` | `bool` | `false` | 시험 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screens/OptionsMenuScreen.cpp) |
+
 ## `Source/Engine/UserSettings`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -136,7 +147,7 @@
 | `gv_cameraFieldOfView` | `float32` | `70.0` | 일반 | 카메라 시야각(도) (사용자 설정 gameplay.fieldOfView) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraHeadBob` | `bool` | `true` | 일반 | 걷기 머리 흔들림 (사용자 설정 gameplay.headBob) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraShakeScale` | `float32` | `1.0` | 일반 | 카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
-| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, 셰이더 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_effectsQuality` | `int32` | `2` | 일반 | 이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_foliageDensity` | `float32` | `1.0` | 일반 | 식생 밀도 배율 (사용자 설정 graphics.foliageDensity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
@@ -148,8 +159,10 @@
 | `gv_subtitles` | `bool` | `true` | 일반 | 자막 표시 (사용자 설정 accessibility.subtitles) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleSize` | `int32` | `1` | 일반 | 자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_textureQuality` | `int32` | `2` | 일반 | 텍스처 품질 0~3 (사용자 설정 graphics.textureQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_uiReduceMotion` | `bool` | `false` | 일반 | UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiScale` | `float32` | `1.0` | 일반 | 게임 UI 배율 (사용자 설정 accessibility.uiScale) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiTextScale` | `float32` | `1.0` | 일반 | 게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_uiTheme` | `string` | `default` | 일반 | 게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_upscaler` | `int32` | `0` | 일반 | 업스케일러 (0 끔, 사용자 설정 graphics.upscaler) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_userSettingsFile` | `string` | — | 시험 · 배포본에도 | 사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_viewDistanceScale` | `float32` | `1.0` | 일반 | 시야 거리 배율 (사용자 설정 graphics.viewDistance) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
@@ -212,6 +225,7 @@
 | `gv_benchSpawnChurn` | `int32` | `0` | 시험 | 프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTickMovers` | `int32` | `0` | 시험 | 큐브마다 틱 무버 컴포넌트 N 개 — 첫 번째가 틱 안에서 위치를 쓴다 (0=배치 쓰기) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchTransparent` | `int32` | `25` | 시험 · 배포본에도 | 벤치 큐브 중 투명으로 만들 비율 (퍼센트) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
+| `gv_benchUiMarkers` | `int32` | `0` | 시험 · 배포본에도 | 앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 | `gv_benchViews` | `int32` | `0` | 시험 | 격자를 둘러보는 캡처 카메라(렌더 텍스처 512²) 수 (0=사용 안 함) | [BenchScene.cpp](../../Source/Games/Empty/BenchScene.cpp) |
 
 ## `Source/Games/HarvestValley`

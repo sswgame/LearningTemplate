@@ -14,6 +14,7 @@ namespace sw
     struct DialogueStepInput;
 
     class GameFlags;
+    class UiSystem;
 
     ENUM()
     enum class DialogueRunnerState : uint8
@@ -52,6 +53,8 @@ namespace sw
 
         PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
         string _graphPath;
+        PROPERTY( Category = "Dialogue", DisplayName = "Post Subtitles", Tooltip = "Also show each line as a subtitle (leave off when a dialogue UI already shows the text)" )
+        bool _bPostSubtitles;
 
         using OnDialogueLineFunc     = OnDialogueLineDelegate;
         using OnDialogueChoicesFunc  = OnDialogueChoicesDelegate;
@@ -84,6 +87,8 @@ namespace sw
 
         /** @brief Branch 조건 · `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다(빌려 씁니다 — 러너보다 오래 살아야 합니다). nullptr 이면 모든 플래그가 0 입니다. */
         void setFlags( GameFlags* pFlags );
+        /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다(시험 — nullptr 이면 엔진 서비스). 빌려 씁니다. */
+        void setUiSystem( UiSystem* pUiSystem ) { _pUiSystemOverride = pUiSystem; }
 
         DialogueRunnerState   getState() const;
         int32                 getCurrentNodeId() const;
@@ -116,7 +121,7 @@ namespace sw
         void finishDialogue();
         void executeAction( string actionCmd );
         /**
-         * @brief `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
+         * @brief `_bPostSubtitles` 면 줄을 자막으로 보내고, `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
          * @details 델리게이트가 받는 `const string&` 가 이 객체의 멤버를 그대로 가리키면,
          *          핸들러가 `advance()` · `stopDialogue()` 를 부르는 순간 자기가 받은 참조가
          *          바뀌거나 비워집니다. 대화 UI 에서 가장 흔한 사용법이 바로 그것입니다.
@@ -127,6 +132,7 @@ namespace sw
 
         DialogueGraphAsset     _graph;
         GameFlags*             _pFlags;
+        UiSystem*              _pUiSystemOverride; ///< 자막을 보낼 UI(시험), nullptr 이면 엔진 서비스
         string                 _currentSpeaker;
         string                 _currentText;
         vector<string>         _listCurrentChoice;

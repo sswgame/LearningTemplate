@@ -618,6 +618,15 @@ namespace sw
         commandListForRecord()->RSSetScissorRects( 1, &scissor );
     }
 
+    void D3D12RHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        if ( _pCmdList == nullptr )
+            return;
+        const D3D12_RECT scissor{ static_cast<LONG>( rect._x ), static_cast<LONG>( rect._y ), static_cast<LONG>( rect._x + rect._width ),
+                                  static_cast<LONG>( rect._y + rect._height ) };
+        commandListForRecord()->RSSetScissorRects( 1, &scissor );
+    }
+
     void D3D12RHICommandContext::drawIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset, uint32 drawCount,
                                                RHIBufferHandle countBuffer, uint32 countBufferOffset )
     {

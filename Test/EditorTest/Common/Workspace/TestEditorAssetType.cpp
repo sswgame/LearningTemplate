@@ -280,7 +280,7 @@ SW_TEST_CASE( EditorAssetTypeTest, ReloadRouteComesFromTheTable )
     SW_ASSERT_NOT_NULL( prefab._pCacheKindName );
     SW_EXPECT_STREQ( "Prefab", prefab._pCacheKindName );
 
-    const AssetReloadRoute clip = EditorAssetTypeRegistry::findReloadRoute( "engine/textures/ui/digits.sprite.json" );
+    const AssetReloadRoute clip = EditorAssetTypeRegistry::findReloadRoute( "engine/textures/test/quadrants.sprite.json" );
     SW_ASSERT_NOT_NULL( clip._pCacheKindName );
     SW_EXPECT_STREQ( "SpriteClip", clip._pCacheKindName );
 

@@ -144,12 +144,19 @@ cd build/Ninja-Debug/Bin
 - **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
 - **VRM 임포트의 남은 것** — 머티리얼(MToon) · 구간 메시 · 스켈레톤만 옮긴다. 표정(모프 타깃 · `blendShapeMaster`) · 스프링 본(`secondaryAnimation`) · humanoid 본 표 · firstPerson 은 읽지 않는다(0.x · 1.0 모두). 본 메시(`<이름>.mesh`)는 구간들을 다시 합친 것이라 디스크에 두 벌이다(VRoid 34k 삼각형 7 MB × 2) — 엔진 메시에 머티리얼 구간이 생기면 하나로 줄인다. VRoid 텍스처는 BC3 이다(Debug DirectXTex 의 BC7 은 512×256 한 장도 10 분이 넘는다 — Release 로 BC7 임포트를 다시 할 것). `ModelImporterTest.SkinnedModelImportsSkeletonClipsAndAttachments` 는 Debug 에서 혼자 31 초라 EditorTest 한도를 30 → 120 초로 올려 두었다 — 임포트를 줄이면 되돌린다.
+- **캔버스(화면 2D)의 남은 것(runtime-ui 4-4)** — (1) 화면 사각형 뷰(PiP · 분할 화면)는 주 시점의 Canvas 뒤에 그려져 UI 를 덮는다 — 뷰를 다 그린 뒤 주 출력에
+  한 번 그리게 옮긴다(언리얼은 모든 장면 뷰 뒤 Slate). (2) 렌더 텍스처 대상(월드 공간 UI)은 텍스처가 처음 만들어질 때의 크기로 그린다 — 위젯이 크기를
+  나중에 바꾸면 텍스처를 다시 만들지 않는다(`TextureCache::declareRenderTarget` 은 이미 만든 것을 바꾸지 않는다).
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 - **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
 
 ### 1-4. 에디터
 
+- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UiPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
+  미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UiDocumentWriter` 로 저장(되돌리기 —
+  `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
+  에셋 종류 `UiDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
 - **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
   찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
   기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
@@ -189,11 +196,14 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
-  `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
-  텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode`(톤맵 패스에 색각 행렬 — 지금 톤맵에 상수 버퍼가 없어 미뤘다) · UI 배율 · 글자 크기 · 자막,
+- **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`, 메뉴는 `Engine/UI/Screens/OptionsMenuScreen`.
+  (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
+  텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
   (5) 게임 스키마에 키 바인딩 설정 — 시험 게임 일곱이 모두 입력 맵(`data/<게임>.input.xml`)을 쓴다(그 액션부터). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
+- **패드 스틱 시점 · 가상 커서(a4-input 이 남긴 것).** 입력 맵에 바인딩마다의 배율 · 프레임 시간 곱(언리얼 Enhanced Input 의 Scale · Scale By Delta Time 모디파이어)이
+  없어 오른쪽 스틱을 `Look` · `Camera.Look`(마우스 이동량 = 픽셀/프레임)에 묶으면 프레임률을 따르는 느린 값이 된다 — 그래서 시점 액션은 아직 마우스만이다.
+  명령형 게임(StarSkirmish · NileCity)의 패드 A · B 는 커서 자리를 쓰는데 커서를 패드로 옮기는 가상 커서(언리얼 CommonUI 의 아날로그 커서)가 없다.
 - **GameFramework 구조 정리(2026-10-04 리뷰, 사용자 승인).** 남은 것 —
   - 중간: Overworld `TileMap` 의 칸 손셈(`indexOf` · `isInBounds` — 크기는 파일 스키마 `TileMapXmlData` 가 든다) · NetConnection 메시지 버퍼 재사용 ·
     기반의 같은 손셈(NavGrid 4 · FlowField 4 · GridInventory 3 · PlatformTileMap 2 · GridReachability `% 너비` 1, 클래스마다 자기 `isInside` · `computeIndex` ·
@@ -286,15 +296,43 @@ cd build/Ninja-Debug/Bin
   - **중간(M)**: 대역폭 프로파일러 · 게임플레이 디버거 · 비주얼 로거 · 모듈 패키지 관리 · 점광/스폿 그림자 · SSAO ·
     HZB 가림 컬링 · 메시 LOD(meshopt) · PSO 미리 만들기 · 에디터 G(RenderDoc · 보기 모드 — 프로파일러 표 · GPU 타임스탬프 · Tracy 는 들어갔다) · 에디터 C(확장 지점) · 에디터 F
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · 패키징 UI · 시나리오 녹화(실행 중 입력 → `.scenario.xml`) ·
-    로딩 흐름 · 입력 확장 · 에셋 DCC 내보내기 · 포토 모드 · 리플레이/킬캠(바탕인 의도 기록 `.swintent` 은 있다 — 남은 것: 재생 UI · 카메라 · 되감기) · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
-    안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
-    [넷 다: 런타임 UI].
-  - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 제약 ·
+    로딩 흐름의 남은 것(로딩 화면 · 페이드는 `LoadingScreenController` — 진행률(씬 매니저에 진행 질의가 없다 — 스트리밍 큐 바이트로) · 프리로드 세트 연결 ·
+    팁 목록 데이터(`LoadingScreenSettings::_listTip` 은 있으나 gamesettings 칸 · 글 수집 규칙이 없다)) · 입력 확장 · 에셋 DCC 내보내기 · 포토 모드 · 리플레이/킬캠(바탕인 의도 기록 `.swintent` 은 있다 — 남은 것: 재생 UI · 카메라 · 되감기) · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
+    안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서).
+  - **큼(L)**: 제약 ·
     파티클/VFX · 텍스처
     밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 ·
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
+- **런타임 UI 애니메이션 · 전환의 남은 것(runtime-ui 7-1 · 7-2 뒤, `Engine/UI/README.md`).** (1) 스타일 전환은 부모의 보간 값을 물려받는 글 칸에 내리지 않는다
+  (자식 규칙에 `_transition` 을 따로 적는다) — CSS 는 물려받은 값도 보간된다. (2) 한쪽만 정한 칸(위젯 자기 칸 ↔ 시트 값)은 전환 없이 바뀐다 — 위젯 칸 값을 읽는 길이 필요.
+  (3) 전환 지연(`transition-delay`) · 키 사이 사건 말고 곡선 위 사건.
+  (4) 그림 캐시는 조상의 `kTransform` 이면 자손까지 다시 칠한다 — 변환을 캐시 밖에서 곱하는 쪽은 10-4 의 위젯 1 만 개 측정으로 판단.
+- **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
+  (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
+  (2) 에디터 GameView 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
+  키 리바인딩 — 키 바인딩 창(`KeyRebindScreen`)은 있다, UI 맵을 설정 대상으로 두는 길(`UserSettingsTargets` 의 입력 맵이 게임 맵 하나)이 남았다. (4) 글 입력 칸(`TextInputWidget`)은 끝에 붙이기 · Backspace(`UI.TextBackspace`) · Enter 확정만 — 커서 이동(좌우 · Home/End) · 선택 · 붙여넣기 · 조합 글 밑줄이 남았다.
+- **런타임 UI 접근성의 남은 것(runtime-ui 9-1 뒤, `Engine/UI/README.md`).** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
+  `UiSubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다). (2) "글자 배율 2 에서 옵션 메뉴가 넘치지 않는다" 시험은 옵션 메뉴(8-2)가 없어
+  견본 문서로 한다(`UiAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`) — 8-2 가 들어오면 엔진 옵션 메뉴 문서로 바꾼다.
+- **옵션 · 일시정지 메뉴의 남은 것(runtime-ui 8-2 뒤, `Engine/UI/README.md`).** (1) 일시정지 메뉴에 타이틀로 · 끝내기 — 게임 흐름(`GameInstanceBase`)의
+  명령이라 엔진 화면이 모른다(게임이 `PauseMenuScreen` 을 덮어쓰거나 명령 표를 거는 길). (2) 명령 조종자 게임(NileCity · StarSkirmish · ThemePark)과
+  MeadowVillage 는 `_bUiPauseMenu` 를 켜지 않았다 — Esc 를 게임이 따로 쓰는지 보고 켠다. (3) 열거형 행은 콤보(펼침)뿐 — 패드에 맞는 좌우 고르기 위젯이 없다.
+  (4) 키 바인딩 창의 Esc 길게 누르기는 키보드 Esc 만 — 패드 사용자는 취소가 없다(패드 B 를 바인딩할 수 있어야 해서). (5) 해상도 바꾸고 15 초 되돌림 ·
+  키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때. (6) 옵션 창은 고정 960×640 UI 단위라 뷰포트가 그보다 작으면
+  (720p · UI 배율 1.5 = 853×480) 화면 밖으로 넘친다(`UiDeterminismTest` 골든 options.layout.txt) — 일시정지 창처럼 자동 크기 + 최대 크기로.
+- **알림 · 힌트 · 목표 마커의 남은 것(runtime-ui 8-3 뒤, `Engine/UI/README.md`).** (1) 들어오기 · 나가기 애니메이션 — 항목은 화면이 아니라 조각이라 문서 Open · Close 가 닿지 않는다,
+  `showEntry` · 제거 때 `UiSystem::tween` 으로 `_opacity` 를 걸고 지우기를 페이드 뒤로 미룬다. (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글
+  ("Game saved" · "다시 시작하면 적용")은 글 그대로라 글 수집에 들지 않는다 — 코드 글 키(`SW_LOCTEXT` 꼴)로 바꿀 것. (4) 입력 힌트 위젯을 따로 두지 않았다 —
+  리치 텍스트 태그 하나로 충분한지 게임 HUD(8-1)에서 본다. (5) 항목마다 이름 `Message` · `Count` 가 트리 안에 겹쳐
+  둘째 항목부터 "name is used twice" 경고가 난다 — 항목 조각을 `UserWidget` 으로 감싸 이름을 `<번호>.Message` 로.
+- **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 위젯 1 만 칸(패널 하나) · 글 10 칸/프레임 바뀜에서 `GT.Ui` p50 ≈ 1.7 ms
+  (목표 0.3 ms) — 무엇이든 바뀐 프레임은 트리를 걷고, 자식 1 만 개의 자르기 검사 · 보이는 위젯 ~1200 개의 그림 캐시 이어 붙이기가 남는다. (1) 패널마다 하위 출력 캐시
+  (바뀐 가지만 걷고 나머지는 이어 붙이기 한 번 — Slate 의 Invalidation Panel) 또는 정렬된 흐름 패널(Box · Wrap)의 보이는 범위 이분 탐색. 긴 목록은 지금도
+  `ListViewWidget`(보이는 행만 짓는다)이 답이다. (2) 창 크기 바꿈(전체 재배치) 한 프레임 · 첫 프레임 글리프 래스터화가 몇 프레임에 퍼지는지는 표 밖이다(워밍업 60 프레임이 버린다).
+- **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
+  내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —
   `loadEventLibrary` · `loadMixer` 는 같은 이름이면 바꾸지만 파일 감시(에디터 `FileWatchDispatcher`)에 걸려 있지 않다. (2) 에디터 — 믹서 패널(버스 미터 · 음소거/솔로),
   이벤트 브라우저 · 미리 듣기, 보이스 · 가상화 프로파일러. (3) 긴 음악 스트리밍(지금은 클립을 통째로 디코드해 메모리에 든다 — 3 분 스테레오 ≈ 69 MB float).
@@ -318,10 +356,8 @@ cd build/Ninja-Debug/Bin
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
-- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면: `getFontFallback( culture )` 의 가족 목록으로 CJK ·
-  아랍 글리프 대체를 고르고, `isRightToLeft()` 로 배치를 뒤집고, `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
-  `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
-  그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
+- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글 위젯은 글 판을 따라 다시 푼다(runtime-ui 6-2). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
+  그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 없다(무기 이름은 HUD 가 `getStringByText` 로 쓴다).
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Base/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
   - 물리: 기믹 프리팹의 `BoxCollider2DComponent` 에 3D 게임용 3D 트리거 · 강체 콜라이더 변형을 더한다(`Resource/common/prefabs/gimmicks`). 월드 질의 · 카메라 암 ·
@@ -543,6 +579,10 @@ cd build/Ninja-Debug/Bin
 
 ### 1-12. 낮은 우선순위 · 조건이 오면
 
+- **월드 공간 위젯의 입력 · 가려짐(runtime-ui 4-6 뒤)** — World 위젯은 그리기만 한다: 레이로 사각형을 맞혀 위젯 좌표로 사건을 보내는 길(언리얼
+  `WidgetInteractionComponent`)이 없다. 화면 마커의 "벽에 가려지면 숨김" 은 레이캐스트 질의 · 깊이 버퍼 읽기 둘 다 없다. World 렌더 텍스처는 내용이 바뀔 때만 다시
+  그리지만 화면에 안 보일 때도 칠하기는 돈다(보일 때만 칠하기 — 절두체 판정은 조건: 월드 위젯이 수십 개를 넘을 때).
+
 - **상호작용 대상의 공유 공간 격자**(조건: 하는 쪽 · 대상이 모두 수천 — 지금 하는 쪽은 등록된 대상 목록을 한 번 돈다, 대상 16 · 10k 오브젝트에서 +2~6 us).
   대상이 움직일 수 있어 격자를 프레임마다 맞추는 비용이 목록을 도는 비용과 같으므로, 하는 쪽이 여럿일 때만 씬당 하나(`SpatialHashGrid2D`, 셀 = 최대 상호작용 반경)를 틱 앞에 맞춘다.
 
@@ -557,9 +597,16 @@ cd build/Ninja-Debug/Bin
 - **걸음 조우 판정 둘**(Overworld `shouldEncounterOnStep` 의 결정적 주기 · ClassicJrpg `JrpgEncounterWalker` 의 확률 + 유예) — 오버월드 위에 JRPG · 몬스터 수집 게임이 서면 기반 `World/` 로 하나를 올린다.
 - **MMO 갱신 확인을 `NetConnection` 전달 통지로**: 패킷 확인 → 메시지 전달 통지가 Core 에 생기면 키트 확인 메시지(`kUpdateAck`)를 지우고 그 통지로 판정한다(언리얼 NAK 자리).
 
+- **스크린 리더**(위젯 접근성 이름 · 역할 → OS 내레이터 — 언리얼 Slate 접근성 · Xbox 접근성 지침 107): 런타임 UI 의 접근성은 글자 크기 · 자막 · 색각 · 고대비까지다.
+- **MSDF 글리프**(직접 — 윤곽 모서리 칠하기 · 채널별 거리, 큰 글자의 모서리가 날카롭다) — 지금은 단일 채널 SDF(`Engine/Text/GlyphCache`, FreeType `sdf` 렌더러,
+  결정 R2). 아틀라스 페이지가 R8 이라 MSDF 는 RGB 페이지 · 셰이더 median 이 함께 든다.
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
-  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
+  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 없음(양방향은 `Engine/Text/TextBidi` 단순판 — 포개진 방향 제어 문자 ·
+  숫자 앞뒤 기호 규칙 미지원) → HarfBuzz(MIT) + SheenBidi(Apache 2.0)
+  (꽂을 자리는 `Engine/Text/ITextShaper` — 런 하나, 같은 글꼴 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다. SheenBidi 는 `TextBidi` 를 대신한다). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
+- **임포터가 1 채널(R8) DDS 를 내는 규칙**(조건: 마스크 · 1 채널 텍스처 에셋이 생기면) — RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는다. `App --import-textures` 의
+  규칙 표(`TextureImportConfig.json`)에 R8 출력이 없다.
 
 ---
 
@@ -658,6 +705,10 @@ cd build/Ninja-Debug/Bin
 - **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` +
   `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`, `RHI/DX/RHIDxgiTearing.h`). Vulkan 은 present 모드. CLI 는 `-vsync`.
 - **셰이더를 고쳤으면 재기 전에 `App.exe --cook-shaders`.** 빌드는 HLSL 을 다시 쿠킹하지 않는다.
+- **런타임 UI 벤치**(2026-10-07, Release · DX12 · VSync 꺼짐 · 600 프레임 × 세 번, i5-8500): `-gv_benchUiWidgets=10000`(엔진 `UiBenchScreen` — 스크롤 밖이 대부분) ·
+  `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`(Empty 벤치 큐브에 화면 마커). 글 10 칸/프레임: `GT.Ui.Paint` p50 12.6 → 1.6 ms(자르기 밖 자식 컬링),
+  `GT.Ui.Layout` 0.11 ms(30 위젯), `RT.Canvas` Upload 0.05 + Draw 0.013 ms. 바뀜 없음(대조군): `GT.Ui.Paint` 2.1 → 0.12 ms(바뀌지 않은 트리 출력 재사용), 업로드 p50 0.
+  마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 구간 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Ui.CanvasQuads`(값은 per_frame 열).
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
@@ -865,6 +916,8 @@ cd build/Ninja-Debug/Bin
   `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
   vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
   보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
+- **FreeType 는 엔진 직접 의존**(`vcpkg.json` · `ThirdParty/freetype` — imgui[freetype] 과 같은 포트 · 같은 기능): 헤더는 `Engine/Text/FreeType` 에서만,
+  링크는 `Source/Engine/CMakeLists.txt` 에서만(`CheckThirdPartyIsolation`). 임포트 타깃 이름이 `freetype` 그대로라 래퍼 INTERFACE 를 만들지 않고 전역으로 올린다.
 - **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
   재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
   리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
@@ -1243,6 +1296,11 @@ cd build/Ninja-Debug/Bin
   에디터에는 이름표 편집 창구가 없다(`_componentName` 은 `HideInInspector`). 만들게 되면 프리팹 인스턴스의 물려받은 컴포넌트는 막는다(언리얼과 같다).
 - **`getAllGameObjects()` 값 반환은 사건 구동 5 곳만**(에디터 프리팹 명령 둘 · 미리보기 둘 · `Scene::shutdown`) — 프레임 경로에 쓰면 `getAllGameObjects( out )` · `forEachGameObject`.
 - **`MeshInstanceBatch` 는 항목 수 고정 · 메시 · 머티리얼 하나**(언리얼 ISM 과 같다) — 늘리려면 다시 만들고, 항목별 머티리얼 · 투명 정렬이 필요하면 `MeshComponent` 로.
+- **UI 위젯은 `WidgetId` 로 들고(포인터는 그 호출 안에서만), 무효화는 이유를 나눠 알린다 — 레이아웃만 부모로 번진다**(레이아웃 경계에서 멈춘다, `Engine/UI/README.md`).
+  리플렉션 파생 위젯은 `getTypeInfo()` 를 자기 `StaticType()` 으로 덮어쓴다(RTTI 가 없다 — 빠뜨리면 `castTo` 가 부모 타입으로 본다).
+- **RTL 배치 거울은 두 자리뿐이다** — 패널은 늘 왼쪽에서 오른쪽으로 계산하고, `PanelWidget::arrangeChild` 가 자식 사각형을 패널 너비로 거울(상자 순서 · 캔버스 앵커 ·
+  격자 열이 한 번에), `UiLayoutPass::arrange` 가 슬롯 여백 · 정렬을 부모 방향으로 읽는다. 새 패널에 방향 분기를 넣지 말 것. 글의 양방향은 줄을 나눈 **뒤** 줄마다 뒤집고(L2),
+  수준은 원문 코드 포인트로 정한다(셰이퍼가 버린 RLO · PDF 도 수준을 바꾼다).
 
 ### 3-7. 그래픽스 · RHI · 셰이더
 
@@ -1252,6 +1310,18 @@ cd build/Ninja-Debug/Bin
   (`TextureImportConfig.json` 의 `Character_Atlases`)이라 몇 초다. 큰 BC7 은 Release App 으로 굽는다.
 - **D3D11 `UpdateSubresource` 에 상자가 없으면 버퍼 전체 길이를 원본에서 읽는다** — 용량을 남겨 둔 버퍼에 짧게 올릴 때는 상자를 준다(원본 뒤를 넘어 읽어
   드라이버 안에서 죽는다 — `RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킨다).
+- **텍스처 영역 업로드는 `uploadTexture2DRegion`(가끔 · 작게 — Vulkan 은 제출하고 기다린다)** — 매 프레임 큰 구간이 필요해지면 프레임 커맨드 리스트에 복사를 기록하는
+  길을 먼저 만든다. 검사는 `validateTextureRegionUpload` 한 곳(DX12 는 전체 업로드와 같은 스테이징 슬롯 · 배리어 — 새 슬롯 규칙을 만들지 말 것).
+- **블렌드는 곧은(SrcAlpha) · 프리멀티플라이(`_bPremultipliedAlpha`, One) 둘이고 알파 채널은 네 백엔드 모두 One/InvSrcAlpha 다** — GL 도 `glBlendFuncSeparate`
+  (`RHIDeviceTest.PremultipliedBlendAddsColorWithoutAlphaMultiply` 가 알파 255 로 지킨다).
+- **가위(`setScissorRect`)는 `setViewport` · `beginRenderPass` 가 뷰포트 전체로 되돌린다** — DX11 은 래스터라이저 상태에 늘 켜 두고 뷰포트를 거는 세 자리가 가위도 건다
+  (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
+- **UI 는 Present(톤맵) 뒤 Canvas 패스가 같은 출력에 Load 로 그린다** — 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝이다(그 전에 복사하면
+  UI 가 캡처에 없다 — `RenderPassGpuTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 견준다). Canvas 는 Swapchain 을 쓰는 마지막 패스여야 한다(검증).
+- **게임 스레드의 UI 그림은 경로로 싣는다** — 위젯은 디바이스가 없어 `TextureCache::acquire` 를 부를 수 없다. 그리기 목록에 경로(`CanvasTextureRef::_texturePath`)를
+  싣고 `CanvasRenderer::prepareFrame`(렌더 스레드 · 기록 전)이 빌린다 — 머티리얼 텍스처와 같은 캐시라 백엔드 교체도 그 길을 탄다.
+- **Vulkan 의 텍스처 하나짜리 프레임버퍼 렌더 패스는 CLEAR 고정이다** — 깊이 없는 컬러 하나를 Load · DontCare 로 여는 패스는 load op 을 키로 드는 합성 경로로 간다
+  (`RHIDeviceTest.LoadOpKeepsSingleOffscreenTarget`). 새 렌더 패스 경로를 만들면 Load 가 앞 그림을 지우지 않는지 그 시험으로 본다.
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
   대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
   몸 전체가 튀면 프레임별 CSV(Shooter3D `-gv_shooterMotionTrace=<경로>`)로 몸 = 발 자리 · 루트 본 · 요 각속도 · 카메라 이동을 나눠 본다 — 자동 조준이 표적을 바꿀 때
@@ -1711,6 +1781,11 @@ cd build/Ninja-Debug/Bin
 
 ### 3-11. 입력 · 오디오 · 게임프레임워크
 
+- **글꼴은 `engine/fonts/fontcatalog.xml` 이 정본**(`FontSystem` — 고른 가족 → 문화권 표 `fonts` 의 대체 가족 → 카탈로그 기본 가족). 문화권 표의 가족 이름은
+  카탈로그의 저장소 가족 · 시스템 가족 표에 있어야 쓰이고, 없거나 그 기계에 설치되지 않았으면 처음 한 번 경고하고 건너뛴다(어디에도 없는 글자는 두부 + 경고 한 번).
+  저장소에는 CC0 라틴 글꼴만(결정 R1) — 시스템 글꼴을 쓰는 시험은 글리프 존재 · 사슬만 단언하고, 그 글꼴이 없는 기계에서는 건너뛴다.
+- **리치 텍스트는 BBCode 꼴**(`[b]` · `[i]` · `[color=]` · `[size=]` · `[[`, `Engine/Text/RichTextParser`) — XML 속성 안에서 이스케이프가 필요 없다. 번역 검사가 태그 열을
+  원문과 견주고(`--check-text` 보고), 의사 로컬라이저는 태그를 바꾸지 않는다(토큰 읽기는 `Core/String/MarkupTagScanner` 하나).
 - **캐시 앞 · 서버 버스의 소비자는 호스트 하나**(`OnlineServiceHost` — `getEphemeralRouter` · `subscribeServerBus`) — `IEphemeralStore::pollReplies` · `IServerBus::pollMessages` 는
   앞 전체의 것을 꺼내므로 서비스 둘이 직접 부르면 서로의 답 · 메시지를 가져간다(가져간 쪽은 버리고 맡긴 쪽은 영원히 기다린다). 메서드 영역(키트마다 256 칸)이 겹치는 서비스는
   `registerService` 가, 같은 메서드 번호는 `NetRequestServer::registerMethod` 가 거절한다(bool) — 덮어쓰면 한 키트의 요청이 다른 키트로 간다.
@@ -1727,6 +1802,8 @@ cd build/Ninja-Debug/Bin
 - **입력 · 매핑 · 행동 세 층** — 입력 층(Engine/Input)은 장치 사건만, 매핑(InputMap)은 플레이어 조종자 · 플레이어 뷰 · 명령형 디렉터만, 폰은 `ControlIntent` 만
   읽는다(`CheckControlBoundary` 허용 표). 네트워크 · 게임플레이 리플레이는 의도를 싣는다. **탑승 = 빙의를 탈것으로 옮기는 것**, 탑승자는 좌석 소켓에 붙어(이동 멈춤 ·
   자세 파라미터) 피격은 그대로 받는다. 탈것 의도의 연결은 운전석 조종자를 따른다. 명령형 장르(RTS · SRPG · 경영)는 폰이 없다.
+  허용 표의 파일도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 묻지 않는다 — 클릭 · 시점 · 확대도 입력 맵 액션이고, 남는 장치 조회는 커서 위치
+  `getMousePositionNormalized` 하나다(같은 게이트). 확대처럼 "한 칸씩" 인 축은 `wasActionTriggered` 프레임에만 쓴다 — 패드 버튼 축은 누르는 동안 매 프레임 ±1 이다.
 - **가상 입력은 `IVirtualInputSource` 하나로 넣는다** — `InputManager::attachVirtualInput` 이 붙이면 `beginFrame` 이 OS 사건과 같은 자리에서 그 프레임 사건을
   재생한다. 배타 모드(기본)는 OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다 — 사람이 같은 기계를 써도 시험이 흔들리지 않는다.
   엔진 키보드 포커스(개발 콘솔)는 따른다. 바깥 스크립트로 OS 입력(`SendInput`)을 넣지 말 것 — OS 는 사건을 포그라운드 창에만 준다.
@@ -1775,9 +1852,9 @@ cd build/Ninja-Debug/Bin
 - **반복 간격(연사 · 스폰 · 자동 공격)은 끝난 걸음에 `Countdown::restart`** — 간격으로 덮으면(`start` · `= 간격`) 지나친 몫을 버려 빈도가 fps · 고정 걸음에
   매이고, float 로 걸음을 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다린다(RTS 0.05 초 걸음에서 1.2 초 → 1.25 초). 잇는 몫은 한 간격까지라 몰아 내지 않는다.
   "원하는 동안 간격마다 한 번" 은 `Countdown::tickRepeat( dt, interval, bWant )` 한 줄이다(Voxel 블록 놓기 · Shooter3D 적 휘두르기).
-- **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. 월드 UI(HP 바 ·
-  데미지 숫자)는 저장되지 않는 `SpriteInstanceBatch` 로 그린다 — 자식 컴포넌트로 만들면 씬 · 프리팹 · 스냅샷에 저장돼 다음 시작에 겹친다. 스프라이트 UV · 색은 인스턴스에 싣는다(같은 텍스처는
-  한 배치). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`, 글리프 · 클립은 `Scripts/generate/GenerateSpriteTextures.py`.
+- **피해 · 월드 UI(킷)** — 피해는 `UnitStatsComponent::applyTakeDamage` 한 자리에서만 깎인다. 방어 식은 `DamageMath::applyArmor`(고정 방어, 최소 1 — 액션 룸의 적도 같은 식)이고, 0 이하 피해는 맞지 않은 것이다(HP · 무적 · 이벤트 없음 — 언리얼 `ApplyDamage`). `DamageAppliedEvent` 는 큐로, 같은 프레임이 필요하면 `registerDamageApplied`. HP 바 ·
+  데미지 숫자는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen — 데이터에 함께 적는다, `spawnNumber` 는 코드로 붙인다)에 위젯을 넣는다 — 마커는 한 트리에 모이므로
+  위젯 이름을 쓰지 않고 자식 순서 · 타입으로 찾는다(이름표가 겹친다). 위젯 값은 틱 뒤 큐에서 넣는다(병렬 틱에서 위젯을 고치지 말 것). 체력을 가진 컴포넌트는 `Combat/HealthSourceComponent` 를 상속해 읽기(`getHealthReading` — 지금 · 최대 · 쓰러짐) 하나만 내고, 알림은 `notifyHealthChanged` 한 곳이 비율 · 종류(쓰러짐 포함)를 정해 같은 오브젝트의 `HealthListenerComponent` 에 보낸다 — HP 바는 시작할 때 원천을 읽는다(맞은 뒤 붙여도 맞는 비율). RTTI 가 없어 인터페이스가 아니라 리플렉션 베이스다(`getComponent<HealthSourceComponent>()`). 시뮬레이션 키트(`Vitality` · 정수 HP 배열)는 상속하지 않는다 — 그 유닛에 HP 바를 띄울 게임은 뷰 컴포넌트가 상속해 스냅샷을 읽는다. 보이기 정책은 바의 PROPERTY 다. 확인용 씬 `Resource/game/empty/maps/spriteui.scene.xml`.
 - **수명이 다하면 지우는 컴포넌트(이펙트 페이드 · 데미지 숫자 · 투사체)는 `LifeSpanUtil` 로 센다** — 흐른 시간은 저장되는 PROPERTY 이고 `onBeginPlay` 에서 0 으로 돌리지
   않는다(되돌리기 · 핫 리로드 때마다 수명을 다시 산다 — 투사체가 그랬다). 끝나는 경계는 `Countdown::tick` 과 같은 "수명 이상", 수명 0 은 지우지 않음.
 - **액션 룸의 적은 몬스터 정의다** — 종 id(`grunt` · `boss`)를 게임이 건 `MonsterCatalog` 서비스(`game::bindLocalService`)에서 찾고, 없으면 내장 정의(옛 상수와 같은 값)다. 카탈로그가 걸렸는데 그 id 가 없으면 싸움마다 한 번 경고한다. 사격은 `<Shot angle speed life radius damage/>` 줄마다 한 발(겨냥에서 돌린 각). 방어 식은 유닛 스탯과 같다(`DamageMath::applyArmor`). 룸이 돌려주는 플레이어 피해(`_damageToPlayer`)는 방어 전 값이다 — 게임이 플레이어 `UnitStatsComponent::takeDamage` 로 넣으면 방어가 한 번 빠진다. 룸의 적은 오브젝트가 아니라 `UnitStatsComponent` 를 거치지 않는다. 방 배치는 코드 표(`kArr*Spawn`) — 쓰는 게임이 생기면 맵의 스폰 지점으로.
@@ -1958,7 +2035,7 @@ cd build/Ninja-Debug/Bin
   밀어내기 합이 바뀐다, BR 은 근접 질의가 없다, Mech 는 조종사 몇 명 전수 검사가 격자보다 싸다), 키트 칸 저장소 템플릿 `Grid2D<T>`(덮는 자리 4 곳에서 4 줄,
   저장소 모양이 키트마다 다르다).
 - **게임 · 키트**: 복셀 청크 메시 제자리 갱신 — 다시 짓기는 블록이 바뀐 청크만(Debug VoxelCraft 자동 플레이 5,000 프레임에 2 회, 프레임당 최대 4 개), 새 `Mesh` 가
-  렌더 스레드가 든 옛 메시와 겹치지 않는 길. HP 바 · 피해 숫자의 배치 예약을 바뀔 때만 — 월드 변환이 틱 뒤에 적용돼 한 프레임 늦는다(변환 적용 뒤 훅이 필요).
+  렌더 스레드가 든 옛 메시와 겹치지 않는 길.
   카트 트랙을 공용 `SplinePath` 로 — 카트는 XZ 로 달려 랩 · 고스트 거리가 수평 길이다(3D 호 길이로 바꾸면 같은 트랙의 값이 바뀐다), 공유되는 것은 누적 거리 표 하나, 쓰는 게임 0.
 - **늘 상위에 오는 정당한 중복**(`RunDuplicateCode`): 백엔드 인터페이스 선언 · 레이스 래퍼 전달 · 플랫폼 구현 · enum 레이블 나열 · 서비스 로케이터 둘(`sw::editor` 는 nullptr, `sw::game` 은
   assert) · `MaterialPacking` 숫자 case(`-Wswitch-enum`) · DX12 상태 조회 · `TypeInfo` 생성자 · RLE · 콜스택 관문 · 셰이더 반사 D3D11/12(확인 중 — 1-3) · Win32 마우스 case · include 묶음.

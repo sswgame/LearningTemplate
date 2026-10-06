@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Runtime UI InputMap — the actions UiSystem routes to the active screen (focus navigation, accept, back, tabs).
+  UiSystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action
+  is consumed until released: the player controller does not turn it into the pawn's intent (gamepad A = accept, not jump).
+  Navigation uses trigger="Repeat" (fires on press, then repeats after navRepeatDelay at navRepeatRate) like a held D-pad.
+  UI.TextBackspace is routed only while a text field holds keyboard focus (with Back and the focus Tab actions).
+  UI.Scroll (right stick) goes to the focused widget's path, or the hovered path without focus; a scroll panel moves at its stick speed.
+  The UIGlobal layer is on only while no screen is active and the game preset enables the pause menu: UI.Pause opens it (and is consumed).
+-->
+<InputMap defaultLayer="UI" holdThreshold="0.4">
+	<layers>
+		<layer name="UI" enabled="0" blockLower="0"/>
+		<layer name="UIGlobal" enabled="0" blockLower="0"/>
+	</layers>
+	<layer name="UIGlobal" enabled="0" blockLower="0">
+		<action name="UI.Pause" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="gamepad" code="Start"/>
+		</action>
+	</layer>
+	<layer name="UI" enabled="0" blockLower="0">
+		<action name="UI.NavigateUp" trigger="Repeat">
+			<bind source="key" code="Up"/>
+			<bind source="gamepad" code="DPadUp"/>
+		</action>
+		<action name="UI.NavigateDown" trigger="Repeat">
+			<bind source="key" code="Down"/>
+			<bind source="gamepad" code="DPadDown"/>
+		</action>
+		<action name="UI.NavigateLeft" trigger="Repeat">
+			<bind source="key" code="Left"/>
+			<bind source="gamepad" code="DPadLeft"/>
+		</action>
+		<action name="UI.NavigateRight" trigger="Repeat">
+			<bind source="key" code="Right"/>
+			<bind source="gamepad" code="DPadRight"/>
+		</action>
+		<action name="UI.NavigateStick">
+			<stick stick="Left" deadzone="0.35"/>
+		</action>
+		<action name="UI.Scroll">
+			<stick stick="Right" deadzone="0.25"/>
+		</action>
+		<action name="UI.TextBackspace" trigger="Repeat">
+			<bind source="key" code="Backspace"/>
+		</action>
+		<action name="UI.Accept" trigger="Pressed">
+			<bind source="key" code="Enter"/>
+			<bind source="key" code="NumpadEnter"/>
+			<bind source="key" code="Space"/>
+			<bind source="gamepad" code="A"/>
+		</action>
+		<action name="UI.Back" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="gamepad" code="B"/>
+		</action>
+		<action name="UI.FocusNext" trigger="Repeat">
+			<bind source="key" code="Tab"/>
+		</action>
+		<action name="UI.FocusPrevious" trigger="Repeat">
+			<bind source="key" modifier="Shift" code="Tab"/>
+		</action>
+		<action name="UI.TabNext" trigger="Pressed">
+			<bind source="gamepad" code="RightShoulder"/>
+		</action>
+		<action name="UI.TabPrevious" trigger="Pressed">
+			<bind source="gamepad" code="LeftShoulder"/>
+		</action>
+	</layer>
+</InputMap>

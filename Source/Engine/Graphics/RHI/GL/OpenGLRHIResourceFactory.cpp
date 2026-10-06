@@ -57,6 +57,7 @@ namespace sw
             {   RHIFormat::R32G32B32_FLOAT,                             GL_RGB32F,           GL_RGB,             GL_FLOAT},
             {      RHIFormat::R32G32_FLOAT,                              GL_RG32F,            GL_RG,             GL_FLOAT},
             {         RHIFormat::R32_FLOAT,                               GL_R32F,           GL_RED,             GL_FLOAT},
+            {          RHIFormat::R8_UNORM,                                 GL_R8,           GL_RED,     GL_UNSIGNED_BYTE},
         };
 
         const OpenGLFormatRow* findFormatRow( RHIFormat format )
@@ -353,6 +354,38 @@ namespace sw
                                          static_cast<GLsizei>( span._width ), static_cast<GLsizei>( span._height ), 1, glFormat, glType, span._pData );
                 }
             }
+        }
+        glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
+        return true;
+    }
+
+    bool OpenGLRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    {
+        OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE || pRecord->_bDepthStencil != SW_FALSE )
+            return false;
+        uint32 rowBytes{ 0 };
+        if ( validateTextureRegionUpload( pRecord->_format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arraySize, desc, rowBytes ) == false )
+            return false;
+
+        ScopedOpenGLContext ctxScope( _pDevice );
+        const GLenum        glFormat = toGlFormat( pRecord->_format );
+        const GLenum        glType   = toGlType( pRecord->_format );
+        // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R8 12픽셀 행 = 12바이트).
+        glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+        if ( pRecord->_target == GL_TEXTURE_2D )
+        {
+            glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
+            glTexSubImage2D( GL_TEXTURE_2D, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
+                             static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), glFormat, glType, desc._pData );
+            glBindTexture( GL_TEXTURE_2D, 0 );
+        }
+        else
+        {
+            // 배열 · 큐브는 전체 업로드와 같은 DSA 3D 창(z = 면)이다.
+            glTextureSubImage3D( pRecord->_texture, static_cast<GLint>( desc._mip ), static_cast<GLint>( desc._x ), static_cast<GLint>( desc._y ),
+                                 static_cast<GLint>( desc._arraySlice ), static_cast<GLsizei>( desc._width ), static_cast<GLsizei>( desc._height ), 1, glFormat,
+                                 glType, desc._pData );
         }
         glPixelStorei( GL_UNPACK_ALIGNMENT, 4 );
         return true;

@@ -11,3 +11,8 @@ Resource/**/models/** -text
 
 # 로컬라이제이션 표(원문 · 번역 · 번역 메모리 · PO)는 글 수집(`App --gather-text` / `--check-text`)이 바이트로 쓰고 대조한다 — 줄끝 변환 금지
 Resource/**/localization/** -text
+
+# 글꼴(TrueType · OpenType · 컬렉션)은 바이너리다 — 줄끝 변환 · diff 금지
+*.ttf binary
+*.otf binary
+*.ttc binary

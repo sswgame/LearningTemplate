@@ -1,0 +1,26 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Swap" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/options.uistyle.xml</item>
+	</_listStyleSheet>
+	<CanvasPanel>
+		<BorderPanel _name="Window" _styleClass="window modal">
+			<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-300,-110" _offsetMax="300,110" />
+			<BoxPanel _spacing="16" _orientation="Vertical">
+				<TextWidget _name="Prompt" _text="Press a key. Escape cancels; hold Escape for one second to bind it." />
+				<BoxPanel _name="ConflictRow" _spacing="6" _visibility="Collapsed">
+					<TextWidget _text="Already used by" />
+					<TextWidget _name="ConflictTarget" _styleClass="settingvalue" />
+				</BoxPanel>
+				<BoxPanel _name="ConflictButtons" _spacing="8" _visibility="Collapsed">
+					<ButtonWidget _name="Swap" _styleClass="primary" _command="Swap">
+						<TextWidget _text="Swap" />
+					</ButtonWidget>
+					<ButtonWidget _name="Cancel" _command="Cancel">
+						<TextWidget _text="Cancel" />
+					</ButtonWidget>
+				</BoxPanel>
+			</BoxPanel>
+		</BorderPanel>
+	</CanvasPanel>
+</UiDocument>

@@ -166,6 +166,10 @@
             "text": "번쩍임 줄이기"
         },
         {
+            "source": "Reduce Motion",
+            "text": "움직임 줄이기"
+        },
+        {
             "source": "Render Scale",
             "text": "렌더 배율"
         },

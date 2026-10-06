@@ -337,6 +337,9 @@ namespace sw
                 // 정점 애니메이션(VAT) 표: 그래픽스 t14 (네 백엔드 공통). 먼 군중의 정점 셰이더가 인스턴스 시각으로 읽는다.
                 add( shaderslot::resname::kVertexAnimation, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kVertexAnimationBuffer ),
                      slotB( shaderslot::kVertexAnimationBuffer ), vkT( shaderslot::kVertexAnimationBuffer ), slotB( shaderslot::kVertexAnimationBuffer ) );
+                // 캔버스 사각형: 캔버스 패스 t15 (네 백엔드 공통). 정점 · 픽셀 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째를 읽는다(canvas.hlsl).
+                add( shaderslot::resname::kCanvasQuads, ShaderBindingKind::StructuredBuffer, slotB( shaderslot::kCanvasQuadBuffer ),
+                     slotB( shaderslot::kCanvasQuadBuffer ), vkT( shaderslot::kCanvasQuadBuffer ), slotB( shaderslot::kCanvasQuadBuffer ) );
                 // gpucull 컴퓨트: t0/t1 읽기, u0/u1 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
                 add( shaderslot::resname::kCullInstances, ShaderBindingKind::StructuredBuffer, slotB( 0 ), slotB( 0 ), vkT( 0 ), slotB( 0 ) );
                 add( shaderslot::resname::kCullBatchInfo, ShaderBindingKind::StructuredBuffer, slotB( 1 ), slotB( 1 ), vkT( 1 ), slotB( 1 ) );

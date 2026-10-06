@@ -184,9 +184,29 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
+                        const InputSlot& negativeSlot = binding._arrSlot[0];
+                        const InputSlot& positiveSlot = binding._arrSlot[1];
+                        const bool       bGamepad     = negativeSlot._deviceKind == InputDeviceKind::Gamepad && positiveSlot._deviceKind == InputDeviceKind::Gamepad &&
+                                              negativeSlot._deviceIndex == positiveSlot._deviceIndex;
+                        const bool bKeyboard = negativeSlot._deviceKind == InputDeviceKind::Keyboard && positiveSlot._deviceKind == InputDeviceKind::Keyboard;
+                        if ( bGamepad == false && bKeyboard == false )
+                        {
+                            SW_LOG_ERROR( "Action '%#' has an axis1d binding over two devices, which the <InputMap> format cannot name - not saved", pActionName );
+                            return false;
+                        }
                         XmlNode axisNode = actionNode.appendChild( "axis1d" );
-                        axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[0]._controlIndex ) ) );
-                        axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( binding._arrSlot[1]._controlIndex ) ) );
+                        if ( bGamepad )
+                        {
+                            axisNode.appendAttribute( InputMapXml::kAttrSource, InputMapXml::kSourceGamepad );
+                            axisNode.appendAttribute( "negative", GamepadButtonUtil::toName( static_cast<GamepadButton>( negativeSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( "positive", GamepadButtonUtil::toName( static_cast<GamepadButton>( positiveSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( InputMapXml::kAttrPad, static_cast<int32>( negativeSlot._deviceIndex ) );
+                        }
+                        else
+                        {
+                            axisNode.appendAttribute( "negative", KeyCodeUtil::toName( static_cast<Key>( negativeSlot._controlIndex ) ) );
+                            axisNode.appendAttribute( "positive", KeyCodeUtil::toName( static_cast<Key>( positiveSlot._controlIndex ) ) );
+                        }
                         // 적지 않으면 Down 으로 읽힌다 — 그 밖의 trigger 만 적는다.
                         if ( binding._trigger != ActionTrigger::Down && pTriggerName != nullptr )
                             axisNode.appendAttribute( InputMapXml::kAttrTrigger, pTriggerName );
@@ -267,6 +287,48 @@ namespace sw
                 if ( node.tryGetAttributeIntInRange( "modifierMask", 0, 0, ModifierKey::All, modifierMask ) == false )
                     return false;
                 outModifierMask = static_cast<uint8>( modifierMask );
+                return true;
+            }
+
+            /**
+             * @brief 1D 축 합성의 두 슬롯을 읽습니다 — `source="gamepad"`(+ `pad`)면 게임패드 버튼 이름, 없거나 `key` 면 키 이름입니다.
+             * @return 이름을 모르거나 패드 번호가 틀리면 경고하고 false 입니다 — 부르는 쪽은 그 바인딩을 버립니다.
+             */
+            [[nodiscard]] static bool tryReadAxisSlots( XmlNode node, const utf8* pNegativeName, const utf8* pPositiveName, InputSlot& outNegative, InputSlot& outPositive )
+            {
+                const utf8* pSource = node.findAttribute( InputMapXml::kAttrSource );
+                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXml::kSourceGamepad, true ) )
+                {
+                    uint8 padIndex{ 0 };
+                    if ( tryGetPadIndex( node, padIndex ) == false )
+                        return false;
+                    const GamepadButton negativeButton = GamepadButtonUtil::fromName( node.getAttributeText( pNegativeName ) );
+                    const GamepadButton positiveButton = GamepadButtonUtil::fromName( node.getAttributeText( pPositiveName ) );
+                    if ( negativeButton == GamepadButton::Count || positiveButton == GamepadButton::Count )
+                    {
+                        SW_LOG_WARNING( "axis1d names an unknown gamepad button ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
+                                        node.getAttributeText( pPositiveName ) );
+                        return false;
+                    }
+                    outNegative = InputSlot::fromGamepadButton( negativeButton, padIndex );
+                    outPositive = InputSlot::fromGamepadButton( positiveButton, padIndex );
+                    return true;
+                }
+                if ( pSource != nullptr && StringUtil::equals( pSource, InputMapXml::kSourceKey, true ) == false )
+                {
+                    SW_LOG_WARNING( "axis1d source '%#' is neither 'key' nor 'gamepad' - binding dropped", pSource );
+                    return false;
+                }
+                const Key negativeKey = KeyCodeUtil::fromName( node.getAttributeText( pNegativeName ) );
+                const Key positiveKey = KeyCodeUtil::fromName( node.getAttributeText( pPositiveName ) );
+                if ( negativeKey == Key::Unknown || positiveKey == Key::Unknown )
+                {
+                    SW_LOG_WARNING( "axis1d names an unknown key ('%#' / '%#') - binding dropped", node.getAttributeText( pNegativeName ),
+                                    node.getAttributeText( pPositiveName ) );
+                    return false;
+                }
+                outNegative = InputSlot::fromKey( negativeKey );
+                outPositive = InputSlot::fromKey( positiveKey );
                 return true;
             }
         };
@@ -471,8 +533,10 @@ namespace sw
             // 3) <axis1d> 태그 파싱
             for ( XmlNode axisNode = actionNode.findChild( "axis1d" ); axisNode.isValid(); axisNode = axisNode.findNextSibling( "axis1d" ) )
             {
-                const Key     posKey         = KeyCodeUtil::fromName( axisNode.getAttributeText( "positive" ) );
-                const Key     negativeKey    = KeyCodeUtil::fromName( axisNode.getAttributeText( "negative" ) );
+                InputSlot negativeSlot{};
+                InputSlot positiveSlot{};
+                if ( InputMapSerializationInternal::tryReadAxisSlots( axisNode, "negative", "positive", negativeSlot, positiveSlot ) == false )
+                    continue; // 모르는 이름 · 패드 번호는 알렸다 — 이 바인딩을 버린다
                 hashed_string axisLayer      = layer;
                 const utf8*   pAxisLayerAttr = axisNode.findAttribute( "layer" );
                 if ( StringUtil::isNullOrEmpty( pAxisLayerAttr ) == false )
@@ -489,8 +553,7 @@ namespace sw
                     if ( parsed != ActionTrigger::Count )
                         axisTrigger = parsed;
                 }
-                if ( posKey != Key::Unknown && negativeKey != Key::Unknown )
-                    bindAxis1DComposite( hashed_string( pActionName ), negativeKey, posKey, hashed_string( axisLayer.view() ), axisTrigger );
+                bindAxis1DComposite( hashed_string( pActionName ), negativeSlot, positiveSlot, hashed_string( axisLayer.view() ), axisTrigger );
             }
 
             // 4) <stick> 태그 파싱
@@ -696,10 +759,16 @@ namespace sw
                     }
                     case BindingKind::Axis1DComposite:
                     {
-                        const Key negativeKey = static_cast<Key>( b._arrSlot[0]._controlIndex );
-                        const Key posKey      = static_cast<Key>( b._arrSlot[1]._controlIndex );
-                        bindNode.appendAttribute( "negKey", KeyCodeUtil::toName( negativeKey ) );
-                        bindNode.appendAttribute( "posKey", KeyCodeUtil::toName( posKey ) );
+                        if ( b._arrSlot[0]._deviceKind == InputDeviceKind::Gamepad )
+                        {
+                            bindNode.appendAttribute( "source", "gamepad" );
+                            bindNode.appendAttribute( "negKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[0]._controlIndex ) ) );
+                            bindNode.appendAttribute( "posKey", GamepadButtonUtil::toName( static_cast<GamepadButton>( b._arrSlot[1]._controlIndex ) ) );
+                            bindNode.appendAttribute( "pad", static_cast<int32>( b._arrSlot[0]._deviceIndex ) );
+                            break;
+                        }
+                        bindNode.appendAttribute( "negKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[0]._controlIndex ) ) );
+                        bindNode.appendAttribute( "posKey", KeyCodeUtil::toName( static_cast<Key>( b._arrSlot[1]._controlIndex ) ) );
                         break;
                     }
                     case BindingKind::Vector2DComposite:
@@ -808,10 +877,10 @@ namespace sw
             {
                 case BindingKind::Axis1DComposite:
                 {
-                    const Key negativeKey = KeyCodeUtil::fromName( bindNode.getAttributeText( "negKey" ) );
-                    const Key posKey      = KeyCodeUtil::fromName( bindNode.getAttributeText( "posKey" ) );
-                    if ( negativeKey != Key::Unknown && posKey != Key::Unknown )
-                        bindAxis1DComposite( hashed_string( pAction ), negativeKey, posKey, hashed_string( layer ),
+                    InputSlot negativeSlot{};
+                    InputSlot positiveSlot{};
+                    if ( InputMapSerializationInternal::tryReadAxisSlots( bindNode, "negKey", "posKey", negativeSlot, positiveSlot ) )
+                        bindAxis1DComposite( hashed_string( pAction ), negativeSlot, positiveSlot, hashed_string( layer ),
                                              InputMapSerializationInternal::readUserBindingTrigger( bindNode, ActionTrigger::Down ) );
                     break;
                 }

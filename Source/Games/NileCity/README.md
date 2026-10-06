@@ -13,6 +13,7 @@ cmake --preset Ninja-Debug-NileCity        # 빌드 폴더 build/Ninja-Debug-Nil
 cmake --build --preset Ninja-Debug-NileCity
 cd build/Ninja-Debug-NileCity/Bin
 ./App.exe -dx12
+./App.exe -dx12 -scenario=game/nilecity/automation/control.scenario.xml   # 패드 A · B(액션 Nile.Place · Nile.Demolish)로 도로를 깔고 허문다(종료 코드 0 = 통과)
 ./App.exe -dx12 -gv_nileAutoPlay=1      # 계획표대로 도로 고리 · 우물 · 농장 · 창고 · 시장 · 집 … 을 지으며 달마다 [Nile] month N pop P money M
 ```
 
@@ -20,11 +21,11 @@ cd build/Ninja-Debug-NileCity/Bin
 
 | 키 | 하는 일 |
 |----|---------|
-| WASD · 방향키 · 휠 | 카메라 이동 · 확대 |
+| WASD · 방향키 · 휠(패드 D 패드 위 · 아래) | 카메라 이동 · 확대(`Camera.Zoom`) |
 | Q · E · Tab | 지을 것 고르기(도로 → `city.xml` 의 건물 순서) |
 | R | 도로 고르기 |
-| 왼쪽 버튼 | 커서 칸(노란 상자)에 짓기 — 도로는 누른 채 끌면 이어 깐다. 못 지으면 까닭(`Occupied` · `BadTerrain` · `NotEnoughMoney`)을 로그로 |
-| 오른쪽 버튼 | 커서 칸의 건물 · 도로 허물기 |
+| 왼쪽 버튼(패드 A — `Nile.Place`) | 커서 칸(노란 상자)에 짓기 — 도로는 누른 채 끌면 이어 깐다. 못 지으면 까닭(`Occupied` · `BadTerrain` · `NotEnoughMoney`)을 로그로 |
+| 오른쪽 버튼(패드 B — `Nile.Demolish`) | 커서 칸의 건물 · 도로 허물기 |
 | P | 자동 계획 켜기 · 끄기(`-gv_nileAutoPlay` 와 같은 계획표, 이어서) |
 | Space · − · = | 멈춤 · 속도 ½ · 속도 ×2(0.25 – 8 배) |
 | F1 | 도시 상태(인구 · 돈 · 일꾼 · 평균 집 단계 · 문화 · 비옥함)를 로그로 |

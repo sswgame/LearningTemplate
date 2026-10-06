@@ -74,7 +74,7 @@ namespace sw
                 if ( desc._bEnableBlend != 0 )
                 {
                     rtBlend.BlendEnable    = TRUE;
-                    rtBlend.SrcBlend       = D3D12_BLEND_SRC_ALPHA;
+                    rtBlend.SrcBlend       = ( desc._bPremultipliedAlpha != SW_FALSE ) ? D3D12_BLEND_ONE : D3D12_BLEND_SRC_ALPHA;
                     rtBlend.DestBlend      = D3D12_BLEND_INV_SRC_ALPHA;
                     rtBlend.BlendOp        = D3D12_BLEND_OP_ADD;
                     rtBlend.SrcBlendAlpha  = D3D12_BLEND_ONE;

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  StarSkirmish 조작 시나리오 — 명령형 디렉터는 마우스 버튼이 아니라 액션(Skirmish.Select · Skirmish.Order)을 읽는다.
+  커서 자리만 포인터 위치(MousePosition)로 두고, 누르는 것은 패드 버튼(A = 고르기, B = 명령)으로 낸다 — 마우스 원시 조회가 남아 있으면 아무것도 고르지 못한다.
+  App -scenario=game/starskirmish/automation/control.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="starskirmish.control" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_skirmishAutoPlay" value="0"/></At>
+	<At frame="30"><Expect probe="Skirmish.SelectedCount" equals="0"/></At>
+	<!-- 본진(10, 10)을 덮는 사각형 — 리그 초점 (14, 14) · 직교 높이 30 에서 화면 왼쪽 가운데 아래. -->
+	<At frame="31"><MousePosition x="0.3" y="0.45"/><Press slot="Gamepad.A"/></At>
+	<At frame="36"><MousePosition x="0.6" y="0.85"/></At>
+	<At frame="40"><Release slot="Gamepad.A"/></At>
+	<At frame="45"><Expect probe="Skirmish.SelectedCount" atLeast="1"/></At>
+	<!-- 빈 땅으로 명령 — 고른 일꾼이 그 자리로 무리 이동한다. -->
+	<At frame="46"><MousePosition x="0.7" y="0.3"/></At>
+	<At frame="48"><Tap slot="Gamepad.B" hold="1"/></At>
+	<At frame="52"><Expect probe="Skirmish.SelectedMovingCount" atLeast="1"/></At>
+	<At frame="60"><Pass/></At>
+</Scenario>

@@ -623,6 +623,77 @@ namespace sw
         return true;
     }
 
+    bool VulkanRHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    {
+        VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_image == VK_NULL_HANDLE || _pDevice->_device == VK_NULL_HANDLE ||
+             _pDevice->_graphicsQueue == VK_NULL_HANDLE || _pDevice->_oneShotCommandPool == VK_NULL_HANDLE || pRecord->_bDepthStencil != SW_FALSE )
+            return false;
+        uint32 rowBytes{ 0 };
+        if ( validateTextureRegionUpload( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, pRecord->_mipLevels,
+                                          pRecord->_arrayLayers, desc, rowBytes ) == false )
+            return false;
+
+        // 전체 업로드와 같은 길: 빈틈없는 행 그대로 스테이징 → 일회성 커맨드 → 제출하고 기다린다(가끔 · 작게 바뀌는 텍스처용).
+        const uint32                         usedBytes = rowBytes * desc._height;
+        const RHIBufferHandle                staging   = _pDevice->createVulkanBuffer( usedBytes, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, desc._pData );
+        VulkanRHIDevice::VulkanBufferRecord* pStaging  = _pDevice->resolveAllocatedBuffer( staging );
+        if ( pStaging == nullptr || pStaging->_buffer == VK_NULL_HANDLE )
+        {
+            destroyBuffer( staging );
+            SW_LOG_ERROR( "uploadTexture2DRegion: failed to create the staging buffer (%# bytes)", usedBytes );
+            return false;
+        }
+
+        VulkanOneShotCommands oneShot{ _pDevice->_device, _pDevice->_oneShotCommandPool, _pDevice->_oneShotMutex, _pDevice->_graphicsQueue,
+                                       _pDevice->_queueMutex };
+        if ( oneShot.isValid() == false )
+        {
+            destroyBuffer( staging );
+            SW_LOG_ERROR( "uploadTexture2DRegion: failed to allocate the one-shot command buffer" );
+            return false;
+        }
+        const VkCommandBuffer cmd = oneShot.get();
+
+        // 레코드가 이미지 레이아웃 하나만 들므로 배리어도 이미지 전체다. 구간 밖 픽셀은 지금 레이아웃에서 보존된다(UNDEFINED 였다면 원래 정의되지 않았다).
+        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
+        barrier.oldLayout            = static_cast<VkImageLayout>( pRecord->_layout );
+        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
+
+        VkBufferImageCopy region{};
+        region.bufferOffset                    = 0;
+        region.bufferRowLength                 = 0; // 0 = 빈틈없는 행(imageExtent.width)
+        region.bufferImageHeight               = 0;
+        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel       = desc._mip;
+        region.imageSubresource.baseArrayLayer = desc._arraySlice;
+        region.imageSubresource.layerCount     = 1;
+        region.imageOffset                     = { static_cast<int32>( desc._x ), static_cast<int32>( desc._y ), 0 };
+        region.imageExtent                     = { desc._width, desc._height, 1 };
+        vkCmdCopyBufferToImage( cmd, pStaging->_buffer, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region );
+
+        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                              VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 0, nullptr,
+                              0, nullptr, 1, &barrier );
+
+        const bool bSubmitted = oneShot.endSubmitAndWait();
+        destroyBuffer( staging );
+        if ( bSubmitted == false )
+        {
+            SW_LOG_ERROR( "uploadTexture2DRegion: vkQueueSubmit failed" );
+            return false;
+        }
+        pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+        return true;
+    }
+
     RHIFormat VulkanRHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
     {
         const VulkanRHIDevice::VulkanTextureRecord* pRecord = _pDevice->resolveTexture( texture );

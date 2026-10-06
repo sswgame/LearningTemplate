@@ -1052,3 +1052,80 @@ SW_TEST_CASE( RenderPassTest, EmptyEntryPointsResolveToStageTable )
     SW_EXPECT_EQUAL( sw::string_view( "CSMain" ), sw::resolveEntryPoint( {}, sw::ShaderStage::Compute ) );
     SW_EXPECT_EQUAL( sw::string_view( "MyCS" ), sw::resolveEntryPoint( "MyCS", sw::ShaderStage::Compute ) );
 }
+
+/**
+ * @brief [RenderPassTest] 엔진 파이프라인 여섯 모두 Swapchain 을 쓰는 마지막 패스가 Canvas 다 — UI 가 장면 위에 · 스크린샷 캡처 안에 그려진다
+ * @details Canvas 를 빠뜨린 엔진 파이프라인은 UI 가 없는 화면을 낸다(게임 파이프라인은 UI 가 없을 수 있어 검증 오류로 하지 않는다 — 이 시험이 엔진 것을 지킨다).
+ */
+SW_TEST_CASE( RenderPassTest, EngineGraphicsPipelinesEndWithCanvas )
+{
+    const std::string_view arrPipeline[] = {
+        "engine/pipeline/forwardpipeline.xml",
+        "engine/pipeline/deferredpipeline.xml",
+        "engine/pipeline/forwardprepasspipeline.xml",
+        "engine/pipeline/forwardpipelinestaged.xml",
+        "engine/pipeline/forwardtoonpipeline.xml",
+        "engine/pipeline/forward2dpipeline.xml",
+    };
+    for ( std::string_view path : arrPipeline )
+    {
+        sw::RenderPipelineAsset res;
+        SW_ASSERT_TRUE( res.loadFromXmlFile( path ) );
+        SW_EXPECT_EQUAL( 0u, res.validate( path ) );
+        const sw::RenderGraphPassDesc* pLastWriter = nullptr;
+        for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
+        {
+            if ( std::find( pass._listOutput.begin(), pass._listOutput.end(), sw::string( sw::kSwapchainOutputName ) ) != pass._listOutput.end() )
+                pLastWriter = &pass;
+        }
+        SW_ASSERT_NOT_NULL( pLastWriter );
+        SW_EXPECT_TRUE_MSG( pLastWriter->_resolvedType == sw::RenderPassType::Canvas, sw::string( path ).c_str() );
+    }
+}
+
+/**
+ * @brief [RenderPassTest] Canvas 뒤에서 Swapchain 을 쓰는 패스 · Swapchain 이 아닌 Canvas 출력 · Canvas 의 입력 선언은 검증 오류다(Present → Canvas 는 통과)
+ */
+SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
+{
+    auto makePass = []( const utf8* pName, const utf8* pType, const utf8* pOutput )
+    {
+        sw::RenderGraphPassDesc pass{};
+        pass._name = pName;
+        pass._type = pType;
+        pass._listOutput.push_back( pOutput );
+        return pass;
+    };
+    {
+        sw::RenderPipelineAsset res;
+        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "Swapchain" ) );
+        SW_EXPECT_EQUAL( 0u, res.validate( "unit-test" ) );
+    }
+    {
+        sw::RenderPipelineAsset res;
+        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "Swapchain" ) );
+        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment attachment{};
+        attachment._name = "UiColor";
+        res.getDesc()._listAttachment.push_back( attachment );
+        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UiColor" ) );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+    {
+        sw::RenderPipelineAsset  res;
+        sw::RenderPassAttachment attachment{};
+        attachment._name = "SceneColor";
+        res.getDesc()._listAttachment.push_back( attachment );
+        res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
+        sw::RenderGraphPassDesc canvas = makePass( "Canvas", "Canvas", "Swapchain" );
+        canvas._listInput.push_back( "SceneColor" );
+        res.getDesc()._listPass.push_back( canvas );
+        SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
+    }
+}

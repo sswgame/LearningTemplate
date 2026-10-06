@@ -1,6 +1,143 @@
 {
     "culture": "en",
     "entries": {
+        "Already used by": {
+            "source": "Already used by",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/key_rebind.ui.xml"
+            ]
+        },
+        "Apply": {
+            "source": "Apply",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_unsaved.ui.xml",
+                "engine/ui/options.ui.xml"
+            ]
+        },
+        "Cancel": {
+            "source": "Cancel",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_unsaved.ui.xml",
+                "engine/ui/key_rebind.ui.xml"
+            ]
+        },
+        "Close": {
+            "source": "Close",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/options.ui.xml"
+            ]
+        },
+        "Defaults": {
+            "source": "Defaults",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/options.ui.xml"
+            ]
+        },
+        "Discard": {
+            "source": "Discard",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_unsaved.ui.xml"
+            ]
+        },
+        "Keep": {
+            "source": "Keep",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_countdown.ui.xml"
+            ]
+        },
+        "Keep these display settings?": {
+            "source": "Keep these display settings?",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_countdown.ui.xml"
+            ]
+        },
+        "Loading": {
+            "source": "Loading",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/loading.ui.xml"
+            ]
+        },
+        "Options": {
+            "source": "Options",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/options.ui.xml",
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Paused": {
+            "source": "Paused",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Press a key. Escape cancels; hold Escape for one second to bind it.": {
+            "source": "Press a key. Escape cancels; hold Escape for one second to bind it.",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/key_rebind.ui.xml"
+            ]
+        },
+        "Resume": {
+            "source": "Resume",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/pause.ui.xml"
+            ]
+        },
+        "Revert": {
+            "source": "Revert",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_countdown.ui.xml",
+                "engine/ui/options.ui.xml"
+            ]
+        },
+        "Reverting in": {
+            "source": "Reverting in",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_countdown.ui.xml"
+            ]
+        },
+        "Some changes take effect after a restart.": {
+            "source": "Some changes take effect after a restart.",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/options.ui.xml"
+            ]
+        },
+        "Swap": {
+            "source": "Swap",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/key_rebind.ui.xml"
+            ]
+        },
+        "You have changes that are not applied.": {
+            "source": "You have changes that are not applied.",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/confirm_unsaved.ui.xml"
+            ]
+        },
+        "[action=UI.Accept] Select": {
+            "source": "[action=UI.Accept] Select",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/parts/inputhint.ui.xml"
+            ]
+        },
         "settings.accessibility.colorVision": {
             "source": "Color Vision Mode",
             "context": "Options menu label",
@@ -41,6 +178,14 @@
                 "engine/settings/engine.settings.xml"
             ]
         },
+        "settings.accessibility.reduceMotion": {
+            "source": "Reduce Motion",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
         "settings.accessibility.subtitleBackground": {
             "source": "Subtitle Background",
             "context": "Options menu label",
@@ -75,6 +220,30 @@
         },
         "settings.accessibility.uiScale": {
             "source": "UI Scale",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.accessibility.uiTheme": {
+            "source": "UI Theme",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.accessibility.uiTheme.default": {
+            "source": "Default",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.accessibility.uiTheme.highcontrast": {
+            "source": "High Contrast",
             "context": "Options menu label",
             "maxLength": 32,
             "origins": [
@@ -344,6 +513,14 @@
         },
         "settings.gameplay.headBob": {
             "source": "Head Bob",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
+        "settings.gameplay.showTutorials": {
+            "source": "Show Tutorials",
             "context": "Options menu label",
             "maxLength": 32,
             "origins": [

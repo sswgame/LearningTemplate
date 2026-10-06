@@ -34,6 +34,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
+#include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/Debug/PhysicsDebugDrawAdapter.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -84,11 +85,15 @@
 #include "Engine/Scene/SceneNavigationCooker.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Text/FontSystem.h"
+#include "Engine/Text/GlyphCache.h"
+#include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
+#include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
@@ -113,6 +118,11 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_rhiSwapAtFrame, 0, "이 프레임에 백엔드 교체를 요청한다 (0=사용 안 함)" );
     SW_TEST_GLOBAL_VARIABLE( RHIBackend, gv_rhiSwapTo, RHIBackend::DirectX12, "gv_rhiSwapAtFrame 에 바꿀 백엔드" );
+    /**
+     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 시험 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
+     * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 시험 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
     /**
      * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
      * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
@@ -250,6 +260,18 @@ namespace sw
             return EngineInitResult::Succeeded;
         }
         static void destroy( EngineLoop& loop ) { loop._owned._pEngineDefaultAssets.reset(); }
+    };
+
+    struct EngineLoop::FontsStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없다 — 기동 오류다. 시스템 대체 가족은 없어도 경고만 한다.
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            return loop._owned._pFontSystem->initialize( defaultAssets._fontCatalog ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+        }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pFontSystem->shutdown(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pFontSystem.reset(); }
     };
 
     struct EngineLoop::ShaderCacheStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -819,6 +841,53 @@ namespace sw
         }
     };
 
+    struct EngineLoop::UiStartupStep : EngineInitStepDefaults<EngineLoop>
+    {
+        static EngineInitResult initialize( EngineLoop& loop )
+        {
+            // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
+            const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
+            const GameConfig&          gameConfig    = GameConfig::getActive();
+            const string               scalePath     = gameConfig._uiScaleSettings.empty()
+                                                         ? string( defaultAssets._uiScaleSettings )
+                                                         : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiScaleSettings );
+            UiScaleSettings            scaleSettings{};
+            if ( scaleSettings.loadFromResource( scalePath ) == false )
+                return EngineInitResult::Failed;
+            UiSystem& ui = *loop._owned._pUiSystem;
+            ui.setScaleSettings( scaleSettings );
+            // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
+            if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
+                return EngineInitResult::Failed;
+            // UI 문서 · 스타일 시트 캐시를 에셋 캐시 등록부에 올린다 — 핫 리로드 · 종료 · 진단이 다른 에셋과 같은 길로 간다.
+            loop._owned._pAssetManager->registerAssetCache( &ui.getDocumentCache() );
+            loop._owned._pAssetManager->registerAssetCache( &ui.getStyleSheetCache() );
+            // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
+            const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes )
+                                                                    : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiThemes );
+            UiThemeCatalog themes{};
+            if ( themes.loadFromResource( themePath ) == false )
+                return EngineInitResult::Failed;
+            ui.setThemeCatalog( themes );
+            // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
+            const string packRoot = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
+            ui.setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu )
+                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
+            if ( gameConfig._bUiPauseMenu )
+                ui.setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu )
+                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
+            return EngineInitResult::Succeeded;
+        }
+        static void shutdown( EngineLoop& loop )
+        {
+            UiSystem& ui = *loop._owned._pUiSystem;
+            loop._owned._pAssetManager->unregisterAssetCache( &ui.getStyleSheetCache() );
+            loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
+            ui.shutdown();
+        }
+        static void destroy( EngineLoop& loop ) { loop._owned._pUiSystem.reset(); }
+    };
+
     EngineLoop::EngineLoop()
         : _bootstrap{}
         , _configManager{ nullptr }
@@ -1072,6 +1141,9 @@ namespace sw
             _pAutomationRunner->onFrameBegin( *_owned._pInputManager );
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
+        // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
+        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+            _owned._pUiSystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -1195,6 +1267,26 @@ namespace sw
             _owned._pTelemetryService->update( deltaTime );
         }
 
+        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
+        // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
+        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+        {
+            // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 시험 그림과 같은 규칙)다.
+            const IWindow* const pWindow      = IWindow::getActiveWindow();
+            const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
+            const bool           bHasDevice   = _rhi != nullptr && _rhi->hasDevice();
+            uint32               uiWidth      = vpWidth;
+            uint32               uiHeight     = vpHeight;
+            if ( uiWidth == 0 || uiHeight == 0 )
+            {
+                uiWidth  = bHasDevice ? _rhi->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
+                uiHeight = bHasDevice ? _rhi->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
+            }
+            const UiViewport viewport =
+                _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            _owned._pUiSystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+        }
+
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
         // 올리기는 bindless 표에 등록하므로 렌더 스레드가 지난 프레임을 병렬로 기록하는 동안 하면 안 된다 — 올릴 것이 있는 프레임(씬 로드 ·
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
@@ -1316,6 +1408,28 @@ namespace sw
                 }
             }
 
+            // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 시험 그림은 그 위에.
+            // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
+            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() && _owned._pUiSystem->getCanvas().isEmpty() == false )
+            {
+                packet._canvas._mainOutput      = _owned._pUiSystem->getCanvas();
+                packet._canvas._contentRevision = _owned._pUiSystem->getCanvasRevision();
+            }
+            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+                _owned._pUiSystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+            if ( gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
+            {
+                packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다
+                const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();
+                const uint32 canvasHeight       = packet._viewportHeight > 0 ? packet._viewportHeight : _rhi->getDevice().getBackBufferHeight();
+                CanvasTestPattern::paint( packet._canvas._mainOutput, float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) },
+                                          _owned._pFontSystem.get(), engine::getFrameProfiler().getFrameCount() );
+            }
+            if ( _owned._pFontSystem != nullptr && _owned._pFontSystem->isInitialized() )
+                _owned._pFontSystem->getGlyphCache().getAtlas().takeUploads( packet._canvas._listAtlasUpload );
+            // 색각 보정 — UI 는 톤맵 뒤라 캔버스 셰이더가 직접 건다(사용자 설정 accessibility.colorVision, 범위 밖은 끔).
+            packet._canvas._colorVisionMode = ( 0 <= gv_colorVisionMode && gv_colorVisionMode <= 3 ) ? static_cast<uint32>( gv_colorVisionMode ) : 0u;
+
             if ( _renderThread != nullptr )
             {
                 // GT 가 여기서 기다린다면 그것은 렌더 스레드가 밀린 것이다. 링이 차면 submit 이 막는다.
@@ -1342,7 +1456,8 @@ namespace sw
         _memoryBudgetMonitor.onFrameEnd();
 
         // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
-        if ( _pAutomationRunner != nullptr && _pAutomationRunner->isActive() && _owned._pInputManager != nullptr )
+        // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
+        if ( _pAutomationRunner != nullptr && _pAutomationRunner->hasEnded() == false && _owned._pInputManager != nullptr )
         {
             _pAutomationRunner->setCompletedScreenshotCount( _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
             const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );

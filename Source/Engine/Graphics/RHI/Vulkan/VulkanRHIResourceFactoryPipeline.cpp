@@ -156,7 +156,7 @@ namespace sw
             arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             arrColorBlendAttachment[blendIndex].blendEnable         = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
-            arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            arrColorBlendAttachment[blendIndex].srcColorBlendFactor = ( desc._bPremultipliedAlpha != SW_FALSE ) ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].colorBlendOp        = VK_BLEND_OP_ADD;
             arrColorBlendAttachment[blendIndex].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;

@@ -25,10 +25,16 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 |---|---|---|---|---|---|
 | `_defaultMaterial` | `string` | `engine/materials/defaultmaterial.material` |  |  | 씬 폴백 머티리얼 |
 | `_shellInputMap` | `string` | `engine/input/default.input.xml` |  |  | App 셸 InputMap |
+| `_uiInputMap` | `string` | `engine/input/ui.input.xml` |  |  | 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다) |
 | `_userSettingsSchema` | `string` | `engine/settings/engine.settings.xml` |  |  | 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`) |
 | `_telemetrySchema` | `string` | `engine/telemetry/engine.telemetry.xml` |  |  | 엔진 텔레메트리 사건 스키마(`TelemetryService`) |
 | `_cultureTable` | `string` | `engine/localization/engine.cultures.json` |  |  | 문화권 표 — 복수형 규칙 · 숫자 · 날짜 형식 · 쓰기 방향 · 글꼴 대체(`LocalizationManager`) |
 | `_localizationProject` | `string` | `engine/localization/engine.locproject.json` |  |  | 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트 |
+| `_fontCatalog` | `string` | `engine/fonts/fontcatalog.xml` |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`) |
+| `_uiScaleSettings` | `string` | `engine/ui/uiscale.xml` |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다) |
+| `_uiThemes` | `string` | `engine/ui/uithemes.xml` |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다) |
+| `_uiOptionsMenu` | `string` | `engine/ui/options.ui.xml` |  |  | 옵션 메뉴 문서 — 설정 스키마에서 탭 · 행을 짓는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다) |
+| `_uiPauseMenu` | `string` | `engine/ui/pause.ui.xml` |  |  | 일시정지 메뉴 문서 — 게임 프리셋이 `_bUiPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
 | `_defaultForwardPipeline` | `string` | `engine/pipeline/forwardpipeline.xml` |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `string` | `engine/pipeline/deferredpipeline.xml` |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `string` | `engine/renderpass/defaultrenderpass.xml` |  |  | 기본 렌더 패스 바인드 틀 |
@@ -49,3 +55,4 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_shaderTaa` | `string` | `engine/shaders/taa.hlsl` |  |  | TAA |
 | `_shaderTonemap` | `string` | `engine/shaders/tonemap.hlsl` |  |  | 톤 매핑 |
 | `_shaderToon` | `string` | `engine/shaders/toon.hlsl` |  |  | 셀 셰이딩 머티리얼 셰이더 — 메시 외곽선 패스의 기본 셰이더이기도 하다 |
+| `_shaderCanvas` | `string` | `engine/shaders/canvas.hlsl` |  |  | 화면 2D(UI · 월드 글자) 사각형 — 사각형 하나 = 인스턴스 하나, SDF 모양 · 글리프 |

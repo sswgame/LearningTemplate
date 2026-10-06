@@ -88,6 +88,15 @@ namespace sw
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */
         virtual uint32 getHeight() const { return _height; }
+        /**
+         * @brief OS 가 이 창에 권하는 배율입니다(96 DPI = 1). Win32 `GetDpiForWindow`(PerMonitorV2 매니페스트 — 모니터를 옮기면 따른다) ·
+         *        X11 `Xft.dpi` 리소스. 모르면 1 입니다.
+         * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다 — `UiScaleSettings::_bApplyContentScale`).
+         */
+        virtual float32 getContentScale() const { return 1.0f; }
+
+        /** @brief 배율 1 에 해당하는 DPI 입니다(Windows · X11 의 기준). */
+        static constexpr float32 kReferenceDpi = 96.0f;
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.

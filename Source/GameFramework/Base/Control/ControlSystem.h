@@ -18,6 +18,7 @@ namespace sw
     class GameObjectManager;
     class InputManager;
     class PlayerControllerComponent;
+    class UiSystem;
 
     /**
      * @class ControlSystem
@@ -52,6 +53,10 @@ namespace sw
         void setInputManager( InputManager* pInput ) { _pInputOverride = pInput; }
         /** @brief 플레이어 조종자가 읽을 입력입니다. 없을 수 있습니다(서버 · 헤드리스). */
         InputManager* findInputManager() const;
+        /** @brief 플레이어 조종자가 볼 UI 를 바꿉니다(시험). nullptr 이면 게임 서비스의 UI 시스템입니다. */
+        void setUiSystem( const UiSystem* pUiSystem ) { _pUiSystemOverride = pUiSystem; }
+        /** @brief 플레이어 조종자가 볼 UI 입니다 — 시작하지 않았으면(서버 · 시험 하네스) nullptr 입니다. */
+        const UiSystem* findUiSystem() const;
         /** @brief 지금까지 돈 틱 수입니다(기록 · 네트워크 창의 틱 번호). */
         uint32 getTick() const { return _tick; }
 
@@ -87,6 +92,7 @@ namespace sw
         vector<ComponentHandle> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(등록부를 도는 동안 오브젝트를 만들지 않게 모은다)
         vector<QueuedPossess>   _listQueuedPossess;
         InputManager*           _pInputOverride;
+        const UiSystem*         _pUiSystemOverride;
         uint32                  _tick;
         uint8                   _bRecording : 1;
         [[maybe_unused]] uint8  _reserved   : 7;

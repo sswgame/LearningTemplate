@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Graphics/Renderer/Frame/RenderView.h"
@@ -35,6 +36,11 @@ namespace sw
         vector<GpuLight> _listLight;
         /** @brief 이번 프레임의 추가 뷰(CCTV · 백미러 · 분할 화면 · PiP)입니다. 쉬는 뷰도 실린다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
+        /**
+         * @brief 화면 2D(UI · 월드 글자) 그리기 목록과 글리프 아틀라스 업로드입니다. 렌더 스레드가 위젯을 볼 수 없으므로 이것만 넘어간다.
+         * @details 렌더러가 자기 것과 바꿔치기로 받는다(`FrameRenderer::executePacket`) — 저장소가 돌아 다음 프레임에 다시 쓰인다.
+         */
+        CanvasFrameData _canvas;
         /** @brief 주 시점의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. */
         RenderViewSettings _mainView;
         /** @brief 비지 않으면 이 패킷을 그린 뒤 화면에 나간 그림을 이 경로에 PPM 으로 씁니다(자동화 시나리오의 `<Screenshot>`). */
@@ -59,6 +65,7 @@ namespace sw
             , _lightDirIntensity{}
             , _lightColorAmbient{}
             , _listView{}
+            , _canvas{}
             , _mainView{}
             , _screenshotPath{}
             , _gameRenderTarget{ 0 }
@@ -89,6 +96,7 @@ namespace sw
             _lightColorAmbient = float4{};
             _listLight.clear();
             _listView.clear();
+            _canvas.clear();
             _mainView = RenderViewSettings{};
             _screenshotPath.clear();
             _gameRenderTarget = 0;

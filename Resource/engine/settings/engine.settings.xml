@@ -159,6 +159,8 @@
 	<Setting id="gameplay.fieldOfView" category="gameplay" type="float" default="70" min="60" max="110" step="1" target="gv:gv_cameraFieldOfView" text="settings.gameplay.fieldOfView"/>
 	<Setting id="gameplay.cameraShake" category="gameplay" type="float" default="1" min="0" max="1" step="0.1" target="gv:gv_cameraShakeScale" text="settings.gameplay.cameraShake"/>
 	<Setting id="gameplay.headBob" category="gameplay" type="bool" default="true" target="gv:gv_cameraHeadBob" text="settings.gameplay.headBob"/>
+	<!-- 튜토리얼 힌트(TutorialHintComponent)를 띄울지 — 대상이 없다, 힌트 볼륨이 getBoolValue 로 읽는다. -->
+	<Setting id="gameplay.showTutorials" category="gameplay" type="bool" default="true" text="settings.gameplay.showTutorials"/>
 
 	<!-- 접근성 -->
 	<Setting id="accessibility.colorVision" category="accessibility" type="enum" default="off" target="gv:gv_colorVisionMode" text="settings.accessibility.colorVision">
@@ -168,8 +170,14 @@
 		<Option value="tritanopia" text="settings.accessibility.colorVision.tritanopia"/>
 	</Setting>
 	<Setting id="accessibility.uiScale" category="accessibility" type="float" default="1" min="0.75" max="1.5" step="0.05" target="gv:gv_uiScale" text="settings.accessibility.uiScale"/>
+	<!-- 테마 이름은 UI 테마 목록(engine/ui/uithemes.xml · 게임 프리셋 _uiThemes)의 이름이다 — 게임 목록에 없는 이름이면 목록의 기본 테마. -->
+	<Setting id="accessibility.uiTheme" category="accessibility" type="enum" default="default" target="gv:gv_uiTheme" text="settings.accessibility.uiTheme">
+		<Option value="default" text="settings.accessibility.uiTheme.default"/>
+		<Option value="highcontrast" text="settings.accessibility.uiTheme.highcontrast"/>
+	</Setting>
 	<Setting id="accessibility.textSize" category="accessibility" type="float" default="1" min="0.75" max="2" step="0.05" target="gv:gv_uiTextScale" text="settings.accessibility.textSize"/>
 	<Setting id="accessibility.reduceFlashing" category="accessibility" type="bool" default="false" target="gv:gv_reduceFlashing" text="settings.accessibility.reduceFlashing"/>
+	<Setting id="accessibility.reduceMotion" category="accessibility" type="bool" default="false" target="gv:gv_uiReduceMotion" text="settings.accessibility.reduceMotion"/>
 	<Setting id="accessibility.subtitles" category="accessibility" type="bool" default="true" target="gv:gv_subtitles" text="settings.accessibility.subtitles"/>
 	<Setting id="accessibility.subtitleSize" category="accessibility" type="enum" default="medium" target="gv:gv_subtitleSize" enabledWhen="accessibility.subtitles=true" text="settings.accessibility.subtitleSize">
 		<Option value="small"/>

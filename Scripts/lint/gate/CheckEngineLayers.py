@@ -145,6 +145,8 @@ _kEngineTier: dict[str, int] = {
     # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
     "Graphics": 5,
     "Window": 5,
+    # 글자 — 글꼴 파일(Resource, 4)을 읽어 글리프 · SDF 아틀라스(CPU 바이트) · 줄 바꿈을 만든다. GPU 를 모른다 — 아틀라스 업로드는 렌더러(8)의 캔버스가 한다.
+    "Text": 5,
     # 6: 컴포넌트 모델 · 입력. 컴포넌트가 머티리얼·메시(5)를 든다.
     "Input": 6,
     "Object": 6,
@@ -169,6 +171,9 @@ _kEngineTier: dict[str, int] = {
     "Automation": 8,
     # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구(7)와 컴포넌트 모델(6) 위에 선다 — 렌더러는 모른다.
     "Destruction": 8,
+    # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력(6) · 글자(5) · 캔버스 그리기 목록(Graphics, 5) · 사용자 설정(7)을 쓴다.
+    # 렌더러(8)와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
+    "UI": 8,
     # 9: 전부를 엮는 자리.
     _kRootLayerName: 9,
 }

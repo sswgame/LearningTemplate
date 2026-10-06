@@ -82,6 +82,9 @@ namespace sw
         rasterizerDesc.FillMode        = ( desc._fillMode == RHIFillMode::Wireframe ) ? D3D11_FILL_WIREFRAME : D3D11_FILL_SOLID;
         rasterizerDesc.CullMode        = ( desc._cullMode == RHICullMode::Front ) ? D3D11_CULL_FRONT : ( ( desc._cullMode == RHICullMode::Back ) ? D3D11_CULL_BACK : D3D11_CULL_NONE );
         rasterizerDesc.DepthClipEnable = TRUE;
+        // 가위는 늘 켠다 — 뷰포트를 거는 자리(setViewport · beginRenderPass · beginFrame)가 가위를 뷰포트 전체로 함께 걸어 두므로
+        // setScissorRect 를 부르지 않은 드로우는 지금과 같다(언리얼 D3D11 래스터라이저 상태와 같은 방식).
+        rasterizerDesc.ScissorEnable = TRUE;
         if ( _pDevice != nullptr )
             _pDevice->_device->CreateRasterizerState( &rasterizerDesc, pso._rasterizerState.GetAddressOf() );
 
@@ -92,7 +95,7 @@ namespace sw
             if ( desc._bEnableBlend != 0 )
             {
                 blendDesc.RenderTarget[0].BlendEnable    = TRUE;
-                blendDesc.RenderTarget[0].SrcBlend       = D3D11_BLEND_SRC_ALPHA;
+                blendDesc.RenderTarget[0].SrcBlend       = ( desc._bPremultipliedAlpha != SW_FALSE ) ? D3D11_BLEND_ONE : D3D11_BLEND_SRC_ALPHA;
                 blendDesc.RenderTarget[0].DestBlend      = D3D11_BLEND_INV_SRC_ALPHA;
                 blendDesc.RenderTarget[0].BlendOp        = D3D11_BLEND_OP_ADD;
                 blendDesc.RenderTarget[0].SrcBlendAlpha  = D3D11_BLEND_ONE;

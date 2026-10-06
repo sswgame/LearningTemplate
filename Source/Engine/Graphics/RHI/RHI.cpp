@@ -73,6 +73,7 @@ namespace sw
         , _bEnableDepthTest{ SW_FALSE }
         , _bEnableDepthWrite{ SW_TRUE }
         , _bEnableBlend{ SW_FALSE }
+        , _bPremultipliedAlpha{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
@@ -149,6 +150,42 @@ namespace sw
         _arrClearColor[0]  = clearColor;
         _arrLoadOp[0]      = loadOp;
         _colorTargetCount  = 1;
+    }
+
+    bool validateTextureRegionUpload( RHIFormat format, uint32 textureWidth, uint32 textureHeight, uint32 mipLevels, uint32 arraySize,
+                                      const RHITextureRegionUploadDesc& desc, uint32& outRowBytes )
+    {
+        const uint32 bytesPerPixel = getRhiFormatBytesPerPixel( format );
+        if ( bytesPerPixel == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2DRegion: format %# is compressed, depth or unknown", static_cast<uint32>( format ) );
+            return false;
+        }
+        if ( desc._mip >= mipLevels || desc._arraySlice >= arraySize || desc._width == 0 || desc._height == 0 )
+        {
+            SW_LOG_ERROR( "uploadTexture2DRegion: mip %# of %#, slice %# of %#, or an empty %#x%# region", desc._mip, mipLevels, desc._arraySlice, arraySize,
+                          desc._width, desc._height );
+            return false;
+        }
+        const uint32 mipWidth  = ( textureWidth >> desc._mip ) > 0 ? ( textureWidth >> desc._mip ) : 1u;
+        const uint32 mipHeight = ( textureHeight >> desc._mip ) > 0 ? ( textureHeight >> desc._mip ) : 1u;
+        // 더하기가 넘치지 않게 뺄셈으로 비교한다(x + width 가 uint32 를 넘으면 안쪽으로 보인다).
+        const bool bInsideX = desc._x < mipWidth && desc._width <= mipWidth - desc._x;
+        const bool bInsideY = desc._y < mipHeight && desc._height <= mipHeight - desc._y;
+        if ( bInsideX == false || bInsideY == false )
+        {
+            SW_LOG_ERROR( "uploadTexture2DRegion: region (%#,%# %#x%#) is outside the %#x%# mip %#", desc._x, desc._y, desc._width, desc._height, mipWidth,
+                          mipHeight, desc._mip );
+            return false;
+        }
+        outRowBytes                = desc._width * bytesPerPixel;
+        const uint64 requiredBytes = static_cast<uint64>( outRowBytes ) * desc._height;
+        if ( desc._pData == nullptr || desc._sizeBytes < requiredBytes )
+        {
+            SW_LOG_ERROR( "uploadTexture2DRegion: %# bytes for %# rows of %# bytes", desc._sizeBytes, desc._height, outRowBytes );
+            return false;
+        }
+        return true;
     }
 
     bool RHIBackendUtil::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )

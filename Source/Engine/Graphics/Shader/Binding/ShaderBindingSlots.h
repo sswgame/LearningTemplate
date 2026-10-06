@@ -87,7 +87,12 @@ namespace sw
          * @details 정점 셰이더가 배치 표의 VAT 시작과 인스턴스의 시각 오프셋으로 읽습니다(binding.hlsli `swLoadAnimatedVertex`).
          */
         inline constexpr uint32 kVertexAnimationBuffer = SW_SLOT_VERTEX_ANIMATION_SRV;
-        inline constexpr uint32 kSrvSlotCount          = SW_SRV_SLOT_COUNT;
+        /**
+         * @brief 캔버스(화면 2D — UI · 월드 글자) 사각형 구조버퍼(g_SwCanvasQuads)입니다. 캔버스 패스만 겁니다.
+         * @details 정점 셰이더가 사각형 하나를 인스턴스 하나로 읽고 `SV_VertexID` 로 모서리를 만듭니다(동적 정점 버퍼 없음).
+         */
+        inline constexpr uint32 kCanvasQuadBuffer = SW_SLOT_CANVAS_QUAD_SRV;
+        inline constexpr uint32 kSrvSlotCount     = SW_SRV_SLOT_COUNT;
 
         // ------------------------------------------------------------------------------
         // 2-1) 라이트 원소의 타입 값. bindingslots.hlsli 가 기준이다(셰이더와 같은 파일).
@@ -226,6 +231,7 @@ namespace sw
             inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
             inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 표
             inline constexpr const utf8* kVertexAnimation    = "g_SwVertexAnimation";    ///< t14(그래픽스). 정점 애니메이션(VAT) 표
+            inline constexpr const utf8* kCanvasQuads        = "g_SwCanvasQuads";        ///< t15(캔버스 패스). 화면 2D 사각형
             inline constexpr const utf8* kMorphRestVertices  = "g_RestVertices";         ///< meshmorph t0. 레스트 포즈
             inline constexpr const utf8* kMorphVerticesRw    = "g_MorphVerticesRW";      ///< meshmorph · meshskin u0. 변형 결과
             inline constexpr const utf8* kSkinWeights        = "g_SkinWeights";          ///< meshskin t1. 스킨 정점의 가중치 · 팔레트 행 번호
@@ -249,7 +255,8 @@ namespace sw
         static_assert( kMorphVertexBuffer == kVisibleInstanceBuffer + 1, "모프 정점 버퍼는 가시 목록 다음이어야 한다" );
         static_assert( kLightBuffer == kMorphVertexBuffer + 1, "라이트 버퍼는 모프 정점 다음이다" );
         static_assert( kBatchBuffer == kLightBuffer + 1, "배치 표는 라이트 다음이다" );
-        static_assert( kVertexAnimationBuffer == kBatchBuffer + 1 && kVertexAnimationBuffer + 1 == kSrvSlotCount, "VAT 표는 배치 표 다음이고 SRV 슬롯의 마지막이다" );
+        static_assert( kVertexAnimationBuffer == kBatchBuffer + 1, "VAT 표는 배치 표 다음이다" );
+        static_assert( kCanvasQuadBuffer == kVertexAnimationBuffer + 1 && kCanvasQuadBuffer + 1 == kSrvSlotCount, "캔버스 사각형은 VAT 표 다음이고 SRV 슬롯의 마지막이다" );
         static_assert( kLightTypeDirectional < kLightTypeCount && kLightTypePoint < kLightTypeCount &&
                            kLightTypeSpot < kLightTypeCount && kLightTypePoint2D < kLightTypeCount && kLightTypeGlobal2D < kLightTypeCount &&
                            kLightTypeShadow2D >= kLightTypeCount,

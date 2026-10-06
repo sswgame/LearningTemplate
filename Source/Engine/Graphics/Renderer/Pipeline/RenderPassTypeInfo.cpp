@@ -149,6 +149,15 @@ namespace sw
                         info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kDrawsSceneMeshes | Flag::kUsesMaterialShader | Flag::kCullFront;
                         break;
                     }
+                    case RenderPassType::Canvas:
+                    {
+                        // 화면 2D — 사각형 구조버퍼(t15)를 인스턴스로 그린다(전용 실행: CanvasRenderer). 깊이 없음 · 프리멀티플라이 블렌드.
+                        // 입력 계약은 비어 있다 — 첨부를 읽지 않으므로 선언한 입력은 검증 오류다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderCanvas;
+                        info._inputContract  = makeContract( {}, {} );
+                        info._flags          = Flag::kBlend | Flag::kPremultipliedAlpha | Flag::kHasInputContract;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 한다.

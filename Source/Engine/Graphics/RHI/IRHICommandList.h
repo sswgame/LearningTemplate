@@ -30,9 +30,19 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 기록 범위 · 뷰포트 · PSO · 렌더 패스
         // ------------------------------------------------------------------------------
-        virtual void beginCommandList()                         = 0;
-        virtual void endCommandList()                           = 0;
+        virtual void beginCommandList() = 0;
+        virtual void endCommandList()   = 0;
+        /**
+         * @brief 뷰포트를 겁니다. **가위 사각형도 이 뷰포트 전체로 되돌립니다**(`beginRenderPass` 도 그 패스 크기로 되돌린다).
+         * @details 가위를 걸고 잊어도 다음 뷰포트 · 다음 패스로 새지 않습니다(언리얼 `RHISetViewport` 가 가위를 끄는 것과 같다).
+         */
         virtual void setViewport( const RHIViewport& viewport ) = 0;
+        /**
+         * @brief 가위 사각형을 겁니다 — 이 밖의 픽셀은 그리지 않습니다. 다음 `setViewport` · `beginRenderPass` 까지 유지됩니다.
+         * @details 렌더 타깃 픽셀, 왼쪽 위 원점(`RHIViewport` 와 같다). 클리어 · `blitTexture` 는 가위를 따르지 않습니다(D3D · Vulkan 규약 —
+         *          GL 은 그동안 가위 시험을 끈다). 축 정렬 사각 클리핑 전용이고, 둥근 · 회전 클리핑은 셰이더가 합니다.
+         */
+        virtual void setScissorRect( const RHIScissorRect& rect ) = 0;
         /**
          * @brief 이 지점의 GPU 시각을 슬롯에 적습니다. 지원하지 않는 백엔드에서는 아무 일도 하지 않습니다.
          * @param slotIndex `IRHIDevice::getTimestampSlotCount()` 미만이어야 합니다.

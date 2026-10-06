@@ -658,15 +658,17 @@ namespace sw
         updateCursor( input );
         if ( _bCursorValid == SW_FALSE )
             return;
-        if ( input.wasMouseButtonPressed( MouseButton::Left ) || ( _selectedTool == 0 && input.isMouseButtonDown( MouseButton::Left ) ) )
+        // 커서 칸은 포인터 위치, 누르는 것은 액션 — 길 도구는 누르는 동안 끌어 잇는다.
+        const hashed_string placeAction( "Nile.Place" );
+        if ( inputMap.wasActionPressed( placeAction ) || ( _selectedTool == 0 && inputMap.isActionDown( placeAction ) ) )
             placeSelected();
-        if ( input.wasMouseButtonPressed( MouseButton::Right ) && _city.demolish( _cursorTile._x, _cursorTile._y ) )
+        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Demolish" ) ) && _city.demolish( _cursorTile._x, _cursorTile._y ) )
             SW_LOG_INFO( "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
     }
 
     void NileDirectorComponent::updateCursor( const InputManager& input )
     {
-        // 리그의 직교 시점으로 마우스 아래 땅 칸을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
+        // 리그의 직교 시점으로 포인터 아래 땅 칸을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
         _bCursorValid                             = SW_FALSE;
         GameObjectManager*             pManager   = getObjectManager();
         const GameObject*              pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;

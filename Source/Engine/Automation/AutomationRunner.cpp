@@ -19,6 +19,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/Automation/UiAutomationSteps.h"
+#include "Engine/UI/UiSystem.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -98,7 +100,8 @@ namespace sw
 
             static bool isInputStepKind( string_view kind )
             {
-                return kind == "Press" || kind == "Release" || kind == "Tap" || kind == "MouseDelta" || kind == "GamepadAxis" || kind == "Text";
+                return kind == "Press" || kind == "Release" || kind == "Tap" || kind == "MouseDelta" || kind == "MousePosition" || kind == "GamepadAxis" ||
+                       kind == "Text";
             }
 
             /** @brief 값 비교 단계(`Expect`)의 비교 하나를 읽습니다. 정확히 하나여야 합니다. */
@@ -182,6 +185,7 @@ namespace sw
         , _reserved{ 0 }
     {
         AutomationWindowSteps::ensureLinked();
+        UiAutomationSteps::ensureLinked();
     }
 
     AutomationRunner::~AutomationRunner()
@@ -236,8 +240,11 @@ namespace sw
             return;
         if ( _bStarted == SW_FALSE )
         {
-            const GameObjectManager* pManager = findActiveObjectManager();
-            const bool               bReady   = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() );
+            // 씬 플레이 중 = 활성 씬이 플레이를 시작했고 로딩 화면이 걷혔다(로딩 화면은 게임 입력을 막는다 — 그동안 넣은 입력은 폰에 닿지 않는다).
+            const GameObjectManager* pManager  = findActiveObjectManager();
+            const UiSystem*          pUiSystem = engine::areEngineServicesBound() ? engine::getBoundEngineServices()._pUiSystem : nullptr;
+            const bool               bLoading  = pUiSystem != nullptr && pUiSystem->isInitialized() && pUiSystem->isLoadingScreenShown();
+            const bool               bReady    = _scenario.getStartCondition() == AutomationStartCondition::Immediately || ( pManager != nullptr && pManager->hasBegunPlay() && bLoading == false );
             if ( bReady == false )
             {
                 if ( ++_waitFrameCount > _scenario.getStartTimeoutFrames() )
@@ -424,6 +431,21 @@ namespace sw
             return Internal::checkAttributeNames( step, { "x", "y" }, outError ) && Internal::readFloat( step, "x", 0.0f, value, outError ) &&
                    Internal::readFloat( step, "y", 0.0f, value, outError );
         }
+        if ( kind == "MousePosition" )
+        {
+            if ( Internal::checkAttributeNames( step, { "x", "y" }, outError ) == false || Internal::requireAttribute( step, "x", outError ) == nullptr ||
+                 Internal::requireAttribute( step, "y", outError ) == nullptr )
+                return false;
+            float32 valueY = 0.0f;
+            if ( Internal::readFloat( step, "x", 0.0f, value, outError ) == false || Internal::readFloat( step, "y", 0.0f, valueY, outError ) == false )
+                return false;
+            if ( value < 0.0f || value > 1.0f || valueY < 0.0f || valueY > 1.0f )
+            {
+                outError = step.describe() + ": x and y are fractions of the client area (0..1)";
+                return false;
+            }
+            return true;
+        }
         if ( kind == "GamepadAxis" )
         {
             return Internal::checkAttributeNames( step, { "axis", "value", "pad" }, outError ) && Internal::requireAttribute( step, "axis", outError ) != nullptr &&
@@ -553,6 +575,22 @@ namespace sw
             (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError );
             (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError );
             _inputScript.addMouseDelta( frame, valueX, valueY );
+            return true;
+        }
+        if ( kind == "MousePosition" )
+        {
+            // 창 클라이언트 영역의 비율 → 픽셀(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 자리를 낼 수 없다.
+            const IWindow* pWindow = IWindow::getActiveWindow();
+            if ( pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0 )
+            {
+                outError = step.describe() + ": no window to place the pointer in";
+                return false;
+            }
+            (void)AutomationRunnerInternal::readFloat( step, "x", 0.0f, valueX, outError );
+            (void)AutomationRunnerInternal::readFloat( step, "y", 0.0f, valueY, outError );
+            const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
+            const float32 maxY = static_cast<float32>( pWindow->getHeight() - 1 );
+            _inputScript.addMousePosition( frame, static_cast<int32>( MathUtil::round( valueX * maxX ) ), static_cast<int32>( MathUtil::round( valueY * maxY ) ) );
             return true;
         }
         if ( kind == "GamepadAxis" )

@@ -5,6 +5,7 @@
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/MarkupTagScanner.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineDefines.h"
@@ -77,7 +78,7 @@ namespace sw
                     applyAssetRule( rule, child, gatherer, origin, depth + 1 );
             }
 
-            /** @brief 번역 하나를 원문에 대어 검사합니다 — 구문 · 자리표시자 이름 · 최대 길이. */
+            /** @brief 번역 하나를 원문에 대어 검사합니다 — 구문 · 자리표시자 이름 · 리치 텍스트 태그 열 · 최대 길이. */
             static void validateTranslation( const string& culture, const string& key, const SourceTextEntry& source, const TranslationEntry& translation,
                                              TextGatherReport& inoutReport )
             {
@@ -94,6 +95,8 @@ namespace sw
                 TextFormatter::collectArgumentNames( translation._text, listTranslationName );
                 if ( listSourceName != listTranslationName )
                     inoutReport._listIssue.push_back( { location, "translation arguments differ from the source arguments", false } );
+                if ( MarkupTagScanner::hasSameTags( source._source, translation._text ) == false )
+                    inoutReport._listIssue.push_back( { location, "translation rich text tags differ from the source tags", false } );
                 const uint32 length = countCharacters( translation._text );
                 if ( source._maxLength != 0 && length > source._maxLength )
                     inoutReport._listIssue.push_back( { location, "translation is " + to_string( length ) + " characters, over maxLength " + to_string( source._maxLength ), false } );

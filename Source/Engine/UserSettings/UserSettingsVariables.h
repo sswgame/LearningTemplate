@@ -25,11 +25,13 @@ SW_EXTERN_GLOBAL_VARIABLE( float32, gv_cameraShakeScale );  ///< 카메라 흔�
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_cameraHeadBob );        ///< 걷기 머리 흔들림.
 
 // 접근성 · UI · 자막
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정 0 끔 · 1 적색약 · 2 녹색약 · 3 청색약. 톤맵 패스가 읽을 자리다(아직 셰이더 없음).
+SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정 0 끔 · 1 적색약 · 2 녹색약 · 3 청색약. 캔버스(UI)가 읽는다 — 톤맵 쪽은 아직(함수는 colorvision.hlsli).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiScale );                   ///< 게임 UI 배율.
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율.
+SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_uiTheme );                ///< 게임 UI 테마 이름(UiSystem 이 테마 목록에서 고른다 — 목록에 없으면 목록의 기본).
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율(줄여도 글은 12 UI 단위 밑으로 가지 않는다 — UiScaleUtil).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_reduceFlashing );               ///< 번쩍임 줄이기(섬광 · 화면 깜빡임 효과를 약하게).
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_subtitles );                    ///< 자막 표시.
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiReduceMotion );               ///< UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환의 길이를 0 으로.
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_subtitles );                    ///< 자막 표시(UiSubtitleService — 끄면 줄은 받되 화면을 닫는다).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_subtitleSize );                ///< 자막 크기 0 작게 · 1 보통 · 2 크게.
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity ); ///< 자막 배경 불투명도 0~1.
 

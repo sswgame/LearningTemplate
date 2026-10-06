@@ -630,6 +630,47 @@ namespace sw
         return false;
     }
 
+    bool InputManager::findFirstPressedSlot( InputSlot& outSlot ) const
+    {
+        if ( _pKeyboard != nullptr && _keyboardFocus != InputKeyboardFocus::DevConsole )
+        {
+            for ( uint32 index = static_cast<uint32>( Key::Unknown ) + 1; index < static_cast<uint32>( Key::Count ); ++index )
+            {
+                if ( _pKeyboard->wasKeyPressed( static_cast<Key>( index ) ) )
+                {
+                    outSlot = InputSlot::fromKey( static_cast<Key>( index ) );
+                    return true;
+                }
+            }
+        }
+        if ( _pMouse != nullptr )
+        {
+            for ( uint32 index = 0; index < static_cast<uint32>( MouseButton::Count ); ++index )
+            {
+                if ( _pMouse->wasButtonPressed( static_cast<MouseButton>( index ) ) )
+                {
+                    outSlot = InputSlot::fromMouseButton( static_cast<MouseButton>( index ) );
+                    return true;
+                }
+            }
+        }
+        for ( uint32 padIndex = 0; padIndex < kMaxGamepadSlot; ++padIndex )
+        {
+            const GamepadDevice* pPad = getGamepad( padIndex );
+            if ( pPad == nullptr || pPad->isConnected() == false )
+                continue;
+            for ( uint32 index = 0; index < static_cast<uint32>( GamepadButton::Count ); ++index )
+            {
+                if ( pPad->wasButtonPressed( static_cast<GamepadButton>( index ) ) )
+                {
+                    outSlot = InputSlot::fromGamepadButton( static_cast<GamepadButton>( index ), static_cast<uint8>( padIndex ) );
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     void InputManager::onTextInput( string_view text )
     {
         TextInputDelegate& onTextInput = _arrOnTextInput[static_cast<size_t>( _keyboardFocus )];

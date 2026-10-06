@@ -29,6 +29,9 @@ kHandEditedEngineFile = {
     "game/empty/maps/spriteui.scene.xml",    # 짧은 줄을 손으로 접었다
 }
 
+# 사람이 쓰는 형식(HTML · CSS 자리) — 엔진이 쓰지 않으므로 바이트 왕복을 요구하지 않는다(의미 왕복만 본다).
+kHandAuthoredSuffix = (".ui.xml", ".uistyle.xml")
+
 kSceneRelativePath = "game/shooter3d/maps/arena.scene.xml"
 kMaterialRelativePath = "engine/materials/defaultmaterial.material"
 kCatalogRelativePath = "game/starskirmish/data/units.xml"
@@ -52,7 +55,7 @@ class RoundTripTest(unittest.TestCase):
             asset = parseXmlAsset(text)
             output = serializeXmlAsset(asset)
             self.assertEqual([], diffAssets(asset, parseXmlAsset(output)), relPath)
-            if asset.bEngineFormat and relPath not in kHandEditedEngineFile:
+            if asset.bEngineFormat and relPath not in kHandEditedEngineFile and not relPath.endswith(kHandAuthoredSuffix):
                 self.assertEqual(text, output, f"{relPath} does not round-trip byte for byte")
                 identicalCount += 1
         self.assertGreater(identicalCount, 30)

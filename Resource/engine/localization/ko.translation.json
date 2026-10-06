@@ -21,6 +21,10 @@
             "text": "번쩍임 줄이기",
             "sourceHash": "81cf7ea1fe1b0e77"
         },
+        "settings.accessibility.reduceMotion": {
+            "text": "움직임 줄이기",
+            "sourceHash": "4c7266515b845807"
+        },
         "settings.accessibility.subtitleBackground": {
             "text": "자막 배경",
             "sourceHash": "2b9911a132958e47"

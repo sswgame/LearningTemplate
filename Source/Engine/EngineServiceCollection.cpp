@@ -25,6 +25,8 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Text/FontSystem.h"
+#include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"

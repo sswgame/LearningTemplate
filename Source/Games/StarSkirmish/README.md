@@ -14,15 +14,21 @@ cmake --build --preset Ninja-Debug-StarSkirmish
 cd build/Ninja-Debug-StarSkirmish/Bin
 ./App.exe -dx12                           # 사람(파랑) 대 컴퓨터(빨강)
 ./App.exe -dx12 -gv_skirmishAutoPlay=1    # 컴퓨터(러시) 대 컴퓨터(운영) — 승패까지
+./App.exe -dx12 -scenario=game/starskirmish/automation/control.scenario.xml   # 고르기 · 명령 시나리오(종료 코드 0 = 통과)
 ```
+
+조작은 모두 입력 맵 액션이다(`data/skirmish.input.xml` — 디렉터는 마우스 버튼을 묻지 않는다, `CheckControlBoundary`): 고르기 `Skirmish.Select`(왼쪽 버튼 · 패드 A),
+명령 `Skirmish.Order`(오른쪽 버튼 · 패드 B), 확대 `Camera.Zoom`(휠 · 패드 D 패드 위 · 아래). 커서 아래 땅만 포인터 위치(`getMousePositionNormalized`)로 고른다.
+`automation/control.scenario.xml` 은 커서를 옮겨(`MousePosition`) **패드 버튼**으로 끌어 고르고 빈 땅에 명령해, 디렉터가 장치가 아니라 액션을 읽는지 본다
+(탐침 `Skirmish.SelectedCount` · `Skirmish.SelectedMovingCount`).
 
 ## 조작(사람 대 컴퓨터)
 
 | 키 | 하는 일 |
 |----|---------|
-| 방향키 · 휠 · Space | 카메라 이동 · 확대 · 고른 유닛으로 |
-| 왼쪽 버튼 끌기 · 클릭 | 고르기(내 움직이는 유닛 먼저 — 최대 12) · Shift 로 더하기 |
-| 오른쪽 버튼 | 적이면 공격, 광물 · 내 정제소면 채취(일꾼), 덜 지은 내 건물이면 이어 짓기, 빈 땅이면 무리 이동(건물은 집결지) · Shift 로 대기열 |
+| 방향키 · 휠(패드 D 패드 위 · 아래) · Space | 카메라 이동 · 확대 · 고른 유닛으로 |
+| 왼쪽 버튼(패드 A) 끌기 · 클릭 | 고르기(내 움직이는 유닛 먼저 — 최대 12) · Shift 로 더하기 |
+| 오른쪽 버튼(패드 B) | 적이면 공격, 광물 · 내 정제소면 채취(일꾼), 덜 지은 내 건물이면 이어 짓기, 빈 땅이면 무리 이동(건물은 집결지) · Shift 로 대기열 |
 | A → 왼쪽 클릭 | 공격 이동 |
 | S · H | 멈춤 · 제자리 |
 | Q · W · E | 고른 건물의 첫째 · 둘째 · 셋째 생산(본진 → 일꾼, 병영 → 해병 · 화염방사병, 공장 → 벌처 · 탱크 · 골리앗, 우주공항 → 레이스) |
@@ -51,7 +57,7 @@ cd build/Ninja-Debug-StarSkirmish/Bin
 | 규칙 · 상태(채취 · 생산 · 전투 · 안개 · AI) | 키트의 보통 클래스 `RtsWorld` · `RtsAiCommander` · `RtsSelection` 과 판 규칙 `SkirmishMatch` — 씬 없이 시험한다 |
 | 판 · 고르기 · 명령 · 생산 · 건설 · 부대 · 속도 · 알림 · 스폰 | `SkirmishDirectorComponent`(씬에 하나 — 언리얼 GameMode/GameState 자리) |
 | 모습 | 뷰 `SkirmishUnitComponent`(유닛 하나 — 자리 · 지은 만큼 · 남은 자원만큼 · 움직인 쪽 · 편 색 · 고름) · `SkirmishDragComponent`(끌기 상자) — 디렉터를 **읽기만** 한다 |
-| 카메라 | GameFramework 공용 `OrthoCameraRigComponent` — 방향키 · 휠, 초점을 맵 안에 묶고 Q/E 회전은 끈다. 사람 쪽은 WASD 를 끄고(글자 키가 명령), 자동 플레이는 디렉터가 맵 전체가 보이게 물러서며 WASD 를 켠다. 마우스는 리그의 `findGroundPoint` |
+| 카메라 | GameFramework 공용 `OrthoCameraRigComponent` — 방향키 · 휠, 초점을 맵 안에 묶고 Q/E 회전은 끈다. 사람 쪽은 WASD 를 끄고(글자 키가 명령), 자동 플레이는 디렉터가 맵 전체가 보이게 물러서며 WASD 를 켠다. 커서 아래 땅은 리그의 `findGroundPoint` |
 | 머티리얼 | `materials/ground` · `cliff` · `drag`(반투명). 편 색 · 자원 색 · 고름은 디렉터가 만들어 나눠 쓰는 머티리얼 인스턴스 |
 
 **틱.** 디렉터는 `TickGroup::PrePhysics` 에서 입력 · 판 · 알림을 돌리고, 보일 유닛(사람 쪽은 안개에 가린 적을 뺀다)과 세운 모습을 견줘 새로 보인 · 사라진 유닛 자리를

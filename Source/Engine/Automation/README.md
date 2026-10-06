@@ -40,7 +40,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `name` | (필수) | 보고 · 산출물 폴더 이름 |
 | `fixedDelta` | `1/60` | 프레임마다 흘릴 시간(초) |
 | `timeoutFrames` | 3600 | 이 프레임을 넘도록 `<Pass/>` 가 없으면 12 |
-| `startAfter` | `ScenePlaying` | `ScenePlaying`(활성 씬이 플레이를 시작한 첫 프레임) · `Immediately` |
+| `startAfter` | `ScenePlaying` | `ScenePlaying`(활성 씬이 플레이를 시작했고 로딩 화면이 걷힌 첫 프레임 — 로딩 화면은 게임 입력을 막는다) · `Immediately` |
 | `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 안 오면 12 |
 | `input` | `exclusive` | `exclusive`(OS 입력 무시 — 기본) · `mixed`(OS 입력도 받는다, 진짜 창 상태를 볼 때) |
 
@@ -49,6 +49,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `Press` · `Release` | `slot`(`InputSlotUtil` 글 — `Key.E` · `Mouse.Left` · `Gamepad.A` · `Gamepad1.A`) | 가상 사건 | 입력 |
 | `Tap` | `slot`, `hold`(프레임, 기본 1, 0 = 같은 프레임에 뗌) | 누름 + hold 뒤 뗌 | 입력 |
 | `MouseDelta` | `x` · `y`(픽셀) | `MouseRawDelta` | 입력 |
+| `MousePosition` | `x` · `y`(창 클라이언트 영역의 비율 0..1 — 시작할 때 창 크기로 픽셀) | 커서를 옮김(`MouseMove`). 뒤의 마우스 버튼은 이 자리에서 눌린다(없으면 (0, 0)) — 커서 아래를 고르는 조작(RTS 선택 · 배치) | 입력 |
 | `GamepadAxis` | `axis` · `value` · `pad` | 축 | 입력 |
 | `Text` | `value` | 글자 입력 | 입력 |
 | `Variable` | `name` · `value` | 전역 변수(gv) 값 설정 — 모르는 변수는 읽기 오류 | 환경 |
@@ -60,6 +61,8 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
 | `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
+| `ExpectUi` | `focus`(위젯 이름 · `none`) · `screen`(활성 화면 문서 · `none`) · `screens`(화면 수) 중 하나 이상 | 런타임 UI 단언 — 엔진 UI 가 등록(`Engine/UI/Automation/UiAutomationSteps`), 같은 판정을 nogpu `UiNavigationScriptTest` 가 쓴다 | 결과 |
+| `UiLayoutDump` | `file`(상대면 `Saved/Automation/<이름>/`) | UI 스택의 화면마다 레이아웃 덤프(위젯 이름 · 물리 픽셀 사각형)를 쓴다 — `AppUiTest` 가 스크린샷 안의 위젯을 이름으로 찾는다 | 결과 |
 | 그 밖 | — | 등록표(`AutomationStepRegistry`)에서 이름으로 찾는다 | |
 
 - **모르는 엘리먼트 · 모르는 속성 · 형식이 틀린 값 · 모르는 탐침 · 모르는 gv 는 읽기 오류(11)** — 조용히 버리지 않습니다. 단계 종류 · 탐침 검사는

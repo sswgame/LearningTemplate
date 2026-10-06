@@ -346,8 +346,11 @@ namespace sw
         }
 
         // MRT · 컬러+깊이 · 깊이 전용은 합성 프레임버퍼를 쓴다. 그 밖에는 단일 RT · 스왑체인 경로를 그대로 쓴다.
-        const bool bUseComposite = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
-                                   ( colorCount == 0 && bHasDepth );
+        // 주의: 텍스처 하나짜리 프레임버퍼의 렌더 패스는 지우기(CLEAR)로 고정이다 — 지우지 않는 패스(Load · DontCare)는 load op 을 키로 드는
+        // 합성 경로로 보낸다. 그러지 않으면 Load 로 연 패스가 앞 패스의 그림을 지운다(Present 가 그린 캡처 위의 Canvas).
+        const bool bSingleTextureKeepsContent = colorCount == 1 && colorHandles[0] != 0 && beginInfo._arrLoadOp[0] != RHIRenderPassLoadOp::Clear;
+        const bool bUseComposite              = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
+                                   ( colorCount == 0 && bHasDepth ) || bSingleTextureKeepsContent;
 
         VkRenderPass  renderPass  = _pDevice->_renderPass;
         VkFramebuffer framebuffer = VK_NULL_HANDLE;
@@ -872,6 +875,20 @@ namespace sw
         scissor.offset.y      = static_cast<int32>( viewport._y );
         scissor.extent.width  = viewport._width > 0.0f ? static_cast<uint32>( viewport._width ) : 0u;
         scissor.extent.height = viewport._height > 0.0f ? static_cast<uint32>( viewport._height ) : 0u;
+        vkCmdSetScissor( cmd, 0, 1, &scissor );
+    }
+
+    void VulkanRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
+            return;
+        // 가위는 프레임버퍼 좌표(왼쪽 위 원점)라 음수 높이 뷰포트와 달리 뒤집지 않는다.
+        VkRect2D scissor{};
+        scissor.offset.x      = static_cast<int32>( rect._x );
+        scissor.offset.y      = static_cast<int32>( rect._y );
+        scissor.extent.width  = rect._width;
+        scissor.extent.height = rect._height;
         vkCmdSetScissor( cmd, 0, 1, &scissor );
     }
 

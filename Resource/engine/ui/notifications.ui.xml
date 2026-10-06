@@ -1,0 +1,13 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/notifications.uistyle.xml</item>
+	</_listStyleSheet>
+	<SafeZonePanel>
+		<CanvasPanel _visibility="SelfHitTestInvisible">
+			<BoxPanel _name="Stack" _spacing="8" _orientation="Vertical" _visibility="HitTestInvisible">
+				<_slot _anchorMin="1,0" _anchorMax="1,0" _offsetMin="-24,24" _offsetMax="-24,24" _bAutoSize="true" _growHorizontal="Begin" />
+			</BoxPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>

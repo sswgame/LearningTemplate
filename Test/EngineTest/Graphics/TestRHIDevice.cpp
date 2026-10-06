@@ -179,6 +179,47 @@ namespace
         pResource->destroyTexture( rt );
         return bOk;
     }
+
+    /** @brief 64×64 RGBA8 타깃을 clearColor 로 지우고 fullscreentriangle(색 = MaterialCB)을 그린 뒤 되읽습니다. recordCb 가 렌더 패스 안의 기록(가위 등)을 더합니다. */
+    struct FullscreenDrawProbe
+    {
+        sw::IRHIDevice*          _pDevice{ nullptr };
+        sw::IRHIResourceFactory* _pResource{ nullptr };
+        sw::RHIBufferHandle      _cb{ 0 };
+        sw::RHIDescriptorIndex   _cbIndex{ sw::kInvalidDescriptorIndex };
+
+        bool initialize( sw::IRHIDevice& device, const float32 ( &arrColor )[4] )
+        {
+            _pDevice   = &device;
+            _pResource = device.getResourceFactory();
+            _cb        = _pResource->createConstantBuffer( sizeof( arrColor ) );
+            if ( _cb == 0 )
+                return false;
+            _pResource->updateConstantBuffer( _cb, arrColor, sizeof( arrColor ) );
+            _cbIndex = _pResource->registerBindlessResource( _cb );
+            return _cbIndex != sw::kInvalidDescriptorIndex;
+        }
+
+        void shutdown()
+        {
+            if ( _cbIndex != sw::kInvalidDescriptorIndex )
+                _pResource->unregisterBindlessResource( _cbIndex );
+            if ( _cb != 0 )
+                _pResource->destroyBuffer( _cb );
+        }
+    };
+
+    /** @brief 그린 뒤 되읽은 RGBA8 픽셀 하나입니다. */
+    const uint8* findPixel( const sw::vector<uint8>& bytes, const sw::RHITextureMipSpan& layout, uint32 x, uint32 y )
+    {
+        return bytes.data() + static_cast<size_t>( y ) * layout._rowBytes + static_cast<size_t>( x ) * 4;
+    }
+
+    bool isNear( uint8 value, uint32 expected, uint32 tolerance )
+    {
+        const uint32 actual = value;
+        return expected <= actual + tolerance && actual <= expected + tolerance;
+    }
 } // namespace
 
 /**
@@ -1971,4 +2012,417 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the driver memory budget test" );
+}
+/**
+ * @brief [RHIDeviceTest] 영역 업로드는 그 사각형만 바꾸고 나머지 픽셀은 그대로 둔다 — R8 · RGBA8 · 밉 · 배열 면, 4백엔드
+ * @details 글리프 아틀라스(R8 SDF)가 새 글리프 칸만 올리는 길이다. 먼저 전체를 0 으로 올린 뒤(텍스처가 셰이더 읽기 상태에서 출발 — 실제 아틀라스와 같다)
+ *          구간에 (행 × 16 + 열 + 1) 값을 올리고 되읽는다. 구간 밖이 0 이 아니면 좌표 · 행 피치 · 서브리소스가 어긋난 것이다.
+ */
+SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
+{
+    struct Case
+    {
+        sw::RHIFormat                  _format;
+        uint32                         _width;
+        uint32                         _height;
+        uint32                         _mips;
+        uint32                         _slices;
+        sw::RHITextureRegionUploadDesc _region;
+        const utf8*                    _pName;
+    };
+    auto makeRegion = []( uint32 x, uint32 y, uint32 width, uint32 height, uint32 mip, uint32 slice ) -> sw::RHITextureRegionUploadDesc
+    {
+        sw::RHITextureRegionUploadDesc region{};
+        region._x          = x;
+        region._y          = y;
+        region._width      = width;
+        region._height     = height;
+        region._mip        = mip;
+        region._arraySlice = slice;
+        return region;
+    };
+    const Case arrCase[] = {
+        {      sw::RHIFormat::R8_UNORM, 64, 64, 1, 1, makeRegion( 8, 16, 12, 10, 0, 0 ), "R8 64x64 (8,16) 12x10"},
+        {sw::RHIFormat::R8G8B8A8_UNORM, 16, 16, 2, 1, makeRegion( 2,  1,  3,  2, 1, 0 ), "RGBA8 mip 1 (2,1) 3x2"},
+        {      sw::RHIFormat::R8_UNORM, 16, 16, 1, 2, makeRegion( 5,  3,  7,  4, 0, 1 ),  "R8 slice 1 (5,3) 7x4"},
+    };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        for ( const Case& testCase : arrCase )
+        {
+            const sw::string label = sw::string( device->getBackendName() ) + " " + testCase._pName + ": ";
+
+            sw::RHITextureDesc texDesc{};
+            texDesc._width                     = testCase._width;
+            texDesc._height                    = testCase._height;
+            texDesc._mipLevels                 = testCase._mips;
+            texDesc._arraySize                 = testCase._slices;
+            texDesc._dimension                 = testCase._slices > 1 ? sw::RHITextureDimension::Texture2DArray : sw::RHITextureDimension::Texture2D;
+            texDesc._format                    = testCase._format;
+            texDesc._bIsShaderResource         = SW_TRUE;
+            const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+            SW_EXPECT_TRUE_MSG( texture != 0, ( label + "createTexture2D" ).c_str() );
+            if ( texture == 0 )
+                continue;
+
+            // 모든 면 · 밉을 0 으로.
+            const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( testCase._format );
+            uint32       chainBytes{ 0 };
+            for ( uint32 mip = 0; mip < testCase._mips; ++mip )
+            {
+                sw::RHITextureMipSpan span{};
+                SW_ASSERT_TRUE( sw::computeRhiTextureMipLayout( testCase._format, testCase._width, testCase._height, mip, span ) );
+                chainBytes += span._sizeBytes;
+            }
+            const sw::vector<uint8> zeros( chainBytes, 0 );
+            for ( uint32 slice = 0; slice < testCase._slices; ++slice )
+            {
+                sw::RHITextureUploadDesc full{};
+                full._pData      = zeros.data();
+                full._sizeBytes  = chainBytes;
+                full._mipLevels  = 0;
+                full._arraySlice = slice;
+                SW_EXPECT_TRUE_MSG( pResource->uploadTexture2D( texture, full ), ( label + "zero upload" ).c_str() );
+            }
+
+            // 구간 — 픽셀 (행, 열) 의 모든 채널이 행 × 16 + 열 + 1 이다(0 과 갈린다).
+            const sw::RHITextureRegionUploadDesc& shape    = testCase._region;
+            const uint32                          rowBytes = shape._width * bytesPerPixel;
+            sw::vector<uint8>                     regionBytes( static_cast<size_t>( rowBytes ) * shape._height, 0 );
+            for ( uint32 row = 0; row < shape._height; ++row )
+            {
+                for ( uint32 col = 0; col < shape._width; ++col )
+                {
+                    for ( uint32 channel = 0; channel < bytesPerPixel; ++channel )
+                        regionBytes[static_cast<size_t>( row ) * rowBytes + col * bytesPerPixel + channel] = static_cast<uint8>( row * 16 + col + 1 );
+                }
+            }
+            sw::RHITextureRegionUploadDesc region = shape;
+            region._pData                         = regionBytes.data();
+            region._sizeBytes                     = static_cast<uint32>( regionBytes.size() );
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( texture, region ), ( label + "region upload" ).c_str() );
+
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bRead = pResource->readbackTexture2D( texture, shape._mip, shape._arraySlice, bytes, layout );
+            SW_EXPECT_TRUE_MSG( bRead, ( label + "readback" ).c_str() );
+            if ( bRead )
+            {
+                uint32 wrongCount{ 0 };
+                for ( uint32 row = 0; row < layout._height; ++row )
+                {
+                    for ( uint32 col = 0; col < layout._width; ++col )
+                    {
+                        const bool  bInside  = shape._y <= row && row < shape._y + shape._height && shape._x <= col && col < shape._x + shape._width;
+                        const uint8 expected = bInside ? static_cast<uint8>( ( row - shape._y ) * 16 + ( col - shape._x ) + 1 ) : 0;
+                        for ( uint32 channel = 0; channel < bytesPerPixel; ++channel )
+                        {
+                            if ( bytes[static_cast<size_t>( row ) * layout._rowBytes + col * bytesPerPixel + channel] != expected )
+                                ++wrongCount;
+                        }
+                    }
+                }
+                SW_EXPECT_TRUE_MSG( wrongCount == 0, ( label + sw::to_string( wrongCount ) + " bytes differ (region values inside, 0 outside)" ).c_str() );
+            }
+            pResource->destroyTexture( texture );
+        }
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the region upload test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 영역 업로드는 밖 구간 · 압축 포맷 · 모자란 데이터 · 없는 밉 · 없는 면을 거부한다 — 4백엔드
+ */
+SW_TEST_CASE( RHIDeviceTest, RegionUploadRejectsOutOfRange )
+{
+    uint8 arrByte[64 * 4]{};
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                 = 8;
+        texDesc._height                = 8;
+        texDesc._format                = sw::RHIFormat::R8_UNORM;
+        const sw::RHITextureHandle r8  = pResource->createTexture2D( texDesc );
+        texDesc._format                = sw::RHIFormat::BC1_UNORM;
+        const sw::RHITextureHandle bc1 = pResource->createTexture2D( texDesc );
+        SW_ASSERT_TRUE( r8 != 0 && bc1 != 0 );
+
+        sw::RHITextureRegionUploadDesc good{};
+        good._pData     = arrByte;
+        good._sizeBytes = 4 * 4;
+        good._x         = 4;
+        good._y         = 4;
+        good._width     = 4;
+        good._height    = 4;
+        SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, good ), ( label + "a region touching the far corner is inside" ).c_str() );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "uploadTexture2DRegion rejects bad regions" );
+            sw::RHITextureRegionUploadDesc outside = good;
+            outside._x                             = 5;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, outside ) == false, ( label + "region past the right edge" ).c_str() );
+            sw::RHITextureRegionUploadDesc shortData = good;
+            shortData._sizeBytes                     = 4 * 4 - 1;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, shortData ) == false, ( label + "short data" ).c_str() );
+            sw::RHITextureRegionUploadDesc badMip = good;
+            badMip._mip                           = 1;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, badMip ) == false, ( label + "mip past the last" ).c_str() );
+            sw::RHITextureRegionUploadDesc badSlice = good;
+            badSlice._arraySlice                    = 1;
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( r8, badSlice ) == false, ( label + "slice past the last" ).c_str() );
+            SW_EXPECT_TRUE_MSG( pResource->uploadTexture2DRegion( bc1, good ) == false, ( label + "compressed format" ).c_str() );
+        }
+        pResource->destroyTexture( r8 );
+        pResource->destroyTexture( bc1 );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the region upload rejection test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 프리멀티플라이 블렌드는 원본 색에 알파를 다시 곱하지 않는다 · 알파 채널은 네 백엔드 모두 One/InvSrcAlpha — 4백엔드
+ * @details 파랑 (0,0,1,1) 으로 지운 타깃에 (0.5, 0, 0, 0.5) 를 화면 가득 그린다. 프리멀티플라이(One/InvSrcAlpha)면 R 0.5 · B 0.5, 곧은 알파(SrcAlpha)면 R 0.25 다.
+ *          알파는 둘 다 0.5 + 1 × 0.5 = 1 이어야 한다 — GL 이 glBlendFunc 하나로 알파에도 SrcAlpha 를 곱하면 0.75 가 나와 갈린다.
+ */
+SW_TEST_CASE( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply )
+{
+    const float32 arrHalfRed[4] = { 0.5f, 0.0f, 0.0f, 0.5f };
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        FullscreenDrawProbe      probe;
+        SW_ASSERT_TRUE( probe.initialize( *device, arrHalfRed ) );
+
+        for ( uint32 premultiplied = 0; premultiplied < 2; ++premultiplied )
+        {
+            sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" );
+            psoDesc._bEnableBlend                = SW_TRUE;
+            psoDesc._bPremultipliedAlpha         = premultiplied == 1 ? SW_TRUE : SW_FALSE;
+            const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
+            SW_ASSERT_TRUE( pso != 0 );
+
+            sw::RHITextureDesc desc           = makeOffscreenTargetDesc( 16, 16 );
+            desc._clearColor                  = sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+            const sw::RHITextureHandle target = pResource->createTexture2D( desc );
+            SW_ASSERT_TRUE( target != 0 );
+
+            sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+            SW_ASSERT_TRUE( cmd != nullptr );
+            cmd->beginCommandList();
+            beginOffscreenRenderPass( *cmd, target, desc );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( probe._cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+            cmd->endCommandList();
+            device->executeCommandListImmediate( cmd.get() );
+            device->waitIdle();
+
+            sw::vector<uint8>     pixels;
+            sw::RHITextureMipSpan layout{};
+            SW_ASSERT_TRUE( pResource->readbackTexture2D( target, 0, 0, pixels, layout ) );
+            const uint8* pCenter     = findPixel( pixels, layout, 8, 8 );
+            const uint32 expectedRed = premultiplied == 1 ? 128u : 64u;
+            const bool   bOk         = isNear( pCenter[0], expectedRed, 3 ) && isNear( pCenter[1], 0, 3 ) && isNear( pCenter[2], 128, 3 ) && isNear( pCenter[3], 255, 3 );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + ( premultiplied == 1 ? "premultiplied" : "straight" ) + " blend gave " + sw::to_string( pCenter[0] ) + " " +
+                                       sw::to_string( pCenter[1] ) + " " + sw::to_string( pCenter[2] ) + " " + sw::to_string( pCenter[3] ) + ", expected " +
+                                       sw::to_string( expectedRed ) + " 0 128 255" )
+                                         .c_str() );
+
+            pResource->destroyTexture( target );
+            pResource->destroyPipelineState( pso );
+        }
+        probe.shutdown();
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the premultiplied blend test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 가위 밖 픽셀은 그대로이고, setViewport · beginRenderPass 는 가위를 전체로 되돌린다 — 4백엔드
+ * @details 타깃 셋에 빨강을 화면 가득 그린다. (A) 가위 (16,8 20×12) — 그 사각형만 빨강이고 행 · 열이 위 · 왼쪽 원점이다. (B) 같은 리스트에서 A 의 패스를 닫고
+ *          setViewport 없이 새 패스를 연 뒤 가위 없이 — 전부 빨강(beginRenderPass 가 가위를 되돌린다 — GL 은 상태가 남는다). (C) 가위를 건 뒤 setViewport — 전부 빨강.
+ */
+SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
+{
+    const float32            arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    const sw::RHIScissorRect scissor{ 16, 8, 20, 12 };
+    constexpr uint32         kSize = 64;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        FullscreenDrawProbe      probe;
+        SW_ASSERT_TRUE( probe.initialize( *device, arrRed ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        SW_ASSERT_TRUE( pso != 0 );
+
+        const sw::RHITextureDesc desc = makeOffscreenTargetDesc( kSize, kSize );
+        sw::RHITextureHandle     arrTarget[3]{};
+        for ( sw::RHITextureHandle& target : arrTarget )
+        {
+            target = pResource->createTexture2D( desc );
+            SW_ASSERT_TRUE( target != 0 );
+        }
+
+        sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+        SW_ASSERT_TRUE( cmd != nullptr );
+        cmd->beginCommandList();
+        for ( uint32 targetIndex = 0; targetIndex < 3; ++targetIndex )
+        {
+            if ( targetIndex == 1 )
+            {
+                // setViewport 없이 연다 — 되돌리는 것이 beginRenderPass 자신이어야 한다.
+                sw::RHIRenderPassBeginInfo beginInfo{};
+                beginInfo.setColorTarget( arrTarget[targetIndex], desc._clearColor, sw::RHIRenderPassLoadOp::Clear );
+                beginInfo._width  = kSize;
+                beginInfo._height = kSize;
+                cmd->beginRenderPass( beginInfo );
+            }
+            else
+                beginOffscreenRenderPass( *cmd, arrTarget[targetIndex], desc );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( probe._cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+            if ( targetIndex == 0 )
+                cmd->setScissorRect( scissor );
+            if ( targetIndex == 2 )
+            {
+                cmd->setScissorRect( scissor );
+                sw::RHIViewport viewport{};
+                viewport._width  = static_cast<float32>( kSize );
+                viewport._height = static_cast<float32>( kSize );
+                cmd->setViewport( viewport );
+            }
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+        }
+        cmd->endCommandList();
+        device->executeCommandListImmediate( cmd.get() );
+        device->waitIdle();
+
+        const utf8* arrCaseName[3] = { "scissored draw", "next pass without scissor", "setViewport after scissor" };
+        for ( uint32 targetIndex = 0; targetIndex < 3; ++targetIndex )
+        {
+            sw::vector<uint8>     pixels;
+            sw::RHITextureMipSpan layout{};
+            SW_ASSERT_TRUE( pResource->readbackTexture2D( arrTarget[targetIndex], 0, 0, pixels, layout ) );
+            uint32 wrongCount{ 0 };
+            for ( uint32 row = 0; row < kSize; ++row )
+            {
+                for ( uint32 col = 0; col < kSize; ++col )
+                {
+                    const bool   bInside    = scissor._y <= row && row < scissor._y + scissor._height && scissor._x <= col && col < scissor._x + scissor._width;
+                    const bool   bExpectRed = ( targetIndex != 0 ) || bInside;
+                    const uint8* pPixel     = findPixel( pixels, layout, col, row );
+                    const bool   bRed       = pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80;
+                    const bool   bClear     = isNear( pPixel[0], 13, 2 ) && isNear( pPixel[1], 13, 2 ) && isNear( pPixel[2], 20, 2 );
+                    if ( ( bExpectRed && bRed == false ) || ( bExpectRed == false && bClear == false ) )
+                        ++wrongCount;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( wrongCount == 0, ( label + arrCaseName[targetIndex] + ": " + sw::to_string( wrongCount ) + " pixels differ" ).c_str() );
+        }
+
+        for ( const sw::RHITextureHandle target : arrTarget )
+            pResource->destroyTexture( target );
+        pResource->destroyPipelineState( pso );
+        probe.shutdown();
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the scissor test" );
+}
+
+/**
+ * @brief [RHIDeviceTest] 깊이 없는 오프스크린 컬러 타깃 하나를 Load 로 다시 열면 앞 패스의 픽셀이 남는다 — 4백엔드
+ * @details 첫 패스는 지우고 가위 (0,0 16×16) 안만 빨강, 둘째 패스는 같은 타깃을 **Load** 로 열어 가위 (32,32 16×16) 안만 빨강. 두 모서리가 다 빨강이고
+ *          나머지는 첫 패스의 클리어 색이어야 한다. Canvas 패스가 Present 가 그린 캡처 텍스처에 이렇게 얹는다.
+ */
+SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
+{
+    const float32            arrRed[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+    const sw::RHIScissorRect arrScissor[2]{
+        { 0,  0, 16, 16},
+        {32, 32, 16, 16}
+    };
+    constexpr uint32 kSize = 64;
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
+        FullscreenDrawProbe      probe;
+        SW_ASSERT_TRUE( probe.initialize( *device, arrRed ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        SW_ASSERT_TRUE( pso != 0 );
+        const sw::RHITextureDesc   desc   = makeOffscreenTargetDesc( kSize, kSize );
+        const sw::RHITextureHandle target = pResource->createTexture2D( desc );
+        SW_ASSERT_TRUE( target != 0 );
+
+        sw::unique_ptr<sw::IRHICommandList> cmd = device->createCommandList();
+        SW_ASSERT_TRUE( cmd != nullptr );
+        cmd->beginCommandList();
+        for ( uint32 passIndex = 0; passIndex < 2; ++passIndex )
+        {
+            // 둘째 패스의 클리어 색은 일부러 다르게 둔다 — Load 를 무시하고 지우면 그 색이 남는다.
+            sw::RHIRenderPassBeginInfo beginInfo{};
+            beginInfo.setColorTarget( target, passIndex == 0 ? desc._clearColor : sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f },
+                                      passIndex == 0 ? sw::RHIRenderPassLoadOp::Clear : sw::RHIRenderPassLoadOp::Load );
+            beginInfo._width  = kSize;
+            beginInfo._height = kSize;
+            cmd->beginRenderPass( beginInfo );
+            cmd->setPipelineState( pso );
+            cmd->bindConstantBuffer( probe._cbIndex, sw::shaderslot::kMaterialConstantBuffer );
+            cmd->setScissorRect( arrScissor[passIndex] );
+            cmd->draw( 3, 0 );
+            cmd->endRenderPass();
+        }
+        cmd->endCommandList();
+        device->executeCommandListImmediate( cmd.get() );
+        device->waitIdle();
+
+        sw::vector<uint8>     pixels;
+        sw::RHITextureMipSpan layout{};
+        SW_ASSERT_TRUE( pResource->readbackTexture2D( target, 0, 0, pixels, layout ) );
+        uint32 wrongCount{ 0 };
+        for ( uint32 row = 0; row < kSize; ++row )
+        {
+            for ( uint32 col = 0; col < kSize; ++col )
+            {
+                bool bExpectRed{ false };
+                for ( const sw::RHIScissorRect& scissor : arrScissor )
+                    bExpectRed = bExpectRed || ( scissor._y <= row && row < scissor._y + scissor._height && scissor._x <= col && col < scissor._x + scissor._width );
+                const uint8* pPixel = findPixel( pixels, layout, col, row );
+                const bool   bRed   = pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80;
+                const bool   bClear = isNear( pPixel[0], 13, 2 ) && isNear( pPixel[1], 13, 2 ) && isNear( pPixel[2], 20, 2 );
+                if ( ( bExpectRed && bRed == false ) || ( bExpectRed == false && bClear == false ) )
+                    ++wrongCount;
+            }
+        }
+        SW_EXPECT_TRUE_MSG( wrongCount == 0, ( label + "Load pass lost earlier pixels: " + sw::to_string( wrongCount ) + " pixels differ" ).c_str() );
+
+        pResource->destroyTexture( target );
+        pResource->destroyPipelineState( pso );
+        probe.shutdown();
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend could initialize for the load-op test" );
 }

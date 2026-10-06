@@ -50,6 +50,15 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/Text/FontCatalog.h"
+#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Document/UiDocument.h"
+#include "Engine/UI/Document/UiDocumentCache.h"
+#include "Engine/UI/Document/UiDocumentLoader.h"
+#include "Engine/UI/Layout/UiScale.h"
+#include "Engine/UI/Style/UiStyleSheet.h"
+#include "Engine/UI/Style/UiStyleSheetCache.h"
+#include "Engine/UI/Style/UiTheme.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
@@ -131,6 +140,39 @@ namespace
         static bool isAudioMixer( sw::string_view resourceId ) { return endsWith( resourceId, ".audiomixer.xml" ); }
         static bool isAudioEvents( sw::string_view resourceId ) { return endsWith( resourceId, ".audioevents.xml" ); }
         static bool isAudioMusic( sw::string_view resourceId ) { return endsWith( resourceId, ".music.xml" ); }
+        static bool isFontCatalog( sw::string_view resourceId ) { return endsWith( resourceId, "fontcatalog.xml" ); }
+        static bool isUiScale( sw::string_view resourceId ) { return endsWith( resourceId, "uiscale.xml" ); }
+        static bool isUiDocument( sw::string_view resourceId ) { return endsWith( resourceId, sw::UiDocumentAsset::kExtension ); }
+        static bool isUiStyleSheet( sw::string_view resourceId ) { return endsWith( resourceId, sw::UiStyleSheetAsset::kExtension ); }
+        static bool isUiThemes( sw::string_view resourceId ) { return endsWith( resourceId, "uithemes.xml" ); }
+
+        /** @brief 스타일 시트를 읽습니다(모르는 칸 · 변수 · 선택자 문법 · 읽지 못한 값). */
+        static bool loadUiStyleSheet( const sw::string& resourceId )
+        {
+            sw::UiStyleSheetCache cache;
+            sw::string            error;
+            if ( cache.findOrLoad( resourceId, error ) == nullptr )
+            {
+                SW_LOG_WARNING( "%#", error.c_str() );
+                return false;
+            }
+            return true;
+        }
+
+        /** @brief UI 문서를 읽고 위젯 트리까지 짓습니다(모르는 타입 · 속성 · 열거자 · 조각). */
+        static bool loadUiDocument( const sw::string& resourceId )
+        {
+            sw::UiDocumentCache                             cache;
+            sw::string                                      error;
+            const sw::shared_ptr<const sw::UiDocumentAsset> document = cache.findOrLoad( resourceId, error );
+            sw::vector<sw::UiBindingDesc>                   listBinding;
+            if ( document == nullptr || sw::UiDocumentLoader::instantiate( *document, cache, listBinding, error ) == nullptr )
+            {
+                SW_LOG_WARNING( "%#", error.c_str() );
+                return false;
+            }
+            return true;
+        }
         static bool isCultureTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::CultureTable::kExtension ); }
         static bool isLocalizationProject( sw::string_view resourceId ) { return endsWith( resourceId, sw::LocalizationProject::kExtension ); }
         static bool isSourceStringTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::SourceStringTable::kExtension ); }
@@ -496,6 +538,11 @@ namespace
             {         "audiomixer",          &isAudioMixer,                   &loadCatalog<sw::AudioMixerDesc>},
             {        "audioevents",         &isAudioEvents,                &loadCatalog<sw::AudioEventLibrary>},
             {         "audiomusic",          &isAudioMusic,                   &loadCatalog<sw::AudioMusicDesc>},
+            {        "fontcatalog",         &isFontCatalog,                  &loadCatalog<sw::FontCatalogDesc>},
+            {            "uiscale",             &isUiScale,                  &loadCatalog<sw::UiScaleSettings>},
+            {         "uidocument",          &isUiDocument,                                    &loadUiDocument},
+            {       "uistylesheet",        &isUiStyleSheet,                                  &loadUiStyleSheet},
+            {           "uithemes",            &isUiThemes,                   &loadCatalog<sw::UiThemeCatalog>},
             {       "culturetable",        &isCultureTable,        &loadLocalizationDocument<sw::CultureTable>},
             {"localizationproject", &isLocalizationProject, &loadLocalizationDocument<sw::LocalizationProject>},
             {        "stringtable",   &isSourceStringTable,   &loadLocalizationDocument<sw::SourceStringTable>},

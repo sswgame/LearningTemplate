@@ -1,0 +1,49 @@
+<UiDocument _schemaVersion="1">
+	<_listStyleSheet>
+		<item>engine/ui/styles/subtitles.uistyle.xml</item>
+	</_listStyleSheet>
+	<!-- 자막 화면 — UiSubtitleService 가 연다. 줄 자리는 이름 Line<n>(바탕) · Speaker<n> · Text<n>, 글 크기 · 바탕 알파는 사용자 설정이 바꾼다(자리 0 의 값이 기준). -->
+	<UiScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BoxPanel _name="Lines" _orientation="Vertical" _spacing="8">
+				<_slot _anchorMin="0.5,1"
+				       _anchorMax="0.5,1"
+				       _offsetMin="0,-64"
+				       _offsetMax="0,-64"
+				       _maxSize="1000,0"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Begin" />
+				<BorderPanel _name="Line0" _styleClass="subtitle" _contentPadding="16,8,16,8" _visibility="Collapsed">
+					<_slot _horizontalAlignment="Center" />
+					<_background _color="0,0,0,0.5" _cornerRadius="6,6,6,6" />
+					<BoxPanel _orientation="Vertical" _spacing="2">
+						<TextWidget _name="Speaker0" _styleClass="speaker">
+							<_slot _horizontalAlignment="Center" />
+							<_style _fontSize="22" _alignment="Center" />
+						</TextWidget>
+						<TextWidget _name="Text0" _styleClass="line">
+							<_slot _horizontalAlignment="Center" />
+							<_style _fontSize="30" _alignment="Center" />
+						</TextWidget>
+					</BoxPanel>
+				</BorderPanel>
+				<BorderPanel _name="Line1" _styleClass="subtitle" _contentPadding="16,8,16,8" _visibility="Collapsed">
+					<_slot _horizontalAlignment="Center" />
+					<_background _color="0,0,0,0.5" _cornerRadius="6,6,6,6" />
+					<BoxPanel _orientation="Vertical" _spacing="2">
+						<TextWidget _name="Speaker1" _styleClass="speaker">
+							<_slot _horizontalAlignment="Center" />
+							<_style _fontSize="22" _alignment="Center" />
+						</TextWidget>
+						<TextWidget _name="Text1" _styleClass="line">
+							<_slot _horizontalAlignment="Center" />
+							<_style _fontSize="30" _alignment="Center" />
+						</TextWidget>
+					</BoxPanel>
+				</BorderPanel>
+			</BoxPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>

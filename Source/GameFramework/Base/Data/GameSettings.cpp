@@ -97,6 +97,7 @@ namespace sw
         root.takeChildText( "defaultLanguage", _defaultLanguage );
         root.takeChildText( "fallbackLanguage", _fallbackLanguage );
         root.takeChildText( "inputMap", _inputMap );
+        root.takeChildText( "loadingScreen", _loadingScreen );
 
         bool bUnknownElement = false;
         for ( XmlNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
@@ -112,7 +113,8 @@ namespace sw
                  StringUtil::equals( pName, "localizationProject" ) ||
                  StringUtil::equals( pName, "defaultLanguage" ) ||
                  StringUtil::equals( pName, "fallbackLanguage" ) ||
-                 StringUtil::equals( pName, "inputMap" ) )
+                 StringUtil::equals( pName, "inputMap" ) ||
+                 StringUtil::equals( pName, "loadingScreen" ) )
                 continue;
 
             if ( StringUtil::equals( pName, "custom" ) )

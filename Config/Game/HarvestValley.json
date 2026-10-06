@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/harvestvalley",
-    "_windowTitle": "Harvest Valley"
+    "_windowTitle": "Harvest Valley",
+    "_bUiPauseMenu": true
 }

@@ -2,12 +2,18 @@
 
 #include "AppTest/AppTestUtil.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "sw/config/ConfigConstants.h"
+
+#include <chrono>
+#include <thread>
 
 namespace test
 {
@@ -23,6 +29,14 @@ namespace test
 #else
                 return "App";
 #endif
+            }
+
+            /** @brief 시나리오 이름 조각(`weaponswitch`)입니다 — 로그 · 보고 파일 이름에 쓴다. */
+            static sw::string getScenarioStem( sw::string_view path )
+            {
+                const size_t slash = path.find_last_of( '/' );
+                sw::string   stem{ path.substr( slash == sw::string_view::npos ? 0 : slash + 1 ) };
+                return stem.substr( 0, stem.find( '.' ) );
             }
         };
     } // namespace
@@ -72,5 +86,54 @@ namespace test
         if ( close != sw::string::npos )
             packRoot = text.substr( open + 1, close - open - 1 );
         return packRoot;
+    }
+
+    int32 AppTestUtil::runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines )
+    {
+        const sw::string backend    = pBackendSwitch[0] == '-' ? sw::string( pBackendSwitch + 1 ) : sw::string( "default" );
+        const sw::string outputBase = "Saved/Automation/" + AppTestUtilInternal::getScenarioStem( scenarioPath ) + "_" + backend;
+        (void)sw::FileUtil::ensureDirectoryExists( "Saved/Automation" );
+        sw::string arguments = "-scenario=" + scenarioPath + " -scenario-report=" + outputBase + ".json " + pBackendSwitch;
+
+        sw::Process process;
+        if ( launchApp( process, arguments ) == false )
+            return kNotLaunchedExitCode;
+
+        // 시한 감시 — 멈춘 App 이 CTest 시한까지 붙잡지 않게 죽인다(`terminate` 는 다른 스레드가 읽는 중에도 안전하다).
+        sw::atomic<bool> bDone{ false };
+        sw::atomic<bool> bKilled{ false };
+        std::thread      watchdog( [&process, &bDone, &bKilled]()
+        {
+            const int64 deadline = sw::MonotonicClock::nowMicroseconds() + static_cast<int64>( kScenarioTimeoutSeconds ) * 1000000;
+            while ( bDone.load() == false && sw::MonotonicClock::nowMicroseconds() < deadline )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            }
+            if ( bDone.load() == false )
+            {
+                bKilled.store( true );
+                (void)process.terminate( -1 );
+            }
+        } );
+
+        sw::string log;
+        sw::string line;
+        while ( process.readOutputLine( line ) )
+        {
+            log += line;
+            log += "\n";
+            if ( line.find( "[Scenario]" ) != sw::string::npos )
+                outScenarioLines += line + "\n";
+        }
+        const int32 exitCode = process.waitForExit();
+        bDone.store( true );
+        watchdog.join();
+        (void)sw::FileUtil::writeTextFile( outputBase + ".log", log );
+        return bKilled.load() ? -1 : exitCode;
+    }
+
+    bool AppTestUtil::isSkippedExitCode( int32 exitCode )
+    {
+        return exitCode == kSkippedExitCode || exitCode == sw::kRhiUnusableHereExitCode || exitCode == kNotLaunchedExitCode;
     }
 } // namespace test

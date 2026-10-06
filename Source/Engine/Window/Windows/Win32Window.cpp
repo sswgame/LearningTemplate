@@ -106,6 +106,14 @@ namespace sw
         return ( _hWnd != nullptr ) ? ( IsWindowVisible( _hWnd ) != FALSE ) : false;
     }
 
+    float32 Win32Window::getContentScale() const
+    {
+        if ( _hWnd == nullptr )
+            return 1.0f;
+        const UINT dpi = GetDpiForWindow( _hWnd );
+        return dpi > 0 ? static_cast<float32>( dpi ) / kReferenceDpi : 1.0f;
+    }
+
     bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
     {
         if ( _hWnd == nullptr )
@@ -358,6 +366,11 @@ namespace sw
     bool Win32Window::isVisible() const
     {
         return false;
+    }
+
+    float32 Win32Window::getContentScale() const
+    {
+        return 1.0f;
     }
 
     LRESULT CALLBACK Win32Window::wndProc( HWND, UINT, WPARAM, LPARAM )

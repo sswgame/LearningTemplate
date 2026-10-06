@@ -1,0 +1,39 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _bPausesGame="true" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/options.uistyle.xml</item>
+	</_listStyleSheet>
+	<SafeZonePanel>
+		<CanvasPanel>
+			<BorderPanel _name="Window" _styleClass="window">
+				<_slot _anchorMin="0.5,0.5"
+				       _anchorMax="0.5,0.5"
+				       _offsetMin="-480,-320"
+				       _offsetMax="480,320" />
+				<BoxPanel _spacing="12" _orientation="Vertical">
+					<TextWidget _name="Title" _styleClass="title" _text="Options" />
+					<WrapPanel _name="Tabs" _itemSpacing="6" _lineSpacing="6" />
+					<ScrollPanel _name="Scroll">
+						<_slot _sizeRule="Fill" />
+						<BoxPanel _name="Rows" _spacing="6" _orientation="Vertical" />
+					</ScrollPanel>
+					<TextWidget _name="RestartNotice" _styleClass="notice" _visibility="Collapsed" _text="Some changes take effect after a restart." />
+					<BoxPanel _name="Buttons" _spacing="8">
+						<ButtonWidget _name="Apply" _styleClass="primary" _command="Apply">
+							<TextWidget _text="Apply" />
+						</ButtonWidget>
+						<ButtonWidget _name="Revert" _command="Revert">
+							<TextWidget _text="Revert" />
+						</ButtonWidget>
+						<ButtonWidget _name="Defaults" _command="Defaults">
+							<TextWidget _text="Defaults" />
+						</ButtonWidget>
+						<ButtonWidget _name="Close" _command="Close">
+							<TextWidget _text="Close" />
+						</ButtonWidget>
+					</BoxPanel>
+				</BoxPanel>
+			</BorderPanel>
+		</CanvasPanel>
+	</SafeZonePanel>
+</UiDocument>

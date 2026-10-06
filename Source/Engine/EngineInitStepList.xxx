@@ -33,6 +33,7 @@ SW_ENGINE_STARTUP_STEP( ModuleTypes,         Reflection, All,    { Config, Modul
 SW_ENGINE_STARTUP_STEP( Physics,             Physics,    All,    { Resource, Task } )            // 설정 표(레이어 · 재질)는 리소스, Jolt 잡은 태스크
 SW_ENGINE_STARTUP_STEP( Scene,               Scene,      All,    { Audio, FileIo, Input, ModuleImages, Physics, Resource, Task } ) // 컴포넌트가 입력 · 오디오 · 모듈 코드 · 에셋 · 물리 씬을 든다(스트리밍은 비동기 IO)
 SW_ENGINE_STARTUP_STEP( Headless,            EngineMisc, All,    { EngineDefaultAssets, ModuleTypes, Scene, ShaderCache } ) // 셰이더 쿠킹 · 씬 쿠킹(모든 컴포넌트 타입이 있어야 쿠킹한다) — 하면 뒤 단계(창 · RHI · 렌더러)를 건너뛴다 — 서버는 씬 쿠킹만(셰이더 쿠킹 · 임포트는 거절)
+SW_ENGINE_STARTUP_STEP( Fonts,               EngineMisc, Client, { EngineDefaultAssets, Headless, Resource } ) // 글꼴 카탈로그 · 기본 가족 — 문화권 표(EngineDefaultAssets)를 읽은 뒤, 쿠킹(Headless)이면 열지 않는다
 SW_ENGINE_STARTUP_STEP( UserSettings,        EngineMisc, Client, { Audio, Headless, Input, Resource } ) // 플레이어 옵션 — 스키마 · 사용자 파일을 읽어 대상(오디오 · 입력 · 전역 변수)에 넣는다. 화면 값은 창을 만드는 RHI 가 읽는다
 SW_ENGINE_STARTUP_STEP( RHI,                 RenderCpu,  Client, { Config, Headless, UserSettings } ) // 백엔드 선택 · 창 · 디바이스
 SW_ENGINE_STARTUP_STEP( FrameRenderer,       RenderCpu,  Client, { RHI, Task } )                
@@ -40,6 +41,7 @@ SW_ENGINE_STARTUP_STEP( RenderThread,        RenderCpu,  Client, { FrameRenderer
 SW_ENGINE_STARTUP_STEP( LiveShader,          Shader,     Client, { FrameRenderer, RenderThread } ) // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
 SW_ENGINE_STARTUP_STEP( SceneRhi,            RenderCpu,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
 SW_ENGINE_STARTUP_STEP( Telemetry,           EngineMisc, Client, { UserSettings } )              // 동의는 사용자 설정 — 종료가 맨 처음이라 마지막 장면 요약 · 묶음을 쓴다 — 서버 크래시 묶기 · 텔레메트리는 후속(동의가 플레이어 설정이다)
+SW_ENGINE_STARTUP_STEP( Ui,                  EngineMisc, Client, { Fonts, Input, UserSettings } ) // 런타임 UI — 입력(행동 · 포인터)을 읽고 글꼴로 잰다, UI 배율 · 글자 크기는 사용자 설정
 
 // `AssetManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
 // 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

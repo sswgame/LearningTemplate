@@ -1,8 +1,9 @@
 #pragma once
+#include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Combat/HealthListenerComponent.h"
@@ -10,44 +11,44 @@
 
 namespace sw
 {
+    class ProgressBarWidget;
+    class Widget;
+    class WidgetComponent;
+
     /**
      * @class HealthBarComponent
-     * @brief 소유 오브젝트 위(+ `_offsetPos`)에 떠 있는 월드 공간 HP 바입니다. 채움 · 피해 흔적 · 바탕 세 조각을 스프라이트로 그립니다.
+     * @brief 소유 오브젝트 위에 떠 있는 HP 바입니다 — 같은 오브젝트의 `WidgetComponent`(Screen — 화면 마커: 크기 · 머리 위 오프셋 · 피벗)에 막대 위젯을 넣고 값을 채웁니다.
      * @details 비율 셋의 뜻:
      *          - `_targetRatio` — 참 HP 비율입니다. 체력 시스템의 알림(`onHealthChanged` — `HealthListenerComponent::broadcast`)이 넣습니다.
-     *          - `_hpRatio` — 채움 조각의 길이입니다. 줄 때는 바로 따라가고(맞은 순간 줄어든다) 늘 때는 `_lerpSpeed` 로 차오릅니다.
+     *          - `_hpRatio` — 채움 막대의 길이입니다. 줄 때는 바로 따라가고(맞은 순간 줄어든다) 늘 때는 `_lerpSpeed` 로 차오릅니다.
      *          - `_remainRatio` — 피해 흔적입니다. 채움보다 길면 `_lerpSpeed` 로 채움까지 줄어들어 "방금 잃은 만큼" 을 잠깐 보입니다.
-     *          그리는 조각은 **겹치지 않습니다**: 채움 [0, hp], 흔적 [hp, remain], 바탕 [max(hp, remain), 1]. 같은 깊이의 반투명 조각이 겹치면
-     *          그리는 순서가 카메라 거리 정렬에 맡겨져 앞뒤가 뒤바뀔 수 있는데, 겹치지 않으면 순서가 상관없습니다.
+     *          그림은 겹친 진행 막대 둘입니다 — 아래 막대(바탕 색 위에 흔적 색이 `_remainRatio` 까지), 위 막대(바탕 없음, 채움 색이 `_hpRatio` 까지).
+     *          UI 그리기 순서는 위젯 순서라 겹쳐도 앞뒤가 바뀌지 않습니다(월드 스프라이트처럼 카메라 거리 정렬에 맡기지 않는다).
      *
-     *          그리기는 `SpriteInstanceBatch`(조각 셋)이고 `onBeginPlay` 에서 만듭니다 — 저장되는 컴포넌트를 만들지 않습니다. 자리는 이번 프레임의
-     *          트랜스폼 쓰기가 적용된 **뒤에** 잡습니다(틱 직후 큐) — 틱 안에서 읽는 월드 자리는 지난 프레임 것이라 움직이는 캐릭터를 한 프레임 늦게
-     *          따라갑니다.
+     *          막대 위젯은 `onBeginPlay` 에서 코드로 짓습니다(화면 마커는 한 트리에 모이므로 위젯 이름을 쓰지 않고 자식 순서로 찾는다). 값은 이번 프레임의
+     *          틱 **뒤에** 넣습니다(틱 직후 큐 — 위젯은 게임 스레드만 고친다). 같은 오브젝트에 `WidgetComponent` 가 없으면 경고 한 번 뒤 계산만 합니다.
+     *          막대는 뷰모델 바인딩이 아니라 코드가 값을 넣습니다 — 화면 마커는 오브젝트마다 하나라 뷰모델 · 문서를 두면 마커 수만큼 생기고, 값이 컴포넌트 칸에 이미 있다.
      */
-    REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP Bar floating UI component" )
+    REFLECT( Category = "UI", DisplayName = "Health Bar Component", Tooltip = "Smooth lerping HP bar drawn by the object's screen-marker WidgetComponent" )
     class SW_GF_API HealthBarComponent : public HealthListenerComponent
     {
     public:
         REFLECT_BODY();
 
-        /** @brief 조각 번호입니다(스프라이트 배치의 항목 순서). */
-        static constexpr uint32 kFillEntry       = 0;
-        static constexpr uint32 kTrailEntry      = 1;
-        static constexpr uint32 kBackgroundEntry = 2;
-        static constexpr uint32 kEntryCount      = 3;
+        /** @brief 막대 위젯 안의 자식 순서입니다(겹침 패널의 아래 → 위). */
+        static constexpr uint32 kTrailBarIndex = 0;
+        static constexpr uint32 kFillBarIndex  = 1;
 
         HealthBarComponent();
         virtual ~HealthBarComponent() override = default;
 
-        /** @brief 조각 셋을 만들고 비율을 같은 오브젝트의 체력 원천(`HealthSourceComponent`)에 맞춥니다 — 원천이 없으면 저장된 `_hpRatio`(흔적 없음). */
+        /** @brief 막대 위젯을 같은 오브젝트의 `WidgetComponent` 에 넣고 비율을 같은 오브젝트의 체력 원천(`HealthSourceComponent`)에 맞춥니다 — 원천이 없으면 저장된 `_hpRatio`(흔적 없음). */
         void onBeginPlay() override;
-        /** @brief 조각을 놓습니다. */
-        void onEndPlay() override;
-        /** @brief 채움 · 흔적을 참 비율 쪽으로 옮기고, 틱 뒤에 조각 자리를 잡게 합니다. */
+        /** @brief 채움 · 흔적을 참 비율 쪽으로 옮기고, 틱 뒤에 막대 값을 넣게 합니다. */
         void onTick( float32 deltaTime ) override;
-        /** @brief 보임 · 색 · 크기 · 비율 칸을 고치면 조각을 다시 잡습니다(켜고 끄기 포함). */
+        /** @brief 보임 · 색 · 비율 칸을 고치면 막대를 다시 채웁니다(켜고 끄기 포함). */
         void onPropertyChanged( hashed_string propertyName ) override;
-        /** @brief 소유 오브젝트가 꺼지면 조각을 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
+        /** @brief 소유 오브젝트가 꺼지면 막대를 숨깁니다(꺼진 오브젝트는 틱이 돌지 않습니다). */
         void onOwnerActiveInHierarchyChanged() override;
         /**
          * @brief 같은 오브젝트의 체력 시스템이 알린 변화입니다 — 다시 두기는 흔적 없이(`resetRatio`), 바뀜은 목표만(`setTargetRatio`).
@@ -65,7 +66,7 @@ namespace sw
         void resetRatio( float32 ratio );
         /** @brief 참 HP 비율입니다. */
         float32 getTargetRatio() const { return _targetRatio; }
-        /** @brief 채움 조각의 비율입니다. */
+        /** @brief 채움 막대의 비율입니다. */
         float32 getHpRatio() const { return _hpRatio; }
         /** @brief 피해 흔적의 끝 비율입니다(채움보다 짧지 않습니다). */
         float32 getRemainRatio() const { return _remainRatio; }
@@ -75,14 +76,23 @@ namespace sw
         /** @brief 바가 보이도록 정해져 있으면 true 입니다. */
         bool isVisible() const { return _bVisible; }
 
-        /** @brief 조각을 그리는 스프라이트 배치입니다(시험이 항목을 읽습니다). */
-        const SpriteInstanceBatch& getSpriteBatch() const { return _spriteBatch; }
+        /** @brief 같은 오브젝트의 화면 마커 컴포넌트입니다(없으면 nullptr). */
+        WidgetComponent* findWidgetComponent() const;
+        /** @brief 아래(흔적) 막대입니다(위젯을 아직 넣지 않았으면 nullptr — 시험이 값을 읽는다). */
+        const ProgressBarWidget* findTrailBar() const { return findBar( kTrailBarIndex ); }
+        /** @brief 위(채움) 막대입니다. */
+        const ProgressBarWidget* findFillBar() const { return findBar( kFillBarIndex ); }
+
+        /** @brief 막대 위젯(겹침 패널 + 진행 막대 둘)을 짓습니다. */
+        static unique_ptr<Widget> createBarWidget();
 
     private:
-        /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 조각 자리를 잡게 합니다. 틱 밖이면 바로 잡습니다. */
-        void scheduleLayout();
-        /** @brief 소유 오브젝트의 월드 자리 + 오프셋에 조각 셋을 놓습니다. 숨김 · 꺼짐이면 모두 숨깁니다. */
-        void layoutSprites();
+        /** @brief 틱 직후(트랜스폼 적용 뒤) 게임 스레드에서 막대 값을 넣게 합니다. 틱 밖이면 바로 넣습니다. */
+        void scheduleRefresh();
+        /** @brief 막대 둘에 비율 · 색을 넣고, 숨김 · 꺼짐이면 마커를 숨깁니다. */
+        void refreshWidgets();
+        /** @brief 마커 위젯의 막대 @p index(아래 → 위)입니다. 없으면 nullptr 입니다. */
+        ProgressBarWidget* findBar( uint32 index ) const;
 
         PROPERTY( Category = "Health", DisplayName = "HP Ratio", Tooltip = "Displayed fill ratio (0..1); drops at once, refills at the lerp speed", Min = 0.0, Max = 1.0,
                   Units = ratio, Meta = "Slider" )
@@ -94,24 +104,18 @@ namespace sw
         float32 _targetRatio;
         PROPERTY( Category = "Animation", DisplayName = "Lerp Speed", Tooltip = "How fast the trail shrinks and the fill refills (per second)", Min = 0.1, Max = 20.0 )
         float32 _lerpSpeed;
-        PROPERTY( Category = "Layout", DisplayName = "Offset Position", Tooltip = "Offset of the bar center from the owner position", Units = m )
-        float2 _offsetPos;
-        PROPERTY( Category = "Layout", DisplayName = "Bar Size", Tooltip = "Bar width and height in world units", Min = 0.0, Units = m )
-        float2 _barSize;
         PROPERTY( Category = "Style", DisplayName = "Fill Color", Meta = "Color", Tooltip = "Color of the current HP" )
         float4 _fillColor;
         PROPERTY( Category = "Style", DisplayName = "Trail Color", Meta = "Color", Tooltip = "Color of the HP just lost" )
         float4 _trailColor;
         PROPERTY( Category = "Style", DisplayName = "Background Color", Meta = "Color", Tooltip = "Color of the missing HP" )
         float4 _backgroundColor;
-        PROPERTY( Category = "Style", DisplayName = "Sorting Layer", Tooltip = "Sorting layer of the bar (render2d.xml); world UI draws above sprites" )
-        hashed_string _sortingLayer;
         PROPERTY( Category = "Layout", DisplayName = "Visible", Tooltip = "Toggle HP bar visibility" )
         bool _bVisible;
         PROPERTY( Category = "Layout", DisplayName = "Show When Hurt", Tooltip = "Show the bar the first time health drops" )
         bool _bShowWhenHurt;
         PROPERTY( Category = "Layout", DisplayName = "Hide When Dead", Tooltip = "Hide the bar when the owner dies" )
-        bool                _bHideWhenDead;
-        SpriteInstanceBatch _spriteBatch; ///< 조각 셋(채움 · 흔적 · 바탕). 저장하지 않습니다
+        bool _bHideWhenDead;
+        bool _bWarnedNoWidgetComponent; ///< 같은 오브젝트에 WidgetComponent 가 없다고 한 번 알렸다
     };
 } // namespace sw

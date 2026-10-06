@@ -240,6 +240,7 @@ namespace
         // 하네스가 세우지 않는 단계다(모듈 이미지 · 헤드리스 작업 · 창 · RHI · 렌더러).
         using ModuleImagesStartupStep  = Defaults;
         using HeadlessStartupStep      = Defaults;
+        using FontsStartupStep         = Defaults; // 글꼴 시험은 자기 FontSystem 을 만든다(가짜 래스터라이저 · 시험 카탈로그)
         using UserSettingsStartupStep  = Defaults;
         using RHIStartupStep           = Defaults;
         using FrameRendererStartupStep = Defaults;
@@ -247,6 +248,7 @@ namespace
         using LiveShaderStartupStep    = Defaults;
         using SceneRhiStartupStep      = Defaults;
         using TelemetryStartupStep     = Defaults;
+        using UiStartupStep            = Defaults; // UI 시험은 자기 UiSystem 을 만든다(자기 입력 관리자)
     };
 } // namespace
 

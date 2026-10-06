@@ -91,7 +91,13 @@ namespace sw
         /** @brief 시나리오를 바로 끝냅니다(`Pass` · `Fail` · `Skipped` …). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
         void finish( AutomationResult result, string_view reason );
 
-        bool             isActive() const { return _result == AutomationResult::Running; }
+        bool isActive() const { return _result == AutomationResult::Running; }
+        /**
+         * @brief 끝맺음(요약 줄 · 보고 · 가상 입력 떼기)까지 마쳤는지 묻습니다.
+         * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다 — 시작 프레임(`onFrameBegin`)에서 읽기 오류 · 시작 시한으로 끝나면
+         *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
+         */
+        bool             hasEnded() const { return _bEnded == SW_TRUE; }
         AutomationResult getResult() const { return _result; }
         /** @brief 지금 시나리오 프레임(시작 전이면 0)입니다. */
         uint32                    getFrameIndex() const { return _frameIndex; }

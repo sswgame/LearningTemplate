@@ -6,10 +6,11 @@ SWCOOK 3
 1798ef79b05237be engine:gerstner.hlsli
 22c00eae8dfcf116 samplecompute.hlsl
 2376b38d79149448 provokingvertex.hlsl
+2ff459ee18b86ae3 engine:bindingslots.hlsli
 980c18c4c174d3fb engine:postoutline.hlsli
 9e8ef007673671c1 engine:lighting.hlsli
 9ee00d8a59ae021e engine:common.hlsli
-a12bf020ef8a17af engine:bindingslots.hlsli
-a4f9a4c4a174030e engine:binding.hlsli
+a16db7b2113a3424 engine:colorvision.hlsli
+bebc217123811acb engine:binding.hlsli
 d43a994c10ab331e engine:instancedata.hlsli
 f653f249d0845efc engine:lighting2d.hlsli

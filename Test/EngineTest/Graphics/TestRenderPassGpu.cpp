@@ -16,6 +16,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
@@ -65,6 +67,8 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Text/GlyphCache.h"
+#include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Window/IWindow.h"
 
 #include "EngineTest/AnimationTestUtil.h"
@@ -7032,4 +7036,400 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
 
     if ( comparedCount == 0 )
         SW_TEST_SKIP( "No RHI backend could render the two-sided material test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] Canvas 패스가 장면 위에 UI 를 불러온 채(Load) 그리고 스크린샷 캡처 · 백버퍼 둘 다에 들어간다 — 4 백엔드
+ * @details 큐브 장면을 캔버스 없이 한 번(A), 캔버스와 함께 한 번(B) 그린다. 캔버스: 빨간 둥근 사각형 · 반투명 파랑 겹침(프리멀티플라이) · 가위로 잘린 초록 ·
+ *          엔진 글꼴(라틴, 저장소 글꼴)의 SDF 글리프 "A". 단언은 픽셀 값이 아니라 A 와의 차이로 본다(장면 · 클리어 색 · 톤매핑에 매이지 않게):
+ *          캔버스 밖은 A 그대로(Load — Clear 로 열면 장면이 사라진다), 둥근 모서리 바깥 · 가위 밖도 A 그대로, 겹친 곳은 빨강 반 + 파랑 반,
+ *          글리프 상자의 밝기 증가가 백엔드끼리 2 % 안. 백버퍼 사본이 캡처와 같다 — 캡처 → 백버퍼 복사가 Canvas 뒤에 있다.
+ *          경로 그림(네 칸 시험 텍스처 — 게임 스레드는 경로만 싣고 렌더러가 `TextureCache` 로 푼다)은 칸마다 제 색이다(왼위 빨강 · 오위 초록 · 왼아래 파랑).
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
+{
+    constexpr float32      kGlyphSize = 64.0f;
+    const sw::float2       glyphOrigin{ 180.0f, 230.0f };
+    sw::vector<float64>    listGlyphMetric;
+    sw::vector<sw::string> listBackend;
+    test::RHIBackendSweep  sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytesWithout;
+        sw::RHITextureMipSpan layoutWithout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesWithout, layoutWithout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 없는 프레임" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage without;
+        without.assign( std::move( bytesWithout ), layoutWithout, sw::constant::kBackBufferFormat );
+
+        // 캔버스 — 글리프는 저장소 글꼴(라틴)이라 기계마다 같다.
+        sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
+        sw::vector<uint8>                   fontBytes;
+        SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
+        const sw::FontFaceId face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
+        SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+        sw::GlyphCache      glyphCache( *rasterizer );
+        sw::CanvasFrameData canvas{};
+        canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( without.getWidth() ), static_cast<float32>( without.getHeight() ) };
+        {
+            sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+            sw::CanvasBrush   red{};
+            red._color        = sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f };
+            red._cornerRadius = sw::float4{ 12.0f, 12.0f, 12.0f, 12.0f };
+            painter.fillRect( sw::float2{ 40.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, red );
+            sw::CanvasBrush blue{};
+            blue._color = sw::float4{ 0.0f, 0.0f, 1.0f, 0.5f };
+            painter.fillRect( sw::float2{ 100.0f, 40.0f }, sw::float2{ 60.0f, 60.0f }, blue );
+            painter.pushClip( sw::float2{ 20.0f, 120.0f }, sw::float2{ 60.0f, 30.0f }, 0.0f );
+            sw::CanvasBrush green{};
+            green._color = sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f };
+            painter.fillRect( sw::float2{ 20.0f, 120.0f }, sw::float2{ 120.0f, 30.0f }, green );
+            painter.popClip();
+            sw::CanvasBrush quadrants{};
+            quadrants._imagePath = sw::hashed_string( "engine/textures/test/quadrants.dds" );
+            painter.fillRect( sw::float2{ 190.0f, 40.0f }, sw::float2{ 64.0f, 64.0f }, quadrants );
+            sw::CanvasGlyphStyle style{};
+            style._fontSize = kGlyphSize;
+            SW_EXPECT_TRUE( painter.drawGlyph( glyphOrigin, face, rasterizer->findGlyphIndex( face, 'A' ), style, glyphCache, 1 ) );
+        }
+        glyphCache.getAtlas().takeUploads( canvas._listAtlasUpload );
+        renderer.setCanvasFrame( canvas );
+
+        test::RHITestImage window;
+        bOk = renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
+        sw::vector<uint8>     bytesWith;
+        sw::RHITextureMipSpan layoutWith{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesWith, layoutWith );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "캔버스 프레임 · 백버퍼 · 캡처 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage with;
+            with.assign( std::move( bytesWith ), layoutWith, sw::constant::kBackBufferFormat );
+            auto isUnchanged = [&]( uint32 x, uint32 y )
+            { return test::RHITestImage::getColorDistance( with.getPixel( x, y ), without.getPixel( x, y ) ) <= 8; };
+
+            const test::Rgba8 redCenter = with.getPixel( 70, 70 );
+            SW_EXPECT_TRUE_MSG( redCenter._r > 220 && redCenter._g < 40 && redCenter._b < 40, ( label + "빨간 사각형 가운데" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isUnchanged( 41, 41 ), ( label + "둥근 모서리 바깥이 칠해졌다(모서리가 안 깎였다)" ).c_str() );
+            const test::Rgba8 overlap = with.getPixel( 110, 70 );
+            SW_EXPECT_TRUE_MSG( overlap._r > 100 && overlap._r < 160 && overlap._b > 100 && overlap._b < 160 && overlap._g < 40,
+                                ( label + "겹친 곳이 빨강 반 + 파랑 반이 아니다(프리멀티플라이 블렌드) — " + sw::to_string( overlap._r ) + "," +
+                                  sw::to_string( overlap._g ) + "," + sw::to_string( overlap._b ) )
+                                    .c_str() );
+            const test::Rgba8 clipped = with.getPixel( 50, 135 );
+            SW_EXPECT_TRUE_MSG( clipped._g > 220 && clipped._r < 40, ( label + "가위 안의 초록" ).c_str() );
+            SW_EXPECT_TRUE_MSG( isUnchanged( 110, 135 ), ( label + "가위 밖이 칠해졌다" ).c_str() );
+            const test::Rgba8 imageTopLeft    = with.getPixel( 206, 56 );
+            const test::Rgba8 imageTopRight   = with.getPixel( 238, 56 );
+            const test::Rgba8 imageBottomLeft = with.getPixel( 206, 88 );
+            SW_EXPECT_TRUE_MSG( imageTopLeft._r > 200 && imageTopLeft._g < 60 && imageTopLeft._b < 60, ( label + "경로 그림 왼위 칸이 빨강이 아니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( imageTopRight._g > 200 && imageTopRight._r < 60 && imageTopRight._b < 60, ( label + "경로 그림 오위 칸이 초록이 아니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( imageBottomLeft._b > 200 && imageBottomLeft._r < 60 && imageBottomLeft._g < 60, ( label + "경로 그림 왼아래 칸이 파랑이 아니다" ).c_str() );
+
+            // 캔버스 사각형 밖은 A 그대로여야 한다 — Load 대신 지우면 장면(큐브)이 사라진다.
+            uint32 changedOutside{ 0 };
+            for ( uint32 y = 0; y < with.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < with.getWidth(); ++x )
+                {
+                    const bool bNearCanvas = x < 270 && y < 250;
+                    if ( bNearCanvas == false && isUnchanged( x, y ) == false )
+                        ++changedOutside;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( changedOutside * 1000 < with.getPixelCount(),
+                                ( label + "캔버스 밖 " + sw::to_string( changedOutside ) + " 픽셀이 바뀌었다(장면이 지워졌다)" ).c_str() );
+
+            // 글리프 상자의 밝기 증가 — 픽셀 수가 아니라 배경을 뺀 합(톤매핑 · 배경색에 흔들리지 않게).
+            float64 glyphGain{ 0.0 };
+            for ( uint32 y = 150; y < 240; ++y )
+            {
+                for ( uint32 x = 170; x < 260; ++x )
+                {
+                    const test::Rgba8 after  = with.getPixel( x, y );
+                    const test::Rgba8 before = without.getPixel( x, y );
+                    glyphGain += static_cast<float64>( after._r + after._g + after._b ) - static_cast<float64>( before._r + before._g + before._b );
+                }
+            }
+            SW_EXPECT_TRUE_MSG( glyphGain > 255.0 * 3.0 * 300.0, ( label + "글리프가 보이지 않는다 — 밝기 증가 " + sw::to_string( glyphGain ) ).c_str() );
+            listGlyphMetric.push_back( glyphGain );
+            listBackend.push_back( device->getBackendName() );
+
+            // 백버퍼(화면)에도 UI 가 있다 — 캡처를 백버퍼로 옮기는 것이 Canvas 뒤다.
+            uint32 differCount{ 0 };
+            for ( uint32 y = 0; y < with.getHeight() && y < window.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < with.getWidth() && x < window.getWidth(); ++x )
+                {
+                    if ( test::RHITestImage::getColorDistance( with.getPixel( x, y ), window.getPixel( x, y ) ) > 6 )
+                        ++differCount;
+                }
+            }
+            SW_EXPECT_TRUE_MSG( differCount * 100 < with.getPixelCount(), ( label + "백버퍼가 캡처와 다르다 — " + sw::to_string( differCount ) + " 픽셀" ).c_str() );
+            SW_LOG_INFO( "%#canvas: glyph gain %#, changed outside %#, window vs capture %#", label, glyphGain, changedOutside, differCount );
+        }
+        renderer.shutdown();
+    }
+    for ( size_t index = 1; index < listGlyphMetric.size(); ++index )
+    {
+        const float64 ratio = listGlyphMetric[index] / sw::MathUtil::max( listGlyphMetric[0], 1.0 );
+        SW_EXPECT_TRUE_MSG( 0.98 <= ratio && ratio <= 1.02, ( listBackend[index] + " 글리프 밝기가 " + listBackend[0] + " 와 2 % 넘게 다르다" ).c_str() );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 캔버스 렌더 텍스처 대상(월드 공간 UI)은 장면 앞에서 그 텍스처를 지우고 그린다 — 빨간 사각형이 텍스처에 들고, 내용 번호가 같은 다음
+ *        프레임은 다시 그리지 않으며(텍스처가 그림을 지킨다), 번호가 오르면 다시 그린다(파랑). 4 백엔드
+ * @details 변이: `FrameRenderer::drawCanvasTargets` 를 부르지 않으면 텍스처가 비어(지운 적도 없다) 붉은 픽셀이 없다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasTargetDrawsIntoRenderTexture )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        const auto makeFrame = []( const sw::float4& color, uint64 revision )
+        {
+            sw::CanvasFrameData       frame{};
+            sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+            target._targetPath               = sw::hashed_string( kTargetPath );
+            target._list._targetSize         = sw::float2{ 64.0f, 64.0f };
+            target._contentRevision          = revision;
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   brush{};
+            brush._color = color;
+            painter.fillRect( sw::float2{ 16.0f, 16.0f }, sw::float2{ 32.0f, 32.0f }, brush );
+            return frame;
+        };
+        sw::CanvasFrameData red = makeFrame( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f }, 1 );
+        renderer.setCanvasFrame( red );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        int64  diff  = 0;
+        uint32 drawn = 0;
+        uint32 width = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ),
+                            ( label + "대상 텍스처를 읽지 못했다" ).c_str() );
+        SW_EXPECT_EQUAL( 64u, width );
+        SW_EXPECT_TRUE_MSG( drawn >= 32u * 32u - 64u && drawn <= 32u * 32u + 64u, ( label + "빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( diff > 200, ( label + "대상이 붉지 않다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear ); // 같은 번호 — 그리지 않는다
+        SW_EXPECT_EQUAL( 0u, renderer.getLastDrawnCanvasTargetCount() );
+        sw::CanvasFrameData blue = makeFrame( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f }, 2 );
+        renderer.setCanvasFrame( blue );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
+        SW_EXPECT_TRUE_MSG( diff < -200, ( label + "번호가 올랐는데 다시 그리지 않았다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas target test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 월드 공간 UI 의 길 — 캔버스 대상 텍스처(파란 사각형)를 프리멀티플라이 스프라이트 머티리얼 인스턴스(albedoMap = 그 렌더 텍스처)로 읽는
+ *        사각형이 카메라 앞에서 화면 가운데를 파랗게 칠한다(큐브는 주황, 배경은 어둡다). 4 백엔드
+ * @details WidgetComponent(World)가 짓는 것과 같은 조합이다 — 스프라이트 사각형 메시 · sprite2d 머티리얼 · `premultipliedTexture`. 변이: 대상 그리기를 빼면
+ *          텍스처가 비어 가운데가 파랗지 않다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, WorldWidgetRenderTextureIsSampled )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_world_widget";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+
+        // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
+        sw::engine::getAssetManager().getTextureManager().declareRenderTarget( kTargetPath, 64, 64 );
+        sw::shared_ptr<sw::Material> sprite = sw::Material::create();
+        bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
+        const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );
+        bOk                                 = bOk && pCamera != nullptr;
+        sw::shared_ptr<sw::Mesh> quadMesh   = sw::MeshUtil::createSpriteQuad();
+        if ( bOk )
+        {
+            sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( sprite.get() );
+            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), kTargetPath );
+            instance->setParameter( sw::hashed_string( "premultipliedTexture" ), "1" );
+            sw::GameObject*    pQuad = stage._scene.getObjectManager()->createGameObject( sw::hashed_string( "WidgetQuad" ) );
+            sw::MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                      = pMesh != nullptr;
+            if ( bOk )
+            {
+                const sw::float3 forward = pCamera->getCameraForward();
+                const sw::float3 eye     = pCamera->getCameraPosition();
+                pMesh->setMesh( quadMesh );
+                pMesh->setMaterial( sprite.get() );
+                pMesh->setMaterialInstance( std::move( instance ) );
+                pMesh->setLocalPosition( sw::float3{ eye._x + forward._x * 1.5f, eye._y + forward._y * 1.5f, eye._z + forward._z * 1.5f } );
+                pMesh->setLocalRotation( pCamera->getLocalRotation() );
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+
+        sw::CanvasFrameData       frame{};
+        sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+        target._targetPath               = sw::hashed_string( kTargetPath );
+        target._list._targetSize         = sw::float2{ 64.0f, 64.0f };
+        target._contentRevision          = 1;
+        {
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   blue{};
+            blue._color = sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+            painter.fillRect( sw::float2{ 16.0f, 16.0f }, sw::float2{ 32.0f, 32.0f }, blue );
+        }
+        renderer.setCanvasFrame( frame );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 캡처" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 center = image.getPixel( image.getWidth() / 2, image.getHeight() / 2 );
+            SW_LOG_INFO( "%#world widget center %# %# %#", label, center._r, center._g, center._b );
+            SW_EXPECT_TRUE_MSG( static_cast<int32>( center._b ) > static_cast<int32>( center._r ) + 40,
+                                ( label + "화면 가운데가 렌더 텍스처의 파랑이 아니다 (" + sw::to_string( center._r ) + ", " + sw::to_string( center._g ) + ", " +
+                                  sw::to_string( center._b ) + ")" )
+                                    .c_str() );
+        }
+        if ( quadMesh != nullptr )
+            quadMesh->releaseRhi( device.get() );
+        if ( sprite != nullptr )
+            sprite->releaseRhi( device.get() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the world widget test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 캔버스 색각 보정 — 녹색약(2)에서 빨강 · 초록 사각형의 출력이 보정 식의 결과(±2/255)와 같고, 끔(0)이면 그대로다 — 4 백엔드
+ * @details 기대값은 시험 안의 C++ 식(Machado 2009 녹색약 행렬로 흉내 → 빨강 쪽 오차를 초록 · 파랑으로 옮김)이다 — 셰이더(colorvision.hlsli)와 따로 적어 서로를 잡는다.
+ *          사각형은 불투명이라 장면과 섞이지 않는다. 변이: canvas.hlsl 의 보정 호출을 빼면 녹색약에서도 빨강이 (255, 0, 0) 이라 진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasColorVisionChangesRedGreen )
+{
+    struct ColorVisionOracle
+    {
+        /** @brief 녹색약 보정 — colorvision.hlsli 의 swApplyColorVisionCorrection( color, 2 ) 과 같은 식. */
+        static sw::float3 correctDeuteranopia( const sw::float3& color )
+        {
+            const float32 simulatedR = 0.367322f * color._x + 0.860646f * color._y - 0.227968f * color._z;
+            const float32 simulatedG = 0.280085f * color._x + 0.672501f * color._y + 0.047413f * color._z;
+            const float32 simulatedB = -0.011820f * color._x + 0.042940f * color._y + 0.968881f * color._z;
+            const float32 errorR     = color._x - simulatedR;
+            const float32 errorG     = color._y - simulatedG;
+            const float32 errorB     = color._z - simulatedB;
+            return sw::float3{ sw::MathUtil::clamp( color._x, 0.0f, 1.0f ), sw::MathUtil::clamp( color._y + 0.7f * errorR + errorG, 0.0f, 1.0f ),
+                               sw::MathUtil::clamp( color._z + 0.7f * errorR + errorB, 0.0f, 1.0f ) };
+        }
+
+        static bool isNear( const test::Rgba8& pixel, const sw::float3& expected )
+        {
+            constexpr int32 kTolerance = 2;
+            auto            toByte     = []( float32 value )
+            { return static_cast<int32>( value * 255.0f + 0.5f ); };
+            return sw::MathUtil::abs( static_cast<int32>( pixel._r ) - toByte( expected._x ) ) <= kTolerance &&
+                   sw::MathUtil::abs( static_cast<int32>( pixel._g ) - toByte( expected._y ) ) <= kTolerance &&
+                   sw::MathUtil::abs( static_cast<int32>( pixel._b ) - toByte( expected._z ) ) <= kTolerance;
+        }
+
+        static sw::string describe( const test::Rgba8& pixel )
+        {
+            return sw::to_string( pixel._r ) + "," + sw::to_string( pixel._g ) + "," + sw::to_string( pixel._b );
+        }
+    };
+    using Oracle = ColorVisionOracle;
+    const sw::float3      red{ 1.0f, 0.0f, 0.0f };
+    const sw::float3      green{ 0.0f, 1.0f, 0.0f };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytesFirst;
+        sw::RHITextureMipSpan layoutFirst{};
+        bOk = bOk && renderer.readbackPresentCapture( bytesFirst, layoutFirst );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "첫 프레임" ).c_str() );
+        if ( bOk == false )
+        {
+            renderer.shutdown();
+            continue;
+        }
+        test::RHITestImage first;
+        first.assign( std::move( bytesFirst ), layoutFirst, sw::constant::kBackBufferFormat );
+
+        for ( const uint32 mode : { 0u, 2u } )
+        {
+            sw::CanvasFrameData canvas{};
+            canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( first.getWidth() ), static_cast<float32>( first.getHeight() ) };
+            canvas._colorVisionMode        = mode;
+            {
+                sw::CanvasPainter painter( canvas._mainOutput, 1.0f );
+                sw::CanvasBrush   brush{};
+                brush._color = sw::float4{ red._x, red._y, red._z, 1.0f };
+                painter.fillRect( sw::float2{ 40.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, brush );
+                brush._color = sw::float4{ green._x, green._y, green._z, 1.0f };
+                painter.fillRect( sw::float2{ 140.0f, 40.0f }, sw::float2{ 80.0f, 60.0f }, brush );
+            }
+            renderer.setCanvasFrame( canvas );
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bFrame    = renderSceneFrame( renderer, device.get(), stage._scene, clear ) && renderer.readbackPresentCapture( bytes, layout );
+            const sw::string      modeLabel = label + "방식 " + sw::to_string( mode ) + " ";
+            SW_EXPECT_TRUE_MSG( bFrame, ( modeLabel + "프레임" ).c_str() );
+            if ( bFrame == false )
+                continue;
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 redPixel    = image.getPixel( 80, 70 );
+            const test::Rgba8 greenPixel  = image.getPixel( 180, 70 );
+            const sw::float3  expectRed   = mode == 0u ? red : Oracle::correctDeuteranopia( red );
+            const sw::float3  expectGreen = mode == 0u ? green : Oracle::correctDeuteranopia( green );
+            SW_EXPECT_TRUE_MSG( Oracle::isNear( redPixel, expectRed ), ( modeLabel + "빨강 → " + Oracle::describe( redPixel ) ).c_str() );
+            SW_EXPECT_TRUE_MSG( Oracle::isNear( greenPixel, expectGreen ), ( modeLabel + "초록 → " + Oracle::describe( greenPixel ) ).c_str() );
+            SW_LOG_INFO( "%#red %#, green %#", modeLabel, Oracle::describe( redPixel ), Oracle::describe( greenPixel ) );
+        }
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas color vision test" );
 }

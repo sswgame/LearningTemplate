@@ -182,3 +182,40 @@ SW_TEST_CASE( VirtualInputTest, ScriptKeepsOrderAndRewinds )
     SW_EXPECT_FALSE( script.isFinished( 2 ) );
     SW_EXPECT_TRUE( script.isFinished( 3 ) );
 }
+
+/**
+ * @brief [VirtualInputTest] 마우스 버튼은 그 프레임까지 옮긴 커서 자리에서 눌린다 — (0, 0) 으로 커서를 끌고 가지 않는다
+ * @details 버튼 사건이 커서 자리를 싣는데(OS 와 같다) 스크립트가 늘 (0, 0) 을 실으면 누르는 순간 커서가 모서리로 가, 커서 아래를 고르는
+ *          조작(RTS 선택 · 경영 게임 배치)을 시나리오로 낼 수 없다.
+ */
+SW_TEST_CASE( VirtualInputTest, MouseButtonPressesAtTheScriptedPointer )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::VirtualInputScript script;
+    script.addMousePosition( 1, 120, 80 );
+    SW_ASSERT_TRUE( script.addTap( 2, sw::InputSlot::fromMouseButton( sw::MouseButton::Left ), 1 ) );
+    script.addMousePosition( 4, 300, 200 );
+    SW_ASSERT_TRUE( script.addSlot( 4, sw::InputSlot::fromMouseButton( sw::MouseButton::Right ), true ) );
+    input.attachVirtualInput( &script );
+
+    for ( uint32 frame = 0; frame < 5; ++frame )
+    {
+        input.beginFrame( 0.016f );
+        if ( frame == 2 )
+        {
+            SW_EXPECT_TRUE( input.wasMouseButtonPressed( sw::MouseButton::Left ) );
+            SW_EXPECT_TRUE( input.getMousePosition() == sw::int2( 120, 80 ) );
+        }
+        if ( frame == 3 )
+            SW_EXPECT_TRUE( input.getMousePosition() == sw::int2( 120, 80 ) ); // 뗄 때도 그 자리
+        if ( frame == 4 )
+        {
+            SW_EXPECT_TRUE( input.isMouseButtonDown( sw::MouseButton::Right ) );
+            SW_EXPECT_TRUE( input.getMousePosition() == sw::int2( 300, 200 ) );
+        }
+        input.endFrame();
+    }
+    input.detachVirtualInput();
+    input.shutdown();
+}

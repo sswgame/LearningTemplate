@@ -76,6 +76,7 @@ namespace sw
         static constexpr uint32 kRequiresGpuCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGpuCulling` 일 때만 만든다(아니면 `_bCompute`)
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값: 앞면 컬링(뒤집은 껍질 외곽선). XML 은 None 으로만 바꿀 수 있다
+        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha — `_bPremultipliedAlpha`)
     };
 } // namespace sw
 

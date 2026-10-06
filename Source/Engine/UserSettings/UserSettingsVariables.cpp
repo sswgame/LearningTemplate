@@ -18,10 +18,12 @@ SW_GLOBAL_VARIABLE( float32, gv_cameraFieldOfView, 70.0f, "카메라 시야각(�
 SW_GLOBAL_VARIABLE( float32, gv_cameraShakeScale, 1.0f, "카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake)" );
 SW_GLOBAL_VARIABLE( bool, gv_cameraHeadBob, true, "걷기 머리 흔들림 (사용자 설정 gameplay.headBob)" );
 
-SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, 셰이더 미구현)" );
+SW_GLOBAL_VARIABLE( int32, gv_colorVisionMode, 0, "색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiScale, 1.0f, "게임 UI 배율 (사용자 설정 accessibility.uiScale)" );
+SW_GLOBAL_VARIABLE( sw::string, gv_uiTheme, "default", "게임 UI 테마 이름 default · highcontrast (사용자 설정 accessibility.uiTheme)" );
 SW_GLOBAL_VARIABLE( float32, gv_uiTextScale, 1.0f, "게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize)" );
 SW_GLOBAL_VARIABLE( bool, gv_reduceFlashing, false, "번쩍임 줄이기 (사용자 설정 accessibility.reduceFlashing)" );
+SW_GLOBAL_VARIABLE( bool, gv_uiReduceMotion, false, "UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion)" );
 SW_GLOBAL_VARIABLE( bool, gv_subtitles, true, "자막 표시 (사용자 설정 accessibility.subtitles)" );
 SW_GLOBAL_VARIABLE( int32, gv_subtitleSize, 1, "자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize)" );
 SW_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity, 0.5f, "자막 배경 불투명도 0~1 (사용자 설정 accessibility.subtitleBackground)" );

@@ -98,6 +98,9 @@ namespace sw
         desc._bEnableDepthTest     = ( bDepthTest && bPassDepthTest ) ? 1 : 0;
         desc._bEnableDepthWrite    = ( bDefaultDepthWrite && bPassDepthWrite ) ? 1 : 0;
         desc._bEnableBlend         = pPassDesc != nullptr ? ( pPassDesc->_bEnableBlend != 0 ? 1 : 0 ) : ( bDefaultBlend ? 1 : 0 );
+        // 프리멀티플라이는 셰이더의 출력 규약이라 표가 정한다(XML 이 바꿀 수 없다 — 곧은 알파로 섞으면 알파가 두 번 곱해진다).
+        const bool bPremultiplied = desc._bEnableBlend != 0 && info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha );
+        desc._bPremultipliedAlpha = bPremultiplied ? SW_TRUE : SW_FALSE;
 
         // 뎁스를 안 쓰는 패스(풀스크린)는 렌더패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
         // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만

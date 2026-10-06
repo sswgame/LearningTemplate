@@ -10,6 +10,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Text/SystemFontLocator.h"
 
 #include <imgui.h>
 #include <imgui_freetype.h>
@@ -22,34 +23,6 @@ namespace sw::editor
     {
         struct EditorFontSetupInternal
         {
-            /** @brief 해당 디렉터리가 실제로 존재하는 경우에만 정규화하여 출력 목록에 추가합니다. */
-            static void appendIfDirectory( vector<string>& outList, const string& candidate )
-            {
-                if ( candidate.empty() == false && FileUtil::isDirectory( candidate ) )
-                    outList.push_back( FileUtil::normalizeSeparators( candidate ) );
-            }
-
-            /**
-             * @brief 현재 운영체제의 기본 시스템 폰트 디렉터리 경로 목록을 반환합니다.
-             */
-            static vector<string> getSystemFontsDirectories()
-            {
-                vector<string> listDir;
-
-#if defined( SW_PLATFORM_WINDOWS )
-                utf16 windowsDir[constant::kMaxPathSize];
-                if ( GetWindowsDirectoryW( reinterpret_cast<LPWSTR>( windowsDir ), constant::kMaxPathSize ) != 0 )
-                    appendIfDirectory( listDir, FileUtil::joinPath( StringUtil::utf16ToUtf8( windowsDir ), "Fonts" ) );
-
-#elif defined( SW_PLATFORM_LINUX )
-                appendIfDirectory( listDir, "/usr/share/fonts" );
-                appendIfDirectory( listDir, "/usr/local/share/fonts" );
-                if ( const utf8* pHome = std::getenv( "HOME" ) )
-                    appendIfDirectory( listDir, FileUtil::joinPath( pHome, ".local/share/fonts" ) );
-#endif
-                return listDir;
-            }
-
             /**
              * @brief 폰트 파일 이름을 프로젝트 에디터 폰트 폴더 및 OS 시스템 폰트 디렉터리에서 검색하여 절대 경로를 반환합니다.
              */
@@ -76,7 +49,7 @@ namespace sw::editor
                 }
 
                 // 프로젝트 안에 없으면 OS 시스템 폰트 폴더를 직접 찾는다(I/O 지연을 막으려고 재귀 스캔은 하지 않는다)
-                for ( const string& fontsDir : getSystemFontsDirectories() )
+                for ( const string& fontsDir : SystemFontLocator::getSystemFontDirectories() )
                 {
                     string direct = FileUtil::joinPath( fontsDir, pFileName );
                     if ( FileUtil::isRegularFile( direct ) )

@@ -34,5 +34,21 @@ namespace test
          * @details 게임 프리셋(`Ninja-Debug-<게임>`)마다 App 이 그리는 게임이 다르다 — 게임에 매인 시험(시나리오 · 골든 이미지)이 고른다.
          */
         static sw::string readActivePackRoot();
+
+        /** @brief 시나리오 하나의 프로세스 시한(초) — 넘으면 죽이고 -1 입니다(시나리오의 프레임 시한이 먼저 끝내야 한다). */
+        static constexpr uint32 kScenarioTimeoutSeconds = 180;
+        /** @brief 시나리오가 건너뜀으로 끝났다(전경 창을 못 얻음 등 — `AutomationResult::Skipped`). */
+        static constexpr int32 kSkippedExitCode = 13;
+        /** @brief App 을 띄우지 못했다(실행 파일이 없다). */
+        static constexpr int32 kNotLaunchedExitCode = -1000;
+
+        /**
+         * @brief 자동화 시나리오 @p scenarioPath 를 백엔드 스위치 @p pBackendSwitch(`-dx12` · 빈 글 = 빌드 기본)로 돌려 종료 코드를 돌려줍니다.
+         * @details 로그는 `Saved/Automation/<시나리오 이름 조각>_<백엔드>.log`, 보고는 `.json`. `[Scenario]` 줄은 @p outScenarioLines 에 모읍니다.
+         * @return 띄우지 못하면 `kNotLaunchedExitCode`, 시한을 넘겨 죽였으면 -1
+         */
+        static int32 runScenario( const sw::string& scenarioPath, const utf8* pBackendSwitch, sw::string& outScenarioLines );
+        /** @brief 이 기계에서 돌릴 수 없어 건너뛸 종료 코드(13 건너뜀 · 77 백엔드 없음 · 못 띄움)면 true 입니다. */
+        static bool isSkippedExitCode( int32 exitCode );
     };
 } // namespace test

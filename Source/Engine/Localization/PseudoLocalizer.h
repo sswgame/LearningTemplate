@@ -25,9 +25,16 @@ namespace sw
 
         /** @brief 메시지 패턴 @p pattern 을 @p mode 로 바꿉니다. `None` 이면 그대로입니다. */
         static string transform( string_view pattern, PseudoLocaleMode mode );
-        /** @brief 글자 조각 하나 — ASCII 글자는 악센트 글자로, 모음은 한 번 더 써서 길이를 약 40 % 늘립니다. 구문 문자(`{` `}` `'` `#`)는 그대로입니다. */
+        /**
+         * @brief 글자 조각 하나 — ASCII 글자는 악센트 글자로, 모음은 한 번 더 써서 길이를 약 40 % 늘립니다. 구문 문자(`{` `}` `'` `#`)는 그대로입니다.
+         * @details 리치 텍스트 표기(`[b]` · `[color=…]` · `[[` — `MarkupTagScanner`)도 그대로 둡니다.
+         */
         static string accentLiteral( string_view literalText );
         /** @brief 의사 변환을 거친 글인지(앞뒤 표시가 있는지)입니다. 하드코딩 글 찾기 · 시험이 씁니다. */
         static bool isPseudoText( string_view text );
+
+    private:
+        /** @brief 표기가 없는 글 조각의 ASCII 글자를 바꿉니다. */
+        static string accentPlainText( string_view plainText );
     };
 } // namespace sw

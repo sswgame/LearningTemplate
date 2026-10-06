@@ -28,6 +28,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | **Mesh/** | CPU 메시 에셋(`Mesh`)과 기본 도형 생성기(`MeshUtil`), 메시 에셋 파일(`.mesh` — `MeshAssetFormat`)과 경로 캐시(`MeshCache`). GPU 풀은 여기 없다 — Renderer/Scene/ |
 | **Texture/** | `Texture2D` 에셋과 `TextureCache`(참조 수 + unique_ptr) |
 | **Upload/** | `GpuUploadQueue` — 게임 스레드가 스냅샷을 내보내기 **전에** 워커가 GPU 리소스를 만든다 |
+| **Canvas/** | 화면 2D 그리기 목록(`CanvasDrawList` — 셰이더 원소와 같은 배치의 사각형 · 텍스처 넷 + 가위 단위 일괄 · 글리프 아틀라스 업로드)과 칠하기 도구(`CanvasPainter` — UI 단위 → 픽셀 · 변환 · 자르기(사각 = 가위, 둥근 = 셰이더) · 불투명도 · 9-슬라이스 · SDF 글리프). 렌더 스레드로 넘어가는 UI 값은 이것뿐이다 |
 | **2D/** | [2D/README.md](2D/README.md). 2D 렌더 데이터 — `Render2DSettings`(`render2d.xml` 정렬 레이어 표 · 정렬 키 · 투명 정렬 축) |
 | **Renderer/** | [Renderer/README.md](Renderer/README.md). `Frame/` FrameRenderer 와 그 소유물 셋(PassConstantRing · RenderPsoCache · TransientAttachmentPool) · `Graph/` RenderGraph · `Pipeline/` 패스·파이프라인 리소스·입력 계약 · `Scene/` GpuSceneBuilder(GT) → GpuSceneSnapshot → GpuScene(RT) + GPU 정점/모프 풀 · `Light/` 라이트 버퍼 · `Debug/` 에디터가 읽는 통로(RenderTargetRegistry · DebugDrawQueue) · `Capture/` 격리 스튜디오 렌더(PortraitRenderer) · RenderThread |
 
@@ -79,6 +80,7 @@ DX11 · DX12 · OpenGL · Vulkan
 | `Mesh` · `MeshUtil` | Mesh/ | 메시 버퍼 · 기본 도형 생성 |
 | `MeshAssetFormat` · `MeshCache` | Mesh/ | `.mesh` 읽기 · 쓰기(쓰기는 에디터 모델 임포터, 판 2 = 스킨 스트림), 경로당 `Mesh` 하나(약한 참조) · 제자리 핫 리로드. `MeshComponent::_meshId` 가 `.mesh` 경로면 여기서 받는다. 스킨드 메시는 `Mesh::setSkin`(정점마다 본 넷 · 가중치) |
 | `Texture2D` · `TextureCache` | Texture/ | 텍스처 에셋 · 캐시 |
+| `CanvasDrawList` · `CanvasPainter` | Canvas/ | 화면 2D(UI · 월드 글자) 그리기 목록과 칠하기 도구 — 게임 스레드가 칠하고 패킷이 렌더 스레드로 나른다 |
 | `GpuUploadQueue` | Upload/ | GPU 리소스를 그리기 전에 워커로 만든다 |
 | `FrameRenderer` · `RenderView` | Renderer/Frame/ | 한 프레임 오케스트레이션과 뷰 |
 | `RenderViewCollector` · `RenderViewScheduler` | Renderer/Frame/ | 다중 뷰 — 씬 카메라에서 추가 뷰 요청을 모으고(GT), 갱신 주기 · 보임 · 예산으로 이번 프레임에 그릴 뷰를 고른다 |
