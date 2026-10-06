@@ -25,8 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot  # noqa: E402
-from common.AppRun import (kBackendSwitch, computeSlopePerMinute, findBuildDirOfApp, loadGameTable, parseProfileTable,  # noqa: E402
-                           parseProfileWall, readCMakeCacheValue, runApp)
+from common import BuildTree  # noqa: E402
+from common.AppRun import kBackendSwitch, computeSlopePerMinute, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 kMegabyte = 1024.0 * 1024.0
 
@@ -46,7 +46,7 @@ def main(listArgument: list[str] | None = None) -> int:
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
-    gameName = args.game or readCMakeCacheValue(findBuildDirOfApp(args.app), "SW_ACTIVE_GAME")
+    gameName = args.game or BuildTree.ofApp(args.app).readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Soak] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)

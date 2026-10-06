@@ -21,6 +21,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .BuildTree import BuildTree
+
 #: 백엔드 짧은 이름 → App 스위치(쿠킹 표의 첫 별칭과 같다 — `Config/Engine/CookContract.json`).
 kBackendSwitch: dict[str, str] = {"dx12": "-dx12", "dx11": "-dx11", "vk": "-vk", "gl": "-gl"}
 
@@ -97,31 +99,16 @@ def parseProfileWall(listLine: list[str]) -> tuple[int, int, int] | None:
     return None
 
 
-def readCMakeCacheValue(buildDir: Path, name: str) -> str | None:
-    cachePath = Path(buildDir) / "CMakeCache.txt"
-    if not cachePath.is_file():
-        return None
-    for line in cachePath.read_text(encoding="utf-8", errors="replace").splitlines():
-        if line.startswith(f"{name}:"):
-            return line.split("=", 1)[1].strip()
-    return None
-
-
 #: Shipping 이 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND` — 쿠킹 표의 이름, 소문자) → 백엔드 짧은 이름.
 _kShippingBackendAlias: dict[str, str] = {"directx12": "dx12", "directx11": "dx11", "vulkan": "vk", "opengl": "gl"}
 
 
-def findUsableBackends(buildDir: Path) -> list[str]:
+def findUsableBackends(tree: BuildTree) -> list[str]:
     """그 빌드의 App 이 받는 백엔드 — Dev 는 넷 다(모듈), Shipping 은 링크한 하나뿐이다(다른 스위치는 기동 오류다)."""
-    if readCMakeCacheValue(buildDir, "SW_SHIPPING_BUILD") not in ("ON", "TRUE", "1"):
+    if not tree.bShipping:
         return list(kBackendSwitch)
-    backend = _kShippingBackendAlias.get((readCMakeCacheValue(buildDir, "SW_SHIPPING_RHI_BACKEND") or "").lower())
+    backend = _kShippingBackendAlias.get((tree.readCacheValue("SW_SHIPPING_RHI_BACKEND") or "").lower())
     return [backend] if backend else []
-
-
-def findBuildDirOfApp(appPath: Path) -> Path:
-    """`build/<프리셋>/Bin/App.exe` → `build/<프리셋>`."""
-    return Path(appPath).resolve().parent.parent
 
 
 def loadGameTable(repositoryRoot: Path) -> dict:

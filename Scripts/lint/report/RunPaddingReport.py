@@ -50,7 +50,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-from common import TranslationUnitSweep, getProjectRoot, runProcess  # noqa: E402
+from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot, runProcess  # noqa: E402
 
 _kDefaultPreset = "Ninja-Debug"
 _kTag = "RunPaddingReport"
@@ -599,7 +599,7 @@ def main() -> int:
     repositoryRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="Source/ 레코드의 패딩과 필드 재배치로 줄일 수 있는 크기를 보고합니다 (게이트 아님)")
-    parser.add_argument("--preset", default=_kDefaultPreset, help=f"컴파일 DB 를 읽을 빌드 프리셋 (기본 {_kDefaultPreset})")
+    addBuildTreeArguments(parser)
     parser.add_argument("--define", action="append", default=[],
                         help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE) — 예: --define SW_SHIPPING")
     parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Engine/Graphics)")
@@ -612,8 +612,8 @@ def main() -> int:
     parser.add_argument("--out", default="", help="전체 결과를 TSV 로 저장할 파일")
     args = parser.parse_args()
 
-    buildDir = repositoryRoot / "build" / args.preset
-    sweep = TranslationUnitSweep(buildDir, tag=_kTag)
+    tree = BuildTree.fromArguments(args, repositoryRoot)
+    sweep = TranslationUnitSweep(tree, tag=_kTag)
     if sweep.bHasDatabase is False:
         sweep.reportMissingDatabase()
         return 0
@@ -636,7 +636,7 @@ def main() -> int:
             return 0
 
         defineText = f", 정의 {' '.join(args.define)}" if args.define else ""
-        print(f"[{_kTag}] {args.preset}{defineText}: TU {len(listUnit)}개를 libclang 으로 파싱합니다 …")
+        print(f"[{_kTag}] {tree.name}{defineText}: TU {len(listUnit)}개를 libclang 으로 파싱합니다 …")
         sourceRoot = repositoryRoot / "Source"
         rawText = sweep.run(listUnit, lambda entry: runUnitInternal(entry, sourceRoot, tuple(args.define)),
                             workerCount=args.jobs or None, progressEvery=100)

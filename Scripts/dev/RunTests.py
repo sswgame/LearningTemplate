@@ -27,20 +27,19 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, mapConcurrent, runProcess  # noqa: E402
+from common import BuildTree, addBuildTreeArguments, mapConcurrent, runProcess  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
 
 
-def findTestExecutables(buildDir: Path) -> tuple[Path, list[Path]]:
+def findTestExecutables(tree: BuildTree) -> tuple[Path, list[Path]]:
     """(작업 폴더 Bin, 테스트 실행 파일들). Shipping 은 실행 파일이 TestBin 에 있다."""
-    binDir = buildDir / "Bin"
-    for candidateDir in (buildDir / "TestBin", binDir):
+    for candidateDir in (tree.testBinDir, tree.binDir):
         listExecutable = sorted(path for path in candidateDir.glob("*Test*") if path.is_file() and path.suffix in ("", ".exe"))
         if listExecutable:
-            return binDir, listExecutable
-    return binDir, []
+            return tree.binDir, listExecutable
+    return tree.binDir, []
 
 
 def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[str]:
@@ -52,17 +51,17 @@ def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run tests by suite/case name in the right executable and folder.")
     parser.add_argument("pattern", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
-    parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋 폴더 이름 (기본 Ninja-Debug)")
+    addBuildTreeArguments(parser)
     parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
     parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
     parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
     # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
     args, listPassthrough = parser.parse_known_args(argv)
 
-    buildDir = getProjectRoot() / "build" / args.preset
-    workingDir, listExecutable = findTestExecutables(buildDir)
+    tree = BuildTree.fromArguments(args)
+    workingDir, listExecutable = findTestExecutables(tree)
     if not listExecutable:
-        print(f"[RunTests] {buildDir} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {args.preset})", file=sys.stderr)
+        print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name})", file=sys.stderr)
         return 2
 
     # 실행 파일마다 `--test_list` 로 묻는다 — 엔진 서비스를 세우느라 하나에 수백 ms 라 동시에.

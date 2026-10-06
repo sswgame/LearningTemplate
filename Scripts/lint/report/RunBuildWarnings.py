@@ -65,7 +65,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import TranslationUnitSweep, getProjectRoot
+from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
 _kDiagnosticRe = re.compile(r"^(?P<where>.+?):\s*(?P<kind>warning|error):\s*(?P<text>.*)$")
@@ -248,8 +248,7 @@ def main() -> int:
     projectRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="트리에 남아 있는 컴파일러 경고를 전부 보고합니다")
-    parser.add_argument("--preset", action="append", default=None,
-                        help=f"검사할 빌드 프리셋 (여러 번 줄 수 있습니다. 기본: {' '.join(_kDefaultPresets)})")
+    addBuildTreeArguments(parser, bMultiple=True)
     parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Graphics)")
     parser.add_argument("--jobs", type=int, default=max(4, (os.cpu_count() or 8)), help="병렬 실행 수")
     parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
@@ -261,13 +260,17 @@ def main() -> int:
                              "주지 않으면 늘 0 입니다(보고 도구)")
     args = parser.parse_args()
 
-    listPreset = args.preset or list(_kDefaultPresets)
+    if args.build_dir:
+        listTree = [BuildTree.fromArguments(args, projectRoot)]
+    else:
+        listTree = [BuildTree.fromPreset(name, projectRoot) for name in (args.preset or _kDefaultPresets)]
     mapPresetToText: dict[str, str] = {}
     listRawChunk: list[str] = []
     listSkippedPreset: list[str] = []
 
-    for presetName in listPreset:
-        sweep = TranslationUnitSweep(projectRoot / "build" / presetName, tag="RunBuildWarnings")
+    for tree in listTree:
+        presetName = tree.name
+        sweep = TranslationUnitSweep(tree, tag="RunBuildWarnings")
         listEntry = sweep.selectUnits(args.filter)
         if sweep.listMissingFile:
             print(f"[RunBuildWarnings] {presetName}: 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB — "

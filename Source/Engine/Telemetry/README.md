@@ -103,7 +103,7 @@ Shooter3D 는 새 웨이브(`progression.waveReached`)와 쓰러짐(`progression
   묶음의 `buildId` 로 "어느 빌드의 PDB 가 필요한가" 를 덤프를 열지 않고 안다.
 - 모든 구성이 서명을 적는다 — Release · Shipping 도 `/DEBUG:FULL` + `/PDBALTPATH:%_PDB%`(PDB 이름만, 빌드 기계 경로가 새지 않는다). 디버그 정보의 양은
   `SW_RELEASE_DEBUG_INFO`(기본 `lines` — 함수 · 줄 표만, `full` · `none`). Shipping 의 PDB 는 배포 폴더 밖 `build/<프리셋>/Symbols/` 에 놓인다(시험 실행 파일의 PDB 는 `TestBin`).
-- 배포할 때 할 일: 빌드마다 `py -3 -m Scripts symbols --build build/Ninja-Shipping --store <저장소>`(Windows PDB · 리눅스 `.debug` 를 심볼 서버 배치로) 또는
+- 배포할 때 할 일: 빌드마다 `py -3 -m Scripts symbols --preset Ninja-Shipping --store <저장소>`(Windows PDB · 리눅스 `.debug` 를 심볼 서버 배치로) 또는
   Sentry `sentry-cli debug-files upload`. 배포물에는 PDB 를 싣지 않는다. Dev 는 모듈(DLL)마다 PDB 가 따로라 `EngineBuildId` 도 적는다.
 - 리눅스: ELF `NT_GNU_BUILD_ID` 노트(16진). 링크가 `--build-id=sha1` 을 늘 준다. Shipping `App` 은 링크 뒤 `objcopy --only-keep-debug` 로 디버그 정보를
   `Symbols/App.debug` 로 떼고 `.gnu_debuglink` 만 남긴다(`sw_splitShippingDebugInfo`); 저장소에는 `.build-id/<앞 2 자리>/<나머지>.debug` 배치로(gdb · Sentry 가 읽는다).

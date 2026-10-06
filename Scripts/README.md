@@ -159,7 +159,7 @@ py -3 -m Scripts asset-merge diff a.scene.xml b.scene.xml   # XML 에셋 의미 
 py -3 -m Scripts golden --app build/Ninja-Debug-NileCity/Bin/App.exe   # 골든 이미지 (GoldenImages)
 py -3 -m Scripts soak --app <App> --minutes 10                # 장시간 실행 (Soak)
 py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe   # 성능 회귀 (PerfRegression)
-py -3 -m Scripts symbols --build build/Ninja-Shipping --store <저장소>   # 심볼 저장소 배치 (StoreSymbols)
+py -3 -m Scripts symbols --preset Ninja-Shipping --store <저장소>   # 심볼 저장소 배치 (StoreSymbols)
 py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러 (SampleStacks, Windows)
 ```
 

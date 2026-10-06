@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import CookContractSpec, getProjectRoot, runProcess
+from common import BuildTree, CookContractSpec, addBuildTreeArguments, runProcess
 
 kArrBackgroundColor = (31, 38, 46)  # forwardpipeline.xml SceneColor clearColor 0.12,0.15,0.18
 
@@ -45,20 +45,18 @@ def readPpmStatsInternal(path):
 
 def main():
     parser = argparse.ArgumentParser(description="4-backend PPM smoke")
-    parser.add_argument("--preset", default="Ninja-Debug")
+    addBuildTreeArguments(parser)
     parser.add_argument("--out", default=None, help="PPM/log 출력 폴더 (기본: build/<preset>/smoke)")
     parser.add_argument("--meshes", type=int, default=16)
     args = parser.parse_args()
 
-    # 손으로 세던 상위 디렉터리 개수(parents[3])는 스크립트가 한 칸만 옮겨져도 조용히 틀린다.
-    # 공용 getProjectRoot 는 CMakeLists.txt 를 찾아 올라간다.
-    repo = str(getProjectRoot())
-    bin_dir = os.path.join(repo, "build", args.preset, "Bin")
+    tree = BuildTree.fromArguments(args)
+    bin_dir = str(tree.binDir)
     app = os.path.join(bin_dir, "App.exe")
     if os.path.exists(app) is False:
         print("App.exe 가 없습니다: " + app)
         return 2
-    out_dir = args.out or os.path.join(repo, "build", args.preset, "smoke")
+    out_dir = args.out or str(tree.path / "smoke")
     os.makedirs(out_dir, exist_ok=True)
 
     # (백엔드 이름, 플래그) — 쿠킹 표의 줄 순서, 플래그는 그 줄의 첫 별칭.

@@ -17,28 +17,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-#: App 이 있을 수 있는 빌드 폴더 — 앞에서부터 본다 (저장소 루트 기준).
-#: Shipping App 도 쿠커·쿠커를 링크한다(로그만 안 남는다). 두 번째 Shipping 빌드부터는
-#: 그 경로가 살아 있어서 Dev 빌드 없이도 스스로 다시 쿠킹한다.
-kAppBuildBinDir: tuple[str, ...] = (
-    "build/Ninja-Debug/Bin",
-    "build/Ninja-Release/Bin",
-    "build/Ninja-Shipping/Bin",
-    "build/CI-Debug/Bin",
-    "build/CI-Shipping/Bin",
-    "build/WSL-Debug/Bin",
-    "build/WSL-Release/Bin",
-    "build/WSL-Shipping/Bin",
-    "Bin",
-)
-
-#: 플랫폼별 실행 파일 이름. 리눅스는 확장자가 없다.
-kAppExecutableName: tuple[str, ...] = ( "App.exe", "App" )
-
-#: 빌드된 App 을 찾는 자리 — 폴더 × 이름, 앞에서부터.
-kAppExecutableRelPath: tuple[str, ...] = tuple(
-    f"{binDir}/{name}" for binDir in kAppBuildBinDir for name in kAppExecutableName
-)
+from .BuildTree import BuildTree
 
 #: 쿠커가 셰이더 컴파일 실패를 알릴 때 쓰는 문구. 이 줄이 있으면 종료 코드와 무관하게 실패다.
 kShaderCompileFailureMark = "Failed to compile shader"
@@ -52,11 +31,7 @@ def findAppExecutable(projectRoot: Path, explicitPath: Path | None = None) -> Pa
     """
     if explicitPath is not None:
         return explicitPath if explicitPath.is_file() else None
-    for relPath in kAppExecutableRelPath:
-        candidate = projectRoot / relPath
-        if candidate.is_file():
-            return candidate
-    return None
+    return BuildTree.findAppExecutable(projectRoot)
 
 
 def runShaderCook(

@@ -29,8 +29,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot, runProcess  # noqa: E402
-from common.AppRun import (kBackendSwitch, kSkipExitCode, findBuildDirOfApp, findUsableBackends, loadGameTable,  # noqa: E402
-                           readCMakeCacheValue, runApp)
+from common import BuildTree  # noqa: E402
+from common.AppRun import kBackendSwitch, kSkipExitCode, findUsableBackends, loadGameTable, runApp  # noqa: E402
 from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, computeMetrics, deriveTolerance, downscale,  # noqa: E402
                                  readPng, readPpm, writePng)
 
@@ -147,7 +147,8 @@ def main(listArgument: list[str] | None = None) -> int:
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
-    gameName = args.game or readCMakeCacheValue(findBuildDirOfApp(args.app), "SW_ACTIVE_GAME")
+    appTree = BuildTree.ofApp(args.app)
+    gameName = args.game or appTree.readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Golden] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
@@ -160,7 +161,7 @@ def main(listArgument: list[str] | None = None) -> int:
     diffDir = (args.diff_dir / gameName) if args.diff_dir is not None else None
 
     # Shipping 은 백엔드 하나만 링크한다 — 다른 백엔드는 기동 오류라 건너뛴다(골든은 같은 기준과 견준다).
-    listUsable = findUsableBackends(findBuildDirOfApp(args.app))
+    listUsable = findUsableBackends(appTree)
     listBackend = [backend for backend in args.backends if backend in listUsable]
     for backend in args.backends:
         if backend not in listUsable:

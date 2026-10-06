@@ -4,8 +4,8 @@
 @file StoreSymbols.py
 @brief 빌드의 심볼을 심볼 저장소 배치로 복사합니다 — 크래시 묶음의 `buildId` 로 그 빌드의 심볼을 찾는 자리입니다.
 
-    py -3 -m Scripts symbols --build build/Ninja-Shipping --store D:/SymbolStore
-    py -3 -m Scripts symbols --build build/Ninja-Shipping --store D:/SymbolStore --dry-run
+    py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore
+    py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore --dry-run
 
 Windows: `Symbols/*.pdb`(없으면 `Bin/*.pdb`)를 `<저장소>/<pdb 이름>/<GUID 32 자리><age 16진>/<pdb 이름>`(symstore · 심볼 서버 배치)로.
 PDB 의 GUID · age 는 PDB 자신의 정보 스트림(스트림 1)에서 읽는다 — 실행 파일의 RSDS 와 같은 값이다(`ModuleBuildId` 가 만드는 열쇠).
@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common import BuildTree, addBuildTreeArguments  # noqa: E402
 
 _kMsfMagic = b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\x00\x00\x00"
 _kPdbInfoStream = 1
@@ -102,14 +102,15 @@ def collectSymbolFilesInternal(buildDir: Path) -> list[Path]:
 
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사한다")
-    parser.add_argument("--build", type=Path, required=True, help="빌드 폴더(예: build/Ninja-Shipping)")
+    addBuildTreeArguments(parser, defaultPreset="Ninja-Shipping")
     parser.add_argument("--store", type=Path, required=True, help="심볼 저장소 폴더")
     parser.add_argument("--dry-run", action="store_true", help="복사하지 않고 배치만 찍는다")
     args = parser.parse_args(listArgument)
 
-    listFile = collectSymbolFilesInternal(args.build)
+    buildDir = BuildTree.fromArguments(args).path
+    listFile = collectSymbolFilesInternal(buildDir)
     if not listFile:
-        print(f"no symbol file under {args.build}/Symbols or {args.build}/Bin", file=sys.stderr)
+        print(f"no symbol file under {buildDir}/Symbols or {buildDir}/Bin", file=sys.stderr)
         return 1
     copiedCount = 0
     failedCount = 0

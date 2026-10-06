@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common import BuildTree, addBuildTreeArguments  # noqa: E402
 from common.HeaderSelfContained import (findHeaderProbeProblem, findSeedEntry, loadCompileDatabase, makeSeedIndex,  # noqa: E402
                                         runSyntaxOnly)
 
@@ -391,7 +391,7 @@ def main() -> int:
     parser.add_argument("--show-unused", action="store_true", help="정의된 이름의 쓰임을 못 찾은 include 도 보인다 (우산 · 기본형 헤더가 섞여 시끄럽다)")
     parser.add_argument("--verify-unused", action="store_true",
                         help="쓰임을 못 찾은 include 를 실제로 빼고 단독 컴파일해 '빼도 선다' 만 보인다 (컴파일 DB 필요, 몇 분)")
-    parser.add_argument("--build", default="build/Ninja-Debug", help="--verify-unused 가 쓸 컴파일 DB 의 빌드 폴더")
+    addBuildTreeArguments(parser)
     args = parser.parse_args()
 
     listHeader = sorted(p for p in kSourceRoot.rglob("*.h") if ".gen." not in p.name)
@@ -411,9 +411,7 @@ def main() -> int:
         names = ", ".join(n for n, _, _ in c.listName)
         print("  %s  ←  %s  [%s]" % (c.header.relative_to(kRepositoryRoot).as_posix(), c.included.relative_to(kSourceRoot).as_posix(), names))
     if listUnused and args.verify_unused and not args.apply:
-        buildDir = Path(args.build)
-        if not buildDir.is_absolute():
-            buildDir = kRepositoryRoot / buildDir
+        buildDir = BuildTree.fromArguments(args, kRepositoryRoot).path
         verified = verifyUnusedIncludes(listUnused, buildDir)
         print("\n  쓰임을 못 찾은 include %d건을 컴파일로 가렸다: 빼도 선다 %d · 거쳐 오는 이름이 있다 %d · 헤더가 혼자 서지 못한다 %d"
               % (len(listUnused), len(verified["removable"]), len(verified["needed"]), len(verified["unknown"])))

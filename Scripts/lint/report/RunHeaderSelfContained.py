@@ -27,8 +27,8 @@ staged 헤더만 본다(`gate/CheckHeaderSelfContained.py`). 판정 · 플래그
   py -3 Scripts/lint/report/RunHeaderSelfContained.py                       # Source/ 전부
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --filter Engine/Graphics
   py -3 Scripts/lint/report/RunHeaderSelfContained.py --files Source/Engine/Scene/Scene.h
-  py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/Ninja-Shipping --jobs 8
-  py -3 Scripts/lint/report/RunHeaderSelfContained.py --build build/CI-Debug --fail-on-violation   # CI 정기 잡
+  py -3 Scripts/lint/report/RunHeaderSelfContained.py --preset Ninja-Shipping --jobs 8
+  py -3 Scripts/lint/report/RunHeaderSelfContained.py --preset CI-Debug --fail-on-violation   # CI 정기 잡
 """
 
 from __future__ import annotations
@@ -40,15 +40,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common import BuildTree, addBuildTreeArguments  # noqa: E402
 from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
-                                        isCheckedHeader, kDefaultHeaderProbeBuildDir)
+                                        isCheckedHeader)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="혼자 서지 못하는 헤더를 보고한다 (게이트 아님).")
     parser.add_argument("--root", default=".", help="저장소 루트")
-    parser.add_argument("--build", default=str(kDefaultHeaderProbeBuildDir), help="컴파일 DB 가 있는 빌드 디렉터리")
+    addBuildTreeArguments(parser)
     parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 헤더만")
     parser.add_argument("--files", nargs="*", default=None, help="검사할 헤더 경로 목록")
     parser.add_argument("--jobs", type=int, default=0, help="동시 실행 수 (0 이면 CPU 수)")
@@ -57,9 +57,7 @@ def main() -> int:
     args = parser.parse_args()
 
     repositoryRoot = Path(args.root).resolve()
-    buildDir = Path(args.build)
-    if not buildDir.is_absolute():
-        buildDir = repositoryRoot / buildDir
+    buildDir = BuildTree.fromArguments(args, repositoryRoot).path
 
     problem = findHeaderProbeProblem(buildDir)
     if problem:

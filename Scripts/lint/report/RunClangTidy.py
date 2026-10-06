@@ -30,7 +30,7 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import TranslationUnitSweep, getProjectRoot, runProcess
+from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot, runProcess
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
@@ -135,7 +135,7 @@ def main() -> int:
     projectRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="clang-tidy 정적 분석 실행")
-    parser.add_argument("--preset", default="Ninja-Debug", help="컴파일 DB 를 가져올 빌드 프리셋")
+    addBuildTreeArguments(parser)
     parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Core)")
     parser.add_argument("--jobs", type=int, default=5, help="병렬 실행 수")
     parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
@@ -143,14 +143,15 @@ def main() -> int:
                         help="쓸 clang-tidy 실행 파일 (버전을 고정해 비교할 때)")
     args = parser.parse_args()
 
-    buildDir = projectRoot / "build" / args.preset
+    tree = BuildTree.fromArguments(args, projectRoot)
+    buildDir = tree.path
     tidyExe = args.clangTidy or findClangTidy()
     # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 판이 다른 두 PC 는 같은 코드에서
     # "0건" 과 "72건" 처럼 다른 답을 받는다. 숫자만으로는 비교할 수 없다.
     print(f"[RunClangTidy] {tidyExe}")
     print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
 
-    sweep = TranslationUnitSweep(buildDir, tag="RunClangTidy")
+    sweep = TranslationUnitSweep(tree, tag="RunClangTidy")
     if not sweep.bHasDatabase:
         sweep.reportMissingDatabase()
         return 2
@@ -164,7 +165,7 @@ def main() -> int:
         print("[RunClangTidy] 검사할 TU 가 없습니다.")
         return 0
 
-    print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {args.jobs} ({args.preset})")
+    print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {args.jobs} ({tree.name})")
     diagnosticText = sweep.run(
         listUnit,
         lambda unit: runOne(tidyExe, buildDir, unit),

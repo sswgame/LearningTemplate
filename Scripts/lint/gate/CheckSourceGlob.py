@@ -22,13 +22,12 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 (Ninja 빌드는 소스 GLOB 의 `CONFIGURE_DEPENDS` 로 추가 · 삭제를 감지하지만,
  이 게이트는 전체 빌드 없이 빠르게 소스 누락을 막는 데 씁니다.)
 
-  python Scripts/lint/gate/CheckSourceGlob.py [--root <repo>] [--build <dir>]
+  python Scripts/lint/gate/CheckSourceGlob.py [--root <repo>] [--preset <이름> | --build-dir <dir>]
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
@@ -37,7 +36,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import (  # noqa: E402
+    BuildTree,
+    BuildTreeError,
+    addBuildTreeArguments,
     collectSourceFiles,
+    kUnbuiltSourceListRelPath,
     kCppSourceExtensions,
     kDirSourceApp,
     kDirSourceCore,
@@ -56,57 +59,6 @@ _kScanRoots = (
     kDirSourceGames,
     kDirSourceCore,
 )
-
-#: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 트리 기준). `cmake/Engine/TargetRules.cmake` 의
-#: `SW_UNBUILT_SOURCE_LIST` 와 같은 경로다. 한 줄에 저장소 기준 경로 하나.
-_kUnbuiltSourceListPath = "generated/sw/config/UnbuiltSources.txt"
-
-
-def readUnbuiltSourcesInternal(buildDir: Path) -> set[str] | None:
-    """빌드 트리의 "짓지 않는 소스" 목록(저장소 기준 경로, 소문자). 목록 파일이 없으면 None — 이 변경 전에 구성한 트리다."""
-    listPath = buildDir / _kUnbuiltSourceListPath
-    if listPath.is_file() is False:
-        return None
-    lines = listPath.read_text(encoding="utf-8", errors="ignore").splitlines()
-    return {line.strip().replace("\\", "/").lower() for line in lines if line.strip()}
-
-
-def pickBuildDirInternal(repo: Path) -> Path | None:
-    """
-    compile_commands.json 을 읽을 빌드 트리를 고릅니다.
-
-    .clangd 가 가리키는 트리를 먼저 보고, 없으면 가장 최근에 갱신된 것을 쓴다. 주의: 이름순 같은 의미 없는
-    순서로 고르면 build/ 에 디렉터리가 하나 늘어나는 것만으로 대상이 바뀐다 — Unity 빌드 트리를 고르면
-    (개별 .cpp 가 없다) 수백 개를 "빠졌다" 고 오탐한다.
-    """
-    rootDb = repo / "build" / "compile_commands.json"
-    if rootDb.is_file():
-        return rootDb.parent
-
-    preferred = readClangdBuildDirInternal(repo)
-    if preferred is not None and (preferred / "compile_commands.json").is_file():
-        return preferred
-
-    candidates = list((repo / "build").glob("*/compile_commands.json"))
-    if not candidates:
-        return None
-    return max(candidates, key=lambda path: path.stat().st_mtime).parent
-
-
-def readClangdBuildDirInternal(repo: Path) -> Path | None:
-    """.clangd 의 CompilationDatabase 항목이 가리키는 빌드 트리 (없으면 None)."""
-    clangdFile = repo / ".clangd"
-    if not clangdFile.is_file():
-        return None
-    for line in clangdFile.read_text(encoding="utf-8", errors="ignore").splitlines():
-        stripped = line.strip()
-        if not stripped.startswith("CompilationDatabase:"):
-            continue
-        value = stripped.split(":", 1)[1].strip().strip('"').strip("'")
-        if value:
-            return (repo / value).resolve()
-    return None
-
 
 _kRhiBackendListFile = "cmake/Engine/RhiBackendSources.cmake"
 _kRhiBackendRoot = "Source/Engine/Graphics/RHI"
@@ -146,15 +98,16 @@ class CheckSourceGlobGate(LintGate):
     빌드가 실제로 컴파일하는 목록과 디스크의 소스를 대조한다.
 
     본 검사는 **빌드 트리의 compile_commands.json** 과 대조한다(빌드 없이 돌리면 스스로 "소스 목록만 보고" 하고 0 을 돌려준다).
-    자가 시험은 임시 트리에 `build/compile_commands.json` 을 직접 써서 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
+    고르는 빌드 폴더는 `--build-dir`(CTest 가 `${CMAKE_BINARY_DIR}` 를 넘긴다) · `--preset`, 없으면 `.clangd` 가 가리키는 트리다(`BuildTree`).
+    자가 시험은 임시 트리에 `build/compile_commands.json` 을 직접 써서 `--build-dir build` 로 돌린다 — "짓지 않는 소스" 목록이 있어도 거기 없는
     빠진 소스는 잡는지 본다(목록이 게이트를 눈멀게 하지 않는지).
     """
 
     description = "소스 GLOB 누락 검사"
     buildComment = "Checking source GLOB coverage vs compile_commands..."
     timeoutSeconds = 15
-    preCommitSkipReason = "빌드 디렉터리(--build)가 있어야 글롭과 대조할 수 있다 — 커밋 훅은 그것을 모른다"
-    listCtestArgument = ("--build", "${CMAKE_BINARY_DIR}")
+    preCommitSkipReason = "빌드 디렉터리(--build-dir)가 있어야 글롭과 대조할 수 있다 — 커밋 훅은 그것을 모른다"
+    listCtestArgument = ("--build-dir", "${CMAKE_BINARY_DIR}")
     maxViolationShown = 40
     hint = ("  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다. 이 구성이 일부러 짓지 않는 소스라면\n"
             "  빼는 자리에서 sw_excludeUnbuiltSources · sw_declareUnbuiltSources 로 적으세요(cmake/Engine/TargetRules.cmake).")
@@ -168,6 +121,7 @@ class CheckSourceGlobGate(LintGate):
                 "build/compile_commands.json": "[]\n",
                 "build/generated/sw/config/UnbuiltSources.txt": "Source/Editor/Declared.cpp\n",
             },
+            "args": ["--build-dir", "build"],
         },
         {
             # 게이트에 플랫폼 · 게임 무시 목록이 없다 — 다른 OS 폴더 · 다른 게임 팩도 목록에 없으면 위반이다.
@@ -181,11 +135,12 @@ class CheckSourceGlobGate(LintGate):
                 "build/compile_commands.json": "[]\n",
                 "build/generated/sw/config/UnbuiltSources.txt": "Source/Engine/Graphics/RHI/Vulkan/Built.cpp\n",
             },
+            "args": ["--build-dir", "build"],
         },
     ]
 
     def addArguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--build", type=Path, default=None, help="compile_commands.json 이 있는 빌드 디렉터리")
+        addBuildTreeArguments(parser, defaultPreset=None)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         # 백엔드 목록 검사는 빌드 트리가 없어도 성립한다 — 아래 조기 반환들보다 먼저 본다.
@@ -195,29 +150,29 @@ class CheckSourceGlobGate(LintGate):
         sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
         summary = f"{len(sources)} sources scanned under Source/"
 
-        buildDir = args.build.resolve() if args.build else pickBuildDirInternal(repositoryRoot)
-        if buildDir is None or not (buildDir / "compile_commands.json").is_file():
+        tree = BuildTree.fromArguments(args, repositoryRoot)
+        try:
+            data = tree.readCompileDatabase()
+        except BuildTreeError:
             return GateResult(
                 listViolation=violations,
                 listNote=["compile_commands.json 없음 — 소스 목록만 보고합니다"],
                 summary=summary,
             )
 
-        data = json.loads((buildDir / "compile_commands.json").read_text(encoding="utf-8"))
-
         # Unity 빌드는 소스를 unity_N_cxx.cxx 로 묶어 컴파일하므로 개별 .cpp 가 DB 에 없다.
         # 그 빌드 트리에서는 이 검사가 성립하지 않는다 — 없다고 답하는 대신 성립하지 않는다고 말한다.
         if any("unity_" in entry.get("file", "") for entry in data):
             return GateResult(
                 listViolation=violations,
-                listNote=[f"{buildDir.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다"],
+                listNote=[f"{tree.name} 은 Unity 빌드라 개별 소스가 DB 에 없습니다 — 검사를 건너뜁니다"],
                 summary=summary,
             )
 
         listNote: list[str] = []
-        unbuiltSources = readUnbuiltSourcesInternal(buildDir)
+        unbuiltSources = tree.readUnbuiltSources()
         if unbuiltSources is None:
-            listNote.append(f"{buildDir.name} 에 {_kUnbuiltSourceListPath} 가 없습니다 — 이 구성이 일부러 짓지 않는 소스를 모릅니다"
+            listNote.append(f"{tree.name} 에 {kUnbuiltSourceListRelPath} 가 없습니다 — 이 구성이 일부러 짓지 않는 소스를 모릅니다"
                             f"(다시 구성하면 생깁니다)")
             unbuiltSources = set()
 
@@ -239,7 +194,7 @@ class CheckSourceGlobGate(LintGate):
         return GateResult(
             listViolation=violations,
             listNote=listNote,
-            summary=f"{len(sources)} sources referenced in {buildDir} ({len(unbuiltSources)} declared unbuilt by CMake), "
+            summary=f"{len(sources)} sources referenced in {tree.path} ({len(unbuiltSources)} declared unbuilt by CMake), "
                     f"RHI backend list matches disk",
         )
 

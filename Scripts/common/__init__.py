@@ -3,6 +3,7 @@ Scripts/common package
 
 도메인별로 분리된 스크립트 공통 모듈:
   - AppBinary: 빌드된 App.exe 를 찾고 헤드리스로 셰이더를 쿠킹하는 자리 (쿠커·커밋 훅 공용)
+  - BuildTree: 빌드 폴더 하나(build/<프리셋>) — 고르기(--preset · --build-dir · .clangd · 프리셋 순서) · 컴파일 DB · CMakeCache · 짓지 않는 소스
   - Constants: 고정 경로, 파일명, C++ 확장자 세트, JSON 스키마 키
   - Paths: 프로젝트 루트, 경로 정규화, 플랫폼 판별
   - Config: JSON 설정 읽기/쓰기/병합
@@ -43,11 +44,12 @@ for _stream in (_sys.stdout, _sys.stderr):
         except (ValueError, OSError):
             pass  # 리다이렉트된 파이프 등 — 그대로 둔다
 
-from . import (AppBinary, Archive, AssetPipeline, ClangFormat, CodeText, Config, Constants, CookContract, Host, PackFormat, Parallel,
+from . import (AppBinary, Archive, AssetPipeline, BuildTree, ClangFormat, CodeText, Config, Constants, CookContract, Host, PackFormat, Parallel,
                Paths, Process, Search, ToolLocator, TranslationUnits)
 from .AppBinary import *
 from .Archive import *
 from .AssetPipeline import *
+from .BuildTree import *
 from .ClangFormat import *
 from .CodeText import *
 from .Config import *

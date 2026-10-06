@@ -45,6 +45,7 @@ from common import (
     normalizePath,
     readJsonDictInternal,
     resolveDefaultOutputDir,
+    BuildTreeError,
     runSceneCook,
     runShaderCook,
 )
@@ -689,6 +690,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--app", type=str, default="", help="씬 쿠킹·셰이더 쿠킹에 쓸 App 실행 파일 (CMake 가 $<TARGET_FILE:App> 을 넘긴다; 없으면 빌드 폴더를 뒤진다)")
 
     args = parser.parse_args(argv)
+    try:
+        return cookInternal(args)
+    except BuildTreeError as error:
+        print(f"[CookAssets Error] {error}", file=sys.stderr)
+        return 1
+
+
+def cookInternal(args: argparse.Namespace) -> int:
     projectRoot = getProjectRoot()
     appExePath = Path(args.app) if args.app else None
 

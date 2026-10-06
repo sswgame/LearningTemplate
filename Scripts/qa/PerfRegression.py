@@ -26,8 +26,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import getProjectRoot  # noqa: E402
-from common.AppRun import (kBackendSwitch, kSkipExitCode, findBuildDirOfApp, loadGameTable, parseProfileTable,  # noqa: E402
-                           parseProfileWall, readCMakeCacheValue, runApp)
+from common import BuildTree  # noqa: E402
+from common.AppRun import kBackendSwitch, kSkipExitCode, loadGameTable, parseProfileTable, parseProfileWall, runApp  # noqa: E402
 
 #: 기준으로 들고 있는 구간 — 프레임 전체(게임 · 렌더 스레드 · GPU)와 그 아래 큰 덩어리. `GPU.Frame` 은 네 백엔드의 타임스탬프(프레임 첫 명령 ~ 마지막 패스 끝)다 —
 #: 기준에 없는 구간은 비교하지 않으므로(`compareInternal` 은 기준을 돈다) 새로 뜬 기준부터 잡힌다.
@@ -103,15 +103,15 @@ def main(listArgument: list[str] | None = None) -> int:
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
-    buildDir = findBuildDirOfApp(args.app)
-    gameName = args.game or readCMakeCacheValue(buildDir, "SW_ACTIVE_GAME")
-    buildType = readCMakeCacheValue(buildDir, "CMAKE_BUILD_TYPE")
+    appTree = BuildTree.ofApp(args.app)
+    gameName = args.game or appTree.readCacheValue("SW_ACTIVE_GAME")
+    buildType = appTree.readCacheValue("CMAKE_BUILD_TYPE")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
         print(f"[Perf] unknown game '{gameName}' - add it to Test/Qa/Games.json", file=sys.stderr)
         return 1
     if buildType != "Release" and not args.allow_debug:
-        print(f"[Perf] {buildDir.name} is a {buildType} build - measure Release (or pass --allow-debug)", file=sys.stderr)
+        print(f"[Perf] {appTree.name} is a {buildType} build - measure Release (or pass --allow-debug)", file=sys.stderr)
         return 1
 
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileFrames={args.frames}", kBackendSwitch[args.backend]]

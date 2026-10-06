@@ -8,7 +8,7 @@
 
 | | 맡는 것 |
 | --- | --- |
-| 컴파일 DB 읽기 | `buildDir / "compile_commands.json"` 존재 확인 · `json.loads` |
+| 컴파일 DB 읽기 | `BuildTree.readCompileDatabase` |
 | TU 거르기 | `/generated/` · `*.gen.cpp` 제외, `--filter` 부분 문자열 |
 | 동시 실행 | `common.Parallel.mapConcurrent`(진행률 콜백 포함) |
 | 결과 | 출력 문자열 이어 붙이기 |
@@ -18,14 +18,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Callable, Sequence, TypeVar
 
+from .BuildTree import BuildTree, BuildTreeError
 from .Parallel import getProcessWorkerCount, mapConcurrent
-
-#: 컴파일 DB 파일 이름.
-kCompileDatabaseFileName = "compile_commands.json"
 
 #: 어느 도구에서든 대상이 아닌 TU — 리플렉션 코드젠 산출물과 CMake 의 PCH 더미.
 _kAlwaysSkipPart = ("/generated/",)
@@ -38,13 +35,12 @@ class TranslationUnitSweep:
     """
     빌드 트리 하나의 TU 를 골라 자식 프로세스로 훑는다.
 
-    `buildDir` 만 알면 되고, **무엇을 돌릴지는 호출부가 준다**(`run` 의 `worker`). 도구를 여기
+    빌드 폴더(`BuildTree`)만 알면 되고, **무엇을 돌릴지는 호출부가 준다**(`run` 의 `worker`). 도구를 여기
     알게 만들면 세 번째 도구가 생길 때 다시 갈라진다.
     """
 
-    def __init__(self, buildDir: Path, *, tag: str) -> None:
-        self.buildDir = buildDir
-        self.databasePath = buildDir / kCompileDatabaseFileName
+    def __init__(self, tree: BuildTree, *, tag: str) -> None:
+        self.tree = tree
         self._tag = tag
         #: 마지막 `selectUnits` 가 건너뛴, 디스크에 없는 TU(낡은 컴파일 DB — 이름을 바꾸고 그 프리셋을 다시 안 지었을 때).
         self.listMissingFile: list[str] = []
@@ -52,7 +48,7 @@ class TranslationUnitSweep:
     @property
     def bHasDatabase(self) -> bool:
         """configure 한 빌드 트리인가 — 아니면 이 훑기는 성립하지 않는다."""
-        return self.databasePath.is_file()
+        return self.tree.bHasCompileDatabase
 
     def selectUnits(self, pathFilter: str = "", *, requirePathPart: str = "") -> list[dict]:
         """
@@ -64,11 +60,13 @@ class TranslationUnitSweep:
         디스크에 없는 TU(낡은 DB)는 건너뛰고 `listMissingFile` 에 남긴다 — 컴파일러가 "파일 없음" 을 오류로 내면 경고 보고가 그 줄로 덮인다.
         """
         self.listMissingFile = []
-        if not self.bHasDatabase:
+        try:
+            listDatabase = self.tree.readCompileDatabase()
+        except BuildTreeError:
             return []
 
         listEntry: list[dict] = []
-        for entry in json.loads(self.databasePath.read_text(encoding="utf-8")):
+        for entry in listDatabase:
             filePath = str(entry.get("file", "")).replace("\\", "/")
             if requirePathPart and requirePathPart not in filePath:
                 continue
@@ -125,5 +123,5 @@ class TranslationUnitSweep:
 
     def reportMissingDatabase(self) -> None:
         """DB 가 없을 때 무엇을 하라고 말할지 — 두 스크립트가 같은 말을 한다."""
-        print(f"[{self._tag}] {self.databasePath} 가 없습니다 — "
-              f"`cmake --preset {self.buildDir.name}` 으로 configure 하세요.")
+        print(f"[{self._tag}] {self.tree.compileDatabasePath} 가 없습니다 — "
+              f"`cmake --preset {self.tree.name}` 으로 configure 하세요.")
