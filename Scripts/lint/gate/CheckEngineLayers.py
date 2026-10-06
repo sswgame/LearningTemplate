@@ -103,7 +103,7 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 #
 # **강결합 묶음은 없다.** 그래프가 DAG 라 모든 폴더에 참인 순서가 있다. 묶음이 다시 생기면 대개 "위층 것을
 # 아래층이 드는" 모양이다 — Object 가 SceneManager 에게 활성 씬을 묻거나, RHI 디바이스가 렌더 패스 에셋 캐시를
-# 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md 와 docs/07_EngineStructureVsCommercial.md.
+# 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md "상용 엔진과의 대조".
 #
 # `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
 # RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·

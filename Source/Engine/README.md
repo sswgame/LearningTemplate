@@ -27,7 +27,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 다시 계산하려면 `py -3 Scripts/lint/report/RunEngineLayerGraph.py` — 게이트와 같은 규칙(prelude·배선 예외,
 `Graphics/Renderer` 분리)으로 묶음과 티어를 찍습니다. `Graphics` 만 폴더보다 잘게 봅니다: `Graphics/Renderer`
 는 위(8), 나머지 `Graphics` 는 아래(5) — 상용 엔진의 RHI/RenderCore ↔ Renderer 사이의 선과 같습니다.
-상용 엔진과 어디가 같고 어디가 다른지는 [docs/07_EngineStructureVsCommercial.md](../../docs/07_EngineStructureVsCommercial.md).
+상용 엔진과 어디가 같고 어디가 다른지는 아래 [상용 엔진과의 대조](#상용-엔진과의-대조).
 
 **규칙: 위층 것을 아래층이 들지 않는다.** 티어를 거스르는 include 가 필요해 보이면 대개 소유가 거꾸로 된 것입니다.
 지금 자리는 이렇습니다.
@@ -53,8 +53,6 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 - Engine → `Editor/` · `GameFramework/` · `Games/` 금지, 그리고 위 티어 방향(표에 없는 새 최상위 폴더도 실패).
 - `Games/` · `GameFramework/` → `Engine/Common/EngineServices.h` 금지 — 게임 쪽은 `GameFramework/Base/GameService.h` 의 `game::` 만 씁니다.
-
-물리 모듈 분할(`EngineRHI` / `EngineReflection`)은 설계만 있습니다 — [docs/07](../../docs/07_EngineStructureVsCommercial.md) 참고.
 
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)
@@ -157,11 +155,44 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
   태그를 읽는 것은 Debug 의 `MemoryProfiler` 뿐이라 다른 구성에서 비용은 0 입니다. 보고는 `-gv_profileFrames` 프로파일 보고 · 에디터 프로파일러 패널.
 - **Task 시스템**: Core의 [Task/README.md](../Core/Task/README.md) (`TaskManager` / `TaskHandle`)
 
-## 동작 방식
-- **개발 모드(Dev)**: `SHARED` (DLL) 형태로 빌드되어 동적으로 로드됩니다.
-- **배포 모드(Shipping)**: 성능 최적화를 위해 `App`에 `STATIC`으로 묶입니다.
+## 상용 엔진과의 대조
 
-## 핵심 주의사항
-`Engine` 내부에 작성된 코드는 **`EditorModule`이나 `Games` / `GameFramework` 로직에 직접 의존하면 안 됩니다.**
-엔진은 플랫폼이자 뼈대이므로, 게임별로 달라지는 구체적인 로직이나 에디터 전용 UI 코드가 이 폴더를 더럽히지 않도록 주의하세요.
-에디터와 통신이 필요할 때는 RuntimeAPI·공통 인터페이스나 델리게이트를 통합니다.
+기준은 하나 — **의존 방향이 상용 엔진과 같은가**(폴더 이름 · 클래스 수가 아니라 "누가 누구를 아는가")입니다.
+묶음(순환)이 생기면 위층 것을 아래층이 들고 있는 것이고, 처방은 위 "지금 자리" 의 모양 중 하나입니다 — 푸는 쪽이 든 객체로 풀기 ·
+소유를 위로 올리기 · 인터페이스를 토대에 두고 위가 구현하기 · 서비스 표로 내주기.
+
+| 층 | 언리얼 | Unity / Godot | 이 저장소 | 판단 |
+|---|---|---|---|---|
+| 토대 | `Core` (컨테이너·문자열·파일·스레드·메모리) | Godot `core/` | `Source/Core` (STATIC, OBJECT 로 Engine 에 흡수) | **같다.** Core 는 Engine 을 모른다. 리플렉션 파서도 Core 만 링크한다. |
+| 리플렉션·직렬화 | `CoreUObject` (UClass · UProperty · 아카이브) | Godot `ClassDB` · Unity C# 리플렉션 | `Engine/Reflection` + `Engine/Serialization` (코드젠 `.gen.cpp`) | **같다.** 인코딩은 Serialization 이 갖고 선언은 Reflection 에 남는다. |
+| 설정 | `GConfig` · `UDeveloperSettings` | `ProjectSettings` | `Engine/Config` (EngineConfig · GameConfig · EngineDefaultAssets) | **같다.** 리플렉션 위, 코어 아래. |
+| 에셋 | `AssetRegistry` · `FStreamableManager` · 패키지 | `Resources` · `ResourceLoader` | `Engine/Resource` (AssetDatabase · 팩 · `IAssetCache` 등록부 · 스트리밍 큐) | **같다.** 종류를 늘리는 자리가 인터페이스 하나다. |
+| 디바이스 | `RHI` — `void*` 창 핸들로 `FRHIViewport` 를 만든다. 창 시스템(Slate)은 RHI 위 | Godot `RenderingDevice` | `Graphics/RHI` (4 백엔드) | **같다.** RHI 는 창을 모른다 — `Common/IRenderSurface` 를 `IWindow` 가 구현하고 `EngineLoop` 이 넘긴다. |
+| GPU 에셋 | `Engine` 의 `UMaterialInterface` · `UStaticMesh` — 컴포넌트가 든다 | Unity `Material` · `Mesh` | `Graphics/Material` · `Mesh` · `Texture` · `Shader` | **같다.** 컴포넌트가 머티리얼·메시를 드는 것은 상용 엔진의 모양이다 — 이 엣지는 결함이 아니다. |
+| 렌더러 | `Renderer` — `Engine` 을 보고(프록시·씬) 그린다. `Engine` 은 `RendererInterface` 만 안다 | Unity SRP · Godot `RenderingServer` | `Graphics/Renderer` (FrameRenderer · RenderGraph · GpuScene · RenderThread) | **같다.** (1) 렌더 패스 *에셋* 캐시(`RenderPipelineAssetCache`)는 `FrameRenderer` 가 소유한다 — RHI 는 Renderer 를 모른다. (2) "무엇을 쿠킹할지" 의 정책은 `Renderer/Cook/ShaderCookDriver` 에 있고 `Shader/Compile` 은 렌더러를 모른다. |
+| 월드 | `UWorld` → `AActor` → `UActorComponent`. 액터는 `GWorld` 전역으로 월드를 찾는다 | Godot `SceneTree` → `Node` | `Scene` → `Object`(GameObject · Component) | **더 좁다.** Object 는 Scene 을 모른다. 활성 월드 전역(`GWorld`)도 없다 — 핸들은 그것을 푸는 쪽이 든 `GameObjectManager` 가 푼다(`resolveGameObject` · `resolveComponent`). |
+| 월드 ↔ 렌더러 | `UWorld` 는 `FScene`(렌더 씬 인터페이스)만 안다. 렌더러 본체를 모른다 | Godot 노드는 `RenderingServer` 에 RID 로만 말한다 | `SceneManager` | **같다.** 씬은 렌더러를 모른다 — 렌더러는 호스트가 내주는 선택 서비스(`EngineServiceList.xxx`)다. |
+| 기능 모듈 | `LevelSequence` · `MovieScene` 은 `Engine` 위의 모듈 — 액터를 알고, 액터는 모른다 | Godot `AnimationPlayer` 는 `scene/` 안의 노드 | `Sequencer` | **같다.** `SequencePlayerComponent` 는 `Sequencer/` 에 있다 — Sequencer 가 Object 를 알고, Object 는 Sequencer 를 모른다. |
+| 서브시스템 수명 | `FEngineLoop` + `UEngineSubsystem`(자동 수집) | `PlayerLoop` | `EngineLoop` + `EngineServiceList.xxx`(X-macro 등록표, 낱말 칸 `Required`/`Optional` · `GameVisible`/`HostOnly` · `EngineCreated`/`HostCreated` 로 생성·바인딩 생성) + `EngineInitStepList.xxx`(기동 단계와 의존) | **같은 모양.** 언리얼은 `USubsystem::Initialize` 안에서 `FSubsystemCollectionBase::InitializeDependency` 로 먼저 설 서브시스템을 적고 컬렉션이 그 순서로 초기화 · 역순으로 `Deinitialize` 한다. 여기도 단계마다 의존을 표에 식별자 목록으로 적고(오타 · 아래 줄 의존은 컴파일 오류) `EngineInitSequence` 가 그 순서로 초기화 · 역순 종료한다. 호스트(`EngineLoop` · 시험 하네스, 공통 부트스트랩은 `EngineBootstrap`)는 단계마다 구조체 하나(`initialize` · `shutdown` · `destroy`)로 본문만 준다. 객체 해제도 모든 종료 뒤에 같은 역순으로 모든 단계를 돈다 — `AssetManager::shutdown` 은 Resource 단계의 해제에 있어, 에셋을 드는 뒤 단계들의 소멸자가 먼저 돈다. |
+| 창·입력 | `ApplicationCore` (창) · `InputCore` — RHI 위 | Godot `DisplayServer` | `Window` · `Input` | **같다.** Window 는 Resource(스플래시 그림) 위, Input 은 Window 위. RHI 는 둘 다 모른다. |
+| 병렬 | `ParallelFor` · `TaskGraph` | Unity Jobs | `Core/Task` + `engine::runParallel` | **같다.** 병렬 시스템의 모양이 하나다(트랜스폼 계층이 첫 예). |
+
+### 같아서 두는 것 — 다시 제안하지 말 것
+
+- **컴포넌트가 머티리얼·메시를 든다 (Object → Graphics 저층).** 언리얼의 `UStaticMeshComponent` 가 `UStaticMesh` ·
+  `UMaterialInterface` 를 드는 것과 같다. Godot 식 "노드는 RID 만 안다" 로 바꾸면 모든 컴포넌트에 해석 표가 생기고,
+  `shared_ptr` 로 풀어 둔 렌더 패킷 수명 문제가 되살아난다.
+- **렌더러가 컴포넌트를 읽는다 (Graphics/Renderer → Object · Scene).** `GpuSceneBuilder` 가 `PrimitiveRegistry` ·
+  `ComponentRegistry`(빛) 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향이다. 영속 렌더 씬(`FScene`
+  모델)은 두지 않는다 — 빌더가 내용이 그대로면 빌드를 건너뛰고, 움직임만 있으면 제자리 갱신하고, 바뀐 구간만 올리므로
+  메시 종류가 8 → 1024 로 늘어도 빌드 비용이 평평하다(`-gv_benchMeshVariants` 로 잰다). 얻을 것이 남아 있지 않다.
+- **`EngineLoop` 이 크다.** `FEngineLoop::Init` 도 그렇다. 서비스 생성·바인딩은 표(`EngineServiceList.xxx`)에서, 초기화 · 종료 순서는
+  기동 단계 표(`EngineInitStepList.xxx`)의 의존 칸에서 나온다. 남은 크기는 단계 본문이고, 본문은 단계마다 하는 일이 정말 달라 나누지 않는다.
+  표는 기동 순서대로 적고, 의존 칸만으로 위상 정렬(동점은 이름 순)한 결과가 줄 순서와 같아야 한다 — 의존을 빼먹으면
+  `EngineInitSequenceTest.TableIsWrittenInStartupOrder` 가 진다.
+- **`Scene` 이 기본 머티리얼을 든다.** 언리얼은 `UMaterial::GetDefaultMaterial` 이 엔진 에셋이라 월드가 모른다. 여기는
+  씬이 인스턴스화할 때 머티리얼 없는 메시에 채워 준다 — 결과는 같고, 엣지는 Scene → Graphics 저층(허용 방향)이다.
+- **`Dialogue` · `Sequencer` · `Localization` 이 Engine 안에 있다.** 언리얼은 모듈/플러그인이지만 전부 Engine 위의
+  런타임 모듈이다. 이 저장소는 물리 분할을 하지 않으므로 폴더 티어로 같은 선을 긋는다.
+- **물리 모듈 분할(EngineRHI / EngineReflection)은 하지 않는다.** 그래프가 DAG 라 어디를 잘라도 순환이 없으므로,
+  자를 때는 티어 경계를 그대로 링크 단위로 바꾸면 된다.

@@ -1587,7 +1587,7 @@ cd build/Ninja-Debug/Bin
 - **엔진 서비스는 `EngineServiceList.xxx` 의 `owned` 열에서** `EngineServiceCollection::createAll()` / `bindInto()` 로 생성된다(호스트가 먼저 만든 것은 덮지 않는다, 정의는 `.cpp`, 자리는
   `Source/Engine/` — `Common` 이면 `CheckEngineLayers` 가 막는다). 호스트 대조는 `CheckEngineServiceBinding`. 시험의 서비스 흔들기 창구는 `test::rebindEngineServices` 하나.
   `EngineServiceTest` 의 기대값도 같은 X-매크로라 `gameAllowed` 값 자체가 틀린 것은 못 잡는다.
-- **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `docs/07_EngineStructureVsCommercial.md` 4절). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
+- **Engine 폴더 include 그래프는 DAG 다**(`RunEngineLayerGraph.py`, 다시 제안하지 말 목록은 `Source/Engine/README.md` "같아서 두는 것"). 일부러 그 층에 둔 것: 핸들 · `TagID` 는 Core,
   `CommandStack` 은 `EngineLoop` 소유(핫 리로드를 넘어 산다), `TileMapXml.h` 는 Engine. 엔진 창은 `WindowResizeEvent` 를 발행하지 않는다(델리게이트). 상태가 살아남아야 하면 Engine · App 에 둔다.
 - **기동 순서**: 로거 · 크래시 핸들러 → `ResourceUtil::initialize()`(로거 뒤라야 진단이 남는다) → 설정 → `AssetManager::initialize()` + `mountContent`. 종료는 `_rhi->shutdown()` 이
   `AssetManager::shutdown` 보다 먼저, 오디오는 TaskManager 보다 먼저(`_voiceMutex` 로 `_bInitialized` 를 먼저 내린다), 로거를 세운 뒤 `MemoryProfiler`. 시험 호스트도 앱과 같은 순서
