@@ -64,6 +64,12 @@ namespace sw
         return MathUtil::clamp( scale, _minScale, MathUtil::max( _minScale, _maxScale ) );
     }
 
+    float32 UiScaleUtil::computeScaledFontSize( float32 fontSize, float32 textScale )
+    {
+        const float32 scaled = fontSize * ( textScale > 0.0f ? textScale : 1.0f );
+        return MathUtil::max( scaled, MathUtil::min( fontSize, kMinScaledFontSize ) );
+    }
+
     UiViewport UiScaleUtil::makeViewport( const UiScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale,
                                           float32 safeZoneRatio )
     {

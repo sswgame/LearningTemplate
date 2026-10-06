@@ -6,6 +6,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
@@ -162,7 +163,7 @@ namespace sw
             style._font = pStyle->_value._font;
         if ( pStyle != nullptr && pStyle->has( UiStyleField::FontSize ) )
             style._fontSize = pStyle->_value._fontSize;
-        style._fontSize           = style._fontSize * ( textScale > 0.0f ? textScale : 1.0f );
+        style._fontSize           = UiScaleUtil::computeScaledFontSize( style._fontSize, textScale );
         style._paragraphDirection = isRightToLeft() ? TextDirection::RightToLeft : TextDirection::LeftToRight;
         return style;
     }

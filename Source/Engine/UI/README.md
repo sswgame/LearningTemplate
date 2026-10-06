@@ -96,6 +96,7 @@ UI 는 키 · 버튼을 직접 보지 않고 **행동**을 받습니다 — 키 
   `wantsCursor` 면 마우스 잠금을 쉰다). 입력 맵이 둘이어도(UI 맵 · 게임 맵) 물리 슬롯으로 견주므로 메뉴에서 누른 패드 A 가 점프가 되지 않습니다.
 - **글 입력 칸**(`supportsTextInput`)이 포커스를 쥐면 키보드 포커스 `Ui` 를 잡습니다 — 게임은 키를 보지 못하고(칸에 있는 동안 누른 키는 뗄 때까지), 글자 · 조합은
   그 위젯의 `onTextEvent` 로 갑니다. 그 동안 UI 행동은 `UI.Back` · `UI.FocusNext/Previous` 만(스페이스가 확인이 되지 않게). 개발 콘솔이 열리면 UI 는 행동을 받지 않습니다.
+
 ## 레이아웃 (`Layout/`)
 
 어느 엔진이나 **두 번 걷기**입니다 — 아래에서 위로 "얼마나 크고 싶나"(measure — Slate `ComputeDesiredSize` · WPF `Measure` · Yoga), 위에서 아래로
@@ -208,6 +209,8 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 창의 OS 배율(`IWindow::getContentScale` — Win32 `GetDpiForWindow`, X11 `Xft.dpi`)은 `_bApplyContentScale` 일 때만 곱합니다(데스크톱식 UI). 게임 창은 해상도 규칙이
   이미 창 크기를 따르므로 둘 다 곱하면 두 번 곱한다(UMG 기본과 같다).
 - `gv_uiTextScale` 은 글 측정에만 곱합니다(`UiLayoutContext::_textScale`) — 글이 커지면 그 상자도 커진다. 배율 · 글자 배율이 바뀌면 트리 전체를 다시 잽니다.
+  배율이 줄여도 글은 12 UI 단위 밑으로 가지 않는다(`UiScaleUtil::computeScaledFontSize` — Xbox 접근성 지침의 최소 글 크기). 그보다 작게 적은 글은 적은 크기가 하한이다.
+  배율 2 에서 넘치지 않게 하는 것은 문서의 몫이다 — 긴 이름은 `_overflow="Ellipsis"`(줄 바꿈 없이), 늘어난 줄은 `ScrollPanel` 로(`UiAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`).
 - 안전 영역: `SafeZonePanel` 이 뷰포트 안전 영역과 겹치는 만큼 자식을 안쪽으로 민다. PC 는 0 이고 `gv_uiDebugSafeZone`(0..0.1 — 각 변 비율, 언리얼
   `r.DebugSafeZone.TitleRatio`)으로 흉내 낸다. 화면 문서의 기본 루트는 `SafeZonePanel > CanvasPanel` 입니다.
 - `UiSystem::computeViewport( 물리 크기, 창 배율 )` 이 뷰포트를, `makeLayoutContext()` 가 레이아웃 문맥을 만든다 — `EngineLoop` 가 프레임마다 앞의 것을 `update` 에 넘긴다.
@@ -358,6 +361,7 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   거절됐으면(Rejected · Disabled) 원래 값이 보입니다. 키 바인딩 겹침(Conflict)은 옵션 메뉴의 키 바인딩 창(8-2) 몫입니다.
 - 다른 곳의 변경(되돌리기 · 기본값 · 확인 카운트다운의 자동 되돌림)은 변경 통보(`registerEventListener`)로 받습니다 — 사용 가능이 다른 설정에 기대므로 통보가 오면
   그 화면의 설정 바인딩을 모두 다시 읽습니다. 리스너는 바인딩 집합(= 화면)이 지워질 때 뗍니다. 시험은 `UiSystem::setUserSettings` 로 자기 매니저를 넘깁니다.
+
 ## 애니메이션 · 트윈 (`Animation/`)
 
 | 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
@@ -417,3 +421,15 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 보이는 값은 위젯이 든 복사본(`UiStyleTransitionState`)이고 `Widget::getComputedStyle` 이 그것을 돌려줍니다 — 나눠 쓰는 계산된 스타일은 바꾸지 않습니다. 끝나면 복사본을 지웁니다.
 - 물려받는 글 칸은 부모의 **목표** 값을 물려받습니다(보간 값을 자손에 내리지 않는다 — 나눠 쓰기 열쇠가 프레임마다 바뀌지 않게). 자식 글이 함께 움직이려면 자식 규칙에도
   `_transition` 을 적습니다(`ButtonWidget TextWidget` — 자식의 물려받은 값이 바뀐 것도 자식에게는 바뀐 칸이다).
+
+## 자막 (`Screen/UiSubtitleService`)
+
+`UiSystem::getSubtitles().post( 화자, 글, 길이 )` — 언리얼 `FSubtitleManager` 의 자리입니다. 글은 현지화한 것을 받습니다(대화 러너 · 음성 이벤트가 푼다).
+
+- **보이는 시간**: 길이 0 이면 읽기 시간 = max( 2 초, 글자(코드 포인트) 수 × 0.06 초 ). 줄은 **둘까지** 동시에 보이고(오래된 것이 위), 넘치는 줄은 대기열에서
+  기다렸다가 자리가 나면 그때부터 시간을 센다.
+- **화면**: 오버레이 층(포커스 · 포인터 없음) 문서 `engine/ui/subtitles.ui.xml` — 화면 아래 가운데, 줄 자리는 이름 `Line<n>`(바탕) · `Speaker<n>` · `Text<n>`.
+  줄이 있을 때만 열고 없으면 닫는다. 화자 이름 색은 시트 `engine/ui/styles/subtitles.uistyle.xml` 의 변수 `speaker`.
+- **사용자 설정**(매 프레임 읽는다): `gv_subtitles` 를 끄면 화면을 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터), `gv_subtitleSize` 0 · 1 · 2 는 문서에 적힌
+  글 크기에 0.85 · 1 · 1.3 을 곱하고(글자 배율 · 하한은 그 위에), `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
+- **보내는 쪽**: GF `DialogueRunnerComponent::_bPostSubtitles`(기본 끔 — 대화 UI 가 글을 따로 보이면 켜지 않는다).

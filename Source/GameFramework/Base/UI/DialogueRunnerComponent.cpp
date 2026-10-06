@@ -6,7 +6,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
+#include "Engine/UI/UiSystem.h"
 
+#include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/World/GameFlags.h"
 
 namespace sw
@@ -15,8 +17,10 @@ namespace sw
 
     DialogueRunnerComponent::DialogueRunnerComponent()
         : _graphPath{}
+        , _bPostSubtitles{ false }
         , _graph{}
         , _pFlags{ nullptr }
+        , _pUiSystemOverride{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
         , _listCurrentChoice{}
@@ -215,6 +219,12 @@ namespace sw
 
     void DialogueRunnerComponent::notifyLine()
     {
+        if ( _bPostSubtitles )
+        {
+            UiSystem* pUiSystem = _pUiSystemOverride != nullptr ? _pUiSystemOverride : game::getService<UiSystem>();
+            if ( pUiSystem != nullptr && pUiSystem->isInitialized() && _currentText.empty() == false )
+                (void)pUiSystem->getSubtitles().post( _currentSpeaker, _currentText );
+        }
         if ( _onLine.isBound() == false )
             return;
 

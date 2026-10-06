@@ -147,6 +147,7 @@ namespace sw
         , _pUserSettings{ nullptr }
         , _textLayout{}
         , _scaleSettings{}
+        , _subtitles{ *this }
         , _viewport{}
         , _canvas{}
         , _canvasScratch{}
@@ -209,6 +210,7 @@ namespace sw
 
     void UiSystem::shutdown()
     {
+        _subtitles.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있다 — 등록 · 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
             pComponent->forgetUiSystem();
@@ -257,6 +259,7 @@ namespace sw
         _viewport = viewport;
         syncDemoScreen();
         reopenClosedScreens();
+        _subtitles.update( deltaSeconds );
         applyPendingCloses();
         updateBindings();
         // 애니메이션 — 문서 애니메이션 · 트윈이 프로퍼티를 쓴다(스타일 · 레이아웃 앞 — 쓴 칸의 무효화가 이번 프레임에 걷힌다). 실제 프레임 시간이다(정지 메뉴도 움직인다).

@@ -25,6 +25,7 @@
 #include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Screen/UiSubtitleService.h"
 #include "Engine/UI/Style/UiStyleSheetCache.h"
 #include "Engine/UI/Style/UiTheme.h"
 
@@ -184,6 +185,11 @@ namespace sw
          */
         bool tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
 
+        // --- 자막 ---------------------------------------------------------------
+        /** @brief 자막(오버레이 층 아래 가운데, 둘까지 — 사용자 설정의 끔/켬 · 크기 · 배경)입니다. */
+        UiSubtitleService&       getSubtitles() { return _subtitles; }
+        const UiSubtitleService& getSubtitles() const { return _subtitles; }
+
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
         bool isGameInputBlocked() const;
@@ -327,6 +333,7 @@ namespace sw
         UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처(nullptr = 엔진 서비스)
         unique_ptr<TextLayoutEngine> _textLayout;
         UiScaleSettings              _scaleSettings;
+        UiSubtitleService            _subtitles;
         UiViewport                   _viewport;
         CanvasDrawList               _canvas;         ///< 이번 프레임 그리기 목록
         CanvasDrawList               _canvasScratch;  ///< 칠하는 중의 목록(같은 내용이면 버린다)

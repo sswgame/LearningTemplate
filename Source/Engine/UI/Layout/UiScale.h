@@ -69,6 +69,15 @@ namespace sw
      */
     struct SW_API UiScaleUtil
     {
+        /** @brief 글자 배율이 줄여도 글이 이 크기(UI 단위) 밑으로 내려가지 않습니다 — Xbox 접근성 지침(XAG 101)의 최소 글 크기. */
+        static constexpr float32 kMinScaledFontSize = 12.0f;
+
+        /**
+         * @brief 글자 배율 @p textScale(gv_uiTextScale)을 곱한 글 크기입니다.
+         * @details 배율이 줄여도 `kMinScaledFontSize` 밑으로는 내려가지 않습니다. 그보다 작게 적은 글(각주 · 아래 첨자)은 적은 크기가 하한입니다 —
+         *          배율이 글을 키우기만 하고 디자이너가 고른 크기를 억지로 키우지는 않습니다. 0 이하 배율은 1 입니다.
+         */
+        static float32 computeScaledFontSize( float32 fontSize, float32 textScale );
         /**
          * @brief 이번 프레임의 UI 뷰포트를 만듭니다.
          * @param physicalSize 그릴 화면의 픽셀 크기.
