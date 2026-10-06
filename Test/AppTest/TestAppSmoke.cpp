@@ -712,6 +712,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|input.classicDarkSwatch",
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
+        "EditorSelfTest|PASS|contentBrowser.treeDoesNotReadTheDiskEveryFrame",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

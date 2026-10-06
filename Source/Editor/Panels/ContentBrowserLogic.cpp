@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/ContentBrowserLogic.h"
 
+#include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 
 namespace sw::editor
@@ -58,5 +59,30 @@ namespace sw::editor
     {
         const string child = ContentBrowserLogicInternal::makeFolderPath( childAbs );
         inoutListCrumb.push_back( ContentBrowserCrumb{ FileUtil::getFileNamePart( child ), child } );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    ContentBrowserFolderCache::ContentBrowserFolderCache( ContentBrowserFolderScanFunc pfnScan )
+        : _mapChildFolder{}
+        , _pfnScan{ pfnScan }
+    {
+    }
+
+    const vector<string>& ContentBrowserFolderCache::getChildFolders( string_view folderAbs )
+    {
+        const string key = FileUtil::normalizePath( FileUtil::trimTrailingSlashes( folderAbs ) );
+        const auto   it  = _mapChildFolder.find( key );
+        if ( it != _mapChildFolder.end() )
+            return *it->second;
+
+        unique_ptr<vector<string>> pListChild = make_unique<vector<string>>();
+        if ( _pfnScan != nullptr )
+            _pfnScan( folderAbs, *pListChild );
+        std::sort( pListChild->begin(), pListChild->end() );
+        const vector<string>& listChild = *pListChild;
+        _mapChildFolder.emplace( key, std::move( pListChild ) );
+        return listChild;
     }
 } // namespace sw::editor

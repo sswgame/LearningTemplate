@@ -229,6 +229,7 @@ namespace sw::editor
         , _pendingImportMutex{}
         , _listPendingImportPath{}
         , _folderJob{}
+        , _folderCache{ &EditorAssetCommands::collectChildFolders }
         , _bRootsDirty{ SW_TRUE }
         , _bFolderDirty{ SW_TRUE }
         , _bOpenDeleteConfirm{ SW_FALSE }
@@ -252,6 +253,7 @@ namespace sw::editor
             // 지운 파일이 목록 · 선택에 남지 않게 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
             _selectedAssetAbs.clear();
             _bFolderDirty = SW_TRUE;
+            _folderCache.clear();
         }
         _pendingDeleteAbs.clear();
         return bDeleted;
@@ -293,6 +295,7 @@ namespace sw::editor
             return;
         _seenContentChangeSerial = serial;
         _bFolderDirty            = SW_TRUE;
+        _folderCache.clear();
     }
 
     void ContentBrowserPanel::openFolder( string_view absolutePath )
@@ -502,6 +505,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Refresh" ) )
             {
+                _folderCache.clear();
                 _listEntry.clear();
                 _selectedAssetAbs.clear();
                 refreshRoots();
@@ -578,9 +582,9 @@ namespace sw::editor
         if ( depth == 0 )
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
-        vector<string> listChild;
-        EditorAssetCommands::collectChildFolders( absPath, listChild );
-        const bool hasChildDirs = listChild.empty() == false;
+        // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다(Refresh · 파일 감시가 비운다). 참조는 재귀 중에도 산다.
+        const vector<string>& listChild    = _folderCache.getChildFolders( absPath );
+        const bool            hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -602,7 +606,6 @@ namespace sw::editor
 
         if ( opened && hasChildDirs )
         {
-            std::sort( listChild.begin(), listChild.end() );
             for ( const string& child : listChild )
             {
                 drawFolderTreeNode( child, FileUtil::getFileNamePart( child ), depth + 1 );

@@ -48,6 +48,8 @@ namespace sw::editor
          * @return 지웠으면 true. 기다리던 것이 없거나 지우지 못했으면 false(실패는 `EditorAssetCommands::deleteAsset` 이 알린다).
          */
         bool confirmDeleteAsset();
+        /** @brief 폴더 트리가 읽어 둔 하위 폴더를 버립니다(다음 그리기가 디스크를 다시 읽는다 — Refresh 와 같다). */
+        void clearFolderTreeCache() { _folderCache.clear(); }
 
     private:
         // ------------------------------------------------------------------------------
@@ -181,6 +183,7 @@ namespace sw::editor
         mutex                                 _pendingImportMutex;
         vector<string>                        _listPendingImportPath;
         EditorFolderListingJob                _folderJob;
+        ContentBrowserFolderCache             _folderCache; /**< 폴더 트리의 하위 폴더 — 그리기마다 디스크를 읽지 않게 */
         uint8                                 _bRootsDirty        : 1;
         uint8                                 _bFolderDirty       : 1;
         uint8                                 _bOpenDeleteConfirm : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다(우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없다) */

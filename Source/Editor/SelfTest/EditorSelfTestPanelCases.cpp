@@ -2,6 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
+#include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/ContentBrowserPanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -213,6 +215,99 @@ namespace sw::editor
                 removeProbeFolder( context, probe );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // contentBrowser.treeDoesNotReadTheDiskEveryFrame — 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다(D15, Debug 16.8 ms 의 원인)
+            // ------------------------------------------------------------------------------
+            /** @brief 폴더 트리 시험의 진행 상태입니다. 앞 시험이 지운 폴더의 파일 감시 사건이 캐시를 비울 수 있어 변경 번호가 멎을 때까지 기다린다. */
+            struct FolderTreeProbe
+            {
+                uint64 _contentSerial{ 0 };
+                uint64 _scanCountAtStart{ 0 };
+                uint64 _scanCountAfterWarmUp{ 0 };
+                uint32 _phase{ 0 };
+                uint32 _phaseStartStep{ 0 };
+            };
+
+            static FolderTreeProbe& getFolderTreeProbe()
+            {
+                static FolderTreeProbe s_probe;
+                return s_probe;
+            }
+
+            static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
+            {
+                constexpr uint32 kPhaseSettle       = 0; ///< `Resource/` 변경 번호가 멎기를 기다린다
+                constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 한 번 그려지기를 기다린다
+                constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤 프레임들은 디스크를 읽지 않아야 한다
+                constexpr uint32 kSettleStepCount   = 10;
+                constexpr uint32 kWarmUpStepCount   = 3;
+                constexpr uint32 kSteadyStepCount   = 10;
+                constexpr uint32 kMaxTotalStepCount = 600;
+
+                FolderTreeProbe&     probe     = getFolderTreeProbe();
+                const uint32         stepIndex = context.getStepIndex();
+                ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
+                EditorContext*       pContext  = EditorContext::get();
+                if ( pPanel == nullptr || pContext == nullptr )
+                    return EditorSelfTestStep::Done;
+                if ( stepIndex == 0 )
+                    probe = FolderTreeProbe{};
+                if ( stepIndex > kMaxTotalStepCount )
+                {
+                    (void)context.expect( false, "the resource folder kept changing - could not measure the folder tree" );
+                    probe = FolderTreeProbe{};
+                    return EditorSelfTestStep::Done;
+                }
+
+                // 변경 번호가 바뀌면 패널이 캐시를 비우므로 처음부터 다시 잰다.
+                const uint64 contentSerial = pContext->getAssetHotReload().getContentChangeSerial();
+                if ( stepIndex == 0 || contentSerial != probe._contentSerial )
+                {
+                    probe._contentSerial  = contentSerial;
+                    probe._phase          = kPhaseSettle;
+                    probe._phaseStartStep = stepIndex;
+                    return EditorSelfTestStep::Continue;
+                }
+
+                const uint32 phaseStepCount = stepIndex - probe._phaseStartStep;
+                switch ( probe._phase )
+                {
+                    case kPhaseSettle:
+                    {
+                        if ( phaseStepCount < kSettleStepCount )
+                            return EditorSelfTestStep::Continue;
+                        pPanel->clearFolderTreeCache();
+                        probe._scanCountAtStart = EditorAssetCommands::getChildFolderScanCount();
+                        probe._phase            = kPhaseWarmUp;
+                        probe._phaseStartStep   = stepIndex;
+                        return EditorSelfTestStep::Continue;
+                    }
+                    case kPhaseWarmUp:
+                    {
+                        if ( phaseStepCount < kWarmUpStepCount )
+                            return EditorSelfTestStep::Continue;
+                        probe._scanCountAfterWarmUp = EditorAssetCommands::getChildFolderScanCount();
+                        if ( context.expect( probe._scanCountAfterWarmUp > probe._scanCountAtStart, "the content browser folder tree was not drawn" ) == false )
+                        {
+                            probe = FolderTreeProbe{};
+                            return EditorSelfTestStep::Done;
+                        }
+                        probe._phase          = kPhaseSteady;
+                        probe._phaseStartStep = stepIndex;
+                        return EditorSelfTestStep::Continue;
+                    }
+                    default:
+                    {
+                        if ( phaseStepCount < kSteadyStepCount )
+                            return EditorSelfTestStep::Continue;
+                        (void)context.expect( EditorAssetCommands::getChildFolderScanCount() == probe._scanCountAfterWarmUp,
+                                              "the folder tree read the disk again on later frames" );
+                        probe = FolderTreeProbe{};
+                        return EditorSelfTestStep::Done;
+                    }
+                }
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -221,4 +316,5 @@ namespace sw::editor
 {
     SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::runDeleteRefreshesTheList );
     SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
+    SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
 } // namespace sw::editor
