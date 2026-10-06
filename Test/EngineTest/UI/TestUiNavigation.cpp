@@ -2,10 +2,13 @@
 
 #include "Core/Container/string.h"
 
+#include "Engine/Input/InputManager.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/UiSystem.h"
 
 #include "EngineTest/UI/UiTestWidgets.h"
 
@@ -218,4 +221,39 @@ SW_TEST_CASE( UiNavigationTest, PerpendicularGapIsPenalized )
     sw::test::UiTestUtil::placeWidget( *pB, 110.0f, 80.0f, 100.0f, 50.0f );
     sw::test::UiTestUtil::placeWidget( *pA, 150.0f, 0.0f, 100.0f, 50.0f );
     SW_EXPECT_EQUAL( pA->getId(), sw::UiNavigationSolver::findNextWidget( tree, pFrom->getId(), sw::UiNavigationDirection::Right ) );
+}
+
+/** @brief [UiNavigationTest] 탐색은 활성(모달) 화면의 트리 안에서만 — 오른쪽에 아래 메뉴의 버튼이 있어도 모달 밖으로 나가지 않는다 */
+SW_TEST_CASE( UiNavigationTest, NavigationStaysInsideModalScreen )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    {
+        sw::UiSystem ui;
+        SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
+        ui.setInputMode( sw::UiInputMode::Navigation );
+
+        auto menuRoot = sw::make_unique<sw::test::TestPanelWidget>( "menuRoot" );
+        sw::test::UiTestUtil::placeWidget( *menuRoot, 0.0f, 0.0f, 800.0f, 600.0f );
+        sw::Widget* pMenuButton = menuRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "menuButton", true ) );
+        sw::test::UiTestUtil::placeWidget( *pMenuButton, 500.0f, 100.0f, 100.0f, 40.0f );
+        (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( menuRoot ) ) );
+
+        auto modalRoot = sw::make_unique<sw::test::TestPanelWidget>( "modalRoot" );
+        sw::test::UiTestUtil::placeWidget( *modalRoot, 0.0f, 80.0f, 300.0f, 100.0f );
+        sw::Widget* pModalButton = modalRoot->addChild( sw::make_unique<sw::test::TestBoxWidget>( "modalButton", true ) );
+        sw::test::UiTestUtil::placeWidget( *pModalButton, 10.0f, 100.0f, 100.0f, 40.0f );
+        sw::UiScreenDesc modalDesc{};
+        modalDesc._layer  = sw::UiLayer::Modal;
+        modalDesc._bModal = true;
+        (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( modalDesc, std::move( modalRoot ) ) );
+
+        SW_ASSERT_NOT_NULL( ui.getActiveScreen() );
+        SW_EXPECT_TRUE( pModalButton->hasFocus() );
+        SW_EXPECT_FALSE( ui.getFocusManager().navigate( ui.getActiveScreen()->getTree(), sw::UiNavigationDirection::Right ) );
+        SW_EXPECT_TRUE( pModalButton->hasFocus() );
+        SW_EXPECT_FALSE( pMenuButton->hasFocus() );
+        ui.shutdown();
+    }
+    input.shutdown();
 }

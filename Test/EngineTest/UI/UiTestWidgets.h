@@ -12,6 +12,7 @@
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw::test
 {
@@ -44,6 +45,7 @@ namespace sw::test
         explicit TestBoxWidget( const hashed_string& name = {}, bool bFocusable = false )
             : Widget{}
             , _pRecord{ nullptr }
+            , _pScreenToClose{ nullptr }
             , _focusChangeCount{ 0 }
             , _hoverChangeCount{ 0 }
             , _clickCount{ 0 }
@@ -64,6 +66,8 @@ namespace sw::test
             const utf8* pPhase = phase == UiRoutePhase::Tunnel ? "T" : "B";
             if ( _pRecord != nullptr )
                 _pRecord->add( getName(), pPhase );
+            if ( _pScreenToClose != nullptr && event._kind == UiPointerEventKind::Down && phase == UiRoutePhase::Bubble )
+                _pScreenToClose->close(); // 사건 처리 중에 자기 화면을 닫는다 — 지워지는 것은 경로가 끝난 뒤
             const bool bHandle = ( phase == UiRoutePhase::Tunnel && _bHandleTunnel ) || ( phase == UiRoutePhase::Bubble && _bHandleBubble );
             if ( bHandle == false )
                 return UiReply::makeUnhandled();
@@ -101,6 +105,7 @@ namespace sw::test
         }
 
         UiEventRecord* _pRecord;
+        UiScreen*      _pScreenToClose; ///< 포인터 누름의 버블 단계에서 이 화면을 닫는다
         uint32         _focusChangeCount;
         uint32         _hoverChangeCount;
         uint32         _clickCount;
