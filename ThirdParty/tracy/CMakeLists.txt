@@ -5,7 +5,7 @@
 #        이 저장소의 clang-cl 트리플릿용 C++17 오버레이 포트는 `vcpkg-port/tracy`.
 # ==============================================================================
 
-sw_addVcpkgConfigLib(
+sw_addVcpkgPackage(
 	NAME tracy
 	PACKAGE Tracy
 	CONFIG_TARGET Tracy::TracyClient

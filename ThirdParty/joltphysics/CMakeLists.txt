@@ -4,7 +4,7 @@
 #        vcpkg x64-windows 는 공유 라이브러리(JPH_SHARED_LIBRARY)이고, 설정 정의(JPH_USE_AVX2 등)는 임포트 타깃이 실어 준다.
 # ==============================================================================
 
-sw_addVcpkgConfigLib(
+sw_addVcpkgPackage(
 	NAME joltphysics
 	PACKAGE Jolt
 	CONFIG_TARGET Jolt::Jolt

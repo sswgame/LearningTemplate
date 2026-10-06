@@ -958,7 +958,7 @@ cd build/Ninja-Debug/Bin
   `configure_file` 은 빈 값을 조용히 넣는다. `toolchain_config.json` 은 CMake 가 파싱하지 않는다(`GenerateToolchainCMake.py` → `SW_TOOLCHAIN_<KEY>`) — 예외는 vcpkg 가 부르는
   `FindLlvmBin.cmake` · `VcpkgPortsToolchain.cmake` 둘이고, 거기서 `CMAKE_SOURCE_DIR` 은 vcpkg scripts 폴더다. 상수만 필요한 CMake 는 `LoadConfigConstants.cmake` 를 **파일
   스코프에서** include 한다(함수 안에서 처음 include 하면 상수가 그 함수에만 생긴다).
-- **`sw_addVcpkgConfigLib` 는 패키지를 못 찾으면 빈 타겟으로 조용히 대신한다.** 반드시 있어야 하는 것은 `ThirdParty/<이름>/CMakeLists.txt` 에서 `find_package( … CONFIG REQUIRED GLOBAL )`.
+- **`sw_addVcpkgPackage` 는 못 찾으면 구성을 세운다(REQUIRED)** — 설정 파일이 없는 헤더 전용 포트는 `sw_addVcpkgHeaderOnly`(PROBE 헤더 확인). 서드파티 폴더 목록은 없다(폴더 훑기).
   OBJECT 라이브러리(`Core_objects`)는 링크를 전파하지 않는다 — 외부 라이브러리는 `Core` 와 `Engine` 양쪽에. vcpkg 업스트림 결함은 `ThirdParty/<pkg>/vcpkg-port/` 오버레이로
   (`.gitattributes` 의 `*.patch -text`).
 - **Shipping 정적 링크는 열거형만 든 `.gen.cpp` 를 버린다**(증상: `findEnum` 이 null, enum 2 개) — `sw_linkWholeArchive` 가 링커별 whole-archive 를 고른다.

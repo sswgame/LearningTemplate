@@ -36,7 +36,7 @@ cmake/
     │                               (include 되는 순간 실행된다 — TargetRules 보다 먼저여야 한다)
     ├── TargetRules.cmake         — 타겟을 어떻게 만드나: DLL export, RHI·키트·게임·테스트 팩토리, delay-load
     ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 짓지 않고 `Bin/Modules/` 에 복사
-    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG, STATIC 폴백
+    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
