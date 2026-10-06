@@ -106,6 +106,9 @@ namespace sw
         , _sceneAudio{}
         , _sceneNavigation{}
         , _frameStepObserver{}
+        , _listFrameSystem{}
+        , _listRetiredFrameSystem{}
+        , _bRunningFrameSystems{ false }
     {
         _animationSystem.setObjectManager( this );
         _sceneNavigation.setObjectManager( this );
@@ -118,6 +121,9 @@ namespace sw
 
     void GameObjectManager::clear()
     {
+        // 프레임 시스템이 먼저다 — 지울 컴포넌트를 가리킬 수 있다. 컴포넌트의 해제는 시스템이 없으면 할 일이 없다.
+        _listFrameSystem.clear();
+        _listRetiredFrameSystem.clear();
         // 저장소가 오브젝트를 지우기 전에 미룬 일 · 루트 목록을 버린다 — 지울 오브젝트를 가리킨다.
         _structuralChangeBuffer.clear();
         _transformHierarchy.clear();
@@ -127,6 +133,44 @@ namespace sw
         // 컴포넌트가 바디를 놓았다 — 빈 물리 씬과 쌓인 시간을 버린다(다음 씬은 처음 쓸 때 새로 만든다).
         _scenePhysics.shutdown();
         _sceneNavigation.shutdown();
+    }
+
+    ISceneFrameSystem* GameObjectManager::findFrameSystem( const hashed_string& key ) const
+    {
+        for ( const FrameSystemEntry& entry : _listFrameSystem )
+        {
+            if ( entry._pSystem != nullptr && entry._key == key )
+                return entry._pSystem.get();
+        }
+        return nullptr;
+    }
+
+    bool GameObjectManager::addFrameSystem( const hashed_string& key, unique_ptr<ISceneFrameSystem> pSystem )
+    {
+        if ( pSystem == nullptr || findFrameSystem( key ) != nullptr )
+            return false;
+        _listFrameSystem.push_back( FrameSystemEntry{ key, std::move( pSystem ) } );
+        return true;
+    }
+
+    void GameObjectManager::removeFrameSystem( const hashed_string& key )
+    {
+        for ( auto it = _listFrameSystem.begin(); it != _listFrameSystem.end(); ++it )
+        {
+            if ( it->_pSystem == nullptr || it->_key != key )
+                continue;
+            // 도는 중이면 객체는 단계가 끝날 때까지 살려 두고 빈 칸만 남긴다(지금 도는 시스템일 수 있고, 지우면 뒤 칸의 자리가 당겨진다).
+            if ( _bRunningFrameSystems )
+            {
+                _listRetiredFrameSystem.push_back( std::move( it->_pSystem ) );
+                it->_key = hashed_string{};
+            }
+            else
+            {
+                _listFrameSystem.erase( it );
+            }
+            return;
+        }
     }
 
     Component* GameObjectManager::addComponentByName( GameObject* pGameObject, hashed_string typeName, bool bLogWarning )

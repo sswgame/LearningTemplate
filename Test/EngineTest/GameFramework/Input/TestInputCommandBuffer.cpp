@@ -22,7 +22,7 @@ namespace
     }
 } // namespace
 
-SW_TEST_CASE( ControlTest, ParserReadsTekkenNotationAndMotions )
+SW_TEST_CASE( InputCommandBufferTest, ParserReadsTekkenNotationAndMotions )
 {
     InputCommandParser parser;
     InputCommand       command;
@@ -43,7 +43,7 @@ SW_TEST_CASE( ControlTest, ParserReadsTekkenNotationAndMotions )
     SW_EXPECT_EQUAL( kControlButton2, command._listStep[2]._buttons );
 }
 
-SW_TEST_CASE( ControlTest, BufferCompletesCommandsWithinGapsFacingAndPriority )
+SW_TEST_CASE( InputCommandBufferTest, BufferCompletesCommandsWithinGapsFacingAndPriority )
 {
     InputCommandParser parser;
     InputCommand       dashPunch;
@@ -103,7 +103,7 @@ SW_TEST_CASE( ControlTest, BufferCompletesCommandsWithinGapsFacingAndPriority )
     SW_EXPECT_EQUAL( 2, InputCommandBuffer::mirrorDirection( 2, -1 ) );
 }
 
-SW_TEST_CASE( ControlTest, BufferCountsFramesSavesStateAndPrefersSpecificCommands )
+SW_TEST_CASE( InputCommandBufferTest, BufferCountsFramesSavesStateAndPrefersSpecificCommands )
 {
     InputCommandBuffer buffer( 8 );
     SW_EXPECT_EQUAL( 0, buffer.getFrameCount() );

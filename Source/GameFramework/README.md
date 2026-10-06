@@ -16,6 +16,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   (태그 조건 · 비용 · 쿨다운 · 트리거 · 입력) · `AbilityTask`, XML 카탈로그(`AbilityCatalog`). 장르를 가리지 않아 키트가 아니라 기반에 있습니다(턴제는
   틱을 끄고 턴마다 `advanceTime( 1 )`). 체력 변화는 같은 오브젝트의 `HealthListenerComponent`(HP 바)에 알리고 피해는 `DamageNumberComponent` 로 띄웁니다. 자세한 것은 `Ability/README.md`,
   쓰는 예는 `Source/Games/AbilityArena`
+- **Control**(빙의): 조종 대상(폰)과 조종자를 나눈다(언리얼 `APawn` / `AController` · `Possess`). 폰(`PawnComponent`)은 행동 층 의도(`ControlIntent` —
+  이동 축 · 위아래 · 절대 조종 회전 · 아날로그 4 · 버튼 32, 양자화 `write` / `read` 하나)만 들고, 같은 오브젝트의 이동 · 행동 컴포넌트는 그것만 읽는다(InputMap 을 읽지 않는다).
+  조종자(`ControllerComponent` — `possess` / `unpossess`, 조종 회전)는 자기 오브젝트에 산다: `PlayerControllerComponent`(입력 맵 → 의도, 매핑 층을 읽는 유일한 조종자 —
+  빙의하면 폰의 입력 레이어 · 플레이어 카메라 매니저 뷰 타깃 · `PossessionChangedEvent`), `AiControllerComponent`(`think` → `moveTo` · `setFocus` · 버튼).
+  조종 시스템(`ControlSystem`)이 씬 프레임 단계 `FrameSystems`(시작 뒤 · PrePhysics 틱 앞, 게임 스레드)에서 자동 빙의(`PawnAutoPossess`) · 의도 생산을 하고,
+  조종자 · 폰 목록은 등록부(`ComponentRegistry`)에서 읽는다. 플레이어와 NPC 의 움직임 코드가 하나다.
 - **Framework**: 게임 모듈의 수명과 배선 — `IGame`, `GameInstanceBase`, 서비스 로케이터(`GameService`), 다국어 창구(`GameStrings` — 엔진 `LocalizationManager` 를 게임 서비스로 부른다), 세이브 베이스(`SaveGame`),
   "game" 채널 이벤트(`GameEvents.h` · 내는 길 `GameEventUtil`), 화면 전환(`ScreenTransitionManager`), 소리(`GameSound` — 이벤트 라이브러리 올리기 · 내리기, 2D 이벤트 `postEvent`, 월드 자리 원샷 `postEventAt`(한 번 쓰는 에미터), 클립 `play( path, bus )`;
   따라 움직이는 · 루프 소리는 엔진의 `AudioEmitterComponent`, 자세한 것은 `Source/Engine/Audio/README.md`). `GameInstanceBase` 가 세이브 · 로드 완료와 씬 로드 요청 · 완료를 그 자리에서 낸다. `onInitialize` 뒤에 사용자 설정을 다시 넣는다(`UserSettingsManager::reapplyAll` — 언어 · 입력 맵이 그때 선다). 공유 타입은 루트의 `GameFrameworkMinimal.h`.
@@ -535,7 +541,7 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 | 2 | `Framework` |
 | 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
 | 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
-| 5 | `Ability` · `Gimmick` · `GameState` |
+| 5 | `Ability` · `Control` · `Gimmick` · `GameState` |
 
 위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
 나누지는 않는다(층은 폴더로만 지킨다).

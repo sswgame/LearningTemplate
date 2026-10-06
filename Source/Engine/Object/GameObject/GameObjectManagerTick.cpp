@@ -54,6 +54,36 @@ namespace sw
         dispatchPendingBeginPlay();
     }
 
+    void GameObjectManager::runFrameStepFrameSystems( float32 deltaTime )
+    {
+        if ( _listFrameSystem.empty() )
+            return;
+        SW_PROFILE_SCOPE( "GT.Scene.tick.frameSystems" );
+        // 시스템이 시스템을 붙이거나 뗄 수 있다 — 붙인 것은 다음 프레임부터(개수를 먼저 센다), 뗀 것은 빈 칸으로 남았다가 끝에 걷힌다.
+        _bRunningFrameSystems = true;
+        const size_t count    = _listFrameSystem.size();
+        for ( size_t systemIndex = 0; systemIndex < count; ++systemIndex )
+        {
+            ISceneFrameSystem* pSystem = _listFrameSystem[systemIndex]._pSystem.get();
+            if ( pSystem != nullptr )
+                pSystem->runBeforeTick( *this, deltaTime );
+        }
+        _bRunningFrameSystems = false;
+        if ( _listRetiredFrameSystem.empty() )
+            return;
+        size_t keptCount = 0;
+        for ( size_t systemIndex = 0; systemIndex < _listFrameSystem.size(); ++systemIndex )
+        {
+            if ( _listFrameSystem[systemIndex]._pSystem == nullptr )
+                continue;
+            if ( keptCount != systemIndex )
+                _listFrameSystem[keptCount] = std::move( _listFrameSystem[systemIndex] );
+            ++keptCount;
+        }
+        _listFrameSystem.resize( keptCount );
+        _listRetiredFrameSystem.clear();
+    }
+
     void GameObjectManager::runFrameStepTickPrePhysics( float32 deltaTime )
     {
         // 오브젝트가 없으면 컴포넌트 틱만 건너뛴다(적용 · 병합 · 파괴는 늘 돈다).

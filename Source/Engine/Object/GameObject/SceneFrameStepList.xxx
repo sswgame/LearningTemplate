@@ -19,6 +19,7 @@ SW_SCENE_FRAME_STEP( MainThreadTasks )    // 엔진의 메인 스레드 작업(`
 SW_SCENE_FRAME_STEP( Destroy )            // 지난 프레임 뒤에 지운 오브젝트 · 컴포넌트를 놓는다
 SW_SCENE_FRAME_STEP( Merge )              // 틱 밖에서 만든 오브젝트를 목록에 합친다
 SW_SCENE_FRAME_STEP( BeginPlay )          // 플레이 중에 붙은 컴포넌트를 틱 **전에** 시작한다 — onBeginPlay 가 틱 그룹 · 구조를 바꾸면 이번 틱에 든다
+SW_SCENE_FRAME_STEP( FrameSystems )       // 붙은 프레임 시스템(`ISceneFrameSystem`)을 붙인 순서대로(게임 스레드) — 조종 시스템이 모든 폰의 이번 틱 의도를 채운다
 SW_SCENE_FRAME_STEP( TickPrePhysics )     // PrePhysics · DuringPhysics 그룹 병렬 틱(`SceneTickScheduler::tickPhase`, 구조 동결)
 SW_SCENE_FRAME_STEP( ApplyPrePhysics )    // 틱이 남긴 것을 적용 — 구조 변경 → 틱 중 트랜스폼 쓰기 → 틱 뒤 큐 → 병합 → 시작(`StructuralChangeBuffer::drain`)
 SW_SCENE_FRAME_STEP( Navigation )         // 틱이 건 목적지로 군중을 진행해 자리 · 컨트롤러 속도를 쓴다 — 그 속도가 이번 물리에 든다
