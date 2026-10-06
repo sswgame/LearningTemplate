@@ -167,7 +167,7 @@ cd build/Ninja-Debug/Bin
   InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
   - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
     EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
-    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화.
+    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화. GM 도구 패널(GF_Admin 의 `AdminClient` — 조회 · 지급 · 제재 · 감사 열람)도 이것을 기다린다.
   - **D 콘솔 · 치트(남은 것)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
     엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.
     게임 창 콘솔은 셸 InputMap 액션 + `InputManager` 키보드 포커스로 받는다(`DevTools/DevConsoleController`). 남은 것: 패드는 포커스 밖이라 콘솔이 열린 동안
@@ -426,6 +426,16 @@ cd build/Ninja-Debug/Bin
   **서버 여럿**: 접속 상태(`OnlinePresence` — 캐시 `presence:` 키, 시한 60 초 · 30 초마다 다시 적기)와 버스(`account.revoke` 로 다른 서버의 옛 세션 닫기 · `push.<서버>` 로
   다른 서버의 계정에게 알림)가 들어갔다(`OnlineMultiServerTest`). 계정 · 거래 몫의 남은 것: 게임 UDP 접속 표 서명 키(로그인 · 게임 서버 공유, 지금 서버 설정 파일)의
   배포 · 교체 절차, 인스턴스 아이템(지금 거래 다리는 가산 자산만 — 인벤토리 인스턴스 상태 칸은 거절), 부하 시험 봇, 실제 지연(루프백이 아닌 망)에서의 버스 · 캐시 왕복 측정.
+  **경제 · 우편함 · GM**: `GF_Economy`/`GF_Server_Economy`(화폐 · 상품 카탈로그 · 구매 · 영수증 계약 + 가짜 제공자 · 서비스 · 클라이언트 · Wallet/Inventory 거울 — 로컬 지갑은
+  원장 사본), `GF_Mailbox`/`GF_Server_Mailbox`(수령 = 원장 이동 · 모두 받기 · 만료 쓸기 · 전체 우편 캠페인 — 기반 `Online/Mail/ServiceMailCampaign`), `GF_Admin`/`GF_Server_Admin`
+  (권한 등급 넷 · 모든 조작이 효과와 같은 트랜잭션의 감사 줄 · 환불 회수 빚)이 들어갔다. 남은 것 — ① 영수증 제공자 셋(`Receipt/Provider/<제품>/`): Apple(App Store Server API —
+  서명된 거래 JWS 의 x5c 사슬을 Apple 루트로 + 거래 조회), Google(Play Developer API `purchases.products` — 서비스 계정 JWT → OAuth 토큰), Steam(`ISteamMicroTxn`
+  InitTxn → FinalizeTxn — 서버가 주문을 여는 흐름) — 외부 스토어 계정 · 비용이 들어 계약 + 가짜까지만(사용자 결정), 호스트 이름 해석(Core 주소는 IPv4 뿐)이 먼저다
+  ② 환불 · 결제 취소 알림 받기(Apple 서버 알림 v2 · Google RTDN · Steam 환불 → GM 회수와 같은 `refund.revoke` 빚 이동) · 유상 재화 청약철회(7 일 · 미사용분) 규칙
+  ③ 인스턴스 아이템(내구도 · 강화 — 원장은 개수만, `item.<정의>#<id>` 개수 1 + 상태 레코드) ④ 잔액 · 새 우편 알림(서버 → 클라이언트 `sendPush` — 지금은 응답에 실린 잔액 · 다음 목록)
+  ⑤ 원장 보존 검사 · 만료 쓸기를 예약 작업(`ServiceScheduler`)으로(지금 쓸기는 우편함 서비스 틱 주기), 분개 · 감사 보존 기간 정리, `mail_sent` · 멱등 기록 · `econ_purchase` 정리
+  ⑥ GM: 에디터 패널(1-4 C 확장 지점 뒤), 접속하지 않은 계정 이름 찾기(계정 키트 저장 부분을 기반 계약으로), 첫 관리자 · GM 전용 호스트 포트를 서버 설정에(`AdminService::seedRole`)
+  ⑦ 서버 실행 파일에 경제 · 우편함 · GM 서비스 조립(카탈로그 경로 · 영수증 등록부 · 지표 등록부를 서버 설정으로) ⑧ 발행 · 소각 총량 지표(보존 검사가 `economy_issued_total{asset}`).
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).
@@ -1790,6 +1800,10 @@ cd build/Ninja-Debug/Bin
 - **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
   새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
   저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.
+- **멱등 재시도는 잔액 · 한도 판정보다 먼저 지난 결과를 본다**(`EconomyStoreLogic::purchase`) — 첫 구매로 잔액이 준 뒤의 재시도가 "모자람" 을 받으면 클라이언트는
+  구매가 안 된 줄 안다. 그리고 재생은 **저장된 분개의 다리로** 한다 — 가상 화폐(무상 → 유상 재원) 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 달라 내용 해시가 어긋난다.
+- **여러 키트가 한 트랜잭션에 넣는 쓰기는 기반 `Online/` 에 둔다**(원장 이동 · 우편 넣기 · 제재 · 캠페인) — 키트끼리는 include 하지 못하므로 키트 안에 두면 거래 · 우편 ·
+  GM 이 같은 트랜잭션을 만들 수 없다. 키트에는 요청 처리 · 카탈로그 · 클라이언트가 남는다. 온라인 키트의 업무 결과는 응답 몸에, 오류 코드는 공통(`OnlineError`)만.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 
