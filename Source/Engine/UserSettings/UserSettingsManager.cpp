@@ -3,6 +3,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
@@ -20,10 +21,9 @@ namespace sw
     {
         struct UserSettingsManagerInternal
         {
-            static constexpr utf8 kFileName[]       = "usersettings.json";
-            static constexpr utf8 kVersionKey[]     = "version";
-            static constexpr utf8 kValuesKey[]      = "values";
-            static constexpr utf8 kFallbackFolder[] = "Saved/UserSettings";
+            static constexpr utf8 kFileName[]   = "usersettings.json";
+            static constexpr utf8 kVersionKey[] = "version";
+            static constexpr utf8 kValuesKey[]  = "values";
 
             /** @brief 사용자 파일의 키 · 값 한 줄입니다(버전 올리기가 이 목록을 고친다). */
             struct FileEntry
@@ -386,21 +386,7 @@ namespace sw
 
     string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        using Internal          = UserSettingsManagerInternal;
-        const string folderName = gameName.empty() ? string( "default" ) : StringUtil::toLower( string( gameName ).c_str() );
-#if defined( SW_PLATFORM_WINDOWS )
-        const utf8* pRoot = std::getenv( "LOCALAPPDATA" );
-        if ( StringUtil::isNullOrEmpty( pRoot ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pRoot, "SWEngine" ), folderName ), Internal::kFileName );
-#elif defined( SW_PLATFORM_LINUX )
-        const utf8* pConfigRoot = std::getenv( "XDG_CONFIG_HOME" );
-        if ( StringUtil::isNullOrEmpty( pConfigRoot ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pConfigRoot, "swengine" ), folderName ), Internal::kFileName );
-        const utf8* pHome = std::getenv( "HOME" );
-        if ( StringUtil::isNullOrEmpty( pHome ) == false )
-            return FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( FileUtil::joinPath( pHome, ".config" ), "swengine" ), folderName ), Internal::kFileName );
-#endif
-        return FileUtil::joinPath( FileUtil::joinPath( Internal::kFallbackFolder, folderName ), Internal::kFileName );
+        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsManagerInternal::kFileName );
     }
 
     // ------------------------------------------------------------------------------

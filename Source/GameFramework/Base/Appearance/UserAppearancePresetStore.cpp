@@ -2,7 +2,6 @@
 
 #include "GameFramework/Base/Appearance/UserAppearancePresetStore.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/KeyValueFile.h"
@@ -232,17 +231,15 @@ namespace sw
         return true;
     }
 
-    bool UserAppearancePresetStore::saveToFile( string_view path ) const
+    bool UserAppearancePresetStore::writeBytes( vector<uint8>& outBytes ) const
     {
-        FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, saveToText() );
+        const string text = saveToText();
+        outBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
+        return true;
     }
 
-    bool UserAppearancePresetStore::loadFromFile( string_view path )
+    bool UserAppearancePresetStore::readBytes( const uint8* pData, size_t size )
     {
-        string text;
-        if ( FileUtil::readTextFile( path, text ) == false )
-            return false;
-        return loadFromText( string_view( text.c_str(), text.size() ) );
+        return loadFromText( string_view( reinterpret_cast<const utf8*>( pData ), size ) );
     }
 } // namespace sw

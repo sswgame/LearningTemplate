@@ -393,11 +393,10 @@ SW_TEST_CASE( ArchiveTest, ArchiveObjectTLVSerialization )
 }
 
 /**
- * @brief [ArchiveTest] 세이브 슬롯 바이너리 직렬화/역직렬화(SAV1 포맷 + CRC32) 라운드트립 검증 — 받침은 리플렉션 세이브 구조체
+ * @brief [ArchiveTest] 세이브 바이트 직렬화/역직렬화 라운드트립 검증 — 받침은 리플렉션 세이브 구조체(판 · 체크섬은 로컬 저장 봉투의 몫)
  */
 SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
 {
-    const sw::string savePath = test::makeTempPath( "test_save_slot.sav" );
 
     sw::ScheduleNpcSaveState writeSlot;
     writeSlot._id             = sw::hashed_string( "innkeeper" );
@@ -405,11 +404,11 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
     writeSlot._listTag        = { "quest_giver" };
     writeSlot._originPosition = sw::float3{ 150.0f, 0.0f, -300.0f };
     writeSlot._originMinute   = 9999;
-    SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( writeSlot, savePath ) );
-    SW_EXPECT_TRUE( sw::FileUtil::exists( savePath ) );
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::SaveGameSerializer::writeBytes( writeSlot, bytes ) );
 
     sw::ScheduleNpcSaveState readSlot;
-    SW_EXPECT_TRUE( sw::SaveGameSerializer::loadGameFromSlot( readSlot, savePath ) );
+    SW_EXPECT_TRUE( sw::SaveGameSerializer::readBytes( readSlot, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( readSlot._id == writeSlot._id );
     SW_EXPECT_TRUE( readSlot._originArea == writeSlot._originArea );
     SW_ASSERT_EQUAL( size_t{ 1 }, readSlot._listTag.size() );
@@ -417,31 +416,6 @@ SW_TEST_CASE( ArchiveTest, SaveGameBinaryArchiveRoundTrip )
     SW_EXPECT_NEAR_EQUAL( 150.0f, readSlot._originPosition._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( -300.0f, readSlot._originPosition._z, 1.0e-6f );
     SW_EXPECT_EQUAL( 9999, readSlot._originMinute );
-}
-
-/**
- * @brief [ArchiveTest] SaveGame 변조된 바이너리 세이브 파일 거부(CRC mismatch rejection) 검증
- */
-SW_TEST_CASE( ArchiveTest, SaveGameBinaryTamperRejection )
-{
-    const sw::string savePath = test::makeTempPath( "tampered_save_slot.sav" );
-
-    sw::ScheduleNpcSaveState writeSlot;
-    writeSlot._id           = sw::hashed_string( "world_level_1" );
-    writeSlot._originMinute = 20;
-    SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( writeSlot, savePath ) );
-
-    // 파일 읽어서 페이로드 바이트 임의 변조
-    sw::vector<uint8> saveBytes;
-    SW_ASSERT_TRUE( sw::FileUtil::readFile( savePath, saveBytes ) );
-    SW_ASSERT_TRUE( saveBytes.size() > 20 );
-
-    saveBytes[saveBytes.size() - 2] ^= 0x7F; // 페이로드 끝 변조
-    SW_ASSERT_TRUE( sw::FileUtil::writeFile( savePath, saveBytes.data(), saveBytes.size() ) );
-
-    // 변조된 파일 로드시 CRC 불일치로 실패해야 함
-    sw::ScheduleNpcSaveState tamperedSlot;
-    SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( tamperedSlot, savePath ) );
 }
 
 /**
@@ -1570,35 +1544,9 @@ SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
     }
 }
 
-SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
+SW_TEST_CASE( ArchiveTest, CorruptedDocumentBinaryStreams )
 {
-    // 1. SaveGame SAV1 CRC32 mismatch detection
-    {
-        sw::ScheduleNpcSaveState validSlot;
-        validSlot._id           = sw::hashed_string( "dungeon_boss" );
-        validSlot._originMinute = 200;
-
-        const sw::string savePath = test::makeTempPath( "test_corrupt_slot.sav" );
-        SW_EXPECT_TRUE( sw::SaveGameSerializer::saveGameToSlot( validSlot, savePath ) );
-
-        // Read and intentionally flip a byte in payload
-        sw::vector<uint8> fileBytes;
-        SW_EXPECT_TRUE( sw::FileUtil::readFile( savePath, fileBytes ) );
-        SW_EXPECT_TRUE( fileBytes.size() > 20 );
-
-        // Flip byte at the end of the file
-        fileBytes.back() ^= 0xFF;
-        SW_EXPECT_TRUE( sw::FileUtil::writeFile( savePath, fileBytes.data(), fileBytes.size() ) );
-
-        // Load must detect CRC32 mismatch and reject
-        sw::ScheduleNpcSaveState corruptSlot;
-        SW_EXPECT_FALSE( sw::SaveGameSerializer::loadGameFromSlot( corruptSlot, savePath ) );
-
-        // Cleanup
-        SW_EXPECT_TRUE( sw::FileUtil::removeFile( savePath ) );
-    }
-
-    // 2. SceneDocument corrupted binary magic
+    // 1. SceneDocument corrupted binary magic
     {
         const uint8      corruptedSceneBytes[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
         const sw::string testScenePath          = test::makeTempPath( "test_corrupt_scene.bin" );
@@ -1612,7 +1560,7 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( testScenePath ) );
     }
 
-    // 3. PrefabAsset corrupted binary magic
+    // 2. PrefabAsset corrupted binary magic
     {
         const uint8      corruptedPrefabBytes[8] = { 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
         const sw::string testPrefabPath          = test::makeTempPath( "test_corrupt_prefab.bin" );
@@ -1628,13 +1576,11 @@ SW_TEST_CASE( ArchiveTest, CorruptedSaveGameAndDocumentBinaryStreams )
 }
 
 /**
- * @brief [ArchiveTest] 세이브 슬롯은 같은 값이면 같은 파일 바이트다(결정적) — 그리고 읽으면 그 값이 돌아온다
- * @details 게임 플래그의 이름 순 결정성은 스냅숏 봉투 쪽 시험(`SharedStateArchiveTest`)이 본다 — SAV1 슬롯은 사용자 파일만 싣는다.
+ * @brief [ArchiveTest] 세이브 바이트는 같은 값이면 같은 바이트다(결정적) — 그리고 읽으면 그 값이 돌아온다
+ * @details 게임 플래그의 이름 순 결정성은 스냅숏 봉투 쪽 시험(`SharedStateArchiveTest`)이 본다 — SaveGame 은 사용자 파일만 싣는다.
  */
 SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
 {
-    const sw::string testSavePath  = test::makeTempPath( "test_deterministic_slot.sav" );
-    const sw::string otherSavePath = test::makeTempPath( "test_deterministic_slot_other.sav" );
 
     sw::ScheduleNpcSaveState slot1;
     slot1._id                                = sw::hashed_string( "Overworld_Main" );
@@ -1643,16 +1589,14 @@ SW_TEST_CASE( ArchiveTest, SaveGameReflectionChecksumAndLoad )
     slot1._originMinute                      = 3;
     const sw::ScheduleNpcSaveState otherSlot = slot1;
 
-    SW_ASSERT_TRUE( sw::SaveGameSerializer::saveGameToSlot( slot1, testSavePath ) );
-    SW_ASSERT_TRUE( sw::SaveGameSerializer::saveGameToSlot( otherSlot, otherSavePath ) );
     sw::vector<uint8> bytes;
     sw::vector<uint8> otherBytes;
-    SW_ASSERT_TRUE( sw::FileUtil::readFile( testSavePath, bytes ) );
-    SW_ASSERT_TRUE( sw::FileUtil::readFile( otherSavePath, otherBytes ) );
+    SW_ASSERT_TRUE( sw::SaveGameSerializer::writeBytes( slot1, bytes ) );
+    SW_ASSERT_TRUE( sw::SaveGameSerializer::writeBytes( otherSlot, otherBytes ) );
     SW_EXPECT_TRUE_MSG( bytes == otherBytes, "같은 값인데 세이브 바이트가 다릅니다" );
 
     sw::ScheduleNpcSaveState slot2;
-    SW_ASSERT_TRUE( sw::SaveGameSerializer::loadGameFromSlot( slot2, testSavePath ) );
+    SW_ASSERT_TRUE( sw::SaveGameSerializer::readBytes( slot2, bytes.data(), bytes.size() ) );
     SW_EXPECT_TRUE( slot2._id == sw::hashed_string( "Overworld_Main" ) );
     SW_ASSERT_EQUAL( size_t{ 2 }, slot2._listTag.size() );
     SW_EXPECT_EQUAL( sw::string( "quest.boss_defeated" ), slot2._listTag[0] );

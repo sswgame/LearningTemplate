@@ -39,6 +39,8 @@
 #include "GameFramework/Base/Framework/GameStrings.h"
 #include "GameFramework/Base/Framework/SaveGame.h"
 #include "GameFramework/Base/Framework/ScreenTransitionManager.h"
+#include "GameFramework/Base/Online/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Base/Online/Local/MemoryLocalStore.h"
 #include "GameFramework/Base/UI/DamageNumberComponent.h"
 #include "GameFramework/Base/UI/DialogueRunnerComponent.h"
 #include "GameFramework/Base/UI/HealthBarComponent.h"
@@ -180,6 +182,14 @@ namespace
         return probe;
     }
 
+    /** @brief 메모리 로컬 저장(맡기는 자리에서 실행)의 요청 하나를 맡기고 그 완료를 꺼냅니다. */
+    LocalStoreCompletion takeOnlyCompletion( ILocalStore& store )
+    {
+        vector<LocalStoreCompletion> listCompletion;
+        (void)store.pollCompletions( listCompletion );
+        SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
+        return listCompletion.empty() ? LocalStoreCompletion{} : std::move( listCompletion.front() );
+    }
     void expectSameSaveSlotProbe( const ScheduleNpcSaveState& expected, const ScheduleNpcSaveState& actual )
     {
         SW_EXPECT_TRUE( expected._id == actual._id );
@@ -329,21 +339,28 @@ SW_TEST_CASE( GameFrameworkTest, ScreenTransitionManagerReset )
 }
 
 // ------------------------------------------------------------------------------
-// 3) 세이브 슬롯(SaveGameSerializer) — SAV1 봉투(리플렉션 객체 하나)의 파일 왕복 · 변조 거부. 받침은 리플렉션 세이브 구조체(`ScheduleNpcSaveState`).
-//    게임 상태(진행 · 세계)는 이 길이 아니라 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)다 — SAV1 은 사용자 파일만.
+// 3) 세이브 슬롯(SaveGameSerializer + 로컬 저장) — 리플렉션 객체 하나의 바이트를 슬롯에 왕복 · 변조 거부. 받침은 리플렉션 세이브 구조체(`ScheduleNpcSaveState`).
+//    게임 상태(진행 · 세계)는 이 길이 아니라 스냅숏 봉투(`GameInstanceBase::saveStateToFile`)다 — SaveGame 은 사용자 파일만.
 // ------------------------------------------------------------------------------
 
 /**
- * @brief [GameFrameworkTest] 리플렉션 객체 하나를 세이브 슬롯 파일로 왕복한다 — 목록 · 이름 · 벡터 칸이 그대로 돌아온다
+ * @brief [GameFrameworkTest] 리플렉션 객체 하나를 로컬 저장 슬롯으로 왕복한다 — 목록 · 이름 · 벡터 칸이 그대로 돌아온다
  */
-SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileRoundTrip )
+SW_TEST_CASE( GameFrameworkTest, SaveGameSlotRoundTrip )
 {
+    MemoryLocalDatabase        database;
+    MemoryLocalStore           store( &database, LocalSealContext{} );
     const ScheduleNpcSaveState source = makeSaveSlotProbe( "blacksmith", 480 );
-    const string               path   = test::makeTempPath( "test_saveslot_temp.sav" );
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( source, path ) );
+    vector<uint8>              bytes;
+    SW_ASSERT_TRUE( SaveGameSerializer::writeBytes( source, bytes ) );
+    (void)store.submitWrite( "save/probe", bytes, LocalStoreWriteOptions{} );
+    SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
 
+    (void)store.submitRead( "save/probe" );
+    const LocalStoreCompletion read = takeOnlyCompletion( store );
+    SW_ASSERT_TRUE( read._result == LocalStoreResult::Ok );
     ScheduleNpcSaveState loaded{};
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( loaded, path ) );
+    SW_ASSERT_TRUE( SaveGameSerializer::readBytes( loaded, read._bytes.data(), read._bytes.size() ) );
     expectSameSaveSlotProbe( source, loaded );
 }
 
@@ -358,66 +375,81 @@ SW_TEST_CASE( GameFrameworkTest, StringUtilCrc32StandardVector )
 }
 
 /**
- * @brief [GameFrameworkTest] SaveGame SAV1 바이너리 CRC32 위변조/손상 감지 검증
+ * @brief [GameFrameworkTest] 세이브 슬롯 봉투의 바이트 하나를 고치면 읽기가 Corrupt 다(체크섬은 봉투의 몫 — 세이브 바이트에는 머리가 없다)
  */
-SW_TEST_CASE( GameFrameworkTest, SaveGameBinaryCrc32TamperingDetection )
+SW_TEST_CASE( GameFrameworkTest, SaveGameSlotTamperingIsCorrupt )
 {
+    MemoryLocalDatabase        database;
+    MemoryLocalStore           store( &database, LocalSealContext{} );
     const ScheduleNpcSaveState source = makeSaveSlotProbe( "guard", 1320 );
-    const string               path   = test::makeTempPath( "test_sav1_corrupt.sav" );
-    SW_EXPECT_TRUE( SaveGameSerializer::saveGameToSlot( source, path ) );
+    vector<uint8>              bytes;
+    SW_ASSERT_TRUE( SaveGameSerializer::writeBytes( source, bytes ) );
+    (void)store.submitWrite( "save/guard", bytes, LocalStoreWriteOptions{} );
+    SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
 
-    // 1) 정상 로드 확인
-    ScheduleNpcSaveState okSlot{};
-    SW_EXPECT_TRUE( SaveGameSerializer::loadGameFromSlot( okSlot, path ) );
-    expectSameSaveSlotProbe( source, okSlot );
+    vector<uint8> envelopeBytes;
+    SW_ASSERT_TRUE( database.findEnvelope( "save/guard", envelopeBytes ) );
+    SW_ASSERT_TRUE( database.modifyEnvelopeByte( "save/guard", envelopeBytes.size() / 2, 0xFF ) ); // 몸 가운데
+    (void)store.submitRead( "save/guard" );
+    SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Corrupt );
+}
 
-    // 2) 바이너리 페이로드 바이트 1개 변조
-    vector<uint8> rawBlob;
-    SW_EXPECT_TRUE( FileUtil::readFile( path, rawBlob ) );
-    SW_ASSERT_TRUE( rawBlob.size() > 20 );
-    rawBlob[rawBlob.size() - 1] ^= 0xFF; // 마지막 바이트 손상
-    SW_EXPECT_TRUE( FileUtil::writeFile( path, rawBlob.data(), rawBlob.size() ) );
+/**
+ * @brief [GameFrameworkTest] 세이브 바이트는 리플렉션 아카이브 그대로다(옛 SAV1 머리 없음) — 판 · 체크섬은 슬롯 봉투(`SWLS`)가 든다
+ */
+SW_TEST_CASE( GameFrameworkTest, SaveGameBytesCarryNoHeaderOfTheirOwn )
+{
+    const ScheduleNpcSaveState slot = makeSaveSlotProbe( "envelope", 7 );
+    vector<uint8>              bytes;
+    SW_ASSERT_TRUE( SaveGameSerializer::writeBytes( slot, bytes ) );
+    Archive archive;
+    SW_ASSERT_TRUE( archive.serializeObject( slot, SaveGameSerializer::makeSaveContext() ) );
+    SW_EXPECT_EQUAL( static_cast<uint64>( archive.getSize() ), static_cast<uint64>( bytes.size() ) );
 
-    // 3) CRC32 불일치로 로드 실패 검증
+    MemoryLocalDatabase database;
+    MemoryLocalStore    store( &database, LocalSealContext{} );
+    (void)store.submitWrite( "envelope", bytes, LocalStoreWriteOptions{} );
+    SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
+    vector<uint8> envelopeBytes;
+    SW_ASSERT_TRUE( database.findEnvelope( "envelope", envelopeBytes ) );
+    SW_ASSERT_TRUE( envelopeBytes.size() > LocalSlotEnvelope::kHeaderSize );
+    SW_EXPECT_TRUE( envelopeBytes[0] == 'S' && envelopeBytes[1] == 'W' && envelopeBytes[2] == 'L' && envelopeBytes[3] == 'S' );
+}
+
+/**
+ * @brief [GameFrameworkTest] 사용자 파일(외형 프리셋)은 SaveGame 슬롯 API 로 왕복하고, 형식 판이 다른 슬롯은 읽지 않는다
+ */
+SW_TEST_CASE( GameFrameworkTest, SaveGameUserFileRoundTripsThroughASlot )
+{
+    MemoryLocalDatabase       database;
+    MemoryLocalStore          store( &database, LocalSealContext{} );
+    UserAppearancePresetStore presets;
+    SW_ASSERT_TRUE( presets.saveToSlot( store, "user/presets", LocalStoreWriteOptions{} ) != 0 );
+    SW_EXPECT_TRUE( takeOnlyCompletion( store )._result == LocalStoreResult::Ok );
+
+    (void)store.submitRead( "user/presets" );
+    LocalStoreCompletion      read = takeOnlyCompletion( store );
+    UserAppearancePresetStore loaded;
+    SW_ASSERT_TRUE( loaded.loadFromCompletion( read ) );
+    SW_EXPECT_TRUE( loaded.saveToText() == presets.saveToText() ); // 프리셋 내용의 왕복은 AppearanceSelectionTest(외형 데이터가 있어야 공유 코드를 푼다)
+
+    read._formatVersion = presets.getFormatVersion() + 1;
     {
-        SW_TEST_DEFENSIVE_SCOPE( "Testing SaveGame binary CRC32 tampering detection" );
-        ScheduleNpcSaveState corruptedSlot{};
-        SW_EXPECT_FALSE( SaveGameSerializer::loadGameFromSlot( corruptedSlot, path ) );
+        SW_TEST_DEFENSIVE_SCOPE( "a slot written by another format version is refused" );
+        UserAppearancePresetStore refused;
+        SW_EXPECT_FALSE( refused.loadFromCompletion( read ) );
     }
 }
 
 /**
- * @brief [GameFrameworkTest] 세이브 슬롯 파일은 SAV1 봉투다 — 머리 16 바이트(마법 · 판 · 페이로드 CRC32 · 페이로드 길이) 뒤에 페이로드
- * @details 받침 타입을 바꿔도(어떤 REFLECT 타입이든) 봉투는 `SaveGameSerializer` 하나가 쓰므로 그대로여야 한다.
- */
-SW_TEST_CASE( GameFrameworkTest, SaveGameSlotFileIsTheSav1Envelope )
-{
-    const ScheduleNpcSaveState slot = makeSaveSlotProbe( "envelope", 7 );
-    const string               path = test::makeTempPath( "envelope.sav" );
-    SW_ASSERT_TRUE( SaveGameSerializer::saveGameToSlot( slot, path ) );
-
-    vector<uint8> bytes;
-    SW_ASSERT_TRUE( FileUtil::readFile( path, bytes ) );
-    SW_ASSERT_TRUE( bytes.size() > 16u );
-
-    uint32 arrHeader[4]{ 0, 0, 0, 0 };
-    Memory::copy( arrHeader, bytes.data(), sizeof( arrHeader ) );
-    const uint32 payloadSize = static_cast<uint32>( bytes.size() - 16u );
-    SW_EXPECT_EQUAL( SaveGameSerializer::kSaveBinMagic, arrHeader[0] );
-    SW_EXPECT_EQUAL( SaveGameSerializer::kSaveBinVersion, arrHeader[1] );
-    SW_EXPECT_EQUAL( StringUtil::computeCrc32( bytes.data() + 16, payloadSize ), arrHeader[2] );
-    SW_EXPECT_EQUAL( payloadSize, arrHeader[3] );
-}
-
-/**
  * @brief [GameFrameworkTest] 세이브 기반(`SaveGame`)은 파일 입출력의 기본 구현을 갖지 않는다 — 파생 타입(사용자 파일)이 자기 형식으로 쓴다
- * @details 기반이 `saveGameToSlot( *this, path )` 를 부르면 템플릿 인자가 `SaveGame` 이라 프로퍼티 0 인 빈 페이로드를 쓰고도 성공을 돌려준다.
+ * @details 기반이 `SaveGameSerializer::writeBytes( *this, out )` 를 부르면 템플릿 인자가 `SaveGame` 이라 프로퍼티 0 인 빈 페이로드를 쓰고도 성공을 돌려준다.
  *          그런 기본 구현이 있으면 override 를 빠뜨린 파생 세이브는 말없이 데이터를 잃는다 — 순수 가상이라 컴파일러가 막는다.
  */
 SW_TEST_CASE( GameFrameworkTest, SaveGameBaseHasNoDefaultFileIo )
 {
     SW_EXPECT_TRUE_MSG( std::is_abstract_v<SaveGame>, "SaveGame 에 파일 입출력 기본 구현이 다시 생겼습니다" );
-    SW_EXPECT_TRUE_MSG( std::is_abstract_v<UserAppearancePresetStore> == false, "UserAppearancePresetStore 가 saveToFile · loadFromFile 을 정의하지 않습니다" );
+    SW_EXPECT_TRUE_MSG( std::is_abstract_v<UserAppearancePresetStore> == false, "UserAppearancePresetStore 가 writeBytes · readBytes 를 정의하지 않습니다" );
     SW_EXPECT_TRUE( (std::is_base_of_v<SaveGame, UserAppearancePresetStore>));
     SW_EXPECT_NOT_NULL( SaveGame::StaticType() );
 }
@@ -1205,9 +1237,9 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
 
     // 봉투(SWST v3 · 토큰) 안의 씬 섹션 — 첫 4 바이트가 오브젝트 수다. 뒤에는 4 바이트뿐이다.
     const uint8 arrSceneSection[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x00, 0x00 };
-    Archive     envelope;
-    envelope << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 3 ) << static_cast<uint64>( 0 );
-    envelope.writeSection( arrSceneSection, static_cast<uint32>( sizeof( arrSceneSection ) ) );
+    Archive     envelopeBytes;
+    envelopeBytes << static_cast<uint32>( 0x53575354u ) << static_cast<uint32>( 3 ) << static_cast<uint64>( 0 );
+    envelopeBytes.writeSection( arrSceneSection, static_cast<uint32>( sizeof( arrSceneSection ) ) );
 
     // 할당한 바이트 누계로 본다 — 운영체제가 큰 예약을 받아 주면 그 reserve 는 실패하지 않고 조용히 수십 GB 를 잡는다.
     const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
@@ -1224,7 +1256,7 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     GameInstanceBase instance;
     SW_TEST_DEFENSIVE_SCOPE( "a truncated scene snapshot that claims four billion objects" );
     const uint64 bytesBefore = sumAllocatedBytes();
-    SW_EXPECT_FALSE( instance.deserializeState( envelope.getData(), static_cast<uint32>( envelope.getSize() ) ) );
+    SW_EXPECT_FALSE( instance.deserializeState( envelopeBytes.getData(), static_cast<uint32>( envelopeBytes.getSize() ) ) );
     const uint64 allocatedBytes = sumAllocatedBytes() - bytesBefore;
     SW_EXPECT_TRUE_MSG( allocatedBytes < uint64{ 1 } * 1024 * 1024, "파일이 말한 오브젝트 수만큼 미리 잡았습니다" );
 }
@@ -1240,7 +1272,7 @@ SW_TEST_CASE( GameFrameworkTest, SnapshotWithoutTheCurrentEnvelopeIsRefused )
     const ScopedSceneGameService scopedService{ sceneManager };
 
     GameInstanceBase instance;
-    SW_TEST_DEFENSIVE_SCOPE( "a state snapshot without the current envelope" );
+    SW_TEST_DEFENSIVE_SCOPE( "a state snapshot without the current envelopeBytes" );
 
     // 봉투 없이 오브젝트 0 개 — 봉투 없는 형식으로 짐작하면 빈 씬으로 "성공" 한다.
     const uint8 arrBare[4] = { 0x00, 0x00, 0x00, 0x00 };

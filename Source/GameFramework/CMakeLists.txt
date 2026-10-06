@@ -32,6 +32,10 @@ target_link_libraries(GameFramework
 	PRIVATE
 	sw_global_options
 )
+# 로컬 저장의 장치 키(Base/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
+if(WIN32)
+	target_link_libraries(GameFramework PRIVATE crypt32)
+endif()
 
 target_compile_definitions(GameFramework
 	PRIVATE

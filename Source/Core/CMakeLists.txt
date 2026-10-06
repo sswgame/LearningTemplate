@@ -52,6 +52,7 @@ set(cfSources
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/IFileWatcher.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/PlatformFileUtil.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/File/Std/FileUtilStdFileSystem.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/File/UserDataPath.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/GlobalVariable/GlobalVariableManager.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Log/ConsoleLogOutput.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Log/FileLogOutput.cpp"

@@ -30,7 +30,7 @@ namespace sw
 {
     /**
      * @class UserAppearancePresetStore
-     * @brief 플레이어 프리셋 목록을 `key=value` 세이브 파일로 읽고 씁니다. 프리셋 내용은 공유 코드(`AppearanceShareCode`) 한 줄로 싣습니다 —
+     * @brief 플레이어 프리셋 목록을 `key=value` 글로 읽고 씁니다(로컬 저장 슬롯의 몸). 프리셋 내용은 공유 코드(`AppearanceShareCode`) 한 줄로 싣습니다 —
      *        세이브와 공유가 같은 형식이고, 콘텐츠가 바뀌어도 읽힙니다(펼칠 때 `AppearanceSelectionUtil::applySelection` 이 지워진 것을 보고한다).
      * @details **플레이어 세이브는 이미 배포된 데이터라 옛 형식을 읽습니다** — 엔진 데이터의 "옛 이름 · 옛 형식 리더를 두지 않는다" 규칙은 여기 해당하지
      *          않습니다. 형식 판(`formatVersion`)마다 다음 판으로 올리는 단계를 두고, 읽을 때 지금 판까지 차례로 올립니다. 지금 판보다 새 파일은 읽지 않습니다.
@@ -61,8 +61,8 @@ namespace sw
         /** @brief 즐겨찾기만 저장 순서대로 모읍니다. */
         void collectFavorites( vector<const UserAppearancePreset*>& outListPreset ) const;
 
-        [[nodiscard]] bool saveToFile( string_view path ) const override;
-        [[nodiscard]] bool loadFromFile( string_view path ) override;
+        [[nodiscard]] bool writeBytes( vector<uint8>& outBytes ) const override;
+        [[nodiscard]] bool readBytes( const uint8* pData, size_t size ) override;
         string             saveToText() const;
         /** @brief 글에서 읽습니다. 옛 판은 올리고, 망가진 프리셋 줄은 건너뛰며(경고), 판이 지금보다 새면 false 입니다. */
         [[nodiscard]] bool loadFromText( string_view text );

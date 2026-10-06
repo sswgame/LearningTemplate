@@ -210,11 +210,11 @@ SW_TEST_CASE( AppearanceSelectionTest, UserPresetStoreRoundTripsAndUpgrades )
     SW_EXPECT_FALSE( store.renamePreset( "Hair only", "Parade Look" ) );
     SW_EXPECT_TRUE( store.renamePreset( "Hair only", "Barber" ) );
 
-    const string path = test::makeTempPath( "appearance_presets.sav" );
-    SW_ASSERT_TRUE( store.saveToFile( path ) );
+    vector<uint8> bytes;
+    SW_ASSERT_TRUE( store.writeBytes( bytes ) );
     UserAppearancePresetStore loaded;
     loaded.setDatabase( &fixture._database );
-    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_ASSERT_TRUE( loaded.readBytes( bytes.data(), bytes.size() ) );
     SW_ASSERT_EQUAL( size_t( 2 ), loaded.getPresets().size() );
     const UserAppearancePreset* pParade = loaded.findPresetByName( "Parade Look" );
     SW_ASSERT_NOT_NULL( pParade );

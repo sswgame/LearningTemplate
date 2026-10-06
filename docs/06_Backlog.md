@@ -399,7 +399,7 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: `ILocalStore` · 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  남은 기반: 서비스 틀(캐시 답 · 버스 메시지를 요청 id · 주제별로 나눠 주기 — 그때까지 `EphemeralServerBus` 는 자기 캐시 앞을 혼자 쓴다) · 관측, PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
@@ -1679,8 +1679,11 @@ cd build/Ninja-Debug/Bin
   팀 번호를 배열 첨자로 쓰는 곳이 많고(약 220 줄 · 18 파일) RTS 상태 바이트(int32)를 바꿔서 하지 않았다. 동맹 표 · 팀킬 허용이 생기면 판정기를
   `TeamAttitudeUtil` 에 붙이고 `SrpgBattlefield::isHostile` · `ConquestWorldInternal::isHostile` 도 그쪽으로 옮긴다.
 - **턴제 몬스터 전투는 `MonsterCollector` 하나다**(같은 장르의 얇은 `TurnBattle` 키트는 2026-10 에 지웠다 — 레벨 업이 없었고 쓰는 게임이 0 이었다). 전투 연출(단계 타이머 · HUD 한 줄)은 게임 몫이다.
-- **`SaveGame::saveToFile` · `loadFromFile` 은 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
-  `saveGameToSlot( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다. 게임 상태(진행 · 세계)는 SAV1 이 아니라 스냅숏 봉투(`GameInstanceBase::saveStateToFile`) 하나다 — `SaveGame` 은 사용자 파일(`UserAppearancePresetStore` · 키 바인딩 · 옵션)만.
+- **`SaveGame::writeBytes` · `readBytes` 는 순수 가상이다**(`REFLECT( Abstract )`) — `Archive::serializeObject<T>` 가 정적 타입 `T::StaticType()` 을 쓰므로 기반에서
+  `SaveGameSerializer::writeBytes( *this )` 를 부르면 `SaveGame` 의 TypeInfo(프로퍼티 0)로 빈 페이로드를 쓰고 성공을 돌려준다. 파생 세이브가 자기 타입으로 부른다. 저장은 로컬 저장 슬롯
+  (`saveToSlot` · `loadFromCompletion` — 판 · 체크섬 · 봉인은 봉투 `SWLS`). 게임 상태(진행 · 세계)는 스냅숏 봉투(`GameInstanceBase::saveStateToFile`) 하나다 — `SaveGame` 은 사용자 파일만.
+- **로컬 저장 봉인은 장치 키다** — 키가 그 PC 에 있어 치트는 막지 못한다(실수 · 가벼운 변조 막기, 경쟁 데이터의 정본은 서버). 키 파일(`device.key`)을 다른 PC 로 옮기면 열지 못한다(IoError),
+  키가 바뀌면 봉인 슬롯은 WrongKey. `GameConfig::_localStore`(팩 데이터의 백엔드 · 루트) 연결은 config-docs D9 몫 — 지금은 `LocalStoreSettings` 를 부르는 쪽이 채운다.
 - **존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이다**(`ZoneTracker::setFromMap` 이 쉼표 · 공백으로 나눈다, `hashed_string` 이라 대소문자를 가리지 않는다). 클리어 게이트는 `clear_gate` 태그 —
   경로 이름에서 역할을 짐작하지 않는다.
 - **2D 근접 질의는 엔진 `SpatialHashGrid2D` 하나** — NetMmo 관심 영역이 쓴다(키는 엔티티 id 를 index 에 담은 `SlotHandle`, 세대 1). `update` 는 덮는 셀이 그대로면

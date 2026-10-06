@@ -26,7 +26,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   다른 실행의 세이브는 타입 안 순서로 짝짓는다(언리얼 `UObject::Serialize` · 유니티 `ISerializationCallbackReceiver` 의 자리). 살아 있는 씬 위에 다시 선
   인스턴스(핫 리로드 · 백엔드 교체)는 `requestFirstScene` 이 아무것도 하지 않는다 — 되살린 씬을 첫 씬이 덮지 않게.
   **세이브 틀은 하나**: 게임 상태(진행 · 세계 — 공유 상태 · 디렉터 · 키트 상태 바이트)는 스냅숏 봉투(`GameInstanceBase::saveStateToFile` · `loadStateFromFile`)로만 저장한다.
-  `SaveGame`(파일 입출력 순수 가상)과 SAV1 슬롯(`SaveGameSerializer` — 리플렉션 객체 하나 · CRC)은 **사용자 파일**(외형 프리셋 `UserAppearancePresetStore` · 키 바인딩 · 옵션)만.
+  `SaveGame`(바이트 쓰기 · 읽기 순수 가상 + 슬롯 API `saveToSlot` · `loadFromCompletion`)과 `SaveGameSerializer`(리플렉션 객체 하나 → 바이트, 머리 없음 — 판 · 체크섬은
+  로컬 저장 봉투)는 **사용자 파일**(외형 프리셋 `UserAppearancePresetStore` · 키 바인딩 · 옵션)만. 옛 SAV1 파일은 읽지 않는다.
   디렉터 베이스(`GameDirectorComponent` — 언리얼 `AGameModeBase` · `AGameStateBase` 자리): 틱 그룹(PrePhysics) · 상태 바이트 보류와 적용 · 틱 뒤 플러시
   (`executeOrDeferPostTick` 한 번 → `onFlush`) · 세운 것 걷기(`spawnPrefab` · `trackSpawned` · `despawnViews`) · 자동 플레이(`_bAutoPlay` · `GameAutoplay`) ·
   디렉터 찾기(`resolve<T>`)를 들고, 게임은 `startGame` · `readState` · `tickGame` · `onFlush` 만 적는다(쓰는 법은 `Source/Games/README.md`). 틱 안에서 쌓아
@@ -106,6 +107,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   회차를 저장소 조건부 쓰기로 차지해 서버 여럿 중 하나만, 지나친 회차는 최근 하나, 임대가 지나면 이어받기). `Online/Config`: 원격 설정 · 기능 플래그(`RemoteConfig` —
   저장소 정본 · 판 조건 바꾸기 + 감사 · 버스 알림, 계정 해시 출시 비율, 클라이언트 묶음 · 해시). 관측(지표 · 구조화 로그 · 요청 추적 id)은 서비스 틀의 요청 문맥이 자리다.
   `Online/Identity`: 신원 원형 — `AccountId` · `AccountIdentity` · `IAccountDirectory`(이 프로세스에 붙어 있는 계정, 발급은 계정 키트).
+  `Online/Local`: 클라이언트 로컬 저장 계약 `ILocalStore`(슬롯 `save/slot0` → 바이트, 슬롯 하나 단위 원자 쓰기 · 묶음 나열, 맡기고 거둔다 — 서버 계약과 따로 좁게),
+  모든 저장소가 같은 봉투(`LocalSlotEnvelope` — `SWLS` 머리 · 형식 판 · 코덱 · 봉인 None(CRC32) / Authenticated(AEAD 태그) / Encrypted(AEAD), 키 표시가 다르면 WrongKey),
+  바닥 `ILocalSlotStorage`(파일 `FileLocalSlotStorage` — 임시 파일 → 이름 바꾸기 · 띄울 때 찌꺼기 지우기, 메모리 `MemoryLocalDatabase` — 쓰기 도중 꺼짐 주입) 위의 앞 둘
+  (`ThreadedLocalStore` 전용 스레드 하나 · `MemoryLocalStore` 그 자리 실행), 장치 키(`LocalDeviceKeyProvider` — Windows DPAPI · 리눅스 0600, 실수 · 가벼운 변조 막기만),
+  공장(`LocalStoreFactory` — file · memory, 키트가 올리는 이름: `GF_SqlStore` 의 sqlite). 경로는 Core `UserDataPath`(사용자 설정과 같은 한 곳).
+  시험: `LocalStoreMemoryTest` · `LocalStoreFileTest` · `LocalStoreSqliteTest`(같은 계약 아홉 `LocalStoreContract.h`).
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
   `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)
@@ -239,7 +246,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,
       없는 이름은 분명한 오류), 마이그레이션 적용기(`SqlMigrationRunner` — `NNNN_이름.sql` · `NNNN_이름.<드라이버>.sql`, 체크섬 · 한 트랜잭션 · 토큰 `{{blob}}` `{{keytext}}`),
-      SQLite 드라이버(`Driver/Sqlite/` — sqlite3 를 아는 유일한 폴더, WAL · 준비문 캐시).
+      SQLite 드라이버(`Driver/Sqlite/` — sqlite3 를 아는 유일한 폴더, WAL · 준비문 캐시), 로컬 저장의 SQLite 바닥(`SqlLocalSlotStorage` — `sw_local_slot` upsert,
+      마이그레이션 `Resource/common/sql/localstore/` · DB `<루트>/localstore.db`, 기반 공장에 `registerLocalStoreBackend` 로 "sqlite").
       **SQL 이식성**: 공통 SQL 은 SQLite 3.35+ · PostgreSQL 이 같은 문법만(`ON CONFLICT … DO NOTHING/UPDATE` · `RETURNING` · `LIMIT ?`), 자리표시자는 늘 `?`(드라이버가 바꾼다),
       갈라지는 곳은 방언 훅뿐이다. 시험: `SqlDriverSqliteTest`(드라이버 계약 `SqlDriverContract.h` · 풀 · 등록부).
     - `Server/SqlStore`(`GF_Server_SqlStore`, Server): `SqlServiceStore`(기반 `IServiceStore` 의 SQL 구현 — `sw_record` 표, 조건부 쓰기는 영향 받은 행 수로,
