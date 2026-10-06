@@ -10,6 +10,7 @@
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -26,7 +27,6 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
-#include <IconsFontAwesome6.h>
 #include <imgui.h>
 
 namespace sw::editor
@@ -168,8 +168,8 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         const bool     bLocked  = pContext != nullptr && pContext->getSourceControl().findLock( entry._absolutePath ) != nullptr;
         const ImU32    color    = bLocked ? IM_COL32( 255, 160, 40, 255 ) : IM_COL32( 170, 170, 170, 255 );
-        const ImVec2   textSize = ImGui::CalcTextSize( ICON_FA_LOCK );
-        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, ICON_FA_LOCK );
+        const ImVec2   textSize = ImGui::CalcTextSize( editoricon::kLock );
+        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
         if ( ImGui::IsItemHovered() )
             ImGui::SetTooltip( "%s", statusText.c_str() );
     }
@@ -195,9 +195,9 @@ namespace sw::editor
                 const bool           bCanLock      = sourceControl.getProvider().canLock();
                 const bool           bLocked       = sourceControl.findLock( entry._absolutePath ) != nullptr;
                 ImGui::Separator();
-                if ( ImGui::MenuItem( ICON_FA_LOCK "  Check Out (Lock)", nullptr, false, bCanLock && bLocked == false ) )
+                if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kLock, "Check Out (Lock)" ), nullptr, false, bCanLock && bLocked == false ) )
                     (void)sourceControl.requestLock( entry._absolutePath );
-                if ( ImGui::MenuItem( ICON_FA_LOCK_OPEN "  Release Lock", nullptr, false, bCanLock && bLocked ) )
+                if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kUnlock, "Release Lock" ), nullptr, false, bCanLock && bLocked ) )
                     (void)sourceControl.requestUnlock( entry._absolutePath );
                 if ( ImGui::MenuItem( "Refresh Source Control", nullptr, false, bCanLock ) )
                     sourceControl.requestRefresh();
@@ -688,7 +688,7 @@ namespace sw::editor
             if ( bIsLast )
             {
                 const Color4 accentColor = EditorThemeUtil::getAccentColor();
-                ImGui::TextColored( ImVec4( accentColor._r, accentColor._g, accentColor._b, 1.0f ), ICON_FA_FOLDER_OPEN );
+                ImGui::TextColored( ImVec4( accentColor._r, accentColor._g, accentColor._b, 1.0f ), "%s", editoricon::kFolderOpen );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( string( part ).c_str() );
             }
@@ -797,7 +797,7 @@ namespace sw::editor
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color4 assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
                     const string statusText   = describeSourceControlStatus( entry );
-                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? "" : "  " ICON_FA_LOCK );
+                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + editoricon::kLock );
                     ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( assetColor._r, assetColor._g, assetColor._b, assetColor._a ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();

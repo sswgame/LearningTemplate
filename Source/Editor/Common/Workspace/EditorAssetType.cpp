@@ -8,6 +8,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -19,8 +20,6 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
-
-#include <IconsFontAwesome6.h>
 
 namespace sw::editor
 {
@@ -119,24 +118,24 @@ namespace sw::editor
         // 종류마다 한 줄. 줄 순서가 곧 **브라우저 필터 · 도구 패널 · 리소스 카탈로그의 표시 순서**다.
         // 칸: 종류 · 이름(단수) · 브라우저 라벨 · 패널 제목 · 아이콘 · 색 · 액센트 색 · Other 제외 · 임포트
         constexpr EditorAssetTypeInfo kArrKindInfo[] = {
-            {        EditorAssetType::Scene,       "Scene",       "Scenes",           nullptr,   ICON_FA_CLAPPERBOARD,                style::kAccent,  true,  true, false},
-            {       EditorAssetType::Prefab,      "Prefab",      "Prefabs",   "Prefab Editor",          ICON_FA_CUBES, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::Texture,     "Texture",     "Textures",           nullptr,          ICON_FA_IMAGE, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
-            {       EditorAssetType::Shader,      "Shader",      "Shaders",           nullptr,           ICON_FA_CODE, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
-            {     EditorAssetType::Material,    "Material",    "Materials",        "Material",        ICON_FA_DROPLET, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
-            {        EditorAssetType::Audio,       "Audio",        "Audio",           nullptr,          ICON_FA_MUSIC, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
-            {    EditorAssetType::AnimGraph,   "AnimGraph",         "Anim", "Animation Graph", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            {EditorAssetType::DialogueGraph,    "Dialogue",     "Dialogue",  "Dialogue Graph",       ICON_FA_COMMENTS, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
-            {   EditorAssetType::SpriteClip,  "SpriteClip",       "Sprite",     "Sprite Clip", ICON_FA_PERSON_RUNNING, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
-            {      EditorAssetType::TileMap,     "TileMap",     "Tile Map",   "Tile Map Tool",     ICON_FA_BORDER_ALL, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
-            {     EditorAssetType::Sequence,    "Sequence",          "Seq",       "Sequencer",           ICON_FA_FILM, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
-            {         EditorAssetType::Mesh,        "Mesh",       "Meshes",           nullptr,           ICON_FA_CUBE, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
-            {     EditorAssetType::Skeleton,    "Skeleton",    "Skeletons",           nullptr,           ICON_FA_BONE, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
-            {     EditorAssetType::AnimClip,    "AnimClip",        "Clips",           nullptr, ICON_FA_PERSON_WALKING, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
-            {          EditorAssetType::Rig,         "Rig",         "Rigs",           nullptr,           ICON_FA_BONE, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
-            {  EditorAssetType::Heightfield, "Heightfield", "Heightfields",           nullptr,       ICON_FA_MOUNTAIN, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
-            {     EditorAssetType::Fracture,    "Fracture",    "Fractures",           nullptr,          ICON_FA_BURST, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
-            {         EditorAssetType::Data,        "Data",         "Data",           nullptr,          ICON_FA_TABLE, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
+            {        EditorAssetType::Scene,       "Scene",       "Scenes",           nullptr,       editoricon::kScene,                style::kAccent,  true,  true, false},
+            {       EditorAssetType::Prefab,      "Prefab",      "Prefabs",   "Prefab Editor",      editoricon::kPrefab, { 0.35f, 0.70f, 1.00f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::Texture,     "Texture",     "Textures",           nullptr,     editoricon::kTexture, { 0.35f, 0.85f, 0.45f, 1.0f }, false,  true,  true},
+            {       EditorAssetType::Shader,      "Shader",      "Shaders",           nullptr,      editoricon::kShader, { 0.95f, 0.45f, 0.35f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Material,    "Material",    "Materials",        "Material",    editoricon::kMaterial, { 0.80f, 0.45f, 0.95f, 1.0f }, false,  true,  true},
+            {        EditorAssetType::Audio,       "Audio",        "Audio",           nullptr,       editoricon::kAudio, { 0.95f, 0.85f, 0.25f, 1.0f }, false,  true,  true},
+            {    EditorAssetType::AnimGraph,   "AnimGraph",         "Anim", "Animation Graph",   editoricon::kAnimGraph, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {EditorAssetType::DialogueGraph,    "Dialogue",     "Dialogue",  "Dialogue Graph",    editoricon::kDialogue, { 0.40f, 0.75f, 1.00f, 1.0f }, false,  true,  true},
+            {   EditorAssetType::SpriteClip,  "SpriteClip",       "Sprite",     "Sprite Clip",      editoricon::kSprite, { 1.00f, 0.60f, 0.20f, 1.0f }, false,  true,  true},
+            {      EditorAssetType::TileMap,     "TileMap",     "Tile Map",   "Tile Map Tool",     editoricon::kTileMap, { 0.45f, 0.85f, 0.50f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Sequence,    "Sequence",          "Seq",       "Sequencer",    editoricon::kSequence, { 0.85f, 0.55f, 0.85f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Mesh,        "Mesh",       "Meshes",           nullptr,        editoricon::kCube, { 0.55f, 0.80f, 0.80f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::Skeleton,    "Skeleton",    "Skeletons",           nullptr,    editoricon::kSkeleton, { 0.90f, 0.85f, 0.70f, 1.0f }, false,  true,  true},
+            {     EditorAssetType::AnimClip,    "AnimClip",        "Clips",           nullptr,    editoricon::kAnimClip, { 1.00f, 0.70f, 0.35f, 1.0f }, false,  true,  true},
+            {          EditorAssetType::Rig,         "Rig",         "Rigs",           nullptr,         editoricon::kRig, { 0.95f, 0.75f, 0.55f, 1.0f }, false,  true,  true},
+            {  EditorAssetType::Heightfield, "Heightfield", "Heightfields",           nullptr, editoricon::kHeightfield, { 0.65f, 0.60f, 0.45f, 1.0f }, false,  true, false},
+            {     EditorAssetType::Fracture,    "Fracture",    "Fractures",           nullptr,    editoricon::kFracture, { 0.85f, 0.50f, 0.40f, 1.0f }, false,  true,  true},
+            {         EditorAssetType::Data,        "Data",         "Data",           nullptr,       editoricon::kTable, { 0.60f, 0.75f, 0.95f, 1.0f }, false, false, false},
         };
 
         /** @brief 종류 표가 `Unknown` 을 뺀 모든 종류를 꼭 한 번씩 담고, 이름 · 라벨 · 아이콘 칸이 비지 않았는지입니다. */

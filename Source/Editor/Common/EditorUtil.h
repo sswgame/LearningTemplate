@@ -38,6 +38,8 @@ namespace sw::editor
         static constexpr const utf8* kModelImportConfigFileName     = "ModelImportConfig.json";
         /** @brief 에디터 팩(`path::kEditorPack`) 안의 글꼴 폴더 이름입니다. */
         static constexpr const utf8* kFontsFolderName = "fonts";
+        /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`Scripts/generate/GenerateEditorIcons.py` 가 만든다). */
+        static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
 
         /**
          * @brief 프로젝트 루트(<Project>, Resource 의 부모)를 반환합니다.

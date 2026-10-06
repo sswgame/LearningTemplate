@@ -403,6 +403,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **에디터 아이콘은 `Scripts/common/EditorIconFont.py` 의 `kListIcon` 이 원본이다** — 아이콘을 더하면 `GenerateEditorIcons.py` 로 폰트 · 헤더를 다시 만들고 함께
   커밋한다(`CheckEditorIcons`). 구멍 윤곽(cut)은 채움 하나 안에만 둔다 — 밖으로 나가거나 구멍끼리 겹치면 그 부분이 반대로 칠해진다. 코드에서는
   `editoricon::k…` 상수만 쓴다(목록 순서가 코드포인트다). 아이콘 세트도 CC0 급 · 이 저장소 것만 — Font Awesome 같은 CC BY · OFL 세트는 넣지 않는다.
+  `EditorFontSetup` 이 `editor/fonts/sweditoricons.ttf` 를 본문 폰트에 합친다(못 찾으면 오류 로그 한 줄, 화면은 빈 상자 — 자체 시험 `font.iconGlyphs`).
+  상수는 `const utf8*` 라 문자열 리터럴과 이어 붙일 수 없다 — 라벨 앞에는 `EditorThemeUtil::makeIconLabel( editoricon::kSave, "Save" )`.
 - **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워진다**(`ModelImporter::importModel`) — 손으로 쓴 캐릭터 데이터(소켓 · 알림 표 · 물리 에셋 ·
   몸 영역)는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둔다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적고 `App --import-models`.
 - **Debug App 의 `--import-textures` 는 BC7 1024² 한 장에 20 분을 넘긴다**(CPU 압축기가 최적화 없이 돈다) — 색 칸 아틀라스(KayKit)는 BC1 규칙

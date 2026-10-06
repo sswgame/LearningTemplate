@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include <IconsFontAwesome6.h>
 #include <imgui.h>
 
 namespace sw::editor
@@ -567,7 +567,7 @@ namespace sw::editor
             return;
 
         ImGui::SetNextWindowSize( ImVec2( 460.0f, 380.0f ), ImGuiCond_FirstUseEver );
-        if ( ImGui::Begin( ICON_FA_PALETTE "  Theme & Look and Feel", pOpen, ImGuiWindowFlags_NoCollapse ) )
+        if ( ImGui::Begin( makeIconLabel( editoricon::kPalette, "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
@@ -660,7 +660,7 @@ namespace sw::editor
             ImGui::Separator();
 
             // 5) 기본값 복원 버튼
-            if ( ImGui::Button( ICON_FA_ROTATE_LEFT "  Reset to Modern Dark" ) )
+            if ( ImGui::Button( makeIconLabel( editoricon::kUndo, "Reset to Modern Dark" ) ) )
             {
                 applyPreset( EditorThemePreset::ModernDark );
                 saveToConfig();
@@ -678,13 +678,13 @@ namespace sw::editor
 
     const utf8* EditorThemeUtil::getFolderIcon( bool bOpened )
     {
-        return bOpened ? ICON_FA_FOLDER_OPEN : ICON_FA_FOLDER;
+        return bOpened ? editoricon::kFolderOpen : editoricon::kFolder;
     }
 
     const utf8* EditorThemeUtil::getAssetTypeIcon( EditorAssetType kind )
     {
         const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
-        return pInfo != nullptr ? pInfo->_pIcon : ICON_FA_FILE;
+        return pInfo != nullptr ? pInfo->_pIcon : editoricon::kFile;
     }
 
     Color4 EditorThemeUtil::getAssetTypeColor( EditorAssetType kind )
@@ -698,7 +698,7 @@ namespace sw::editor
     const utf8* EditorThemeUtil::getAssetIconForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
-            return ICON_FA_FOLDER;
+            return editoricon::kFolder;
         return getAssetTypeIcon( EditorAssetTypeRegistry::findKind( path ) );
     }
 
@@ -707,5 +707,13 @@ namespace sw::editor
         if ( bIsDirectory )
             return getFolderColor();
         return getAssetTypeColor( EditorAssetTypeRegistry::findKind( path ) );
+    }
+
+    const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
+    {
+        // UI 스레드 하나가 부르지만 자체 시험 스레드에서도 불릴 수 있어 스레드마다 버퍼를 둔다.
+        thread_local fixed_string<constant::kMaxBuffer256> s_label;
+        formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
+        return s_label.c_str();
     }
 } // namespace sw::editor

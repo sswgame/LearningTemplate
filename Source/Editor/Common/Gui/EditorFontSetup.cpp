@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
@@ -14,8 +15,6 @@
 
 #include <imgui.h>
 #include <imgui_freetype.h>
-#include <fa_solid_900.h>
-#include <IconsFontAwesome6.h>
 
 namespace sw::editor
 {
@@ -23,6 +22,12 @@ namespace sw::editor
     {
         struct EditorFontSetupInternal
         {
+            /**
+             * @brief 아이콘 폰트 크기 ÷ 본문 폰트 크기입니다.
+             * @details 아이콘은 24 격자의 가운데 20 칸에 그려져 있어 em 의 5/6 을 차지합니다. 0.8 이면 아이콘 높이가 본문 크기의 2/3 쯤입니다.
+             */
+            static constexpr float32 kIconFontScale = 0.8f;
+
             /**
              * @brief 폰트 파일 이름을 프로젝트 에디터 폰트 폴더 및 OS 시스템 폰트 디렉터리에서 검색하여 절대 경로를 반환합니다.
              */
@@ -136,18 +141,25 @@ namespace sw::editor
                 SW_LOG_WARNING( "Korean font not found - Hangul may not render." );
         }
 
-        BLOCK( "Font Awesome 6 (ImGuiNotify icons)" )
+        BLOCK( "Editor icon font" )
         {
-            const float32            iconFontSize      = data._fontSize * 2.0f / 3.0f;
-            static constexpr ImWchar kArrIconsRanges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
-            ImFontConfig             iconsConfig{};
-            iconsConfig.MergeMode            = true;
-            iconsConfig.PixelSnapH           = true;
-            iconsConfig.GlyphMinAdvanceX     = iconFontSize;
-            iconsConfig.FontDataOwnedByAtlas = false;
-            io.Fonts->AddFontFromMemoryTTF( const_cast<void*>( static_cast<const void*>( fa_solid_900 ) ),
-                                            sizeof( fa_solid_900 ), iconFontSize, &iconsConfig,
-                                            kArrIconsRanges );
+            // ImWchar 가 16 비트일 때만 헤더의 범위 배열을 그대로 넘길 수 있다(IMGUI_USE_WCHAR32 를 켜면 이 단언이 알려 준다).
+            static_assert( sizeof( ImWchar ) == sizeof( editoricon::kArrGlyphRange[0] ), "editor icon glyph range must match ImWchar" );
+            const string iconPath = EditorFontSetupInternal::resolveFontFile( EditorUtil::kIconFontFileName );
+            if ( iconPath.empty() )
+            {
+                SW_LOG_ERROR( "Editor icon font '%#' not found under editor/fonts - icons render as empty boxes", EditorUtil::kIconFontFileName );
+            }
+            else
+            {
+                const float32 iconFontSize = data._fontSize * EditorFontSetupInternal::kIconFontScale;
+                ImFontConfig  iconConfig{};
+                iconConfig.MergeMode        = true;
+                iconConfig.PixelSnapH       = true;
+                iconConfig.GlyphMinAdvanceX = iconFontSize;
+                io.Fonts->AddFontFromFileTTF( iconPath.c_str(), iconFontSize, &iconConfig,
+                                              reinterpret_cast<const ImWchar*>( editoricon::kArrGlyphRange ) );
+            }
         }
 
         io.FontDefault = pBaseFont;

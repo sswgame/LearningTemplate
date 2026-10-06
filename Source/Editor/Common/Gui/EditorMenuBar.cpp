@@ -8,6 +8,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
 #include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
@@ -27,7 +28,6 @@
 
 #include "RuntimeAPI/Service/IModuleCompiler.h"
 
-#include <IconsFontAwesome6.h>
 #include <imgui.h>
 
 namespace sw::editor
@@ -108,7 +108,7 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( ICON_FA_TABLE_COLUMNS "  Reset Default Layout" ) )
+            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kLayout, "Reset Default Layout" ) ) )
                 dockLayout.requestResetDefault();
             EditorWidgets::drawTooltip( "도킹 창 배치를 기본 에디터 레이아웃으로 초기화합니다" );
             drawNamedLayoutMenu( dockLayout );
@@ -214,14 +214,14 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
                 ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
                 fixed_string<constant::kMaxBuffer64> label;
-                formatstring( label.data(), label.capacity(), ICON_FA_SPINNER " Compiling (%#s)", Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
+                formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", editoricon::kSpinner, Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
                     pCompiler->cancel();
                 ImGui::PopStyleColor( 2 );
             }
             else
             {
-                if ( ImGui::SmallButton( ICON_FA_HAMMER " Compile" ) )
+                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( editoricon::kHammer, "Compile" ) ) )
                     pCompiler->compileModule( "SWGame" );
 
                 EditorWidgets::drawTooltip( "라이브 코딩: SWGame 모듈을 즉시 컴파일하고 핫리로드합니다 (Ctrl+Alt+F11)" );
@@ -230,24 +230,24 @@ namespace sw::editor
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                EditorThemeUtil::textWarning( ICON_FA_SPINNER " Compiling..." );
+                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( editoricon::kSpinner, "Compiling..." ) );
                 EditorWidgets::drawTooltip( "현재 백그라운드에서 모듈을 빌드하고 있습니다" );
             }
             else if ( state == BuildState::Success )
             {
                 EditorThemeUtil::pushTextColor( EditorThemeUtil::getSuccessColor() );
-                ImGui::Text( ICON_FA_CIRCLE_CHECK " Built (%.1fs)", static_cast<float64>( pCompiler->getLastDurationSec() ) );
+                ImGui::Text( "%s  Built (%.1fs)", editoricon::kSuccess, static_cast<float64>( pCompiler->getLastDurationSec() ) );
                 EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( "마지막 빌드가 성공적으로 완료되었습니다" );
             }
             else if ( state == BuildState::Failed )
             {
-                EditorThemeUtil::textError( ICON_FA_CIRCLE_XMARK " Build Failed" );
+                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( editoricon::kError, "Build Failed" ) );
                 EditorWidgets::drawTooltip( "빌드에 실패했습니다. 콘솔 창에서 상세 오류를 확인하세요." );
             }
             else
             {
-                ImGui::TextDisabled( ICON_FA_CHECK " Ready" );
+                ImGui::TextDisabled( "%s  Ready", editoricon::kCheck );
                 EditorWidgets::drawTooltip( "라이브 코딩 빌드 준비 완료" );
             }
 

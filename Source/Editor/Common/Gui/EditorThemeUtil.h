@@ -133,18 +133,25 @@ namespace sw::editor
         /** @brief 폴더용 테마 색을 반환합니다. */
         static Color4 getFolderColor();
 
-        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(ICON_FA_FOLDER_OPEN / ICON_FA_FOLDER). */
+        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(editoricon::kFolderOpen / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
-        /** @brief 종류의 Font Awesome 아이콘입니다(애셋 종류 표). `Unknown` 이면 일반 파일 아이콘입니다. */
+        /** @brief 종류의 에디터 아이콘입니다(애셋 종류 표). `Unknown` 이면 일반 파일 아이콘입니다. */
         static const utf8* getAssetTypeIcon( EditorAssetType kind );
         /** @brief 종류의 색입니다(애셋 종류 표, 액센트 종류는 테마 액센트). `Unknown` 이면 흐린 글자색입니다. */
         static Color4 getAssetTypeColor( EditorAssetType kind );
 
-        /** @brief 경로(확장자)에 맞는 Font Awesome 애셋 아이콘을 반환합니다. */
+        /** @brief 경로(확장자)에 맞는 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );
 
         /** @brief 경로(확장자)에 맞는 테마 색을 반환합니다. */
         static Color4 getAssetColorForPath( string_view path, bool bIsDirectory = false );
+
+        /**
+         * @brief "아이콘 + 공백 두 칸 + 라벨" 문자열을 만듭니다. ImGui 라벨 앞에 아이콘을 붙일 때 씁니다.
+         * @details 반환값은 호출한 스레드의 고정 버퍼라 다음 호출 전까지만 유효합니다. ImGui 호출 인자로 바로 넘기십시오 — 한 호출에 두 번 넘기면
+         *          두 번째가 첫 번째를 덮습니다(그런 자리는 지역 fixed_string 을 씁니다).
+         */
+        static const utf8* makeIconLabel( const utf8* pIcon, const utf8* pLabel );
     };
 } // namespace sw::editor

@@ -4,6 +4,7 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -146,6 +147,33 @@ namespace sw::editor
 
                 EditorThemeUtil::setDpiScale( savedScale );
                 EditorThemeUtil::applyTheme( savedTheme );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
+            // font.iconGlyphs — 아이콘 폰트가 본문 폰트에 합쳐졌다(못 찾으면 ImGui 는 빈 상자를 그리고 로그 한 줄만 남긴다)
+            // ------------------------------------------------------------------------------
+            static bool hasGlyph( ImFontBaked* pBaked, uint32 codepoint )
+            {
+                return pBaked != nullptr && pBaked->FindGlyphNoFallback( static_cast<ImWchar>( codepoint ) ) != nullptr;
+            }
+
+            static uint32 decodeFirstCodepoint( const utf8* pText )
+            {
+                uint32 codepoint{ 0 }; // ImTextCharFromUtf8 은 unsigned int* 를 받는다(uint32 와 같은 형)
+                ImTextCharFromUtf8( &codepoint, pText, nullptr );
+                return codepoint;
+            }
+
+            static EditorSelfTestStep runIconFontHasGlyphs( EditorSelfTestContext& context )
+            {
+                // ImGuiNotify 토스트가 박아 둔 Font Awesome 코드포인트(성공) — 아이콘 폰트가 같은 자리에 글리프를 둔다.
+                constexpr uint32 kNotifySuccessCodepoint = 0xF058;
+                ImFont*          pFont                   = ImGui::GetFont();
+                ImFontBaked*     pBaked                  = pFont != nullptr ? pFont->GetFontBaked( ImGui::GetFontSize() ) : nullptr;
+                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( editoricon::kSave ) ), "editor icon font glyph kSave is missing" );
+                (void)context.expect( hasGlyph( pBaked, decodeFirstCodepoint( editoricon::kMissing ) ), "editor icon font glyph kMissing is missing" );
+                (void)context.expect( hasGlyph( pBaked, kNotifySuccessCodepoint ), "notification glyph U+F058 is missing from the editor icon font" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -885,6 +913,7 @@ namespace sw::editor
 {
     SW_EDITOR_SELF_TEST( Palette, "theme.palette", 100, &EditorSelfTestCasesInternal::runPaletteFollowsTheTheme );
     SW_EDITOR_SELF_TEST( ThemeReapply, "theme.reapplyKeepsSizes", 110, &EditorSelfTestCasesInternal::runThemeReapplyKeepsSizes );
+    SW_EDITOR_SELF_TEST( IconFont, "font.iconGlyphs", 140, &EditorSelfTestCasesInternal::runIconFontHasGlyphs );
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );

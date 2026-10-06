@@ -83,7 +83,7 @@ namespace sw::editor
         const utf8*     _pDisplayName;   ///< 단수 이름 — 퀵 런처 분류 · 배지
         const utf8*     _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 · 리소스 카탈로그 라벨
         const utf8*     _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
-        const utf8*     _pIcon;          ///< Font Awesome 글리프(UTF-8)
+        const utf8*     _pIcon;          ///< 에디터 아이콘 글리프(editoricon::k…, UTF-8)
         Color4          _color;          ///< 목록 · 배지 색. `_bAccentColor` 이면 쓰지 않습니다
         bool            _bAccentColor;   ///< 고정 색 대신 테마 액센트 색을 씁니다
         bool            _bOtherExcluded; ///< 브라우저 "Other" 필터에서 뺄지
