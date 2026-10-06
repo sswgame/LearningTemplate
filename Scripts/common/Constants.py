@@ -25,6 +25,7 @@ kFileRuntimeEditorConfig = "Config/Editor/EditorConfig.json"
 kDirRuntimeGamePreset = "Config/Game"
 # 전용 서버 운영 설정 폴더 — `<SW_ACTIVE_GAME>.json`(ServerConfig). Shipping 도 굽지 않고 디스크에서 읽는다.
 kDirRuntimeServerPreset = "Config/Server"
+# 사람이 쓰는 에디터 도구 값 — 기본값과 다른 값이 있을 때만 만든다(없으면 기본값).
 kFileRuntimeEditorToolDefaults = "Config/Editor/editortooldefaults.json"
 kFileShippingHostDefaultsHeader = "ShippingHostDefaults.h"
 kFilePackConfig = "Config/Engine/PackConfig.json"

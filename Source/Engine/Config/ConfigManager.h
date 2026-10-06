@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -190,6 +191,24 @@ namespace sw
         {
             return readConfigJson( &outConfig, *T::StaticType(), jsonStr, pSourceLabel );
         }
+
+        /**
+         * @brief 설정 JSON 의 키 가운데 값이 타입의 기본값과 같은 것을 모읍니다(구조체 칸은 안으로 들어가 `_window._width` 처럼). 읽지 못하는 JSON 이면 false 입니다.
+         * @details 설정 파일에는 기본값과 다른 값만 적는다(언리얼 `Default*.ini` 와 같다) — 기본값을 다시 적은 줄은 코드의 기본값을 바꿔도
+         *          따라가지 않는 옛 값이 된다. 두 값은 같은 직렬화기로 다시 써서 비교하므로 숫자 · 색 표기 차이는 같다고 본다.
+         */
+        template <typename T>
+        [[nodiscard]] static bool collectDefaultEchoKeys( string_view jsonStr, vector<string>& outListKey )
+        {
+            T loaded{};
+            if ( readConfigJson( loaded, jsonStr, "default echo check" ) == false )
+                return false;
+            const T defaultValue{};
+            return collectEqualKeys( &loaded, &defaultValue, *T::StaticType(), jsonStr, outListKey );
+        }
+
+        /** @brief @p jsonStr 의 키마다 두 인스턴스의 그 칸이 같은 JSON 으로 쓰이면 @p outListKey 에 담습니다(`collectDefaultEchoKeys` 의 몸). */
+        [[nodiscard]] static bool collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey );
 
         /** @brief 파일을 `readConfigJson` 으로 읽습니다. 없으면 `Missing`(로그 없음)입니다. @p absolutePath 는 그대로 씁니다. */
         template <typename T>

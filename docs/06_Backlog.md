@@ -1716,7 +1716,8 @@ cd build/Ninja-Debug/Bin
 - **설정 표의 열쇠는 타입이다**(`ensureConfig<T>( path, generated )`). Shipping 은 디스크의 `Config/` 를 보지 않는다. 고정 스텝 상한은 `EngineConfig::_fixedDeltaTime` · `_maxFixedStepPerFrame`
   (넘친 잔액은 버린다). `ModuleFrameState` 래치 지점이 둘인 것은 의도다(옮기면 에디터 Step 한 칸이 틱 없이 소비된다).
   틀린 설정 파일(모르는 키 · 대소문자만 다른 키 · `Min`/`Max` 밖)은 키 이름과 함께 오류이고 기동을 멈춘다 — 없는 파일만 생성 JSON → C++ 기본값이다.
-  `EngineConfig.json` 도 configure 의존이다(Shipping 에 굽는 값).
+  `EngineConfig.json` 도 configure 의존이다(Shipping 에 굽는 값). 설정 파일에는 기본값과 다른 값만 적는다(언리얼 `Default*.ini` 와 같다) —
+  `ConfigFileSchemaTest` 가 기본값을 다시 적은 키를 막는다(`ConfigManager::collectDefaultEchoKeys`, 앱이 통째로 쓰는 상태는 제외).
 - **리눅스 스플래시** — `XPutImage` 는 1:1 이라 우리가 줄인다, `Expose` 마다 지워지므로 배경 픽스맵, `override_redirect` 창은 XWayland 에서 안 뜬다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
   서버가 "정상" 이어도 화면에 없을 수 있다 — 최종 확인은 사람 눈이다. 창의 `isVisible()`(지금 화면에 있나)과 `isVisibleRequested()`(의도)는 다른 질문이다.
 - **데이터 이름 `None` 은 빈 이름이다** — `hashed_string( "None" )` 은 언리얼 `FName` 처럼 `empty()` 다. 고르기 항목 · id 를 `None` 으로 지으면 "이름 없음" 으로

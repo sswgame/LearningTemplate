@@ -6,6 +6,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Utility/Json/JsonDocument.h"
 
 namespace sw
 {
@@ -18,6 +19,28 @@ namespace sw
 
         struct ConfigManagerInternal
         {
+            /** @brief @p fileObject 의 키마다 두 쪽 값이 같은 JSON 이면 경로를 담습니다. 파일 쪽이 객체면 안으로 들어간다(구조체 칸). */
+            static void collectEqualMembers( const JsonValue& fileObject, const JsonValue& left, const JsonValue& right, const string& prefix,
+                                             vector<string>& outListKey )
+            {
+                for ( const string& key : fileObject.getMemberNames() )
+                {
+                    const string    path       = prefix.empty() ? key : string( prefix + "." + key );
+                    const JsonValue fileValue  = fileObject.get( key, false );
+                    const JsonValue leftValue  = left.get( key, false );
+                    const JsonValue rightValue = right.get( key, false );
+                    if ( leftValue.isValid() == false || rightValue.isValid() == false )
+                        continue;
+                    if ( fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false )
+                    {
+                        collectEqualMembers( fileValue, leftValue, rightValue, path, outListKey );
+                        continue;
+                    }
+                    if ( leftValue.dump() == rightValue.dump() )
+                        outListKey.push_back( path );
+                }
+            }
+
             /** @brief 숫자 칸의 값을 float64 로 읽습니다. 숫자 타입이 아니면 false 입니다. */
             [[nodiscard]] static bool readNumber( const PropertyInfo& prop, const void* pInstance, float64& outValue )
             {
@@ -108,6 +131,18 @@ namespace sw
         for ( const string& rangeError : listRangeError )
             SW_LOG_ERROR( "Config %#: %#", pSourceLabel, rangeError.c_str() );
         return listOrphan.empty() && listRangeError.empty();
+    }
+
+    bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )
+    {
+        JsonDocument fileDoc;
+        JsonDocument leftDoc;
+        JsonDocument rightDoc;
+        if ( fileDoc.parse( jsonStr ) == false || leftDoc.parse( JsonSerializer::serialize( pLeft, typeInfo ) ) == false ||
+             rightDoc.parse( JsonSerializer::serialize( pRight, typeInfo ) ) == false )
+            return false;
+        ConfigManagerInternal::collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );
+        return true;
     }
 
     bool ConfigManager::reloadConfigFile( string_view changedPath )

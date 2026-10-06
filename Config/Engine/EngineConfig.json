@@ -1,16 +1,2 @@
 {
-    "_window": {
-        "_width": 1280,
-        "_height": 720,
-        "_bVSync": false,
-        "_defaultRHI": "DirectX12",
-        "_clearColor": "0.12,0.15,0.18,1"
-    },
-    "_maxFrameDeltaTime": 0.1,
-    "_listResourcePriority": [
-        "game",
-        "common",
-        "engine",
-        "editor"
-    ]
 }

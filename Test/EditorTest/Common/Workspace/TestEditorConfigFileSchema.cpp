@@ -20,8 +20,25 @@ namespace
 {
     struct EditorConfigFileSchemaInternal
     {
+        /** @brief 엄격하게 읽고, 기본값과 같은 값을 다시 적은 키가 없는지도 봅니다(설정 파일에는 기본값과 다른 값만 적는다). */
         template <typename T>
         static bool loadStrict( const string& absolutePath )
+        {
+            T config{};
+            if ( ConfigManager::readConfigFile( config, absolutePath ) != ConfigReadResult::Loaded )
+                return false;
+            string         text;
+            vector<string> listEchoKey;
+            if ( FileUtil::readTextFile( absolutePath, text ) == false || ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
+                return false;
+            for ( const string& key : listEchoKey )
+                SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' restates the default - write only values that differ (docs/Config lists the defaults)" );
+            return true;
+        }
+
+        /** @brief 앱이 통째로 다시 쓰는 상태(`EditorConfig`)는 엄격하게 읽기만 합니다 — 기본값과 같은 칸도 쓰인다. */
+        template <typename T>
+        static bool loadAppWritten( const string& absolutePath )
         {
             T config{};
             return ConfigManager::readConfigFile( config, absolutePath ) == ConfigReadResult::Loaded;
@@ -48,7 +65,7 @@ namespace
 
         /** @brief 앞의 줄이 먼저 맞습니다. 짝은 `Scripts/common/ConfigCatalog.py` 다. */
         static constexpr ConfigKind kArrKind[] = {
-            {        "EditorConfig.json",       &loadStrict<EditorConfig>},
+            {        "EditorConfig.json",   &loadAppWritten<EditorConfig>},
             {  "editortooldefaults.json", &loadStrict<EditorToolDefaults>},
             { "TextureImportConfig.json",              &loadTextureImport},
             {   "ModelImportConfig.json",                &loadModelImport},
@@ -94,5 +111,6 @@ SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
         SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), relative + " 를 엄격하게 읽지 못했습니다:" + logs.joined() );
         ++loadedCount;
     }
-    SW_EXPECT_TRUE_MSG( loadedCount >= 3u, "읽은 에디터 설정 파일이 " + to_string( loadedCount ) + " 개뿐입니다" );
+    // 임포트 설정 둘(EditorConfig 는 앱이 쓰는 상태, editortooldefaults 는 기본값과 다른 값이 있을 때만 생긴다).
+    SW_EXPECT_TRUE_MSG( loadedCount >= 2u, "읽은 에디터 설정 파일이 " + to_string( loadedCount ) + " 개뿐입니다" );
 }

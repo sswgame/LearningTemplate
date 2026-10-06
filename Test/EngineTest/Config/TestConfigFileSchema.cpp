@@ -24,11 +24,20 @@ namespace
             bool ( *_pLoad )( const sw::string& absolutePath );
         };
 
+        /** @brief 엄격하게 읽고, 기본값과 같은 값을 다시 적은 키가 없는지도 봅니다(설정 파일에는 기본값과 다른 값만 적는다). */
         template <typename T>
         static bool loadStrict( const sw::string& absolutePath )
         {
             T config{};
-            return sw::ConfigManager::readConfigFile( config, absolutePath ) == sw::ConfigReadResult::Loaded;
+            if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
+                return false;
+            sw::string             text;
+            sw::vector<sw::string> listEchoKey;
+            if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
+                return false;
+            for ( const sw::string& key : listEchoKey )
+                SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' restates the default - write only values that differ (docs/Config lists the defaults)" );
+            return true;
         }
 
         static bool loadMemoryBudget( const sw::string& absolutePath )
@@ -73,7 +82,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ConfigFileSchemaTest] Config/ 의 설정 파일은 모두 실제 로더로 엄격하게 읽힌다 — 모르는 키 · 읽지 못한 값 · 범위 밖 값이 하나도 없다
+ * @brief [ConfigFileSchemaTest] Config/ 의 설정 파일은 모두 실제 로더로 엄격하게 읽힌다 — 모르는 키 · 읽지 못한 값 · 범위 밖 값 · 기본값을 다시 적은 키가 하나도 없다
  * @details 기동은 틀린 설정에서 멈춘다(`ConfigManager::ensureConfig`). 이 시험은 그것을 실행 없이 — 게임 프리셋 모두 — 본다.
  *          표에 없는 파일도 실패다(새 설정 파일이 검사를 비켜 가지 않게). 표의 짝은 `Scripts/common/ConfigCatalog.py`(문서용 목록)다.
  */
