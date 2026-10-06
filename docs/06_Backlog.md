@@ -864,7 +864,7 @@ cd build/Ninja-Debug/Bin
   안 보이는데 헤더 인라인 함수는 링커가 우리 TU 의 계측된 사본을 골라 거짓 경쟁 수백 건이 났다. 트리플릿 파일은 ABI 해시에 들어 고치면 포트를 다 다시 짓고(WSL 약 35 분),
   기본 CI 캐시 키가 보는 `Toolchain/Vcpkg/**` 밖에 둔다. 포트 컴파일러는 프리셋의 `CC=clang` 이 정한다(빠지면 vcpkg 가 GCC 로 짓는다).
 - **유니티 빌드는 `CI-*` 프리셋에만 켜져 있다.** `Ninja-*` 가 초록이어도 익명 네임스페이스 충돌이 없다는 뜻이 아니다 — 헬퍼 · 상수는 `XxxInternal` 구조체로 감싼다.
-  `sw_skipUnitySources` 가 다시 길어지면 규칙이 깨지고 있다는 신호다.
+  유니티 제외 목록(옛 `sw_skipUnitySources`)은 다시 만들지 않는다 — 부딪치는 이름을 고친다.
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **LTO 함정** — clang `-flto` obj 는 MSVC `lib.exe` 가 못 읽는다(LNK1107). 아카이버는 "지금 컴파일러 옆" 을 먼저 본다(리눅스 `/usr/bin` 에는 llvm-ar 이 없어 LTO 가 조용히 꺼진다).
   CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
@@ -946,7 +946,8 @@ cd build/Ninja-Debug/Bin
 - **소스 목록 중 손 목록이 셋 있다** — `Source/Core/CMakeLists.txt`(`cfSources`, 빠지면 ReflectionParser 링크에서 깨진다), `cmake/Engine/RhiBackendSources.cmake`(빠지면
   Engine GLOB 이 주워 **모듈의 미정의 심볼**로 나타난다), `Test/EditorTest/CMakeLists.txt`. `CheckSourceGlob` 이 디스크와 대조한다. 구성이 일부러 짓지 않는 소스는
   `sw_excludeUnbuiltSources` · `sw_declareUnbuiltSources` 로 적는다(`<빌드>/generated/sw/config/UnbuiltSources.txt`). 파일을 옮기면 경로를 문자열로 적은 곳은 컴파일러가 안 잡는다.
-- **동적 모듈은 타깃을 만드는 자리에서** `sw_registerDynamicModule( <타깃> rhi|kit|game|gameframework|editor )` 로 등록한다. `sw_verifyDynamicModuleRegistry` 가 루트부터 훑어
+- **모듈 라이브러리는 `sw_addModuleLibrary` 로 만든다**(기본값 한 자리 — 팩토리 셋 · GameFramework · 에디터).
+  **동적 모듈은 타깃을 만드는 자리에서** `sw_registerDynamicModule( <타깃> rhi|kit|game|gameframework|editor )` 로 등록한다. `sw_verifyDynamicModuleRegistry` 가 루트부터 훑어
   미등록 MODULE 이면 FATAL_ERROR.
 - **생성 상수는 `Scripts/common/Constants.py` 의 `k*` 전부를 기계 변환한다**(`kDirSourceEngine` → `SW_DIR_SOURCE_ENGINE`). 경로 조립은 소비 쪽(`ConfigConstants.h.in`)이 한다.
   `configure_file` 은 빈 값을 조용히 넣는다. `toolchain_config.json` 은 CMake 가 파싱하지 않는다(`GenerateToolchainCMake.py` → `SW_TOOLCHAIN_<KEY>`) — 예외는 vcpkg 가 부르는

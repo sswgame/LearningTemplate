@@ -272,7 +272,7 @@ endif()
 # 4) export / IPO / delay-load 훅 경로 / 로그 태그 / Windows 시스템 라이브러리
 # SW_DELAYLOAD_HOOK_SOURCE는 sw_addDelayloadHook(TargetRules.cmake)이 참조
 # ------------------------------------------------------------------------------
-sw_configureEngineDllExports(Engine ${coreLibType})
+sw_configureDllExports(Engine ${coreLibType} ENGINE)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
 set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
@@ -303,8 +303,8 @@ endif()
 # ------------------------------------------------------------------------------
 # 5) Unity — 제외 목록이 **없다.** 그게 정상이고, 다시 만들지 말 것
 #
-# `sw_skipUnitySources` 목록은 **TU 를 나눌 때마다 같이 고쳐야 하는 자리**가 되고, 빠뜨려도 Ninja-* 프리셋은
-# 유니티가 꺼져 있어 조용히 지나가 CI 에서만 터진다.
+# **유니티 제외 목록을 다시 만들지 말 것** — 목록은 TU 를 나눌 때마다 같이 고쳐야 하는 자리가 되고, 빠뜨려도 Ninja-* 프리셋은
+# 유니티가 꺼져 있어 CI 에서만 터진다.
 #
 # "익명 네임스페이스가 합쳐져 이름이 부딪친다" 는 **이름 규칙으로 막혀 있다**. 익명 네임스페이스의 도우미는
 # 클래스가 아니라 **TU 이름**을 딴다(`ShaderCookStampInternal` 등, AGENTS.md). `CheckCodeConventions` 의
@@ -315,9 +315,7 @@ endif()
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_setUnityBuild` 가
 # include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Options/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
-if(COMMAND sw_setUnityBuild)
-    sw_setUnityBuild(Engine BATCH_SIZE 12)
-endif()
+sw_setUnityBuild(Engine BATCH_SIZE 12)
 
 # 파괴 · 파쇄는 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 한다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`,
 # `DestructionDamageTest.EventLogHashMatchesTheRecordedValueOnEveryBuild`). 화면용(컴포넌트 · 렌더 도우미)은 넣지 않는다.

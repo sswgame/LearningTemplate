@@ -4,21 +4,22 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# DLL export 매크로 — Engine / GameFramework가 공유
+# 내보내기 매크로 — 종류(KIND)마다 짝이 정해져 있다. STATIC(배포)에는 아무것도 붙이지 않는다.
+#   ENGINE : SHARED 면 SW_EXPORTS(PRIVATE) · SW_IMPORTS(INTERFACE)        — Engine.dll
+#   GF     : SHARED 면 SW_GF_EXPORTS(PRIVATE) · SW_GF_IMPORTS(INTERFACE)  — GameFramework.dll · 키트
+#   MODULE : MODULE 이면 SW_MODULE_EXPORTS(PRIVATE)                       — C-ABI 진입점을 내보내는 플러그인(RHI · 게임 · 에디터)
 # ------------------------------------------------------------------------------
-# SHARED Engine: SW_EXPORTS / SW_IMPORTS
-function(sw_configureEngineDllExports TARGET_NAME LIB_TYPE)
-	if(LIB_TYPE STREQUAL "SHARED")
-		target_compile_definitions(${TARGET_NAME} PRIVATE SW_EXPORTS)
-		target_compile_definitions(${TARGET_NAME} INTERFACE SW_IMPORTS)
+function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
+	if(NOT KIND MATCHES "^(ENGINE|GF|MODULE)$")
+		message(FATAL_ERROR "sw_configureDllExports(${TARGET_NAME}): KIND 는 ENGINE | GF | MODULE 이다 (받은 값: ${KIND})")
 	endif()
-endfunction()
 
-# GameFramework·Kit SHARED: SW_GF_EXPORTS / SW_GF_IMPORTS
-function(sw_configureGfExports TARGET_NAME LIB_TYPE)
-	if(LIB_TYPE STREQUAL "SHARED")
-		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS)
-		target_compile_definitions(${TARGET_NAME} INTERFACE SW_GF_IMPORTS)
+	if(KIND STREQUAL "ENGINE" AND LIB_TYPE STREQUAL "SHARED")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_EXPORTS INTERFACE SW_IMPORTS)
+	elseif(KIND STREQUAL "GF" AND LIB_TYPE STREQUAL "SHARED")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS INTERFACE SW_GF_IMPORTS)
+	elseif(KIND STREQUAL "MODULE" AND LIB_TYPE STREQUAL "MODULE")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
 	endif()
 endfunction()
 
@@ -339,83 +340,107 @@ function(sw_configureAppDependencies TARGET_NAME)
 	endif()
 endfunction()
 
-# RHI 그래픽스 백엔드 MODULE 타겟을 정의하고 공통 속성을 바인딩합니다.
+# ------------------------------------------------------------------------------
+# sw_addModuleLibrary — 엔진 모듈 라이브러리 하나(RHI 백엔드 · 키트 · 게임 · GameFramework · 에디터)
+#
+# 모듈마다 다른 것만 받고 나머지는 여기서 정한다(언리얼 ModuleRules 의 기본값 자리). 꺼진 모듈 건너뛰기(`sw_skipInactiveModule`)는
+# 부르는 쪽이 먼저 한다 — 함수는 부른 쪽을 return 시킬 수 없다.
+#
+#   KIND        rhi | kit | game | gameframework | editor    동적 모듈 레지스트리 종류(`sw_registerDynamicModule`)
+#   DEV_TYPE    SHARED | MODULE                              개발 빌드의 라이브러리 종류. 배포(SW_SHIPPING_BUILD)는 늘 STATIC 이다
+#   EXPORTS     GF | MODULE                                  내보내기 매크로(`sw_configureDllExports`)
+#   LOG_TAG     로그 태그(SW_LOG_TAG)
+#   FOLDER      IDE 폴더
+#   SOURCES     소스
+#   LINK_PUBLIC · LINK_PRIVATE   링크(PRIVATE 끝에 sw_global_options 가 붙는다)
+#   DEFINITIONS 더 붙일 PRIVATE 정의
+#   DELAYLOAD   개발 빌드에서 지연 로드할 DLL(Windows 만 — `sw_addDelayloadHook`)
+#   UNITY_BATCH 유니티 묶음 크기(주면 `sw_setUnityBuild`)
+#   REFLECTION_HEADERS  리플렉션 입력 헤더. 비우면 폴더를 재귀로 훑는다(`sw_addReflectionStep` 자동 훑기)
+#   NO_REFLECTION       리플렉션 단계를 두지 않는다(RHI 백엔드)
+# ------------------------------------------------------------------------------
+function(sw_addModuleLibrary TARGET_NAME)
+	cmake_parse_arguments(ARG "NO_REFLECTION" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH"
+		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;DELAYLOAD;REFLECTION_HEADERS" ${ARGN})
+
+	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
+		message(FATAL_ERROR "sw_addModuleLibrary(${TARGET_NAME}): DEV_TYPE 는 SHARED | MODULE 이다 (받은 값: ${ARG_DEV_TYPE})")
+	endif()
+	if(SW_SHIPPING_BUILD)
+		set(libType STATIC)
+	else()
+		set(libType ${ARG_DEV_TYPE})
+	endif()
+
+	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
+	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
+	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+	if(ARG_LINK_PUBLIC)
+		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
+	endif()
+	target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_LINK_PRIVATE} sw_global_options)
+	target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" ${ARG_DEFINITIONS})
+	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+	sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
+
+	if(NOT libType STREQUAL "STATIC")
+		sw_setModuleBinOutput(${TARGET_NAME})
+		if(ARG_DELAYLOAD)
+			sw_addDelayloadHook(${TARGET_NAME} DLLS ${ARG_DELAYLOAD})
+		endif()
+	endif()
+
+	sw_registerDynamicModule(${TARGET_NAME} ${ARG_KIND})
+
+	if(ARG_UNITY_BATCH)
+		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE ${ARG_UNITY_BATCH})
+	endif()
+
+	if(NOT ARG_NO_REFLECTION)
+		sw_addReflectionStep(${TARGET_NAME}
+			HEADERS ${ARG_REFLECTION_HEADERS}
+			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+		)
+	endif()
+endfunction()
+
+# RHI 그래픽스 백엔드 MODULE — Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가 백엔드 하나를 Engine 에 넣는다).
 function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
 	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
 	sw_skipInactiveModule(${BACKEND_NAME} swSkip)
 	if(swSkip)
 		return()
 	endif()
-	add_library(${BACKEND_NAME} MODULE "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${ARG_SOURCES})
-
-	target_include_directories(${BACKEND_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-	target_link_libraries(${BACKEND_NAME}
-		PRIVATE
-		Engine
-		${GRAPHICS_LIB}
-		sw_third_party_includes
-		sw_global_options
+	sw_addModuleLibrary(${BACKEND_NAME}
+		KIND rhi
+		DEV_TYPE MODULE
+		EXPORTS MODULE
+		LOG_TAG "RHI"
+		FOLDER "Source/Engine/Graphics/RHI/Modules"
+		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${ARG_SOURCES}
+		LINK_PRIVATE Engine ${GRAPHICS_LIB} sw_third_party_includes
+		DEFINITIONS SW_ENGINE_INTERNAL
+		NO_REFLECTION
 	)
-
-	target_compile_definitions(${BACKEND_NAME}
-		PRIVATE
-		"SW_LOG_TAG=\"RHI\""
-		SW_MODULE_EXPORTS
-		SW_ENGINE_INTERNAL
-	)
-	sw_configurePch(${BACKEND_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-	sw_setModuleBinOutput(${BACKEND_NAME})
-	set_target_properties(${BACKEND_NAME} PROPERTIES FOLDER "Source/Engine/Graphics/RHI/Modules")
-	sw_registerDynamicModule(${BACKEND_NAME} rhi)
 endfunction()
 
-# GameFramework 장르 키트 라이브러리 타겟을 정의하고 빌드 모드에 맞게 구성합니다.
+# GameFramework 장르 키트 — 폴더의 소스 전부. 리플렉션 헤더는 폴더를 재귀로 훑는다(키트 루트의 *.h 만 모으면 하위 폴더의 REFLECT() 가 조용히 빠진다).
 function(sw_addGameFrameworkKit KIT_NAME)
 	# 꺼진 키트(프로젝트가 껐거나 이 플랫폼 · 구성에 없는 것)는 짓지 않는다 — 매니페스트(`<키트>.module.json`)가 정한다.
 	sw_skipInactiveModule(${KIT_NAME} swSkip)
 	if(swSkip)
 		return()
 	endif()
-	if(SW_SHIPPING_BUILD)
-		set(kitType STATIC)
-	else()
-		set(kitType SHARED)
-	endif()
-
-	file(GLOB_RECURSE kitSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
-	add_library(${KIT_NAME} ${kitType} ${kitSources})
-
-	target_include_directories(${KIT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-	target_link_libraries(${KIT_NAME}
-		PUBLIC
-		GameFramework
-		Engine
-		sw_public_source_includes
-		PRIVATE
-		sw_global_options
-	)
-
-	target_compile_definitions(${KIT_NAME} PRIVATE "SW_LOG_TAG=\"${KIT_NAME}\"")
-	sw_configurePch(${KIT_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-
-	sw_configureGfExports(${KIT_NAME} ${kitType})
-
-	if(kitType STREQUAL "SHARED")
-		sw_setModuleBinOutput(${KIT_NAME})
-
-		if(WIN32)
-			sw_addDelayloadHook(${KIT_NAME} DLLS GameFramework.dll)
-		endif()
-	endif()
-
-	sw_registerDynamicModule(${KIT_NAME} kit)
-	set_target_properties(${KIT_NAME} PROPERTIES FOLDER "Source/GameFramework/Kits")
-
-	# 헤더 목록을 넘기지 않는다. sw_addReflectionStep 이 REFLECT/ENUM 매크로를 가진 헤더를
-	# **재귀로** 찾아낸다. 주의: 여기서 키트 루트의 *.h 만 모으면(소스는 GLOB_RECURSE) 하위 폴더의 .cpp 는
-	# 컴파일되는데 그 안의 REFLECT() 타입만 조용히 등록되지 않는다.
-	sw_addReflectionStep(${KIT_NAME}
-		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	file(GLOB_RECURSE listKitSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_addModuleLibrary(${KIT_NAME}
+		KIND kit
+		DEV_TYPE SHARED
+		EXPORTS GF
+		LOG_TAG "${KIT_NAME}"
+		FOLDER "Source/GameFramework/Kits"
+		SOURCES ${listKitSource}
+		LINK_PUBLIC GameFramework Engine sw_public_source_includes
+		DELAYLOAD GameFramework.dll
 	)
 endfunction()
 
@@ -433,83 +458,26 @@ function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
 	endif()
 endfunction()
 
-# 게임 팩 모듈(SWGame) 타겟을 정의하고 링크 및 리플렉션/딜레이로드를 구성합니다.
+# 게임 팩 모듈(SWGame) — 링크하는 키트는 게임 매니페스트(`SWGame.module.json`)의 의존 가운데 Kit 인 것이다(CMake 에 다시 적지 않는다).
 function(sw_addGameModule TARGET_NAME)
-	cmake_parse_arguments(ARG "" "" "HEADERS;EXCLUDE" ${ARGN})
-
-	# 게임이 링크하는 키트는 게임 매니페스트(`SWGame.module.json`)의 의존 가운데 Kit 인 것이다 — 목록을 CMake 에 다시 적지 않는다.
-	sw_isModuleActive(${TARGET_NAME} swGameActive)
-	get_property(swGameDependencies GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
-	set(ARG_KITS "")
-	foreach(swDependency IN LISTS swGameDependencies)
-		get_property(swDependencyKind GLOBAL PROPERTY SW_MODULE_${swDependency}_KIND)
-		if(swDependencyKind STREQUAL "Kit")
-			list(APPEND ARG_KITS ${swDependency})
-		endif()
+	sw_getModuleDependenciesOfKind(${TARGET_NAME} Kit listKit)
+	set(listDelayLoad GameFramework.dll)
+	foreach(kit IN LISTS listKit)
+		list(APPEND listDelayLoad "${kit}.dll")
 	endforeach()
 
-	if(SW_SHIPPING_BUILD)
-		set(gameLibType STATIC)
-	else()
-		set(gameLibType MODULE)
-	endif()
-
-	file(GLOB_RECURSE gameSources CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
-
-	foreach(exPattern IN LISTS ARG_EXCLUDE)
-		list(FILTER gameSources EXCLUDE REGEX "${exPattern}")
-	endforeach()
-
-	add_library(${TARGET_NAME} ${gameLibType} ${gameSources})
-	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Source/Games")
-	sw_registerDynamicModule(${TARGET_NAME} game)
-
-	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
-	target_link_libraries(${TARGET_NAME}
-		PRIVATE
-		Engine
-		RuntimeAPI
-		GameFramework
-		${ARG_KITS}
-		sw_global_options
+	file(GLOB_RECURSE listGameSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
+	sw_addModuleLibrary(${TARGET_NAME}
+		KIND game
+		DEV_TYPE MODULE
+		EXPORTS MODULE
+		LOG_TAG "Game"
+		FOLDER "Source/Games"
+		SOURCES ${listGameSource}
+		LINK_PRIVATE Engine RuntimeAPI GameFramework ${listKit}
+		DELAYLOAD ${listDelayLoad}
+		UNITY_BATCH 8
 	)
-
-	target_compile_definitions(${TARGET_NAME}
-		PRIVATE
-		"SW_LOG_TAG=\"Game\""
-	)
-
-	if(gameLibType STREQUAL "MODULE")
-		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
-		sw_setModuleBinOutput(${TARGET_NAME})
-	endif()
-
-	sw_configurePch(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
-
-	if(COMMAND sw_setUnityBuild)
-		sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
-	endif()
-
-	if(NOT SW_SHIPPING_BUILD AND WIN32)
-		set(delayDlls GameFramework.dll)
-
-		foreach(kit IN LISTS ARG_KITS)
-			list(APPEND delayDlls "${kit}.dll")
-		endforeach()
-
-		sw_addDelayloadHook(${TARGET_NAME} DLLS ${delayDlls})
-	endif()
-
-	if(ARG_HEADERS)
-		sw_addReflectionStep(${TARGET_NAME}
-			HEADERS ${ARG_HEADERS}
-			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-		)
-	else()
-		sw_addReflectionStep(${TARGET_NAME}
-			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-		)
-	endif()
 endfunction()
 
 # ------------------------------------------------------------------------------

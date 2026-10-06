@@ -125,9 +125,7 @@ sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
 
 set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 
-if(COMMAND sw_setUnityBuild)
-    sw_setUnityBuild(ReflectionParser OFF)
-endif()
+sw_setUnityBuild(ReflectionParser OFF)
 
 set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
 
