@@ -11,6 +11,7 @@ Win32 는 문자열을 받는 함수마다 `xxxA`(ANSI 코드 페이지) · `xxx
 `A` 판을 이름으로 부르는 것도 막는다: `A` 판은 문자열을 ANSI 코드 페이지로 읽어, UTF-8 경로(한글 사용자 폴더 · 설치 경로)를 깨뜨린다.
 예외는 `mapExemption`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 `A` 판 이름)뿐이다.
 `->GetMessage(` · `.GetMessage(` 처럼 멤버로 부르는 같은 이름(COM 인터페이스 메서드)은 보지 않는다. 주석 · 문자열 안의 언급도 보지 않는다.
+일반 이름 표는 닫혀 있지 않다 — 저장소가 부르는 `XxxW(` 의 `Xxx` 가 표에 없으면 그것도 위반이다(새 API 가 들어올 때 표가 같이 자란다).
 
   python Scripts/lint/gate/CheckWin32WideCalls.py [--root <repo>] [--files a.cpp b.h]
 """
@@ -48,7 +49,7 @@ _kListGenericName = (
     "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",
     "SHGetPathFromIDList", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
     # 키보드
-    "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower",
+    "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower", "ImmGetCompositionString",
     # 모듈 · 파일 · 프로세스
     "GetModuleHandle", "GetModuleHandleEx", "GetModuleFileName", "LoadLibrary", "LoadLibraryEx", "SetDllDirectory",
     "GetDllDirectory", "CreateFile", "CreateFileMapping", "OpenFileMapping", "DeleteFile", "CopyFile", "CopyFileEx", "MoveFile",
@@ -56,7 +57,7 @@ _kListGenericName = (
     "SetFileAttributes", "FindFirstFile", "FindFirstFileEx", "FindNextFile", "GetFullPathName", "GetCurrentDirectory",
     "SetCurrentDirectory", "GetTempPath", "GetTempFileName", "GetLongPathName", "GetShortPathName", "GetFinalPathNameByHandle",
     "CreateHardLink", "CreateSymbolicLink", "GetDriveType", "GetVolumeInformation", "GetDiskFreeSpace", "GetDiskFreeSpaceEx",
-    "FindFirstChangeNotification", "SearchPath", "GetSystemDirectory", "GetWindowsDirectory", "GetEnvironmentVariable",
+    "FindFirstChangeNotification", "ReadDirectoryChanges", "SearchPath", "GetSystemDirectory", "GetWindowsDirectory", "GetEnvironmentVariable",
     "SetEnvironmentVariable", "ExpandEnvironmentStrings", "GetEnvironmentStrings", "FreeEnvironmentStrings",
     "CreateProcess", "GetCommandLine", "GetStartupInfo", "CreateNamedPipe", "WaitNamedPipe", "CallNamedPipe",
     "Process32First", "Process32Next", "Module32First", "Module32Next",
@@ -64,11 +65,20 @@ _kListGenericName = (
     "CreateEvent", "CreateEventEx", "OpenEvent", "CreateMutex", "CreateMutexEx", "OpenMutex", "CreateSemaphore",
     "CreateSemaphoreEx", "OpenSemaphore", "CreateWaitableTimer", "CreateWaitableTimerEx", "OutputDebugString", "FormatMessage",
     "GetComputerName", "GetUserName", "GetVersionEx", "RegOpenKeyEx", "RegCreateKeyEx", "RegQueryValueEx", "RegSetValueEx",
-    "RegDeleteKey", "RegDeleteValue", "RegEnumKeyEx", "RegEnumValue", "RegGetValue",
+    "RegDeleteKey", "RegDeleteValue", "RegEnumKeyEx", "RegEnumValue", "RegGetValue", "SymGetSearchPath", "SymSetSearchPath",
+    # 서비스
+    "RegisterServiceCtrlHandlerEx", "StartServiceCtrlDispatcher",
+    # 소켓
+    "WSASocket",
     # 콘솔
     "SetConsoleTitle", "GetConsoleTitle", "WriteConsole", "ReadConsole", "ReadConsoleInput", "PeekConsoleInput",
     "FillConsoleOutputCharacter", "WriteConsoleOutput", "WriteConsoleOutputCharacter",
 )
+
+_kSetGenericName = frozenset(_kListGenericName)
+
+#: 저장소가 부르는 `W` 판 — 일반 이름이 위 표에 없으면 위반이다(표가 닫혀 있으면 새 API 의 일반 이름 · A 판 호출이 빠진다).
+_kWideCallRe = re.compile(r"(?<![\w$>.:])([A-Z][A-Za-z0-9]+)W\s*\(")
 
 #: 일반 이름 또는 그 `A` 판을 함수처럼 부르는 자리입니다. 더 긴 이름의 일부(`DefWindowProcW` · `myGetMessage`)는 빠집니다.
 _kGenericCallRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kListGenericName) + r")(A?)\s*\(")
@@ -78,12 +88,22 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
     """Win32 일반 이름 · `A` 판을 부르는 줄을 위반 문자열로 돌려줍니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listTargetFile, listScanRoot=_kListScanRoot, suffixes=_kSuffixes)
     listViolation: list[str] = []
+    gate = CheckWin32WideCallsGate
     for path, text in LintGate.readFiles(listPath):
-        if _kGenericCallRe.search(text) is None:
+        if _kGenericCallRe.search(text) is None and _kWideCallRe.search(text) is None:
             continue
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
         listOriginalLine = text.splitlines()
         for lineIndex, line in enumerate(blankCommentsAndLiterals(text).splitlines(), start=1):
+            for match in _kWideCallRe.finditer(line):
+                baseName = match.group(1)
+                if baseName in _kSetGenericName:
+                    continue
+                if baseName + "W" in gate.mapExemption:
+                    gate.useExemption(baseName + "W")
+                    continue
+                listViolation.append(f"{relative}:{lineIndex}: {baseName}W 의 일반 이름 '{baseName}' 이 _kListGenericName 에 없습니다 — 표에 더합니다"
+                                     f"  | {listOriginalLine[lineIndex - 1].strip()}")
             for match in _kGenericCallRe.finditer(line):
                 # 멤버 호출(`queue->GetMessage(` · `x.GetObject(`)은 COM · 클래스 메서드다 — 매크로가 바꿔도 선언과 함께 바뀐다.
                 prefix = line[:match.start()].rstrip()
@@ -106,6 +126,7 @@ class CheckWin32WideCallsGate(LintGate):
     #: 이름으로 불러도 되는 `A` 판 → 이유. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
     mapExemption = {
         "OutputDebugStringA": "디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다",
+        "ElfW": "glibc <link.h> 의 ElfW(type) 매크로 — Win32 가 아니다",
     }
 
     description = "Win32 API 를 문자 집합 일반 이름(A/W 매크로) · A 판이 아니라 W 판 이름으로 부르는지 검사"
@@ -121,6 +142,10 @@ class CheckWin32WideCallsGate(LintGate):
         "  A 판(LoadLibraryExA · CreateFileA …)은 UTF-8 경로를 ANSI 로 읽어 한글 경로에서 실패합니다 — W 판 + StringUtil::utf8ToUtf16 으로 넘깁니다."
     )
     selfTestCases = [
+        {
+            "name": "일반 이름 표에 없는 W 판을 부른다(표가 닫혀 있으면 그 A 판 · 일반 이름을 못 잡는다)",
+            "files": {"Source/Probe/ProbeWide.cpp": "void probe()\n{\n    ProbeThingW( L\"x\" );\n}\n"},
+        },
         {
             "name": "창 프로시저가 DefWindowProc 로 끝난다",
             "files": {
