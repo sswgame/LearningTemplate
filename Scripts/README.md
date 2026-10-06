@@ -64,7 +64,7 @@ Scripts/
   │     └── GenerateDocs.py           # Doxygen 레퍼런스 생성
   │
   ├── lint/                           # [정적 검사 및 코드 스타일] — 폴더가 곧 성격이다
-  │     ├── LintGate.py · LintFixer.py # 게이트 하나 = 클래스 하나, 픽서 하나 = 클래스 하나 (껍데기는 기반이 든다)
+  │     ├── LintGate.py · LintFixer.py · LintReport.py # 게이트 · 픽서 · 보고서 하나 = 클래스 하나 (껍데기는 기반이 든다)
   │     ├── LintCatalog.py            # gate/ · selftest/ 를 훑어 "무엇이 있고 어떻게 돌리는가" (CMake · 훅이 읽는다)
   │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
@@ -104,6 +104,7 @@ Scripts/
   │     │     ├── RunClangFormat.py           # clang-format 적용 (`py -3 -m Scripts format`)
   │     │     └── FormatModified.py           # 작업 트리 변경분에 위 셋 + 인클루드 순서
   │     ├── report/                   # 찍어 줄 뿐, 0 으로 끝난다 (`RunBuildWarnings.py --fail-on` 을 명시했을 때만 예외)
+  │     │                             #   보고서 = `LintReport` 하위 클래스(`main = XxxReport.run`) — --root · --preset/--build-dir · --jobs · --filter · --out 은 기반이
   │     │     ├── RunBuildWarnings.py         # 트리에 남아 있는 컴파일러 경고 (`--fail-on error` 를 명시하면 CI 가 막는 데 쓴다,
   │     │     │                               #   `--define SW_ENABLE_DEADLOCK_DETECTION` 처럼 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지도 묻는다)
   │     │     ├── RunClangTidy.py
@@ -117,7 +118,8 @@ Scripts/
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
   │           ├── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
-  │           └── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
+  │           ├── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
+  │           └── CheckReportsRun.py          # report/ 의 보고서가 모두 LintReport 이고 --help 로 뜨는지
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교

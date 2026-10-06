@@ -27,8 +27,10 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 
-from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from common import collectSourceFiles, getLintSearchDirs, kCppAllExtensions, kNotOurDirNames  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 kDefaultMaxFileCount = 40
 
@@ -56,29 +58,33 @@ def folderAncestorsInternal(folder: str) -> list[str]:
     return ["/".join(listPart[:index]) for index in range(1, len(listPart))]
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="폴더당 코드 파일 수 보고")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--max", type=int, default=kDefaultMaxFileCount, help=f"이보다 많으면 보고합니다(기본 {kDefaultMaxFileCount})")
-    args = parser.parse_args(argv)
+class RunFolderFileCountReport(LintReport):
+    description = "폴더당 코드 파일 수 보고"
 
-    repositoryRoot = (args.root or getProjectRoot()).resolve()
-    mapFileCount = countFilesPerFolder(repositoryRoot)
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--max", type=int, default=kDefaultMaxFileCount, help=f"이보다 많으면 보고합니다(기본 {kDefaultMaxFileCount})")
 
-    # 하위 폴더에 코드가 있는 폴더는 묶음이다(`Kits/Network` 의 공용 헤더 하나) — 파일 하나짜리 폴더로 세지 않는다.
-    setParentFolder = {parent for folder in mapFileCount for parent in folderAncestorsInternal(folder)}
-    listLargeFolder = sorted(((count, folder) for folder, count in mapFileCount.items() if count > args.max), reverse=True)
-    listSingleFileFolder = sorted(folder for folder, count in mapFileCount.items()
-                                  if count == 1 and folder.startswith("Source/") and folder not in setParentFolder
-                                  and not isSingleFileFolderAllowedInternal(folder))
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        repositoryRoot = context.repositoryRoot
+        mapFileCount = countFilesPerFolder(repositoryRoot)
 
-    print(f"[RunFolderFileCount] 코드 파일이 {args.max} 개를 넘는 폴더 {len(listLargeFolder)}개")
-    for count, folder in listLargeFolder:
-        print(f"  {count:4d}  {folder}")
-    print(f"[RunFolderFileCount] 코드 파일이 하나뿐인 Source 폴더 {len(listSingleFileFolder)}개 — 위 폴더로 합칠지 본다")
-    for folder in listSingleFileFolder:
-        print(f"        {folder}")
-    return 0
+        # 하위 폴더에 코드가 있는 폴더는 묶음이다(`Kits/Network` 의 공용 헤더 하나) — 파일 하나짜리 폴더로 세지 않는다.
+        setParentFolder = {parent for folder in mapFileCount for parent in folderAncestorsInternal(folder)}
+        listLargeFolder = sorted(((count, folder) for folder, count in mapFileCount.items() if count > args.max), reverse=True)
+        listSingleFileFolder = sorted(folder for folder, count in mapFileCount.items()
+                                      if count == 1 and folder.startswith("Source/") and folder not in setParentFolder
+                                      and not isSingleFileFolderAllowedInternal(folder))
+
+        print(f"[RunFolderFileCount] 코드 파일이 {args.max} 개를 넘는 폴더 {len(listLargeFolder)}개")
+        for count, folder in listLargeFolder:
+            print(f"  {count:4d}  {folder}")
+        print(f"[RunFolderFileCount] 코드 파일이 하나뿐인 Source 폴더 {len(listSingleFileFolder)}개 — 위 폴더로 합칠지 본다")
+        for folder in listSingleFileFolder:
+            print(f"        {folder}")
+        return 0
+
+
+main = RunFolderFileCountReport.run
 
 
 if __name__ == "__main__":

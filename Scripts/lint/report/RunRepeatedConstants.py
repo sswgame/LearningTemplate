@@ -40,8 +40,10 @@ from pathlib import Path
 from typing import NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 
 from common import blankComments, normalizePath, readTextFiles  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 kListScanRoot = ("Source", "Tools/ReflectionParser")
 kSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")
@@ -124,66 +126,71 @@ def printSection(title: str, rows: list[str], top: int) -> None:
         print("  " + row)
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Report constants and literals defined in more than one place.")
-    parser.add_argument("--root", default=None, help="저장소 루트 (기본: 이 스크립트 기준)")
-    parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 파일만")
-    parser.add_argument("--top", type=int, default=30, help="절마다 보고할 최대 건수")
-    parser.add_argument("--section", type=int, choices=(1, 2, 3, 4), default=None, help="이 절만")
-    parser.add_argument("--min-files", type=int, default=6, help="4 절: 숫자 리터럴이 이 수 이상의 파일에 있을 때만")
-    args = parser.parse_args(argv)
-    repositoryRoot = Path(args.root).resolve() if args.root else Path(__file__).resolve().parents[3]
+class RunRepeatedConstantsReport(LintReport):
+    description = "두 곳 이상에 정의된 상수와 반복되는 리터럴을 보고한다"
+    bUsesFilter = True
 
-    listDecl, mapNumber, mapString, mapHashed = collect(repositoryRoot, args.filter)
-    mapByName: dict[str, list[Decl]] = defaultdict(list)
-    for decl in listDecl:
-        mapByName[decl.name].append(decl)
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--top", type=int, default=30, help="절마다 보고할 최대 건수")
+        parser.add_argument("--section", type=int, choices=(1, 2, 3, 4), default=None, help="이 절만")
+        parser.add_argument("--min-files", type=int, default=6, help="4 절: 숫자 리터럴이 이 수 이상의 파일에 있을 때만")
 
-    if args.section in (None, 1):
-        rows = []
-        for name, group in sorted(mapByName.items(), key=lambda item: -len(item[1])):
-            if name in kConventionNames:
-                continue
-            setModule = {moduleOf(d.path) for d in group}
-            setValue = {normalizeValue(d.value) for d in group}
-            if len(setModule) >= 2 and len(setValue) == 1:
-                rows.append(f"{name} = {group[0].value[:30]}  ({len(group)} 곳 · {len(setModule)} 모듈)  " + " | ".join(f"{d.path}:{d.line}" for d in group[:4]))
-        printSection("1) 이름 · 값이 같은 상수가 여러 모듈에", rows, args.top)
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        repositoryRoot = context.repositoryRoot
 
-    if args.section in (None, 2):
-        mapSibling: dict[tuple[str, str], list[Decl]] = defaultdict(list)
+        listDecl, mapNumber, mapString, mapHashed = collect(repositoryRoot, args.filter)
+        mapByName: dict[str, list[Decl]] = defaultdict(list)
         for decl in listDecl:
-            value = normalizeValue(decl.value)
-            if value in kTrivialNumbers or value in ("true", "false", "{}", "") or value.startswith("{") or '"' in value:
-                continue
-            mapSibling[(nameTail(decl.name), value)].append(decl)
-        rows = []
-        for (tail, value), group in sorted(mapSibling.items(), key=lambda item: -len(item[1])):
-            if len({d.path for d in group}) >= 2 and len({d.name for d in group}) >= 1 and not all(d.name in kConventionNames for d in group):
-                rows.append(f"*{tail} = {value[:28]}  " + " | ".join(f"{d.name}@{d.path}:{d.line}" for d in group[:4]))
-        printSection("2) 형제 상수(이름 꼬리 · 값이 같다)", rows, args.top)
+            mapByName[decl.name].append(decl)
 
-    if args.section in (None, 3):
-        mapStringConst: dict[str, list[Decl]] = defaultdict(list)
-        for decl in listDecl:
-            match = re.fullmatch(r'(?:u8)?"([^"\\]{3,})"', decl.value)
-            if match:
-                mapStringConst[match.group(1)].append(decl)
-        rows = []
-        for value, group in mapStringConst.items():
-            listSite = [site for site in mapString.get(value, []) if site.split(":")[0] not in {d.path for d in group}]
-            if listSite and (value.startswith((".", "/")) or "/" in value or re.search(r"[A-Z].*[a-z]", value) or len(value) > 8):
-                rows.append((len(listSite), f'"{value}" 이 {len(listSite)} 곳 — 상수 {group[0].name}@{group[0].path}:{group[0].line}  예: ' + ", ".join(listSite[:3])))
-        printSection("3) 이름 붙은 문자열 상수를 리터럴로 다시 적음", [row for _, row in sorted(rows, key=lambda r: -r[0])], args.top)
+        if args.section in (None, 1):
+            rows = []
+            for name, group in sorted(mapByName.items(), key=lambda item: -len(item[1])):
+                if name in kConventionNames:
+                    continue
+                setModule = {moduleOf(d.path) for d in group}
+                setValue = {normalizeValue(d.value) for d in group}
+                if len(setModule) >= 2 and len(setValue) == 1:
+                    rows.append(f"{name} = {group[0].value[:30]}  ({len(group)} 곳 · {len(setModule)} 모듈)  " + " | ".join(f"{d.path}:{d.line}" for d in group[:4]))
+            printSection("1) 이름 · 값이 같은 상수가 여러 모듈에", rows, args.top)
 
-    if args.section in (None, 4):
-        rows = [f"{len(files):4} 파일  {value}" for value, files in sorted(mapNumber.items(), key=lambda item: -len(item[1])) if len(files) >= args.min_files]
-        printSection(f"4a) 숫자 리터럴 반복({args.min_files} 파일 이상)", rows, args.top)
-        rows = [f"{len(files):4} 파일  hashed_string( \"{value}\" )  " + ", ".join(sorted(files)[:3]) for value, files in sorted(mapHashed.items(), key=lambda item: -len(item[1])) if len(files) >= 2]
-        printSection("4b) hashed_string 리터럴 반복(2 파일 이상)", rows, args.top)
+        if args.section in (None, 2):
+            mapSibling: dict[tuple[str, str], list[Decl]] = defaultdict(list)
+            for decl in listDecl:
+                value = normalizeValue(decl.value)
+                if value in kTrivialNumbers or value in ("true", "false", "{}", "") or value.startswith("{") or '"' in value:
+                    continue
+                mapSibling[(nameTail(decl.name), value)].append(decl)
+            rows = []
+            for (tail, value), group in sorted(mapSibling.items(), key=lambda item: -len(item[1])):
+                if len({d.path for d in group}) >= 2 and len({d.name for d in group}) >= 1 and not all(d.name in kConventionNames for d in group):
+                    rows.append(f"*{tail} = {value[:28]}  " + " | ".join(f"{d.name}@{d.path}:{d.line}" for d in group[:4]))
+            printSection("2) 형제 상수(이름 꼬리 · 값이 같다)", rows, args.top)
 
-    print("\n  고르기 전에 **'같은 이유로 같은 값인가'** 를 먼저 물어보세요. 계약이면 한 곳으로, 우연이면 그대로 둡니다(AGENTS.md 상수 절).")
-    return 0  # 보고만 한다.
+        if args.section in (None, 3):
+            mapStringConst: dict[str, list[Decl]] = defaultdict(list)
+            for decl in listDecl:
+                match = re.fullmatch(r'(?:u8)?"([^"\\]{3,})"', decl.value)
+                if match:
+                    mapStringConst[match.group(1)].append(decl)
+            rows = []
+            for value, group in mapStringConst.items():
+                listSite = [site for site in mapString.get(value, []) if site.split(":")[0] not in {d.path for d in group}]
+                if listSite and (value.startswith((".", "/")) or "/" in value or re.search(r"[A-Z].*[a-z]", value) or len(value) > 8):
+                    rows.append((len(listSite), f'"{value}" 이 {len(listSite)} 곳 — 상수 {group[0].name}@{group[0].path}:{group[0].line}  예: ' + ", ".join(listSite[:3])))
+            printSection("3) 이름 붙은 문자열 상수를 리터럴로 다시 적음", [row for _, row in sorted(rows, key=lambda r: -r[0])], args.top)
+
+        if args.section in (None, 4):
+            rows = [f"{len(files):4} 파일  {value}" for value, files in sorted(mapNumber.items(), key=lambda item: -len(item[1])) if len(files) >= args.min_files]
+            printSection(f"4a) 숫자 리터럴 반복({args.min_files} 파일 이상)", rows, args.top)
+            rows = [f"{len(files):4} 파일  hashed_string( \"{value}\" )  " + ", ".join(sorted(files)[:3]) for value, files in sorted(mapHashed.items(), key=lambda item: -len(item[1])) if len(files) >= 2]
+            printSection("4b) hashed_string 리터럴 반복(2 파일 이상)", rows, args.top)
+
+        print("\n  고르기 전에 **'같은 이유로 같은 값인가'** 를 먼저 물어보세요. 계약이면 한 곳으로, 우연이면 그대로 둡니다(AGENTS.md 상수 절).")
+        return 0  # 보고만 한다.
+
+
+main = RunRepeatedConstantsReport.run
 
 
 if __name__ == "__main__":

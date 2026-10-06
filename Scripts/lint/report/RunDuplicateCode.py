@@ -72,8 +72,10 @@ from pathlib import Path
 from typing import Iterable, NamedTuple
 
 sys.path.insert( 0, str( Path( __file__ ).resolve().parents[ 2 ] ) )   # Scripts — common
+sys.path.insert( 0, str( Path( __file__ ).resolve().parents[ 1 ] ) )   # Scripts/lint — LintReport
 
 from common import collectRepositoryFiles  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 #: 해시할 창의 줄 수. 짧으면 잡음이, 길면 놓치는 것이 는다 — 6 이 이 저장소에서 쓸 만했다.
 kWindowLines = 6
@@ -247,44 +249,45 @@ def selectFiles( repositoryRoot: Path, filterText: str, bIncludeHeaders: bool, s
     return sorted( selected )
 
 
-def parseArgs( argv: list[ str ] | None = None ) -> argparse.Namespace:
-    parser = argparse.ArgumentParser( description = "Report duplicated code blocks, longest first." )
-    parser.add_argument( "--root", default = None, help = "저장소 루트 (기본: 이 스크립트 기준)" )
-    parser.add_argument( "--filter", default = "", help = "경로에 이 문자열이 든 파일만" )
-    parser.add_argument( "--min-lines", type = int, default = kDefaultMinLines, help = "보고할 최소 길이" )
-    parser.add_argument( "--top", type = int, default = 20, help = "보고할 최대 건수" )
-    parser.add_argument( "--same-file-only", action = "store_true", help = "한 파일 안의 복사만" )
-    parser.add_argument( "--no-headers", action = "store_true", help = "헤더를 빼고 소스만" )
-    parser.add_argument( "--language", choices = sorted( kLanguageSpec ), default = "cpp", help = "훑을 언어 (기본 cpp)" )
-    return parser.parse_args( argv )
+class RunDuplicateCodeReport( LintReport ):
+    description = "Report duplicated code blocks, longest first."
+    bUsesFilter = True
+
+    def addArguments( self, parser: argparse.ArgumentParser ) -> None:
+        parser.add_argument( "--min-lines", type = int, default = kDefaultMinLines, help = "보고할 최소 길이" )
+        parser.add_argument( "--top", type = int, default = 20, help = "보고할 최대 건수" )
+        parser.add_argument( "--same-file-only", action = "store_true", help = "한 파일 안의 복사만" )
+        parser.add_argument( "--no-headers", action = "store_true", help = "헤더를 빼고 소스만" )
+        parser.add_argument( "--language", choices = sorted( kLanguageSpec ), default = "cpp", help = "훑을 언어 (기본 cpp)" )
+
+    def produce( self, context: ReportContext, args: argparse.Namespace ) -> int:
+        repositoryRoot = context.repositoryRoot
+
+        spec = kLanguageSpec[ args.language ]
+        files = selectFiles( repositoryRoot, args.filter, bIncludeHeaders = not args.no_headers, spec = spec )
+        if not files:
+            print( "[DuplicateCode] 검사할 파일이 없습니다." )
+            return 0
+
+        print( f"[DuplicateCode] 파일 {len( files )}개에서 {kWindowLines}줄 창을 해시합니다 …" )
+        findings = [ f for f in collectFindings( repositoryRoot, files, args.same_file_only, spec ) if f.lineCount >= args.min_lines ]
+
+        if not findings:
+            print( f"[DuplicateCode] {args.min_lines}줄 이상 중복 없음." )
+            return 0
+
+        print( f"\n[DuplicateCode] {args.min_lines}줄 이상 {len( findings )}건 (긴 것부터 {min( args.top, len( findings ) )}건):\n" )
+        for finding in findings[ : args.top ]:
+            marker = "  [같은 파일]" if finding.isSameFile() else ""
+            print( f"  {finding.lineCount:3d}줄  {finding.leftPath}:{finding.leftLine}" )
+            print( f"         {finding.rightPath}:{finding.rightLine}{marker}" )
+
+        print( "\n  고르기 전에 **'백엔드·플랫폼마다 정말로 다른 일을 하는가'** 를 먼저 물어보세요." )
+        print( "  그렇다면 넘기고, 아니라면 합칠 값이 있습니다 (이 파일 머리말의 목록 참고)." )
+        return 0  # 보고만 한다.
 
 
-def main( argv: list[ str ] | None = None ) -> int:
-    args = parseArgs( argv )
-    repositoryRoot = Path( args.root ).resolve() if args.root else Path( __file__ ).resolve().parents[ 3 ]
-
-    spec = kLanguageSpec[ args.language ]
-    files = selectFiles( repositoryRoot, args.filter, bIncludeHeaders = not args.no_headers, spec = spec )
-    if not files:
-        print( "[DuplicateCode] 검사할 파일이 없습니다." )
-        return 0
-
-    print( f"[DuplicateCode] 파일 {len( files )}개에서 {kWindowLines}줄 창을 해시합니다 …" )
-    findings = [ f for f in collectFindings( repositoryRoot, files, args.same_file_only, spec ) if f.lineCount >= args.min_lines ]
-
-    if not findings:
-        print( f"[DuplicateCode] {args.min_lines}줄 이상 중복 없음." )
-        return 0
-
-    print( f"\n[DuplicateCode] {args.min_lines}줄 이상 {len( findings )}건 (긴 것부터 {min( args.top, len( findings ) )}건):\n" )
-    for finding in findings[ : args.top ]:
-        marker = "  [같은 파일]" if finding.isSameFile() else ""
-        print( f"  {finding.lineCount:3d}줄  {finding.leftPath}:{finding.leftLine}" )
-        print( f"         {finding.rightPath}:{finding.rightLine}{marker}" )
-
-    print( "\n  고르기 전에 **'백엔드·플랫폼마다 정말로 다른 일을 하는가'** 를 먼저 물어보세요." )
-    print( "  그렇다면 넘기고, 아니라면 합칠 값이 있습니다 (이 파일 머리말의 목록 참고)." )
-    return 0  # 보고만 한다.
+main = RunDuplicateCodeReport.run
 
 
 if __name__ == "__main__":

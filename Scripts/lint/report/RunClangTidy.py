@@ -30,7 +30,9 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot, runProcess
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+from common import TranslationUnitSweep, getProjectRoot, runProcess
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
@@ -131,56 +133,59 @@ def getClangTidyVersionInternal(tidyExe: str) -> str:
     return completed.stdout.strip().splitlines()[0] if completed.stdout.strip() else "버전 미보고"
 
 
-def main() -> int:
-    projectRoot = getProjectRoot()
+class RunClangTidyReport(LintReport):
+    description = "clang-tidy 정적 분석 실행"
+    bUsesBuildTree = True
+    bUsesJobs = True
+    bUsesFilter = True
+    bUsesOut = True
 
-    parser = argparse.ArgumentParser(description="clang-tidy 정적 분석 실행")
-    addBuildTreeArguments(parser)
-    parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Core)")
-    parser.add_argument("--jobs", type=int, default=5, help="병렬 실행 수")
-    parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
-    parser.add_argument("--clang-tidy", default="", dest="clangTidy",
-                        help="쓸 clang-tidy 실행 파일 (버전을 고정해 비교할 때)")
-    args = parser.parse_args()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--clang-tidy", default="", dest="clangTidy",
+                            help="쓸 clang-tidy 실행 파일 (버전을 고정해 비교할 때)")
 
-    tree = BuildTree.fromArguments(args, projectRoot)
-    buildDir = tree.path
-    tidyExe = args.clangTidy or findClangTidy()
-    # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 판이 다른 두 PC 는 같은 코드에서
-    # "0건" 과 "72건" 처럼 다른 답을 받는다. 숫자만으로는 비교할 수 없다.
-    print(f"[RunClangTidy] {tidyExe}")
-    print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        tree = context.buildTree
+        buildDir = tree.path
+        tidyExe = args.clangTidy or findClangTidy()
+        # 버전을 함께 찍는다. **검사 목록이 버전마다 다르다** — 판이 다른 두 PC 는 같은 코드에서
+        # "0건" 과 "72건" 처럼 다른 답을 받는다. 숫자만으로는 비교할 수 없다.
+        print(f"[RunClangTidy] {tidyExe}")
+        print(f"[RunClangTidy] {getClangTidyVersionInternal(tidyExe)}")
 
-    sweep = TranslationUnitSweep(tree, tag="RunClangTidy")
-    if not sweep.bHasDatabase:
-        sweep.reportMissingDatabase()
-        return 2
+        sweep = TranslationUnitSweep(tree, tag="RunClangTidy")
+        if not sweep.bHasDatabase:
+            sweep.reportMissingDatabase()
+            return 2
 
-    # 같은 .cpp 가 여러 타깃의 DB 항목으로 들어오므로 **파일 단위로 유일화**해서 넘긴다 —
-    # clang-tidy 에게 필요한 것은 파일 경로뿐이고, 같은 파일을 두 번 보면 지적도 두 번 나온다.
-    listUnit = sorted({entry["file"] for entry in sweep.selectUnits(args.filter, requirePathPart="/Source/")})
-    if sweep.listMissingFile:
-        print(f"[RunClangTidy] 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB). 첫 파일: {sweep.listMissingFile[0]}")
-    if not listUnit:
-        print("[RunClangTidy] 검사할 TU 가 없습니다.")
+        # 같은 .cpp 가 여러 타깃의 DB 항목으로 들어오므로 **파일 단위로 유일화**해서 넘긴다 —
+        # clang-tidy 에게 필요한 것은 파일 경로뿐이고, 같은 파일을 두 번 보면 지적도 두 번 나온다.
+        listUnit = sorted({entry["file"] for entry in sweep.selectUnits(args.filter, requirePathPart="/Source/")})
+        if sweep.listMissingFile:
+            print(f"[RunClangTidy] 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB). 첫 파일: {sweep.listMissingFile[0]}")
+        if not listUnit:
+            print("[RunClangTidy] 검사할 TU 가 없습니다.")
+            return 0
+
+        print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {context.jobs} ({tree.name})")
+        diagnosticText = sweep.run(
+            listUnit,
+            lambda unit: runOne(tidyExe, buildDir, unit),
+            workerCount=context.jobs,
+            progressEvery=25,
+        )
+        if args.out:
+            Path(args.out).write_text(diagnosticText, encoding="utf-8")
+            print(f"[RunClangTidy] 원본 출력 → {args.out}")
+
+        summarize(diagnosticText)
+
+        # 지적이 있어도 실패로 만들지 않는다. 정적 분석은 판단이 필요한 자료이고, 게이트는
+        # CheckCodeConventions.py 가 맡는다. 게이트로 쓰려면 .clang-tidy 의 WarningsAsErrors 를 켠다.
         return 0
 
-    print(f"[RunClangTidy] {len(listUnit)}개 TU, 병렬 {args.jobs} ({tree.name})")
-    diagnosticText = sweep.run(
-        listUnit,
-        lambda unit: runOne(tidyExe, buildDir, unit),
-        workerCount=args.jobs,
-        progressEvery=25,
-    )
-    if args.out:
-        Path(args.out).write_text(diagnosticText, encoding="utf-8")
-        print(f"[RunClangTidy] 원본 출력 → {args.out}")
 
-    summarize(diagnosticText)
-
-    # 지적이 있어도 실패로 만들지 않는다. 정적 분석은 판단이 필요한 자료이고, 게이트는
-    # CheckCodeConventions.py 가 맡는다. 게이트로 쓰려면 .clang-tidy 의 WarningsAsErrors 를 켠다.
-    return 0
+main = RunClangTidyReport.run
 
 
 if __name__ == "__main__":

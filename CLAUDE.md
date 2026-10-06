@@ -114,11 +114,12 @@ over staged files only). **The folder says what a script does to you** — that 
 |--------|------|-----------|
 | `lint/gate/` | fails the build and blocks the commit | non-zero on any violation |
 | `lint/fixer/` | rewrites your files | 0 (or non-zero under `--check`) |
-| `lint/report/` | prints, you decide | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
+| `lint/report/` | prints, you decide (one `LintReport` subclass per script) | 0 (unless asked: `RunBuildWarnings.py --fail-on`, used by CI) |
 | `lint/selftest/` | checks the **lints**, not the code | non-zero if a lint went blind |
 
-`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py` and `LintFixer.py`
-stay there because every gate and every fixer inherits from them.
+`PreCommitLint.py` stays at `lint/` because it orchestrates all four; `LintGate.py`, `LintFixer.py` and `LintReport.py`
+stay there because every gate, fixer and report inherits from them (a report owns `--root` · `--preset`/`--build-dir` · `--jobs` ·
+`--filter` · `--out` through the base; `selftest/CheckReportsRun.py` checks every report still starts).
 
 **Adding a gate is dropping a file into `lint/gate/`.** A gate is one `LintGate` subclass that implements
 `scan(repositoryRoot, args) -> GateResult`; the base owns `--root`, UTF-8 output, violation printing and

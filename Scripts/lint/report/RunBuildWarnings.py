@@ -65,7 +65,9 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+from common import TranslationUnitSweep
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
 _kDiagnosticRe = re.compile(r"^(?P<where>.+?):\s*(?P<kind>warning|error):\s*(?P<text>.*)$")
@@ -244,69 +246,71 @@ def computeExitCode(failOn: str, totalWarning: int, totalError: int, listSkipped
     return 0
 
 
-def main() -> int:
-    projectRoot = getProjectRoot()
+class RunBuildWarningsReport(LintReport):
+    description = "트리에 남아 있는 컴파일러 경고를 전부 보고합니다"
+    bUsesBuildTree = True
+    bMultiplePresets = True
+    listDefaultPreset = _kDefaultPresets
+    bUsesJobs = True
+    bUsesFilter = True
+    bUsesOut = True
 
-    parser = argparse.ArgumentParser(description="트리에 남아 있는 컴파일러 경고를 전부 보고합니다")
-    addBuildTreeArguments(parser, bMultiple=True)
-    parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Graphics)")
-    parser.add_argument("--jobs", type=int, default=max(4, (os.cpu_count() or 8)), help="병렬 실행 수")
-    parser.add_argument("--out", default="", help="원본 출력을 저장할 파일")
-    parser.add_argument("--define", action="append", default=[],
-                        help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE). 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지 볼 때 "
-                             "(예: --define SW_ENABLE_DEADLOCK_DETECTION)")
-    parser.add_argument("--fail-on", choices=("error", "warning"), default="",
-                        help="CI 용: 오류(error) 또는 오류 · 경고(warning)가 있거나 검사한 TU 가 없는 프리셋이 있으면 1 로 끝냅니다. "
-                             "주지 않으면 늘 0 입니다(보고 도구)")
-    args = parser.parse_args()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--define", action="append", default=[],
+                            help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE). 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지 볼 때 "
+                                 "(예: --define SW_ENABLE_DEADLOCK_DETECTION)")
+        parser.add_argument("--fail-on", choices=("error", "warning"), default="",
+                            help="CI 용: 오류(error) 또는 오류 · 경고(warning)가 있거나 검사한 TU 가 없는 프리셋이 있으면 1 로 끝냅니다. "
+                                 "주지 않으면 늘 0 입니다(보고 도구)")
 
-    if args.build_dir:
-        listTree = [BuildTree.fromArguments(args, projectRoot)]
-    else:
-        listTree = [BuildTree.fromPreset(name, projectRoot) for name in (args.preset or _kDefaultPresets)]
-    mapPresetToText: dict[str, str] = {}
-    listRawChunk: list[str] = []
-    listSkippedPreset: list[str] = []
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        listTree = context.listBuildTree
+        mapPresetToText: dict[str, str] = {}
+        listRawChunk: list[str] = []
+        listSkippedPreset: list[str] = []
 
-    for tree in listTree:
-        presetName = tree.name
-        sweep = TranslationUnitSweep(tree, tag="RunBuildWarnings")
-        listEntry = sweep.selectUnits(args.filter)
-        if sweep.listMissingFile:
-            print(f"[RunBuildWarnings] {presetName}: 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB — "
-                  f"`cmake --build --preset {presetName}` 한 번이면 맞춰집니다). 첫 파일: {sweep.listMissingFile[0]}")
-        if not listEntry:
-            print(f"[RunBuildWarnings] {presetName}: compile_commands.json 이 없거나 대상 TU 가 없습니다 "
-                  f"— `cmake --preset {presetName}` 으로 configure 하세요. 건너뜁니다.")
-            listSkippedPreset.append(presetName)
-            continue
+        for tree in listTree:
+            presetName = tree.name
+            sweep = TranslationUnitSweep(tree, tag="RunBuildWarnings")
+            listEntry = sweep.selectUnits(args.filter)
+            if sweep.listMissingFile:
+                print(f"[RunBuildWarnings] {presetName}: 컴파일 DB 의 TU {len(sweep.listMissingFile)}개가 디스크에 없어 건너뜁니다(낡은 DB — "
+                      f"`cmake --build --preset {presetName}` 한 번이면 맞춰집니다). 첫 파일: {sweep.listMissingFile[0]}")
+            if not listEntry:
+                print(f"[RunBuildWarnings] {presetName}: compile_commands.json 이 없거나 대상 TU 가 없습니다 "
+                      f"— `cmake --preset {presetName}` 으로 configure 하세요. 건너뜁니다.")
+                listSkippedPreset.append(presetName)
+                continue
 
-        print(f"[RunBuildWarnings] {presetName}: TU {len(listEntry)}개, 병렬 {args.jobs}")
-        rawText = sweep.run(listEntry, functools.partial(runOne, listExtraDefine=tuple(args.define)), workerCount=args.jobs,
-                            progressEvery=100)
-        mapPresetToText[presetName] = rawText
-        listRawChunk.append(f"==== {presetName}\n{rawText}\n")
+            print(f"[RunBuildWarnings] {presetName}: TU {len(listEntry)}개, 병렬 {context.jobs}")
+            rawText = sweep.run(listEntry, functools.partial(runOne, listExtraDefine=tuple(args.define)), workerCount=context.jobs,
+                                progressEvery=100)
+            mapPresetToText[presetName] = rawText
+            listRawChunk.append(f"==== {presetName}\n{rawText}\n")
 
-    if args.out:
-        Path(args.out).write_text("".join(listRawChunk), encoding="utf-8")
-        print(f"[RunBuildWarnings] 원본 출력 → {args.out}")
+        if args.out:
+            Path(args.out).write_text("".join(listRawChunk), encoding="utf-8")
+            print(f"[RunBuildWarnings] 원본 출력 → {args.out}")
 
-    totalUnique, totalError = summarize(mapPresetToText)
+        totalUnique, totalError = summarize(mapPresetToText)
 
-    print("")
-    if totalUnique == 0:
-        print("[RunBuildWarnings] 경고 0건 — 이 값이 정상입니다.")
-    else:
-        print(f"[RunBuildWarnings] 경고 {totalUnique}건. 새 경고는 분류해서 고치거나, 의도한 것이면 "
-              f"그 자리에 이유를 주석으로 남기세요.")
+        print("")
+        if totalUnique == 0:
+            print("[RunBuildWarnings] 경고 0건 — 이 값이 정상입니다.")
+        else:
+            print(f"[RunBuildWarnings] 경고 {totalUnique}건. 새 경고는 분류해서 고치거나, 의도한 것이면 "
+                  f"그 자리에 이유를 주석으로 남기세요.")
 
-    # **기본은 게이트가 아니다.** 경고가 있어도 0 을 돌려준다 — 구성·컴파일러 버전마다 집합이 달라서
-    # 막으면 남의 PC 에서 빨개진다. 막는 일은 `Check*` 스크립트가 맡는다(RunClangTidy 와 같은 규칙).
-    # `--fail-on` 은 CI 가 "어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는가" 를 지키려고 명시적으로 켠다(ci.yml).
-    exitCode = computeExitCode(args.fail_on, totalUnique, totalError, listSkippedPreset)
-    if exitCode != 0:
-        print(f"[RunBuildWarnings] --fail-on {args.fail_on}: 오류 {totalError}건 · 경고 {totalUnique}건 · 검사 못 한 프리셋 {listSkippedPreset} — 실패로 끝냅니다.")
-    return exitCode
+        # **기본은 게이트가 아니다.** 경고가 있어도 0 을 돌려준다 — 구성·컴파일러 버전마다 집합이 달라서
+        # 막으면 남의 PC 에서 빨개진다. 막는 일은 `Check*` 스크립트가 맡는다(RunClangTidy 와 같은 규칙).
+        # `--fail-on` 은 CI 가 "어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는가" 를 지키려고 명시적으로 켠다(ci.yml).
+        exitCode = computeExitCode(args.fail_on, totalUnique, totalError, listSkippedPreset)
+        if exitCode != 0:
+            print(f"[RunBuildWarnings] --fail-on {args.fail_on}: 오류 {totalError}건 · 경고 {totalUnique}건 · 검사 못 한 프리셋 {listSkippedPreset} — 실패로 끝냅니다.")
+        return exitCode
+
+
+main = RunBuildWarningsReport.run
 
 
 if __name__ == "__main__":

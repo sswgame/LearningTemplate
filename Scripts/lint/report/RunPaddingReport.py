@@ -50,7 +50,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-from common import BuildTree, TranslationUnitSweep, addBuildTreeArguments, getProjectRoot, runProcess  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
+from common import TranslationUnitSweep, runProcess  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 _kDefaultPreset = "Ninja-Debug"
 _kTag = "RunPaddingReport"
@@ -592,97 +594,103 @@ def printDetailInternal(record: RecordLayout) -> None:
         print(f"        {'':>6}  ({record.size - cursor} 바이트 꼬리 패딩)")
 
 
-def main() -> int:
-    if "--parse-unit" in sys.argv:
-        return parseUnitInWorker(json.loads(sys.stdin.read()))
+class RunPaddingReport(LintReport):
+    description = "Source/ 레코드의 패딩과 필드 재배치로 줄일 수 있는 크기를 보고합니다 (게이트 아님)"
+    bUsesBuildTree = True
+    bUsesJobs = True
+    bUsesFilter = True
+    bUsesOut = True
 
-    repositoryRoot = getProjectRoot()
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--define", action="append", default=[],
+                            help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE) — 예: --define SW_SHIPPING")
+        parser.add_argument("--files", nargs="*", default=None,
+                            help="이 파일들에 정의된 레코드만 봅니다. .h 는 그 헤더만 include 하는 탐침 TU 로, .cpp 는 그 TU 로 파싱합니다")
+        parser.add_argument("--all", action="store_true", help="줄일 수 없는 패딩(꼬리 등)까지 패딩이 있는 레코드 전부를 보입니다")
+        parser.add_argument("--min-saving", type=int, default=1, help="이 바이트 이상 줄일 수 있는 레코드만 보입니다 (기본 1)")
+        parser.add_argument("--detail", action="store_true", help="표에 나온 레코드마다 필드 배치를 찍습니다")
+        parser.add_argument("--parse-unit", action="store_true", help=argparse.SUPPRESS)   # 자식 프로세스 갈래(runUnitInternal)
 
-    parser = argparse.ArgumentParser(description="Source/ 레코드의 패딩과 필드 재배치로 줄일 수 있는 크기를 보고합니다 (게이트 아님)")
-    addBuildTreeArguments(parser)
-    parser.add_argument("--define", action="append", default=[],
-                        help="모든 TU 에 더할 전처리 정의(NAME 또는 NAME=VALUE) — 예: --define SW_SHIPPING")
-    parser.add_argument("--filter", default="", help="경로 부분 문자열로 TU 를 고릅니다 (예: Engine/Graphics)")
-    parser.add_argument("--files", nargs="*", default=None,
-                        help="이 파일들에 정의된 레코드만 봅니다. .h 는 그 헤더만 include 하는 탐침 TU 로, .cpp 는 그 TU 로 파싱합니다")
-    parser.add_argument("--all", action="store_true", help="줄일 수 없는 패딩(꼬리 등)까지 패딩이 있는 레코드 전부를 보입니다")
-    parser.add_argument("--min-saving", type=int, default=1, help="이 바이트 이상 줄일 수 있는 레코드만 보입니다 (기본 1)")
-    parser.add_argument("--detail", action="store_true", help="표에 나온 레코드마다 필드 배치를 찍습니다")
-    parser.add_argument("--jobs", type=int, default=0, help="동시에 띄울 파서 프로세스 수 (0 이면 CPU 수)")
-    parser.add_argument("--out", default="", help="전체 결과를 TSV 로 저장할 파일")
-    args = parser.parse_args()
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        # 자기 자신을 자식 프로세스로 띄워 TU 하나를 파싱하는 갈래(runUnitInternal) — 표준 입력의 요청을 읽는다.
+        if args.parse_unit:
+            return parseUnitInWorker(json.loads(sys.stdin.read()))
 
-    tree = BuildTree.fromArguments(args, repositoryRoot)
-    sweep = TranslationUnitSweep(tree, tag=_kTag)
-    if sweep.bHasDatabase is False:
-        sweep.reportMissingDatabase()
-        return 0
-    listEntry = sweep.selectUnits(args.filter, requirePathPart="/Source/")
-
-    uniqueTargetFile: set[str] = set()
-    with tempfile.TemporaryDirectory(prefix="swPaddingProbe") as probeDirName:
-        if args.files:
-            listPath = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
-            uniqueTargetFile = {normalizeSlashInternal(str(p.resolve())).lower() for p in listPath}
-            listHeader = [p for p in listPath if p.suffix == ".h" and p.is_file()]
-            listSource = {normalizeSlashInternal(str(p.resolve())).lower() for p in listPath if p.suffix == ".cpp"}
-            listUnit = [entry for entry in listEntry
-                        if normalizeSlashInternal(str(entry.get("file", ""))).lower() in listSource]
-            listUnit += makeProbeEntriesInternal(repositoryRoot, listHeader, listEntry, Path(probeDirName))
-        else:
-            listUnit = listEntry
-        if not listUnit:
-            print(f"[{_kTag}] 파싱할 TU 가 없습니다.")
+        repositoryRoot = context.repositoryRoot
+        tree = context.buildTree
+        sweep = TranslationUnitSweep(tree, tag=_kTag)
+        if sweep.bHasDatabase is False:
+            sweep.reportMissingDatabase()
             return 0
+        listEntry = sweep.selectUnits(args.filter, requirePathPart="/Source/")
 
-        defineText = f", 정의 {' '.join(args.define)}" if args.define else ""
-        print(f"[{_kTag}] {tree.name}{defineText}: TU {len(listUnit)}개를 libclang 으로 파싱합니다 …")
-        sourceRoot = repositoryRoot / "Source"
-        rawText = sweep.run(listUnit, lambda entry: runUnitInternal(entry, sourceRoot, tuple(args.define)),
-                            workerCount=args.jobs or None, progressEvery=100)
+        uniqueTargetFile: set[str] = set()
+        with tempfile.TemporaryDirectory(prefix="swPaddingProbe") as probeDirName:
+            if args.files:
+                listPath = [Path(p) if Path(p).is_absolute() else repositoryRoot / p for p in args.files]
+                uniqueTargetFile = {normalizeSlashInternal(str(p.resolve())).lower() for p in listPath}
+                listHeader = [p for p in listPath if p.suffix == ".h" and p.is_file()]
+                listSource = {normalizeSlashInternal(str(p.resolve())).lower() for p in listPath if p.suffix == ".cpp"}
+                listUnit = [entry for entry in listEntry
+                            if normalizeSlashInternal(str(entry.get("file", ""))).lower() in listSource]
+                listUnit += makeProbeEntriesInternal(repositoryRoot, listHeader, listEntry, Path(probeDirName))
+            else:
+                listUnit = listEntry
+            if not listUnit:
+                print(f"[{_kTag}] 파싱할 TU 가 없습니다.")
+                return 0
 
-    mapKeyToRecord, listError = collectRecordsInternal(rawText)
-    listRecord: list[RecordLayout] = [variant for listVariant in mapKeyToRecord.values() for variant in listVariant]
-    if uniqueTargetFile:
-        listRecord = [record for record in listRecord if record.file.lower() in uniqueTargetFile]
+            defineText = f", 정의 {' '.join(args.define)}" if args.define else ""
+            print(f"[{_kTag}] {tree.name}{defineText}: TU {len(listUnit)}개를 libclang 으로 파싱합니다 …")
+            sourceRoot = repositoryRoot / "Source"
+            rawText = sweep.run(listUnit, lambda entry: runUnitInternal(entry, sourceRoot, tuple(args.define)),
+                                workerCount=context.jobs, progressEvery=100)
 
-    listRow: list[tuple[int, int, int, RecordLayout]] = []
-    for record in listRecord:
-        if not record.listSpan:
-            continue   # 빈 타입(태그 · 정적 함수 모음) — 1 바이트는 패딩이 아니라 C++ 의 최소 크기다.
-        padding = record.size - record.computeCoveredBytes()
-        # `alignas` 필드의 패딩은 의도한 것이다 — 절약으로 세지 않는다(`--all` 표에는 `alignas` 표시와 함께 나온다).
-        saving = 0 if record.bHasAlignedField else record.size - record.computeMinimumSize()
-        listRow.append((saving, padding, record.computeMinimumSize(), record))
-    listRow.sort(key=lambda row: (-row[0], -row[1], row[3].name))
+        mapKeyToRecord, listError = collectRecordsInternal(rawText)
+        listRecord: list[RecordLayout] = [variant for listVariant in mapKeyToRecord.values() for variant in listVariant]
+        if uniqueTargetFile:
+            listRecord = [record for record in listRecord if record.file.lower() in uniqueTargetFile]
 
-    if args.out:
-        with open(args.out, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write("saving\tpadding\tsize\tminimum\talign\talignas\tname\tfile\tline\n")
-            for saving, padding, minimum, record in listRow:
-                relative = os.path.relpath(record.file, repositoryRoot).replace("\\", "/")
-                stream.write(f"{saving}\t{padding}\t{record.size}\t{minimum}\t{record.align}\t{int(record.bHasAlignedField)}\t{record.name}\t{relative}\t{record.line}\n")
-        print(f"[{_kTag}] 전체 {len(listRow)}개 → {args.out}")
+        listRow: list[tuple[int, int, int, RecordLayout]] = []
+        for record in listRecord:
+            if not record.listSpan:
+                continue   # 빈 타입(태그 · 정적 함수 모음) — 1 바이트는 패딩이 아니라 C++ 의 최소 크기다.
+            padding = record.size - record.computeCoveredBytes()
+            # `alignas` 필드의 패딩은 의도한 것이다 — 절약으로 세지 않는다(`--all` 표에는 `alignas` 표시와 함께 나온다).
+            saving = 0 if record.bHasAlignedField else record.size - record.computeMinimumSize()
+            listRow.append((saving, padding, record.computeMinimumSize(), record))
+        listRow.sort(key=lambda row: (-row[0], -row[1], row[3].name))
 
-    listShown = [row for row in listRow if (row[1] > 0 if args.all else row[0] >= args.min_saving)]
-    print("")
-    print(f"  {'절약':>4} {'패딩':>4} {'크기':>6} {'최소':>6} {'정렬':>4}  타입  (위치)")
-    print("  " + "-" * 76)
-    for saving, padding, minimum, record in listShown:
-        relative = os.path.relpath(record.file, repositoryRoot).replace("\\", "/")
-        alignedText = "  [alignas]" if record.bHasAlignedField else ""
-        print(f"  {saving:>6} {padding:>6} {record.size:>6} {minimum:>6} {record.align:>6}  {record.name}  ({relative}:{record.line}){alignedText}")
-        if args.detail:
-            printDetailInternal(record)
-    print("")
-    totalSaving = sum(row[0] for row in listShown)
-    print(f"[{_kTag}] 레코드 {len(listRow)}개 중 {len(listShown)}개 표시 — 표시한 것의 절약 합 {totalSaving} 바이트(인스턴스 하나 기준).")
-    if listError:
-        print(f"[{_kTag}] 파싱 문제 {len(listError)}건 (그 TU 의 숫자는 의심할 것) — 첫 셋:")
-        for message in listError[:3]:
-            print(f"    {message}")
-    # 보고 도구 — 늘 0 이다.
-    return 0
+        if args.out:
+            with open(args.out, "w", encoding="utf-8", newline="\n") as stream:
+                stream.write("saving\tpadding\tsize\tminimum\talign\talignas\tname\tfile\tline\n")
+                for saving, padding, minimum, record in listRow:
+                    relative = os.path.relpath(record.file, repositoryRoot).replace("\\", "/")
+                    stream.write(f"{saving}\t{padding}\t{record.size}\t{minimum}\t{record.align}\t{int(record.bHasAlignedField)}\t{record.name}\t{relative}\t{record.line}\n")
+            print(f"[{_kTag}] 전체 {len(listRow)}개 → {args.out}")
+
+        listShown = [row for row in listRow if (row[1] > 0 if args.all else row[0] >= args.min_saving)]
+        print("")
+        print(f"  {'절약':>4} {'패딩':>4} {'크기':>6} {'최소':>6} {'정렬':>4}  타입  (위치)")
+        print("  " + "-" * 76)
+        for saving, padding, minimum, record in listShown:
+            relative = os.path.relpath(record.file, repositoryRoot).replace("\\", "/")
+            alignedText = "  [alignas]" if record.bHasAlignedField else ""
+            print(f"  {saving:>6} {padding:>6} {record.size:>6} {minimum:>6} {record.align:>6}  {record.name}  ({relative}:{record.line}){alignedText}")
+            if args.detail:
+                printDetailInternal(record)
+        print("")
+        totalSaving = sum(row[0] for row in listShown)
+        print(f"[{_kTag}] 레코드 {len(listRow)}개 중 {len(listShown)}개 표시 — 표시한 것의 절약 합 {totalSaving} 바이트(인스턴스 하나 기준).")
+        if listError:
+            print(f"[{_kTag}] 파싱 문제 {len(listError)}건 (그 TU 의 숫자는 의심할 것) — 첫 셋:")
+            for message in listError[:3]:
+                print(f"    {message}")
+        # 보고 도구 — 늘 0 이다.
+        return 0
+
+
+main = RunPaddingReport.run
 
 
 if __name__ == "__main__":

@@ -32,11 +32,13 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 
-from common import getProjectRoot, kNotOurDirNames  # noqa: E402
+from common import kNotOurDirNames  # noqa: E402
+from LintReport import LintReport, ReportContext  # noqa: E402
 
 _kTag = "BuildScriptInventory"
 _kCmakeDefinitionRe = re.compile(r"^\s*(function|macro)\s*\(\s*([A-Za-z_0-9]+)", re.MULTILINE | re.IGNORECASE)
@@ -202,21 +204,25 @@ def printReportInternal(cmake: dict[str, Any], python: dict[str, Any], bZeroOnly
         print(f"  - {relPath}: " + ", ".join(f"{name}×{count}" for name, count in sorted(mapHit.items())))
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="빌드 스크립트(CMake · 파이썬) 재고 — 죽은 함수 · 공통부를 비켜 간 곳")
-    parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
-    parser.add_argument("--json", type=Path, default=None, help="결과를 JSON 으로도 쓴다")
-    parser.add_argument("--zero-only", action="store_true", help="부르는 곳이 0 인 CMake 함수만")
-    args = parser.parse_args(argv)
+class RunBuildScriptInventoryReport(LintReport):
+    description = "빌드 스크립트(CMake · 파이썬) 재고 — 죽은 함수 · 공통부를 비켜 간 곳"
 
-    repositoryRoot = (args.root or getProjectRoot()).resolve()
-    cmake = inventoryCmake(repositoryRoot)
-    python = inventoryPython(repositoryRoot)
-    printReportInternal(cmake, python, args.zero_only)
-    if args.json is not None:
-        args.json.parent.mkdir(parents=True, exist_ok=True)
-        args.json.write_text(json.dumps({"cmake": cmake, "python": python}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    return 0
+    def addArguments(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("--json", type=Path, default=None, help="결과를 JSON 으로도 쓴다")
+        parser.add_argument("--zero-only", action="store_true", help="부르는 곳이 0 인 CMake 함수만")
+
+    def produce(self, context: ReportContext, args: argparse.Namespace) -> int:
+        repositoryRoot = context.repositoryRoot
+        cmake = inventoryCmake(repositoryRoot)
+        python = inventoryPython(repositoryRoot)
+        printReportInternal(cmake, python, args.zero_only)
+        if args.json is not None:
+            args.json.parent.mkdir(parents=True, exist_ok=True)
+            args.json.write_text(json.dumps({"cmake": cmake, "python": python}, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+        return 0
+
+
+main = RunBuildScriptInventoryReport.run
 
 
 if __name__ == "__main__":
