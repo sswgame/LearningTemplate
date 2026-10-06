@@ -127,7 +127,10 @@ namespace sw
 
     JoltPhysicsScene::~JoltPhysicsScene()
     {
-        // 관절 → 캐릭터 → 바디 순서로 내린다(관절이 바디를 가리킨다).
+        // 바퀴 차 · 관절 → 캐릭터 → 바디 순서로 내린다(차 · 관절이 바디를 가리킨다).
+        _vehicles.forEach( [this]( VehicleRecord& vehicle )
+        { removeVehicleConstraint( vehicle ); } );
+        _vehicles.clear();
         _joints.forEach( [this]( JointRecord& joint )
         {
             if ( joint._pConstraint != nullptr )
@@ -557,6 +560,21 @@ namespace sw
         } );
         for ( const PhysicsJointHandle& joint : listDoomed )
             destroyJoint( joint );
+        // 차체가 지워지는 바퀴 차도 함께.
+        vector<PhysicsVehicleHandle> listDoomedVehicle;
+        _vehicles.forEachHandle( [&]( SlotHandle slot, const VehicleRecord& vehicle )
+        {
+            for ( const PhysicsBodyHandle& body : listBody )
+            {
+                if ( vehicle._chassis == body )
+                {
+                    listDoomedVehicle.push_back( PhysicsVehicleHandle::fromSlot( slot ) );
+                    return;
+                }
+            }
+        } );
+        for ( const PhysicsVehicleHandle& vehicle : listDoomedVehicle )
+            destroyVehicle( vehicle );
     }
 
     void JoltPhysicsScene::destroyBodies( span<const PhysicsBodyHandle> listBody )

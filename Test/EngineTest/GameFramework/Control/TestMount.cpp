@@ -13,6 +13,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
+#include "Engine/Object/Component/Physics/WheeledVehicleComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -34,6 +35,7 @@
 #include "GameFramework/Base/Vehicle/MountInteractionComponent.h"
 #include "GameFramework/Base/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Base/Vehicle/MountUtil.h"
+#include "GameFramework/Base/Vehicle/PhysicsCarComponent.h"
 #include "GameFramework/Base/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleExitComponent.h"
 #include "GameFramework/Base/Vehicle/VehicleSeatComponent.h"
@@ -623,4 +625,58 @@ SW_TEST_CASE( MountTest, PlayerAndAiDriveTheSameLine )
         SW_EXPECT_NEAR_EQUAL( Internal::findPosition( *pAiKart )._z, Internal::findPosition( *pAiRider )._z, 1.0e-3f );
     }
     input.shutdown();
+}
+
+/**
+ * @brief [MountTest] 물리 차는 의도로 간다 — 앞 의도면 바퀴 차가 달리고, 앞으로 가는 중에 뒤 의도면 먼저 브레이크 뒤 후진, 차 방향으로 투영한 조향
+ */
+SW_TEST_CASE( MountTest, PhysicsCarFromIntent )
+{
+    ControlIntent back;
+    back._move                    = float2{ 0.0f, -1.0f };
+    const PhysicsCarInput braking = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 8.0f, 0.5f, -1 );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, braking._brake, 1.0e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, braking._forward, 1.0e-6f );
+    const PhysicsCarInput reversing = PhysicsCarComponent::toCarInput( back, float3{ 0.0f, 0.0f, 1.0f }, 0.1f, 0.5f, -1 );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, reversing._forward, 1.0e-6f );
+    ControlIntent forward;
+    forward._move                 = float2{ 0.0f, 1.0f };
+    const PhysicsCarInput turning = PhysicsCarComponent::toCarInput( forward, float3{ 1.0f, 0.0f, 0.0f }, 0.0f, 0.5f, -1 );
+    SW_EXPECT_NEAR_EQUAL( -1.0f, turning._right, 1.0e-5f ); // 차가 +X 를 볼 때 +Z 로 가고 싶다 = 왼쪽
+
+    using Internal = MountTestInternal;
+    GameObjectManager manager;
+    navtest::spawnStaticBody( manager, "Floor", float3{ 0.0f, -0.5f, 0.0f }, float3{ 200.0f, 0.5f, 200.0f } );
+    GameObject*         pCar  = manager.createGameObject( hashed_string( "Car" ) );
+    RigidBodyComponent* pBody = pCar->addComponent<RigidBodyComponent>();
+    PhysicsShapeDesc3D  box;
+    box._halfExtents = float3{ 0.9f, 0.4f, 2.0f };
+    pBody->setShape( box );
+    pBody->setBodyType( PhysicsBodyType::Dynamic );
+    pBody->setMass( 1500.0f );
+    pBody->setLocalPosition( float3{ 0.0f, 0.9f, 0.0f } );
+    WheeledVehicleComponent* pWheels = pCar->addComponent<WheeledVehicleComponent>();
+    pCar->addComponent<PawnComponent>();
+    pCar->addComponent<PhysicsCarComponent>();
+    auto* pDriver = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AiControllerComponent>();
+    manager.beginPlay();
+    pDriver->possess( *pCar->getComponent<PawnComponent>() );
+    for ( uint32 frame = 0; frame < 30; ++frame )
+        manager.tick( Internal::kDeltaTime );
+
+    pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
+    for ( uint32 frame = 0; frame < 120; ++frame )
+        manager.tick( Internal::kDeltaTime );
+    SW_EXPECT_TRUE_MSG( pWheels->getVehicleState()._forwardSpeed > 5.0f, ( "speed " + std::to_string( pWheels->getVehicleState()._forwardSpeed ) ).c_str() );
+
+    // 뒤의 목적지 — 브레이크로 서고 나서 후진한다.
+    pDriver->moveTo( float3{ 0.0f, 0.0f, -1000.0f } );
+    bool bReversed = false;
+    for ( uint32 frame = 0; frame < 600 && bReversed == false; ++frame )
+    {
+        manager.tick( Internal::kDeltaTime );
+        bReversed = pWheels->getVehicleState()._forwardSpeed < -0.5f;
+    }
+    SW_EXPECT_TRUE( bReversed );
+    manager.endPlay();
 }

@@ -434,6 +434,29 @@ namespace sw
             pRecord->_state._position = position;
     }
 
+    PhysicsVehicleHandle Box2DPhysicsScene::createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc )
+    {
+        (void)chassis;
+        (void)desc;
+        return PhysicsVehicleHandle{};
+    }
+
+    void Box2DPhysicsScene::setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake )
+    {
+        (void)vehicle;
+        (void)forward;
+        (void)right;
+        (void)brake;
+        (void)handBrake;
+    }
+
+    bool Box2DPhysicsScene::getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const
+    {
+        (void)vehicle;
+        outState = PhysicsVehicleState{};
+        return false;
+    }
+
     bool Box2DPhysicsScene::getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const
     {
         const CharacterRecord* pRecord = _characters.get( character.getSlot() );

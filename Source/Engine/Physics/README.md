@@ -75,6 +75,7 @@ Jolt 의 대상 기능 옵션(AVX2)과 정의는 Jolt 백엔드 소스에만 붙
 | `RigidBodyComponent` · `RigidBody2DComponent` | 바디 하나(무기 판정의 히트 존 `_hitZone`, 3D 는 소켓 부착의 물리 창구 `getSocketPhysicsBody` 도 든다). 종류 · 셰이프(둘 이상이면 컴파운드) · 레이어 · 재질 · 질량 · 트리거 · 연속을 속성으로 든다. Dynamic 은 보간한 자세를 트랜스폼에 쓰고, Kinematic 은 트랜스폼을 따라 스텝마다 나눠 움직이고, 코드가 옮기면(`teleportTo` 포함) 순간이동 |
 | `JointComponent` · `Joint2DComponent` | 이 오브젝트의 강체를 부모 사슬에서 가장 가까운 강체(또는 월드)에 잇는다. 자리 · 축은 컴포넌트의 월드 자세 |
 | `CharacterControllerComponent` · `CharacterController2DComponent` | 캡슐 무버. `setMoveVelocity` · `jump`, 중력은 컴포넌트가 쌓는다. 자리는 발. 3D 는 애니메이션 루트 모션(`addRootMotionDisplacement` — 프레임의 스텝들이 나눠 간다)도 받는다 |
+| `WheeledVehicleComponent` | 같은 오브젝트의 동적 강체(차체)에 바퀴 넷 · 서스펜션 · 엔진 · 자동 변속 · 디퍼렌셜(`WheelDrive` 앞 · 뒤 · 네 바퀴)을 붙인 물리 차(Jolt `VehicleConstraint` + `WheeledVehicleController`, 스텝 리스너). `setDriverInput( 앞, 오른쪽, 브레이크, 핸드브레이크 )` 는 어느 틱에서든, 상태는 물리 프레임 끝. 씬 창구는 `IPhysicsScene3D::createWheeledVehicle` · `setVehicleInput` · `getVehicleState`(2D 는 무효). 엔진의 오른쪽(+X)은 Jolt 의 오른쪽과 손이 달라 백엔드가 조향 부호를 바꾼다. 같은 실행 · 같은 입력이면 같은 궤적(기계 사이는 보장하지 않는다). 바퀴 메시를 바퀴 자세로 옮기는 것은 아직 없다 |
 
 이벤트는 두 오브젝트의 켜진 컴포넌트에 갑니다 — 막는 접촉은 `onCollisionBegin/Stay/End( CollisionInfo )`, 트리거는 `onOverlapBegin/Stay/End( OverlapInfo )`
 (`_selfBody` · `_otherBody` 로 어느 바디였는지 — 래그돌 뼈 · 히트 존). 바디의 사용자 값이 오브젝트 id 라서, 컴포넌트가 아닌 코드(래그돌 빌더)가

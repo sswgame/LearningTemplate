@@ -33,6 +33,8 @@
 #include <Jolt/Physics/Collision/PhysicsMaterial.h>
 #include <Jolt/Physics/Constraints/TwoBodyConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Vehicle/VehicleCollisionTester.h>
+#include <Jolt/Physics/Vehicle/VehicleConstraint.h>
 
 namespace sw
 {
@@ -195,6 +197,12 @@ namespace sw
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float3& position ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState3D& outState ) const override;
 
+        PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
+        void                 destroyVehicle( PhysicsVehicleHandle vehicle ) override;
+        bool                 isVehicleValid( PhysicsVehicleHandle vehicle ) const override;
+        void                 setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake ) override;
+        bool                 getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const override;
+
         bool   raycast( const float3& origin, const float3& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const override;
@@ -240,6 +248,14 @@ namespace sw
             PhysicsCharacterState3D         _state{};
         };
 
+        /** @brief 바퀴 차 하나 — 구속(스텝 리스너이기도 하다)과 바퀴 충돌 시험기, 차체 바디입니다. */
+        struct VehicleRecord
+        {
+            JPH::Ref<JPH::VehicleConstraint>      _pConstraint;
+            JPH::Ref<JPH::VehicleCollisionTester> _pTester;
+            PhysicsBodyHandle                     _chassis{};
+        };
+
         struct ShapeRecord
         {
             JPH::RefConst<JPH::Shape>       _pShape;
@@ -279,8 +295,10 @@ namespace sw
         BodyRecord*       findBody( PhysicsBodyHandle body );
         PhysicsBodyHandle findHandle( const JPH::BodyID& bodyId ) const;
         void              setHandle( const JPH::BodyID& bodyId, PhysicsBodyHandle body );
-        /** @brief 바디들에 붙은 관절을 지웁니다(바디를 지우기 전에). */
+        /** @brief 바디들에 붙은 관절 · 바퀴 차를 지웁니다(바디를 지우기 전에). */
         void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
+        /** @brief 구속을 시스템에서 내립니다(구속 · 스텝 리스너 둘 다). */
+        void removeVehicleConstraint( VehicleRecord& record );
         void recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings, uint8 kind );
         /** @brief 알림의 결정적 순서입니다(바디 쌍 · 서브 셰이프 · 종류). */
         static bool isEarlierReport( const ContactReport& lhs, const ContactReport& rhs );
@@ -298,6 +316,7 @@ namespace sw
         SlotHandleTable<BodyRecord>               _bodies;
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;
+        SlotHandleTable<VehicleRecord>            _vehicles;
         SlotHandleTable<ShapeRecord>              _shapes;
         vector<BodyIdEntry>                       _listBodyIdEntry;
         PhysicsPairFilter                         _pairFilter;

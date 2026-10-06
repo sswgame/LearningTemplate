@@ -157,3 +157,50 @@ namespace sw
     using PhysicsCharacterState3D = PhysicsCharacterState<PhysicsDimension3D>;
     using PhysicsCharacterState2D = PhysicsCharacterState<PhysicsDimension2D>;
 } // namespace sw
+
+namespace sw
+{
+    /** @brief 바퀴 하나입니다(차체 바디 기준 — 차체의 앞 +Z · 위 +Y). 3D 만입니다. */
+    struct PhysicsWheelDesc
+    {
+        float3  _position{}; ///< 서스펜션이 가장 짧을 때 바퀴 중심의 붙는 자리(차체 기준)
+        float32 _radius{ 0.35f };
+        float32 _width{ 0.25f };
+        float32 _suspensionMinLength{ 0.1f };  ///< 미터
+        float32 _suspensionMaxLength{ 0.35f }; ///< 미터
+        float32 _suspensionFrequency{ 1.5f };  ///< 스프링 고유 진동수(Hz)
+        float32 _suspensionDamping{ 0.5f };    ///< 감쇠비
+        float32 _maxSteerAngle{ 0.0f };        ///< 라디안 — 0 이면 조향하지 않는 바퀴
+        float32 _maxBrakeTorque{ 1500.0f };    ///< N·m
+        float32 _maxHandBrakeTorque{ 0.0f };   ///< N·m — 0 이면 핸드브레이크가 걸리지 않는 바퀴
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 바퀴 차 하나입니다 — 이미 만든 동적 차체 바디에 바퀴 · 엔진 · 변속 · 디퍼렌셜을 붙입니다(Jolt `VehicleConstraint` · `WheeledVehicleController`).
+     * @details 디퍼렌셜은 바퀴 둘씩(`_listDriven` 의 짝 — 0 과 1 이 한 차축)입니다. 2D 물리에는 없습니다(무효 핸들).
+     */
+    struct PhysicsWheeledVehicleDesc
+    {
+        vector<PhysicsWheelDesc> _listWheel;
+        vector<int32>            _listDrivenAxle;            ///< 구동 차축의 바퀴 짝 — `[왼쪽, 오른쪽, 왼쪽, 오른쪽 …]` 자리 번호
+        float32                  _engineMaxTorque{ 500.0f }; ///< N·m
+        float32                  _engineMinRpm{ 1000.0f };
+        float32                  _engineMaxRpm{ 6000.0f };
+        float32                  _maxPitchRollAngle{ MathUtil::kPi }; ///< 뒤집히지 않게 위 방향을 묶는 원뿔 반각(π 면 끔)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 바퀴 차의 지금 상태입니다. */
+    struct PhysicsVehicleState
+    {
+        float32 _forwardSpeed{ 0.0f }; ///< 차체 앞 방향 속도(m/s)
+        float32 _engineRpm{ 0.0f };
+        int32   _gear{ 0 }; ///< 0 중립 · 음수 후진
+        uint32  _groundedWheelCount{ 0 };
+    };
+} // namespace sw

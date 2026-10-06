@@ -66,6 +66,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   돌며 자기 요로 간다, 루트 모션이면 애니메이터 `Gait` · `Turn` 만, 질주 허용 · 걸음새 상한은 키트가). 운전석에서 내리면 탈 때 탈것을 쥐고 있던 조종자(말 AI)가 다시 쥔다.
   아케이드 차 `ArcadeVehicleComponent`(기존 `ArcadeVehicleMotor` 를 폰 이동으로 — 의도의 월드 이동을 차 방향으로 투영해 앞 성분이 페달 · 옆 성분이 조향(`toVehicleInput`),
   Drift · Boost · Jump 버튼, 땅은 물리 아래 광선). 의도는 탈것 모두 "가고 싶은 월드 방향" 이라 플레이어 · AI 가 같은 규칙으로 몬다.
+  물리 차 `PhysicsCarComponent`(의도 → 엔진 `WheeledVehicleComponent` 운전 입력 — 같은 투영, 앞으로 가는 중의 뒤 의도는 브레이크 · 거의 서면 후진, HandBrake 버튼).
 - **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).

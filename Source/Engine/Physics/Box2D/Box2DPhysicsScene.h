@@ -96,6 +96,17 @@ namespace sw
         void                    setCharacterPosition( PhysicsCharacterHandle character, const float2& position ) override;
         bool                    getCharacterState( PhysicsCharacterHandle character, PhysicsCharacterState2D& outState ) const override;
 
+        /** @brief 2D 물리에는 바퀴 차가 없습니다 — 무효 핸들 · false 입니다. */
+        PhysicsVehicleHandle createWheeledVehicle( PhysicsBodyHandle chassis, const PhysicsWheeledVehicleDesc& desc ) override;
+        void                 destroyVehicle( PhysicsVehicleHandle vehicle ) override { (void)vehicle; }
+        bool                 isVehicleValid( PhysicsVehicleHandle vehicle ) const override
+        {
+            (void)vehicle;
+            return false;
+        }
+        void setVehicleInput( PhysicsVehicleHandle vehicle, float32 forward, float32 right, float32 brake, float32 handBrake ) override;
+        bool getVehicleState( PhysicsVehicleHandle vehicle, PhysicsVehicleState& outState ) const override;
+
         bool   raycast( const float2& origin, const float2& direction, float32 maxDistance, const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
         bool   shapeCast( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction, float32 maxDistance,
                           const PhysicsQueryFilter& filter, PhysicsCastHit2D& outHit ) const override;
