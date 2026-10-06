@@ -17,6 +17,15 @@ when an item is done, delete it, and move what is worth keeping to where it belo
 History lives in `git log`; the full old backlog with every dated "recently finished" entry is
 `git show 7ce95fc8:docs/06_Backlog.md`.
 
+## How work is split, verified and pushed lives in docs/11_Workflow.md
+
+**Read [docs/11_Workflow.md](docs/11_Workflow.md) before starting a batch.** It holds the rules that used to live only in one PC's memory:
+worktrees (`py -3 -m Scripts worktree-make <name>` / `worktree-remove`) and the single integrator, at most two concurrent builds
+(helpers build at below-normal priority, per-game presets only at the end of a batch), what to verify per batch vs. per big step,
+push-after-verification with a short Korean result report, not waiting on CI (`py -3 -m Scripts ci-jobs` when the user reports a
+failure), deciding by comparison with commercial engines and recording it in docs/09 (ask only about law, licences, public actions,
+cost), the commit message format, and replying to the user in Korean.
+
 ## Conventions live in AGENTS.md
 
 **Read [AGENTS.md](AGENTS.md) before writing any C++, CMake, or Python in this repo.** It is the
@@ -42,6 +51,31 @@ rules, and the term table (keep established loanwords such as 빌드 · 버전 �
 Comments and commit messages use the same term table; reword a comment when you touch its function, never by word replacement.
 `Scripts/lint/gate/CheckDocPaths.py` checks every relative link, heading anchor and backticked repository path, and that
 every README is on the map. A placeholder path is written with angle brackets (`Source/Games/<Game>/`).
+
+## Working with agents (token budget)
+
+The full rules live in `docs/11_Workflow.md`; agent definitions live in `.claude/agents/` (`integrator`, `worker`, `mech-worker`, `scout`).
+The essentials, which hold on every machine:
+
+- New work is implemented directly — no proposal round. One `integrator` per batch, at most one helper, **at most two concurrent builds**;
+  helpers never spawn agents. Reports are short (ten lines); details go to files (`docs/plans/`, commit messages). Build and test output is read as a summary.
+- **Pick the cheapest model that can do the job**, for helpers and when advising the user on `/model`:
+
+  | work | model | effort |
+  |------|-------|--------|
+  | find a file, a call site, a current value | `scout` (haiku) | low |
+  | rename, move, reword docs or comments, repetitive edits | `mech-worker` (sonnet) | low |
+  | a bounded C++ / CMake / Python change | `worker` (opus; sonnet when the change is local and spelled out) | medium |
+  | design, cross-module refactor, GPU/threading bugs, batch integration | `integrator` (opus) | high (xhigh only for a bug that resisted one attempt) |
+
+  When the user hands over a request, say in one line which model and effort fit it if they differ from the current session's
+  (for example "이 일은 Sonnet · low 로 충분합니다 — `/model sonnet`, `/effort low`"), then proceed.
+  Questions, status checks and progress reports need no more than low effort.
+- **Tell the user before acting when a request conflicts with these rules or a limit is reached** — one line naming the rule and the
+  cost, then the recommended action. `.claude/hooks/SessionGuard.py` (wired in `.claude/settings.json`) injects the signals: a long
+  or compacted conversation (write the handoff to `docs/plans/NEXT.md` at the next batch boundary and recommend a new session),
+  more than two running builds (start no new build), leftover worktrees, wording that matches a rule (proposal round, full
+  matrix, waiting on CI, WSL, aliases), compaction and API-limit stops. A new session starts by reading `docs/plans/NEXT.md` when it exists.
 
 ## Build
 
@@ -242,8 +276,8 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
   (`-fsyntax-only`, real build flags from the compile DB) in ~1.5 min per preset, and defaults to
   sweeping Debug · Release · Shipping because **the warning set differs per configuration**.
   The build you just ran already reports warnings your own change introduced (it recompiled exactly the
-  affected TUs); this answers the other question — what is left in the tree. Run it when finishing a
-  chunk of work, not on every edit. **A warning in the build log can also be an old one replayed by
+  affected TUs); this answers the other question — what is left in the tree. Run the full sweep only when
+  the user asks for it (docs/11_Workflow.md), not on every edit or commit. **A warning in the build log can also be an old one replayed by
   sccache** (a cache hit replays the recorded stderr) — the tell is that the source line clang prints
   does not match that line number in the file. `SCCACHE_RECACHE=1` forces a real compile; this report
   never goes through the cache, so when the two disagree, the report is right.

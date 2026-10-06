@@ -38,6 +38,8 @@ CMake를 통해 구성(Configure)한 후, 다음과 같이 테스트를 실행�
 ctest --test-dir build/Ninja-Debug --output-on-failure
 ```
 
+Ninja는 구성이 하나뿐인 생성기라서 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다. 구성은 프리셋, 곧 빌드 폴더가 정합니다.
+
 > **직접 실행할 때는 작업 폴더가 `build/<preset>/Bin` 이어야 한다.** 테스트는 현재 폴더에서 위로 올라가며
 > `Resource/` 를 찾는데, 그 탐색이 성공하는 자리가 `Bin` 이다(ctest 도 거기서 돌린다). **Shipping 은
 > 바이너리가 `TestBin` 에 있지만 작업 폴더는 여전히 `Bin` 이다** — 배포용 `Bin` 에 테스트 바이너리와
@@ -181,6 +183,12 @@ ReflectionTest 는 Dev 전용 진단 경로와 배포본에 없는 메타데이�
 
 단언 자체를 시험할 때는 `test::ScopedFailureCapture` 로 실패를 가로챕니다(gtest 의 `EXPECT_FATAL_FAILURE` 와 같은 일).
 `Test/CoreTest/TestTestFramework.cpp` 가 매크로마다 "실패를 하나 남기는가 · 무엇이라 찍는가 · ASSERT 가 멈추는가" 를 봅니다.
+
+로그와 실패 메시지를 다루는 도우미도 `Test/TestFramework/TestFramework.h` 에 있습니다.
+
+- `test::ScopedLogCollector` 는 스코프 동안 나온 Warning과 Error 로그를 모읍니다. `countContaining( "..." )` 로 그 경고가 나왔는지 확인하고, 실패 메시지에는 `joined()` 로 모은 줄을 붙입니다.
+- `test::ScopedDefensiveTestLog` 는 일부러 내는 오류와 경고 앞에 `[Expected Defensive Test]` 를 붙입니다. 로그를 읽는 사람이 실패로 오해하지 않게 하려는 것입니다.
+- `SW_ASSERT_TRUE_MSG( 조건, 메시지 )` 는 실패하면 메시지를 남기고 그 케이스를 멈춥니다. 메시지에는 보통 실제로 받은 값을 넣습니다.
 
 엔진 단언(`SW_ASSERT` · `SW_LOG_ASSERT`)이 걸리는 입력을 시험할 때는 `test::ScopedAssertCapture` 를 겁니다. Debug 의 단언은
 멈추지만(`SW_DEBUG_BREAK`) 가로채기를 건 동안은 멈추지 않고 세므로, 방어 경로 시험이 Debug 에서도 돕니다(유니티 `LogAssert.Expect` 와 같은 일).

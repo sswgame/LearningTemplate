@@ -206,6 +206,8 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 스탬프 헤더는 `SWCOOK 3` 이고, `cook.stamp` 는 CR을 뗀 바이트로 계산합니다.
 매니페스트가 바이너리보다 낡으면 바인더가 빈 레이아웃으로 그려 DirectX 12가 DEVICE_HUNG에 빠집니다. 배포 패킹은 `Scripts/generate/CookAssets.py --verify-shaders` 로 이것을 막습니다.
 
+**컴파일러 동작(옵션, DXC 버전)을 바꿔 실험할 때는 `ShaderCompiler` 디스크 캐시와 `cook.stamp` 를 지웁니다.** 소스가 그대로면 내용 해시도 그대로라 아무것도 다시 쿠킹하지 않습니다.
+
 **쿠킹된 파일 이름은 `ShaderCooker::computeBinaryFileName` 하나가 정합니다.** 이름에는 퍼뮤테이션 해시가 들어갑니다. 해시가 빠지면 define이 GPU에 전달되지 않는데도 리플렉션은 맞아 보입니다.
 
 **런타임과 쿠커는 같은 함수를 부릅니다.** 패스 define의 원본은 `FrameRendererUtil::getPassDefine` 입니다. 둘이 다르면 Shipping에서만 그 드로우가 사라집니다.
@@ -243,6 +245,8 @@ Debug 빌드는 런타임 리플렉션으로 넘어가 문제를 숨기고, Ship
 
 **정점 입력의 원본은 `constant::arrVertexAttribute` 입니다**(POSITION, NORMAL, TEXCOORD, COLOR, 48바이트). 인스턴스 번호는 정점 슬롯 1(`SW_INSTANCESLOT`)로 넘기므로 `SV_InstanceID` 를 쓰지 않습니다.
 `SV_VertexID` 는 Vulkan과 OpenGL에서 `startVertex` 를 포함하고 Direct3D에서는 0부터 셉니다. `GpuInstance` 원소의 정의는 `instancedata.hlsli` 하나입니다.
+
+**OpenGL 타깃의 SPIR-V는 구조체 버퍼를 `Uniform` 저장 클래스와 `BufferBlock` 데코레이션으로 냅니다.** 리플렉션이 StorageBuffer 클래스만 보면 구조체 버퍼를 상수 버퍼로 잘못 분류합니다. 그래서 `ShaderReflectionSpirv` 가 `BufferBlock` 을 따로 확인합니다.
 
 **구조체 버퍼 원소는 `float4` 단위로 짭니다.** float3을 섞으면 std430 규칙 때문에 OpenGL만 레이아웃이 어긋납니다.
 

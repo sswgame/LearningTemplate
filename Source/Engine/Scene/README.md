@@ -192,3 +192,4 @@ if (loadedDoc.load("Resource/game/<pack>/maps/level01.scene.xml"))
 - **씬 쿠킹은 활성 게임 팩만 엄격하다.** 다른 게임 팩(`game/<다른 게임>/`)의 씬이 이 빌드에 없는 게임 모듈의 컴포넌트를 쓰면 건너뛴다(정보 줄) — 실패로 세면 다른
   게임을 고른 빌드의 쿠킹이 모두 선다. 엔진 · 공용 타입만 쓰는 다른 팩의 씬은 그대로 쿠킹한다(`AppCookTest` 가 `game/empty` 를 본다). 활성 팩의 모르는 타입은 여전히 실패다
   (`SceneTest.SceneCookFailsOnAComponentOfUnknownType`).
+- **`SceneManager::createScene` 은 `Scene::initialize` 를 부르지 않아 기본 머티리얼과 카메라가 없고 메시가 그려지지 않습니다.** 그리는 씬은 `createEmptyActiveScene` 으로 만듭니다.
