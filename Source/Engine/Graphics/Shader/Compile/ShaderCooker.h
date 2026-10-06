@@ -151,7 +151,7 @@ namespace sw
         /** @brief 타깃 포맷에 해당하는 확장자(".dxbc", ".dxil", ".spv")를 반환합니다. */
         static string_view getExtensionForFormat( ShaderTargetFormat format );
 
-        /** @brief 쿠킹 표의 별칭(폴더 이름 포함)으로 ShaderTargetFormat 을 거꾸로 구합니다. 모르면 Count 입니다. */
+        /** @brief 쿠킹 표의 셰이더 폴더 이름(`dx11` · `dx12` · `vulkan` · `opengl`)으로 ShaderTargetFormat 을 거꾸로 구합니다. 모르면 Count 입니다. */
         static ShaderTargetFormat getFormatForSubfolder( string_view subfolder );
     };
 } // namespace sw

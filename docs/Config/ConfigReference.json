@@ -3022,41 +3022,34 @@
   {
    "name": "DIRECTX_11",
    "spellings": [
-    "dx11",
-    "d3d11",
-    "directx11"
+    "dx11"
    ],
    "value": "플래그(`-이름`)",
-   "description": "DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+   "description": "DirectX11 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`)"
   },
   {
    "name": "DIRECTX_12",
    "spellings": [
-    "dx12",
-    "d3d12",
-    "directx12"
+    "dx12"
    ],
    "value": "플래그(`-이름`)",
-   "description": "DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+   "description": "DirectX12 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`)"
   },
   {
    "name": "VULKAN",
    "spellings": [
-    "vk",
-    "vulkan",
-    "spirv"
+    "vk"
    ],
    "value": "플래그(`-이름`)",
-   "description": "Vulkan 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+   "description": "Vulkan 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`)"
   },
   {
    "name": "OPENGL",
    "spellings": [
-    "gl",
-    "opengl"
+    "gl"
    ],
    "value": "플래그(`-이름`)",
-   "description": "OpenGL 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름"
+   "description": "OpenGL 백엔드로 띄운다. 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`)"
   },
   {
    "name": "ENABLE_EDITOR",

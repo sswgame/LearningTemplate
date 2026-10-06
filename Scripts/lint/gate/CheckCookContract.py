@@ -6,11 +6,11 @@ Scripts/lint/gate/CheckCookContract.py
 쿠커(`Scripts/generate/CookAssets.py`)가 쿠킹 표(`Config/Engine/CookContract.json`)대로 고르는지 검사합니다.
 
 C++ 은 같은 표를 생성 헤더의 X-macro 로 읽어 컴파일 때 따라오지만, 쿠커는 파이썬이라 표를 어기는 판단(손으로 적은 폴더
-목록 · 별칭 목록 · 산출물 이름 규칙)을 해도 아무것도 깨지지 않는다 — 팩에 다른 백엔드의 셰이더 바이너리가 실려도 빌드와
+목록 · 백엔드 이름 목록 · 산출물 이름 규칙)을 해도 아무것도 깨지지 않는다 — 팩에 다른 백엔드의 셰이더 바이너리가 실려도 빌드와
 실행은 멀쩡하다. 그래서 쿠커의 판단 함수 셋을 표의 줄마다 불러 답을 대조한다:
 
   - `shouldIncludeFile`  : `shaders/bin/<폴더>/` 는 타깃 백엔드의 폴더만 팩에 들어간다(표의 모든 폴더에 대해).
-  - `resolveTargetRhi`   : 표의 백엔드 이름 · 별칭 · 셰이더 폴더가 그 백엔드의 폴더로 풀린다. 아무것도 없으면 기본 백엔드다.
+  - `resolveTargetRhi`   : 표의 백엔드 이름 · 명령줄 이름이 그 백엔드의 폴더로 풀린다. 아무것도 없으면 기본 백엔드다.
   - `isCookedArtifact`   : 표의 쿠킹본 접미사는 산출물이고, 저작 소스 접미사는 산출물이 아니다.
 
 쿠커는 `--root` 아래의 `Scripts/generate/CookAssets.py` 를 파일 경로로 불러온다(게이트 셀프 테스트가 임시 트리의 조각을 쓴다).
@@ -73,7 +73,7 @@ def isCookedArtifact(relPath):
 _kTargetContractFixture = '''{
     "default_rhi_backend": "DirectX12",
     "rhi_backends": [
-        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "aliases": [ "dx12" ] }
+        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "command_line_name": "dx12" }
     ],
     "cook_suffixes": [
         { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
@@ -87,8 +87,8 @@ _kTargetContractFixture = '''{
 _kContractFixture = '''{
     "default_rhi_backend": "DirectX12",
     "rhi_backends": [
-        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "aliases": [ "dx12" ] },
-        { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "aliases": [ "gl", "opengl" ] }
+        { "name": "DirectX12", "shader_folder": "dx12", "shader_target": "DXIL_D3D12", "command_line_argument": "DIRECTX_12", "command_line_name": "dx12" },
+        { "name": "OpenGL", "shader_folder": "opengl", "shader_target": "SPIRV_OpenGL", "command_line_argument": "OPENGL", "command_line_name": "gl" }
     ],
     "cook_suffixes": [
         { "source": ".scene.xml", "cooked": ".scene.bin", "kind": "Scene", "is_authoring_source": true }
@@ -127,10 +127,10 @@ def checkShaderFolderFilterInternal(cooker: ModuleType, spec: CookContractSpec) 
 
 
 def checkTargetResolutionInternal(cooker: ModuleType, spec: CookContractSpec) -> list[str]:
-    """표의 이름 · 별칭 · 폴더가 그 백엔드의 폴더로 풀리고, 아무것도 주지 않으면 기본 백엔드인지."""
+    """표의 이름 · 명령줄 이름이 그 백엔드의 폴더로 풀리고, 아무것도 주지 않으면 기본 백엔드인지."""
     listViolation: list[str] = []
     for backend in spec.listBackend:
-        for text in (backend.name, backend.shaderFolder, *backend.listAlias, backend.listAlias[0].upper()):
+        for text in (backend.name, backend.name.upper(), backend.commandLineName, backend.commandLineName.upper()):
             resolved = cooker.resolveTargetRhi(cliRhi=text)
             if resolved != backend.shaderFolder:
                 listViolation.append(f"resolveTargetRhi(cliRhi='{text}') = '{resolved}' - 표는 '{backend.shaderFolder}'")

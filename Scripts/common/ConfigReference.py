@@ -492,7 +492,7 @@ def collectBackendArgumentsInternal(repositoryRoot: Path, description: str) -> l
     if contractPath.is_file() is False:
         return []
     contract = json.loads(contractPath.read_text(encoding="utf-8"))
-    return [ArgumentDoc(enumName=row["command_line_argument"], listSpelling=list(row["aliases"]), valueKind="플래그(`-이름`)",
+    return [ArgumentDoc(enumName=row["command_line_argument"], listSpelling=[row["command_line_name"]], valueKind="플래그(`-이름`)",
                         description=f"{row['name']} 백엔드로 띄운다. {description}".strip())
             for row in contract.get("rhi_backends", [])]
 

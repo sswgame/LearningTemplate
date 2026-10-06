@@ -5,7 +5,7 @@ RHI 백엔드 표(Config/Engine/CookContract.json rhi_backends)의 CMake 쪽 —
 
 결함 고정: 배포 빌드가 고른 백엔드가 그 플랫폼에 없으면(리눅스 DirectX12) 예전 Engine CMakeLists 는 어느 갈래도 타지 않고 **백엔드 없는 Engine** 을
 링크했다(구성 · 빌드 통과, 실행에서 "백엔드 없음"). 이제 `sw_resolveShippingRhiBackend` 가 구성을 세운다. 표의 이름만 받는다 —
-명령줄 별칭(dx12 · vk)이나 대소문자가 다른 이름은 별칭 없이 구성 실패(옛 캐시 값을 고치라는 안내와 함께). 표의 줄마다 모듈 폴더 · 매니페스트 · 장치 소스 폴더가 실제로 있는지도 본다.
+명령줄 이름(dx12 · vk)이나 대소문자가 다른 이름은 별칭 없이 구성 실패(옛 캐시 값을 고치라는 안내와 함께). 표의 줄마다 모듈 폴더 · 매니페스트 · 장치 소스 폴더가 실제로 있는지도 본다.
 """
 
 from __future__ import annotations

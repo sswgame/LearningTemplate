@@ -398,8 +398,8 @@ SW_TEST_CASE( AppSmokeTest, EveryBackendStartsRendersAndExitsCleanly )
     // App 이 0 이 아닌 코드로 끝난다. 그래서 여기서는 스위치 없이 "이 빌드가 가진 것" 으로 돌린다.
     constexpr const utf8* kArrBackendSwitch[] = { "" };
 #else
-    // 스위치는 쿠킹 표의 줄마다 첫 별칭이다(`-dx11` · `-dx12` · `-vk` · `-gl`) — 백엔드가 늘면 여기도 같이 는다.
-    #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) "-" FirstAlias,
+    // 스위치는 쿠킹 표의 줄마다 명령줄 이름이다(`-dx11` · `-dx12` · `-vk` · `-gl`) — 백엔드가 늘면 여기도 같이 는다.
+    #define SW_APP_SMOKE_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
     constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SMOKE_BACKEND_SWITCH ) };
     #undef SW_APP_SMOKE_BACKEND_SWITCH
 #endif
@@ -906,7 +906,7 @@ SW_TEST_CASE( AppSmokeTest, BenchFrameMatchesGoldenImage )
     };
     #endif
 #else
-    #define SW_APP_GOLDEN_BACKEND( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) { FirstAlias, "-" FirstAlias },
+    #define SW_APP_GOLDEN_BACKEND( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { CommandLineName, "-" CommandLineName },
     constexpr GoldenBackend kArrBackend[] = { SW_RHI_BACKEND_TABLE( SW_APP_GOLDEN_BACKEND ) };
     #undef SW_APP_GOLDEN_BACKEND
 #endif

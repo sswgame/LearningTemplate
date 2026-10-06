@@ -29,7 +29,7 @@ function(sw_getAllRhiBackendSources OUT_VAR)
 	set(${OUT_VAR} ${listAll} PARENT_SCOPE)
 endfunction()
 
-# 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 별칭(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
+# 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 이름(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
 function(sw_checkRhiBackendName TEXT)
 	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
 		string(REPLACE ";" ", " listName "${SW_RHI_BACKEND_NAMES}")

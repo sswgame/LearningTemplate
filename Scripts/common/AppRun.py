@@ -25,7 +25,7 @@ from pathlib import Path
 from .BuildTree import BuildTree
 from .CookContract import CookContractSpec
 
-#: 백엔드 짧은 이름 → App 스위치. 표는 Config/Engine/CookContract.json(별칭의 첫 이름이 짧은 이름이다, 표 순서).
+#: 백엔드 명령줄 이름 → App 스위치. 표는 Config/Engine/CookContract.json 의 `command_line_name`(표 순서).
 kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
 
 
@@ -116,7 +116,7 @@ def findUsableBackends(tree: BuildTree) -> list[str]:
     if not tree.bShipping:
         return list(kBackendSwitch)
     backend = CookContractSpec.load().findBackend(tree.readCacheValue("SW_SHIPPING_RHI_BACKEND") or "")
-    return [backend.listAlias[0]] if backend else []
+    return [backend.commandLineName] if backend else []
 
 
 def loadGameTable(repositoryRoot: Path) -> dict:

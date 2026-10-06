@@ -31,17 +31,16 @@ namespace sw
     {
         struct ShaderCookerInternal
         {
-            /** @brief 백엔드 하나의 셰이더 타깃 · 바이너리 폴더 · 별칭입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
+            /** @brief 백엔드 하나의 셰이더 타깃 · 바이너리 폴더입니다. 쿠킹 표(`SW_RHI_BACKEND_TABLE`)의 줄마다 하나입니다. */
             struct BackendFolder
             {
                 string_view        _folder;
-                string_view        _arrAlias[4]; ///< 표의 별칭. 빈 칸 뒤는 없다(넷을 넘으면 컴파일되지 않는다)
                 ShaderTargetFormat _format;
                 bool               _bDefault; ///< 표의 기본 백엔드인가
             };
 
             static constexpr BackendFolder kArrBackendFolder[] = {
-#define SW_SHADER_COOKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) { ShaderFolder, { __VA_ARGS__ }, ShaderTargetFormat::ShaderTarget, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
+#define SW_SHADER_COOKER_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) { ShaderFolder, ShaderTargetFormat::ShaderTarget, RHIBackend::Backend == RHIBackend::SW_RHI_BACKEND_DEFAULT },
                 SW_RHI_BACKEND_TABLE( SW_SHADER_COOKER_BACKEND_ROW )
 #undef SW_SHADER_COOKER_BACKEND_ROW
             };
@@ -183,11 +182,8 @@ namespace sw
             return ShaderTargetFormat::Count;
         for ( const ShaderCookerInternal::BackendFolder& row : ShaderCookerInternal::kArrBackendFolder )
         {
-            for ( const string_view alias : row._arrAlias )
-            {
-                if ( alias == subfolder )
-                    return row._format;
-            }
+            if ( row._folder == subfolder )
+                return row._format;
         }
         return ShaderTargetFormat::Count;
     }

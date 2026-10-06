@@ -71,7 +71,7 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
     // 배포본은 백엔드를 하나만 링크한다 — 스위치 없이 "이 빌드가 가진 것" 으로 돌린다(AppSmokeTest 와 같다).
     constexpr const utf8* kArrBackendSwitch[] = { "" };
 #else
-    #define SW_APP_SCENARIO_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, FirstAlias, ... ) "-" FirstAlias,
+    #define SW_APP_SCENARIO_BACKEND_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
     constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_BACKEND_SWITCH ) };
     #undef SW_APP_SCENARIO_BACKEND_SWITCH
 #endif

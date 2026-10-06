@@ -231,18 +231,13 @@ SW_TEST_CASE( ShaderCookerTest, SubfolderAndFormatMappingAliases )
     SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_Vulkan ) );
     SW_EXPECT_EQUAL( sw::string_view( ".spv" ), sw::ShaderCooker::getExtensionForFormat( sw::ShaderTargetFormat::SPIRV_OpenGL ) );
 
-    // 별칭 역산출
+    // 폴더 이름 역산출 — 폴더 이름 하나만 받는다(명령줄 이름 `vk` · `gl` 은 폴더가 아니다)
     SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "dx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "d3d11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "directx11" ) == sw::ShaderTargetFormat::DXBC_D3D11 );
     SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "dx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "d3d12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "directx12" ) == sw::ShaderTargetFormat::DXIL_D3D12 );
     SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "vulkan" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "vk" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "spirv" ) == sw::ShaderTargetFormat::SPIRV_Vulkan );
     SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "opengl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
-    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "gl" ) == sw::ShaderTargetFormat::SPIRV_OpenGL );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "vk" ) == sw::ShaderTargetFormat::Count );
+    SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "d3d12" ) == sw::ShaderTargetFormat::Count );
 
     // 미지원/미지의 서브폴더 -> Count
     SW_EXPECT_TRUE( sw::ShaderCooker::getFormatForSubfolder( "unknown" ) == sw::ShaderTargetFormat::Count );

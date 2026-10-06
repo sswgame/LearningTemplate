@@ -31,9 +31,9 @@ SW_REGISTER_ARGUMENT( HEIGHT, 0, false, "H" )
 // 수직 동기화를 켠다 — EngineConfig · 플레이어 값보다 이긴다
 SW_REGISTER_ARGUMENT( VSYNC, false, false, "vsync" )
 
-// 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 셰이더 폴더 · 쿠커와 같은 이름
+// 이 백엔드로 띄운다(EngineConfig `_defaultRHI` 를 이긴다). 줄과 철자는 쿠킹 표(Config/Engine/CookContract.json)의 `rhi_backends` — 백엔드마다 `command_line_name` 하나(`-dx11` · `-dx12` · `-vk` · `-gl`)
 #include "sw/config/CookContract.gen.h"
-#define SW_REGISTER_RHI_BACKEND_ARGUMENT( Backend, ShaderFolder, ShaderTarget, Argument, ... ) SW_REGISTER_ARGUMENT( Argument, false, false, __VA_ARGS__ )
+#define SW_REGISTER_RHI_BACKEND_ARGUMENT( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) SW_REGISTER_ARGUMENT( Argument, false, false, CommandLineName )
 SW_RHI_BACKEND_TABLE( SW_REGISTER_RHI_BACKEND_ARGUMENT )
 #undef SW_REGISTER_RHI_BACKEND_ARGUMENT
 

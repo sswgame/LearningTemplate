@@ -22,12 +22,12 @@ namespace
         RHIBackend         _backend;
         string_view        _shaderFolder;
         ShaderTargetFormat _shaderTarget;
-        string_view        _arrAlias[4];
+        string_view        _commandLineName;
     };
 
     constexpr ContractBackendRow kArrContractBackend[] = {
-#define SW_TEST_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, ... ) \
-    { RHIBackend::Backend, ShaderFolder, ShaderTargetFormat::ShaderTarget, { __VA_ARGS__ } },
+#define SW_TEST_BACKEND_ROW( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) \
+    { RHIBackend::Backend, ShaderFolder, ShaderTargetFormat::ShaderTarget, CommandLineName },
         SW_RHI_BACKEND_TABLE( SW_TEST_BACKEND_ROW )
 #undef SW_TEST_BACKEND_ROW
     };
@@ -47,13 +47,13 @@ namespace
 #undef SW_TEST_COOK_SUFFIX_ROW
     };
 
-    /** @brief `-<alias>` 하나만 준 명령줄이 고르는 백엔드입니다. 고르지 않으면 false 입니다. */
-    bool findBackendForFlag( string_view alias, RHIBackend& outBackend )
+    /** @brief `-<name>` 하나만 준 명령줄이 고르는 백엔드입니다. 고르지 않으면 false 입니다. */
+    bool findBackendForFlag( string_view name, RHIBackend& outBackend )
     {
         CommandLineManager commandLineManager;
         commandLineManager.initialize();
         string flag = "-";
-        flag += alias;
+        flag += name;
         utf8* argv[] = {
             const_cast<utf8*>( "TestApp.exe" ),
             flag.data(),
@@ -64,36 +64,32 @@ namespace
 } // namespace
 
 /**
- * @brief [CookContractTest] 쿠킹 표의 백엔드 별칭은 명령줄 플래그 · 셰이더 폴더 역산에서 모두 그 백엔드를 고른다
- * @details 별칭을 읽는 셋 — `ArgumentList.xxx`(명령줄), `ShaderCooker::getFormatForSubfolder`, `CookAssets.py` — 이 `Config/Engine/CookContract.json` 의
- *          같은 줄을 읽는다. 따로 들면 한쪽(예: 명령줄이 `-directx11` · `-directx12` · `-spirv` 를 모르는 식)이 어긋난다.
+ * @brief [CookContractTest] 쿠킹 표의 백엔드마다 명령줄 이름 하나가 그 백엔드를 고르고, 셰이더 폴더 이름이 그 타깃으로 풀린다
+ * @details 명령줄(`ArgumentList.xxx`) · 셰이더 폴더 역산(`ShaderCooker::getFormatForSubfolder`) · `CookAssets.py` 가 `Config/Engine/CookContract.json` 의
+ *          같은 줄을 읽는다. 철자는 백엔드마다 하나다 — 옛 철자(`-vulkan` · `-directx12` · `-spirv`)는 아무 백엔드도 고르지 않는다.
  */
-SW_TEST_CASE( CookContractTest, EveryBackendAliasSelectsItsBackend )
+SW_TEST_CASE( CookContractTest, EveryBackendCommandLineNameSelectsItsBackend )
 {
     SW_EXPECT_EQUAL( static_cast<size_t>( ShaderTargetFormat::Count ), std::size( kArrContractBackend ) );
     for ( const ContractBackendRow& row : kArrContractBackend )
     {
         SW_EXPECT_EQUAL( row._shaderFolder, ShaderCooker::getSubfolderForFormat( row._shaderTarget ) );
-        uint32 aliasCount = 0;
-        for ( const string_view alias : row._arrAlias )
-        {
-            if ( alias.empty() )
-                continue;
-            ++aliasCount;
-            SW_EXPECT_TRUE_MSG( ShaderCooker::getFormatForSubfolder( alias ) == row._shaderTarget, alias.data() );
+        SW_EXPECT_TRUE_MSG( ShaderCooker::getFormatForSubfolder( row._shaderFolder ) == row._shaderTarget, row._shaderFolder.data() );
+        SW_EXPECT_FALSE( row._commandLineName.empty() );
 
-            RHIBackend backend = RHIBackend::DirectX11;
-            const bool bChosen = findBackendForFlag( alias, backend );
-            SW_EXPECT_TRUE_MSG( bChosen, alias.data() );
-            SW_EXPECT_TRUE_MSG( bChosen && backend == row._backend, alias.data() );
-        }
-        SW_EXPECT_TRUE( aliasCount > 0 );
+        RHIBackend backend = RHIBackend::DirectX11;
+        const bool bChosen = findBackendForFlag( row._commandLineName, backend );
+        SW_EXPECT_TRUE_MSG( bChosen, row._commandLineName.data() );
+        SW_EXPECT_TRUE_MSG( bChosen && backend == row._backend, row._commandLineName.data() );
     }
 
-    // 표 밖의 이름은 아무 백엔드도 고르지 않는다.
+    // 표 밖의 이름 · 옛 철자는 아무 백엔드도 고르지 않는다.
     SW_EXPECT_TRUE( ShaderCooker::getFormatForSubfolder( "metal" ) == ShaderTargetFormat::Count );
-    RHIBackend backend = RHIBackend::DirectX11;
-    SW_EXPECT_FALSE( findBackendForFlag( "metal", backend ) );
+    for ( const string_view name : { "metal", "vulkan", "directx12", "d3d11", "spirv", "opengl" } )
+    {
+        RHIBackend backend = RHIBackend::DirectX11;
+        SW_EXPECT_FALSE_MSG( findBackendForFlag( name, backend ), name.data() );
+    }
 }
 
 /**
