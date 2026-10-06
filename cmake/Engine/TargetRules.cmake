@@ -488,9 +488,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # ASan 테스트 보정 — 등록된 CTest 이름 하나에 적용한다.
 #
-# `sw_addTestExecutable` 안에만 두면 **손으로 add_test 한 테스트가 빠져** 그쪽만 평시 타임아웃으로
-# ASan 에서 혼자 시간 초과가 난다. 그래서 한 곳으로 빼고 양쪽이 부른다 — 새 테스트를 손으로 등록해도
-# 이 줄만 부르면 된다.
+# 실행 파일 시험(`sw_registerTestRun`)이 부른다. 스크립트 시험(`sw_registerScriptTest`)은 새니타이저와 무관하다(파이썬 프로세스).
 # ------------------------------------------------------------------------------
 function(sw_applySanitizerTestProperties TEST_NAME)
 	cmake_parse_arguments(ARG "" "" "ASAN_OPTIONS" ${ARGN})
@@ -564,11 +562,7 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
 	endif()
 
-	# ASan 의 ODR 검사를 완화한다. 이 엔진은 플러그인 DLL 이 여럿이고(RHI_*, SWGame, GF_*,
-	# EditorModule) 그 DLL 들이 같은 SDK·CRT 헤더를 포함한다. 그러면 헤더가 박는 전역이
-	# DLL 마다 생기고 ASan 은 그것을 ODR 위반으로 본다 — 실제로 나온 것이
-	# `d3d11.h` 의 `D3D11_DEFAULT` 와 CRT 내부 `_Avx2WmemEnabledWeakValue` 다. 우리 코드가
-	# 아니라 헤더 정의이고, 핫리로드로 DLL 사본이 오갈 때마다 다시 난다 — 영구 오탐이다.
+	# 새니타이저 구성의 제한 시간 · 옵션(ODR 검사 끄기 · TSan 억제)은 한 함수가 정한다.
 	sw_applySanitizerTestProperties(${TEST_NAME} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 endfunction()
 
@@ -585,16 +579,19 @@ function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
 	endif()
 
 	if(SHARD_COUNT LESS_EQUAL 1)
-		sw_registerTestRun(${TEST_NAME} ${TARGET_NAME} ${runSerial}
-			ARGS ${ARG_ARGS} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
-		return()
+		set(SHARD_COUNT 1)
 	endif()
-
 	math(EXPR lastShard "${SHARD_COUNT} - 1")
 	foreach(shardIndex RANGE 0 ${lastShard})
-		math(EXPR shardNumber "${shardIndex} + 1")
-		sw_registerTestRun(${TEST_NAME}_Shard${shardNumber} ${TARGET_NAME} ${runSerial}
-			ARGS ${ARG_ARGS} --test_shard=${shardIndex}/${SHARD_COUNT} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+		set(shardName ${TEST_NAME})
+		set(shardArgs ${ARG_ARGS})
+		if(SHARD_COUNT GREATER 1)
+			math(EXPR shardNumber "${shardIndex} + 1")
+			set(shardName ${TEST_NAME}_Shard${shardNumber})
+			list(APPEND shardArgs --test_shard=${shardIndex}/${SHARD_COUNT})
+		endif()
+		sw_registerTestRun(${shardName} ${TARGET_NAME} ${runSerial}
+			ARGS ${shardArgs} LABELS "${ARG_LABELS}" TIMEOUT ${ARG_TIMEOUT} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
 	endforeach()
 endfunction()
 
@@ -767,6 +764,38 @@ function(sw_addTestExecutable TARGET_NAME)
 	endif()
 	sw_registerTestShards(${TARGET_NAME}_HostOnly ${TARGET_NAME} ${hostShardCount} RUN_SERIAL
 		ARGS --host_suites=only LABELS "${labels};hostgpu" TIMEOUT ${hostTimeout} ASAN_OPTIONS ${ARG_ASAN_OPTIONS})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_registerScriptTest — 파이썬 스크립트 하나를 ctest 항목 하나로(파이썬 단위 시험 · QA · 린트)
+#
+#   SCRIPT            저장소 기준 .py 경로
+#   ARGS              스크립트 인자
+#   LABELS · TIMEOUT  실행 파일 시험과 같은 철자
+#   WORKING_DIRECTORY 기본은 저장소 루트(App 을 띄우는 QA 는 `Bin`)
+#   RUN_SERIAL · SKIP_RETURN_CODE
+# ------------------------------------------------------------------------------
+function(sw_registerScriptTest TEST_NAME)
+	cmake_parse_arguments(ARG "RUN_SERIAL" "SCRIPT;TIMEOUT;SKIP_RETURN_CODE;WORKING_DIRECTORY" "ARGS;LABELS" ${ARGN})
+	if(NOT ARG_SCRIPT OR NOT ARG_TIMEOUT)
+		message(FATAL_ERROR "sw_registerScriptTest(${TEST_NAME}): SCRIPT 와 TIMEOUT 은 꼭 준다")
+	endif()
+	if(NOT ARG_WORKING_DIRECTORY)
+		set(ARG_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+	endif()
+
+	add_test(NAME ${TEST_NAME} COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/${ARG_SCRIPT}" ${ARG_ARGS})
+	set_tests_properties(${TEST_NAME} PROPERTIES
+		WORKING_DIRECTORY "${ARG_WORKING_DIRECTORY}"
+		LABELS "${ARG_LABELS}"
+		TIMEOUT ${ARG_TIMEOUT}
+	)
+	if(ARG_RUN_SERIAL)
+		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
+	endif()
+	if(DEFINED ARG_SKIP_RETURN_CODE)
+		set_tests_properties(${TEST_NAME} PROPERTIES SKIP_RETURN_CODE ${ARG_SKIP_RETURN_CODE})
+	endif()
 endfunction()
 
 # ------------------------------------------------------------------------------

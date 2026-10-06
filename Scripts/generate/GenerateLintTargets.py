@@ -74,16 +74,10 @@ def emitTestsInternal(listTarget: Sequence[LintTarget]) -> str:
     for target in listTarget:
         listArgument = " ".join(quoteArgumentInternal(argument) for argument in target.listCtestArgument)
         listLine.append(f"\tif(TARGET {target.name})")
-        listLine.append("\t\tadd_test(")
-        listLine.append(f"\t\t\tNAME {target.name}")
-        listLine.append(
-            f'\t\t\tCOMMAND "${{Python3_EXECUTABLE}}" "${{CMAKE_SOURCE_DIR}}/{target.scriptRelPath}"'
-        )
-        listLine.append(f'\t\t\t--root "${{CMAKE_SOURCE_DIR}}"{" " + listArgument if listArgument else ""}')
-        listLine.append("\t\t)")
-        listLine.append(
-            f'\t\tset_tests_properties({target.name} PROPERTIES LABELS "lint" TIMEOUT {target.timeoutSeconds})'
-        )
+        listLine.append(f"\t\tsw_registerScriptTest({target.name}")
+        listLine.append(f'\t\t\tSCRIPT "{target.scriptRelPath}"')
+        listLine.append(f'\t\t\tARGS --root "${{CMAKE_SOURCE_DIR}}"{" " + listArgument if listArgument else ""}')
+        listLine.append(f'\t\t\tLABELS "lint" TIMEOUT {target.timeoutSeconds})')
         listLine.append("\tendif()")
     listLine.append("endfunction()")
     return "\n".join(listLine)

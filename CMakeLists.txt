@@ -110,5 +110,6 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
 	add_subdirectory(Test)
-	sw_registerLintTests()
+	# 린트 시험 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
+	sw_registerGeneratedLintTests()
 endif()

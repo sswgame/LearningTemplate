@@ -148,6 +148,6 @@ DirectX 11/12, OpenGL, Vulkan 등을 추상화하는 그래픽스 백엔드입�
 CTest 항목은 `CoreTest`, `EngineTest_NoGPU_Shard1` ~ `_Shard3` · `EngineTest_HostOnly_Shard1` ~ `_Shard2`, `ReflectionTest_Shard1` ~ `ReflectionTest_Shard6`, `SmokeTest`, `EditorTest`,
 `EditorUiTest`, `AppTest_NoGPU` · `AppTest_HostOnly` 입니다. CI 가 못 돌리는 스위트는 자기 파일에서
 `SW_TEST_REQUIRES_HOST( 스위트, "이유" )` 로 선언하고, `HOST_SPLIT` 으로 등록한 실행 파일이 그 선언으로 두 항목을 가릅니다.
-GPU가 없는 CI는 `nogpu` 라벨만 돌립니다. 린트는 `sw_registerLintTests`(`cmake/Engine/AssetAndToolTargets.cmake`)가
+GPU가 없는 CI는 `nogpu` 라벨만 돌립니다. 린트는 생성 파일 `LintTargets.cmake`(`Scripts/generate/GenerateLintTargets.py`)가 `sw_registerScriptTest` 로
 `Scripts/lint/gate/` 의 게이트 전부와 `Scripts/lint/selftest/` 의 자기 검사를 `lint` 라벨로 등록합니다 — 목록은 손으로 적지 않고
 구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑어 `Scripts/generate/GenerateLintTargets.py` 가 만듭니다. 자세한 것은 [Test/README.md](Test/README.md).

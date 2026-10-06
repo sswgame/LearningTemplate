@@ -3,6 +3,12 @@
 # @brief Editor 판별·세션 정책 단위 테스트 (UI/ImGui 없음)
 # ==============================================================================
 
+# 에디터 · App 시험은 클라이언트 코드다 — 전용 서버 타깃(Server)에는 에디터 · App · 창이 없어 짓지 않는다.
+if(SW_TARGET_TYPE STREQUAL "Server")
+	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
+	return()
+endif()
+
 # Editor 소스를 직접 나열해 같이 컴파일한다 — `EditorModule` 은 MODULE DLL 이라 링크할 수 없다.
 #
 # **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야

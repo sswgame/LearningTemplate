@@ -56,7 +56,7 @@ ctest --test-dir build/Ninja-Debug --output-on-failure
 `soak` · `perf` 는 분 단위라 `hostgpu` 에 넣지 않았다 — 손으로 고른다(`ctest -L soak`).
 `lint` 는 `Scripts/lint/gate/` 의 게이트와 `Scripts/lint/selftest/` 의 자기 검사 전부입니다. 목록은 어디에도 손으로 적지 않습니다 —
 구성 시점에 `Scripts/lint/LintCatalog.py` 가 두 폴더를 훑고 `Scripts/generate/GenerateLintTargets.py` 가 CTest 항목을 만듭니다
-(`sw_registerLintTests`, `cmake/Engine/AssetAndToolTargets.cmake`). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
+(생성 파일 `LintTargets.cmake` 가 `sw_registerScriptTest` 로). 지금 무엇이 도는지는 `ctest --preset Ninja-Debug-lint -N` 으로 봅니다.
 
 ```powershell
 # GPU 없이 도는 것만 (CI 와 같은 집합)

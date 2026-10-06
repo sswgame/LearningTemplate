@@ -128,16 +128,3 @@ if(Python3_Interpreter_FOUND)
 	include("${SW_GENERATED_LINT_TARGETS}")
 	sw_addGeneratedLintTargets()
 endif()
-
-# ------------------------------------------------------------------------------
-# 3) CTest 린트 테스트 등록 헬퍼
-# ------------------------------------------------------------------------------
-function(sw_registerLintTests)
-	if(NOT Python3_Interpreter_FOUND)
-		return()
-	endif()
-
-	# 등록 목록은 `generated/sw/config/LintTargets.cmake` 가 든다 (바로 위에서 include 했다).
-	# 새 린트는 `Scripts/lint/gate/` 에 파일을 놓는 것으로 끝이다 — 여기 고칠 것이 없다.
-	sw_registerGeneratedLintTests()
-endfunction()
