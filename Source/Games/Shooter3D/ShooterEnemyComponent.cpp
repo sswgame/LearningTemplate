@@ -12,6 +12,7 @@
 
 #include "GameFramework/Base/Utility/OrientationUtil.h"
 
+#include "Games/Shooter3D/ShooterAnimParameter.h"
 #include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
@@ -21,9 +22,6 @@ namespace sw
     {
         struct ShooterEnemyComponentInternal
         {
-            static constexpr float32 kMoveIdle = 0.0f;
-            static constexpr float32 kMoveWalk = 1.0f;
-            static constexpr float32 kMoveRun  = 2.0f;
             /** @brief 플레이어가 이만큼 움직이면 목적지를 다시 건다(미터) — 프레임마다 경로를 새로 구하지 않는다. */
             static constexpr float32 kRetargetDistance = 0.5f;
             /** @brief 이 빠르기 아래면 서 있는 클립을 튼다(m/s). */
@@ -154,7 +152,7 @@ namespace sw
         const float3  target   = pDirector->getPlayerFeet();
         const float3  toTarget = float3{ target._x - _position._x, 0.0f, target._z - _position._z };
         const float32 distance = toTarget.getLength();
-        float32       moveCode = Internal::kMoveIdle;
+        float32       moveCode = ShooterAnimParameter::kMoveIdle;
         float32       wantYaw  = distance > 1.0e-4f ? MathUtil::atan2( toTarget._x, toTarget._z ) : _yaw;
         // 내비메시 에이전트(프리팹)가 있으면 상자 더미를 경로로 돌아가고 이웃은 군중이 비킨다. 자리는 에이전트가 쓴다.
         NavMeshAgentComponent* pAgent = pOwner->getComponent<NavMeshAgentComponent>();
@@ -198,7 +196,7 @@ namespace sw
                     if ( speed > Internal::kWalkSpeed )
                     {
                         wantYaw  = MathUtil::atan2( velocity._x, velocity._z );
-                        moveCode = speed >= _runSpeed ? Internal::kMoveRun : Internal::kMoveWalk;
+                        moveCode = speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
                     }
                     break;
                 }
@@ -222,7 +220,7 @@ namespace sw
                 }
                 const float3 next = ShooterArenaMath::resolveCircle( pDirector->getBoxes(), _position + steer * ( _speed * step ), _radius );
                 _position         = float3{ next._x, 0.0f, next._z };
-                moveCode          = _speed >= _runSpeed ? Internal::kMoveRun : Internal::kMoveWalk;
+                moveCode          = _speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;
                 break;
             }
             case ShooterEnemyPhase::Attacking:
@@ -275,12 +273,12 @@ namespace sw
         if ( pAnimator == nullptr )
             return;
         AnimParameterSet& parameters = pAnimator->getParameters();
-        parameters.setFloat( hashed_string( "Move" ), moveCode );
-        parameters.setBool( hashed_string( "Dead" ), isDead() );
+        parameters.setFloat( hashed_string( ShooterAnimParameter::kMove ), moveCode );
+        parameters.setBool( hashed_string( ShooterAnimParameter::kDead ), isDead() );
         if ( _bAttackStarting == SW_TRUE )
             parameters.setTrigger( hashed_string( "Attack" ) );
         if ( _bHitPending == SW_TRUE )
-            parameters.setTrigger( hashed_string( "Hit" ) );
+            parameters.setTrigger( hashed_string( ShooterAnimParameter::kHit ) );
         _bAttackStarting = SW_FALSE;
         _bHitPending     = SW_FALSE;
     }

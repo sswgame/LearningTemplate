@@ -60,7 +60,7 @@ namespace sw::editor
         if ( pManager == nullptr )
             return nullptr;
 
-        GameObject* pCreated = pManager->createGameObject( hashed_string( "GameObject" ) );
+        GameObject* pCreated = pManager->createGameObject( hashed_string( GameObject::kDefaultName ) );
         if ( pCreated == nullptr )
             return nullptr;
 

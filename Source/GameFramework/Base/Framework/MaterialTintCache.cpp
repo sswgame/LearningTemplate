@@ -26,7 +26,7 @@ namespace sw
         entry._instance = MaterialInstance::create( pMaterial );
         if ( entry._instance == nullptr )
             return nullptr;
-        entry._instance->setVectorParameter( hashed_string( "color" ), color );
+        entry._instance->setVectorParameter( hashed_string( kMaterialColorParameter ), color );
         entry._color = color;
         _listEntry.push_back( entry );
         return entry._instance;

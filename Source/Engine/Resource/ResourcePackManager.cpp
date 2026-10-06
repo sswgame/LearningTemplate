@@ -18,6 +18,9 @@ namespace sw
 
         struct ResourcePackManagerInternal
         {
+            static constexpr int32 kPriorityStep       = 1000; ///< 우선순위 토큰 한 칸
+            static constexpr int32 kPatchPriorityBonus = 500;  ///< patch_ 팩은 대상 모듈보다 반 칸 위
+
             /**
              * @brief 팩 파일 이름이 우선순위 토큰과 맞는지 대소문자를 무시하고 판별합니다(할당 없음).
              * @param stem 팩 파일 이름(확장자 제외. 예: "game", "game_patch", "dlc_expansion")
@@ -62,7 +65,7 @@ namespace sw
                 {
                     const string_view token{ listPriorityEffective[index] };
                     if ( matchesTokenCaseInsensitive( stem, token ) )
-                        return static_cast<int32>( ( priorityCount - index ) * 1000 );
+                        return static_cast<int32>( priorityCount - index ) * kPriorityStep;
                 }
 
                 // 2. 패치 접두사(patch_)가 붙으면 대상 모듈 우선순위에 500 을 더한다
@@ -73,10 +76,10 @@ namespace sw
                     {
                         const string_view token{ listPriorityEffective[index] };
                         if ( matchesTokenCaseInsensitive( subStem, token ) )
-                            return static_cast<int32>( ( priorityCount - index ) * 1000 ) + 500;
+                            return static_cast<int32>( priorityCount - index ) * kPriorityStep + kPatchPriorityBonus;
                     }
                     // 대상 모듈이 없는 단독 핫픽스 팩(가장 높은 우선순위)
-                    return static_cast<int32>( ( priorityCount + 1 ) * 1000 );
+                    return static_cast<int32>( priorityCount + 1 ) * kPriorityStep;
                 }
 
                 // 3. 맞는 우선순위 토큰이 없는 일반 팩의 기본 우선순위

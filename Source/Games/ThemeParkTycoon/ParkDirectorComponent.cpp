@@ -18,6 +18,7 @@
 
 #include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 #include "GameFramework/Base/Utility/OrientationUtil.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
@@ -459,7 +460,7 @@ namespace sw
                 {
                     _arrGuestLook[bucket] = MaterialInstance::create( pMesh->getMaterial() );
                     if ( _arrGuestLook[bucket] != nullptr )
-                        _arrGuestLook[bucket]->setVectorParameter( hashed_string( "color" ), arrColor[bucket] );
+                        _arrGuestLook[bucket]->setVectorParameter( hashed_string( kMaterialColorParameter ), arrColor[bucket] );
                 }
             }
             if ( _arrGuestLook[0] != nullptr )

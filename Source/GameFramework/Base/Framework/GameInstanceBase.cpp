@@ -294,7 +294,7 @@ namespace sw
             }
             offset += identityBytes;
 
-            GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( "GameObject" ), identity._objectId )
+            GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( GameObject::kDefaultName ), identity._objectId )
                                                       : pObjectManager->createGameObject();
             ObjectLoadContext context{};
             context._pIdentity     = bRestoreIdentity ? &identity : nullptr;

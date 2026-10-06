@@ -16,6 +16,9 @@ namespace sw
     class MaterialInstance;
     class MeshComponent;
 
+    /** @brief 색을 바꾸는 머티리얼 벡터 매개변수 이름입니다(셰이더 머티리얼 구조체의 `color` 와 묶인 문자열). 내보낸 클래스의 정적 멤버로 두면 지연 로드하는 게임 모듈이 데이터 import 를 못 한다. */
+    inline constexpr string_view kMaterialColorParameter = "color";
+
     /**
      * @class MaterialTintCache
      * @brief (부모 머티리얼 · 색) 하나에 인스턴스 하나입니다. 같은 색은 같은 인스턴스를 나눠 써서 배치 키가 갈라지지 않습니다.

@@ -56,6 +56,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
+        /** @brief 이름 없이 만든 게임 오브젝트의 이름입니다(생성 · 에디터 "새 오브젝트" · 상태 복원이 같은 이름을 쓴다). */
+        static constexpr string_view kDefaultName = "GameObject";
+
         /** @brief 기본 게임 오브젝트를 만듭니다. */
         GameObject();
         /** @brief 이름을 지정해 만듭니다. */

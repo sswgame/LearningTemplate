@@ -10,6 +10,9 @@ namespace sw
     {
         struct InputKeyMapWin32Internal
         {
+            static constexpr uint32 kExtendedKeyFlag = 0x01000000u;                  ///< lParam 24 번 비트 — 오른쪽 Ctrl · Alt, 숫자패드 Enter
+            static constexpr SHORT  kKeyDownBit      = static_cast<SHORT>( 0x8000 ); ///< GetAsyncKeyState 의 지금 눌림 비트
+
             static Key resolveShiftKey( intptr_t lParam )
             {
                 if ( lParam != 0 )
@@ -22,8 +25,8 @@ namespace sw
                         return Key::LeftShift;
                 }
 
-                const bool left  = ( GetAsyncKeyState( VK_LSHIFT ) & 0x8000 ) != 0;
-                const bool right = ( GetAsyncKeyState( VK_RSHIFT ) & 0x8000 ) != 0;
+                const bool left  = ( GetAsyncKeyState( VK_LSHIFT ) & kKeyDownBit ) != 0;
+                const bool right = ( GetAsyncKeyState( VK_RSHIFT ) & kKeyDownBit ) != 0;
                 if ( right && left == false )
                     return Key::RightShift;
                 return Key::LeftShift;
@@ -33,13 +36,13 @@ namespace sw
             {
                 if ( lParam != 0 )
                 {
-                    if ( ( static_cast<uint32>( lParam ) & 0x01000000 ) != 0 )
+                    if ( ( static_cast<uint32>( lParam ) & kExtendedKeyFlag ) != 0 )
                         return Key::RightControl;
                     return Key::LeftControl;
                 }
 
-                const bool left  = ( GetAsyncKeyState( VK_LCONTROL ) & 0x8000 ) != 0;
-                const bool right = ( GetAsyncKeyState( VK_RCONTROL ) & 0x8000 ) != 0;
+                const bool left  = ( GetAsyncKeyState( VK_LCONTROL ) & kKeyDownBit ) != 0;
+                const bool right = ( GetAsyncKeyState( VK_RCONTROL ) & kKeyDownBit ) != 0;
                 if ( right && left == false )
                     return Key::RightControl;
                 return Key::LeftControl;
@@ -49,13 +52,13 @@ namespace sw
             {
                 if ( lParam != 0 )
                 {
-                    if ( ( static_cast<uint32>( lParam ) & 0x01000000 ) != 0 )
+                    if ( ( static_cast<uint32>( lParam ) & kExtendedKeyFlag ) != 0 )
                         return Key::RightAlt;
                     return Key::LeftAlt;
                 }
 
-                const bool left  = ( GetAsyncKeyState( VK_LMENU ) & 0x8000 ) != 0;
-                const bool right = ( GetAsyncKeyState( VK_RMENU ) & 0x8000 ) != 0;
+                const bool left  = ( GetAsyncKeyState( VK_LMENU ) & kKeyDownBit ) != 0;
+                const bool right = ( GetAsyncKeyState( VK_RMENU ) & kKeyDownBit ) != 0;
                 if ( right && left == false )
                     return Key::RightAlt;
                 return Key::LeftAlt;
@@ -253,7 +256,7 @@ namespace sw
             }
             case VK_RETURN:
             {
-                if ( ( static_cast<uint32>( lParam ) & 0x01000000 ) != 0 )
+                if ( ( static_cast<uint32>( lParam ) & InputKeyMapWin32Internal::kExtendedKeyFlag ) != 0 )
                     return Key::NumpadEnter;
                 return Key::Enter;
             }

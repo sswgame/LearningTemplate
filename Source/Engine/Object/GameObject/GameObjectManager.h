@@ -52,7 +52,7 @@ namespace sw
         ~GameObjectManager();
 
         /** @brief 새 GameObject 를 만들고 등록합니다. */
-        GameObject* createGameObject( hashed_string name = hashed_string( "GameObject" ) ) { return _store.createGameObject( name ); }
+        GameObject* createGameObject( hashed_string name = hashed_string( GameObject::kDefaultName ) ) { return _store.createGameObject( name ); }
 
         /**
          * @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.

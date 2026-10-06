@@ -67,7 +67,7 @@ namespace sw
                    "GameObject has padding between fields (or a field was added without adding its size here)" );
 
     GameObject::GameObject()
-        : GameObject( hashed_string( "GameObject" ) )
+        : GameObject( hashed_string( GameObject::kDefaultName ) )
     {
     }
 

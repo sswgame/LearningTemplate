@@ -28,6 +28,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Framework/MaterialTintCache.h"
 
 #include "Games/Empty/BenchCombatComponent.h"
 #include "Games/Empty/BenchMoverComponent.h"
@@ -460,7 +461,7 @@ namespace sw
                 const float4                 tint     = makeBenchColor( slot * 977u + 13u );
                 // 알파를 눈에 띄게 낮춘다 — 1.0 에 가까우면 블렌딩이 됐는지 그림으로 구분할 수 없다.
                 const float32 alpha = 0.30f + 0.15f * static_cast<float32>( slot );
-                instance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+                instance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
                 _listChurnInstance.push_back( instance );
                 arrTransparentMaterial[slot] = std::move( instance );
             }
@@ -518,7 +519,7 @@ namespace sw
             if ( bPerCubeMaterial && pSceneMaterial != nullptr )
             {
                 shared_ptr<MaterialInstance> instance = MaterialInstance::create( pSceneMaterial );
-                instance->setVectorParameter( hashed_string( "color" ), makeBenchColor( index ) );
+                instance->setVectorParameter( hashed_string( kMaterialColorParameter ), makeBenchColor( index ) );
                 _listChurnInstance.push_back( instance );
                 pMesh->setMaterialInstance( std::move( instance ) );
             }
@@ -1175,7 +1176,7 @@ namespace sw
             const float4  tint   = makeBenchColor( nextChurnRandom() );
             const bool    bGlass = ( pInstance->getParent() != nullptr ) && ( pInstance->getParent() == _glassMaterial.get() );
             const float32 alpha  = bGlass ? ( 0.25f + 0.35f * static_cast<float32>( nextChurnRandom() & 0xFFu ) / 255.0f ) : 1.0f;
-            pInstance->setVectorParameter( hashed_string( "color" ), float4{ tint._x, tint._y, tint._z, alpha } );
+            pInstance->setVectorParameter( hashed_string( kMaterialColorParameter ), float4{ tint._x, tint._y, tint._z, alpha } );
         }
         else
         {
