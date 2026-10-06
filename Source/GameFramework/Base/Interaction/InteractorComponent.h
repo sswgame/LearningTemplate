@@ -85,6 +85,8 @@ namespace sw
         float3 _facing2D;
         PROPERTY( Category = "Interaction", DisplayName = "Line Of Sight", Tooltip = "Ask the physics world whether the target is visible" )
         bool _bUseLineOfSight;
+        PROPERTY( Category = "Interaction", DisplayName = "Keep Distance Scale", Tooltip = "A focused target stays focused until it is this many times its reach away (hysteresis)", Min = 1.0 )
+        float32 _keepDistanceScale;
 
         InteractionSession              _session;
         InteractionPrompt               _prompt;

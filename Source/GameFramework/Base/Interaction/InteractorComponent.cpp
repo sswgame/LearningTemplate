@@ -18,8 +18,6 @@ namespace sw
     {
         struct InteractorComponentInternal
         {
-            /** @brief 진행 중 대상이 이 배율 거리 밖으로 나가면 취소합니다(경계에서 깜빡이지 않게 고를 때보다 넓다). */
-            static constexpr float32 kKeepDistanceScale = 1.25f;
 
             /**
              * @brief 하는 쪽에 모션 워핑이 있으면 대상의 맞춤 지점을 마커 이름(없으면 "Interaction")의 워프 목표로 넣습니다 — 상호작용 클립의
@@ -47,6 +45,7 @@ namespace sw
         , _eyeOffset{ 0.0f, 1.6f, 0.0f }
         , _facing2D{ 1.0f, 0.0f, 0.0f }
         , _bUseLineOfSight{ true }
+        , _keepDistanceScale{ 1.25f }
         , _session{}
         , _prompt{}
         , _listCandidate{}
@@ -179,7 +178,7 @@ namespace sw
                 InteractionCandidate candidate;
                 const GameObject*    pTargetObject = pTarget->getOwner();
                 candidate._position                = pTargetObject->getPrimarySceneComponent() != nullptr ? pTargetObject->getPrimarySceneComponent()->getWorldPosition() : float3{};
-                candidate._maxDistance             = pTarget->getDefinition()->_maxDistance * InteractorComponentInternal::kKeepDistanceScale;
+                candidate._maxDistance             = pTarget->getDefinition()->_maxDistance * _keepDistanceScale;
                 float32 distance{ 0.0f };
                 bKeep = InteractionSelector::isInReach( viewer, candidate, distance );
             }
