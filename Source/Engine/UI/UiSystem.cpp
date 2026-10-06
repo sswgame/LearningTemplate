@@ -22,9 +22,11 @@
 #include "Engine/UI/Debug/UiDemoScreen.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
+#include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Style/UiStylePass.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
+#include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
@@ -148,6 +150,8 @@ namespace sw
         , _stickDirection{ UiNavigationDirection::Next }
         , _activeScreen{ kInvalidUiScreenHandle }
         , _demoScreen{ kInvalidUiScreenHandle }
+        , _markerScreen{ kInvalidUiScreenHandle }
+        , _listWidgetComponent{}
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _inputMode{ UiInputMode::Pointer }
@@ -193,6 +197,12 @@ namespace sw
 
     void UiSystem::shutdown()
     {
+        // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있다 — 등록 · 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
+        for ( WidgetComponent* pComponent : _listWidgetComponent )
+            pComponent->forgetUiSystem();
+        _listWidgetComponent.clear();
+        _markerScreen = kInvalidUiScreenHandle;
+        _demoScreen   = kInvalidUiScreenHandle;
         _focus.clearFocus();
         while ( _listScreen.empty() == false )
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
@@ -245,6 +255,9 @@ namespace sw
             }
             SW_PROFILE_COUNT( "Ui.StyleWidgets", restyledCount );
         }
+        // 화면 마커 — 게임 틱 · 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(레이아웃 앞 — 같은 프레임에 놓인다).
+        for ( WidgetComponent* pComponent : _listWidgetComponent )
+            pComponent->updateScreenMarker( _viewport );
         // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.Ui.Layout" );
@@ -860,6 +873,69 @@ namespace sw
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
         }
         return context;
+    }
+
+    WidgetId UiSystem::addScreenMarker( unique_ptr<Widget> widget )
+    {
+        if ( widget == nullptr )
+            return kInvalidWidgetId;
+        UiScreen* pMarkers = findScreen( _markerScreen );
+        if ( pMarkers == nullptr || pMarkers->isClosing() )
+        {
+            unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
+            root->setVisibility( WidgetVisibility::SelfHitTestInvisible ); // 빈 곳 클릭은 아래로(게임으로)
+            UiScreenDesc desc{};
+            desc._layer       = UiLayer::Hud;
+            desc._bTakesFocus = false;
+            desc._bShowCursor = false;
+            _markerScreen     = pushScreen( sw::make_unique<UiScreen>( desc, std::move( root ) ) );
+            pMarkers          = findScreen( _markerScreen );
+        }
+        PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
+        return pRoot != nullptr ? pRoot->addChild( std::move( widget ) )->getId() : kInvalidWidgetId;
+    }
+
+    void UiSystem::removeScreenMarker( WidgetId widget )
+    {
+        UiScreen*    pMarkers = findScreen( _markerScreen );
+        Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetById( widget ) : nullptr;
+        PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
+        if ( pRoot == nullptr )
+            return;
+        (void)pRoot->removeChild( pWidget );
+        if ( pRoot->getChildCount() == 0 )
+        {
+            closeScreen( _markerScreen );
+            _markerScreen = kInvalidUiScreenHandle;
+        }
+    }
+
+    Widget* UiSystem::findScreenMarker( WidgetId widget ) const
+    {
+        const UiScreen* pMarkers = findScreen( _markerScreen );
+        return pMarkers != nullptr ? pMarkers->getTree().findWidgetById( widget ) : nullptr;
+    }
+
+    void UiSystem::registerWidgetComponent( WidgetComponent& component )
+    {
+        for ( const WidgetComponent* pExisting : _listWidgetComponent )
+        {
+            if ( pExisting == &component )
+                return;
+        }
+        _listWidgetComponent.push_back( &component );
+    }
+
+    void UiSystem::unregisterWidgetComponent( WidgetComponent& component )
+    {
+        for ( size_t index = 0; index < _listWidgetComponent.size(); ++index )
+        {
+            if ( _listWidgetComponent[index] == &component )
+            {
+                _listWidgetComponent.erase( _listWidgetComponent.begin() + static_cast<ptrdiff_t>( index ) );
+                return;
+            }
+        }
     }
 
     void UiSystem::syncDemoScreen()

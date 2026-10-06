@@ -93,7 +93,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
     SW_EXPECT_EQUAL( pRoot->getId(), tree.getLayoutDirtyRoots()[0] );
 }
 
-/** @brief [WidgetTreeTest] 그리기만 바뀌면 레이아웃 뿌리는 없고 그리기 목록에 하나 — 변환 · 불투명도도 그리기 쪽이다 */
+/** @brief [WidgetTreeTest] 그리기만 바뀌면 레이아웃 뿌리는 없고 그리기 목록에 하나 — 불투명도도 그리기 쪽이고, 렌더 변환은 그 위젯만 다시 놓는다(재기 없음) */
 SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
 {
     sw::WidgetTree   tree;
@@ -114,9 +114,12 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
     tree.clearAllDirty();
     sw::WidgetRenderTransform transform{};
     transform._angleDegrees = 30.0f;
-    pBox->setRenderTransform( transform );
     pBox->setOpacity( 0.25f );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) ); // 불투명도는 그림만
+    pBox->setRenderTransform( transform );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) ); // 렌더 변환은 기하에 얹힌다 — 그 위젯만 배치(재기 없음)
+    SW_EXPECT_EQUAL( pBox->getId(), tree.getLayoutDirtyRoots()[0] );
+    SW_EXPECT_TRUE( ( pBox->getDirtyFlags() & sw::WidgetDirty::kLayout ) == 0 );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getPaintDirtyWidgets().size() ) );
 }
 

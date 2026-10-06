@@ -163,7 +163,9 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 자르는 패널은 자기 사각형을 가위로 쌓고, 자식 위 그림(스크롤 막대)은 `paintOverChildren` — 자르기 밖이다.
 - `UiSystem::update` 가 화면을 그리기 순서로 칠하고(구간 `GT.Ui.Paint` · 카운터 `Ui.PaintWidgets`), **탐색 입력 방식이면** 포커스 위젯 둘레에 테두리를 그 화면 위에
   얹는다(포인터 방식이면 숨긴다 — CommonUI 와 같다). 목록 내용이 지난 프레임과 같으면 내용 번호(`getCanvasRevision`)를 올리지 않아 렌더러가 사각형을 다시 올리지 않는다.
-  `EngineLoop` 가 목록을 렌더 패킷의 주 출력 캔버스에 싣는다(`-gv_canvasTestPattern` 은 그 위).
+  `EngineLoop` 가 목록을 렌더 패킷의 주 출력 캔버스에 싣는다(`-gv_canvasTestPattern` 은 그 위). 게임 창의 뷰포트 0 은 백버퍼 크기다.
+- 개발 시험 화면 `-gv_uiDemo=1`(`Debug/UiDemoScreen` — 글 · 리치 텍스트 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸)로 네 백엔드 스크린샷을 본다.
+  입력 방식은 커서가 실제로 움직일 때만 포인터로 바뀐다(창이 뜰 때 OS 가 보내는 같은 자리 이동은 세지 않는다).
 - 글 위젯: 원하는 크기 = 측정(글자 배율을 곱한 크기, 줄 바꿈이면 가용 너비 안), 칠하기는 위젯 너비로 배치하고 결과를 캐시한다. 글 · 스타일은 `kLayout`, 색은 `kPaint`.
   문단 방향 = 위젯의 흐름 방향. 리치 텍스트(`_bRichText`)는 `RichTextParser` 표기.
 - 그림 위젯: 브러시(색 · 둥근 모서리 · 9-슬라이스) × 그림, 그림이 없으면 단색 상자. `_bMirrorInRtl` 이면 오른쪽에서 왼쪽에서 좌우로 뒤집는다.
@@ -176,6 +178,20 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   보낸다)는 끝 코드 포인트 하나, Enter 는 확정 알림. 커서는 글 끝.
 - **가상 목록**(`ListViewWidget`)은 보이는 줄 + 1 개만 줄 위젯을 만들고(`setRowFactory`) 항목 k 를 늘 줄 k % 줄 수에 묶는다(`setRowBinder`) — 한 줄 스크롤에 한 위젯만
   다시 묶고, 보이는 동안 항목과 위젯이 바뀌지 않아 포커스가 항목을 따라간다. 줄 위젯은 레이아웃 안에서 만들어진다(곧바로 놓인다).
+
+## 월드에 붙는 UI (`World/WidgetComponent`)
+
+| 이 엔진 | 언리얼 | 유니티 | Godot |
+|---|---|---|---|
+| `WidgetComponent` Screen · World | `UWidgetComponent` Space Screen · World | World Space Canvas | SubViewport → ViewportTexture → 3D 메시 |
+
+- **Screen**: 위젯을 `UiSystem` 의 Hud 층 **마커 화면**(캔버스 패널 루트 · 클릭을 막지 않는다 — 처음 붙일 때 만들고 마지막을 뗄 때 닫는다)에 자식으로 붙인다.
+  `UiSystem::update` 가 레이아웃 앞에서(게임 틱 · 트랜스폼 적용 뒤 — 병렬 틱 밖) 등록된 컴포넌트마다 오브젝트의 월드 점을 게임 카메라로 투영해 슬롯을 옮긴다
+  (`computeMarkerPlacement` — 순수 함수). `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고, 없으면 원하는 크기에 피벗을 맞춘다. 카메라 뒤 · 화면 밖은 숨기거나
+  `_bClampToScreenEdge` 면 가장자리(여백 24)에 붙이고(카메라 뒤는 나누기 전 클립 방향 — 오른쪽 뒤면 오른쪽 변), `_maxDistance` 밖은 숨긴다. `_bScaleWithDistance` 는
+  기준 거리 / 거리(0.25 ~ 2)를 피벗 둘레 렌더 변환으로. 2D(직교) · 3D 가 같은 코드다.
+- 컴포넌트는 시작할 때 엔진의 UI 시스템에 묶이고(`bindUiSystem` — 서버처럼 없으면 아무것도 하지 않는다) 끝날 때 풀린다. UI 시스템이 먼저 내려가면 `forgetUiSystem`.
+- 렌더 변환(`setRenderTransform`)은 기하에 얹히는 값이라 그 위젯을 배치 뿌리로 적는다(`kArrange` — 재기 없이 다시 놓는다). 불투명도는 그리기만.
 
 ## 배율 · 안전 영역
 

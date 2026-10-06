@@ -123,7 +123,8 @@ namespace sw
         if ( _renderTransform == transform )
             return;
         _renderTransform = transform;
-        invalidate( WidgetDirty::kTransform );
+        // 기하에 얹히는 값이다 — 이 위젯을 지난 슬롯 자리에 다시 놓아(measure 0) 자기와 자손 기하에 새 변환을 얹는다.
+        invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange );
     }
 
     void Widget::setFlowDirection( UiFlowDirection flowDirection )

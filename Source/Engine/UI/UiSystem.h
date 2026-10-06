@@ -36,6 +36,7 @@ namespace sw
     class InputMap;
     class LocalizationManager;
     class TextLayoutEngine;
+    class WidgetComponent;
 
     /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
     enum class UiInputMode : uint8
@@ -140,6 +141,20 @@ namespace sw
          */
         [[nodiscard]] bool   setTheme( const hashed_string& name );
         const hashed_string& getThemeName() const { return _themeName; }
+        // --- 화면 마커(WidgetComponent Screen) -------------------------------------------
+        /**
+         * @brief 마커 화면(Hud 층 · 캔버스 패널 루트 · 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 돌려줍니다. 마커 화면은 처음 붙일 때 만들고 마지막을 뗄 때 닫는다.
+         * @details 위치는 붙인 쪽이 슬롯 앵커 · 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
+         */
+        WidgetId addScreenMarker( unique_ptr<Widget> widget );
+        /** @brief 마커 위젯을 떼어 지웁니다. */
+        void removeScreenMarker( WidgetId widget );
+        /** @brief 마커 위젯입니다(없으면 nullptr). */
+        Widget* findScreenMarker( WidgetId widget ) const;
+        /** @brief 위젯 컴포넌트를 등록합니다 — `update` 가 레이아웃 앞에서 화면 마커 자리를 갱신한다(시작할 때 컴포넌트가 부른다). */
+        void   registerWidgetComponent( WidgetComponent& component );
+        void   unregisterWidgetComponent( WidgetComponent& component );
+        uint32 getWidgetComponentCount() const { return static_cast<uint32>( _listWidgetComponent.size() ); }
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
@@ -274,7 +289,9 @@ namespace sw
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)
         UiNavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UiScreenHandle               _activeScreen;
-        UiScreenHandle               _demoScreen; ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
+        UiScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
+        UiScreenHandle               _markerScreen;        ///< 화면 마커를 담는 Hud 화면(없으면 무효)
+        vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
         UiScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
         UiInputMode                  _inputMode;
