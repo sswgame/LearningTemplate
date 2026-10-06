@@ -111,7 +111,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `IAccountNameIndex`(오프라인 계정을 저장소에서 이름 · id 로 — 부르는 키트의 저장소 일 안에서). 셋 다 계정 키트가 구현하고 다른 키트는 창구만 본다.
   `Online/Service`: 서비스 틀 — 호스트(`OnlineServiceHost` — 스트림 끝점 · 요청 서버, 연결의 첫 요청 Hello 로 기반 · 키트 판 협상, 인증(계정 바인딩 — 익명 메서드만 로그인 없이) ·
   주소 · 계정 토큰 버킷 · 몸 상한을 먼저 보고 영역을 맡은 `IOnlineService` 로, 계정 ↔ 연결 표로 알림 `sendPush` · `sendPushToAll`, 계정이 떠나면 서비스들에 `onAccountLeft`,
-  캐시 답 · 채널 메시지는 `EphemeralStoreRouter`(`Online/Cache`)로, 버스 메시지는 `subscribeServerBus` 한 서비스로 나눠 준다 — 호스트가 앞 · 버스의 유일한 소비자),
+  캐시 답 · 채널 메시지는 `EphemeralStoreRouter`(`Online/Cache` — 주인이 먼저 내려가면 `cancel`)로, 버스 메시지는 `subscribeServerBus` 한 서비스로 나눠 준다 — 호스트가 앞 · 버스의 유일한 소비자),
   와이어 표(`OnlineProtocol.h` — 키트마다 메서드 영역 256 칸: 메서드 영역 + 0x00..0x7F · 알림 영역 + 0x80..0xFF, 공통 오류 코드), 클라이언트(`OnlineServiceClient` —
   Hello · 모은 요청 · 알림 나누기 · 다시 연결(물러남), 자기 끝점 모드와 공유 끝점 모드(부하 시험 봇 — 끝점 하나에 연결 여럿)), 키트 바인딩 · 클라이언트 도우미
   (`ServicePendingTable` — 로직에 맡긴 요청의 꼬리표 ↔ 토큰, `ServiceClientCallTable` — 요청 id ↔ 사용자 델리게이트, `send` 안에서 바로 온 실패도 잃지 않는다).
@@ -135,6 +135,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   만료 때 운영 · 보상 우편은 첨부 소멸 · 플레이어 우편은 반환). `Online/Sanction`: 계정 제재 레코드(채팅 금지 · 정지 · 영구 정지 — 끝 시각 · 사유, 판 조건 쓰기).
   `Online/Mail/ServiceMailCampaign.h`: 전체 우편(캠페인 레코드 하나 + 계정마다 수령 표식 "없어야 함" — 계정마다 행을 만들지 않는다, GM 키트가 만들고 우편함 키트가 끼운다).
   `Online/Identity/AccountSessionControl.h`: 세션 끊기 창구 `IAccountSessionControl`(계정 키트가 구현). 시험: `ServiceMailTest` · `ServiceSanctionTest`.
+  `Online/Directory`: 서버 등록 · 고르기 — 기록 형식 `ServerRecord`(캐시 `sd/srv/<id>` 시한 15 초 · 종류 색인 `sd/idx/<종류>` 정렬 집합), 등록 `ServerRegistration`
+  (5 초 하트비트, 상태 · 부하가 바뀌면 바로, 정상 종료 때 지움), 읽기 캐시 `ServerRegistryReader`(색인 → 기록을 읽어 스냅숏 교체, 시한으로 사라진 서버의 색인 멤버 정리,
+  고른 몫을 다음 읽기까지 얹음, 내릴 때 기다리던 캐시 요청 취소), 고르기 `ServerSelection`(열림 · 종류 · 판 · 살아 있음 · 자리 → 같은 지역 → 찬 비율 → id, 순수 함수) —
+  클라이언트 배정(GF_ServerDirectory)과 매칭의 전용 서버 배정(GF_Matchmaking)이 같이 쓴다. 시험: `ServerSelectionTest` · `ServerRegistryTest`.
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
   `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)

@@ -1800,7 +1800,9 @@ cd build/Ninja-Debug/Bin
 - **벽시계는 `WallClock` 하나**(`Core/Time`, `system_clock` 을 읽는 유일한 파일) — 서비스는 `nowMs` 매개변수로 받고 시험은 가짜 시각을 넣는다.
   여러 서비스가 함께 쓰는 비동기 창구(캐시 앞 · 버스 · 접속 상태 찾기)는 결과를 "꺼내 가기(poll)" 로 두지 않는다 — 소비자가 둘이면 서로의 결과를 가져간다.
   맡길 때 델리게이트를 받아 그 요청에만 알린다(`EphemeralStoreRouter` · `IAccountPresence`). 클라이언트 요청 id ↔ 델리게이트 표는 `sendRequest` 가 그 자리에서
-  실패를 알릴 수 있어 보내기 전에 걸어 둔다(`ServiceClientCallTable::send`).
+  실패를 알릴 수 있어 보내기 전에 걸어 둔다(`ServiceClientCallTable::send`). 라우터보다 먼저 내려가는 델리게이트 주인은 기다리던 요청을 `cancel` 한다.
+- **서버 고르기는 기반 하나**(`Online/Directory/ServerSelection`) — 클라이언트 배정과 매칭의 전용 서버 배정이 같은 규칙(열림 · 판 · 살아 있음 · 자리 → 같은 지역 →
+  찬 비율 → id)을 쓴다. 스냅숏은 읽기 주기(2 초)만큼 늦으니 고른 몫을 다음 읽기까지 얹어 몰림을 막는다.
 - **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
   새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
   저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.

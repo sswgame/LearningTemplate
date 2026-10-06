@@ -5,7 +5,8 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 캐시 앞 나눠 쓰기 — 답은 맡긴 쪽 델리게이트로만, 같은 채널 구독 둘은 앞에 한 번, 델리게이트 안에서 구독 해지, 내릴 때 기다리던 요청은 Unavailable 한 번.
+// 캐시 앞 나눠 쓰기 — 답은 맡긴 쪽 델리게이트로만, 같은 채널 구독 둘은 앞에 한 번, 델리게이트 안에서 구독 해지, 내릴 때 기다리던 요청은 Unavailable 한 번,
+// 취소한 요청은 답이 와도 · 내릴 때도 부르지 않는다.
 
 using namespace sw;
 
@@ -94,4 +95,26 @@ SW_TEST_CASE( EphemeralStoreRouterTest, ShutdownAnswersPendingRequestsOnceWithUn
     }
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( recorder._listReply[0]._result == EphemeralResult::Unavailable );
+}
+
+SW_TEST_CASE( EphemeralStoreRouterTest, CancelledRequestsAreNeverAnswered )
+{
+    MemoryEphemeralDatabase database;
+    MemoryEphemeralStore    store( &database );
+    EphemeralStoreRouter    router;
+    router.initialize( &store );
+    RouterRecorder recorder;
+    const uint64   answeredId = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    const uint64   droppedId  = router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    router.cancel( droppedId );
+    router.cancel( 9999 ); // 없는 요청 — 아무것도 하지 않는다
+    (void)router.pump();
+    SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
+    SW_EXPECT_EQUAL( recorder._listReply[0]._requestId, answeredId );
+
+    const uint64 pendingId = router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    router.cancel( pendingId ); // 주인이 먼저 내려간다
+    router.shutdown();
+    SW_EXPECT_EQUAL( recorder._listReply.size(), size_t( 1 ) ); // 내릴 때의 Unavailable 도 오지 않는다
+    SW_EXPECT_EQUAL( router.getPendingCount(), 0 );
 }
