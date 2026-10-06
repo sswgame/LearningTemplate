@@ -51,6 +51,8 @@ namespace sw
 
         /** @brief 네이티브 창 핸들(HWND)을 반환합니다. */
         void* getNativeHandle() const override { return _hWnd; }
+        /** @brief `GetDpiForWindow` / 96 입니다(프로세스가 PerMonitorV2 — `WindowsProcess.manifest`). 창이 없으면 1. */
+        float32 getContentScale() const override;
 
         /** @brief Win32 전용 HWND 핸들을 반환합니다. */
         HWND getHwnd() const { return _hWnd; }

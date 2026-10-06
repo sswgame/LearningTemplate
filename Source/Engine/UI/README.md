@@ -124,3 +124,16 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리).
 
 스크롤 입력(휠 · 막대 끌기 · 패드 오른쪽 스틱 `UI.Scroll`)은 사건 경로가 `ScrollPanel::scrollBy` · `setScrollOffset` 을 부르는 자리다 — 레이아웃은 API 만 준다.
+
+## 배율 · 안전 영역
+
+레이아웃은 **UI 단위**(기준 해상도 1920×1080 의 픽셀)로 하고, 화면에 낼 때 배율을 곱합니다(`UiViewport` — `_size` · `_physicalSize` · `_uiScale` · `_safeInsets`).
+
+- 배율 = clamp( 해상도 규칙( 물리 크기 ), 최소, 최대 ) × `gv_uiScale` — 규칙은 `UiScaleSettings`(`engine/ui/uiscale.xml`, 게임 프리셋 `_uiScaleSettings` 가 덮어쓴다):
+  `ShortestSide`(짧은 변 / 기준 짧은 변 — 기본, 가로 · 세로 화면 모두) · `Width` · `Height` · `Fixed`. UMG 의 DPI 곡선(해상도 짧은 변 → 배율) 자리입니다.
+- 창의 OS 배율(`IWindow::getContentScale` — Win32 `GetDpiForWindow`, X11 `Xft.dpi`)은 `_bApplyContentScale` 일 때만 곱합니다(데스크톱식 UI). 게임 창은 해상도 규칙이
+  이미 창 크기를 따르므로 둘 다 곱하면 두 번 곱한다(UMG 기본과 같다).
+- `gv_uiTextScale` 은 글 측정에만 곱합니다(`UiLayoutContext::_textScale`) — 글이 커지면 그 상자도 커진다. 배율 · 글자 배율이 바뀌면 트리 전체를 다시 잽니다.
+- 안전 영역: `SafeZonePanel` 이 뷰포트 안전 영역과 겹치는 만큼 자식을 안쪽으로 민다. PC 는 0 이고 `gv_uiDebugSafeZone`(0..0.1 — 각 변 비율, 언리얼
+  `r.DebugSafeZone.TitleRatio`)으로 흉내 낸다. 화면 문서의 기본 루트는 `SafeZonePanel > CanvasPanel` 입니다.
+- `UiSystem::computeViewport( 물리 크기, 창 배율 )` 이 뷰포트를, `makeLayoutContext()` 가 레이아웃 문맥을 만든다 — `EngineLoop` 가 프레임마다 앞의 것을 `update` 에 넘긴다.

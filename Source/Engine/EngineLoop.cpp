@@ -844,9 +844,18 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
+            // UI 배율 규칙 — 게임 프리셋이 팩 상대 경로로 덮어쓰면 그것, 아니면 엔진 기본(engine/ui/uiscale.xml). 모르는 키는 기동 오류다.
             const EngineDefaultAssets& defaultAssets = *loop._owned._pEngineDefaultAssets;
-            UiSystem&                  ui            = *loop._owned._pUiSystem;
+            const GameConfig&          gameConfig    = GameConfig::getActive();
+            const string               scalePath     = gameConfig._uiScaleSettings.empty()
+                                                         ? string( defaultAssets._uiScaleSettings )
+                                                         : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiScaleSettings );
+            UiScaleSettings            scaleSettings{};
+            if ( scaleSettings.loadFromResource( scalePath ) == false )
+                return EngineInitResult::Failed;
+            UiSystem& ui = *loop._owned._pUiSystem;
+            ui.setScaleSettings( scaleSettings );
+            // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
             return ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) ? EngineInitResult::Succeeded
                                                                                                                            : EngineInitResult::Failed;
         }
@@ -1233,11 +1242,14 @@ namespace sw
             _owned._pTelemetryService->update( deltaTime );
         }
 
-        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이다.
+        // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
+        // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
         {
-            UiViewport viewport{};
-            viewport._size = float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) };
+            const IWindow* const pWindow      = IWindow::getActiveWindow();
+            const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;
+            const UiViewport     viewport =
+                _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( vpWidth ), static_cast<float32>( vpHeight ) }, contentScale );
             _owned._pUiSystem->update( deltaTime, viewport );
         }
 

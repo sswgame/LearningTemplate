@@ -28,6 +28,8 @@ namespace sw
         void applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;
+        /** @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1. */
+        float32 getContentScale() const override;
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
         bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;

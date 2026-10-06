@@ -40,6 +40,8 @@ namespace sw
         string _localizationProject{ "engine/localization/engine.locproject.json" }; ///< 엔진 문자열(설정 메뉴 등)의 로컬라이제이션 프로젝트
         PROPERTY()
         string _fontCatalog{ "engine/fonts/fontcatalog.xml" }; ///< 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`)
+        PROPERTY()
+        string _uiScaleSettings{ "engine/ui/uiscale.xml" }; ///< 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다)
 
         PROPERTY()
         string _defaultForwardPipeline{ "engine/pipeline/forwardpipeline.xml" }; ///< 포워드 렌더 파이프라인(프레임 그래프)

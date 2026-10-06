@@ -9,9 +9,11 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
 
 namespace sw
@@ -120,6 +122,8 @@ namespace sw
         , _uiInputMap{}
         , _pInput{ nullptr }
         , _pFontSystem{ nullptr }
+        , _textLayout{}
+        , _scaleSettings{}
         , _viewport{}
         , _lastPointerPosition{}
         , _stickRepeatSeconds{ 0.0f }
@@ -145,6 +149,7 @@ namespace sw
     {
         _pInput        = &inputManager;
         _pFontSystem   = pFontSystem;
+        _textLayout    = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
         _bPointerKnown = SW_FALSE;
         _consumption.clear();
         _pInput->setTextInputCallback( SW_DELEGATE_METHOD( InputManager::TextInputDelegate, &UiSystem::onTextInput, this ), InputKeyboardFocus::Ui );
@@ -182,6 +187,7 @@ namespace sw
         }
         _uiInputMap.reset();
         _consumption.clear();
+        _textLayout.reset();
         _pInput      = nullptr;
         _pFontSystem = nullptr;
     }
@@ -651,5 +657,21 @@ namespace sw
         const WidgetId target   = pDefault != nullptr ? pDefault->getId() : UiNavigationSolver::findFirstFocusable( *tree.getRoot() );
         if ( target != kInvalidWidgetId )
             (void)_focus.setFocus( tree, target );
+    }
+
+    UiViewport UiSystem::computeViewport( const float2& physicalSize, float32 contentScale ) const
+    {
+        return UiScaleUtil::makeViewport( _scaleSettings, physicalSize, gv_uiScale, contentScale, gv_uiDebugSafeZone );
+    }
+
+    UiLayoutContext UiSystem::makeLayoutContext() const
+    {
+        UiLayoutContext context{};
+        context._pTextLayout  = _textLayout.get();
+        context._safeInsets   = _viewport._safeInsets;
+        context._viewportSize = _viewport._size;
+        context._uiScale      = _viewport._uiScale;
+        context._textScale    = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
+        return context;
     }
 } // namespace sw

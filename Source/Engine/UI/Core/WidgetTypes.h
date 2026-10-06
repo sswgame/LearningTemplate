@@ -151,10 +151,14 @@ namespace sw
 {
     /**
      * @struct UiViewport
-     * @brief UI 가 그려질 화면 하나의 크기입니다(UI 단위). 게임 창이면 백버퍼, 에디터면 게임 뷰 렌더 타깃입니다.
+     * @brief UI 가 그려질 화면 하나입니다. 게임 창이면 백버퍼, 에디터면 게임 뷰 렌더 타깃입니다.
+     * @details 물리 크기 = UI 크기 × 배율. `UiScaleUtil::makeViewport` 가 해상도 규칙 · 사용자 배율 · 안전 영역으로 채웁니다.
      */
     struct UiViewport
     {
-        float2 _size{}; ///< UI 단위 크기(UI 배율을 곱하기 전)
+        float2  _size{};          ///< UI 단위 크기(물리 크기 / 배율) — 레이아웃 루트가 놓이는 사각형
+        float2  _physicalSize{};  ///< 물리 픽셀 크기
+        float4  _safeInsets{};    ///< 안전 영역(왼 · 위 · 오른 · 아래, UI 단위) — `SafeZonePanel` 이 안쪽으로 민다
+        float32 _uiScale{ 1.0f }; ///< UI 단위 → 물리 픽셀
     };
 } // namespace sw

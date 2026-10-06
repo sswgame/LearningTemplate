@@ -17,6 +17,8 @@
 #include "Engine/UI/Core/WidgetNavigation.h"
 #include "Engine/UI/Core/WidgetTypes.h"
 #include "Engine/UI/Input/UiInputConsumption.h"
+#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw
@@ -24,6 +26,7 @@ namespace sw
     class FontSystem;
     class InputManager;
     class InputMap;
+    class TextLayoutEngine;
 
     /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
     enum class UiInputMode : uint8
@@ -116,6 +119,19 @@ namespace sw
         InputManager*     getInputManager() const { return _pInput; }
         FontSystem*       getFontSystem() const { return _pFontSystem; }
         const UiViewport& getViewport() const { return _viewport; }
+        /** @brief 글 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 문맥이 넘긴다. */
+        TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
+
+        /** @brief 해상도 → 배율 규칙입니다(기동 단계 `Ui` 가 `engine/ui/uiscale.xml` · 게임 프리셋 `_uiScaleSettings` 로 정한다). */
+        const UiScaleSettings& getScaleSettings() const { return _scaleSettings; }
+        void                   setScaleSettings( const UiScaleSettings& settings ) { _scaleSettings = settings; }
+        /**
+         * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다 — 배율 = 규칙 × gv_uiScale(× 창 배율, 설정이 켤 때), 안전 영역 = gv_uiDebugSafeZone.
+         * @param contentScale 창의 OS 배율(`IWindow::getContentScale`).
+         */
+        UiViewport computeViewport( const float2& physicalSize, float32 contentScale ) const;
+        /** @brief 지금 뷰포트(`update` 가 받은 것) · gv_uiTextScale · 글 측정으로 레이아웃 문맥을 만듭니다(`UiLayoutPass::update` 에 넘긴다). */
+        UiLayoutContext makeLayoutContext() const;
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
         /** @brief vtable 이 [@p pBegin, @p pEnd) 안인 화면 · 위젯이 든 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
@@ -163,6 +179,8 @@ namespace sw
         unique_ptr<InputMap>         _uiInputMap; ///< UI 행동 맵(레이어 `UI` — 활성 화면이 있을 때만 켠다)
         InputManager*                _pInput;
         FontSystem*                  _pFontSystem;
+        unique_ptr<TextLayoutEngine> _textLayout;
+        UiScaleSettings              _scaleSettings;
         UiViewport                   _viewport;
         float2                       _lastPointerPosition;
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간

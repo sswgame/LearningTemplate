@@ -130,6 +130,12 @@
 |---|---|---|---|---|---|
 | `gv_defaultMaterial` | `string` | — | 일반 | 씬 기본 머티리얼 경로 덮어쓰기 (비면 EngineDefaultAssets) | [Scene.cpp](../../Source/Engine/Scene/Scene.cpp) |
 
+## `Source/Engine/UI`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UiScale.cpp](../../Source/Engine/UI/Layout/UiScale.cpp) |
+
 ## `Source/Engine/UserSettings`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |

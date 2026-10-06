@@ -92,7 +92,9 @@ namespace sw
         vector<WidgetId> listRoot;
         listRoot.swap( tree._listLayoutDirtyRoot );
 
-        const bool bRootPending = pRoot->_layoutSerial == 0 || pRoot->_lastSlotSize != context._viewportSize ||
+        const bool bInsetsChanged = tree._layoutSafeInsets != context._safeInsets;
+        tree._layoutSafeInsets    = context._safeInsets;
+        const bool bRootPending   = bInsetsChanged || pRoot->_layoutSerial == 0 || pRoot->_lastSlotSize != context._viewportSize ||
                                   ( pRoot->_dirtyFlags & UiLayoutPassInternal::kClearBits ) != 0;
         if ( bRootPending )
             layoutTreeRoot( *pRoot, context );

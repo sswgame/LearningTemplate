@@ -193,6 +193,21 @@ namespace sw
         XFlush( pDisplay );
     }
 
+    float32 X11Window::getContentScale() const
+    {
+        if ( _pX11Display == nullptr )
+            return 1.0f;
+        // 데스크톱의 배율은 리소스 문자열의 "Xft.dpi:\t144" 한 줄이다(xrdb · GNOME · KDE). 없으면 96 DPI 로 본다.
+        const utf8* const pResource = XResourceManagerString( static_cast<Display*>( _pX11Display ) );
+        if ( pResource == nullptr )
+            return 1.0f;
+        const utf8* const pKey = std::strstr( pResource, "Xft.dpi:" );
+        if ( pKey == nullptr )
+            return 1.0f;
+        const float32 dpi = static_cast<float32>( std::strtod( pKey + sizeof( "Xft.dpi:" ) - 1, nullptr ) );
+        return dpi > 0.0f ? dpi / kReferenceDpi : 1.0f;
+    }
+
     bool X11Window::processMessages()
     {
         if ( _pX11Display == nullptr )
@@ -296,6 +311,11 @@ namespace sw
     bool X11Window::isVisible() const
     {
         return false;
+    }
+
+    float32 X11Window::getContentScale() const
+    {
+        return 1.0f;
     }
 #endif
 } // namespace sw

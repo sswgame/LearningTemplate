@@ -252,6 +252,15 @@
        "description": "글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`)"
       },
       {
+       "name": "_uiScaleSettings",
+       "type": "string",
+       "default": "engine/ui/uiscale.xml",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다)"
+      },
+      {
        "name": "_defaultForwardPipeline",
        "type": "string",
        "default": "engine/pipeline/forwardpipeline.xml",
@@ -850,6 +859,15 @@
        "max": "",
        "units": "",
        "description": "엔진 스키마에 덧붙이는 게임의 텔레메트리 사건 스키마(팩 상대 경로, 예: `data/mygame.telemetry.xml`)입니다. 비면 없습니다."
+      },
+      {
+       "name": "_uiScaleSettings",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "엔진 기본(`engine/ui/uiscale.xml`) 대신 쓸 런타임 UI 배율 규칙(팩 상대 경로, 예: `data/uiscale.xml`)입니다. 비면 엔진 기본입니다."
       },
       {
        "name": "_mapUserSettingDefault",
@@ -2742,6 +2760,14 @@
    "kind": "일반",
    "description": "Tracy 뷰어(tracy-profiler 0.13.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
    "source": "Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
+  },
+  {
+   "name": "gv_uiDebugSafeZone",
+   "type": "float32",
+   "default": "0.0",
+   "kind": "시험",
+   "description": "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다",
+   "source": "Source/Engine/UI/Layout/UiScale.cpp"
   },
   {
    "name": "gv_uiScale",

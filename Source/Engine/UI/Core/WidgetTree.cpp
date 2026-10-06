@@ -41,6 +41,7 @@ namespace sw
         , _focusedWidget{ kInvalidWidgetId }
         , _layoutUiScale{ 0.0f }
         , _layoutTextScale{ 0.0f }
+        , _layoutSafeInsets{}
     {
     }
 
