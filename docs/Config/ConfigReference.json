@@ -431,7 +431,7 @@
       {
        "name": "_gravity",
        "type": "float3",
-       "default": "0.0, -9.81, 0.0",
+       "default": "0.0, -kDefaultGravity, 0.0",
        "min": "",
        "max": "",
        "units": "m/s2",
@@ -440,7 +440,7 @@
       {
        "name": "_gravity2D",
        "type": "float2",
-       "default": "0.0, -9.81",
+       "default": "0.0, -kDefaultGravity",
        "min": "",
        "max": "",
        "units": "m/s2",
@@ -653,7 +653,7 @@
       {
        "name": "_maxSlope",
        "type": "float32",
-       "default": "0.785398",
+       "default": "kHalfPi * 0.5",
        "min": "0.0",
        "max": "1.553343",
        "units": "rad",

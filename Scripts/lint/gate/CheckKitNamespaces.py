@@ -3,8 +3,9 @@
 """
 여러 장르 키트를 한 게임에 섞을 때 소리 없이 부딪히는 이름 공간을 막는다.
 
-  1) 상태 형식 표(`k...Tag = 0x........u; ///< 'ABCD'`)는 저장소(Source · Test)에서 하나뿐이고, 주석의 네 글자가 값의 바이트(작은 끝 —
-     `Archive` 가 uint32 를 쓰는 순서)와 같다. 한 상태에 키트 여럿의 구간이 실리면 표가 곧 구간 이름이다 — 같은 표 둘이면 한쪽 구간을 다른 쪽이 읽는다.
+  1) 상태 형식 표(`k...Tag = FourCcUtil::make( "ABCD" )`)는 저장소(Source · Test)에서 하나뿐이다. 한 상태에 키트 여럿의 구간이 실리면 표가
+     곧 구간 이름이다 — 같은 표 둘이면 한쪽 구간을 다른 쪽이 읽는다. 16 진 리터럴 표(`k...Tag = 0x…`)는 바이트 순서를 손으로 맞추는 것이라 금지
+     (`FourCcUtil::make` 하나 — constants D2).
   2) 키트(`Source/GameFramework/Kits/`)는 키를 직접 읽지 않고(`isKeyDown` · `Key::W`) 입력 맵 액션 이름을 글자로 박지 않는다 — 액션 이름은
      키트 설정 칸으로 받는다(`PlayerControllerSettings::_moveAction`). 입력 맵은 게임에 하나라 키트가 이름을 정하면 다른 키트와 부딪힌다.
   3) 키트가 읽는 게임 설정의 사용자 칸(`GameSettings::getCustomProperty*`)은 `<키트>.` 로 시작한다(`Farming.startingGold`).
@@ -34,7 +35,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import blankComments  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*0x([0-9A-Fa-f]{8})u?\s*;(?:[ \t]*///<[ \t]*'([^'\n]{4})')?")
+_kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*(?:sw::)?FourCcUtil::make\s*\(\s*\"([^\"\n]{4})\"\s*\)")
+_kHexTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*0x[0-9A-Fa-f]{8}u?\s*;")
 _kRawKeyRe = re.compile(r"\b(?:isKeyDown|wasKeyPressed|wasKeyReleased)\s*\(|\bKey::[A-Z]\w*")
 _kActionLiteralRe = re.compile(r"\b(?:wasActionTriggered|isActionDown|wasActionPressed|wasActionReleased|isActionToggled|getActionHoldDuration|"
                                r"getVector2D|getAxis1D|isChordDown|wasChordTriggered)\s*\(\s*(?:hashed_string\s*\(\s*)?\"")
@@ -55,12 +57,6 @@ _kOwnershipException: dict[tuple[str, str], str] = {
 _kBorrowedDrainRe = re.compile(r"(?:\b_p(?:Wallet|QuestLog|Reputation|Flags|Clock|Weather|Inventory|Land)\w*|\brefs\._p\w+)\s*->\s*drainEvents\s*\(")
 _kLogCallerRe = re.compile(r"\bSW_LOG_CALLER\s*\(\s*\"([^\"]*)\"")
 _kGlobalVariableRe = re.compile(r"\bSW_(?:TEST_)?GLOBAL_VARIABLE\w*\s*\(")
-
-
-def decodeTagInternal(hexText: str) -> str:
-    """값의 바이트를 작은 끝 순서로 읽은 네 글자입니다(`Archive` 가 uint32 를 쓰는 순서)."""
-    value = int(hexText, 16)
-    return "".join(chr((value >> (8 * index)) & 0xFF) for index in range(4))
 
 
 def findKitNameInternal(relativePath: str) -> str:
@@ -84,20 +80,20 @@ class CheckKitNamespacesGate(LintGate):
     preCommitPattern = ("Source/*.h", "Source/*.cpp", "Test/*.h", "Test/*.cpp")
     preCommitFileArgument = ""
     violationHeader = "키트 이름 공간 위반"
-    hint = ("상태 표는 새 네 글자로(주석은 값의 작은 끝 바이트), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "
+    hint = ("상태 표는 새 네 글자로(FourCcUtil::make), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "
             "공유 상태는 빌린다(`GameStateRefs`) — Source/GameFramework/README.md \"키트 여럿을 한 게임에\"")
     selfTestCases = [
         {
             "name": "두 파일이 같은 상태 표를 쓴다",
             "files": {
-                "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = 0x4D524146u; ///< 'FARM'\n",
-                "Source/Games/GameB/BDirector.cpp": "static constexpr uint32 kStateTag = 0x4D524146u; ///< 'FARM'\n",
+                "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\n",
+                "Source/Games/GameB/BDirector.cpp": "static constexpr uint32 kStateTag = FourCcUtil::make( \"FARM\" );\n",
             },
         },
         {
-            "name": "표 주석이 값의 바이트와 다르다",
+            "name": "16 진 리터럴 상태 표",
             "files": {
-                "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = 0x4D524146u; ///< 'MRAF'\n",
+                "Source/Games/GameA/ADirector.cpp": "static constexpr uint32 kStateTag = 0x4D524146u; ///< 'FARM'\n",
             },
         },
         {
@@ -168,18 +164,14 @@ class CheckKitNamespacesGate(LintGate):
         for path in listFile:
             relativePath = path.relative_to(repositoryRoot).as_posix()
             text = path.read_text(encoding="utf-8", errors="replace")
-            # 1) 상태 표 — 주석을 함께 봐야 하므로 원문에서 찾는다.
+            # 1) 상태 표
             if "Tag" in text:
-                for match in _kTagRe.finditer(text):
-                    site = f"{relativePath}:{lineOfInternal(text, match.start())}"
-                    hexText = match.group(2).upper()
-                    decoded = decodeTagInternal(hexText)
-                    mapTagToSite[hexText].append(site)
-                    comment = match.group(3)
-                    if comment is None:
-                        listViolation.append(f"{site}: {match.group(1)} = 0x{hexText} 옆에 네 글자 주석(///< '{decoded}')이 없습니다")
-                    elif comment != decoded:
-                        listViolation.append(f"{site}: {match.group(1)} 의 주석 '{comment}' 가 값의 바이트 '{decoded}' 와 다릅니다")
+                code1 = blankComments(text)
+                for match in _kTagRe.finditer(code1):
+                    mapTagToSite[match.group(2)].append(f"{relativePath}:{lineOfInternal(code1, match.start())}")
+                for match in _kHexTagRe.finditer(code1):
+                    listViolation.append(f"{relativePath}:{lineOfInternal(code1, match.start())}: {match.group(1)} 를 16 진 리터럴로 적었습니다 — "
+                                         f"FourCcUtil::make( \"ABCD\" ) 로")
             bKit  = relativePath.startswith(_kKitPrefix)
             bGame = relativePath.startswith(_kGamePrefix)
             if bKit is False and bGame is False and relativePath.startswith(_kGameFrameworkPrefix) is False:
@@ -233,9 +225,9 @@ class CheckKitNamespacesGate(LintGate):
                 if kitName and (prefix == "" or prefix.islower() is False or prefix not in kitName.lower()):
                     listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 평판 세력 '{factionId}' 에 키트 접두가 없습니다 — "
                                          f"'<{kitName} 의 소문자 낱말>.{factionId}'")
-        for hexText, listSite in sorted(mapTagToSite.items()):
+        for tagText, listSite in sorted(mapTagToSite.items()):
             if len(listSite) > 1:
-                listViolation.append(f"상태 표 0x{hexText}('{decodeTagInternal(hexText)}')가 둘 이상입니다: {' · '.join(listSite)}")
+                listViolation.append(f"상태 표 '{tagText}' 가 둘 이상입니다: {' · '.join(listSite)}")
         for callerName, listSite in sorted(mapLogCallerToSite.items()):
             if len(listSite) > 1:
                 listViolation.append(f"로그 범주 '{callerName}' 가 GameFramework · Games 의 파일 둘 이상에 있습니다: {' · '.join(listSite)}")

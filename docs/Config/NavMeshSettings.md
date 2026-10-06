@@ -41,7 +41,7 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 | `_radius` | `float32` | `0.4` | 0.0 ~ - | m | Body radius; walls are eroded by this much |
 | `_height` | `float32` | `2.0` | 0.0 ~ - | m | Body height; lower ceilings are not walkable |
 | `_maxClimb` | `float32` | `0.4` | 0.0 ~ - | m | Highest step the body walks up |
-| `_maxSlope` | `float32` | `0.785398` | 0.0 ~ 1.553343 | rad | Steepest walkable slope |
+| `_maxSlope` | `float32` | `kHalfPi * 0.5` | 0.0 ~ 1.553343 | rad | Steepest walkable slope |
 | `_cellSize` | `float32` | `0.2` | 0.01 ~ - | m | Voxel size on XZ (smaller is more exact and slower to bake) |
 | `_cellHeight` | `float32` | `0.1` | 0.01 ~ - | m | Voxel size on Y |
 | `_tileSize` | `uint32` | `48` | 8 ~ 256 |  | Tile edge in cells; a change rebakes one tile |

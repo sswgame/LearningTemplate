@@ -23,8 +23,8 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 
 | 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
-| `_gravity` | `float3` | `0.0, -9.81, 0.0` |  | m/s2 | 3D gravity |
-| `_gravity2D` | `float2` | `0.0, -9.81` |  | m/s2 | 2D gravity |
+| `_gravity` | `float3` | `0.0, -kDefaultGravity, 0.0` |  | m/s2 | 3D gravity |
+| `_gravity2D` | `float2` | `0.0, -kDefaultGravity` |  | m/s2 | 2D gravity |
 | `_subStepCount` | `uint32` | `1` | 1 ~ 16 |  | 엔진 고정 스텝(`EngineConfig::_fixedDeltaTime`) 하나에 도는 물리 스텝 수입니다. 물리 스텝 = 고정 스텝 / 이 값, 프레임당 상한도 이 배수다. |
 | `_subStepCount2D` | `uint32` | `4` | 1 ~ - |  | Box2D sub-steps per step |
 | `_listLayer` | `vector<PhysicsLayerDef>` | — |  |  | Collision layers in index order and what they collide with |
