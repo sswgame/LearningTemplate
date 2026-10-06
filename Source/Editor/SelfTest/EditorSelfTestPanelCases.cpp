@@ -1,9 +1,11 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -390,6 +392,103 @@ namespace sw::editor
                 (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // panels.toolWindowsOpenAtAUsableSize — 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다(D20)
+            // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 0 폭이었고, Input Map Editor 는 처음부터 열렸다.
+            // 자체 시험은 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
+            // ------------------------------------------------------------------------------
+            static constexpr const utf8* kArrFloatingToolPanelId[] = { "history", "global_variables", "render_targets", "ui_preview",
+                                                                       "animation_rewind", "data_table", "input_map", "user_settings" };
+
+            /** @brief 도구 창 시험의 진행 상태입니다. */
+            struct ToolWindowProbe
+            {
+                uint32 _panelIndex{ 0 };
+                uint32 _openStep{ 0 };
+                bool   _bWasOpen{ false };
+            };
+
+            static ToolWindowProbe& getToolWindowProbe()
+            {
+                static ToolWindowProbe s_probe;
+                return s_probe;
+            }
+
+            static EditorSelfTestStep runToolWindowsOpenAtAUsableSize( EditorSelfTestContext& context )
+            {
+                constexpr uint32  kPanelCount      = static_cast<uint32>( sizeof( kArrFloatingToolPanelId ) / sizeof( kArrFloatingToolPanelId[0] ) );
+                constexpr uint32  kSettleStepCount = 3; ///< 연 뒤 창이 만들어지고 크기가 자리 잡기까지
+                constexpr float32 kMinUsableWidth  = 400.0f;
+                constexpr float32 kMinUsableHeight = 300.0f;
+                constexpr float32 kViewportRatio   = 0.9f; ///< `EditorChrome::setNextPanelSize` 가 자르는 비율
+                constexpr float32 kEdgeTolerancePx = 1.0f;
+
+                ToolWindowProbe&     probe     = getToolWindowProbe();
+                EditorContext*       pContext  = EditorContext::get();
+                const ImGuiViewport* pViewport = ImGui::GetMainViewport();
+                if ( context.expect( pContext != nullptr && pViewport != nullptr, "no editor context or main viewport" ) == false )
+                    return EditorSelfTestStep::Done;
+                EditorPanelManager& panelManager = pContext->getPanelManager();
+                const uint32        stepIndex    = context.getStepIndex();
+
+                if ( stepIndex == 0 )
+                {
+                    probe = ToolWindowProbe{};
+                    // 처음 열림은 등록부가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 시험 · 사용자가 열었을 수 있다.
+                    for ( const utf8* pPanelId : kArrFloatingToolPanelId )
+                    {
+                        const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelId );
+                        if ( context.expect( pRegistration != nullptr, "a floating tool panel is not registered" ) == false )
+                            continue;
+                        const unique_ptr<IEditorPanel> pFresh = pRegistration->_pCreate();
+                        string                         what{ "a floating tool panel starts open: " };
+                        what += pPanelId;
+                        (void)context.expect( pFresh != nullptr && pFresh->isOpen() == false, what.c_str() );
+                    }
+                }
+
+                if ( probe._panelIndex >= kPanelCount )
+                {
+                    probe = ToolWindowProbe{};
+                    return EditorSelfTestStep::Done;
+                }
+
+                const utf8*   pPanelId = kArrFloatingToolPanelId[probe._panelIndex];
+                IEditorPanel* pPanel   = panelManager.findPanel( pPanelId );
+                if ( pPanel == nullptr )
+                {
+                    ++probe._panelIndex;
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( probe._openStep == 0 )
+                {
+                    probe._bWasOpen = pPanel->isOpen();
+                    probe._openStep = stepIndex + 1; // 0 은 "아직 열지 않음"
+                    (void)panelManager.setPanelOpen( pPanelId, true );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex + 1 - probe._openStep < kSettleStepCount )
+                    return EditorSelfTestStep::Continue;
+
+                const float32      dpiScale  = EditorThemeUtil::getDpiScale();
+                const float32      minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
+                const float32      minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
+                const ImGuiWindow* pWindow   = ImGui::FindWindowByName( pPanel->getPanelTitle() );
+                string             what{ pPanelId };
+                if ( context.expect( pWindow != nullptr, ( what + ": the tool window was not created" ).c_str() ) )
+                {
+                    (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, ( what + ": the tool window opened too small" ).c_str() );
+                    const bool bInsideViewport = pViewport->Pos.x - kEdgeTolerancePx <= pWindow->Pos.x && pViewport->Pos.y - kEdgeTolerancePx <= pWindow->Pos.y &&
+                                                 pWindow->Pos.x + pWindow->Size.x <= pViewport->Pos.x + pViewport->Size.x + kEdgeTolerancePx &&
+                                                 pWindow->Pos.y + pWindow->Size.y <= pViewport->Pos.y + pViewport->Size.y + kEdgeTolerancePx;
+                    (void)context.expect( bInsideViewport, ( what + ": the tool window does not fit in the main viewport" ).c_str() );
+                }
+                (void)panelManager.setPanelOpen( pPanelId, probe._bWasOpen );
+                ++probe._panelIndex;
+                probe._openStep = 0;
+                return EditorSelfTestStep::Continue;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -401,4 +500,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
+    SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::runToolWindowsOpenAtAUsableSize );
 } // namespace sw::editor
