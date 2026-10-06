@@ -93,6 +93,8 @@ namespace sw
             (void)_canvasRenderer.drawList( *_pCmd, target._list, _canvasRenderer.getTargetQuadBase( targetIndex ), pso, width, height,
                                             _pDevice->supportsNativeBindlessSampling() );
             _pCmd->endRenderPass();
+            // 그린 텍스처는 셰이더가 읽는다(머티리얼 · 에디터 ImGui 이미지) — 카메라 렌더 텍스처 출력과 같이 읽기 상태로 둔다(Vulkan 레이아웃).
+            _pCmd->prepareTextureForShaderRead( texture );
             pState->_drawnRevision = target._contentRevision;
             pState->_drawnTexture  = texture;
             ++_lastDrawnCanvasTargetCount;
