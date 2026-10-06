@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/UI/Animation/UiStyleTransition.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
@@ -206,6 +207,13 @@ namespace sw
                 const bool  bRead   = SerializerUtil::applyPropertyText( pNested != nullptr ? *pNested : property, pTarget, assignment._text, SerializeContext::getDefault() );
                 if ( bRead == false )
                     return fail( context, node, string( "Rule value '" ) + assignment._text + "' cannot be read as '" + pName + "'" );
+                if ( field == UiStyleField::Transition )
+                {
+                    UiStyleTransitionSpec spec{};
+                    string                transitionError;
+                    if ( UiStyleTransitionSpec::parse( assignment._text, spec, transitionError ) == false )
+                        return fail( context, node, "Rule _transition: " + transitionError );
+                }
                 inoutRule._listAssignment.push_back( std::move( assignment ) );
                 return true;
             }

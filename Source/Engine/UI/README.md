@@ -398,3 +398,22 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **트윈**: `UiSystem::tween( 위젯 번호, 경로, 끝값, 길이, 곡선 )` — 지금 값에서 끝값으로(코드 한 줄, Godot `Tween`). 같은 위젯 · 경로의 새 트윈은 옛 것을 대신합니다.
 - **시간**: `UiSystem::update` 의 애니메이션 단계(구간 `GT.Ui.Animate` — 스타일 · 레이아웃 앞)에서 실제 프레임 시간으로 진행합니다(게임 정지 메뉴도 움직인다).
 - **움직임 줄이기**: 사용자 설정 `accessibility.reduceMotion`(`gv_uiReduceMotion`)이면 애니메이션 · 트윈 · 닫기가 바로 끝 값입니다(사건은 모두 보낸다).
+
+### 스타일 전환 (`Animation/UiStyleTransition`)
+
+유니티 USS · CSS 의 `transition` 자리입니다. 시트 규칙의 `_transition` 칸에 적습니다.
+
+```xml
+<Rule _selector="ButtonWidget" _transition="_backgroundColor 0.12 EaseOut, _opacity 0.2 Linear" />   <!-- 칸 길이(초) 곡선(없으면 EaseOut) -->
+<Rule _selector="ButtonWidget:hover" _backgroundColor="$accentHover" />
+```
+
+- 계산된 스타일이 바뀔 때(상태 · 클래스 · 테마 — 스타일 걷기가 그 프레임에 **한 번** 계산) 새 스타일의 `_transition` 이 적은 칸만 **지금 보이는 값**에서 새 값으로
+  옮겨 갑니다. 진행 중에 다시 바뀌면 그 자리에서 새 목표로(처음 값으로 튀지 않는다). 그 뒤 프레임마다는 값만 보간합니다(애니메이션 단계 — 칸 종류대로 `kPaint` ·
+  `kLayout` · `kTransform`). `all` 은 보간되는 모든 칸, 뒤 항목이 앞을 덮습니다.
+- 보간되는 칸 = 실수 칸(색 · 모서리 · 두께 · 그림자 · 여백 · 글자 크기 · 외곽선 · 불투명도). 글꼴 · `_transition` 자신 · 모르는 칸 · 읽지 못한 길이 · 모르는 곡선은 시트
+  로드 오류입니다.
+- 바로 바뀌는 것: 적지 않은 칸, 처음 맞추는 위젯, 옛 · 새 스타일 중 한쪽만 정한 칸(위젯 자기 칸 ↔ 시트 값), `gv_uiReduceMotion`.
+- 보이는 값은 위젯이 든 복사본(`UiStyleTransitionState`)이고 `Widget::getComputedStyle` 이 그것을 돌려줍니다 — 나눠 쓰는 계산된 스타일은 바꾸지 않습니다. 끝나면 복사본을 지웁니다.
+- 물려받는 글 칸은 부모의 **목표** 값을 물려받습니다(보간 값을 자손에 내리지 않는다 — 나눠 쓰기 열쇠가 프레임마다 바뀌지 않게). 자식 글이 함께 움직이려면 자식 규칙에도
+  `_transition` 을 적습니다(`ButtonWidget TextWidget` — 자식의 물려받은 값이 바뀐 것도 자식에게는 바뀐 칸이다).

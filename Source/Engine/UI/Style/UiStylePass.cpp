@@ -5,6 +5,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/UI/Animation/UiStyleTransition.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Core/WidgetTree.h"
@@ -13,35 +14,25 @@
 
 namespace sw
 {
-    namespace
+    uint32 UiStylePass::makeDirtyReason( uint32 changedFields )
     {
-        struct UiStylePassInternal
+        if ( changedFields == 0 )
+            return WidgetDirty::kNone;
+        uint32 reason = WidgetDirty::kPaint;
+        for ( uint32 index = 0; index < static_cast<uint32>( UiStyleField::Count ); ++index )
         {
-            /** @brief 바뀐 칸 비트 @p changedFields 를 무효화 이유로 바꿉니다. */
-            static uint32 makeDirtyReason( uint32 changedFields )
-            {
-                if ( changedFields == 0 )
-                    return WidgetDirty::kNone;
-                uint32 reason = WidgetDirty::kPaint;
-                for ( uint32 index = 0; index < static_cast<uint32>( UiStyleField::Count ); ++index )
-                {
-                    const UiStyleField field = static_cast<UiStyleField>( index );
-                    if ( ( changedFields & UiStyleFieldTable::makeBit( field ) ) == 0 )
-                        continue;
-                    const uint32 flags = UiStyleFieldTable::getEntry( field )._flags;
-                    if ( ( flags & UiStyleFieldTable::kAffectsLayout ) != 0 )
-                        reason |= WidgetDirty::kLayout;
-                    if ( ( flags & UiStyleFieldTable::kAffectsSubtree ) != 0 )
-                        reason |= WidgetDirty::kTransform;
-                }
-                return reason;
-            }
-        };
-    } // namespace
-} // namespace sw
+            const UiStyleField field = static_cast<UiStyleField>( index );
+            if ( ( changedFields & UiStyleFieldTable::makeBit( field ) ) == 0 )
+                continue;
+            const uint32 flags = UiStyleFieldTable::getEntry( field )._flags;
+            if ( ( flags & UiStyleFieldTable::kAffectsLayout ) != 0 )
+                reason |= WidgetDirty::kLayout;
+            if ( ( flags & UiStyleFieldTable::kAffectsSubtree ) != 0 )
+                reason |= WidgetDirty::kTransform;
+        }
+        return reason;
+    }
 
-namespace sw
-{
     uint32 UiStylePass::update( WidgetTree& tree, UiStyleSet& styleSet, bool bNavigationMode )
     {
         if ( tree._listStyleDirty.empty() )
@@ -69,17 +60,20 @@ namespace sw
 
     uint32 UiStylePass::restyle( Widget& widget, UiStyleSet& styleSet, bool bNavigationMode )
     {
-        const bool                              bSelfDirty   = ( widget._dirtyFlags & WidgetDirty::kStyle ) != 0;
-        const UiComputedStyle*                  pParentStyle = widget.getParent() != nullptr ? widget.getParent()->getComputedStyle() : nullptr;
+        const bool bSelfDirty = ( widget._dirtyFlags & WidgetDirty::kStyle ) != 0;
+        // 부모는 목표(나눠 쓰는) 스타일로 — 전환 중인 보간 값을 물려받으면 나눠 쓰기 열쇠가 프레임마다 바뀐다.
+        const UiComputedStyle*                  pParentStyle = widget.getParent() != nullptr ? widget.getParent()->_computedStyle.get() : nullptr;
         uint64                                  ancestorKey{ 0 };
         const shared_ptr<const UiComputedStyle> style         = styleSet.computeStyle( widget, pParentStyle, bNavigationMode, ancestorKey );
         const uint32                            changedFields = UiComputedStyle::computeChangedFields( widget._computedStyle.get(), style.get() );
         const bool                              bPropagate    = style != widget._computedStyle || ancestorKey != widget._styleAncestorKey;
-        widget._computedStyle                                 = style;
-        widget._styleAncestorKey                              = ancestorKey;
+        if ( changedFields != 0 )
+            UiStyleTransition::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields );
+        widget._computedStyle    = style;
+        widget._styleAncestorKey = ancestorKey;
         widget._dirtyFlags &= ~WidgetDirty::kStyle;
 
-        uint32 reason = UiStylePassInternal::makeDirtyReason( changedFields );
+        uint32 reason = makeDirtyReason( changedFields );
         if ( bSelfDirty )
             reason |= WidgetDirty::kPaint;
         if ( reason != WidgetDirty::kNone )

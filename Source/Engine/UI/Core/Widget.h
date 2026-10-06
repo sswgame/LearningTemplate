@@ -23,6 +23,7 @@ namespace sw
     struct UiComputedStyle;
     struct UiLayoutContext;
     struct UiPaintContext;
+    struct UiStyleTransitionState;
     struct WidgetPaintCache;
 
     class CanvasPainter;
@@ -156,8 +157,11 @@ namespace sw
          * @details 상태가 바뀌면 위젯이 `kStyle` 을 겁니다(스타일 걷기가 다시 계산한다).
          */
         virtual uint32 computeStyleStates() const;
-        /** @brief 계산된 스타일입니다(스타일 걷기가 정한다 — 스타일 시트 규칙과 부모에서 물려받은 글 칸). 걷기 전이면 nullptr 입니다. */
-        const UiComputedStyle* getComputedStyle() const { return _computedStyle.get(); }
+        /**
+         * @brief 계산된 스타일입니다(스타일 걷기가 정한다 — 스타일 시트 규칙과 부모에서 물려받은 글 칸). 걷기 전이면 nullptr 입니다.
+         * @details 스타일 전환(`_transition`) 중이면 보간 중인 보이는 값입니다(위젯이 든 복사본). 전환이 끝나면 다시 나눠 쓰는 계산된 스타일입니다.
+         */
+        const UiComputedStyle* getComputedStyle() const;
         /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 걷기가 쓴다). */
         float32 computeEffectiveOpacity() const;
 
@@ -192,6 +196,7 @@ namespace sw
         friend class UiPaintPass;
         friend class UiPointerState;
         friend class UiStylePass;
+        friend class UiStyleTransition;
 
         /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다 — 번호를 이름표에 올리고 밀린 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );
@@ -210,9 +215,10 @@ namespace sw
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
 
-        unique_ptr<WidgetPaintCache>      _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
-        shared_ptr<const UiComputedStyle> _computedStyle;    ///< 계산된 스타일(같은 조건의 위젯이 나눠 쓴다 — `UiStylePass` 가 정한다)
-        uint64                            _styleAncestorKey; ///< 이 위젯이 맞는 "조상 쪽" 선택자 조각의 해시 — 바뀌면 자손을 다시 맞춘다(`UiStylePass`)
+        unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
+        shared_ptr<const UiComputedStyle>  _computedStyle;    ///< 계산된 스타일(같은 조건의 위젯이 나눠 쓴다 — `UiStylePass` 가 정한다)
+        unique_ptr<UiStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값(전환이 없으면 비었다 — `UiStyleTransition` 이 정한다)
+        uint64                             _styleAncestorKey; ///< 이 위젯이 맞는 "조상 쪽" 선택자 조각의 해시 — 바뀌면 자손을 다시 맞춘다(`UiStylePass`)
 
         WidgetGeometry _geometry;          ///< 마지막 arrange 결과
         float2         _desiredSize;       ///< 마지막 measure 결과

@@ -5,7 +5,7 @@
 	<Variable _name="surface" _value="0.125,0.125,0.25,0.875" />
 	<Variable _name="text" _value="0.92,0.93,0.95,1" />
 	<Rule _selector="BorderPanel.window" _backgroundColor="$surface" _cornerRadius="8,8,8,8" _shadowColor="0,0,0,0.5" _shadowOffset="0,6" _shadowBlur="16" _padding="24,24,24,24" />
-	<Rule _selector="ButtonWidget.primary" _backgroundColor="$accent" />
+	<Rule _selector="ButtonWidget.primary" _backgroundColor="$accent" _transition="_backgroundColor 0.12 EaseOut" />
 	<Rule _selector="ButtonWidget.primary:hover" _backgroundColor="$accentHover" />
 	<Rule _selector="ButtonWidget.primary:pressed" _backgroundColor="$accentPressed" />
 	<Rule _selector="TextWidget.title" _fontSize="32">

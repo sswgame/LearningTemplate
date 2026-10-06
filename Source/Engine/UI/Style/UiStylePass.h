@@ -25,6 +25,8 @@ namespace sw
     public:
         /** @brief 트리의 스타일 더러운 위젯을 다시 맞춥니다. 다시 계산한 위젯 수입니다. */
         static uint32 update( WidgetTree& tree, UiStyleSet& styleSet, bool bNavigationMode );
+        /** @brief 바뀐 칸 비트 @p changedFields 의 무효화 이유입니다(레이아웃 칸 → kLayout, 불투명도 → kTransform, 그 밖 kPaint). 없으면 kNone 입니다. */
+        static uint32 makeDirtyReason( uint32 changedFields );
 
     private:
         /** @brief @p widget 을 다시 맞추고 필요한 자손으로 내려갑니다. */

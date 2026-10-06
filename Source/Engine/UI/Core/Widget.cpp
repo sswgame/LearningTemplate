@@ -7,6 +7,7 @@
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Animation/UiStyleTransition.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Render/UiPaintPass.h"
@@ -32,6 +33,7 @@ namespace sw
         , _navigation{}
         , _paintCache{}
         , _computedStyle{}
+        , _styleTransition{}
         , _styleAncestorKey{ 0 }
         , _geometry{}
         , _desiredSize{}
@@ -178,10 +180,18 @@ namespace sw
         return states;
     }
 
+    const UiComputedStyle* Widget::getComputedStyle() const
+    {
+        if ( _styleTransition != nullptr )
+            return &_styleTransition->_shown;
+        return _computedStyle.get();
+    }
+
     float32 Widget::computeEffectiveOpacity() const
     {
-        if ( _computedStyle != nullptr && _computedStyle->has( UiStyleField::Opacity ) )
-            return _opacity * _computedStyle->_value._opacity;
+        const UiComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle != nullptr && pStyle->has( UiStyleField::Opacity ) )
+            return _opacity * pStyle->_value._opacity;
         return _opacity;
     }
 
@@ -305,6 +315,7 @@ namespace sw
                 child->detachFromTree();
         }
         onDetachedFromTree();
+        _styleTransition.reset(); // 트리의 전환 목록은 다음 진행에서 이 번호를 버린다
         _pTree->unregisterWidget( *this );
         _pTree = nullptr;
     }

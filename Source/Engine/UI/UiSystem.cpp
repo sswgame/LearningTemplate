@@ -17,6 +17,7 @@
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
+#include "Engine/UI/Animation/UiStyleTransition.h"
 #include "Engine/UI/Binding/UiBindingSet.h"
 #include "Engine/UI/Binding/UiViewModel.h"
 #include "Engine/UI/Core/UiEventRouter.h"
@@ -262,7 +263,10 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.Ui.Animate" );
             for ( size_t index = 0; index < _listScreen.size(); ++index )
+            {
                 _listScreen[index]->_animationPlayer.tick( deltaSeconds );
+                (void)UiStyleTransition::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환 — 새로 바뀐 것은 아래 스타일 단계가 시작한다
+            }
             applyPendingCloses(); // 닫기 애니메이션이 끝난 화면
         }
         // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).

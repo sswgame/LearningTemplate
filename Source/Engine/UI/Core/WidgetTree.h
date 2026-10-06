@@ -84,6 +84,7 @@ namespace sw
         friend class UiPaintPass;
         friend class UiScreen;
         friend class UiStylePass;
+        friend class UiStyleTransition;
 
         /** @brief 번호 · 이름을 올립니다(`Widget::attachToTree` 가 부른다). */
         void registerWidget( Widget& widget );
@@ -103,8 +104,9 @@ namespace sw
         vector<WidgetId>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
         vector<WidgetId>                                               _listPaintDirty;
         vector<WidgetId>                                               _listStyleDirty;
-        UiFocusManager*                                                _pFocusManager; ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
-        UiScreen*                                                      _pScreen;       ///< 소유한 화면(UiScreen 생성자가 적는다)
+        vector<WidgetId>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UiStyleTransition` 이 진행한다)
+        UiFocusManager*                                                _pFocusManager;       ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
+        UiScreen*                                                      _pScreen;             ///< 소유한 화면(UiScreen 생성자가 적는다)
         WidgetId                                                       _focusedWidget;
         float32                                                        _layoutUiScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UiLayoutPass)
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 걷기의 글자 배율

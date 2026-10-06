@@ -1,5 +1,9 @@
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -26,14 +30,22 @@ namespace
     {
         static constexpr float32 kFrameSeconds = 1.0f / 60.0f;
 
-        static void runFrame( sw::InputManager& input, sw::UiSystem& ui )
+        static void runFrame( sw::InputManager& input, sw::UiSystem& ui, float32 deltaSeconds = kFrameSeconds )
         {
-            input.beginFrame( kFrameSeconds );
-            ui.processInput( kFrameSeconds );
-            ui.update( kFrameSeconds, sw::UiViewport{
-                                          sw::float2{ 1920.0f, 1080.0f }
+            input.beginFrame( deltaSeconds );
+            ui.processInput( deltaSeconds );
+            ui.update( deltaSeconds, sw::UiViewport{
+                                         sw::float2{ 1920.0f, 1080.0f }
             } );
             input.endFrame();
+        }
+
+        /** @brief 두 색이 성분마다 허용 오차 안이면 true 입니다. */
+        static bool isNear( const sw::float4& lhs, const sw::float4& rhs )
+        {
+            const float32 kTolerance = 0.001f;
+            return sw::MathUtil::abs( lhs._x - rhs._x ) < kTolerance && sw::MathUtil::abs( lhs._y - rhs._y ) < kTolerance &&
+                   sw::MathUtil::abs( lhs._z - rhs._z ) < kTolerance && sw::MathUtil::abs( lhs._w - rhs._w ) < kTolerance;
         }
 
         /** @brief 계산된 스타일이 그 칸을 정했으면 그 값, 아니면 (-1, -1, -1, -1) 입니다. */
@@ -62,6 +74,43 @@ namespace
     const sw::float4 UiStyleTestUtil::kGreen{ 0.0f, 1.0f, 0.0f, 1.0f };
     const sw::float4 UiStyleTestUtil::kBlue{ 0.0f, 0.0f, 1.0f, 1.0f };
     const sw::float4 UiStyleTestUtil::kYellow{ 1.0f, 1.0f, 0.0f, 1.0f };
+
+    /** @brief 전역 bool 변수 하나를 이름으로 바꾸고 스코프 끝에 되돌립니다(시험 DLL 은 Engine 의 gv_* 를 extern 으로 못 읽는다). */
+    class ScopedBoolVariable
+    {
+    public:
+        ScopedBoolVariable( const utf8* pName, bool bValue )
+            : _pInfo{ sw::engine::getGlobalVariableManager().findVariable( pName ) }
+            , _bPrevious{ false }
+        {
+            SW_EXPECT_TRUE( _pInfo != nullptr );
+            if ( _pInfo == nullptr )
+                return;
+            _bPrevious = _pInfo->getValueAsBool();
+            (void)_pInfo->setValueAsBool( bValue );
+        }
+        ~ScopedBoolVariable()
+        {
+            if ( _pInfo != nullptr )
+                (void)_pInfo->setValueAsBool( _bPrevious );
+        }
+        ScopedBoolVariable( const ScopedBoolVariable& )            = delete;
+        ScopedBoolVariable& operator=( const ScopedBoolVariable& ) = delete;
+
+    private:
+        sw::GlobalVariableInfo* _pInfo;
+        bool                    _bPrevious;
+    };
+
+    /** @brief 전환 시험의 시트 — 배경색만 1 초 Linear 로 옮기고, 글 색은 적지 않아 바로 바뀐다. */
+    constexpr utf8 kTransitionSheet[] = "<UiStyleSheet _schemaVersion=\"1\">\n"
+                                        "\t<Rule _selector=\"BorderPanel\" _transition=\"_backgroundColor 1 Linear\" />\n"
+                                        "\t<Rule _selector=\".a\" _backgroundColor=\"1,0,0,1\" _textColor=\"0,1,0,1\" />\n"
+                                        "\t<Rule _selector=\".b\" _backgroundColor=\"0,0,1,1\" _textColor=\"1,1,0,1\" />\n"
+                                        "</UiStyleSheet>\n";
+    constexpr utf8 kTransitionBody[]  = "\t<CanvasPanel>\n"
+                                        "\t\t<BorderPanel _name=\"Box\" _styleClass=\"a\" />\n"
+                                        "\t</CanvasPanel>\n";
 
     /** @brief 입력 관리자와 UI 시스템 — 시트 하나를 건 문서를 연다. */
     struct UiStyleFixture
@@ -275,12 +324,16 @@ SW_TEST_CASE( UiStyleTest, UnknownPropertyOrSelectorSyntaxIsLoadError )
         const utf8* _pExpected;
     };
     const BadCase kArrCase[] = {
-        {          "<Rule _selector=\"TextWidget\" _textColour=\"1,0,0,1\" />",    "unknown style property '_textColour'"},
-        {               "<Rule _selector=\"TextWidget\" _textColor=\"red\" />",                          "cannot be read"},
-        {"<Rule _selector=\"BoxPanel > TextWidget\" _textColor=\"1,0,0,1\" />",                      "unsupported syntax"},
-        {       "<Rule _selector=\"ButtonWidget:hovered\" _opacity=\"0.5\" />",                "unknown state ':hovered'"},
-        {   "<Rule _selector=\"TextWidget\"><_font _wieght=\"Bold\" /></Rule>", "<_font> has unknown attribute '_wieght'"},
-        {                                    "<Rule _textColor=\"1,0,0,1\" />",                    "Rule needs _selector"},
+        {              "<Rule _selector=\"TextWidget\" _textColour=\"1,0,0,1\" />",       "unknown style property '_textColour'"},
+        {                   "<Rule _selector=\"TextWidget\" _textColor=\"red\" />",                             "cannot be read"},
+        {    "<Rule _selector=\"BoxPanel > TextWidget\" _textColor=\"1,0,0,1\" />",                         "unsupported syntax"},
+        {           "<Rule _selector=\"ButtonWidget:hovered\" _opacity=\"0.5\" />",                   "unknown state ':hovered'"},
+        {       "<Rule _selector=\"TextWidget\"><_font _wieght=\"Bold\" /></Rule>",    "<_font> has unknown attribute '_wieght'"},
+        {                                        "<Rule _textColor=\"1,0,0,1\" />",                       "Rule needs _selector"},
+        {"<Rule _selector=\"TextWidget\" _transition=\"_backgroundColour 0.2\" />", "unknown style property '_backgroundColour'"},
+        {            "<Rule _selector=\"TextWidget\" _transition=\"_font 0.2\" />",                          "cannot transition"},
+        {        "<Rule _selector=\"TextWidget\" _transition=\"_opacity fast\" />",                        "unreadable duration"},
+        {  "<Rule _selector=\"TextWidget\" _transition=\"_opacity 0.2 Bouncy\" />",                     "unknown curve 'Bouncy'"},
     };
     for ( const BadCase& badCase : kArrCase )
     {
@@ -381,4 +434,77 @@ SW_TEST_CASE( UiStyleTest, ThemeSwitchRestylesEverything )
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "A" ) ) == Util::kBlue );
     SW_EXPECT_TRUE( Util::findTextColor( pScreen->getTree().findWidgetByName( "B" ) ) == Util::kBlue );
     SW_EXPECT_FALSE( fixture._ui.setTheme( "missing" ) );
+}
+
+/** @brief [UiStyleTest] 전환을 적은 칸은 계산된 스타일이 바뀔 때 옛 값에서 새 값으로 옮겨 가고(반에서 반), 끝나면 나눠 쓰는 계산된 스타일로 돌아간다 */
+SW_TEST_CASE( UiStyleTest, TransitionInterpolatesChangedProperty )
+{
+    using Util = UiStyleTestUtil;
+    UiStyleFixture fixture;
+    sw::UiScreen*  pScreen = fixture.open( kTransitionSheet, kTransitionBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kRed ); // 처음 맞춘 스타일은 전환 없이
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f ); // 스타일이 바뀐 프레임 — 아직 옛 값
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kRed );
+    Util::runFrame( fixture._input, fixture._ui, 0.5f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.6f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
+}
+
+/** @brief [UiStyleTest] 전환 중에 다시 바뀌면 지금 보이는 값에서 새 목표로(처음 값으로 튀지 않는다) */
+SW_TEST_CASE( UiStyleTest, RetargetFromCurrentValue )
+{
+    using Util = UiStyleTestUtil;
+    UiStyleFixture fixture;
+    sw::UiScreen*  pScreen = fixture.open( kTransitionSheet, kTransitionBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    Util::runFrame( fixture._input, fixture._ui, 0.5f ); // (0.5, 0, 0.5)
+    pBox->setStyleClass( "a" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.5f, 0.0f, 0.5f, 1.0f }, Util::findBackground( pBox ) ) );
+    Util::runFrame( fixture._input, fixture._ui, 0.5f ); // 보라 → 빨강의 반
+    SW_EXPECT_TRUE( Util::isNear( sw::float4{ 0.75f, 0.0f, 0.25f, 1.0f }, Util::findBackground( pBox ) ) );
+}
+
+/** @brief [UiStyleTest] 전환에 적지 않은 칸(글 색)은 같은 변화에서도 바로 바뀐다 */
+SW_TEST_CASE( UiStyleTest, UntransitionedPropertyJumps )
+{
+    using Util = UiStyleTestUtil;
+    UiStyleFixture fixture;
+    sw::UiScreen*  pScreen = fixture.open( kTransitionSheet, kTransitionBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+    SW_EXPECT_TRUE( Util::findTextColor( pBox ) == Util::kGreen );
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::findTextColor( pBox ) == Util::kYellow );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kRed ); // 배경은 이제 막 옮겨 가기 시작
+}
+
+/** @brief [UiStyleTest] 움직임 줄이기(gv_uiReduceMotion)면 전환 없이 바로 새 값 */
+SW_TEST_CASE( UiStyleTest, ReduceMotionDisablesTransitions )
+{
+    using Util = UiStyleTestUtil;
+    const ScopedBoolVariable reduceMotion( "gv_uiReduceMotion", true );
+    UiStyleFixture           fixture;
+    sw::UiScreen*            pScreen = fixture.open( kTransitionSheet, kTransitionBody );
+    SW_ASSERT_NOT_NULL( pScreen );
+    sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
+    SW_ASSERT_NOT_NULL( pBox );
+
+    pBox->setStyleClass( "b" );
+    Util::runFrame( fixture._input, fixture._ui, 0.0f );
+    SW_EXPECT_TRUE( Util::findBackground( pBox ) == Util::kBlue );
 }
