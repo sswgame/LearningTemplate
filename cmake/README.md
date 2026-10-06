@@ -70,3 +70,19 @@ cmake/
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
 | `sw_registerLintTests` | 린트 CTest 일괄 등록. **목록은 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 를 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |
+
+## 고친 뒤 구성이 같은지
+
+CMake 리팩터는 컴파일러가 잡지 않는다 — 정의 하나 · 링크 순서 · 출력 폴더가 달라져도 configure 는 통과한다. 고치기 전과 뒤의 구성 결과를 견준다
+(`Scripts/dev/ConfigureSnapshot.py` — File API 답 · 생성 파일 해시 · ctest 목록):
+
+```powershell
+py -3 Scripts/dev/ConfigureSnapshot.py prepare --preset Ninja-Debug             # 질의를 둔다(한 번)
+cmake --preset Ninja-Debug ; py -3 Scripts/dev/ConfigureSnapshot.py take --preset Ninja-Debug --out before.json
+# ... CMake 를 고친다 ...
+cmake --preset Ninja-Debug ; py -3 Scripts/dev/ConfigureSnapshot.py take --preset Ninja-Debug --out after.json
+py -3 Scripts/dev/ConfigureSnapshot.py diff before.json after.json              # 다르면 1 · 다른 줄만 찍는다
+```
+
+Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프리셋마다 뜬다. 구성 시간은 `cmake --preset … --profiling-format=google-trace --profiling-output=t.json`
+뒤 `ConfigureSnapshot.py profile t.json --top 25`.

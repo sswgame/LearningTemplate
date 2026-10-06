@@ -121,6 +121,7 @@ Scripts/
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
   │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
   │     ├── CiFailureReport.py        # CI 실패(시험 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
+  │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
   │     ├── GenerateStressScene.py    # 로드 경로를 재기 위한 큰 씬
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
