@@ -17,6 +17,7 @@ namespace sw
         : IAssetCache{}
         , _mapPathToDocument{}
         , _mapPathToMemoryText{}
+        , _reloadedHandler{}
         , _parseCount{ 0 }
     {
     }
@@ -59,7 +60,24 @@ namespace sw
     void UiDocumentCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        _mapPathToDocument.erase( FileUtil::normalizePath( relativePath ) );
+        const string key = FileUtil::normalizePath( relativePath );
+        string       text;
+        if ( readDocumentText( key, relativePath, text ) == false )
+        {
+            SW_LOG_ERROR( "[Ui] UI document reload failed - not found, keeping the old one: %#", relativePath );
+            return;
+        }
+        ++_parseCount;
+        shared_ptr<UiDocumentAsset> document = make_shared<UiDocumentAsset>();
+        string                      error;
+        if ( UiDocumentLoader::parse( text, relativePath, *document, error ) == false )
+        {
+            SW_LOG_ERROR( "[Ui] UI document reload failed, keeping the old one: %#", error.c_str() );
+            return;
+        }
+        _mapPathToDocument[key] = document;
+        if ( _reloadedHandler.isBound() )
+            _reloadedHandler( key );
     }
 
     void UiDocumentCache::clear()

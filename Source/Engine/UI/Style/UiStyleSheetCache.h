@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/IAssetCache.h"
+#include "Engine/UI/Document/UiDocumentCache.h"
 
 namespace sw
 {
@@ -30,17 +31,24 @@ namespace sw
         shared_ptr<const UiStyleSheetAsset> findOrLoad( string_view path, string& outError );
         /** @brief 파일 대신 읽을 시트 글을 경로에 겁니다(시험). 이미 읽어 둔 그 경로는 버립니다. */
         void registerMemorySheet( string_view path, string_view text );
+        /** @brief 다시 읽어 바꾼 시트를 알릴 함수를 겁니다(`UiSystem` 이 건다 — 그 시트를 쓰는 화면을 다시 맞춘다). */
+        void setReloadedHandler( const UiAssetReloadedDelegate& handler ) { _reloadedHandler = handler; }
 
         /** @brief 등록부의 종류 이름("UiStyleSheet")입니다. */
         const utf8* getAssetKindName() const override { return "UiStyleSheet"; }
         bool        isCached( string_view relativePath ) const override;
-        /** @brief 읽어 둔 시트를 버립니다(다음 요청이 다시 읽는다). 디바이스는 쓰지 않습니다. */
+        /** @brief 시트를 다시 읽습니다(핫 리로드). 되면 바꾸고 알리고, 실패하면 옛 시트를 그대로 두고 오류를 남깁니다. 디바이스는 쓰지 않습니다. */
         void   reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t getCachedCount() const override { return _mapPathToSheet.size(); }
         void   clear() override;
 
     private:
+        /** @brief 시트 글을 찾습니다(메모리 → 리소스 → 절대 경로). */
+        [[nodiscard]] bool readSheetText( const string& key, string_view path, string& outText ) const;
+
+    private:
         unordered_map<string, shared_ptr<const UiStyleSheetAsset>> _mapPathToSheet;
         unordered_map<string, string>                              _mapPathToMemoryText;
+        UiAssetReloadedDelegate                                    _reloadedHandler;
     };
 } // namespace sw

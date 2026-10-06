@@ -23,6 +23,7 @@
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Style/UiStylePass.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
@@ -130,6 +131,7 @@ namespace sw
         , _styleSheetCache{}
         , _themeCatalog{}
         , _themeName{}
+        , _listReopenDocument{}
         , _focus{}
         , _pointer{}
         , _consumption{}
@@ -171,8 +173,10 @@ namespace sw
 
     bool UiSystem::initialize( InputManager& inputManager, FontSystem* pFontSystem, string_view uiInputMapPath )
     {
-        _pInput        = &inputManager;
-        _pFontSystem   = pFontSystem;
+        _pInput      = &inputManager;
+        _pFontSystem = pFontSystem;
+        _documentCache.setReloadedHandler( SW_DELEGATE_METHOD( UiAssetReloadedDelegate, &UiSystem::onDocumentReloaded, this ) );
+        _styleSheetCache.setReloadedHandler( SW_DELEGATE_METHOD( UiAssetReloadedDelegate, &UiSystem::onStyleSheetReloaded, this ) );
         _textLayout    = pFontSystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSystem ) : nullptr;
         _bPointerKnown = SW_FALSE;
         _consumption.clear();
@@ -207,6 +211,9 @@ namespace sw
         while ( _listScreen.empty() == false )
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
         _bPendingClose = SW_FALSE;
+        _listReopenDocument.clear();
+        _documentCache.setReloadedHandler( {} );
+        _styleSheetCache.setReloadedHandler( {} );
         refreshActiveScreen();
         if ( _pInput != nullptr )
         {
@@ -242,6 +249,7 @@ namespace sw
         (void)deltaSeconds;
         _viewport = viewport;
         syncDemoScreen();
+        reopenClosedScreens();
         applyPendingCloses();
         // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).
         {
@@ -353,6 +361,125 @@ namespace sw
         screen->_listBinding    = std::move( listBinding );
         screen->_listStyleSheet = std::move( listStyleSheet );
         return pushScreen( std::move( screen ) );
+    }
+
+    void UiSystem::onDocumentReloaded( string_view documentPath )
+    {
+        uint32 rebuiltCount = 0;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            if ( screen->_documentPath.empty() || isDocumentUsing( screen->_documentPath, documentPath ) == false )
+                continue;
+            if ( rebuildScreenFromDocument( *screen ) )
+                ++rebuiltCount;
+        }
+        if ( rebuiltCount > 0 )
+            SW_LOG_INFO( "[Ui] Reloaded %# screen(s) for %#", rebuiltCount, documentPath );
+    }
+
+    void UiSystem::onStyleSheetReloaded( string_view sheetPath )
+    {
+        // 묶음은 테마 시트와 문서 시트를 다 든다 — 그 경로의 시트를 든 화면만 새 시트로 다시 건다.
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            if ( screen->_styleSet == nullptr )
+                continue;
+            bool bUses = false;
+            for ( const shared_ptr<const UiStyleSheetAsset>& sheet : screen->_styleSet->getSheets() )
+                bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
+            if ( bUses )
+                rebuildStyleSet( *screen );
+        }
+    }
+
+    bool UiSystem::isDocumentUsing( const string& documentPath, string_view usedPath )
+    {
+        vector<string> listDocument{ documentPath };
+        for ( size_t index = 0; index < listDocument.size(); ++index )
+        {
+            if ( listDocument[index] == usedPath )
+                return true;
+            string                                  error;
+            const shared_ptr<const UiDocumentAsset> document = _documentCache.findOrLoad( listDocument[index], error );
+            if ( document == nullptr )
+                continue;
+            for ( const string& fragment : document->_listFragment )
+            {
+                if ( std::find( listDocument.begin(), listDocument.end(), fragment ) == listDocument.end() )
+                    listDocument.push_back( fragment );
+            }
+        }
+        return false;
+    }
+
+    bool UiSystem::rebuildScreenFromDocument( UiScreen& screen )
+    {
+        UiScreenDesc          desc{};
+        vector<UiBindingDesc> listBinding{};
+        vector<string>        listStyleSheet{};
+        unique_ptr<Widget>    root = instantiateDocument( screen._documentPath, desc, listBinding, listStyleSheet );
+        if ( root == nullptr )
+            return false; // 옛 트리를 둔다 — 오류는 instantiateDocument 가 남겼다
+
+        // 이름으로 이어 갈 것 — 포커스 위젯 · 덮였을 때의 포커스 · 스크롤 오프셋.
+        WidgetTree&           tree          = screen.getTree();
+        const bool            bHadFocus     = _focus.getFocusedTree() == &tree;
+        const Widget*         pFocused      = bHadFocus ? tree.findWidgetById( _focus.getFocusedWidget() ) : nullptr;
+        const Widget*         pLastFocused  = tree.findWidgetById( screen._lastFocused );
+        const hashed_string   focusedName   = pFocused != nullptr ? pFocused->getName() : hashed_string{};
+        const hashed_string   lastFocusName = pLastFocused != nullptr ? pLastFocused->getName() : hashed_string{};
+        vector<Widget*>       listOldWidget;
+        vector<hashed_string> listScrollName;
+        vector<float2>        listScrollOffset;
+        tree.collectWidgetsInDocumentOrder( listOldWidget );
+        for ( const Widget* pWidget : listOldWidget )
+        {
+            const ScrollPanel* pScroll = castTo<const ScrollPanel>( pWidget );
+            if ( pScroll == nullptr || pWidget->getName().empty() )
+                continue;
+            listScrollName.push_back( pWidget->getName() );
+            listScrollOffset.push_back( pScroll->getScrollOffset() );
+        }
+
+        tree.setRoot( std::move( root ) );
+        screen._listBinding    = std::move( listBinding );
+        screen._listStyleSheet = std::move( listStyleSheet );
+        screen._lastFocused    = kInvalidWidgetId;
+        rebuildStyleSet( screen );
+        // 스크롤 오프셋은 내용 크기 안으로 묶이므로 새 트리를 지금 한 번 맞추고 재 둔 뒤에 돌려준다.
+        if ( screen._styleSet != nullptr )
+            (void)UiStylePass::update( tree, *screen._styleSet, _inputMode == UiInputMode::Navigation );
+        (void)UiLayoutPass::update( tree, makeLayoutContext() );
+
+        for ( size_t index = 0; index < listScrollName.size(); ++index )
+        {
+            ScrollPanel* pScroll = tree.findWidget<ScrollPanel>( listScrollName[index] );
+            if ( pScroll != nullptr )
+                pScroll->setScrollOffset( listScrollOffset[index] );
+        }
+        const Widget* pNewLast = lastFocusName.empty() ? nullptr : tree.findWidgetByName( lastFocusName );
+        if ( pNewLast != nullptr )
+            screen._lastFocused = pNewLast->getId();
+        if ( bHadFocus )
+        {
+            const Widget* pNewFocus = focusedName.empty() ? nullptr : tree.findWidgetByName( focusedName );
+            if ( pNewFocus == nullptr || _focus.setFocus( tree, pNewFocus->getId() ) == false )
+                restoreFocus( screen );
+        }
+        return true;
+    }
+
+    void UiSystem::reopenClosedScreens()
+    {
+        if ( _listReopenDocument.empty() )
+            return;
+        vector<string> listDocument;
+        listDocument.swap( _listReopenDocument );
+        for ( const string& documentPath : listDocument )
+        {
+            if ( openScreen( documentPath ) == kInvalidUiScreenHandle )
+                SW_LOG_ERROR( "[Ui] Screen document could not be reopened after module reload: %#", documentPath );
+        }
     }
 
     void UiSystem::setThemeCatalog( const UiThemeCatalog& catalog )
@@ -472,7 +599,12 @@ namespace sw
         {
             if ( UiSystemInternal::usesCodeWithin( *_listScreen[index - 1], pBegin, pEnd ) == false )
                 continue;
-            SW_LOG_WARNING( "[Ui] Screen %# closed for module reload - it holds widget code from the unloading module", _listScreen[index - 1]->_handle );
+            const UiScreen& screen = *_listScreen[index - 1];
+            SW_LOG_WARNING( "[Ui] Screen %# closed for module reload - it holds widget code from the unloading module", screen._handle );
+            // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈 것이면 다시 열 길이 없다.
+            const bool bScreenClassInModule = IModuleUnloadListener::isAddressWithin( IModuleUnloadListener::findVtableAddress( &screen ), pBegin, pEnd );
+            if ( screen._documentPath.empty() == false && bScreenClassInModule == false )
+                _listReopenDocument.push_back( screen._documentPath );
             destroyScreenAt( index - 1 );
             ++closedCount;
         }

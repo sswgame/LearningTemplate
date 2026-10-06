@@ -3,16 +3,20 @@
 #include "Engine/UI/Style/UiStyleSheetCache.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
 
 namespace sw
 {
+    SW_LOG_CALLER( "UiStyleSheetCache" );
+
     UiStyleSheetCache::UiStyleSheetCache()
         : IAssetCache{}
         , _mapPathToSheet{}
         , _mapPathToMemoryText{}
+        , _reloadedHandler{}
     {
     }
 
@@ -25,11 +29,8 @@ namespace sw
         if ( iter != _mapPathToSheet.end() )
             return iter->second;
 
-        string     text;
-        const auto memory = _mapPathToMemoryText.find( key );
-        if ( memory != _mapPathToMemoryText.end() )
-            text = memory->second;
-        else if ( ResourceUtil::readTextResource( path, text ) == false && ( FileUtil::isRegularFile( path ) == false || FileUtil::readTextFile( path, text ) == false ) )
+        string text;
+        if ( readSheetText( key, path, text ) == false )
         {
             outError = string( path ) + ": UI style sheet not found";
             return {};
@@ -56,7 +57,36 @@ namespace sw
     void UiStyleSheetCache::reload( string_view relativePath, IRHIDevice* pDevice )
     {
         (void)pDevice;
-        _mapPathToSheet.erase( FileUtil::normalizePath( relativePath ) );
+        const string key = FileUtil::normalizePath( relativePath );
+        string       text;
+        if ( readSheetText( key, relativePath, text ) == false )
+        {
+            SW_LOG_ERROR( "[Ui] UI style sheet reload failed - not found, keeping the old one: %#", relativePath );
+            return;
+        }
+        shared_ptr<UiStyleSheetAsset> sheet = make_shared<UiStyleSheetAsset>();
+        string                        error;
+        if ( UiStyleSheetLoader::parse( text, relativePath, *sheet, error ) == false )
+        {
+            SW_LOG_ERROR( "[Ui] UI style sheet reload failed, keeping the old one: %#", error.c_str() );
+            return;
+        }
+        _mapPathToSheet[key] = sheet;
+        if ( _reloadedHandler.isBound() )
+            _reloadedHandler( key );
+    }
+
+    bool UiStyleSheetCache::readSheetText( const string& key, string_view path, string& outText ) const
+    {
+        const auto memory = _mapPathToMemoryText.find( key );
+        if ( memory != _mapPathToMemoryText.end() )
+        {
+            outText = memory->second;
+            return true;
+        }
+        if ( ResourceUtil::readTextResource( path, outText ) )
+            return true;
+        return FileUtil::isRegularFile( path ) && FileUtil::readTextFile( path, outText );
     }
 
     void UiStyleSheetCache::clear()

@@ -76,6 +76,7 @@
 - `_bPausesGame` 화면이 하나라도 있으면 `GameTimeScale::addPauseRequest` 하나를 걸어 둡니다(`gv_timeScale` 은 그대로).
 - 게임이 마우스를 잠가 쥔 동안(1 인칭)은 포인터 사건을 만들지 않습니다.
 - 핫 리로드: 내려가는 모듈에 vtable 이 있는 화면 · 위젯이 든 화면은 그 자리에서 닫습니다(경고 "closed for module reload"). 위젯 타입의 정적 상태는 모듈에 두지 않습니다.
+  문서로 연 기본 화면(화면 클래스가 그 모듈 것이 아닌 것)은 다음 `update` 가 같은 문서로 다시 엽니다(새 이미지의 위젯 타입으로).
 
 ## 행동 입력 · 먹은 입력 (`Input/UiInputConsumption` · `UiSystem::processInput`)
 
@@ -289,3 +290,12 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **테마**(`UiThemeCatalog` — `engine/ui/uithemes.xml`, 게임 프리셋 `_uiThemes` 가 덮어쓴다): 이름 → 시트들. 모든 화면에 테마 시트 → 문서(와 조각) 시트 순서로 겁니다.
   `UiSystem::setTheme( 이름 )` 은 모든 화면을 다시 맞춥니다. 엔진 기본 테마 `default` = `engine/ui/styles/default.uistyle.xml`.
 - 문서는 `<_listStyleSheet>` 로 자기 시트를 겁니다(조각 문서의 시트도 모인다). 시트는 `UiStyleSheetCache`(종류 `UiStyleSheet`)가 경로로 듭니다.
+
+## 핫 리로드 (문서 · 스타일)
+
+- 에디터의 파일 감시(`AssetHotReload` — `*.ui.xml` · `*.uistyle.xml` 은 "그 경로를 든 캐시" 길)가 캐시의 `reload` 를 부릅니다. 캐시는 **다시 읽어 파싱이 되면** 바꾸고
+  `UiSystem` 에 알리고, 실패하면 **옛 것을 그대로 두고** 오류만 남깁니다(실패가 화면을 지우지 않는다 — 현지화 `reloadChangedFile` 과 같은 규칙).
+- 문서가 바뀌면 그 문서(또는 조각 사슬로 그것을 쓰는 문서)로 연 화면마다 트리를 새로 짓고 바인딩 · 시트를 다시 겁니다. 포커스 위젯 · 덮였을 때의 포커스 ·
+  스크롤 패널 오프셋은 **이름으로** 이어 갑니다(새 트리를 바로 한 번 맞추고 재 둔 뒤 — 오프셋은 내용 크기 안으로 묶인다). 화면 서술(층 · 모달)은 그대로입니다.
+- 스타일 시트가 바뀌면 그 시트를 쓰는 화면의 묶음만 다시 걸고 위젯을 다시 맞춥니다(트리 · 위젯 번호 그대로).
+- Shipping 은 파일 감시가 없을 뿐 길은 같습니다(캐시의 다시 읽기 함수 하나).

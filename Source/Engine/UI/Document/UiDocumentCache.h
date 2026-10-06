@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Resource/IAssetCache.h"
@@ -14,6 +15,9 @@
 namespace sw
 {
     struct UiDocumentAsset;
+
+    /** @brief UI 에셋(문서 · 스타일 시트)을 다시 읽어 바꿨다는 알림입니다(인자는 정규화한 경로). `UiSystem` 이 받아 화면을 다시 짓거나 맞춘다. */
+    using UiAssetReloadedDelegate = Delegate<void( string_view )>;
 
     /**
      * @class UiDocumentCache
@@ -37,11 +41,16 @@ namespace sw
         void registerMemoryDocument( string_view path, string_view text );
         /** @brief 문서 글을 읽어 파싱한 횟수입니다(캐시가 파일을 한 번만 읽는지 시험이 본다). */
         uint32 getParseCount() const { return _parseCount; }
+        /** @brief 다시 읽어 바꾼 문서를 알릴 함수를 겁니다(`UiSystem` 이 건다 — 그 문서로 연 화면을 다시 짓는다). */
+        void setReloadedHandler( const UiAssetReloadedDelegate& handler ) { _reloadedHandler = handler; }
 
         /** @brief 등록부의 종류 이름("UiDocument")입니다. */
         const utf8* getAssetKindName() const override { return "UiDocument"; }
         bool        isCached( string_view relativePath ) const override;
-        /** @brief 읽어 둔 문서를 버리고 다시 읽습니다. 디바이스는 쓰지 않습니다. */
+        /**
+         * @brief 문서를 다시 읽어 파싱합니다(에디터 핫 리로드). 되면 바꾸고 알림을 부르고, 읽기 · 파싱이 실패하면 **옛 문서를 그대로 두고** 오류를 남깁니다
+         *        (실패가 화면을 지우지 않는다 — 현지화 `reloadChangedFile` 과 같은 규칙). 디바이스는 쓰지 않습니다.
+         */
         void   reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t getCachedCount() const override { return _mapPathToDocument.size(); }
         /** @brief 읽어 둔 문서와 메모리 문서를 모두 비웁니다. */
@@ -54,6 +63,7 @@ namespace sw
     private:
         unordered_map<string, shared_ptr<const UiDocumentAsset>> _mapPathToDocument;   ///< 정규화한 경로 → 파싱한 문서
         unordered_map<string, string>                            _mapPathToMemoryText; ///< 정규화한 경로 → 메모리 문서 글
+        UiAssetReloadedDelegate                                  _reloadedHandler;
         uint32                                                   _parseCount;
     };
 } // namespace sw

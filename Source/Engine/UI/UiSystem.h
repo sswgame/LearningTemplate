@@ -158,6 +158,16 @@ namespace sw
         /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다(`EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 — 렌더러가 장면 앞에서 그린다). */
         void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
+        // --- 핫 리로드 ---------------------------------------------------------------
+        /**
+         * @brief 문서 @p documentPath 가 바뀌었다 — 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 짓습니다(캐시의 다시 읽기 알림이 부른다).
+         * @details 포커스 위젯 · 스크롤 패널의 스크롤 오프셋을 **이름으로** 기억했다가 새 트리의 같은 이름에 돌려줍니다. 짓기가 실패하면 옛 트리를 그대로 둡니다.
+         *          화면 서술(층 · 모달 …)은 바꾸지 않습니다(스택 순서가 흔들리지 않게 — 다음에 열 때 새 서술).
+         */
+        void onDocumentReloaded( string_view documentPath );
+        /** @brief 스타일 시트 @p sheetPath 가 바뀌었다 — 그 시트를 쓰는 화면의 스타일 묶음을 다시 걸고 위젯을 다시 맞춥니다(트리는 그대로). */
+        void onStyleSheetReloaded( string_view sheetPath );
+
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
         bool isGameInputBlocked() const;
@@ -223,6 +233,12 @@ namespace sw
         UiScreenHandle pushDocumentScreen( unique_ptr<UiScreen> screen, string_view documentPath, vector<UiBindingDesc> listBinding, vector<string> listStyleSheet );
         /** @brief 화면의 스타일 묶음을 지금 테마 시트 → 화면 시트로 다시 걸고 트리 전체를 다시 맞추게 합니다. */
         void rebuildStyleSet( UiScreen& screen );
+        /** @brief 화면 @p screen 의 트리를 그 문서로 새로 짓습니다(포커스 · 스크롤을 이름으로 이어 간다). 실패하면 옛 트리를 두고 false 입니다. */
+        bool rebuildScreenFromDocument( UiScreen& screen );
+        /** @brief 문서 @p documentPath 가 조각 사슬로 @p usedPath 를 쓰는가(자기 자신 포함)입니다. */
+        bool isDocumentUsing( const string& documentPath, string_view usedPath );
+        /** @brief 모듈 다시 로드로 닫은 문서 화면을 다시 엽니다(다음 `update` 앞). */
+        void reopenClosedScreens();
         /** @brief 시트들을 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 뺀다). */
         void appendStyleSheets( const vector<string>& listPath, vector<shared_ptr<const UiStyleSheetAsset>>& inoutListSheet );
         /** @brief 이번 프레임 원시 사건에서 마지막으로 쓴 장치로 입력 방식을 정합니다(커서는 자리가 실제로 바뀐 이동만). */
@@ -271,7 +287,8 @@ namespace sw
         UiDocumentCache              _documentCache;
         UiStyleSheetCache            _styleSheetCache;
         UiThemeCatalog               _themeCatalog;
-        hashed_string                _themeName; ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
+        hashed_string                _themeName;          ///< 지금 테마(없으면 빈 이름 — 문서 시트만)
+        vector<string>               _listReopenDocument; ///< 모듈 다시 로드로 닫은 문서 화면(다음 update 가 다시 연다)
         UiFocusManager               _focus;
         UiPointerState               _pointer;
         UiInputConsumption           _consumption;

@@ -11,7 +11,10 @@
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Document/UiDocumentWriter.h"
 #include "Engine/UI/Layout/SafeZonePanel.h"
+#include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Style/UiStyleSheetCache.h"
+#include "Engine/UI/Style/WidgetStyle.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
@@ -20,7 +23,8 @@
 
 #include "TestFramework/TestFramework.h"
 
-// UiDocumentTest — UI 문서(*.ui.xml): 위젯 원소 = 리플렉션 타입 · 속성 = PROPERTY · 조각(UserWidget)의 이름 범위 · 바인딩 식 떼기 · 명령 · 캐시 · 다시 쓰기.
+// UiDocumentTest — UI 문서(*.ui.xml): 위젯 원소 = 리플렉션 타입 · 속성 = PROPERTY · 조각(UserWidget)의 이름 범위 · 바인딩 식 떼기 · 명령 · 캐시 · 다시 쓰기 ·
+// 핫 리로드(문서 · 스타일 · 조각, 실패는 옛 트리 유지).
 // 문서는 메모리 문서(UiDocumentCache::registerMemoryDocument)로 넣고, 엔진 견본(engine/ui/pause.ui.xml)만 리소스에서 읽는다. 디바이스 없음(nogpu).
 
 namespace
@@ -95,6 +99,29 @@ namespace
 
         sw::hashed_string _lastCommand;
         uint32            _commandCount;
+    };
+
+    struct UiReloadTestUtil
+    {
+        /** @brief 버튼 셋(A · B · 넣으면 C)과 긴 스크롤 목록이 든 문서 글입니다. */
+        static sw::string makeReloadDocument( bool bWithC, const utf8* pBCommand )
+        {
+            sw::string text = "<UiDocument _schemaVersion=\"1\">\n"
+                              "\t<BoxPanel _orientation=\"Vertical\">\n"
+                              "\t\t<ButtonWidget _name=\"A\" />\n";
+            text += sw::string( "\t\t<ButtonWidget _name=\"B\" _command=\"" ) + pBCommand + "\" />\n";
+            if ( bWithC )
+                text += "\t\t<ButtonWidget _name=\"C\" />\n";
+            text += "\t\t<ScrollPanel _name=\"Scroll\">\n"
+                    "\t\t\t<_slot _heightOverride=\"100\" />\n"
+                    "\t\t\t<BorderPanel>\n"
+                    "\t\t\t\t<_slot _heightOverride=\"1000\" />\n"
+                    "\t\t\t</BorderPanel>\n"
+                    "\t\t</ScrollPanel>\n"
+                    "\t</BoxPanel>\n"
+                    "</UiDocument>\n";
+            return text;
+        }
     };
 } // namespace
 
@@ -379,4 +406,115 @@ SW_TEST_CASE( UiDocumentTest, RoundTripSaveMatchesSource )
     SW_ASSERT_TRUE( boundSource.parse( kBindingText ) );
     SW_EXPECT_STREQ( boundSource.saveToString().c_str(),
                      sw::UiDocumentWriter::write( pBound->getDesc(), {}, *pBound->getTree().getRoot(), pBound->getBindings() ).c_str() );
+}
+
+/** @brief [UiDocumentTest] 문서 파일이 바뀌어 다시 읽으면 화면을 새로 짓고 포커스 · 스크롤을 이름으로 이어 준다 */
+SW_TEST_CASE( UiDocumentTest, ReloadRebuildsAndKeepsFocusByName )
+{
+    using Util = UiDocumentTestUtil;
+    UiDocumentFixture fixture;
+    const sw::string  path = test::makeTempPath( "reload.ui.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, UiReloadTestUtil::makeReloadDocument( false, "Old" ) ) );
+    const sw::UiScreenHandle handle  = fixture._ui.openScreen( path );
+    sw::UiScreen*            pScreen = fixture._ui.findScreen( handle );
+    SW_ASSERT_NOT_NULL( pScreen );
+    Util::runFrame( fixture._input, fixture._ui );
+    sw::ButtonWidget* pOldB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
+    SW_ASSERT_NOT_NULL( pOldB );
+    const sw::WidgetId oldId = pOldB->getId();
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), oldId ) );
+    sw::ScrollPanel* pScroll = pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" );
+    SW_ASSERT_NOT_NULL( pScroll );
+    pScroll->setScrollOffset( sw::float2{ 0.0f, 300.0f } );
+    SW_EXPECT_EQUAL( 300.0f, pScroll->getScrollOffset()._y );
+
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, UiReloadTestUtil::makeReloadDocument( true, "New" ) ) );
+    fixture._ui.getDocumentCache().reload( path, nullptr );
+    SW_ASSERT_TRUE( fixture._ui.findScreen( handle ) == pScreen ); // 같은 화면 · 새 트리
+    const sw::ButtonWidget* pNewB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
+    SW_ASSERT_NOT_NULL( pNewB );
+    SW_EXPECT_TRUE( pNewB->getId() != oldId );
+    SW_EXPECT_STREQ( "New", pNewB->getCommand().c_str() );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
+    SW_EXPECT_EQUAL( pNewB->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( 300.0f, pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" )->getScrollOffset()._y );
+    Util::runFrame( fixture._input, fixture._ui );
+}
+
+/** @brief [UiDocumentTest] 다시 읽은 문서가 깨졌으면 옛 트리를 그대로 둔다 — 실패가 화면을 지우지 않는다 */
+SW_TEST_CASE( UiDocumentTest, FailedReloadKeepsOldTree )
+{
+    UiDocumentFixture    fixture;
+    sw::UiDocumentCache& cache = fixture._ui.getDocumentCache();
+    cache.registerMemoryDocument( "test/fail.ui.xml", UiReloadTestUtil::makeReloadDocument( false, "Old" ) );
+    sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/fail.ui.xml" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    const sw::WidgetId oldId = pScreen->getTree().findWidgetByName( "B" )->getId();
+
+    cache.registerMemoryDocument( "test/fail.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<BoxPanel _bogus=\"1\" />\n</UiDocument>\n" );
+    {
+        test::ScopedLogCollector logs; // 다시 읽기 실패 오류는 기대한 것이다
+        cache.reload( "test/fail.ui.xml", nullptr );
+        SW_EXPECT_TRUE_MSG( logs.joined().find( "keeping the old one" ) != sw::string::npos, logs.joined().c_str() );
+    }
+    SW_EXPECT_EQUAL( oldId, pScreen->getTree().findWidgetByName( "B" )->getId() );
+}
+
+/** @brief [UiDocumentTest] 스타일 시트를 다시 읽으면 위젯만 다시 맞춘다 — 트리(위젯 번호)는 그대로 */
+SW_TEST_CASE( UiDocumentTest, StyleReloadRestylesOnly )
+{
+    using Util = UiDocumentTestUtil;
+    UiDocumentFixture fixture;
+    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
+                                                                                     "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"1,0,0,1\" />\n"
+                                                                                     "</UiStyleSheet>\n" );
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/styled.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                                                 "\t<_listStyleSheet><item>test/reload.uistyle.xml</item></_listStyleSheet>\n"
+                                                                                 "\t<BoxPanel>\n"
+                                                                                 "\t\t<ButtonWidget _name=\"Go\" />\n"
+                                                                                 "\t</BoxPanel>\n"
+                                                                                 "</UiDocument>\n" );
+    sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/styled.ui.xml" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    Util::runFrame( fixture._input, fixture._ui );
+    const sw::Widget* pGo = pScreen->getTree().findWidgetByName( "Go" );
+    SW_ASSERT_NOT_NULL( pGo );
+    const sw::WidgetId goId = pGo->getId();
+    SW_EXPECT_TRUE( pGo->getComputedStyle()->_value._backgroundColor == ( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+
+    fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
+                                                                                     "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"0,1,0,1\" />\n"
+                                                                                     "</UiStyleSheet>\n" );
+    fixture._ui.getStyleSheetCache().reload( "test/reload.uistyle.xml", nullptr );
+    Util::runFrame( fixture._input, fixture._ui );
+    const sw::Widget* pSame = pScreen->getTree().findWidgetByName( "Go" );
+    SW_ASSERT_NOT_NULL( pSame );
+    SW_EXPECT_EQUAL( goId, pSame->getId() );
+    SW_EXPECT_TRUE( pSame->getComputedStyle()->_value._backgroundColor == ( sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f } ) );
+}
+
+/** @brief [UiDocumentTest] 조각 문서가 바뀌면 그것을 끼운 문서로 연 화면도 새로 짓는다(안 쓰는 화면은 그대로) */
+SW_TEST_CASE( UiDocumentTest, UserWidgetChangeReloadsParents )
+{
+    UiDocumentFixture    fixture;
+    sw::UiDocumentCache& cache = fixture._ui.getDocumentCache();
+    cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"Old\" />\n</UiDocument>\n" );
+    cache.registerMemoryDocument( "test/parent.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                        "\t<BoxPanel>\n"
+                                                        "\t\t<UserWidget _name=\"Part\" _document=\"test/part.ui.xml\" />\n"
+                                                        "\t</BoxPanel>\n"
+                                                        "</UiDocument>\n" );
+    cache.registerMemoryDocument( "test/other.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Other\" />\n</UiDocument>\n" );
+    sw::UiScreen* pParent = fixture._ui.findScreen( fixture._ui.openScreen( "test/parent.ui.xml" ) );
+    sw::UiScreen* pOther  = fixture._ui.findScreen( fixture._ui.openScreen( "test/other.ui.xml" ) );
+    SW_ASSERT_NOT_NULL( pParent );
+    SW_ASSERT_NOT_NULL( pOther );
+    const sw::WidgetId otherId = pOther->getTree().findWidgetByName( "Other" )->getId();
+
+    cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"New\" />\n</UiDocument>\n" );
+    cache.reload( "test/part.ui.xml", nullptr );
+    const sw::TextWidget* pLabel = pParent->getTree().findWidget<sw::TextWidget>( "Part.Label" );
+    SW_ASSERT_NOT_NULL( pLabel );
+    SW_EXPECT_STREQ( "New", pLabel->getText().c_str() );
+    SW_EXPECT_EQUAL( otherId, pOther->getTree().findWidgetByName( "Other" )->getId() );
 }
