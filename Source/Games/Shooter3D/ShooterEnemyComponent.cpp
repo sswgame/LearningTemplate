@@ -22,10 +22,6 @@ namespace sw
     {
         struct ShooterEnemyComponentInternal
         {
-            /** @brief 플레이어가 이만큼 움직이면 목적지를 다시 건다(미터) — 프레임마다 경로를 새로 구하지 않는다. */
-            static constexpr float32 kRetargetDistance = 0.5f;
-            /** @brief 이 빠르기 아래면 서 있는 클립을 튼다(m/s). */
-            static constexpr float32 kWalkSpeed = 0.3f;
         };
     } // namespace
 } // namespace sw
@@ -46,6 +42,8 @@ namespace sw
         , _corpseTime{ 3.0f }
         , _runSpeed{ 3.2f }
         , _turnRate{ 6.0f }
+        , _retargetDistance{ 0.5f }
+        , _walkClipSpeed{ 0.3f }
         , _position{ 0.0f, 0.0f, 0.0f }
         , _lastTarget{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
@@ -137,7 +135,6 @@ namespace sw
 
     void ShooterEnemyComponent::onTick( float32 deltaTime )
     {
-        using Internal = ShooterEnemyComponentInternal;
         Component::onTick( deltaTime );
         if ( _bLaunched == SW_FALSE || deltaTime <= 0.0f )
             return;
@@ -185,7 +182,7 @@ namespace sw
                 if ( pAgent != nullptr )
                 {
                     const float3 retarget = target - _lastTarget;
-                    const bool   bMoved   = retarget._x * retarget._x + retarget._z * retarget._z > Internal::kRetargetDistance * Internal::kRetargetDistance;
+                    const bool   bMoved   = retarget._x * retarget._x + retarget._z * retarget._z > _retargetDistance * _retargetDistance;
                     if ( bMoved || pAgent->hasDestination() == false )
                     {
                         pAgent->setDestination( target );
@@ -193,7 +190,7 @@ namespace sw
                     }
                     const float3& velocity = pAgent->getVelocity();
                     const float32 speed    = MathUtil::sqrt( velocity._x * velocity._x + velocity._z * velocity._z );
-                    if ( speed > Internal::kWalkSpeed )
+                    if ( speed > _walkClipSpeed )
                     {
                         wantYaw  = MathUtil::atan2( velocity._x, velocity._z );
                         moveCode = speed >= _runSpeed ? ShooterAnimParameter::kMoveRun : ShooterAnimParameter::kMoveWalk;

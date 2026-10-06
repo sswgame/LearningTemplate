@@ -198,6 +198,12 @@ namespace sw
         int32 _effectPoolSize;
         PROPERTY( Category = "Arena", DisplayName = "Tracer Pool Size", Tooltip = "Tracer boxes kept hidden and reused", Min = 1 )
         int32 _tracerPoolSize;
+        PROPERTY( Category = "Debug", DisplayName = "Status Log Interval", Tooltip = "Seconds between status log lines", Min = 0.1, Units = s )
+        float32 _statusLogInterval;
+        PROPERTY( Category = "Pacing", DisplayName = "Near Enemy Distance", Tooltip = "Enemies inside this distance count as close to the player (pacing signal)", Min = 0.0, Units = m )
+        float32 _nearEnemyDistance;
+        PROPERTY( Category = "Pacing", DisplayName = "Repair Health Per Scale", Tooltip = "Health one unit of a repair reward restores", Min = 0.0 )
+        float32 _repairHealthPerScale;
 
         vector<ShooterArenaBox>  _listBox;
         vector<ShooterEnemyView> _listEnemyView;

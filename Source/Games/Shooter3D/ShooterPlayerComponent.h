@@ -181,6 +181,18 @@ namespace sw
         float32 _regenPerSecond;
         PROPERTY( Category = "Health", DisplayName = "Down Time", Tooltip = "Seconds the death clip plays before the round starts over", Min = 0.0, Units = s )
         float32 _downTime;
+        PROPERTY( Category = "View", DisplayName = "Crosshair Distance", Tooltip = "Distance of the crosshair sprites in front of the eye", Min = 0.05, Units = m )
+        float32 _crosshairDistance;
+        PROPERTY( Category = "Effects", DisplayName = "Hit Effect Lifetime", Tooltip = "Seconds a hit or muzzle flash sphere stays", Min = 0.0, Units = s )
+        float32 _hitEffectLifetime;
+        PROPERTY( Category = "Effects", DisplayName = "Tracer Lifetime", Tooltip = "Seconds a tracer stays", Min = 0.0, Units = s )
+        float32 _tracerLifetime;
+        PROPERTY( Category = "Effects", DisplayName = "Tracer Width", Min = 0.0, Units = m )
+        float32 _tracerWidth;
+        PROPERTY( Category = "Auto Play", DisplayName = "Auto Engage Distance", Tooltip = "Auto play aims at enemies inside this distance", Min = 0.0, Units = m )
+        float32 _autoEngageDistance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Auto Turn Rate", Tooltip = "How fast auto play turns the view", Min = 0.0, Units = "rad/s" )
+        float32 _autoTurnRate;
 
         WeaponState              _arrWeapon[kWeaponCount];
         Vitality                 _vitality;

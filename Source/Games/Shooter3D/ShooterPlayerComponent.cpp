@@ -38,7 +38,6 @@ namespace sw
     {
         struct ShooterPlayerComponentInternal
         {
-            static constexpr float32     kCrosshairDistance                                     = 0.6f;
             static constexpr const utf8* kArrWeaponId[ShooterPlayerComponent::kWeaponCount]     = { "rifle", "shotgun", "pistol" };
             static constexpr const utf8* kArrWeaponModel[ShooterPlayerComponent::kWeaponCount]  = { "game/shooter3d/models/blaster_d.mesh",
                                                                                                     "game/shooter3d/models/blaster_h.mesh",
@@ -51,17 +50,10 @@ namespace sw
             static constexpr const utf8* kBodyMuzzleSocket                                      = "MainHand.Muzzle";
             static constexpr const utf8* kEyesSocket                                            = "Eyes";
 
-            static constexpr float4  kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
-            static constexpr float4  kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
-            static constexpr float4  kTracerColor{ 3.0f, 2.2f, 0.6f, 1.0f };
-            static constexpr float4  kMuzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f };
-            static constexpr float32 kEffectLifetime = 0.12f;
-            static constexpr float32 kTracerLifetime = 0.07f;
-            static constexpr float32 kTracerWidth    = 0.025f;
-            /** @brief 자동 플레이가 쏘기 시작하는 거리(m) — 사람처럼 다가온 적을 쏜다(멀리서 다 잡으면 아레나가 비어 보인다). */
-            static constexpr float32 kAutoEngageDistance = 7.0f;
-            /** @brief 자동 조준의 최대 각속도(rad/s) — 약 170°/s. */
-            static constexpr float32 kAutoTurnRate = 3.0f;
+            static constexpr float4 kEnemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f };
+            static constexpr float4 kCoverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f };
+            static constexpr float4 kTracerColor{ 3.0f, 2.2f, 0.6f, 1.0f };
+            static constexpr float4 kMuzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f };
             // 사운드 이벤트 이름(shooter3d.audioevents.xml) — 플레이어 자신의 소리라 2D 로 낸다.
             static constexpr const utf8* kSoundLand     = "Land";
             static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
@@ -119,6 +111,12 @@ namespace sw
         , _regenDelay{ 4.0f }
         , _regenPerSecond{ 6.0f }
         , _downTime{ 2.5f }
+        , _crosshairDistance{ 0.6f }
+        , _hitEffectLifetime{ 0.12f }
+        , _tracerLifetime{ 0.07f }
+        , _tracerWidth{ 0.025f }
+        , _autoEngageDistance{ 7.0f }
+        , _autoTurnRate{ 3.0f }
         , _arrWeapon{}
         , _vitality{}
         , _weaponSockets{}
@@ -416,11 +414,11 @@ namespace sw
         const float32          yawError    = OrientationUtil::wrapAngle( targetYaw - look.getYaw() );
         // 사람처럼 돈다 — 오차에 비례해 돌되 각속도 상한을 둔다. 상한이 없으면 표적이 바뀔 때 한 프레임에 수십 도 돌아 3인칭 몸 · 카메라가 튄다.
         const float32 blend   = MathUtil::min( 1.0f, deltaTime * 8.0f );
-        const float32 maxTurn = ShooterPlayerComponentInternal::kAutoTurnRate * deltaTime;
+        const float32 maxTurn = _autoTurnRate * deltaTime;
         const float32 yaw     = OrientationUtil::turnTowardAngle( look.getYaw(), look.getYaw() + yawError * blend, maxTurn );
         const float32 pitch   = look.getPitch() + MathUtil::clamp( ( targetPitch - look.getPitch() ) * blend, -maxTurn, maxTurn );
         camera.setAngles( yaw, pitch );
-        const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::kDegreeToRadian && bestDistance < ShooterPlayerComponentInternal::kAutoEngageDistance;
+        const bool bAimed       = MathUtil::abs( yawError ) < 3.0f * MathUtil::kDegreeToRadian && bestDistance < _autoEngageDistance;
         outIntent._bTrigger     = bAimed ? SW_TRUE : SW_FALSE;
         outIntent._bJustPressed = bAimed ? SW_TRUE : SW_FALSE;
         // 가까우면 산탄총, 멀면 소총.
@@ -498,7 +496,7 @@ namespace sw
                 effect._position = end;
                 effect._size     = bHitEnemy ? 0.18f : 0.1f;
                 effect._color    = bHitEnemy ? Internal::kEnemyHitColor : Internal::kCoverHitColor;
-                effect._lifetime = Internal::kEffectLifetime;
+                effect._lifetime = _hitEffectLifetime;
                 _listPendingEffect.push_back( effect );
                 bHitCover = bHitCover || ( bHitEnemy == false && end._y > 0.05f );
             }
@@ -630,7 +628,7 @@ namespace sw
                 continue;
             if ( pSprite->getParent() != pCamera )
                 (void)pSprite->attachToComponent( pCamera, AttachRule::KeepRelative );
-            const float32 distance = Internal::kCrosshairDistance - 0.01f * static_cast<float32>( spriteIndex );
+            const float32 distance = _crosshairDistance - 0.01f * static_cast<float32>( spriteIndex );
             const float32 size     = spriteIndex == 0 ? 0.03f : 0.05f;
             pSprite->setLocalPosition( float3{ 0.0f, 0.0f, distance } );
             pSprite->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
@@ -712,7 +710,7 @@ namespace sw
             for ( const EffectRequest& effect : _listPendingEffect )
                 pDirector->spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
             for ( const TracerRequest& tracer : _listPendingTracer )
-                pDirector->spawnTracer( tracer._from, tracer._to, Internal::kTracerWidth, Internal::kTracerColor, Internal::kTracerLifetime );
+                pDirector->spawnTracer( tracer._from, tracer._to, _tracerWidth, Internal::kTracerColor, _tracerLifetime );
         }
         _listPendingEffect.clear();
         _listPendingTracer.clear();

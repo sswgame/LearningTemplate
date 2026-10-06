@@ -39,13 +39,8 @@ namespace sw
     {
         struct ShooterDirectorComponentInternal
         {
-            static constexpr float32 kStatusInterval = 5.0f;
-            static constexpr uint32  kStateTag       = FourCcUtil::make( "SHOT" );
-            static constexpr uint32  kStateVersion   = 3;
-            /** @brief 이 거리(m) 안의 적이 "가까운 적" 신호입니다. */
-            static constexpr float32 kNearDistance = 7.0f;
-            /** @brief 수리 보상의 scale 1 이 채우는 체력입니다. */
-            static constexpr float32 kRepairPerScale = 10.0f;
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "SHOT" );
+            static constexpr uint32 kStateVersion = 3;
             /** @brief 이 게임이 아는 조우 · 보상 · 스폰 id 입니다 — 프로필이 다른 이름을 쓰면 시작할 때 알린다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
             static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
@@ -132,6 +127,9 @@ namespace sw
         , _pacingSeed{ 1 }
         , _effectPoolSize{ 32 }
         , _tracerPoolSize{ 24 }
+        , _statusLogInterval{ 5.0f }
+        , _nearEnemyDistance{ 7.0f }
+        , _repairHealthPerScale{ 10.0f }
         , _listBox{}
         , _listEnemyView{}
         , _profile{}
@@ -391,7 +389,6 @@ namespace sw
 
     void ShooterDirectorComponent::applyDirectorEvents()
     {
-        using Internal = ShooterDirectorComponentInternal;
         _listDirectorEvent.clear();
         _director.drainEvents( _listDirectorEvent );
         for ( const AiDirectorEvent& event : _listDirectorEvent )
@@ -429,7 +426,7 @@ namespace sw
                     if ( event._id == hashed_string( "ammo" ) )
                         _bAmmoPending = SW_TRUE;
                     else if ( event._id == hashed_string( "repair" ) )
-                        _pendingHeal += event._scale * Internal::kRepairPerScale;
+                        _pendingHeal += event._scale * _repairHealthPerScale;
                     break;
                 }
                 case AiDirectorEventKind::Despawned:
@@ -603,7 +600,7 @@ namespace sw
             view._height   = pEnemy->getHeight();
             _listEnemyView.push_back( view );
             const float3 toPlayer = view._position - _playerFeet;
-            nearCount += toPlayer.getLength() < ShooterDirectorComponentInternal::kNearDistance ? 1 : 0;
+            nearCount += toPlayer.getLength() < _nearEnemyDistance ? 1 : 0;
         }
         if ( _bPacingReady == SW_TRUE )
             (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "enemiesNear" ), static_cast<float32>( nearCount ) );
@@ -626,7 +623,7 @@ namespace sw
     void ShooterDirectorComponent::logStatus( float32 deltaTime )
     {
         _statusTimer += deltaTime;
-        if ( _statusTimer < ShooterDirectorComponentInternal::kStatusInterval )
+        if ( _statusTimer < _statusLogInterval )
             return;
         _statusTimer                           = 0.0f;
         GameObjectManager*            pManager = getObjectManager();

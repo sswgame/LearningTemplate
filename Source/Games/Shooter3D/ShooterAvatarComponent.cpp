@@ -20,8 +20,6 @@ namespace sw
     {
         struct ShooterAvatarComponentInternal
         {
-            /** @brief 레이어 가중치가 목표로 가는 빠르기(1/s)입니다. */
-            static constexpr float32 kLayerBlendRate = 10.0f;
 
             static float32 approach( float32 current, float32 target, float32 maxStep )
             {
@@ -63,6 +61,7 @@ namespace sw
         , _runThreshold{ 3.0f }
         , _hitPause{ 0.45f }
         , _turnRate{ 10.0f }
+        , _layerBlendRate{ 10.0f }
         , _locomotion{ 0.25f }
         , _aimWeight{ 0.0f }
         , _shootWeight{ 0.0f }
@@ -153,8 +152,8 @@ namespace sw
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
         const float32 aimTarget      = bUpperBodyFree ? 1.0f : 0.0f;
         const float32 shootTarget    = bUpperBodyFree && pPlayer->getTimeSinceShot() < 0.2f ? 1.0f : 0.0f;
-        _aimWeight                   = Internal::approach( _aimWeight, aimTarget, Internal::kLayerBlendRate * step );
-        _shootWeight                 = Internal::approach( _shootWeight, shootTarget, Internal::kLayerBlendRate * 2.0f * step );
+        _aimWeight                   = Internal::approach( _aimWeight, aimTarget, _layerBlendRate * step );
+        _shootWeight                 = Internal::approach( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         if ( _aimLayer >= 0 )
             pAnimator->setLayerWeight( static_cast<uint32>( _aimLayer ), _aimWeight );
         if ( _shootLayer >= 0 )
