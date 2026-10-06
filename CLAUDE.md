@@ -24,6 +24,13 @@ The rules are machine-enforced — see Linting below.
 Documentation and code comments in this repo are written in Korean (`/** @brief */` above declarations,
 `/**<` beside member fields). Log and assert strings are never translated.
 
+## Documentation map
+
+`docs/02_DocumentMap.md` says which document owns which fact and lists every README. **One fact lives in one place**;
+other documents link to it. A module README holds that folder's contracts, traps and open work — usage lives in the
+header comments (`/** @brief */`), not in a README. Write docs in Korean and in the present tense; how something came
+to be goes in the commit message, and a past defect is written as a present-tense caution.
+
 ## Build
 
 ```powershell

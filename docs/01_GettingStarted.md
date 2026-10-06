@@ -116,4 +116,4 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 - `SW_ASSERT_TRUE_MSG( 조건, 메시지 )` — 실패하면 메시지(대개 실제로 받은 글)를 남기고 그 케이스를 멈춘다.
 
 ---
-[🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 서브시스템 개요](02_EngineSubsystems.md)
+[🏠 위키 홈으로 돌아가기](../README.md) | [▶ 다음: 문서 지도](02_DocumentMap.md)
