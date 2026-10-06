@@ -56,6 +56,7 @@ Scripts/
   │     ├── ConfigReference.py        # 설정 참조 문서(docs/Config)를 코드에서 만든다
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
+  │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
@@ -84,6 +85,7 @@ Scripts/
   │     ├── GenerateToolchainCMake.py # toolchain_config.json → CMake set() 목록
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
   │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 도장 헤더
+  │     ├── GenerateEditorIcons.py    # 에디터 아이콘 폰트 · 글리프 상수 헤더(그림은 common/EditorIconFont.py) — 손으로 돌리고 결과를 커밋한다
   │     ├── GenerateSpriteTextures.py # 엔진 스프라이트 텍스처(DDS) · 클립 — 손으로 돌리고 결과를 커밋한다
   │     └── GenerateDocs.py           # Doxygen 레퍼런스 생성
   │

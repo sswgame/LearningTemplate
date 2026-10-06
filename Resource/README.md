@@ -7,7 +7,7 @@
 | Engine | `engine/` | 렌더 파이프라인, 코어 셰이더, 폴백 머티리얼, 내장 텍스처, 셸 입력 맵 |
 | Common | `common/` | 여러 게임 팩이 같이 쓰는 셰이더, 프리팹, 데이터, 저장소 SQL |
 | Game | `game/<팩>/` | 그 게임의 맵, 프리팹, 텍스처, 오디오, `gamesettings.xml` |
-| Editor | `editor/` | 에디터가 배포본에서 읽는 에셋(스플래시 텍스처 등) |
+| Editor | `editor/` | 에디터가 배포본에서 읽는 에셋(스플래시 텍스처 · 아이콘 폰트 `fonts/sweditoricons.ttf` 등) |
 
 엔진의 기본 에셋 경로는 `engine/data/enginedefaultassets.xml` 이 정합니다.
 에디터 도구의 기본값 파일 `editortooldefaults.json` 은 `editor/` 팩이 아니라 `Config/Editor/` 에 둡니다. 에디터 도구 설정은 배포본에 실리지 않기 때문입니다.
