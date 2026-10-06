@@ -711,6 +711,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|input.tooltipOnHover",
         "EditorSelfTest|PASS|input.classicDarkSwatch",
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
+        "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

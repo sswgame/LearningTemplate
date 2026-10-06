@@ -414,6 +414,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   원본 glb 는 내려받은 그대로 둔다 — 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙으로 지운다. 경계 상자 중심
   (`recenter: xz`)은 모양이 치우친 모델을 옮기므로 원점이 정해진 키트에는 `translation` 이 맞다.
 - **머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다(`AssetDatabase::ensureMeta`)** — 임포트 결과 옆 폴더(`models/<이름>/`)에 머티리얼을 쓰면 첫 실행이 실행마다 다른 GUID 의 `.meta` 를 만들어 스탬프가 "손으로 바꿨다" 가 된다. 임포터가 경로에서 정해지는 GUID 로 `.meta` 를 미리 쓴다(`ModelImporterInternal::makeImportedGuid`).
+- **`.meta`(GUID)는 그 에셋을 쓰는 시스템이 만듭니다**(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트). 목록을 보기만 하는 화면(콘텐츠 브라우저)이 `.meta` 를 쓰면 폴더를 한 번 연 것만으로 추적되지 않는 파일이 수십 개 생깁니다. 시험 `contentBrowser.browsingWritesNoMeta`.
+- **콘텐츠 브라우저는 디스크 목록을 들고 있으므로 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다** — 탐색기 · git 의 변경도 이 번호가 셉니다. 에디터 안의 삭제처럼 결과를 바로 아는 경로는 번호를 기다리지 않고 그 자리에서 다시 읽기로 합니다(감시는 한두 프레임 늦다). 시험 `contentBrowser.deleteRefreshesTheList`.
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.

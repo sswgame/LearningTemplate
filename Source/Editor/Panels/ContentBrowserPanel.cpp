@@ -17,14 +17,11 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <IconsFontAwesome6.h>
@@ -383,18 +380,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
     {
+        // 목록을 보기만 한다 — `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트)이 만든다.
         _listEntry = std::move( listEntry );
-
-        // 서비스는 루프 **밖에서** 한 번 확인한다. 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
-        AssetManager* pResources = editor::getService<AssetManager>();
-        if ( pResources != nullptr )
-        {
-            for ( const AssetEntry& entry : _listEntry )
-            {
-                if ( entry._bIsDirectory == false && entry._relativePath.empty() == false )
-                    pResources->getAssetDatabase().ensureMeta( entry._relativePath, false );
-            }
-        }
 
         std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
         {

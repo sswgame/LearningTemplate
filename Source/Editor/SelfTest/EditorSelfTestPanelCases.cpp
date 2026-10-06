@@ -174,6 +174,45 @@ namespace sw::editor
                 removeProbeFolder( context, probe );
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // contentBrowser.browsingWritesNoMeta — 폴더를 보기만 해서는 `.meta` 가 생기지 않는다(D14). GUID 는 그 에셋을 쓰는 시스템이 만든다
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runBrowsingWritesNoMeta( EditorSelfTestContext& context )
+            {
+                constexpr uint32      kPhaseWaitListing = 1;
+                constexpr const utf8* kFileName         = "probe.txt";
+
+                ContentBrowserProbe& probe     = getContentBrowserProbe();
+                const uint32         stepIndex = context.getStepIndex();
+                ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
+                if ( pPanel == nullptr )
+                {
+                    removeProbeFolder( context, probe );
+                    return EditorSelfTestStep::Done;
+                }
+
+                if ( stepIndex == 0 )
+                {
+                    if ( context.expect( makeProbeFolder( probe, kFileName ), "could not write the self test folder" ) == false )
+                    {
+                        removeProbeFolder( context, probe );
+                        return EditorSelfTestStep::Done;
+                    }
+                    pPanel->openFolder( probe._folderAbs );
+                    enterPhase( probe, kPhaseWaitListing, stepIndex );
+                    return EditorSelfTestStep::Continue;
+                }
+
+                const bool bListed = pPanel->getEntryCount() == 1 && pPanel->isFolderRefreshPending() == false;
+                if ( bListed == false && hasPhaseTimedOut( probe, stepIndex ) == false )
+                    return EditorSelfTestStep::Continue;
+                (void)context.expect( bListed, "the self test folder listing never arrived (is the content browser drawn?)" );
+                (void)context.expect( FileUtil::exists( FileUtil::joinPath( probe._folderAbs, string{ kFileName } + ".meta" ) ) == false,
+                                      "browsing a folder wrote a .meta file" );
+                removeProbeFolder( context, probe );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -181,4 +220,5 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::runDeleteRefreshesTheList );
+    SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
 } // namespace sw::editor
