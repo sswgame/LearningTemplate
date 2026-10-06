@@ -79,7 +79,11 @@ namespace sw
 
         /** @brief 입력 → UI 사건(게임 틱 앞). 뗀 입력 풀기 → UI 맵 갱신 → 입력 방식 → 포인터 → 행동 → 글 포커스 → 닫기 요청 적용 순서입니다. */
         void processInput( float32 deltaSeconds );
-        /** @brief 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다. */
+        /**
+         * @brief 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
+         * @details 레이아웃은 화면 트리마다 `UiLayoutPass::update( 트리, makeLayoutContext() )` — 화면마다 뷰포트(UI 단위) 전체가 루트 사각형입니다.
+         *          포인터 위치는 다음 `processInput` 이 이 뷰포트의 배율로 UI 단위로 바꿉니다.
+         */
         void update( float32 deltaSeconds, const UiViewport& viewport );
 
         // --- 화면 스택 ---------------------------------------------------------------

@@ -29,7 +29,7 @@ namespace
             auto                         root  = sw::make_unique<sw::uitest::TestPanelWidget>( sw::hashed_string( sw::string( pPrefix ) + "root" ) );
             sw::uitest::TestPanelWidget* pRoot = root.get();
             pRoot->_pRecord                    = pRecord;
-            sw::uitest::UiTestUtil::placeWidget( *pRoot, x, y, width, height );
+            sw::uitest::UiTestUtil::pinRoot( *pRoot, x, y, width, height );
             for ( uint32 index = 0; index < buttonCount; ++index )
             {
                 auto* pButton           = static_cast<sw::uitest::TestBoxWidget*>( pRoot->addChild(

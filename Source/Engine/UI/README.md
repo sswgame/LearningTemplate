@@ -40,7 +40,9 @@
 `engine::getUiSystem()` · 게임은 `game::getService<UiSystem>()`. 기동 단계 `Ui`(Client 대상 — 전용 서버는 세우지 않는다). 틱은 둘입니다.
 
 - `processInput` — `EngineLoop::beginFrame` 의 입력 갱신 직후, **게임 틱 앞**. UI 가 먹은 입력을 폰이 못 보게.
-- `update` — 게임 틱 뒤, 렌더 패킷 앞. 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기.
+- `update` — 게임 틱 뒤, 렌더 패킷 앞. 애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기. 레이아웃은 화면 트리마다 `UiLayoutPass::update`
+  (화면마다 뷰포트 전체가 루트 사각형 — 작은 창은 루트 슬롯의 여백 · 크기 덮어쓰기 또는 루트 패널 안의 자리로).
+- 포인터 위치는 창 픽셀을 지난 `update` 의 뷰포트 배율로 나눈 UI 단위입니다(입력은 레이아웃 앞이라 지난 프레임에 그린 화면 기준).
 
 ## 히트 테스트 · 사건 경로 (`Core/UiEventRouter` · `Core/UiPointerState`)
 

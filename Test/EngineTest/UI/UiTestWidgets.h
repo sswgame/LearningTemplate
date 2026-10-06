@@ -174,5 +174,21 @@ namespace sw::uitest
             const WidgetGeometry rect = WidgetGeometry::makeAxisAligned( float2{ x, y }, float2{ width, height } );
             widget.setArrangedGeometry( widget.getRenderTransform().applyTo( rect ) );
         }
+
+        /**
+         * @brief 화면 루트를 화면 사각형에 놓고, `UiSystem::update` 의 레이아웃 걷기도 같은 자리에 놓도록 슬롯(왼 · 위 여백 + 크기 덮어쓰기)을 맞춥니다.
+         * @details 루트는 레이아웃이 뷰포트 전체에 다시 놓는다 — 슬롯 없이 `placeWidget` 만 하면 다음 프레임에 화면 전체를 덮는다.
+         */
+        static void pinRoot( Widget& root, float32 x, float32 y, float32 width, float32 height )
+        {
+            WidgetLayoutSlot slot     = root.getLayoutSlot();
+            slot._padding             = float4{ x, y, 0.0f, 0.0f };
+            slot._horizontalAlignment = UiAlignment::Start;
+            slot._verticalAlignment   = UiAlignment::Start;
+            slot._widthOverride       = width;
+            slot._heightOverride      = height;
+            root.setLayoutSlot( slot );
+            placeWidget( root, x, y, width, height );
+        }
     };
 } // namespace sw::uitest

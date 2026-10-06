@@ -6,6 +6,8 @@
 #include "Engine/UI/Layout/OverlayPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Layout/WrapPanel.h"
+#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/UiSystem.h"
 
 #include "EngineTest/UI/UiLayoutTestUtil.h"
 
@@ -407,4 +409,29 @@ SW_TEST_CASE( UiLayoutTest, ScrollOffsetChangeIsArrangeOnly )
     SW_EXPECT_EQUAL( 0u, fixture.update() );
     SW_EXPECT_EQUAL( 1u, listItem[0]->getMeasureCount() );
     SW_EXPECT_NEAR_EQUAL( -30.0f, listItem[0]->getGeometry()._position._y, 0.001f );
+}
+
+/**
+ * @brief [UiLayoutTest] `UiSystem::update` 는 화면 트리마다 레이아웃을 돌린다 — 루트는 뷰포트(UI 단위) 전체, 자식은 자기 슬롯대로 놓인다
+ * @details 변이: `UiSystem::update` 의 `UiLayoutPass::update` 줄을 빼면 라벨이 놓이지 않아 진다.
+ */
+SW_TEST_CASE( UiLayoutTest, UiSystemLaysOutScreenTrees )
+{
+    sw::UiSystem                     ui;
+    sw::unique_ptr<sw::OverlayPanel> root   = sw::make_unique<sw::OverlayPanel>();
+    sw::Widget*                      pLabel = root->addChild( sw::make_unique<sw::test::TestFixedWidget>( "label", sw::float2{ 100.0f, 40.0f } ) );
+    UiLayoutTestUtil::setAlignment( *pLabel, sw::UiAlignment::Center, sw::UiAlignment::Center, sw::float4{} );
+    sw::UiScreenDesc desc{};
+    desc._layer = sw::UiLayer::Hud;
+    (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( desc, std::move( root ) ) );
+
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = sw::float2{ 1600.0f, 1200.0f };
+    viewport._uiScale      = 2.0f;
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_NEAR_EQUAL( 350.0f, pLabel->getGeometry()._position._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 280.0f, pLabel->getGeometry()._position._y, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pLabel->getGeometry()._size._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 40.0f, pLabel->getGeometry()._size._y, 0.001f );
 }

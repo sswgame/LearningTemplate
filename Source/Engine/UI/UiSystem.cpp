@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
@@ -15,6 +16,7 @@
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
+#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {
@@ -211,7 +213,16 @@ namespace sw
         (void)deltaSeconds;
         _viewport = viewport;
         applyPendingCloses();
-        // 스타일 · 레이아웃 · 그리기 걷기가 생기기 전까지는 무효화를 프레임마다 처리한 것으로 둔다(목록이 쌓이지 않게).
+        // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
+        {
+            SW_PROFILE_SCOPE( "GT.Ui.Layout" );
+            const UiLayoutContext context       = makeLayoutContext();
+            uint32                measuredCount = 0;
+            for ( const unique_ptr<UiScreen>& screen : _listScreen )
+                measuredCount += UiLayoutPass::update( screen->getTree(), context );
+            SW_PROFILE_COUNT( "Ui.LayoutWidgets", measuredCount );
+        }
+        // 스타일 · 그리기 걷기가 생기기 전까지는 남은 무효화(그리기 · 스타일)를 프레임마다 처리한 것으로 둔다(목록이 쌓이지 않게).
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
             screen->getTree().clearAllDirty();
     }
@@ -325,9 +336,10 @@ namespace sw
             _bPointerKnown = SW_FALSE;
             return;
         }
-        // UI 단위 = 창 픽셀(UI 배율이 생기면 여기서 나눈다).
-        const int2     pixel = pMouse->getPosition();
-        const float2   position{ static_cast<float32>( pixel._x ), static_cast<float32>( pixel._y ) };
+        // 창 픽셀 → UI 단위(지난 `update` 의 뷰포트 배율 — 입력은 이번 프레임 레이아웃 앞이라 지난 프레임에 그린 화면 기준이다).
+        const int2     pixel   = pMouse->getPosition();
+        const float32  uiScale = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
+        const float2   position{ static_cast<float32>( pixel._x ) / uiScale, static_cast<float32>( pixel._y ) / uiScale };
         UiPointerEvent event{};
         event._position      = position;
         event._delta         = _bPointerKnown == SW_TRUE ? float2{ position._x - _lastPointerPosition._x, position._y - _lastPointerPosition._y } : float2{};

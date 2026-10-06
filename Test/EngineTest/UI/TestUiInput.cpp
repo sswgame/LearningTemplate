@@ -31,6 +31,7 @@ namespace
         sw::UiSystem                           _ui;
         sw::VirtualInputScript                 _script;
         sw::vector<sw::uitest::TestBoxWidget*> _listButton;
+        sw::UiViewport                         _viewport; ///< `endFrame` 이 UI 에 넘기는 화면(기본 1920 × 1080, 배율 1)
         sw::UiScreenHandle                     _menu;
 
         UiInputFixture()
@@ -38,8 +39,11 @@ namespace
             , _ui{}
             , _script{}
             , _listButton{}
+            , _viewport{}
             , _menu{ sw::kInvalidUiScreenHandle }
         {
+            _viewport._size         = sw::float2{ 1920.0f, 1080.0f };
+            _viewport._physicalSize = _viewport._size;
             SW_EXPECT_TRUE( _input.initialize() );
             sw::InputMap& gameMap = _input.getInputMap();
             gameMap.bind( "Jump", sw::GamepadButton::A );
@@ -105,9 +109,7 @@ namespace
 
         void endFrame()
         {
-            _ui.update( UiInputTestUtil::kFrameSeconds, sw::UiViewport{
-                                                            sw::float2{ 1920.0f, 1080.0f }
-            } );
+            _ui.update( UiInputTestUtil::kFrameSeconds, _viewport );
             _input.endFrame();
         }
 
@@ -301,4 +303,27 @@ SW_TEST_CASE( UiInputTest, TextFieldTakesKeyboardFocus )
     SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::W ) ) );
     fixture.runFrame();
     SW_EXPECT_TRUE( fixture._input.getInputMap().isActionDown( "MoveForward" ) );
+}
+
+/**
+ * @brief [UiInputTest] 마우스 위치는 창 픽셀을 UI 배율로 나눈 UI 단위다 — 배율 2 에서 창 (300, 220) 은 UI (150, 110), 첫 버튼 위다
+ * @details 변이: `UiSystem::processPointer` 의 배율 나누기를 빼면 (300, 220) 은 버튼 밖이라 게임이 Fire 를 본다.
+ */
+SW_TEST_CASE( UiInputTest, PointerPositionIsInUiUnits )
+{
+    UiInputFixture fixture;
+    fixture._viewport._size         = sw::float2{ 960.0f, 540.0f };
+    fixture._viewport._physicalSize = sw::float2{ 1920.0f, 1080.0f };
+    fixture._viewport._uiScale      = 2.0f;
+    fixture.openMenu( 1 );
+    fixture._listButton[0]->_bHandleBubble = true;
+    fixture.runFrame(); // 배율 뷰포트를 UI 에 한 번 넘긴다
+
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseMove( 300, 220 ) ) );
+    SW_EXPECT_TRUE( fixture._input.postRawEvent( sw::RawInputEvent::makeMouseButtonDown( sw::MouseButton::Left, 300, 220 ) ) );
+    fixture.beginFrame();
+    SW_EXPECT_TRUE( fixture._input.getInputMap().wasActionTriggered( "Fire" ) );
+    SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getId(), fixture._ui.getPointerState().getHoveredWidget() );
+    fixture.endFrame();
 }
