@@ -107,9 +107,8 @@ def readCMakeCacheValue(buildDir: Path, name: str) -> str | None:
     return None
 
 
-#: Shipping 이 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND`, 소문자) → 백엔드 짧은 이름.
-_kShippingBackendAlias: dict[str, str] = {"dx12": "dx12", "directx12": "dx12", "dx11": "dx11", "directx11": "dx11", "vulkan": "vk", "vk": "vk",
-                                          "opengl": "gl", "gl": "gl"}
+#: Shipping 이 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND` — 쿠킹 표의 이름, 소문자) → 백엔드 짧은 이름.
+_kShippingBackendAlias: dict[str, str] = {"directx12": "dx12", "directx11": "dx11", "vulkan": "vk", "opengl": "gl"}
 
 
 def findUsableBackends(buildDir: Path) -> list[str]:

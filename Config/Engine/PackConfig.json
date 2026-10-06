@@ -1,5 +1,4 @@
 {
-  "target_rhi": "DirectX12",
   "_compression_note": [
     "팩 압축 코덱을 고른다. 이름은 Config/Engine/PackFormat.json 의 compression.codecs 에 있는 것만 쓴다.",
     "Zlib 은 파이썬 표준 라이브러리라 추가 설치가 필요 없다(기본값).",

@@ -170,13 +170,14 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
     raise SystemExit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
 
 
-def resolveTargetRhi(config: dict, cliRhi: str = "", projectRoot: Path | None = None) -> str:
-    """타깃 RHI 의 셰이더 폴더를 정합니다: CLI > PackConfig.json > EngineConfig.json > 표의 기본 백엔드. 이름은 표의 별칭으로 푼다."""
+def resolveTargetRhi(cliRhi: str = "", projectRoot: Path | None = None) -> str:
+    """타깃 RHI 의 셰이더 폴더를 정합니다: CLI > EngineConfig.json `_window._defaultRHI` > 표의 기본 백엔드. 이름은 표의 별칭으로 푼다.
+
+    기본 RHI 를 적는 곳은 EngineConfig(없으면 쿠킹 표의 `default_rhi_backend`) 하나다 — 팩 설정에 따로 두지 않는다.
+    """
     r = ""
     if cliRhi:
         r = cliRhi.strip().lower()
-    elif config.get("target_rhi"):
-        r = str(config["target_rhi"]).strip().lower()
     elif projectRoot:
         engineCfgPath = projectRoot / kFileRuntimeEngineConfig
         if engineCfgPath.is_file():
@@ -711,7 +712,7 @@ def main(argv: list[str] | None = None) -> int:
         if not packConfig:
             print(f"[CookAssets Error] missing or invalid config: {configPath}", file=sys.stderr)
             return 1
-        targetRhi = resolveTargetRhi(packConfig, cliRhi=args.target_rhi, projectRoot=projectRoot)
+        targetRhi = resolveTargetRhi(cliRhi=args.target_rhi, projectRoot=projectRoot)
         print(f"[CookAssets] Target RHI for shader packaging: {targetRhi}")
 
         if args.verify_shaders:

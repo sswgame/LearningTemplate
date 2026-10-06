@@ -44,8 +44,8 @@ def shouldIncludeFile(relPath, config, targetRhi="dx12"):
     return True
 
 
-def resolveTargetRhi(config, cliRhi="", projectRoot=None):
-    text = (cliRhi or config.get("target_rhi", "")).strip().lower()
+def resolveTargetRhi(cliRhi="", projectRoot=None):
+    text = (cliRhi or "").strip().lower()
     if text in ("opengl", "gl"):
         return "opengl"
     return "dx12"
@@ -61,7 +61,7 @@ def shouldIncludeFile(relPath, config, targetRhi="dx12", buildTarget=""):
     return True
 
 
-def resolveTargetRhi(config, cliRhi="", projectRoot=None):
+def resolveTargetRhi(cliRhi="", projectRoot=None):
     return "dx12"
 
 
@@ -131,12 +131,10 @@ def checkTargetResolutionInternal(cooker: ModuleType, spec: CookContractSpec) ->
     listViolation: list[str] = []
     for backend in spec.listBackend:
         for text in (backend.name, backend.shaderFolder, *backend.listAlias, backend.listAlias[0].upper()):
-            resolvedFromCli = cooker.resolveTargetRhi({}, cliRhi=text)
-            resolvedFromConfig = cooker.resolveTargetRhi({"target_rhi": text})
-            for origin, resolved in (("cliRhi", resolvedFromCli), ("target_rhi", resolvedFromConfig)):
-                if resolved != backend.shaderFolder:
-                    listViolation.append(f"resolveTargetRhi({origin}='{text}') = '{resolved}' - 표는 '{backend.shaderFolder}'")
-    resolvedDefault = cooker.resolveTargetRhi({})
+            resolved = cooker.resolveTargetRhi(cliRhi=text)
+            if resolved != backend.shaderFolder:
+                listViolation.append(f"resolveTargetRhi(cliRhi='{text}') = '{resolved}' - 표는 '{backend.shaderFolder}'")
+    resolvedDefault = cooker.resolveTargetRhi()
     if resolvedDefault != spec.defaultBackend.shaderFolder:
         listViolation.append(f"resolveTargetRhi() 기본값 = '{resolvedDefault}' - 표는 '{spec.defaultBackend.shaderFolder}'")
     return listViolation
