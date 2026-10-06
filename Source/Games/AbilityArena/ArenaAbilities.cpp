@@ -7,8 +7,8 @@
 #include "GameFramework/Base/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Ability/AbilitySystemComponent.h"
 
-#include "Games/AbilityArena/ArenaControllerComponent.h"
 #include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaUnitComponent.h"
 
 namespace sw
 {
@@ -45,18 +45,18 @@ namespace sw
             return;
         }
 
-        AbilitySystemComponent*         pAbilitySystem = getAbilitySystem();
-        const ArenaDirectorComponent*   pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
-        const GameObject*               pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
-        const ArenaControllerComponent* pController    = pOwner != nullptr ? pOwner->getComponent<ArenaControllerComponent>() : nullptr;
-        if ( pDirector != nullptr && pController != nullptr )
+        AbilitySystemComponent*       pAbilitySystem = getAbilitySystem();
+        const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
+        const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
+        if ( pDirector != nullptr && pUnit != nullptr )
         {
             GameplayEffectSpec spec = makeOutgoingSpec( getNameParameter( "damageEffect" ) );
             if ( spec.isValid() )
                 spec.setSetByCallerMagnitude( "Damage", getParameter( "damage", 0.0f ) );
             const hashed_string      extraEffect = getNameParameter( "extraEffect" );
             const GameplayEffectSpec extraSpec   = extraEffect.empty() ? GameplayEffectSpec{} : makeOutgoingSpec( extraEffect );
-            pDirector->launchProjectile( *pAbilitySystem, pController->getFacing(), spec, extraSpec, getParameter( "speed", 10.0f ), getParameter( "range", 12.0f ) );
+            pDirector->launchProjectile( *pAbilitySystem, pUnit->getFacing(), spec, extraSpec, getParameter( "speed", 10.0f ), getParameter( "range", 12.0f ) );
         }
         endAbility();
     }

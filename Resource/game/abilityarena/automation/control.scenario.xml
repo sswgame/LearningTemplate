@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 조종 시나리오 — 입력 층(가상 키) → 플레이어 조종자 → 의도 → 유닛 이동 · 어빌리티, 그리고 자동 플레이 스위치가 빙의를 옮기는 것.
+  App -scenario=game/abilityarena/automation/control.scenario.xml (종료 코드 0 = 통과)
+-->
+<Scenario name="abilityarena.control" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" input="exclusive">
+	<At frame="0"><Variable name="gv_arenaAutoPlay" value="0"/></At>
+	<!-- 플레이어가 가운데 서고 플레이어 조종자가 쥐었다. -->
+	<At frame="20"><Expect probe="Arena.PlayerControllerKind" equals="0"/><Expect probe="Arena.PlayerX" near="0" tolerance="0.01"/></At>
+	<!-- D 를 반 초 — 이동 속도 6 m/s 라 3 m 남짓 오른쪽. -->
+	<At frame="21"><Press slot="Key.D"/></At>
+	<At frame="51"><Release slot="Key.D"/></At>
+	<At frame="55"><Expect probe="Arena.PlayerX" atLeast="2"/><Expect probe="Arena.PlayerZ" near="0" tolerance="0.01"/></At>
+	<!-- K 한 번 = 화염구 하나. -->
+	<At frame="56"><Tap slot="Key.K" hold="1"/></At>
+	<At frame="64"><Expect probe="Arena.PlayerShotCount" equals="1"/></At>
+	<!-- 자동 플레이를 켜면 자동 전투 AI 가 플레이어 폰을 쥐고 싸운다. -->
+	<At frame="70"><Variable name="gv_arenaAutoPlay" value="1"/></At>
+	<At frame="75"><Expect probe="Arena.PlayerControllerKind" equals="1"/></At>
+	<At frame="1500"><Expect probe="Arena.KillCount" atLeast="1"/><Expect probe="Arena.PlayerShotCount" atLeast="3"/></At>
+	<!-- 끄면 플레이어 조종자가 되찾는다. -->
+	<At frame="1501"><Variable name="gv_arenaAutoPlay" value="0"/></At>
+	<At frame="1506"><Expect probe="Arena.PlayerControllerKind" equals="0"/></At>
+	<At frame="1510"><Pass/></At>
+</Scenario>

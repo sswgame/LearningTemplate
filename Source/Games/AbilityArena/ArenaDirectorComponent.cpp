@@ -6,8 +6,10 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -16,6 +18,9 @@
 #include "GameFramework/Base/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Base/Ability/CombatAttributeSet.h"
+#include "GameFramework/Base/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Control/PawnComponent.h"
+#include "GameFramework/Base/Control/PlayerControllerComponent.h"
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/Base/Utility/StateArchiveUtil.h"
 
@@ -51,6 +56,68 @@ namespace sw
                 }
                 return hashed_string{};
             }
+
+            /** @brief 탐침이 읽는 디렉터 — 씬의 첫 아레나 디렉터입니다(탐침은 단언 단계에서만 불린다 — 프레임 경로가 아니다). */
+            static const ArenaDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+            {
+                const ArenaDirectorComponent* pFound = nullptr;
+                if ( pManager != nullptr )
+                {
+                    pManager->forEachComponentOfType<ArenaDirectorComponent>( [&pFound]( const ArenaDirectorComponent* pDirector )
+                    {
+                        if ( pFound == nullptr )
+                            pFound = pDirector;
+                    } );
+                }
+                return pFound;
+            }
+
+            [[nodiscard]] static bool readPlayerX( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
+                float3                        position{};
+                if ( pDirector == nullptr || pDirector->findUnitPosition( pDirector->getPlayerObject(), position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._x );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPlayerZ( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
+                float3                        position{};
+                if ( pDirector == nullptr || pDirector->findUnitPosition( pDirector->getPlayerObject(), position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._z );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPlayerShotCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = pDirector->getPlayerShotCount();
+                return true;
+            }
+
+            [[nodiscard]] static bool readKillCount( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = pDirector->getKillCount();
+                return true;
+            }
+
+            [[nodiscard]] static bool readPlayerControllerKind( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
+                if ( pDirector == nullptr )
+                    return false;
+                outValue = pDirector->isPlayerDrivenByAi() ? 1.0 : 0.0;
+                return true;
+            }
         };
     } // namespace
 
@@ -59,7 +126,14 @@ namespace sw
      * @details 배포본 실행 파일로도 돌릴 수 있게 남긴다: `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200`.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The player is driven by the AI too" );
+    SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
+
+    SW_AUTOMATION_PROBE( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", &ArenaDirectorComponentInternal::readPlayerX );
+    SW_AUTOMATION_PROBE( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", &ArenaDirectorComponentInternal::readPlayerZ );
+    SW_AUTOMATION_PROBE( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", &ArenaDirectorComponentInternal::readPlayerShotCount );
+    SW_AUTOMATION_PROBE( arenaKillCount, "Arena.KillCount", "Enemies felled this game", &ArenaDirectorComponentInternal::readKillCount );
+    SW_AUTOMATION_PROBE( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI",
+                         &ArenaDirectorComponentInternal::readPlayerControllerKind );
 } // namespace sw
 
 namespace sw
@@ -69,6 +143,9 @@ namespace sw
         , _gruntPrefab{}
         , _casterPrefab{}
         , _projectilePrefab{}
+        , _gruntAiPrefab{}
+        , _casterAiPrefab{}
+        , _autoBattleAiPrefab{}
         , _arenaHalfSize{ 14.0f }
         , _waveRadius{ 11.0f }
         , _playerRespawnDelay{ 2.5f }
@@ -86,11 +163,14 @@ namespace sw
         , _tintCache{}
         , _playerFocus{ 0.0f, 0.0f, 0.0f }
         , _playerObject{}
+        , _autoBattleObject{}
         , _playerRespawnTimer{ -1.0f }
         , _statusLogTimer{ 0.0f }
         , _wave{ 0 }
         , _killCount{ 0 }
+        , _playerShotCount{ 0 }
         , _bUnitsRequested{ SW_FALSE }
+        , _bPossessionDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -162,6 +242,14 @@ namespace sw
             logStatus( deltaTime );
         }
         updateUnitViews();
+
+        // 빙의는 틱 뒤에 — 자동 플레이 스위치와 플레이어 폰을 쥔 조종자가 다르면 플러시를 잡는다(`hasPendingSpawn`).
+        const PawnComponent* pPlayerPawn = findPlayerPawn();
+        if ( pPlayerPawn != nullptr )
+        {
+            const bool bWantAi = isAutoPlayOn();
+            _bPossessionDirty  = pPlayerPawn->isPossessed() == false || bWantAi != isPlayerDrivenByAi() ? SW_TRUE : SW_FALSE;
+        }
     }
 
     void ArenaDirectorComponent::onViewsDespawned()
@@ -171,7 +259,9 @@ namespace sw
         _listProjectile.clear();
         _listPendingUnit.clear();
         _playerRespawnTimer = -1.0f;
+        _autoBattleObject   = GameObjectHandle{};
         _bUnitsRequested    = SW_FALSE;
+        _bPossessionDirty   = SW_FALSE;
     }
 
     // ------------------------------------------------------------------------------
@@ -213,6 +303,39 @@ namespace sw
         return pNearest;
     }
 
+    bool ArenaDirectorComponent::findUnitPosition( GameObjectHandle object, float3& outPosition ) const
+    {
+        const GameObjectManager* pManager = getObjectManager();
+        const GameObject*        pObject  = pManager != nullptr && findUnitView( object ) != nullptr ? pManager->resolveGameObject( object ) : nullptr;
+        const MeshComponent*     pMesh    = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return false;
+        outPosition = pMesh->getWorldPosition();
+        return true;
+    }
+
+    bool ArenaDirectorComponent::findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const
+    {
+        const ArenaUnitView* pNearest = findNearestHostileView( from, 100.0f );
+        return pNearest != nullptr && findUnitPosition( pNearest->_object, outPosition );
+    }
+
+    bool ArenaDirectorComponent::isPlayerDrivenByAi() const
+    {
+        GameObjectManager*   pManager    = getObjectManager();
+        const PawnComponent* pPlayerPawn = findPlayerPawn();
+        const GameObject*    pAutoBattle = pManager != nullptr ? pManager->resolveGameObject( _autoBattleObject ) : nullptr;
+        const Component*     pController = pPlayerPawn != nullptr && pManager != nullptr ? pManager->resolveComponent( pPlayerPawn->getController() ) : nullptr;
+        return pController != nullptr && pAutoBattle != nullptr && pController->getOwner() == pAutoBattle;
+    }
+
+    PawnComponent* ArenaDirectorComponent::findPlayerPawn() const
+    {
+        GameObjectManager* pManager = getObjectManager();
+        GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _playerObject ) : nullptr;
+        return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+    }
+
     AbilitySystemComponent* ArenaDirectorComponent::findNearestHostile( const AbilitySystemComponent& from, float32 maxRange ) const
     {
         const GameObject*    pFromOwner = from.getOwner();
@@ -238,7 +361,7 @@ namespace sw
         request._velocity    = facing * speed;
         request._range       = range;
         request._bFromPlayer = from.hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
-        // 어빌리티는 워커(컨트롤러의 틱)에서 쏜다 — 오브젝트는 틱 뒤 게임 스레드에서 세운다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
+        // 어빌리티는 워커(유닛의 틱)에서 쏜다 — 오브젝트는 틱 뒤 게임 스레드에서 세운다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
         const ComponentHandle self = getHandle();
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
         {
@@ -250,12 +373,22 @@ namespace sw
 
     const ArenaDirectorComponent* ArenaDirectorComponent::findForUnit( const AbilitySystemComponent& unit )
     {
-        const GameObject*               pOwner      = unit.getOwner();
-        const GameObjectManager*        pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ArenaControllerComponent* pController = pOwner != nullptr ? pOwner->getComponent<ArenaControllerComponent>() : nullptr;
-        if ( pManager == nullptr || pController == nullptr )
+        const GameObject*         pOwner   = unit.getOwner();
+        const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
+        if ( pManager == nullptr || pUnit == nullptr )
             return nullptr;
-        return resolve<ArenaDirectorComponent>( *pManager, pController->getDirector() );
+        return resolve<ArenaDirectorComponent>( *pManager, pUnit->getDirector() );
+    }
+
+    const ArenaDirectorComponent* ArenaDirectorComponent::findForPawn( const PawnComponent& pawn )
+    {
+        const GameObject*         pOwner   = pawn.getOwner();
+        const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
+        if ( pManager == nullptr || pUnit == nullptr )
+            return nullptr;
+        return resolve<ArenaDirectorComponent>( *pManager, pUnit->getDirector() );
     }
 
     // ------------------------------------------------------------------------------
@@ -295,20 +428,22 @@ namespace sw
         for ( const SpawnRequest& request : _listPendingUnit )
             (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 선다 — 실패한 플레이어는 다시 서기 시간이 지나 다시 세운다
         _listPendingUnit.clear();
+        syncPlayerPossession( manager );
     }
 
     bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
-        const bool                bPlayer        = request._kind == ArenaUnitKind::Player;
-        const string&             prefabPath     = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
-        const utf8*               pName          = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
-        GameObject*               pObject        = spawnPrefab( manager, prefabPath, pName );
-        MeshComponent*            pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
-        AbilitySystemComponent*   pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
-        ArenaControllerComponent* pController    = pObject != nullptr ? pObject->getComponent<ArenaControllerComponent>() : nullptr;
-        if ( pMesh == nullptr || pAbilitySystem == nullptr || pController == nullptr )
+        const bool              bPlayer        = request._kind == ArenaUnitKind::Player;
+        const string&           prefabPath     = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
+        const utf8*             pName          = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
+        GameObject*             pObject        = spawnPrefab( manager, prefabPath, pName );
+        MeshComponent*          pMesh          = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
+        AbilitySystemComponent* pAbilitySystem = pObject != nullptr ? pObject->getComponent<AbilitySystemComponent>() : nullptr;
+        ArenaUnitComponent*     pUnitComponent = pObject != nullptr ? pObject->getComponent<ArenaUnitComponent>() : nullptr;
+        PawnComponent*          pPawn          = pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        if ( pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr )
         {
-            SW_LOG_WARNING( "[Arena] prefab '%#' needs a mesh, an ability system and an arena controller", prefabPath.c_str() );
+            SW_LOG_WARNING( "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return false;
@@ -333,14 +468,76 @@ namespace sw
 
         applyTint( *pMesh, static_cast<int32>( request._kind ) );
         pMesh->setLocalPosition( request._position );
-        const float3 facing = ArenaControllerComponent::flattenDirection( float3{ 0.0f, 0.0f, 0.0f } - request._position, float3{ 0.0f, 0.0f, 1.0f } );
-        pController->assignDirector( getOwner()->getHandle(), facing );
+        const float3 facing = ArenaUnitComponent::flattenDirection( float3{ 0.0f, 0.0f, 0.0f } - request._position, float3{ 0.0f, 0.0f, 1.0f } );
+        pUnitComponent->assignDirector( getOwner()->getHandle(), facing );
 
         ArenaUnit unit;
         unit._object = pObject->getHandle();
         unit._kind   = request._kind;
+        if ( bPlayer == false )
+            unit._controller = spawnEnemyController( manager, request._kind, *pPawn );
         _listUnit.push_back( unit );
         return true;
+    }
+
+    GameObjectHandle ArenaDirectorComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
+    {
+        const string&          prefabPath = kind == ArenaUnitKind::Caster ? _casterAiPrefab : _gruntAiPrefab;
+        GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAi" : "ArenaGruntAi" );
+        AiControllerComponent* pAi        = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
+        if ( pAi == nullptr )
+        {
+            SW_LOG_WARNING( "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
+            if ( pObject != nullptr )
+                manager.destroyObject( pObject );
+            return GameObjectHandle{};
+        }
+        pAi->possess( pawn );
+        return pObject->getHandle();
+    }
+
+    void ArenaDirectorComponent::syncPlayerPossession( GameObjectManager& manager )
+    {
+        _bPossessionDirty    = SW_FALSE;
+        PawnComponent* pPawn = findPlayerPawn();
+        if ( pPawn == nullptr )
+            return;
+        if ( isAutoPlayOn() )
+        {
+            GameObject*            pObject = manager.resolveGameObject( _autoBattleObject );
+            AiControllerComponent* pAi     = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
+            if ( pAi == nullptr )
+            {
+                pObject           = spawnPrefab( manager, _autoBattleAiPrefab, "ArenaAutoBattleAi" );
+                pAi               = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
+                _autoBattleObject = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
+            }
+            if ( pAi == nullptr )
+            {
+                SW_LOG_WARNING( "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAiPrefab.c_str() );
+                return;
+            }
+            if ( isPlayerDrivenByAi() == false )
+                pAi->possess( *pPawn );
+            return;
+        }
+        // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다 — 씬에 없으면 세운다(조종 시스템이 자동 빙의로 세우는 것과 같은 자리).
+        PlayerControllerComponent* pPlayer = nullptr;
+        for ( PlayerControllerComponent* pCandidate : manager.getComponentRegistry().getAll<PlayerControllerComponent>() )
+        {
+            if ( pCandidate != nullptr && pCandidate->getPlayerIndex() == 0 )
+            {
+                pPlayer = pCandidate;
+                break;
+            }
+        }
+        if ( pPlayer == nullptr )
+        {
+            GameObject* pObject = manager.createGameObject( hashed_string( "PlayerController" ) );
+            pPlayer             = pObject != nullptr ? pObject->addComponent<PlayerControllerComponent>() : nullptr;
+        }
+        if ( pPlayer != nullptr && pPlayer->getPawn() != pPawn->getHandle() )
+            pPlayer->possess( *pPawn );
     }
 
     void ArenaDirectorComponent::spawnProjectile( const ProjectileRequest& request )
@@ -361,6 +558,8 @@ namespace sw
             applyTint( *pMesh, ArenaDirectorComponentInternal::kProjectileTint );
         pProjectile->launch( getOwner()->getHandle(), request._position, request._velocity, request._range, request._spec, request._extraSpec,
                              request._bFromPlayer == SW_TRUE );
+        if ( request._bFromPlayer == SW_TRUE )
+            ++_playerShotCount;
         pruneProjectiles();
         _listProjectile.push_back( pObject->getHandle() );
     }
@@ -407,10 +606,11 @@ namespace sw
             }
             if ( unit._deathTimer >= 0.0f )
             {
-                // 컨트롤러가 납작하게 만드는 동안 기다렸다가 걷는다.
+                // 유닛이 납작해지는 동안 기다렸다가 걷는다 — 쥐고 있던 AI 조종자도 같이.
                 unit._deathTimer -= deltaTime;
                 if ( unit._deathTimer <= 0.0f )
                 {
+                    destroySpawned( *pManager, unit._controller );
                     pManager->destroyObject( pObject );
                     _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                     continue;
@@ -429,8 +629,8 @@ namespace sw
 
     void ArenaDirectorComponent::updateUnitViews()
     {
-        // 이번 프레임의 모습 — 컨트롤러 · 투사체가 뒤 그룹에서 읽는다. 틱 전 자리다(틱 안의 쓰기는 틱 뒤에 보인다). 이번 프레임 자리가 필요한 쪽은
-        // 트랜스폼을 읽는다 — 적은 플레이어 컨트롤러 뒤의 서브틱에서, 카메라는 물리 뒤 단계에서.
+        // 이번 프레임의 모습 — 유닛 · 투사체가 뒤 그룹에서 읽는다. 틱 전 자리다(틱 안의 쓰기는 틱 뒤에 보인다). 이번 프레임 자리가 필요한 쪽은
+        // 트랜스폼을 읽는다 — 조종자의 판단은 다음 틱 전에(`findUnitPosition`), 카메라는 물리 뒤 단계에서.
         _listUnitView.clear();
         _playerFocus                = float3{ 0.0f, 0.0f, 0.0f };
         _playerObject               = GameObjectHandle{};

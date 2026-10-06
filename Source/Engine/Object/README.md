@@ -156,7 +156,7 @@ B·I 의 "씬 트랜스폼 flush" 는 매니저의 알고리즘이 아니라 **`
 - 선행 조건이 없으면 같은 그룹의 다른 오브젝트가 쓴 값은 틱 전 값으로 읽힌다 — 그것이 보통 길의 계약이고 그래서 잠금이 없다. 선행 조건은 그 계약을 그
   사슬에만 푼다. 대상이 자주 바뀌면(가장 가까운 적) 바뀔 때 선행 조건을 갈아 건다(`removeSubTickPrerequisite` — 틱 중이면 다음 틱부터).
 - 선행 조건 핸들은 등록이 준 것(`registerSubTick` 의 반환 · `getTickHandle()`)을 쓴다 — 소유 오브젝트 id 가 들어야 등록부가 씬을 훑지 않고 대상을 찾는다.
-- 예: AbilityArena 의 적(`ArenaEnemyControllerComponent`)은 플레이어 컨트롤러의 주 틱 뒤에 서브틱으로 돌아 이번 프레임의 플레이어 자리를 쫓는다.
+- 예: 디렉터의 `_tickAfter`(`GameDirectorComponent`) — 규칙을 서브틱(`kRuleSubTick`)으로 옮기고 다른 오브젝트 디렉터의 규칙 틱을 선행 조건으로 걸어 그 뒤에 돈다.
 
 ### 초심자가 꼭 기억할 것
 
