@@ -31,12 +31,14 @@ namespace sw
      */
     struct UiLayoutContext
     {
-        TextLayoutEngine* _pTextLayout{ nullptr }; ///< 글 측정(없으면 글 위젯이 크기 0)
-        float4            _safeInsets{};           ///< 뷰포트 안전 영역(왼 · 위 · 오른 · 아래, UI 단위)
-        float2            _viewportSize{};         ///< 뷰포트 크기(UI 단위) — 트리 루트가 놓이는 사각형
-        float32           _uiScale{ 1.0f };        ///< UI 단위 → 물리 픽셀. 픽셀 맞춤에 쓴다
-        float32           _textScale{ 1.0f };      ///< 글자 크기 배율(gv_uiTextScale) — 글 측정에만 곱한다
-        bool              _bRightToLeft{ false };  ///< 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 루트의 Inherit 이 따른다
+        TextLayoutEngine*          _pTextLayout{ nullptr };   ///< 글 측정(없으면 글 위젯이 크기 0)
+        float4                     _safeInsets{};             ///< 뷰포트 안전 영역(왼 · 위 · 오른 · 아래, UI 단위)
+        float2                     _viewportSize{};           ///< 뷰포트 크기(UI 단위) — 트리 루트가 놓이는 사각형
+        float32                    _uiScale{ 1.0f };          ///< UI 단위 → 물리 픽셀. 픽셀 맞춤에 쓴다
+        float32                    _textScale{ 1.0f };        ///< 글자 크기 배율(gv_uiTextScale) — 글 측정에만 곱한다
+        bool                       _bRightToLeft{ false };    ///< 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 루트의 Inherit 이 따른다
+        const LocalizationManager* _pLocalization{ nullptr }; ///< 글 위젯이 키를 푸는 문화권(없으면 글 그대로)
+        uint32                     _textRevision{ 0 };        ///< 그 문화권의 글 판(`getTextRevision`) — 글 위젯의 풀이 캐시 열쇠
     };
 } // namespace sw
 

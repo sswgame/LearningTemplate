@@ -3,6 +3,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Render/UiPaintPass.h"
@@ -38,6 +39,10 @@ namespace sw
         , _outlineColor{ 0.0f, 0.0f, 0.0f, 1.0f }
         , _outlineWidth{ 0.0f }
         , _bRichText{ false }
+        , _bLocalized{ true }
+        , _displayText{}
+        , _displayRevision{ 0 }
+        , _bDisplayValid{ false }
         , _richText{}
         , _layoutCache{}
         , _layoutWidth{ 0.0f }
@@ -103,7 +108,7 @@ namespace sw
             invalidate( WidgetDirty::kPaint );
             return;
         }
-        if ( name == hashed_string( "_text" ) || name == hashed_string( "_style" ) || name == hashed_string( "_bRichText" ) )
+        if ( name == hashed_string( "_text" ) || name == hashed_string( "_style" ) || name == hashed_string( "_bRichText" ) || name == hashed_string( "_bLocalized" ) )
         {
             invalidateText();
             return;
@@ -111,10 +116,41 @@ namespace sw
         Widget::onBoundPropertyChanged( property );
     }
 
+    void TextWidget::setLocalized( bool bLocalized )
+    {
+        if ( _bLocalized == bLocalized )
+            return;
+        _bLocalized = bLocalized;
+        invalidateText();
+    }
+
+    void TextWidget::onTextRevisionChanged()
+    {
+        if ( _bLocalized && _text.empty() == false )
+            invalidateText();
+    }
+
+    void TextWidget::resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision ) const
+    {
+        if ( _bDisplayValid && _displayRevision == textRevision )
+            return;
+        const bool  bResolve  = _bLocalized && pLocalization != nullptr && _text.empty() == false;
+        const utf8* pResolved = bResolve ? pLocalization->getStringByText( _text, _text.c_str() ) : _text.c_str();
+        if ( _bDisplayValid == false || _displayText != pResolved )
+        {
+            _displayText  = pResolved;
+            _bLayoutValid = false;
+            _bRichParsed  = false;
+        }
+        _displayRevision = textRevision;
+        _bDisplayValid   = true;
+    }
+
     void TextWidget::invalidateText()
     {
-        _bLayoutValid = false;
-        _bRichParsed  = false;
+        _bDisplayValid = false;
+        _bLayoutValid  = false;
+        _bRichParsed   = false;
         invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint );
     }
 
@@ -134,10 +170,10 @@ namespace sw
     string_view TextWidget::getPlainText() const
     {
         if ( _bRichText == false )
-            return _text;
+            return _displayText;
         if ( _bRichParsed == false )
         {
-            RichTextParser::parse( _text, _richText );
+            RichTextParser::parse( _displayText, _richText );
             _bRichParsed = true;
         }
         return _richText._plainText;
@@ -155,6 +191,7 @@ namespace sw
     {
         if ( context._pTextLayout == nullptr || _text.empty() )
             return float2{};
+        resolveDisplayText( context._pLocalization, context._textRevision );
         // 줄 바꿈이면 가용 너비 안에서 잰다(무한이면 한 줄). 줄 바꿈이 아니면 늘 한 줄이다.
         const bool    bBounded = UiLayoutPass::isUnbounded( availableSize._x ) == false && availableSize._x > 0.0f;
         const float32 maxWidth = _style._bWrap && bBounded ? availableSize._x : 0.0f;
@@ -165,6 +202,7 @@ namespace sw
     {
         if ( context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty() )
             return;
+        resolveDisplayText( context._pLocalization, context._textRevision );
         const TextLayoutStyle  style  = makeLayoutStyle( context._textScale );
         const float32          width  = getGeometry()._size._x;
         const bool             bRtl   = style._paragraphDirection == TextDirection::RightToLeft;

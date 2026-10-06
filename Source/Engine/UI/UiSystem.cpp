@@ -12,6 +12,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -159,12 +160,14 @@ namespace sw
         , _listWidgetComponent{}
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
+        , _textRevision{ 0 }
         , _inputMode{ UiInputMode::Pointer }
         , _bPauseRequested{ SW_FALSE }
         , _bPendingClose{ SW_FALSE }
         , _bPointerKnown{ SW_FALSE }
         , _bStickHeld{ SW_FALSE }
         , _bMousePixelKnown{ SW_FALSE }
+        , _bTextRevisionKnown{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -634,9 +637,27 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "GT.Ui.Bind" );
         UiBindingContext context{};
-        context._pLocalization = _pLocalization != nullptr ? _pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
+        context._pLocalization = findLocalization();
         context._pConverters   = &_bindingConverters;
-        uint32 polledCount     = 0;
+        // 글 판 — 언어를 바꾸거나 표를 다시 읽으면 오른다. 정수 하나 비교라 매 프레임 본다(언리얼 FTextLocalizationManager 의 TextRevision).
+        const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
+        if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
+        {
+            if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
+                _pFontSystem->invalidateFaceChains(); // 문화권의 대체 가족이 바뀐다
+            vector<Widget*> listWidget;
+            for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            {
+                listWidget.clear();
+                screen->getTree().collectWidgetsInDocumentOrder( listWidget );
+                for ( Widget* pWidget : listWidget )
+                    pWidget->onTextRevisionChanged();
+            }
+            context._bTextRevisionChanged = true;
+        }
+        _textRevision       = textRevision;
+        _bTextRevisionKnown = SW_TRUE;
+        uint32 polledCount  = 0;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
         {
             UiBindingSet& bindingSet = screen->getBindingSet();
@@ -644,6 +665,11 @@ namespace sw
             polledCount += bindingSet.getPolledCount();
         }
         SW_PROFILE_COUNT( "Ui.PollBindings", polledCount );
+    }
+
+    const LocalizationManager* UiSystem::findLocalization() const
+    {
+        return _pLocalization != nullptr ? _pLocalization : engine::getBoundEngineServices()._pLocalizationManager;
     }
 
     void UiSystem::processPointer()
@@ -1036,10 +1062,12 @@ namespace sw
     UiPaintContext UiSystem::makePaintContext() const
     {
         UiPaintContext context{};
-        context._pTextLayout = _textLayout.get();
-        context._uiScale     = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
-        context._textScale   = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
-        context._frameIndex  = engine::getFrameProfiler().getFrameCount();
+        context._pTextLayout   = _textLayout.get();
+        context._uiScale       = _viewport._uiScale > 0.0f ? _viewport._uiScale : 1.0f;
+        context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
+        context._frameIndex    = engine::getFrameProfiler().getFrameCount();
+        context._pLocalization = findLocalization();
+        context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _pFontSystem != nullptr && _pFontSystem->isInitialized() )
         {
             context._pGlyphCache     = &_pFontSystem->getGlyphCache();
@@ -1169,12 +1197,14 @@ namespace sw
     UiLayoutContext UiSystem::makeLayoutContext() const
     {
         UiLayoutContext context{};
-        context._pTextLayout  = _textLayout.get();
-        context._safeInsets   = _viewport._safeInsets;
-        context._viewportSize = _viewport._size;
-        context._uiScale      = _viewport._uiScale;
-        context._textScale    = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
-        context._bRightToLeft = UiLayoutPass::isCultureRightToLeft( _pLocalization );
+        context._pTextLayout   = _textLayout.get();
+        context._safeInsets    = _viewport._safeInsets;
+        context._viewportSize  = _viewport._size;
+        context._uiScale       = _viewport._uiScale;
+        context._textScale     = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
+        context._bRightToLeft  = UiLayoutPass::isCultureRightToLeft( _pLocalization );
+        context._pLocalization = findLocalization();
+        context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         return context;
     }
 } // namespace sw

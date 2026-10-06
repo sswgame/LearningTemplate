@@ -260,6 +260,10 @@ namespace sw
             invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint );
     }
 
+    void Widget::onTextRevisionChanged()
+    {
+    }
+
     void Widget::notifyValueEdited( const hashed_string& propertyName )
     {
         UiScreen* pScreen = _pTree != nullptr ? _pTree->getScreen() : nullptr;

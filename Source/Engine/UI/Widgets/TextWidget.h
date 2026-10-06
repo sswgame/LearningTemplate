@@ -16,6 +16,11 @@
 
 namespace sw
 {
+    class LocalizationManager;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class TextWidget
      * @brief 글을 배치(`TextLayoutEngine`)해 글리프 사각형으로 칠합니다.
@@ -23,6 +28,8 @@ namespace sw
      *          (글 · 스타일 · 너비 · 글자 배율 · 방향이 같으면 다시 배치하지 않는다). 글 · 스타일이 바뀌면 `kLayout`, 색만 바뀌면 `kPaint` 입니다.
      *          문단 방향은 이 위젯의 흐름 방향(`isRightToLeft`)입니다. `_bRichText` 면 `[b]` · `[i]` · `[color=]` · `[size=]` 표기를 읽습니다(`RichTextParser`).
      *          글리프 아틀라스를 쓰므로 페이지가 비워지면(세대가 오르면) 다시 칠합니다.
+     *          `_text` 는 현지화 키 또는 글 그대로이고, 보이는 글은 측정 · 칠하기 때 문맥의 문화권으로 풀어 글 판과 함께 캐시합니다 — 언어가 바뀌면
+     *          `UiSystem` 이 `onTextRevisionChanged` 로 알려 다시 풀고 다시 잽니다(언리얼 FText 의 TextRevision).
      */
     REFLECT( Category = "UI", DisplayName = "Text", Tooltip = "Draws a line or paragraph of text" )
     class SW_API TextWidget : public Widget
@@ -37,9 +44,19 @@ namespace sw
         /** @brief 바인딩이 쓴 칸에 맞춰 무효화합니다(색 · 외곽선은 그리기만, 글 · 스타일은 배치 캐시를 버리고 레이아웃). */
         void onBoundPropertyChanged( const PropertyInfo& property ) override;
 
-        /** @brief 글을 바꿉니다(현지화 키 풀기는 6-2). 바뀌면 kLayout. */
+        /**
+         * @brief 글을 바꿉니다 — **현지화 키 또는 글 그대로**(`Menu.Pause.Title` · `Paused`). 바뀌면 kLayout.
+         * @details 보이는 글은 `LocalizationManager::getStringByText( 키, 키 )` 로 풉니다 — 표에 없으면 글 그대로. 코드는 키를 넣습니다
+         *          (`SW_LOCTEXT` 로 미리 푼 글을 넣으면 언어를 바꿔도 그대로다). 사용자가 친 글처럼 풀면 안 되는 글은 `setLocalized( false )`.
+         */
         void          setText( string_view text );
         const string& getText() const { return _text; }
+        /** @brief 마지막 측정 · 칠하기가 푼 보이는 글입니다(풀기 전이면 빈 글). */
+        const string& getDisplayText() const { return _displayText; }
+        /** @brief 글을 현지화 키로 풀지 정합니다(기본 true). 바뀌면 kLayout. */
+        void setLocalized( bool bLocalized );
+        bool isLocalized() const { return _bLocalized; }
+        void onTextRevisionChanged() override;
         /** @brief 배치 스타일을 바꿉니다. 바뀌면 kLayout. */
         void                   setTextStyle( const TextLayoutStyle& style );
         const TextLayoutStyle& getTextStyle() const { return _style; }
@@ -68,11 +85,13 @@ namespace sw
         string_view getPlainText() const;
         /** @brief 리치 텍스트 구간입니다(리치 텍스트가 아니면 nullptr). */
         const vector<RichTextSpan>* getSpans() const;
-        /** @brief 글 · 스타일이 바뀌었다 — 배치 캐시 · 리치 텍스트 파싱을 버리고 kLayout. */
+        /** @brief 글 · 스타일이 바뀌었다 — 풀이 · 배치 캐시 · 리치 텍스트 파싱을 버리고 kLayout. */
         void invalidateText();
+        /** @brief 보이는 글을 문화권 @p pLocalization 의 판 @p textRevision 으로 풉니다(같은 판이면 캐시). 바뀌면 배치 · 리치 텍스트 캐시를 버린다. */
+        void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision ) const;
 
     private:
-        PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Text, or a localization key once text binding (6-2) resolves it" )
+        PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Localization key, or the text itself when the tables have no such key" )
         string _text;
         PROPERTY( DisplayName = "Style" )
         TextLayoutStyle _style;
@@ -84,6 +103,12 @@ namespace sw
         float32 _outlineWidth;
         PROPERTY( DisplayName = "Rich Text", Tooltip = "Read [b] [i] [color=] [size=] markup" )
         bool _bRichText;
+        PROPERTY( DisplayName = "Localized", Tooltip = "Resolve the text as a localization key (off for text the player typed)" )
+        bool _bLocalized;
+
+        mutable string _displayText;     ///< 푼 보이는 글(`_bDisplayValid` 일 때 유효)
+        mutable uint32 _displayRevision; ///< 그 풀이의 글 판
+        mutable bool   _bDisplayValid;   ///< `_displayText` 가 지금 글 · 판의 것이다
 
         mutable RichTextParseResult _richText;       ///< 리치 텍스트 파싱 결과(`_bRichParsed` 일 때 유효)
         mutable TextLayoutResult    _layoutCache;    ///< 마지막 칠하기의 배치

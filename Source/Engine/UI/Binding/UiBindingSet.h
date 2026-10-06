@@ -25,8 +25,9 @@ namespace sw
     /** @struct UiBindingContext @brief 바인딩 단계가 묻는 것 — 현지화(형식 바인딩) · 변환기 표입니다. */
     struct UiBindingContext
     {
-        const LocalizationManager*        _pLocalization{ nullptr }; ///< 형식 바인딩의 메시지 패턴(없으면 값 글 그대로)
-        const UiBindingConverterRegistry* _pConverters{ nullptr };   ///< 변환기 표(없으면 변환기를 쓴 바인딩은 오류)
+        const LocalizationManager*        _pLocalization{ nullptr };      ///< 형식 바인딩의 메시지 패턴(없으면 값 글 그대로)
+        const UiBindingConverterRegistry* _pConverters{ nullptr };        ///< 변환기 표(없으면 변환기를 쓴 바인딩은 오류)
+        bool                              _bTextRevisionChanged{ false }; ///< 이번 프레임 글 판이 바뀌었다 — 형식 바인딩을 다시 쓴다
     };
 } // namespace sw
 

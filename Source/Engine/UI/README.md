@@ -331,3 +331,12 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **변환기**: 이름으로 찾습니다(`UiSystem::getBindingConverters`). 엔진 기본 `Percent` · `Invert` · `NotEmpty` · `IsZero` · `Seconds`(m:ss). 게임이 더한 변환기는
   그 모듈이 내려갈 때 걷히고 화면은 다시 겁니다.
 - **폴링**(`{poll:필드}`): 알림 없이 매 프레임 값을 견줍니다 — 개발 편의입니다. 견준 수가 프로파일 카운터 `Ui.PollBindings` 로 보이고, Shipping 에서 걸면 경고 한 줄.
+
+### 현지화 글
+
+- 글 위젯의 `_text`(`Meta = "Localizable"`)는 **현지화 키 또는 글 그대로**입니다. 보이는 글은 측정 · 칠하기 때 문맥의 문화권으로 `getStringByText( 키, 키 )` —
+  표에 없으면 글 그대로(문서의 영어 원문 `"Paused"` 도 그대로 보인다). 푼 글은 글 판(`getTextRevision`)과 함께 위젯이 캐시합니다(`getDisplayText`).
+- 바인딩 단계가 프레임마다 글 판을 견줍니다(정수 하나). 바뀌면 글꼴 대체 사슬을 비우고(`FontSystem::invalidateFaceChains`) 모든 위젯에 `onTextRevisionChanged` —
+  글 위젯은 다시 풀고 kLayout(글 길이가 바뀐다). 형식 바인딩(`format=`)도 같은 프레임에 다시 포맷합니다. 오른쪽에서 왼쪽 문화권이면 레이아웃이 거울로 놓습니다.
+- 코드는 **키를 넣습니다**(`setText( "Menu.Start" )`). `SW_LOCTEXT` 로 미리 푼 글을 넣으면 언어를 바꿔도 그대로입니다. 플레이어가 친 글처럼 풀면 안 되는 글은
+  `setLocalized( false )` — 글 입력 칸은 친 글을 풀지 않고 힌트만 풉니다.

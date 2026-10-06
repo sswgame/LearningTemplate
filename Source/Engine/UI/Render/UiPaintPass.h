@@ -15,6 +15,7 @@ namespace sw
     struct WidgetGeometry;
 
     class GlyphCache;
+    class LocalizationManager;
     class TextLayoutEngine;
     class Widget;
     class WidgetTree;
@@ -28,12 +29,14 @@ namespace sw
      */
     struct UiPaintContext
     {
-        TextLayoutEngine* _pTextLayout{ nullptr }; ///< 글 배치(없으면 글 위젯은 칠하지 않는다)
-        GlyphCache*       _pGlyphCache{ nullptr }; ///< 글리프 아틀라스(없으면 글 위젯은 칠하지 않는다)
-        uint64            _frameIndex{ 0 };        ///< 글리프 캐시의 최근 사용 프레임
-        float32           _uiScale{ 1.0f };        ///< UI 단위 → 물리 픽셀
-        float32           _textScale{ 1.0f };      ///< 글자 배율(gv_uiTextScale) — 레이아웃 문맥과 같은 값
-        uint32            _atlasGeneration{ 0 };   ///< 글리프 아틀라스 세대 — 바뀌면 글 위젯을 다시 칠한다
+        TextLayoutEngine*          _pTextLayout{ nullptr };   ///< 글 배치(없으면 글 위젯은 칠하지 않는다)
+        GlyphCache*                _pGlyphCache{ nullptr };   ///< 글리프 아틀라스(없으면 글 위젯은 칠하지 않는다)
+        uint64                     _frameIndex{ 0 };          ///< 글리프 캐시의 최근 사용 프레임
+        float32                    _uiScale{ 1.0f };          ///< UI 단위 → 물리 픽셀
+        float32                    _textScale{ 1.0f };        ///< 글자 배율(gv_uiTextScale) — 레이아웃 문맥과 같은 값
+        uint32                     _atlasGeneration{ 0 };     ///< 글리프 아틀라스 세대 — 바뀌면 글 위젯을 다시 칠한다
+        const LocalizationManager* _pLocalization{ nullptr }; ///< 글 위젯이 키를 푸는 문화권(레이아웃 문맥과 같은 값)
+        uint32                     _textRevision{ 0 };        ///< 그 문화권의 글 판
     };
 } // namespace sw
 

@@ -273,8 +273,13 @@ namespace sw
         bool dispatchPointerEvent( const UiPointerEvent& event );
         /** @brief 점 아래의 맨 위 화면입니다(막는 화면 아래로는 내려가지 않는다). 없으면 nullptr 입니다. */
         UiScreen* findPointerScreen( const float2& point ) const;
-        /** @brief 바인딩 단계 — 화면마다 바인딩 집합을 돌린다(걸리지 않았으면 걸고, 바뀐 소스의 칸만 쓴다). */
+        /**
+         * @brief 바인딩 단계 — 글 판(현지화)이 바뀌었으면 글꼴 대체 사슬을 비우고 모든 위젯에 알린 뒤(`Widget::onTextRevisionChanged`),
+         *        화면마다 바인딩 집합을 돌린다(걸리지 않았으면 걸고, 바뀐 소스의 칸만 쓴다 — 글 판이 바뀌면 형식 바인딩도 다시).
+         */
         void updateBindings();
+        /** @brief 지금 문화권 출처입니다(`setLocalization` 이 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). */
+        const LocalizationManager* findLocalization() const;
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
         /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
@@ -320,12 +325,14 @@ namespace sw
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
         UiScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
+        uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 글 판
         UiInputMode                  _inputMode;
-        uint8                        _bPauseRequested  : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
-        uint8                        _bPendingClose    : 1; ///< 닫기를 요청한 화면이 있다
-        uint8                        _bPointerKnown    : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
-        uint8                        _bStickHeld       : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
-        uint8                        _bMousePixelKnown : 1; ///< `_lastMousePixel` 을 한 번 읽었다
-        [[maybe_unused]] uint8       _reserved         : 3;
+        uint8                        _bPauseRequested    : 1; ///< 게임 정지 요청을 걸어 두었다(정지 화면이 하나라도 있다)
+        uint8                        _bPendingClose      : 1; ///< 닫기를 요청한 화면이 있다
+        uint8                        _bPointerKnown      : 1; ///< 마우스 위치를 한 번 읽었다(첫 프레임의 Move 기준)
+        uint8                        _bStickHeld         : 1; ///< 스틱이 탐색 문턱 너머로 기울어 있다
+        uint8                        _bMousePixelKnown   : 1; ///< `_lastMousePixel` 을 한 번 읽었다
+        uint8                        _bTextRevisionKnown : 1; ///< `_textRevision` 을 한 번 읽었다
+        [[maybe_unused]] uint8       _reserved           : 2;
     };
 } // namespace sw

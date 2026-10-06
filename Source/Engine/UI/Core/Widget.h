@@ -124,6 +124,8 @@ namespace sw
          *          파생은 그리기만 바뀌는 칸(색)과 캐시를 가진 칸(글 · 범위)을 덮어씁니다. 칸 종류를 PROPERTY 메타로 적지 않는 이유: 커스텀 메타는 Shipping 에서 지워진다.
          */
         virtual void onBoundPropertyChanged( const PropertyInfo& property );
+        /** @brief 글 판(현지화 — 언어 변경 · 표 다시 읽기)이 바뀌었다. 글 위젯은 키를 다시 풀고 kLayout 입니다. 기본은 아무것도 하지 않습니다. */
+        virtual void onTextRevisionChanged();
 
         // --- 포커스 ---------------------------------------------------------------
         /** @brief 포커스를 받을 수 있는 종류인가 — 버튼 · 슬라이더 · 입력 칸이 true. 꺼졌거나 안 보이면 받지 않는다(트리가 따로 본다). */

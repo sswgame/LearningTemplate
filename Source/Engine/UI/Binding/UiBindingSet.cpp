@@ -112,18 +112,20 @@ namespace sw
             {
                 case UiBindingSource::ViewModel:
                 {
-                    if ( bViewModelMoved == false )
+                    const bool bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
+                    if ( bViewModelMoved == false && bReformat == false )
                         break;
                     const uint64 fieldSerial = _pViewModel->findFieldChangeSerial( binding._sourceField );
-                    if ( fieldSerial > _seenSerial && fieldSerial != binding._skipSerial )
+                    if ( bReformat || ( fieldSerial > _seenSerial && fieldSerial != binding._skipSerial ) )
                         (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
                     break;
                 }
                 case UiBindingSource::Poll:
                 {
                     ++_polledCount;
-                    const string text = UiBindingValueUtil::readValue( binding._source, _pViewModel ).toText();
-                    if ( binding._bPollKnown && binding._lastPollText == text )
+                    const string text      = UiBindingValueUtil::readValue( binding._source, _pViewModel ).toText();
+                    const bool   bReformat = context._bTextRevisionChanged && binding._expression._format.empty() == false;
+                    if ( binding._bPollKnown && binding._lastPollText == text && bReformat == false )
                         break;
                     (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
                     break;

@@ -107,6 +107,7 @@ namespace sw
     void TextInputWidget::refreshDisplay()
     {
         const bool bHint = _text.empty() && _composition.empty();
+        _pDisplay->setLocalized( bHint ); // 힌트는 현지화 키일 수 있고, 친 글은 풀지 않는다
         _pDisplay->setText( bHint ? string_view{ _hintText } : string_view{ _text + _composition } );
         _pDisplay->setColor( TextInputWidgetInternal::makeTextColor( bHint ) );
         invalidate( WidgetDirty::kPaint ); // 커서 자리

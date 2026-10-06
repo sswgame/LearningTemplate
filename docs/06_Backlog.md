@@ -329,9 +329,7 @@ cd build/Ninja-Debug/Bin
   (`OngoingTagRequirements` — 기절 중 버프 정지), 태그가 붙을 때 발동(`OwnedTagAdded` 트리거), 큐를 데이터로 이어 주는 큐 매니저(큐 태그 → 프리팹 · 사운드),
   어트리뷰트를 `SaveGame` 에 싣는 도우미, 에디터의 런타임 상태 패널(걸린 이펙트 · 태그 개수 · 쿨다운). 넣을 때마다 `AbilitySystemTest` 에 시험 하나.
 
-- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글꼴 렌더러가 생기면(글꼴 대체는 `FontSystem` 이,
-  배치 거울은 `UiLayoutPass` 가 이미 읽는다): `getTextRevision()` 이 바뀌면 글을 다시 묻는다(언리얼 FText 처럼 키를 든 UI 글 컴포넌트 —
-  `Meta = "Localizable"` 프로퍼티 + `getStringByText`). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
+- **로컬라이제이션 — 남은 것(데이터 쪽 파이프라인은 끝, `Engine/Localization/README.md`).** UI 글 위젯은 글 판을 따라 다시 푼다(runtime-ui 6-2). 아직 없는 것: `selectordinal`(서수) · 화폐 · 시간대 · XLIFF · 쿠킹된 이진 표(언리얼 `.locres` — 지금은 JSON 을
   그대로 읽는다) · 아랍어 이외 RTL 문화권 데이터 · `ja` 번역. 아이템 · 무기 이름(Shooter3D)은 표에 모이지만 화면에 쓰는 코드가 아직 `getStringByText` 를 거치지 않는다.
 
 - **상호작용 · 기믹(2026-10-04 들어감 — `GameFramework/Base/Interaction` · `Gimmick` · `Spline`) 병합 뒤 남은 것.**
