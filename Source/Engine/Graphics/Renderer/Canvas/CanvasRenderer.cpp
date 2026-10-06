@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Canvas/CanvasRenderer.h"
 
+#include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -71,15 +72,34 @@ namespace sw
         for ( AtlasPage& page : _listAtlasPage )
             uploadAtlasPage( device, page );
 
-        // 3) 사각형 버퍼 — 내용 번호가 같고 버퍼가 그대로면 올리지 않는다(0 은 "모른다" 라 늘 올린다).
-        const vector<CanvasQuad>& listQuad  = inoutFrame._mainOutput._listQuad;
-        const uint32              quadCount = static_cast<uint32>( listQuad.size() );
+        // 3) 사각형 버퍼 — 주 출력 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)이 같고 버퍼가 그대로면 올리지 않는다
+        //    (번호 0 은 "모른다" 라 늘 올린다).
+        uint32 quadCount = static_cast<uint32>( inoutFrame._mainOutput._listQuad.size() );
+        uint64 signature = inoutFrame._contentRevision;
+        bool   bKnown    = inoutFrame._contentRevision != 0;
+        _listTargetQuadBase.clear();
+        for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
+        {
+            _listTargetQuadBase.push_back( quadCount );
+            quadCount += static_cast<uint32>( target._list._listQuad.size() );
+            bKnown    = bKnown && target._contentRevision != 0;
+            signature = HashUtil::mix64( signature ^ ( target._contentRevision * HashUtil::kGoldenRatio64 ) ^ target._targetPath.getHash() );
+        }
         if ( quadCount == 0 )
             return;
-        const bool bSameContent = inoutFrame._contentRevision != 0 && inoutFrame._contentRevision == _uploadedRevision && quadCount == _uploadedQuadCount &&
-                                  _quadBuffer.isValid();
+        signature               = signature == 0 ? 1 : signature;
+        const bool bSameContent = bKnown && signature == _uploadedRevision && quadCount == _uploadedQuadCount && _quadBuffer.isValid();
         if ( bSameContent )
             return;
+        const CanvasQuad* pQuads = inoutFrame._mainOutput._listQuad.data();
+        if ( inoutFrame._listTarget.empty() == false )
+        {
+            _listQuadScratch.clear();
+            _listQuadScratch.insert( _listQuadScratch.end(), inoutFrame._mainOutput._listQuad.begin(), inoutFrame._mainOutput._listQuad.end() );
+            for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
+                _listQuadScratch.insert( _listQuadScratch.end(), target._list._listQuad.begin(), target._list._listQuad.end() );
+            pQuads = _listQuadScratch.data();
+        }
         if ( _quadBuffer._capacityElements < quadCount || _quadBuffer.isValid() == false )
         {
             const uint32 capacity = MathUtil::max( quadCount, static_cast<uint32>( static_cast<float32>( _quadBuffer._capacityElements ) * CanvasRendererInternal::kQuadBufferGrowth ) );
@@ -91,13 +111,13 @@ namespace sw
                 return;
             }
         }
-        _quadBuffer.upload( &device, listQuad.data(), quadCount * static_cast<uint32>( sizeof( CanvasQuad ) ) );
-        _uploadedRevision  = inoutFrame._contentRevision;
+        _quadBuffer.upload( &device, pQuads, quadCount * static_cast<uint32>( sizeof( CanvasQuad ) ) );
+        _uploadedRevision  = bKnown ? signature : 0;
         _uploadedQuadCount = quadCount;
     }
 
-    uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
-                                     bool bNativeBindless ) const
+    uint32 CanvasRenderer::drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth,
+                                     uint32 targetHeight, bool bNativeBindless ) const
     {
         if ( list.isEmpty() || pso == 0 || _quadBuffer.isValid() == false || targetWidth == 0 || targetHeight == 0 )
             return 0;
@@ -119,7 +139,7 @@ namespace sw
             cmd.setScissorRect( batch._bScissor == SW_TRUE ? batch._scissor : wholeTarget );
 
             uint32 arrRoot[CanvasRendererInternal::kRootConstantCount]{};
-            arrRoot[CanvasRendererInternal::kRootQuadBase]     = batch._firstQuad;
+            arrRoot[CanvasRendererInternal::kRootQuadBase]     = quadBase + batch._firstQuad;
             arrRoot[CanvasRendererInternal::kRootTargetWidth]  = CanvasRendererInternal::toBits( static_cast<float32>( targetWidth ) );
             arrRoot[CanvasRendererInternal::kRootTargetHeight] = CanvasRendererInternal::toBits( static_cast<float32>( targetHeight ) );
             for ( uint32 slot = 0; slot < shaderslot::kMaterialTextureCount; ++slot )

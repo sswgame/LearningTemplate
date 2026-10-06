@@ -5,19 +5,25 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Core/WidgetTypes.h"
 
 namespace sw
 {
+    struct UiLayoutContext;
+    struct UiPaintContext;
+
     class UiSystem;
     class Widget;
+    class WidgetTree;
 
     /** @brief 위젯 컴포넌트가 그리는 자리입니다. */
     ENUM()
@@ -109,17 +115,41 @@ namespace sw
         /** @brief UI 시스템이 먼저 내려간다 — 등록 · 마커를 알림 없이 잊습니다(`UiSystem::shutdown` 이 부른다). */
         void forgetUiSystem();
 
+        // --- World(렌더 텍스처 사각형) -----------------------------------------------
+        /** @brief World 의 렌더 텍스처 크기(픽셀 = UI 단위, 배율 1)입니다 — `_drawSize`, 없으면 기본 256 × 128. */
+        float2 getWorldTextureSize() const;
+        /**
+         * @brief World 위젯 트리를 놓고 칠해 렌더 텍스처 목록을 갱신합니다(`UiSystem::update` 가 부른다 — 배율 1 · 뷰포트 = 텍스처 크기).
+         * @details 내용이 지난번과 같으면 번호를 올리지 않아 렌더러가 텍스처를 다시 그리지 않습니다.
+         */
+        void updateWorldCanvas( const UiLayoutContext& baseLayout, const UiPaintContext& basePaint );
+        /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UiSystem::collectWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않는다. */
+        void appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const;
+        /** @brief World 목록의 내용 번호입니다(시험). */
+        uint64 getWorldCanvasRevision() const { return _worldRevision; }
+        /** @brief World 사각형 오브젝트입니다(없으면 무효 — 시작할 때 오브젝트 밑에 만든다). */
+        GameObjectHandle getWorldQuad() const { return _worldQuad; }
+
     private:
         /** @brief 콘텐츠를 UI 시스템의 마커 화면에 붙입니다(등록 · 콘텐츠가 다 있을 때). */
         void attachMarker();
         /** @brief 마커 위젯을 떼어 지웁니다. */
         void detachMarker();
+        /** @brief World 사각형(자식 오브젝트 — 스프라이트 사각형 메시 + 렌더 텍스처를 읽는 프리멀티플라이 스프라이트 머티리얼 인스턴스)을 만듭니다. */
+        void createWorldQuad();
+        /** @brief World 사각형 오브젝트를 지웁니다. */
+        void destroyWorldQuad();
 
     private:
-        unique_ptr<Widget>    _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯
-        WidgetId              _markerWidget;   ///< 마커 화면에 붙인 위젯(없으면 무효)
-        WidgetMarkerPlacement _lastPlacement;
-        UiSystem*             _pUiSystem; ///< 등록한 UI 시스템(없으면 nullptr)
+        unique_ptr<Widget>     _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯
+        WidgetId               _markerWidget;   ///< 마커 화면에 붙인 위젯(없으면 무효)
+        WidgetMarkerPlacement  _lastPlacement;
+        UiSystem*              _pUiSystem;     ///< 등록한 UI 시스템(없으면 nullptr)
+        unique_ptr<WidgetTree> _worldTree;     ///< World — 위젯 트리(루트 = 콘텐츠)
+        CanvasDrawList         _worldCanvas;   ///< World — 마지막 그리기 목록(텍스처 픽셀)
+        CanvasDrawList         _worldScratch;  ///< World — 칠하는 중의 목록
+        uint64                 _worldRevision; ///< World — `_worldCanvas` 내용 번호
+        GameObjectHandle       _worldQuad;     ///< World — 사각형 자식 오브젝트
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
         string _documentPath;
         PROPERTY( DisplayName = "Space" )

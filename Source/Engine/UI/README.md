@@ -190,6 +190,11 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   (`computeMarkerPlacement` — 순수 함수). `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고, 없으면 원하는 크기에 피벗을 맞춘다. 카메라 뒤 · 화면 밖은 숨기거나
   `_bClampToScreenEdge` 면 가장자리(여백 24)에 붙이고(카메라 뒤는 나누기 전 클립 방향 — 오른쪽 뒤면 오른쪽 변), `_maxDistance` 밖은 숨긴다. `_bScaleWithDistance` 는
   기준 거리 / 거리(0.25 ~ 2)를 피벗 둘레 렌더 변환으로. 2D(직교) · 3D 가 같은 코드다.
+- **World**: 위젯을 컴포넌트 자기 트리(화면 스택 밖 — 포커스 · 입력 없음)에 놓고, `UiSystem::update` 가 렌더 텍스처 크기(`_drawSize`, 배율 1)로 놓고 칠해
+  내용이 바뀔 때만 번호를 올린다. `EngineLoop` 가 목록(`rendertarget/widget_<컴포넌트 id>`)을 렌더 패킷 캔버스의 대상 목록에 싣고, 렌더러는 장면 뷰보다 먼저(프리패스 리스트)
+  그 텍스처를 지우고 그린다(번호 · 텍스처가 그대로면 건너뛴다 — 텍스처가 그림을 지킨다). 시작할 때 오브젝트 밑에 사각형 자식(스프라이트 사각형 메시 · sprite2d 머티리얼 인스턴스
+  — albedoMap = 그 렌더 텍스처, `premultipliedTexture` 로 곧은 알파로 되돌린다, 크기 `_worldSize` m)을 만들고 끝날 때 지운다. 렌더 텍스처 크기는 먼저 알린다
+  (`declareRenderTarget` — 먼저 빌리는 쪽이 크기를 정한다).
 - 컴포넌트는 시작할 때 엔진의 UI 시스템에 묶이고(`bindUiSystem` — 서버처럼 없으면 아무것도 하지 않는다) 끝날 때 풀린다. UI 시스템이 먼저 내려가면 `forgetUiSystem`.
 - 렌더 변환(`setRenderTransform`)은 기하에 얹히는 값이라 그 위젯을 배치 뿌리로 적는다(`kArrange` — 재기 없이 다시 놓는다). 불투명도는 그리기만.
 

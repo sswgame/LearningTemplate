@@ -14,6 +14,7 @@ SW_MATERIAL_BEGIN
 	float4 uvRect;
 	uint albedoMap;
 	uint pointFilter;
+	uint premultipliedTexture;
 }
 SW_MATERIAL_END
 
@@ -58,6 +59,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 	{
 		// 점 필터(픽셀 아트)면 텍셀 중심에 붙여 읽는다 — 확대해도 텍셀 경계가 번지지 않는다(유니티 Filter Mode Point · Godot TEXTURE_FILTER_NEAREST).
 		textureColor = (material.pointFilter != 0u) ? swSampleMaterialTexturePoint(material.albedoMap, uv) : swSampleMaterialTexture(material.albedoMap, uv);
+		// 프리멀티플라이 텍스처(월드 공간 UI 의 렌더 텍스처 — 캔버스가 프리멀티플라이로 그린다)는 곧은 알파로 되돌린다 — 투명 블렌드가 SrcAlpha 를 다시 곱한다.
+		if (material.premultipliedTexture != 0u && textureColor.a > 0.0f)
+			textureColor.rgb /= textureColor.a;
 	}
 
 	float4 finalColor = textureColor * material.color * input.color;

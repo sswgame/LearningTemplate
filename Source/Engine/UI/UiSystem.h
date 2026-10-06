@@ -155,6 +155,8 @@ namespace sw
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
         uint32 getWidgetComponentCount() const { return static_cast<uint32>( _listWidgetComponent.size() ); }
+        /** @brief World 위젯 컴포넌트의 렌더 텍스처 목록을 덧붙입니다(`EngineLoop` 가 렌더 패킷 캔버스의 대상 목록에 — 렌더러가 장면 앞에서 그린다). */
+        void collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const;
 
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */

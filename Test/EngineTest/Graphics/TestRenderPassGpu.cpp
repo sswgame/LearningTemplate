@@ -7181,3 +7181,146 @@ SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the canvas test" );
 }
+
+/**
+ * @brief [RenderPassGpuTest] 캔버스 렌더 텍스처 대상(월드 공간 UI)은 장면 앞에서 그 텍스처를 지우고 그린다 — 빨간 사각형이 텍스처에 들고, 내용 번호가 같은 다음
+ *        프레임은 다시 그리지 않으며(텍스처가 그림을 지킨다), 번호가 오르면 다시 그린다(파랑). 4 백엔드
+ * @details 변이: `FrameRenderer::drawCanvasTargets` 를 부르지 않으면 텍스처가 비어(지운 적도 없다) 붉은 픽셀이 없다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, CanvasTargetDrawsIntoRenderTexture )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_canvas_target";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+        const auto makeFrame = []( const sw::float4& color, uint64 revision )
+        {
+            sw::CanvasFrameData       frame{};
+            sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+            target._targetPath               = sw::hashed_string( kTargetPath );
+            target._list._targetSize         = sw::float2{ 64.0f, 64.0f };
+            target._contentRevision          = revision;
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   brush{};
+            brush._color = color;
+            painter.fillRect( sw::float2{ 16.0f, 16.0f }, sw::float2{ 32.0f, 32.0f }, brush );
+            return frame;
+        };
+        sw::CanvasFrameData red = makeFrame( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f }, 1 );
+        renderer.setCanvasFrame( red );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        int64  diff  = 0;
+        uint32 drawn = 0;
+        uint32 width = 0;
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ),
+                            ( label + "대상 텍스처를 읽지 못했다" ).c_str() );
+        SW_EXPECT_EQUAL( 64u, width );
+        SW_EXPECT_TRUE_MSG( drawn >= 32u * 32u - 64u && drawn <= 32u * 32u + 64u, ( label + "빨간 사각형 넓이가 아니다 (" + sw::to_string( drawn ) + ")" ).c_str() );
+        SW_EXPECT_TRUE_MSG( diff > 200, ( label + "대상이 붉지 않다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear ); // 같은 번호 — 그리지 않는다
+        SW_EXPECT_EQUAL( 0u, renderer.getLastDrawnCanvasTargetCount() );
+        sw::CanvasFrameData blue = makeFrame( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f }, 2 );
+        renderer.setCanvasFrame( blue );
+        bOk = bOk && renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        SW_EXPECT_EQUAL( 1u, renderer.getLastDrawnCanvasTargetCount() );
+        SW_EXPECT_TRUE_MSG( bOk && MultiViewScene::readTextureRedMinusBlue( device.get(), kTargetPath, diff, drawn, width ), ( label + "두 번째 읽기" ).c_str() );
+        SW_EXPECT_TRUE_MSG( diff < -200, ( label + "번호가 올랐는데 다시 그리지 않았다 (R-B " + sw::to_string( diff ) + ")" ).c_str() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the canvas target test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 월드 공간 UI 의 길 — 캔버스 대상 텍스처(파란 사각형)를 프리멀티플라이 스프라이트 머티리얼 인스턴스(albedoMap = 그 렌더 텍스처)로 읽는
+ *        사각형이 카메라 앞에서 화면 가운데를 파랗게 칠한다(큐브는 주황, 배경은 어둡다). 4 백엔드
+ * @details WidgetComponent(World)가 짓는 것과 같은 조합이다 — 스프라이트 사각형 메시 · sprite2d 머티리얼 · `premultipliedTexture`. 변이: 대상 그리기를 빼면
+ *          텍스처가 비어 가운데가 파랗지 않다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, WorldWidgetRenderTextureIsSampled )
+{
+    constexpr const utf8* kTargetPath = "rendertarget/test_world_widget";
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string  label = sw::string( device->getBackendName() ) + ": ";
+        sw::FrameRenderer renderer;
+        LitCubeScene      stage;
+        bool              bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+        renderer.setPresentCaptureEnabled( true );
+
+        // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
+        sw::engine::getAssetManager().getTextureManager().declareRenderTarget( kTargetPath, 64, 64 );
+        sw::shared_ptr<sw::Material> sprite = sw::Material::create();
+        bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
+        const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );
+        bOk                                 = bOk && pCamera != nullptr;
+        sw::shared_ptr<sw::Mesh> quadMesh   = sw::MeshUtil::createSpriteQuad();
+        if ( bOk )
+        {
+            sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( sprite.get() );
+            instance->setTextureParameter( sw::hashed_string( "albedoMap" ), kTargetPath );
+            instance->setParameter( sw::hashed_string( "premultipliedTexture" ), "1" );
+            sw::GameObject*    pQuad = stage._scene.getObjectManager()->createGameObject( sw::hashed_string( "WidgetQuad" ) );
+            sw::MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<sw::MeshComponent>() : nullptr;
+            bOk                      = pMesh != nullptr;
+            if ( bOk )
+            {
+                const sw::float3 forward = pCamera->getCameraForward();
+                const sw::float3 eye     = pCamera->getCameraPosition();
+                pMesh->setMesh( quadMesh );
+                pMesh->setMaterial( sprite.get() );
+                pMesh->setMaterialInstance( std::move( instance ) );
+                pMesh->setLocalPosition( sw::float3{ eye._x + forward._x * 1.5f, eye._y + forward._y * 1.5f, eye._z + forward._z * 1.5f } );
+                pMesh->setLocalRotation( pCamera->getLocalRotation() );
+            }
+        }
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
+
+        sw::CanvasFrameData       frame{};
+        sw::CanvasTargetDrawList& target = frame._listTarget.emplace_back();
+        target._targetPath               = sw::hashed_string( kTargetPath );
+        target._list._targetSize         = sw::float2{ 64.0f, 64.0f };
+        target._contentRevision          = 1;
+        {
+            sw::CanvasPainter painter( target._list, 1.0f );
+            sw::CanvasBrush   blue{};
+            blue._color = sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+            painter.fillRect( sw::float2{ 16.0f, 16.0f }, sw::float2{ 32.0f, 32.0f }, blue );
+        }
+        renderer.setCanvasFrame( frame );
+        const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        sw::vector<uint8>     bytes;
+        sw::RHITextureMipSpan layout{};
+        bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 캡처" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage image;
+            image.assign( std::move( bytes ), layout, sw::constant::kBackBufferFormat );
+            const test::Rgba8 center = image.getPixel( image.getWidth() / 2, image.getHeight() / 2 );
+            SW_LOG_INFO( "%#world widget center %# %# %#", label, center._r, center._g, center._b );
+            SW_EXPECT_TRUE_MSG( static_cast<int32>( center._b ) > static_cast<int32>( center._r ) + 40,
+                                ( label + "화면 가운데가 렌더 텍스처의 파랑이 아니다 (" + sw::to_string( center._r ) + ", " + sw::to_string( center._g ) + ", " +
+                                  sw::to_string( center._b ) + ")" )
+                                    .c_str() );
+        }
+        if ( quadMesh != nullptr )
+            quadMesh->releaseRhi( device.get() );
+        if ( sprite != nullptr )
+            sprite->releaseRhi( device.get() );
+        renderer.shutdown();
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the world widget test" );
+}

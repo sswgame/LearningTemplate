@@ -125,6 +125,8 @@ namespace sw
         , _presentCapture{ 0 }
         , _canvasRenderer{}
         , _canvasFrame{}
+        , _listCanvasTarget{}
+        , _lastDrawnCanvasTargetCount{ 0 }
         , _pLastSwapchainWriter{ nullptr }
         , _statusMessage{}
         , _graphContext{}
@@ -545,6 +547,8 @@ namespace sw
         dispatchMeshMorph();
         dispatchMeshSkin();
         dispatchCullAndSort( animInstanceCount );
+        // 월드 공간 UI 의 렌더 텍스처 — 장면 뷰가 그 텍스처를 읽기 전에(같은 큐 · 먼저 제출하는 프리패스 리스트).
+        drawCanvasTargets();
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGpuTime )
@@ -789,7 +793,8 @@ namespace sw
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
         ensureMaterialPsos();
 
-        // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 기록 전에 갖춘다(Canvas 패스는 그리기만 한다).
+        // 캔버스의 아틀라스 텍스처 · 사각형 버퍼 · 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스 · 대상 그리기는 그리기만 한다).
+        prepareCanvasTargets();
         _canvasRenderer.prepareFrame( *pDevice, _canvasFrame );
 
         if ( prepareCommandList( pDevice, pCallerName ) == false )

@@ -269,6 +269,14 @@ namespace sw
         }
         // 그리기 — 더러운 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 걷기(5-2) 전까지 kStyle 도 그리기가 비운다).
         paintScreens();
+        // 월드 공간 위젯 — 컴포넌트마다 자기 트리를 렌더 텍스처 크기(배율 1)로 놓고 칠한다.
+        if ( _listWidgetComponent.empty() == false )
+        {
+            const UiLayoutContext layout = makeLayoutContext();
+            const UiPaintContext  paint  = makePaintContext();
+            for ( WidgetComponent* pComponent : _listWidgetComponent )
+                pComponent->updateWorldCanvas( layout, paint );
+        }
     }
 
     UiScreenHandle UiSystem::pushScreen( unique_ptr<UiScreen> screen )
@@ -936,6 +944,12 @@ namespace sw
                 return;
             }
         }
+    }
+
+    void UiSystem::collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const
+    {
+        for ( const WidgetComponent* pComponent : _listWidgetComponent )
+            pComponent->appendWorldCanvas( inoutListTarget );
     }
 
     void UiSystem::syncDemoScreen()

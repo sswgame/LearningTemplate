@@ -13,6 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -122,11 +123,27 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 렌더 텍스처 하나에 그리는 목록입니다(월드 공간 UI — `WidgetComponent` World). 렌더러가 장면 앞에서 그 텍스처를 지우고 그립니다.
+     * @details 텍스처는 `TextureCache` 의 렌더 타깃 경로(`rendertarget/...`)라 머티리얼이 같은 경로로 읽습니다. 크기 = `_list._targetSize`.
+     */
+    struct SW_API CanvasTargetDrawList
+    {
+        hashed_string  _targetPath{};         ///< 렌더 텍스처 경로
+        CanvasDrawList _list{};               ///< 대상 픽셀 크기는 `_list._targetSize`
+        float4         _clearColor{};         ///< 그리기 전에 지우는 색(프리멀티플라이 — 투명이면 0)
+        uint64         _contentRevision{ 0 }; ///< 내용이 바뀔 때만 오른다 — 같으면 렌더러가 텍스처를 다시 그리지 않는다(0 = 늘 그린다)
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 한 프레임의 캔버스 전부입니다 — 렌더 프레임 패킷이 듭니다. */
     struct SW_API CanvasFrameData
     {
-        CanvasDrawList           _mainOutput{};      ///< 주 출력(백버퍼 · 게임 뷰 RT · 스크린샷 캡처)에 Present 뒤 그리는 목록
-        vector<GlyphAtlasUpload> _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
+        CanvasDrawList               _mainOutput{};      ///< 주 출력(백버퍼 · 게임 뷰 RT · 스크린샷 캡처)에 Present 뒤 그리는 목록
+        vector<CanvasTargetDrawList> _listTarget{};      ///< 렌더 텍스처 대상 목록(장면 앞에서 그린다 — 월드 공간 UI)
+        vector<GlyphAtlasUpload>     _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
         /**
          * @brief 사각형 · 일괄 내용이 바뀔 때만 오르는 번호입니다. 렌더러는 지난 프레임과 같으면 사각형 버퍼를 다시 올리지 않습니다.
          * @details 0 은 "모른다" 라 늘 올립니다(시험 · 개발 시험 그림).

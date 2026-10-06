@@ -6,6 +6,7 @@
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
 #include "EngineTest/UI/UiTestWidgets.h"
@@ -138,4 +139,46 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( 0u, ui.getScreenCount() );
     SW_EXPECT_EQUAL( 0u, ui.getWidgetComponentCount() );
+}
+
+/**
+ * @brief [WidgetComponentTest] World 위젯은 마커 화면 대신 자기 트리를 렌더 텍스처 크기(배율 1)로 놓고 칠해, 경로 `rendertarget/widget_<id>` 의 대상 목록을 낸다 —
+ *        내용이 같으면 번호가 그대로, 바뀌면 오른다
+ * @details 변이: `WidgetComponent::updateWorldCanvas` 의 같은 내용 확인을 빼면 바뀐 것이 없는 프레임에도 번호가 올라 진다.
+ */
+SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
+{
+    sw::UiSystem   ui;
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
+    viewport._physicalSize = viewport._size;
+    sw::WidgetComponent component;
+    component.setSpace( sw::WidgetSpace::World );
+    component.setDrawSize( sw::float2{ 64.0f, 32.0f } );
+    sw::unique_ptr<sw::ImageWidget> image  = sw::make_unique<sw::ImageWidget>();
+    sw::ImageWidget*                pImage = image.get();
+    pImage->setBrush( sw::UiBrush::makeSolid( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    component.setContent( std::move( image ) );
+    component.bindUiSystem( &ui );
+    SW_EXPECT_EQUAL( 0u, ui.getScreenCount() ); // 마커 화면을 쓰지 않는다
+
+    ui.update( 1.0f / 60.0f, viewport );
+    sw::vector<sw::CanvasTargetDrawList> listTarget;
+    ui.collectWorldCanvases( listTarget );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listTarget.size() );
+    SW_EXPECT_STREQ( component.getRenderTargetPath().c_str(), listTarget[0]._targetPath.c_str() );
+    SW_EXPECT_NEAR_EQUAL( 64.0f, listTarget[0]._list._targetSize._x, 1e-6f );
+    SW_ASSERT_EQUAL( size_t{ 1 }, listTarget[0]._list._listQuad.size() );
+    SW_EXPECT_NEAR_EQUAL( 64.0f, listTarget[0]._list._listQuad[0]._rect._z, 1e-4f ); // 위젯이 텍스처 전체(배율 1)
+    const uint64 firstRevision = listTarget[0]._contentRevision;
+
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( firstRevision, component.getWorldCanvasRevision() );
+    pImage->setBrush( sw::UiBrush::makeSolid( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_EQUAL( firstRevision + 1, component.getWorldCanvasRevision() );
+    component.bindUiSystem( nullptr );
+    listTarget.clear();
+    ui.collectWorldCanvases( listTarget );
+    SW_EXPECT_TRUE( listTarget.empty() );
 }

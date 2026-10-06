@@ -1407,6 +1407,8 @@ namespace sw
                 packet._canvas._mainOutput      = _owned._pUiSystem->getCanvas();
                 packet._canvas._contentRevision = _owned._pUiSystem->getCanvasRevision();
             }
+            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+                _owned._pUiSystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
             if ( gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
             {
                 packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다

@@ -119,6 +119,7 @@ namespace sw
     void CanvasFrameData::clear()
     {
         _mainOutput.clear();
+        _listTarget.clear();
         _listAtlasUpload.clear();
         _contentRevision = 0;
     }

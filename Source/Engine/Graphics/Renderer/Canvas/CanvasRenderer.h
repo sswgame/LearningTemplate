@@ -16,6 +16,7 @@ namespace sw
 {
     struct CanvasDrawList;
     struct CanvasFrameData;
+    struct CanvasQuad;
     struct CanvasTextureRef;
 
     class IRHICommandList;
@@ -43,18 +44,22 @@ namespace sw
         /**
          * @brief 프레임의 캔버스를 그릴 준비를 합니다 — **기록 시작 전에** 부릅니다(버퍼 · 텍스처 생성과 bindless 등록은 기록 중에 할 수 없다).
          * @details 아틀라스 업로드를 거울에 반영하고(소비한 업로드는 @p inoutFrame 에서 비운다), 페이지 텍스처를 만들거나(없으면) 바뀐 구간을 올리고,
-         *          사각형 버퍼를 갱신합니다. RT.Canvas.Upload.
+         *          사각형 버퍼를 갱신합니다 — 주 출력 다음에 렌더 텍스처 대상들을 이어 한 버퍼에(같은 프레임에 버퍼를 두 번 갱신하지 않게), 대상마다 시작 자리는
+         *          `getTargetQuadBase`. RT.Canvas.Upload.
          */
         void prepareFrame( IRHIDevice& device, CanvasFrameData& inoutFrame );
         /**
          * @brief 목록 하나를 지금 열린 렌더 패스에 그립니다. 일괄마다 가위 · 루트 상수(시작 · 텍스처 넷 · 대상 크기) · `drawInstanced( 6, n )`.
+         * @param quadBase       사각형 버퍼에서 이 목록이 시작하는 자리(주 출력 0, 대상은 `getTargetQuadBase`)
          * @param pso            대상 포맷의 캔버스 PSO
          * @param targetWidth    대상 픽셀 크기(가위가 없는 일괄의 가위 · 셰이더의 NDC 변환)
          * @param bNativeBindless DX12 · Vulkan 이면 텍스처를 bindless 전역 번호로, 아니면 t5..t8 에 서수로 건다
          * @return 그린 일괄 수
          */
-        uint32 drawList( IRHICommandList& cmd, const CanvasDrawList& list, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
+        uint32 drawList( IRHICommandList& cmd, const CanvasDrawList& list, uint32 quadBase, RHIPipelineStateHandle pso, uint32 targetWidth, uint32 targetHeight,
                          bool bNativeBindless ) const;
+        /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 자리입니다. */
+        uint32 getTargetQuadBase( uint32 targetIndex ) const { return targetIndex < _listTargetQuadBase.size() ? _listTargetQuadBase[targetIndex] : 0; }
         /** @brief GPU 자원을 놓습니다(디바이스가 없으면 핸들만 잊는다). 아틀라스 거울은 남깁니다 — 다음 `prepareFrame` 이 다시 올린다. */
         void release( IRHIDevice* pDevice );
 
@@ -89,8 +94,10 @@ namespace sw
 
         vector<AtlasPage>       _listAtlasPage;
         vector<uint8>           _regionScratchBytes; ///< 구간 업로드용 빈틈없는 행 사본
+        vector<CanvasQuad>      _listQuadScratch;    ///< 대상이 있을 때 주 출력 + 대상 사각형을 이어 붙인 사본
+        vector<uint32>          _listTargetQuadBase; ///< 대상마다 버퍼 안 시작 자리
         RHIStructuredBufferSlot _quadBuffer;
-        uint64                  _uploadedRevision; ///< 사각형 버퍼에 지금 든 내용의 번호(0 = 없음)
+        uint64                  _uploadedRevision; ///< 사각형 버퍼에 지금 든 내용의 서명(주 출력 · 대상 내용 번호 — 0 = 없음)
         uint32                  _uploadedQuadCount;
         uint32                  _lastUploadCallCount;
     };

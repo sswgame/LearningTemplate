@@ -178,6 +178,8 @@ namespace sw
          *          그 목록을 그립니다. 아틀라스 업로드는 한 번만 반영합니다(반영하면 비운다).
          */
         void setCanvasFrame( CanvasFrameData& inoutFrame );
+        /** @brief 마지막 프레임에 다시 그린 캔버스 렌더 텍스처 대상 수입니다(내용 번호가 같은 대상은 다시 그리지 않는다 — 시험 · 진단). */
+        uint32 getLastDrawnCanvasTargetCount() const { return _lastDrawnCanvasTargetCount; }
 
     private:
         /** @brief 읽어 온 바이트를 PPM(P6) 파일로 씁니다. 트랜지언트 덤프와 Present 캡처 덤프가 같이 씁니다. */
@@ -421,6 +423,15 @@ namespace sw
         void releaseViewTransients( ViewTarget& view );
         /** @brief 추가 뷰 하나를 통째로 놓습니다(트랜지언트 · 컬링 상수버퍼 · 리스트 · 빌린 렌더 텍스처). */
         void releaseExtraView( ViewTarget& view );
+        /**
+         * @brief 이번 캔버스의 렌더 텍스처 대상을 빌립니다(`TextureCache` 의 렌더 타깃 — 크기는 목록의 대상 크기) · 사라진 대상은 돌려줍니다.
+         *        **기록 전에** 부릅니다(텍스처 생성 · bindless 등록은 기록 중에 할 수 없다).
+         */
+        void prepareCanvasTargets();
+        /** @brief 렌더 텍스처 대상을 지우고 그립니다(프리패스 리스트 — 장면 뷰보다 먼저). 내용 번호 · 텍스처가 지난번과 같은 대상은 건너뜁니다. */
+        void drawCanvasTargets();
+        /** @brief 빌린 렌더 텍스처 대상을 모두 돌려줍니다(디바이스를 놓을 때 · 끝낼 때). */
+        void releaseCanvasTargets();
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태로 맞춥니다 — 새 뷰를 만들고, 사라진 뷰를 놓고, 출력 텍스처 · 풀 크기 · 컬링 입력을 맞추고,
          *        GpuScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
@@ -876,6 +887,18 @@ namespace sw
         CanvasRenderer _canvasRenderer;
         /// @brief 그릴 캔버스입니다 — 패킷 · `setCanvasFrame` 과 바꿔치기로 받는다. 기록 중에는 읽기만 한다.
         CanvasFrameData _canvasFrame;
+        /** @brief 캔버스 렌더 텍스처 대상 하나의 상태입니다 — 빌린 텍스처와 마지막으로 그린 내용 번호 · 텍스처. */
+        struct CanvasTargetState
+        {
+            hashed_string    _path{};
+            Texture2D*       _pTexture{ nullptr }; ///< 캐시가 소유 — 돌려줄 때까지 빌린다
+            uint64           _drawnRevision{ 0 };  ///< 마지막으로 그린 내용 번호(0 = 그린 적 없음)
+            RHITextureHandle _drawnTexture{ 0 };   ///< 그때의 텍스처(다시 만들어졌으면 내용이 없다 — 다시 그린다)
+            uint8            _bSeen{ SW_FALSE };   ///< 이번 프레임 목록에 있다
+        };
+        /// @brief 캔버스 렌더 텍스처 대상(월드 공간 UI)들입니다 — 이번 캔버스 목록 순서와 같지 않다(경로로 찾는다).
+        vector<CanvasTargetState> _listCanvasTarget;
+        uint32                    _lastDrawnCanvasTargetCount;
         /// @brief Swapchain 을 쓰는 마지막 패스(선언 순서 — 그래프가 같은 출력의 쓰기를 선언 순서로 잇는다). 콜백을 묶을 때 정한다.
         const RenderGraphPassDesc*  _pLastSwapchainWriter;
         string                      _statusMessage;

@@ -5,12 +5,21 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Canvas/CanvasPainter.h"
+#include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/2D/SpriteRenderUtil.h"
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Render/UiPaintPass.h"
 #include "Engine/UI/UiSystem.h"
 
 namespace sw
@@ -26,6 +35,9 @@ namespace sw
             static constexpr float32 kMaxDistanceScale = 2.0f;
             /** @brief 원근 나누기의 w 가 이보다 작으면 카메라 뒤(또는 눈 위)로 본다. */
             static constexpr float32 kMinClipW = 1e-5f;
+            /** @brief 그리기 크기를 정하지 않은 World 위젯의 렌더 텍스처 크기입니다. */
+            static constexpr float32 kDefaultWorldWidth  = 256.0f;
+            static constexpr float32 kDefaultWorldHeight = 128.0f;
 
             /** @brief 지금 UI 시스템입니다(서버처럼 없거나 시작 전이면 nullptr). */
             static UiSystem* findUiSystem()
@@ -45,6 +57,11 @@ namespace sw
         , _markerWidget{ kInvalidWidgetId }
         , _lastPlacement{}
         , _pUiSystem{ nullptr }
+        , _worldTree{}
+        , _worldCanvas{}
+        , _worldScratch{}
+        , _worldRevision{ 1 }
+        , _worldQuad{}
         , _documentPath{}
         , _space{ WidgetSpace::Screen }
         , _drawSize{}
@@ -66,11 +83,15 @@ namespace sw
     void WidgetComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        bindUiSystem( WidgetComponentInternal::findUiSystem() );
+        UiSystem* pUi = WidgetComponentInternal::findUiSystem();
+        bindUiSystem( pUi );
+        if ( pUi != nullptr && _space == WidgetSpace::World )
+            createWorldQuad();
     }
 
     void WidgetComponent::onEndPlay()
     {
+        destroyWorldQuad();
         bindUiSystem( nullptr );
         Component::onEndPlay();
     }
@@ -108,6 +129,8 @@ namespace sw
     {
         if ( _pendingContent != nullptr )
             return _pendingContent.get();
+        if ( _worldTree != nullptr )
+            return _worldTree->getRoot();
         return _pUiSystem != nullptr ? _pUiSystem->findScreenMarker( _markerWidget ) : nullptr;
     }
 
@@ -125,7 +148,17 @@ namespace sw
     void WidgetComponent::attachMarker()
     {
         UiSystem* const pUi = _pUiSystem;
-        if ( pUi == nullptr || _space != WidgetSpace::Screen || _pendingContent == nullptr || _markerWidget != kInvalidWidgetId )
+        if ( pUi == nullptr || _pendingContent == nullptr )
+            return;
+        if ( _space == WidgetSpace::World )
+        {
+            // World — 자기 트리(화면 스택 밖 — 포커스 · 포인터 없음, 입력은 백로그)에 놓고 렌더 텍스처로 칠한다.
+            if ( _worldTree == nullptr )
+                _worldTree = make_unique<WidgetTree>();
+            _worldTree->setRoot( std::move( _pendingContent ) );
+            return;
+        }
+        if ( _markerWidget != kInvalidWidgetId )
             return;
         // 첫 자리가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게).
         _pendingContent->setVisibility( WidgetVisibility::Collapsed );
@@ -134,6 +167,7 @@ namespace sw
 
     void WidgetComponent::detachMarker()
     {
+        _worldTree.reset();
         if ( _markerWidget == kInvalidWidgetId )
             return;
         if ( _pUiSystem != nullptr )
@@ -252,5 +286,92 @@ namespace sw
         transform._scale                = float2{ placement._scale, placement._scale };
         transform._pivot                = _pivot;
         pMarker->setRenderTransform( transform );
+    }
+
+    float2 WidgetComponent::getWorldTextureSize() const
+    {
+        if ( _drawSize._x > 0.0f && _drawSize._y > 0.0f )
+            return float2{ MathUtil::ceil( _drawSize._x ), MathUtil::ceil( _drawSize._y ) };
+        return float2{ WidgetComponentInternal::kDefaultWorldWidth, WidgetComponentInternal::kDefaultWorldHeight };
+    }
+
+    void WidgetComponent::updateWorldCanvas( const UiLayoutContext& baseLayout, const UiPaintContext& basePaint )
+    {
+        if ( _space != WidgetSpace::World || _worldTree == nullptr )
+            return;
+        // 텍스처 픽셀 = UI 단위(배율 1). 안전 영역 없음. 글자 배율 · 방향은 화면 UI 와 같다.
+        const float2    size   = getWorldTextureSize();
+        UiLayoutContext layout = baseLayout;
+        layout._viewportSize   = size;
+        layout._safeInsets     = float4{};
+        layout._uiScale        = 1.0f;
+        (void)UiLayoutPass::update( *_worldTree, layout );
+
+        UiPaintContext paint = basePaint;
+        paint._uiScale       = 1.0f;
+        _worldScratch.clear();
+        _worldScratch._targetSize = size;
+        CanvasPainter painter( _worldScratch, 1.0f );
+        (void)UiPaintPass::paint( *_worldTree, paint, painter, _worldScratch );
+        if ( _worldScratch.isSameContent( _worldCanvas ) && _worldScratch._targetSize == _worldCanvas._targetSize )
+            return;
+        std::swap( _worldCanvas, _worldScratch );
+        ++_worldRevision;
+    }
+
+    void WidgetComponent::appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const
+    {
+        if ( _space != WidgetSpace::World || _worldTree == nullptr )
+            return;
+        CanvasTargetDrawList& target = inoutListTarget.emplace_back();
+        target._targetPath           = hashed_string( getRenderTargetPath() );
+        target._list                 = _worldCanvas;
+        target._list._targetSize     = getWorldTextureSize();
+        target._clearColor           = float4{};
+        target._contentRevision      = _worldRevision;
+    }
+
+    void WidgetComponent::createWorldQuad()
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || _worldQuad.isValid() )
+            return;
+        // 스프라이트 사각형(양면 · 단위 크기)에 렌더 텍스처를 읽는 머티리얼 인스턴스를 건다. 캔버스는 프리멀티플라이로 그리므로 셰이더가 곧은 알파로 되돌린다.
+        GameObject*    pQuad = pManager->createGameObject( hashed_string( string( pOwner->getName().c_str() ) + "_WidgetQuad" ) );
+        MeshComponent* pMesh = pQuad != nullptr ? pQuad->addComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+            return;
+        (void)pQuad->attachToParent( pOwner );
+        // 렌더 텍스처 크기는 처음 만드는 쪽이 정한다 — 머티리얼 인스턴스(렌더 스레드)가 캔버스보다 먼저 빌려도 위젯 크기로 만들어지게 먼저 알린다.
+        const float2 textureSize = getWorldTextureSize();
+        if ( engine::areEngineServicesBound() )
+        {
+            engine::getAssetManager().getTextureManager().declareRenderTarget( getRenderTargetPath(), static_cast<uint32>( textureSize._x ),
+                                                                               static_cast<uint32>( textureSize._y ) );
+        }
+        pMesh->setMeshId( "Sprite" );
+        pMesh->setMaterialPath( SpriteRenderUtil::getSpriteMaterialPath().c_str() );
+        pMesh->setLocalScale( float3{ _worldSize._x, _worldSize._y, 1.0f } );
+        if ( pMesh->getMaterial() != nullptr )
+        {
+            shared_ptr<MaterialInstance> instance = MaterialInstance::create( pMesh->getMaterial() );
+            instance->setTextureParameter( hashed_string( "albedoMap" ), getRenderTargetPath() );
+            instance->setParameter( hashed_string( "premultipliedTexture" ), "1" );
+            pMesh->setMaterialInstance( std::move( instance ) );
+        }
+        _worldQuad = pQuad->getHandle();
+    }
+
+    void WidgetComponent::destroyWorldQuad()
+    {
+        if ( _worldQuad.isValid() == false )
+            return;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*        pQuad    = pManager != nullptr ? pManager->findGameObjectById( _worldQuad.objectId() ) : nullptr;
+        if ( pQuad != nullptr )
+            pQuad->destroy();
+        _worldQuad = GameObjectHandle{};
     }
 } // namespace sw
