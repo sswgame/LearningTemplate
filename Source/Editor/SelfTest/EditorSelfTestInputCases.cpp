@@ -327,10 +327,14 @@ namespace sw::editor
                 if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
                     return EditorSelfTestStep::Done;
                 (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
-                uint64& objectId = getToggleProbeObjectId();
-                if ( context.getStepIndex() == 0 )
+                HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
+                uint64&         objectId   = getToggleProbeObjectId();
+                const uint32    stepIndex  = context.getStepIndex();
+                if ( stepIndex == 0 )
                 {
-                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만든다.
+                    // 줄이 하나는 있어야 토글이 그려진다 — 빈 씬에서도 돌게 하나 만들고, 앞 시험이 남긴 검색어를 지운다(걸러지면 줄이 없다).
+                    if ( pHierarchy != nullptr )
+                        pHierarchy->setFilterText( "" );
                     GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
@@ -338,8 +342,18 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
+                // 앞 시험이 연 창이 Hierarchy 를 가렸을 수 있다 — 몇 프레임은 이름표를 기다린다.
+                constexpr uint32   kMaxMarkWaitStep = 10;
                 EditorSelfTestMark mark{};
-                if ( context.expect( EditorSelfTestMarks::find( "hierarchy.activeToggle", mark ), "the hierarchy visibility toggle left no mark" ) )
+                const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
+                if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
+                {
+                    ImGuiWindow* pWindow = ImGui::FindWindowByName( "Hierarchy" );
+                    if ( pWindow != nullptr )
+                        ImGui::FocusWindow( pWindow );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( context.expect( bMarked, "the hierarchy visibility toggle left no mark" ) )
                 {
                     const float32 width     = mark._max._x - mark._min._x;
                     const float32 height    = mark._max._y - mark._min._y;
