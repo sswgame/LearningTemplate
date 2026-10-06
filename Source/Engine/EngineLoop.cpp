@@ -1456,7 +1456,8 @@ namespace sw
         _memoryBudgetMonitor.onFrameEnd();
 
         // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
-        if ( _pAutomationRunner != nullptr && _pAutomationRunner->isActive() && _owned._pInputManager != nullptr )
+        // `isActive` 가 아니라 `hasEnded` — 시작 프레임에서 진 시나리오(읽기 오류 · 시작 시한)도 여기서 끝맺고 그 코드로 끝난다.
+        if ( _pAutomationRunner != nullptr && _pAutomationRunner->hasEnded() == false && _owned._pInputManager != nullptr )
         {
             _pAutomationRunner->setCompletedScreenshotCount( _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
             const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );
