@@ -48,7 +48,7 @@ namespace sw::editor
     public:
         /** @brief 뷰포트 상단 뷰모드/카메라 속도 툴바를 그립니다. */
         static void draw( ViewportToolbarSettings& settings, float32 viewportWidth );
-        /** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. */
-        static void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, bool bEnabled );
+        /** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. @p maxWidth 보다 넓으면 가로 스크롤로 넘깁니다. */
+        static void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, float32 maxWidth, bool bEnabled );
     };
 } // namespace sw::editor

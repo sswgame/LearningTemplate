@@ -691,6 +691,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|widgets.helpMarker",
         "EditorSelfTest|PASS|widgets.propertyRow",
         "EditorSelfTest|PASS|dock.corePanelsAreDocked",
+        "EditorSelfTest|PASS|dock.followsWindowSize",
         "EditorSelfTest|PASS|inspector.drawLeavesTheObjectAlone",
         "EditorSelfTest|PASS|preview.materialHoldsOneReference",
         "EditorSelfTest|PASS|hierarchy.tagFilter",

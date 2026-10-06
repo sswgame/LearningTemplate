@@ -258,6 +258,21 @@ namespace sw
                     return 0;
                 }
 
+                case WM_GETMINMAXINFO:
+                {
+                    // 창 모드에서 사용자가 줄일 수 있는 바닥(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리 · 제목 줄을 더해 창 크기로 넘긴다
+                    // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
+                    // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다 — 그때는 pThis 가 없어 기본 처리로 간다.
+                    if ( pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0 )
+                        break;
+                    RECT frameRect = { 0, 0, static_cast<LONG>( pThis->_minClientWidth ), static_cast<LONG>( pThis->_minClientHeight ) };
+                    AdjustWindowRect( &frameRect, WS_OVERLAPPEDWINDOW, FALSE );
+                    MINMAXINFO* pInfo       = reinterpret_cast<MINMAXINFO*>( lParam );
+                    pInfo->ptMinTrackSize.x = frameRect.right - frameRect.left;
+                    pInfo->ptMinTrackSize.y = frameRect.bottom - frameRect.top;
+                    return 0;
+                }
+
                 case WM_CLOSE:
                 {
                     if ( pThis->_bRecreating == SW_FALSE )

@@ -48,6 +48,8 @@ namespace sw
         void captureRestorePosition() override;
         /** @brief 복원 위치를 창 관리자에게 맡기는 기본 좌표로 되돌립니다. */
         void clearRestorePosition() override;
+        /** @brief `WM_NORMAL_HINTS` 의 최소 크기(PMinSize)를 창 관리자에게 알립니다. */
+        void applyMinimumClientSize() override;
 
     private:
         [[maybe_unused]] void*  _pX11Display;

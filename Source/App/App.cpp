@@ -51,6 +51,14 @@ namespace sw
                 return engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
             }
         };
+
+        /** @brief 이 TU 의 창 크기 상수입니다. */
+        struct AppWindowInternal
+        {
+            /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바 · 도크 다섯 칸 · 게임 뷰 툴바가 겹치지 않는 바닥입니다. */
+            static constexpr uint32 kEditorMinClientWidth  = 960;
+            static constexpr uint32 kEditorMinClientHeight = 540;
+        };
     } // namespace
 
 #if !defined( SW_SHIPPING )
@@ -319,7 +327,11 @@ namespace sw
         // 에디터 뷰 카메라는 에디터 모드에서만 묶는다. 비어 있다는 사실이 곧 "씬 카메라를 쓴다" 는 뜻이라 루프에서 모드를
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
+        {
             _viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
+            // 에디터 창은 패널 배치가 겹치는 크기 밑으로 줄이지 않는다(언리얼 메인 프레임 · 유니티 에디터 창도 최소 크기를 둔다).
+            _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
+        }
 
         _backendSwap.initialize( &_engineLoop, _moduleHost.get(), _bEnableEditor == SW_TRUE );
         _userSettingsHost.initialize( &_engineLoop, _window.get() );

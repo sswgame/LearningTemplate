@@ -39,7 +39,7 @@ namespace sw::editor
         /** @brief 뷰포트 렌더 모드/카메라 속도 툴바를 그립니다. */
         void drawViewportToolbar( float32 viewportWidth );
         /** @brief 기즈모 트랜스폼 플로팅 바를 그립니다. */
-        void drawTransformBar( const float2& anchorPos );
+        void drawTransformBar( const float2& anchorPos, float32 maxWidth );
 
         /** @brief 뷰 행렬을 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const;

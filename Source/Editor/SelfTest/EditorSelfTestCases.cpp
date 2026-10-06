@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
+#include "Engine/Window/IWindow.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -167,6 +168,164 @@ namespace sw::editor
                     ++checkedCount;
                 }
                 (void)context.expect( checkedCount > 0, "no core panel was open" );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
+            // dock.followsWindowSize — 창을 키우고 줄여도 메인 뷰포트가 클라이언트 크기를 따르고, 도크 칸이 화면 안에서 창에 대한 비율을 지킨다
+            // ImGui 는 중앙 노드 옆 칸에 마지막 픽셀 크기(SizeRef)를 그대로 준다. 맞추지 않으면 창을 줄일 때 옆 칸은 그대로이고 게임 뷰 쪽이 32 px 로 눌린다.
+            // 게임 뷰 위 Transform 바는 게임 뷰의 뷰포트 안에 남아야 한다 — 넘치면 멀티 뷰포트가 OS 창으로 떼어 낸다. 에디터 창은 최소 크기 밑으로 줄지 않는다.
+            // ------------------------------------------------------------------------------
+            struct DockResizeProbe
+            {
+                struct NodeShare
+                {
+                    ImGuiID _id{ 0 };
+                    float32 _shareX{ 0.0f };
+                    float32 _shareY{ 0.0f };
+                };
+                vector<NodeShare> _listShare;
+                uint32            _originalWidth{ 0 };
+                uint32            _originalHeight{ 0 };
+            };
+
+            static DockResizeProbe& getDockResizeProbe()
+            {
+                static DockResizeProbe s_probe;
+                return s_probe;
+            }
+
+            /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr. */
+            static const ImGuiDockNode* findMainDockspace()
+            {
+                const ImGuiViewport* pMain       = ImGui::GetMainViewport();
+                ImGuiDockContext&    dockContext = ImGui::GetCurrentContext()->DockContext;
+                for ( int32 nodeIndex = 0; nodeIndex < dockContext.Nodes.Data.Size; ++nodeIndex )
+                {
+                    const ImGuiDockNode* pNode     = static_cast<const ImGuiDockNode*>( dockContext.Nodes.Data[nodeIndex].val_p );
+                    const bool           bMainRoot = pNode != nullptr && pNode->ParentNode == nullptr && pNode->IsDockSpace() && pNode->HostWindow != nullptr &&
+                                           pNode->HostWindow->Viewport == pMain;
+                    if ( bMainRoot )
+                        return pNode;
+                }
+                return nullptr;
+            }
+
+            static void collectVisibleLeaves( const ImGuiDockNode* pNode, vector<const ImGuiDockNode*>& outListLeaf )
+            {
+                if ( pNode == nullptr || pNode->IsVisible == false )
+                    return;
+                if ( pNode->IsLeafNode() )
+                {
+                    outListLeaf.push_back( pNode );
+                    return;
+                }
+                collectVisibleLeaves( pNode->ChildNodes[0], outListLeaf );
+                collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
+            }
+
+            /**
+             * @brief 이번 프레임의 메인 뷰포트 · 도크 칸을 봅니다.
+             * @param bCompareShare false 면 칸마다 창에 대한 비율을 기준으로 적고, true 면 적어 둔 기준과 견줍니다.
+             */
+            static void expectDockFitsViewport( EditorSelfTestContext& context, const IWindow& window, bool bCompareShare )
+            {
+                constexpr float32 kPixelTolerance = 1.0f;
+                constexpr float32 kShareTolerance = 0.03f;
+
+                const ImGuiViewport* pMain = ImGui::GetMainViewport();
+                (void)context.expect( isNear( pMain->Size.x, static_cast<float32>( window.getWidth() ), kPixelTolerance ) &&
+                                          isNear( pMain->Size.y, static_cast<float32>( window.getHeight() ), kPixelTolerance ),
+                                      "the main viewport does not match the window client size" );
+
+                const ImGuiDockNode* pRoot = findMainDockspace();
+                if ( context.expect( pRoot != nullptr && pRoot->Size.x > 0.0f && pRoot->Size.y > 0.0f, "no main dockspace" ) == false )
+                    return;
+
+                vector<const ImGuiDockNode*> listLeaf;
+                collectVisibleLeaves( pRoot, listLeaf );
+                DockResizeProbe& probe = getDockResizeProbe();
+                const ImVec2     workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
+                for ( const ImGuiDockNode* pLeaf : listLeaf )
+                {
+                    const bool bInside = pLeaf->Pos.x >= pMain->WorkPos.x - kPixelTolerance && pLeaf->Pos.y >= pMain->WorkPos.y - kPixelTolerance &&
+                                         pLeaf->Pos.x + pLeaf->Size.x <= workMax.x + kPixelTolerance && pLeaf->Pos.y + pLeaf->Size.y <= workMax.y + kPixelTolerance;
+                    (void)context.expect( bInside, "a dock node lies outside the main viewport" );
+
+                    const float32 shareX = pLeaf->Size.x / pRoot->Size.x;
+                    const float32 shareY = pLeaf->Size.y / pRoot->Size.y;
+                    if ( bCompareShare == false )
+                    {
+                        probe._listShare.push_back( DockResizeProbe::NodeShare{ pLeaf->ID, shareX, shareY } );
+                        continue;
+                    }
+                    for ( const DockResizeProbe::NodeShare& share : probe._listShare )
+                    {
+                        if ( share._id != pLeaf->ID )
+                            continue;
+                        (void)context.expect( isNear( share._shareX, shareX, kShareTolerance ) && isNear( share._shareY, shareY, kShareTolerance ),
+                                              "a dock node did not keep its share of the window - side panels kept their pixel size" );
+                    }
+                }
+            }
+
+            static void expectTransformBarStaysInGameView( EditorSelfTestContext& context )
+            {
+                constexpr float32  kPixelTolerance = 1.0f;
+                const ImGuiWindow* pGameView       = ImGui::FindWindowByName( "Game View" );
+                const ImGuiWindow* pBar            = ImGui::FindWindowByName( "##EditorTransformBar" );
+                if ( pGameView == nullptr || pBar == nullptr || pBar->Active == false )
+                    return; // 이번 프레임에 바를 그리지 않았다(게임 뷰가 가려졌다)
+                (void)context.expect( pBar->Viewport == pGameView->Viewport, "the transform bar left the game view's viewport (it became its own OS window)" );
+                (void)context.expect( pBar->Pos.x >= pGameView->Pos.x - kPixelTolerance &&
+                                          pBar->Pos.x + pBar->Size.x <= pGameView->Pos.x + pGameView->Size.x + kPixelTolerance,
+                                      "the transform bar is wider than the game view" );
+            }
+
+            static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
+            {
+                constexpr uint32 kSettleFrameCount = 3; // 크기 통보 → 다음 NewFrame 의 DisplaySize → 도크 갱신
+                constexpr uint32 kWideWidth        = 1600;
+                constexpr uint32 kWideHeight       = 900;
+                constexpr uint32 kNarrowWidth      = 640; // 에디터 최소 크기보다 작다 — 최소 크기에서 멈춰야 한다
+                constexpr uint32 kNarrowHeight     = 360;
+
+                IWindow* pWindow = IWindow::getActiveWindow();
+                if ( context.expect( pWindow != nullptr, "no active window" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                DockResizeProbe& probe     = getDockResizeProbe();
+                const uint32     stepIndex = context.getStepIndex();
+                if ( stepIndex == 0 )
+                {
+                    probe                 = DockResizeProbe{};
+                    probe._originalWidth  = pWindow->getWidth();
+                    probe._originalHeight = pWindow->getHeight();
+                    (void)context.expect( pWindow->setDisplayMode( WindowDisplayMode::Windowed, kWideWidth, kWideHeight ), "this platform cannot resize the window" );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex == kSettleFrameCount )
+                {
+                    expectDockFitsViewport( context, *pWindow, false );
+                    (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, kNarrowWidth, kNarrowHeight );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex == kSettleFrameCount * 2 )
+                {
+                    expectDockFitsViewport( context, *pWindow, true );
+                    expectTransformBarStaysInGameView( context );
+                    const uint32 minWidth  = pWindow->getMinimumClientWidth();
+                    const uint32 minHeight = pWindow->getMinimumClientHeight();
+                    (void)context.expect( minWidth > 0 && minHeight > 0, "the editor window has no minimum size" );
+                    (void)context.expect( pWindow->getWidth() >= minWidth && pWindow->getHeight() >= minHeight, "the window shrank below the editor minimum size" );
+                    (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, probe._originalWidth, probe._originalHeight );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kSettleFrameCount * 3 )
+                    return EditorSelfTestStep::Continue;
+
+                expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로다
+                probe = DockResizeProbe{};
                 return EditorSelfTestStep::Done;
             }
 
@@ -700,6 +859,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );
+    SW_EDITOR_SELF_TEST( DockResize, "dock.followsWindowSize", 310, &EditorSelfTestCasesInternal::runDockFollowsWindowSize );
     SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::runInspectorDrawLeavesTheObjectAlone );
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );

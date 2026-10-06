@@ -1353,6 +1353,7 @@ cd build/Ninja-Debug/Bin
   모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
   오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
 - **에디터 동작 검증은 에디터 안 자체 시험** — `SW_EDITOR_SELF_TEST` 로 등록하고 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 의 기대 목록에 한 줄 더한다
+- **도크 칸은 창 크기를 비율로 따른다** — ImGui 는 중앙 노드 옆 칸에 마지막 픽셀 크기(`SizeRef`)를 그대로 줘서, 창을 줄이면 옆 패널은 그대로이고 게임 뷰가 32 px 로 눌렸다. `EditorDockLayout::scaleDockSizeToViewport` 가 `DockSpaceOverViewport` 앞에서 `SizeRef` 를 같은 비율로 맞춘다(기준은 마지막 실제 크기 · 처음엔 저장된 루트 크기, 최소화 0×0 은 건너뛴다). 패널 밖으로 넘칠 수 있는 떠 있는 바는 부르는 패널의 뷰포트에 묶는다(`beginFloatingBar` — 묶지 않으면 멀티 뷰포트가 OS 창으로 떼어 낸다). 에디터 창 최소 크기 960×540(`IWindow::setMinimumClientSize`). 시험 `dock.followsWindowSize`.
   (`-gv_editorSelfTest=<패턴>`, 실행 중에는 사용자 `imgui.ini` 를 읽지도 쓰지도 않는다). 워크스페이스는 오브젝트 GUID · 프리팹 경로 사본을 들지 않는다(id · 씬이 정본).
   입력은 `EditorSelfTestInput`(플랫폼 newFrame 뒤 · NewFrame 앞에 넣는다 — 실제 커서보다 뒤라 이긴다), 누를 위젯은 그린 직후 `EditorSelfTestMarks::note( "키" )`.
   클릭은 누르기 · 떼기를 단계 둘로, 단계마다 이름표 위로 다시 옮긴 뒤(ImGui 는 한 프레임의 누름 · 뗌을 흘려 처리하고 플랫폼이 실제 커서를 다시 넣는다).

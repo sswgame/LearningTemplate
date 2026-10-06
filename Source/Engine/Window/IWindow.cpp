@@ -29,7 +29,21 @@ namespace sw
         , _arrReserved{}
         , _restoreX{ 0 }
         , _restoreY{ 0 }
+        , _minClientWidth{ 0 }
+        , _minClientHeight{ 0 }
     {
+    }
+
+    void IWindow::setMinimumClientSize( uint32 width, uint32 height )
+    {
+        _minClientWidth  = width;
+        _minClientHeight = height;
+        applyMinimumClientSize();
+
+        // 바닥은 사용자가 줄일 때만 막는다. 이미 바닥보다 작은 창은 여기서 키운다.
+        const bool bSmaller = _width < width || _height < height;
+        if ( _displayMode == WindowDisplayMode::Windowed && bSmaller )
+            (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
     }
 
     void IWindow::requestClose()

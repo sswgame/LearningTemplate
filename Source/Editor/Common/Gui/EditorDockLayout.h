@@ -52,11 +52,19 @@ namespace sw::editor
 
     private:
         void applyDefaultDockLayout( uint32 dockspaceId );
+        /**
+         * @brief 메인 뷰포트 크기가 바뀌었으면 도크 트리의 기준 크기(SizeRef)를 같은 비율로 맞춥니다. `DockSpaceOverViewport` 앞에서 부릅니다.
+         * @details ImGui 는 중앙 노드 옆 노드에 마지막 픽셀 크기(SizeRef)를 그대로 주고 나머지를 중앙에 줍니다. 그대로 두면 창을 줄일 때 옆 패널은
+         *          그대로이고 중앙(게임 뷰) 쪽이 최소 폭으로 눌립니다.
+         */
+        void scaleDockSizeToViewport( uint32 dockspaceId );
 
         string                 _imguiIniPath;
         string                 _windowsIniPath;
         string                 _pendingLayoutIni; ///< 다음 프레임 시작에 적용할 레이아웃의 ImGui 설정 글
         KeyValueMap            _pendingLayoutVisibility;
+        float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기. 0 이면 다음 프레임이 저장된 크기에서 시작한다
+        float32                _lastDockspaceHeight; ///< 위와 같다(세로)
         uint8                  _bLayoutPending : 1;
         uint8                  _bApplied       : 1;
         [[maybe_unused]] uint8 _reserved       : 6;

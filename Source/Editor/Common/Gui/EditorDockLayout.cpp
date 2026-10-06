@@ -31,6 +31,20 @@ namespace sw::editor
             /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이라 겹치지 않습니다. */
             static constexpr const utf8* kOpenAllPanels = "all";
 
+            /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
+            static constexpr float32 kMinScaledDockspaceSize = 64.0f;
+
+            /** @brief @p pNode 아래 모든 노드의 기준 크기(SizeRef)에 @p scale 을 곱합니다. */
+            static void scaleSizeRef( ImGuiDockNode* pNode, const ImVec2& scale )
+            {
+                if ( pNode == nullptr )
+                    return;
+                pNode->SizeRef.x *= scale.x;
+                pNode->SizeRef.y *= scale.y;
+                scaleSizeRef( pNode->ChildNodes[0], scale );
+                scaleSizeRef( pNode->ChildNodes[1], scale );
+            }
+
             /**
              * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록돼 있는지 확인합니다.
              * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받습니다.** 그래서 패널 제목이 바뀌면 기본 배치만 말없이
@@ -88,6 +102,8 @@ namespace sw::editor
         , _windowsIniPath{}
         , _pendingLayoutIni{}
         , _pendingLayoutVisibility{}
+        , _lastDockspaceWidth{ 0.0f }
+        , _lastDockspaceHeight{ 0.0f }
         , _bLayoutPending{ SW_FALSE }
         , _bApplied{ SW_FALSE }
         , _reserved{ 0 }
@@ -152,6 +168,9 @@ namespace sw::editor
             }
         }
         ImGui::LoadIniSettingsFromMemory( _pendingLayoutIni.c_str(), _pendingLayoutIni.size() );
+        // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 든다. 다음 프레임이 그 크기를 기준으로 지금 창에 비율을 맞춘다.
+        _lastDockspaceWidth  = 0.0f;
+        _lastDockspaceHeight = 0.0f;
         // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다).
         _bApplied = SW_TRUE;
         _pendingLayoutIni.clear();
@@ -298,8 +317,10 @@ namespace sw::editor
             return;
 
         const ImGuiViewport* pViewport   = ImGui::GetMainViewport();
-        const ImGuiID        dockspaceId = ImGui::DockSpaceOverViewport(
-            ImGui::GetID( "EditorMainDockSpace_v6" ), pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+        const ImGuiID        dockspaceId = ImGui::GetID( "EditorMainDockSpace_v6" );
+        // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
+        scaleDockSizeToViewport( dockspaceId );
+        (void)ImGui::DockSpaceOverViewport( dockspaceId, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
         if ( _bApplied == SW_FALSE && isOpeningAllPanels() )
         {
@@ -320,6 +341,33 @@ namespace sw::editor
     void EditorDockLayout::requestResetDefault()
     {
         _bApplied = SW_FALSE;
+    }
+
+    void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceId )
+    {
+        const ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
+        if ( workSize.x < EditorDockLayoutInternal::kMinScaledDockspaceSize || workSize.y < EditorDockLayoutInternal::kMinScaledDockspaceSize )
+            return; // 최소화 — 기준을 바꾸지 않고 다음 실제 크기에서 비교한다
+
+        ImGuiDockNode* pRoot = ImGui::DockBuilderGetNode( dockspaceId );
+        if ( _lastDockspaceWidth <= 0.0f || _lastDockspaceHeight <= 0.0f )
+        {
+            // 첫 프레임 · 이름 붙인 레이아웃을 읽은 뒤: 기준은 저장된 도크스페이스 크기다(다른 창 크기로 저장한 imgui.ini 도 비율로 맞는다).
+            const bool bHasSavedSize = pRoot != nullptr && pRoot->Size.x >= EditorDockLayoutInternal::kMinScaledDockspaceSize &&
+                                       pRoot->Size.y >= EditorDockLayoutInternal::kMinScaledDockspaceSize;
+            _lastDockspaceWidth  = bHasSavedSize ? pRoot->Size.x : workSize.x;
+            _lastDockspaceHeight = bHasSavedSize ? pRoot->Size.y : workSize.y;
+        }
+
+        const bool bResized = workSize.x != _lastDockspaceWidth || workSize.y != _lastDockspaceHeight;
+        if ( bResized && pRoot != nullptr && pRoot->IsSplitNode() )
+        {
+            const ImVec2 scale{ workSize.x / _lastDockspaceWidth, workSize.y / _lastDockspaceHeight };
+            EditorDockLayoutInternal::scaleSizeRef( pRoot->ChildNodes[0], scale );
+            EditorDockLayoutInternal::scaleSizeRef( pRoot->ChildNodes[1], scale );
+        }
+        _lastDockspaceWidth  = workSize.x;
+        _lastDockspaceHeight = workSize.y;
     }
 
     void EditorDockLayout::applyDefaultDockLayout( uint32 dockspaceId )
