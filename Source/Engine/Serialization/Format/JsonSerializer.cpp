@@ -449,9 +449,11 @@ namespace sw
                     *pOutVersion = static_cast<uint32>( field.asUint( 0 ) );
                 continue;
             }
-            bool                bCaseVariant{ false };
+            bool bCaseVariant{ false };
+            // 대소문자를 가리는 문맥에서 대소문자만 다른 키: orphan 목록이 없으면 건너뛴다(그 문맥의 계약 — 묶지 않을 뿐 실패는 아니다).
+            // 목록이 있으면(설정 읽기 `ConfigManager::readConfigJson`) 아래에서 모르는 키로 이름을 알린다 — 조용히 버리면 `_Width` 오타가 사라진다.
             const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
-            if ( pMatched == nullptr && bCaseVariant )
+            if ( pMatched == nullptr && bCaseVariant && pOutListOrphan == nullptr )
                 continue;
 
             if ( pMatched == nullptr || pMatched->_metadata._bTransient == SW_TRUE )

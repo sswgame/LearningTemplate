@@ -27,10 +27,10 @@ namespace sw
         PROPERTY()
         string _clearColor{ "0.12 0.15 0.18 1.0" }; ///< 백버퍼 클리어 색(공백 또는 쉼표로 구분한 RGBA)
 
-        PROPERTY()
+        PROPERTY( Min = 1 )
         uint32 _width{ 1280 }; ///< 클라이언트 영역 너비(픽셀)
 
-        PROPERTY()
+        PROPERTY( Min = 1 )
         uint32 _height{ 720 }; ///< 클라이언트 영역 높이(픽셀)
 
         PROPERTY()
@@ -58,16 +58,12 @@ namespace sw
         PROPERTY()
         WindowConfig _window; ///< 창·백엔드 설정
 
-        /**
-         * @brief 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다.
-         * @note 아래 셋은 0 이하여도 기동을 막지 않습니다. `FixedTimestep::configure` 가 그 자리에서
-         *       내장 기본값으로 바꿉니다. 설정 파일 하나 때문에 프레임 루프가 서지 못하는 일을 막으려는 것입니다.
-         */
-        PROPERTY()
+        /** @brief 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다. */
+        PROPERTY( Min = 0.001, Units = s )
         float32 _maxFrameDeltaTime{ 0.1f };
 
-        /** @brief 고정 주기 업데이트 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다. */
-        PROPERTY()
+        /** @brief 고정 주기 업데이트(게임 `fixedUpdate`) 한 스텝의 길이(초)입니다. 기본은 60Hz 입니다. */
+        PROPERTY( Min = 0.001, Units = s )
         float32 _fixedDeltaTime{ 1.0f / 60.0f };
 
         /**
@@ -75,7 +71,7 @@ namespace sw
          * @details 상한을 넘긴 남은 시간은 버립니다. 남기면 느린 프레임이 더 많은 스텝을 불러
          *          더 느려지는 악순환이 됩니다. FixedTimestep 이 이 값을 적용합니다.
          */
-        PROPERTY()
+        PROPERTY( Min = 1 )
         uint32 _maxFixedStepPerFrame{ 6 };
 
         PROPERTY()

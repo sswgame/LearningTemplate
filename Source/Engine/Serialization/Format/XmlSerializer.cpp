@@ -301,7 +301,7 @@ namespace sw
 
             /**
              * @brief @p pName 이 타입(상속 포함)의 프로퍼티 이름 · 별칭이면 true 입니다. 대소문자를 가리지 않습니다(해시가 그렇다).
-             * @details 대소문자만 다른 태그 · 속성은 orphan 이 아니다(JsonSerializer 의 bCaseVariant 와 같다).
+             * @details 대소문자만 다른 태그 · 속성은 orphan 이 아니다(XML 은 이름 해시로 맞춘다 — JSON 은 대소문자를 가리는 문맥에서 그런 키를 모르는 키로 본다).
              */
             static bool isNameKnown( const TypeInfo& typeInfo, const utf8* pName )
             {

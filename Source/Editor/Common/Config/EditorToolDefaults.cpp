@@ -8,8 +8,8 @@
 
 #include "Editor/Common/EditorUtil.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -27,26 +27,17 @@ namespace sw::editor
 
         const string absPath = EditorUtil::resolveProjectRelativePath( rel );
 
-        // REFLECT_BODY() 가 헤더에 StaticType() 을 선언해 둔다. 그래서 레지스트리를 이름으로 뒤질 필요가 없고, Engine 내부
-        // 서비스에 접근할 수 없는 모듈에서도 그대로 쓸 수 있다.
-        const TypeInfo* pTypeInfo = EditorToolDefaults::StaticType();
-        if ( pTypeInfo == nullptr )
+        // 따로 읽고 성공할 때만 덮는다 — 틀린 파일의 앞부분 값이 섞이면 무엇이 기본값인지 아무도 모른다. 오류는 키 이름과 함께 readConfigFile 이 남긴다.
+        EditorToolDefaults     loaded{};
+        const ConfigReadResult result = ConfigManager::readConfigFile( loaded, absPath );
+        if ( result == ConfigReadResult::Missing )
         {
-            SW_LOG_WARNING( "EditorToolDefaults TypeInfo 없음 — 내장 기본값을 씁니다." );
+            SW_LOG_INFO( "editortooldefaults 파일이 없어 내장 기본값을 씁니다: %#", absPath );
             return false;
         }
-
-        // 파일에 없는 필드는 멤버 초기값이 그대로 남는다. 다만 loadFile 이 false 를 반환해도 그 앞까지 읽은 값은 **이미
-        // 들어가 있다.** "기본값" 은 파일이 없을 때만 맞는 말이라 두 경우를 나눠 로그에 남긴다.
-        if ( JsonSerializer::loadFile( absPath, this, *pTypeInfo ) == false )
-        {
-            if ( FileUtil::exists( absPath ) == false )
-                SW_LOG_INFO( "editortooldefaults 파일이 없어 내장 기본값을 씁니다: %#", absPath );
-            else
-                SW_LOG_WARNING( "editortooldefaults 의 일부 필드를 읽지 못했습니다(키 오타·형식) — 읽힌 값은 쓰고 나머지는 기본값입니다. 파일을 확인하세요: %#", absPath );
+        if ( result == ConfigReadResult::Invalid )
             return false;
-        }
-
+        *this = std::move( loaded );
         SW_LOG_INFO( "Loaded from %#", absPath );
         return true;
     }

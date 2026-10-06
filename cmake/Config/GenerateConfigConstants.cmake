@@ -18,8 +18,11 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 endif()
 # 3-2. 전용 서버 운영 설정(Config/Server/<SW_ACTIVE_GAME>.json, ServerConfig) — 굽지 않고 Server 가 디스크에서 읽는다. 서버가 없는 게임은 파일이 없어도 된다.
 set(SW_FILE_RUNTIME_SERVER_CONFIG "${SW_DIR_RUNTIME_SERVER_PRESET}/${SW_ACTIVE_GAME}.json")
-# 프리셋을 고치면 생성 헤더(Shipping 기본값)도 다시 만든다.
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
+# 프리셋 · 엔진 설정을 고치면 생성 헤더(Shipping 에 굽는 값)도 다시 만든다 — 엔진 설정이 빠지면 Shipping 이 옛 값을 굽는다.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}"
+	"${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}"
+)
 
 # 4. 가져온 CMake 변수들을 바탕으로 C++ 헤더(ConfigConstants.h) 생성
 configure_file(

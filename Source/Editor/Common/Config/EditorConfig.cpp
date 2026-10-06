@@ -6,6 +6,7 @@
 
 #include "Editor/Common/EditorUtil.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -31,18 +32,17 @@ namespace sw::editor
 
     void EditorConfig::loadFromHost()
     {
-        EditorConfig    config{};
-        const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
-        const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
+        EditorConfig config{};
+        const string configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
-        // loadFile 은 필드 하나만 어긋나도 false 를 반환하지만, 그 앞까지 읽은 값은 config 에 **이미 들어가 있다.**
-        // 그래서 "기본값을 쓴다" 는 파일이 없을 때만 맞는 말이다. 두 경우를 나눠 로그에 남긴다.
-        if ( pTypeInfo != nullptr && JsonSerializer::loadFile( configPath, &config, *pTypeInfo ) )
+        // 틀린 파일은 칸 하나도 쓰지 않는다 — 읽은 데까지만 쓰면 무엇이 기본값인지 아무도 모른다. 오류는 키 이름과 함께 readConfigFile 이 남긴다.
+        const ConfigReadResult result = ConfigManager::readConfigFile( config, configPath );
+        if ( result == ConfigReadResult::Loaded )
             SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
-        else if ( FileUtil::exists( configPath ) == false )
+        else if ( result == ConfigReadResult::Missing )
             SW_LOG_INFO( "EditorConfig 파일이 없어 내장 기본값을 씁니다: %#", configPath.c_str() );
         else
-            SW_LOG_WARNING( "EditorConfig 의 일부 필드를 읽지 못했습니다(키 오타·형식) — 읽힌 값은 쓰고 나머지는 기본값입니다. 파일을 확인하세요: %#", configPath.c_str() );
+            config = EditorConfig{};
 
         setActive( config );
     }

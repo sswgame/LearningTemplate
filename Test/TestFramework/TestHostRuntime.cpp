@@ -116,10 +116,13 @@ namespace
                     }
                 }
 #endif
-                host._pEngineConfig               = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
+                host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
+                if ( host._pEngineConfig == nullptr )
+                    return sw::EngineInitResult::Failed;
                 const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
-                if ( pGameConfig != nullptr )
-                    sw::GameConfig::setActive( *pGameConfig );
+                if ( pGameConfig == nullptr )
+                    return sw::EngineInitResult::Failed;
+                sw::GameConfig::setActive( *pGameConfig );
                 return sw::EngineInitResult::Succeeded;
             }
             static void destroy( TestHost& host )
