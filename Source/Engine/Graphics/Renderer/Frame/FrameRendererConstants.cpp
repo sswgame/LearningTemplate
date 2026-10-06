@@ -22,10 +22,6 @@ namespace sw
         /// @brief 라이트 직교 투영이 담는 가로 · 세로 범위입니다(약 2.222).
         constexpr float32 kLightOrthoExtent = 2.0f / 0.9f;
 
-        /// @brief 폴백 궤도 카메라 파라미터입니다. 약 40도 수직 화각입니다.
-        constexpr float32 kFallbackFovY  = 0.70f;
-        constexpr float32 kFallbackNearZ = 0.1f;
-        constexpr float32 kFallbackFarZ  = 100.0f;
     } // namespace
 
     void FrameRenderer::updatePassConstants( FramePassContext& ctx )
@@ -152,7 +148,7 @@ namespace sw
         const float32                  aspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
                                                                          : ( 16.0f / 9.0f );
 
-        outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( kFallbackFovY, aspect, kFallbackNearZ, kFallbackFarZ );
+        outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( CameraComponent::kDefaultFovY, aspect, CameraComponent::kDefaultNearZ, CameraComponent::kDefaultFarZ );
     }
 
     void FrameRenderer::setIdentityWorld( FramePassContext& ctx )

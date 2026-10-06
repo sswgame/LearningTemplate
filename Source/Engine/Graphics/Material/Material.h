@@ -6,6 +6,7 @@
  *  - MaterialInstance: 사용처마다 파라미터 · 키워드 · multi_compile 을 덮어쓰고 자기 CB 를 가짐
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
@@ -158,7 +159,7 @@ namespace sw
          */
         const vector<RHIDescriptorIndex>& getMaterialTextureSrvs() const { return _listMaterialTextureSrv; }
         /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
-        static constexpr uint32 kInvalidTextureSlot = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidTextureSlot = invalid_index::kUint32;
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSrvs`)의 몇 번째인지입니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 kInvalidTextureSlot 입니다.

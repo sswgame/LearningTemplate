@@ -31,6 +31,7 @@
  * 것과 같은 자리). 결과를 읽는 쪽(정점 셰이더)은 모프와 똑같아 새 그리기 코드가 없습니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/unordered_map.h"
@@ -98,7 +99,7 @@ namespace sw
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 셰이더의 폴백 조건과 같은 뜻입니다. */
-        static constexpr uint32 kInvalidBase = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
         GpuMeshMorphPool()                                     = default;
         ~GpuMeshMorphPool()                                    = default;

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/AsyncFileIoBackend.h"
 
@@ -23,8 +24,6 @@ namespace sw
             static constexpr ULONG_PTR kWakeKey = 1;
             /** @brief 파일 핸들을 포트에 묶을 때의 키입니다(읽기 완료 패킷). */
             static constexpr ULONG_PTR kReadKey = 2;
-            /** @brief `ReadFile` 한 번에 넘기는 최대 바이트입니다(DWORD 상한 아래). 더 큰 구간은 이어서 읽는다. */
-            static constexpr uint64 kMaxChunkBytes = 1ull << 30;
             /** @brief 핸들을 포트에 묶지 못했다는 표식입니다(오버랩드로 열지 않은 핸들). 그 파일은 동기로 읽는다. */
             static inline void* const kUnbindablePort = reinterpret_cast<void*>( static_cast<uintptr_t>( 1 ) );
         };
@@ -170,7 +169,7 @@ namespace sw
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;
             const uint64      remaining  = request._size - request._bytesDone;
-            const uint64      chunkBytes = remaining < WindowsAsyncFileIoBackendInternal::kMaxChunkBytes ? remaining : WindowsAsyncFileIoBackendInternal::kMaxChunkBytes;
+            const uint64      chunkBytes = remaining < constant::kMaxFileReadChunkBytes ? remaining : constant::kMaxFileReadChunkBytes;
             const uint64      position   = request._offset + request._bytesDone;
 
             Memory::set( &pOperation->_overlapped, 0, sizeof( pOperation->_overlapped ) );

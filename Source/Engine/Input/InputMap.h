@@ -82,7 +82,7 @@ namespace sw
         static uint32 getConflictSlotCount( BindingKind kind );
 
         /** @brief 키 하나로 바꿀 수 있는 슬롯이 없는 종류가 `getRebindSlotIndex` 에서 받는 값입니다. */
-        static constexpr uint32 kNoRebindSlot = 0xFFFFFFFFu;
+        static constexpr uint32 kNoRebindSlot = invalid_index::kUint32;
         /**
          * @brief 키 하나를 새로 잡았을 때(`InputMap::rebindKey` · 편집기의 Rebind) **그 키가 들어갈** 슬롯입니다.
          * @details 단일 · Shortcut 은 0, Chord 는 방아쇠(1)이고 수식 키는 그대로 둡니다. 합성 축 · 스틱 · 마우스 델타 · AnyKey 는 키 하나로

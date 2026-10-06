@@ -20,6 +20,7 @@
  * @endcode
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -144,7 +145,7 @@ namespace sw
     {
     public:
         /** @brief `setWindow` 의 끝을 정하지 않을 때 — 창 첫 틱 + 고리 크기까지 받는다. */
-        static constexpr uint32 kNoWindowEnd = 0xFFFFFFFFu;
+        static constexpr uint32 kNoWindowEnd = invalid_index::kUint32;
 
         NetInputReceiveBuffer();
 

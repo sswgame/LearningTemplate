@@ -2,6 +2,7 @@
 
 #include "Engine/Destruction/DestructionState.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -19,7 +20,7 @@ namespace sw
         {
             static constexpr uint32 kMagic        = FourCcUtil::make( "SWDS" );
             static constexpr uint32 kVersion      = 1;
-            static constexpr uint32 kNoActiveNode = 0xFFFFFFFFu;
+            static constexpr uint32 kNoActiveNode = invalid_index::kUint32;
 
             /** @brief 0/1 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )

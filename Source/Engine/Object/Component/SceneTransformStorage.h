@@ -3,6 +3,7 @@
  * @brief 씬 컴포넌트 트랜스폼 값(로컬 TRS · 월드 행렬 · LWC)의 전역 저장소입니다. 값마다 연속 배열이고, 컴포넌트는 칸 번호와 페이지만 듭니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
@@ -117,9 +118,9 @@ namespace sw
     {
     public:
         /** @brief 칸이 없음을 나타냅니다. */
-        static constexpr uint32 kInvalidSlot = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidSlot = invalid_index::kUint32;
         /** @brief 칸에 렌더 프리미티브가 없음을 나타냅니다(`SceneTransformPage::_arrPrimitiveIndex`). */
-        static constexpr uint32 kNoPrimitive = 0xFFFFFFFFu;
+        static constexpr uint32 kNoPrimitive = invalid_index::kUint32;
         /**
          * @brief 페이지 표의 칸 수입니다. 페이지 16384 × 칸 256 = 씬 컴포넌트 약 400만 개까지입니다.
          * @details 오브젝트 표(`GameObjectManager` 의 id 표)가 약 100만 개에서 끝나므로 오브젝트마다 씬 컴포넌트 넷이 넘어야 닿습니다.

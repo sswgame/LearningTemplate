@@ -6,6 +6,7 @@
  *          소유 규칙(shared_ptr 로 소유를 함께 싣는다)은 `GpuSceneSnapshot` 주석과 Scripts/lint/gate/CheckRenderOwnership.py 참고.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/HashUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -22,9 +23,9 @@ namespace sw
     class Mesh;
 
     /// @brief 배치에 머티리얼 데이터 그룹이 없음을 뜻합니다(GpuMeshBatch::_materialGroup).
-    inline constexpr uint32 kInvalidMaterialGroup = 0xFFFFFFFFu;
+    inline constexpr uint32 kInvalidMaterialGroup = invalid_index::kUint32;
     /// @brief 배치에 셰이더 퍼뮤테이션이 없음을 뜻합니다. 그러면 패스가 자기 PSO 로 그립니다(GpuMeshBatch::_shaderPermutation).
-    inline constexpr uint32 kInvalidShaderPermutation = 0xFFFFFFFFu;
+    inline constexpr uint32 kInvalidShaderPermutation = invalid_index::kUint32;
 
     /**
      * @brief GPU 인스턴스 하나입니다(월드 행렬 · 바운드 · 배치 인덱스 · 머티리얼 원소 인덱스 · 블렌드 · 회전 시드 · 스프라이트 프레임과 색).

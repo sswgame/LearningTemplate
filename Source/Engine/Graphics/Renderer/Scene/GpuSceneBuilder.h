@@ -6,6 +6,7 @@
  *          (언리얼 GPUScene 의 영속 ID 자리)입니다. 스냅샷은 매 프레임 복사해 내보내고 기준은 여기 남습니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -399,7 +400,7 @@ namespace sw
         };
 
         /** @brief 후보 배열에 실리지 않은 프리미티브의 표시입니다. */
-        static constexpr uint32 kInvalidCandidateIndex = 0xFFFFFFFFu;
+        static constexpr uint32 kInvalidCandidateIndex = invalid_index::kUint32;
         /**
          * @brief 이번 프레임에 "바뀌었다" 고 표시된 프리미티브의 등록부 인덱스입니다.
          * @details 등록부에서 받을 때는 **렌더 상태가** 바뀐 것뿐이고(다시 모은다), 부분 수집이 끝나면 `_listTransformDirtyPrimitive` 를

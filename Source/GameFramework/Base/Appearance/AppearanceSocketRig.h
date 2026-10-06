@@ -6,6 +6,7 @@
  *          새 무기의 총구를 가리킵니다. 씬 · 컴포넌트를 모르는 값 타입이라 시험에서 그대로 돕니다 — 외형 컴포넌트가 이것을 들고 오브젝트에 붙입니다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/span.h"
@@ -78,7 +79,7 @@ namespace sw
         /** @brief 몸 유닛 번호입니다. */
         static constexpr uint32 kBodyUnit = 0;
         /** @brief 소켓 에셋이 없는 부품의 유닛 번호입니다. */
-        static constexpr uint32 kNoUnit = 0xFFFFFFFFu;
+        static constexpr uint32 kNoUnit = invalid_index::kUint32;
 
         AppearanceSocketRig();
 

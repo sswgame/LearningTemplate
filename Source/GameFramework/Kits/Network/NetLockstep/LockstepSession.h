@@ -10,6 +10,7 @@
  *          - **체크섬 창**: 지금보다 `kChecksumWindow` 넘게 지난 틱의 체크섬은 다 모이지 않았어도 지운다. 떠난 플레이어는 그 틱부터 기다리지 않는다.
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
@@ -50,7 +51,7 @@ namespace sw
     class SW_GF_API LockstepSession : public INetMessageHandler
     {
     public:
-        static constexpr uint32 kNoLeaveTick   = 0xFFFFFFFFu;
+        static constexpr uint32 kNoLeaveTick   = invalid_index::kUint32;
         static constexpr int32  kMaxInputDelay = 64;
         /** @brief 받는 입력 틱 창 [지금, 지금 + 창)입니다. */
         static constexpr uint32 kInputWindow = 256;

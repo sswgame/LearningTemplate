@@ -2,6 +2,7 @@
 
 #include "Engine/EngineInitSequence.h"
 
+#include "Core/Common/Defines.h"
 #include "Core/Common/TopologicalSortUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
@@ -39,7 +40,7 @@ namespace sw
             static_assert( sizeof( kArrStepTarget ) / sizeof( kArrStepTarget[0] ) == static_cast<size_t>( EngineInitStep::Count ),
                            "Startup target table must have one row per EngineInitStep" );
 
-            static constexpr uint32 kNotFound = 0xFFFFFFFFu;
+            static constexpr uint32 kNotFound = invalid_index::kUint32;
 
             /** @brief 의존 글의 구분자입니다 — 표는 `{ A, B }`, 시험은 공백으로 이은 이름을 넘긴다. */
             static constexpr bool isDependencySeparator( utf8 ch ) { return ch == ' ' || ch == ',' || ch == '{' || ch == '}'; }

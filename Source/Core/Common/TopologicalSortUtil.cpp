@@ -2,6 +2,8 @@
 
 #include "Core/Common/TopologicalSortUtil.h"
 
+#include "Core/Common/Defines.h"
+
 namespace sw
 {
     namespace
@@ -9,7 +11,7 @@ namespace sw
         struct TopologicalSortUtilInternal
         {
             /** @brief 찾지 못함을 뜻하는 노드 번호입니다. */
-            static constexpr uint32 kNoNode = 0xFFFFFFFFu;
+            static constexpr uint32 kNoNode = invalid_index::kUint32;
 
             /** @brief 방문 상태입니다(깊이 우선 순환 찾기). */
             enum class VisitState : uint8

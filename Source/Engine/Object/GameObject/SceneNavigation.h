@@ -13,6 +13,7 @@
  *          않은 종류면 실패합니다 — 베이크는 갱신이 합니다(`ensureNavMesh` 는 게임 스레드에서 지금 베이크한다).
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/SpinLock.h"
@@ -88,7 +89,7 @@ namespace sw
     {
     public:
         /** @brief 등록부에 없는 자리입니다. */
-        static constexpr uint32 kNotRegistered = 0xFFFFFFFFu;
+        static constexpr uint32 kNotRegistered = invalid_index::kUint32;
 
         SceneNavigation();
         ~SceneNavigation();
