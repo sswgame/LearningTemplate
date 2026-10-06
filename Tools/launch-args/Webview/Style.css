@@ -524,3 +524,41 @@ select.input.small {
 #deliveryNote {
   color: var(--vscode-descriptionForeground);
 }
+
+/* 버튼 글이 낱자 단위로 꺾이지 않게 — 좁으면 버튼째 다음 줄로 */
+.action-row {
+  flex-wrap: wrap;
+}
+
+.action-row .button {
+  white-space: nowrap;
+}
+
+/* 기본값 줄 — 값 칸과 설명 사이, 위아래를 가는 선으로 나눈다 */
+.row-default-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0 0 18px;
+  padding: 2px 0;
+  border-top: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
+  border-bottom: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
+  font-size: 11px;
+}
+
+.row-default-label {
+  flex: none;
+  color: var(--vscode-descriptionForeground);
+}
+
+.row-default-value {
+  font-family: var(--mono);
+  color: var(--vscode-foreground);
+  overflow-wrap: anywhere;
+}
+
+.row-default-value.placeholder {
+  font-family: var(--vscode-font-family);
+  font-style: italic;
+  color: var(--vscode-descriptionForeground);
+}

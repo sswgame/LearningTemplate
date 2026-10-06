@@ -22,14 +22,14 @@
       <div id="issueList"></div>
       <div class="note warning" id="powerShellNote" hidden>
         점(.)이 든 인자가 있습니다. 기본 터미널이 Windows PowerShell 이면 CMake Tools 의 ▷ 실행은 이 인자를 둘로 쪼갭니다 —
-        아래 <b>실행</b> 또는 <b>디버그</b>는 셸을 거치지 않아 안전합니다.
+        아래 <b>CMake Tools 로 디버그</b> · <b>실행 (셸 없이)</b>는 셸을 거치지 않아 안전합니다.
       </div>
     </div>
     <div class="action-row">
       <button class="button" id="debugButton" title="CMake Tools 의 디버그(cmake.debugTarget)를 이 인자로 시작합니다">CMake Tools 로 디버그</button>
       <button class="button" id="runButton" title="CMake Tools 의 실행 대상을 셸을 거치지 않고 이 인자로 실행합니다(필요하면 먼저 빌드)">실행 (셸 없이)</button>
       <span class="spacer"></span>
-      <button class="button secondary" id="disableAllButton" title="모든 항목 끄기 (값은 기억)">모두 끄기</button>
+      <button class="button secondary" id="disableAllButton" title="체크를 모두 풀어 명령줄을 비웁니다. 입력한 값은 기억합니다">모두 빼기</button>
     </div>
   </header>
 
@@ -42,12 +42,12 @@
 
   <section class="filter-bar" id="filterBar">
     <input class="input" id="searchInput" type="search" placeholder="이름 · 설명 검색">
-    <label class="chip"><input type="checkbox" id="enabledOnlyToggle"> 켜진 것만</label>
+    <label class="chip" title="체크된 항목(명령줄에 넘어가는 것)만 보입니다. 값을 고쳤는지와는 상관없습니다"><input type="checkbox" id="enabledOnlyToggle"> 체크된 항목만</label>
     <label class="chip" title="묶음 안의 순서">정렬
       <select class="input small" id="sortSelect">
         <option value="nameAscending">이름 ↑</option>
         <option value="nameDescending">이름 ↓</option>
-        <option value="enabledFirst">켜진 것 먼저</option>
+        <option value="enabledFirst">체크된 항목 먼저</option>
         <option value="source">소스 순서</option>
       </select>
     </label>
@@ -94,7 +94,7 @@
   </section>
 
   <section class="tab-page" data-page="preset">
-    <p class="hint">지금 고른 것 전체(켜짐 · 값 · 사용자 인자 · 환경 변수)를 이름 붙여 둡니다. 같은 이름은 덮어씁니다.</p>
+    <p class="hint">지금 고른 것 전체(체크 · 값 · 사용자 인자 · 환경 변수)를 이름 붙여 둡니다. 같은 이름은 덮어씁니다.</p>
     <div class="add-row">
       <input class="input" id="presetNameInput" placeholder="프리셋 이름">
       <button class="button" id="presetSaveButton">저장</button>

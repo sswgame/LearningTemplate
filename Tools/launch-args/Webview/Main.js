@@ -329,6 +329,7 @@
             const head = createElement('div', 'row-head');
             const checkbox = createElement('input');
             checkbox.type = 'checkbox';
+            checkbox.title = '체크된 항목만 명령줄에 넘어갑니다 (값을 고치면 자동으로 체크됩니다)';
             const nameText = kind === 'argument' && bUnknown === false ? this._makeFlagText(entry.listSpelling[0]) : entry.name;
             const nameElement = createElement('span', 'row-name', nameText);
             nameElement.title = bUnknown ? entry.name : `${entry.name} — ${entry.relativePath}:${entry.lineNumber} 열기`;
@@ -366,7 +367,6 @@
                 record.editor.addEventListener('change', sendValue);
                 editorRow.appendChild(record.editor);
                 if (bUnknown === false) {
-                    editorRow.appendChild(createElement('span', 'row-default', `기본 ${entry.defaultText === '' ? '""' : entry.defaultText}`));
                     record.resetButton = createElement('button', 'icon-button', '↺');
                     record.resetButton.title = '기본값으로';
                     record.resetButton.addEventListener('click', () => postIntent(kind === 'globalVariable' ? 'resetGlobalVariable' : 'resetArgument', { name: entry.name }));
@@ -380,6 +380,19 @@
                 removeButton.addEventListener('click', () => postIntent(kind === 'globalVariable' ? 'removeGlobalVariable' : 'removeArgument', { name: entry.name }));
                 head.appendChild(createElement('span', 'spacer'));
                 head.appendChild(removeButton);
+            }
+            if (bUnknown === false) {
+                // 기본값은 설명 위 제 줄에 둔다 — 값 칸 옆의 작은 글은 찾기 어려웠다. 플래그는 "주지 않음" 이 기본이다.
+                const defaultLine = createElement('div', 'row-default-line');
+                defaultLine.appendChild(createElement('span', 'row-default-label', '기본값'));
+                let defaultText = entry.defaultText;
+                if (bFlagOnly)
+                    defaultText = '주지 않음';
+                else if (entry.defaultText === '')
+                    defaultText = '빈 글';
+                const bPlaceholder = bFlagOnly || entry.defaultText === '';
+                defaultLine.appendChild(createElement('span', bPlaceholder ? 'row-default-value placeholder' : 'row-default-value', defaultText));
+                row.appendChild(defaultLine);
             }
             if (bUnknown === false && entry.description !== '') {
                 const description = createElement('div', 'row-description', entry.description);
@@ -673,7 +686,7 @@
                 const visibleCount = listRow.filter((row) => row.hidden === false).length;
                 const enabledCount = listRow.filter((row) => row.classList.contains('enabled')).length;
                 details.hidden = visibleCount === 0;
-                details.querySelector('summary .count').textContent = `  ${enabledCount} / ${listRow.length}`;
+                details.querySelector('summary .count').textContent = `  체크 ${enabledCount} / ${listRow.length}`;
             }
             const countEnabled = (map) => Object.values(map).filter((item) => item.bEnabled).length;
             findElement('globalVariableCount').textContent = String(countEnabled(selection.globalVariable) || '');

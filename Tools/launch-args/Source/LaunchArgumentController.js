@@ -269,7 +269,7 @@ class LaunchArgumentController {
 
     /** @brief 상태 파일(꺼진 값 · 프리셋)을 지웁니다. 지금 켜진 것은 설정에 남아 있으므로 다시 읽어 들입니다. */
     async resetState() {
-        const answer = await vscode.window.showWarningMessage('꺼 둔 값과 프리셋을 모두 지울까요? 지금 켜진 인자는 그대로 남습니다.', { modal: true }, kDeleteActionLabel);
+        const answer = await vscode.window.showWarningMessage('체크를 푼 항목의 값과 프리셋을 모두 지울까요? 지금 체크된 항목은 그대로 남습니다.', { modal: true }, kDeleteActionLabel);
         if (answer !== kDeleteActionLabel)
             return;
         await this._store.deleteFile();

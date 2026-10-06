@@ -2,7 +2,7 @@
   "name": "launch-args",
   "displayName": "Launch Args",
   "description": "Pick command-line arguments and globals scanned from source in a sidebar and hand them to CMake Tools debug / launch and to launch.json configurations (CodeLLDB, cppdbg, cppvsdbg).",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "publisher": "sw-engine",
   "license": "MIT",
   "private": true,
