@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Environment/PythonUtils.cmake
-# @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_executePythonScript)
+# @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_executePythonScript) — 파이썬 인터프리터는 여기 한 곳에서 찾는다
 # ==============================================================================
 
 # 이 파일은 여러 곳에서 include 된다(상수 · vcpkg · 툴체인 · 에셋 타겟). 인터프리터는 한 번 찾으면 된다 — include 마다
@@ -10,33 +10,8 @@ if(NOT Python3_Interpreter_FOUND)
     find_package(Python3 QUIET COMPONENTS Interpreter)
 endif()
 
-# CMake Tools 등 얇은 PATH에서도 Git for Windows를 쓰도록 기본 경로를 앞에 붙입니다. 환경 변수는 프로세스 전체라 한 번만 붙인다.
-# 주의: ENV{ProgramFiles(x86)} 는 괄호 때문에 if(DEFINED ...) 파싱이 깨지므로 쓰지 않음.
-get_property(_swGitPathPrepended GLOBAL PROPERTY SW_GIT_PATH_PREPENDED)
-if(WIN32 AND NOT _swGitPathPrepended)
-    set_property(GLOBAL PROPERTY SW_GIT_PATH_PREPENDED TRUE)
-    set(_swGitCandidates
-        "$ENV{ProgramFiles}/Git/cmd"
-        "$ENV{ProgramFiles}/Git/bin"
-        "C:/Program Files/Git/cmd"
-        "C:/Program Files/Git/bin"
-        "C:/Program Files (x86)/Git/cmd"
-        "C:/Program Files (x86)/Git/bin"
-        "$ENV{LOCALAPPDATA}/Programs/Git/cmd"
-        "$ENV{LOCALAPPDATA}/Programs/Git/bin"
-    )
-
-    foreach(_swGitDir IN LISTS _swGitCandidates)
-        if(EXISTS "${_swGitDir}/git.exe")
-            set(ENV{PATH} "${_swGitDir};$ENV{PATH}")
-            break()
-        endif()
-    endforeach()
-
-    unset(_swGitDir)
-    unset(_swGitCandidates)
-endif()
-unset(_swGitPathPrepended)
+# Git for Windows 기본 경로를 PATH 앞에(한 번 — include_guard).
+include("${CMAKE_CURRENT_LIST_DIR}/HostPath.cmake")
 
 if(NOT COMMAND sw_executePythonScript)
     # ------------------------------------------------------------------------------

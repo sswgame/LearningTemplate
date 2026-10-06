@@ -14,7 +14,10 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 include(cmake/Config/BuildOptions.cmake)
 include(cmake/Config/GenerateConfigConstants.cmake)
 include(cmake/Environment/DetectToolchain.cmake)
-include(cmake/Environment/VcpkgIntegration.cmake)
+# vcpkg 매니페스트 게이트 — 실제 툴체인은 그 안에서 CMAKE_TOOLCHAIN_FILE 로 확정한다(project() 전이어야 한다).
+if(SW_USE_VCPKG)
+	include(cmake/Modules/Toolchain/Vcpkg/Vcpkg.cmake)
+endif()
 
 project(
 	${sw_workspace_name}
@@ -66,8 +69,9 @@ include(cmake/Engine/AssetAndToolTargets.cmake)
 # 모듈 매니페스트를 먼저 해석한다 — 모듈을 만드는 함수가 "켜져 있는가" 를 묻는다(`cmake/Engine/ModuleManifest.cmake`).
 sw_resolveModuleManifests()
 
-add_subdirectory(Source)
-add_subdirectory(Tools)
+# 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → RuntimeAPI → Editor → App → GameFramework/Games.
+add_subdirectory(Source/Core)
+add_subdirectory(Tools/ReflectionParser)
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/RuntimeAPI)
 add_subdirectory(Source/Editor)

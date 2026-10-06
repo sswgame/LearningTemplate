@@ -23,6 +23,13 @@ function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
 	endif()
 endfunction()
 
+# SW_ENABLE_PCH 가 켜져 있을 때만 PCH 를 건다.
+function(sw_configurePch targetName headerPath)
+	if(SW_ENABLE_PCH)
+		target_precompile_headers(${targetName} PRIVATE "${headerPath}")
+	endif()
+endfunction()
+
 # 모듈 · 핫 리로드 타깃의 런타임 출력을 Bin/ 으로 — SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로 갈 수 있다. `$<0:>` 는 BuildLayout 과 같다.
 function(sw_setModuleBinOutput TARGET_NAME)
 	set_target_properties(${TARGET_NAME} PROPERTIES

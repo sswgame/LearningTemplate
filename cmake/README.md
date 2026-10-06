@@ -14,12 +14,12 @@ cmake/
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
 │   ├── DetectToolchain.cmake    — toolchain_config.json 파싱 & LLVM/Ninja 바인딩
-│   ├── VcpkgIntegration.cmake   — vcpkg 매니페스트 및 오버레이 게이트
 │   ├── FindLlvmBin.cmake        — clang-cl / clang 이 있는 LLVM bin 찾기 (vcpkg 포트 툴체인도 쓴다)
 │   ├── ToolchainBinaries.cmake  — 아카이버를 "지금 쓰는 컴파일러 옆" 에서 고정 (LTO 비트코드를 읽어야 한다)
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
 │   ├── WindowsToolSearch.cmake  — MSVC lib.exe · SDK mt.exe 폴더 탐색 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
-│   └── PythonUtils.cmake        — Python 인터프리터 탐색 및 스크립트 실행 헬퍼
+│   ├── HostPath.cmake           — PATH 앞에 붙이기(sw_prependEnvPath) · Git for Windows 기본 경로
+│   └── PythonUtils.cmake        — Python 인터프리터 탐색(한 곳) 및 스크립트 실행 헬퍼
 │
 ├── Modules/                     [3계층: 컴파일러/플랫폼/아키텍처 INTERFACE 플래그]
 │   ├── LoadCompileFlags.cmake   — 플래그 모듈 일괄 인클루더
@@ -58,8 +58,9 @@ cmake/
 
 | 함수 | 용도 |
 |------|------|
-| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`BuildOptions.cmake`) |
+| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`TargetRules.cmake`) |
 | `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
+| `sw_prependEnvPath` | configure 프로세스의 PATH 앞에 폴더를 붙인다(호스트 구분자, 이미 있으면 그대로 — `HostPath.cmake`) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
 | `sw_deployRuntimeDependencies` | 실행 파일 옆 런타임 DLL(DXC · Debug 검증 레이어 · Tracy)을 구성에 맞게 골라 복사 (`BuildLayout.cmake`) |
 | `sw_addDynamicModuleDependencies` | 레지스트리의 동적 모듈(종류로 고름)이 그 타깃보다 먼저 지어지게 한다 — App · 시험이 이름을 적지 않는다 |

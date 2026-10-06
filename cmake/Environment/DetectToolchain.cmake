@@ -61,13 +61,10 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
         set(ENV{LLVM_ROOT} "${SW_TOOLCHAIN_LLVM_PATH}")
         set(ENV{LLVM_HOME} "${SW_TOOLCHAIN_LLVM_PATH}")
 
-        if(WIN32)
-            set(ENV{PATH} "${SW_TOOLCHAIN_LLVM_PATH}/bin;$ENV{PATH}")
-        else()
-            set(ENV{PATH} "${SW_TOOLCHAIN_LLVM_PATH}/bin:$ENV{PATH}")
-        endif()
+        sw_prependEnvPath("${SW_TOOLCHAIN_LLVM_PATH}/bin")
 
-        if(WIN32 AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe")
+        # project() 전이다 — 호스트 판정(CMAKE_HOST_WIN32)으로 고른다.
+        if(CMAKE_HOST_WIN32 AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe")
             set(CMAKE_C_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "C 컴파일러" FORCE)
             set(CMAKE_CXX_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "CXX 컴파일러" FORCE)
 
@@ -112,11 +109,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
         set(CMAKE_MAKE_PROGRAM "${SW_TOOLCHAIN_NINJA_PATH}" CACHE FILEPATH "Ninja" FORCE)
         get_filename_component(swNinjaDir "${SW_TOOLCHAIN_NINJA_PATH}" DIRECTORY)
 
-        if(WIN32)
-            set(ENV{PATH} "${swNinjaDir};$ENV{PATH}")
-        else()
-            set(ENV{PATH} "${swNinjaDir}:$ENV{PATH}")
-        endif()
+        sw_prependEnvPath("${swNinjaDir}")
 
         message(STATUS "[DetectToolchain] Using Ninja: ${SW_TOOLCHAIN_NINJA_PATH}")
     endif()

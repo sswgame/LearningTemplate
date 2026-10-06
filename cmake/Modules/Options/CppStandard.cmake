@@ -1,20 +1,16 @@
 # ==============================================================================
 # @file cmake/Modules/Options/CppStandard.cmake
-# @brief C++ 표준 INTERFACE (최소 C++17, 그 이상은 sw_cpp_standard)
+# @brief C++ 표준 INTERFACE (최소 C++17, 그 이상은 캐시 옵션 SW_CPP_STANDARD — cmake/Config/BuildOptions.cmake)
 # ==============================================================================
 
-if(NOT DEFINED sw_cpp_standard)
-	set(sw_cpp_standard 17)
-endif()
-
-if(sw_cpp_standard LESS 17)
-	message(FATAL_ERROR "sw_cpp_standard must be >= 17 (got ${sw_cpp_standard})")
+if(SW_CPP_STANDARD LESS 17)
+	message(FATAL_ERROR "SW_CPP_STANDARD must be >= 17 (got ${SW_CPP_STANDARD})")
 endif()
 
 add_library(sw_cpp_standard INTERFACE)
-target_compile_features(sw_cpp_standard INTERFACE cxx_std_${sw_cpp_standard})
+target_compile_features(sw_cpp_standard INTERFACE cxx_std_${SW_CPP_STANDARD})
 
-set(CMAKE_CXX_STANDARD ${sw_cpp_standard})
+set(CMAKE_CXX_STANDARD ${SW_CPP_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 

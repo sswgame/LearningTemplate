@@ -877,6 +877,8 @@ cd build/Ninja-Debug/Bin
 - **커버리지 안내 퍼징은 리눅스 전용**(`SW_ENABLE_FUZZING` · 프리셋 `CI-Fuzz` · `.github/workflows/fuzz.yml`, 대상 표 하나를 시드 고정 변이 `LoaderFuzzTest` 와
   나눠 쓴다). 퍼저와 시험 실행 파일은 같은 기동(`Test/TestFramework/TestHostRuntime`)을 쓴다. Windows 는 clang_rt.fuzzer 가 /MT 뿐이라 엔진(/MD)과 링크되지
   않는다 — 디코더만 /MT 로 떼어 돌리는 것은 하지 않는다(사용자 결정 2026-10-06, 같은 코드를 리눅스가 돈다).
+- **configure 의 PATH 는 `sw_prependEnvPath` 로만 고친다**(`cmake/Environment/HostPath.cmake` — 호스트 구분자, 이미 있으면 그대로). project() 전에는
+  호스트 판정 `CMAKE_HOST_WIN32` 로 고른다(이 PC 의 --fresh 구성에서는 `WIN32` 도 그때 이미 1 이었다 — 문서가 보장하는 것은 호스트 변수다).
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 

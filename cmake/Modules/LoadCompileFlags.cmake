@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file cmake/Modules/LoadCompileFlags.cmake
 # @brief Compiler/Platform/Architecture/BuildType/Options INTERFACE 모듈 (명시적 순서)
-# @note cmake/Modules/Toolchain 은 VcpkgIntegration.cmake가 담당
+# @note cmake/Modules/Toolchain 은 루트 CMakeLists.txt 의 vcpkg 게이트가 include 한다
 # ==============================================================================
 
 # ------------------------------------------------------------------------------

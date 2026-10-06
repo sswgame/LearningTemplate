@@ -23,10 +23,6 @@ endfunction()
 # 1) Doxygen — SW_BUILD_DOCS일 때만 GenerateDocs
 # ------------------------------------------------------------------------------
 if(SW_BUILD_DOCS)
-	if(NOT Python3_Interpreter_FOUND)
-		find_package(Python3 COMPONENTS Interpreter REQUIRED)
-	endif()
-
 	find_program(DOXYGEN_EXECUTABLE doxygen)
 	set(doxyfile "${CMAKE_SOURCE_DIR}/Doxyfile")
 
@@ -45,81 +41,75 @@ endif()
 # CheckEngineLayers: Engine → Editor/GameFramework/Games 금지 include
 # CheckSourceGlob: GLOB 누락 힌트 (compile_commands.json 필요)
 # ------------------------------------------------------------------------------
-if(NOT Python3_Interpreter_FOUND)
-	find_package(Python3 COMPONENTS Interpreter QUIET)
+# 파이썬은 PythonUtils.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
+# 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
+# 주의: CMAKE_RUNTIME_OUTPUT_DIRECTORY 를 이어 붙이지 않는다 — 생성기 식(`$<0:>`)이 든 값이라 명령줄 경로가 되지 않는다.
+set(swPackOutputDir "${CMAKE_BINARY_DIR}/Bin/Packs")
+
+# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
+# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
+# 검증을 켠다: cook.stamp 의 내용 해시로 확인하고, 쿠커(App.exe)가 있으면 스스로 다시
+# 쿠킹하고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
+# 이 검사를 걸 이유가 없다.
+# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
+# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
+# 씬 쿠킹은 엔진 안(App --cook-scenes)에서 돈다 — 리플렉션이 필요해서다. 그래서 이 타겟은 App **뒤**에
+# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 주의: 방향을 거꾸로(App 이 CookAssets 에
+# 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가
+# 우연히 있어 지나간다. 의존 방향은 sw_configureAppDependencies 가 건다.
+# 씬 쿠킹을 돌리는 엔진 실행 파일 — 전용 서버 타깃에는 App 이 없어 Server 가 쿠킹한다(같은 Headless 단계가 씬을 쿠킹한다).
+# 서버는 셰이더를 쿠킹 · 검증하지 않는다(DXC 가 없고, 그릴 것이 없다).
+if(SW_TARGET_TYPE STREQUAL "Server")
+	set(SW_COOK_HOST_TARGET Server)
+else()
+	set(SW_COOK_HOST_TARGET App)
+endif()
+# 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 팩에 넣지 않는다.
+set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>"
+	--build-target "${SW_TARGET_TYPE}")
+if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
+	list(APPEND swCookArgs --verify-shaders)
 endif()
 
-if(Python3_Interpreter_FOUND)
-	# 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
-	# 주의: CMAKE_RUNTIME_OUTPUT_DIRECTORY 를 이어 붙이지 않는다 — 생성기 식(`$<0:>`)이 든 값이라 명령줄 경로가 되지 않는다.
-	set(swPackOutputDir "${CMAKE_BINARY_DIR}/Bin/Packs")
+sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
+	COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary..."
+	ARGS ${swCookArgs}
+)
 
-	# 배포 빌드는 런타임 셰이더 컴파일이 없다 — 쿠킹해 둔 바이너리가 소스와 어긋나 있으면 화면이
-	# 통째로 비고, 그 사실이 실행해 보기 전까지 드러나지 않는다. 그래서 Shipping 쿠킹에서만
-	# 검증을 켠다: cook.stamp 의 내용 해시로 확인하고, 쿠커(App.exe)가 있으면 스스로 다시
-	# 쿠킹하고, 그래도 어긋나면 패킹하지 않고 빌드를 세운다. Dev 빌드는 런타임 컴파일이 있으므로
-	# 이 검사를 걸 이유가 없다.
-	# 프리팹·씬 쿠킹 산출물은 소스 트리(Resource/)가 아니라 빌드 폴더에 스테이징한다 — 소스 옆에 두면
-	# 낡은 .bin 이 남아 Dev 런타임이 그것으로 물러나 실패를 가린다. 팩 안 경로는 같다(cookPack 이 병합).
-	# 씬 쿠킹은 엔진 안(App --cook-scenes)에서 돈다 — 리플렉션이 필요해서다. 그래서 이 타겟은 App **뒤**에
-	# 와야 하고, App 경로는 빌드 폴더를 뒤지지 않고 CMake 가 그대로 넘긴다. 주의: 방향을 거꾸로(App 이 CookAssets 에
-	# 의존) 걸면 깨끗한 트리(CI)에서 아직 없는 App 을 찾다가 죽는다 — 로컬에서는 다른 프리셋의 낡은 App.exe 가
-	# 우연히 있어 지나간다. 의존 방향은 sw_configureAppDependencies 가 건다.
-	# 씬 쿠킹을 돌리는 엔진 실행 파일 — 전용 서버 타깃에는 App 이 없어 Server 가 쿠킹한다(같은 Headless 단계가 씬을 쿠킹한다).
-	# 서버는 셰이더를 쿠킹 · 검증하지 않는다(DXC 가 없고, 그릴 것이 없다).
-	if(SW_TARGET_TYPE STREQUAL "Server")
-		set(SW_COOK_HOST_TARGET Server)
-	else()
-		set(SW_COOK_HOST_TARGET App)
-	endif()
-	# 빌드 타깃이 빼는 에셋 종류(Config/Engine/CookContract.json 의 target_excluded_asset_kinds — 서버: 텍스처 · 셰이더 바이너리 · 오디오)는 팩에 넣지 않는다.
-	set(swCookArgs --all --output "${swPackOutputDir}" --cooked-dir "${CMAKE_BINARY_DIR}/Cooked" --app "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>"
-		--build-target "${SW_TARGET_TYPE}")
-	if(SW_SHIPPING_BUILD AND NOT SW_TARGET_TYPE STREQUAL "Server")
-		list(APPEND swCookArgs --verify-shaders)
-	endif()
-
-	sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
-		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary..."
-		ARGS ${swCookArgs}
+# 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
+# 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
+	set(swThirdPartyNotices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
+	add_custom_command(
+		OUTPUT "${swThirdPartyNotices}"
+		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
+			--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
+			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}"
+		DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
+			"${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
+		COMMENT "Collecting third-party license notices..."
+		VERBATIM
 	)
-	set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
-
-	# 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
-	# 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
-	if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
-		set(swThirdPartyNotices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
-		add_custom_command(
-			OUTPUT "${swThirdPartyNotices}"
-			COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
-				--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
-				--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}"
-			DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
-				"${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
-			COMMENT "Collecting third-party license notices..."
-			VERBATIM
-		)
-		add_custom_target(ThirdPartyNotices ALL DEPENDS "${swThirdPartyNotices}")
-		set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
-	endif()
-
-	# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
-	# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
-	# 각 린트가 직접 든다. 이 파일에 린트를 손으로 나열하지 않는다.
-	#
-	# **폴더가 목록이므로 폴더를 감시해야 한다.** 이 GLOB 의 결과는 쓰지 않는다 — `CONFIGURE_DEPENDS`
-	# 가 그 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다. 없으면 `gate/` 에 파일을 놓아도
-	# 아무 일이 없다(고칠 CMakeLists 가 없으니 reconfigure 를 부를 것도 없다).
-	file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
-		"${CMAKE_SOURCE_DIR}/Scripts/lint/gate/*.py"
-		"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"
-	)
-
-	set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
-	sw_executePythonScript("Scripts/generate/GenerateLintTargets.py"
-		ARGS "${SW_GENERATED_LINT_TARGETS}"
-		REQUIRED
-	)
-	include("${SW_GENERATED_LINT_TARGETS}")
-	sw_addGeneratedLintTargets()
+	add_custom_target(ThirdPartyNotices ALL DEPENDS "${swThirdPartyNotices}")
+	set_target_properties(ThirdPartyNotices PROPERTIES FOLDER "Engine/Scripts")
 endif()
+
+# 린트 타깃·CTest 등록은 파이썬이 만든다 — 목록의 출처는 `Scripts/lint/gate/` 와
+# `Scripts/lint/selftest/` 폴더 그 자체이고, 린트마다 다른 값(설명·타임아웃·추가 인자)은
+# 각 린트가 직접 든다. 이 파일에 린트를 손으로 나열하지 않는다.
+#
+# **폴더가 목록이므로 폴더를 감시해야 한다.** 이 GLOB 의 결과는 쓰지 않는다 — `CONFIGURE_DEPENDS`
+# 가 그 디렉터리를 빌드마다 다시 보게 만드는 것이 목적이다. 없으면 `gate/` 에 파일을 놓아도
+# 아무 일이 없다(고칠 CMakeLists 가 없으니 reconfigure 를 부를 것도 없다).
+file(GLOB swLintScriptWatch CONFIGURE_DEPENDS
+	"${CMAKE_SOURCE_DIR}/Scripts/lint/gate/*.py"
+	"${CMAKE_SOURCE_DIR}/Scripts/lint/selftest/*.py"
+)
+
+set(SW_GENERATED_LINT_TARGETS "${CMAKE_BINARY_DIR}/generated/sw/config/LintTargets.cmake")
+sw_executePythonScript("Scripts/generate/GenerateLintTargets.py"
+	ARGS "${SW_GENERATED_LINT_TARGETS}"
+	REQUIRED
+)
+include("${SW_GENERATED_LINT_TARGETS}")
+sw_addGeneratedLintTargets()

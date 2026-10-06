@@ -104,30 +104,28 @@ function(sw_findDxcRuntimeDlls OUT_DXC OUT_DXIL)
 		set(dxilNames "libdxildll.so" "libdxil.so")
 	endif()
 
-	if(COMMAND sw_getVcpkgPaths)
-		sw_getVcpkgPaths(incDirs binDirs)
-		set(searchDirs ${binDirs})
-		if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-			list(APPEND searchDirs
-				"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
-				"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib"
-				"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/directx-dxc"
-			)
-		endif()
-
-		foreach(dir IN LISTS searchDirs)
-			foreach(name IN LISTS dxcNames)
-				if(dxc STREQUAL "" AND EXISTS "${dir}/${name}")
-					set(dxc "${dir}/${name}")
-				endif()
-			endforeach()
-			foreach(name IN LISTS dxilNames)
-				if(dxil STREQUAL "" AND EXISTS "${dir}/${name}")
-					set(dxil "${dir}/${name}")
-				endif()
-			endforeach()
-		endforeach()
+	sw_getVcpkgPaths(incDirs binDirs)
+	set(searchDirs ${binDirs})
+	if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+		list(APPEND searchDirs
+			"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/bin"
+			"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib"
+			"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/directx-dxc"
+		)
 	endif()
+
+	foreach(dir IN LISTS searchDirs)
+		foreach(name IN LISTS dxcNames)
+			if(dxc STREQUAL "" AND EXISTS "${dir}/${name}")
+				set(dxc "${dir}/${name}")
+			endif()
+		endforeach()
+		foreach(name IN LISTS dxilNames)
+			if(dxil STREQUAL "" AND EXISTS "${dir}/${name}")
+				set(dxil "${dir}/${name}")
+			endif()
+		endforeach()
+	endforeach()
 
 	if(DEFINED DIRECTX_DXC_TOOL AND EXISTS "${DIRECTX_DXC_TOOL}")
 		get_filename_component(toolDir "${DIRECTX_DXC_TOOL}" DIRECTORY)

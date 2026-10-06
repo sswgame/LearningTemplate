@@ -3,10 +3,11 @@
 # @brief SW Engine 전역 기능 빌드 옵션(SW_*) 및 워크스페이스 메타데이터 정의
 #
 # [CMake 네이밍 및 개발 규칙]:
-# - sw_camelCase      : CMake function() / macro() 헬퍼 함수 (예: sw_configurePch, sw_addGameModule)
+# - sw_camelCase      : CMake function() / macro() 헬퍼 함수 (예: sw_addModuleLibrary, sw_addGameModule)
 # - sw_snake_case     : 프로젝트 내부 변수 및 INTERFACE 타겟명 (예: sw_flag_libraries)
 # - SW_UPPER_SNAKE    : option() / CACHE 빌드 옵션 및 C++ 컴파일 매크로 (예: SW_ENABLE_PCH, SW_SHIPPING_BUILD)
 # - camelCase         : 함수/매크로 내부 로컬 변수
+# 이 파일은 옵션(SW_*)과 메타데이터만 둔다 — 타깃 함수는 cmake/Engine/, 찾은 도구 경로 캐시(SW_SCCACHE_EXE 등)는 찾는 파일이 둔다.
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -15,10 +16,8 @@
 set(sw_workspace_name "Workspace")
 set(sw_project_version "1.0.0")
 
-# 최소 C++17 표준 요구. 필요 시 -Dsw_cpp_standard=20 (또는 23)으로 오버라이드 가능.
-if(NOT DEFINED sw_cpp_standard)
-	set(sw_cpp_standard 17)
-endif()
+# 최소 C++17 표준 요구. 필요 시 -DSW_CPP_STANDARD=20 (또는 23).
+set(SW_CPP_STANDARD 17 CACHE STRING "C++ 표준(17 이상 — 20 · 23)")
 
 # ------------------------------------------------------------------------------
 # 2) 핵심 빌드 및 아키텍처 기능 옵션 (SW_* / option) — 논리 그룹별 알파벳 정렬
@@ -66,12 +65,6 @@ set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 
 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
-
-function(sw_configurePch targetName headerPath)
-	if(SW_ENABLE_PCH)
-		target_precompile_headers(${targetName} PRIVATE "${headerPath}")
-	endif()
-endfunction()
 
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
 # 어떤 새니타이저인가. address(ASan+UBSan, 기본) 와 thread(TSan)는 함께 켤 수 없다 — 런타임이 서로 다른 섀도 메모리를 쓴다.

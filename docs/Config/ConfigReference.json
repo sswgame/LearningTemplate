@@ -3097,6 +3097,14 @@
    "presets": []
   },
   {
+   "name": "SW_CPP_STANDARD",
+   "type": "STRING",
+   "default": "17",
+   "choices": [],
+   "description": "C++ 표준(17 이상 — 20 · 23)",
+   "presets": []
+  },
+  {
    "name": "SW_ENABLE_DEADLOCK_DETECTION",
    "type": "BOOL",
    "default": "OFF",
