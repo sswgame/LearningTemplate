@@ -278,3 +278,13 @@
 
 - **imgui-node-editor 의 vcpkg 수정은 업스트림에 PR 을 내지 않고 오버레이로 유지합니다**(2026-10-06). 외부에 공개하는 일은 사용자가 요청할 때만 합니다.
 - **DPI 150 % 는 대체 테스트로 확인하고, 글자 래스터 선명도만 실제 모니터에서 확인합니다**(2026-10-06). 남은 확인은 [백로그](06_Backlog.md) 1-12 에 있습니다.
+- **에디터 보강의 결정 열다섯 개(D1 ~ D15)**(2026-10-06, 사용자 지시 "특별한 의도가 없으면 상용 엔진과 비교해 나은 쪽"으로 추천을 정함). 단위와 코드 초안은 [에디터 보강 계획](plans/EditorPlus.md)에 있고, 아직 적용 전입니다.
+  - **확장 지점**(D1 ~ D4): EditorModule 을 SHARED DLL 로 바꾸고 `SW_EDITOR_API` 로 내보냅니다. 키트의 에디터 확장은 `GF_Editor_<키트>`, 게임의 것은 `SWGameEditor` 이고 매니페스트 종류는 `EditorExtension`(Dev 전용)입니다.
+    등록부만 따로 떼지 않은 이유는, 확장이 쓸 위젯과 선택과 Undo 까지 결국 옮겨야 하기 때문입니다. 언리얼 에디터 모듈이 `UnrealEd` 를 그대로 링크하는 것과 같습니다.
+    vcpkg imgui 는 정적 라이브러리라 DLL 마다 사본이 생기므로, CMake 가 확장마다 ImGui 컨텍스트 결속 소스를 만듭니다(Dear ImGui FAQ 의 DLL 지침). 확장의 메뉴와 단축키는 등록 줄 `SW_EDITOR_COMMAND` 로 더합니다(유니티 `[MenuItem]`).
+  - **설정**(D5 ~ D7): 에디터 환경설정은 `Saved/Editor/EditorPreferences.json` 에 기본값과 다른 값만 두고, 섹션은 리플렉션 구조체 하나입니다(언리얼 `UDeveloperSettings`). 단축키 덮어쓰기는 `Saved/Editor/Shortcuts.json`(유니티 Shortcuts Manager)입니다.
+    모듈 켜고 끄기는 프로젝트 매니페스트를 고치고 빌드와 재시작을 묻습니다. 실행 중 켜기는 없습니다(언리얼 Plugins 창의 Restart Now).
+  - **디버그와 캡처**(D8 ~ D13): assert 무시 대화상자는 대화형 에디터 실행에서만 띄우고 자동 실행(`-unattended`, 시나리오, 프로파일)에서는 지금처럼 멈춥니다(언리얼 `ensure`). GPU 캡처는 네 백엔드를 모두 잡는 RenderDoc in-app API 이고 PIX 는 하지 않습니다.
+    스크린샷 버튼은 PNG, 테스트용 `-gv_screenshot` 은 PPM 그대로입니다. 보기 모드는 Normals, Depth, Overdraw 를 더하고 Shader Complexity 는 하지 않습니다(머티리얼 그래프가 없어 의미가 약합니다).
+    스레드 미니 타임라인은 프로파일러 패널 안에 두고 깊은 분석은 Tracy 로 합니다. 버그 리포트는 언리얼 `BugIt`/`BugItGo` 구조이고 zip 은 만들지 않습니다.
+  - **편집 틀과 콘텐츠**(D14, D15): 공용 커브는 엔진 값 타입 `FloatCurve`(언리얼 `FRichCurve`, 유니티 `AnimationCurve`)이고 키트의 `GameCurve` 는 옮기지 않습니다. 콘텐츠 브라우저는 활성 게임 팩이 기본이고, 참조 찾기는 텍스트 에셋 역색인입니다(유니티 Find References 와 같은 텍스트 검색).
