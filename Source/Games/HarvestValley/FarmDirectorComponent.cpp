@@ -37,15 +37,8 @@ namespace sw
     {
         struct FarmDirectorComponentInternal
         {
-            static constexpr float32 kWalkSpeed          = 4.0f; ///< 농부 걸음(m/s)
-            static constexpr float32 kReach              = 0.9f; ///< 바라보는 칸을 고르는 거리(m)
-            static constexpr float32 kNearDistance       = 1.7f; ///< 출하함 · 가게 옆으로 치는 거리(m)
-            static constexpr float32 kAutoActionInterval = 0.25f;
-            static constexpr float32 kRainChance         = 0.25f;
-            static constexpr int32   kAutoCultivateLimit = 32;   ///< 자동 농부가 가꾸는 칸 수(체력이 하루에 감당하는 만큼)
-            static constexpr float32 kCameraFollow       = 0.4f; ///< 카메라 초점이 밭 가운데에서 농부 쪽으로 가는 비율
-            static constexpr uint32  kStateTag           = FourCcUtil::make( "FARM" );
-            static constexpr uint32  kStateVersion       = 2;
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
+            static constexpr uint32 kStateVersion = 2;
 
             static constexpr float3 kDefaultShippingBinPosition{ 13.4f, 0.0f, 1.0f };
             static constexpr float3 kDefaultShopPosition{ -1.6f, 0.0f, 5.0f };
@@ -158,6 +151,16 @@ namespace sw
         , _shippingBin{}
         , _shop{}
         , _playerStart{ 6.0f, 0.0f, -1.2f }
+        , _walkSpeed{ 4.0f }
+        , _reach{ 0.9f }
+        , _nearDistance{ 1.7f }
+        , _autoActionInterval{ 0.25f }
+        , _autoCultivateLimit{ 32 }
+        , _rainChance{ 0.25f }
+        , _cameraFollow{ 0.4f }
+        , _maxStamina{ 100 }
+        , _startingGold{ 500 }
+        , _secondsPerDay{ 144.0f }
         , _cropCatalog{}
         , _itemCatalog{}
         , _field{}
@@ -175,7 +178,7 @@ namespace sw
         , _shopPosition{ FarmDirectorComponentInternal::kDefaultShopPosition }
         , _random{ 0x2545f491u }
         , _autoTimer{ 0.0f }
-        , _stamina{ kMaxStamina }
+        , _stamina{ _maxStamina }
         , _selectedSeedIndex{ 0 }
         , _lastLoggedHour{ -1 }
         , _dayStarted{ 0 }
@@ -291,7 +294,7 @@ namespace sw
         _playerPosition    = playerPosition;
         _facing            = facing;
         _autoTimer         = autoTimer;
-        _stamina           = MathUtil::clamp( stamina, 0, kMaxStamina );
+        _stamina           = MathUtil::clamp( stamina, 0, _maxStamina );
         _selectedSeedIndex = _listSeed.empty() ? 0 : MathUtil::clamp( selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 );
         _tool              = static_cast<FarmTool>( tool );
         _bRaining          = bRaining != SW_FALSE ? SW_TRUE : SW_FALSE;
@@ -309,7 +312,7 @@ namespace sw
 
     bool FarmDirectorComponent::findTargetTile( int32& outX, int32& outY ) const
     {
-        const float3 target = _playerPosition + _facing * FarmDirectorComponentInternal::kReach;
+        const float3 target = _playerPosition + _facing * _reach;
         outX                = static_cast<int32>( MathUtil::floor( target._x ) );
         outY                = static_cast<int32>( MathUtil::floor( target._z ) );
         return _field.findTile( outX, outY ) != nullptr;
@@ -363,7 +366,7 @@ namespace sw
         _cropCatalog.fillItemCatalog( _itemCatalog, 99 );
         GameStateSettings settings;
         settings._clock._listSeason    = FarmDirectorComponentInternal::makeSeasons();
-        settings._clock._secondsPerDay = kSecondsPerDay;
+        settings._clock._secondsPerDay = _secondsPerDay;
         settings._clock._startHour     = 6.0f;
         settings._clock._daysPerSeason = 28;
         settings._pItemCatalog         = &_itemCatalog;
@@ -377,7 +380,7 @@ namespace sw
         // 시작 돈 · 씨앗은 새 판에만 — 되살린 판에 덧쌓이지 않게.
         if ( bFresh )
         {
-            pState->getWallet().add( _shipment.getCurrency(), kStartingGold );
+            pState->getWallet().add( _shipment.getCurrency(), _startingGold );
             (void)pState->getInventory().addItem( _cropCatalog.getCrops().front()._seedItem, 10 );
         }
         _dayStarted = pState->getClock().getDay();
@@ -387,7 +390,7 @@ namespace sw
         _shopPosition        = findObjectPosition( _shop, FarmDirectorComponentInternal::kDefaultShopPosition );
         _playerPosition      = _playerStart;
         _facing              = float3{ 0.0f, 0.0f, 1.0f };
-        _stamina             = kMaxStamina;
+        _stamina             = _maxStamina;
         _tool                = FarmTool::Hoe;
         return true;
     }
@@ -568,7 +571,7 @@ namespace sw
                         priority = 3;
                         tool     = FarmTool::Seeds;
                     }
-                    else if ( pTile->_bTilled == SW_FALSE && cultivatedCount < Internal::kAutoCultivateLimit && seasonalSeed >= 0 )
+                    else if ( pTile->_bTilled == SW_FALSE && cultivatedCount < _autoCultivateLimit && seasonalSeed >= 0 )
                     {
                         priority = 2;
                         tool     = FarmTool::Hoe;
@@ -610,12 +613,12 @@ namespace sw
         const float32 distance = Internal::computeDistanceXz( task._standPosition, _playerPosition );
         if ( distance > 0.1f )
         {
-            movePlayer( float3{ toStand._x, 0.0f, toStand._z }, MathUtil::min( deltaTime, distance / Internal::kWalkSpeed ) );
+            movePlayer( float3{ toStand._x, 0.0f, toStand._z }, MathUtil::min( deltaTime, distance / _walkSpeed ) );
             return;
         }
         if ( _autoTimer > 0.0f )
             return;
-        _autoTimer = Internal::kAutoActionInterval;
+        _autoTimer = _autoActionInterval;
 
         if ( task._kind == 2 )
         {
@@ -641,7 +644,7 @@ namespace sw
         const float32 length = direction.getLength();
         if ( length < 1.0e-4f )
             return;
-        const float3 step  = direction * ( FarmDirectorComponentInternal::kWalkSpeed * deltaTime / length );
+        const float3 step  = direction * ( _walkSpeed * deltaTime / length );
         _playerPosition._x = MathUtil::clamp( _playerPosition._x + step._x, -5.0f, static_cast<float32>( kFieldWidth ) + 4.0f );
         _playerPosition._z = MathUtil::clamp( _playerPosition._z + step._z, -5.0f, static_cast<float32>( kFieldHeight ) + 4.0f );
         // 네 방향 — 대각선이면 더 큰 축.
@@ -786,10 +789,10 @@ namespace sw
         _dayStarted                               = clock.getDay();
         _hourOfDay                                = clock.getHour();
         [[maybe_unused]] const bool bSeasonChange = clock.getSeasonName() != seasonBefore;
-        const bool                  bRaining      = clock.getSeasonName() != hashed_string( "Winter" ) && _random.nextChance( FarmDirectorComponentInternal::kRainChance );
+        const bool                  bRaining      = clock.getSeasonName() != hashed_string( "Winter" ) && _random.nextChance( _rainChance );
         _bRaining                                 = bRaining ? SW_TRUE : SW_FALSE;
         _field.advanceDay( clock.getSeasonName(), bRaining );
-        _stamina        = bPassedOut ? kMaxStamina / 2 : kMaxStamina;
+        _stamina        = bPassedOut ? _maxStamina / 2 : _maxStamina;
         _playerPosition = _playerStart;
         _facing         = float3{ 0.0f, 0.0f, 1.0f };
         SW_LOG_INFO( "[Farm] good morning - %# %#, year %# · shipped for %#G · gold %#G · %#%#", clock.getSeasonName().c_str(), clock.getDayOfSeason() + 1,
@@ -819,7 +822,7 @@ namespace sw
         if ( pRig == nullptr )
             return;
         const float3 fieldCenter{ static_cast<float32>( kFieldWidth ) * 0.5f, 0.0f, static_cast<float32>( kFieldHeight ) * 0.5f };
-        pRig->setFocus( fieldCenter + ( _playerPosition - fieldCenter ) * FarmDirectorComponentInternal::kCameraFollow );
+        pRig->setFocus( fieldCenter + ( _playerPosition - fieldCenter ) * _cameraFollow );
     }
 
     void FarmDirectorComponent::logStatus( bool bForce )
@@ -834,19 +837,19 @@ namespace sw
         _lastLoggedHour                       = hour;
         [[maybe_unused]] const CropDef* pCrop = _cropCatalog.findCropBySeed( getSelectedSeed() );
         SW_LOG_INFO( "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
-                     clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pState->getWallet().getBalance( _shipment.getCurrency() ), _stamina, kMaxStamina,
+                     clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pState->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
                      FarmDirectorComponentInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),
                      _field.getCropCount(), _field.getReadyCount() );
     }
 
     bool FarmDirectorComponent::isNearShippingBin() const
     {
-        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shippingBinPosition ) < FarmDirectorComponentInternal::kNearDistance;
+        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shippingBinPosition ) < _nearDistance;
     }
 
     bool FarmDirectorComponent::isNearShop() const
     {
-        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shopPosition ) < FarmDirectorComponentInternal::kNearDistance + 0.5f;
+        return FarmDirectorComponentInternal::computeDistanceXz( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
     }
 
     const hashed_string& FarmDirectorComponent::getSelectedSeed() const

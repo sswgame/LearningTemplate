@@ -59,12 +59,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32   kFieldWidth    = 12;
-        static constexpr int32   kFieldHeight   = 8;
-        static constexpr int32   kMaxStamina    = 100;
-        static constexpr int32   kStartingGold  = 500;
-        static constexpr float32 kSecondsPerDay = 144.0f; ///< 실제 초 — 1 초 = 게임 10 분(공유 시계 하루)
-        static constexpr int32   kBagSlotCount  = 24;     ///< 플레이어 가방 칸 수(공유 상태)
+        static constexpr int32 kFieldWidth   = 12;
+        static constexpr int32 kFieldHeight  = 8;
+        static constexpr int32 kBagSlotCount = 24; ///< 플레이어 가방 칸 수(공유 상태)
 
         FarmDirectorComponent();
         virtual ~FarmDirectorComponent() override;
@@ -156,6 +153,26 @@ namespace sw
         GameObjectHandle _shop;
         PROPERTY( Category = "Farmer", DisplayName = "Player Start", Tooltip = "Where the farmer wakes up", Units = m )
         float3 _playerStart;
+        PROPERTY( Category = "Farmer", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )
+        float32 _walkSpeed;
+        PROPERTY( Category = "Farmer", DisplayName = "Reach", Tooltip = "Distance in front of the farmer that picks the faced tile", Min = 0.0, Units = m )
+        float32 _reach;
+        PROPERTY( Category = "Farmer", DisplayName = "Near Distance", Tooltip = "Distance that counts as standing next to the shipping bin or the shop", Min = 0.0, Units = m )
+        float32 _nearDistance;
+        PROPERTY( Category = "Auto Play", DisplayName = "Auto Action Interval", Tooltip = "Seconds between automatic farmer actions", Min = 0.0, Units = s )
+        float32 _autoActionInterval;
+        PROPERTY( Category = "Auto Play", DisplayName = "Auto Cultivate Limit", Tooltip = "Tiles the automatic farmer looks after (what one day of stamina covers)", Min = 0 )
+        int32 _autoCultivateLimit;
+        PROPERTY( Category = "Weather", DisplayName = "Rain Chance", Tooltip = "Chance a new day outside winter is rainy", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _rainChance;
+        PROPERTY( Category = "Camera", DisplayName = "Camera Follow", Tooltip = "How far the camera focus moves from the field centre towards the farmer", Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _cameraFollow;
+        PROPERTY( Category = "Farmer", DisplayName = "Max Stamina", Min = 1 )
+        int32 _maxStamina;
+        PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Tooltip = "Gold a new game starts with", Min = 0 )
+        int32 _startingGold;
+        PROPERTY( Category = "Time", DisplayName = "Seconds Per Day", Tooltip = "Real seconds in one game day (1 s = 10 game minutes)", Min = 1.0, Units = s )
+        float32 _secondsPerDay;
 
         CropCatalog                  _cropCatalog;
         ItemCatalog                  _itemCatalog; ///< 작물 카탈로그가 채운 씨앗 · 수확물(공유 가방의 겹침 수)
