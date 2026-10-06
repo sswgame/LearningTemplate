@@ -21,7 +21,8 @@ Windows에 필요한 것은 다음과 같습니다.
 - Python 3.10 이상. 저장소의 스크립트가 모두 파이썬이라 꼭 필요합니다.
 - Visual Studio 2022의 "C++를 사용한 데스크톱 개발" 워크로드. 컴파일러는 따로 받는 clang-cl을 쓰지만, Windows SDK와 MSVC 헤더가 이 워크로드에 들어 있습니다.
 
-Linux(WSL 포함)에서는 `py -3 Scripts/setup/SetupLinuxDevEnvironment.py` 를 실행하면 설치해야 할 패키지를 알려 줍니다.
+Linux(WSL 포함)에서는 2절의 `SetupEnvironment.py` 가 `Scripts/setup/SetupLinuxDevEnvironment.py` 도 함께 실행합니다. 이 스크립트는 Vulkan, XCB, Wayland 개발 패키지, 디버거, 클립보드 도구가 있는지 검사하고, 없으면 설치 명령을 알려 줍니다.
+Linux에서는 명령의 `py -3` 을 `python3` 으로 바꿔 실행합니다.
 WSL을 쓴다면 저장소를 리눅스 파일 시스템(`~` 아래)에 클론해야 합니다. `/mnt/c/...` 처럼 Windows 드라이브 위에 두면 CMake 구성 단계가 권한 오류로 실패합니다.
 
 ## 2. 도구와 라이브러리 받기
