@@ -405,6 +405,9 @@ cd build/Ninja-Debug/Bin
   관측은 들어갔다 — 지표 · 상태 확인 · 운영 HTTP(`Engine/Observability`, 서비스 묶음 `Online/Observability/ServiceMetrics`), 로그 문맥(Core `LogContext` —
   요청 머리의 추적 id 128 비트 → 처리기 · 저장소 일의 줄 꼬리표). 관측 남은 것: 서버 로그 JSON lines 출력 장치, OpenTelemetry 내보내기, 감사 줄의 추적 id 칸.
   남은 기반: `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율) ·
+  `Ledger`(원장 — 복식 이동 · 분개 키 멱등 · 보존 검사 · 환불 회수 빚).
+  남은 기반: 관측(지표 · 구조화 로그 — 추적 id 자리는 `OnlineCallContext::_traceId`), `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
