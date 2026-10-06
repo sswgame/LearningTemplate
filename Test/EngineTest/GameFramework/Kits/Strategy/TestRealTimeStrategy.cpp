@@ -7,7 +7,7 @@
 
 #include "GameFramework/Base/Inventory/Shop.h"
 #include "GameFramework/Base/World/LandRegistry.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
@@ -490,7 +490,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuild
     aiSettings._workerTarget     = 8;
     aiSettings._productionTarget = 1;
     aiSettings._attackArmySize   = 3;
-    RtsAiController ai;
+    RtsAiCommander ai;
     ai.initialize( &scene._world, cpu, aiSettings );
 
     bool bDefeatedSeen = false;

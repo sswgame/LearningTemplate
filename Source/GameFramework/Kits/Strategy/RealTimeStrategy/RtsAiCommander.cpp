@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct RtsAiControllerInternal
+        struct RtsAiCommanderInternal
         {
             static const hashed_string& getThreatKey()
             {
@@ -30,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    RtsAiController::RtsAiController()
+    RtsAiCommander::RtsAiCommander()
         : _tree{}
         , _runner{}
         , _blackboard{}
@@ -42,7 +42,7 @@ namespace sw
     {
     }
 
-    void RtsAiController::initialize( RtsWorld* pWorld, int32 player, const RtsAiSettings& settings )
+    void RtsAiCommander::initialize( RtsWorld* pWorld, int32 player, const RtsAiSettings& settings )
     {
         _pWorld   = pWorld;
         _player   = player;
@@ -54,22 +54,22 @@ namespace sw
         _runner.initialize( &_tree );
     }
 
-    void RtsAiController::makeTree()
+    void RtsAiCommander::makeTree()
     {
         _tree              = BehaviorTree{};
         const int32 root   = _tree.addSelector( -1, "Root", true );
-        const int32 threat = _tree.addBlackboardCondition( root, RtsAiControllerInternal::getThreatKey(), BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
-        _tree.addAction( threat, "Defend", &RtsAiController::taskDefend );
+        const int32 threat = _tree.addBlackboardCondition( root, RtsAiCommanderInternal::getThreatKey(), BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::LowerPriority );
+        _tree.addAction( threat, "Defend", &RtsAiCommander::taskDefend );
         const int32 economy = _tree.addSequence( root, "Economy" );
-        _tree.addAction( _tree.addForceSuccess( economy ), "GatherIdle", &RtsAiController::taskGatherIdle );
-        _tree.addAction( _tree.addForceSuccess( economy ), "TrainWorkers", &RtsAiController::taskTrainWorkers );
-        _tree.addAction( _tree.addForceSuccess( economy ), "BuildSupply", &RtsAiController::taskBuildSupply );
-        _tree.addAction( _tree.addForceSuccess( economy ), "BuildProduction", &RtsAiController::taskBuildProduction );
-        _tree.addAction( _tree.addForceSuccess( economy ), "TrainArmy", &RtsAiController::taskTrainArmy );
-        _tree.addAction( _tree.addForceSuccess( economy ), "Attack", &RtsAiController::taskAttack );
+        _tree.addAction( _tree.addForceSuccess( economy ), "GatherIdle", &RtsAiCommander::taskGatherIdle );
+        _tree.addAction( _tree.addForceSuccess( economy ), "TrainWorkers", &RtsAiCommander::taskTrainWorkers );
+        _tree.addAction( _tree.addForceSuccess( economy ), "BuildSupply", &RtsAiCommander::taskBuildSupply );
+        _tree.addAction( _tree.addForceSuccess( economy ), "BuildProduction", &RtsAiCommander::taskBuildProduction );
+        _tree.addAction( _tree.addForceSuccess( economy ), "TrainArmy", &RtsAiCommander::taskTrainArmy );
+        _tree.addAction( _tree.addForceSuccess( economy ), "Attack", &RtsAiCommander::taskAttack );
     }
 
-    void RtsAiController::update( float32 deltaTime )
+    void RtsAiCommander::update( float32 deltaTime )
     {
         if ( _pWorld == nullptr )
             return;
@@ -83,23 +83,23 @@ namespace sw
         _runner.tick( _blackboard, this, _settings._thinkInterval );
     }
 
-    void RtsAiController::notify( const RtsEvent& event )
+    void RtsAiCommander::notify( const RtsEvent& event )
     {
         if ( event._kind != RtsEvent::Kind::UnderAttack || event._player != _player )
             return;
         const RtsUnit* pDepot = _pWorld->findUnit( findDepot() );
-        if ( pDepot != nullptr && RtsAiControllerInternal::computeFlatDistance( pDepot->_position, event._position ) > _settings._defendRadius )
+        if ( pDepot != nullptr && RtsAiCommanderInternal::computeFlatDistance( pDepot->_position, event._position ) > _settings._defendRadius )
             return;
-        _blackboard.setVector( RtsAiControllerInternal::getThreatKey(), event._position );
+        _blackboard.setVector( RtsAiCommanderInternal::getThreatKey(), event._position );
     }
 
-    void RtsAiController::writeState( Archive& outArchive ) const
+    void RtsAiCommander::writeState( Archive& outArchive ) const
     {
         outArchive << _thinkTimer._remaining;
         outArchive << _attackWaveCount;
     }
 
-    bool RtsAiController::readState( Archive& archive )
+    bool RtsAiCommander::readState( Archive& archive )
     {
         float32 thinkTimer      = 0.0f;
         int32   attackWaveCount = 0;
@@ -112,7 +112,7 @@ namespace sw
         return true;
     }
 
-    RtsUnitId RtsAiController::findDepot() const
+    RtsUnitId RtsAiCommander::findDepot() const
     {
         RtsUnitId depotId{};
         _pWorld->forEachUnit( [&]( const RtsUnit& unit )
@@ -123,7 +123,7 @@ namespace sw
         return depotId;
     }
 
-    void RtsAiController::collectArmy( vector<RtsUnitId>& outListUnit ) const
+    void RtsAiCommander::collectArmy( vector<RtsUnitId>& outListUnit ) const
     {
         outListUnit.clear();
         _pWorld->forEachUnit( [&]( const RtsUnit& unit )
@@ -133,7 +133,7 @@ namespace sw
         } );
     }
 
-    bool RtsAiController::orderConstruction( const hashed_string& buildingId )
+    bool RtsAiCommander::orderConstruction( const hashed_string& buildingId )
     {
         const RtsUnit* pDepot = _pWorld->findUnit( findDepot() );
         if ( pDepot == nullptr )
@@ -174,23 +174,23 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 작업
     // ------------------------------------------------------------------------------
-    BehaviorStatus RtsAiController::taskDefend( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskDefend( BehaviorContext& context )
     {
-        RtsAiController&  self   = *static_cast<RtsAiController*>( context._pOwner );
-        const float3      threat = context._pBlackboard->getVector( RtsAiControllerInternal::getThreatKey() );
+        RtsAiCommander&   self   = *static_cast<RtsAiCommander*>( context._pOwner );
+        const float3      threat = context._pBlackboard->getVector( RtsAiCommanderInternal::getThreatKey() );
         vector<RtsUnitId> listArmy;
         self.collectArmy( listArmy );
         if ( listArmy.empty() == false )
             (void)self._pWorld->issueGroupMove( listArmy, threat, true );
-        context._pBlackboard->clearValue( RtsAiControllerInternal::getThreatKey() );
+        context._pBlackboard->clearValue( RtsAiCommanderInternal::getThreatKey() );
         return BehaviorStatus::Success;
     }
 
-    BehaviorStatus RtsAiController::taskGatherIdle( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskGatherIdle( BehaviorContext& context )
     {
-        RtsAiController& self   = *static_cast<RtsAiController*>( context._pOwner );
-        RtsWorld&        world  = *self._pWorld;
-        const RtsUnit*   pDepot = world.findUnit( self.findDepot() );
+        RtsAiCommander& self   = *static_cast<RtsAiCommander*>( context._pOwner );
+        RtsWorld&       world  = *self._pWorld;
+        const RtsUnit*  pDepot = world.findUnit( self.findDepot() );
         if ( pDepot == nullptr )
             return BehaviorStatus::Failure;
         vector<RtsUnitId> listIdle;
@@ -209,19 +209,19 @@ namespace sw
         return BehaviorStatus::Success;
     }
 
-    BehaviorStatus RtsAiController::taskTrainWorkers( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskTrainWorkers( BehaviorContext& context )
     {
-        RtsAiController& self   = *static_cast<RtsAiController*>( context._pOwner );
-        RtsWorld&        world  = *self._pWorld;
-        const RtsUnit*   pDepot = world.findUnit( self.findDepot() );
+        RtsAiCommander& self   = *static_cast<RtsAiCommander*>( context._pOwner );
+        RtsWorld&       world  = *self._pWorld;
+        const RtsUnit*  pDepot = world.findUnit( self.findDepot() );
         if ( pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._settings._workerId ) >= self._settings._workerTarget )
             return BehaviorStatus::Failure;
         return world.train( pDepot->_id, self._settings._workerId ) == RtsCommandResult::Ok ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 
-    BehaviorStatus RtsAiController::taskBuildSupply( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskBuildSupply( BehaviorContext& context )
     {
-        RtsAiController& self    = *static_cast<RtsAiController*>( context._pOwner );
+        RtsAiCommander&  self    = *static_cast<RtsAiCommander*>( context._pOwner );
         RtsWorld&        world   = *self._pWorld;
         const RtsPlayer* pPlayer = world.findPlayer( self._player );
         if ( pPlayer->_supplyCap >= world.getCatalog()->getSupplyMax() || pPlayer->_supplyCap - pPlayer->_supplyUsed > self._settings._supplyMargin )
@@ -232,10 +232,10 @@ namespace sw
         return self.orderConstruction( self._settings._supplyId ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 
-    BehaviorStatus RtsAiController::taskBuildProduction( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskBuildProduction( BehaviorContext& context )
     {
-        RtsAiController& self  = *static_cast<RtsAiController*>( context._pOwner );
-        RtsWorld&        world = *self._pWorld;
+        RtsAiCommander& self  = *static_cast<RtsAiCommander*>( context._pOwner );
+        RtsWorld&       world = *self._pWorld;
         if ( world.countPlanned( self._player, self._settings._productionId ) >= self._settings._productionTarget )
             return BehaviorStatus::Failure;
         // 일꾼을 어느 정도 모은 뒤에.
@@ -244,9 +244,9 @@ namespace sw
         return self.orderConstruction( self._settings._productionId ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 
-    BehaviorStatus RtsAiController::taskTrainArmy( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskTrainArmy( BehaviorContext& context )
     {
-        RtsAiController&  self  = *static_cast<RtsAiController*>( context._pOwner );
+        RtsAiCommander&   self  = *static_cast<RtsAiCommander*>( context._pOwner );
         RtsWorld&         world = *self._pWorld;
         vector<RtsUnitId> listIdleProducer;
         world.forEachUnit( [&]( const RtsUnit& unit )
@@ -260,9 +260,9 @@ namespace sw
         return bTrained ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 
-    BehaviorStatus RtsAiController::taskAttack( BehaviorContext& context )
+    BehaviorStatus RtsAiCommander::taskAttack( BehaviorContext& context )
     {
-        RtsAiController&  self  = *static_cast<RtsAiController*>( context._pOwner );
+        RtsAiCommander&   self  = *static_cast<RtsAiCommander*>( context._pOwner );
         RtsWorld&         world = *self._pWorld;
         vector<RtsUnitId> listArmy;
         self.collectArmy( listArmy );
@@ -285,7 +285,7 @@ namespace sw
             const RtsPlayer* pOther = world.findPlayer( player );
             if ( pOther->_bDefeated || world.areEnemies( self._player, player ) == false )
                 continue;
-            const float32 distance = RtsAiControllerInternal::computeFlatDistance( pSelf->_startPosition, pOther->_startPosition );
+            const float32 distance = RtsAiCommanderInternal::computeFlatDistance( pSelf->_startPosition, pOther->_startPosition );
             if ( distance < bestDistance )
             {
                 bestDistance = distance;

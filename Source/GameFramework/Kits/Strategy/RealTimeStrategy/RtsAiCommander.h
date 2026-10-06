@@ -1,5 +1,5 @@
 /**
- * @file RtsAiController.h
+ * @file RtsAiCommander.h
  * @brief 컴퓨터 상대 — 행동 트리로 일꾼 · 보급 · 생산 건물 · 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
  */
 #pragma once
@@ -35,7 +35,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RtsAiController
+     * @class RtsAiCommander
      * @brief 한 플레이어를 맡는 AI 입니다. 트리는 이렇습니다(반응형 셀렉터 — 위가 먼저).
      * @code
      *     Root (reactive)
@@ -50,10 +50,10 @@ namespace sw
      * @endcode
      *          월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 압니다. 월드 · 설정은 AI 보다 오래 살아야 합니다.
      */
-    class SW_GF_API RtsAiController
+    class SW_GF_API RtsAiCommander
     {
     public:
-        RtsAiController();
+        RtsAiCommander();
 
         void initialize( RtsWorld* pWorld, int32 player, const RtsAiSettings& settings );
         /** @brief `_thinkInterval` 마다 트리를 한 번 돌립니다. */

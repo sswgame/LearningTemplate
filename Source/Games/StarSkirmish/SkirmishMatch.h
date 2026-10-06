@@ -1,8 +1,8 @@
 /**
  * @file SkirmishMatch.h
- * @brief StarSkirmish 의 한 판 규칙 — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 시작 유닛, 컴퓨터 상대(`RtsAiController`), 정리 사냥, 상태 · 승패 로그입니다.
+ * @brief StarSkirmish 의 한 판 규칙 — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 시작 유닛, 컴퓨터 상대(`RtsAiCommander`), 정리 사냥, 상태 · 승패 로그입니다.
  *
- * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `RtsWorld` · `RtsAiController` 만 씁니다).
+ * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `RtsWorld` · `RtsAiCommander` 만 씁니다).
  *          사람이 0 번을 맡으면 AI 는 1 번만, 자동 플레이면 둘 다 AI 입니다. 두 AI 는 성향이 다릅니다(0 번 러시 · 1 번 운영) — 같은 AI 끼리면 대칭이라
  *          가운데서 서로 지우기만 하고 끝나지 않는다.
  */
@@ -13,7 +13,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Inventory/Shop.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiController.h"
+#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 
 namespace sw
@@ -84,7 +84,7 @@ namespace sw
         void huntRemaining( int32 player );
 
         RtsWorld         _world;
-        RtsAiController  _arrAi[kPlayerCount];
+        RtsAiCommander   _arrAi[kPlayerCount];
         Wallet           _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
         vector<RtsEvent> _listEvent;               ///< 화면이 꺼내 갈 사본
         vector<RtsEvent> _listFrameEvent;

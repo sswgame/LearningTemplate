@@ -189,10 +189,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `OpenWorldWestern`: 오픈월드 서부극(레드 데드 리뎀션 장르) — 목격자 시야 · 신고 시간 · 처치/위협으로 막기 · 지역별 현상금 · 수배 감쇠 · 보안관 추적(`WesternLaw`), 명예 단계 · 할인 · 대사 플래그(`WesternHonor`), 말 유대 · 능력 해금 · 코어 · 질주 · 겁(`WesternHorse`), 추위/더위 · 옷 · 음식 · 데드아이(`WesternSurvival`), 가죽 등급 · 사체 부패 · 매입 값(`WesternHunting`).
     - `WitcherRpg`: 위쳐 RPG(위쳐 3 장르) — 괴물 도감 지식 · 해금된 약점 · 속성 배율(`WitcherBestiary`), 연금술 · 독성 · 변이 혼합물 · 명상 보충 · 오일(`WitcherAlchemy`), 표식 · 대체 시전 · 스태미나 · 아드레날린(`WitcherCombat`), 변이 슬롯 색 맞춤(`WitcherMutagens`), 계약 단서 순서 · 보상 흥정(`WitcherContract`).
   - **전략** (`Kits/Strategy/`)
+    - 명령형 장르(RTS · SRPG · 경영)에는 폰이 없다 — 플레이어 디렉터와 AI 커맨더(`RtsAiCommander` · `SrpgAiCommander`)가 같은 키트 명령 API 를 부른다(행동 층 = 명령).
     - `RealTimeStrategy`: 실시간 전략(스타크래프트 장르) — 유닛 XML(`RtsCatalog`), 명령 · 채취 · 건설 · 생산 · 테크 · 전투 · 안개 · 흐름장 무리 이동(`RtsWorld`),
-      고르기 · 부대(`RtsSelection`), 행동 트리 AI(`RtsAiController`).
+      고르기 · 부대(`RtsSelection`), 행동 트리 AI(`RtsAiCommander`).
     - `CityBuilder`: 도시 건설(파라오 장르) — 건물 · 물자 · 집 단계 XML(`CityCatalog`), 도로망 · 노동 · 순회 일꾼 · 수레 · 시장 · 집 진화 · 이민 · 세금 · 범람(`CitySimulation`).
-    - `TacticsSrpg`: SRPG(SD건담 G제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 XML(`SrpgCatalog`), 전장(`SrpgBattlefield` — `GridReachability` 이동 범위 · ZOC · MAP 병기 · 페이즈/개별 순서), 전투 예측 · 반격 · 지원 · 동기(`SrpgCombat`), 점수 AI(`SrpgAiController`), 승패 · 개발 · `RunMap` 로그라이트 캠페인(`SrpgProgress`).
+    - `TacticsSrpg`: SRPG(SD건담 G제네레이션 · 메탈슬러그 택틱스 장르) — 기체 · 파일럿 · 무기 · 지형 XML(`SrpgCatalog`), 전장(`SrpgBattlefield` — `GridReachability` 이동 범위 · ZOC · MAP 병기 · 페이즈/개별 순서), 전투 예측 · 반격 · 지원 · 동기(`SrpgCombat`), 점수 AI(`SrpgAiCommander`), 승패 · 개발 · `RunMap` 로그라이트 캠페인(`SrpgProgress`).
     - `SideScrollConquest`: 횡스크롤 정복(썬즈 오브 발할라 장르) — 1차원 전선 거점 · 건물/일꾼/생산 · 병력 훈련/인구 · 지휘관 부대 명령 · 진형 · 사기 · 성문/성벽 · 충차/사다리 · 점령 → 영토 · 반격 웨이브(`ConquestWorld`).
   - **시뮬레이션 · 생활** (`Kits/Simulation/`)
     - `Farming`: 농장 생활(하베스트 문 장르) — 작물 XML 카탈로그(`CropCatalog` — 계절은 공유 시계의 이름, 씨앗 · 수확물 아이템을 `ItemCatalog` 로),

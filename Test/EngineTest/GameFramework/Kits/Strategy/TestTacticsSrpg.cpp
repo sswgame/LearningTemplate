@@ -4,7 +4,7 @@
 
 #include "GameFramework/Base/Navigation/GridReachability.h"
 #include "GameFramework/Base/World/LandRegistry.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiController.h"
+#include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiCommander.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCombat.h"
@@ -492,8 +492,8 @@ SW_TEST_CASE( TacticsSrpgTest, AiPicksBestScoredTargetDeterministically )
         scene._field.endPhase();
         SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Enemy );
 
-        SrpgAiController controller;
-        SrpgAiSettings   aiSettings;
+        SrpgAiCommander controller;
+        SrpgAiSettings  aiSettings;
         if ( pass == 1 )
             aiSettings._killBonus = 3000; // 격파를 무겁게 보면 표적이 바뀐다
         controller.setSettings( aiSettings );
@@ -536,8 +536,8 @@ SW_TEST_CASE( TacticsSrpgTest, AiPicksBestScoredTargetDeterministically )
     (void)farScene.add( "gm", "grunt", SrpgTeam::Player, 0, 0 );
     farScene._field.beginBattle();
     farScene._field.endPhase();
-    SrpgAiController controller;
-    SrpgAiPlan       plan;
+    SrpgAiCommander controller;
+    SrpgAiPlan      plan;
     SW_ASSERT_TRUE( controller.makePlan( farScene._field, hunter, plan ) );
     SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
     SW_EXPECT_TRUE( plan._moveCell == ( int2{ 15, 0 } ) );

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiController.h"
+#include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiCommander.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct SrpgAiControllerInternal
+        struct SrpgAiCommanderInternal
         {
             static constexpr int32 kNoScore = -2147483647;
 
@@ -57,12 +57,12 @@ namespace sw
 
 namespace sw
 {
-    SrpgAiController::SrpgAiController()
+    SrpgAiCommander::SrpgAiCommander()
         : _settings{}
     {
     }
 
-    bool SrpgAiController::makePlan( const SrpgBattlefield& field, int32 unitIndex, SrpgAiPlan& outPlan ) const
+    bool SrpgAiCommander::makePlan( const SrpgBattlefield& field, int32 unitIndex, SrpgAiPlan& outPlan ) const
     {
         outPlan = SrpgAiPlan{};
         if ( field.canAct( unitIndex ) == false )
@@ -84,7 +84,7 @@ namespace sw
         if ( unit._bAttacked == SW_TRUE )
             return true; // 이미 쳤다 — 제자리에서 끝낸다
 
-        int32        bestScore = SrpgAiControllerInternal::kNoScore;
+        int32        bestScore = SrpgAiCommanderInternal::kNoScore;
         int32        bestCost  = 0;
         SrpgForecast forecast;
         for ( const int2& stand : listStand )
@@ -100,7 +100,7 @@ namespace sw
                     const SrpgWeaponStatus status = SrpgCombat::computeForecastFrom( field, unitIndex, stand, weaponIndex, targetIndex, bAfterMove, forecast );
                     if ( status != SrpgWeaponStatus::Ok )
                         continue;
-                    const int32 score   = SrpgAiControllerInternal::scoreForecast( field, _settings, unit, forecast );
+                    const int32 score   = SrpgAiCommanderInternal::scoreForecast( field, _settings, unit, forecast );
                     const bool  bBetter = score > bestScore || ( score == bestScore && cost < bestCost );
                     if ( bBetter == false )
                         continue;
@@ -118,11 +118,11 @@ namespace sw
             return true;
 
         // 칠 것이 없다 — 가장 가까운 적에게 다가간다(같으면 덜 걷는 칸)
-        int32 bestDistance = SrpgAiControllerInternal::computeNearestHostileDistance( field, unit, unit._cell );
+        int32 bestDistance = SrpgAiCommanderInternal::computeNearestHostileDistance( field, unit, unit._cell );
         bestCost           = 0;
         for ( const int2& stand : listStand )
         {
-            const int32 distance = SrpgAiControllerInternal::computeNearestHostileDistance( field, unit, stand );
+            const int32 distance = SrpgAiCommanderInternal::computeNearestHostileDistance( field, unit, stand );
             const int32 cost     = unit._bMoved == SW_FALSE ? reach.getCost( stand ) : 0;
             const bool  bCloser  = distance >= 0 && ( distance < bestDistance || ( distance == bestDistance && cost < bestCost ) );
             if ( bCloser == false )
@@ -134,7 +134,7 @@ namespace sw
         return true;
     }
 
-    bool SrpgAiController::runUnit( SrpgBattlefield& field, int32 unitIndex, SrpgCombatResult* pOutResult ) const
+    bool SrpgAiCommander::runUnit( SrpgBattlefield& field, int32 unitIndex, SrpgCombatResult* pOutResult ) const
     {
         SrpgAiPlan plan;
         if ( makePlan( field, unitIndex, plan ) == false )
@@ -150,7 +150,7 @@ namespace sw
         return true;
     }
 
-    int32 SrpgAiController::runPhase( SrpgBattlefield& field, SrpgTeam team ) const
+    int32 SrpgAiCommander::runPhase( SrpgBattlefield& field, SrpgTeam team ) const
     {
         int32       movedCount = 0;
         const int32 limit      = field.countAlive( team );

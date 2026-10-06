@@ -1,5 +1,5 @@
 /**
- * @file SrpgAiController.h
+ * @file SrpgAiCommander.h
  * @brief 택틱스 SRPG 의 적 AI — 갈 수 있는 칸 × 무기 × 표적마다 "기대 피해 − 반격 위험" 점수를 매겨 가장 좋은 것을 고릅니다(결정적).
  */
 #pragma once
@@ -39,15 +39,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SrpgAiController
+     * @class SrpgAiCommander
      * @brief 표적이 없으면 가장 가까운 적 쪽으로 다가갑니다. 같은 점수면 덜 걷는 칸, 그다음 칸 번호 · 무기 · 표적 순서가 앞선 것 — 늘 같은 답입니다.
      * @details 점수 = 명중 × min( 피해, 표적 HP ) / 100 + 격파 가능이면 명중 × 격파 보너스 / 100 − 반격 명중 × min( 반격 피해, 내 HP ) / 100 × 위험 / 100.
      *          피해는 크리티컬을 넣지 않은 보통 피해입니다.
      */
-    class SW_GF_API SrpgAiController
+    class SW_GF_API SrpgAiCommander
     {
     public:
-        SrpgAiController();
+        SrpgAiCommander();
 
         void                  setSettings( const SrpgAiSettings& settings ) { _settings = settings; }
         const SrpgAiSettings& getSettings() const { return _settings; }
