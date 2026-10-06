@@ -56,6 +56,16 @@ namespace sw
         }
 
         /**
+         * @brief 이 구성이 @p pBaseName 모듈을 지었으면 true 입니다.
+         * @details 스킵은 "이 구성에 없다" 만이다 — 지어진 모듈의 등록 실패(로드 · 바인딩)는 회귀이므로 단언한다.
+         *          게임 프리셋은 쓰지 않는 키트를 짓지 않는다(`sw_excludeSourcesOfInactiveKits`).
+         */
+        bool isModuleBuilt( const utf8* pBaseName )
+        {
+            return sw::FileUtil::exists( modulePath( pBaseName ) );
+        }
+
+        /**
          * @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 가운데 **이 프로세스가 만든 것**의 수를 셉니다.
          * @details 그 폴더는 나란히 도는 다른 시험 프로세스(App 을 띄우는 AppTest 등)도 쓰므로 그쪽 복사본은 세지 않습니다.
          */
@@ -302,17 +312,15 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOnAfterBrokenGraphFailsRegister )
 SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterBrokenGraph )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Testing cascade abort when a dependency's onAfter breaks the graph" );
-    const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::exists( gfPath ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    if ( sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "SWGame" ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
-    SW_EXPECT_TRUE( manager.registerModule( "GameFramework" ) );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GameFramework" ), "GameFramework is built but did not register - see the log above" );
 
     sw::vector<sw::string> gameDepends;
     gameDepends.push_back( "GameFramework" );
-    if ( manager.registerModule( "SWGame", gameDepends ) == false )
-        SW_TEST_SKIP( "SWGame MODULE not available for cascade test" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", gameDepends ), "SWGame is built but did not register - see the log above" );
 
     void* const gameBefore = manager.getModuleHandle( "SWGame" );
     SW_EXPECT_TRUE( gameBefore != nullptr );
@@ -342,9 +350,11 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeAbortsAfterOnAfterBrokenGraph )
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadSuccessfulShadowReload )
 {
+    if ( sw::isModuleBuilt( "SWGame" ) == false )
+        SW_TEST_SKIP( "SWGame MODULE not built in this config" );
+
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "SWGame" ) == false )
-        SW_TEST_SKIP( "SWGame MODULE not available for LiveReload test" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame" ), "SWGame is built but did not register - see the log above" );
 
     void* const initialHandle = manager.getModuleHandle( "SWGame" );
     SW_EXPECT_TRUE( initialHandle != nullptr );
@@ -421,8 +431,7 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
     SW_EXPECT_EQUAL( static_cast<sw::EnumRegistrar*>( nullptr ), sw::EnumRegistrar::getHead() );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "GameFramework" ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE register failed in this config" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GameFramework" ), "GameFramework is built but did not register - see the log above" );
 
     const sw::vector<sw::hashed_string> afterRegister = collectFqn();
     SW_EXPECT_TRUE( afterRegister.size() > baseTypes.size() );
@@ -475,18 +484,15 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadRegistrarContentLifecycle )
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadCascadeSuccessPath )
 {
-    const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::exists( gfPath ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    if ( sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "SWGame" ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "GameFramework" ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GameFramework" ), "GameFramework is built but did not register - see the log above" );
 
     sw::vector<sw::string> gameDepends;
     gameDepends.push_back( "GameFramework" );
-    if ( manager.registerModule( "SWGame", gameDepends ) == false )
-        SW_TEST_SKIP( "SWGame MODULE registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", gameDepends ), "SWGame is built but did not register - see the log above" );
 
     sw::vector<sw::string> reloadLog;
 
@@ -669,13 +675,11 @@ SW_TEST_CASE( ArchitectureTest, ModuleGlobalVariablesFollowTheModuleLifetime )
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
 {
-    const sw::string editorPath = sw::modulePath( "EditorModule" );
-    if ( sw::FileUtil::exists( editorPath ) == false )
+    if ( sw::isModuleBuilt( "EditorModule" ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "EditorModule" ) == false )
-        SW_TEST_SKIP( "EditorModule registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "EditorModule" ), "EditorModule is built but did not register - see the log above" );
 
     void* const initialHandle = manager.getModuleHandle( "EditorModule" );
     SW_ASSERT_NOT_NULL( initialHandle );
@@ -779,13 +783,11 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
 
     for ( const utf8* kitName : kKits )
     {
-        const sw::string kitPath = sw::modulePath( kitName );
-        if ( sw::FileUtil::exists( kitPath ) == false )
+        if ( sw::isModuleBuilt( kitName ) == false )
             continue;
 
         sw::LiveReloadManager manager;
-        if ( manager.registerModule( kitName ) == false )
-            continue;
+        SW_ASSERT_TRUE_MSG( manager.registerModule( kitName ), "a built kit did not register - see the log above" );
 
         bool  reloaded{ false };
         void* newH{ nullptr };
@@ -821,18 +823,16 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadGenreKitsIndividuallyAndCascaded )
  */
 SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
 {
+    if ( sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false || sw::isModuleBuilt( "EditorModule" ) == false )
+        SW_TEST_SKIP( "a module this case reloads is not built in this configuration" );
+
     sw::LiveReloadManager manager;
 
     sw::vector<sw::string> gameDepends;
     gameDepends.push_back( "GF_Overworld" );
-    if ( manager.registerModule( "GF_Overworld" ) == false )
-        SW_TEST_SKIP( "GF_Overworld registration failed" );
-
-    if ( manager.registerModule( "SWGame", gameDepends ) == false )
-        SW_TEST_SKIP( "SWGame registration failed" );
-
-    if ( manager.registerModule( "EditorModule" ) == false )
-        SW_TEST_SKIP( "EditorModule registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GF_Overworld" ), "GF_Overworld is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", gameDepends ), "SWGame is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "EditorModule" ), "EditorModule is built but did not register - see the log above" );
 
     // 1) GF_Overworld 핫리로드 트리거 -> 종속된 SWGame까지 캐스케이드 리로드
     bool kitReloaded{ false };
@@ -896,19 +896,18 @@ SW_TEST_CASE( ArchitectureTest, MultiModuleFullStackLiveReload )
  */
 SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
 {
-    for ( const utf8* pKitName : { "GF_Farming", "GF_CreatureLife" } )
+    for ( const utf8* pModuleName : { "GF_Farming", "GF_CreatureLife", "SWGame" } )
     {
-        if ( sw::FileUtil::exists( sw::modulePath( pKitName ) ) == false )
-            SW_TEST_SKIP( "kit module is not built" );
+        if ( sw::isModuleBuilt( pModuleName ) == false )
+            SW_TEST_SKIP( "a module this case reloads is not built in this configuration" );
     }
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "GF_Farming" ) == false || manager.registerModule( "GF_CreatureLife" ) == false )
-        SW_TEST_SKIP( "kit registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GF_Farming" ), "GF_Farming is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GF_CreatureLife" ), "GF_CreatureLife is built but did not register - see the log above" );
     sw::vector<sw::string> gameDepends;
     gameDepends.push_back( "GF_Farming" );
     gameDepends.push_back( "GF_CreatureLife" );
-    if ( manager.registerModule( "SWGame", gameDepends ) == false )
-        SW_TEST_SKIP( "SWGame registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", gameDepends ), "SWGame is built but did not register - see the log above" );
 
     bool farmingReloaded{ false };
     bool creatureReloaded{ false };
@@ -960,17 +959,13 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
  */
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
-    const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::exists( gfPath ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    if ( sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "GF_Overworld" ) == false || sw::isModuleBuilt( "SWGame" ) == false )
+        SW_TEST_SKIP( "a module this case reloads is not built in this configuration" );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "GameFramework" ) == false )
-        SW_TEST_SKIP( "GameFramework registration failed" );
-    if ( manager.registerModule( "GF_Overworld", { "GameFramework" } ) == false )
-        SW_TEST_SKIP( "GF_Overworld registration failed" );
-    if ( manager.registerModule( "SWGame", { "GameFramework", "GF_Overworld" } ) == false )
-        SW_TEST_SKIP( "SWGame registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GameFramework" ), "GameFramework is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GF_Overworld", { "GameFramework" } ), "GF_Overworld is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", { "GameFramework", "GF_Overworld" } ), "SWGame is built but did not register - see the log above" );
 
     SW_EXPECT_FALSE( manager.isGraphBroken() );
     #if defined( SW_PLATFORM_WINDOWS )
@@ -1077,15 +1072,12 @@ SW_TEST_CASE( ArchitectureTest, ReloadWaitsForTheBuildToSucceed )
  */
 SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsEvicted )
 {
-    const sw::string gfPath = sw::modulePath( "GameFramework" );
-    if ( sw::FileUtil::exists( gfPath ) == false )
-        SW_TEST_SKIP( "GameFramework MODULE not built in this config" );
+    if ( sw::isModuleBuilt( "GameFramework" ) == false || sw::isModuleBuilt( "SWGame" ) == false )
+        SW_TEST_SKIP( "GameFramework · SWGame MODULE not built in this config" );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "GameFramework" ) == false )
-        SW_TEST_SKIP( "GameFramework registration failed" );
-    if ( manager.registerModule( "SWGame", { "GameFramework" } ) == false )
-        SW_TEST_SKIP( "SWGame registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "GameFramework" ), "GameFramework is built but did not register - see the log above" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "SWGame", { "GameFramework" } ), "SWGame is built but did not register - see the log above" );
     SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 
     void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
@@ -1270,13 +1262,11 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "ModuleCompiler is only supported in Dev / non-shipping builds" );
     #else
-    const sw::string editorPath = sw::modulePath( "EditorModule" );
-    if ( sw::FileUtil::exists( editorPath ) == false )
+    if ( sw::isModuleBuilt( "EditorModule" ) == false )
         SW_TEST_SKIP( "EditorModule not built in this config" );
 
     sw::LiveReloadManager manager;
-    if ( manager.registerModule( "EditorModule" ) == false )
-        SW_TEST_SKIP( "EditorModule registration failed" );
+    SW_ASSERT_TRUE_MSG( manager.registerModule( "EditorModule" ), "EditorModule is built but did not register - see the log above" );
 
     void* const initialHandle = manager.getModuleHandle( "EditorModule" );
     SW_ASSERT_NOT_NULL( initialHandle );
