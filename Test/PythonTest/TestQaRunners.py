@@ -128,7 +128,7 @@ class UsableBackendTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tempDir:
             cachePath = Path(tempDir) / "CMakeCache.txt"
             cachePath.write_text("SW_SHIPPING_BUILD:BOOL=OFF\n", encoding="utf-8")
-            self.assertEqual(["dx12", "dx11", "vk", "gl"], findUsableBackends(BuildTree(Path(tempDir))))
+            self.assertEqual({"dx12", "dx11", "vk", "gl"}, set(findUsableBackends(BuildTree(Path(tempDir)))))
             cachePath.write_text("SW_SHIPPING_BUILD:BOOL=ON\nSW_SHIPPING_RHI_BACKEND:STRING=Vulkan\n", encoding="utf-8")
             self.assertEqual(["vk"], findUsableBackends(BuildTree(Path(tempDir))))
 

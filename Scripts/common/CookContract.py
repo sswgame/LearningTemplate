@@ -34,6 +34,10 @@ class RhiBackendSpec:
     shaderTarget: str
     commandLineArgument: str
     listAlias: tuple[str, ...]
+    moduleName: str
+    sourceFolder: str
+    graphicsLibs: str
+    shippingDefine: str
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,11 @@ class CookContractSpec:
                 return kind
         return None
 
+    @property
+    def mapBackendSwitch(self) -> dict[str, str]:
+        """App 의 백엔드 스위치 — 짧은 이름(첫 별칭) → `-<짧은 이름>`(`ArgumentList.xxx` 의 RHI 줄이 별칭을 받는다). 표 순서 그대로."""
+        return {backend.listAlias[0]: f"-{backend.listAlias[0]}" for backend in self.listBackend}
+
     def findBackend(self, text: str) -> RhiBackendSpec | None:
         """별칭 · 백엔드 이름(대소문자 무시)으로 줄을 찾습니다. 모르면 None."""
         key = text.strip().lower()
@@ -142,8 +151,13 @@ def makeBackendInternal(row: dict) -> RhiBackendSpec:
         shaderTarget=str(row["shader_target"]),
         commandLineArgument=str(row["command_line_argument"]),
         listAlias=tuple(str(alias) for alias in row["aliases"]),
+        moduleName=str(row["module"]),
+        sourceFolder=str(row["source_folder"]),
+        graphicsLibs=str(row["graphics_libs"]),
+        shippingDefine=str(row["shipping_define"]),
     )
-    for identifier in (backend.name, backend.shaderTarget, backend.commandLineArgument):
+    for identifier in (backend.name, backend.shaderTarget, backend.commandLineArgument, backend.moduleName, backend.sourceFolder,
+                       backend.graphicsLibs, backend.shippingDefine):
         if not _kIdentifierPattern.match(identifier):
             raise ValueError(f"rhi_backends '{backend.name}': '{identifier}' 는 C++ 식별자가 아닙니다")
     for lowerName in (backend.shaderFolder, *backend.listAlias):
@@ -192,7 +206,8 @@ def validateInternal(spec: CookContractSpec) -> None:
     """표 전체 규칙 — 이름 · 폴더 · 별칭이 백엔드끼리 겹치지 않고, 긴 접미사가 짧은 것보다 먼저 온다."""
     mapOwnerByName: dict[str, str] = {}
     for backend in spec.listBackend:
-        for name in {backend.name.lower(), backend.shaderFolder, *backend.listAlias}:
+        for name in {backend.name.lower(), backend.shaderFolder, *backend.listAlias, backend.moduleName, backend.sourceFolder,
+                     backend.graphicsLibs, backend.shippingDefine}:
             owner = mapOwnerByName.setdefault(name, backend.name)
             if owner != backend.name:
                 raise ValueError(f"rhi_backends: '{name}' 를 '{owner}' 와 '{backend.name}' 가 같이 씁니다")

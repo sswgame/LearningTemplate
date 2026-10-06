@@ -19,6 +19,8 @@
         #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
     #elif defined( SW_RHI_TARGET_OPENGL )
         #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+    #elif defined( SW_WITH_CLIENT_CODE )
+        #error "Shipping links exactly one RHI backend into Engine: SW_RHI_TARGET_* is missing (SW_SHIPPING_RHI_BACKEND)"
     #endif
 #endif
 

@@ -7,6 +7,20 @@
 # 그래서 TargetRules.cmake 보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
+# 플랫폼 · 구성 이름 — 매니페스트(_listPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
+# ------------------------------------------------------------------------------
+if(WIN32)
+	set(sw_platform_name "Windows")
+else()
+	set(sw_platform_name "Linux")
+endif()
+if(SW_SHIPPING_BUILD)
+	set(sw_configuration_name "Shipping")
+else()
+	set(sw_configuration_name "Dev")
+endif()
+
+# ------------------------------------------------------------------------------
 # 출력 경로 — Ninja 단일 설정 → 평탄한 Bin/Lib (LiveReload와 동일)
 # ------------------------------------------------------------------------------
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${sw_output_directory}/Bin")

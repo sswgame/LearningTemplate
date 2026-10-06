@@ -27,7 +27,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_REQUIRE_REFLECTION` | BOOL | `ON` |  | Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_SANITIZER_KIND` | STRING | `address` | `address` · `thread` | SW_ENABLE_SANITIZER 가 켤 새니타이저: address \| thread | CI-Debug-TSAN | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_SHIPPING_BUILD` | BOOL | `OFF` |  | 배포용 단일 실행 파일 정적 링크 빌드 (Editor 모듈 제외 및 최고 성능 최적화) | CI-Shipping, Ninja-Shipping, WSL-Shipping | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
-| `SW_SHIPPING_RHI_BACKEND` | STRING | `DirectX12 · Vulkan` | `DirectX11` · `DirectX12` · `Vulkan` · `OpenGL` | Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름) |  | [Source/Engine/CMakeLists.txt](../../Source/Engine/CMakeLists.txt) |
+| `SW_SHIPPING_RHI_BACKEND` | STRING | `DirectX12 · Vulkan` | `DirectX11` · `DirectX12` · `Vulkan` · `OpenGL` | Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름 · 별칭) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_TARGET_TYPE` | STRING | `` | `""` · `Game` · `Client` · `Server` | 빌드 타깃 종류: Game \| Client \| Server (비우면 Shipping=Client, 그 밖=Game) | CI-Shipping, CI-Shipping-Server, Ninja-Debug-Server 외 5 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_USE_SCCACHE` | BOOL | `ON` |  | 사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_USE_VCPKG` | BOOL | `ON` |  | vcpkg 패키지 매니저 연동 및 툴체인 사용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |

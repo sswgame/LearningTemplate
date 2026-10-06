@@ -10,16 +10,14 @@
 # ------------------------------------------------------------------------------
 # 1) 라이브러리 타입 · RHI 소스 목록
 # Dev: SHARED / Shipping: STATIC
-# RHI MODULE 엔트리(Modules/)와 백엔드 device .cpp 는 항상 Engine GLOB 에서 뺀다.
-# Dev 는 RHI_* MODULE 이, Shipping 은 아래 3) 이 고른 백엔드 하나를 같은 목록에서 가져다 짓는다.
+# RHI MODULE 엔트리(Modules/)와 백엔드 장치 .cpp 는 항상 Engine GLOB 에서 뺀다(장치 소스는 cmake/Engine/RhiBackends.cmake 가 백엔드 폴더로 안다).
+# Dev 는 RHI_* MODULE 이, Shipping 은 아래 3) 이 고른 백엔드 하나를 같은 함수로 가져다 짓는다.
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD)
     set(coreLibType STATIC)
 else()
     set(coreLibType SHARED)
 endif()
-
-include("${CMAKE_SOURCE_DIR}/cmake/Engine/RhiBackendSources.cmake")
 
 # DelayLoadNotifyHook 이 Engine 에서 빠지는 것은 **의도한 것**이다. 이 훅은 지연 로드된 DLL 을
 # 이미 로드된 엔진 모듈 핸들로 돌려주는 장치라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
@@ -32,12 +30,6 @@ set(coreExclude
     "Module/DelayLoadNotifyHook.cpp"
 )
 
-foreach(src IN LISTS SW_RHI_ALL_DEVICE_SOURCES)
-    file(RELATIVE_PATH rel "${CMAKE_CURRENT_SOURCE_DIR}" "${src}")
-    string(REPLACE "." "\\." relEsc "${rel}")
-    list(APPEND coreExclude "${relEsc}")
-endforeach()
-
 # ------------------------------------------------------------------------------
 # 2) Engine 타겟 — include 전파, Core_objects 재사용
 # Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
@@ -49,6 +41,10 @@ file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 foreach(exPattern IN LISTS coreExclude)
     list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
+
+# RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 3) 이 고른 하나를 가져간다.
+sw_getAllRhiBackendSources(listRhiBackendSource)
+list(REMOVE_ITEM ENGINE_SOURCES ${listRhiBackendSource})
 
 # 셰이더 라이브 리로드는 개발 도구다. Shipping 은 쿠킹된 셰이더만 읽으므로 감시할 것이 없다.
 # 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다. 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
@@ -216,55 +212,27 @@ target_link_libraries(Engine PRIVATE openssl)
 # ------------------------------------------------------------------------------
 if(SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Server")
     message(STATUS "[Engine] Dedicated server: no RHI backend linked")
-    sw_declareUnbuiltSources(${SW_RHI_ALL_DEVICE_SOURCES})
+    sw_declareUnbuiltSources(${listRhiBackendSource})
 elseif(SW_SHIPPING_BUILD)
-    # 기본 RHI 는 한 곳이다 — 이름은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends` 의 name), 기본은 표의 `default_rhi_backend`
-    # (Windows 밖은 Vulkan). EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
-    file(READ "${CMAKE_SOURCE_DIR}/Config/Engine/CookContract.json" swCookContractText)
-    string(JSON swContractDefaultRhi GET "${swCookContractText}" default_rhi_backend)
-    if(NOT SW_SHIPPING_RHI_BACKEND)
-        if(WIN32)
-            set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
-        else()
-            set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
-        endif()
-    endif()
-    set(swListShippingRhi DirectX11 DirectX12 Vulkan OpenGL)
-    set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS ${swListShippingRhi})
-    if(NOT SW_SHIPPING_RHI_BACKEND IN_LIST swListShippingRhi)
-        message(FATAL_ERROR "SW_SHIPPING_RHI_BACKEND='${SW_SHIPPING_RHI_BACKEND}' is not a cook-table backend name (${swListShippingRhi}) - "
-                            "re-configure with -DSW_SHIPPING_RHI_BACKEND=<name>")
-    endif()
+    # 이름 · 별칭은 쿠킹 표(`Config/Engine/CookContract.json` `rhi_backends`)가 풀고, 이 플랫폼에 없는 백엔드면 구성을 세운다(sw_resolveShippingRhiBackend).
+    # 주의: 여기서 백엔드를 못 고른 채 지나가면 Engine 은 백엔드 없이 링크되고 실행에서야 "백엔드 없음" 으로 진다(RHIBackendRegistry.cpp 의 #error 가 다음 방어선).
+    sw_resolveShippingRhiBackend("${SW_SHIPPING_RHI_BACKEND}" swShippingBackend)
+    # EngineConfig 가 다른 백엔드를 고르면 알린다 — 배포본은 링크한 하나만 띄운다.
     file(READ "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_ENGINE_CONFIG}" swEngineConfigText)
     string(JSON swEngineConfigRhi ERROR_VARIABLE swEngineConfigRhiError GET "${swEngineConfigText}" _window _defaultRHI)
-    if(NOT swEngineConfigRhiError AND NOT swEngineConfigRhi STREQUAL SW_SHIPPING_RHI_BACKEND)
-        message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${SW_SHIPPING_RHI_BACKEND}'")
+    if(NOT swEngineConfigRhiError AND NOT swEngineConfigRhi STREQUAL swShippingBackend)
+        message(WARNING "${SW_FILE_RUNTIME_ENGINE_CONFIG} picks _defaultRHI='${swEngineConfigRhi}' but Shipping links only '${swShippingBackend}'")
     endif()
 
-    message(STATUS "[Engine] Shipping monolithic RHI backend: ${SW_SHIPPING_RHI_BACKEND}")
+    message(STATUS "[Engine] Shipping monolithic RHI backend: ${swShippingBackend}")
+    sw_getRhiBackendSources(${swShippingBackend} listShippingRhiSource)
+    target_sources(Engine PRIVATE ${listShippingRhiSource})
+    target_link_libraries(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_GRAPHICS_LIBS})
+    target_compile_definitions(Engine PUBLIC ${SW_RHI_BACKEND_${swShippingBackend}_SHIPPING_DEFINE})
 
-    if(SW_SHIPPING_RHI_BACKEND STREQUAL "DirectX12" AND TARGET sw_graphics_dx12_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_DX12_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_dx12_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX12)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "DirectX11" AND TARGET sw_graphics_dx11_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_DX11_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_dx11_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_DX11)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "Vulkan" AND TARGET sw_graphics_vulkan_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_VULKAN_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_vulkan_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_VULKAN)
-    elseif(SW_SHIPPING_RHI_BACKEND STREQUAL "OpenGL" AND TARGET sw_graphics_gl_libs)
-        target_sources(Engine PRIVATE ${SW_RHI_GL_DEVICE_SOURCES})
-        target_link_libraries(Engine PUBLIC sw_graphics_gl_libs)
-        target_compile_definitions(Engine PUBLIC SW_RHI_TARGET_OPENGL)
-    endif()
-
-    # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다. 고른 것은 Engine 의 소스 목록이 답한다.
-    get_target_property(listEngineSource Engine SOURCES)
-    set(listUnbuiltRhiSource ${SW_RHI_ALL_DEVICE_SOURCES})
-    list(REMOVE_ITEM listUnbuiltRhiSource ${listEngineSource})
+    # 고르지 않은 백엔드는 이 구성에서 아무도 짓지 않는다 — 소스 검사 게이트가 알도록 적는다.
+    set(listUnbuiltRhiSource ${listRhiBackendSource})
+    list(REMOVE_ITEM listUnbuiltRhiSource ${listShippingRhiSource})
     sw_declareUnbuiltSources(${listUnbuiltRhiSource})
 endif()
 

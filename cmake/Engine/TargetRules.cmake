@@ -410,21 +410,25 @@ function(sw_addModuleLibrary TARGET_NAME)
 	endif()
 endfunction()
 
-# RHI 그래픽스 백엔드 MODULE — Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가 백엔드 하나를 Engine 에 넣는다).
-function(sw_addRhiBackendModule BACKEND_NAME GRAPHICS_LIB)
-	cmake_parse_arguments(ARG "" "" "SOURCES" ${ARGN})
-	sw_skipInactiveModule(${BACKEND_NAME} swSkip)
+# RHI 그래픽스 백엔드 MODULE — 표(CookContract.json rhi_backends)의 이름 하나를 받는다. Dev 만 짓는다(배포는 Source/Engine/CMakeLists.txt 가
+# 백엔드 하나를 Engine 에 넣는다).
+function(sw_addRhiBackendModule BACKEND_NAME)
+	set(moduleName ${SW_RHI_BACKEND_${BACKEND_NAME}_MODULE})
+	sw_getRhiBackendSources(${BACKEND_NAME} listDeviceSource)
+	sw_skipInactiveModule(${moduleName} swSkip)
 	if(swSkip)
+		# 장치 소스는 모듈 폴더 밖(Graphics/RHI/<폴더>)에 있다 — 그것도 이 구성이 짓지 않는다.
+		sw_declareUnbuiltSources(${listDeviceSource})
 		return()
 	endif()
-	sw_addModuleLibrary(${BACKEND_NAME}
+	sw_addModuleLibrary(${moduleName}
 		KIND rhi
 		DEV_TYPE MODULE
 		EXPORTS MODULE
 		LOG_TAG "RHI"
 		FOLDER "Source/Engine/Graphics/RHI/Modules"
-		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${ARG_SOURCES}
-		LINK_PRIVATE Engine ${GRAPHICS_LIB} sw_third_party_includes
+		SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ModuleEntry.cpp" ${listDeviceSource}
+		LINK_PRIVATE Engine ${SW_RHI_BACKEND_${BACKEND_NAME}_GRAPHICS_LIBS} sw_third_party_includes
 		DEFINITIONS SW_ENGINE_INTERNAL
 		NO_REFLECTION
 	)

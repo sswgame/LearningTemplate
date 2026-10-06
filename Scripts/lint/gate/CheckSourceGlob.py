@@ -6,13 +6,6 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 현재 빌드 트리(compile_commands.json)와 디스크의 C++ 소스 파일 목록을 대조하여,
 새로 추가된 .cpp/.c 파일이 빌드 타겟 및 LSP 인덱서에 정상 등록되었는지 검사합니다.
 
-**RHI 백엔드 목록도 함께 본다** (`cmake/Engine/RhiBackendSources.cmake`).
-그 파일은 백엔드 .cpp 를 손으로 나열하고, Dev 에서 어느 .cpp 가 `RHI_*` MODULE 로
-가는지를 정한다. 목록에서 빠진 파일은 **컴파일이 안 되는 게 아니라 Engine 타겟의 glob 이 주워간다** —
-즉 모듈이 아니라 Engine.dll 로 들어간다. 그래서 compile_commands 대조로는 절대 안 잡히고(실험으로 확인),
-증상은 모듈의 미정의 심볼로 나온다(실제로 `VulkanRHIRenderPassCache.cpp` 가 빠져 `vkCreateRenderPass`
-미정의가 났다). 목록과 디스크를 양방향으로 맞춘다.
-
 **구성이 일부러 짓지 않는 소스는 CMake 가 적은 목록으로만 안다** (`<빌드>/generated/sw/config/UnbuiltSources.txt`).
 배포 구성의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드, 다른 OS 의 Core 소스, 짓지 않는 RHI 모듈 엔트리 · DX 모듈(윈도우 밖),
 고르지 않은 게임 팩, 끈 GameFramework 가 그렇다. 무엇을 빼는지는 CMake 가 정하므로 빼는 자리가 직접 적고(`sw_declareUnbuiltSources` ·
@@ -28,7 +21,6 @@ CMake 소스 GLOB 누락 및 컴파일 데이터베이스 일치 검사.
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -60,39 +52,6 @@ _kScanRoots = (
     kDirSourceCore,
 )
 
-_kRhiBackendListFile = "cmake/Engine/RhiBackendSources.cmake"
-_kRhiBackendRoot = "Source/Engine/Graphics/RHI"
-_kRhiBackendDirs = ("DX11", "DX12", "GL", "Vulkan")
-_kRhiListedRe = re.compile(r"\$\{swRhiRoot\}/([\w/]+\.cpp)")
-
-
-def checkRhiBackendSourceListInternal(repo: Path) -> list[str]:
-    """백엔드 .cpp 목록과 디스크를 양방향으로 맞춥니다 (파일 머리 주석 참고)."""
-    listPath = repo / _kRhiBackendListFile
-    if listPath.is_file() is False:
-        return [f"{_kRhiBackendListFile}: 파일이 없습니다"]
-
-    listed = set(_kRhiListedRe.findall(listPath.read_text(encoding="utf-8", errors="ignore")))
-    if not listed:
-        return [f"{_kRhiBackendListFile}: 백엔드 소스를 하나도 찾지 못했습니다 (검사가 헛돌고 있습니다)"]
-
-    onDisk: set[str] = set()
-    for backend in _kRhiBackendDirs:
-        backendDir = repo / _kRhiBackendRoot / backend
-        if backendDir.is_dir() is False:
-            continue
-        for path in backendDir.rglob("*.cpp"):
-            onDisk.add(path.relative_to(repo / _kRhiBackendRoot).as_posix())
-
-    errors: list[str] = []
-    for relPath in sorted(onDisk - listed):
-        errors.append(f"{_kRhiBackendRoot}/{relPath}: {_kRhiBackendListFile} 에 없습니다 — "
-                      f"모듈이 아니라 Engine 타겟으로 들어갑니다(링크 시점에 미정의 심볼로 터집니다)")
-    for relPath in sorted(listed - onDisk):
-        errors.append(f"{_kRhiBackendListFile}: `{relPath}` 가 디스크에 없습니다 — 파일이 옮겨졌으면 경로를 고치세요")
-    return errors
-
-
 class CheckSourceGlobGate(LintGate):
     """
     빌드가 실제로 컴파일하는 목록과 디스크의 소스를 대조한다.
@@ -109,13 +68,12 @@ class CheckSourceGlobGate(LintGate):
     preCommitSkipReason = "빌드 디렉터리(--build-dir)가 있어야 글롭과 대조할 수 있다 — 커밋 훅은 그것을 모른다"
     listCtestArgument = ("--build-dir", "${CMAKE_BINARY_DIR}")
     maxViolationShown = 40
-    hint = ("  reconfigure 가 필요하거나, RhiBackendSources.cmake 의 경로가 디스크와 어긋났습니다. 이 구성이 일부러 짓지 않는 소스라면\n"
+    hint = ("  reconfigure 가 필요합니다. 이 구성이 일부러 짓지 않는 소스라면\n"
             "  빼는 자리에서 sw_excludeUnbuiltSources · sw_declareUnbuiltSources 로 적으세요(cmake/Engine/TargetRules.cmake).")
     selfTestCases = [
         {
             "name": "짓지 않는 소스 목록에 없는데 compile_commands 에도 없는 소스",
             "files": {
-                "cmake/Engine/RhiBackendSources.cmake": 'set(SW_RHI_VULKAN_DEVICE_SOURCES\n    "${swRhiRoot}/Vulkan/Probe.cpp"\n)\n',
                 "Source/Engine/Graphics/RHI/Vulkan/Probe.cpp": "// 아무도 짓지 않는다\n",
                 "Source/Editor/Declared.cpp": "// 이 구성이 짓지 않는다고 적혀 있다\n",
                 "build/compile_commands.json": "[]\n",
@@ -127,8 +85,7 @@ class CheckSourceGlobGate(LintGate):
             # 게이트에 플랫폼 · 게임 무시 목록이 없다 — 다른 OS 폴더 · 다른 게임 팩도 목록에 없으면 위반이다.
             "name": "다른 OS 폴더 · 다른 게임 팩의 소스도 목록에 없으면 위반",
             "files": {
-                "cmake/Engine/RhiBackendSources.cmake": 'set(SW_RHI_VULKAN_DEVICE_SOURCES\n    "${swRhiRoot}/Vulkan/Built.cpp"\n)\n',
-                # 백엔드 목록 검사를 맞추려고 둔 파일 — 짓지 않는 소스로 적혀 있어 위반이 아니다. 남는 위반은 아래 둘뿐이다.
+                # 짓지 않는 소스로 적혀 있어 위반이 아니다. 남는 위반은 아래 둘뿐이다.
                 "Source/Engine/Graphics/RHI/Vulkan/Built.cpp": "// 짓지 않는 소스로 적혀 있다\n",
                 "Source/Core/File/Linux/ProbeLinux.cpp": "// 이 구성이 짓지 않는데 아무도 적지 않았다\n",
                 "Source/Games/Other/ProbeGame.cpp": "// 고르지 않은 게임 팩인데 아무도 적지 않았다\n",
@@ -143,8 +100,7 @@ class CheckSourceGlobGate(LintGate):
         addBuildTreeArguments(parser, defaultPreset=None)
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
-        # 백엔드 목록 검사는 빌드 트리가 없어도 성립한다 — 아래 조기 반환들보다 먼저 본다.
-        violations = checkRhiBackendSourceListInternal(repositoryRoot)
+        violations: list[str] = []
 
         scanDirs = [repositoryRoot / rel for rel in _kScanRoots]
         sources = collectSourceFiles(scanDirs, extensions=kCppSourceExtensions)
@@ -194,8 +150,7 @@ class CheckSourceGlobGate(LintGate):
         return GateResult(
             listViolation=violations,
             listNote=listNote,
-            summary=f"{len(sources)} sources referenced in {tree.path} ({len(unbuiltSources)} declared unbuilt by CMake), "
-                    f"RHI backend list matches disk",
+            summary=f"{len(sources)} sources referenced in {tree.path} ({len(unbuiltSources)} declared unbuilt by CMake)",
         )
 
 

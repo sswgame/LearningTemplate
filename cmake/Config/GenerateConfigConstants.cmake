@@ -41,11 +41,14 @@ sw_executePythonScript("Scripts/generate/GeneratePackFormat.py"
 
 # 5b. 쿠킹 표(RHI 백엔드 · 쿡 접미사) → C++ X-macro 헤더 생성
 # Config/Engine/CookContract.json 이 단일 출처이고, 같은 파일을 Python 쿠커(CookAssets.py)가 읽는다.
+# RHI 백엔드의 빌드 칸(모듈 · 장치 소스 폴더 · 그래픽 라이브러리 · 배포 매크로)은 같은 표에서 CMake 쪽으로 옮긴다(cmake/Engine/RhiBackends.cmake 가 읽는다).
 set(SW_GENERATED_COOK_CONTRACT_H "${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.gen.h")
+set(SW_GENERATED_COOK_CONTRACT_CMAKE "${CMAKE_BINARY_DIR}/generated/sw/config/CookContract.cmake")
 sw_executePythonScript("Scripts/generate/GenerateCookContract.py"
-	ARGS "${SW_GENERATED_COOK_CONTRACT_H}"
+	ARGS "${SW_GENERATED_COOK_CONTRACT_H}" "${SW_GENERATED_COOK_CONTRACT_CMAKE}"
 	REQUIRED
 )
+include("${SW_GENERATED_COOK_CONTRACT_CMAKE}")
 
 # 계약 파일이 바뀌면 configure 를 다시 돌려 생성 헤더를 새로 만든다.
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS

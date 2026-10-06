@@ -42,7 +42,7 @@ cmake/
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
     │                               (DXC 복사는 `ThirdParty/dxc/CMakeLists.txt` 의 `sw_copyDxcDlls` —
     │                                DXC 탐색 로직이 거기 있어 같이 둔다)
-    └── RhiBackendSources.cmake  — RHI 백엔드 소스 파일 목록
+    └── RhiBackends.cmake        — RHI 백엔드 표의 CMake 쪽(장치 소스 · 이름 · 별칭 · 배포 백엔드 확인 — 표는 CookContract.json)
 ```
 
 ## 네이밍 컨벤션

@@ -45,8 +45,8 @@ cmake --build --preset Ninja-Debug
   `SW_WITH_CLIENT_CODE` / `SW_WITH_SERVER_CODE` / `sw::build::kTargetName`, and only inside `.cpp` bodies — split code goes into modules by `_listTarget`),
   `SW_ACTIVE_GAME` (which `Source/Games/<name>` builds as `SWGame`, and which game preset `Config/Game/<name>.json` — pack root,
   window title — the runtime reads; Shipping bakes that file in; the startup scene is the pack's `data/gamesettings.xml`),
-  `SW_SHIPPING_RHI_BACKEND` (the one RHI backend Shipping links statically, a cook-table name such as `DirectX12` —
-  declared in `Source/Engine/CMakeLists.txt`; Dev always loads every `RHI_*` module),
+  `SW_SHIPPING_RHI_BACKEND` (the one RHI backend Shipping links statically, a cook-table name or alias such as `DirectX12` · `vk` —
+  a backend missing on that platform stops the configure; the backend table is `Config/Engine/CookContract.json`; Dev always loads every `RHI_*` module),
   `SW_REQUIRE_REFLECTION`, `SW_ENABLE_PCH`, `SW_USE_SCCACHE`.
 
 ## Test

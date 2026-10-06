@@ -43,6 +43,7 @@ include(cmake/Engine/ModuleManifest.cmake)
 include(cmake/Engine/ThirdPartyLibs.cmake)
 include(cmake/Engine/RuntimeDependencies.cmake)
 include(cmake/Engine/ReflectionCodeGen.cmake)
+include(cmake/Engine/RhiBackends.cmake)
 
 # 모든 엔진 타겟이 공유하는 include 루트 (Source/, Resource/, generated/)
 add_library(sw_third_party_includes INTERFACE)

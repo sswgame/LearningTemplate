@@ -22,9 +22,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .BuildTree import BuildTree
+from .CookContract import CookContractSpec
 
-#: 백엔드 짧은 이름 → App 스위치(쿠킹 표의 첫 별칭과 같다 — `Config/Engine/CookContract.json`).
-kBackendSwitch: dict[str, str] = {"dx12": "-dx12", "dx11": "-dx11", "vk": "-vk", "gl": "-gl"}
+#: 백엔드 짧은 이름 → App 스위치. 표는 Config/Engine/CookContract.json(별칭의 첫 이름이 짧은 이름이다, 표 순서).
+kBackendSwitch: dict[str, str] = CookContractSpec.load().mapBackendSwitch
 
 #: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드
 #: (`kRhiUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
@@ -99,16 +100,12 @@ def parseProfileWall(listLine: list[str]) -> tuple[int, int, int] | None:
     return None
 
 
-#: Shipping 이 링크한 백엔드(`SW_SHIPPING_RHI_BACKEND` — 쿠킹 표의 이름, 소문자) → 백엔드 짧은 이름.
-_kShippingBackendAlias: dict[str, str] = {"directx12": "dx12", "directx11": "dx11", "vulkan": "vk", "opengl": "gl"}
-
-
 def findUsableBackends(tree: BuildTree) -> list[str]:
     """그 빌드의 App 이 받는 백엔드 — Dev 는 넷 다(모듈), Shipping 은 링크한 하나뿐이다(다른 스위치는 기동 오류다)."""
     if not tree.bShipping:
         return list(kBackendSwitch)
-    backend = _kShippingBackendAlias.get((tree.readCacheValue("SW_SHIPPING_RHI_BACKEND") or "").lower())
-    return [backend] if backend else []
+    backend = CookContractSpec.load().findBackend(tree.readCacheValue("SW_SHIPPING_RHI_BACKEND") or "")
+    return [backend.listAlias[0]] if backend else []
 
 
 def loadGameTable(repositoryRoot: Path) -> dict:
