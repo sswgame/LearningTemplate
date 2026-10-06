@@ -14,6 +14,7 @@
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -35,6 +36,9 @@ namespace sw::editor
     {
         struct ContentBrowserPanelInternal
         {
+            /** @brief 삭제 확인 모달의 팝업 이름입니다(OpenPopup 과 BeginPopupModal 이 같은 글을 써야 한다). */
+            static constexpr const utf8* kDeleteConfirmPopupName = "Delete Asset##ConfirmDeleteAsset";
+
             static ImVec4 colorForAsset( string_view path, bool bIsDirectory = false )
             {
                 const Color4 c = EditorThemeUtil::getAssetColorForPath( path, bIsDirectory );
@@ -204,9 +208,9 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다).
-            if ( ImGui::MenuItem( "Delete" ) )
-                (void)EditorAssetCommands::deleteAsset( entry._absolutePath ); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
+            // 지우기 전에 확인한다(휴지통이 아니라 되돌릴 수 없다). 모달은 이 메뉴 밖, 창 단위에서 연다.
+            if ( ImGui::MenuItem( "Delete..." ) )
+                requestDeleteAsset( entry._absolutePath );
             ImGui::EndPopup();
         }
     }
@@ -218,7 +222,9 @@ namespace sw::editor
         , _selectedFolderAbs{}
         , _listCrumb{}
         , _selectedAssetAbs{}
+        , _pendingDeleteAbs{}
         , _searchBuffer{}
+        , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
         , _filterIndex{ 0 }
         , _historyIndex{ -1 }
@@ -228,8 +234,75 @@ namespace sw::editor
         , _folderJob{}
         , _bRootsDirty{ SW_TRUE }
         , _bFolderDirty{ SW_TRUE }
+        , _bOpenDeleteConfirm{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
+    }
+
+    void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
+    {
+        _pendingDeleteAbs   = string{ absolutePath };
+        _bOpenDeleteConfirm = SW_TRUE;
+    }
+
+    bool ContentBrowserPanel::confirmDeleteAsset()
+    {
+        if ( _pendingDeleteAbs.empty() )
+            return false;
+        const bool bDeleted = EditorAssetCommands::deleteAsset( _pendingDeleteAbs );
+        if ( bDeleted )
+        {
+            // 지운 파일이 목록 · 선택에 남지 않게 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
+            _selectedAssetAbs.clear();
+            _bFolderDirty = SW_TRUE;
+        }
+        _pendingDeleteAbs.clear();
+        return bDeleted;
+    }
+
+    void ContentBrowserPanel::drawDeleteConfirmModal()
+    {
+        if ( _bOpenDeleteConfirm == SW_TRUE )
+        {
+            ImGui::OpenPopup( ContentBrowserPanelInternal::kDeleteConfirmPopupName );
+            _bOpenDeleteConfirm = SW_FALSE;
+        }
+        if ( ImGui::BeginPopupModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+            return;
+
+        ImGui::Text( "Delete '%s'? This cannot be undone.", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
+        ImGui::Separator();
+        if ( ImGui::Button( "Delete" ) )
+        {
+            (void)confirmDeleteAsset(); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if ( ImGui::Button( "Cancel" ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+        {
+            _pendingDeleteAbs.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    void ContentBrowserPanel::syncWithContentChanges()
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+        const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
+        if ( serial == _seenContentChangeSerial )
+            return;
+        _seenContentChangeSerial = serial;
+        _bFolderDirty            = SW_TRUE;
+    }
+
+    void ContentBrowserPanel::openFolder( string_view absolutePath )
+    {
+        vector<ContentBrowserCrumb> listCrumb;
+        makeTrailForFolder( absolutePath, listCrumb );
+        selectFolder( absolutePath, listCrumb );
     }
 
     void ContentBrowserPanel::drawContent()
@@ -255,6 +328,7 @@ namespace sw::editor
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();
         processPendingImports();
+        syncWithContentChanges();
         if ( _bFolderDirty == SW_TRUE )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
@@ -267,6 +341,7 @@ namespace sw::editor
         drawSourcesSection();
         ImGui::SameLine();
         drawAssetView();
+        drawDeleteConfirmModal();
     }
 
     void ContentBrowserPanel::refreshRoots()

@@ -95,6 +95,8 @@ namespace sw::editor
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
         , _resourceWatchHandle{}
+        , _contentWatchHandle{}
+        , _contentChangeSerial{ 0 }
     {
     }
 
@@ -125,6 +127,9 @@ namespace sw::editor
         // 감시 접두어는 **절대 경로**여야 한다 — 이벤트의 `_directory` 는 감시자가 열어 둔 절대 경로(리소스 루트)이고,
         // 접두어 비교는 그 둘을 그대로 맞춰 본다(상대 경로를 주면 비교가 항상 실패한다).
         _resourceWatchHandle = _pFileWatchDispatcher->registerWatch( ResourceUtil::getRootFolderPath(), listExtension, fileWatchDelegate );
+        // 디스크 목록을 든 화면(콘텐츠 브라우저)이 다시 읽을 때를 알도록, 종류와 무관하게 모든 변경을 센다.
+        FileWatchMatchDelegate treeWatchDelegate{ SW_DELEGATE_METHOD( FileWatchMatchDelegate, &AssetHotReload::onResourceTreeChanged, this ) };
+        _contentWatchHandle = _pFileWatchDispatcher->registerWatch( ResourceUtil::getRootFolderPath(), {}, treeWatchDelegate );
         return _resourceWatchHandle.isValid();
     }
 
@@ -136,6 +141,9 @@ namespace sw::editor
         if ( _resourceWatchHandle.isValid() )
             _pFileWatchDispatcher->unregisterWatch( _resourceWatchHandle );
         _resourceWatchHandle = {};
+        if ( _contentWatchHandle.isValid() )
+            _pFileWatchDispatcher->unregisterWatch( _contentWatchHandle );
+        _contentWatchHandle = {};
 
         _pFileWatchDispatcher->shutdown();
         _pFileWatchDispatcher.reset();
@@ -145,6 +153,12 @@ namespace sw::editor
     {
         if ( _pFileWatchDispatcher != nullptr )
             _pFileWatchDispatcher->update();
+    }
+
+    void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
+    {
+        (void)changeEvent;
+        ++_contentChangeSerial;
     }
 
     void AssetHotReload::onResourceFileChanged( const FileChangeEvent& changeEvent )

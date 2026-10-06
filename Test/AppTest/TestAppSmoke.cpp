@@ -710,6 +710,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|input.hierarchySearchTyping",
         "EditorSelfTest|PASS|input.tooltipOnHover",
         "EditorSelfTest|PASS|input.classicDarkSwatch",
+        "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

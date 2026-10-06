@@ -32,6 +32,23 @@ namespace sw::editor
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;
 
+        // ------------------------------------------------------------------------------
+        // 1-1) 삭제 · 시험 창구 — 우클릭 Delete 는 requestDeleteAsset → 확인 모달 → confirmDeleteAsset 이다. 자체 시험이 같은 길을 부른다
+        // ------------------------------------------------------------------------------
+        /** @brief 폴더로 갑니다(그 폴더를 든 콘텐츠 루트에서 만든 경로 줄과 함께). */
+        void openFolder( string_view absolutePath );
+        /** @brief 지금 폴더 목록의 항목 수입니다(필터 전). */
+        uint32 getEntryCount() const { return static_cast<uint32>( _listEntry.size() ); }
+        /** @brief 폴더 목록을 다시 읽기로 했거나 읽는 중이면 true 입니다. */
+        bool isFolderRefreshPending() const { return _bFolderDirty == SW_TRUE || _folderJob.isPending(); }
+        /** @brief 에셋 삭제 확인 모달을 엽니다. 지우는 것은 사용자가 확인한 뒤(`confirmDeleteAsset`)입니다. */
+        void requestDeleteAsset( string_view absolutePath );
+        /**
+         * @brief 확인을 기다리던 에셋을 지웁니다(파일 + 짝 `.meta`, 휴지통 아님). 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
+         * @return 지웠으면 true. 기다리던 것이 없거나 지우지 못했으면 false(실패는 `EditorAssetCommands::deleteAsset` 이 알린다).
+         */
+        bool confirmDeleteAsset();
+
     private:
         // ------------------------------------------------------------------------------
         // 2) 필터 · 뷰 모드 · 항목
@@ -85,6 +102,10 @@ namespace sw::editor
         void drawListView( const vector<const AssetEntry*>& listVisible );
         /** @brief 애셋 항목 우클릭 컨텍스트 메뉴를 그립니다. */
         void drawAssetContextMenu( const AssetEntry& entry );
+        /** @brief 삭제 확인 모달을 그립니다(`requestDeleteAsset` 이 연다). */
+        void drawDeleteConfirmModal();
+        /** @brief `Resource/` 가 바뀌었으면(에디터 밖 변경 포함) 폴더 목록을 다시 읽게 합니다. */
+        void syncWithContentChanges();
         /** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
@@ -150,7 +171,9 @@ namespace sw::editor
         string                                _selectedFolderAbs;
         vector<ContentBrowserCrumb>           _listCrumb; /**< 지금 폴더의 경로 줄. 예: "Favorites / Shaders / bin" */
         string                                _selectedAssetAbs;
+        string                                _pendingDeleteAbs; /**< 삭제 확인을 기다리는 에셋(비면 없음) */
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
+        uint64                                _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
         float32                               _tileSize;
         uint32                                _filterIndex;
         int32                                 _historyIndex;
@@ -158,8 +181,9 @@ namespace sw::editor
         mutex                                 _pendingImportMutex;
         vector<string>                        _listPendingImportPath;
         EditorFolderListingJob                _folderJob;
-        uint8                                 _bRootsDirty   : 1;
-        uint8                                 _bFolderDirty  : 1;
-        [[maybe_unused]] uint8                _reservedFlags : 6;
+        uint8                                 _bRootsDirty        : 1;
+        uint8                                 _bFolderDirty       : 1;
+        uint8                                 _bOpenDeleteConfirm : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다(우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없다) */
+        [[maybe_unused]] uint8                _reservedFlags      : 5;
     };
 } // namespace sw::editor
