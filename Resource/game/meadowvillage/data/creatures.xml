@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MeadowVillage 의 생물 마을 — 풀 두 칸(meadow)에 sprout 가 낮 · 맑음에 찾아오고, 과수원(orchard — 나무 두 그루)을 부탁한다. -->
+<CreatureLifeCatalog>
+  <Habitat id="meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
+  <Habitat id="orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
+  <Species id="sprout" habitats="meadow" phases="Dawn,Day" weathers="sunny" chance="1" requests="meadow_request"/>
+  <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal>
+</CreatureLifeCatalog>

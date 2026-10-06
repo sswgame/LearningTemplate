@@ -12,6 +12,7 @@
 | `Empty` | 최소 템플릿 + 렌더 벤치 하네스(`-gv_benchMeshes=N`). 기본값 | `-DSW_ACTIVE_GAME=Empty` |
 | `AbilityArena` | 어빌리티 시스템(`GameFramework/Base/Ability`)을 실제로 쓰는 탑다운 웨이브 아레나 — 근접 · 화염구(화상 스택) · 회복(데이터만) · 대시(무적) · 가시 | `-DSW_ACTIVE_GAME=AbilityArena` |
 | `HarvestValley` | 농장 생활(하베스트 문 장르, `GF_Farming`) — 갈기 · 물 · 심기 · 거두기 · 출하 · 잠, 계절 · 비, 직교 탑다운 시점 | `-DSW_ACTIVE_GAME=HarvestValley` |
+| `MeadowVillage` | 키트 조립 시험(농장 `GF_Farming` + 생물 마을 `GF_CreatureLife`) — 공유 상태 `GameStateComponent` 와 키트 디렉터 둘이 한 오브젝트에, 밭이 번 돈으로 마을이 과수원을 심어 부탁이 끝난다 | `-DSW_ACTIVE_GAME=MeadowVillage` |
 | `NileCity` | 도시 건설(파라오 장르, `GF_CityBuilder`) — 절차 나일 강 · 범람원 · 사막, 도로 · 우물 · 농장 → 창고 → 바자 → 집 사슬, 순회 일꾼, 집 진화, 범람, 마우스 짓기 · 허물기, `-gv_nileAutoPlay=1` | `-DSW_ACTIVE_GAME=NileCity` |
 | `Shooter3D` | 1인칭 슈터(기반 `Combat`) — 소총 · 산탄총 · 권총, 히트스캔 · 퍼짐 · 반동, 드론 웨이브, Kenney 조준선(CC0) | `-DSW_ACTIVE_GAME=Shooter3D` |
 | `StarSkirmish` | 실시간 전략(스타크래프트 장르, `GF_RealTimeStrategy`) — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 채취 · 생산 · 건설 · 전투 · 안개, 끌어 고르기 · 오른쪽 클릭 · 부대, 사람 대 AI 또는 `-gv_skirmishAutoPlay=1` AI 대 AI | `-DSW_ACTIVE_GAME=StarSkirmish` |

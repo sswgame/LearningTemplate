@@ -17,6 +17,10 @@
       "arguments": ["-gv_farmAutoPlay=1"],
       "screenshot_frame": 180
     },
+    "MeadowVillage": {
+      "arguments": ["-gv_meadowAutoPlay=1"],
+      "screenshot_frame": 180
+    },
     "NileCity": {
       "arguments": ["-gv_nileAutoPlay=1"],
       "screenshot_frame": 180

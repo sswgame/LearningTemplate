@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  MeadowVillage 의 게임플레이 입력 맵 — 액션 이름은 게임 접두(Village. · Town.)로 갈라 키트 디렉터 둘이 한 맵을 나눠 쓴다.
+  키트 코드는 액션 이름을 박지 않는다(CheckKitNamespaces) — 이름은 게임 디렉터만 안다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Village.FastForward" layer="Gameplay" trigger="Down">
+		<bind source="key" code="Space"/>
+	</action>
+	<action name="Town.Talk" layer="Gameplay" trigger="Pressed">
+		<bind source="key" code="E"/>
+	</action>
+</InputMap>

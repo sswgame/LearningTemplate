@@ -80,6 +80,15 @@
       }
     },
     {
+      "name": "Ninja-Debug-MeadowVillage",
+      "displayName": "Windows Ninja Debug — MeadowVillage",
+      "description": "Ninja-Debug 와 같고 활성 게임만 MeadowVillage (빌드 폴더 build/Ninja-Debug-MeadowVillage, 게임 프리셋 Config/Game/MeadowVillage.json)",
+      "inherits": "Ninja-Debug",
+      "cacheVariables": {
+        "SW_ACTIVE_GAME": "MeadowVillage"
+      }
+    },
+    {
       "name": "Ninja-Debug-NileCity",
       "displayName": "Windows Ninja Debug — NileCity",
       "description": "Ninja-Debug 와 같고 활성 게임만 NileCity (빌드 폴더 build/Ninja-Debug-NileCity, 게임 프리셋 Config/Game/NileCity.json)",
@@ -317,6 +326,10 @@
     {
       "name": "Ninja-Debug-HarvestValley",
       "configurePreset": "Ninja-Debug-HarvestValley"
+    },
+    {
+      "name": "Ninja-Debug-MeadowVillage",
+      "configurePreset": "Ninja-Debug-MeadowVillage"
     },
     {
       "name": "Ninja-Debug-NileCity",

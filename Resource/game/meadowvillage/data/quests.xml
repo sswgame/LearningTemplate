@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MeadowVillage 의 부탁 — 과수원 서식지 하나를 지으면 끝난다(공유 퀘스트 일지). -->
+<QuestCatalog>
+  <Quest id="meadow_request">
+    <Stage id="plant" next="done"><Objective kind="Habitat" target="orchard" count="1"/></Stage>
+    <Stage id="done" complete="true"/>
+  </Quest>
+</QuestCatalog>
