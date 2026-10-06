@@ -6,9 +6,12 @@
 #include "Engine/Input/VirtualInputScript.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/UiFocusManager.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
 
+#include "EngineTest/UI/UiLayoutTestUtil.h"
 #include "EngineTest/UI/UiTestWidgets.h"
 
 #include "TestFramework/TestFramework.h"
@@ -326,4 +329,32 @@ SW_TEST_CASE( UiInputTest, PointerPositionIsInUiUnits )
     SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
     SW_EXPECT_EQUAL( fixture._listButton[0]->getId(), fixture._ui.getPointerState().getHoveredWidget() );
     fixture.endFrame();
+}
+
+/**
+ * @brief [UiInputTest] 오른쪽 스틱(`UI.Scroll`)은 포커스 항목이 든 스크롤 목록을 스틱 속도 × 시간만큼 옮기고, 쓴 스틱은 먹힌 입력이다
+ * @details 아래로 끝까지 기울이면 1200 × 1/60 = 프레임마다 20. 변이: `UiSystem::processScroll` 을 부르지 않으면 오프셋이 0 으로 남는다.
+ */
+SW_TEST_CASE( UiInputTest, RightStickScrollsFocusedList )
+{
+    UiInputFixture                  fixture;
+    sw::unique_ptr<sw::ScrollPanel> root     = sw::make_unique<sw::ScrollPanel>();
+    sw::ScrollPanel*                pScroll  = root.get();
+    sw::BoxPanel*                   pContent = static_cast<sw::BoxPanel*>( pScroll->addChild( sw::make_unique<sw::BoxPanel>() ) );
+    pContent->setOrientation( sw::UiOrientation::Vertical );
+    sw::Widget* pFirst = pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "first", sw::float2{ 100.0f, 1000.0f } ) );
+    pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "second", sw::float2{ 100.0f, 1000.0f } ) );
+    const sw::UiScreenHandle screen = fixture._ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( root ) ) );
+    fixture.runFrame(); // 놓는다
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( screen )->getTree(), pFirst->getId() ) );
+    fixture._script.addGamepadAxis( 1, 3, -1.0f ); // 오른쪽 스틱 y — 아래
+    fixture.attachScript();
+
+    fixture.runFrame();   // 0
+    fixture.beginFrame(); // 1 — 기울임
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pScroll->getScrollOffset()._y, 0.01f );
+    fixture.endFrame();
+    for ( uint32 frame = 2; frame < 6; ++frame )
+        fixture.runFrame();
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pScroll->getScrollOffset()._y, 0.01f );
 }

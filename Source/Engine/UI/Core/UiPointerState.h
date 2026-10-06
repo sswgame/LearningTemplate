@@ -49,6 +49,8 @@ namespace sw
         const WidgetTree*   getCaptureTree() const { return _pCaptureTree; }
         WidgetId            getHoveredWidget() const { return _hoverPath.getLeaf(); }
         const UiWidgetPath& getHoverPath() const { return _hoverPath; }
+        /** @brief 호버 경로가 든 트리입니다(없으면 nullptr). */
+        const WidgetTree* getHoverTree() const { return _pHoverTree; }
 
     private:
         /** @brief 호버 경로를 @p newPath(@p pTree 안)로 바꾸며 Leave · Enter 를 알립니다. */

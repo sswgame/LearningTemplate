@@ -60,7 +60,7 @@
 - 방향 탐색(언리얼 `EUINavigationRule` · Godot `focus_neighbor`): 포커스 위젯에서 조상으로 올라가며 방향 항목(`WidgetNavigation`)을 본다 — 첫 `Explicit` 은 그 이름의
   위젯(받을 수 없으면 다음 규칙), 첫 `Stop` · `Wrap` 위젯이 찾는 범위, 모두 `Escape` 면 화면 뿌리. 범위 안에서 **공간 점수 = 주축 거리 + 2 × 수직축 틈**이 가장 낮은 것
   (같은 줄 · 같은 열을 먼저), 같으면 중심 거리 → 문서 순서(결정적). 없고 `Wrap` 이면 반대쪽 끝, `Next` · `Previous` 는 문서 순서로 돈다.
-- 자르는 패널 밖으로 완전히 나간 위젯은 후보가 아니다(스크롤이 "보이게 하기" 를 맡는다 — 레이아웃 단계).
+- 자르는 패널 밖으로 완전히 나간 위젯은 후보가 아니다 — 스크롤 패널(`canScrollIntoView`)이 자른 것은 후보이고, 포커스가 가면 그 패널이 보이게 옮긴다.
 
 ## 화면 스택 (`Screen/UiScreen` · `UiSystem`)
 
@@ -125,7 +125,13 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 
 결과를 견주는 형식은 `UiLayoutDump::makeDump( tree )` — 줄마다 `<깊이 들여쓰기><이름> x y w h`(소수 둘째 자리).
 
-스크롤 입력(휠 · 막대 끌기 · 패드 오른쪽 스틱 `UI.Scroll`)은 사건 경로가 `ScrollPanel::scrollBy` · `setScrollOffset` 을 부르는 자리다 — 레이아웃은 API 만 준다.
+스크롤 입력은 `ScrollPanel` 이 사건으로 받는다(UMG ScrollBox · Godot ScrollContainer 와 같은 넷):
+
+- **휠**(버블) — 한 칸 `_wheelStep`. 끝에 닿아 못 옮기면 처리하지 않아 바깥 스크롤 패널이 받는다.
+- **막대 끌기**(터널 — 막대는 내용 위에 겹쳐 그려 버튼보다 먼저 받는다) — 엄지를 누르면 포인터를 잡고 끈 거리 × 최대 오프셋 / (트랙 − 엄지)만큼, 트랙을 누르면 한 화면.
+  막대 사각형은 `computeScrollBar( 축 )`(그리기도 같은 값).
+- **패드 오른쪽 스틱**(`UI.Scroll` 행동) — 포커스 경로(포커스가 없으면 포인터가 올라간 경로)로 가고 `_stickSpeed` × 프레임 시간만큼. 쓴 스틱은 먹힌 입력이다.
+- **포커스 탐색** — `UiFocusManager::navigate` 가 옮긴 뒤 조상 패널마다 `scrollIntoView`. 스크롤 패널이 자른(완전히 밖인) 항목도 탐색 후보다(`canScrollIntoView`).
 
 ## 배율 · 안전 영역
 

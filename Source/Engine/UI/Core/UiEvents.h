@@ -58,9 +58,30 @@ namespace sw
      */
     struct UiActionEvent
     {
-        hashed_string _action{};            ///< 액션 이름(`UI.Accept` · `UI.NavigateLeft` …)
-        float2        _value{};             ///< 축 값(스틱 탐색) — 버튼이면 0
-        uint8         _bRepeat{ SW_FALSE }; ///< 누르고 있는 동안의 반복 발화이면 SW_TRUE
+        hashed_string _action{};             ///< 액션 이름(`UiActionName` — `UI.Accept` · `UI.NavigateLeft` …)
+        float2        _value{};              ///< 축 값(스틱 탐색 · 스크롤 — 위 · 오른쪽이 +) — 버튼이면 0
+        float32       _deltaSeconds{ 0.0f }; ///< 이번 입력 프레임의 시간 — 축 행동(스크롤)이 속도 × 시간으로 옮긴다
+        uint8         _bRepeat{ SW_FALSE };  ///< 누르고 있는 동안의 반복 발화이면 SW_TRUE
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief UI 행동 맵(`engine/input/ui.input.xml`)의 행동 이름입니다 — `UiSystem` 과 위젯(버튼 · 슬라이더 · 스크롤)이 같은 이름을 씁니다. */
+    struct UiActionName
+    {
+        static constexpr utf8 kNavigateUp[]    = "UI.NavigateUp";
+        static constexpr utf8 kNavigateDown[]  = "UI.NavigateDown";
+        static constexpr utf8 kNavigateLeft[]  = "UI.NavigateLeft";
+        static constexpr utf8 kNavigateRight[] = "UI.NavigateRight";
+        static constexpr utf8 kNavigateStick[] = "UI.NavigateStick";
+        static constexpr utf8 kFocusNext[]     = "UI.FocusNext";
+        static constexpr utf8 kFocusPrevious[] = "UI.FocusPrevious";
+        static constexpr utf8 kAccept[]        = "UI.Accept";
+        static constexpr utf8 kBack[]          = "UI.Back";
+        static constexpr utf8 kTabNext[]       = "UI.TabNext";
+        static constexpr utf8 kTabPrevious[]   = "UI.TabPrevious";
+        static constexpr utf8 kScroll[]        = "UI.Scroll"; ///< 패드 오른쪽 스틱 — 값을 든다
     };
 } // namespace sw
 

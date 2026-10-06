@@ -4,8 +4,11 @@
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiPointerState.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
+#include "Engine/UI/Layout/ScrollPanel.h"
 
+#include "EngineTest/UI/UiLayoutTestUtil.h"
 #include "EngineTest/UI/UiTestWidgets.h"
 
 #include "TestFramework/TestFramework.h"
@@ -60,6 +63,29 @@ namespace
         }
 
         static sw::UiPointerEvent makePointer( sw::UiPointerEventKind kind, float32 x, float32 y )
+        {
+            sw::UiPointerEvent event{};
+            event._kind     = kind;
+            event._position = sw::float2{ x, y };
+            return event;
+        }
+    };
+
+    struct UiScrollRouteUtil
+    {
+        /** @brief 200 × 100 스크롤 패널(루트) 안에 높이 40 항목 다섯(내용 200 — 최대 오프셋 100)을 짓고 놓습니다. */
+        static sw::ScrollPanel* makeScrollList( sw::test::UiLayoutFixture& fixture )
+        {
+            sw::ScrollPanel* pScroll  = fixture.setRoot<sw::ScrollPanel>( "scroll" );
+            sw::BoxPanel*    pContent = fixture.addPanel<sw::BoxPanel>( pScroll, "content" );
+            pContent->setOrientation( sw::UiOrientation::Vertical );
+            for ( uint32 index = 0; index < 5; ++index )
+                fixture.addFixed( pContent, sw::hashed_string( "item" + sw::to_string( index ) ), 50.0f, 40.0f );
+            fixture.update();
+            return pScroll;
+        }
+
+        static sw::UiPointerEvent makeEvent( sw::UiPointerEventKind kind, float32 x, float32 y )
         {
             sw::UiPointerEvent event{};
             event._kind     = kind;
@@ -244,4 +270,47 @@ SW_TEST_CASE( UiEventRouteTest, CanvasZOrderDecidesHitTarget )
 
     SW_EXPECT_STREQ( "front", fixture.hitLeafName( 120.0f, 120.0f ).c_str() ); // 겹친 곳 — z 1 이 위
     SW_EXPECT_STREQ( "back", fixture.hitLeafName( 180.0f, 180.0f ).c_str() );  // back 만 있는 곳
+}
+
+/**
+ * @brief [UiEventRouteTest] 휠은 포인터 아래 스크롤 패널을 한 칸(48)씩 옮기고, 끝에 닿아 못 옮기면 처리하지 않는다(바깥 스크롤로 간다)
+ * @details 변이: `ScrollPanel::onPointerEvent` 의 휠 처리를 빼면 오프셋이 0 으로 남는다.
+ */
+SW_TEST_CASE( UiEventRouteTest, WheelScrollsPanelUnderPointer )
+{
+    sw::test::UiLayoutFixture fixture( 200.0f, 100.0f );
+    sw::ScrollPanel*          pScroll = UiScrollRouteUtil::makeScrollList( fixture );
+    sw::UiPointerState        pointer;
+    sw::UiPointerEvent        wheel = UiScrollRouteUtil::makeEvent( sw::UiPointerEventKind::Wheel, 50.0f, 50.0f );
+    wheel._wheel                    = -1.0f; // 아래로 한 칸
+    SW_EXPECT_TRUE( pointer.process( fixture.getTree(), wheel )._bHandled == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( 48.0f, pScroll->getScrollOffset()._y, 0.001f );
+    wheel._wheel = 1.0f;
+    SW_EXPECT_TRUE( pointer.process( fixture.getTree(), wheel )._bHandled == SW_TRUE );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pScroll->getScrollOffset()._y, 0.001f );
+    SW_EXPECT_TRUE( pointer.process( fixture.getTree(), wheel )._bHandled == SW_FALSE ); // 이미 위 끝
+}
+
+/**
+ * @brief [UiEventRouteTest] 스크롤 막대 엄지를 누르면 포인터를 잡고, 끈 거리 × (최대 오프셋 / 엄지가 움직일 트랙)만큼 옮기며, 떼면 놓는다
+ * @details 트랙 100 · 엄지 50 · 최대 오프셋 100 — 25 끌면 50. 변이: 막대 누름 처리(`beginScrollBarDrag`)를 빼면 잡지 않아 오프셋이 그대로다.
+ */
+SW_TEST_CASE( UiEventRouteTest, ScrollBarDragMovesOffset )
+{
+    sw::test::UiLayoutFixture        fixture( 200.0f, 100.0f );
+    sw::ScrollPanel*                 pScroll = UiScrollRouteUtil::makeScrollList( fixture );
+    sw::ScrollPanel::ScrollBarLayout bar{};
+    SW_ASSERT_TRUE( pScroll->computeScrollBar( sw::UiOrientation::Vertical, bar ) );
+    SW_EXPECT_NEAR_EQUAL( 194.0f, bar._thumbPosition._x, 0.001f );
+    SW_EXPECT_NEAR_EQUAL( 50.0f, bar._thumbSize._y, 0.001f );
+    SW_EXPECT_FALSE( pScroll->computeScrollBar( sw::UiOrientation::Horizontal, bar ) );
+
+    sw::UiPointerState pointer;
+    SW_EXPECT_TRUE( pointer.process( fixture.getTree(), UiScrollRouteUtil::makeEvent( sw::UiPointerEventKind::Down, 197.0f, 10.0f ) )._bHandled == SW_TRUE );
+    SW_EXPECT_EQUAL( pScroll->getId(), pointer.getCapturedWidget() );
+    (void)pointer.process( fixture.getTree(), UiScrollRouteUtil::makeEvent( sw::UiPointerEventKind::Move, 150.0f, 35.0f ) ); // 막대 밖으로 나가도 잡고 있다
+    SW_EXPECT_NEAR_EQUAL( 50.0f, pScroll->getScrollOffset()._y, 0.001f );
+    (void)pointer.process( fixture.getTree(), UiScrollRouteUtil::makeEvent( sw::UiPointerEventKind::Up, 150.0f, 35.0f ) );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, pointer.getCapturedWidget() );
+    SW_EXPECT_FALSE( pScroll->isDraggingScrollBar() );
 }

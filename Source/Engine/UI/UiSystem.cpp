@@ -42,18 +42,13 @@ namespace sw
                 UiNavigationDirection _direction;
             };
             static constexpr NavigationAction kArrNavigationAction[] = {
-                {   "UI.NavigateUp",       UiNavigationDirection::Up},
-                { "UI.NavigateDown",     UiNavigationDirection::Down},
-                { "UI.NavigateLeft",     UiNavigationDirection::Left},
-                {"UI.NavigateRight",    UiNavigationDirection::Right},
-                {    "UI.FocusNext",     UiNavigationDirection::Next},
-                {"UI.FocusPrevious", UiNavigationDirection::Previous},
+                {   UiActionName::kNavigateUp,       UiNavigationDirection::Up},
+                { UiActionName::kNavigateDown,     UiNavigationDirection::Down},
+                { UiActionName::kNavigateLeft,     UiNavigationDirection::Left},
+                {UiActionName::kNavigateRight,    UiNavigationDirection::Right},
+                {    UiActionName::kFocusNext,     UiNavigationDirection::Next},
+                {UiActionName::kFocusPrevious, UiNavigationDirection::Previous},
             };
-            static constexpr utf8 kAcceptAction[]      = "UI.Accept";
-            static constexpr utf8 kBackAction[]        = "UI.Back";
-            static constexpr utf8 kTabNextAction[]     = "UI.TabNext";
-            static constexpr utf8 kTabPreviousAction[] = "UI.TabPrevious";
-            static constexpr utf8 kStickAction[]       = "UI.NavigateStick";
 
             /** @brief 원시 사건 하나가 가리키는 입력 방식입니다. 방식과 무관한 사건이면 false 입니다. */
             [[nodiscard]] static bool tryGetInputMode( const RawInputEvent& rawEvent, UiInputMode& outMode )
@@ -129,6 +124,7 @@ namespace sw
         , _viewport{}
         , _lastPointerPosition{}
         , _stickRepeatSeconds{ 0.0f }
+        , _inputDeltaSeconds{ 0.0f }
         , _stickDirection{ UiNavigationDirection::Next }
         , _activeScreen{ kInvalidUiScreenHandle }
         , _nextScreenHandle{ 1 }
@@ -198,6 +194,7 @@ namespace sw
     {
         if ( _pInput == nullptr )
             return;
+        _inputDeltaSeconds = deltaSeconds;
         _consumption.update( *_pInput );
         if ( _uiInputMap != nullptr )
             _uiInputMap->update( deltaSeconds );
@@ -535,10 +532,13 @@ namespace sw
                 consumeAction( uiMap, action );
         }
         if ( bTextFocus == false )
+        {
             processStickNavigation( *pActive, deltaSeconds );
+            processScroll( *pActive );
+        }
 
-        const hashed_string arrRoutedAction[] = { hashed_string( UiSystemInternal::kAcceptAction ), hashed_string( UiSystemInternal::kTabNextAction ),
-                                                  hashed_string( UiSystemInternal::kTabPreviousAction ) };
+        const hashed_string arrRoutedAction[] = { hashed_string( UiActionName::kAccept ), hashed_string( UiActionName::kTabNext ),
+                                                  hashed_string( UiActionName::kTabPrevious ) };
         for ( const hashed_string& action : arrRoutedAction )
         {
             if ( bTextFocus || uiMap.wasActionTriggered( action ) == false )
@@ -547,7 +547,7 @@ namespace sw
                 consumeAction( uiMap, action );
         }
 
-        const hashed_string backAction( UiSystemInternal::kBackAction );
+        const hashed_string backAction( UiActionName::kBack );
         if ( uiMap.wasActionTriggered( backAction ) )
         {
             // 위젯이 먼저(펼친 목록을 접는 콤보 상자), 아무도 안 먹으면 화면이(기본은 닫기).
@@ -573,7 +573,7 @@ namespace sw
 
     void UiSystem::processStickNavigation( UiScreen& screen, float32 deltaSeconds )
     {
-        const hashed_string stickAction( UiSystemInternal::kStickAction );
+        const hashed_string stickAction( UiActionName::kNavigateStick );
         const float2        value = _uiInputMap->getVector2D( stickAction );
         const float32       absX  = MathUtil::abs( value._x );
         const float32       absY  = MathUtil::abs( value._y );
@@ -607,15 +607,36 @@ namespace sw
         consumeAction( *_uiInputMap, stickAction ); // 기운 동안(반복을 기다리는 동안에도) 스틱은 UI 의 것이다
     }
 
+    void UiSystem::processScroll( UiScreen& screen )
+    {
+        const hashed_string scrollAction( UiActionName::kScroll );
+        const float2        value = _uiInputMap->getVector2D( scrollAction );
+        if ( value._x == 0.0f && value._y == 0.0f )
+            return;
+        // 포커스가 이 화면에 있으면 포커스 경로(목록 안의 버튼 → 그 목록), 없으면 포인터가 올라간 경로로 보낸다.
+        UiWidgetPath path{};
+        _focus.makeFocusPath( screen.getTree(), path );
+        if ( path.isEmpty() && _pointer.getHoverTree() == &screen.getTree() )
+            path = _pointer.getHoverPath();
+        if ( routeActionAlong( screen, path, scrollAction, value ) )
+            consumeAction( *_uiInputMap, scrollAction );
+    }
+
     bool UiSystem::routeAction( UiScreen& screen, const hashed_string& action, const float2& value )
     {
         UiWidgetPath path{};
         _focus.makeFocusPath( screen.getTree(), path );
+        return routeActionAlong( screen, path, action, value );
+    }
+
+    bool UiSystem::routeActionAlong( UiScreen& screen, const UiWidgetPath& path, const hashed_string& action, const float2& value )
+    {
         if ( path.isEmpty() )
             return false;
         UiActionEvent event{};
-        event._action = action;
-        event._value  = value;
+        event._action       = action;
+        event._value        = value;
+        event._deltaSeconds = _inputDeltaSeconds;
         WidgetId      handler{ kInvalidWidgetId };
         const UiReply reply = UiEventRouter::routeActionEvent( screen.getTree(), path, event, handler );
         if ( reply.isHandled() && reply._focusRequest != kInvalidWidgetId )

@@ -7,9 +7,12 @@
 #include "Engine/UI/Core/UiFocusManager.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
 
+#include "EngineTest/UI/UiLayoutTestUtil.h"
 #include "EngineTest/UI/UiTestWidgets.h"
 
 #include "TestFramework/TestFramework.h"
@@ -256,4 +259,30 @@ SW_TEST_CASE( UiNavigationTest, NavigationStaysInsideModalScreen )
         ui.shutdown();
     }
     input.shutdown();
+}
+
+/**
+ * @brief [UiNavigationTest] 스크롤 패널이 자른(완전히 밖인) 항목도 아래 탐색의 후보이고, 포커스가 가면 패널이 그 항목을 보이게 옮긴다
+ * @details 보이는 높이 100 · 항목 0..40 · 빈칸 110 · 항목 150..190. 변이: 탐색 후보 거르기에서 스크롤 패널 예외(`canScrollIntoView`)를 빼면 포커스가
+ *          옮겨지지 않고, `UiFocusManager::navigate` 의 `scrollIntoView` 를 빼면 오프셋이 0 으로 남는다.
+ */
+SW_TEST_CASE( UiNavigationTest, NavigateRevealsClippedItemInScrollPanel )
+{
+    sw::test::UiLayoutFixture fixture( 200.0f, 100.0f );
+    sw::ScrollPanel*          pScroll  = fixture.setRoot<sw::ScrollPanel>( "scroll" );
+    sw::BoxPanel*             pContent = fixture.addPanel<sw::BoxPanel>( pScroll, "content" );
+    pContent->setOrientation( sw::UiOrientation::Vertical );
+    sw::Widget* pFirst = pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "first", sw::float2{ 50.0f, 40.0f } ) );
+    fixture.addFixed( pContent, "gap", 50.0f, 110.0f );
+    sw::Widget* pLast = pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "last", sw::float2{ 50.0f, 40.0f } ) );
+    fixture.update();
+
+    sw::UiFocusManager focus;
+    SW_ASSERT_TRUE( focus.setFocus( fixture.getTree(), pFirst->getId() ) );
+    SW_EXPECT_TRUE( focus.navigate( fixture.getTree(), sw::UiNavigationDirection::Down ) );
+    SW_EXPECT_EQUAL( pLast->getId(), focus.getFocusedWidget() );
+    SW_EXPECT_NEAR_EQUAL( 90.0f, pScroll->getScrollOffset()._y, 0.001f ); // 끝(190 − 100)까지 — 여백 8 을 두려다 최대에 묶인다
+    fixture.update();
+    SW_EXPECT_NEAR_EQUAL( 60.0f, pLast->getGeometry()._position._y, 0.001f );
+    focus.clearFocus();
 }

@@ -67,6 +67,12 @@ namespace sw
         invalidate( WidgetDirty::kLayout );
     }
 
+    bool PanelWidget::scrollIntoView( const Widget& widget )
+    {
+        (void)widget;
+        return false;
+    }
+
     void PanelWidget::collectPaintOrder( vector<uint32>& outListIndex ) const
     {
         outListIndex.clear();

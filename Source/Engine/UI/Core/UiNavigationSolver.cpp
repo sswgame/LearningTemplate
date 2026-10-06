@@ -32,13 +32,17 @@ namespace sw
                     collectFocusable( *pPanel->getChild( index ), inoutListWidget );
             }
 
-            /** @brief 자르는 조상 밖으로 완전히 나간 위젯이면 true 입니다(스크롤 영역 밖 항목). */
+            /**
+             * @brief 자르는 조상 밖으로 완전히 나간 위젯이면 true 입니다.
+             * @details 스크롤 패널(`canScrollIntoView`)이 자른 것은 빼지 않는다 — 포커스가 가면 그 패널이 보이게 옮긴다(목록 아래로 내려가기).
+             */
             static bool isClippedOut( const Widget& widget )
             {
                 const UiRect bounds = widget.getGeometry().computeScreenBounds();
                 for ( const PanelWidget* pParent = widget.getParent(); pParent != nullptr; pParent = pParent->getParent() )
                 {
-                    if ( pParent->clipsChildren() && bounds.intersects( pParent->getGeometry().computeScreenBounds() ) == false )
+                    if ( pParent->clipsChildren() && pParent->canScrollIntoView() == false &&
+                         bounds.intersects( pParent->getGeometry().computeScreenBounds() ) == false )
                         return true;
                 }
                 return false;

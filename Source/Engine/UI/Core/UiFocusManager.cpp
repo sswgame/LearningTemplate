@@ -2,6 +2,7 @@
 
 #include "Engine/UI/Core/UiFocusManager.h"
 
+#include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/UiEventRouter.h"
 #include "Engine/UI/Core/UiNavigationSolver.h"
 #include "Engine/UI/Core/Widget.h"
@@ -64,7 +65,13 @@ namespace sw
         const WidgetId next = UiNavigationSolver::findNextWidget( tree, tree._focusedWidget, direction );
         if ( next == kInvalidWidgetId || next == tree._focusedWidget )
             return false;
-        return setFocus( tree, next );
+        if ( setFocus( tree, next ) == false )
+            return false;
+        // 자른 조상(스크롤 패널)이 새 포커스를 보이게 옮긴다 — 안쪽부터. 지난 배치의 기하로 세고, 옮긴 자리는 다음 레이아웃 걷기가 놓는다.
+        const Widget* pFocused = tree.findWidgetById( next );
+        for ( PanelWidget* pAncestor = pFocused != nullptr ? pFocused->getParent() : nullptr; pAncestor != nullptr; pAncestor = pAncestor->getParent() )
+            (void)pAncestor->scrollIntoView( *pFocused );
+        return true;
     }
 
     void UiFocusManager::makeFocusPath( const WidgetTree& tree, UiWidgetPath& outPath ) const

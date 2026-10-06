@@ -39,6 +39,7 @@ namespace sw
         WidgetTree* getFocusedTree() const { return _pFocusedTree; }
         /**
          * @brief @p tree 안에서 방향으로 다음 위젯을 찾아 옮깁니다(`UiNavigationSolver::findNextWidget`). 포커스가 그 트리에 없거나 못 찾으면 그대로 두고 false.
+         * @details 옮기면 새 포커스의 조상 패널마다 `scrollIntoView`(스크롤 패널이 보이게 옮긴다 — UMG ScrollBox 의 탐색 스크롤).
          */
         [[nodiscard]] bool navigate( WidgetTree& tree, UiNavigationDirection direction );
         /** @brief 포커스 위젯에서 뿌리까지의 경로(뿌리 → 포커스)입니다 — 행동 사건이 이 경로를 탑니다. 포커스가 @p tree 에 없으면 빈 경로입니다. */

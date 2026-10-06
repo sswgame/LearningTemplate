@@ -150,8 +150,12 @@ namespace sw
         bool handleNavigation( UiScreen& screen, const hashed_string& action, UiNavigationDirection direction );
         /** @brief 스틱 탐색 — 크게 기울면 큰 축 방향으로 한 번, 그 뒤 탐색 반복 간격으로 반복합니다. */
         void processStickNavigation( UiScreen& screen, float32 deltaSeconds );
+        /** @brief 스크롤 행동(`UI.Scroll` — 오른쪽 스틱)을 포커스 경로(없으면 포인터가 올라간 경로)로 보냅니다. 스크롤 패널이 쓰면 먹습니다. */
+        void processScroll( UiScreen& screen );
         /** @brief 행동 사건 하나를 활성 화면의 포커스 경로로 보냅니다. 처리됐으면 true 입니다. */
         bool routeAction( UiScreen& screen, const hashed_string& action, const float2& value );
+        /** @brief 행동 사건 하나를 @p path 로 보냅니다(이번 입력 프레임 시간을 싣는다). 처리됐으면 true 입니다. */
+        bool routeActionAlong( UiScreen& screen, const UiWidgetPath& path, const hashed_string& action, const float2& value );
         /** @brief 포커스 위젯이 글 입력 칸이면 키보드 포커스 `Ui` 를 잡고, 아니면 놓습니다. */
         void updateKeyboardFocus();
         /** @brief 키보드 포커스가 `Ui` 일 때 오는 글자를 포커스 위젯에 보냅니다. */
@@ -188,6 +192,7 @@ namespace sw
         UiViewport                   _viewport;
         float2                       _lastPointerPosition;
         float32                      _stickRepeatSeconds; ///< 스틱 탐색의 다음 반복까지 남은 시간
+        float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)
         UiNavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UiScreenHandle               _activeScreen;
         UiScreenHandle               _nextScreenHandle;

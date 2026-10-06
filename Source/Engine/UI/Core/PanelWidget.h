@@ -50,7 +50,11 @@ namespace sw
         virtual void collectPaintOrder( vector<uint32>& outListIndex ) const;
         /** @brief 자식을 자르는가(스크롤 패널). 히트 테스트와 그리기가 함께 따른다. */
         bool clipsChildren() const { return _bClipChildren; }
-        void setClipChildren( bool bClip );
+        /** @brief 자른 자손을 내용을 옮겨 보이게 할 수 있는 패널이면 true 입니다(스크롤 패널) — 포커스 탐색은 이 패널이 자른 자손도 후보로 본다. */
+        virtual bool canScrollIntoView() const { return false; }
+        /** @brief 자손 @p widget 이 보이도록 내용을 옮깁니다(포커스 탐색 뒤 — `UiFocusManager::navigate`). 옮겼으면 true 입니다. 기본은 아무것도 하지 않습니다. */
+        virtual bool scrollIntoView( const Widget& widget );
+        void         setClipChildren( bool bClip );
 
     protected:
         /**

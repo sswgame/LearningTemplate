@@ -53,6 +53,21 @@ namespace sw::test
 
 namespace sw::test
 {
+    /** @brief 포커스를 받는 고정 크기 위젯입니다(목록 항목 · 버튼 자리). */
+    class TestFocusableFixedWidget : public TestFixedWidget
+    {
+    public:
+        TestFocusableFixedWidget( const hashed_string& name, const float2& size )
+            : TestFixedWidget{ name, size }
+        {
+        }
+
+        bool supportsFocus() const override { return true; }
+    };
+} // namespace sw::test
+
+namespace sw::test
+{
     /**
      * @brief 줄 바꿈 글을 흉내 내는 잎 위젯입니다 — 글자 하나 너비 10 · 줄 높이 20(둘 다 글자 배율을 곱한다).
      * @details 가용 너비가 있으면 그 너비로 줄을 나눠 높이 = ceil( 글자 수 × 10 / 너비 ) × 20, 없으면 한 줄입니다.
