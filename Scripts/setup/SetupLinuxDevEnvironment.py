@@ -28,7 +28,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 _kMarker = "Template engine linux-dev"
 
@@ -268,7 +268,6 @@ def parseArgs(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
     args = parseArgs(argv)
     return setupLinuxDevEnvironment(home=args.home)
 

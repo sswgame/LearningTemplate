@@ -40,13 +40,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.HeaderSelfContained import (collectCheckedHeaders, findHeaderProbeProblem, findHeadersNotSelfContained,  # noqa: E402
                                         isCheckedHeader, kDefaultHeaderProbeBuildDir)
 
 
 def main() -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="혼자 서지 못하는 헤더를 보고한다 (게이트 아님).")
     parser.add_argument("--root", default=".", help="저장소 루트")
     parser.add_argument("--build", default=str(kDefaultHeaderProbeBuildDir), help="컴파일 DB 가 있는 빌드 디렉터리")

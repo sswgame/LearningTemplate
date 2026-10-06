@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppAllExtensions, kNotOurDirNames, useUtf8Stdout  # noqa: E402
+from common import collectSourceFiles, getLintSearchDirs, getProjectRoot, kCppAllExtensions, kNotOurDirNames  # noqa: E402
 
 kDefaultMaxFileCount = 40
 
@@ -61,7 +61,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
     parser.add_argument("--max", type=int, default=kDefaultMaxFileCount, help=f"이보다 많으면 보고합니다(기본 {kDefaultMaxFileCount})")
     args = parser.parse_args(argv)
-    useUtf8Stdout()
 
     repositoryRoot = (args.root or getProjectRoot()).resolve()
     mapFileCount = countFilesPerFolder(repositoryRoot)

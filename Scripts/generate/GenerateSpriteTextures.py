@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 # 5x7 비트맵 글꼴. 프레임 순서가 곧 글리프 번호다(DamageNumberComponent::kMinusGlyphFrame = 10).
 kGlyphRows = (
@@ -142,7 +142,6 @@ def generate(repositoryRoot):
 
 
 def main():
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), help="repository root")
     args = parser.parse_args()

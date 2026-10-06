@@ -51,7 +51,7 @@ from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, useUtf8Stdout  # noqa: E402
+from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames  # noqa: E402
 
 
 class GateError(Exception):
@@ -156,8 +156,6 @@ class LintGate:
         return cls().main(argv)
 
     def main(self, argv: list[str] | None = None) -> int:
-        useUtf8Stdout()
-
         parser = argparse.ArgumentParser(description=self.description)
         parser.add_argument("--root", type=Path, default=None, help="저장소 루트")
         self.addArguments(parser)

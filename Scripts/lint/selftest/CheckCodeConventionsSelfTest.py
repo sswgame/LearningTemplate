@@ -29,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from gate import CheckCodeConventions  # noqa: E402
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 #: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
 #: (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
@@ -340,7 +340,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[3]))
     parser.add_argument("--verbose", action="store_true", help="조각마다 잡힌 카테고리를 모두 출력")
     args = parser.parse_args(argv)
-    useUtf8Stdout()
 
     repoRoot = Path(args.root).resolve()
     errors: list[str] = []

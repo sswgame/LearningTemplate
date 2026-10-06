@@ -25,13 +25,6 @@ import sys
 from fnmatch import fnmatch
 from pathlib import Path
 
-if sys.platform == "win32":
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
-
 # 부모 경로들을 sys.path에 추가하여 공통 스크립트 모듈 로드
 scriptDir = Path(__file__).resolve().parent
 sys.path.insert(0, str(scriptDir))
@@ -50,7 +43,6 @@ from common import (
     listFilesUnlikeEveryParent,
     runClangFormatBatch,
     runShaderCook,
-    useUtf8Stdout,
 )
 
 
@@ -193,7 +185,6 @@ def checkStagedShadersInternal(projectRoot: Path, stagedFiles: list[Path]) -> bo
 
 
 def main() -> int:
-    useUtf8Stdout()
 
     projectRoot = getProjectRoot()
     allStagedFiles = getAllStagedFiles(projectRoot)

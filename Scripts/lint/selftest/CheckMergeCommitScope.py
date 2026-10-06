@@ -27,7 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — PreCommitLint
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable, useUtf8Stdout  # noqa: E402
+from common import getAllStagedFiles, getMergeHeadRevisions, resolveGitExecutable  # noqa: E402
 from PreCommitLint import selectFileScopedStagedInternal  # noqa: E402
 
 #: CMake 등록 정보 (`Scripts/lint/LintCatalog.py`). 영어인 이유는 ninja 가 찍는 줄이기 때문이다.
@@ -107,7 +107,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트 (이 검사는 쓰지 않는다 — CTest 가 준다)")
     parser.add_argument("--verbose", action="store_true", help="고른 파일을 모두 출력")
     args = parser.parse_args(argv)
-    useUtf8Stdout()
 
     errors: list[str] = []
     tempRoot = Path(tempfile.mkdtemp(prefix="sw_merge_scope_"))

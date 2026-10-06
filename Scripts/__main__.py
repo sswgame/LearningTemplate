@@ -24,7 +24,7 @@ _scriptRoot = Path(__file__).resolve().parent
 if str(_scriptRoot) not in sys.path:
     sys.path.insert(0, str(_scriptRoot))
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,6 @@ _kSubcommandByName: dict[str, Subcommand] = {command.name: command for command i
 
 
 def main() -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(
         prog="py -3 -m Scripts",
         description="SW Engine 통합 개발 도구체인 CLI",

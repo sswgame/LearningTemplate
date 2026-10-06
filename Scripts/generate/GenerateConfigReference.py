@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, useUtf8Stdout  # noqa: E402
+from common import getProjectRoot  # noqa: E402
 from common.ConfigReference import buildConfigReference, kConfigReferenceDir  # noqa: E402
 
 
@@ -42,7 +42,6 @@ def writeConfigReference(repositoryRoot: Path) -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="docs/Config 설정 참조 문서를 코드에서 만든다")
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트(생략하면 이 스크립트의 저장소)")
     args = parser.parse_args(argv)

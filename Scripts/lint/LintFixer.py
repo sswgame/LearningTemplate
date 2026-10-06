@@ -31,7 +31,6 @@ from common import (  # noqa: E402
     getLintSearchDirs,
     getModifiedCppFiles,
     getProjectRoot,
-    useUtf8Stdout,
 )
 
 
@@ -177,7 +176,6 @@ class LintFixer:
         return cls().main(argv)
 
     def main(self, argv: Sequence[str] | None = None) -> int:
-        useUtf8Stdout()
 
 
         parser = argparse.ArgumentParser(description=self.description)

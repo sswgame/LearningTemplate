@@ -18,7 +18,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 #: 포트를 짓는 데만 쓰는 vcpkg 도우미 포트의 이름 접두입니다 — 산출물에 들어가지 않는다.
 kBuildHelperPrefix = "vcpkg-"
@@ -157,7 +157,6 @@ def makeNoticeTextInternal(listPort, shareRoot):
 
 
 def main():
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="vcpkg 설치 트리의 copyright 를 모아 서드파티 고지 파일을 씁니다.")
     parser.add_argument("--manifest", required=True, help="vcpkg.json 경로")
     parser.add_argument("--installed", required=True, help="vcpkg 설치 루트(VCPKG_INSTALLED_DIR)")

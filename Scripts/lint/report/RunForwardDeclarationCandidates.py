@@ -35,7 +35,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from common.HeaderSelfContained import (findHeaderProbeProblem, findSeedEntry, loadCompileDatabase, makeSeedIndex,  # noqa: E402
                                         runSyntaxOnly)
 
@@ -383,7 +383,6 @@ def verifyUnusedIncludes(listUnused: list[tuple[Path, str]], buildDir: Path) -> 
 
 
 def main() -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="전방 선언으로 바꿀 수 있는 include 후보를 보고합니다")
     parser.add_argument("--filter", default="", help="경로에 이 문자열이 든 헤더만")
     parser.add_argument("--apply", action="store_true", help="후보를 실제로 바꾼다")

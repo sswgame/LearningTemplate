@@ -32,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지 · LintGate
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import getProcessWorkerCount, mapConcurrent, useUtf8Stdout  # noqa: E402
+from common import getProcessWorkerCount, mapConcurrent  # noqa: E402
 from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 
 #: CMake 등록 정보 — 게이트는 `LintGate` 클래스가 들고, 클래스가 없는 이쪽은 모듈이 든다
@@ -67,7 +67,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", default=str(Path(__file__).resolve().parents[3]))
     parser.add_argument("--verbose", action="store_true")
     args = parser.parse_args(argv)
-    useUtf8Stdout()
 
     errors: list[str] = []
     listJob: list[tuple[LintScript, dict]] = []

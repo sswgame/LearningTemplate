@@ -65,7 +65,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import TranslationUnitSweep, getProjectRoot, useUtf8Stdout
+from common import TranslationUnitSweep, getProjectRoot
 
 # "path(line,col): warning: 본문 [-Wname]" / GNU 드라이버의 "path:line:col: warning: ..." 둘 다 받는다.
 _kDiagnosticRe = re.compile(r"^(?P<where>.+?):\s*(?P<kind>warning|error):\s*(?P<text>.*)$")
@@ -245,7 +245,6 @@ def computeExitCode(failOn: str, totalWarning: int, totalError: int, listSkipped
 
 
 def main() -> int:
-    useUtf8Stdout()
     projectRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="트리에 남아 있는 컴파일러 경고를 전부 보고합니다")

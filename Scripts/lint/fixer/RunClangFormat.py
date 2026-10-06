@@ -23,14 +23,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 from fixer import FormatBranchBraces
 from fixer import FormatForwardDeclarations
 from LintFixer import addFileArguments, selectTargetFiles
-from common import getProjectRoot, runClangFormatBatch, useUtf8Stdout
+from common import getProjectRoot, runClangFormatBatch
 
 # 파일을 고쳐 쓰므로 `report/` 가 아니라 `fixer/` 에 있다. 변환이 clang-format 이라 파이썬 변환(`FixPass`)이 없다.
 kFixerSkipReason = "파이썬 변환(FixPass)이 아니라 clang-format 을 부르는 실행기다 — 대상 파일 고르기만 LintFixer 와 같다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    useUtf8Stdout()
 
     parser = argparse.ArgumentParser(description="C++ 소스코드에 clang-format을 적용합니다.")
     addFileArguments(parser)

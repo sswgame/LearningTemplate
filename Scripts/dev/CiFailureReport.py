@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 kNewline = "\n"
 _kAnsi = re.compile(r"\x1b\[[0-9;]*m")
@@ -98,7 +98,6 @@ def reportConfigure(logPath: Path) -> int:
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="CI 실패를 GitHub 주석으로 올린다")
     listSub = parser.add_subparsers(dest="kind", required=True)
     tests = listSub.add_parser("tests", help="진 시험 · 크래시 스택")

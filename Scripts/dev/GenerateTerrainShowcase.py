@@ -27,7 +27,7 @@ import sys
 import zlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, useUtf8Stdout
+from common import getProjectRoot
 
 kResolution = 257
 kHeightRange = 40.0
@@ -206,7 +206,6 @@ def writeDetailTextureInternal(resourceRoot: pathlib.Path) -> None:
 
 
 def main() -> int:
-    useUtf8Stdout()
     resourceRoot = getProjectRoot() / "Resource"
     writeTerrainSourcesInternal(resourceRoot)
     writeDetailTextureInternal(resourceRoot)

@@ -51,7 +51,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
-from common import TranslationUnitSweep, getProjectRoot, useUtf8Stdout  # noqa: E402
+from common import TranslationUnitSweep, getProjectRoot  # noqa: E402
 
 _kDefaultPreset = "Ninja-Debug"
 _kTag = "RunPaddingReport"
@@ -600,7 +600,6 @@ def main() -> int:
     if "--parse-unit" in sys.argv:
         return parseUnitInWorker(json.loads(sys.stdin.read()))
 
-    useUtf8Stdout()
     repositoryRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="Source/ 레코드의 패딩과 필드 재배치로 줄일 수 있는 크기를 보고합니다 (게이트 아님)")

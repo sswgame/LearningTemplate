@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot, mapConcurrent, useUtf8Stdout  # noqa: E402
+from common import getProjectRoot, mapConcurrent  # noqa: E402
 
 #: `--test_list` 가 고른 케이스를 찍는 줄(`  Suite.Case`).
 _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
@@ -52,7 +52,6 @@ def listSelectedCases(executable: Path, workingDir: Path, pattern: str) -> list[
 
 
 def main(argv: list[str] | None = None) -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="Run tests by suite/case name in the right executable and folder.")
     parser.add_argument("pattern", help="--test_filter 패턴(예: SceneTest.* · \"A.*,B.Case\" · \"*\")")
     parser.add_argument("--preset", default="Ninja-Debug", help="빌드 프리셋 폴더 이름 (기본 Ninja-Debug)")

@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 _kProcessAllAccess = 0x1F0FFF
 _kThreadAllAccess = 0x1F03FF
@@ -146,7 +146,6 @@ class StackSampler:
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    useUtf8Stdout()
     if sys.platform != "win32":
         print("SampleStacks.py is Windows only (DbgHelp)", file=sys.stderr)
         return 2

@@ -30,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gate"))   # 게이트 모듈의 규칙을 그대로 쓴다
 
-from common import kDirSourceEngine, normalizePath, useUtf8Stdout  # noqa: E402
+from common import kDirSourceEngine, normalizePath  # noqa: E402
 import CheckEngineLayers as gate  # noqa: E402
 
 kSourceSuffix = (".h", ".cpp", ".inl", ".xxx")
@@ -119,7 +119,6 @@ def computeTiersInternal(listEdge: dict[str, dict[str, list[str]]]) -> dict[str,
 
 
 def main() -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="Engine 폴더 include 그래프의 묶음과 티어를 계산한다")
     parser.add_argument("--root", default=None, help="저장소 루트 (기본: 스크립트 위치에서 추정)")
     parser.add_argument("--edges", action="store_true", help="묶음 안의 엣지를 파일 단위로 찍는다")

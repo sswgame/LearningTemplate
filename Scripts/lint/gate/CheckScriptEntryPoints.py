@@ -165,7 +165,7 @@ class CheckScriptEntryPointsGate(LintGate):
     hint = (
         "  진입점 머리에서 Scripts 를 sys.path 에 넣고 common 을 import 합니다:\n"
         "    sys.path.insert(0, str(Path(__file__).resolve().parents[N]))   # Scripts\n"
-        "    from common import useUtf8Stdout  # noqa: E402\n"
+        "    import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다\n"
         "  함수 안의 import 는 그 함수 전의 출력을 지키지 못합니다 — 모듈 수준에 둡니다."
     )
     selfTestCases = [

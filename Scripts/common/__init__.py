@@ -33,6 +33,7 @@ import sys as _sys
 # 해결 안내가 그 자리에서 트레이스백으로 바뀐다.
 #
 # 그래서 여기서 한 번 막는다. `errors="replace"` 라 터미널이 글자를 못 그려도 예외는 나지 않는다.
+# 스크립트는 이것을 따로 부르지 않는다 — 진입점이 모듈 수준에서 common 을 import 하면 된다(CheckScriptEntryPoints).
 # ------------------------------------------------------------------------------
 for _stream in (_sys.stdout, _sys.stderr):
     if _stream is not None and hasattr(_stream, "reconfigure"):

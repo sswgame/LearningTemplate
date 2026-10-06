@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(RuntimeAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `EngineServiceList.xxx` 가
@@ -69,7 +69,6 @@ def makeHeaderTextInternal(stamp):
 
 
 def main():
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 씁니다.")
     parser.add_argument("--root", required=True, help="저장소 루트")
     parser.add_argument("--out", required=True, help="쓸 헤더 경로")

@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
 _kMsfMagic = b"Microsoft C/C++ MSF 7.00\r\n\x1aDS\x00\x00\x00"
 _kPdbInfoStream = 1
@@ -101,7 +101,6 @@ def collectSymbolFilesInternal(buildDir: Path) -> list[Path]:
 
 
 def main(listArgument: list[str] | None = None) -> int:
-    useUtf8Stdout()
     parser = argparse.ArgumentParser(description="빌드의 심볼(PDB · .debug)을 심볼 저장소 배치로 복사한다")
     parser.add_argument("--build", type=Path, required=True, help="빌드 폴더(예: build/Ninja-Shipping)")
     parser.add_argument("--store", type=Path, required=True, help="심볼 저장소 폴더")

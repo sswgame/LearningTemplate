@@ -31,7 +31,7 @@ import pathlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from common import TranslationUnitSweep, getProjectRoot, useUtf8Stdout
+from common import TranslationUnitSweep, getProjectRoot
 
 _kDiagnosticRe = re.compile(r"\[([a-z][a-zA-Z0-9.-]*-[a-zA-Z0-9.-]+)\]\s*$")
 
@@ -139,7 +139,6 @@ def getClangTidyVersionInternal(tidyExe: str) -> str:
 
 
 def main() -> int:
-    useUtf8Stdout()
     projectRoot = getProjectRoot()
 
     parser = argparse.ArgumentParser(description="clang-tidy 정적 분석 실행")

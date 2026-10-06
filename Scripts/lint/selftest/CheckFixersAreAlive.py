@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
-from common import useUtf8Stdout  # noqa: E402
+import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 from LintCatalog import discoverLintScripts  # noqa: E402
 from LintFixer import findFixerClass  # noqa: E402
 
@@ -46,7 +46,6 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="저장소 루트 (이 검사는 쓰지 않는다 — CTest 가 준다)")
     parser.add_argument("--verbose", action="store_true", help="변환마다 결과를 모두 출력")
     args = parser.parse_args(argv)
-    useUtf8Stdout()
 
     errors: list[str] = []
     checkedPasses = 0
