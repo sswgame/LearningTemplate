@@ -38,7 +38,7 @@ namespace
 
         ReceiptValidationResult validate( const utf8* pPayload, uint64 accountId )
         {
-            const uint64                    ticket = _registry.submitValidation( "fake", pPayload, accountId );
+            [[maybe_unused]] const uint64   ticket = _registry.submitValidation( "fake", pPayload, accountId );
             vector<ReceiptValidationResult> listResult;
             _registry.pollCompletions( listResult );
             SW_ASSERT( listResult.size() == 1 && listResult[0]._ticket == ticket );
