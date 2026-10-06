@@ -1,0 +1,25 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Apply" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/options.uistyle.xml</item>
+	</_listStyleSheet>
+	<CanvasPanel>
+		<BorderPanel _name="Window" _styleClass="window modal">
+			<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-280,-100" _offsetMax="280,100" />
+			<BoxPanel _spacing="16" _orientation="Vertical">
+				<TextWidget _name="Message" _text="You have changes that are not applied." />
+				<BoxPanel _name="Buttons" _spacing="8">
+					<ButtonWidget _name="Apply" _styleClass="primary" _command="Apply">
+						<TextWidget _text="Apply" />
+					</ButtonWidget>
+					<ButtonWidget _name="Discard" _command="Discard">
+						<TextWidget _text="Discard" />
+					</ButtonWidget>
+					<ButtonWidget _name="Cancel" _command="Cancel">
+						<TextWidget _text="Cancel" />
+					</ButtonWidget>
+				</BoxPanel>
+			</BoxPanel>
+		</BorderPanel>
+	</CanvasPanel>
+</UiDocument>

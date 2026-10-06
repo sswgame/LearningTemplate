@@ -138,6 +138,19 @@ namespace sw
         UiDocumentCache&       getDocumentCache() { return _documentCache; }
         const UiDocumentCache& getDocumentCache() const { return _documentCache; }
 
+        // --- 엔진 기본 메뉴(옵션 · 일시정지) ---------------------------------------------------
+        /** @brief 옵션 메뉴 문서입니다(기동 단계 `Ui` — 엔진 기본 `engine/ui/options.ui.xml`, 게임 프리셋 `_uiOptionsDocument` 가 덮어쓴다). */
+        const string& getOptionsMenuDocument() const { return _optionsMenuDocument; }
+        void          setOptionsMenuDocument( string_view documentPath ) { _optionsMenuDocument = documentPath; }
+        /**
+         * @brief 일시정지 메뉴 문서를 겁니다. 비우면(기본) 일시정지 메뉴가 없습니다. 걸면 화면이 없을 때 UI 맵의 `UI.Pause`(Esc · 패드 Start)가
+         *        `PauseMenuScreen` 으로 엽니다 — 그 입력은 UI 가 먹어 게임 행동(마우스 잠금 토글 등)이 보지 못한다.
+         */
+        void          setPauseMenuDocument( string_view documentPath );
+        const string& getPauseMenuDocument() const { return _pauseMenuDocument; }
+        /** @brief 설정 출처입니다(`setUserSettings` 가 준 것, 없으면 엔진 서비스 — 그것도 없으면 nullptr). 옵션 메뉴 · 설정 바인딩이 쓴다. */
+        UserSettingsManager* findUserSettings() const;
+
         // --- 스타일 · 테마 ---------------------------------------------------------------
         /** @brief 스타일 시트 캐시입니다(기동 단계 `Ui` 가 에셋 캐시 등록부에 올린다). */
         UiStyleSheetCache& getStyleSheetCache() { return _styleSheetCache; }
@@ -206,7 +219,9 @@ namespace sw
         /** @brief @p inputMap 의 행동 @p action 이 지금 쓰는 물리 입력을 먹습니다(UI 가 그 행동을 처리했다). */
         void consumeAction( const InputMap& inputMap, const hashed_string& action );
         /** @brief 마우스 버튼 @p button 을 먹습니다. */
-        void                      consumeMouseButton( MouseButton button ) { _consumption.consumeMouseButton( button ); }
+        void consumeMouseButton( MouseButton button ) { _consumption.consumeMouseButton( button ); }
+        /** @brief 원시 입력 슬롯 @p slot 을 먹습니다(키 바인딩 창이 받은 키 — 뗄 때까지 게임 · UI 행동이 보지 못한다). */
+        void                      consumeSlot( const InputSlot& slot ) { _consumption.consumeSlot( slot ); }
         const UiInputConsumption& getInputConsumption() const { return _consumption; }
         /** @brief UI 행동 맵입니다(행동 맵을 주지 않았으면 nullptr). */
         InputMap* getUiInputMap() const { return _uiInputMap.get(); }
@@ -314,8 +329,16 @@ namespace sw
         void syncThemeSetting();
         /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
         void syncDemoScreen();
+        /** @brief `gv_uiOptionsMenu` 를 따라 옵션 메뉴를 열고 닫습니다(개발 스위치 — 스크린샷 · 네 백엔드 확인). */
+        void syncOptionsMenuSwitch();
+        /** @brief 화면이 없을 때 `UI.Pause` 가 오면 일시정지 메뉴를 엽니다. */
+        void processPauseAction();
+        /** @brief UI 맵 레이어를 맞춥니다 — `UI` 는 활성 화면이 있을 때, `UIGlobal`(일시정지)은 없고 일시정지 메뉴가 있을 때. */
+        void syncInputLayers( const UiScreen* pActive );
         /** @brief 닫기를 요청한 화면을 지웁니다. */
         void applyPendingCloses();
+        /** @brief 닫는 중이 아닌 화면마다 `UiScreen::onTick` 을 부릅니다(틱이 화면을 올리고 닫아도 되게 번호로 돈다). */
+        void tickScreens( float32 deltaSeconds );
         /** @brief 화면 @p index 를 바로 지웁니다(포인터 · 포커스가 그 트리를 놓게). */
         void destroyScreenAt( uint32 index );
         /** @brief 활성 화면 · 게임 정지를 다시 정합니다(화면을 올리고 지운 뒤). */
@@ -356,6 +379,10 @@ namespace sw
         UiScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
         UiScreenHandle               _markerScreen;        ///< 화면 마커를 담는 Hud 화면(없으면 무효)
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
+        vector<UiScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호(프레임마다 다시 쓴다)
+        string                       _optionsMenuDocument; ///< 옵션 메뉴 문서
+        string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서(비면 일시정지 메뉴 없음)
+        UiScreenHandle               _optionsSwitchScreen; ///< `-gv_uiOptionsMenu` 가 연 옵션 메뉴(없으면 무효)
         UiScreenHandle               _nextScreenHandle;
         uint32                       _nextPushOrder;
         uint32                       _textRevision; ///< 마지막 바인딩 단계가 본 글 판

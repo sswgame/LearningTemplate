@@ -33,6 +33,8 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_fontCatalog` | `string` | `engine/fonts/fontcatalog.xml` |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`) |
 | `_uiScaleSettings` | `string` | `engine/ui/uiscale.xml` |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다) |
 | `_uiThemes` | `string` | `engine/ui/uithemes.xml` |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다) |
+| `_uiOptionsMenu` | `string` | `engine/ui/options.ui.xml` |  |  | 옵션 메뉴 문서 — 설정 스키마에서 탭 · 행을 짓는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다) |
+| `_uiPauseMenu` | `string` | `engine/ui/pause.ui.xml` |  |  | 일시정지 메뉴 문서 — 게임 프리셋이 `_bUiPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
 | `_defaultForwardPipeline` | `string` | `engine/pipeline/forwardpipeline.xml` |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `string` | `engine/pipeline/deferredpipeline.xml` |  |  | 디퍼드 렌더 파이프라인 |
 | `_defaultRenderPass` | `string` | `engine/renderpass/defaultrenderpass.xml` |  |  | 기본 렌더 패스 바인드 틀 |

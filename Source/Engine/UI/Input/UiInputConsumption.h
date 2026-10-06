@@ -38,6 +38,8 @@ namespace sw
         void consumeAction( const InputMap& inputMap, const InputManager& input, const hashed_string& action );
         /** @brief 마우스 버튼 @p button 을 먹습니다(위젯이 그 클릭을 처리했다). */
         void consumeMouseButton( MouseButton button );
+        /** @brief 슬롯 @p slot 을 먹습니다(행동이 아닌 원시 입력을 받은 쪽 — 키 바인딩 창). 뗄 때까지 게임이 보지 못합니다. */
+        void consumeSlot( const InputSlot& slot );
         /** @brief @p inputMap 의 행동 @p action 을 지금 누르는 물리 입력이 모두 UI 가 먹은 것이면 true 입니다. */
         bool isActionConsumed( const InputMap& inputMap, const InputManager& input, const hashed_string& action ) const;
         /** @brief 슬롯 @p slot 이 먹힌 입력이면 true 입니다. */
@@ -54,8 +56,6 @@ namespace sw
             InputSlot _slot{};
             uint8     _bReleased{ SW_FALSE }; ///< 뗀 것을 한 번 보았다(다음 update 에서 빠진다)
         };
-
-        void addSlot( const InputSlot& slot );
 
     private:
         vector<ConsumedSlot> _listConsumedSlot;

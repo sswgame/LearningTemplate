@@ -83,6 +83,7 @@ namespace sw
         static constexpr utf8 kTabPrevious[]   = "UI.TabPrevious";
         static constexpr utf8 kScroll[]        = "UI.Scroll";        ///< 패드 오른쪽 스틱 — 값을 든다
         static constexpr utf8 kTextBackspace[] = "UI.TextBackspace"; ///< 글 입력 칸이 키보드 포커스를 쥔 동안만 — 커서 앞 글자 하나 지우기
+        static constexpr utf8 kPause[]         = "UI.Pause";         ///< 화면이 없을 때만(레이어 `UIGlobal`) — 일시정지 메뉴를 연다
     };
 } // namespace sw
 

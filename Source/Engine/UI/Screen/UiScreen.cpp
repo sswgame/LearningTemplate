@@ -55,6 +55,17 @@ namespace sw
         _bindingSet->markRebind();
     }
 
+    void UiScreen::removeOrphanBindings()
+    {
+        const auto newEnd = std::remove_if( _listBinding.begin(), _listBinding.end(),
+                                            [this]( const UiBindingDesc& binding )
+        { return _tree.findWidgetById( binding._widget ) == nullptr; } );
+        if ( newEnd == _listBinding.end() )
+            return;
+        _listBinding.erase( newEnd, _listBinding.end() );
+        _bindingSet->markRebind();
+    }
+
     void UiScreen::setViewModel( UiViewModel* pViewModel )
     {
         _bindingSet->setViewModel( pViewModel );
@@ -74,6 +85,21 @@ namespace sw
     {
         close();
         return true;
+    }
+
+    bool UiScreen::onUnhandledAction( const hashed_string& action )
+    {
+        (void)action;
+        return false;
+    }
+
+    void UiScreen::onTick( float32 deltaSeconds )
+    {
+        (void)deltaSeconds;
+    }
+
+    void UiScreen::onTreeRebuilt()
+    {
     }
 
     void UiScreen::registerCommand( const hashed_string& command, const UiCommandDelegate& handler )

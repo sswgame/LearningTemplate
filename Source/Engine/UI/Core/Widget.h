@@ -206,7 +206,7 @@ namespace sw
     private:
         PROPERTY( DisplayName = "Name", Tooltip = "Name used by findWidget, style selectors (#name) and explicit navigation" )
         hashed_string _name;
-        PROPERTY( DisplayName = "Style Class", Tooltip = "Space-separated style classes (.primary .danger)" )
+        PROPERTY( DisplayName = "Style Class", Tooltip = "Space-separated style classes (.primary .danger)", Meta = "NotLocalizable" )
         string _styleClass;
         PROPERTY( DisplayName = "Render Transform" )
         WidgetRenderTransform _renderTransform;

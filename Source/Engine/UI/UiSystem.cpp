@@ -28,6 +28,8 @@
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
+#include "Engine/UI/Screens/OptionsMenuScreen.h"
+#include "Engine/UI/Screens/PauseMenuScreen.h"
 #include "Engine/UI/Style/UiStylePass.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
@@ -47,7 +49,8 @@ namespace sw
             /** @brief 마우스 버튼 중 UI 가 사건으로 받는 것(왼쪽 · 오른쪽 · 가운데). */
             static constexpr MouseButton kArrPointerButton[] = { MouseButton::Left, MouseButton::Right, MouseButton::Middle };
             /** @brief UI 행동 맵의 레이어 이름입니다(활성 화면이 있을 때만 켠다). */
-            static constexpr utf8 kUiLayerName[] = "UI";
+            static constexpr utf8 kUiLayerName[]       = "UI";
+            static constexpr utf8 kUiGlobalLayerName[] = "UIGlobal"; ///< 화면이 없을 때의 UI 행동(일시정지)
             /** @brief 스틱 탐색이 한 칸 옮기는 기울기 문턱입니다. */
             static constexpr float32 kStickNavigateMagnitude = 0.5f;
             /** @brief 패드 축 사건이 "패드를 쓴다" 로 세는 크기입니다(손을 떼어 둔 스틱의 떨림은 세지 않는다). */
@@ -162,6 +165,10 @@ namespace sw
         , _demoScreen{ kInvalidUiScreenHandle }
         , _markerScreen{ kInvalidUiScreenHandle }
         , _listWidgetComponent{}
+        , _listTickScratch{}
+        , _optionsMenuDocument{ "engine/ui/options.ui.xml" }
+        , _pauseMenuDocument{}
+        , _optionsSwitchScreen{ kInvalidUiScreenHandle }
         , _nextScreenHandle{ 1 }
         , _nextPushOrder{ 0 }
         , _textRevision{ 0 }
@@ -205,7 +212,7 @@ namespace sw
             return false;
         }
         _uiInputMap->setInputManager( _pInput );
-        _uiInputMap->setLayerEnabled( UiSystemInternal::kUiLayerName, getActiveScreen() != nullptr );
+        syncInputLayers( getActiveScreen() );
         return true;
     }
 
@@ -260,8 +267,10 @@ namespace sw
         _viewport = viewport;
         syncThemeSetting();
         syncDemoScreen();
+        syncOptionsMenuSwitch();
         reopenClosedScreens();
         _subtitles.update( deltaSeconds );
+        tickScreens( deltaSeconds );
         applyPendingCloses();
         updateBindings();
         // 애니메이션 — 문서 애니메이션 · 트윈이 프로퍼티를 쓴다(스타일 · 레이아웃 앞 — 쓴 칸의 무효화가 이번 프레임에 걷힌다). 실제 프레임 시간이다(정지 메뉴도 움직인다).
@@ -500,6 +509,7 @@ namespace sw
         screen._lastFocused    = kInvalidWidgetId;
         // 뷰모델은 화면이 그대로 든다 — 식이 새 위젯 번호를 가리키니 다음 바인딩 단계가 다시 걸고 모든 칸을 쓴다.
         screen._bindingSet->markRebind();
+        screen.onTreeRebuilt();
         applyDocumentAnimations( screen ); // 고친 문서의 애니메이션 — 재생 중이던 것(닫기 포함)은 멈춘다
         rebuildStyleSet( screen );
         // 스크롤 오프셋은 내용 크기 안으로 묶이므로 새 트리를 지금 한 번 맞추고 재 둔 뒤에 돌려준다.
@@ -705,7 +715,7 @@ namespace sw
         UiBindingContext context{};
         context._pLocalization = findLocalization();
         context._pConverters   = &_bindingConverters;
-        context._pSettings     = _pUserSettings != nullptr ? _pUserSettings : engine::getBoundEngineServices()._pUserSettingsManager;
+        context._pSettings     = findUserSettings();
         // 글 판 — 언어를 바꾸거나 표를 다시 읽으면 오른다. 정수 하나 비교라 매 프레임 본다(언리얼 FTextLocalizationManager 의 TextRevision).
         const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
@@ -861,6 +871,23 @@ namespace sw
         refreshActiveScreen();
     }
 
+    void UiSystem::tickScreens( float32 deltaSeconds )
+    {
+        // 틱이 화면을 올리고 닫을 수 있다(확인 창 · 키 바인딩 창) — 번호로 돌고 매번 다시 찾는다.
+        _listTickScratch.clear();
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            if ( screen->_bClosing == SW_FALSE )
+                _listTickScratch.push_back( screen->_handle );
+        }
+        for ( const UiScreenHandle handle : _listTickScratch )
+        {
+            UiScreen* pScreen = findScreen( handle );
+            if ( pScreen != nullptr && pScreen->isClosing() == false )
+                pScreen->onTick( deltaSeconds );
+        }
+    }
+
     void UiSystem::destroyScreenAt( uint32 index )
     {
         unique_ptr<UiScreen> screen = std::move( _listScreen[index] );
@@ -905,7 +932,7 @@ namespace sw
 
         // UI 행동은 활성 화면이 있을 때만 — HUD 만 있으면 패드 A 는 게임의 것이다.
         if ( _uiInputMap != nullptr )
-            _uiInputMap->setLayerEnabled( UiSystemInternal::kUiLayerName, pNewActive != nullptr );
+            syncInputLayers( pNewActive );
 
         // 게임 정지 — 정지 화면이 하나라도 있으면 요청을 걸어 둔다.
         bool bPause = false;
@@ -954,7 +981,9 @@ namespace sw
     void UiSystem::processActions( float32 deltaSeconds )
     {
         UiScreen* pActive = getActiveScreen();
-        if ( pActive == nullptr || _uiInputMap == nullptr )
+        if ( pActive == nullptr )
+            processPauseAction();
+        if ( pActive == nullptr || _uiInputMap == nullptr || pActive->wantsUiActions() == false )
         {
             _bStickHeld = SW_FALSE;
             return;
@@ -987,7 +1016,9 @@ namespace sw
         {
             if ( bTextFocus || uiMap.wasActionTriggered( action ) == false )
                 continue;
-            if ( routeAction( *pActive, action, float2{} ) )
+            // 위젯이 먼저, 아무도 안 먹은 탭 행동은 화면이(옵션 메뉴의 탭 줄).
+            const bool bScreenAction = action != hashed_string( UiActionName::kAccept );
+            if ( routeAction( *pActive, action, float2{} ) || ( bScreenAction && pActive->onUnhandledAction( action ) ) )
                 consumeAction( uiMap, action );
         }
 
@@ -1252,6 +1283,57 @@ namespace sw
         }
         _demoScreen = pushScreen( UiDemoScreen::create() );
         setInputMode( UiInputMode::Navigation );
+    }
+
+    void UiSystem::syncOptionsMenuSwitch()
+    {
+        const bool bOpen = _optionsSwitchScreen != kInvalidUiScreenHandle && findScreen( _optionsSwitchScreen ) != nullptr;
+        if ( gv_uiOptionsMenu == bOpen )
+            return;
+        if ( bOpen )
+        {
+            closeScreen( _optionsSwitchScreen );
+            _optionsSwitchScreen = kInvalidUiScreenHandle;
+            return;
+        }
+        _optionsSwitchScreen = OptionsMenuScreen::open( *this );
+        if ( _optionsSwitchScreen == kInvalidUiScreenHandle )
+        {
+            gv_uiOptionsMenu = false; // 열 수 없다(설정 서비스 없음) — 프레임마다 다시 시도하지 않는다
+            return;
+        }
+        setInputMode( UiInputMode::Navigation );
+    }
+
+    void UiSystem::setPauseMenuDocument( string_view documentPath )
+    {
+        _pauseMenuDocument = documentPath;
+        syncInputLayers( getActiveScreen() );
+    }
+
+    UserSettingsManager* UiSystem::findUserSettings() const
+    {
+        return _pUserSettings != nullptr ? _pUserSettings : engine::getBoundEngineServices()._pUserSettingsManager;
+    }
+
+    void UiSystem::processPauseAction()
+    {
+        if ( _uiInputMap == nullptr || _pauseMenuDocument.empty() || _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole )
+            return;
+        const hashed_string pauseAction( UiActionName::kPause );
+        if ( _uiInputMap->wasActionTriggered( pauseAction ) == false || _consumption.isActionConsumed( *_uiInputMap, *_pInput, pauseAction ) )
+            return;
+        // 열지 못해도 먹는다 — 일시정지를 누른 Esc 가 게임의 마우스 잠금 토글로 새지 않게(오류는 문서 짓기가 남겼다).
+        consumeAction( *_uiInputMap, pauseAction );
+        (void)openScreen<PauseMenuScreen>( _pauseMenuDocument );
+    }
+
+    void UiSystem::syncInputLayers( const UiScreen* pActive )
+    {
+        if ( _uiInputMap == nullptr )
+            return;
+        _uiInputMap->setLayerEnabled( UiSystemInternal::kUiLayerName, pActive != nullptr );
+        _uiInputMap->setLayerEnabled( UiSystemInternal::kUiGlobalLayerName, pActive == nullptr && _pauseMenuDocument.empty() == false );
     }
 
     void UiSystem::paintScreens()

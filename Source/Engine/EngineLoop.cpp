@@ -868,6 +868,13 @@ namespace sw
             if ( themes.loadFromResource( themePath ) == false )
                 return EngineInitResult::Failed;
             ui.setThemeCatalog( themes );
+            // 엔진 기본 메뉴(옵션 · 일시정지) — 게임 프리셋이 팩 상대 경로로 문서를 덮어쓴다. 일시정지 메뉴는 게임이 켤 때만.
+            const string packRoot = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
+            ui.setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu )
+                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
+            if ( gameConfig._bUiPauseMenu )
+                ui.setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu )
+                                                                         : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
             return EngineInitResult::Succeeded;
         }
         static void shutdown( EngineLoop& loop )

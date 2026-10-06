@@ -1,4 +1,5 @@
 {
     "_packRoot": "game/abilityarena",
-    "_windowTitle": "Ability Arena"
+    "_windowTitle": "Ability Arena",
+    "_bUiPauseMenu": true
 }

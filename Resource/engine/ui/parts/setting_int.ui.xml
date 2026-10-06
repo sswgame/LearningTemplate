@@ -1,0 +1,13 @@
+<UiDocument _schemaVersion="1">
+	<BoxPanel _styleClass="settingrow" _spacing="12">
+		<TextWidget _name="Label" _styleClass="settinglabel">
+			<_slot _widthOverride="320" _verticalAlignment="Center" />
+		</TextWidget>
+		<SliderWidget _name="Value">
+			<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+		</SliderWidget>
+		<TextWidget _name="ValueText" _styleClass="settingvalue">
+			<_slot _widthOverride="72" _verticalAlignment="Center" />
+		</TextWidget>
+	</BoxPanel>
+</UiDocument>

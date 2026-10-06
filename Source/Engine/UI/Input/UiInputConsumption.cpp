@@ -143,14 +143,14 @@ namespace sw
             {
                 const InputSlot& slot = pBinding->_arrSlot[arrIndex[slotIndex]];
                 if ( UiInputConsumptionInternal::isSlotDown( input, slot ) )
-                    addSlot( slot );
+                    consumeSlot( slot );
             }
         }
     }
 
     void UiInputConsumption::consumeMouseButton( MouseButton button )
     {
-        addSlot( InputSlot::fromMouseButton( button ) );
+        consumeSlot( InputSlot::fromMouseButton( button ) );
     }
 
     bool UiInputConsumption::isActionConsumed( const InputMap& inputMap, const InputManager& input, const hashed_string& action ) const
@@ -204,7 +204,7 @@ namespace sw
         _consumedStickMask = 0;
     }
 
-    void UiInputConsumption::addSlot( const InputSlot& slot )
+    void UiInputConsumption::consumeSlot( const InputSlot& slot )
     {
         for ( ConsumedSlot& entry : _listConsumedSlot )
         {

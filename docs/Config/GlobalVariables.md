@@ -136,6 +136,7 @@
 |---|---|---|---|---|---|
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UiScale.cpp](../../Source/Engine/UI/Layout/UiScale.cpp) |
 | `gv_uiDemo` | `bool` | `false` | 시험 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸(코드로 지은 위젯 트리) | [UiDemoScreen.cpp](../../Source/Engine/UI/Debug/UiDemoScreen.cpp) |
+| `gv_uiOptionsMenu` | `bool` | `false` | 시험 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screens/OptionsMenuScreen.cpp) |
 
 ## `Source/Engine/UserSettings`
 

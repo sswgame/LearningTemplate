@@ -1,0 +1,26 @@
+<UiDocument _schemaVersion="1">
+	<UiScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Keep" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/options.uistyle.xml</item>
+	</_listStyleSheet>
+	<CanvasPanel>
+		<BorderPanel _name="Window" _styleClass="window modal">
+			<_slot _anchorMin="0.5,0.5" _anchorMax="0.5,0.5" _offsetMin="-280,-110" _offsetMax="280,110" />
+			<BoxPanel _spacing="16" _orientation="Vertical">
+				<TextWidget _name="Message" _text="Keep these display settings?" />
+				<BoxPanel _spacing="6">
+					<TextWidget _text="Reverting in" />
+					<TextWidget _name="Seconds" _text="{bind:_secondsLeft, converter=Seconds}" />
+				</BoxPanel>
+				<BoxPanel _name="Buttons" _spacing="8">
+					<ButtonWidget _name="Keep" _styleClass="primary" _command="Keep">
+						<TextWidget _text="Keep" />
+					</ButtonWidget>
+					<ButtonWidget _name="Revert" _command="Revert">
+						<TextWidget _text="Revert" />
+					</ButtonWidget>
+				</BoxPanel>
+			</BoxPanel>
+		</BorderPanel>
+	</CanvasPanel>
+</UiDocument>

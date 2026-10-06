@@ -192,8 +192,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
-- **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`. (1) 메뉴 UI(런타임 UI 프레임워크 뒤) ·
-  `UserSettingsPanel` 대신 키를 눌러 받는 리바인딩 창. (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
+- **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`, 메뉴는 `Engine/UI/Screens/OptionsMenuScreen`.
+  (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),
   카메라 `gv_cameraFieldOfView` · `gv_cameraShakeScale` · `gv_cameraHeadBob`(cam-views 가 읽을 자리). (4) 해상도 선택지를 모니터 모드에서(선택지 공급자) · GPU 사양 조회(RHI 어댑터 · 전용 메모리)로 품질 자동 선택.
   (5) 게임 스키마에 키 바인딩 설정 — 시험 게임 일곱이 모두 입력 맵(`data/<게임>.input.xml`)을 쓴다(그 액션부터). (6) X11 `setDisplayMode`(EWMH 전체 화면)는 리눅스 실기 미확인.
@@ -291,8 +291,8 @@ cd build/Ninja-Debug/Bin
     (카탈로그 편집기) · 공용 커브 편집기 · 공용 노드 그래프 틀 · 인스펙터 개선 · 에셋 브라우저 · 맵 검사 패널 · 패키징 UI · 시나리오 녹화(실행 중 입력 → `.scenario.xml`) ·
     로딩 흐름의 남은 것(로딩 화면 · 페이드는 `LoadingScreenController` — 진행률(씬 매니저에 진행 질의가 없다 — 스트리밍 큐 바이트로) · 프리로드 세트 연결 ·
     팁 목록 데이터(`LoadingScreenSettings::_listTip` 은 있으나 gamesettings 칸 · 글 수집 규칙이 없다)) · 입력 확장 · 에셋 DCC 내보내기 · 포토 모드 · 리플레이/킬캠(바탕인 의도 기록 `.swintent` 은 있다 — 남은 것: 재생 UI · 카메라 · 되감기) · SSR · 업스케일러 · HDR 출력 · 데칼 · 하늘/시간대/높이
-    안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 옵션 메뉴 · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
-    [넷 다: 런타임 UI].
+    안개 · 2D 스켈레탈 · 학습용 몫(장르 시작 템플릿 · 튜토리얼 · API 문서) · 알림/토스트 · 튜토리얼 힌트 · 월드 마커
+    [셋 다: 런타임 UI].
   - **큼(L)**: 런타임 UI 프레임워크(폰트 · 글자 · 위젯 · 레이아웃 · 게임패드 탐색 · 현지화 · 화면/월드 공간) · 제약 ·
     파티클/VFX · 텍스처
     밉 스트리밍 · 카메라 5 · 6 단계 · 에셋 레지스트리 · DDC · 증분 쿠킹 · 월드 편집 도구 ·
@@ -306,10 +306,15 @@ cd build/Ninja-Debug/Bin
 - **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
   (2) 에디터 GameView 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
-  키 리바인딩 — 옵션 메뉴의 키 바인딩 창과 함께. (4) 글 입력 칸(`TextInputWidget`)은 끝에 붙이기 · Backspace(`UI.TextBackspace`) · Enter 확정만 — 커서 이동(좌우 · Home/End) · 선택 · 붙여넣기 · 조합 글 밑줄이 남았다.
+  키 리바인딩 — 키 바인딩 창(`KeyRebindScreen`)은 있다, UI 맵을 설정 대상으로 두는 길(`UserSettingsTargets` 의 입력 맵이 게임 맵 하나)이 남았다. (4) 글 입력 칸(`TextInputWidget`)은 끝에 붙이기 · Backspace(`UI.TextBackspace`) · Enter 확정만 — 커서 이동(좌우 · Home/End) · 선택 · 붙여넣기 · 조합 글 밑줄이 남았다.
 - **런타임 UI 접근성의 남은 것(runtime-ui 9-1 뒤, `Engine/UI/README.md`).** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
   `UiSubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다). (2) "글자 배율 2 에서 옵션 메뉴가 넘치지 않는다" 시험은 옵션 메뉴(8-2)가 없어
   견본 문서로 한다(`UiAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`) — 8-2 가 들어오면 엔진 옵션 메뉴 문서로 바꾼다.
+- **옵션 · 일시정지 메뉴의 남은 것(runtime-ui 8-2 뒤, `Engine/UI/README.md`).** (1) 일시정지 메뉴에 타이틀로 · 끝내기 — 게임 흐름(`GameInstanceBase`)의
+  명령이라 엔진 화면이 모른다(게임이 `PauseMenuScreen` 을 덮어쓰거나 명령 표를 거는 길). (2) 명령 조종자 게임(NileCity · StarSkirmish · ThemePark)과
+  MeadowVillage 는 `_bUiPauseMenu` 를 켜지 않았다 — Esc 를 게임이 따로 쓰는지 보고 켠다. (3) 열거형 행은 콤보(펼침)뿐 — 패드에 맞는 좌우 고르기 위젯이 없다.
+  (4) 키 바인딩 창의 Esc 길게 누르기는 키보드 Esc 만 — 패드 사용자는 취소가 없다(패드 B 를 바인딩할 수 있어야 해서). (5) 해상도 바꾸고 15 초 되돌림 ·
+  키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때.
 - **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
   내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —

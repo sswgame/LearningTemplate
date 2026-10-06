@@ -6,11 +6,19 @@
   Navigation uses trigger="Repeat" (fires on press, then repeats after navRepeatDelay at navRepeatRate) like a held D-pad.
   UI.TextBackspace is routed only while a text field holds keyboard focus (with Back and the focus Tab actions).
   UI.Scroll (right stick) goes to the focused widget's path, or the hovered path without focus; a scroll panel moves at its stick speed.
+  The UIGlobal layer is on only while no screen is active and the game preset enables the pause menu: UI.Pause opens it (and is consumed).
 -->
 <InputMap defaultLayer="UI" holdThreshold="0.4">
 	<layers>
 		<layer name="UI" enabled="0" blockLower="0"/>
+		<layer name="UIGlobal" enabled="0" blockLower="0"/>
 	</layers>
+	<layer name="UIGlobal" enabled="0" blockLower="0">
+		<action name="UI.Pause" trigger="Pressed">
+			<bind source="key" code="Escape"/>
+			<bind source="gamepad" code="Start"/>
+		</action>
+	</layer>
 	<layer name="UI" enabled="0" blockLower="0">
 		<action name="UI.NavigateUp" trigger="Repeat">
 			<bind source="key" code="Up"/>

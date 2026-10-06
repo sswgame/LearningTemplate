@@ -118,6 +118,8 @@ namespace sw
         UiStyleSet* getStyleSet() const { return _styleSet.get(); }
         /** @brief 바인딩 식 하나를 더합니다(코드로 지은 화면 — 문서 화면은 `UiSystem::openScreen` 이 넣는다). 다음 바인딩 단계가 다시 겁니다. */
         void addBinding( const UiBindingDesc& binding );
+        /** @brief 트리에 없는 위젯(코드가 지운 행)에 붙은 바인딩 식을 뺍니다. 뺐으면 다음 바인딩 단계가 다시 겁니다. */
+        void removeOrphanBindings();
         /**
          * @brief 뷰모델을 겁니다(nullptr 이면 뗀다). 다음 바인딩 단계가 식을 다시 걸고 모든 칸을 씁니다.
          * @details 소유는 게임입니다. 화면보다 먼저 지우면 바인딩이 그 뷰모델을 놓습니다(위젯 값은 마지막 값으로 남는다).
@@ -150,6 +152,17 @@ namespace sw
          * @details 기본은 스스로 닫기입니다. 확인 창은 "취소" 로, 첫 화면(타이틀)은 아무것도 하지 않도록 덮어씁니다.
          */
         virtual bool onBack();
+        /**
+         * @brief 화면 단위 행동 @p action(`UI.TabNext` · `UI.TabPrevious`)을 포커스 경로의 위젯이 처리하지 않았을 때 불립니다. 처리했으면 true 입니다.
+         * @details 탭 줄 옮기기처럼 포커스와 무관한 화면의 행동입니다(CommonUI 화면이 묶은 행동). 기본은 처리하지 않습니다.
+         */
+        virtual bool onUnhandledAction( const hashed_string& action );
+        /** @brief `UiSystem::update` 마다 바인딩 앞에서 불립니다 — 시간에 따라 바꾸는 것(카운트다운 · 키 받기)의 자리. 기본은 아무것도 하지 않습니다. */
+        virtual void onTick( float32 deltaSeconds );
+        /** @brief 이 화면이 활성인 동안 UI 행동(탐색 · 확인 · 뒤로)을 받는가입니다. 원시 입력을 받는 화면(키 바인딩 창)이 false 로 행동을 끕니다. */
+        virtual bool wantsUiActions() const { return true; }
+        /** @brief 핫 리로드가 문서로 트리를 새로 지은 뒤 불립니다 — 코드로 덧붙인 위젯(옵션 메뉴의 행)을 다시 짓는 자리입니다. 기본은 아무것도 하지 않습니다. */
+        virtual void onTreeRebuilt();
 
     private:
         friend class UiSystem;

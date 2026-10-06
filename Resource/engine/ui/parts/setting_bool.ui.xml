@@ -1,0 +1,10 @@
+<UiDocument _schemaVersion="1">
+	<BoxPanel _styleClass="settingrow" _spacing="12">
+		<TextWidget _name="Label" _styleClass="settinglabel">
+			<_slot _widthOverride="320" _verticalAlignment="Center" />
+		</TextWidget>
+		<CheckBoxWidget _name="Value">
+			<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+		</CheckBoxWidget>
+	</BoxPanel>
+</UiDocument>

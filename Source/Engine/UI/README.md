@@ -77,6 +77,9 @@
 - 게임이 마우스를 잠가 쥔 동안(1 인칭)은 포인터 사건을 만들지 않습니다.
 - 핫 리로드: 내려가는 모듈에 vtable 이 있는 화면 · 위젯이 든 화면은 그 자리에서 닫습니다(경고 "closed for module reload"). 위젯 타입의 정적 상태는 모듈에 두지 않습니다.
   문서로 연 기본 화면(화면 클래스가 그 모듈 것이 아닌 것)은 다음 `update` 가 같은 문서로 다시 엽니다(새 이미지의 위젯 타입으로).
+- 화면 클래스가 덮어쓰는 자리: `onCommand`(단추 명령) · `onBack` · `onUnhandledAction`(위젯이 안 먹은 `UI.TabNext` · `UI.TabPrevious` — 탭 줄) ·
+  `onTick`(`update` 마다 바인딩 앞 — 카운트다운 · 키 받기, 틱 안에서 화면을 올리고 닫아도 된다) · `wantsUiActions`(false 면 활성인 동안 UI 행동을 끈다 — 원시 입력을 받는 창) ·
+  `onTreeRebuilt`(핫 리로드가 트리를 새로 지은 뒤 — 코드로 붙인 위젯을 다시 짓는 자리).
 
 ## 행동 입력 · 먹은 입력 (`Input/UiInputConsumption` · `UiSystem::processInput`)
 
@@ -371,7 +374,7 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 읽기: `getValue`(보류 값 우선). 칸이 `_value` 이고 위젯에 `_minValue` · `_maxValue` · `_step` 이 있으면 정의의 범위를, 칸이 `_selectedIndex` 이고 `_listOption` 이
   있으면 선택지를 값보다 먼저 씁니다(칸 이름이 같은 위젯이면 모두 — 슬라이더 · 콤보를 따로 알지 않는다). `isSettingEnabled` 는 위젯 사용 가능으로.
 - 쓰기(사용자 입력): 설정 타입에 맞는 `setPending*Value`. 결과는 보지 않고 다음 바인딩 단계가 설정 값을 다시 읽습니다 — 눈금으로 고쳐 받았으면(Clamped) 고친 값이,
-  거절됐으면(Rejected · Disabled) 원래 값이 보입니다. 키 바인딩 겹침(Conflict)은 옵션 메뉴의 키 바인딩 창(8-2) 몫입니다.
+  거절됐으면(Rejected · Disabled) 원래 값이 보입니다. 키 바인딩 겹침(Conflict)은 옵션 메뉴의 키 바인딩 창(`KeyRebindScreen`) 몫입니다.
 - 다른 곳의 변경(되돌리기 · 기본값 · 확인 카운트다운의 자동 되돌림)은 변경 통보(`registerEventListener`)로 받습니다 — 사용 가능이 다른 설정에 기대므로 통보가 오면
   그 화면의 설정 바인딩을 모두 다시 읽습니다. 리스너는 바인딩 집합(= 화면)이 지워질 때 뗍니다. 시험은 `UiSystem::setUserSettings` 로 자기 매니저를 넘깁니다.
 
@@ -446,3 +449,27 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - **사용자 설정**(매 프레임 읽는다): `gv_subtitles` 를 끄면 화면을 닫지만 줄은 계속 받고 시간도 흐른다(켜면 지금 줄부터), `gv_subtitleSize` 0 · 1 · 2 는 문서에 적힌
   글 크기에 0.85 · 1 · 1.3 을 곱하고(글자 배율 · 하한은 그 위에), `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
 - **보내는 쪽**: GF `DialogueRunnerComponent::_bPostSubtitles`(기본 끔 — 대화 UI 가 글을 따로 보이면 켜지 않는다).
+## 옵션 · 일시정지 메뉴 (`Screens/`)
+
+| 이 엔진 | 언리얼 Lyra | 유니티 | Godot |
+|---|---|---|---|
+| `OptionsMenuScreen` — 스키마 → 탭 · 행 견본 | `UGameSettingRegistry` → `UGameSettingListView`(설정 종류별 행 위젯) | UI Toolkit 설정 화면(직접) | (직접) |
+| `SettingsConfirmScreen` — "유지할까요? 0:15" | `ULyraSettingsLocal` 해상도 확인 창 | (직접) | (직접) |
+| `KeyRebindScreen` — 다음 원시 입력 | `ULyraSettingsListEntrySetting_KeyboardInput` · 키 누르기 창 | Input System `PerformInteractiveRebinding` | `InputEventKey` 받기 |
+| `PauseMenuScreen` · `UI.Pause` | Escape 메뉴(`UI.Action.Escape` → 활성 레이아웃이 민다) | (직접) | (직접) |
+
+- **엔진이 기본 메뉴를 준다**: `engine/ui/options.ui.xml`(탭 줄 `Tabs` · 스크롤 행 목록 `Rows` · 다시 시작 알림 `RestartNotice` · 단추 `Apply` · `Revert` · `Defaults` · `Close`)과
+  행 견본 조각 `engine/ui/parts/setting_{bool,int,float,enum,string,keybinding}.ui.xml`, 스타일 `engine/ui/styles/options.uistyle.xml`. 게임은 프리셋 `_uiOptionsMenu` 로
+  문서를 바꾸고(위 이름 · 명령을 지키면 된다) 테마로 겉모습을 바꾼다.
+- **행은 스키마가 정본**이다: 탭 = 보일 설정이 있는 카테고리, 행 = `collectSettings` 순서. 견본을 지어 안쪽 이름을 `<설정 id>.<이름>` 으로 감싸고, 값 위젯 `Value` 에
+  `{setting:id}` 바인딩을 코드로 건다(형식별 칸 — Bool `_bChecked` · Int/Float `_value` · Enum `_selectedIndex` · String `_text`, 값 글 `ValueText` 는 단방향).
+  키 바인딩 행은 단추(`Rebind`) + 글리프 `Glyph`(`getBindingGlyph` — 입력 방식이 바뀌면 다시 쓴다). 탭을 바꾸면 행과 그 바인딩을 다시 짓는다.
+- **적용**: `applyPending` — 확인 대기가 시작되면 `SettingsConfirmScreen`(모달, 남은 초는 뷰모델 `{bind:_secondsLeft, converter=Seconds}`). 시간은 매니저가 센다
+  (호스트의 `update` — 다 되면 스스로 되돌린다), 창은 확인 대기가 끝난 것을 보고 닫힌다. [되돌리기] · 뒤로 = 남은 시간을 다 써서 지금 되돌림.
+- **닫기**(닫기 · 뒤로): 보류 값이 있으면 `engine/ui/confirm_unsaved.ui.xml`("적용 · 버리기 · 취소"). 창의 단추는 메뉴를 번호로 찾는다(메뉴가 먼저 사라져도 매달리지 않는다).
+- **키 바인딩 창**: 연 다음 프레임부터 `InputManager::findFirstPressedSlot`(키보드 → 마우스 → 패드)의 첫 슬롯을 받는다 — 받는 동안 `wantsUiActions` 가 false 라 누른 키가
+  메뉴를 움직이지 않는다. Esc 는 떼면 취소, 1 초 누르면 Esc 를 바인딩. 받은 슬롯은 UI 가 먹는다(`UiSystem::consumeSlot` — 뗄 때까지 게임이 보지 못한다).
+  겹치면(`findBindingConflict`) "이미 쓰입니다 — 바꾸기 · 취소"(바꾸기 = `setPendingBinding( Swap )`), 스키마 밖 액션과 겹치면 취소만.
+- **일시정지 메뉴**: 게임 프리셋 `_bUiPauseMenu` 를 켜면 화면이 없을 때 UI 맵의 `UIGlobal` 레이어(`UI.Pause` — Esc · 패드 Start)가 `PauseMenuScreen`(`_uiPauseMenu`,
+  기본 `engine/ui/pause.ui.xml`)을 연다. 그 입력은 UI 가 먹어 게임의 같은 키 행동(Shooter3D 의 마우스 잠금 토글)이 보지 못한다 — 메뉴가 커서를 바라니 잠금이 쉬고,
+  닫으면 돌아온다. `OpenOptions` 명령은 옵션 메뉴를 위에 연다. 개발 스위치 `-gv_uiOptionsMenu=1` 은 옵션 메뉴를 바로 띄운다(스크린샷 · 네 백엔드 확인).
