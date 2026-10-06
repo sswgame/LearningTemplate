@@ -13,7 +13,7 @@ kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
-from LintCatalog import LintScript  # noqa: E402
+from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 from LintGate import LintGate  # noqa: E402
 from PreCommitLint import selectGatesForStaged  # noqa: E402
 
@@ -71,6 +71,22 @@ class PreCommitLintSelectionTest(unittest.TestCase):
 
     def testDeclaredSkipReasonWins(self) -> None:
         self.assertEqual(self.plan(["Source/A.h"])["Skipped"][0], "빌드 폴더가 필요하다")
+
+
+class PreCommitLintRealGateTest(unittest.TestCase):
+    """실제 게이트의 훅 선언 — 트리 전체 게이트가 관계없는 커밋에서도 돌면 훅의 바닥 시간이 그만큼 는다."""
+
+    def plan(self, gateName: str, listStaged: list[str]) -> str:
+        listScript = [script for script in discoverLintScripts("gate") if script.name == gateName]
+        listStagedPath = [kRepositoryRoot / path for path in listStaged]
+        return selectGatesForStaged(kRepositoryRoot, listStagedPath, listStagedPath, listScript)[0].skipReason
+
+    def testDataFileReferencesSkipsDocumentOnlyCommit(self) -> None:
+        self.assertTrue(self.plan("CheckDataFileReferences", ["docs/06_Backlog.md", "Resource/engine/a.xml"]))
+
+    def testDataFileReferencesRunsForListFile(self) -> None:
+        self.assertEqual(self.plan("CheckDataFileReferences", ["Source/Core/Predefined/X.xxx"]), "")
+        self.assertEqual(self.plan("CheckDataFileReferences", ["cmake/Engine/X.cmake"]), "")
 
 
 if __name__ == "__main__":

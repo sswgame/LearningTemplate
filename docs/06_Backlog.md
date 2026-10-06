@@ -999,7 +999,8 @@ cd build/Ninja-Debug/Bin
   `common/HeaderSelfContained.py` 한 자리. 유니티 빌드(CI 프리셋)의 컴파일 DB 는 TU 가 빌드 폴더 안이라 `CMakeFiles` 앞을 소스 경로로 옮겨 씨앗 TU 를 고른다(안 그러면
   모든 헤더가 첫 TU 의 플래그를 받는다). 구성만 한 폴더(`FlagOps.gen.h` 자리 표시자)는 검사 불가로 친다 — 가짜 오류 수십 건.
 - **X-매크로 목록 `.xxx` 의 정본은 `Core/Predefined/`** 이고 죽은 사본은 `CheckDataFileReferences` 가 막는다. `PredefinedNameType.xxx` 의 줄 순서가 곧 intern 인덱스다(중간 삽입
-  금지, 대소문자만 다른 이름 금지).
+  금지, 대소문자만 다른 이름 금지). `CheckDataFileReferences` 는 참조 파일(.cpp · .h · .cmake · .py · .txt · .json · .xxx …)이 staged 됐을 때만 훅에서 돈다.
+  게이트의 제외 폴더는 `kNotOurDirNames` 를 쓴다 — 게이트마다 목록을 들지 말 것(자체 목록이 `LLVM` 을 빠뜨려 그 헤더를 참조 파일로 읽고 있었다).
 - **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
   `Style/HeaderMemberInitializer` 는 전체 스캔에서만 돈다. `Naming/OutParameter` 는 `out` 이 든 지역 변수(`arrOutput`)를 오탐한다. 게이트는 파일을 동시에 훑으니 규칙
   객체에 상태를 들지 말 것. 자기 시험 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
