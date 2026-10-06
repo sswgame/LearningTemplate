@@ -155,7 +155,7 @@ namespace sw::editor
             VkWin32SurfaceCreateInfoKHR create_info = {};
             create_info.sType                       = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
             create_info.hwnd                        = static_cast<HWND>( pVp->PlatformHandleRaw );
-            create_info.hinstance                   = GetModuleHandle( nullptr );
+            create_info.hinstance                   = GetModuleHandleW( nullptr );
             VkResult result                         = vkCreateWin32SurfaceKHR( reinterpret_cast<VkInstance>( vulkanInstance ), &create_info, static_cast<const VkAllocationCallbacks*>( pVkAllocators ), reinterpret_cast<VkSurfaceKHR*>( pOutVkSurface ) );
             return result;
         };

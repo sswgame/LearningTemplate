@@ -200,7 +200,7 @@ namespace sw
         if ( FAILED( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _fence.GetAddressOf() ) ) ) )
             return false;
         _fenceValue = 1;
-        _fenceEvent = CreateEvent( nullptr, FALSE, FALSE, nullptr );
+        _fenceEvent = CreateEventW( nullptr, FALSE, FALSE, nullptr );
 
         if ( createGlobalResources() == false )
             return false;

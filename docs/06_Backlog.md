@@ -764,6 +764,7 @@ cd build/Ninja-Debug/Bin
   모든 TU 에 `Convex` · `None` 같은 매크로가 퍼져 Jolt(`EShapeType::Convex`)가 리눅스 다섯 잡을 세웠다 — Windows 빌드는 원리상 못 본다. 유니티 빌드는 X11 `.cpp` 를
   include 줄을 보고 묶음에서 뺀다(`sw_skipUnityForX11Sources`).
 - **플랫폼 스텁도 인터페이스를 따라간다** — `IWindow` 에 가상 함수를 더하면 `Win32Window` 의 비-Windows `#else` 스텁에도 정의를 둔다(빠지면 리눅스 링크만 진다).
+- **Win32 는 W 판을 이름으로 부른다** — 이 저장소는 UNICODE 를 정의하지 않아 일반 이름(`DefWindowProc` · `LoadCursor` · `CreateFile` …)은 A 판이다. W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목이 "S" 한 글자였다(`WindowTest.TitleReachesTheOsAsUtf16`). 게이트 `CheckWin32WideCalls.py`, `IDC_*` 는 `reinterpret_cast<LPCWSTR>` 로 넘긴다. 전역 UNICODE 정의(언리얼)는 대상마다 정의가 빠지면 말없이 A 로 돌아가 택하지 않았다.
   올라온 이미지는 이름이 아니라 주소로 찾는다(`ModuleBuildId::find( &함수 )._modulePath`) — `Engine.dll` 을 글자로 찾던 시험이 리눅스(`Lib/libEngine.so`)에서
   늘 건너뛰어 "아무것도 검증하지 않은 스위트" 로 졌다.
 - **CI 가 끝까지 돌게 하는 세 가지**(`.github/workflows/ci.yml`). ① main 은 `cancel-in-progress: false` — push 가 실행 시간보다 잦으면 끝나는 실행이 0 건이 된다(10-04 7 시간).

@@ -478,21 +478,21 @@ namespace sw
     {
         if ( AccessibilityInternal::s_bDisabled == false )
         {
-            SystemParametersInfo( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfo( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfo( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+            SystemParametersInfoW( SPI_GETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+            SystemParametersInfoW( SPI_GETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+            SystemParametersInfoW( SPI_GETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
 
             STICKYKEYS stickyKeys = AccessibilityInternal::s_prevStickyKeys;
             stickyKeys.dwFlags &= static_cast<DWORD>( ~( SKF_STICKYKEYSON | SKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
+            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &stickyKeys, 0 );
 
             TOGGLEKEYS toggleKeys = AccessibilityInternal::s_prevToggleKeys;
             toggleKeys.dwFlags &= static_cast<DWORD>( ~( TKF_TOGGLEKEYSON | TKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
+            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &toggleKeys, 0 );
 
             FILTERKEYS filterKeys = AccessibilityInternal::s_prevFilterKeys;
             filterKeys.dwFlags &= static_cast<DWORD>( ~( FKF_FILTERKEYSON | FKF_HOTKEYACTIVE ) );
-            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
+            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &filterKeys, 0 );
 
             AccessibilityInternal::s_bDisabled = true;
         }
@@ -502,9 +502,9 @@ namespace sw
     {
         if ( AccessibilityInternal::s_bDisabled == true )
         {
-            SystemParametersInfo( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
-            SystemParametersInfo( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
-            SystemParametersInfo( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
+            SystemParametersInfoW( SPI_SETSTICKYKEYS, sizeof( STICKYKEYS ), &AccessibilityInternal::s_prevStickyKeys, 0 );
+            SystemParametersInfoW( SPI_SETTOGGLEKEYS, sizeof( TOGGLEKEYS ), &AccessibilityInternal::s_prevToggleKeys, 0 );
+            SystemParametersInfoW( SPI_SETFILTERKEYS, sizeof( FILTERKEYS ), &AccessibilityInternal::s_prevFilterKeys, 0 );
             AccessibilityInternal::s_bDisabled = false;
         }
     }

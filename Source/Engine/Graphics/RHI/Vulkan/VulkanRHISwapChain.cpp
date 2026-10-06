@@ -45,7 +45,7 @@ namespace sw
         VkWin32SurfaceCreateInfoKHR createInfo{};
         createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
         createInfo.hwnd      = static_cast<HWND>( pWindowHandle );
-        createInfo.hinstance = GetModuleHandle( nullptr );
+        createInfo.hinstance = GetModuleHandleW( nullptr );
 
         if ( vkCreateWin32SurfaceKHR( instance, &createInfo, nullptr, &_surface ) != VK_SUCCESS )
         {

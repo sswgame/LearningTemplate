@@ -97,11 +97,12 @@ namespace sw
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
         WNDCLASSEXW wc{};
-        wc.cbSize        = sizeof( WNDCLASSEXW );
-        wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DROPSHADOW;
-        wc.lpfnWndProc   = splashWndProc;
-        wc.hInstance     = hInstance;
-        wc.hCursor       = LoadCursor( nullptr, IDC_ARROW );
+        wc.cbSize      = sizeof( WNDCLASSEXW );
+        wc.style       = CS_HREDRAW | CS_VREDRAW | CS_DROPSHADOW;
+        wc.lpfnWndProc = splashWndProc;
+        wc.hInstance   = hInstance;
+        // IDC_* 는 TCHAR 매크로(A 판 포인터 모양의 정수 자원 id)라 W 판에 맞게 넘긴다.
+        wc.hCursor       = LoadCursorW( nullptr, reinterpret_cast<LPCWSTR>( IDC_ARROW ) );
         wc.hbrBackground = nullptr;
         wc.lpszClassName = Win32SplashWindowInternal::kSplashClassName;
 
