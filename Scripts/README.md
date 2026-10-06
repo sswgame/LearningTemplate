@@ -31,6 +31,8 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 | `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Configure*` · `Sample*` …) | 사람이 가끔 — 시험 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
 | `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 견주기 |
 
+`gate/CheckScriptLayout.py` 가 이 표를 지킨다(린트 폴더는 기반 클래스까지). 진입점은 모두 `main(argv)` 로 인자를 받는다(`CheckScriptEntryPoints`).
+
 ```
 Scripts/
   ├── common/                         # [공용 계층] 다른 폴더는 여기만 import 한다
@@ -128,8 +130,9 @@ Scripts/
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
-  │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8)
+  │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지
   │     │     ├── CheckScriptCommonHelpers.py # common 의 한 자리(runProcess · BuildTree · writeGeneratedFile · 콘솔)를 비켜 가는 호출
+  │     │     ├── CheckScriptLayout.py        # 폴더마다 파일 이름 앞머리 · 린트 기반 클래스(아래 Layout 표)
   │     │     ├── CheckHeaderSelfContained.py # staged 헤더가 혼자 서는지 — 빌드 폴더가 있을 때만, CTest 린트에는 안 든다(ctestSkipReason)
   │     │     ├── CheckPythonMinimumVersion.py # CI 의 파이썬에서도 파싱되는지
   │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
@@ -162,7 +165,7 @@ Scripts/
   │           └── CheckReportsRun.py          # report/ 의 보고서가 모두 LintReport 이고 --help 로 뜨는지
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
-  │     ├── BackendSmoke.py           # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
+  │     ├── RunBackendSmoke.py        # 네 백엔드로 같은 씬을 그려 SceneColor 를 비교
   │     ├── CiFailureReport.py        # CI 실패(시험 · 구성 · 크래시 스택)를 GitHub 주석으로 — ci.yml 이 부른다
   │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
   │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 시험 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)

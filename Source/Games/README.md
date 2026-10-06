@@ -113,7 +113,7 @@
 `-gv_benchMeshes=N` 을 주면 큐브 N 개를 격자로 세우고 매 프레임 흔듭니다.
 
 그릴 것이 씬에 올라가야 렌더 비용을 잴 수 있고, **씬을 만드는 것은 엔진이 아니라 게임의 일**이라
-여기 있습니다. `Scripts/dev/BackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
+여기 있습니다. `Scripts/dev/RunBackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
 플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
 
 그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는

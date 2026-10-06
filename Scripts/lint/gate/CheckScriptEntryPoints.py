@@ -13,6 +13,9 @@ Scripts/lint/gate/CheckScriptEntryPoints.py
 - **함수 안의 import 는 치지 않는다** — 그 함수가 불리기 전의 출력은 보호받지 못한다(`RunForwardDeclarationCandidates.py` 가
   `--verify-unused` 갈래에서만 `common` 을 끌어와 `--apply` 끝에서 죽었다).
 
+진입점은 또 **인자를 받는다**: 모듈 수준 `def main()` 은 첫 인자(`argv`)가 있어야 하고, `parse_args()` 를 인자 없이 부르지 않는다 —
+그러면 프로그램에서 인자를 넘길 수 없어 `py -3 -m Scripts` · 시험이 부를 수 없다(`main = XxxGate.run` 은 기반이 받는다).
+
   python Scripts/lint/gate/CheckScriptEntryPoints.py [--root <repo>] [--files a.py b.py]
 """
 
@@ -44,6 +47,19 @@ def isMainGuardInternal(node: ast.stmt) -> bool:
     bName = any(isinstance(operand, ast.Name) and operand.id == "__name__" for operand in listOperand)
     bMain = any(isinstance(operand, ast.Constant) and operand.value == "__main__" for operand in listOperand)
     return bName and bMain
+
+
+def findArgumentProblemsInternal(tree: ast.Module) -> list[str]:
+    """진입점이 인자를 받지 못하는 자리 — 인자 없는 모듈 수준 `def main()`, 인자 없는 `parse_args()`."""
+    listProblem: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "main" and not node.args.args and node.args.vararg is None:
+            listProblem.append(f"{node.lineno}: def main() 이 인자를 받지 않습니다 — main(argv: list[str] | None = None)")
+    for node in ast.walk(tree):
+        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "parse_args"
+                and not node.args and not node.keywords):
+            listProblem.append(f"{node.lineno}: parse_args() 를 인자 없이 부릅니다 — parse_args(argv)")
+    return listProblem
 
 
 def collectModuleLevelImportsInternal(listStatement: list[ast.stmt], outListName: list[str]) -> None:
@@ -83,6 +99,7 @@ class ScriptModuleGraph:
         self._mapPathToEntryPoint: dict[Path, bool] = {}
         self._mapStemToPath: dict[str, list[Path]] = {}
         self._mapPathToReach: dict[Path, bool] = {}
+        self._mapPathToArgumentProblem: dict[Path, list[str]] = {}
         self.listParseError: list[str] = []
         for path, text in LintGate.readFiles(listPath):
             resolved = path.resolve()
@@ -95,11 +112,15 @@ class ScriptModuleGraph:
             collectModuleLevelImportsInternal(tree.body, listName)
             self._mapPathToImport[resolved] = listName
             self._mapPathToEntryPoint[resolved] = path.name == "__main__.py" or any(isMainGuardInternal(node) for node in tree.body)
+            self._mapPathToArgumentProblem[resolved] = findArgumentProblemsInternal(tree)
             if path.stem != "__init__":
                 self._mapStemToPath.setdefault(path.stem, []).append(resolved)
 
     def isEntryPoint(self, path: Path) -> bool:
         return self._mapPathToEntryPoint.get(path.resolve(), False)
+
+    def findArgumentProblems(self, path: Path) -> list[str]:
+        return self._mapPathToArgumentProblem.get(path.resolve(), [])
 
     def reachesCommon(self, path: Path) -> bool:
         """이 모듈을 읽으면 `common` 이 import 되는가(모듈 수준 import 를 따라간다)."""
@@ -149,6 +170,8 @@ def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> 
         if not graph.reachesCommon(path):
             listViolation.append(f"{path.relative_to(repositoryRoot).as_posix()}: 진입점이 모듈 수준에서 common 을 import 하지 않습니다"
                                  " — Windows 콘솔(cp949)에서 한국어 출력이 UnicodeEncodeError 로 죽습니다")
+        listViolation.extend(f"{path.relative_to(repositoryRoot).as_posix()}:{problem} — 프로그램에서 인자를 넘길 수 없다"
+                             for problem in graph.findArgumentProblems(path))
     return listViolation, entryPointCount
 
 
@@ -160,12 +183,13 @@ class CheckScriptEntryPointsGate(LintGate):
     timeoutSeconds = 30
     preCommitPattern = ("Scripts/*.py",)
     preCommitFileArgument = "--files"
-    violationHeader = "진입점 콘솔 초기화 누락"
+    violationHeader = "진입점 콘솔 초기화 · 인자 받기 누락"
     hint = (
         "  진입점 머리에서 Scripts 를 sys.path 에 넣고 common 을 import 합니다:\n"
         "    sys.path.insert(0, str(Path(__file__).resolve().parents[N]))   # Scripts\n"
         "    import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다\n"
-        "  함수 안의 import 는 그 함수 전의 출력을 지키지 못합니다 — 모듈 수준에 둡니다."
+        "  함수 안의 import 는 그 함수 전의 출력을 지키지 못합니다 — 모듈 수준에 둡니다.\n"
+        "  진입점은 main(argv: list[str] | None = None) 이고 parser.parse_args(argv) 로 읽습니다."
     )
     selfTestCases = [
         {
@@ -186,6 +210,17 @@ class CheckScriptEntryPointsGate(LintGate):
                 "Scripts/report/ProbeEntry.py": "import sys\nfrom ProbeHelper import kProbeValue\n\n"
                                                 "if __name__ == \"__main__\":\n    print(kProbeValue)\n",
             },
+        },
+        {
+            "name": "인자를 받지 않는 main()",
+            "files": {"Scripts/report/ProbeArgless.py": "import sys\nimport common\n\n\ndef main():\n    return 0\n\n\n"
+                                                         "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
+        },
+        {
+            "name": "parse_args() 를 인자 없이",
+            "files": {"Scripts/report/ProbeParse.py": "import argparse\nimport sys\nimport common\n\n\ndef main(argv=None):\n"
+                                                       "    argparse.ArgumentParser().parse_args()\n    return 0\n\n\n"
+                                                       "if __name__ == \"__main__\":\n    sys.exit(main())\n"},
         },
         {
             "name": "python -m 진입점(__main__.py)",

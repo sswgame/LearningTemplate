@@ -4,7 +4,7 @@
  *
  * @details **새 게임을 시작할 때 지울 파일이다.** 이 템플릿이 벤치를 들고 있는 이유는 하나다 —
  *          렌더 경로를 재려면 그릴 것을 씬에 올려야 하고, 씬을 만드는 것은 엔진이 아니라 게임의
- *          일이다. `Scripts/dev/BackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이
+ *          일이다. `Scripts/dev/RunBackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이
  *          이 플래그에 기대고 있으므로 타겟과 플래그 이름은 바꾸지 않는다.
  */
 #pragma once

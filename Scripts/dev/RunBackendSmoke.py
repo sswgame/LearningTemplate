@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-@file BackendSmoke.py
+@file RunBackendSmoke.py
 @brief 네 백엔드(DX12/Vulkan/DX11/GL)로 벤치 큐브 씬을 그려 SceneColor 를 PPM 으로 받아 비교하는 스모크.
 
 사용법 (빌드 후):
-    py -3 Scripts/dev/BackendSmoke.py                # 불투명 + 반투명 회차, 네 백엔드
-    py -3 Scripts/dev/BackendSmoke.py --preset Ninja-Release --out C:/tmp/smoke
-    py -3 Scripts/dev/BackendSmoke.py --backends dx12 vk               # 고른 백엔드만
+    py -3 Scripts/dev/RunBackendSmoke.py                # 불투명 + 반투명 회차, 네 백엔드
+    py -3 Scripts/dev/RunBackendSmoke.py --preset Ninja-Release --out C:/tmp/smoke
+    py -3 Scripts/dev/RunBackendSmoke.py --backends dx12 vk               # 고른 백엔드만
 
 판정: 각 실행이 exit 0 이고, 로그의 [Error] 수와 PPM 의 평균 RGB·"배경이 아닌 픽셀 수" 를 표로 낸다.
 네 백엔드의 평균이 서로 1.0 이내이고 non-bg 픽셀 수가 0 이 아니면 정상이다.
