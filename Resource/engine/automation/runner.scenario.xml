@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 실행기 자체(어느 게임 프리셋에서나 돈다): 시작 조건 · 고정 프레임 시간 · 가상 키 · 스크린샷 · 픽셀 지표 · 로그 · 종료 코드.
+  실행: App.exe -scenario=engine/automation/runner.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.runner" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<!-- 게임에 가지 않는 키(ScrollLock)를 가상 키보드로 누르고 뗀다 — 입력 단계가 프레임 번호대로 들어가는지는 단위 시험(VirtualInputTest)이 본다 -->
+	<At frame="5"><Tap slot="Key.ScrollLock" hold="2"/></At>
+	<At frame="30"><Screenshot file="frame30.ppm"/></At>
+	<!-- 화면에 무언가 나갔다(완전히 검지 않다) — 첫 프레임에 그릴 것이 없는 백엔드 결함의 그물 -->
+	<At frame="31">
+		<ExpectImage file="frame30.ppm" metric="meanLuma" atLeast="0.01"/>
+		<ExpectLog contains="Quit requested" count="0"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -95,3 +95,25 @@ namespace sw
 
 - 탐침은 그 게임의 컴포넌트 .cpp(다른 기호가 쓰이는 파일)에 둡니다 — Shipping 정적 링크에서 등록자가 빠지지 않게(`SW_GAME_AUTOPLAY` 와 같은 처지).
 - 모듈을 내리면(핫 리로드) 그 모듈의 탐침 · 단계도 빠집니다. 같은 이름은 두 번 등록되지 않습니다(뒤 것을 거절하고 오류).
+
+## CTest — `AppScenarioTest`(hostgpu)
+
+`Test/AppTest/TestAppScenario.cpp` 가 `Resource/engine/automation/*.scenario.xml` 과 활성 게임 팩(`Config/Game/<게임>.json` 의 `_packRoot`)의
+`automation/*.scenario.xml` 을 찾아 **백엔드마다** `App -scenario=… -scenario-report=…` 로 띄우고 종료 코드 0 을 단언합니다(13 건너뜀 · 77 이 기계에 없는 백엔드,
+시나리오마다 180 초 시한). 파일을 놓기만 하면 돈다 — CMake 에 목록을 적지 않는다. 게임은 프리셋마다 하나라 게임 시나리오는 그 프리셋에서 돈다:
+
+```powershell
+ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --output-on-failure
+```
+
+로그 · 보고는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log` · `.json`.
+
+## 에디터 단계(에디터 모듈이 등록 — `-EnableEditor`)
+
+| 단계 | 속성 | 하는 일 |
+|---|---|---|
+| `EditorClick` | `mark`(에디터 자체 시험 이름표 — `EditorSelfTestMarks::note`) · `button`(0..4) | 그 위젯 가운데로 마우스를 옮겨 누르고 뗀다 |
+| `EditorText` | `value` | ImGui 에 글자 입력 |
+
+에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로(Win32 메시지를 ImGui 백엔드가 직접 받는다) 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
+이 단계를 쓰는 시나리오는 시작할 때 위젯 이름표 적기를 켭니다.
