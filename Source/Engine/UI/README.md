@@ -516,3 +516,8 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   덤프해 `Test/EngineTest/UI/Golden/<견본>.layout.txt` · `.canvas.txt` 와 견준다(조건마다 새 UI 시스템, 여는 애니메이션이 끝난 뒤). 가짜 래스터라이저라 글꼴 ·
   FreeType 판이 바뀌어도 그대로다. 레이아웃 · 그리기 규칙을 바꿨으면 `SW_UPDATE_GOLDEN=1` 로 이 스위트를 돌려 다시 쓰고, diff 를 보고 같은 커밋에 넣는다.
 - **순서가 새지 않는다**: 같은 견본을 새 시스템 둘로 지으면 바이트까지 같고, 위젯을 만드는 순서를 섞어도(번호가 달라도) 트리 순서가 같으면 같다.
+- **탐색 열**(`UiNavigationScriptTest`): 자동화 시나리오 형식(`<At frame><Tap slot="Gamepad.DPadDown"/></At>` + `<ExpectUi focus screen screens/>`)을 가상 입력
+  (`VirtualInputScript`)으로 재생해 포커스를 단언한다 — 닫으면 연 단추로 돌아오는가, 모달이 네 방향 어디로도 아래 화면에 새지 않는가. `ExpectUi` 는 실기동
+  시나리오 단계와 같은 판정(`Automation/UiAutomationSteps::isExpectUiMet`)이고, `engine/automation/uinavigation.scenario.xml` 이 같은 단계로 App 을 네 백엔드에서 몬다.
+- **패드 도달성**: `engine/ui` 의 모든 `.ui.xml`(조각 폴더 빼고 — 새 문서는 자동으로 든다)을 열어 시작 위젯(기본 포커스 · 없으면 첫 위젯)에서 네 방향 BFS 로
+  포커스 가능한 위젯 전부에 닿는지 본다. 옵션 문서는 `OptionsMenuScreen` 으로 열어 탭마다. 막힌 위젯은 문서 · 위젯 이름으로 실패한다 — "패드로 못 가는 단추" 의 게이트.

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 런타임 UI 를 가상 패드로만 몬다(어느 게임 프리셋에서나 돈다): 옵션 메뉴를 열고 어깨 단추로 탭을, DPad 로 행을 옮기고 B 로 닫는다.
+  ExpectUi 판정은 nogpu UiNavigationScriptTest 와 같은 함수(UiAutomationSteps::isExpectUiMet)다. 행 이름은 엔진 스키마(engine/settings/engine.settings.xml) 순서.
+  탭 줄은 창 너비에 따라 접히므로(WrapPanel) 탭 사이는 DPad 가 아니라 어깨 단추로 옮긴다 — 탭을 바꾸면 첫 행에 포커스가 간다.
+  실행: App.exe -scenario=engine/automation/uinavigation.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.uinavigation" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_uiOptionsMenu" value="1"/></At>
+	<At frame="5"><ExpectUi screen="engine/ui/options.ui.xml"/></At>
+	<At frame="6"><Tap slot="Gamepad.RightShoulder"/></At>
+	<At frame="10"><ExpectUi focus="graphics.quality.Value"/></At>
+	<At frame="11"><Tap slot="Gamepad.LeftShoulder"/></At>
+	<At frame="15"><ExpectUi focus="display.windowMode.Value"/></At>
+	<At frame="16"><Tap slot="Gamepad.DPadDown"/></At>
+	<At frame="20"><ExpectUi screen="engine/ui/options.ui.xml" focus="display.resolution.Value"/></At>
+	<!-- 뒤로(B) — 보류 값이 없으니 닫힌다. 스위치도 내려 다시 열지 않게 한다 -->
+	<At frame="21"><Tap slot="Gamepad.B"/><Variable name="gv_uiOptionsMenu" value="0"/></At>
+	<At frame="40">
+		<ExpectUi screen="none" focus="none"/>
+		<Pass/>
+	</At>
+</Scenario>

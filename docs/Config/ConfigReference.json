@@ -2853,7 +2853,7 @@
    "name": "gv_uiOptionsMenu",
    "type": "bool",
    "default": "false",
-   "kind": "시험",
+   "kind": "시험 · 배포본에도",
    "description": "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷)",
    "source": "Source/Engine/UI/Screens/OptionsMenuScreen.cpp"
   },

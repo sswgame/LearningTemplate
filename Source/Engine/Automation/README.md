@@ -60,6 +60,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
 | `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
+| `ExpectUi` | `focus`(위젯 이름 · `none`) · `screen`(활성 화면 문서 · `none`) · `screens`(화면 수) 중 하나 이상 | 런타임 UI 단언 — 엔진 UI 가 등록(`Engine/UI/Automation/UiAutomationSteps`), 같은 판정을 nogpu `UiNavigationScriptTest` 가 쓴다 | 결과 |
 | 그 밖 | — | 등록표(`AutomationStepRegistry`)에서 이름으로 찾는다 | |
 
 - **모르는 엘리먼트 · 모르는 속성 · 형식이 틀린 값 · 모르는 탐침 · 모르는 gv 는 읽기 오류(11)** — 조용히 버리지 않습니다. 단계 종류 · 탐침 검사는

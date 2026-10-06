@@ -19,6 +19,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/UI/Automation/UiAutomationSteps.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/Window/IWindow.h"
 
@@ -183,6 +184,7 @@ namespace sw
         , _reserved{ 0 }
     {
         AutomationWindowSteps::ensureLinked();
+        UiAutomationSteps::ensureLinked();
     }
 
     AutomationRunner::~AutomationRunner()
