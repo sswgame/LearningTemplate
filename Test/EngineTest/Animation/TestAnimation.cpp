@@ -26,7 +26,7 @@ using namespace sw;
 namespace
 {
     /** @brief 이름 붙은 노드만 가진 그래프를 @p path 에 씁니다(링크 없음). */
-    bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
+    [[nodiscard]] bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
     {
         AnimGraphAsset graph;
         int32          nodeId = 1;
@@ -41,7 +41,7 @@ namespace
     }
 
     /** @brief 애니메이터의 그래프 경로 PROPERTY 를 쓰고, 인스펙터 · 에셋 핫 리로드처럼 바뀐 칸을 알립니다. */
-    bool writeGraphPath( SpriteAnimatorComponent* pAnimator, const string& path )
+    [[nodiscard]] bool writeGraphPath( SpriteAnimatorComponent* pAnimator, const string& path )
     {
         const PropertyInfo* pProperty = pAnimator->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_animGraphPath" ) );
         if ( pProperty == nullptr )

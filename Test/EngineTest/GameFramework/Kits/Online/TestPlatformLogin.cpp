@@ -105,7 +105,7 @@ namespace
     public:
         string _lastUrl{};
 
-        bool openUrl( string_view url ) override
+        [[nodiscard]] bool openUrl( string_view url ) override
         {
             _lastUrl = string( url );
             return true;

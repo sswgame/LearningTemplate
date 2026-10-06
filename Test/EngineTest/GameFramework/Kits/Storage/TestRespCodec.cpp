@@ -18,7 +18,7 @@ namespace
     vector<uint8> makeBytes( const utf8* pText ) { return makeBytes( pText, std::strlen( pText ) ); }
 
     /** @brief @p bytes 를 @p chunkSize 조각으로 넣으며 값을 모두 꺼냅니다. 오류면 false. */
-    bool parseAll( const vector<uint8>& bytes, size_t chunkSize, vector<RespValue>& outListValue )
+    [[nodiscard]] bool parseAll( const vector<uint8>& bytes, size_t chunkSize, vector<RespValue>& outListValue )
     {
         RespParser parser;
         for ( size_t offset = 0; offset < bytes.size(); offset += chunkSize )

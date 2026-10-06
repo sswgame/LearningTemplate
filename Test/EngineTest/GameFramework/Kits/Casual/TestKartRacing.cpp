@@ -47,7 +47,7 @@ namespace
 
     constexpr float32 kKartRacingStep = 1.0f / 60.0f;
 
-    bool loadTestTrack( KartTrack& outTrack, int32 lapCount )
+    [[nodiscard]] bool loadTestTrack( KartTrack& outTrack, int32 lapCount )
     {
         KartTrackCatalog catalog;
         if ( catalog.loadFromXmlText( kTrackXml, "test" ) == false || catalog.findTrack( "oval" ) == nullptr )

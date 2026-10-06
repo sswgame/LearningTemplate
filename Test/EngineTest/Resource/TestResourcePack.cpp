@@ -83,7 +83,7 @@ namespace sw
         };
 
         /** @brief 같은 키를 텍스트 · 바이너리로 둘 다 읽습니다. 둘 다 읽었으면 true. */
-        bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
+        [[nodiscard]] bool readTextAndBinaryResource( const utf8* pKey, string& outText, string& outBinary )
         {
             vector<uint8> bytes;
             const bool    bText   = ResourceUtil::readTextResource( pKey, outText );
@@ -93,7 +93,7 @@ namespace sw
         }
 
         /** @brief 이미 만들어진 팩 파일의 헤더를 읽고(있는 그대로) 다시 쓰는 테스트 헬퍼. */
-        bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
+        [[nodiscard]] bool readPackHeaderFromDisk( const string& packPath, PackHeader& outHeader )
         {
             vector<uint8> bytes;
             if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
@@ -103,7 +103,7 @@ namespace sw
         }
 
         /** @brief 팩의 FAT 항목 하나를 읽습니다. 헤더가 적어 둔 인덱스 오프셋을 씁니다. */
-        bool readPackEntryFromDisk( const string& packPath, uint32 entryIndex, PackFileEntryOnDisk& outEntry )
+        [[nodiscard]] bool readPackEntryFromDisk( const string& packPath, uint32 entryIndex, PackFileEntryOnDisk& outEntry )
         {
             PackHeader header{};
             if ( readPackHeaderFromDisk( packPath, header ) == false || entryIndex >= header._fileCount )
@@ -121,7 +121,7 @@ namespace sw
         }
 
         /** @brief 팩의 FAT 항목 하나를 덮어씁니다. */
-        bool writePackEntryToDisk( const string& packPath, uint32 entryIndex, const PackFileEntryOnDisk& entry )
+        [[nodiscard]] bool writePackEntryToDisk( const string& packPath, uint32 entryIndex, const PackFileEntryOnDisk& entry )
         {
             PackHeader header{};
             if ( readPackHeaderFromDisk( packPath, header ) == false || entryIndex >= header._fileCount )
@@ -138,7 +138,7 @@ namespace sw
             return FileUtil::writeFile( packPath, bytes.data(), static_cast<uint64>( bytes.size() ) );
         }
 
-        bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
+        [[nodiscard]] bool writePackHeaderToDisk( const string& packPath, const PackHeader& header )
         {
             vector<uint8> bytes;
             if ( FileUtil::readFile( packPath, bytes ) == false || bytes.size() < sizeof( PackHeader ) )
@@ -335,18 +335,18 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
     const sw::string patchPack  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_vfs_patch.pack" );
 
     // 1. 각 팩에 동일한 키의 파일 생성
-    sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
-                                                                                                      { "config/gameplay.xml", "VERSION_ENGINE" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
-                                                                                                    { "config/gameplay.xml", "VERSION_GAME" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( dlcPack, 0, sw::PackCompressionType::None, {
-                                                                                                   { "config/gameplay.xml", "VERSION_DLC" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( patchPack, 0, sw::PackCompressionType::None, {
-                                                                                                     { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
-    } );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
+                                                                                                                      { "config/gameplay.xml", "VERSION_ENGINE" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
+                                                                                                                    { "config/gameplay.xml", "VERSION_GAME" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( dlcPack, 0, sw::PackCompressionType::None, {
+                                                                                                                   { "config/gameplay.xml", "VERSION_DLC" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( patchPack, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "config/gameplay.xml", "VERSION_PATCH_HOTFIX" }
+    } ) );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();
@@ -429,9 +429,9 @@ SW_TEST_CASE( ResourcePackTest, LooseFileOverrideOption )
     const sw::string packPath  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_opt.pack" );
     const sw::string loosePath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_loose_file.xml" );
 
-    sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
-                                                                                                    { "test_loose_file.xml", "CONTENT_IN_PACK" }
-    } );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::None, {
+                                                                                                                    { "test_loose_file.xml", "CONTENT_IN_PACK" }
+    } ) );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( loosePath, "CONTENT_ON_DISK" ) );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
@@ -571,21 +571,21 @@ SW_TEST_CASE( ResourcePackTest, DynamicPriorityAutoCalculation )
     const sw::string patchGame  = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_game_main_autotest.pack" );
     const sw::string hotfixPack = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "patch_hotfix_autotest.pack" );
 
-    sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
-                                                                                                      { "core/version.txt", "ENGINE_1.0" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( commonPack, 0, sw::PackCompressionType::None, {
-                                                                                                      { "core/version.txt", "COMMON_1.0" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
-                                                                                                    { "core/version.txt", "GAME_1.0" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( patchGame, 0, sw::PackCompressionType::None, {
-                                                                                                     { "core/version.txt", "PATCH_GAME_1.1" }
-    } );
-    sw::test::ResourcePackTestUtil::createPackFile( hotfixPack, 0, sw::PackCompressionType::None, {
-                                                                                                      { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
-    } );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( enginePack, 0, sw::PackCompressionType::None, {
+                                                                                                                      { "core/version.txt", "ENGINE_1.0" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( commonPack, 0, sw::PackCompressionType::None, {
+                                                                                                                      { "core/version.txt", "COMMON_1.0" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( gamePack, 0, sw::PackCompressionType::None, {
+                                                                                                                    { "core/version.txt", "GAME_1.0" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( patchGame, 0, sw::PackCompressionType::None, {
+                                                                                                                     { "core/version.txt", "PATCH_GAME_1.1" }
+    } ) );
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( hotfixPack, 0, sw::PackCompressionType::None, {
+                                                                                                                      { "core/version.txt", "HOTFIX_GLOBAL_1.2" }
+    } ) );
 
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::ResourcePackManager& packManager = sw::ResourceUtil::getPackManager();

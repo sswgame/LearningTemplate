@@ -20,7 +20,7 @@ namespace sw
     struct StateReloadTestUtil
     {
         /** @brief @p pObject 의 상태를 다시 읽고 새 컴포넌트의 시작을 부릅니다. 찍거나 읽지 못하면 false 입니다. */
-        static bool reloadInPlace( GameObject* pObject )
+        [[nodiscard]] static bool reloadInPlace( GameObject* pObject )
         {
             if ( pObject == nullptr )
                 return false;

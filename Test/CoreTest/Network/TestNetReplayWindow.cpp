@@ -74,7 +74,7 @@ namespace
             outError = "not supported";
             return nullptr;
         }
-        bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override
+        [[nodiscard]] bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override
         {
             (void)commonName;
             (void)validDays;
@@ -104,7 +104,7 @@ namespace
             (void)signatureSize;
             return false;
         }
-        bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override
+        [[nodiscard]] bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override
         {
             (void)algorithm;
             (void)outPrivateKeyPem;

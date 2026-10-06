@@ -132,9 +132,9 @@ namespace
     class CountingLogOutput final : public sw::ILogOutput
     {
     public:
-        bool open() override { return true; }
-        void close() override {}
-        void write( const sw::LogRecord& ) override { ++_writeCount; }
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const sw::LogRecord& ) override { ++_writeCount; }
 
         uint32 _writeCount{ 0 };
     };
@@ -143,9 +143,9 @@ namespace
     class CapturingLogOutput final : public sw::ILogOutput
     {
     public:
-        bool open() override { return true; }
-        void close() override {}
-        void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
 
         sw::vector<sw::string> _listFormatted;
     };

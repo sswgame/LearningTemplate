@@ -26,7 +26,7 @@ namespace
 
         /** @brief 엄격하게 읽고, 기본값과 같은 값을 다시 적은 키가 없는지도 봅니다(설정 파일에는 기본값과 다른 값만 적는다). */
         template <typename T>
-        static bool loadStrict( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadStrict( const sw::string& absolutePath )
         {
             T config{};
             if ( sw::ConfigManager::readConfigFile( config, absolutePath ) != sw::ConfigReadResult::Loaded )
@@ -40,7 +40,7 @@ namespace
             return true;
         }
 
-        static bool loadMemoryBudget( const sw::string& absolutePath )
+        [[nodiscard]] static bool loadMemoryBudget( const sw::string& absolutePath )
         {
             sw::string text;
             if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )

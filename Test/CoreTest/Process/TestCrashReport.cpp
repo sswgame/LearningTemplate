@@ -40,7 +40,7 @@ namespace
     }
 
     /** @brief 세션 ID 로 만들어지는 리포트 파일 하나를 읽습니다. */
-    bool readReportFileInternal( const utf8* pExtension, sw::string& outText )
+    [[nodiscard]] bool readReportFileInternal( const utf8* pExtension, sw::string& outText )
     {
         utf8 arrPath[sw::constant::kMaxBuffer1024]{};
         sw::buildCrashReportPath( arrPath, sw::constant::kMaxBuffer1024, pExtension );

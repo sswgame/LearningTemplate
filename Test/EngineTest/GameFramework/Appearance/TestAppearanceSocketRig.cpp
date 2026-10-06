@@ -72,7 +72,7 @@ namespace
             ItemCatalog        _items;
             AppearanceDatabase _database;
 
-            bool load()
+            [[nodiscard]] bool load()
             {
                 return _items.loadFromXmlText( kItemXml, "SocketRigTest.items" ) && _database.loadSectionFromXmlText( kSlotXml, "SocketRigTest.slots" ) &&
                        _database.loadSectionFromXmlText( kVisualXml, "SocketRigTest.visuals" ) && _database.loadSectionFromXmlText( kPresetXml, "SocketRigTest.presets" ) &&

@@ -48,7 +48,7 @@ namespace
 
     /** @brief 바이트를 읽어 넣습니다 — 끝까지 다 읽었을 때만 true 입니다. */
     template <typename TState>
-    bool restoreStateBytes( TState& inoutState, const vector<uint8>& bytes )
+    [[nodiscard]] bool restoreStateBytes( TState& inoutState, const vector<uint8>& bytes )
     {
         Archive archive( bytes.data(), bytes.size() );
         return inoutState.readState( archive ) && archive.getRemainingBytes() == 0;

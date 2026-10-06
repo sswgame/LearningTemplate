@@ -34,7 +34,7 @@ namespace test
     {
     public:
         /** @brief 프레임 렌더러의 transient 첨부(예: `"SceneColor"`)를 되읽습니다. 실패하면 false 이고 이미지는 빈다. */
-        bool readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName );
+        [[nodiscard]] bool readTransient( sw::FrameRenderer& renderer, sw::string_view attachmentName );
         /**
          * @brief 이미 가진 바이트를 이미지로 삼습니다 — 되읽기 없이 해석 규칙(BGRA 뒤집기 · 반정밀도)을 시험할 때.
          * @details 네 백엔드가 `SceneColor` 를 전부 RGBA8 로 되읽는 기계에서는 BGRA 뒤집기를 틀려도 GPU 케이스가 하나도 지지

@@ -16,7 +16,7 @@
 동사의 뜻은 "false = 그 일이 일어나지 않았다" 다. 할 일이 없어 true 인 것(`FileUtil::removeFile` 은 이미 없으면 true)도, 없어서 false 인
 컨테이너 도우미(`VectorUtil::removeSingleSwap`)도 그 뜻 안에 있다 — 버려도 되는 자리는 `(void)` 와 이유로 그렇다고 적는다.
 
-린트 대상(Source · Tools 의 C++ — `kLintProductRelDirs`)의 헤더뿐 아니라 `.cpp` · `.inl` 도 본다 — 번역 단위 지역 함수(익명 네임스페이스 안 · `static`)도 결과를 버리면 같은 결함이다.
+린트 대상(Source · Tools · Test 의 C++ — `kLintTargetRelDirs`)의 헤더뿐 아니라 `.cpp` · `.inl` 도 본다 — 번역 단위 지역 함수(익명 네임스페이스 안 · `static`)도 결과를 버리면 같은 결함이다.
 `.cpp` 에서 이름 있는 네임스페이스에 둔 정의(`namespace sw::internal { bool tryX() … }`)와 `Foo::loadX(` 같은 멤버 정의는 헤더에 선언된
 것을 정의하는 자리라 보지 않는다 — 속성은 헤더 선언이 든다. 반환 타입만 한 줄에 두고 이름을 다음 줄에 쓴
 선언도 본다. `[[nodiscard]]` 는 같은 줄이나, 주석 · `template <…>` 줄을 건너뛴 바로 위 줄에 있으면 된다.
@@ -36,7 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintProductRelDirs, normalizePath  # noqa: E402
+from common import kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListFallibleVerb = (
@@ -57,8 +57,8 @@ _kNameOnlyRe = re.compile(r"^\s*" + _kFallibleNamePattern + r"\s*\(")
 # `[[nodiscard]]` 를 찾을 때 건너뛰는 윗줄 — 주석과 템플릿 머리.
 _kSkippedAboveRe = re.compile(r"^\s*(?://|/\*|\*|template\s*<)")
 
-#: 린트 대상에서 시험을 뺀 것(Source · Tools 의 C++) — 시험 도우미는 다음 단계(U3)에서 같은 규칙에 든다.
-_kListScanRoot = kLintProductRelDirs
+#: 린트 대상 전체(Source · Tools · Test 의 C++) — 시험 도우미의 false 를 버리면 시험이 통과한 척 한다.
+_kListScanRoot = kLintTargetRelDirs
 _kListScanSuffix = (".h", ".cpp", ".inl")
 
 

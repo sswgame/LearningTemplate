@@ -306,9 +306,9 @@ namespace test
             return versionIt == _mapKeyVersion.end() ? 0 : versionIt->second;
         }
 
-        static bool parseInteger( const sw::RespValue& value, int64& outValue ) { return parseIntegerText( value.getText(), outValue ); }
+        [[nodiscard]] static bool parseInteger( const sw::RespValue& value, int64& outValue ) { return parseIntegerText( value.getText(), outValue ); }
 
-        static bool parseIntegerText( sw::string_view text, int64& outValue )
+        [[nodiscard]] static bool parseIntegerText( sw::string_view text, int64& outValue )
         {
             if ( text.empty() )
                 return false;

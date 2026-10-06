@@ -504,7 +504,7 @@ namespace test
                      result._desyncRecoverTicks, result._settleTicks );
     }
 
-    inline bool loadShowcase( SceneDocument& outDocument )
+    [[nodiscard]] inline bool loadShowcase( SceneDocument& outDocument )
     {
         return ResourceUtil::initialize() && outDocument.loadXml( "game/empty/maps/destructionshowcase.scene.xml" );
     }

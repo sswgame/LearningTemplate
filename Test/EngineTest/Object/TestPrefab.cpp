@@ -58,7 +58,7 @@ namespace sw
         }
 
         /** @brief 저작 파일(@p sourcePath)과 같은 이름의 쿠킹본(.bin)을 씁니다 — Shipping 은 쿠킹본만 읽습니다. */
-        bool writeCookedBeside( const sw::string& sourcePath, bool bJson )
+        [[nodiscard]] bool writeCookedBeside( const sw::string& sourcePath, bool bJson )
         {
             sw::PrefabAsset cooked;
             if ( ( bJson ? cooked.loadFromJsonFile( sourcePath ) : cooked.loadFromXmlFile( sourcePath ) ) == false )

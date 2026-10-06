@@ -55,7 +55,7 @@ namespace
         WeaponCatalog _weaponCatalog{};
         MoveCatalog   _moveCatalog{};
 
-        bool load()
+        [[nodiscard]] bool load()
         {
             return _weaponCatalog.loadFromXmlText( kMechWeaponXml, "MechArenaTest" ) && _moveCatalog.loadFromXmlText( kMechMoveXml, "MechArenaTest" ) &&
                    _mechCatalog.loadFromXmlText( kMechCatalogXml, "MechArenaTest" );

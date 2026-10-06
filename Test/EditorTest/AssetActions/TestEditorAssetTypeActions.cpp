@@ -16,8 +16,8 @@ namespace
     class FakeAudioAssetTypeActions final : public IEditorAssetTypeActions
     {
     public:
-        virtual EditorAssetType getKind() const override { return EditorAssetType::Audio; }
-        virtual bool            open( string_view /*relativePath*/ ) const override { return true; }
+        virtual EditorAssetType    getKind() const override { return EditorAssetType::Audio; }
+        [[nodiscard]] virtual bool open( string_view /*relativePath*/ ) const override { return true; }
     };
 } // namespace
 

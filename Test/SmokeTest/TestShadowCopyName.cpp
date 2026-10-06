@@ -30,7 +30,7 @@ namespace
     };
 
     /** @brief 빈 파일 하나를 씁니다. */
-    bool writeEmptyFile( const sw::string& filePath )
+    [[nodiscard]] bool writeEmptyFile( const sw::string& filePath )
     {
         return sw::FileUtil::writeTextFile( filePath, "" );
     }

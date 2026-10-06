@@ -20,7 +20,7 @@ namespace
     {
         static constexpr const utf8* kScenePath = "game/empty/maps/destructionshowcase.scene.xml";
 
-        static bool instantiate( sw::Scene& scene )
+        [[nodiscard]] static bool instantiate( sw::Scene& scene )
         {
             sw::SceneDocument document;
             return document.loadXml( kScenePath ) && scene.instantiate( document );
