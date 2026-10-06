@@ -18,6 +18,7 @@
 namespace sw
 {
     class UiFocusManager;
+    class UiScreen;
 
     /** @brief 위젯이 낸 명령(버튼의 `_command`)을 받는 함수입니다 — 화면(`UiScreen`)이 자기 트리에 겁니다. */
     using UiCommandDelegate = Delegate<void( const hashed_string&, Widget& )>;
@@ -71,6 +72,9 @@ namespace sw
          */
         void clearAllDirty();
 
+        /** @brief 이 트리를 소유한 화면입니다(화면 밖의 트리 — 시험 · 월드 위젯 — 면 nullptr). 팝업을 여는 위젯이 그 화면의 UI 시스템을 찾는다. */
+        UiScreen* getScreen() const { return _pScreen; }
+
         /** @brief 이 트리에서 포커스를 쥔 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */
         WidgetId getFocusedWidget() const { return _focusedWidget; }
 
@@ -87,6 +91,7 @@ namespace sw
         friend class UiFocusManager;
         friend class UiLayoutPass;
         friend class UiPaintPass;
+        friend class UiScreen;
 
         /** @brief 번호 · 이름을 올립니다(`Widget::attachToTree` 가 부른다). */
         void registerWidget( Widget& widget );
@@ -108,6 +113,7 @@ namespace sw
         vector<WidgetId>                                               _listStyleDirty;
         UiCommandDelegate                                              _commandHandler; ///< 위젯 명령을 받는 함수(화면이 건다)
         UiFocusManager*                                                _pFocusManager;  ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
+        UiScreen*                                                      _pScreen;        ///< 소유한 화면(UiScreen 생성자가 적는다)
         WidgetId                                                       _focusedWidget;
         float32                                                        _layoutUiScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UiLayoutPass)
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 걷기의 글자 배율

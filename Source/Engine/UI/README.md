@@ -152,6 +152,8 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 |---|---|---|---|
 | 위젯 그림 캐시 · `UiPaintPass` | Slate 캐시된 요소 목록 · 전역 무효화 | UIR 더러운 요소 다시 칠하기 | CanvasItem 명령 캐시 |
 | `TextWidget` · `ImageWidget` · `BorderPanel` · `UiBrush` | `STextBlock` · `SImage` · `SBorder` · `FSlateBrush` | Label · Image · VisualElement 배경 | Label · TextureRect · PanelContainer + StyleBox |
+| `ButtonWidget` · `CheckBoxWidget` · `SliderWidget` · `ProgressBarWidget` | Button · CheckBox · Slider · ProgressBar | Button · Toggle · Slider · ProgressBar | Button · CheckBox · HSlider · ProgressBar |
+| `ComboBoxWidget` · `TextInputWidget` · `ListViewWidget` | ComboBox · EditableTextBox · ListView | DropdownField · TextField · ListView | OptionButton · LineEdit · ItemList |
 
 - 위젯은 `paint( painter, context )` 에 **자기 로컬 (0, 0) ~ 크기**로 칠합니다(칠하기 도구의 변환이 위젯 기하다). 결과는 위젯의 **그림 캐시**(물리 픽셀 사각형 — 조상의
   자르기 · 불투명도가 구워져 있다)에 남고, 그리기 걷기는 그리기 순서(z 순서 패널은 `collectPaintOrder`)로 트리를 걸으며 캐시를 프레임 목록에 **이어 붙입니다**
@@ -165,6 +167,15 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
 - 글 위젯: 원하는 크기 = 측정(글자 배율을 곱한 크기, 줄 바꿈이면 가용 너비 안), 칠하기는 위젯 너비로 배치하고 결과를 캐시한다. 글 · 스타일은 `kLayout`, 색은 `kPaint`.
   문단 방향 = 위젯의 흐름 방향. 리치 텍스트(`_bRichText`)는 `RichTextParser` 표기.
 - 그림 위젯: 브러시(색 · 둥근 모서리 · 9-슬라이스) × 그림, 그림이 없으면 단색 상자. `_bMirrorInRtl` 이면 오른쪽에서 왼쪽에서 좌우로 뒤집는다.
+- **버튼 클릭 = 같은 버튼 위에서 누르고 뗌**(누른 동안 포인터를 잡는다 — 밖에서 떼면 취소) 또는 포커스 상태의 `UI.Accept`. 누르면 포커스가 버튼으로 온다. 상태(보통 · 호버 ·
+  누름 · 꺼짐)별 배경은 위젯 칸(스타일 시트 5-2 가 채울 자리).
+- **슬라이더**는 포커스 상태에서 `UI.NavigateLeft/Right` 를 먹는다(값 한 칸 — 포커스는 위 · 아래로만 떠난다). 오른쪽에서 왼쪽이면 최소가 오른쪽.
+- **콤보 상자**는 위젯이 든 화면의 `UiSystem` 에 팝업 화면(Modal 층 · 막지 않음)을 올린다 — 항목 버튼이 상자 아래, 밖 클릭 · `UI.Back` 은 닫기. 팝업은 상자를 화면 핸들 ·
+  위젯 번호로 다시 찾는다(`WidgetTree::getScreen` — 화면이 트리를 소유한다).
+- **글 입력 칸**은 포커스를 쥐면 키보드 포커스 `Ui` — 글자 사건은 끝에 붙고, IME 조합 글은 확정 전까지 따로 보이고, `UI.TextBackspace`(칸이 키보드를 쥔 동안만 UiSystem 이
+  보낸다)는 끝 코드 포인트 하나, Enter 는 확정 알림. 커서는 글 끝.
+- **가상 목록**(`ListViewWidget`)은 보이는 줄 + 1 개만 줄 위젯을 만들고(`setRowFactory`) 항목 k 를 늘 줄 k % 줄 수에 묶는다(`setRowBinder`) — 한 줄 스크롤에 한 위젯만
+  다시 묶고, 보이는 동안 항목과 위젯이 바뀌지 않아 포커스가 항목을 따라간다. 줄 위젯은 레이아웃 안에서 만들어진다(곧바로 놓인다).
 
 ## 배율 · 안전 영역
 

@@ -584,6 +584,11 @@ namespace sw
                 consumeAction( uiMap, action );
         }
 
+        // 글 입력 칸 — 지우기는 칸이 키보드 포커스를 쥔 동안만(그 밖에서 Backspace 는 UI 의 것이 아니다).
+        const hashed_string backspaceAction( UiActionName::kTextBackspace );
+        if ( bTextFocus && uiMap.wasActionTriggered( backspaceAction ) && routeAction( *pActive, backspaceAction, float2{} ) )
+            consumeAction( uiMap, backspaceAction );
+
         const hashed_string backAction( UiActionName::kBack );
         if ( uiMap.wasActionTriggered( backAction ) )
         {

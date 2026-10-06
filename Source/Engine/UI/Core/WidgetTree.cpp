@@ -39,6 +39,7 @@ namespace sw
         , _listStyleDirty{}
         , _commandHandler{}
         , _pFocusManager{ nullptr }
+        , _pScreen{ nullptr }
         , _focusedWidget{ kInvalidWidgetId }
         , _layoutUiScale{ 0.0f }
         , _layoutTextScale{ 0.0f }

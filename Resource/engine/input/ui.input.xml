@@ -4,6 +4,7 @@
   UiSystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action
   is consumed until released: the player controller does not turn it into the pawn's intent (gamepad A = accept, not jump).
   Navigation uses trigger="Repeat" (fires on press, then repeats after navRepeatDelay at navRepeatRate) like a held D-pad.
+  UI.TextBackspace is routed only while a text field holds keyboard focus (with Back and the focus Tab actions).
   UI.Scroll (right stick) goes to the focused widget's path, or the hovered path without focus; a scroll panel moves at its stick speed.
 -->
 <InputMap defaultLayer="UI" holdThreshold="0.4">
@@ -32,6 +33,9 @@
 		</action>
 		<action name="UI.Scroll">
 			<stick stick="Right" deadzone="0.25"/>
+		</action>
+		<action name="UI.TextBackspace" trigger="Repeat">
+			<bind source="key" code="Backspace"/>
 		</action>
 		<action name="UI.Accept" trigger="Pressed">
 			<bind source="key" code="Enter"/>

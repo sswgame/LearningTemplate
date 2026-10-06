@@ -23,6 +23,7 @@ namespace sw
         , _pushOrder{ 0 }
         , _bClosing{ SW_FALSE }
     {
+        _tree._pScreen = this;
         _tree.setRoot( std::move( root ) );
         _tree.setCommandHandler( SW_DELEGATE_METHOD( UiCommandDelegate, &UiScreen::dispatchCommand, this ) );
     }

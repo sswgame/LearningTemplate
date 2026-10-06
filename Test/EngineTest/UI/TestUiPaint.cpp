@@ -26,8 +26,11 @@
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"
+#include "Engine/UI/Widgets/ComboBoxWidget.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
+#include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
+#include "Engine/UI/Widgets/TextInputWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
@@ -503,4 +506,143 @@ SW_TEST_CASE( UiPaintTest, ProgressBarFillsFromFlowStart )
     fixture._layoutContext._bRightToLeft = true;
     (void)fixture.runFrame();
     SW_EXPECT_NEAR_EQUAL( 350.0f, fixture._canvas._listQuad[1]._rect._x, 1e-4f ); // 캔버스 거울(400 − 200) + 막대 안 150
+}
+
+/**
+ * @brief [UiPaintTest] 가상 목록: 1 만 항목 · 보이는 12 줄이면 줄 위젯은 13 개(≤ 14)만 만들고, 스크롤하면 새로 만들지 않고 다시 묶는다 — 항목 k 는 늘 줄 k % 13
+ * @details 변이: `ListViewWidget::arrangeChildren` 이 보이는 줄 수 대신 항목 수만큼 만들면 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ListViewCreatesOnlyVisibleRows )
+{
+    UiPaintFixture      fixture( 300.0f, 240.0f );
+    sw::ListViewWidget* pList        = fixture.setRoot<sw::ListViewWidget>();
+    uint32              createdCount = 0;
+    sw::vector<uint32>  listBoundItem;
+    pList->setRowHeight( 20.0f );
+    pList->setRowFactory( [&createdCount]() -> sw::unique_ptr<sw::Widget>
+    {
+        ++createdCount;
+        return sw::make_unique<TestPaintWidget>( sw::hashed_string{}, sw::float2{ 10.0f, 20.0f }, sw::float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+    } );
+    pList->setRowBinder( [&listBoundItem]( sw::Widget& row, uint32 itemIndex )
+    {
+        (void)row;
+        listBoundItem.push_back( itemIndex );
+    } );
+    pList->setItemCount( 10000 );
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( 13u, createdCount );
+    SW_EXPECT_EQUAL( 13u, pList->getCreatedRowCount() );
+    SW_EXPECT_EQUAL( size_t{ 13 }, listBoundItem.size() );
+
+    pList->setScrollOffset( 1000.0f ); // 항목 50 부터
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( 13u, createdCount );
+    SW_EXPECT_EQUAL( 50u, pList->findItemIndex( *pList->getChild( 50 % 13 ) ) );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pList->getChild( 50 % 13 )->getGeometry()._position._y, 1e-4f );
+    const size_t bindsAfterJump = listBoundItem.size();
+    pList->setScrollOffset( 1020.0f ); // 한 줄 — 한 위젯만 다시 묶는다
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( bindsAfterJump + 1, listBoundItem.size() );
+    SW_EXPECT_EQUAL( 63u, listBoundItem.back() );
+}
+
+/**
+ * @brief [UiPaintTest] 콤보 상자는 클릭하면 팝업 화면(항목 버튼 · 상자 아래)을 올리고, 항목을 고르면 값 · 알림을 바꾸고 팝업을 닫는다
+ * @details 변이: `ComboBoxPopupScreen::choose` 가 상자를 부르지 않으면 고른 값이 그대로라 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ComboBoxOpensPopupAndSelects )
+{
+    sw::UiSystem                    ui;
+    sw::unique_ptr<sw::CanvasPanel> root   = sw::make_unique<sw::CanvasPanel>();
+    sw::ComboBoxWidget*             pCombo = static_cast<sw::ComboBoxWidget*>( root->addChild( sw::make_unique<sw::ComboBoxWidget>() ) );
+    UiWidgetTestUtil::pin( *pCombo, 100.0f, 50.0f, 200.0f, 40.0f );
+    pCombo->setOptions( sw::vector<sw::string>{ "Low", "Medium", "High" } );
+    pCombo->setSelectedIndex( 0 );
+    uint32 chosen = sw::invalid_index::kUint32;
+    (void)pCombo->getOnSelectionChanged().add( [&chosen]( uint32 index )
+    { chosen = index; } );
+    const sw::UiScreenHandle screen = ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( root ) ) );
+    sw::UiViewport           viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+    ui.update( 1.0f / 60.0f, viewport );
+
+    sw::UiPointerState pointer;
+    sw::WidgetTree&    tree = ui.findScreen( screen )->getTree();
+    (void)pointer.process( tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, 150.0f, 70.0f ) );
+    (void)pointer.process( tree, UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, 150.0f, 70.0f ) );
+    SW_ASSERT_EQUAL( 2u, ui.getScreenCount() );
+    sw::UiScreen* pPopup = ui.findScreen( pCombo->getPopupScreen() );
+    SW_ASSERT_NOT_NULL( pPopup );
+    ui.update( 1.0f / 60.0f, viewport );
+    sw::Widget* pHigh = pPopup->getTree().findWidgetByName( "option2" );
+    SW_ASSERT_NOT_NULL( pHigh );
+    SW_EXPECT_NEAR_EQUAL( 100.0f, pHigh->getGeometry()._position._x, 4.0f ); // 상자 아래 · 같은 너비
+    SW_EXPECT_TRUE( pHigh->getGeometry()._position._y > 90.0f );
+
+    const sw::float2 center = pHigh->getGeometry().computeScreenBounds().getCenter();
+    (void)pointer.process( pPopup->getTree(), UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Down, center._x, center._y ) );
+    (void)pointer.process( pPopup->getTree(), UiWidgetTestUtil::makePointer( sw::UiPointerEventKind::Up, center._x, center._y ) );
+    SW_EXPECT_EQUAL( 2u, pCombo->getSelectedIndex() );
+    SW_EXPECT_EQUAL( 2u, chosen );
+    pointer.forgetTree( pPopup->getTree() );
+    ui.update( 1.0f / 60.0f, viewport ); // 지연 닫기
+    SW_EXPECT_EQUAL( 1u, ui.getScreenCount() );
+}
+
+/**
+ * @brief [UiPaintTest] 글 입력 칸: 포커스를 쥐면 키보드 포커스 Ui, 글자 사건은 끝에 붙고(조합 글은 확정 전까지 따로), Backspace(UI.TextBackspace)는 끝 코드 포인트 하나를,
+ *        Enter 는 확정 알림을 부른다
+ * @details 변이: `UiSystem::processActions` 의 UI.TextBackspace 경로를 빼면 "가" 가 남지 않아 진다.
+ */
+SW_TEST_CASE( UiPaintTest, TextInputTypesAndDeletes )
+{
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::UiSystem ui;
+    SW_ASSERT_TRUE( ui.initialize( input, nullptr, "engine/input/ui.input.xml" ) );
+    sw::unique_ptr<sw::BoxPanel> root   = sw::make_unique<sw::BoxPanel>();
+    sw::TextInputWidget*         pField = static_cast<sw::TextInputWidget*>( root->addChild( sw::make_unique<sw::TextInputWidget>() ) );
+    sw::string                   committed;
+    (void)pField->getOnCommitted().add( [&committed]( const sw::string& text )
+    { committed = text; } );
+    const sw::UiScreenHandle screen = ui.pushScreen( sw::make_unique<sw::UiScreen>( sw::UiScreenDesc{}, std::move( root ) ) );
+    sw::UiViewport           viewport{};
+    viewport._size         = sw::float2{ 800.0f, 600.0f };
+    viewport._physicalSize = viewport._size;
+    const auto runFrame    = [&]()
+    {
+        input.beginFrame( 1.0f / 60.0f );
+        ui.processInput( 1.0f / 60.0f );
+        ui.update( 1.0f / 60.0f, viewport );
+        input.endFrame();
+    };
+    runFrame();
+    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pField->getId() ) );
+    runFrame();
+    SW_EXPECT_TRUE( input.getKeyboardFocus() == sw::InputKeyboardFocus::Ui );
+
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeTextComposition( "\xEB\x82\x98" ) ) ); // 조합 중 "나"
+    runFrame();
+    SW_EXPECT_STREQ( "\xEB\x82\x98", pField->getComposition().c_str() );
+    SW_EXPECT_TRUE( pField->getText().empty() );
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeTextInput( "\xEA\xB0\x80"
+                                                                          "a" ) ) ); // 확정 "가" "a"
+    runFrame();
+    SW_EXPECT_STREQ( "\xEA\xB0\x80"
+                     "a",
+                     pField->getText().c_str() );
+    SW_EXPECT_TRUE( pField->getComposition().empty() );
+
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Backspace ) ) );
+    runFrame();
+    SW_EXPECT_STREQ( "\xEA\xB0\x80", pField->getText().c_str() );
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Backspace ) ) );
+    runFrame();
+    SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeTextInput( "\r" ) ) );
+    runFrame();
+    SW_EXPECT_STREQ( "\xEA\xB0\x80", committed.c_str() );
+    ui.shutdown();
+    input.shutdown();
 }
