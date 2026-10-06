@@ -52,6 +52,31 @@ Comments and commit messages use the same term table; reword a comment when you 
 `Scripts/lint/gate/CheckDocPaths.py` checks every relative link, heading anchor and backticked repository path, and that
 every README is on the map. A placeholder path is written with angle brackets (`Source/Games/<Game>/`).
 
+## Working with agents (token budget)
+
+The full rules live in `docs/11_Workflow.md`; agent definitions live in `.claude/agents/` (`integrator`, `worker`, `mech-worker`, `scout`).
+The essentials, which hold on every machine:
+
+- New work is implemented directly — no proposal round. One `integrator` per batch, at most one helper, **at most two concurrent builds**;
+  helpers never spawn agents. Reports are short (ten lines); details go to files (`docs/plans/`, commit messages). Build and test output is read as a summary.
+- **Pick the cheapest model that can do the job**, for helpers and when advising the user on `/model`:
+
+  | work | model | effort |
+  |------|-------|--------|
+  | find a file, a call site, a current value | `scout` (haiku) | low |
+  | rename, move, reword docs or comments, repetitive edits | `mech-worker` (sonnet) | low |
+  | a bounded C++ / CMake / Python change | `worker` (opus; sonnet when the change is local and spelled out) | medium |
+  | design, cross-module refactor, GPU/threading bugs, batch integration | `integrator` (opus) | high (xhigh only for a bug that resisted one attempt) |
+
+  When the user hands over a request, say in one line which model and effort fit it if they differ from the current session's
+  (for example "이 일은 Sonnet · low 로 충분합니다 — `/model sonnet`, `/effort low`"), then proceed.
+  Questions, status checks and progress reports need no more than low effort.
+- **Tell the user before acting when a request conflicts with these rules or a limit is reached** — one line naming the rule and the
+  cost, then the recommended action. `.claude/hooks/SessionGuard.py` (wired in `.claude/settings.json`) injects the signals: a long
+  or compacted conversation (write the handoff to `docs/plans/NEXT.md` at the next batch boundary and recommend a new session),
+  more than two running builds (start no new build), leftover worktrees, wording that matches a rule (proposal round, full
+  matrix, waiting on CI, WSL, aliases), compaction and API-limit stops. A new session starts by reading `docs/plans/NEXT.md` when it exists.
+
 ## Build
 
 ```powershell
