@@ -32,13 +32,11 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag      = FourCcUtil::make( "MVFM" );
-        static constexpr uint32  kStateVersion  = 1;
-        static constexpr int32   kFieldWidth    = 4;
-        static constexpr int32   kFieldHeight   = 2;
-        static constexpr int64   kStartingGold  = 20;
-        static constexpr float32 kFastTimeScale = 8.0f;
-        static constexpr float32 kTileSpacing   = 1.0f; ///< 칸 사이(m)
+        static constexpr uint32  kStateTag     = FourCcUtil::make( "MVFM" );
+        static constexpr uint32  kStateVersion = 1;
+        static constexpr int32   kFieldWidth   = 4;
+        static constexpr int32   kFieldHeight  = 2;
+        static constexpr float32 kTileSpacing  = 1.0f; ///< 칸 사이(m)
 
         MeadowFarmDirectorComponent();
         virtual ~MeadowFarmDirectorComponent() override;
@@ -65,6 +63,10 @@ namespace sw
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One tile view (a cube)" )
         string _tilePrefab;
+        PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
+        int32 _startingGold;
+        PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )
+        float32 _fastTimeScale;
 
         FarmField                _field;
         MaterialTintCache        _tintCache;

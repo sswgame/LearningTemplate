@@ -31,11 +31,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32  kStateTag     = FourCcUtil::make( "MVTN" );
-        static constexpr uint32  kStateVersion = 1;
-        static constexpr int32   kTownSize     = 6;
-        static constexpr int64   kOrchardPrice = 50;
-        static constexpr float32 kTownOffsetX  = 6.0f; ///< 밭 오른쪽(m)
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "MVTN" );
+        static constexpr uint32 kStateVersion = 1;
+        static constexpr int32  kTownSize     = 6;
 
         MeadowTownDirectorComponent();
         virtual ~MeadowTownDirectorComponent() override;
@@ -61,6 +59,10 @@ namespace sw
     private:
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One object or creature view (a cube)" )
         string _tilePrefab;
+        PROPERTY( Category = "Economy", DisplayName = "Orchard Price", Min = 0 )
+        int32 _orchardPrice;
+        PROPERTY( Category = "Layout", DisplayName = "Town Offset X", Tooltip = "Town grid starts this far right of the field", Units = m )
+        float32 _townOffsetX;
 
         CreatureTown             _town;
         MaterialTintCache        _tintCache;

@@ -37,6 +37,8 @@ namespace sw
 {
     MeadowTownDirectorComponent::MeadowTownDirectorComponent()
         : _tilePrefab{ "game/meadowvillage/prefabs/tile.prefab.xml" }
+        , _orchardPrice{ 50 }
+        , _townOffsetX{ 6.0f }
         , _town{}
         , _tintCache{}
         , _listView{}
@@ -122,12 +124,12 @@ namespace sw
         const hashed_string request( MeadowVillageData::kRequestQuest );
         const bool          bCanAsk = _town.findCreature( sprout ) != nullptr && pState->getQuestLog().getStatus( request ) == QuestStatus::NotStarted;
         if ( bCanAsk && _town.startRequest( sprout, request ) == CreatureRequestResult::Ok )
-            SW_LOG_INFO( "[Meadow] sprout asks for an orchard (%# G)", kOrchardPrice );
+            SW_LOG_INFO( "[Meadow] sprout asks for an orchard (%# G)", _orchardPrice );
 
         // 밭이 이번 틱에 번 돈도 여기서 보인다 — 같은 오브젝트에서 밭이 먼저 돈다.
         Wallet&    wallet         = pState->getWallet();
-        const bool bCanBuyOrchard = _town.countHabitats( "orchard" ) == 0 && wallet.canAfford( Wallet::getDefaultCurrency(), kOrchardPrice );
-        if ( bCanBuyOrchard && wallet.trySpend( Wallet::getDefaultCurrency(), kOrchardPrice ) )
+        const bool bCanBuyOrchard = _town.countHabitats( "orchard" ) == 0 && wallet.canAfford( Wallet::getDefaultCurrency(), _orchardPrice );
+        if ( bCanBuyOrchard && wallet.trySpend( Wallet::getDefaultCurrency(), _orchardPrice ) )
         {
             (void)_town.setObject( 0, 2, "tree" );
             (void)_town.setObject( 1, 2, "tree" );
@@ -182,7 +184,7 @@ namespace sw
                 const hashed_string* pObject = _town.findObject( x, y );
                 if ( pObject == nullptr || pObject->empty() )
                     continue;
-                const float3 position{ kTownOffsetX + static_cast<float32>( x ) + 0.5f, 0.3f, static_cast<float32>( y ) + 0.5f };
+                const float3 position{ _townOffsetX + static_cast<float32>( x ) + 0.5f, 0.3f, static_cast<float32>( y ) + 0.5f };
                 spawnCube( manager, position, MeadowTownDirectorComponentInternal::findObjectColor( *pObject ) );
             }
         }
@@ -190,7 +192,7 @@ namespace sw
         {
             const HabitatInstance* pHabitat = _town.findHabitat( creature._habitat );
             const int2             anchor   = pHabitat != nullptr ? pHabitat->_origin : int2{ 0, 0 };
-            const float3           position{ kTownOffsetX + static_cast<float32>( anchor._x ) + 0.5f, 0.8f, static_cast<float32>( anchor._y ) + 0.5f };
+            const float3           position{ _townOffsetX + static_cast<float32>( anchor._x ) + 0.5f, 0.8f, static_cast<float32>( anchor._y ) + 0.5f };
             spawnCube( manager, position, float4{ 1.0f, 0.9f, 0.2f, 1.0f } );
         }
     }

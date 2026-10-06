@@ -47,6 +47,8 @@ namespace sw
 {
     MeadowFarmDirectorComponent::MeadowFarmDirectorComponent()
         : _tilePrefab{ "game/meadowvillage/prefabs/tile.prefab.xml" }
+        , _startingGold{ 20 }
+        , _fastTimeScale{ 8.0f }
         , _field{}
         , _tintCache{}
         , _listTileView{}
@@ -76,7 +78,7 @@ namespace sw
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(되살린 판 위에 덧쌓이지 않게).
         if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == GameStateInitResult::Fresh )
-            pState->getWallet().add( Wallet::getDefaultCurrency(), kStartingGold );
+            pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
         const hashed_string season = pState->getClock().getSeasonName();
         for ( int32 y = 0; y < kFieldHeight; ++y )
@@ -121,7 +123,7 @@ namespace sw
         const InputManager* pInput       = game::getService<InputManager>();
         const bool          bFastForward = isAutoPlayOn() ||
                                   ( pInput != nullptr && pInput->getInputMap().isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
-        pState->getClock().setTimeScale( bFastForward ? kFastTimeScale : 1.0f );
+        pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f );
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
         {
             if ( clockEvent._kind == WorldClockEvent::Kind::DayChanged )
