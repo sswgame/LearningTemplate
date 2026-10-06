@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/UI/Core/PanelWidget.h"
+#include "Engine/UI/Core/UiFocusManager.h"
 
 namespace sw
 {
@@ -36,12 +37,15 @@ namespace sw
         , _listLayoutDirtyRoot{}
         , _listPaintDirty{}
         , _listStyleDirty{}
+        , _pFocusManager{ nullptr }
         , _focusedWidget{ kInvalidWidgetId }
     {
     }
 
     WidgetTree::~WidgetTree()
     {
+        if ( _pFocusManager != nullptr )
+            _pFocusManager->forgetTree( *this );
         setRoot( nullptr );
     }
 

@@ -23,8 +23,8 @@ namespace sw
      * @brief 루트 위젯 하나와 그 아래 모든 위젯의 번호표 · 이름표, 무효화 목록을 듭니다(언리얼 UWidgetTree · 유니티 패널).
      * @details 화면(`UiScreen`) 하나가 트리 하나를 가집니다. 무효화는 이유별 목록으로 모입니다 — 레이아웃은 부모 쪽으로 레이아웃 경계까지 올라가 그
      *          "다시 잴 뿌리" 만 적고(`getLayoutDirtyRoots`), 그리기 · 스타일은 위젯 자신만 적습니다. 목록은 번호를 듭니다 — 그 사이 떨어진 위젯은 걷는 쪽이 건너뜁니다.
-     *          포커스: 트리마다 포커스 위젯이 하나 있고(덮인 화면이면 다시 맨 위가 될 때 돌려줄 위젯), 포커스 관리자(`UiFocusManager`)가 옮깁니다.
-     *          그 위젯이 떨어지면 트리가 포커스를 풉니다.
+     *          포커스: 포커스 관리자(`UiFocusManager`)가 이 트리에 포커스를 두면 그 위젯 번호가 여기 적힙니다. 그 위젯이 떨어지면 트리가 포커스를 풀고,
+     *          트리가 지워지면 관리자에게 알립니다.
      */
     class SW_API WidgetTree
     {
@@ -67,7 +67,7 @@ namespace sw
          */
         void clearAllDirty();
 
-        /** @brief 이 트리의 포커스 위젯입니다(없으면 무효). 화면이 덮여 있으면 다시 맨 위가 될 때 돌려줄 위젯입니다. */
+        /** @brief 이 트리에서 포커스를 쥔 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */
         WidgetId getFocusedWidget() const { return _focusedWidget; }
 
         /** @brief 뿌리부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
@@ -97,6 +97,7 @@ namespace sw
         vector<WidgetId>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
         vector<WidgetId>                                               _listPaintDirty;
         vector<WidgetId>                                               _listStyleDirty;
+        UiFocusManager*                                                _pFocusManager; ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
         WidgetId                                                       _focusedWidget;
     };
 } // namespace sw

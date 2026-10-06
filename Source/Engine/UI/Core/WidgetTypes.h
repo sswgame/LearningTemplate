@@ -52,6 +52,33 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct UiRect
+     * @brief 축 정렬 사각형입니다(UI 단위, y 는 아래가 +). 포커스 탐색 · 자르기 판정이 씁니다.
+     */
+    struct SW_API UiRect
+    {
+        float32 _left{ 0.0f };
+        float32 _top{ 0.0f };
+        float32 _right{ 0.0f };
+        float32 _bottom{ 0.0f };
+
+        static UiRect makeFromPositionSize( float32 x, float32 y, float32 width, float32 height ) { return UiRect{ x, y, x + width, y + height }; }
+        /** @brief 두 구간 [aMin, aMax] · [bMin, bMax] 사이의 틈입니다. 겹치면 0 입니다. */
+        static float32 computeRangeGap( float32 aMin, float32 aMax, float32 bMin, float32 bMax );
+
+        float32 getLeft() const { return _left; }
+        float32 getTop() const { return _top; }
+        float32 getRight() const { return _right; }
+        float32 getBottom() const { return _bottom; }
+        float2  getCenter() const { return float2{ ( _left + _right ) * 0.5f, ( _top + _bottom ) * 0.5f }; }
+        /** @brief 두 사각형이 넓이를 가지고 겹치면 true 입니다(변만 닿으면 false). */
+        bool intersects( const UiRect& other ) const { return _left < other._right && other._left < _right && _top < other._bottom && other._top < _bottom; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct WidgetGeometry
      * @brief 배치 결과 — 레이아웃 사각형과 화면으로 가는 누적 렌더 변환입니다.
      * @details 로컬 점(레이아웃 사각형 왼쪽 위 원점) p 의 화면 점 = _translation + p.x × _axisX + p.y × _axisY 입니다.
@@ -76,6 +103,8 @@ namespace sw
         bool containsLocal( const float2& local ) const { return 0.0f <= local._x && local._x < _size._x && 0.0f <= local._y && local._y < _size._y; }
         /** @brief 축이 단위(회전 · 기울임 · 배율 없음)면 true 입니다. */
         bool isAxisAligned() const;
+        /** @brief 레이아웃 사각형의 네 꼭짓점을 화면으로 옮긴 축 정렬 경계 상자입니다. */
+        UiRect computeScreenBounds() const;
 
         bool operator==( const WidgetGeometry& other ) const;
         bool operator!=( const WidgetGeometry& other ) const { return ( *this == other ) == false; }
