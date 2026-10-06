@@ -1,6 +1,6 @@
 /**
  * @file LeaderboardTypes.h
- * @brief 순위표 키트의 타입 — 결과 · 정렬 · 갱신 방식 · 초기화 주기 · 표 정의 · 항목 · 통계 · 상한 · id 규칙입니다.
+ * @brief 순위표 키트의 타입 — 결과 · 정렬 · 갱신 방식 · 초기화 주기 · 시즌(보상 구간) · 표 정의 · 항목 · 통계 · 업적 · 상한 · id 규칙입니다.
  * @details 통계(계정마다 이름 → int64)가 바뀌면 그 통계에 건 표(`_sourceStat`)에 같은 값을 낸다 — EOS Stats → Leaderboards · PlayFab Statistics 와 같은 "통계 → 순위".
  *          점수는 서버 게임 로직이 낸다 — 클라이언트 제출은 표마다 `_bClientSubmit` 을 켠 표만(사용자 결정 — 위조를 받아들인 캐주얼 · 싱글 기록).
  */
@@ -57,7 +57,33 @@ namespace sw
         None = 0,
         Daily,
         Weekly,
+        Season, ///< 표의 시즌 목록 — 기간 id = 지금을 품은 시즌 id(밖이면 0 — 제출은 NotRanked)
         Count
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 시즌 보상 구간 하나입니다(순위 from..to 에게 자산 · 수량을 우편으로). */
+    struct LeaderboardRewardTier
+    {
+        string _assetId{};      ///< 원장 자산 id("cur.gem" · "item.badge_gold")
+        string _mailTitleKey{}; ///< 우편 제목 로컬라이제이션 키
+        int64  _amount{ 0 };
+        int32  _rankFrom{ 1 };
+        int32  _rankTo{ 1 }; ///< 포함
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 시즌 하나입니다. 끝나면 정산 작업(`lb.settle.<표>.<시즌>`, 창 [끝, 끝 + 7 일))이 순위대로 결과 · 보상 우편을 남긴다. */
+    struct LeaderboardSeason
+    {
+        vector<LeaderboardRewardTier> _listRewardTier{};
+        int64                         _startMs{ 0 };
+        int64                         _endMs{ 0 };
+        uint32                        _seasonId{ 0 }; ///< 1 부터, 표 안에서 유일
     };
 } // namespace sw
 
@@ -66,14 +92,15 @@ namespace sw
     /** @brief 표 하나의 정의(게임 데이터 — 서버가 기동 때 올린다)입니다. */
     struct LeaderboardDefinition
     {
-        string            _boardId{};             ///< `[0-9a-z_]`, 1..32
-        string            _sourceStat{};          ///< 비지 않으면 이 통계가 바뀔 때 같은 값을 낸다
-        int32             _resetMinuteOfDay{ 0 }; ///< UTC 0..1439
-        int32             _resetDayOfWeek{ 0 };   ///< 0 = 월요일
-        LeaderboardOrder  _order{ LeaderboardOrder::Descending };
-        LeaderboardUpdate _update{ LeaderboardUpdate::Best };
-        LeaderboardReset  _reset{ LeaderboardReset::None };
-        uint8             _bClientSubmit{ SW_FALSE }; ///< 클라이언트 점수 제출을 받는다
+        vector<LeaderboardSeason> _listSeason{};          ///< Season 표만
+        string                    _boardId{};             ///< `[0-9a-z_]`, 1..32
+        string                    _sourceStat{};          ///< 비지 않으면 이 통계가 바뀔 때 같은 값을 낸다
+        int32                     _resetMinuteOfDay{ 0 }; ///< UTC 0..1439
+        int32                     _resetDayOfWeek{ 0 };   ///< 0 = 월요일
+        LeaderboardOrder          _order{ LeaderboardOrder::Descending };
+        LeaderboardUpdate         _update{ LeaderboardUpdate::Best };
+        LeaderboardReset          _reset{ LeaderboardReset::None };
+        uint8                     _bClientSubmit{ SW_FALSE }; ///< 클라이언트 점수 제출을 받는다
     };
 } // namespace sw
 
@@ -104,12 +131,13 @@ namespace sw
     /** @brief 상한입니다. */
     struct LeaderboardLimit
     {
-        static constexpr int32 kMaxIdSize    = 32;
-        static constexpr int32 kMaxPage      = 100;
-        static constexpr int32 kMaxAround    = 25;
-        static constexpr int64 kMaxAbsScore  = 1ll << 53;  ///< 캐시 점수(배정밀도)가 정확한 범위
-        static constexpr int32 kMaxStatCount = 256;        ///< 계정 하나의 통계 수(조회 상한)
-        static constexpr int64 kNameTtlMs    = 2592000000; ///< 30 일 — 표시 이름 캐시
+        static constexpr int32 kMaxIdSize           = 32;
+        static constexpr int32 kMaxPage             = 100;
+        static constexpr int32 kMaxAround           = 25;
+        static constexpr int64 kMaxAbsScore         = 1ll << 53;  ///< 캐시 점수(배정밀도)가 정확한 범위
+        static constexpr int32 kMaxStatCount        = 256;        ///< 계정 하나의 통계 수(조회 상한)
+        static constexpr int32 kMaxAchievementCount = 1024;       ///< 계정 하나의 업적 수(조회 상한)
+        static constexpr int64 kNameTtlMs           = 2592000000; ///< 30 일 — 표시 이름 캐시
     };
 } // namespace sw
 
@@ -120,5 +148,29 @@ namespace sw
     {
         /** @brief `[0-9a-z_]`, 1..32 바이트인가입니다(저장소 키 · 캐시 키 · 예약 작업 id 에 그대로 들어간다). */
         static bool isValidId( string_view id );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 업적 하나의 정의입니다(서버가 기동 때 올린다). 통계가 문턱을 넘으면 한 번 달성 · 보상은 우편. */
+    struct AchievementDefinition
+    {
+        string _achievementId{}; ///< `[0-9a-z_]`
+        string _statName{};
+        string _rewardAssetId{}; ///< 비면 보상 없음
+        string _mailTitleKey{};
+        int64  _threshold{ 1 };
+        int64  _rewardAmount{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 달성한 업적 하나입니다. */
+    struct AchievementState
+    {
+        string _achievementId{};
+        int64  _unlockedMs{ 0 };
     };
 } // namespace sw

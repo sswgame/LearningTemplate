@@ -317,11 +317,15 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       30 초 주기 다시 읽기 + 버스 `sd.changed` 재촉, 보이는 내용의 해시가 바뀌면(기간 경계 포함) 알림), 바인딩(`ServerDirectoryServer` — `sendPushToAll`).
       바꾸기는 C++ API(GM 도구가 조립에서). 시험: `ServerDirectoryServiceTest` · `ServerDirectoryStreamTest`.
     - `Leaderboard`(`GF_Leaderboard`, Client · Server): 순위표 타입(`LeaderboardTypes.h` — 결과 · 정렬 · 갱신 Best · Latest · Sum · 초기화 None · Daily · Weekly · 표 정의
-      (`_sourceStat` 통계 연동 · `_bClientSubmit`) · 항목 · 통계 · 상한 · id 규칙 `[0-9a-z_]`).
+      (`_sourceStat` 통계 연동 · `_bClientSubmit`) · 항목 · 통계 · 상한 · id 규칙 `[0-9a-z_]` · 시즌(보상 구간) · 업적), 와이어(`LeaderboardProtocol.h` — 영역 0x0900,
+      응답 몸 = `LeaderboardResult` + 칸, 업적 알림 `kPushAchievement`), 클라이언트(`LeaderboardClient` — 요청마다 완료 델리게이트, 점수 제출은 멱등 키).
     - `Server/Leaderboard`(`GF_Server_Leaderboard`, Server): 로직(`LeaderboardService` — 정본은 영속 `lb_score`(판 조건, 충돌 4 번 다시), 순위는 캐시 정렬 집합
       `lb/<표>/<기간>`(오름차순은 부호 뒤집기), 준비 표시가 없으면 영속에서 256 개씩 읽어 다시 채우고 그동안 온 읽기는 줄 · 그동안 쓴 점수는 채운 뒤 한 번 더,
-      기간 id = `ServiceScheduler::computeLatestOccurrence`, 상위 · 내 둘레 조회에 캐시 이름 `lb/name/<계정>`, 통계 `lb_stat` → 연동 표).
-      시험: `LeaderboardServiceTest`.
+      기간 id = `ServiceScheduler::computeLatestOccurrence`(시즌 표는 지금을 품은 시즌 id), 상위 · 내 둘레 조회에 캐시 이름 `lb/name/<계정>`, 통계 `lb_stat` → 연동 표,
+      업적 — 문턱을 넘으면 `lb_achievement` "없어야 함" + 보상 우편(재원 발행, 멱등 키 `ach.<계정>.<업적>`) 한 트랜잭션, 시즌 정산 — 예약 작업
+      `lb.settle.<표>.<시즌>`(창 [끝, 끝 + 7 일), 임대 10 분)이 순위(같은 점수는 계정 id)대로 결과 `lb_season_result` "없어야 함" + 구간 보상 우편을 15 명씩, 결과가 있는
+      사람은 건너뜀), 바인딩(`LeaderboardServer` — 클라이언트 점수 제출은 `_bClientSubmit` 표만, 업적 알림은 다른 서버면 `sendRemotePush`).
+      시험: `LeaderboardServiceTest` · `LeaderboardSeasonTest` · `LeaderboardStreamTest`.
     - `Social`(`GF_Social`, Client · Server): 친구 타입(`SocialTypes.h` — 결과 · 관계 상태(친구 · 보낸 신청 · 받은 신청 · 막음) · 접속 상태(상태 + 활동 글) · 알림 · 상한),
       와이어(`SocialProtocol.h` — 영역 0x0800, 응답 몸 = `SocialResult` + 칸, 이름으로 신청은 정식 계정만, 길드 0x10..), 길드 타입(역할 · 회원 · 정보 · 상한),
       클라이언트(`SocialClient` — 요청마다 완료 델리게이트, 바꾸기는 멱등 키, 알림 `drainNotifications`; 로그인 뒤 `listLinks` 를 먼저).

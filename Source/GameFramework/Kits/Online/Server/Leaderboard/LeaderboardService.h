@@ -6,6 +6,9 @@
  *          - 갱신 Best · Latest · Sum, 기간 None · Daily · Weekly(`ServiceScheduler::computeLatestOccurrence` — 같은 규칙 하나, 기간 id = 기간 시작 시각).
  *          - 통계 `lb_stat`(`<계정>/<이름>`) — 바뀌면 그 통계에 건 표에 같은 값을 낸다.
  *          - 상위 · 내 둘레 조회는 표시 이름을 캐시 `lb/name/<계정>`(30 일)에서 함께 읽는다.
+ *          - 업적: 통계가 문턱을 넘으면 `lb_achievement` 를 "없어야 함" 으로 + 보상 우편(`ServiceMail::stageSend` — 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을
+ *            한 트랜잭션에 — 두 번 넘어도 한 번. 시즌 정산: 예약 작업(`lb.settle.<표>.<시즌 16 진 8>`, 창 [끝, 끝 + 7 일))이 점수를 모두 읽어 순위(같은 점수는
+ *            계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함") + 구간 보상 우편을 15 명씩 한 트랜잭션에 — 결과가 있는 사람은 건너뛴다(다시 돌아도 한 번).
  *          PlayFab Statistics + Leaderboards · EOS Stats → Leaderboards · Nakama Leaderboards(best · set · incr)와 같은 자리다.
  */
 #pragma once
@@ -13,7 +16,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Leaderboard/LeaderboardTypes.h"
@@ -42,7 +47,9 @@ namespace sw
         Top,
         Around,
         Stats,
-        StatChange
+        StatChange,
+        Achievements,
+        SeasonResult
     };
 } // namespace sw
 
@@ -53,6 +60,7 @@ namespace sw
     {
         vector<LeaderboardEntry> _listEntry{};
         vector<LeaderboardStat>  _listStat{};
+        vector<AchievementState> _listAchievement{};
         uint64                   _periodId{ 0 };
         uint64                   _requestTag{ 0 };
         int64                    _score{ 0 }; ///< Submit · StatChange — 적용 뒤 값
@@ -73,15 +81,27 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 업적 달성 하나(서버가 알림으로 보낸다)입니다. */
+    struct AchievementUnlock
+    {
+        AchievementState _state{};
+        AccountId        _accountId{ kInvalidAccountId };
+    };
+
+    using SettlementDelegate = Delegate<void( bool )>;
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class LeaderboardService
      * @brief 순위표 로직입니다(서비스 스레드).
      */
-    class SW_GF_API LeaderboardService
+    class SW_GF_API LeaderboardService final : public IScheduledJobHandler
     {
     public:
         LeaderboardService();
-        ~LeaderboardService();
+        ~LeaderboardService() override;
 
         LeaderboardService( const LeaderboardService& )            = delete;
         LeaderboardService& operator=( const LeaderboardService& ) = delete;
@@ -105,6 +125,22 @@ namespace sw
         void changeStat( AccountId accountId, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, int64 nowMs, uint64 requestTag );
         void readStats( AccountId accountId, uint64 requestTag );
 
+        /** @brief 시즌 정산 작업을 올릴 예약 표입니다(빌려 쓴다 — `registerBoard` 전에. 없으면 정산은 `settleSeason` 을 부르는 쪽이). */
+        void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
+        /** @brief 업적을 올립니다(기동 때 — 게임 데이터). 규칙 밖이면 false. */
+        [[nodiscard]] bool registerAchievement( const AchievementDefinition& definition );
+        void               readAchievements( AccountId accountId, uint64 requestTag );
+        /** @brief 시즌 결과 하나(점수 · 순위 — 완료의 항목 하나, 기간 id = 시즌)입니다. 정산 전이거나 점수가 없었으면 NotRanked. */
+        void readSeasonResult( string_view boardId, uint32 seasonId, AccountId accountId, uint64 requestTag );
+        /** @brief 시즌 하나를 정산합니다(예약 작업이 부른다 — 시험 · 운영은 직접). 끝나면 @p onDone( 모두 정산했나 ). */
+        void settleSeason( string_view boardId, uint32 seasonId, int64 nowMs, const SettlementDelegate& onDone );
+        void drainAchievementUnlocks( vector<AchievementUnlock>& outListUnlock ) { _unlockBuffer.drainTo( outListUnlock ); }
+        /** @brief 시즌 정산 작업 id 입니다(`lb.settle.<표>.<시즌 16 진 8>`). */
+        static string makeSettlementJobId( string_view boardId, uint32 seasonId );
+
+        // IScheduledJobHandler
+        void onScheduledRun( const ScheduledRun& run ) override;
+
         void  drainCompletions( vector<LeaderboardCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         int32 getPendingCount() const { return _pendingCount; }
 
@@ -117,6 +153,10 @@ namespace sw
                               LeaderboardResult result, uint64 requestTag, LeaderboardOperation operation, int64 nowMs );
         void applyStats( uint64 requestTag, LeaderboardResult result, vector<LeaderboardStat>&& listStat );
         void applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk );
+        void applyAchievementUnlock( AccountId accountId, const AchievementState& achievement, bool bUnlocked );
+        void applyAchievements( uint64 requestTag, LeaderboardResult result, vector<AchievementState>&& listAchievement );
+        void applySeasonResult( uint64 requestTag, uint32 seasonId, LeaderboardResult result, const LeaderboardEntry& entry );
+        void applySettlement( const string& jobId, const SettlementDelegate& onDone, bool bSucceeded );
 
     private:
         struct PendingRead
@@ -154,8 +194,12 @@ namespace sw
         unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청 → 질의(순위 · 범위 · 이름)
         unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
+        unordered_map<string, AchievementDefinition>       _mapAchievement;
+        unordered_map<string, ScheduledRun>                _mapJobToRun; ///< 정산 작업 id → 차지한 회차(끝나면 completeRun)
+        EventBuffer<AchievementUnlock>                     _unlockBuffer;
         EventBuffer<LeaderboardCompletion>                 _completionBuffer;
         LeaderboardServiceDependencies                     _dependencies;
+        ServiceScheduler*                                  _pScheduler;
         uint64                                             _nextQueryId;
         int32                                              _pendingCount;
     };
