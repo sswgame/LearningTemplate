@@ -277,7 +277,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       `RejectNew`, 묘비로 "다른 곳에서 로그인"), 실패 누적 잠금 · 주소마다 시도 제한(`TokenBucketMap`), 없는 계정에도 해시(열거 막기), 게임(UDP) 접속 표
       (`LoginTicketAuthority` — 주 키로 서명한 상태 없는 표 64 B + 표 비밀). 요청은 저장소에 일로 맡기고(`LoginStoreLogic` 이 저장소 스레드에서) 꼬리표로 거둔다.
       `IAccountDirectory` 구현(이 프로세스에 붙어 있는 계정만). 암호는 `ILoginCrypto` 뒤 — 실제 구현 `NetSecurityLoginCrypto`(네트워크 보안 제공자의
-      Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 시험: `LoginServiceTest`(메모리 저장소 · 결정적 가짜 암호 + 실제 암호 한 케이스).
+      Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
+      메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로,
+      서버 여럿이면 다른 서버의 옛 세션을 버스 `account.revoke` 로 닫는다), 접속 상태 `OnlinePresence`(`IAccountPresence` 구현 — 캐시 `presence:` 키를 시한 · 주기로 다시 적고
+      "내 것일 때만" 지움, 계정 id · 이름으로 붙은 서버 찾기, 버스 `push.<서버>` 로 다른 서버의 계정에게 알림), 이름 색인 `AccountNameIndex`(`IAccountNameIndex` 구현 —
+      정식 계정의 소문자 로그인 이름 표 · 프로필 표를 읽는다, 상태 없음),
+      UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest`(메모리 저장소 · 결정적 가짜 암호 + 실제 암호 한 케이스) · `PlatformLoginTest` ·
+      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀) · `AccountNameIndexTest`.
     - `Chat`(`GF_Chat`, Client · Server): 채팅의 공통 타입 — 결과 코드(`ChatResult`, 응답 몸의 첫 값), 채널 id 규칙(`ChatChannelId` —
       `world.` · `guild.<16 진>` · `party.<16 진>` · `custom.` · 귓속말 기록 키 `whisper.<작은 id>.<큰 id>`, `[0-9a-z_.]` 48 바이트 — 버스 주제 · 저장소 키에 그대로), `ChatMessage`, 와이어(`ChatProtocol` — 메서드 kChat + 0x01..0x05 · 알림 0x80,
       응답 몸 = 결과 + 기다릴 ms + 칸, 공통 오류만 오류 코드(`fromErrorCode`), 메시지 형식 하나를 알림 · 버스 · 기록 레코드가 같이 씀, 버스 주제 `chat.channel.<id>` ·
@@ -309,13 +315,6 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       실력은 게임 조립의 `IMatchRatingSource`, 로비 시작도 같은 배정 길). 게임 서버 쪽 `MatchServerAgent`(올 사람 표 2 분 — 접속 인증 때 `findExpected`).
       바인딩(`MatchmakingServer` — 이 프로세스에 없는 회원의 알림은 `IAccountPresence::sendRemotePush`, 계정이 떠나면 대기열 · 파티 · 로비에서 뺀다).
       시험: `MatchMakerTest` · `PartyLobbyTest` · `CacheRecordUpdaterTest` · `MatchQueueTest` · `MatchmakingStreamTest`.
-      Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
-      메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로,
-      서버 여럿이면 다른 서버의 옛 세션을 버스 `account.revoke` 로 닫는다), 접속 상태 `OnlinePresence`(`IAccountPresence` 구현 — 캐시 `presence:` 키를 시한 · 주기로 다시 적고
-      "내 것일 때만" 지움, 계정 id · 이름으로 붙은 서버 찾기, 버스 `push.<서버>` 로 다른 서버의 계정에게 알림), 이름 색인 `AccountNameIndex`(`IAccountNameIndex` 구현 —
-      정식 계정의 소문자 로그인 이름 표 · 프로필 표를 읽는다, 상태 없음),
-      UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
-      `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀) · `AccountNameIndexTest`.
     - `ServerDirectory`(`GF_ServerDirectory`, Client · Server): 서버 디렉터리 타입(`ServerDirectoryTypes.h` — 결과 · 점검 창(범위 `all` · 종류, 허용 계정) · 공지 ·
       배정 요청/답 · 목록 줄), 와이어(`ServerDirectoryProtocol.h` — 영역 0x0200: 상태 · 목록(익명) · 배정(로그인 뒤), 알림 kPushStatus, 키트 오류 kUnknownKind),
       클라이언트(`ServerDirectoryClient` — 요청마다 완료 델리게이트, 마지막 상태 · 판 번호).
