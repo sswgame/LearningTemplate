@@ -515,6 +515,10 @@ cd build/Ninja-Debug/Bin
   13 ms 뒤에 신호된 것(창 모드 Vulkan 프레젠트가 합성기를 거치는 길). 그 프레임에 엔진 CPU 일은 없었다. 스왑체인 이미지를 4 개로 늘리면 오히려 잦아졌다(3-12).
   다시 보이면 `-gv_tracy=1` 로 acquire · 펜스 · present 를 시간축으로 보고, 전체 화면(독점) · NVIDIA "Vulkan/OpenGL 프레젠트 방식" 설정을 바꿔 가른다.
 
+- **CI Windows Debug `EngineTest_NoGPU_Shard3` 가 모두 통과한 뒤 0 이 아닌 종료 코드로 졌다**(run 37457443235 · `28d5627e3`, 한 번 — 직전 실행은 통과).
+  로그는 `TaskManager Shutdown cleanly` 에서 끝나고 크래시 스택 주석이 없었다. 이 PC Debug 로 같은 조각(`--test_shard=2/3 --host_suites=exclude`) 15 회 순차 ·
+  12 회 4 개 동시 — 재현 안 됨. 하네스가 이제 마지막 줄 `[TestHost] shut down - exit code N` 을 찍는다: 다시 나면 그 줄이 없으면 `TestHostRuntime::stop`
+  안(부트스트랩 · 로거 · 메모리 프로파일러 종료), 있으면 정적 소멸자다.
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
 - **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을
@@ -531,6 +535,8 @@ cd build/Ninja-Debug/Bin
 
 ### 1-11. 결정이 필요한 것
 
+- **전용 서버의 지형 레이어 질의는 레이어 0 이다** — 스플랫 가중치가 텍스처(.dds)라 서버 패키지에서 빠진다(쿠킹 표 `Texture`). 서버 게임 로직이 지형 레이어
+  (발소리 판정 · 표면 마찰 등)를 쓰게 되면 스플랫을 데이터 종류로 쿠킹하거나 그 경로를 서버 패키지에 남긴다.
 - **(보류 — 사용자 결정 2026-10-03) `hashed_string` 에 FName 숫자 꼬리를 둘지.** 지금은 비교 · 표시 인덱스 두 칸(8 바이트)이라 `"Enemy_12"` · `"Enemy_13"` 이
   이름 표에 각각 영구 적재된다. 런타임에 번호 붙은 이름을 대량으로 만드는 경로(복제 · 스폰 이름 자동 부여)가 생기면 다시 본다 — 넣으면 `_숫자`(앞자리 0 제외)를
   떼어 정수 칸에 두고 비교는 (인덱스, 숫자) 쌍.
@@ -1492,6 +1498,9 @@ cd build/Ninja-Debug/Bin
 
 - **전용 서버는 별도 실행 파일 `Server` + 기동 표 대상 칸이다**(언리얼 `<Game>Server` 자리). 널 RHI 를 두지 않는다 — RHI · 렌더러 · 플레이어 설정 단계를
   돌리지 않으면 된다(시험 하네스가 이미 그렇게 씬을 돌린다). 리눅스 서버는 X11 을 링크하면 X 없는 기계에서 main 전에 죽는다 — `SW_WITH_CLIENT_CODE` 로 뺐다.
+- **전용 서버 배포본은 Info 로그를 컴파일한다**(`BuildLayout.cmake`, 클라이언트 배포본은 Warning 까지) — 준비 · 상태 · 종료 줄과 콘솔 명령의 답이 Info 라
+  빼면 서버가 아무 말도 안 한다(ServerBootTest 가 CI 에서만 졌다 — 이 PC 는 Shipping-Server 를 돌리지 않았다). 서버 패키지에 없는 종류(텍스처 · 오디오)를 가리키는
+  시험은 `EngineTest/HostTargetTestUtil.h` 로 서버 전용 빌드에서 건너뛰고, 그 종류를 찾는 엔진 코드(`DdsLoader` · 지형 스플랫)는 `isExcludedForHost` 로 조용히 진다.
 
 - **모듈 대상은 매니페스트 `_listTarget`(Client · Server, 필수)** — CMake 는 빌드 타깃(`SW_TARGET_TYPE`)으로, 런타임은 호스트 역할(App · Server)로 거른다.
   키트는 공유 `GF_<X>` · 서버 `GF_Server_<X>` · (필요하면) 클라이언트 `GF_Client_<X>` 로 나누고, 새 매니페스트에는 처음부터 이 키를 적는다(없으면 configure 가 선다).

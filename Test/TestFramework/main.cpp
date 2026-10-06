@@ -15,5 +15,8 @@ int main( int32 argc, utf8* argv[] )
         result = test::TestRegistry::getInstance().runAllTests();
     }
     runtime.stop();
+    // 마지막 줄 — 이 줄이 없이 끝난 실패(모두 통과 뒤 종료 코드만 0 이 아님)는 하네스 종료(`stop`) 안에서 죽은 것이고, 이 줄 뒤라면 정적 소멸자다.
+    std::fprintf( stdout, "[TestHost] shut down - exit code %d\n", result );
+    std::fflush( stdout );
     return result;
 }
