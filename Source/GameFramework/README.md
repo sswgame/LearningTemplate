@@ -113,6 +113,8 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   와이어 표(`OnlineProtocol.h` — 키트마다 메서드 영역 256 칸: 메서드 영역 + 0x00..0x7F · 알림 영역 + 0x80..0xFF, 공통 오류 코드), 클라이언트(`OnlineServiceClient` —
   Hello · 모은 요청 · 알림 나누기 · 다시 연결(물러남), 자기 끝점 모드와 공유 끝점 모드(부하 시험 봇 — 끝점 하나에 연결 여럿)). 시험: `OnlineServiceHostTest` · `OnlineServiceTest` ·
   `EphemeralStoreRouterTest`.
+  `Online/Observability`: 서비스 표준 지표 묶음(`ServiceMetrics` — `service_requests_total{service,method,result}` · `service_request_seconds` ·
+  `service_store_pending`). 등록부는 엔진 `Engine/Observability/MetricRegistry`(전용 서버 실행 파일이 하나 들고 넘긴다 — null 이면 세지 않는다).
   `Online/Local`: 클라이언트 로컬 저장 계약 `ILocalStore`(슬롯 `save/slot0` → 바이트, 슬롯 하나 단위 원자 쓰기 · 묶음 나열, 맡기고 거둔다 — 서버 계약과 따로 좁게),
   모든 저장소가 같은 봉투(`LocalSlotEnvelope` — `SWLS` 머리 · 형식 판 · 코덱 · 봉인 None(CRC32) / Authenticated(AEAD 태그) / Encrypted(AEAD), 키 표시가 다르면 WrongKey),
   바닥 `ILocalSlotStorage`(파일 `FileLocalSlotStorage` — 임시 파일 → 이름 바꾸기 · 띄울 때 찌꺼기 지우기, 메모리 `MemoryLocalDatabase` — 쓰기 도중 꺼짐 주입) 위의 앞 둘

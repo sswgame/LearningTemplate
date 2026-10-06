@@ -12,7 +12,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
-| 0 | `Common` · `Compression` · `Network` | 토대. Engine 의 어느 것도 참조하지 않는다. 외부 라이브러리로 Core 의 창구를 구현하는 자리(압축 코덱 · 네트워크 보안). |
+| 0 | `Common` · `Compression` · `Network` · `Observability` | 토대. Engine 의 어느 것도 참조하지 않는다. 외부 라이브러리로 Core 의 창구를 구현하는 자리(압축 코덱 · 네트워크 보안)와 Core 만 보는 서버 운영 관측. |
 | 1 | `Reflection` · `Utility` | 리플렉션과, 토대 위의 잎 헬퍼. |
 | 2 | `Animation` · `Localization` · `Serialization` | 리플렉션 위에 올라가는 직렬화와 에셋형 잎. |
 | 3 | `Audio` · `Config` · `Dialogue` · `Physics` | 설정 — 리플렉션·직렬화로 읽힌다. 물리(설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터)와 오디오(믹서 그래프 · 이벤트 · 음악 데이터)도 여기다. |
@@ -75,6 +75,8 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 - **UserSettings/**: 플레이어 옵션 메뉴의 백엔드 — 데이터 스키마 · 품질 프리셋 · 사용자 파일 · 적용/되돌리기/확인 카운트다운 · 메뉴 바인딩 API. [UserSettings/README.md](UserSettings/README.md)
 - **Telemetry/**: 텔레메트리(동의 · 스키마 · 표본 · 묶음 · JSON lines 스풀 · 회전 · 올리기 · 장면별 프레임 시간 요약)와 크래시 보고(다음 실행의 묶음 ·
   동의 local/ask/send · 보고 프로세스 · multipart 업로드). 바깥으로는 `IHttpClient` 창구로만 나가고 기본 창구는 보내지 않는다. [Telemetry/README.md](Telemetry/README.md)
+- **Observability/**: 서버 운영 관측 — 지표 등록부(`MetricRegistry` — 카운터 · 게이지 · 히스토그램, 라벨은 등록 때 고정, Prometheus 텍스트 0.0.4). 늘 켜진
+  서버 누계라 `FrameProfiler`(개발 프레임 구간) · `Telemetry`(동의 받은 클라이언트 사건)와 다른 자리다. 전용 서버 실행 파일(`Source/Server`)이 하나 들고 넘긴다.
 - **Resource/**: AssetDatabase · AssetManager · ResourceUtil · ResourcePackManager (VFS .pack) · AssetStreamingQueue · AssetLoadProfiler
   (팩 리더는 위치 지정 읽기라 여러 스레드가 잠금 없이 읽고 — 매니저는 리더를 찾는 동안만 잠근다 — `readFileAsync` 로 `AsyncFileIo` 에 구간 읽기를 걸어 해제 · CRC 를 태스크 워커에서 한다.
   스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 간다)
