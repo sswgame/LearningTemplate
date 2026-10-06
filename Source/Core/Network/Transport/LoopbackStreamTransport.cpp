@@ -132,6 +132,19 @@ namespace sw
                     }
                 }
                 (void)pollIo( 0 ); // 닫힘 사건을 지금 넘긴다 — 돌아온 뒤에는 콜백이 없다
+                {
+                    // 저쪽이 아직 자리를 풀지 않은 링크는 이 전송을 가리킨 채 남는다 — 이 전송이 먼저 없어지면 저쪽의 자리 풀기가 없어진 전송을 읽는다.
+                    // 두 쪽 모두 닫혔으므로 이 쪽 자리는 더 쓰이지 않는다(자리 풀기는 nullptr 을 "이미 풀렸다" 로 본다).
+                    std::scoped_lock<mutex> lock{ _pState->_mutex };
+                    for ( LoopbackLink& link : _pState->_listLink )
+                    {
+                        for ( LoopbackStreamTransport*& pSide : link._arrSide )
+                        {
+                            if ( pSide == this )
+                                pSide = nullptr;
+                        }
+                    }
+                }
                 _bInitialized = SW_FALSE;
             }
 
@@ -272,6 +285,8 @@ namespace sw
                     return NetAddress{};
                 const uint8                    peerSide = static_cast<uint8>( 1 - _listSlot[handle._index]._side );
                 const LoopbackStreamTransport* pPeer    = pLink->_arrSide[peerSide];
+                if ( pPeer == nullptr )
+                    return NetAddress{}; // 저쪽 전송을 이미 내렸다
                 return NetAddress::makeLoopback( peerSide == 1 ? pPeer->_listenPort : pPeer->_localPort );
             }
 
@@ -419,7 +434,7 @@ namespace sw
                         _stats._receivedBytes += static_cast<uint64>( moved );
                         ++_stats._receiveCallCount;
                         pushEventLocked( std::move( event ) );
-                        if ( queue.consume( moved ) )
+                        if ( queue.consume( moved ) && link._arrSide[peerSide] != nullptr ) // 먼저 내린 저쪽은 nullptr
                             link._arrSide[peerSide]->pushEventLocked( LoopbackEvent{ {}, {}, link._arrHandle[peerSide], StreamCloseReason::None, LoopbackEventKind::Writable, SW_FALSE } );
                     }
                     // 저쪽의 EOF — 저쪽 줄을 다 넘겨받은 뒤. 이쪽이 아직 닫지 않았으면 실제 전송처럼 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).

@@ -325,6 +325,30 @@ SW_TEST_CASE( StreamTransportTest, LoopbackConnectToClosedPortFails )
     runConnectToClosedPortFails( rig );
 }
 
+// 한쪽 전송을 먼저 내리고 없앤 뒤 다른 쪽을 내려도 없앤 전송을 건드리지 않는다(링크가 그 주소를 들고 있으면 안 된다 — Debug 경합 검출기 · ASAN 이 잡는다).
+SW_TEST_CASE( StreamTransportTest, LoopbackShutsDownAfterThePeerTransportIsDestroyed )
+{
+    LoopbackStreamNetwork        network{ 21u };
+    StreamRecorder               serverRecorder;
+    StreamRecorder               clientRecorder;
+    StreamTransportSettings      settings;
+    unique_ptr<IStreamTransport> server = network.createTransport();
+    settings._ioThreadCount             = 0;
+    SW_ASSERT_TRUE( server->initialize( &serverRecorder, settings ) );
+    SW_ASSERT_TRUE( server->listen( NetAddress::makeLoopback( 0 ) ) );
+    {
+        unique_ptr<IStreamTransport> client = network.createTransport();
+        SW_ASSERT_TRUE( client->initialize( &clientRecorder, settings ) );
+        SW_ASSERT_TRUE( client->connect( NetAddress::makeLoopback( server->getListenPort() ) ).isValid() );
+        (void)server->pollIo( 0 );
+        (void)client->pollIo( 0 );
+        SW_ASSERT_EQUAL( 1, serverRecorder.getOpenedCount() );
+        client->shutdown();
+    }
+    server->shutdown();
+    SW_EXPECT_EQUAL( 1, serverRecorder.getClosedCount() );
+}
+
 SW_TEST_CASE( StreamTransportTest, LoopbackBackpressureFillsThenDrains )
 {
     StreamTransportSettings settings;
