@@ -229,6 +229,20 @@ namespace sw::editor
         return true;
     }
 
+    void EditorSceneCommands::setActive( GameObject* pObj, bool bActive )
+    {
+        if ( pObj == nullptr || pObj->isActive() == bActive )
+            return;
+        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        {
+            pObj->setActive( bActive );
+            return;
+        }
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        pObj->setActive( bActive );
+        commitModify( pObj, beforeSnapshot, bActive ? "Activate GameObject" : "Deactivate GameObject" );
+    }
+
     Component* EditorSceneCommands::addComponent( GameObject* pObj, const hashed_string& typeName )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )

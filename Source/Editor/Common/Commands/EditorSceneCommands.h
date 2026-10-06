@@ -44,6 +44,11 @@ namespace sw::editor
         /** @brief 이름을 바꾸고 Undo에 기록합니다. */
         [[nodiscard]] static bool rename( GameObject* pObj, const utf8* pNewName );
         /**
+         * @brief 오브젝트 활성 비트를 바꿉니다. 멈춰 있으면 되돌리기와 씬 dirty 에 남기고, 플레이 중이면 바로 바꿉니다(Stop 이 되돌린다).
+         * @details 계층 창의 눈 단추와 인스펙터의 Active 칸이 같이 쓴다. 같은 값이면 아무것도 하지 않는다.
+         */
+        static void setActive( GameObject* pObj, bool bActive );
+        /**
          * @brief 타입 이름으로 컴포넌트를 붙이고 Undo에 기록합니다. 붙이지 못하면 nullptr 입니다.
          * @details 새 컴포넌트에 `onPostLoad` 를 부릅니다 — 기본값이 그 상태이고, 값을 자원으로 바꾸는 자리가 거기다(메시 · 머티리얼).
          *          컴포넌트를 만드는 편집기 길은 모두 이것(또는 `onPostLoad` 를 부르는 붙여넣기)을 지난다. 주의: 매니저에 바로 붙이면

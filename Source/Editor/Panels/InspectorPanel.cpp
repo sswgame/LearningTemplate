@@ -382,8 +382,7 @@ namespace sw::editor
 
         bool bActive = pObj->isActive();
         if ( ImGui::Checkbox( "Active", &bActive ) )
-            InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Active", [pObj, bActive]()
-            { pObj->setActive( bActive ); } );
+            EditorSceneCommands::setActive( pObj, bActive );
         EditorWidgets::drawTooltip( "게임오브젝트의 활성화 상태를 토글합니다" );
 
         GameObject* pParent = pObj->getParent();

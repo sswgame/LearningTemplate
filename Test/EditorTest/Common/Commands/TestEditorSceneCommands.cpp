@@ -239,6 +239,40 @@ SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh 
 }
 
 /**
+ * @brief [EditorSceneCommandsTest] 활성 바꾸기(계층 창 눈 · 인스펙터 Active)는 되돌릴 수 있다
+ * @details 계층 창의 눈 단추가 `setActive` 를 바로 불러 되돌리기도 dirty 도 남지 않았다 — 다른 씬을 열면 묻지 않고 사라졌다.
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, SetActiveIsUndoable )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "SetActiveProbe" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pManager = pScene->getObjectManager();
+    GameObject*               pObj     = pManager->createGameObject( hashed_string( "Lamp" ) );
+    SW_ASSERT_NOT_NULL( pObj );
+    pManager->mergePendingAdds();
+    SW_ASSERT_TRUE( pObj->isActive() );
+
+    EditorSceneCommands::setActive( pObj, false );
+    SW_EXPECT_FALSE( pObj->isActive() );
+    SW_ASSERT_TRUE( stack.canUndo() );
+    SW_EXPECT_EQUAL( string( "Deactivate GameObject" ), string( stack.peekUndoLabel().c_str() ) );
+
+    // 같은 값이면 아무것도 남기지 않는다
+    EditorSceneCommands::setActive( pObj, false );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+
+    stack.undo();
+    pManager->mergePendingAdds();
+    GameObject* pRestored = pManager->findGameObjectById( pObj->getObjectId() );
+    SW_ASSERT_NOT_NULL( pRestored );
+    SW_EXPECT_TRUE( pRestored->isActive() );
+}
+
+/**
  * @brief [EditorSceneCommandsTest] 계층 창의 재부모 · 부모 떼기는 오브젝트를 놓인 자리에 둔다
  * @details 붙이기가 로컬을 지키면 끌어 놓은 오브젝트가 새 부모의 위치 · 회전 · 크기만큼 튄다(유니티 계층 창 · 언리얼 아웃라이너는 월드를 지킨다).
  */

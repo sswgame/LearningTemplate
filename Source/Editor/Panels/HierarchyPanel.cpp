@@ -453,7 +453,7 @@ namespace sw::editor
                 const bool bActive = pObj->isActiveInHierarchy();
                 if ( EditorWidgets::drawToggleIconButton( "##active", bActive, ICON_FA_EYE, ICON_FA_EYE_SLASH, "Visible - click to deactivate",
                                                           "Inactive - click to activate" ) )
-                    pObj->setActive( bActive == false );
+                    EditorSceneCommands::setActive( pObj, bActive == false ); // 되돌리기 · 씬 dirty 에 남는다
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
