@@ -53,7 +53,7 @@ namespace sw
                 {
                     const XmlNode       defaultChild = defaults.isValid() ? defaults.findChild( child.getName() ) : XmlNode{};
                     const PropertyInfo* pProperty    = findProperty( type, child.getName() );
-                    const bool          bStruct      = pProperty != nullptr && pProperty->_bIsContainer == false;
+                    const bool          bStruct      = pProperty != nullptr && pProperty->_bIsContainer == SW_FALSE;
                     const TypeInfo*     pNestedType  = bStruct ? engine::getTypeRegistry().findType( pProperty->_typeName ) : nullptr;
                     if ( pNestedType == nullptr )
                     {
