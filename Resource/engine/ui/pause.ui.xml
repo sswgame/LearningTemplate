@@ -1,5 +1,33 @@
 <UiDocument _schemaVersion="1">
 	<UiScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
+	<_listAnimation>
+		<UiAnimation _name="Open">
+			<_listTrack>
+				<UiAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="0" _curve="Linear" />
+						<UiAnimationKey _time="0.15" _value="1" _curve="EaseOut" />
+					</_listKey>
+				</UiAnimationTrack>
+				<UiAnimationTrack _widget="Window" _property="_renderTransform._translation">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="0,24" _curve="Linear" />
+						<UiAnimationKey _time="0.2" _value="0,0" _curve="EaseOut" />
+					</_listKey>
+				</UiAnimationTrack>
+			</_listTrack>
+		</UiAnimation>
+		<UiAnimation _name="Close">
+			<_listTrack>
+				<UiAnimationTrack _widget="Window" _property="_opacity">
+					<_listKey>
+						<UiAnimationKey _time="0" _value="1" _curve="Linear" />
+						<UiAnimationKey _time="0.12" _value="0" _curve="EaseIn" />
+					</_listKey>
+				</UiAnimationTrack>
+			</_listTrack>
+		</UiAnimation>
+	</_listAnimation>
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Window" _styleClass="window">

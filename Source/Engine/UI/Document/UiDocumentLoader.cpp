@@ -26,6 +26,7 @@ namespace sw
         {
             static constexpr utf8   kScreenDescElement[]     = "UiScreenDesc";
             static constexpr utf8   kStyleSheetListElement[] = "_listStyleSheet";
+            static constexpr utf8   kAnimationListElement[]  = "_listAnimation";
             static constexpr utf8   kItemElement[]           = "item";
             static constexpr utf8   kSchemaVersionKey[]      = "_schemaVersion";
             static constexpr utf8   kFragmentProperty[]      = "_document";
@@ -221,6 +222,32 @@ namespace sw
                 return true;
             }
 
+            /** @brief 애니메이션 목록(`<UiAnimation>` 원소들)을 읽습니다. 모르는 칸 · 읽지 못한 값 · 이름 없음 · 겹친 이름은 오류입니다. */
+            [[nodiscard]] static bool parseAnimationList( const ParseContext& context, const XmlNode& element )
+            {
+                UiAnimationList           list{};
+                vector<SchemaOrphanValue> listOrphan;
+                const string              text  = string( "<UiAnimationList>" ) + element.toString() + "</UiAnimationList>";
+                const bool                bRead = XmlSerializer::deserializeSoft( &list, *UiAnimationList::StaticType(), text, &listOrphan );
+                if ( bRead == false )
+                    return fail( context, element, "_listAnimation cannot be read" );
+                if ( listOrphan.empty() == false )
+                    return fail( context, element, "_listAnimation has unknown or unreadable '" + describeOrphan( listOrphan.front() ) + "'" );
+                vector<UiAnimation>& listAnimation = context._pAsset->_listAnimation;
+                for ( UiAnimation& animation : list._listAnimation )
+                {
+                    if ( animation._name.empty() )
+                        return fail( context, element, "_listAnimation has an animation without _name" );
+                    for ( const UiAnimation& other : listAnimation )
+                    {
+                        if ( other._name == animation._name )
+                            return fail( context, element, string( "_listAnimation has two animations named '" ) + animation._name.c_str() + "'" );
+                    }
+                    listAnimation.push_back( std::move( animation ) );
+                }
+                return true;
+            }
+
             /** @brief orphan 하나를 `이름 = '글'` 로 적습니다(안쪽 원소면 타입 이름이 앞에 붙는다). */
             static string describeOrphan( const SchemaOrphanValue& orphan )
             {
@@ -366,6 +393,12 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kStyleSheetListElement, true ) )
             {
                 if ( Internal::parseStyleSheetList( context, child ) == false )
+                    return false;
+                continue;
+            }
+            if ( StringUtil::equals( pName, Internal::kAnimationListElement, true ) )
+            {
+                if ( Internal::parseAnimationList( context, child ) == false )
                     return false;
                 continue;
             }

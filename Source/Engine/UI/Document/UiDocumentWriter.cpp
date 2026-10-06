@@ -8,6 +8,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
@@ -92,6 +93,20 @@ namespace sw
                 target.setAttribute( string( rest ).c_str(), value.c_str() );
             }
 
+            /** @brief @p source 를 @p destinationParent 아래로 옮겨 적되, 속성 · 자식 · 글이 없는 원소(빈 컨테이너 `<_listEvent />`)는 뺍니다 — 손으로 쓴 문서와 같은 모양. */
+            static void copyWithoutEmptyElements( const XmlNode& source, const XmlNode& destinationParent )
+            {
+                const XmlNode destination = destinationParent.appendChild( source.getName() );
+                for ( XmlAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                    destination.appendAttribute( attribute.getName(), attribute.getValue() );
+                for ( XmlNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    const bool bEmpty = child.getFirstAttribute().isValid() == false && child.findChild().isValid() == false && StringUtil::isNullOrEmpty( child.getText() );
+                    if ( bEmpty == false )
+                        copyWithoutEmptyElements( child, destination );
+                }
+            }
+
             /** @brief 위젯 @p widget 과 그 자식을 @p parent 아래 원소로 씁니다. */
             static void writeWidget( const Widget& widget, const XmlNode& parent, const vector<UiBindingDesc>& listBinding )
             {
@@ -128,7 +143,8 @@ namespace sw
 
 namespace sw
 {
-    string UiDocumentWriter::write( const UiScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UiBindingDesc>& listBinding )
+    string UiDocumentWriter::write( const UiScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UiBindingDesc>& listBinding,
+                                    const vector<UiAnimation>& listAnimation )
     {
         using Internal = UiDocumentWriterInternal;
         XmlDocument   document;
@@ -153,6 +169,20 @@ namespace sw
             const XmlNode list = documentRoot.appendChild( "_listStyleSheet" );
             for ( const string& path : listStyleSheet )
                 list.appendChild( "item" ).setValue( string_view( path ) );
+        }
+
+        // 애니메이션 — 그릇(UiAnimationList)으로 직렬화한 `_listAnimation` 원소를 그대로 옮긴다.
+        if ( listAnimation.empty() == false )
+        {
+            UiAnimationList holder{};
+            holder._listAnimation = listAnimation;
+            XmlDocument animationDocument;
+            if ( animationDocument.parse( XmlSerializer::serialize( &holder, *UiAnimationList::StaticType() ) ) )
+            {
+                const XmlNode list = animationDocument.getRoot().findChild( "_listAnimation" );
+                if ( list.isValid() )
+                    Internal::copyWithoutEmptyElements( list, documentRoot );
+            }
         }
 
         Internal::writeWidget( root, documentRoot, listBinding );

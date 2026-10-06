@@ -2796,6 +2796,14 @@
    "source": "Source/Engine/UI/Debug/UiDemoScreen.cpp"
   },
   {
+   "name": "gv_uiReduceMotion",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
    "name": "gv_uiScale",
    "type": "float32",
    "default": "1.0",

@@ -358,3 +358,43 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   거절됐으면(Rejected · Disabled) 원래 값이 보입니다. 키 바인딩 겹침(Conflict)은 옵션 메뉴의 키 바인딩 창(8-2) 몫입니다.
 - 다른 곳의 변경(되돌리기 · 기본값 · 확인 카운트다운의 자동 되돌림)은 변경 통보(`registerEventListener`)로 받습니다 — 사용 가능이 다른 설정에 기대므로 통보가 오면
   그 화면의 설정 바인딩을 모두 다시 읽습니다. 리스너는 바인딩 집합(= 화면)이 지워질 때 뗍니다. 시험은 `UiSystem::setUserSettings` 로 자기 매니저를 넘깁니다.
+## 애니메이션 · 트윈 (`Animation/`)
+
+| 이 엔진 | 언리얼 | 유니티 UI Toolkit | Godot |
+|---|---|---|---|
+| `UiAnimation`(트랙 · 키 · 사건) · `UiAnimationPlayer` | UMG 위젯 애니메이션(시퀀서 트랙) | (애니메이션 클립 · 코드) | `AnimationPlayer` |
+| `UiSystem::tween` · `UiAnimationPlayer::tween` | (블루프린트 타임라인) | `experimental.animation` | `Tween` |
+
+**움직이기는 렌더 변환 · 불투명도 · 색으로** — 이 칸들은 `kTransform` · `kPaint` 라 레이아웃이 돌지 않습니다. 크기 · 여백(`_slot._widthOverride` …)을 움직이면
+매 프레임 그 위젯부터 레이아웃 경계까지 다시 잽니다(`UiAnimationTest.TransformTrackDoesNotRelayout` · `SizeTrackRelayouts`).
+
+```xml
+<UiDocument _schemaVersion="1">
+	<_listAnimation>
+		<UiAnimation _name="Open">                                          <!-- Open · Close 는 화면 스택이 튼다 -->
+			<_listTrack>
+				<UiAnimationTrack _widget="Window" _property="_opacity">   <!-- 위젯 이름(조각 안이면 조각.이름) · 프로퍼티 경로 -->
+					<_listKey>
+						<UiAnimationKey _time="0" _value="0" _curve="Linear" />
+						<UiAnimationKey _time="0.2" _value="1" _curve="EaseOut" /> <!-- 곡선은 이 키까지 가는 것(Animation/BlendCurve) -->
+					</_listKey>
+				</UiAnimationTrack>
+			</_listTrack>
+			<_listEvent><UiAnimationEvent _time="0.2" _command="Opened" /></_listEvent>  <!-- 화면 onCommand 로 -->
+		</UiAnimation>
+	</_listAnimation>
+	…
+</UiDocument>
+```
+
+- **값**: 키의 `_value` 는 그 칸의 글 표기입니다(XML 속성과 같다). 실수 · `float2` · `float3` · `float4` 칸은 키 사이를 곡선(`BlendCurve` — 카메라 · 시퀀서와 같은 곡선)으로
+  보간하고, 그 밖(정수 · 불리언 · 열거형 · 글)은 계단입니다(`_visibility` 를 `Collapsed` → `Visible`). 경로는 틀 때 한 번 풀고, 쓰기는 리플렉션으로 한 뒤
+  `Widget::onBoundPropertyChanged`(바인딩과 같은 자리)가 그 칸의 세터와 같은 무효화를 겁니다. 못 푼 트랙(위젯 · 경로 · 값)은 경고하고 그 트랙만 뺍니다.
+- **재생기**(`UiAnimationPlayer` — 화면마다 하나, `UiScreen::getAnimationPlayer`): `play( 이름, 배속, 바퀴 수(0 = 끝없이) )` · `playReverse` · `reverse`(재생 중이면 그 자리에서
+  돌아선다) · `stop` · `isPlaying`. 틀 때 첫 프레임 값을 바로 씁니다(올린 화면이 한 프레임 끝 값으로 번쩍이지 않게). 사건은 재생이 그 시각을 지날 때 한 바퀴에 한 번,
+  진행이 끝난 뒤 보냅니다(명령 처리가 애니메이션을 틀거나 화면을 닫아도 된다).
+- **열기 · 닫기**: 이름 `Open` 은 `pushScreen` 이, `Close` 는 `closeScreen` 이 틉니다. 닫기는 `Close` 가 끝난 뒤 실제로 지우고, 그동안 화면은 그려지기만 합니다
+  (입력 · 포커스 · 활성에서 빠진다).
+- **트윈**: `UiSystem::tween( 위젯 번호, 경로, 끝값, 길이, 곡선 )` — 지금 값에서 끝값으로(코드 한 줄, Godot `Tween`). 같은 위젯 · 경로의 새 트윈은 옛 것을 대신합니다.
+- **시간**: `UiSystem::update` 의 애니메이션 단계(구간 `GT.Ui.Animate` — 스타일 · 레이아웃 앞)에서 실제 프레임 시간으로 진행합니다(게임 정지 메뉴도 움직인다).
+- **움직임 줄이기**: 사용자 설정 `accessibility.reduceMotion`(`gv_uiReduceMotion`)이면 애니메이션 · 트윈 · 닫기가 바로 끝 값입니다(사건은 모두 보낸다).

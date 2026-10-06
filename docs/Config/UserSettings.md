@@ -44,6 +44,7 @@
 | `accessibility.uiScale` | float | `1` | 0.75 ~ 1.5 (눈금 0.05) | confirm | `gv:gv_uiScale` |
 | `accessibility.textSize` | float | `1` | 0.75 ~ 2 (눈금 0.05) | confirm | `gv:gv_uiTextScale` |
 | `accessibility.reduceFlashing` | bool | `false` |  | confirm | `gv:gv_reduceFlashing` |
+| `accessibility.reduceMotion` | bool | `false` |  | confirm | `gv:gv_uiReduceMotion` |
 | `accessibility.subtitles` | bool | `true` |  | confirm | `gv:gv_subtitles` |
 | `accessibility.subtitleSize` | enum | `medium` |  | confirm | `gv:gv_subtitleSize` |
 | `accessibility.subtitleBackground` | float | `0.5` | 0 ~ 1 (눈금 0.1) | confirm | `gv:gv_subtitleBackgroundOpacity` |

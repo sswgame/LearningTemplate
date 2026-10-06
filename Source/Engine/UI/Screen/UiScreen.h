@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Animation/UiAnimationPlayer.h"
 #include "Engine/UI/Core/WidgetTree.h"
 #include "Engine/UI/Core/WidgetTypes.h"
 #include "Engine/UI/Document/UiBindingDesc.h"
@@ -80,6 +81,9 @@ namespace sw
      *          **명령**: 트리의 위젯이 낸 명령(버튼의 `_command` — 클릭 · `UI.Accept`)은 `onCommand` 로 옵니다. 기본은 `registerCommand` 로 건 함수를
      *          부르는 것이고, C++ 화면 클래스는 덮어씁니다(유니티 UI Toolkit 의 컨트롤러가 이름으로 위젯을 찾아 거는 것과 같은 자리).
      *          문서로 연 화면(`UiSystem::openScreen`)은 그 문서 경로와 문서에서 뗀 바인딩 식을 듭니다.
+     *
+     *          **애니메이션**: 화면마다 재생기 하나(`getAnimationPlayer`)가 문서의 `<_listAnimation>` 을 듭니다. `Open` 은 올릴 때, `Close` 는 닫을 때
+     *          재생하고 닫기는 `Close` 가 끝난 뒤 실제로 지웁니다(그동안 화면은 입력 · 포커스를 받지 않는다).
      */
     class SW_API UiScreen
     {
@@ -124,6 +128,9 @@ namespace sw
         const UiBindingSet& getBindingSet() const { return *_bindingSet; }
         /** @brief 트리의 위젯 @p widget 의 칸 @p propertyName 을 사용자 입력이 바꿨다(`Widget::notifyValueEdited`) — 양방향 바인딩이 소스에 되씁니다. */
         void onWidgetValueEdited( Widget& widget, const hashed_string& propertyName );
+        /** @brief 이 화면의 애니메이션 · 트윈 재생기입니다(`UiSystem::update` 의 애니메이션 단계가 진행한다). */
+        UiAnimationPlayer&       getAnimationPlayer() { return _animationPlayer; }
+        const UiAnimationPlayer& getAnimationPlayer() const { return _animationPlayer; }
 
         /** @brief 명령 @p command 를 받을 함수를 겁니다. 같은 명령에 다시 걸면 바꿉니다. */
         void registerCommand( const hashed_string& command, const UiCommandDelegate& handler );
@@ -149,11 +156,12 @@ namespace sw
 
         WidgetTree                                                               _tree;
         UiScreenDesc                                                             _desc;
-        string                                                                   _documentPath;   ///< 지은 문서(코드로 지었으면 빈 글)
-        vector<UiBindingDesc>                                                    _listBinding;    ///< 문서에서 뗀 바인딩 식
-        vector<string>                                                           _listStyleSheet; ///< 문서 · 조각이 건 스타일 시트
-        unique_ptr<UiStyleSet>                                                   _styleSet;       ///< 테마 → 문서 시트 묶음(UiSystem 이 건다)
-        unique_ptr<UiBindingSet>                                                 _bindingSet;     ///< 바인딩 식을 푼 것(뷰모델 · 설정과 위젯 칸을 잇는다)
+        string                                                                   _documentPath;    ///< 지은 문서(코드로 지었으면 빈 글)
+        vector<UiBindingDesc>                                                    _listBinding;     ///< 문서에서 뗀 바인딩 식
+        vector<string>                                                           _listStyleSheet;  ///< 문서 · 조각이 건 스타일 시트
+        unique_ptr<UiStyleSet>                                                   _styleSet;        ///< 테마 → 문서 시트 묶음(UiSystem 이 건다)
+        unique_ptr<UiBindingSet>                                                 _bindingSet;      ///< 바인딩 식을 푼 것(뷰모델 · 설정과 위젯 칸을 잇는다)
+        UiAnimationPlayer                                                        _animationPlayer; ///< 문서 애니메이션 · 코드 트윈(트리를 가리킨다 — `_tree` 뒤에 짓는다)
         unordered_map<hashed_string, UiCommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
         UiSystem*                                                                _pUiSystem; ///< 올린 시스템(올리기 전 nullptr)
         UiScreenHandle                                                           _handle;

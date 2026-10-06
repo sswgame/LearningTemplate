@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Document/UiBindingDesc.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
@@ -39,6 +40,7 @@ namespace sw
      *          <UiDocument _schemaVersion="1">
      *              <UiScreenDesc _layer="Menu" _defaultFocus="Resume" />   (없으면 기본값)
      *              <_listStyleSheet><item>engine/ui/styles/default.uistyle.xml</item></_listStyleSheet>
+     *              <_listAnimation><UiAnimation _name="Open"> … 트랙(_listTrack) · 키(_listKey) · 사건(_listEvent) … </UiAnimation></_listAnimation>
      *              <SafeZonePanel> … 위젯 원소 = 리플렉션 타입, 속성 · 구조체 자식 = PROPERTY, 위젯 자식 = 자식 위젯 … </SafeZonePanel>
      *          </UiDocument>
      *          ```
@@ -54,6 +56,7 @@ namespace sw
         string                 _path{}; ///< 정규화한 경로(캐시 열쇠)
         UiScreenDesc           _screenDesc{};
         vector<string>         _listStyleSheet{}; ///< 스타일 시트 경로(정규화)
+        vector<UiAnimation>    _listAnimation{};  ///< 이름 붙은 애니메이션(이름이 겹치지 않는다 — `Open` · `Close` 는 화면 스택이 재생)
         vector<UiDocumentNode> _listNode{};       ///< 0 이 루트 위젯
         vector<string>         _listFragment{};   ///< 이 문서가 조각으로 바로 쓰는 문서(정규화, 중복 없음)
     };

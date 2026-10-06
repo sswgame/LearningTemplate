@@ -246,8 +246,10 @@ namespace sw
     {
         const hashed_string& name = property._name;
         _opacity                  = MathUtil::clamp( _opacity, 0.0f, 1.0f ); // 세터와 같은 묶기(불투명도 칸이 아니면 그대로다)
-        if ( name == hashed_string( "_opacity" ) || name == hashed_string( "_renderTransform" ) )
+        if ( name == hashed_string( "_opacity" ) )
             invalidate( WidgetDirty::kTransform );
+        else if ( name == hashed_string( "_renderTransform" ) )
+            invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange ); // 세터와 같다 — 지난 슬롯 자리에 다시 놓는다
         else if ( name == hashed_string( "_visibility" ) )
             invalidate( WidgetDirty::kVisibility );
         else if ( name == hashed_string( "_bEnabled" ) )

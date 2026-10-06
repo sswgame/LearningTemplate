@@ -117,11 +117,12 @@ namespace sw
         /** @brief 글리프 아틀라스를 쓰는 위젯이면 true 입니다(글 위젯) — 아틀라스 페이지를 비우면(세대가 오르면) 그림 캐시를 다시 칠한다. */
         virtual bool usesGlyphAtlas() const { return false; }
 
-        // --- 바인딩 ---------------------------------------------------------------
+        // --- 바인딩 · 애니메이션 ---------------------------------------------------------------
         /**
-         * @brief 바인딩이 칸 @p property(경로의 맨 위 칸)에 리플렉션으로 값을 썼다 — 세터를 거치지 않았으므로 그 칸의 세터와 같은 무효화를 합니다.
-         * @details 기본은 `Widget` 의 칸(불투명도 · 변환 → kTransform, 보임 → kVisibility, 슬롯 → kLayout …)을 알고, 모르는 칸은 kLayout | kPaint(보수적)입니다.
-         *          파생은 그리기만 바뀌는 칸(색)과 캐시를 가진 칸(글 · 범위)을 덮어씁니다. 칸 종류를 PROPERTY 메타로 적지 않는 이유: 커스텀 메타는 Shipping 에서 지워진다.
+         * @brief 바인딩 · 애니메이션이 칸 @p property(경로의 맨 위 칸)에 리플렉션으로 값을 썼다 — 세터를 거치지 않았으므로 그 칸의 세터와 같은 무효화를 합니다.
+         * @details 기본은 `Widget` 의 칸(불투명도 → kTransform, 렌더 변환 → kTransform | kArrange, 보임 → kVisibility, 슬롯 → kLayout …)을 알고, 모르는 칸은
+         *          kLayout | kPaint(보수적)입니다. 파생은 그리기만 바뀌는 칸(색)과 캐시를 가진 칸(글 · 범위)을 덮어씁니다. 칸 종류를 PROPERTY 메타로 적지 않는 이유:
+         *          커스텀 메타는 Shipping 에서 지워진다.
          */
         virtual void onBoundPropertyChanged( const PropertyInfo& property );
         /** @brief 글 판(현지화 — 언어 변경 · 표 다시 읽기)이 바뀌었다. 글 위젯은 키를 다시 풀고 kLayout 입니다. 기본은 아무것도 하지 않습니다. */

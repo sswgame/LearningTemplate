@@ -11,6 +11,7 @@
 
 namespace sw
 {
+    struct UiAnimation;
     struct UiScreenDesc;
 
     class Widget;
@@ -23,7 +24,8 @@ namespace sw
      */
     struct SW_API UiDocumentWriter
     {
-        /** @brief 화면 서술 @p desc · 스타일 시트 목록 · 루트 위젯 @p root · 바인딩 식으로 문서 글을 만듭니다. */
-        static string write( const UiScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UiBindingDesc>& listBinding );
+        /** @brief 화면 서술 @p desc · 스타일 시트 목록 · 루트 위젯 @p root · 바인딩 식 · 애니메이션으로 문서 글을 만듭니다. 애니메이션은 칸을 모두 씁니다. */
+        static string write( const UiScreenDesc& desc, const vector<string>& listStyleSheet, const Widget& root, const vector<UiBindingDesc>& listBinding,
+                             const vector<UiAnimation>& listAnimation );
     };
 } // namespace sw

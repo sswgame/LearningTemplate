@@ -101,7 +101,10 @@ namespace sw
         // --- 화면 스택 ---------------------------------------------------------------
         /** @brief 화면을 그 층의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
         UiScreenHandle pushScreen( unique_ptr<UiScreen> screen );
-        /** @brief 화면을 닫습니다(지연 — 사건 처리 중에 닫아도 이번 경로가 끝난 뒤 · 다음 `processInput` 끝 · `update` 앞에서 지운다). */
+        /**
+         * @brief 화면을 닫습니다(지연 — 사건 처리 중에 닫아도 이번 경로가 끝난 뒤 · 다음 `processInput` 끝 · `update` 앞에서 지운다).
+         * @details 화면에 `Close` 애니메이션이 있으면 그것을 틀고 끝난 뒤 지웁니다 — 그동안 화면은 입력 · 포커스를 받지 않고 그려지기만 합니다.
+         */
         void closeScreen( UiScreenHandle handle );
         /** @brief 화면을 찾습니다. 없거나 이미 지웠으면 nullptr 입니다(닫는 중인 화면은 찾는다). */
         UiScreen* findScreen( UiScreenHandle handle ) const;
@@ -173,6 +176,14 @@ namespace sw
         /** @brief 스타일 시트 @p sheetPath 가 바뀌었다 — 그 시트를 쓰는 화면의 스타일 묶음을 다시 걸고 위젯을 다시 맞춥니다(트리는 그대로). */
         void onStyleSheetReloaded( string_view sheetPath );
 
+        // --- 애니메이션 ---------------------------------------------------------------
+        /**
+         * @brief 위젯 @p widget 의 프로퍼티 @p propertyPath 를 지금 값에서 @p endValue(글 표기)로 @p duration 초 동안 옮깁니다(코드 한 줄 트윈 — Godot `Tween`).
+         * @details 그 위젯이 든 화면의 재생기(`UiScreen::getAnimationPlayer`)가 돌립니다. 같은 위젯 · 경로의 트윈은 새 것이 대신합니다.
+         * @return 위젯이 어느 화면에도 없거나 경로 · 값을 읽지 못하면 경고하고 false 입니다.
+         */
+        bool tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
+
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달 · 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 조종자가 의도를 0 으로 둔다). */
         bool isGameInputBlocked() const;
@@ -242,6 +253,8 @@ namespace sw
         void rebuildStyleSet( UiScreen& screen );
         /** @brief 화면 @p screen 의 트리를 그 문서로 새로 짓습니다(포커스 · 스크롤을 이름으로 이어 간다). 실패하면 옛 트리를 두고 false 입니다. */
         bool rebuildScreenFromDocument( UiScreen& screen );
+        /** @brief 화면 문서(`_documentPath`)의 애니메이션을 재생기에 겁니다 — 재생 중인 애니메이션 · 트윈은 멈춘다(옛 트리의 위젯 번호를 가리킨다). */
+        void applyDocumentAnimations( UiScreen& screen );
         /** @brief 문서 @p documentPath 가 조각 사슬로 @p usedPath 를 쓰는가(자기 자신 포함)입니다. */
         bool isDocumentUsing( const string& documentPath, string_view usedPath );
         /** @brief 모듈 다시 로드로 닫은 문서 화면을 다시 엽니다(다음 `update` 앞). */

@@ -21,6 +21,7 @@ namespace sw
         , _listStyleSheet{}
         , _styleSet{}
         , _bindingSet{}
+        , _animationPlayer{ _tree }
         , _mapCommandToHandler{}
         , _pUiSystem{ nullptr }
         , _handle{ kInvalidUiScreenHandle }

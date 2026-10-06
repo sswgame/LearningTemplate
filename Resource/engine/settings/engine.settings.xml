@@ -170,6 +170,7 @@
 	<Setting id="accessibility.uiScale" category="accessibility" type="float" default="1" min="0.75" max="1.5" step="0.05" target="gv:gv_uiScale" text="settings.accessibility.uiScale"/>
 	<Setting id="accessibility.textSize" category="accessibility" type="float" default="1" min="0.75" max="2" step="0.05" target="gv:gv_uiTextScale" text="settings.accessibility.textSize"/>
 	<Setting id="accessibility.reduceFlashing" category="accessibility" type="bool" default="false" target="gv:gv_reduceFlashing" text="settings.accessibility.reduceFlashing"/>
+	<Setting id="accessibility.reduceMotion" category="accessibility" type="bool" default="false" target="gv:gv_uiReduceMotion" text="settings.accessibility.reduceMotion"/>
 	<Setting id="accessibility.subtitles" category="accessibility" type="bool" default="true" target="gv:gv_subtitles" text="settings.accessibility.subtitles"/>
 	<Setting id="accessibility.subtitleSize" category="accessibility" type="enum" default="medium" target="gv:gv_subtitleSize" enabledWhen="accessibility.subtitles=true" text="settings.accessibility.subtitleSize">
 		<Option value="small"/>

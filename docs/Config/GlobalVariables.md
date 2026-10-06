@@ -156,6 +156,7 @@
 | `gv_subtitles` | `bool` | `true` | 일반 | 자막 표시 (사용자 설정 accessibility.subtitles) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_subtitleSize` | `int32` | `1` | 일반 | 자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_textureQuality` | `int32` | `2` | 일반 | 텍스처 품질 0~3 (사용자 설정 graphics.textureQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_uiReduceMotion` | `bool` | `false` | 일반 | UI 움직임 줄이기 — UI 애니메이션 · 트윈 · 스타일 전환이 바로 끝 값으로 (사용자 설정 accessibility.reduceMotion) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiScale` | `float32` | `1.0` | 일반 | 게임 UI 배율 (사용자 설정 accessibility.uiScale) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_uiTextScale` | `float32` | `1.0` | 일반 | 게임 UI 글자 크기 배율 (사용자 설정 accessibility.textSize) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_upscaler` | `int32` | `0` | 일반 | 업스케일러 (0 끔, 사용자 설정 graphics.upscaler) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |

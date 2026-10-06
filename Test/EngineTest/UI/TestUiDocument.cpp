@@ -390,7 +390,9 @@ SW_TEST_CASE( UiDocumentTest, RoundTripSaveMatchesSource )
 
     sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( kPausePath ) );
     SW_ASSERT_NOT_NULL( pScreen );
-    const sw::string written = sw::UiDocumentWriter::write( pScreen->getDesc(), {}, *pScreen->getTree().getRoot(), pScreen->getBindings() );
+    pScreen->getAnimationPlayer().tick( 1.0f ); // 여는 애니메이션(Open)이 끝난 값 — 문서에 적은 값과 같다
+    const sw::string written = sw::UiDocumentWriter::write( pScreen->getDesc(), {}, *pScreen->getTree().getRoot(), pScreen->getBindings(),
+                                                            pScreen->getAnimationPlayer().getAnimations() );
     SW_EXPECT_STREQ( source.saveToString().c_str(), written.c_str() );
 
     // 바인딩 식이 든 문서도 식 그대로 돌아온다
@@ -405,7 +407,7 @@ SW_TEST_CASE( UiDocumentTest, RoundTripSaveMatchesSource )
     sw::XmlDocument boundSource;
     SW_ASSERT_TRUE( boundSource.parse( kBindingText ) );
     SW_EXPECT_STREQ( boundSource.saveToString().c_str(),
-                     sw::UiDocumentWriter::write( pBound->getDesc(), {}, *pBound->getTree().getRoot(), pBound->getBindings() ).c_str() );
+                     sw::UiDocumentWriter::write( pBound->getDesc(), {}, *pBound->getTree().getRoot(), pBound->getBindings(), {} ).c_str() );
 }
 
 /** @brief [UiDocumentTest] 문서 파일이 바뀌어 다시 읽으면 화면을 새로 짓고 포커스 · 스크롤을 이름으로 이어 준다 */

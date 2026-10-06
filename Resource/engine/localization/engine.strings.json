@@ -69,6 +69,14 @@
                 "engine/settings/engine.settings.xml"
             ]
         },
+        "settings.accessibility.reduceMotion": {
+            "source": "Reduce Motion",
+            "context": "Options menu label",
+            "maxLength": 32,
+            "origins": [
+                "engine/settings/engine.settings.xml"
+            ]
+        },
         "settings.accessibility.subtitleBackground": {
             "source": "Subtitle Background",
             "context": "Options menu label",

@@ -253,12 +253,18 @@ namespace sw
 
     void UiSystem::update( float32 deltaSeconds, const UiViewport& viewport )
     {
-        (void)deltaSeconds;
         _viewport = viewport;
         syncDemoScreen();
         reopenClosedScreens();
         applyPendingCloses();
         updateBindings();
+        // 애니메이션 — 문서 애니메이션 · 트윈이 프로퍼티를 쓴다(스타일 · 레이아웃 앞 — 쓴 칸의 무효화가 이번 프레임에 걷힌다). 실제 프레임 시간이다(정지 메뉴도 움직인다).
+        {
+            SW_PROFILE_SCOPE( "GT.Ui.Animate" );
+            for ( size_t index = 0; index < _listScreen.size(); ++index )
+                _listScreen[index]->_animationPlayer.tick( deltaSeconds );
+            applyPendingCloses(); // 닫기 애니메이션이 끝난 화면
+        }
         // 스타일 — 스타일 더러운 위젯만 계산된 스타일을 다시 정한다(레이아웃 앞 — 여백 · 글꼴이 크기를 바꾼다).
         {
             SW_PROFILE_SCOPE( "GT.Ui.Style" );
@@ -305,6 +311,8 @@ namespace sw
         screen->_handle    = _nextScreenHandle++;
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
+        if ( screen->_animationPlayer.findAnimation( hashed_string( UiAnimation::kOpenName ) ) != nullptr )
+            (void)screen->_animationPlayer.play( hashed_string( UiAnimation::kOpenName ) );
         // 같은 층의 끝(그 층에서 맨 위)에 끼운다.
         uint32 at = static_cast<uint32>( _listScreen.size() );
         while ( at > 0 && UiSystemInternal::isDrawnBefore( *screen, *_listScreen[at - 1] ) )
@@ -322,6 +330,24 @@ namespace sw
             return;
         pScreen->_bClosing = SW_TRUE;
         _bPendingClose     = SW_TRUE;
+        // 닫기 애니메이션 — 끝날 때까지 지우지 않는다(`applyPendingCloses`). 여는 애니메이션은 멈춘다.
+        UiAnimationPlayer& player = pScreen->_animationPlayer;
+        if ( player.findAnimation( hashed_string( UiAnimation::kCloseName ) ) != nullptr )
+        {
+            player.stop( hashed_string( UiAnimation::kOpenName ) );
+            (void)player.play( hashed_string( UiAnimation::kCloseName ) );
+        }
+    }
+
+    bool UiSystem::tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
+    {
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            if ( screen->getTree().findWidgetById( widget ) != nullptr )
+                return screen->_animationPlayer.tween( widget, propertyPath, endValue, duration, curve );
+        }
+        SW_LOG_WARNING( "[Ui] Tween of '%#': widget %# is not in any screen", string( propertyPath ).c_str(), widget );
+        return false;
     }
 
     unique_ptr<Widget> UiSystem::instantiateDocument( string_view documentPath, UiScreenDesc& outDesc, vector<UiBindingDesc>& outListBinding,
@@ -368,7 +394,17 @@ namespace sw
         screen->_documentPath   = FileUtil::normalizePath( documentPath );
         screen->_listBinding    = std::move( listBinding );
         screen->_listStyleSheet = std::move( listStyleSheet );
+        applyDocumentAnimations( *screen );
         return pushScreen( std::move( screen ) );
+    }
+
+    void UiSystem::applyDocumentAnimations( UiScreen& screen )
+    {
+        // 애니메이션은 문서의 것(캐시에 이미 있다 — 방금 지었다).
+        screen._animationPlayer.stopAll();
+        string                                  error;
+        const shared_ptr<const UiDocumentAsset> document = _documentCache.findOrLoad( screen._documentPath, error );
+        screen._animationPlayer.setAnimations( document != nullptr ? document->_listAnimation : vector<UiAnimation>{} );
     }
 
     void UiSystem::onDocumentReloaded( string_view documentPath )
@@ -455,6 +491,7 @@ namespace sw
         screen._lastFocused    = kInvalidWidgetId;
         // 뷰모델은 화면이 그대로 든다 — 식이 새 위젯 번호를 가리키니 다음 바인딩 단계가 다시 걸고 모든 칸을 쓴다.
         screen._bindingSet->markRebind();
+        applyDocumentAnimations( screen ); // 고친 문서의 애니메이션 — 재생 중이던 것(닫기 포함)은 멈춘다
         rebuildStyleSet( screen );
         // 스크롤 오프셋은 내용 크기 안으로 묶이므로 새 트리를 지금 한 번 맞추고 재 둔 뒤에 돌려준다.
         if ( screen._styleSet != nullptr )
@@ -784,8 +821,16 @@ namespace sw
         _bPendingClose = SW_FALSE;
         for ( uint32 index = static_cast<uint32>( _listScreen.size() ); index > 0; --index )
         {
-            if ( _listScreen[index - 1]->_bClosing == SW_TRUE )
-                destroyScreenAt( index - 1 );
+            UiScreen& screen = *_listScreen[index - 1];
+            if ( screen._bClosing == SW_FALSE )
+                continue;
+            // 닫기 애니메이션이 도는 화면은 끝날 때까지 남긴다(다음에 다시 본다).
+            if ( screen._animationPlayer.isPlaying( hashed_string( UiAnimation::kCloseName ) ) )
+            {
+                _bPendingClose = SW_TRUE;
+                continue;
+            }
+            destroyScreenAt( index - 1 );
         }
         refreshActiveScreen();
     }
