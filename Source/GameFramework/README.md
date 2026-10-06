@@ -124,6 +124,9 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   `Online/Ledger`: 원장 — 계정 · 맡김 · 발행 · 소각 보유자 사이의 복식 이동(다리 전부 또는 없음), 잔액은 판 조건 레코드, 분개 키가 멱등 키, 보유자별 내역,
   보존 검사(`LedgerAudit` — 보유 = 발행 − 소각). 환불 회수만 계정 잔액을 음수(빚)로 만들 수 있고(`_bAllowDebt`), 빚이 있는 동안 그 재화는 쓰지 못한다.
   거래 · 우편 · 상점 · GM 지급이 `Ledger::stageTransfer` 로 자기 트랜잭션에 붙인다. 시험: `LedgerTest`.
+  `Online/Mail`: 우편 넣기(`ServiceMail::stageSend` — 발행 재원은 수령 때, 그 밖은 넣을 때 맡김으로, 같은 멱등 키 한 번, 만료 색인, 기본 보관 30 일 ·
+  만료 때 운영 · 보상 우편은 첨부 소멸 · 플레이어 우편은 반환). `Online/Sanction`: 계정 제재 레코드(채팅 금지 · 정지 · 영구 정지 — 끝 시각 · 사유, 판 조건 쓰기).
+  `Online/Identity/AccountSessionControl.h`: 세션 끊기 창구 `IAccountSessionControl`(계정 키트가 구현). 시험: `ServiceMailTest` · `ServiceSanctionTest`.
 - **Progression**: 경험치 곡선 · 레벨(`ExperienceCurve` · `LevelProgress`), 스킬 트리(`SkillTreeCatalog` · `SkillTreeState`), 평판 · 호감도(`ReputationCatalog` ·
   `ReputationState`), 로그라이트 지도(`RunMap`), 로컬 통계(`StatCatalog` · `PlayerStats` — `<Stats><Stat id kind="Counter|Max|Min|Time" max/>` 정의, `increment` ·
   `submit`(기록이 좋아질 때만) · `addTime`, 바뀔 때만 듣는 쪽에 `StatChange`, 프로필 파일 `saveToFile` · `loadFromFile` — 업적의 바탕, Steam Stats 의 로컬 판)
