@@ -31,6 +31,8 @@ namespace sw
     /**
      * @struct Ballistics
      * @brief 투사체 계산입니다. 맞음 판정은 게임이 `_previousPosition` → `_position` 선분으로 합니다(`RayMath` · 물리 질의).
+     * @details 중력은 설정된 물리 중력의 크기(`PhysicsSystem::getConfiguredGravityMagnitude`) × 투사체의 중력 배율입니다.
+     * @details 중력은 설정된 물리 중력의 크기(`PhysicsSystem::getConfiguredGravityMagnitude`) × 투사체의 중력 배율입니다.
      */
     struct SW_GF_API Ballistics
     {

@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -21,12 +21,12 @@ namespace sw
     /** @brief 열차 물리의 상수입니다. 단위는 m · s · m/s · m/s². */
     struct CoasterPhysicsParams
     {
-        float32 _gravity{ constant::kDefaultGravity };
-        float32 _rollingResistance{ 0.012f }; ///< 구름 저항 계수 μ — 감속 μg
-        float32 _dragCoefficient{ 0.0004f };  ///< 공기 저항 — 감속 k·v²
-        float32 _liftSpeed{ 4.0f };           ///< 체인이 끄는 속도 — 그보다 느리면 이 속도로 끈다
-        float32 _stationSpeed{ 3.0f };        ///< 스테이션이 맞추는 속도(출발 · 도착)
-        float32 _boosterSpeed{ 22.0f };       ///< 부스터가 올려 주는 속도 상한
+        float32 _gravity{ PhysicsSystem::getConfiguredGravityMagnitude() }; ///< 기본은 설정된 물리 중력
+        float32 _rollingResistance{ 0.012f };                               ///< 구름 저항 계수 μ — 감속 μg
+        float32 _dragCoefficient{ 0.0004f };                                ///< 공기 저항 — 감속 k·v²
+        float32 _liftSpeed{ 4.0f };                                         ///< 체인이 끄는 속도 — 그보다 느리면 이 속도로 끈다
+        float32 _stationSpeed{ 3.0f };                                      ///< 스테이션이 맞추는 속도(출발 · 도착)
+        float32 _boosterSpeed{ 22.0f };                                     ///< 부스터가 올려 주는 속도 상한
         float32 _boosterAcceleration{ 9.0f };
         float32 _brakeSpeed{ 5.0f }; ///< 브레이크가 내리는 속도
         float32 _brakeDeceleration{ 10.0f };

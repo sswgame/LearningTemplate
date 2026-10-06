@@ -52,6 +52,15 @@ namespace sw
         /** @brief 설정을 바꿉니다. 이미 있는 씬에는 들지 않습니다(새로 만드는 씬부터). 검사에 지면 바꾸지 않고 false 입니다. */
         [[nodiscard]] bool setSettings( const PhysicsSettings& settings );
 
+        /**
+         * @brief 설정된 3D 중력(m/s²)입니다 — 엔진 서비스가 묶여 있으면 이 서비스의 설정 표(`physicssettings.xml`), 없으면(도구 · 서비스 없는 시험) 설정 표 기본값.
+         * @details 물리 바깥에서 중력을 쓰는 계산(탄도 · 파괴 하중 · 코스터 · 파도 분산 · 스프링 사슬)은 숫자를 따로 적지 않고 이것 하나를 읽는다
+         *          (언리얼 `UWorld::GetGravityZ` ← 프로젝트 물리 설정과 같은 한 출처).
+         */
+        static float3 getConfiguredGravity();
+        /** @brief `getConfiguredGravity()` 의 크기(m/s²)입니다. 아래(-Y) 방향만 쓰는 계산이 읽습니다. */
+        static float32 getConfiguredGravityMagnitude();
+
     private:
         PhysicsSettings _settings;
         bool            _bInitialized;

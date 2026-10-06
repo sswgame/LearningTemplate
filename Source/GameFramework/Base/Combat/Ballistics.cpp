@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Common/EngineDefines.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
         projectile._previousPosition = projectile._position;
         if ( projectile._drag > 0.0f )
             projectile._velocity = projectile._velocity * MathUtil::max( 0.0f, 1.0f - projectile._drag * deltaTime );
-        projectile._velocity._y -= constant::kDefaultGravity * projectile._gravityScale * deltaTime;
+        projectile._velocity._y -= PhysicsSystem::getConfiguredGravityMagnitude() * projectile._gravityScale * deltaTime;
         projectile._position = projectile._position + projectile._velocity * deltaTime;
         projectile._age += deltaTime;
     }
@@ -35,7 +35,7 @@ namespace sw
     {
         const float3  delta      = to - from;
         const float32 horizontal = MathUtil::sqrt( delta._x * delta._x + delta._z * delta._z );
-        const float32 gravity    = constant::kDefaultGravity * gravityScale;
+        const float32 gravity    = PhysicsSystem::getConfiguredGravityMagnitude() * gravityScale;
         if ( speed <= 0.0f )
             return false;
         if ( gravity <= 1.0e-6f || horizontal < 1.0e-6f )
@@ -95,6 +95,6 @@ namespace sw
         if ( speed <= 0.0f )
             return 0.0f;
         const float32 time = distance / speed;
-        return 0.5f * constant::kDefaultGravity * gravityScale * time * time;
+        return 0.5f * PhysicsSystem::getConfiguredGravityMagnitude() * gravityScale * time * time;
     }
 } // namespace sw

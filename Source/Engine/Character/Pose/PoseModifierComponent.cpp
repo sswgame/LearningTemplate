@@ -16,6 +16,7 @@
 #include "Engine/Object/GameObject/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsAsset.h"
+#include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Resource/AnimationAssetCache.h"
 
 namespace sw
@@ -641,6 +642,7 @@ namespace sw
         RigPrepareContext prepare{};
         prepare._worldFromModel = _worldFromModel;
         prepare._deltaSeconds   = context._deltaSeconds;
+        prepare._worldGravity   = PhysicsSystem::getConfiguredGravity();
         prepare._pGroundQuery   = ( _pGroundQueryOverride != nullptr ) ? _pGroundQueryOverride : _groundQuery.get();
         if ( pManager != nullptr && pManager->getAnimationSystem().findLodViewPosition( prepare._viewPosition ) )
             prepare._bHasViewPosition = SW_TRUE;

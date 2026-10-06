@@ -65,7 +65,7 @@ namespace
             {
                 RigPoseBuffer buffer;
                 openReference( skeleton, buffer ); // 애니메이션은 늘 수평 레퍼런스 — 스프링이 매 프레임 그 위에 얹는다
-                chain.simulate( buffer, listBone, settings, listCollider, float4x4::Identity, frameSeconds, space );
+                chain.simulate( buffer, listBone, settings, listCollider, float4x4::Identity, float3{ 0.0f, -9.81f, 0.0f }, frameSeconds, space );
             }
             return chain.getParticles().back();
         }
@@ -278,14 +278,15 @@ SW_TEST_CASE( RigSolverTest, PlanarSolversStayInPlane )
     // 스프링: 평면 밖 중력(+Z 성분)을 줘도 입자는 평면에 남는다.
     const Skeleton    horizontal = TestRigSolverInternal::makeHorizontalChain( 3, 0.5f );
     RigSpringSettings springSettings{};
-    springSettings._gravity   = float3{ 0.0f, -9.8f, 5.0f };
-    springSettings._stiffness = 0.0f;
+    springSettings._gravityOverride     = float3{ 0.0f, -9.8f, 5.0f };
+    springSettings._bUseGravityOverride = SW_TRUE;
+    springSettings._stiffness           = 0.0f;
     RigSpringChain chain;
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
         RigPoseBuffer buffer;
         TestRigSolverInternal::openReference( horizontal, buffer );
-        chain.simulate( buffer, TestRigSolverInternal::makeChainIndices( 3 ), springSettings, {}, float4x4::Identity, 1.0f / 60.0f, planar );
+        chain.simulate( buffer, TestRigSolverInternal::makeChainIndices( 3 ), springSettings, {}, float4x4::Identity, float3{}, 1.0f / 60.0f, planar );
         if ( frame == 59 )
             SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( 2 )._z, 1e-4f );
     }

@@ -13,6 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -267,6 +268,8 @@ namespace sw
         _material.setVector( hashed_string( "shallowColor" ), _shallowColor );
         _material.setVector( hashed_string( "deepColor" ), _deepColor );
         _material.setVector( hashed_string( "skyColor" ), _skyColor );
+        // 파도 분산의 중력 — CPU 수면 질의(WaterWaveMath)와 같은 설정된 물리 중력 하나.
+        _material.setVector( hashed_string( "waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
     void WaterBodyComponent::rebuildSurface()
@@ -415,7 +418,7 @@ namespace sw
             return false;
         float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
-        outHeight = baseHeight + WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, time < 0.0f ? _waveTime : time, arrWave );
+        outHeight = baseHeight + WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, time < 0.0f ? _waveTime : time, PhysicsSystem::getConfiguredGravityMagnitude(), arrWave );
         return true;
     }
 
@@ -428,8 +431,9 @@ namespace sw
         getWaveVectors( arrWave );
         const float32 waveTime = time < 0.0f ? _waveTime : time;
         float2        origin{};
-        (void)WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, waveTime, arrWave, 4u, &origin );
-        outNormal = WaterWaveMath::computeNormal( origin, waveTime, arrWave );
+        const float32 gravity = PhysicsSystem::getConfiguredGravityMagnitude();
+        (void)WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, waveTime, gravity, arrWave, 4u, &origin );
+        outNormal = WaterWaveMath::computeNormal( origin, waveTime, gravity, arrWave );
         return true;
     }
 

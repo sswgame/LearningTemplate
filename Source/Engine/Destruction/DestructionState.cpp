@@ -11,6 +11,7 @@
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/FractureGraph.h"
+#include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw
 {
@@ -443,13 +444,14 @@ namespace sw
 
         // 깊은 노드부터 — 제 무게 + 받은 하중을 더 얕은 이웃에게 맞닿은 세기 비율로 나눠 넘긴다. 몫이 세기를 넘으면 그 사이가 끊긴다.
         vector<float32> listIncoming( nodeCount, 0.0f );
-        bool            bBroke = false;
+        bool            bBroke  = false;
+        const float32   gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력 — 서버 · 클라가 같은 설정을 읽는다
         for ( size_t order = listQueue.size(); order > 0; --order )
         {
             const uint32 current = listQueue[order - 1];
             if ( listDepth[current] == 0 )
                 continue;
-            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * constant::kDefaultGravity + listIncoming[current];
+            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * gravity + listIncoming[current];
             float32       totalCapacity = 0.0f;
             for ( const Neighbor& neighbor : listNeighbor[current] )
             {

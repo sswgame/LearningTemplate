@@ -7,6 +7,7 @@
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
+#include "Engine/Common/EngineDefines.h"
 
 namespace sw
 {
@@ -51,6 +52,7 @@ namespace sw
         , _pose{}
         , _space{}
         , _pCurveSource{ nullptr }
+        , _worldGravity{ 0.0f, -constant::kDefaultGravity, 0.0f }
         , _pendingDeltaSeconds{ 0.0f }
         , _evaluationCount{ 0 }
     {
@@ -276,6 +278,7 @@ namespace sw
     void RigInstance::prepare( const RigPrepareContext& context )
     {
         _pendingDeltaSeconds += MathUtil::max( context._deltaSeconds, 0.0f );
+        _worldGravity = context._worldGravity;
         for ( const unique_ptr<RigNode>& node : _listNode )
             node->prepare( context );
     }
@@ -295,6 +298,7 @@ namespace sw
         context._modelFromWorld = worldFromModel.invert();
         context._pSpace         = &_space;
         context._deltaSeconds   = _pendingDeltaSeconds;
+        context._worldGravity   = _worldGravity;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
             const float32 weight = computeNodeWeight( nodeIndex );

@@ -32,6 +32,7 @@ SW_MATERIAL_BEGIN
 	float4 shallowColor;
 	float4 deepColor;
 	float4 skyColor;
+	float4 waveParams; // x = 파도 분산의 중력(m/s²) — 컴포넌트가 설정된 물리 중력을 싣는다
 }
 SW_MATERIAL_END
 
@@ -47,10 +48,10 @@ PSInput VSMain( SwVertexInput input )
 	// 파도는 월드 (x, z) 의 함수다 — CPU 질의(WaterWaveMath)가 같은 원점으로 같은 값을 낸다.
 	float4       worldPosition = swComputeWorldPosition( input.position, instance.world );
 	const float2 origin        = worldPosition.xz;
-	worldPosition.xyz += swComputeGerstnerDisplacement( origin, time, arrWave );
+	worldPosition.xyz += swComputeGerstnerDisplacement( origin, time, material.waveParams.x, arrWave );
 	output.position      = swComputeClipPosition( worldPosition, g_ViewProj );
 	output.worldPosition = worldPosition.xyz;
-	output.normal        = swComputeGerstnerNormal( origin, time, arrWave );
+	output.normal        = swComputeGerstnerNormal( origin, time, material.waveParams.x, arrWave );
 
 	const float depth       = max( input.color.a, 0.0f );
 	const float depthFactor = saturate( depth / max( material.waterParams.y, 1e-3f ) );

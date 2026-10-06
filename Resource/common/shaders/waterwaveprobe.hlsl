@@ -10,7 +10,7 @@ SW_ROOT_CONSTANTS_BEGIN
 	uint   g_TargetIndex;
 	uint   g_SampleCount;
 	float  g_Time;
-	uint   g_Pad0;
+	float  g_Gravity;
 	float4 g_Wave0;
 	float4 g_Wave1;
 	float4 g_Wave2;
@@ -31,7 +31,7 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 	// 표본 자리 — 시험의 CPU 쪽과 같은 식이다.
 	const float2 origin = float2( -20.0f + (float)( sampleIndex % 8u ) * 5.25f, -15.0f + (float)( sampleIndex / 8u ) * 4.125f );
 	float4       arrWave[SW_GERSTNER_WAVE_COUNT] = { SW_ROOT( g_Wave0 ), SW_ROOT( g_Wave1 ), SW_ROOT( g_Wave2 ), float4( 0.0f, 1.0f, 0.0f, 0.0f ) };
-	const float3 displacement = swComputeGerstnerDisplacement( origin, SW_ROOT( g_Time ), arrWave );
+	const float3 displacement = swComputeGerstnerDisplacement( origin, SW_ROOT( g_Time ), SW_ROOT( g_Gravity ), arrWave );
 	const uint3  bits         = asuint( displacement );
 	swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), uint2( 0u, sampleIndex ), encodeHalfWord( bits.x & 0xFFFFu ) );
 	swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), uint2( 1u, sampleIndex ), encodeHalfWord( bits.x >> 16 ) );

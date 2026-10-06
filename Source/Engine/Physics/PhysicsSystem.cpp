@@ -4,6 +4,7 @@
 
 #include "Core/Memory/MemoryProfiler.h"
 
+#include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/Box2D/Box2DPhysicsBackend.h"
 #include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -91,6 +92,18 @@ namespace sw
             return nullptr;
         }
         return Box2DPhysicsBackend::createScene( settings );
+    }
+
+    float3 PhysicsSystem::getConfiguredGravity()
+    {
+        if ( engine::areEngineServicesBound() )
+            return engine::getPhysicsSystem().getSettings()._gravity;
+        return PhysicsSettings{}._gravity;
+    }
+
+    float32 PhysicsSystem::getConfiguredGravityMagnitude()
+    {
+        return getConfiguredGravity().getLength();
     }
 
     bool PhysicsSystem::setSettings( const PhysicsSettings& settings )

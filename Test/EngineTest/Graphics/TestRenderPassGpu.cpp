@@ -6313,6 +6313,7 @@ SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
     constexpr uint32  kSampleCount                                = 32;
     constexpr uint32  kTexelPerRow                                = 8;
     constexpr float32 kTime                                       = 2.75f;
+    constexpr float32 kGravity                                    = sw::constant::kDefaultGravity;
     const sw::float4  arrWave[sw::shaderslot::kGerstnerWaveCount] = {
         sw::GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f}
             .toVector(),
@@ -6350,6 +6351,7 @@ SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
             arrRoot[0] = device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u;
             arrRoot[1] = kSampleCount;
             std::memcpy( &arrRoot[2], &kTime, sizeof( float32 ) );
+            std::memcpy( &arrRoot[3], &kGravity, sizeof( float32 ) );
             std::memcpy( &arrRoot[4], arrWave, sizeof( sw::float4 ) * 3 );
             cmdList->beginCommandList();
             cmdList->prepareTextureForUnorderedAccess( texture );
@@ -6381,7 +6383,7 @@ SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
                         std::memcpy( &arrGpu[component], &bits, sizeof( float32 ) );
                     }
                     const sw::float2 origin{ -20.0f + static_cast<float32>( sampleIndex % 8u ) * 5.25f, -15.0f + static_cast<float32>( sampleIndex / 8u ) * 4.125f };
-                    const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, arrWave );
+                    const sw::float3 cpu = sw::WaterWaveMath::computeDisplacement( origin, kTime, kGravity, arrWave );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._x - arrGpu[0] ) );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._y - arrGpu[1] ) );
                     worstError           = sw::MathUtil::max( worstError, sw::MathUtil::abs( cpu._z - arrGpu[2] ) );
