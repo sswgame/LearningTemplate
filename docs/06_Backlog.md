@@ -554,7 +554,8 @@ cd build/Ninja-Debug/Bin
 - **MSDF 글리프**(직접 — 윤곽 모서리 칠하기 · 채널별 거리, 큰 글자의 모서리가 날카롭다) — 지금은 단일 채널 SDF(`Engine/Text/GlyphCache`, FreeType `sdf` 렌더러,
   결정 R2). 아틀라스 페이지가 R8 이라 MSDF 는 RGB 페이지 · 셰이더 median 이 함께 든다.
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
-  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
+  `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0)
+  (꽂을 자리는 `Engine/Text/ITextShaper` — 런 하나, 같은 글꼴 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
 - **임포터가 1 채널(R8) DDS 를 내는 규칙**(조건: 마스크 · 1 채널 텍스처 에셋이 생기면) — RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는다. `App --import-textures` 의
   규칙 표(`TextureImportConfig.json`)에 R8 출력이 없다.
