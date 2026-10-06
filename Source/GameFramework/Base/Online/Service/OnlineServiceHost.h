@@ -6,6 +6,8 @@
  *          - **캐시 앞 · 서버 버스의 소비자는 호스트 하나다**: 캐시 답 · 채널 메시지는 `getEphemeralRouter()` 가 요청 id · 채널로, 버스 메시지는 `subscribeServerBus`
  *            한 서비스에 나눠 준다. 서비스가 `pollReplies` · `pollMessages` 를 직접 부르면 서로의 답을 가져간다.
  *          - 메서드 영역이 겹치는 서비스는 `registerService` 가 거절한다.
+ *          - **수명 계약**: 서비스는 빌려 쓴다. 호스트 `shutdown` 이 서비스마다 `onHostShutdown` 을 한 번 불러 호스트 포인터 · 구독을 떼게 하므로, 서비스 객체는
+ *            호스트보다 먼저든 늦게든 내려가도 된다. 서비스 쪽에서 맡긴 비동기 일(캐시 라우터 · 접속 상태 찾기)은 서비스 `shutdown` 이 `cancel` 한다.
  *          언리얼 Online Services 의 인터페이스 묶음 · gRPC 서버의 서비스 등록과 같은 모양이다.
  */
 #pragma once
@@ -90,6 +92,11 @@ namespace sw
             (void)host;
             (void)message;
         }
+        /**
+         * @brief 호스트가 내려간다 — 기다리던 캐시 답(Unavailable)을 모두 알린 뒤, 버스 구독 · 전송을 닫기 전에 한 번. 들고 있던 호스트 포인터 · 구독 목록을 버린다.
+         *        이 뒤로 서비스는 호스트를 부르지 않는다 — 서비스 객체가 호스트보다 오래 살아도(늦게 `shutdown`) 사라진 호스트를 만지지 않는다.
+         */
+        virtual void onHostShutdown( OnlineServiceHost& host ) { (void)host; }
     };
 } // namespace sw
 

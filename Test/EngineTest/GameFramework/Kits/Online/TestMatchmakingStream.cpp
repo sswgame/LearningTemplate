@@ -27,8 +27,8 @@ namespace
         MatchmakingClient::ReplyDelegate makeDelegate() { return MatchmakingClient::ReplyDelegate::create<&MatchmakingRecorder::onReply>( this ); }
     };
 
-    /** @brief 서버 하나의 매칭(로직 + 바인딩) — 서버보다 먼저 선언해 서버가 먼저 내려가며 캐시 답을 거두게 한다. */
-    struct MatchmakingOnServer
+    /** @brief 서버 하나의 매칭(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */
+    struct MatchmakingOnServer final : public test::IOnlineTestKit
     {
         PartyLobbyService _partyLobby;
         MatchQueueService _queue;
@@ -41,7 +41,8 @@ namespace
         {
         }
 
-        ~MatchmakingOnServer()
+        /** @brief 서버가 내려가기 전에 부른다(호스트 · 저장소 · 접속 상태가 살아 있다). 두 번 불려도 된다. */
+        void stop() override
         {
             _binding.shutdown();
             _queue.shutdown();
@@ -52,6 +53,7 @@ namespace
         {
             SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
             server.start();
+            server.addKit( this );
             _partyLobby.initialize( server._host.getEphemeralRouter(), server.getServerId() );
             MatchModeDefinition mode;
             mode._modeId    = "pair";

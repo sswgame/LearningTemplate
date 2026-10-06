@@ -92,6 +92,12 @@ namespace sw
         _pPresence      = nullptr;
     }
 
+    void SocialServer::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+    }
+
     uint32 SocialServer::getProtocolVersion() const { return SocialProtocol::kVersion; }
 
     void SocialServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )

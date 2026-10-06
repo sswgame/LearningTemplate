@@ -58,6 +58,7 @@ namespace sw
         bool   isAnonymousMethod( uint16 method ) const override;
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void   onHostShutdown( OnlineServiceHost& host ) override;
         void   onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override;
         void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 

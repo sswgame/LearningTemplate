@@ -38,6 +38,7 @@ namespace sw
         uint32 getProtocolVersion() const override;
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
+        void   onHostShutdown( OnlineServiceHost& host ) override;
         void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:

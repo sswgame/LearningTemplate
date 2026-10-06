@@ -438,6 +438,21 @@ SW_TEST_CASE( ChatServiceTest, HistoryPastRetentionIsTrimmedAndFailedWritesAreDr
     SW_EXPECT_EQUAL( node._service.getPendingCount(), 0 );
 }
 
+SW_TEST_CASE( ChatServiceTest, ShutdownCancelsPendingPresenceFinds )
+{
+    // 서비스가 접속 상태 창구보다 먼저 내려가도 된다 — 맡긴 찾기를 취소해 창구가 나중에 사라진 서비스를 부르지 않는다.
+    MemoryServiceDatabase database;
+    LocalServerBusHub     hub;
+    ChatNode              node( &database, &hub, 1 );
+    node._directory._mapOnline[10] = "alice";
+    node._presence.setOnline( AccountIdentity{ "carol", 20, SW_FALSE }, 2 );
+    node._service.sendWhisper( 10, 20, "hello carol", 100, 1 ); // 다른 서버 — 제재를 읽은 뒤 접속 상태 찾기를 맡긴다
+    (void)node._store.pollCompletions();
+    SW_ASSERT_EQUAL( node._presence.getLivePendingCount(), 1 );
+    node._service.shutdown();
+    SW_EXPECT_EQUAL( node._presence.getLivePendingCount(), 0 );
+}
+
 SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
 {
     ChatMessage message;

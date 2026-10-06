@@ -28,8 +28,8 @@ namespace
         const SocialClientReply& getLast() const { return _listReply.back(); }
     };
 
-    /** @brief 서버 하나의 친구 · 길드(로직 + 바인딩) — 서버보다 먼저 선언해 서버가 먼저 내려가며 저장소 일 · 캐시 답을 거두게 한다. */
-    struct SocialOnServer
+    /** @brief 서버 하나의 친구 · 길드(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */
+    struct SocialOnServer final : public test::IOnlineTestKit
     {
         SocialService _socialService;
         GuildService  _guildService;
@@ -42,7 +42,8 @@ namespace
         {
         }
 
-        ~SocialOnServer()
+        /** @brief 서버가 내려가기 전에 부른다(호스트 · 저장소 · 접속 상태가 살아 있다). 두 번 불려도 된다. */
+        void stop() override
         {
             _binding.shutdown();
             _guildService.shutdown();
@@ -53,6 +54,7 @@ namespace
         {
             SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
             server.start();
+            server.addKit( this );
             SocialServiceDependencies dependencies;
             dependencies._pStore  = &server._store;
             dependencies._pRouter = server._host.getEphemeralRouter();

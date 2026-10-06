@@ -44,6 +44,11 @@ namespace sw
 
     void TradeServer::shutdown()
     {
+        if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게
+        {
+            for ( const auto& [lookupId, call] : _mapLookupToCall )
+                _pPresence->cancel( lookupId );
+        }
         _mapTagToCall.clear();
         _mapLookupToCall.clear();
         _listFound.clear();

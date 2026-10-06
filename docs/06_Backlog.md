@@ -413,7 +413,7 @@ cd build/Ninja-Debug/Bin
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
   **채팅**: `GF_Chat`(타입 · `ChatProtocol` · `ChatClient`) · `GF_Server_Chat`(거르개 · 도배 막이 · `ChatService` · 바인딩 `ChatServer`)이 들어갔다. 남은 것: 서버 실행 파일에
   채팅 조립(계정 키트 창구 · 친구 키트 차단 표 · 금칙어 경로), 신고(메시지 스냅숏 → GM 도구), 채널 샤딩(world 채널 수천 명 — 부하 봇 수치로 정함, 거르개 비용은 `ChatService.send` p99),
-  클라이언트 UI 위젯, 실제 금칙어 목록(운영), 접속 상태 찾기 취소 창구(`IAccountPresence` — 지금은 채팅이 호스트보다 늦게 내려야 한다).
+  클라이언트 UI 위젯, 실제 금칙어 목록(운영).
   **서버 디렉터리**: 기반 `Online/Directory`(등록 · 하트비트 · 읽기 캐시 · 고르기)와 `GF_ServerDirectory` · `GF_Server_ServerDirectory`(점검 · 공지 · 배정 · 바인딩 ·
   클라이언트)가 들어갔다. 남은 것: GM 도구 패널(GF_Admin · 에디터 확장 지점 뒤)에 점검 · 공지 바꾸기 잇기, 서버 고르기 UI 위젯, 서버 실행 파일에 디렉터리 서비스 ·
   등록 조립(서버 설정에 종류 · 지역 · 공개 주소), 오케스트레이터(Agones · 쿠버네티스) 상태와 서버 등록 잇기(지금은 서버가 스스로 캐시에 하트비트).
@@ -1685,6 +1685,9 @@ cd build/Ninja-Debug/Bin
 - **캐시(RESP)는 Valkey · Garnet 공통 부분집합만 쓴다**(`GF_Server_CacheStore` README 의 명령 표) — Lua · `SELECT` · RESP3 · Redis 6.2+ 옵션을 쓰면 Garnet(윈도우 서버)에서 갈린다.
   계약 시험 `EphemeralStoreRespTest` 를 두 서버에 같이 돌려 지킨다. 서버가 없는 PC 는 가짜 RESP 서버(`FakeRespServer.h` — 루프백, 앞이 돌 때 같이 돈다)로 같은 계약을 돌린다.
   캐시는 잃어도 되는 것만 — 정본은 `IServiceStore`. 끊김을 보기 전에 맡긴 첫 요청은 `Unavailable` 이다(다시 맡기면 다시 연결한다).
+- **온라인 서비스의 내리는 순서는 하나 — 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시**(실제 서버 · 시험 하니스 `OnlineTestServer::addKit` 모두). 키트 `shutdown` 은
+  빌려 준 것을 모두 거둔다(저장 일 · 라우터 `cancel` · 접속 상태 `IAccountPresence::cancel` · 버스 구독). 늦게 내려가는 서비스는 호스트 `shutdown` 이 `onHostShutdown` 으로
+  떼어 두므로 사라진 호스트를 부르지 않는다 — 선언 순서로 맞추던 시험은 서버가 먼저 사라진 뒤 바인딩이 호스트의 `unsubscribeServerBus` 를 불렀다.
 - **루프백 스트림 전송은 한 스레드에서만 돈다** — 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춘다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돈다.
 
 - **로컬라이제이션의 정본은 원문 표(`*.strings.json`)이고 번역 표(`<culture>.translation.json`)는 번역할 때의 원문 해시를 든다** — 해시가 다르면(원문이

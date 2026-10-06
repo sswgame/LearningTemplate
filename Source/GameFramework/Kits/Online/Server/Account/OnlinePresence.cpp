@@ -63,10 +63,37 @@ namespace sw
 
     void OnlinePresence::shutdown()
     {
+        if ( _pHost != nullptr ) // 호스트가 살아 있다 — 라우터에 맡긴 요청이 이 객체를 부르지 않게 거둔다
+        {
+            EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
+            for ( const auto& [requestId, pending] : _mapRequestToPending )
+                pRouter->cancel( requestId );
+        }
+        detach();
+        _mapAccountToIdentity.clear();
+    }
+
+    void OnlinePresence::detach()
+    {
         _pHost = nullptr;
         _mapRequestToPending.clear();
-        _mapAccountToIdentity.clear();
         _listDeferred.clear();
+    }
+
+    void OnlinePresence::cancel( uint64 requestId )
+    {
+        for ( auto& [routerRequestId, pending] : _mapRequestToPending )
+        {
+            if ( pending._lookupId == requestId && ( pending._pendingKind == PendingKind::FindName || pending._pendingKind == PendingKind::FindAccount ) )
+                pending._onFound = AccountPresenceDelegate{}; // 캐시 답은 그대로 받아 버린다
+        }
+        for ( size_t index = 0; index < _listDeferred.size(); )
+        {
+            if ( _listDeferred[index]._result._requestId == requestId )
+                _listDeferred.erase( _listDeferred.begin() + static_cast<ptrdiff_t>( index ) );
+            else
+                ++index;
+        }
     }
 
     void OnlinePresence::noteOnline( const AccountIdentity& identity )

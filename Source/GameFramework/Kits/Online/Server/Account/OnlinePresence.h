@@ -48,7 +48,10 @@ namespace sw
         void setSettings( const OnlinePresenceSettings& settings ) { _settings = settings; }
         /** @brief 호스트의 캐시 라우터 · 버스를 씁니다(호스트 `initialize` 뒤). 둘 다 있을 때만 켜진다(알림 주제 `makePushTopic` 구독은 부르는 쪽 — 버스 소비자는 서비스). */
         void attach( OnlineServiceHost* pHost );
+        /** @brief 라우터에 맡긴 요청을 취소하고 내립니다(호스트가 살아 있을 때). */
         void shutdown();
+        /** @brief 호스트가 내려간다 — 호스트를 놓고 기다리던 일을 버립니다(캐시 답은 호스트가 이미 거뒀다). 붙은 계정 목록은 남는다(다시 `attach` 하면 다시 적는다). */
+        void detach();
         bool isEnabled() const { return _pHost != nullptr; }
 
         /** @brief 계정이 이 프로세스에 붙었다(또는 표시 이름이 바뀌었다). */
@@ -69,6 +72,7 @@ namespace sw
         uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) override;
         uint64 submitFindByAccount( AccountId accountId, const AccountPresenceDelegate& onFound ) override;
         bool   sendRemotePush( AccountId accountId, uint16 kind, const BitWriter& body ) override;
+        void   cancel( uint64 requestId ) override;
 
     private:
         enum class PendingKind : uint8

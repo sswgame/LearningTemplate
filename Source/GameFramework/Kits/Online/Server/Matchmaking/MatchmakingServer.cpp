@@ -57,6 +57,13 @@ namespace sw
         _pPresence   = nullptr;
     }
 
+    void MatchmakingServer::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 푼다
+        _pHost = nullptr;
+    }
+
     void MatchmakingServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
         if ( _pPartyLobby == nullptr || _pQueue == nullptr )

@@ -26,8 +26,8 @@ namespace
         LiveOpsClient::ReplyDelegate makeDelegate() { return LiveOpsClient::ReplyDelegate::create<&LiveOpsRecorder::onReply>( this ); }
     };
 
-    /** @brief 서버 하나의 라이브 운영(로직 + 바인딩) — 서버보다 먼저 선언한다. */
-    struct LiveOpsOnServer
+    /** @brief 서버 하나의 라이브 운영(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */
+    struct LiveOpsOnServer final : public test::IOnlineTestKit
     {
         LiveOpsService _service;
         LiveOpsServer  _binding;
@@ -38,7 +38,8 @@ namespace
         {
         }
 
-        ~LiveOpsOnServer()
+        /** @brief 서버가 내려가기 전에 부른다(호스트 · 저장소 · 접속 상태가 살아 있다). 두 번 불려도 된다. */
+        void stop() override
         {
             _binding.shutdown();
             _service.shutdown();
@@ -48,6 +49,7 @@ namespace
         {
             SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
             server.start();
+            server.addKit( this );
             LiveOpsDependencies dependencies;
             dependencies._pStore = &server._store;
             dependencies._pBus   = &server._bus;

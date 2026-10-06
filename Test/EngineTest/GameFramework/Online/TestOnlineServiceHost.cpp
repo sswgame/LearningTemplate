@@ -50,6 +50,8 @@ namespace
             , _lastTraceId{}
             , _range{ range }
             , _handledCount{ 0 }
+            , _hostShutdownCount{ 0 }
+            , _cacheReplyCountAtHostShutdown{ -1 }
             , _bReadCacheOnTick{ false }
             , _bHoldLateAnswers{ false }
         {
@@ -129,6 +131,13 @@ namespace
             _listBusMessage.push_back( message );
         }
 
+        void onHostShutdown( OnlineServiceHost& host ) override
+        {
+            (void)host;
+            ++_hostShutdownCount;
+            _cacheReplyCountAtHostShutdown = static_cast<int32>( _listCacheReply.size() );
+        }
+
         void onCacheReply( const EphemeralReply& reply ) { _listCacheReply.push_back( reply ); }
 
         vector<NetRequestToken>  _listLateToken;
@@ -141,6 +150,8 @@ namespace
         LogTraceId               _lastTraceId;    ///< 마지막 요청의 추적 id
         uint16                   _range;
         int32                    _handledCount;
+        int32                    _hostShutdownCount;
+        int32                    _cacheReplyCountAtHostShutdown; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
         bool                     _bReadCacheOnTick;
         bool                     _bHoldLateAnswers; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
     };
@@ -679,6 +690,31 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     rig.step( 1 );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._serviceA._listBusMessage.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), rig._serviceB._listBusMessage.size() ); // 주제는 아직 열려 있다
+}
+
+SW_TEST_CASE( OnlineServiceHostTest, ShutdownTellsEveryServiceOnceAfterPendingCacheReplies )
+{
+    // 서비스 객체는 호스트보다 늦게 내려가도 된다 — 호스트가 내려가며 서비스마다 한 번 알리고(그 뒤로 서비스는 호스트를 부르지 않는다),
+    // 알리기 전에 기다리던 캐시 요청은 Unavailable 로 끝낸다.
+    MemoryEphemeralDatabase   database;
+    MemoryEphemeralStore      hostCache( &database );
+    LocalServerBusHub         hub;
+    LocalServerBus            busOfHost( &hub, 1 );
+    OnlineServiceHostSettings settings = HostRig::makeSettings();
+    settings._pEphemeralStore          = &hostCache;
+    settings._pServerBus               = &busOfHost;
+    HostRig rig( settings );
+    rig._host.subscribeServerBus( "sd.changed", &rig._serviceA );
+    (void)rig._host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( "never.pumped" ),
+                                                  EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( &rig._serviceA ) );
+    rig._host.shutdown();
+    SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
+    SW_EXPECT_EQUAL( 1, rig._serviceB._hostShutdownCount );
+    SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listCacheReply.size() );
+    SW_EXPECT_TRUE( rig._serviceA._listCacheReply[0]._result == EphemeralResult::Unavailable );
+    SW_EXPECT_EQUAL( 1, rig._serviceA._cacheReplyCountAtHostShutdown ); // 답이 먼저
+    rig._host.shutdown();                                               // 두 번째는 아무것도 하지 않는다
+    SW_EXPECT_EQUAL( 1, rig._serviceA._hostShutdownCount );
 }
 
 SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOwnPushes )

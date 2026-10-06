@@ -37,6 +37,12 @@ namespace sw
         _pDispatcher = nullptr;
     }
 
+    void LiveOpsServer::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+    }
+
     uint32 LiveOpsServer::getProtocolVersion() const { return LiveOpsProtocol::kVersion; }
 
     void LiveOpsServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )

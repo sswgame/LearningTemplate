@@ -99,6 +99,9 @@ namespace sw
             return;
         _bInitialized = SW_FALSE;
         _ephemeralRouter.shutdown(); // 기다리던 캐시 요청은 Unavailable 로 한 번씩 — 서비스를 내리기 전
+        // 서비스가 든 호스트 포인터 · 구독을 여기서 떼게 한다 — 서비스 객체는 호스트보다 늦게 내려가도 된다(사라진 호스트를 부르지 않는다).
+        for ( size_t index = _listService.size(); index > 0; --index )
+            _listService[index - 1]->onHostShutdown( *this );
         for ( const BusSubscription& subscription : _listBusSubscription )
             _settings._pServerBus->unsubscribe( subscription._topic );
         _listBusSubscription.clear();

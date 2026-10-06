@@ -27,6 +27,12 @@ namespace sw
         _pService = nullptr;
     }
 
+    void ServerDirectoryServer::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+    }
+
     uint32 ServerDirectoryServer::getProtocolVersion() const { return ServerDirectoryMethod::kWireVersion; }
 
     bool ServerDirectoryServer::isAnonymousMethod( uint16 method ) const

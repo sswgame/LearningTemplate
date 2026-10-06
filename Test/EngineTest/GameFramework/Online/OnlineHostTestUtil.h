@@ -5,6 +5,8 @@
  *          - I/O 스레드 없이 `tickAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
  *          - 클라이언트는 공유 끝점 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `tickAll` 한 번이면 Hello 까지 끝난다.
  *          - 접속 상태는 `FakeAccountPresence`(서버마다 하나 — 시험이 `setOnline` 으로 "다른 서버에 붙은 계정" 을 만든다). 결과는 서버 `tick` 에 한 번 알린다.
+ *          - 내리는 순서는 실제 서버와 같다: 키트(로직 · 바인딩) → 호스트 → 저장소 · 캐시. 키트 묶음은 `IOnlineTestKit` 을 구현해 `server.addKit( this )` 로 올리면
+ *            서버 소멸자가 맨 먼저 `stop` 한다 — 선언 순서에 기대지 않는다.
  *          스위트 파일이 아니다 — 키트 끝단 시험(`<Kit>StreamTest`)이 include 한다. 쓰는 법은 `ServerDirectoryStreamTest` 를 본다.
  */
 #pragma once
@@ -152,6 +154,24 @@ namespace test
             return true;
         }
 
+        void cancel( uint64 requestId ) override
+        {
+            for ( Pending& pending : _listPending )
+            {
+                if ( pending._result._requestId == requestId )
+                    pending._onFound = sw::AccountPresenceDelegate{};
+            }
+        }
+
+        /** @brief 아직 알릴(취소하지 않은) 찾기 수입니다. */
+        int32 getLivePendingCount() const
+        {
+            int32 count = 0;
+            for ( const Pending& pending : _listPending )
+                count += pending._onFound.isBound() ? 1 : 0;
+            return count;
+        }
+
     private:
         struct Entry
         {
@@ -173,12 +193,24 @@ namespace test
 
 namespace test
 {
-    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 시험이 `_host.registerService` 로 올린 뒤 `start` 한다. */
+    /** @brief 서버에 올린 키트 묶음(로직 + 바인딩)입니다 — 서버가 내려가기 전에 `stop` 이 불린다(그 뒤로 키트는 호스트 · 저장소를 만지지 않는다). */
+    class IOnlineTestKit
+    {
+    public:
+        virtual ~IOnlineTestKit() = default;
+        virtual void stop()       = 0;
+    };
+} // namespace test
+
+namespace test
+{
+    /** @brief 서버 프로세스 하나입니다. 키트 서비스는 시험이 `_host.registerService` 로 올린 뒤 `start` 하고, 키트 묶음은 `addKit` 으로 맡긴다. */
     class OnlineTestServer final
     {
     public:
         static constexpr uint16 kFirstPort = 7400;
 
+        sw::vector<IOnlineTestKit*>          _listKit;
         sw::MemoryServiceStore               _store;
         sw::MemoryEphemeralStore             _cache;
         sw::LocalServerBus                   _bus;
@@ -190,7 +222,8 @@ namespace test
 
         OnlineTestServer( sw::LoopbackStreamNetwork& network, sw::MemoryServiceDatabase* pDatabase, sw::MemoryEphemeralDatabase* pCacheDatabase,
                           sw::LocalServerBusHub* pBusHub, uint64 serverId )
-            : _store{ pDatabase }
+            : _listKit{}
+            , _store{ pDatabase }
             , _cache{ pCacheDatabase }
             , _bus{ pBusHub, serverId }
             , _presence{}
@@ -204,11 +237,16 @@ namespace test
 
         ~OnlineTestServer()
         {
+            for ( size_t index = _listKit.size(); index > 0; --index ) // 키트 먼저 — 저장 일을 거두고 캐시 · 접속 상태 요청을 취소한다
+                _listKit[index - 1]->stop();
             _store.shutdown();
-            _host.shutdown(); // 캐시 답을 기다리는 요청이 여기서 Unavailable 로 끝난다 — 서비스보다 먼저
+            _host.shutdown(); // 키트 밖(시험이 직접 올린 서비스)의 캐시 요청은 여기서 Unavailable 로 끝난다
             (void)_store.pollCompletions();
             _cache.shutdown();
         }
+
+        /** @brief 키트 묶음을 맡깁니다 — 이 서버가 내려가기 전에(소멸자 맨 앞) 올린 반대 순서로 `stop` 한다. */
+        void addKit( IOnlineTestKit* pKit ) { _listKit.push_back( pKit ); }
 
         /** @brief 받기 시작합니다(서비스를 모두 올린 뒤). */
         void start()

@@ -65,6 +65,13 @@ namespace sw
         _pLoginService = nullptr;
     }
 
+    void AccountServer::onHostShutdown( OnlineServiceHost& host )
+    {
+        (void)host;
+        _presence.detach(); // 캐시 답은 호스트가 이미 Unavailable 로 거뒀다
+        _bHostAttached = SW_FALSE;
+    }
+
     uint32 AccountServer::getProtocolVersion() const { return AccountProtocol::kVersion; }
 
     bool AccountServer::isAnonymousMethod( uint16 method ) const { return method == AccountMethod::kRegister || AccountServerInternal::isLoginMethod( method ); }

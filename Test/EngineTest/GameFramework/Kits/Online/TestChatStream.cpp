@@ -52,8 +52,8 @@ namespace
         }
     };
 
-    /** @brief 서버 하나의 채팅(로직 + 바인딩) — 서버보다 먼저 선언해 서버가 먼저 내려가며 저장소 일을 거둘 때 살아 있게 한다. */
-    struct ChatOnServer
+    /** @brief 서버 하나의 채팅(로직 + 바인딩) — `start` 가 서버에 올려 서버가 내려가기 전에 `stop` 한다. */
+    struct ChatOnServer final : public test::IOnlineTestKit
     {
         HostAccountDirectory _directory;
         ChatService          _service;
@@ -64,6 +64,7 @@ namespace
         {
             SW_EXPECT_TRUE( server._host.registerService( &_binding ) );
             server.start();
+            server.addKit( this );
             _directory._pHost = &server._host;
             ChatServiceDependencies dependencies;
             dependencies._pStore     = &server._store;
@@ -75,19 +76,12 @@ namespace
             _binding.initialize( &_service );
         }
 
-        /** @brief 호스트가 살아 있을 때 버스 구독을 풀고 로직을 내립니다. */
-        void stop()
+        /** @brief 서버가 내려가기 전에 부른다(호스트 · 저장소 · 접속 상태가 살아 있다). 두 번 불려도 된다. */
+        void stop() override
         {
             _binding.shutdown();
             _service.shutdown();
         }
-    };
-
-    /** @brief 서버 뒤에 선언해 서버보다 먼저 `stop` 을 부릅니다(호스트를 내리기 전에 구독을 푼다). */
-    struct ChatStopGuard
-    {
-        ChatOnServer* _pChat;
-        ~ChatStopGuard() { _pChat->stop(); }
     };
 
     struct ChatReplyRecorder
@@ -108,7 +102,6 @@ SW_TEST_CASE( ChatStreamTest, ChannelChatBetweenTwoClientsWithEchoAndErrors )
     ChatOnServer            chat;
     test::OnlineTestServer  server( network, &database, &cacheDatabase, &hub, 1 );
     chat.start( server );
-    ChatStopGuard stopGuard{ &chat };
     chat._directory._mapName[1] = "alice";
     chat._directory._mapName[2] = "bob";
 
@@ -175,8 +168,6 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     test::OnlineTestServer  second( network, &database, &cacheDatabase, &hub, 2 );
     firstChat.start( first );
     secondChat.start( second );
-    ChatStopGuard firstStopGuard{ &firstChat };
-    ChatStopGuard secondStopGuard{ &secondChat };
     firstChat._directory._mapName[1]  = "alice";
     secondChat._directory._mapName[2] = "bob";
     first._presence.setOnline( AccountIdentity{ "bob", 2, SW_FALSE }, second.getServerId() ); // 계정 서버(K14)가 쓴 접속 상태
