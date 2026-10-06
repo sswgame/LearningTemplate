@@ -1,9 +1,14 @@
-# Empty game pack root.
-# 게임 팩 리소스를 여기에 둡니다 (data/, maps/, prefabs/ ...).
+# Empty — 게임 팩
 
-# 환경 쇼케이스: maps/envshowcase.scene.xml — 지형 · 호수 · 강 · 풀 · 나무.
-#   App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"
-#   원본: heightfields_raw/ · textures_raw/ (Scripts/dev/MakeTerrainShowcase.py) · models_raw/ (Kenney Nature Kit, CC0)
+빈 게임(`Source/Games/Empty`)의 리소스입니다. 엔진 기능을 하나씩 보여 주는 쇼케이스 씬이 여기 있습니다 — 시작 씬 대신 열려면 `-gv_firstScene=<씬 경로>` 를 줍니다.
+
+## 환경 쇼케이스 (`maps/envshowcase.scene.xml`)
+
+지형 · 호수 · 강 · 풀 · 나무. 원본은 `heightfields_raw/` · `textures_raw/`(`Scripts/dev/MakeTerrainShowcase.py` 가 만든다)와 `models_raw/`(Kenney Nature Kit, CC0 — `credits.md`)입니다.
+
+```powershell
+build/Ninja-Debug/Bin/App.exe "-gv_firstScene=game/empty/maps/envshowcase.scene.xml"
+```
 
 ## 툰 쇼케이스 (`maps/toonshowcase.scene.xml`)
 

@@ -1,7 +1,7 @@
 # Destruction — 파괴 가능 메시
 
 미리 쪼갠 메시(언리얼 Chaos 의 Geometry Collection 자리)와 그 위의 구조 · 피해 · 런타임입니다. **티어 8**(렌더러 · 모듈과 같은 줄): 캐릭터 형상의
-자르기 도구(`Character/GeometryCutUtil`, 7) · 컴포넌트 모델(6) · 물리(3) 위에 서고, 렌더러는 모릅니다.
+자르기 도구(`Character/Fit/GeometryCut` 의 `GeometryCutUtil`, 7) · 컴포넌트 모델(6) · 물리(3) 위에 서고, 렌더러는 모릅니다.
 
 ## 1. 쿠킹 — 보로노이 파쇄(`MeshFractureUtil`) → `.fracture`
 

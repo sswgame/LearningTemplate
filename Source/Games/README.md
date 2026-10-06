@@ -44,15 +44,16 @@
 
 ## 새로운 게임 추가하는 방법
 
-1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/MyGame/` 으로 복사합니다.
+1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/<게임>/` 으로 복사합니다.
 2. **벤치 하네스 지우기**: `BenchScene.*` · `BenchMoverComponent.*` 를 지우고, `EmptyGame` 의
    `_benchScene` 멤버와 그것을 쓰는 곳(초기화 · 업데이트 · 상태 직렬화 전후)을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
-3. **필요한 키트 연결하기**: `MyGame/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
-4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
-   `_packRoot` 를 `"game/mygame"`, 창 제목 `_windowTitle` 을 적습니다. 시작 씬은 팩의 `data/gamesettings.xml` `startMap`(타이틀이 있으면 `titleScene`) 하나입니다.
+3. **필요한 키트 연결하기**: `<게임>/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
+4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/<게임 소문자>/` 을 만들고, 게임 프리셋 `Config/Game/<게임>.json`(파일 이름 = 게임 폴더 이름)에
+   `_packRoot` 를 `"game/<게임 소문자>"`, 창 제목 `_windowTitle` 을 적습니다. 시작 씬은 팩의 `data/gamesettings.xml` `startMap`(타이틀이 있으면 `titleScene`) 하나입니다.
    프리셋이 없으면 configure 가 멈춥니다.
-5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
+5. **CMake 프리셋 더하기**: `CMakePresets.json` 에 `Ninja-Debug-<게임>`(configure · build, `SW_ACTIVE_GAME=<게임>`, 빌드 폴더는 게임마다 따로)을
+   더합니다. 게임은 프리셋으로 바꾸고 한 빌드 폴더를 다시 구성하지 않습니다(`CheckGamePresets.py`).
 6. **쓰지 않는 키트 끄기(선택)**: `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드 · 실행에서 빠집니다.
 
 ## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
