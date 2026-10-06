@@ -33,10 +33,10 @@ namespace sw
         , _pDef{ nullptr }
         , _healthCore{ kCoreMax }
         , _staminaCore{ kCoreMax }
-        , _bondExperience{ 0.0f }
+        , _bond{}
+        , _bondXpCarry{ 0.0f }
         , _fear{ 0.0f }
         , _hoursSinceBrush{ 0.0f }
-        , _bondLevel{ 1 }
         , _bRidden{ SW_FALSE }
         , _bGalloping{ SW_FALSE }
     {
@@ -63,16 +63,15 @@ namespace sw
         _random.setSeed( seed );
         _eventBuffer.clear();
         _listAbility.clear();
-        _healthCore                                 = kCoreMax;
-        _staminaCore                                = kCoreMax;
-        _bondExperience                             = 0.0f;
-        _fear                                       = 0.0f;
-        _hoursSinceBrush                            = pCatalog->getBondExperience()._brushCooldownHours;
-        _bondLevel                                  = 0;
-        _bRidden                                    = SW_FALSE;
-        _bGalloping                                 = SW_FALSE;
-        const vector<WesternBondLevelDef>& listBond = pCatalog->getBondLevels();
-        applyBondLevel( listBond.empty() ? 1 : listBond.front()._level );
+        _healthCore      = kCoreMax;
+        _staminaCore     = kCoreMax;
+        _bond            = LevelProgress{};
+        _bondXpCarry     = 0.0f;
+        _fear            = 0.0f;
+        _hoursSinceBrush = pCatalog->getBondExperience()._brushCooldownHours;
+        _bRidden         = SW_FALSE;
+        _bGalloping      = SW_FALSE;
+        applyBondLevel( getBondLevel() );
         _eventBuffer.clear(); // 첫 단계는 알리지 않는다
         return true;
     }
@@ -172,15 +171,12 @@ namespace sw
     {
         if ( _pCatalog == nullptr || amount <= 0.0f )
             return;
-        _bondExperience += amount;
-        int32 level = _bondLevel;
-        for ( const WesternBondLevelDef& bond : _pCatalog->getBondLevels() )
-        {
-            if ( bond._experience <= _bondExperience )
-                level = MathUtil::max( level, bond._level );
-        }
-        if ( level != _bondLevel )
-            applyBondLevel( level );
+        // 기반 레벨 진행은 정수 경험치다 — 소수(초당 타기)는 1 이 될 때까지 들고 있는다.
+        const float32 total = _bondXpCarry + amount;
+        const int64   whole = static_cast<int64>( MathUtil::floor( total ) );
+        _bondXpCarry        = total - static_cast<float32>( whole );
+        if ( whole > 0 && _bond.addXp( _pCatalog->getBondCurve(), whole ) > 0 )
+            applyBondLevel( getBondLevel() );
     }
 
     bool WesternHorse::hasAbility( const hashed_string& abilityId ) const
@@ -217,10 +213,10 @@ namespace sw
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _healthCore;
         outArchive << _staminaCore;
-        outArchive << _bondExperience;
+        _bond.writeState( outArchive );
+        outArchive << _bondXpCarry;
         outArchive << _fear;
         outArchive << _hoursSinceBrush;
-        outArchive << _bondLevel;
         outArchive << _bRidden;
         outArchive << _bGalloping;
     }
@@ -250,13 +246,15 @@ namespace sw
             return false;
         archive >> restored._healthCore;
         archive >> restored._staminaCore;
-        archive >> restored._bondExperience;
+        if ( restored._bond.readState( archive ) == false )
+            return false;
+        archive >> restored._bondXpCarry;
         archive >> restored._fear;
         archive >> restored._hoursSinceBrush;
-        archive >> restored._bondLevel;
         archive >> restored._bRidden;
         archive >> restored._bGalloping;
-        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear;
+        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._bondXpCarry &&
+                            restored._bondXpCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
         if ( bValid == false )
             return false;
         restored._eventBuffer.clear();
@@ -264,9 +262,18 @@ namespace sw
         return true;
     }
 
+    int32 WesternHorse::getBondLevel() const
+    {
+        const int32 progressLevel = _bond.getLevel();
+        if ( _pCatalog == nullptr || _pCatalog->getBondLevels().empty() )
+            return progressLevel;
+        const vector<WesternBondLevelDef>& listBond = _pCatalog->getBondLevels();
+        const int32                        index    = MathUtil::clamp( progressLevel - 1, 0, static_cast<int32>( listBond.size() ) - 1 );
+        return listBond[static_cast<size_t>( index )]._level;
+    }
+
     void WesternHorse::applyBondLevel( int32 level )
     {
-        _bondLevel           = level;
         float32 staminaBonus = 0.0f;
         float32 healthBonus  = 0.0f;
         for ( const WesternBondLevelDef& bond : _pCatalog->getBondLevels() )
@@ -300,9 +307,10 @@ namespace sw
         float32 resist = _pDef != nullptr ? _pDef->_courage : 0.0f;
         if ( _pCatalog == nullptr )
             return resist;
+        const int32 bondLevel = getBondLevel();
         for ( const WesternBondLevelDef& bond : _pCatalog->getBondLevels() )
         {
-            if ( bond._level <= _bondLevel )
+            if ( bond._level <= bondLevel )
                 resist = ( _pDef != nullptr ? _pDef->_courage : 0.0f ) + bond._fearResist;
         }
         return resist;

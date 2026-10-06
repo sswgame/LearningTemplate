@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Progression/LevelProgress.h"
 #include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/Base/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -83,8 +84,10 @@ namespace sw
         void addBondExperience( float32 amount );
         void takeDamage( float32 amount ) { (void)_health.reduce( amount ); }
 
-        int32   getBondLevel() const { return _bondLevel; }
-        float32 getBondExperience() const { return _bondExperience; }
+        /** @brief 지금 유대 단계(카탈로그의 `level`)입니다. */
+        int32 getBondLevel() const;
+        /** @brief 모은 유대 경험치(정수 경험치 + 아직 1 이 안 된 소수)입니다. */
+        float32 getBondExperience() const { return static_cast<float32>( _bond.getTotalXp() ) + _bondXpCarry; }
         bool    hasAbility( const hashed_string& abilityId ) const;
         float32 getHealthCore() const { return _healthCore; }
         float32 getStaminaCore() const { return _staminaCore; }
@@ -95,7 +98,7 @@ namespace sw
         const ResourceGauge&   getStamina() const { return _stamina; }
         const WesternHorseDef* getDef() const { return _pDef; }
         void                   drainEvents( vector<WesternHorseEvent>& outListEvent );
-        /** @brief 품종 id · 열린 능력 · 체력 · 스태미나 게이지 · 난수 · 코어 · 유대 · 겁 · 손질 뒤 시간 · 탔는지 · 질주를 씁니다. 카탈로그는 싣지 않는다. */
+        /** @brief 품종 id · 열린 능력 · 체력 · 스태미나 게이지 · 난수 · 코어 · 유대(레벨 진행 + 소수) · 겁 · 손질 뒤 시간 · 탔는지 · 질주를 씁니다. 카탈로그는 싣지 않는다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 품종이 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다(품종이 다르면 그 품종의 게이지 설정으로 바꾼다). */
         [[nodiscard]] bool readState( Archive& archive );
@@ -113,10 +116,10 @@ namespace sw
         const WesternHorseDef*         _pDef;
         float32                        _healthCore;
         float32                        _staminaCore;
-        float32                        _bondExperience;
+        LevelProgress                  _bond;        ///< 유대 — 레벨 L 은 카탈로그 단계 L − 1 번째(`WesternCatalog::getBondCurve`)
+        float32                        _bondXpCarry; ///< 아직 1 이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
         float32                        _fear;
         float32                        _hoursSinceBrush;
-        int32                          _bondLevel;
         uint8                          _bRidden;
         uint8                          _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 준다)
     };

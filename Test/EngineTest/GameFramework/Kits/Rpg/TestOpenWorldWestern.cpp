@@ -283,6 +283,49 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listEvent.size() ) ); // 중립 → 명예 → 중립 → 무법
 }
 
+/**
+ * @brief [OpenWorldWesternTest] 유대 단계는 카탈로그의 누적 경험치 문턱에서 오른다 — 타기의 소수 경험치는 버려지지 않고 쌓인다, 한 번에 두 단계를 넘으면 둘 다 열린다,
+ *        세이브 왕복 뒤에도 같은 걸음에서 오른다
+ */
+SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
+{
+    WesternCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    WesternHorse horse;
+    SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    horse.setRidden( true ); // 타면 초당 1
+    for ( int32 step = 0; step < 39; ++step )
+        horse.update( 0.5f, 0.0f ); // 19.5
+    SW_EXPECT_EQUAL( 1, horse.getBondLevel() );
+    horse.update( 0.5f, 0.0f ); // 20 — 단계 2 문턱
+    SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
+    for ( int32 step = 0; step < 59; ++step )
+        horse.update( 0.25f, 0.0f ); // 34.75
+    SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
+
+    Archive archive;
+    horse.writeState( archive );
+    vector<uint8> bytes;
+    archive.writeData( bytes );
+    WesternHorse restored;
+    SW_ASSERT_TRUE( restored.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    Archive reader( bytes.data(), bytes.size() );
+    SW_ASSERT_TRUE( restored.readState( reader ) );
+    restored.setRidden( true );
+    for ( int32 step = 0; step < 60; ++step )
+        restored.update( 0.25f, 0.0f ); // 49.75
+    SW_EXPECT_EQUAL( 2, restored.getBondLevel() );
+    restored.update( 0.25f, 0.0f ); // 50 — 단계 3 문턱
+    SW_EXPECT_EQUAL( 3, restored.getBondLevel() );
+
+    // 한 번에 두 단계 — 둘 다의 능력이 열린다
+    WesternHorse fresh;
+    SW_ASSERT_TRUE( fresh.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
+    fresh.addBondExperience( 60.0f );
+    SW_EXPECT_EQUAL( 3, fresh.getBondLevel() );
+    SW_EXPECT_TRUE( fresh.hasAbility( hashed_string( "rear" ) ) && fresh.hasAbility( hashed_string( "drift" ) ) );
+}
+
 SW_TEST_CASE( OpenWorldWesternTest, HorseBondUnlocksAbilitiesCoresSlowRegenAndFearIsDeterministic )
 {
     WesternCatalog catalog;
