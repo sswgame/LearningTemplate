@@ -152,6 +152,9 @@ cd build/Ninja-Debug/Bin
 
 ### 1-4. 에디터
 
+- **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
+  찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
+  기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
 - **Shooter3D 의 Q/E 한 번 = 무기 한 칸은 손으로 확인할 것**(2026-10-06 입력 trigger 결함 수정 뒤). 단위 시험(`InputMapTest.Axis1DBindingFollowsTheActionTrigger`)은

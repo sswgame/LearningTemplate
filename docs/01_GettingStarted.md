@@ -88,6 +88,8 @@ ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure
 > Ninja 는 단일 구성(single-config) 생성기라 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다.
 > 구성은 프리셋(=빌드 디렉터리)이 정합니다.
 
+설정 파일 · 전역 변수 · 명령줄 인자의 전체 표는 [docs/Config](Config/README.md), 어디에 두나는 [07_Configuration.md](07_Configuration.md).
+
 ## 5. 무엇이 일어났는지 보기 (진단 도구)
 
 "왜 이렇게 됐나" 를 디버거 없이 묻는 길입니다. 실행 플래그는 `App.exe` 뒤에 붙이고, 스스로 끝나게 `-gv_profileFrames=3` 을 같이 줍니다.

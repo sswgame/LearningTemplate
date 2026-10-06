@@ -1,32 +1,14 @@
-# Config (호스트 / 개발 설정)
+# Config (호스트 · 개발 설정)
 
-`Config/` 는 **개발·툴·런처 호스트** 설정입니다. 게임에 실려 나가는 기본 콘텐츠는 `Resource/<pack>/data/` 입니다.
+무엇을 어디에 두는지 · 우선순위 · 배포본은 [`docs/07_Configuration.md`](../docs/07_Configuration.md), 파일마다의 칸 표는 생성 문서 [`docs/Config/`](../docs/Config/README.md) 에 있다.
+파일에는 **기본값과 다른 값만** 적는다(기본값은 생성 문서에 있다).
 
-## 두 층의 구분
+| 폴더 | 무엇 | 커밋 |
+|---|---|---|
+| `Engine/` | 엔진 기동 설정 · 메모리 예산 · 쿠킹/팩 계약 | 함 |
+| `Game/` | 게임마다 프리셋 하나(`SW_ACTIVE_GAME` 이 고른다) | 함 |
+| `Editor/` | 사람이 정하는 에디터 도구 값 · 임포트 규칙 — 에디터가 쓰는 상태는 `Saved/Editor/`(git 무시) | 함 |
+| `Environment/` | 개발 머신 툴체인 경로 — `*.defaults.json` 시드만 커밋, 로컬 `*.json` 은 생성 · git 무시 | 시드만 |
+| `Server/` | 전용 서버 운영 설정(게임마다) — 비밀은 환경 변수 이름만 | 함 |
 
-| 위치 | 역할 | Shipping |
-|------|------|----------|
-| `Config/Engine/EngineConfig.json` | 런타임 창/RHI/`enginedefaultassets` 포인터 (C++ `EngineConfig`) | 생성되어 exe에 포함, 디스크 불필요 |
-| `Config/Engine/MemoryBudget.json` | 메모리 태그 예산(`_listBudget: [{ _tag, _megabytes }]`) — 넘으면 `[MemoryBudget]` 경고 한 번(`MemoryBudgetMonitor`) | 미포함(배포본에는 프로파일러가 없다) |
-| `Config/Engine/CookContract.json` | RHI 백엔드 표(이름 · 셰이더 폴더 · 명령줄 별칭 · 기본 백엔드)와 쿠킹 확장자 표, 빌드 타깃별로 패키지에서 빼고 그 호스트가 읽지 않는 에셋 종류 표(전용 서버: 텍스처 · 셰이더 바이너리 · 오디오) — C++(configure 때 `CookContract.gen.h`)와 Python 쿠커가 같이 읽는 단일 출처 | 빌드에 굳어 들어감 |
-| `Config/Engine/PackConfig.json` · `PackFormat.json` | 리소스 팩 쿠킹 설정(코덱 · 제외 폴더 — `textures_raw` 등)과 `.pack` 바이너리 포맷의 단일 출처(C++ 는 `PackFormat.gen.h`, Python 쿠커는 JSON 을 직접 읽는다) | 빌드 · 쿠킹 전용, 미포함 |
-| `Config/Server/<게임>.json` | 전용 서버(`Server`) 운영 설정 `ServerConfig` — 받는 주소 · 게임 · 서비스 포트 · 틱 · TLS 인증서 경로 · 저장소 · 캐시 항목(`-server-config=<경로>` 로 바꿈). 비밀은 파일에 쓰지 않고 항목의 `_secretEnvironment` 환경 변수로 | **Shipping 도 디스크에서 읽는다**(굽지 않는다 — 운영자가 고친다). 없으면 Shipping 서버는 기동하지 않는다 |
-|| `Config/Environment/` | 머신 로컬 툴체인·파서 | **절대 미포함** |
-
-에디터가 떠 있으면 `Config/` 의 JSON 을 감시해 바뀐 설정을 다시 읽습니다(EngineConfig · GameConfig · editortooldefaults —
-`Source/Editor/README.md` "설정 파일 핫 리로드"). 창 크기처럼 기동 때만 쓰는 값은 다시 읽어도 다음 실행부터입니다.
-
-## Environment (툴체인)
-
-| 파일 | 설명 |
-|------|------|
-| `toolchain_config.json` | SetupEnvironment가 채운 LLVM/vcpkg/SDK **절대 경로 캐시** (Git 무시) |
-| `search_paths.json` / `*.defaults.json` | 도구 탐색 후보 |
-| `parser_config.json` / `*.defaults.json` | ReflectionParser 플래그 |
-
-`.defaults.json` 을 시드로 커밋하고, 로컬 `*.json` 은 생성·Git 무시합니다.
-
-## 명칭 주의
-
-- **`EngineConfig.json`**: 런타임 엔진 호스트 (창, RHI). C++ `sw::EngineConfig`.
-- **`toolchain_config.json`**: 개발 PC 컴파일러/SDK 경로. 런타임 `EngineConfig.json`과 혼동하지 말 것.
+명칭 주의: `EngineConfig.json`(런타임 엔진 호스트) ≠ `Environment/toolchain_config.json`(개발 PC 컴파일러 · SDK 경로).

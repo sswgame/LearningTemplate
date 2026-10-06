@@ -138,7 +138,7 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
 - Public functions use `camelCase`; private helpers use `camelCaseInternal`.
 - Module constants use `kPascalCase` or `_kPascalCase`.
 - Module/file names use `PascalCase.py`.
-- JSON configuration keys use `snake_case`.
+- JSON keys of Python-owned contracts (`Config/Engine/CookContract.json` · `PackConfig.json` · `PackFormat.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
 ### HLSL
 
