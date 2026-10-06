@@ -316,6 +316,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       점검이면 Maintenance + 끝 시각 · 글 키(허용 계정은 점검 상태 서버도 후보), 점검 · 공지 바꾸기는 영속 레코드(`sd_maintenance` · `sd_notice`) + 감사 줄 한 트랜잭션,
       30 초 주기 다시 읽기 + 버스 `sd.changed` 재촉, 보이는 내용의 해시가 바뀌면(기간 경계 포함) 알림), 바인딩(`ServerDirectoryServer` — `sendPushToAll`).
       바꾸기는 C++ API(GM 도구가 조립에서). 시험: `ServerDirectoryServiceTest` · `ServerDirectoryStreamTest`.
+    - `Social`(`GF_Social`, Client · Server): 친구 타입(`SocialTypes.h` — 결과 · 관계 상태(친구 · 보낸 신청 · 받은 신청 · 막음) · 접속 상태(상태 + 활동 글) · 알림 · 상한),
+      와이어(`SocialProtocol.h` — 영역 0x0800, 응답 몸 = `SocialResult` + 칸, 이름으로 신청은 정식 계정만).
+    - `Server/Social`(`GF_Server_Social`, Server): 관계 규칙(`SocialLinkRules` — 순수 함수: 서로 신청 = 자동 수락, 나를 막은 사람에게 신청은 조용히 Ok, 막으면 상대 줄 정리,
+      상한 친구 200 · 받은 신청 100 · 보낸 신청 100 · 막음 500), 로직(`SocialService` — 관계 = 방향 있는 레코드 둘 `social_link` + 개수 `social_count` 를 판 조건으로 한
+      트랜잭션(충돌이면 다시 읽고 다시 — 4 번), 이 서버 계정의 관계 메모리 `isBlockedLocal`(채팅 정책은 게임 조립이 잇는다), 다른 서버의 바꾸기는 버스 `social.links`,
+      접속 상태는 캐시 `social/rp/<계정>`(90 초 · 30 초 연장) + 버스 `social.presence`, 이름 신청은 `IAccountNameIndex` 를 같은 저장소 일에서).
+      시험: `SocialLinkRulesTest` · `SocialServiceTest`(같은 판을 읽은 두 커밋의 경합을 끼워 넣는 연결로 다시 하기까지).
     - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`), 와이어(`TradeProtocol.h` —
       메서드 · 알림 Invited · Update · Closed, 응답에 요청한 계정의 이동 뒤 잔액), 클라이언트(`TradeClient` — 모든 요청에 멱등 키, 확정은 비추는 스냅숏의 두 판),
       인벤토리 칸 → 다리(`TradeInventoryUtil` — 같은 아이템 칸 합침, 인스턴스 상태 칸 거절, 아이템 → 자산 id 는 게임이 잇는다).

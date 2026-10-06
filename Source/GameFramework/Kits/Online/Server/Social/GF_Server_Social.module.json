@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Social",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "친구 키트(서버) — 관계 규칙 · 관계 저장(양쪽 레코드 + 개수 한 트랜잭션) · 접속 상태(캐시 · 버스) · 길드 · 서비스 호스트 바인딩 (온라인 게임)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Social"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}
