@@ -468,3 +468,6 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).
   컴포넌트 알림은 `AssetHotReload::notifyAssetUsers` 가 `PROPERTY( AssetPath )` 값으로 찾아 `onPropertyChanged` 를 부른다 — 에셋에서 계산한 상태는
   `onPropertyChanged` 가 **값이 같아도** 다시 맞춰야 한다. 리로드 전용 컴포넌트 훅 · `#if !SW_SHIPPING` 가드는 두지 않는다.
+- **에디터 draw 스냅샷(`EditorDrawDataSnapshot`)은 ImGui 내부에 기댑니다.** `ImDrawList::CloneOutput()` 뒤 쓰기 커서를 "다 썼음" 으로 맞추고, `OwnerViewport` 는 원본 것을 두며, `Textures` 는 비우고 텍스처 갱신은 UI 스레드의 `processTextureUpdates` 가 합니다.
+  떠 있는 뷰포트는 UI 스레드가 그리고, GL 처럼 컨텍스트가 스레드에 묶인 백엔드는 `requiresRenderThreadContext()` 가 참이라 그 GPU 호출을 렌더 스레드의 present 훅에서 합니다. ImGui 버전을 올리면 이 셋을 먼저 다시 확인합니다.
+- **`ed::EndCreate()` 는 `ed::BeginCreate()` 의 반환값과 상관없이 늘 부릅니다.** `BeginCreate` 는 false 를 돌려줘도 내부 활성 상태를 세워 두므로, if 안에서만 닫으면 다음 프레임에 라이브러리 단언으로 멈춥니다.

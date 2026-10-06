@@ -1,0 +1,52 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\" 2>/dev/null || python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/SessionGuard.py\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

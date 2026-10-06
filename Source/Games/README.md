@@ -136,7 +136,7 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
 
 `Empty` 는 템플릿이면서 렌더 경로 측정용 벤치 하네스를 가지고 있습니다. `-gv_benchMeshes=N` 을 주면 큐브 N 개를 격자로 놓고 매 프레임 흔듭니다.
 렌더 비용을 재려면 그릴 것이 씬에 있어야 하고, 씬을 만드는 것은 엔진이 아니라 게임의 일이라서 여기 있습니다.
-`Scripts/dev/RunBackendSmoke.py` 와 [Graphics](../Engine/Graphics/README.md)의 측정 조건이 이 플래그에 기대므로 타깃과 플래그 이름은 바꾸지 않습니다.
+`Scripts/dev/RunBackendSmoke.py` 와 [검증과 측정](../../docs/08_Verification.md)의 측정 조건이 이 플래그에 기대므로 타깃과 플래그 이름은 바꾸지 않습니다.
 
 벤치는 `BenchScene` 과 `BenchSceneRig.cpp` 에 있습니다. `-gv_benchTickMovers=N` 은 틱 안에서 위치를 쓰는 `BenchMoverComponent` 를 붙이고,
 `-gv_benchCombat=1` 은 KayKit 스켈레톤이 맞고 쓰러지는 전투 연출(`BenchCombatComponent`, 로그 `[BenchCombat]`)을 돌립니다.
