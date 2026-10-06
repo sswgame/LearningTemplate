@@ -882,6 +882,15 @@ cd build/Ninja-Debug/Bin
 
 ### 3-4. 빌드 · CMake · 린트 · 스크립트
 
+- **빌드 스크립트 리팩터 뒤의 자리**(2026-10-06): 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
+  `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
+  vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
+  보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
+- **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
+  재는 법: `cmake --preset <p> --profiling-format=google-trace --profiling-output=t.json` → `ConfigureSnapshot.py profile t.json`(CMake 는 B/E 짝으로 적는다).
+  리팩터 전후 configure 동일성은 `ConfigureSnapshot.py take/diff`(실행 파일 시험의 command 는 그 exe 가 지어졌는지에 따라 비거나 찬다 — 차이로 읽지 말 것).
+- **게이트는 고치지 않는다** — include 순서 · namespace 블록의 고치기는 `fixer/FormatIncludeOrder` · `FormatNamespaceBlocks`(규칙은 게이트 파일 한 자리). CMake 들여쓰기는
+  `FormatCmakeIndent`(탭, 문자열 안 · vcpkg 툴체인 영역 제외) — 다른 묶음을 받은 뒤 공백 충돌이 나면 `--all` 을 다시 돌린다.
 - **설정 참조 문서(`docs/Config/`)는 생성물이다** — `GenerateConfigReference.py` 가 PROPERTY · `ConfigKeyDoc` · 전역 변수 · `ArgumentList.xxx` ·
   CMake 옵션 · `*.settings.xml` 에서 만들고 `CheckConfigReference` 가 낡음 · 목록 밖 설정 파일 · 빈 설명을 막는다. 파서는 선언 모양을 읽으므로 칸 대조는
   `ConfigReferenceTest.FieldsMatchReflection` 이 리플렉션으로 한다. 새 설정 파일 = `ConfigCatalog.py` 한 줄 + 시험 표 한 줄. PROPERTY · gv · 명령줄 ·
