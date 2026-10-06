@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — UI 견본 화면(-gv_uiDemo: 주 단추 · 글 · 둥근 상자 · 그림자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)을 띄워 스크린샷과 레이아웃 덤프를 남긴다.
+  AppUiTest 가 백엔드마다 이 시나리오를 돌려 두 산출물로 영역을 찾아 픽셀을 보고 백엔드끼리 견준다. 입력은 exclusive — 사람 마우스가 호버를 바꾸지 않는다.
+  실행: App.exe -scenario=engine/automation/uidemo.scenario.xml -dx12   (산출물: Bin/Saved/Automation/engine.uidemo/)
+-->
+<Scenario name="engine.uidemo" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_uiDemo" value="1"/></At>
+	<At frame="20">
+		<ExpectUi focus="Start"/>
+		<UiLayoutDump file="uidemo.layout.txt"/>
+		<Screenshot file="uidemo.ppm"/>
+	</At>
+	<At frame="21">
+		<ExpectImage file="uidemo.ppm" metric="meanLuma" atLeast="0.01"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -284,6 +284,11 @@ namespace sw
         const CanvasDrawList& getCanvas() const { return _canvas; }
         /** @brief 그리기 목록 내용이 바뀔 때만 오르는 번호입니다(1 부터 — 렌더러가 같으면 사각형을 다시 올리지 않는다). */
         uint64 getCanvasRevision() const { return _canvasRevision; }
+        /**
+         * @brief 스택의 화면마다 레이아웃 덤프(`UiLayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다 — 화면마다 첫 줄 `## <문서 경로 또는 (code)>`.
+         * @details 실기동 시험(`AppUiTest` — 시나리오 단계 `UiLayoutDump`)이 위젯 이름으로 스크린샷 안의 사각형을 찾는 길입니다.
+         */
+        string makeLayoutDump() const;
         /** @brief 문화권 출처를 정합니다(시험이 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
         /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다(시험이 자기 것을 넘긴다). nullptr 이면 바인딩된 엔진 서비스입니다. 화면 바인딩은 다시 걸린다. */

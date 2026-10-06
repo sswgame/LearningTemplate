@@ -521,3 +521,8 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   시나리오 단계와 같은 판정(`Automation/UiAutomationSteps::isExpectUiMet`)이고, `engine/automation/uinavigation.scenario.xml` 이 같은 단계로 App 을 네 백엔드에서 몬다.
 - **패드 도달성**: `engine/ui` 의 모든 `.ui.xml`(조각 폴더 빼고 — 새 문서는 자동으로 든다)을 열어 시작 위젯(기본 포커스 · 없으면 첫 위젯)에서 네 방향 BFS 로
   포커스 가능한 위젯 전부에 닿는지 본다. 옵션 문서는 `OptionsMenuScreen` 으로 열어 탭마다. 막힌 위젯은 문서 · 위젯 이름으로 실패한다 — "패드로 못 가는 단추" 의 게이트.
+- **네 백엔드 실기동 픽셀**(`AppUiTest`, 호스트): 엔진 시나리오 `engine/automation/uidemo.scenario.xml`(가상 입력 exclusive — 사람 마우스가 호버를 바꾸지 않는다)이
+  `-gv_uiDemo` 견본(주 단추 · 글 · 둥근 상자 · 그림자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글 — `Debug/UiDemoScreen`)을 띄워 스크린샷과 `UiLayoutDump` 단계의 덤프를 남긴다.
+  시험이 덤프의 위젯 이름으로 사각형을 찾아 알려진 영역(주 단추 가운데 = 강조색, 둥근 모서리 바깥 = 패널 바탕, 자르기 상자 밖 ≠ 잘린 빨강)을 단언하고, 영역마다 평균 색
+  (≤ 0.02) · 가장자리 수(≤ 2 %)를 첫 백엔드와 견준다. 견본 위젯의 이름(`DemoPanel` · `Start` · `RoundBox` · `ClipBox` · `NineSlice` · `RtlSample`)을 바꾸면 그 시험도 바꾼다.
+  `gv_uiDemo` · `gv_uiOptionsMenu` 는 Shipping 에도 등록된다(시나리오가 배포 실행 파일을 몬다 — hostgpu 는 Shipping 에서 돈다).

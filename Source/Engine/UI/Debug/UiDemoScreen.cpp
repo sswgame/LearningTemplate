@@ -12,11 +12,13 @@
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/CheckBoxWidget.h"
 #include "Engine/UI/Widgets/ComboBoxWidget.h"
+#include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextInputWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-SW_TEST_GLOBAL_VARIABLE( bool, gv_uiDemo, false, "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸(코드로 지은 위젯 트리)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiDemo, false,
+                                 "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
 
 namespace sw
 {
@@ -26,7 +28,10 @@ namespace sw
         {
             /** @brief 패널 크기(UI 단위)입니다. */
             static constexpr float32 kPanelWidth  = 560.0f;
-            static constexpr float32 kPanelHeight = 640.0f;
+            static constexpr float32 kPanelHeight = 720.0f;
+            /** @brief 그리기 견본 칸 하나의 크기(UI 단위)입니다. */
+            static constexpr float32 kSampleWidth  = 96.0f;
+            static constexpr float32 kSampleHeight = 48.0f;
 
             static unique_ptr<TextWidget> makeText( string_view text, float32 fontSize, const float4& color, bool bRichText = false )
             {
@@ -45,6 +50,62 @@ namespace sw
                 WidgetLayoutSlot slot = widget.getLayoutSlot();
                 slot._heightOverride  = height;
                 widget.setLayoutSlot( slot );
+            }
+
+            static void setSampleSize( Widget& widget )
+            {
+                WidgetLayoutSlot slot   = widget.getLayoutSlot();
+                slot._widthOverride     = kSampleWidth;
+                slot._heightOverride    = kSampleHeight;
+                slot._verticalAlignment = UiAlignment::Center;
+                widget.setLayoutSlot( slot );
+            }
+
+            /**
+             * @brief 그리기 견본 줄 — 둥근 상자(`RoundBox`) · 자르기(`ClipBox` — 넓은 빨간 자식을 자른다) · 9-슬라이스(`NineSlice`) · 오른쪽에서 왼쪽 글(`RtlSample`).
+             * @details `AppUiTest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 본다 — 이름을 바꾸면 그 시험도 바꾼다.
+             */
+            static unique_ptr<BoxPanel> makeSamples()
+            {
+                unique_ptr<BoxPanel> row = make_unique<BoxPanel>();
+                row->setName( hashed_string( "Samples" ) );
+                row->setSpacing( 12.0f );
+                unique_ptr<BorderPanel> round = make_unique<BorderPanel>();
+                round->setName( hashed_string( "RoundBox" ) );
+                round->setBackground( UiBrush::makeSolid( float4{ 0.2f, 0.75f, 0.3f, 1.0f }, 20.0f ) );
+                setSampleSize( *round );
+                (void)row->addChild( std::move( round ) );
+
+                unique_ptr<CanvasPanel> clip = make_unique<CanvasPanel>();
+                clip->setName( hashed_string( "ClipBox" ) );
+                clip->setClipChildren( true );
+                setSampleSize( *clip );
+                unique_ptr<BorderPanel> overflow = make_unique<BorderPanel>();
+                overflow->setName( hashed_string( "ClipOverflow" ) );
+                overflow->setBackground( UiBrush::makeSolid( float4{ 0.9f, 0.1f, 0.1f, 1.0f } ) );
+                WidgetLayoutSlot overflowSlot = overflow->getLayoutSlot();
+                overflowSlot._offsetMin       = float2{ 0.0f, 0.0f };
+                overflowSlot._offsetMax       = float2{ kSampleWidth * 4.0f, kSampleHeight }; // 상자 밖으로 세 칸 더 — 잘려야 한다
+                overflow->setLayoutSlot( overflowSlot );
+                (void)clip->addChild( std::move( overflow ) );
+                (void)row->addChild( std::move( clip ) );
+
+                unique_ptr<ImageWidget> nineSlice = make_unique<ImageWidget>();
+                nineSlice->setName( hashed_string( "NineSlice" ) );
+                nineSlice->setImagePath( "engine/textures/test/checker.dds" );
+                UiBrush nineSliceBrush          = nineSlice->getBrush();
+                nineSliceBrush._nineSliceMargin = float4{ 0.25f, 0.25f, 0.25f, 0.25f };
+                nineSlice->setBrush( nineSliceBrush );
+                setSampleSize( *nineSlice );
+                (void)row->addChild( std::move( nineSlice ) );
+
+                unique_ptr<TextWidget> rtl = makeText( "\xD7\xA9\xD7\x9C\xD7\x95\xD7\x9D \xD7\xA2\xD7\x95\xD7\x9C\xD7\x9D", 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ); // "שלום עולם"
+                rtl->setName( hashed_string( "RtlSample" ) );
+                WidgetLayoutSlot rtlSlot   = rtl->getLayoutSlot();
+                rtlSlot._verticalAlignment = UiAlignment::Center;
+                rtl->setLayoutSlot( rtlSlot );
+                (void)row->addChild( std::move( rtl ) );
+                return row;
             }
 
             static void addLabeled( BoxPanel& column, string_view label, unique_ptr<Widget> control )
@@ -75,9 +136,10 @@ namespace sw
         using Internal                = UiDemoScreenInternal;
         unique_ptr<CanvasPanel> root  = make_unique<CanvasPanel>();
         unique_ptr<BorderPanel> panel = make_unique<BorderPanel>();
-        UiBrush                 brush = UiBrush::makeSolid( float4{ 0.07f, 0.08f, 0.11f, 0.92f }, 16.0f );
-        brush._borderColor            = float4{ 0.95f, 0.75f, 0.2f, 1.0f };
-        brush._borderWidth            = 2.0f;
+        panel->setName( hashed_string( "DemoPanel" ) );
+        UiBrush brush      = UiBrush::makeSolid( float4{ 0.07f, 0.08f, 0.11f, 0.92f }, 16.0f );
+        brush._borderColor = float4{ 0.95f, 0.75f, 0.2f, 1.0f };
+        brush._borderWidth = 2.0f;
         panel->setBackground( brush );
         panel->setShadow( float4{ 0.0f, 0.0f, 0.0f, 0.6f }, 12.0f, float2{ 6.0f, 8.0f } );
         panel->setContentPadding( float4{ 28.0f, 24.0f, 28.0f, 24.0f } );
@@ -102,6 +164,8 @@ namespace sw
         {
             unique_ptr<ButtonWidget> button = make_unique<ButtonWidget>();
             button->setName( hashed_string( pLabel ) );
+            if ( pLabel == arrButton[0] )
+                button->setStyleClass( "primary" ); // 주 단추 — 테마의 강조색(AppUiTest 가 가운데 색을 본다)
             Internal::setHeight( *button, 44.0f );
             unique_ptr<TextWidget> label     = Internal::makeText( pLabel, 20.0f, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
             WidgetLayoutSlot       labelSlot = label->getLayoutSlot();
@@ -129,6 +193,7 @@ namespace sw
         unique_ptr<TextInputWidget> input = make_unique<TextInputWidget>();
         input->setHintText( "Player name" );
         Internal::addLabeled( *column, "Name", std::move( input ) );
+        (void)column->addChild( Internal::makeSamples() );
 
         (void)panel->addChild( std::move( column ) );
         (void)root->addChild( std::move( panel ) );

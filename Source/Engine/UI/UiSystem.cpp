@@ -28,6 +28,7 @@
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
+#include "Engine/UI/Layout/UiLayoutDump.h"
 #include "Engine/UI/Screens/OptionsMenuScreen.h"
 #include "Engine/UI/Screens/PauseMenuScreen.h"
 #include "Engine/UI/Style/UiStylePass.h"
@@ -742,6 +743,17 @@ namespace sw
                 return screen.get();
         }
         return nullptr;
+    }
+
+    string UiSystem::makeLayoutDump() const
+    {
+        string text;
+        for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
+            text += "## " + ( screen->_documentPath.empty() ? string( "(code)" ) : screen->_documentPath ) + "\n";
+            text += UiLayoutDump::makeDump( screen->getTree(), _viewport._uiScale );
+        }
+        return text;
     }
 
     UiScreen* UiSystem::getActiveScreen() const

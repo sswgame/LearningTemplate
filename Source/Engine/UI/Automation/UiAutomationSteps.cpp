@@ -49,9 +49,30 @@ namespace sw
                     runner.recordFailure( step, failure );
                 return true;
             }
+
+            static bool validateLayoutDump( const AutomationStep& step, string& outError )
+            {
+                if ( step._listAttribute.size() == 1 && step._listAttribute[0]._name == "file" && step._listAttribute[0]._value.empty() == false )
+                    return true;
+                outError = step.describe() + ": needs only file=\"…\"";
+                return false;
+            }
+
+            /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래 — 스크린샷과 같은 자리입니다. */
+            static bool runLayoutDump( AutomationRunner& runner, const AutomationStep& step )
+            {
+                const string& file = *step.findAttribute( "file" );
+                const string  path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( path ) );
+                if ( FileUtil::writeTextFile( path, engine::getUiSystem().makeLayoutDump() ) == false )
+                    runner.recordFailure( step, "could not write " + path );
+                return true;
+            }
         };
     } // namespace
 
+    SW_AUTOMATION_STEP( uiLayoutDump, UiAutomationSteps::kLayoutDumpKind, &UiAutomationStepsInternal::runLayoutDump, &UiAutomationStepsInternal::validateLayoutDump,
+                        false );
     SW_AUTOMATION_STEP( uiExpect, UiAutomationSteps::kExpectUiKind, &UiAutomationStepsInternal::runExpectUi, &UiAutomationSteps::validateExpectUi, false );
 } // namespace sw
 

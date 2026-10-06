@@ -61,6 +61,7 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
 | `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
 | `ExpectUi` | `focus`(위젯 이름 · `none`) · `screen`(활성 화면 문서 · `none`) · `screens`(화면 수) 중 하나 이상 | 런타임 UI 단언 — 엔진 UI 가 등록(`Engine/UI/Automation/UiAutomationSteps`), 같은 판정을 nogpu `UiNavigationScriptTest` 가 쓴다 | 결과 |
+| `UiLayoutDump` | `file`(상대면 `Saved/Automation/<이름>/`) | UI 스택의 화면마다 레이아웃 덤프(위젯 이름 · 물리 픽셀 사각형)를 쓴다 — `AppUiTest` 가 스크린샷 안의 위젯을 이름으로 찾는다 | 결과 |
 | 그 밖 | — | 등록표(`AutomationStepRegistry`)에서 이름으로 찾는다 | |
 
 - **모르는 엘리먼트 · 모르는 속성 · 형식이 틀린 값 · 모르는 탐침 · 모르는 gv 는 읽기 오류(11)** — 조용히 버리지 않습니다. 단계 종류 · 탐침 검사는
