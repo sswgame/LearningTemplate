@@ -28,9 +28,8 @@ namespace sw
     {
         struct VoxelDirectorComponentInternal
         {
-            static constexpr float32 kStatusInterval = 5.0f;
-            static constexpr uint32  kStateTag       = FourCcUtil::make( "VOXL" );
-            static constexpr uint32  kStateVersion   = 1;
+            static constexpr uint32 kStateTag     = FourCcUtil::make( "VOXL" );
+            static constexpr uint32 kStateVersion = 1;
 
             static uint32 hashCoord( int32 x, int32 y, int32 z )
             {
@@ -55,6 +54,7 @@ namespace sw
         , _player{}
         , _terrainSeed{ 20261003 }
         , _chunkBuildsPerFrame{ 4 }
+        , _statusLogInterval{ 5.0f }
         , _world{}
         , _listChunk{}
         , _statusTimer{ 0.0f }
@@ -260,7 +260,7 @@ namespace sw
     void VoxelDirectorComponent::logStatus( float32 deltaTime )
     {
         _statusTimer += deltaTime;
-        if ( _statusTimer < VoxelDirectorComponentInternal::kStatusInterval )
+        if ( _statusTimer < _statusLogInterval )
             return;
         _statusTimer                         = 0.0f;
         GameObjectManager*          pManager = getObjectManager();
