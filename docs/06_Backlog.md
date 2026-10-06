@@ -653,6 +653,8 @@ cd build/Ninja-Debug/Bin
 
 ### 3-2. 검증 · 시험 쓰기
 
+- **설정 파일 시험은 둘이다** — `ConfigFileSchemaTest`(EngineTest, `Config/` 의 엔진 · 게임 · 서버)와 `EditorConfigFileSchemaTest`(EditorTest, `Config/Editor`).
+  둘 다 표에 없는 파일을 실패로 본다 — 새 설정 파일은 그 표와 `Scripts/common/ConfigCatalog.py` 에 한 줄씩.
 - **바깥 서버가 있어야 하는 시험은 `SW_TEST_REQUIRES_ENVIRONMENT( 스위트, "변수", "까닭" );`** — 변수가 비면 그 스위트만 빠지고 `[ SKIP SUITE ]` 한 줄(실패도 "모두 건너뜀" 도 아님,
   호스트 스위트와 섞이지 않는다). PostgreSQL 은 `SW_TEST_POSTGRES_URL`. 구현마다 같은 케이스는 계약 매크로로(`SW_SERVICE_STORE_CONTRACT_SUITE` · `SW_SQL_DRIVER_CONTRACT_SUITE` ·
   `SW_EPHEMERAL_STORE_CONTRACT_SUITE`). 서버 없이 실패 길만 보려면 닿지 않는 주소(`host=127.0.0.1 port=1 connect_timeout=1`)를 준다 — 깨끗이 지고 멈추지 않아야 한다.
