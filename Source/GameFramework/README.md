@@ -297,11 +297,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       사건 → `addMember( 계정, ChatChannelId::makeGuild( 길드 ), now )`, GM 의 `AdminServiceSettings::_pBus` 로 채팅 금지 즉시 반영. 시험: `ChatWordFilterTest` ·
       `ChatSpamGuardTest` · `ChatServiceTest` · `ChatStreamTest`(루프백 끝단 — 서버 둘).
     - `Matchmaking`(`GF_Matchmaking`, Client · Server): 매칭 타입 — 결과 코드(`MatchmakingResult`), 모드 규칙(`MatchModeDefinition` — 팀 수 · 인원 · 실력 창 기본 ·
-      초당 넓힘 · 상한 · 지역 풀기 · 시한), 표(`MatchTicket` — 혼자 또는 파티), 만든 경기(`MatchFormed`).
+      초당 넓힘 · 상한 · 지역 풀기 · 시한), 표(`MatchTicket` — 혼자 또는 파티), 만든 경기(`MatchFormed`), 파티 · 로비 스냅숏(`PartySnapshot` · `LobbySnapshot`),
+      와이어(`MatchmakingProtocol.h` — 영역 0x0A00, 메서드 + 0x01 부터, 응답 몸 첫 값이 결과, 캐시 기록 `[판 1][몸]`).
     - `Server/Matchmaking`(`GF_Server_Matchmaking`, Server): 매처(`MatchMaker` — 모드 하나의 대기열, 결정적이고 전송 · 저장을 모른다). 오래 기다린 표가 닻, 두 표의 창 중
       큰 것 안의 후보를 실력 거리 순으로 넣어 자리를 정확히 채우고, 큰 표부터 실력 합이 낮은 팀에(파티는 쪼개지 않음 — 나눌 수 없으면 그 닻은 이번에 건너뜀),
-      기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비 · 대기열 권한 서버 · 전용 서버 배정은 아직 없다(백로그 1-7).
-      시험: `MatchMakerTest`.
+      기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비(`PartyLobbyService` — 캐시 기록 하나씩을 비교 후 쓰기
+      `CacheRecordUpdater` 로, 한 계정 한 파티는 계정 색인 `mm/acct/<계정>` 의 IfAbsent, 장 · 방장 넘김, 모드별 로비 목록 정렬 집합).
+      시험: `MatchMakerTest` · `PartyLobbyTest` · `CacheRecordUpdaterTest`.
       Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 스트림 바인딩 `AccountServer`(IOnlineService · IAccountSessionControl — 연결의 세션 토큰은
       메모리에, 로그인 · 재접속 성공이면 호스트에 계정을 붙이고 같은 계정의 옛 연결은 알림 뒤 닫는다, 연결이 닫히면 재접속 유예, 탈퇴 쓸기 · 세션 다시 읽기를 주기로,
       서버 여럿이면 다른 서버의 옛 세션을 버스 `account.revoke` 로 닫는다), 접속 상태 `OnlinePresence`(`IAccountPresence` 구현 — 캐시 `presence:` 키를 시한 · 주기로 다시 적고

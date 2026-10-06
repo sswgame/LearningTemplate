@@ -425,6 +425,8 @@ cd build/Ninja-Debug/Bin
   업적 진행률 표시 · 숨김 업적 목록, 서버 조립에서 `setScheduler` · 표 정의 데이터 읽기.
   **매칭**: `GF_Matchmaking`(타입 · 모드 규칙) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적)이 들어갔다. 남은 것(online-rest R5b · R5c): 파티 · 로비(캐시 기록 + 비교 후 쓰기),
   대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
+  **매칭**: `GF_Matchmaking`(타입 · 모드 규칙 · 와이어) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적, 파티 · 로비 — 캐시 기록 + 비교 후 쓰기)이 들어갔다.
+  남은 것(online-rest R5c): 대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
   작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 공유 `GF_Account`(와이어 타입)와 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴가 들어갔다.
   외부 로그인은 공통부(기반 `Online/Http` · OIDC 확인기 + JWKS 캐시 · 프로필 API 틀 · 제공자 설정 데이터 · PC 루프백 PKCE 클라이언트)와 가짜 제공자까지 — 실제 제공자 설정
