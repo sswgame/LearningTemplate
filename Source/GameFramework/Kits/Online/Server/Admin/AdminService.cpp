@@ -7,8 +7,10 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
+#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/Kits/Online/Server/Admin/AdminStoreLogic.h"
 
@@ -229,6 +231,13 @@ namespace sw
             {
                 const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
                 _settings._pSessionControl->revokeAccountSessions( pending._targetId, reasonCode, pending._nowMs );
+            }
+            const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+            if ( bSanctionChanged && _settings._pBus != nullptr )
+            {
+                BitWriter body;
+                body.writeVarUint( pending._targetId );
+                _settings._pBus->publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
             }
             finishCall( pendingIndex, inoutReply );
             return;

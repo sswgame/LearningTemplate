@@ -1,14 +1,16 @@
 // GM 도구 — 등급 문지기, 지급 · 회수는 원장 + 감사가 한 트랜잭션, 같은 키 재시도 · 응답 유실, 커밋 거절은 흔적 없음, 환불 회수의 빚, 제재 등급 · 세션 끊기 한 번,
-// 조회, 일괄 지급 이어 하기, 캠페인, 자기 등급 금지, 와이어 왕복.
+// 조회, 일괄 지급 이어 하기, 캠페인, 자기 등급 금지, 와이어 왕복, 제재 변경 버스 알림 한 번.
 #include "pch.h"
 
 #include "Core/Network/BitStream.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Identity/AccountSessionControl.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Online/Server/Admin/AdminService.h"
 #include "GameFramework/Kits/Online/Server/Admin/AdminStoreLogic.h"
@@ -306,6 +308,46 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     SW_EXPECT_TRUE( retry._reply._bReplayed == SW_TRUE );
     SW_ASSERT_EQUAL( sessions._listRevoked.size(), size_t( 1 ) ); // 재시도 응답에서 다시 끊지 않는다
     SW_EXPECT_EQUAL( sessions._listRevoked[0], AdminFixture::kPlayer );
+    service.shutdown();
+    store.shutdown();
+    (void)store.pollCompletions();
+}
+
+SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
+{
+    MemoryServiceDatabase database;
+    MemoryServiceStore    store{ &database };
+    LocalServerBusHub     hub;
+    LocalServerBus        adminBus{ &hub, 1 };
+    LocalServerBus        chatBus{ &hub, 2 }; // 다른 서버의 채팅이 듣는다
+    chatBus.subscribe( ServiceSanctionBus::kChangedTopic );
+    AdminService         service;
+    AdminServiceSettings settings;
+    settings._pBus = &adminBus;
+    SW_ASSERT_TRUE( service.initialize( &store, settings ) );
+    service.seedRole( AdminFixture::kSupport, AdminRole::Support, 1 );
+    (void)store.pollCompletions();
+
+    AdminRequest mute;
+    mute._accountId    = AdminFixture::kPlayer;
+    mute._sanctionKind = ServiceSanctionKind::ChatMute;
+    mute._untilMs      = 99999;
+    mute._memo         = "ticket-10";
+    AdminReplyCapture first;
+    AdminReplyCapture retry;
+    AdminReplyCapture lookup;
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, 5000, first.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kSetSanction, mute, NetIdempotencyKey{ 3, 4 }, 5000, retry.makeDelegate() );
+    service.submitCall( AdminFixture::kSupport, AdminMethod::kLookupAccount, mute, NetIdempotencyKey{ 3, 5 }, 5000, lookup.makeDelegate() );
+    (void)store.pollCompletions();
+    SW_EXPECT_TRUE( first._reply._result == AdminResult::Ok );
+    SW_EXPECT_TRUE( retry._reply._bReplayed == SW_TRUE );
+
+    vector<ServerBusMessage> listMessage;
+    (void)chatBus.pollMessages( listMessage );
+    SW_ASSERT_EQUAL( listMessage.size(), size_t( 1 ) ); // 재시도 · 조회는 내지 않는다
+    BitReader reader( listMessage[0]._bytes.data(), static_cast<int32>( listMessage[0]._bytes.size() ) );
+    SW_EXPECT_EQUAL( reader.readVarUint(), AdminFixture::kPlayer );
     service.shutdown();
     store.shutdown();
     (void)store.pollCompletions();

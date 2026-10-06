@@ -132,7 +132,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   보존 검사(`LedgerAudit` — 보유 = 발행 − 소각). 환불 회수만 계정 잔액을 음수(빚)로 만들 수 있고(`_bAllowDebt`), 빚이 있는 동안 그 재화는 쓰지 못한다.
   거래 · 우편 · 상점 · GM 지급이 `Ledger::stageTransfer` 로 자기 트랜잭션에 붙인다. 시험: `LedgerTest`.
   `Online/Mail`: 우편 넣기(`ServiceMail::stageSend` — 발행 재원은 수령 때, 그 밖은 넣을 때 맡김으로, 같은 멱등 키 한 번, 만료 색인, 기본 보관 30 일 ·
-  만료 때 운영 · 보상 우편은 첨부 소멸 · 플레이어 우편은 반환). `Online/Sanction`: 계정 제재 레코드(채팅 금지 · 정지 · 영구 정지 — 끝 시각 · 사유, 판 조건 쓰기).
+  만료 때 운영 · 보상 우편은 첨부 소멸 · 플레이어 우편은 반환). `Online/Sanction`: 계정 제재 레코드(채팅 금지 · 정지 · 영구 정지 — 끝 시각 · 사유, 판 조건 쓰기)와 바뀜 버스 주제(`ServiceSanctionBus` — `sanction.changed`, 몸 = 계정 id).
   `Online/Mail/ServiceMailCampaign.h`: 전체 우편(캠페인 레코드 하나 + 계정마다 수령 표식 "없어야 함" — 계정마다 행을 만들지 않는다, GM 키트가 만들고 우편함 키트가 끼운다).
   `Online/Identity/AccountSessionControl.h`: 세션 끊기 창구 `IAccountSessionControl`(계정 키트가 구현). 시험: `ServiceMailTest` · `ServiceSanctionTest`.
   `Online/Directory`: 서버 등록 · 고르기 — 기록 형식 `ServerRecord`(캐시 `sd/srv/<id>` 시한 15 초 · 종류 색인 `sd/idx/<종류>` 정렬 집합), 등록 `ServerRegistration`
@@ -337,7 +337,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `Server/Admin`(`GF_Server_Admin`, Server): GM 저장 논리(`AdminStoreLogic` — 등급(`admin_role`)을 명령마다 저장소에서 읽고, 바꾸는 명령은 멱등 기록(범위 `gm.<id>`)을 먼저 보고
       효과(원장 분개 · 제재 레코드 · 우편 · 일괄 우편 · 캠페인 · 등급)와 감사 줄과 멱등 기록을 한 트랜잭션에 — 거절 · 커밋 실패면 감사 줄도 없다. 메모(티켓) 필수, 회수는 음수 금지 ·
       환불 회수(`_bRefund`)만 빚 허용, 자기 등급 변경 금지, 일괄 우편은 계정마다 배치 키라 이어 하기에 중복이 없다, 첫 관리자 `seedRole`), 서비스 `AdminService`(IOnlineService
-      영역 kAdmin + `submitCall`, 조회는 계정 창구로 표시 이름 · 접속 여부, 정지 · 영구 정지가 새로 걸리면 `IAccountSessionControl` 로 세션 끊기). GM 에디터 패널은 백로그
+      영역 kAdmin + `submitCall`, 조회는 계정 창구로 표시 이름 · 접속 여부, 정지 · 영구 정지가 새로 걸리면 `IAccountSessionControl` 로 세션 끊기, 제재를 새로 쓰면 버스 `sanction.changed` — 채팅이 묵힌 제재를 버린다). GM 에디터 패널은 백로그
       (에디터 확장 지점 뒤). 시험: `AdminServiceTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),

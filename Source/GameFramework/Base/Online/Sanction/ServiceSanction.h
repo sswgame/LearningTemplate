@@ -55,3 +55,16 @@ namespace sw
         static void stageWrite( ServiceTransaction& inoutTransaction, uint64 accountId, const ServiceSanctionState& state );
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct ServiceSanctionBus
+     * @brief 제재가 바뀌었다는 서버 버스 주제입니다. 몸 = varuint 계정 id. GM 키트가 쓴 뒤 내고, 제재를 묵혀 보는 키트(채팅)는 그 계정의 묵힌 값을 버린다.
+     * @details 버스는 최대 한 번이다 — 놓치면 읽는 쪽이 묵힘 시한(채팅 60 초) 안에 다시 읽는다.
+     */
+    struct ServiceSanctionBus
+    {
+        static constexpr const utf8* kChangedTopic = "sanction.changed";
+    };
+} // namespace sw

@@ -22,6 +22,7 @@ namespace sw
     class IAccountDirectory;
     class IAccountSessionControl;
     class ILedgerPolicy;
+    class IServerBus;
     class IServiceStore;
     class MetricRegistry;
 
@@ -30,6 +31,7 @@ namespace sw
     {
         const IAccountDirectory* _pDirectory{ nullptr };      ///< 이름으로 찾기 · 표시 이름 · 접속 여부(없으면 id 로만)
         IAccountSessionControl*  _pSessionControl{ nullptr }; ///< 정지 · 영구 정지 뒤 세션 끊기(계정 키트가 구현)
+        IServerBus*              _pBus{ nullptr };            ///< 제재를 쓴 뒤 `ServiceSanctionBus::kChangedTopic` 을 낸다(없으면 채팅은 묵힘 시한 뒤에 본다)
         const ILedgerPolicy*     _pPolicy{ nullptr };         ///< 지급 상한(게임이 CurrencyCatalog 를)
         MetricRegistry*          _pMetricRegistry{ nullptr };
     };
