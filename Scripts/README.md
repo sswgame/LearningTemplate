@@ -138,7 +138,8 @@ Scripts/
   │     │     ├── CheckScriptLayout.py        # 폴더마다 파일 이름 앞머리 · 린트 기반 클래스(아래 Layout 표)
   │     │     ├── CheckHeaderSelfContained.py # staged 헤더가 혼자 서는지 — 빌드 폴더가 있을 때만, CTest 린트에는 안 든다(ctestSkipReason)
   │     │     ├── CheckPythonMinimumVersion.py # CI 의 파이썬에서도 파싱되는지
-  │     │     └── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
+  │     │     ├── CheckTextFilesAreText.py    # 텍스트 파일의 널 바이트
+  │     │     └── CheckExecutableBits.py      # `#!` 스크립트(오버레이 포트의 configure 포함)는 git 모드 100755 — Windows 에서 만든 파일은 실행 비트가 없다
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
   │     │     ├── FormatBranchBraces.py       # if 계열 중괄호 (`--check` 면 검사만)
   │     │     ├── FormatCmakeIndent.py        # CMake 줄머리 공백 들여쓰기 → 탭 (문자열 안 · vcpkg 툴체인 영역은 그대로)

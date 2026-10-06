@@ -69,6 +69,11 @@ message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 if(SW_SHIPPING_BUILD)
 	target_compile_definitions(sw_global_options INTERFACE SW_SHIPPING)
+	# 배포 클라이언트는 Info 로그를 컴파일하지 않는다(Core/Log/Logger.h). 전용 서버는 남긴다 — 준비 · 상태 · 종료 줄과 콘솔 명령의 답이 Info 이고,
+	# 운영(journald · docker logs · 시험 ServerBootTest)이 그 줄을 읽는다. 모든 타깃에 같게 걸어야 한다(헤더의 로그 매크로).
+	if(SW_TARGET_TYPE STREQUAL "Server")
+		target_compile_definitions(sw_global_options INTERFACE SW_LOG_COMPILED_VERBOSITY=SW_LOG_VERBOSITY_INFO)
+	endif()
 	message(STATUS "[BuildConfig] Shipping: Engine/SWGame STATIC, RHI backend linked into Engine, Editor off (SW_SHIPPING_BUILD=ON)")
 else()
 	message(STATUS "[BuildConfig] Dev: Engine SHARED, Editor/SWGame MODULE (type=${CMAKE_BUILD_TYPE})")

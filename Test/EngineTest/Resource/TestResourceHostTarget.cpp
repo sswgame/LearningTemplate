@@ -2,22 +2,15 @@
 
 #include "Core/Container/vector.h"
 
+#include "Engine/Resource/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
+
+#include "EngineTest/HostTargetTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
 
 namespace
 {
-    /** @brief 시험이 바꾼 호스트 타깃을 끝에 되돌립니다(시험 하네스는 아무것도 빼지 않는다). */
-    struct ScopedHostTargetInternal
-    {
-        explicit ScopedHostTargetInternal( sw::string_view buildTargetName ) { sw::ResourceUtil::setHostTarget( buildTargetName ); }
-        ~ScopedHostTargetInternal() { sw::ResourceUtil::setHostTarget( "" ); }
-
-        ScopedHostTargetInternal( const ScopedHostTargetInternal& )            = delete;
-        ScopedHostTargetInternal& operator=( const ScopedHostTargetInternal& ) = delete;
-    };
-
     constexpr const utf8* kTexturePath      = "engine/textures/perlin.dds";
     constexpr const utf8* kShaderBinaryPath = "engine/shaders/bin/dx12/deferredlighting_ps.dxil";
     constexpr const utf8* kPipelinePath     = "engine/pipeline/forwardpipeline.xml";
@@ -31,11 +24,13 @@ namespace
  */
 SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
 {
+    if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( kTexturePath ) )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     SW_ASSERT_TRUE_MSG( sw::ResourceUtil::hasResource( kTexturePath ), kTexturePath );
     SW_ASSERT_TRUE_MSG( sw::ResourceUtil::hasResource( kShaderBinaryPath ), kShaderBinaryPath );
 
-    test::ScopedLogCollector       logCollector;
-    const ScopedHostTargetInternal hostTarget{ "Server" };
+    test::ScopedLogCollector     logCollector;
+    const test::ScopedHostTarget hostTarget{ "Server" };
     SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( kTexturePath ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( kShaderBinaryPath ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::isExcludedForHost( "game/abilityarena/sounds/error_004.ogg" ) );
@@ -48,6 +43,8 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
     SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kTexturePath, bytes ) );
     SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kShaderBinaryPath, bytes ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kPipelinePath, bytes ) );
+    sw::DdsImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
+    SW_EXPECT_FALSE( sw::DdsLoader::loadFromResource( kTexturePath, image ) );
     SW_EXPECT_TRUE_MSG( logCollector.joined().empty(), logCollector.joined().c_str() );
 }
 
@@ -56,8 +53,10 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
  */
 SW_TEST_CASE( ResourceHostTargetTest, ClientReadsEveryKind )
 {
-    const ScopedHostTargetInternal hostTarget{ "Client" };
-    sw::vector<uint8>              bytes;
+    if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( kTexturePath ) )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
+    const test::ScopedHostTarget hostTarget{ "Client" };
+    sw::vector<uint8>            bytes;
     SW_EXPECT_FALSE( sw::ResourceUtil::isExcludedForHost( kTexturePath ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kTexturePath, bytes ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kShaderBinaryPath, bytes ) );

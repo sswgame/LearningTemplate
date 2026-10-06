@@ -64,6 +64,8 @@
 #include "Engine/Utility/TileMap/TileSetAsset.h"
 #include "Engine/Utility/Xml/TileMapXml.h"
 
+#include "EngineTest/HostTargetTestUtil.h"
+
 #include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/Base/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/AI/SpawnDirector.h"
@@ -648,6 +650,11 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
 
     sw::vector<sw::string> listGameTypeName;
     ResourceDataSchemaInternal::collectGameModuleTypeNames( resourceRoot, listGameTypeName );
+
+    // 전용 서버 빌드는 서버처럼 읽는다 — 패키지에 없는 종류(텍스처 · 오디오)를 장면이 가리켜도 없는 것으로 친다.
+    sw::unique_ptr<test::ScopedHostTarget> pServerHost;
+    if ( test::HostTargetTestUtil::isServerOnlyBuild() )
+        pServerHost = sw::make_unique<test::ScopedHostTarget>( "Server" );
 
     uint32 loadedCount{ 0 };
     for ( const sw::string& filePath : listFilePath )

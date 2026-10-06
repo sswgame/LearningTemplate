@@ -9,6 +9,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/ResourceUtil.h"
 
+#include "EngineTest/HostTargetTestUtil.h"
+
 #include "TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
@@ -463,6 +465,8 @@ SW_TEST_CASE( AudioSystemTest, DecoderKeepsWavFormatFields )
  */
 SW_TEST_CASE( AudioSystemTest, OggVorbisDecodesToPcm )
 {
+    if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "game/empty/sounds/click.ogg" ) )
+        SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
     sw::vector<uint8> listBytes;
     SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "game/empty/sounds/click.ogg", listBytes ) );
 

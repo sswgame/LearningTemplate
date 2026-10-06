@@ -113,8 +113,10 @@ SW_TEST_CASE( BuildTargetImageTest, ServerImageHasTheMarkerAndNoGraphicsLibrary 
     if ( ModuleCatalog::getBuildTargetMask() != static_cast<uint8>( ModuleTarget::Server ) )
         return; // Game 타깃의 Server 는 클라이언트 코드(X11 등)를 같이 링크한다 — 개발 편의 빌드라 보지 않는다
     vector<string> listImage{ serverImage };
-    const string   engineImage = findEngineImage();
-    if ( engineImage.empty() == false && engineImage != serverImage )
+    // Engine 이 정적 링크(Shipping)면 그 이미지는 이 시험 실행 파일이다 — 시험 실행 파일은 GPU 시험을 위해 그래픽 라이브러리를 링크하므로 보지 않는다.
+    // 그때 Engine 코드는 Server 이미지 안에 있다.
+    const string engineImage = findEngineImage();
+    if ( engineImage.empty() == false && engineImage != serverImage && FileUtil::pathsEqualNormalized( engineImage, FileUtil::getExecutablePath() ) == false )
         listImage.push_back( engineImage );
     for ( const string& imagePath : listImage )
     {
