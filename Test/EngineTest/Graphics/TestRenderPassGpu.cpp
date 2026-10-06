@@ -5709,6 +5709,90 @@ SW_TEST_CASE( RenderPassGpuTest, PresentedBackBufferMatchesTheCapture )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 출력이 렌더 타깃(에디터 게임 뷰)이어도 Present 캡처가 그 그림을 담는다 — 4 백엔드
+ * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_gameRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 견준다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, PresentCaptureFollowsOffscreenOutput )
+{
+    constexpr uint32      kOutputWidth  = 256;
+    constexpr uint32      kOutputHeight = 192;
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string         label    = sw::string( device->getBackendName() ) + ": ";
+        sw::IRHIResourceFactory* pFactory = device->getResourceFactory();
+        sw::FrameRenderer        renderer;
+        LitCubeScene             stage;
+        bool                     bOk = renderer.initialize( device.get() ) && renderer.isReady() && stage.populate();
+
+        sw::RHITextureDesc outputDesc{};
+        outputDesc._width                       = kOutputWidth;
+        outputDesc._height                      = kOutputHeight;
+        outputDesc._format                      = sw::constant::kBackBufferFormat;
+        outputDesc._bIsRenderTarget             = SW_TRUE;
+        outputDesc._bIsShaderResource           = SW_TRUE;
+        const sw::RHITextureHandle outputTarget = bOk ? pFactory->createTexture2D( outputDesc ) : sw::RHITextureHandle{ 0 };
+        bOk                                     = bOk && outputTarget != 0;
+        renderer.setPresentCaptureEnabled( true );
+
+        sw::GpuSceneBuilder builder;
+        const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+        for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
+            sw::RenderFramePacket packet{};
+            packet._bValid           = 1;
+            packet._gameRenderTarget = outputTarget;
+            packet._viewportWidth    = kOutputWidth;
+            packet._viewportHeight   = kOutputHeight;
+            builder.buildFromScene( &stage._scene, packet._cameraPos );
+            builder.exportCpuSnapshot( packet._gpuScene );
+            device->beginFrame( clear );
+            bOk = renderer.executePacket( device.get(), packet );
+            device->endFrame( false, false );
+            device->waitIdle();
+        }
+
+        sw::vector<uint8>     outputBytes;
+        sw::RHITextureMipSpan outputLayout{};
+        sw::vector<uint8>     captureBytes;
+        sw::RHITextureMipSpan captureLayout{};
+        bOk = bOk && pFactory->readbackTexture2D( outputTarget, 0, 0, outputBytes, outputLayout ) &&
+              renderer.readbackPresentCapture( captureBytes, captureLayout );
+        SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 출력 RT · 캡처 읽기" ).c_str() );
+        if ( bOk )
+        {
+            test::RHITestImage output;
+            output.assign( std::move( outputBytes ), outputLayout, sw::constant::kBackBufferFormat );
+            test::RHITestImage capture;
+            capture.assign( std::move( captureBytes ), captureLayout, sw::constant::kBackBufferFormat );
+            SW_EXPECT_EQUAL( capture.getWidth(), kOutputWidth );
+            SW_EXPECT_EQUAL( capture.getHeight(), kOutputHeight );
+            uint32 differCount = 0;
+            uint32 drawnCount  = 0;
+            for ( uint32 y = 0; y < output.getHeight() && y < capture.getHeight(); ++y )
+            {
+                for ( uint32 x = 0; x < output.getWidth() && x < capture.getWidth(); ++x )
+                {
+                    const test::Rgba8 outputPixel = output.getPixel( x, y );
+                    if ( test::RHITestImage::getColorDistance( outputPixel, output.getPixel( 0, 0 ) ) >= 24 )
+                        ++drawnCount;
+                    if ( test::RHITestImage::getColorDistance( outputPixel, capture.getPixel( x, y ) ) > 6 )
+                        ++differCount;
+                }
+            }
+            SW_LOG_INFO( "%#output RT vs capture: %# of %# px differ (drawn %#)", label, differCount, output.getPixelCount(), drawnCount );
+            SW_EXPECT_TRUE_MSG( drawnCount > output.getPixelCount() / 200, ( label + "출력 RT 에 큐브가 없다 — 비교가 뜻이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( differCount * 100 < drawnCount, ( label + "캡처가 출력 RT 그림과 다르다 (다른 픽셀 " + sw::to_string( differCount ) + ")" ).c_str() );
+        }
+        renderer.shutdown();
+        if ( outputTarget != 0 )
+            pFactory->destroyTexture( outputTarget );
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the offscreen output capture test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] Present 가 백버퍼에 직접 그릴 때(캡처 끔) 화면 사각형 뷰가 백버퍼의 오른쪽 아래에 앉는다 — 4 백엔드
  * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 갈래를 안 지난다
  *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.

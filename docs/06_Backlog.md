@@ -66,6 +66,7 @@ cd build/Ninja-Debug/Bin
 
 **렌더 결과는 픽셀로 잰다.** `-gv_screenshot=out.ppm`(`-gv_screenshotFrame=N`)은 톤맵까지 든 최종 화면이다. 눈으로 보지 말고
 배경과 다른 픽셀 수 · 채널 평균을 센다. `-gv_viewMode=<0|1|2>`(Lit · Unlit · Wireframe)는 에디터 없이도 고른다.
+에디터 실행(`-EnableEditor`)의 `-gv_screenshot` · 시나리오 `<Screenshot>` 은 **게임 뷰 그림**이다(에디터 UI 는 들어가지 않는다 — Present 캡처가 게임 뷰 렌더 타깃을 복사한다).
 **벤치는 `-gv_benchAnimate=0` 이어야 결정적이다**(네 백엔드 0 바이트 차이). 애니메이션을 켠 채 차이를 주장하려면 같은 조건
 두 판으로 잡음 바닥을 먼저 잰다.
 

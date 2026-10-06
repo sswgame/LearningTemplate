@@ -612,6 +612,8 @@ namespace sw
                         drawFullscreen( ctx, 0, passCb );
                         ctx._pCmd->endRenderPass();
                     }
+                    if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
+                        copyOutputToPresentCapture( ctx, target );
                     break;
                 }
                 case RenderPassType::Canvas:
@@ -638,6 +640,8 @@ namespace sw
                     }
                     if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
                         ctx._pCmd->blitTexture( target._texture, 0 );
+                    if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
+                        copyOutputToPresentCapture( ctx, target );
                     break;
                 }
                 // 실행 코드가 없는 타입: 일반 풀스크린 패스인데 패스 서술이 없거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -803,6 +807,9 @@ namespace sw
         const bool bCapture = bRenderTexture == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
         // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다 — 크기를 덮어쓴 출력(초상화 굽기)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
         const bool bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
+        // 출력이 RT(에디터 게임 뷰)면 그 RT 에 그대로 그리고 끝에 캡처로 복사한다. 화면 사각형 뷰도 같은 RT 에 겹쳐 그리므로 뷰마다 복사하면
+        // 마지막 복사가 화면과 같다.
+        const bool bCaptureFromOutput = bRenderTexture == false && _outputRenderTarget != 0 && isPresentCaptureEnabled();
 
         PresentTarget target{};
         target._texture = bRenderTexture ? activeView._pOutputTexture->getHandle() : bCapture ? _presentCapture
@@ -810,11 +817,28 @@ namespace sw
         target._width   = bRenderTexture ? activeView._outputWidth : _outputWidth;
         target._height  = bRenderTexture ? activeView._outputHeight : _outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과), 텍스처는 그 텍스처가 기록한 포맷이다.
-        target._format         = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
-        target._bRenderTexture = bRenderTexture ? SW_TRUE : SW_FALSE;
-        target._bCapture       = bCapture ? SW_TRUE : SW_FALSE;
-        target._bCaptureToBack = bCaptureToBack ? SW_TRUE : SW_FALSE;
+        target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
+        target._bRenderTexture     = bRenderTexture ? SW_TRUE : SW_FALSE;
+        target._bCapture           = bCapture ? SW_TRUE : SW_FALSE;
+        target._bCaptureToBack     = bCaptureToBack ? SW_TRUE : SW_FALSE;
+        target._bCaptureFromOutput = bCaptureFromOutput ? SW_TRUE : SW_FALSE;
         return target;
+    }
+
+    void FrameRenderer::copyOutputToPresentCapture( const FramePassContext& ctx, const PresentTarget& target )
+    {
+        // 캡처는 계약 포맷(kBackBufferFormat)으로 출력 크기에 맞춰 만든다(ensurePresentCapture) — 게임 뷰 RT 도 같은 포맷이라 그대로 복사된다.
+        const bool bSameSize   = _presentCaptureWidth == target._width && _presentCaptureHeight == target._height;
+        const bool bSameFormat = target._format == constant::kBackBufferFormat;
+        if ( bSameSize == false || bSameFormat == false )
+        {
+            if ( _bCaptureMismatchLogged.exchange( 1 ) == 0 )
+                SW_LOG_WARNING( "Present capture skipped - the output render target (%#x%#, format %#) does not match the capture (%#x%#, format %#)",
+                                target._width, target._height, static_cast<uint32>( target._format ), _presentCaptureWidth, _presentCaptureHeight,
+                                static_cast<uint32>( constant::kBackBufferFormat ) );
+            return;
+        }
+        ctx._pCmd->blitTexture( target._texture, _presentCapture );
     }
 
     bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const
