@@ -1,0 +1,24 @@
+{
+    "_name": "GF_ServerDirectory",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "서버 디렉터리 키트(공유) — 점검 모드 · 공지 · 접속 배정의 타입 · 와이어 형식 · 클라이언트 창구 (온라인 게임 전반)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

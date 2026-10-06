@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_ServerDirectory",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "서버 디렉터리 키트(서버) — 점검 모드 · 공지 영속 + 감사 · 접속 배정 서비스 · 서비스 호스트 등록 (온라인 게임 전반)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ServerDirectory"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

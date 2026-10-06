@@ -298,6 +298,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       정식 계정의 소문자 로그인 이름 표 · 프로필 표를 읽는다, 상태 없음),
       UDP 접속 인증기 `AccountConnectAuthenticator`(게임 서버 — 저장소 없이 표 서명 · 서버 · 시한만). 시험: `LoginServiceTest` · `PlatformLoginTest` ·
       `AccountStreamTest`(루프백 스트림 평문 · TLS, UDP Encrypted 접속까지) · `OnlineMultiServerTest`(호스트 둘이 저장소 · 캐시 · 버스를 나눠 씀) · `AccountNameIndexTest`.
+    - `ServerDirectory`(`GF_ServerDirectory`, Client · Server): 서버 디렉터리 타입(`ServerDirectoryTypes.h` — 결과 · 점검 창(범위 `all` · 종류, 허용 계정) · 공지 ·
+      배정 요청/답 · 목록 줄), 와이어(`ServerDirectoryProtocol.h` — 영역 0x0200: 상태 · 목록(익명) · 배정(로그인 뒤), 알림 kPushStatus, 키트 오류 kUnknownKind),
+      클라이언트(`ServerDirectoryClient` — 요청마다 완료 델리게이트, 마지막 상태 · 판 번호).
+    - `Server/ServerDirectory`(`GF_Server_ServerDirectory`, Server): 로직(`ServerDirectoryService` — 배정은 기반 `ServerRegistryReader` 스냅숏으로 동기,
+      점검이면 Maintenance + 끝 시각 · 글 키(허용 계정은 점검 상태 서버도 후보), 점검 · 공지 바꾸기는 영속 레코드(`sd_maintenance` · `sd_notice`) + 감사 줄 한 트랜잭션,
+      30 초 주기 다시 읽기 + 버스 `sd.changed` 재촉, 보이는 내용의 해시가 바뀌면(기간 경계 포함) 알림), 바인딩(`ServerDirectoryServer` — `sendPushToAll`).
+      바꾸기는 C++ API(GM 도구가 조립에서). 시험: `ServerDirectoryServiceTest` · `ServerDirectoryStreamTest`.
     - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`), 와이어(`TradeProtocol.h` —
       메서드 · 알림 Invited · Update · Closed, 응답에 요청한 계정의 이동 뒤 잔액), 클라이언트(`TradeClient` — 모든 요청에 멱등 키, 확정은 비추는 스냅숏의 두 판),
       인벤토리 칸 → 다리(`TradeInventoryUtil` — 같은 아이템 칸 합침, 인스턴스 상태 칸 거절, 아이템 → 자산 id 는 게임이 잇는다).

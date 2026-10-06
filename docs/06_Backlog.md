@@ -413,6 +413,9 @@ cd build/Ninja-Debug/Bin
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
   **채팅**: `GF_Chat`(공통 타입 · 채널 id 규칙) · `GF_Server_Chat`(금칙어 거르개 `ChatWordFilter` · 도배 막이 `ChatSpamGuard`)의 순수 부품이 들어갔다. 남은 것(online-rest R2b · R2c):
   채널 · 귓속말 · 기록 · 서버 간 전달 · 채팅 금지(`ChatService` · `ChatProtocol`), 호스트 바인딩 · 클라이언트 · 루프백 끝단 시험, 거르개 비용은 부하 봇의 `ChatService.send` p99 로 잰다.
+  **서버 디렉터리**: 기반 `Online/Directory`(등록 · 하트비트 · 읽기 캐시 · 고르기)와 `GF_ServerDirectory` · `GF_Server_ServerDirectory`(점검 · 공지 · 배정 · 바인딩 ·
+  클라이언트)가 들어갔다. 남은 것: GM 도구 패널(GF_Admin · 에디터 확장 지점 뒤)에 점검 · 공지 바꾸기 잇기, 서버 고르기 UI 위젯, 서버 실행 파일에 디렉터리 서비스 ·
+  등록 조립(서버 설정에 종류 · 지역 · 공개 주소), 오케스트레이터(Agones · 쿠버네티스) 상태와 서버 등록 잇기(지금은 서버가 스스로 캐시에 하트비트).
   **매칭**: `GF_Matchmaking`(타입 · 모드 규칙) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적)이 들어갔다. 남은 것(online-rest R5b · R5c): 파티 · 로비(캐시 기록 + 비교 후 쓰기),
   대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
   작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다.
@@ -1803,6 +1806,9 @@ cd build/Ninja-Debug/Bin
   실패를 알릴 수 있어 보내기 전에 걸어 둔다(`ServiceClientCallTable::send`). 라우터보다 먼저 내려가는 델리게이트 주인은 기다리던 요청을 `cancel` 한다.
 - **서버 고르기는 기반 하나**(`Online/Directory/ServerSelection`) — 클라이언트 배정과 매칭의 전용 서버 배정이 같은 규칙(열림 · 판 · 살아 있음 · 자리 → 같은 지역 →
   찬 비율 → id)을 쓴다. 스냅숏은 읽기 주기(2 초)만큼 늦으니 고른 몫을 다음 읽기까지 얹어 몰림을 막는다.
+- **점검 · 공지는 영속 + 주기 다시 읽기 + 버스 재촉**(GF_Server_ServerDirectory) — 버스만 믿으면 그 순간 내려가 있던 서버는 영영 모른다. 알림은 "보이는 내용의 해시" 가
+  바뀔 때만 — 기간 경계(시작 · 끝)는 다시 읽지 않아도 보이는 것이 바뀐다. 끝단 시험 하니스(`OnlineHostTestUtil.h`)에서 키트 로직 · 바인딩은 `OnlineTestServer` 보다
+  먼저 선언한다 — 서버가 먼저 내려가며 저장소 일 완료 · 캐시 Unavailable 답을 거두는데 그때 로직이 살아 있어야 한다.
 - **서비스 저장소의 판은 저장소 전체에서 오르는 수다**(`Base/Online/Store`) — 키마다 1 부터 세면 지웠다 다시 만든 키가 옛 판을 다시 받아, 그 판을 들고 있던 늦은 쓰기가
   새 레코드를 덮는다(ABA). `Unavailable` 은 "적용됐는지 모른다" 이므로 돈 · 아이템이 움직이는 커밋은 멱등 기록(`ServiceIdempotency`)을 **같은 트랜잭션**에 넣는다.
   저장 왕복은 일(`IServiceStoreWork`) 하나 — `run` 은 저장소 스레드라 서비스 멤버를 만지지 않고 `SW_EXPECT_*` 도 부르지 않는다(계약 시험은 어긋난 단계 번호만 적는다), 결과는 `complete` 에서 적용한다.
