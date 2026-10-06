@@ -5943,7 +5943,9 @@ SW_TEST_CASE( RenderPassGpuTest, GlContextBindWaitsForAShortHolder )
  */
 SW_TEST_CASE( RenderPassGpuTest, SoftwareAdapterSwitchStartsWarp )
 {
-#if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "global variable switches (gv_rhiSoftwareAdapter) are a development-build feature" );
+#elif defined( SW_PLATFORM_WINDOWS )
     sw::GlobalVariableInfo* pSwitch = sw::engine::getGlobalVariableManager().findVariable( "gv_rhiSoftwareAdapter" );
     SW_ASSERT_TRUE( pSwitch != nullptr );
     for ( const sw::RHIBackend backend : { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11 } )
