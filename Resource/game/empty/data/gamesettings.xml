@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Empty 팩의 설정 — 기본 실기동이 여는 시험 씬(배포본도 씬 로드 경로 SCN1 · 프리팹 GUID 해석을 거치게). -->
+<GameSettings>
+  <startMap>game/empty/maps/editortest.scene.xml</startMap>
+</GameSettings>

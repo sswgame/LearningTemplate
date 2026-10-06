@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ThemeParkTycoon 팩의 설정 — 시작 맵은 공원 씬이다(게임 프리셋 Config/Game/ThemeParkTycoon.json 이 이 파일을 가리킨다). -->
+<!-- ThemeParkTycoon 팩의 설정 — 시작 맵은 공원 씬이다(게임마다 팩의 data/gamesettings.xml 하나다). -->
 <GameSettings>
   <startMap>game/themepark/maps/park.scene.xml</startMap>
   <inputMap>game/themepark/data/park.input.xml</inputMap>

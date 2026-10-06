@@ -77,7 +77,7 @@ namespace sw
         // --------------------------------------------------------------------------
         // 부트스트랩 씬 흐름 (GameSettings 의 씬 칸을 읽는 자리)
         // --------------------------------------------------------------------------
-        /** @brief 게임이 처음 여는 씬입니다 — 실행 설정의 시작 씬(`GameConfig::_startupScene`) > 타이틀 씬 > 시작 맵. 셋 다 비었으면 빈 문자열입니다. */
+        /** @brief 게임이 처음 여는 씬입니다 — `-gv_firstScene` > 타이틀 씬 > 시작 맵(gamesettings). 모두 비었으면 빈 문자열입니다. */
         const string& getFirstScene() const;
         /** @brief 타이틀 다음에 여는 씬입니다 — 입구 씬 > 시작 맵. */
         const string& getEntranceScene() const;

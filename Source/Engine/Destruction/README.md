@@ -171,5 +171,5 @@
 벽돌 벽(200 조각, 앵커 바닥) · 나무 상자 셋(대리 부피 24 조각, `wood.destruction.xml`) · 폭발 통 둘(20 조각). `BarrelFuse` 가 1.5 초 도화선(`_fuseTime`)으로
 터지고 반경 3 m 안의 `BarrelChain` 이 사슬로 이어 터집니다 — 벽 아래쪽이 깨지고 받침을 잃은 위쪽이 큰 덩어리로 무너진다(지지 붕괴). 모델 원본은
 `Resource/game/empty/models_raw/`, 어떤 모델을 어떻게 쪼갤지는 `Config/Editor/ModelImportConfig.json` 의 `Destruction_*` 규칙(`App --import-models` 가
-`.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Config/Game/Empty.json` 의 `_startupScene` 을 이 씬으로 바꿔 App 을 띄웁니다
+`.mesh` 옆에 `.fracture` 를 쓴다). 보려면 `Resource/game/empty/data/gamesettings.xml` 의 `startMap` 을 이 씬으로 바꿔(또는 `-gv_firstScene=`) App 을 띄웁니다
 (`-gv_screenshotFrame=900 -gv_screenshot=<경로>.ppm` 로 깨진 뒤를 찍는다). 시험: `DestructionShowcaseTest`(도화선 → 사슬 → 벽 · 상자가 깨진다).

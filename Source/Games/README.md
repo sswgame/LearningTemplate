@@ -50,7 +50,7 @@
    (아래 "Empty 는 왜 비어 있지 않은가" 참고).
 3. **필요한 키트 연결하기**: `MyGame/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
 4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/mygame/` 을 만들고, 게임 프리셋 `Config/Game/MyGame.json`(파일 이름 = 게임 폴더 이름)에
-   `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 프리셋의 `_startupScene` 또는 팩의 `data/gamesettings.xml` `startMap` 입니다.
+   `_packRoot` 를 `"game/mygame"` 로 적습니다. 시작 씬은 팩의 `data/gamesettings.xml` `startMap`(타이틀이 있으면 `titleScene`) 하나입니다.
    프리셋이 없으면 configure 가 멈춥니다.
 5. **CMake 활성화**: `-DSW_ACTIVE_GAME=MyGame`.
 6. **쓰지 않는 키트 끄기(선택)**: `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드 · 실행에서 빠집니다.

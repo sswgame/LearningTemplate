@@ -2894,10 +2894,9 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     };
     ScopedRunState runState;
 
-    // 팩에 gamesettings.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다. 실행 시작 씬도 없다.
+    // 팩에 gamesettings.xml 이 없다 — configureBootstrap 이 채운 값이 그대로 남는다.
     GameConfig runConfig = runState._oldConfig;
     runConfig._packRoot  = "game/no_such_pack";
-    runConfig._startupScene.clear();
     GameConfig::setActive( runConfig );
 
     const string localeDir = test::makeTempDirectory( "bootstrap_locale" );
@@ -2945,12 +2944,9 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
     SW_EXPECT_EQUAL( string( "ko_kr" ), GameStrings::getLanguage() );
     SW_EXPECT_STREQ( "English", GameStrings::get( "UI_ONLY_EN" ) );
 
-    // 4) 씬 흐름 — 실행 시작 씬이 없으면 타이틀, 타이틀 다음은(입구 씬이 없어) 시작 맵. 실행 시작 씬이 있으면 그것이 이긴다.
+    // 4) 씬 흐름 — 처음은 타이틀, 타이틀 다음은(입구 씬이 없어) 시작 맵.
     SW_EXPECT_STREQ( "game/test/maps/title.scene.xml", instance.getFirstScene().c_str() );
     SW_EXPECT_STREQ( "game/test/maps/start.scene.xml", instance.getEntranceScene().c_str() );
-    runConfig._startupScene = "game/test/maps/run.scene.xml";
-    GameConfig::setActive( runConfig );
-    SW_EXPECT_STREQ( "game/test/maps/run.scene.xml", instance.getFirstScene().c_str() );
 
     // 5) 세이브 경로 — 경로 없는 저장 · 읽기는 기본 슬롯이다
     SW_EXPECT_TRUE( instance.saveStateToFile() );
