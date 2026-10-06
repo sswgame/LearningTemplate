@@ -248,6 +248,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       (`LoginTicketAuthority` — 주 키로 서명한 상태 없는 표 64 B + 표 비밀). 요청은 저장소에 일로 맡기고(`LoginStoreLogic` 이 저장소 스레드에서) 꼬리표로 거둔다.
       `IAccountDirectory` 구현(이 프로세스에 붙어 있는 계정만). 암호는 `ILoginCrypto` 뒤 — 실제 구현 `NetSecurityLoginCrypto`(네트워크 보안 제공자의
       Argon2id · HKDF-SHA256, 서버는 기동 때 `isPasswordHashSupported` 로 확인). 시험: `LoginServiceTest`(메모리 저장소 · 결정적 가짜 암호 + 실제 암호 한 케이스).
+    - `Chat`(`GF_Chat`, Client · Server): 채팅의 공통 타입 — 결과 코드(`ChatResult`, 키트 오류 = `OnlineMethodRange::kChat` + 값), 채널 id 규칙(`ChatChannelId` —
+      `world.` · `guild.<16 진>` · `party.<16 진>` · `custom.` · 귓속말 기록 키 `whisper.<작은 id>.<큰 id>`, `[0-9a-z_.]` 48 바이트 — 버스 주제 · 저장소 키에 그대로), `ChatMessage`.
+      시험: `ChatChannelIdTest`.
+    - `Server/Chat`(`GF_Server_Chat`, Server): 금칙어 거르개(`ChatWordFilter` — 코드 포인트 아호-코라식, 대소 · 전각 정규화, 끼움 글자를 건너뛰고 맞춰 `b.a.d` 도 걸고
+      가릴 때는 구간 안의 끼움 글자도 가림, 가리기 · 거절 두 방식, 잘못된 UTF-8 거절, 목록은 `Config/Server/chat_banned_words.txt` — 저장소에는 시험 낱말만),
+      도배 막이(`ChatSpamGuard` — 계정마다 `TokenBucketMap` 몰아 쓰기 5 · 1 초에 하나 + 정규화 해시로 10 초 안 같은 글 셋째 거절). 채널 · 귓속말 · 기록 · 서비스 바인딩은
+      아직 없다(백로그 1-7). 시험: `ChatWordFilterTest` · `ChatSpamGuardTest`.
   - **저장** (`Kits/Storage/` — 서버 전용은 `Kits/Storage/Server/<키트>`, 모듈 `GF_Server_<키트>`)
     - `SqlStore`(`GF_SqlStore`, Client · Server): SQL 드라이버 계약(`Sql/SqlDriver.h` — `ISqlDriver` · `ISqlConnection` · `SqlValue` · `SqlRowSet` · 방언 훅 `SqlDialect`),
       연결 풀(`SqlConnectionPool` — 전용 워커마다 연결 하나 · 일 큐 · 완료 큐 · 끊기면 지수 물러남으로 다시 열기), 드라이버 등록부(`SqlDriverRegistry` — 이 빌드 타깃에 든 것만,

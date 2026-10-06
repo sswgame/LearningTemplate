@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_Chat",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "채팅 키트(서버) — 금칙어 거르개 · 도배 막이 · 채널 · 귓속말 · 기록 · 서버 간 전달 · 서비스 호스트 등록 (온라인 게임 전반)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Chat"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

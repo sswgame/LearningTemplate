@@ -71,7 +71,9 @@ add_subdirectory(Network/NetTurnRelay)
 # ------------------------------------------------------------------------------
 # 8) 온라인 서비스 — 기반 Online/ 계약 위의 서비스(계정 · 거래 …). 서버 전용은 `<묶음>/Server/<키트>`(GF_Server_<키트>)
 # ------------------------------------------------------------------------------
+add_subdirectory(Online/Chat)
 add_subdirectory(Online/Server/Account)
+add_subdirectory(Online/Server/Chat)
 
 # ------------------------------------------------------------------------------
 # 9) 저장 — 서비스 저장 계약(기반 Online/Store)의 드라이버. 서버 전용은 `<묶음>/Server/<키트>`(GF_Server_<키트>)
