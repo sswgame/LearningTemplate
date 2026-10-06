@@ -28,6 +28,7 @@ namespace sw
     {
     public:
         void setViewport( const RHIViewport& viewport ) override { _pContext->setViewport( viewport ); }
+        void setScissorRect( const RHIScissorRect& rect ) override { _pContext->setScissorRect( rect ); }
         void setPipelineState( RHIPipelineStateHandle pso ) override { _pContext->setPipelineState( pso ); }
         void beginRenderPass( const RHIRenderPassBeginInfo& beginInfo ) override { _pContext->beginRenderPass( beginInfo ); }
         void endRenderPass() override { _pContext->endRenderPass(); }

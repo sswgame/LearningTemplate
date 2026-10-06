@@ -57,6 +57,8 @@ namespace sw
         uint32 _renderTargetHeight{ 0 };
         /// @brief 지금 렌더 패스가 기본 프레임버퍼(창의 백버퍼, GL_LOWER_LEFT)에 그리는지입니다.
         uint8 _bDefaultFramebuffer{ SW_FALSE };
+        /// @brief setScissorRect 가 GL_SCISSOR_TEST 를 켜 두었는지입니다. setViewport · beginRenderPass 가 끄고, blitTexture 는 그동안만 끈다.
+        uint8 _bScissorEnabled{ SW_FALSE };
     };
 } // namespace sw
 
@@ -311,10 +313,11 @@ namespace sw
             RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList;
             RHIFillMode          _fillMode = RHIFillMode::Solid;
             RHICullMode          _cullMode = RHICullMode::None;
-            uint8                _bEnableDepthTest  : 1;
-            uint8                _bEnableDepthWrite : 1;
-            uint8                _bEnableBlend      : 1;
-            uint8                _reserved          : 5;
+            uint8                _bEnableDepthTest    : 1;
+            uint8                _bEnableDepthWrite   : 1;
+            uint8                _bEnableBlend        : 1;
+            uint8                _bPremultipliedAlpha : 1; ///< 블렌드 색 원본 계수가 One(아니면 SrcAlpha)
+            uint8                _reserved            : 4;
         };
 
         /// @brief 렌더 패스 서술 캐시입니다.

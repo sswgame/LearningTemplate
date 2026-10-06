@@ -93,6 +93,11 @@ RHI/
   `IRHIResourceFactory::updateConstantBuffer` 는 기록 **밖**(에셋 · 머티리얼 파라미터) 전용입니다 — DX11 은 즉시 컨텍스트 + 잠금.
   리스트는 begin 과 end 가 다른 스레드여도 됩니다(RenderGraph 병렬 레벨의 첫 리스트) —
   `RHIDeviceTest.CommandListHandedOffAcrossThreadsDoesNotLeakRecordingContext` · `CommandListConstantBufferUpdateReachesItsDraws` 가 못박습니다.
+- **가위(`IRHICommandList::setScissorRect`)는 다음 `setViewport` · `beginRenderPass` 까지만 삽니다** — 둘이 가위를 뷰포트 전체로 되돌립니다(언리얼 `RHISetViewport` 와 같다).
+  같은 개념이 API 마다 다릅니다: DX12 · Vulkan 은 가위가 늘 켜진 동적 상태, DX11 은 래스터라이저 상태의 `ScissorEnable`(늘 켜 두고 뷰포트와 함께 건다),
+  GL 은 `GL_SCISSOR_TEST` 를 켜고 끄며 클리어 · 블릿도 가위를 따르므로 그동안 끕니다(`RHIDeviceTest.ScissorRectClipsDrawsAndResetsWithViewport`).
+- **텍스처 일부 고치기는 `uploadTexture2DRegion`** 입니다(밉 하나 · 면 하나의 사각형, 비압축만 — 글리프 아틀라스). 검사는 `validateTextureRegionUpload` 한 곳이고,
+  동기 규약은 `uploadTexture2D` 와 같습니다(`RHIDeviceTest.RegionUploadReadsBackOnEveryBackend`).
 
 ## 디바이스 종료 순서 — `IRHIDevice::shutdown` 하나가 정한다
 

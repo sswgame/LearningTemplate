@@ -49,6 +49,7 @@ namespace sw
         void bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) override;
         void setViewport( const RHIViewport& viewport ) override;
+        void setScissorRect( const RHIScissorRect& rect ) override;
         /** @brief 슬롯 1(인스턴스 슬롯 스트림)을 겁니다(걸려 있을 때만). */
         void bindInstanceSlotStream();
 

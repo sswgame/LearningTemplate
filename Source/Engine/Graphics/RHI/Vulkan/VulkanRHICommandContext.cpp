@@ -875,6 +875,20 @@ namespace sw
         vkCmdSetScissor( cmd, 0, 1, &scissor );
     }
 
+    void VulkanRHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
+            return;
+        // 가위는 프레임버퍼 좌표(왼쪽 위 원점)라 음수 높이 뷰포트와 달리 뒤집지 않는다.
+        VkRect2D scissor{};
+        scissor.offset.x      = static_cast<int32>( rect._x );
+        scissor.offset.y      = static_cast<int32>( rect._y );
+        scissor.extent.width  = rect._width;
+        scissor.extent.height = rect._height;
+        vkCmdSetScissor( cmd, 0, 1, &scissor );
+    }
+
     void VulkanRHICommandContext::setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues )
     {
         // 푸시 상수 범위는 모든 스테이지(VS/PS/CS)에 걸려 있으므로 컴퓨트 경로와 같은 호출이면 된다.

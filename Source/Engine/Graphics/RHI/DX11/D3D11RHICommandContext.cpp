@@ -186,6 +186,10 @@ namespace sw
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         _pContext->RSSetViewports( 1, &viewport );
+
+        // 래스터라이저 상태가 가위를 늘 켜 두므로(PSO) 가위를 패스 전체로 되돌린다 — 앞 패스의 가위가 새지 않게.
+        const D3D11_RECT scissor{ 0, 0, static_cast<LONG>( viewport.Width ), static_cast<LONG>( viewport.Height ) };
+        _pContext->RSSetScissorRects( 1, &scissor );
     }
 
     /**
@@ -462,6 +466,20 @@ namespace sw
         d3dvp.MinDepth = viewport._minDepth;
         d3dvp.MaxDepth = viewport._maxDepth;
         _pContext->RSSetViewports( 1, &d3dvp );
+
+        // 가위 = 뷰포트(IRHICommandList::setViewport 규약). DX12 · Vulkan 과 같은 사각형이다.
+        const D3D11_RECT scissor{ static_cast<LONG>( viewport._x ), static_cast<LONG>( viewport._y ), static_cast<LONG>( viewport._x + viewport._width ),
+                                  static_cast<LONG>( viewport._y + viewport._height ) };
+        _pContext->RSSetScissorRects( 1, &scissor );
+    }
+
+    void D3D11RHICommandContext::setScissorRect( const RHIScissorRect& rect )
+    {
+        if ( _pContext == nullptr )
+            return;
+        const D3D11_RECT scissor{ static_cast<LONG>( rect._x ), static_cast<LONG>( rect._y ), static_cast<LONG>( rect._x + rect._width ),
+                                  static_cast<LONG>( rect._y + rect._height ) };
+        _pContext->RSSetScissorRects( 1, &scissor );
     }
 
     void D3D11RHICommandContext::writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute )

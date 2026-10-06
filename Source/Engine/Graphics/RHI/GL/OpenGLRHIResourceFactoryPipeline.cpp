@@ -98,13 +98,14 @@ namespace sw
         if ( record._program == 0 )
             return 0;
 
-        record._topology          = desc._topology;
-        record._fillMode          = desc._fillMode;
-        record._cullMode          = desc._cullMode;
-        record._bEnableDepthTest  = desc._bEnableDepthTest ? 1 : 0;
-        record._bEnableDepthWrite = desc._bEnableDepthWrite ? 1 : 0;
-        record._bEnableBlend      = desc._bEnableBlend ? 1 : 0;
-        record._reserved          = 0;
+        record._topology            = desc._topology;
+        record._fillMode            = desc._fillMode;
+        record._cullMode            = desc._cullMode;
+        record._bEnableDepthTest    = desc._bEnableDepthTest ? 1 : 0;
+        record._bEnableDepthWrite   = desc._bEnableDepthWrite ? 1 : 0;
+        record._bEnableBlend        = desc._bEnableBlend ? 1 : 0;
+        record._bPremultipliedAlpha = ( desc._bPremultipliedAlpha != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        record._reserved            = 0;
 
         return _pDevice->_pipelineStates.insert( record );
     }

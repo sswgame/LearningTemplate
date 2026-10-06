@@ -297,6 +297,26 @@ namespace sw
         return true;
     }
 
+    bool D3D11RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    {
+        D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_deviceContext == nullptr || pRecord->_bDepth != SW_FALSE )
+            return false;
+
+        D3D11_TEXTURE2D_DESC texDesc{};
+        pRecord->_texture->GetDesc( &texDesc );
+        uint32 rowBytes{ 0 };
+        if ( validateTextureRegionUpload( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, texDesc.MipLevels, texDesc.ArraySize, desc, rowBytes ) == false )
+            return false;
+
+        // 박스는 밉 안의 픽셀 좌표다(끝은 포함하지 않는다). 즉시 컨텍스트 큐에 순서대로 들어가 뒤이은 드로우보다 먼저 실행된다.
+        const D3D11_BOX         box{ desc._x, desc._y, 0, desc._x + desc._width, desc._y + desc._height, 1 };
+        const UINT              subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
+        std::scoped_lock<mutex> lock{ _pDevice->_immediateContextMutex };
+        _pDevice->_deviceContext->UpdateSubresource( pRecord->_texture.Get(), subresource, &box, desc._pData, rowBytes, rowBytes * desc._height );
+        return true;
+    }
+
     RHIFormat D3D11RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
     {
         const D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );

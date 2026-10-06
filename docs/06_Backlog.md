@@ -556,6 +556,8 @@ cd build/Ninja-Debug/Bin
 - **서드파티 빈자리(2026-10-05 후보 중 사용자가 고르지 않은 것).** 리눅스 오디오 출력 없음(`XAudio2System` 만, 리눅스는 `NullAudioSystem`) → miniaudio(퍼블릭 도메인/MIT-0) ·
   `gv_renderScale` 을 읽는 업스케일 없음 → AMD FidelityFX FSR(MIT) · 아랍어 셰이핑 · 양방향 없음 → HarfBuzz(MIT) + SheenBidi(Apache 2.0). 들이면 Jolt · Recast · Tracy 처럼
   엔진 인터페이스 뒤 + 격리 게이트, vcpkg 변경은 main 에서 먼저.
+- **임포터가 1 채널(R8) DDS 를 내는 규칙**(조건: 마스크 · 1 채널 텍스처 에셋이 생기면) — RHI · 로더는 `R8_UNORM`(DXGI 61, DX10 머리)을 읽는다. `App --import-textures` 의
+  규칙 표(`TextureImportConfig.json`)에 R8 출력이 없다.
 
 ---
 
@@ -1246,6 +1248,12 @@ cd build/Ninja-Debug/Bin
   (`TextureImportConfig.json` 의 `Character_Atlases`)이라 몇 초다. 큰 BC7 은 Release App 으로 굽는다.
 - **D3D11 `UpdateSubresource` 에 상자가 없으면 버퍼 전체 길이를 원본에서 읽는다** — 용량을 남겨 둔 버퍼에 짧게 올릴 때는 상자를 준다(원본 뒤를 넘어 읽어
   드라이버 안에서 죽는다 — `RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킨다).
+- **텍스처 영역 업로드는 `uploadTexture2DRegion`(가끔 · 작게 — Vulkan 은 제출하고 기다린다)** — 매 프레임 큰 구간이 필요해지면 프레임 커맨드 리스트에 복사를 기록하는
+  길을 먼저 만든다. 검사는 `validateTextureRegionUpload` 한 곳(DX12 는 전체 업로드와 같은 스테이징 슬롯 · 배리어 — 새 슬롯 규칙을 만들지 말 것).
+- **블렌드는 곧은(SrcAlpha) · 프리멀티플라이(`_bPremultipliedAlpha`, One) 둘이고 알파 채널은 네 백엔드 모두 One/InvSrcAlpha 다** — GL 도 `glBlendFuncSeparate`
+  (`RHIDeviceTest.PremultipliedBlendAddsColorWithoutAlphaMultiply` 가 알파 255 로 지킨다).
+- **가위(`setScissorRect`)는 `setViewport` · `beginRenderPass` 가 뷰포트 전체로 되돌린다** — DX11 은 래스터라이저 상태에 늘 켜 두고 뷰포트를 거는 세 자리가 가위도 건다
+  (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),
   대각선에서 상태가 오가며 클립을 처음부터 다시 틀기, 끊긴 크로스페이드가 한 칸을 버리기. 튐의 간격이 클립 길이와 맞는지부터 본다.
   몸 전체가 튀면 프레임별 CSV(Shooter3D `-gv_shooterMotionTrace=<경로>`)로 몸 = 발 자리 · 루트 본 · 요 각속도 · 카메라 이동을 나눠 본다 — 자동 조준이 표적을 바꿀 때

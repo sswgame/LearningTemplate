@@ -50,6 +50,8 @@ namespace sw
                 return RHIFormat::R32G32_FLOAT;
             case 41: // DXGI_FORMAT_R32_FLOAT
                 return RHIFormat::R32_FLOAT;
+            case 61: // DXGI_FORMAT_R8_UNORM. 1 채널 마스크(DX10 머리 DDS) — 임포터는 아직 내지 않는다
+                return RHIFormat::R8_UNORM;
             case 71: // DXGI_FORMAT_BC1_UNORM
             case 72: // DXGI_FORMAT_BC1_UNORM_SRGB
                 return RHIFormat::BC1_UNORM;

@@ -146,6 +146,15 @@ namespace sw
         virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;
 
         /**
+         * @brief 2D 텍스처의 밉 하나 · 면 하나의 사각형 구간에 픽셀을 올립니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로입니다.
+         * @details 동기 규약은 uploadTexture2D 와 같습니다 — 뒤이은 드로우보다 먼저 실행됩니다(DX12 는 같은 업로드 슬롯의 복사 리스트,
+         *          Vulkan 은 일회성 커맨드를 제출하고 기다림, DX11 · GL 은 즉시 컨텍스트). 글리프 아틀라스처럼 **가끔 · 작게** 바뀌는 텍스처용이고,
+         *          매 프레임 큰 구간을 올리는 용도가 아닙니다. 검사(포맷 · 범위 · 데이터 크기)는 validateTextureRegionUpload 한 곳입니다.
+         * @return 검사에 걸리면 false(이유를 로그).
+         */
+        [[nodiscard]] virtual bool uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc ) = 0;
+
+        /**
          * @brief 텍스처의 면(`arraySlice` — 배열 원소 · 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽어 옵니다. 행은 빈틈없이(업로드와 같은 배치,
          *        BC 는 블록 행) 채웁니다.
          * @details GPU 를 기다리는 **동기** 경로입니다. 테스트 · 도구 · 스크린샷 용도이지 프레임 경로가 아닙니다.

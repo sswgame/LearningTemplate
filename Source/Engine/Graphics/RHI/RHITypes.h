@@ -111,6 +111,7 @@ namespace sw
         BC5_UNORM = 12, ///< 16 B/블록, 2채널(노멀맵)
         BC7_UNORM = 13, ///< 16 B/블록, 고품질 RGBA
         BC6H_UF16 = 14, ///< 16 B/블록, 부호 없는 HDR RGB(반정밀도) — `.hdr` 원본 임포트(하늘 · 환경광)
+        R8_UNORM  = 15, ///< 8비트 단일 채널 정규화(글리프 SDF 아틀라스 · 마스크). 셰이더는 `.r` 로 읽는다
     };
 
     namespace constant
@@ -293,6 +294,23 @@ namespace sw
 
         PROPERTY()
         float32 _maxDepth{ 1.0f }; ///< 최대 깊이 (0.0~1.0)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct RHIScissorRect
+     * @brief 가위(scissor) 사각형입니다 — 이 밖의 픽셀은 래스터라이저가 버립니다. 렌더 타깃 픽셀 단위, 원점은 왼쪽 위(`RHIViewport` 와 같은 규약).
+     * @details `IRHICommandList::setScissorRect` 로 겁니다. 축 정렬 사각 클리핑(UI 스크롤 영역 · 패널)이 쓰는 값이고, 일괄(batch)을 끊지 않고 값이 쌉니다
+     *          (Slate · Dear ImGui · Godot 이 모두 사각 클리핑을 가위로 한다). 둥근 · 회전 클리핑은 셰이더가 합니다.
+     */
+    struct RHIScissorRect
+    {
+        uint32 _x{ 0 };      ///< 왼쪽 위 X (px)
+        uint32 _y{ 0 };      ///< 왼쪽 위 Y (px)
+        uint32 _width{ 0 };  ///< 너비 (px). 0 이면 아무것도 그리지 않는다
+        uint32 _height{ 0 }; ///< 높이 (px). 0 이면 아무것도 그리지 않는다
     };
 } // namespace sw
 
@@ -520,16 +538,22 @@ namespace sw
 
         vector<string> _listShaderDefine; ///< 컴파일 매크로("NAME" 또는 "NAME=VALUE"). 셰이더 퍼뮤테이션
 
-        RHIPrimitiveTopology   _topology;                           ///< 프리미티브 위상
-        RHIFillMode            _fillMode;                           ///< 채우기 모드
-        RHICullMode            _cullMode;                           ///< 컬링 모드
-        uint32                 _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
-        RHIFormat              _arrRtvFormat[kMaxColorAttachments]; ///< RT별 포맷
-        RHIFormat              _depthStencilFormat;
-        uint8                  _bEnableDepthTest  : 1; ///< 깊이 테스트
-        uint8                  _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
-        uint8                  _bEnableBlend      : 1; ///< 알파 블렌딩 (SrcAlpha/InvSrcAlpha)
-        [[maybe_unused]] uint8 _reservedFlags     : 5;
+        RHIPrimitiveTopology _topology;                           ///< 프리미티브 위상
+        RHIFillMode          _fillMode;                           ///< 채우기 모드
+        RHICullMode          _cullMode;                           ///< 컬링 모드
+        uint32               _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
+        RHIFormat            _arrRtvFormat[kMaxColorAttachments]; ///< RT별 포맷
+        RHIFormat            _depthStencilFormat;
+        uint8                _bEnableDepthTest  : 1; ///< 깊이 테스트
+        uint8                _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
+        uint8                _bEnableBlend      : 1; ///< 알파 블렌딩 (색 SrcAlpha/InvSrcAlpha, 알파 채널 One/InvSrcAlpha — 네 백엔드 같음)
+        /**
+         * @brief 블렌드가 켜졌을 때 원본 색이 이미 알파를 곱한 값입니다(색 One/InvSrcAlpha). `_bEnableBlend` 가 꺼져 있으면 뜻이 없습니다.
+         * @details 렌더 텍스처에 반투명을 그린 뒤 다시 합성하면 곧은 알파는 알파를 두 번 곱합니다 — UI · 캔버스는 이쪽으로 그립니다
+         *          (언리얼 `BF_One, BF_InverseSourceAlpha`, 유니티 `Blend One OneMinusSrcAlpha`).
+         */
+        uint8                  _bPremultipliedAlpha : 1;
+        [[maybe_unused]] uint8 _reservedFlags       : 4;
 
         /** @brief 기본 토폴로지 · 컬링 · 깊이 플래그로 만듭니다. */
         RHIPipelineStateDesc() noexcept;
@@ -672,6 +696,33 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RHITextureRegionUploadDesc
+     * @brief `IRHIResourceFactory::uploadTexture2DRegion` 입력입니다 — 밉 하나 · 면 하나의 사각형 구간이고, 행은 빈틈없이(`_width × 픽셀 바이트`) 이어집니다.
+     */
+    struct RHITextureRegionUploadDesc
+    {
+        const void* _pData{ nullptr }; ///< 구간 첫 행부터
+        uint32      _sizeBytes{ 0 };   ///< _pData 전체 길이 — 행 바이트 × _height 이상
+        uint32      _x{ 0 };           ///< 밉 안의 왼쪽 위 X (px)
+        uint32      _y{ 0 };           ///< 밉 안의 왼쪽 위 Y (px)
+        uint32      _width{ 0 };       ///< 구간 너비 (px)
+        uint32      _height{ 0 };      ///< 구간 높이 (px)
+        uint32      _mip{ 0 };         ///< 올릴 밉
+        uint32      _arraySlice{ 0 };  ///< 올릴 면(배열 원소 · 큐브 면)
+    };
+
+    /**
+     * @brief 영역 업로드를 검사하고 행 바이트를 구합니다 — 네 백엔드가 같은 규칙을 쓰는 유일한 자리입니다.
+     * @param mipLevels · arraySize 텍스처가 가진 밉 수 · 면 수
+     * @return 압축 · 깊이 · Unknown 포맷, 범위 밖 밉 · 면 · 사각형, 빈 구간, 모자란 데이터면 false(이유를 로그합니다).
+     */
+    [[nodiscard]] SW_API bool validateTextureRegionUpload( RHIFormat format, uint32 textureWidth, uint32 textureHeight, uint32 mipLevels, uint32 arraySize,
+                                                           const RHITextureRegionUploadDesc& desc, uint32& outRowBytes );
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RHITextureMipSpan
      * @brief resolveTextureUploadMips 가 풀어낸 밉 하나의 위치와 크기입니다.
      */
@@ -717,6 +768,8 @@ namespace sw
                 return RHIFormatBlockInfo{ 1, 1, 8 };
             case RHIFormat::R32G32B32_FLOAT:
                 return RHIFormatBlockInfo{ 1, 1, 12 };
+            case RHIFormat::R8_UNORM:
+                return RHIFormatBlockInfo{ 1, 1, 1 };
             case RHIFormat::BC1_UNORM:
             case RHIFormat::BC4_UNORM:
                 return RHIFormatBlockInfo{ 4, 4, 8 };
@@ -753,6 +806,7 @@ namespace sw
             case RHIFormat::D24_UNORM_S8_UINT:
             case RHIFormat::R32G32_FLOAT:
             case RHIFormat::R32_FLOAT:
+            case RHIFormat::R8_UNORM:
                 return true;
             case RHIFormat::R32G32B32_FLOAT:
             case RHIFormat::Unknown:

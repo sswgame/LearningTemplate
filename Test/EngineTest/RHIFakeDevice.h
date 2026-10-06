@@ -36,6 +36,7 @@ namespace test
             _bOpen = false;
         }
         void setViewport( const sw::RHIViewport& ) override {}
+        void setScissorRect( const sw::RHIScissorRect& ) override {}
         void setPipelineState( sw::RHIPipelineStateHandle ) override {}
         void beginRenderPass( const sw::RHIRenderPassBeginInfo& ) override {}
         void endRenderPass() override {}

@@ -54,7 +54,7 @@
 #define SW_ROOT_DWORD_COUNT      16
 #define SW_SLOT_ROOT_CB_EMUL     2   // DX11/GL: 루트 상수를 담는 상수버퍼 슬롯 (SW_DECLARE_ROOT_CONSTANTS)
 // ------------------------------------------------------------------------------
-// 2) SRV (t#, space0). t0..t9 총 10개 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 텍스처(에뮬)·머티리얼 데이터.
+// 2) SRV (t#, space0). t0..t15 — 엔진 텍스처 슬롯(에뮬)·인스턴스·머티리얼 텍스처(에뮬)·머티리얼 데이터·씬 표들·캔버스 사각형.
 // ------------------------------------------------------------------------------
 #define SW_SLOT_ENGINE_TEX0            0
 #define SW_SLOT_ENGINE_TEX1            1
@@ -108,7 +108,11 @@
 // 정점 셰이더가 배치 표의 vertexAnimationBase 와 인스턴스의 시각 오프셋으로 읽는다(binding.hlsli swLoadAnimatedVertex).
 #define SW_SLOT_VERTEX_ANIMATION_SRV   14
 
-#define SW_SRV_SLOT_COUNT              15  // t0..t14 — DX12 t 테이블 크기, Vulkan set 0 의 t 밴드 폭 이내
+// 캔버스(화면 2D — UI · 월드 글자) 사각형 구조버퍼 (StructuredBuffer<SwCanvasQuad> g_SwCanvasQuads). 캔버스 패스만 건다 —
+// 정점 셰이더가 (루트 상수의 시작 + SV_InstanceID) 번째 사각형을 읽고 SV_VertexID 로 모서리를 만든다(동적 정점 버퍼 없음).
+#define SW_SLOT_CANVAS_QUAD_SRV        15
+
+#define SW_SRV_SLOT_COUNT              16  // t0..t15 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)을 꽉 채운다 — 더 늘리려면 밴드부터 넓힌다
 
 // ------------------------------------------------------------------------------
 // 3) 컴퓨트 — CB 는 b0, 읽기 버퍼 t0..t3, 쓰기 버퍼 u0..u3 (space0)

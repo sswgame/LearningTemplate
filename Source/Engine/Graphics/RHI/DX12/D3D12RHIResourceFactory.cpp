@@ -421,6 +421,75 @@ namespace sw
         return true;
     }
 
+    bool D3D12RHIResourceFactory::uploadTexture2DRegion( RHITextureHandle texture, const RHITextureRegionUploadDesc& desc )
+    {
+        ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
+        if ( pTexture == nullptr || _pDevice->_device == nullptr || _pDevice->_commandQueue == nullptr )
+            return false;
+
+        // 슬롯 · 얼로케이터 규칙은 전체 업로드와 같은 것 하나다(acquireUploadStaging) — 같은 프레임에 업로드가 여럿이어도 슬롯을 두 번 Reset 하지 않는다.
+        std::scoped_lock<mutex> uploadLock{ _pDevice->_uploadSlotMutex };
+
+        const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
+        uint32                    rowBytes{ 0 };
+        if ( validateTextureRegionUpload( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height,
+                                          resourceDesc.MipLevels, resourceDesc.DepthOrArraySize, desc, rowBytes ) == false )
+            return false;
+
+        // 복사 원본은 행 피치 256 정렬 풋프린트여야 한다 — 구간 크기로 손수 짓는다(GetCopyableFootprints 는 서브리소스 전체를 준다).
+        const uint32 rowPitch = MathUtil::align( rowBytes, static_cast<uint32>( D3D12_TEXTURE_DATA_PITCH_ALIGNMENT ) );
+        uint32       slotIndex{ 0 };
+        uint64       stagingOffset{ 0 };
+        void*        pMapped{ nullptr };
+        if ( acquireUploadStaging( static_cast<uint64>( rowPitch ) * desc._height, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, slotIndex, stagingOffset, pMapped ) == false )
+            return false;
+
+        uint8*       pDstBase = static_cast<uint8*>( pMapped ) + stagingOffset;
+        const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
+        for ( uint32 row = 0; row < desc._height; ++row )
+            Memory::copy( pDstBase + static_cast<uint64>( row ) * rowPitch, pSrcBase + static_cast<uint64>( row ) * rowBytes, rowBytes );
+
+        D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
+        ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
+
+        // 추적 상태에서 출발해 같은 상태로 돌아간다(전체 업로드와 같다).
+        const D3D12_RESOURCE_STATES stateBefore = _pDevice->getTrackedTextureState( texture );
+        D3D12_RESOURCE_BARRIER      barrier{};
+        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource   = pTexture;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+        {
+            barrier.Transition.StateBefore = stateBefore;
+            barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COPY_DEST;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+
+        D3D12_TEXTURE_COPY_LOCATION dst{};
+        dst.pResource        = pTexture;
+        dst.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dst.SubresourceIndex = desc._mip + desc._arraySlice * resourceDesc.MipLevels; // D3D12CalcSubresource 와 같은 순서
+
+        D3D12_TEXTURE_COPY_LOCATION src{};
+        src.pResource                          = slot._uploadHeap.Get();
+        src.Type                               = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        src.PlacedFootprint.Offset             = stagingOffset;
+        src.PlacedFootprint.Footprint.Format   = resourceDesc.Format;
+        src.PlacedFootprint.Footprint.Width    = desc._width;
+        src.PlacedFootprint.Footprint.Height   = desc._height;
+        src.PlacedFootprint.Footprint.Depth    = 1;
+        src.PlacedFootprint.Footprint.RowPitch = rowPitch;
+        pList->CopyTextureRegion( &dst, desc._x, desc._y, 0, &src, nullptr );
+
+        if ( stateBefore != D3D12_RESOURCE_STATE_COPY_DEST )
+        {
+            barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            barrier.Transition.StateAfter  = stateBefore;
+            pList->ResourceBarrier( 1, &barrier );
+        }
+        return true;
+    }
+
     RHIFormat D3D12RHIResourceFactory::getTextureFormat( RHITextureHandle texture ) const
     {
         // 오프스크린 레코드는 요청 포맷을 그대로 들고 있다(깊이는 리소스가 typeless 라 GetDesc 로는 못 되돌린다).
