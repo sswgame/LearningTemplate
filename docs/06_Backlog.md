@@ -155,8 +155,6 @@ cd build/Ninja-Debug/Bin
   기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
-- **Shooter3D 의 Q/E 한 번 = 무기 한 칸은 손으로 확인할 것**(2026-10-06 입력 trigger 결함 수정 뒤). 단위 시험(`InputMapTest.Axis1DBindingFollowsTheActionTrigger`)은
-  통과했고, 실기동 키 입력은 백그라운드 세션에서 창 포커스를 얻지 못해 자동으로 넣지 못했다 — 로그 `[Shooter] <무기> - ` 줄이 누를 때마다 한 줄이어야 한다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
   `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
   종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
@@ -678,6 +676,9 @@ cd build/Ninja-Debug/Bin
   `r · cos(π/n)` 로 준다는 것도 기댓값에 넣는다.
 - **`-gv_fixedFrameDelta=<초>` 는 프레임마다 그 시간만 흘린다**(벽시계 무시) — 시나리오 · 픽셀 비교 · 벤치 재현이 기계와 상관없이 같은 게임 시간을 본다.
   App 의 종료 코드는 `EngineLoop::requestQuit( code )` 가 정한다(0 성공, 시나리오 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀).
+- **실기동 확인은 시나리오로 남긴다** — `Resource/<영역>/automation/*.scenario.xml` 을 두면 그 게임 프리셋의 `ctest -L hostgpu`(`AppScenarioTest`)가 백엔드마다 돈다
+  (`Source/Engine/Automation/README.md`). 손 확인 목록을 백로그에 적지 말고 시나리오를 쓴다 — 못 쓰는 것만 이유와 함께 손 확인으로. 값을 보려면 `Expect probe`(게임 .cpp 의
+  `SW_AUTOMATION_PROBE` 한 줄), 그림은 `Screenshot` + `ExpectImage`(지표 값은 보고 JSON 에 늘 적힌다).
 - **App 의 종료 코드 77 = 이 기계 · 빌드가 그 RHI 백엔드를 못 돌린다**(`RHIInitResult` 의 `BackendNotBuilt` · `DriverUnsupported`). 시험 · `AppRun.py` 는 로그 문구가 아니라 이것으로 건너뛴다 —
   환경 탓으로 물러나는 새 경로는 백엔드가 `_initResult` 를 적어야 건너뜀이 된다(안 적으면 결함으로 진다).
 - **백엔드마다 디바이스를 세우는 시험은 `test::RHIBackendSweep`** — `for ( test::RHITestDevice& device : sweep )`, 건너뛰기는 케이스가 `sweep.getReadyCount() == 0` 으로.

@@ -12,6 +12,7 @@
 #include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
@@ -180,6 +181,7 @@ namespace sw
         , _bListeningLog{ SW_FALSE }
         , _reserved{ 0 }
     {
+        AutomationWindowSteps::ensureLinked();
     }
 
     AutomationRunner::~AutomationRunner()

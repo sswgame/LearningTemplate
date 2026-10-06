@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
@@ -89,6 +90,43 @@ namespace sw
                         return part._socketSet;
                 }
                 return hashed_string{};
+            }
+        };
+
+        /** @brief 시나리오 탐침이 보는 첫 슈터 플레이어입니다(드물게 불리므로 씬을 훑는다). */
+        struct ShooterPlayerProbeInternal
+        {
+            static const ShooterPlayerComponent* findFirstPlayer( const GameObjectManager* pManager )
+            {
+                const ShooterPlayerComponent* pFound = nullptr;
+                if ( pManager == nullptr )
+                    return pFound;
+                pManager->forEachComponentOfType<ShooterPlayerComponent>( [&pFound]( ShooterPlayerComponent* pPlayer )
+                {
+                    if ( pFound == nullptr )
+                        pFound = pPlayer;
+                } );
+                return pFound;
+            }
+
+            /** @brief 첫 슈터 플레이어의 무기 번호(0 소총 · 1 산탄총 · 2 권총)입니다. */
+            [[nodiscard]] static bool readWeaponIndex( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getWeaponIndex() );
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어가 살아 있으면 1 — 쓰러지면 판을 다시 시작해 무기가 0 으로 돌아가므로 무기 단언의 전제입니다. */
+            [[nodiscard]] static bool readAlive( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = pPlayer->isAlive() ? 1.0 : 0.0;
+                return true;
             }
         };
     } // namespace
@@ -787,4 +825,11 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         return pManager != nullptr ? pManager->resolveGameObject( _body ) : nullptr;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
+                         &ShooterPlayerProbeInternal::readWeaponIndex );
+    SW_AUTOMATION_PROBE( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerProbeInternal::readAlive );
 } // namespace sw

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  창 닫기 — 플레이 중 커서 잠금 → 포커스 잃음이 잠금을 푼다 → 다시 활성화만으로는 잡지 않는다 → 클라이언트 클릭이 다시 잡는다 → Esc 가 푼다 →
+  Esc 가 다시 잡는다 → WM_CLOSE 로 10 초 안 종료(코드 0). 진짜 ClipCursor 를 보므로 input="mixed"(OS 포커스 사건을 버리지 않는다) — 도는 동안 키보드 · 마우스를
+  만지지 말 것. 전경을 못 얻는 세션(원격 · 잠긴 화면 · 다른 창이 전경을 쥠)이면 13(건너뜀), Windows 밖에서도 13.
+  실행: App.exe -scenario=game/shooter3d/automation/closewindow.scenario.xml -dx12
+-->
+<Scenario name="shooter3d.closewindow" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="mixed">
+	<At frame="0">
+		<Variable name="gv_shooterAutoPlay" value="0"/>
+		<RequireForeground/>
+	</At>
+	<!-- 1인칭 카메라가 첫 틱에 잠금을 켠다 — 전경이면 바로 잡는다 -->
+	<At frame="10"><ExpectCursorClip state="locked"/></At>
+	<!-- 포커스 잃음(알트탭과 같은 메시지) → 풀린다 -->
+	<At frame="20"><PostWindowMessage message="WM_ACTIVATE_INACTIVE"/><PostWindowMessage message="WM_KILLFOCUS"/></At>
+	<At frame="25"><ExpectCursorClip state="free"/></At>
+	<!-- 다시 활성화만으로는 잡지 않는다(제목 표시줄 X 를 누를 수 있게) -->
+	<At frame="30"><PostWindowMessage message="WM_ACTIVATE_ACTIVE"/><PostWindowMessage message="WM_SETFOCUS"/></At>
+	<At frame="35"><ExpectCursorClip state="free"/></At>
+	<!-- 클라이언트 클릭이 다시 잡는다 -->
+	<At frame="40"><PostWindowMessage message="WM_LBUTTONDOWN_CLIENT"/><PostWindowMessage message="WM_LBUTTONUP_CLIENT"/></At>
+	<At frame="45"><ExpectCursorClip state="locked"/></At>
+	<!-- Esc(가상 키보드 — 입력 층)가 푼다 -->
+	<At frame="50"><Tap slot="Key.Escape" hold="1"/></At>
+	<At frame="55"><ExpectCursorClip state="free"/></At>
+	<!-- Esc 다시 → 잠근다 -->
+	<At frame="60"><Tap slot="Key.Escape" hold="1"/></At>
+	<At frame="65"><ExpectCursorClip state="locked"/></At>
+	<!-- 창의 X 와 같은 WM_CLOSE → 10 초 안에 종료 코드 0 -->
+	<At frame="70"><PostWindowMessage message="WM_CLOSE"/><ExpectExitWithin seconds="10"/></At>
+</Scenario>

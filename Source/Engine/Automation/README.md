@@ -117,3 +117,14 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 
 에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로(Win32 메시지를 ImGui 백엔드가 직접 받는다) 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
 이 단계를 쓰는 시나리오는 시작할 때 위젯 이름표 적기를 켭니다.
+
+## 창 단계(`AutomationWindowSteps` — Windows 만, 다른 플랫폼은 같은 이름으로 건너뜀 13)
+
+| 단계 | 속성 | 하는 일 |
+|---|---|---|
+| `PostWindowMessage` | `message` = `WM_ACTIVATE_INACTIVE` · `WM_ACTIVATE_ACTIVE` · `WM_KILLFOCUS` · `WM_SETFOCUS` · `WM_LBUTTONDOWN_CLIENT` · `WM_LBUTTONUP_CLIENT`(클라이언트 가운데) · `WM_CLOSE` | 자기 창에 OS 메시지(SendMessage — 처리기가 돈 뒤 돌아온다, `WM_CLOSE` 만 PostMessage) |
+| `ExpectCursorClip` | `state` = `locked`(클립이 클라이언트 영역 안) · `free`(가상 화면 전체) | `GetClipCursor` 단언 |
+| `RequireForeground` | — | 전경을 얻지 못하면 시나리오를 13 으로 끝낸다(잠금은 전경에서만 건다) |
+
+진짜 OS 창 상태를 보는 시나리오는 `input="mixed"`(OS 포커스 사건을 버리지 않는다) — 도는 동안 사람이 키보드 · 마우스를 만지면 섞인다.
+첫 시나리오: `game/shooter3d/automation/weaponswitch` · `closewindow`, `game/themepark/automation/shadow`.

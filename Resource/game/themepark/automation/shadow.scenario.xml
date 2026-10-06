@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ThemeParkTycoon 그림자 — 직교 카메라가 화면 끝까지 그림자를 받는가(그림자 볼륨이 화면에 맞는가). 고정 카메라(OrthoCameraRig, 배타 입력이라 아무도 움직이지 않는다) ·
+  고정 해(Sun) · 고정 프레임 시간 · 자동 짓기 끔.
+  지표: 화면 띠 · 나무 줄 · 가운데의 darkFraction(영역 중앙값 휘도 × 0.7 보다 어두운 픽셀 비율) — 그림자가 화면 끝까지 **있는가**(볼륨 맞춤의 품질 · 접지까지는
+  보지 않는다: shadow-fix 전 그림도 같은 값이 나온다). 숫자는 보고 JSON · [Scenario] metric 줄에 있다.
+  실행: App.exe -scenario=game/themepark/automation/shadow.scenario.xml -dx12   (백엔드 넷 — AppScenarioTest)
+-->
+<Scenario name="themepark.shadow" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0"><Variable name="gv_parkAutoBuild" value="0"/></At>
+	<At frame="180">
+		<Expect probe="ThemePark.GuestCount" atLeast="0"/>
+		<Screenshot file="park.ppm"/>
+	</At>
+	<!-- 첫 실행(2026-10-06, Debug, 네 백엔드 같은 값): 위 0.0705 · 왼쪽 0.0675 · 가운데 0.0100 · 오른쪽 위 나무 0.1527 · 아래 나무 줄 0.1087.
+	     문턱은 그 절반 — 그림자가 화면 어느 띠에서 통째로 사라지면 진다. 아래 · 오른쪽 띠는 지도 밖 빈 곳(어두운 배경)이 커서 쓰지 않는다. -->
+	<At frame="181">
+		<ExpectImage file="park.ppm" region="0.0,0.0,1.0,0.12" metric="darkFraction" atLeast="0.035"/>
+		<ExpectImage file="park.ppm" region="0.0,0.0,0.12,1.0" metric="darkFraction" atLeast="0.033"/>
+		<ExpectImage file="park.ppm" region="0.3,0.3,0.7,0.7" metric="darkFraction" atLeast="0.005"/>
+		<ExpectImage file="park.ppm" region="0.75,0.0,1.0,0.25" metric="darkFraction" atLeast="0.075"/>
+		<ExpectImage file="park.ppm" region="0.3,0.8,0.6,1.0" metric="darkFraction" atLeast="0.05"/>
+		<Pass/>
+	</At>
+</Scenario>
