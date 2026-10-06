@@ -49,6 +49,10 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;
+        PROPERTY( Category = "Building", DisplayName = "Model Scale", Min = 0.0 )
+        float32 _modelScale;
+        PROPERTY( Category = "Building", DisplayName = "Decoration Scale", Tooltip = "Extra scale for trees and planters, which are modelled smaller than the houses", Min = 0.0 )
+        float32 _decorationScale;
 
         int32 _shownKey; ///< 지금 그린 단계 × 2 + 사람(−1 이면 아직 없다)
     };

@@ -33,12 +33,10 @@ namespace sw
     {
         struct NileDirectorComponentInternal
         {
-            static constexpr int32   kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
-            static constexpr int32   kWalkerKindCount  = 3;
-            static constexpr float32 kRoadTileScale    = 4.8f; ///< 보도 조각(`path_short`, 0.2) × 4.8 = 0.96 m(칸 사이 틈은 옛 상자와 같다)
-            static constexpr uint32  kStateTag         = FourCcUtil::make( "NILE" );
-            static constexpr uint32  kStateVersion     = 3;
-            static constexpr float32 kSecondsPerMonth  = 20.0f; ///< 실제 초 — 시간 배속이 곱해진다
+            static constexpr int32  kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
+            static constexpr int32  kWalkerKindCount  = 3;
+            static constexpr uint32 kStateTag         = FourCcUtil::make( "NILE" );
+            static constexpr uint32 kStateVersion     = 3;
 
             static constexpr const utf8* kSoundSelect  = "game/nilecity/sounds/select_003.ogg";
             static constexpr const utf8* kSoundBuilt   = "game/nilecity/sounds/confirmation_002.ogg";
@@ -179,6 +177,8 @@ namespace sw
         , _cameraRig{}
         , _startingMoney{ 1500 }
         , _serviceDuration{ 60.0f }
+        , _roadTileScale{ 4.8f }
+        , _secondsPerMonth{ 20.0f }
         , _catalog{}
         , _city{}
         , _wallet{}
@@ -308,7 +308,7 @@ namespace sw
             settings._listSeason.push_back( hashed_string( pMonth ) );
         settings._daysPerSeason = 1;
         settings._startHour     = 0.0f; // 첫 달도 꼭 한 달
-        settings._secondsPerDay = NileDirectorComponentInternal::kSecondsPerMonth;
+        settings._secondsPerDay = _secondsPerMonth;
         return settings;
     }
 
@@ -506,7 +506,7 @@ namespace sw
         const int32 y     = tileIndex / _city.getWidth();
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
         (void)NileDirectorComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f },
-                                                        float3{ NileDirectorComponentInternal::kRoadTileScale } );
+                                                        float3{ _roadTileScale } );
         _listRoadObject[static_cast<size_t>( tileIndex )] = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
 

@@ -133,6 +133,10 @@ namespace sw
         int32 _startingMoney;
         PROPERTY( Category = "City", DisplayName = "Service Duration", Tooltip = "Seconds a walker's service lasts at a house", Min = 1.0, Units = s )
         float32 _serviceDuration;
+        PROPERTY( Category = "Look", DisplayName = "Road Tile Scale", Tooltip = "Scale of the path piece so one road tile fills a cell", Min = 0.0 )
+        float32 _roadTileScale;
+        PROPERTY( Category = "City", DisplayName = "Seconds Per Month", Tooltip = "Real seconds in one city month before the time scale", Min = 1.0, Units = s )
+        float32 _secondsPerMonth;
 
         CityCatalog                          _catalog;
         CitySimulation                       _city;
