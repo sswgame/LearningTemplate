@@ -316,6 +316,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       점검이면 Maintenance + 끝 시각 · 글 키(허용 계정은 점검 상태 서버도 후보), 점검 · 공지 바꾸기는 영속 레코드(`sd_maintenance` · `sd_notice`) + 감사 줄 한 트랜잭션,
       30 초 주기 다시 읽기 + 버스 `sd.changed` 재촉, 보이는 내용의 해시가 바뀌면(기간 경계 포함) 알림), 바인딩(`ServerDirectoryServer` — `sendPushToAll`).
       바꾸기는 C++ API(GM 도구가 조립에서). 시험: `ServerDirectoryServiceTest` · `ServerDirectoryStreamTest`.
+    - `Leaderboard`(`GF_Leaderboard`, Client · Server): 순위표 타입(`LeaderboardTypes.h` — 결과 · 정렬 · 갱신 Best · Latest · Sum · 초기화 None · Daily · Weekly · 표 정의
+      (`_sourceStat` 통계 연동 · `_bClientSubmit`) · 항목 · 통계 · 상한 · id 규칙 `[0-9a-z_]`).
+    - `Server/Leaderboard`(`GF_Server_Leaderboard`, Server): 로직(`LeaderboardService` — 정본은 영속 `lb_score`(판 조건, 충돌 4 번 다시), 순위는 캐시 정렬 집합
+      `lb/<표>/<기간>`(오름차순은 부호 뒤집기), 준비 표시가 없으면 영속에서 256 개씩 읽어 다시 채우고 그동안 온 읽기는 줄 · 그동안 쓴 점수는 채운 뒤 한 번 더,
+      기간 id = `ServiceScheduler::computeLatestOccurrence`, 상위 · 내 둘레 조회에 캐시 이름 `lb/name/<계정>`, 통계 `lb_stat` → 연동 표).
+      시험: `LeaderboardServiceTest`.
     - `Social`(`GF_Social`, Client · Server): 친구 타입(`SocialTypes.h` — 결과 · 관계 상태(친구 · 보낸 신청 · 받은 신청 · 막음) · 접속 상태(상태 + 활동 글) · 알림 · 상한),
       와이어(`SocialProtocol.h` — 영역 0x0800, 응답 몸 = `SocialResult` + 칸, 이름으로 신청은 정식 계정만, 길드 0x10..), 길드 타입(역할 · 회원 · 정보 · 상한),
       클라이언트(`SocialClient` — 요청마다 완료 델리게이트, 바꾸기는 멱등 키, 알림 `drainNotifications`; 로그인 뒤 `listLinks` 를 먼저).
