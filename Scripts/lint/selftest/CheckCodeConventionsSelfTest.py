@@ -37,7 +37,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 # ------------------------------------------------------------------------------
 # 1) 파일 하나로는 알 수 없는 규칙 — 트리를 통째로 스캔할 때만 돈다(파일 짝이 있어야 성립해 규칙이 조각을 들 수 없다)
 # ------------------------------------------------------------------------------
-_kWholeScanCases: list[tuple[str, dict[str, str]]] = [
+_kWholeScanCases: list[tuple[str, dict[str, str | bytes]]] = [
     (
         "Style/HeaderMemberInitializer",
         {
@@ -50,6 +50,15 @@ _kWholeScanCases: list[tuple[str, dict[str, str]]] = [
         {
             "Source/Probe/CtorOrder.h": "#pragma once\n\nclass CtorOrder\n{\npublic:\n    CtorOrder();\n\nprivate:\n    int32 _first{ 0 };\n    int32 _second{ 0 };\n};\n",
             "Source/Probe/CtorOrder.cpp": '#include "pch.h"\n\nCtorOrder::CtorOrder()\n    : _second{ 1 }\n    , _first{ 2 }\n{\n}\n',
+        },
+    ),
+    (
+        # 짝 헤더가 UTF-8 이 아니면(CP949 주석) 생성자 순서를 검사할 수 없다 — 통과로 두지 않고 위반으로 알린다.
+        "Style/ConstructorOrder",
+        {
+            "Source/Probe/CtorUnreadable.h": (b"#pragma once\n\n// \xb0\xa1\n\nclass CtorUnreadable\n{\npublic:\n    CtorUnreadable();\n\n"
+                                               b"private:\n    int32 _first{ 0 };\n    int32 _second{ 0 };\n};\n"),
+            "Source/Probe/CtorUnreadable.cpp": '#include "pch.h"\n\nCtorUnreadable::CtorUnreadable()\n    : _second{ 1 }\n    , _first{ 2 }\n{\n}\n',
         },
     ),
     (
@@ -311,10 +320,14 @@ def resetPathMapCacheInternal() -> None:
     CheckCodeConventions._s_exactPathMap = {}
 
 
-def writeFixtureInternal(root: Path, relPath: str, content: str) -> Path:
+def writeFixtureInternal(root: Path, relPath: str, content: str | bytes) -> Path:
+    """조각 파일 하나. `bytes` 면 그대로 쓴다(UTF-8 이 아닌 파일을 만드는 조각)."""
     path = root / relPath
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    if isinstance(content, bytes):
+        path.write_bytes(content)
+    else:
+        path.write_text(content, encoding="utf-8")
     return path
 
 

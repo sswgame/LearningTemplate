@@ -275,7 +275,7 @@ def findFirstValidRoot(templates: Iterable[str],
     )
 
 
-def _naturalVersionKeyInternal(text: str) -> list[Any]:
+def naturalVersionKey(text: str) -> list[Any]:
     """`llvm-9` 와 `llvm-21` 을 사전순이 아니라 숫자로 비교하기 위한 정렬 키입니다."""
     parts: list[Any] = []
     digits = ""
@@ -291,6 +291,11 @@ def _naturalVersionKeyInternal(text: str) -> list[Any]:
         parts.append(int(digits))
     # int 와 str 이 섞이면 비교가 터진다 — 종류를 앞에 붙여 같은 종류끼리만 비교되게 한다.
     return [(0, v, "") if isinstance(v, int) else (1, 0, v) for v in parts]
+
+
+def selectLatestVersion(listVersion: list[str]) -> str:
+    """버전 폴더 이름들 중 최신(자연순 — `14.44.x` 가 `14.9.x` 보다 새것). 비면 빈 문자열."""
+    return max(listVersion, key=naturalVersionKey, default="")
 
 
 def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
@@ -313,7 +318,7 @@ def expandSearchRootGlobsInternal(roots: list[str]) -> list[str]:
                 else [str(m) for m in Path(".").glob(root) if m.is_dir()]
         except OSError:
             matches = []
-        expanded.extend(sorted(matches, key=_naturalVersionKeyInternal, reverse=True))
+        expanded.extend(sorted(matches, key=naturalVersionKey, reverse=True))
     return expanded
 
 

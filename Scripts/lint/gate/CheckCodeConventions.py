@@ -1318,11 +1318,12 @@ def readSourceTextInternal(path: Path, encoding: str, errors: str = "strict") ->
 
 @functools.lru_cache(maxsize=None)
 def readHeaderClassMembersInternal(headerPath: Path) -> dict:
-    """짝 헤더의 클래스 멤버 맵. 헤더는 자기 차례에도 스캔되므로 캐시가 없으면 두 번 읽고 두 번 판다."""
-    try:
-        return extractClassMembersInternal(readSourceTextInternal(headerPath, "utf-8"))
-    except Exception:
-        return {}
+    """
+    짝 헤더의 클래스 멤버 맵. 헤더는 자기 차례에도 스캔되므로 캐시가 없으면 두 번 읽고 두 번 판다.
+
+    읽지 못하면(`OSError` · `UnicodeDecodeError`) 예외를 그대로 낸다 — 부르는 쪽이 위반으로 알린다(빈 맵이면 생성자 순서 검사가 조용히 꺼진다).
+    """
+    return extractClassMembersInternal(readSourceTextInternal(headerPath, "utf-8"))
 
 
 #: 줄 안에서 블록 주석 상태를 바꾸거나 막는 자리 — 문자열 · 문자 리터럴(그 안의 `/*` 는 주석이 아니다), `//`, `/*`.
@@ -1386,8 +1387,12 @@ def checkFileConventionsInternal(filePath: Path, rootDir: Path) -> list[Conventi
         if matchingHeader.is_file():
             try:
                 classMemberMap.update(readHeaderClassMembersInternal(matchingHeader))
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError) as error:
+                # 헤더를 못 읽으면 생성자 순서 검사가 이 파일에서 성립하지 않는다 — 통과로 두지 않고 위반으로 알린다.
+                violations.append(ConventionViolation(
+                    file_path=relPath, line_number=1, rule_category="Style/ConstructorOrder",
+                    message=f"짝 헤더 {matchingHeader.name} 를 읽지 못해 생성자 순서를 검사할 수 없습니다 ({error}) — 헤더를 UTF-8 로 저장하십시오",
+                    snippet=matchingHeader.name))
 
     # 1. 파일 단위 규칙
     fileContext = LineScanContext(relPath=relPath, rootDir=rootDir, lineNum=0, line="", trimmed="", codeWithoutStrings="",

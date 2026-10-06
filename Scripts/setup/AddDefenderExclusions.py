@@ -21,7 +21,7 @@ def isUserAdmin() -> bool:
     """현재 프로세스가 관리자 권한으로 실행 중인지 확인합니다."""
     try:
         return ctypes.windll.shell32.IsUserAnAdmin() != 0
-    except Exception:
+    except (OSError, AttributeError):   # shell32 호출 실패 · Windows 가 아님(ctypes.windll 없음)
         return False
 
 
