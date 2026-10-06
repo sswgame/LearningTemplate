@@ -538,3 +538,32 @@ SW_TEST_CASE( UiLayoutTest, PseudoMirroredLocaleFlipsLayout )
                      "  b 50.00 0.00 70.00 100.00\n",
                      fixture.dump().c_str() );
 }
+
+/**
+ * @brief [UiLayoutTest] `UiSystem` 의 레이아웃 문맥은 문화권 방향을 읽는다 — 거울 의사 문화권(qps-plocm)이면 화면 루트의 가로 상자가 오른쪽부터 놓인다
+ * @details 변이: `UiSystem::makeLayoutContext` 의 `_bRightToLeft` 줄을 빼면 a 가 왼쪽에 남아 진다.
+ */
+SW_TEST_CASE( UiLayoutTest, UiSystemFollowsCultureDirection )
+{
+    sw::LocalizationManager loc;
+    SW_ASSERT_TRUE( sw::test::LocalizationTestUtil::loadEngineCultures( loc ) );
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "qps-plocm" ) );
+
+    sw::UiSystem ui;
+    ui.setLocalization( &loc );
+    sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();
+    sw::Widget*                  pA   = root->addChild( sw::make_unique<sw::test::TestFixedWidget>( "a", sw::float2{ 50.0f, 20.0f } ) );
+    sw::UiScreenDesc             desc{};
+    desc._layer = sw::UiLayer::Hud;
+    (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( desc, std::move( root ) ) );
+    sw::UiViewport viewport{};
+    viewport._size         = sw::float2{ 400.0f, 100.0f };
+    viewport._physicalSize = viewport._size;
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_TRUE( ui.makeLayoutContext()._bRightToLeft );
+    SW_EXPECT_NEAR_EQUAL( 350.0f, pA->getGeometry()._position._x, 0.001f );
+
+    SW_ASSERT_TRUE( loc.setCurrentLanguage( "en" ) );
+    ui.update( 1.0f / 60.0f, viewport );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pA->getGeometry()._position._x, 0.001f );
+}

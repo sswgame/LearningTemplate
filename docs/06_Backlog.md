@@ -301,8 +301,7 @@ cd build/Ninja-Debug/Bin
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
   (2) 에디터 GameView 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
   키 리바인딩 — 옵션 메뉴의 키 바인딩 창과 함께. (4) 글 입력 칸이 포커스를 쥔 동안 키보드로는 Back · Tab 만 — 칸 안의 커서 키 · Enter 는 글 입력 위젯이 받는다.
-- **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (1) 프레임의 레이아웃 문맥이 문화권을 읽게 — `UiLayoutContext::_bRightToLeft`
-  = `UiLayoutPass::isCultureRightToLeft()`(배율 · 안전 영역을 채우는 자리에서). (2) 글 위젯은 `TextLayoutStyle::_paragraphDirection` 을 자기 `isRightToLeft()` 로 채우고,
+- **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (2) 글 위젯은 `TextLayoutStyle::_paragraphDirection` 을 자기 `isRightToLeft()` 로 채우고,
   이미지 위젯에 `_bMirrorInRtl`(화살표 아이콘을 좌우로 뒤집기)을 둔다 — 그림 위젯(4-5)과 함께. (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
   내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —

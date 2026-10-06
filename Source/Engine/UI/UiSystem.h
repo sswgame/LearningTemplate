@@ -26,6 +26,7 @@ namespace sw
     class FontSystem;
     class InputManager;
     class InputMap;
+    class LocalizationManager;
     class TextLayoutEngine;
 
     /** @brief UI 를 지금 무엇으로 다루는가입니다(CommonUI 의 입력 방식). 탐색이면 포커스 테두리를 보이고, 포인터면 숨긴다. */
@@ -134,8 +135,13 @@ namespace sw
          * @param contentScale 창의 OS 배율(`IWindow::getContentScale`).
          */
         UiViewport computeViewport( const float2& physicalSize, float32 contentScale ) const;
-        /** @brief 지금 뷰포트(`update` 가 받은 것) · gv_uiTextScale · 글 측정으로 레이아웃 문맥을 만듭니다(`UiLayoutPass::update` 에 넘긴다). */
+        /**
+         * @brief 지금 뷰포트(`update` 가 받은 것) · gv_uiTextScale · 글 측정 · 문화권 방향으로 레이아웃 문맥을 만듭니다(`UiLayoutPass::update` 에 넘긴다).
+         * @details 루트의 흐름 방향 = 문화권이 오른쪽에서 왼쪽인가(`UiLayoutPass::isCultureRightToLeft`) — 문화권이 바뀌면 다음 걷기가 트리를 다시 놓는다.
+         */
         UiLayoutContext makeLayoutContext() const;
+        /** @brief 문화권 출처를 정합니다(시험이 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
+        void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
         /** @brief vtable 이 [@p pBegin, @p pEnd) 안인 화면 · 위젯이 든 화면을 그 자리에서 닫습니다. 닫은 화면 수를 반환합니다. */
@@ -187,6 +193,7 @@ namespace sw
         unique_ptr<InputMap>         _uiInputMap; ///< UI 행동 맵(레이어 `UI` — 활성 화면이 있을 때만 켠다)
         InputManager*                _pInput;
         FontSystem*                  _pFontSystem;
+        const LocalizationManager*   _pLocalization; ///< 문화권 출처(nullptr = 엔진 서비스)
         unique_ptr<TextLayoutEngine> _textLayout;
         UiScaleSettings              _scaleSettings;
         UiViewport                   _viewport;

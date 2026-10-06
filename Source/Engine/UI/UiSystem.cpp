@@ -119,6 +119,7 @@ namespace sw
         , _uiInputMap{}
         , _pInput{ nullptr }
         , _pFontSystem{ nullptr }
+        , _pLocalization{ nullptr }
         , _textLayout{}
         , _scaleSettings{}
         , _viewport{}
@@ -705,6 +706,7 @@ namespace sw
         context._viewportSize = _viewport._size;
         context._uiScale      = _viewport._uiScale;
         context._textScale    = gv_uiTextScale > 0.0f ? static_cast<float32>( gv_uiTextScale ) : 1.0f;
+        context._bRightToLeft = UiLayoutPass::isCultureRightToLeft( _pLocalization );
         return context;
     }
 } // namespace sw
