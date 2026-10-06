@@ -54,6 +54,8 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
 | `Variable` | `name` · `value` | 전역 변수(gv) 값 설정 — 모르는 변수는 읽기 오류 | 환경 |
 | `Expect` | `probe` + `equals` · `near`(+`tolerance`) · `atLeast` · `atMost` 중 하나 | 탐침 값을 단언, 틀리면 실패를 적고 계속 | 결과 |
 | `ExpectLog` | `contains` + `count` · `atLeast` 중 하나, `since`(프레임) | 시나리오 동안의 로그 줄 수(실행기의 `[Scenario]` 줄은 세지 않는다) | 결과 |
+| `Screenshot` | `file`(상대면 `Saved/Automation/<이름>/`) | 다음에 그리는 렌더 패킷에 실어 그 프레임의 화면(Present 결과)을 PPM 으로 | 결과 |
+| `ExpectImage` | `file` · `metric` · `region`(`x0,y0,x1,y1` 0..1) · `ratio`(darkFraction, 기본 0.7) · `reference`(differentFrom) + 비교 하나 | 영역 지표 단언 — 스크린샷이 써질 때까지 기다린다(최대 30 프레임) | 결과 |
 | `CloseWindow` | `withinSeconds`(기본 10) | 창 닫기 요청 — 그 시간 안에 루프가 끝나야 통과 | 환경 |
 | `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
 | `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
@@ -64,6 +66,19 @@ echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 �
   시작 조건이 참이 되는 프레임에 합니다(게임 · 에디터 모듈이 등록하는 이름이 그때 차 있다).
 - 입력 단계는 시작할 때 가상 입력 원천으로 옮겨져 그 프레임의 `InputManager::beginFrame` 에 들어갑니다(OS 사건과 같은 자리 — `Engine/Input/README.md`).
   단언 · 환경 단계는 그 프레임의 씬 틱 뒤(`EngineLoop::endFrame` 의 입력 프레임 닫기 전)에 돕니다. 등록 단계의 `_bBeforeInput` 은 입력 재생 전에 돕니다.
+
+## 스크린샷 · 픽셀 지표
+
+`-gv_screenshot` 은 렌더 스레드의 자기 프레임 번호로 찍어 시나리오 프레임과 맞지 않습니다. `<Screenshot>` 은 경로를 **렌더 패킷에 실어** 그 패킷을 그린 뒤
+화면에 나간 그림을 쓰고(`RenderThread` — 시나리오 동안 Present 캡처를 켜 둔다), `<ExpectImage>` 는 완료 수가 오를 때까지 기다린 뒤 PPM 을 읽어 지표를 잽니다.
+지표 값은 늘 로그(`[Scenario] metric darkFraction(0,0,1,0.12) park.ppm = 0.034`)와 보고 JSON 에 적힙니다 — 문턱은 그 숫자로 정합니다.
+
+| 지표 | 정의 |
+|---|---|
+| `meanLuma` | 영역 평균 휘도(0..1, Rec.709) |
+| `darkFraction` | 영역에서 휘도가 **영역 중앙값 × ratio** 보다 어두운 픽셀 비율 — 그림자 · 실루엣. 영역 전체가 한 밝기면 0 이다(섞여야 값이 난다) |
+| `meanRedMinusBlue` | 평균 (R − B) — 배경 대비 색 |
+| `differentFrom` | `reference` 그림과의 평균 절대 차(0..1) — 백엔드 일치 · 움직임 |
 
 ## 탐침 · 단계 등록
 

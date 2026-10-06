@@ -945,6 +945,8 @@ namespace sw
             (void)_owned._pCommandLineManager->getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath );
             _pAutomationRunner = make_unique<AutomationRunner>();
             _pAutomationRunner->startFromPath( scenarioPath, reportPath );
+            if ( _renderThread != nullptr )
+                _renderThread->setScenarioCaptureEnabled( true );
             if ( _pAutomationRunner->isActive() )
             {
                 const string fixedDelta = to_string( _pAutomationRunner->getScenario().getFixedDelta() );
@@ -1215,7 +1217,11 @@ namespace sw
             SW_MEMORY_SCOPE( RenderCpu );
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
-            packet._bValid           = 1;
+            packet._bValid = 1;
+            // 시나리오 `<Screenshot>` 은 다음에 그리는 이 패킷에 싣는다.
+            if ( _pAutomationRunner != nullptr )
+                (void)_pAutomationRunner->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
+
             packet._gameRenderTarget = gameRenderTarget;
             packet._viewportWidth    = vpWidth;
             packet._viewportHeight   = vpHeight;
@@ -1338,6 +1344,7 @@ namespace sw
         // 시나리오의 단언 · 환경 단계는 씬 틱 · 렌더 제출 뒤, 입력 프레임을 닫기 전이다(그 프레임의 눌림 엣지가 아직 보인다).
         if ( _pAutomationRunner != nullptr && _pAutomationRunner->isActive() && _owned._pInputManager != nullptr )
         {
+            _pAutomationRunner->setCompletedScreenshotCount( _renderThread != nullptr ? _renderThread->getCompletedScenarioScreenshotCount() : 0u );
             const AutomationResult result = _pAutomationRunner->onFrameEnd( *_owned._pInputManager );
             if ( result != AutomationResult::Running )
                 requestQuit( static_cast<int32>( result ) );

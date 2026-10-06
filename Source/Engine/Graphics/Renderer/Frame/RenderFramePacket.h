@@ -37,12 +37,14 @@ namespace sw
         vector<RenderViewRequest> _listView;
         /** @brief 주 시점의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. */
         RenderViewSettings _mainView;
-        RHITextureHandle   _gameRenderTarget; ///< 0 = 백버퍼 경로
-        uint32             _viewportWidth;
-        uint32             _viewportHeight;
-        uint64             _frameIndex;
-        uint8              _bHasViewProj : 1;
-        uint8              _bValid       : 1;
+        /** @brief 비지 않으면 이 패킷을 그린 뒤 화면에 나간 그림을 이 경로에 PPM 으로 씁니다(자동화 시나리오의 `<Screenshot>`). */
+        string           _screenshotPath;
+        RHITextureHandle _gameRenderTarget; ///< 0 = 백버퍼 경로
+        uint32           _viewportWidth;
+        uint32           _viewportHeight;
+        uint64           _frameIndex;
+        uint8            _bHasViewProj : 1;
+        uint8            _bValid       : 1;
         /** @brief 씬에 DirectionalLightComponent 가 있어 라이트 필드가 유효하면 1 입니다. */
         uint8                  _bHasLight : 1;
         [[maybe_unused]] uint8 _reserved  : 5;
@@ -58,6 +60,7 @@ namespace sw
             , _lightColorAmbient{}
             , _listView{}
             , _mainView{}
+            , _screenshotPath{}
             , _gameRenderTarget{ 0 }
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }
@@ -86,7 +89,8 @@ namespace sw
             _lightColorAmbient = float4{};
             _listLight.clear();
             _listView.clear();
-            _mainView         = RenderViewSettings{};
+            _mainView = RenderViewSettings{};
+            _screenshotPath.clear();
             _gameRenderTarget = 0;
             _viewportWidth    = 0;
             _viewportHeight   = 0;

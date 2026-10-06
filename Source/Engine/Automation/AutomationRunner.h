@@ -77,6 +77,15 @@ namespace sw
          */
         AutomationResult onWindowClosed( InputManager* pInput );
 
+        /**
+         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(EngineLoop 가 다음 렌더 패킷에 싣는다 — 그 패킷이 그린 그림이 찍힌다). 없으면 false 입니다.
+         */
+        [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
+        /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(EngineLoop 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
+        void setCompletedScreenshotCount( uint32 completedCount ) { _screenshotCompletedCount = completedCount; }
+        /** @brief 지표 값 줄들(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 보고에 적는다. */
+        const vector<string>& getMetricLines() const { return _listMetricLine; }
+
         /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 — 끝에서 Failed). */
         void recordFailure( const AutomationStep& step, string_view message );
         /** @brief 시나리오를 바로 끝냅니다(`Pass` · `Fail` · `Skipped` …). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
@@ -108,15 +117,20 @@ namespace sw
         [[nodiscard]] bool runEngineStep( const AutomationStep& step );
         void               runExpect( const AutomationStep& step );
         void               runExpectLog( const AutomationStep& step );
-        void               onLogWritten( const LogEntry& entry );
+        void               runExpectImage( const AutomationStep& step );
+        /** @brief 상대 경로면 산출물 폴더 아래로 둡니다. */
+        string resolveOutputPath( string_view file ) const;
+        void   onLogWritten( const LogEntry& entry );
         /** @brief 끝 정리 — 가상 입력 · 로그 듣기를 떼고 요약 줄 · 보고를 쓴다. 한 번만 돈다. */
         void endRun( InputManager* pInput );
         void writeReport() const;
 
         AutomationScenario        _scenario;
         VirtualInputScript        _inputScript;
-        vector<string>            _listFailure; ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
-        vector<AutomationLogLine> _listLogLine; ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
+        vector<string>            _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
+        vector<AutomationLogLine> _listLogLine;           ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
+        vector<string>            _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로
+        vector<string>            _listMetricLine;        ///< 보고에 적는 지표 값
         string                    _reportPath;
         string                    _outputDirectory;
         string                    _finishReason;
@@ -128,6 +142,9 @@ namespace sw
         atomic<uint32>            _logFrameIndex; ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
         uint32                    _frameIndex;
         uint32                    _waitFrameCount; ///< 시작 조건을 기다린 프레임
+        uint32                    _screenshotRequestedCount;
+        uint32                    _screenshotCompletedCount;
+        uint32                    _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임
         AutomationResult          _result;
         uint8                     _bStarted      : 1;
         uint8                     _bEnded        : 1;

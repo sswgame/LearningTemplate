@@ -63,7 +63,7 @@ namespace sw
     bool AutomationStepRegistry::isEngineStepKind( string_view kind )
     {
         static constexpr string_view kArrEngineStepKind[] = { "Press", "Release", "Tap", "MouseDelta", "GamepadAxis", "Text",
-                                                              "Variable", "Expect", "ExpectLog", "CloseWindow",
+                                                              "Variable", "Expect", "ExpectLog", "Screenshot", "ExpectImage", "CloseWindow",
                                                               "Pass", "Fail", "Skip", "ExpectExitWithin" };
         for ( const string_view engineKind : kArrEngineStepKind )
         {

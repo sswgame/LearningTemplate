@@ -5,9 +5,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Common/EngineServices.h"
@@ -28,6 +30,10 @@ namespace sw
         {
             /** @brief 시나리오 동안 모으는 로그 줄 상한 — 넘치면 더 모으지 않는다(`ExpectLog` 는 그때까지만 센다). */
             static constexpr size_t kMaxLogLine = 20000;
+            /** @brief `<ExpectImage>` 가 스크린샷을 기다리는 최대 프레임 — 렌더 큐 깊이보다 넉넉히. */
+            static constexpr uint32 kMaxImageWaitFrames = 30;
+            /** @brief `darkFraction` 의 기본 문턱(영역 중앙값에 곱한다)입니다. */
+            static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
 
@@ -152,6 +158,8 @@ namespace sw
         , _inputScript{}
         , _listFailure{}
         , _listLogLine{}
+        , _listPendingScreenshot{}
+        , _listMetricLine{}
         , _reportPath{}
         , _outputDirectory{}
         , _finishReason{}
@@ -163,6 +171,9 @@ namespace sw
         , _logFrameIndex{ 0 }
         , _frameIndex{ 0 }
         , _waitFrameCount{ 0 }
+        , _screenshotRequestedCount{ 0 }
+        , _screenshotCompletedCount{ 0 }
+        , _imageWaitFrameCount{ 0 }
         , _result{ AutomationResult::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
@@ -257,8 +268,20 @@ namespace sw
         if ( _result == AutomationResult::Running && _bStarted == SW_TRUE )
         {
             const vector<AutomationStep>& listStep = _scenario.getSteps();
-            while ( _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex == _frameIndex && _result == AutomationResult::Running )
+            // `<=` — 스크린샷을 기다리느라 밀린 단계는 다음 프레임에 이어 돈다.
+            while ( _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running )
             {
+                const AutomationStep& waitingStep = listStep[_nextStepIndex];
+                if ( waitingStep._kind == "ExpectImage" && ( _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount ) )
+                {
+                    if ( ++_imageWaitFrameCount <= AutomationRunnerInternal::kMaxImageWaitFrames )
+                        break;
+                    recordFailure( waitingStep, "the screenshot never completed (is there a renderer?)" );
+                    _imageWaitFrameCount = 0;
+                    ++_nextStepIndex;
+                    continue;
+                }
+                _imageWaitFrameCount                            = 0;
                 const AutomationStep&             step          = listStep[_nextStepIndex++];
                 const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
                 if ( pRegistration != nullptr )
@@ -455,6 +478,44 @@ namespace sw
             return Internal::readUint( step, "count", 0, count, outError ) && Internal::readUint( step, "atLeast", 0, count, outError ) &&
                    Internal::readUint( step, "since", 0, count, outError );
         }
+        if ( kind == "Screenshot" )
+            return Internal::checkAttributeNames( step, { "file" }, outError ) && Internal::requireAttribute( step, "file", outError ) != nullptr;
+        if ( kind == "ExpectImage" )
+        {
+            if ( Internal::checkAttributeNames( step, { "file", "region", "metric", "ratio", "reference", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) ==
+                     false ||
+                 Internal::requireAttribute( step, "file", outError ) == nullptr )
+                return false;
+            const string*             pMetric = Internal::requireAttribute( step, "metric", outError );
+            AutomationImageMetricKind metric  = AutomationImageMetricKind::MeanLuma;
+            if ( pMetric == nullptr )
+                return false;
+            if ( AutomationImageMetric::tryParseKind( *pMetric, metric ) == false )
+            {
+                outError = step.describe() + ": unknown metric '" + *pMetric + "' (meanLuma · darkFraction · meanRedMinusBlue · differentFrom)";
+                return false;
+            }
+            const string*         pRegion = step.findAttribute( "region" );
+            AutomationImageRegion region{};
+            if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, region ) == false )
+            {
+                outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
+                return false;
+            }
+            if ( ( metric == AutomationImageMetricKind::DifferentFrom ) != ( step.findAttribute( "reference" ) != nullptr ) )
+            {
+                outError = step.describe() + ": reference=\"…\" goes with metric=\"differentFrom\" (and only with it)";
+                return false;
+            }
+            if ( Internal::countComparisons( step, { "equals", "near", "atLeast", "atMost" } ) == false )
+            {
+                outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost";
+                return false;
+            }
+            return Internal::readFloat( step, "ratio", 0.0f, value, outError ) && Internal::readFloat( step, "equals", 0.0f, value, outError ) &&
+                   Internal::readFloat( step, "near", 0.0f, value, outError ) && Internal::readFloat( step, "tolerance", 0.0f, value, outError ) &&
+                   Internal::readFloat( step, "atLeast", 0.0f, value, outError ) && Internal::readFloat( step, "atMost", 0.0f, value, outError );
+        }
         if ( kind == "CloseWindow" || kind == "ExpectExitWithin" )
         {
             const utf8* pName = kind == "CloseWindow" ? "withinSeconds" : "seconds";
@@ -525,6 +586,22 @@ namespace sw
         if ( kind == "ExpectLog" )
         {
             runExpectLog( step );
+            return true;
+        }
+        if ( kind == "Screenshot" )
+        {
+            const string path      = resolveOutputPath( *step.findAttribute( "file" ) );
+            const string directory = FileUtil::getDirectoryPart( path );
+            if ( directory.empty() == false )
+                (void)FileUtil::ensureDirectoryExists( directory );
+            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 그림을 읽지 않게
+            _listPendingScreenshot.push_back( path );
+            ++_screenshotRequestedCount;
+            return true;
+        }
+        if ( kind == "ExpectImage" )
+        {
+            runExpectImage( step );
             return true;
         }
         if ( kind == "CloseWindow" || kind == "ExpectExitWithin" )
@@ -636,6 +713,89 @@ namespace sw
             recordFailure( step, "ExpectLog '" + needle + "' count >= " + to_string( expected ) + ", got " + to_string( matchCount ) );
     }
 
+    void AutomationRunner::runExpectImage( const AutomationStep& step )
+    {
+        using Internal = AutomationRunnerInternal;
+        string                    error;
+        AutomationImageMetricKind metric = AutomationImageMetricKind::MeanLuma;
+        AutomationImageRegion     region{};
+        float32                   ratio = Internal::kDefaultDarkRatio;
+        (void)AutomationImageMetric::tryParseKind( *step.findAttribute( "metric" ), metric );
+        const string* pRegion = step.findAttribute( "region" );
+        if ( pRegion != nullptr )
+            (void)AutomationImageMetric::tryParseRegion( *pRegion, region );
+        (void)Internal::readFloat( step, "ratio", Internal::kDefaultDarkRatio, ratio, error );
+
+        const string    path = resolveOutputPath( *step.findAttribute( "file" ) );
+        AutomationImage image;
+        AutomationImage reference;
+        const string*   pReference = step.findAttribute( "reference" );
+        if ( AutomationImageMetric::loadPpm( path, image, error ) == false ||
+             ( pReference != nullptr && AutomationImageMetric::loadPpm( resolveOutputPath( *pReference ), reference, error ) == false ) )
+        {
+            recordFailure( step, "could not read the image: " + error );
+            return;
+        }
+        float64 value = 0.0;
+        if ( AutomationImageMetric::measure( image, region, metric, ratio, pReference != nullptr ? &reference : nullptr, value, error ) == false )
+        {
+            recordFailure( step, error );
+            return;
+        }
+        // 값은 늘 적는다 — 문턱을 정할 때 숫자를 본다.
+        string line = *step.findAttribute( "metric" ) + "(" + ( pRegion != nullptr ? *pRegion : string( "0,0,1,1" ) ) + ") " + *step.findAttribute( "file" ) + " = " +
+                      Internal::formatNumber( value );
+        SW_LOG_INFO( "[Scenario] metric %#", line.c_str() );
+        _listMetricLine.push_back( std::move( line ) );
+
+        float32 expected  = 0.0f;
+        float32 tolerance = 0.0f;
+        bool    bOk       = true;
+        string  rule;
+        if ( step.findAttribute( "equals" ) != nullptr )
+        {
+            (void)Internal::readFloat( step, "equals", 0.0f, expected, error );
+            bOk  = value == static_cast<float64>( expected );
+            rule = "== " + *step.findAttribute( "equals" );
+        }
+        else if ( step.findAttribute( "near" ) != nullptr )
+        {
+            (void)Internal::readFloat( step, "near", 0.0f, expected, error );
+            (void)Internal::readFloat( step, "tolerance", 1.0e-3f, tolerance, error );
+            bOk  = MathUtil::abs( value - static_cast<float64>( expected ) ) <= static_cast<float64>( tolerance );
+            rule = "near " + *step.findAttribute( "near" );
+        }
+        else if ( step.findAttribute( "atLeast" ) != nullptr )
+        {
+            (void)Internal::readFloat( step, "atLeast", 0.0f, expected, error );
+            bOk  = value >= static_cast<float64>( expected );
+            rule = ">= " + *step.findAttribute( "atLeast" );
+        }
+        else
+        {
+            (void)Internal::readFloat( step, "atMost", 0.0f, expected, error );
+            bOk  = value <= static_cast<float64>( expected );
+            rule = "<= " + *step.findAttribute( "atMost" );
+        }
+        if ( bOk == false )
+            recordFailure( step, "ExpectImage " + *step.findAttribute( "metric" ) + " " + rule + ", got " + Internal::formatNumber( value ) );
+    }
+
+    string AutomationRunner::resolveOutputPath( string_view file ) const
+    {
+        const bool bAbsolute = file.empty() == false && ( file[0] == '/' || file[0] == '\\' || ( file.size() > 1 && file[1] == ':' ) );
+        return bAbsolute ? string( file ) : _outputDirectory + "/" + string( file );
+    }
+
+    bool AutomationRunner::takePendingScreenshotPath( string& outPath )
+    {
+        if ( _listPendingScreenshot.empty() )
+            return false;
+        outPath = _listPendingScreenshot.front();
+        _listPendingScreenshot.erase( _listPendingScreenshot.begin() );
+        return true;
+    }
+
     void AutomationRunner::onLogWritten( const LogEntry& entry )
     {
         // 실행기 자신의 줄([Scenario])은 세지 않는다 — 실패 줄이 단언 문구를 되풀이해 ExpectLog 를 맞추지 않게.
@@ -699,7 +859,14 @@ namespace sw
             json += index == 0 ? "\n    \"" : ",\n    \"";
             json += Internal::escapeJson( _listFailure[index] ) + "\"";
         }
-        json += _listFailure.empty() ? "]\n}\n" : "\n  ]\n}\n";
+        json += _listFailure.empty() ? "],\n" : "\n  ],\n";
+        json += "  \"metrics\": [";
+        for ( size_t index = 0; index < _listMetricLine.size(); ++index )
+        {
+            json += index == 0 ? "\n    \"" : ",\n    \"";
+            json += Internal::escapeJson( _listMetricLine[index] ) + "\"";
+        }
+        json += _listMetricLine.empty() ? "]\n}\n" : "\n  ]\n}\n";
         const string directory = FileUtil::getDirectoryPart( _reportPath );
         if ( directory.empty() == false )
             (void)FileUtil::ensureDirectoryExists( directory );

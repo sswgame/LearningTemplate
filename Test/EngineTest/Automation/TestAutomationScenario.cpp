@@ -2,6 +2,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Automation/AutomationImageMetric.h"
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
@@ -150,6 +151,9 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<Expect probe="Test.SwitchCount" equals="1" atMost="2"/>)",
         R"(<Variable name="gv_noSuchVariable" value="1"/>)",
         R"(<TestMark extra="1"/>)",
+        R"(<ExpectImage file="a.ppm" metric="darkness" atLeast="0"/>)",
+        R"(<ExpectImage file="a.ppm" metric="darkFraction" region="0,0,2,1" atLeast="0"/>)",
+        R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -270,4 +274,76 @@ SW_TEST_CASE( AutomationScenarioTest, RegistriesRejectDuplicateNames )
     static const sw::AutomationStepRegistration kDuplicateStep{ "TestMark", &Internal::runMark, nullptr, false };
     SW_EXPECT_FALSE( sw::AutomationStepRegistry::registerStep( &kDuplicateStep ) );
     SW_EXPECT_TRUE( sw::AutomationStepRegistry::find( "TestMark" )->_bBeforeInput );
+}
+
+/**
+ * @brief [AutomationScenarioTest] PPM 을 읽어 영역 지표를 잰다 — 왼쪽 반이 어두운 4×4 그림
+ * @details darkFraction 은 영역 중앙값 대비라, 영역 전체가 같은 밝기면 0 이고(반쪽만 보면 0) 밝고 어두운 것이 섞여야 어두운 몫이 나온다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, ImageMetricsReadAPpm )
+{
+    // 왼쪽 두 열은 (20,20,20), 오른쪽 두 열은 (200,100,50)
+    sw::string ppm = "P6\n# test\n4 4\n255\n";
+    for ( uint32 y = 0; y < 4; ++y )
+    {
+        for ( uint32 x = 0; x < 4; ++x )
+        {
+            const bool bDark = x < 2;
+            ppm.push_back( static_cast<utf8>( bDark ? 20 : 200 ) );
+            ppm.push_back( static_cast<utf8>( bDark ? 20 : 100 ) );
+            ppm.push_back( static_cast<utf8>( bDark ? 20 : 50 ) );
+        }
+    }
+    sw::AutomationImage image;
+    sw::string          error;
+    SW_ASSERT_TRUE_MSG( sw::AutomationImageMetric::parsePpm( reinterpret_cast<const uint8*>( ppm.data() ), ppm.size(), image, error ), error.c_str() );
+    SW_EXPECT_EQUAL( 4u, image._width );
+
+    const auto measure = [&image]( const utf8* pRegion, sw::AutomationImageMetricKind kind, const sw::AutomationImage* pReference = nullptr )
+    {
+        sw::AutomationImageRegion region{};
+        float64                   value = -1.0;
+        sw::string                reason;
+        SW_EXPECT_TRUE( sw::AutomationImageMetric::tryParseRegion( pRegion, region ) );
+        SW_EXPECT_TRUE_MSG( sw::AutomationImageMetric::measure( image, region, kind, 0.7f, pReference, value, reason ), reason.c_str() );
+        return value;
+    };
+    SW_EXPECT_NEAR_EQUAL( 0.5, measure( "0,0,1,1", sw::AutomationImageMetricKind::DarkFraction ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0,0,0.5,1", sw::AutomationImageMetricKind::DarkFraction ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0.5,0,1,1", sw::AutomationImageMetricKind::DarkFraction ), 1e-9 );
+    SW_EXPECT_NEAR_EQUAL( 20.0 / 255.0, measure( "0,0,0.5,1", sw::AutomationImageMetricKind::MeanLuma ), 1e-6 );
+    SW_EXPECT_NEAR_EQUAL( 150.0 / 255.0, measure( "0.5,0,1,1", sw::AutomationImageMetricKind::MeanRedMinusBlue ), 1e-6 );
+    SW_EXPECT_NEAR_EQUAL( 0.0, measure( "0,0,1,1", sw::AutomationImageMetricKind::DifferentFrom, &image ), 1e-9 );
+
+    // 깨진 PPM · 틀린 영역은 거절한다.
+    sw::AutomationImage       broken;
+    sw::AutomationImageRegion region{};
+    SW_EXPECT_FALSE( sw::AutomationImageMetric::parsePpm( reinterpret_cast<const uint8*>( ppm.data() ), ppm.size() - 5, broken, error ) );
+    SW_EXPECT_FALSE( sw::AutomationImageMetric::parsePpm( reinterpret_cast<const uint8*>( "P3 1 1 255 0 0 0" ), 16, broken, error ) );
+    SW_EXPECT_FALSE( sw::AutomationImageMetric::tryParseRegion( "0.5,0,0.5,1", region ) );
+    SW_EXPECT_FALSE( sw::AutomationImageMetric::tryParseRegion( "0,0,1", region ) );
+}
+
+/**
+ * @brief [AutomationScenarioTest] 렌더러가 없으면 ExpectImage 는 스크린샷을 기다리다 실패로 적는다(조용히 통과하지 않는다)
+ */
+SW_TEST_CASE( AutomationScenarioTest, ExpectImageWithoutRendererFails )
+{
+    using Internal = TestAutomationScenarioInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::AutomationRunner runner;
+    SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="1"><Screenshot file="a.ppm"/></At>
+        <At frame="2"><ExpectImage file="a.ppm" metric="meanLuma" atLeast="0"/><Pass/></At>
+      </Scenario>)" ) );
+    SW_TEST_DEFENSIVE_SCOPE( "no renderer takes the screenshot" );
+    sw::string                 pendingPath;
+    const sw::AutomationResult result = Internal::run( runner, input, 100 );
+    SW_EXPECT_TRUE( result == sw::AutomationResult::Failed );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
+    SW_EXPECT_TRUE( runner.getFailures()[0].find( "never completed" ) != sw::string::npos );
+    SW_EXPECT_TRUE( runner.takePendingScreenshotPath( pendingPath ) ); // 아무도 가져가지 않았다
+    SW_EXPECT_TRUE( pendingPath.find( "Saved/Automation/t/a.ppm" ) != sw::string::npos );
+    input.shutdown();
 }
