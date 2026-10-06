@@ -15,7 +15,6 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include "sw/config/ConfigConstants.h"
 #include "sw/config/CookContract.gen.h"
 
 #include <chrono>
@@ -41,28 +40,15 @@ namespace
         static constexpr int32  kSkippedExitCode        = 13;
         static constexpr int32  kNotLaunchedExitCode    = -1000;
 
-        /** @brief 활성 게임 프리셋(`Config/Game/<게임>.json`)의 `_packRoot`(`game/<팩>`)입니다. 못 읽으면 빈 글입니다. */
-        static sw::string readActivePackRoot( const sw::string& repositoryRoot )
-        {
-            sw::string text;
-            if ( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( repositoryRoot, sw::config::kFileRuntimeGameConfig ), text ) == false )
-                return {};
-            const size_t keyIndex = text.find( "\"_packRoot\"" );
-            const size_t open     = keyIndex == sw::string::npos ? sw::string::npos : text.find( '"', text.find( ':', keyIndex ) );
-            const size_t close    = open == sw::string::npos ? sw::string::npos : text.find( '"', open + 1 );
-            return close == sw::string::npos ? sw::string{} : text.substr( open + 1, close - open - 1 );
-        }
-
         /** @brief 엔진(`engine/automation`)과 활성 게임 팩(`<팩>/automation`)의 시나리오 — 리소스 경로로, 이름순입니다. */
         static sw::vector<sw::string> collectScenarioPaths()
         {
             sw::vector<sw::string> listPath;
             if ( sw::ResourceUtil::initialize() == false )
                 return listPath;
-            const sw::string&      resourceRoot   = sw::ResourceUtil::getRootFolderPath();
-            const sw::string       repositoryRoot = sw::FileUtil::getDirectoryPart( resourceRoot );
+            const sw::string&      resourceRoot = sw::ResourceUtil::getRootFolderPath();
             sw::vector<sw::string> listDomain{ "engine" };
-            const sw::string       packRoot = readActivePackRoot( repositoryRoot );
+            const sw::string       packRoot = test::AppTestUtil::readActivePackRoot();
             if ( packRoot.empty() == false )
                 listDomain.push_back( packRoot );
             for ( const sw::string& domain : listDomain )
