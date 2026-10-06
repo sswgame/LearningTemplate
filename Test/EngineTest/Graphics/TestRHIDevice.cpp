@@ -1335,6 +1335,86 @@ SW_TEST_CASE( RHIDeviceTest, ComputeTextureUavWriteIsReadable )
 }
 
 /**
+ * @brief [RHIDeviceTest] 컴퓨트 PSO 는 넘긴 진입점을 쓴다 — 기본(CSMain)이 아닌 진입점(csWriteSwapped)의 픽셀이 네 백엔드에서 나온다
+ * @details 진입점 이름은 쿠킹(바이너리 이름 · DXC -E)과 PSO(Vulkan `pName` · GL `glSpecializeShader`) 두 곳이 같아야 한다. PSO 쪽이 이름을 "CSMain" 으로
+ *          고정하면 다른 진입점으로 컴파일한 SPIR-V 에서 진입점을 못 찾아 PSO 가 실패한다(지금 엔진 컴퓨트 셰이더가 모두 CSMain 이라 드러나지 않았다).
+ */
+SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
+{
+    constexpr uint32 kSize = 8;
+
+    uint32                okCount{ 0 };
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        sw::IRHIResourceFactory* pResource = device->getResourceFactory();
+        const utf8*              pName     = device->getBackendName();
+
+        sw::RHITextureDesc texDesc{};
+        texDesc._width                     = kSize;
+        texDesc._height                    = kSize;
+        texDesc._mipLevels                 = 1;
+        texDesc._format                    = sw::RHIFormat::R8G8B8A8_UNORM;
+        texDesc._bIsShaderResource         = SW_TRUE;
+        texDesc._bIsUnorderedAccess        = SW_TRUE;
+        const sw::RHITextureHandle texture = pResource->createTexture2D( texDesc );
+        SW_EXPECT_TRUE_MSG( texture != 0, pName );
+        const sw::RHIDescriptorIndex uav = texture != 0 ? pResource->registerBindlessTextureUav( texture ) : sw::kInvalidDescriptorIndex;
+        SW_EXPECT_TRUE_MSG( uav != sw::kInvalidDescriptorIndex, pName );
+        const sw::RHIPipelineStateHandle pso = pResource->createComputePipelineState( "common/shaders/computetexturewrite.hlsl", "csWriteSwapped" );
+        SW_EXPECT_TRUE_MSG( pso != 0, pName );
+
+        if ( texture != 0 && uav != sw::kInvalidDescriptorIndex && pso != 0 )
+        {
+            sw::unique_ptr<sw::IRHICommandList> cmdList = device->createCommandList();
+            SW_EXPECT_TRUE_MSG( cmdList != nullptr, pName );
+            if ( cmdList != nullptr )
+            {
+                const uint32 arrRoot[4] = { device->supportsNativeBindlessSampling() ? static_cast<uint32>( uav ) : 0u, kSize, kSize, 0u };
+                cmdList->beginCommandList();
+                cmdList->prepareTextureForUnorderedAccess( texture );
+                cmdList->setComputePipelineState( pso );
+                cmdList->bindComputeUav( uav, sw::shaderslot::kComputeTextureUav0 );
+                cmdList->setComputeRootConstants( 0, 4, arrRoot, 0 );
+                cmdList->dispatchCompute( 1, 1, 1 );
+                cmdList->endCommandList();
+                device->executeCommandListImmediate( cmdList.get() );
+            }
+            device->waitIdle();
+
+            sw::vector<uint8>     bytes;
+            sw::RHITextureMipSpan layout{};
+            const bool            bRead = pResource->readbackTexture2D( texture, 0, 0, bytes, layout );
+            SW_EXPECT_TRUE_MSG( bRead, pName );
+            if ( bRead && layout._rowBytes >= kSize * 4 && bytes.size() >= static_cast<size_t>( layout._rowBytes ) * kSize )
+            {
+                uint32 mismatchCount{ 0 };
+                for ( uint32 y = 0; y < kSize; ++y )
+                {
+                    for ( uint32 x = 0; x < kSize; ++x )
+                    {
+                        const uint8* pPixel = bytes.data() + static_cast<size_t>( y ) * layout._rowBytes + static_cast<size_t>( x ) * 4;
+                        // csWriteSwapped 는 r = y, g = x 다(CSMain 은 r = x, g = y). BGRA 로 돌아와도 g 와 a 자리는 같다.
+                        const bool bOk = ( pPixel[0] == y || pPixel[2] == y ) && pPixel[1] == x && pPixel[3] == 255;
+                        if ( bOk == false )
+                            ++mismatchCount;
+                    }
+                }
+                SW_EXPECT_TRUE_MSG( mismatchCount == 0, ( sw::string( pName ) + ": the PSO did not run the requested entry point (" + sw::to_string( mismatchCount ) + ")" ).c_str() );
+            }
+            ++okCount;
+        }
+
+        if ( uav != sw::kInvalidDescriptorIndex )
+            pResource->unregisterBindlessUav( uav );
+        if ( texture != 0 )
+            pResource->destroyTexture( texture );
+    }
+    if ( okCount == 0 )
+        SW_TEST_SKIP( "No RHI backend could run the compute entry point test" );
+}
+
+/**
  * @brief [RHIDeviceTest] 네 백엔드가 같은 계약으로 GPU 타임스탬프를 돌려준다
  * @details 계약이 셋이다 — (1) 적은 칸은 0 이상이고 뒤 칸이 앞 칸보다 크거나 같다,
  *          (2) **안 적은 칸은 음수**로 온다, (3) 기다리지 않으므로 값은 몇 프레임 늦는다.

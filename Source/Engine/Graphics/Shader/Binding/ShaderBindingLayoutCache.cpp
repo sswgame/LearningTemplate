@@ -39,7 +39,7 @@ namespace sw
             {
                 ShaderCompileDesc compileDesc{};
                 compileDesc._filePath     = shaderPath;
-                compileDesc._entryPoint   = entryPoint.empty() ? string( stage == ShaderStage::Compute ? "CSMain" : ( stage == ShaderStage::Vertex ? "VSMain" : "PSMain" ) ) : string( entryPoint );
+                compileDesc._entryPoint   = string( resolveEntryPoint( entryPoint, stage ) );
                 compileDesc._stage        = stage;
                 compileDesc._targetFormat = targetFormat;
                 compileDesc._listDefine   = listDefine;

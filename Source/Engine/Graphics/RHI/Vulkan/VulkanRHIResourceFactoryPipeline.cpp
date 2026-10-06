@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include <vulkan/vulkan.h>
 
@@ -223,7 +224,7 @@ namespace sw
     {
         ShaderCompileDesc csDesc{};
         csDesc._filePath             = shaderPath;
-        csDesc._entryPoint           = entryPoint;
+        csDesc._entryPoint           = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
         csDesc._stage                = ShaderStage::Compute;
         csDesc._targetFormat         = ShaderTargetFormat::SPIRV_Vulkan;
         ShaderCompileResult csResult = RHIShaderRequest::compile( csDesc );
@@ -251,7 +252,7 @@ namespace sw
         compShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         compShaderStageInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         compShaderStageInfo.module = compShaderModule;
-        compShaderStageInfo.pName  = "CSMain";
+        compShaderStageInfo.pName  = csDesc._entryPoint.c_str();
 
         VkComputePipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;

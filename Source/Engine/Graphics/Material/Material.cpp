@@ -310,7 +310,7 @@ namespace sw
 
         ShaderCompileDesc desc{};
         desc._filePath     = _desc._shaderPath;
-        desc._entryPoint   = "PSMain";
+        desc._entryPoint   = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
         desc._stage        = ShaderStage::Pixel;
         desc._targetFormat = RHI::getShaderTargetFormat( pDevice->getBackendType() );
         ShaderReflectionData reflection{};
@@ -325,7 +325,7 @@ namespace sw
         {
             ShaderCompileDesc    vertexDesc = desc;
             ShaderReflectionData vertexReflection{};
-            vertexDesc._entryPoint = "VSMain";
+            vertexDesc._entryPoint = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
             vertexDesc._stage      = ShaderStage::Vertex;
             if ( ShaderReflectionLibrary::getOrReflect( vertexDesc, vertexReflection ) && hasMaterialSchema( vertexReflection ) )
                 reflection = std::move( vertexReflection );

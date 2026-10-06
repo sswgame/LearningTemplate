@@ -26,6 +26,7 @@
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Upload/GpuUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -1036,4 +1037,18 @@ SW_TEST_CASE( RenderPassTest, MeshOutlineDrawsOnlyMaterialsWithOutline )
     // 다른 메시 패스는 머티리얼로 거르지 않는다(머티리얼이 없는 배치도 그린다).
     SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::ForwardOpaque, nullptr ) );
     SW_EXPECT_TRUE( sw::FrameRendererUtil::drawsMaterialInPass( sw::RenderPassType::Shadow, &lit->getCachedShaderDefines() ) );
+}
+
+/**
+ * @brief [RenderPassTest] 비어 있는 진입점은 스테이지 표(getShaderStageInfo)의 기본값이 된다 — 진입점 기본값은 표 한 줄이다
+ */
+SW_TEST_CASE( RenderPassTest, EmptyEntryPointsResolveToStageTable )
+{
+    const sw::RenderGraphPassDesc pass{};
+    SW_EXPECT_TRUE( pass._vertexEntryPoint.empty() );
+    SW_EXPECT_TRUE( pass._pixelEntryPoint.empty() );
+    SW_EXPECT_EQUAL( sw::string_view( "VSMain" ), sw::resolveEntryPoint( pass._vertexEntryPoint, sw::ShaderStage::Vertex ) );
+    SW_EXPECT_EQUAL( sw::string_view( "PSMain" ), sw::resolveEntryPoint( pass._pixelEntryPoint, sw::ShaderStage::Pixel ) );
+    SW_EXPECT_EQUAL( sw::string_view( "CSMain" ), sw::resolveEntryPoint( {}, sw::ShaderStage::Compute ) );
+    SW_EXPECT_EQUAL( sw::string_view( "MyCS" ), sw::resolveEntryPoint( "MyCS", sw::ShaderStage::Compute ) );
 }

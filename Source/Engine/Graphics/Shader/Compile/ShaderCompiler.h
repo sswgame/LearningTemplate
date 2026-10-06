@@ -89,6 +89,12 @@ namespace sw
         return arrInfo[index];
     }
 
+    /** @brief @p entryPoint 가 비어 있으면 스테이지의 기본 진입점(표의 `_pEntryPoint`)입니다. 진입점 기본값은 이 표 하나다. */
+    inline string_view resolveEntryPoint( const string_view entryPoint, const ShaderStage stage ) noexcept
+    {
+        return entryPoint.empty() ? string_view( getShaderStageInfo( stage )._pEntryPoint ) : entryPoint;
+    }
+
     /**
      * @enum ShaderTargetFormat
      * @brief 컴파일 출력 바이트코드 포맷입니다.

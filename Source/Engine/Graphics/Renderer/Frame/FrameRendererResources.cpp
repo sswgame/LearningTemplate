@@ -56,7 +56,7 @@ namespace sw
                 // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
                 const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable )
-                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str(), FrameRendererUtil::Entry::kCSMain );
+                    pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
             }
             else
             {

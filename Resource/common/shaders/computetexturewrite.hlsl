@@ -1,4 +1,5 @@
 // 컴퓨트 RW 텍스처 쓰기 — RHIDeviceTest.ComputeTextureUavWriteIsReadable 이 네 백엔드에서 결과를 읽어 비교한다.
+// csWriteSwapped 는 기본(CSMain)이 아닌 진입점 — RHIDeviceTest.ComputeEntryPointOtherThanCSMainRuns 가 PSO 가 그 이름을 쓰는지 본다.
 // 바인딩 계약(bindingslots.hlsli): 대상 텍스처는 registerBindlessTextureUav 인덱스(DX12/Vulkan) 또는
 // SW_SLOT_COMPUTE_TEXUAV0 슬롯 서수(DX11/GL)로 고르고, 그 값은 루트 상수 g_TargetIndex 로 온다.
 #include "binding.hlsli"
@@ -17,4 +18,13 @@ void CSMain( uint3 dispatchThreadId : SV_DispatchThreadID )
 		return;
 	// r = x, g = y (8비트 UNORM 에서 정확히 복원), b = 0, a = 1
 	swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.x / 255.0f, dispatchThreadId.y / 255.0f, 0.0f, 1.0f ) );
+}
+
+// 기본이 아닌 진입점 — r = y, g = x(CSMain 과 뒤바뀜). 이 진입점으로 만든 PSO 가 CSMain 을 부르면 픽셀이 CSMain 의 것이 되거나 PSO 가 실패한다.
+[numthreads( 8, 8, 1 )]
+void csWriteSwapped( uint3 dispatchThreadId : SV_DispatchThreadID )
+{
+	if ( dispatchThreadId.x >= SW_ROOT( g_Width ) || dispatchThreadId.y >= SW_ROOT( g_Height ) )
+		return;
+	swStoreRwTexture2D( SW_ROOT( g_TargetIndex ), dispatchThreadId.xy, float4( dispatchThreadId.y / 255.0f, dispatchThreadId.x / 255.0f, 0.0f, 1.0f ) );
 }

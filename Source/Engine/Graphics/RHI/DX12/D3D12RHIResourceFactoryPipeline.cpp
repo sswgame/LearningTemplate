@@ -15,6 +15,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
@@ -118,7 +119,7 @@ namespace sw
         {
             ShaderCompileDesc csDesc{};
             csDesc._filePath        = shaderPath;
-            csDesc._entryPoint      = entryPoint;
+            csDesc._entryPoint      = string( resolveEntryPoint( entryPoint, ShaderStage::Compute ) );
             csDesc._stage           = ShaderStage::Compute;
             csDesc._targetFormat    = ShaderTargetFormat::DXIL_D3D12;
             ShaderCompileResult res = RHIShaderRequest::compile( csDesc );

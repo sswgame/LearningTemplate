@@ -62,13 +62,6 @@ namespace sw
             static constexpr auto kTaaColor         = "TaaColor";
         };
 
-        struct Entry
-        {
-            static constexpr auto kVSMain = "VSMain";
-            static constexpr auto kPSMain = "PSMain";
-            static constexpr auto kCSMain = "CSMain";
-        };
-
         static constexpr uint32 kDefaultTransientSize = 1280;
 
         /**
