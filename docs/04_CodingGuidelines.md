@@ -183,6 +183,29 @@ bool 을 돌려주면 `is*`/`has*` 이고, void 로 단언하면 `assert*` 다. 
 ### 클래스마다 namespace 블록
 한 파일에 클래스 · 구조체 정의가 여럿이면 정의마다 이름 있는 `namespace` 블록을 따로 둡니다(앞 정의의 `};` 뒤에서 닫고 다시 엽니다) — 에디터에서 클래스 단위로 접히게 하려는 것입니다. 같은 이름의 템플릿 특수화는 한 블록에 두고, 익명 namespace 는 하나로 둡니다. `py -3 Scripts/lint/gate/CheckNamespaceBlocks.py --fix` 가 고치고 같은 게이트가 검사합니다.
 
+### 상수 — 자리와 이름
+
+뜻 하나에 정의 하나. 값을 두 곳에 적으면 컴파일도 시험도 통과한 채 한쪽만 바뀌는 날 갈라진다.
+
+| 쓰는 곳 | 자리 | 예 |
+|---|---|---|
+| `.cpp` 하나 | 그 TU 의 `XxxInternal` 구조체(`static constexpr`) 또는 함수 안 | `WeaponInternal::kMaxSpread` |
+| 모듈 하나 | 그것을 가진 타입의 `static constexpr`, 또는 모듈 타입 헤더의 이름공간 | `MeshAssetFormat::kExtension`, `audio::kSampleRate` |
+| 모듈 · 백엔드 사이 계약 | 계약 헤더 하나 | `RHITypes.h` `constant`, `bindingslots.hlsli` → `shaderslot::k*`, `Defines.h` · `EngineDefines.h` `constant` |
+| 잘 알려진 값 | 집 하나(게이트가 막는다) | π · √2 · e → `MathUtil`(셰이더 `common.hlsli`), 중력 → `PhysicsSystem::getConfiguredGravity`(기본값 `constant::kDefaultGravity`), 황금비 · splitmix64 · FNV → `HashUtil`, 4 글자 표식 → `FourCcUtil::make( "...." )` |
+| 게임플레이 튜닝 값 | 컴포넌트 `PROPERTY`(기본값은 생성자) 또는 키트가 받는 설정 · 카탈로그 구조체의 칸 | `kWalkSpeed` → 컴포넌트 `_walkSpeed` |
+| 성능 문턱 · 용량 | 쓰는 자리의 이름 붙은 상수, 다시 짓지 않고 바꿔 볼 사람이 생기면 `gv_*` | `kIdleSpinCount` |
+
+- **지금 값이 같아도 같아야 하는 이유가 있으면 하나로**(계약). 이유가 우연이면 그대로 둔다 — 두 킷의 `kTiny = 1.0e-5f` 는 각자의 허용치다.
+- **"X 와 같아야 한다" 는 주석이 달린 사본은 결함이다.** 주석 대신 같은 정의를 읽게 한다(`SW_MORPH_FLOAT4_PER_VERTEX` 처럼).
+- **별칭 금지**(`kFrameCount = constant::kMaxFrameCountInFlight`). 뜻을 더하는 지역 이름은 된다(`kUnitQuadHalfDiagonal = MathUtil::kInvSqrt2`).
+- **무효 표식**은 이름은 두되 값은 `invalid_index::kUint32` 로. 모든 비트 마스크(`kAllLayers`)는 무효 표식이 아니다.
+- **내보낸 클래스(`SW_GF_API`)의 정적 상수를 지연 로드 모듈이 참조로 쓰면 데이터 import 라 링크가 거절한다** — 그런 상수는 이름공간 `inline constexpr` 로.
+- **이름**: `kPascalCase`(`MathUtil` 도). 형식 머리는 `kMagic` · `kVersion` · `kExtension`, 상태 구간은 `kStateTag` · `kStateVersion`. 단위가 있는 값은
+  이름에 단위(`kTimeoutSeconds` · `kBudgetMilliseconds` · `kMaxBytes` · `kSlopeRadians`), 단위 바꾸기는 이름 붙은 비율(`constant::kNanosecondsPerSecond`)로.
+- **리터럴로 두는 것**: `0` · `1` · `-1` · `2` 의 자명한 쓰임, 시험 기대값, 초기화 표의 행, 로그 · 단언 문자열, 리플렉션 메타데이터(`PROPERTY( Max = ... )`).
+  그 밖에 반복되거나 주석이 있어야 읽히는 수 · 문자열은 이름을 붙인다. 반복은 `py -3 Scripts/lint/report/RunRepeatedConstants.py` 가 보여 준다.
+
 ### 헬퍼 Util vs Internal
 1. 여러 번역 단위가 공유하는 헬퍼는 `XxxUtil` 정적 구조체 헤더로 선언합니다 (`Internal` 이름을 붙이지 않음).
 2. 단일 `.cpp` 내에서만 사용하는 헬퍼는 클래스 구현과 분리된 별도 `namespace sw { namespace { struct FooInternal; } }` 블록에 배치합니다.

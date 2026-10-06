@@ -180,6 +180,7 @@ py -3 Scripts/lint/gate/CheckTextureFolders.py                 # textures/ holds
 py -3 Scripts/lint/gate/CheckConfigReference.py                # docs/Config matches the code; every config file is in ConfigCatalog.py
 py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs/Config after changing a config field, gv, argument or SW_* option
 py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
+py -3 Scripts/lint/gate/CheckWellKnownConstants.py             # π/√2/e/gravity/hash constants only in their home (MathUtil, HashUtil, …)
 py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes

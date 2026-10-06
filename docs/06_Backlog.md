@@ -970,6 +970,13 @@ cd build/Ninja-Debug/Bin
   `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는
   이 함수에 파일을 더하고 기준값 시험을 붙인다.
 
+- **상수의 자리는 `AGENTS.md` "Constants" 절** — 한 TU 는 Internal, 모듈은 소유 타입, 계약은 계약 헤더(`RHITypes` · `bindingslots.hlsli` · `Defines`), 잘 알려진 값은 집 하나
+  (`CheckWellKnownConstants`), 반복은 `RunRepeatedConstants.py` 로 본다. "X 와 같아야 한다" 주석이 달린 사본이 결함의 모양이다(루트 상수 16/64, 모프 배치 넷).
+  게임플레이 튜닝 값은 컴포넌트 `PROPERTY` · 키트 설정 구조체 칸, 중력은 `PhysicsSystem::getConfiguredGravity` 하나.
+- **4 글자 표식은 `FourCcUtil::make( "...." )`(파일 바이트 순서) 하나** — 16 진 손글씨는 바이트 순서가 둘로 갈렸었다. 형식을 바꾸면 커밋된 데이터
+  (`Test/AppTest/Golden/*.ppm.z` 압축 스트림 등)의 앞 네 바이트도 같이 고친다.
+- **커밋 훅은 staged 셰이더가 있으면 `App --cook-shaders` 결과(바이너리 · `cook.stamp`)를 자동으로 stage 한다** — 도우미처럼 바이너리를 커밋하지 않을 때는
+  커밋 뒤 그 경로를 빼고 `--amend` 한다(셰이더 소스가 없는 amend 는 훅이 다시 굽지 않는다).
 ### 3-5. 직렬화 · 리플렉션 · 파서
 
 - **엔진 데이터는 별칭을 쓰지 않는다**(사용자 결정 2026-10-03 — 실제 게임 데이터가 없다). 이름을 바꾸면 `Resource/` 데이터를 다시 쓴다. 모르는 키 · 타입 · 열거자는
