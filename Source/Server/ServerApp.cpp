@@ -15,6 +15,8 @@
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/Network/NetTypes.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -22,6 +24,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"
+#include "Engine/Observability/MetricRegistry.h"
+#include "Engine/Observability/OpsHttpEndpoint.h"
+#include "Engine/Observability/ServiceHealthRegistry.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 #if SW_DEV_COMMANDS_ENABLED
@@ -48,6 +53,11 @@ namespace sw
             static constexpr uint32 kDroppedTickWarningInterval = 100;
             /** @brief 클라이언트 산출물에 없어야 할 표식(`BuildTargetImageTest`) — 서버 실행 파일 자신도 서버 전용이다. */
             static constexpr utf8 kArrServerImageMarker[] = "sw-server-only-module:Server";
+            /** @brief 운영 HTTP 는 스크레이퍼 · 감시자 몇이 붙는다 — 연결 상한과 유휴 시한을 작게. */
+            static constexpr int32   kOpsMaxConnections     = 64;
+            static constexpr float64 kOpsIdleTimeoutSeconds = 10.0;
+
+            static int64 nowMonotonicMs() { return MonotonicClock::nowNanoseconds() / 1000000; }
         };
 
         /** @brief 표식 글을 링커가 버리지 못하게 정적 초기화에서 한 번 읽는다(서버 전용 모듈의 생성 표식과 같은 방식). */
@@ -72,8 +82,14 @@ namespace sw
         , _moduleCatalog{}
         , _moduleResolution{}
         , _console{}
+        , _metricRegistry{ nullptr }
+        , _healthRegistry{ nullptr }
+        , _opsTransport{ nullptr }
+        , _opsEndpoint{ nullptr }
         , _listPendingCommand{}
         , _pServerConfig{ nullptr }
+        , _pTickHistogram{ nullptr }
+        , _pDroppedTickCounter{ nullptr }
         , _tickCount{ 0 }
         , _startNanoseconds{ 0 }
         , _tickNanoseconds{ 0 }
@@ -117,6 +133,8 @@ namespace sw
         if ( loadServerConfig() == false )
             return false;
         _tickNanoseconds = constant::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
+        if ( initializeObservability() == false )
+            return false;
 
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<ModuleHost>();
@@ -200,6 +218,53 @@ namespace sw
 #endif
     }
 
+    bool ServerApp::initializeObservability()
+    {
+        _metricRegistry      = make_unique<MetricRegistry>();
+        _healthRegistry      = make_unique<ServiceHealthRegistry>();
+        _pTickHistogram      = _metricRegistry->registerHistogram( "server_tick_seconds", "Dedicated server tick body duration", MetricRegistry::makeLatencyBounds() );
+        _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
+        if ( _pServerConfig->_opsPort == 0 )
+            return true;
+        OpsHttpEndpointSettings opsSettings;
+        if ( NetAddress::parse( _pServerConfig->_opsListenAddress, static_cast<uint16>( _pServerConfig->_opsPort ), opsSettings._bindAddress ) == false )
+        {
+            SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
+            return false;
+        }
+        opsSettings._bindAddress._port = static_cast<uint16>( _pServerConfig->_opsPort ); // 포트는 _opsPort 가 정본(주소 칸에 포트를 적어도 무시)
+        _opsTransport                  = StreamTransportFactory::createPlatformTransport();
+        if ( _opsTransport == nullptr )
+        {
+            SW_LOG_ERROR( "Ops HTTP endpoint needs a stream transport and this platform has none" );
+            return false;
+        }
+        StreamTransportSettings transportSettings;
+        transportSettings._ioThreadCount      = 1;
+        transportSettings._maxConnections     = ServerAppInternal::kOpsMaxConnections;
+        transportSettings._idleTimeoutSeconds = ServerAppInternal::kOpsIdleTimeoutSeconds;
+        _opsEndpoint                          = make_unique<OpsHttpEndpoint>();
+        if ( _opsEndpoint->initialize( _opsTransport.get(), transportSettings, opsSettings, _metricRegistry.get(), _healthRegistry.get() ) == false )
+        {
+            _opsEndpoint.reset();
+            _opsTransport.reset();
+            return false; // 운영자가 켠 끝점을 못 열면 서지 않는다 — 감시자가 볼 수 없는 서버다
+        }
+        return true;
+    }
+
+    void ServerApp::shutdownObservability()
+    {
+        if ( _opsEndpoint != nullptr )
+            _opsEndpoint->shutdown();
+        _opsEndpoint.reset();
+        _opsTransport.reset();
+        _pTickHistogram      = nullptr;
+        _pDroppedTickCounter = nullptr;
+        _healthRegistry.reset();
+        _metricRegistry.reset();
+    }
+
     void ServerApp::run()
     {
         if ( _bReady == SW_FALSE )
@@ -218,12 +283,15 @@ namespace sw
             if ( cause != ShutdownCause::None || _engineLoop.isQuitRequested() )
             {
                 SW_LOG_INFO( "Dedicated server shutdown requested (%#) after %# ticks", ShutdownSignal::getCauseName( cause ), _tickCount );
+                _healthRegistry->setDraining( true ); // /readyz 503 — 부하 분산기가 새 접속을 끊는다(내리는 동안 /healthz 는 살아 있음)
                 break;
             }
 
             const int64 tickStart = MonotonicClock::nowNanoseconds();
             tickOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
+            _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
+            _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
             _statusTickSumNanoseconds += tickTime;
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;
             ++_statusTickSampleCount;
@@ -241,6 +309,7 @@ namespace sw
                      _droppedTickCount / ServerAppInternal::kDroppedTickWarningInterval != ( _droppedTickCount + dropped ) / ServerAppInternal::kDroppedTickWarningInterval )
                     SW_LOG_WARNING( "Server is behind: dropped %# ticks (total %#), last tick %# us", dropped, _droppedTickCount + dropped, tickTime / 1000 );
                 _droppedTickCount += dropped;
+                _pDroppedTickCounter->add( dropped );
                 deadline = now;
             }
             else if ( deadline > now )
@@ -323,6 +392,8 @@ namespace sw
             _moduleHost->shutdown();
             _moduleHost.reset();
         }
+        // 운영 끝점은 게임을 내리는 동안에도 비우는 중(/readyz 503)을 알리다 마지막에 닫는다 — 로그를 남기므로 엔진(로거)보다 먼저.
+        shutdownObservability();
         // 로거는 엔진 종료와 함께 내려간다 — 마지막 줄은 그 앞에 남긴다(시험 · 운영 도구가 이 줄로 정상 종료를 본다).
         SW_LOG_INFO( "Dedicated server shutdown complete" );
         _engineLoop.shutdown();

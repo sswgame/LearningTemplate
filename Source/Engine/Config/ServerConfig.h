@@ -85,6 +85,15 @@ namespace sw
         /** @brief 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _servicePort{ 7780 };
+        /**
+         * @brief 운영 HTTP 끝점(`/metrics` · `/healthz` · `/readyz`, 평문 · 인증 없음) 포트입니다. 0 이면 열지 않습니다.
+         * @details 기본은 끔 — 한 기계에 서버 여럿(시험 · 개발)이 뜨면 고정 포트가 부딪친다. 운영 설정 파일이 켠다(Prometheus 관례 9100 대).
+         */
+        PROPERTY( Min = 0, Max = 65535 )
+        int32 _opsPort{ 0 };
+        /** @brief 운영 끝점이 받을 주소입니다 — 기본 `127.0.0.1`(이 기계만). 스크레이퍼가 다른 기계면 사설 주소를 준다(공용 인터페이스에 열지 말 것). */
+        PROPERTY()
+        string _opsListenAddress{ "127.0.0.1" };
         /** @brief 서버 틱 수(초당)입니다. 한 틱이 게임 고정 스텝 하나입니다. */
         PROPERTY( Min = 1, Max = 240 )
         int32 _tickRateHz{ 30 };

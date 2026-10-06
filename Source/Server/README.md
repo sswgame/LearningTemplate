@@ -27,13 +27,29 @@ Dev 의 Server 는 낱개 파일을 읽지만 같은 규칙으로 그 종류를 
 
 ## 설정 — `Config/Server/<게임>.json`
 
-`ServerConfig`(`Engine/Config/ServerConfig.h`) — 받는 주소 · 게임 UDP 포트(+ 샤드 수) · 서비스 TCP 포트 · 틱 수 · 따라잡기 상한 · 콘솔 입력 · 종료 유예 ·
-TLS 인증서 · 개인키 경로 · 저장소(`_listStore`) · 캐시(`_listCache`) 항목. `-server-config=<경로>` 로 다른 파일을 줍니다.
+`ServerConfig`(`Engine/Config/ServerConfig.h`) — 받는 주소 · 게임 UDP 포트(+ 샤드 수) · 서비스 TCP 포트 · 운영 HTTP 포트 · 주소(`_opsPort` · `_opsListenAddress`) ·
+틱 수 · 따라잡기 상한 · 콘솔 입력 · 종료 유예 · TLS 인증서 · 개인키 경로 · 저장소(`_listStore`) · 캐시(`_listCache`) 항목. `-server-config=<경로>` 로 다른 파일을 줍니다.
 
 - **Shipping 도 디스크에서 읽습니다**(굽지 않는다 — 운영자가 고친다). 파일이 없으면 Shipping 서버는 기동하지 않고, Dev 는 기본값 + 경고로 섭니다.
   상대 경로는 작업 폴더(`Bin`)에서 프로젝트 루트를 찾아 올라가 풉니다 — 배포 폴더에 `Config/` 가 없으면 `-server-config` 에 절대 경로를 줍니다.
 - **비밀은 파일에 쓰지 않습니다** — 항목의 `_secretEnvironment` 가 가리키는 환경 변수에서 `ServerSecret::read` 로 읽습니다(값은 로그에 남기지 않는다).
 - TLS 인증서 · 키 칸이 비면 Dev 만 개발용 자체 서명 인증서를 씁니다. Shipping 은 서비스 포트를 열 때 오류입니다.
+
+## 운영 관측 — `/metrics` · `/healthz` · `/readyz`
+
+서버는 지표 등록부(`Engine/Observability/MetricRegistry` — `server_tick_seconds` 히스토그램 · `server_dropped_ticks_total`)와 상태 확인
+(`ServiceHealthRegistry` — 틱마다 박동, 종료 요청을 받으면 비우는 중)을 늘 들고 있습니다. 설정의 `_opsPort` 가 0 이 아니면 운영 HTTP 끝점
+(`OpsHttpEndpoint` — GET 하나 · 답한 뒤 닫기, 평문 · 인증 없음)을 엽니다.
+
+- `/metrics` — Prometheus 텍스트 0.0.4. `/healthz` — 틱이 10 초 안에 돌았으면 200, 아니면 503(감시자가 재시작). `/readyz` — 살아 있고 비우는 중이
+  아니고 준비 필수 검사가 모두 통과하면 200, 아니면 503(부하 분산기가 새 접속을 보내지 않는다). 본문은 `live` · `ready` · `draining` · `check` 줄.
+- **기본 바인드는 `127.0.0.1`**(`_opsListenAddress`) — 같은 기계의 에이전트 · 감시자만. 다른 기계의 스크레이퍼는 사설 주소를 주고 방화벽으로 막습니다.
+- 켰는데 열지 못하면(포트 사용 중 · 주소 오류) 서버는 서지 않습니다. 기본은 끔(`0`) — 한 기계에 서버 여럿이 뜨는 시험 · 개발에서 포트가 부딪친다.
+
+```
+Server.exe -server-config=ops.json     # ops.json 에 "_opsPort": 9100
+curl -s http://127.0.0.1:9100/healthz  # ok
+```
 
 ## 콘솔 명령(표준 입력)
 

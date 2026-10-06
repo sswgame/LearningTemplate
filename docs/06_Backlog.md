@@ -369,8 +369,8 @@ cd build/Ninja-Debug/Bin
   넘어 같은지 보는 것(서버 쪽 `NetSimulation` 호스트 모드 · 클라이언트 접속 인자 · 해시 로그 비교 스크립트).
 
 - **전용 서버 타깃에서 남은 것**(2026-10-06, server-target). ① 서버의 크래시 묶기 · 텔레메트리 — 기동 표의 `Telemetry` 는 Client 대상(동의가 플레이어 설정)이라
-  서버는 크래시 보고를 묶지 않는다; 서버용 동의 = 운영 설정으로. ② 서버 프로세스 지표(틱 시간 p50 · p99 · 버린 틱 · 메모리)를 `status` 밖으로(파일 · 엔드포인트 —
-  online-ops 관측). ③ 게임별 서버 기동 확인 — Empty 말고 각 게임을 `Server -gv_serverExitAfterTicks=60` 으로(게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰는지).
+  서버는 크래시 보고를 묶지 않는다; 서버용 동의 = 운영 설정으로. ② 서버 프로세스 지표 — 틱 시간 · 버린 틱은 `/metrics`(`_opsPort`)로 나간다; 메모리 ·
+  접속 수 지표와, 게임 · 키트 모듈이 서버의 지표 · 상태 등록부를 받는 창구(엔진 서비스 줄 — 첫 서버 서비스 조립 때)는 남음. ③ 게임별 서버 기동 확인 — Empty 말고 각 게임을 `Server -gv_serverExitAfterTicks=60` 으로(게임 · 키트가 디바이스 · 창을 null 확인 없이 쓰는지).
   ④ 서버 빌드에서 렌더러 코드를 아예 빼기(지금은 컴파일만 되고 돌지 않는다 — 크기 · 링크 시간을 재고). ⑤ 리눅스 서버(`WSL-*-Server`) 빌드 · `readelf -d` 로
   libX11 없음 확인 · `ServerTest` — 이 묶음은 Windows 만 확인했다.
 
@@ -399,7 +399,9 @@ cd build/Ninja-Debug/Bin
   **들어간 기반**(`GameFramework/Base/Online/`): `Store`(영속 계약 `IServiceStore` — 비동기 일 · 트랜잭션 · 조건부 쓰기 · 멱등 기록, 메모리 구현 · 계약 시험) ·
   `Guard`(토큰 버킷 · 크기 상한) · `Identity`(`AccountId` · `IAccountDirectory`) · `Cache`(휘발성 계약 `IEphemeralStore` — 만료 · 원자 증감 · 임대 · 정렬 집합 · 발행/구독, 메모리 구현 · 계약 시험) ·
   `Audit`(감사 줄) · `Bus`(서버 간 버스 — 캐시 위 · 프로세스 안) · `Schedule`(예약 작업 — 회차 차지 · 임대 이어받기) · `Config`(원격 설정 · 기능 플래그 출시 비율).
-  남은 기반: 관측(지표 · 구조화 로그 — 추적 id 자리는 `OnlineCallContext::_traceId`), `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
+  관측은 들어갔다 — 지표 · 상태 확인 · 운영 HTTP(`Engine/Observability`, 서비스 묶음 `Online/Observability/ServiceMetrics`), 로그 문맥(Core `LogContext` —
+  요청 머리의 추적 id 128 비트 → 처리기 · 저장소 일의 줄 꼬리표). 관측 남은 것: 서버 로그 JSON lines 출력 장치, OpenTelemetry 내보내기, 감사 줄의 추적 id 칸.
+  남은 기반: `EphemeralServerBus` 를 호스트의 캐시 라우터 위로(지금은 자기 캐시 앞을 혼자 쓴다), PostgreSQL · RESP 계약 시험을 실제 서버로 한 번(`SW_TEST_POSTGRES_URL` · `SW_TEST_RESP_URL` — Valkey(WSL) · Garnet(Windows) 각각 — 이 PC 에 서버가 없어 아직 돌리지 않았다, Windows · WSL), 마이그레이션 SQL(`Resource/common/sql/servicestore`)을 Shipping 서버가 읽는 길(지금은 디스크 폴더를 훑는다 — 팩에는 폴더 목록 API 가 없다) —
   계약 시험(`ServiceStoreContract.h`)을 SQL 구현에도 같이 돌린다.
   **계정**: 서버 키트 `GF_Server_Account`(`Kits/Online/Server/Account`)에 로그인 서비스 본체(`LoginService` — 저장소 일로 맡기고 거둠 · `LoginStoreLogic` · `LoginTicketAuthority`)가 들어갔다.
   암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 남은 것: 공유 `GF_Account`(와이어 타입 · `AccountClient`) · 스트림 바인딩 · UDP 접속 인증기, 게스트 · 연동 · 제재.
@@ -1607,6 +1609,9 @@ cd build/Ninja-Debug/Bin
   I/O 스레드를 끝낼 때 완료 포트의 멈춤 표는 깨우기만 쓴다 — `GetQueuedCompletionStatusEx` 는 한 묶음에 표 여럿을 한 스레드에 줘서, 표 수로 끝내면 다른 스레드가 영영 기다린다.
 - **멱등 기억은 연결이 아니라 주체에 묶는다** — 거래 요청이 처리된 뒤 응답 전에 끊기면 클라이언트는 새 연결에서 같은 키로 다시 보낸다. 범위가 연결이면 두 번 처리된다
   (`NetRequestServer::setPrincipal` — 로그인 키트가 붙인다). 처리 중인 키가 다시 오면 처리하지 않고 첫 응답을 같이 받게 한다. 연결이 닫혀도 처리 중 기록은 남겨 늦은 응답을 기억한다.
+- **로그 문맥 꼬리표는 형식 문자열의 빈 자리다**(Core `LogContext`) — 문맥 없는 스레드(게임 · 렌더 · 에디터)의 줄은 바이트가 같다. 비동기 경계는 넘기는 쪽이
+  복사해 들고 받는 쪽이 `ScopedLogContext` 로 다시 건다(`IServiceStoreWork` — 저장소가 `submit` 에서 잡는다). 지표 라벨에는 추적 id · 계정 id 를 넣지 않는다(시리즈가 끝없이 는다).
+  운영 지표 · 상태 · HTTP 끝점은 엔진(`Engine/Observability`)에 둔다 — 전용 서버 실행 파일은 GameFramework DLL 을 링크하지 않는다.
 - **UDP 암호화는 협상하지 않는다** — 암호화 · 토큰 결속 여부를 프로토콜 id 에 섞어 한쪽만 다르면 `SecurityMismatch` 로 거절한다(평문으로 내려가는 길이 없다).
   AEAD nonce 는 방향별 IV XOR 64 비트 패킷 번호(감기지 않는다), 재전송 창(1024)은 **복호가 통과한 뒤에** 표시한다 — 먼저 표시하면 위조 패킷이 진짜 번호를 태운다.
   서버는 주소가 확인된(상태 없는 도전을 통과한) 응답에만 X25519 를 계산하고, 토큰 결속이면 세션 비밀의 증명 태그가 맞아야 자리를 잡는다.
