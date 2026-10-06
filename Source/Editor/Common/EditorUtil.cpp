@@ -37,27 +37,27 @@ namespace sw::editor
         return FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( resourceRoot ) );
     }
 
-    string EditorUtil::getEditorConfigDirectory()
+    string EditorUtil::getEditorStateDirectory()
     {
         const string projectRoot = getProjectRootPath();
         if ( projectRoot.empty() )
             return {};
 
-        const string configDir = FileUtil::joinPath( projectRoot, config::kDirConfigEditor );
-        FileUtil::ensureDirectoryExists( configDir );
-        return configDir;
+        const string stateDir = FileUtil::joinPath( projectRoot, config::kDirSavedEditor );
+        FileUtil::ensureDirectoryExists( stateDir );
+        return stateDir;
     }
 
-    string EditorUtil::resolveEditorConfigFile( const utf8* pFileName )
+    string EditorUtil::resolveEditorStateFile( const utf8* pFileName )
     {
         if ( StringUtil::isNullOrEmpty( pFileName ) )
             return {};
 
-        const string configDir = getEditorConfigDirectory();
-        if ( configDir.empty() )
+        const string stateDir = getEditorStateDirectory();
+        if ( stateDir.empty() )
             return {};
 
-        return FileUtil::joinPath( configDir, pFileName );
+        return FileUtil::joinPath( stateDir, pFileName );
     }
 
     string EditorUtil::resolveProjectRelativePath( string_view hostRelativePath )

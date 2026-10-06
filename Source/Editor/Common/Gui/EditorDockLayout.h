@@ -16,7 +16,7 @@ namespace sw::editor
     public:
         EditorDockLayout();
 
-        /** @brief Config/Editor 아래 imgui.ini / windows.ini 경로를 해석합니다. */
+        /** @brief Saved/Editor 아래 imgui.ini / windows.ini 경로를 해석합니다. */
         void initializePersistencePaths();
         /** @brief 해석된 imgui.ini 경로를 ImGui IO에 연결합니다. */
         void applyIniFilename() const;
@@ -31,7 +31,7 @@ namespace sw::editor
 
         /**
          * @brief 지금 도킹 배치와 패널 가시성을 이름 붙인 레이아웃으로 저장합니다(`EditorLayoutStore`).
-         * @param folder 비우면 기본 폴더(`Config/Editor/Layouts`)
+         * @param folder 비우면 기본 폴더(`Saved/Editor/Layouts`)
          */
         [[nodiscard]] bool saveNamedLayout( string_view name, string_view folder = {} );
         /**

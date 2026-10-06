@@ -48,7 +48,7 @@ namespace sw::editor
         struct ToolDocumentDesc
         {
             const utf8* _pLabel;           ///< "animation graph" — 로그 · 상태 문구에 들어간다
-            const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Config/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
+            const utf8* _pDefaultFileName; ///< 경로가 비었을 때 여는 기본 파일(`Saved/Editor` 아래 이름). nullptr 이면 기본 문서가 없다
         };
 
         constexpr ToolDocumentDesc kAnimGraphDocument{ "animation graph", EditorUtil::kAnimGraphDocumentFileName };
@@ -80,7 +80,7 @@ namespace sw::editor
                     return resolveExistingOrRelativePath( path );
                 if ( desc._pDefaultFileName == nullptr )
                     return {};
-                return EditorUtil::resolveEditorConfigFile( desc._pDefaultFileName );
+                return EditorUtil::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
             template <typename TAsset>

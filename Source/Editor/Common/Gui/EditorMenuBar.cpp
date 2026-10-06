@@ -128,7 +128,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ( ImGui::Button( "Save" ) || bEnter ) && dockLayout.saveNamedLayout( s_layoutName.c_str() ) )
             s_layoutName.clear();
-        EditorWidgets::drawTooltip( "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Config/Editor/Layouts, 영숫자 · 공백 · _ · -)" );
+        EditorWidgets::drawTooltip( "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)" );
 
         vector<string> listName;
         EditorLayoutStore::collectNames( EditorLayoutStore::getDefaultFolder(), listName );

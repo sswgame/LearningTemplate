@@ -52,6 +52,7 @@ namespace sw::editor
         const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
         const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
+        FileUtil::ensureParentDirectoryExists( configPath );
         if ( pTypeInfo != nullptr && JsonSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
             SW_LOG_TRACE( "EditorConfig saved to file (%#)", configPath.c_str() );
         else

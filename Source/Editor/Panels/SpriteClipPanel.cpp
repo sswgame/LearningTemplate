@@ -59,7 +59,7 @@ namespace sw::editor
             else
                 _status = string{ "Saved " } + getLoadedAssetPath();
         }
-        ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirConfigEditor, EditorUtil::kSpriteClipDocumentFileName );
+        ImGui::TextDisabled( "%s/%s (separate from AnimGraph)", config::kDirSavedEditor, EditorUtil::kSpriteClipDocumentFileName );
 
         ImGui::Separator();
         ImGui::TextUnformatted( "Frames (u,v,w,h,durationMs)" );

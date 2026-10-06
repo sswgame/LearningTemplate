@@ -1,6 +1,6 @@
 /**
  * @file EditorConfig.h
- * @brief **앱이 다시 쓰는** 에디터 상태입니다(Config/Editor/EditorConfig.json).
+ * @brief **앱이 다시 쓰는** 에디터 상태입니다(Saved/Editor/EditorConfig.json — git 무시, 사람이 쓰는 설정은 Config/).
  *
  * @details 여기 있는 값은 에디터가 `saveToHost()` 로 **파일 전체를 다시 만들어** 덮어씁니다(테마 대화 상자의 저장).
  *          그래서 손으로 적은 것(주석 · 순서 · 손으로 고른 목록)은 여기 두면 안 됩니다. 그런 설정은 읽기 전용인

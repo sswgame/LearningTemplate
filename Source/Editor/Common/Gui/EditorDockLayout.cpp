@@ -181,11 +181,11 @@ namespace sw::editor
         _imguiIniPath.clear();
         _windowsIniPath.clear();
 
-        const string imguiPath   = EditorUtil::resolveEditorConfigFile( EditorUtil::kImguiIniFileName );
-        const string windowsPath = EditorUtil::resolveEditorConfigFile( EditorUtil::kWindowsIniFileName );
+        const string imguiPath   = EditorUtil::resolveEditorStateFile( EditorUtil::kImguiIniFileName );
+        const string windowsPath = EditorUtil::resolveEditorStateFile( EditorUtil::kWindowsIniFileName );
         if ( imguiPath.empty() || windowsPath.empty() )
         {
-            SW_LOG_WARNING( "Failed to resolve Config/Editor - layout will not persist." );
+            SW_LOG_WARNING( "Failed to resolve Saved/Editor - layout will not persist." );
             return;
         }
 

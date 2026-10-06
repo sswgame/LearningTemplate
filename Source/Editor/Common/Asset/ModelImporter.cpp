@@ -1887,7 +1887,7 @@ namespace sw::editor
         // 스탬프를 적는 길이 하나여야 에디터에서 임포트된 것과 `App --import-models` 로 임포트된 것이 같은 판정을 받는다.
         // 설정 파일이 없으면 규칙 없이 임포트한다. 깨졌으면 로드가 알린다.
         ModelImportConfig config{};
-        (void)config.loadFromFile( EditorUtil::resolveEditorConfigFile( EditorUtil::kModelImportConfigFileName ) );
+        (void)config.loadFromFile( ModelImportConfig::makeDefaultConfigPath() );
         const AssetImportSummary summary = importAllModels( resourceRoot, config, AssetImportMode::ImportStale );
         for ( const string& problem : summary._listProblem )
         {

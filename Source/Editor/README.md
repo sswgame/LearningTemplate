@@ -351,7 +351,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 - **같은 종류 · 태그 모두 선택**: Hierarchy 오른쪽 클릭 `Select All With` — 그 오브젝트의 컴포넌트 종류(파생 포함) · 태그(아래 계층 포함)마다
   (`EditorSceneCommands::collectObjectsWithComponent` · `collectObjectsWithTag` · `selectObjects`).
 - **이름 붙인 레이아웃**: `Panel > Layouts` — 이름을 적고 Save, 목록에서 고르면 불러오고 `x` 로 지운다. 도킹 배치(`<이름>.imgui.ini`)와 패널
-  가시성(`<이름>.windows.ini`)이 `Config/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
+  가시성(`<이름>.windows.ini`)이 `Saved/Editor/Layouts/` 에 남는다(git 무시). 불러오기는 다음 프레임 `NewFrame` 앞에서 한다
   (`EditorDockLayout::applyPendingNamedLayout`) — 프레임 안에서 ImGui 설정을 읽으면 이미 있는 창 · 도킹 노드에 적용되지 않는다.
 - 시험: `EditorLogCommandsTest` · `ConfigHotReloadTest` · `EditorLayoutStoreTest` · `EditorSceneCommandsTest.CollectObjectsByComponentTypeAndTag`
   (EditorTest), `ConfigManagerTest.ReloadConfigFileUpdatesInPlaceAndNotifies`(EngineTest), 에디터 자체 시험 `console.tagFilter` ·

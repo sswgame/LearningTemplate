@@ -14,7 +14,7 @@ namespace sw::editor
     /**
      * @class EditorLayoutStore
      * @brief 레이아웃 하나는 폴더 안의 파일 둘입니다 — `<이름>.imgui.ini`(ImGui 도킹 · 창 배치)와 `<이름>.windows.ini`(패널 가시성).
-     * @details 기본 폴더는 `Config/Editor/Layouts/`(사용자 파일이라 git 이 무시합니다). 이름은 영숫자 · 공백 · `_` · `-` 만 받습니다 —
+     * @details 기본 폴더는 `Saved/Editor/Layouts/`(앱이 쓰는 상태라 git 이 무시합니다). 이름은 영숫자 · 공백 · `_` · `-` 만 받습니다 —
      *          파일 이름이 되므로 경로 문자(`/` · `..`)가 섞이면 안 됩니다. 도킹 배치를 읽고 쓰는 일(ImGui)은 `EditorDockLayout` 이 합니다.
      */
     class EditorLayoutStore
@@ -33,7 +33,7 @@ namespace sw::editor
          * @brief 사람이 적은 이름을 파일 이름으로 쓸 수 있게 다듬습니다. 앞뒤 공백을 떼고, 받지 않는 문자가 있거나 비었거나 너무 길면 false 입니다.
          */
         [[nodiscard]] static bool sanitizeName( string_view name, string& outName );
-        /** @brief 기본 레이아웃 폴더(`Config/Editor/Layouts`)입니다. 에디터 설정 폴더를 찾지 못하면 빈 문자열입니다. */
+        /** @brief 기본 레이아웃 폴더(`Saved/Editor/Layouts`)입니다. 에디터 상태 폴더를 찾지 못하면 빈 문자열입니다. */
         static string getDefaultFolder();
         /** @brief 레이아웃의 도킹 배치 파일 경로입니다. */
         static string makeImguiIniPath( string_view folder, string_view name );

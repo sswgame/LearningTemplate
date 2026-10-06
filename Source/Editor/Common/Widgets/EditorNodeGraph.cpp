@@ -37,7 +37,7 @@ namespace sw::editor
         ed::Config config{};
         if ( StringUtil::isNullOrEmpty( pSettingsFileName ) == false )
         {
-            const string settingsPath = EditorUtil::resolveEditorConfigFile( pSettingsFileName );
+            const string settingsPath = EditorUtil::resolveEditorStateFile( pSettingsFileName );
             if ( settingsPath.empty() == false )
             {
                 _settingsPath       = settingsPath;

@@ -5,7 +5,6 @@
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 #include "Editor/Common/Asset/ModelImportConfig.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
-#include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
 
@@ -36,14 +35,6 @@ namespace
             return true;
         }
 
-        /** @brief 앱이 통째로 다시 쓰는 상태(`EditorConfig`)는 엄격하게 읽기만 합니다 — 기본값과 같은 칸도 쓰인다. */
-        template <typename T>
-        static bool loadAppWritten( const string& absolutePath )
-        {
-            T config{};
-            return ConfigManager::readConfigFile( config, absolutePath ) == ConfigReadResult::Loaded;
-        }
-
         static bool loadTextureImport( const string& absolutePath )
         {
             TextureImportConfig config;
@@ -60,20 +51,15 @@ namespace
         struct ConfigKind
         {
             const utf8* _pFileName;                         ///< `Config/Editor/` 아래 이름(`*` 는 아무 글)
-            bool ( *_pLoad )( const string& absolutePath ); ///< nullptr = 앱이 쓰는 로컬 상태 · 파이썬이 보는 파일
+            bool ( *_pLoad )( const string& absolutePath ); ///< nullptr = 파이썬이 보는 파일
         };
 
         /** @brief 앞의 줄이 먼저 맞습니다. 짝은 `Scripts/common/ConfigCatalog.py` 다. */
         static constexpr ConfigKind kArrKind[] = {
-            {        "EditorConfig.json",   &loadAppWritten<EditorConfig>},
             {  "editortooldefaults.json", &loadStrict<EditorToolDefaults>},
             { "TextureImportConfig.json",              &loadTextureImport},
             {   "ModelImportConfig.json",                &loadModelImport},
             {"AssetValidationRules.json",                         nullptr}, // Scripts/common/AssetValidation.py · CheckAssetRules
-            {                    "*.ini",                         nullptr}, // ImGui 가 쓴다(로컬)
-            {             "*Graph*.json",                         nullptr}, // 노드 에디터 캔버스 · 도구 문서 임시본(로컬)
-            {          "SpriteClip.json",                         nullptr}, // 도구 문서 임시본(로컬)
-            {                "Layouts/*",                         nullptr}, // 저장한 레이아웃(로컬)
         };
 
         static const ConfigKind* findKind( string_view relativePath )
@@ -89,7 +75,7 @@ namespace
 } // namespace
 
 /**
- * @brief [EditorConfigFileSchemaTest] Config/Editor 의 사람이 쓰는 설정은 모두 실제 로더로 엄격하게 읽힌다 — 표에 없는 파일은 실패다
+ * @brief [EditorConfigFileSchemaTest] Config/Editor 의 설정은 모두 실제 로더로 엄격하게 읽힌다 — 표에 없는 파일은 실패다(앱이 쓰는 상태는 Saved/Editor 에 둔다)
  */
 SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
 {
@@ -111,6 +97,6 @@ SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
         SW_EXPECT_TRUE_MSG( pKind->_pLoad( filePath ), relative + " 를 엄격하게 읽지 못했습니다:" + logs.joined() );
         ++loadedCount;
     }
-    // 임포트 설정 둘(EditorConfig 는 앱이 쓰는 상태, editortooldefaults 는 기본값과 다른 값이 있을 때만 생긴다).
+    // 임포트 설정 둘(editortooldefaults 는 기본값과 다른 값이 있을 때만 생긴다). 앱이 쓰는 상태는 Saved/Editor 에 있다.
     SW_EXPECT_TRUE_MSG( loadedCount >= 2u, "읽은 에디터 설정 파일이 " + to_string( loadedCount ) + " 개뿐입니다" );
 }
