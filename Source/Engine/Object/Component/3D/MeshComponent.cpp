@@ -3,6 +3,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -26,6 +27,7 @@ namespace sw
         , _meshId{}
         , _materialPath{}
         , _acquiredMaterialPath{}
+        , _requestedMaterialPath{}
         , _resolvedMeshId{}
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
@@ -63,22 +65,31 @@ namespace sw
     void MeshComponent::resolveMaterialAsset()
     {
         const hashed_string path = _materialPath.empty() ? getDefaultMaterialPath() : _materialPath;
-        if ( path == _acquiredMaterialPath || engine::areEngineServicesBound() == false )
+        if ( path == _requestedMaterialPath || engine::areEngineServicesBound() == false )
             return;
+        _requestedMaterialPath = path;
 
         MaterialCache& cache     = engine::getAssetManager().getMaterialManager();
         Material*      pMaterial = nullptr;
+        hashed_string  borrowedPath{};
         if ( path.empty() == false )
         {
-            pMaterial = cache.acquire( path.c_str(), nullptr );
+            pMaterial    = cache.acquire( path.c_str(), nullptr );
+            borrowedPath = path;
+            if ( pMaterial == nullptr )
+            {
+                // 못 읽은 머티리얼은 마젠타 체커로 보인다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다.
+                const string& missingPath = engine::getEngineDefaultAssets()._missingMaterial;
+                SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the missing-material checker '%#'", path.c_str(), missingPath.c_str() );
+                borrowedPath = missingPath.empty() ? hashed_string{} : hashed_string( missingPath.c_str() );
+                pMaterial    = borrowedPath.empty() ? nullptr : cache.acquire( borrowedPath.c_str(), nullptr );
+            }
             if ( pMaterial != nullptr )
-                cache.requestInitialize( path.c_str() );
-            else
-                SW_LOG_WARNING( "Material '%#' could not be acquired - the mesh uses the scene default", path.c_str() );
+                cache.requestInitialize( borrowedPath.c_str() );
         }
 
         const hashed_string previousPath = _acquiredMaterialPath;
-        _acquiredMaterialPath            = ( pMaterial != nullptr ) ? path : hashed_string{};
+        _acquiredMaterialPath            = ( pMaterial != nullptr ) ? borrowedPath : hashed_string{};
         setMaterial( pMaterial );
         if ( previousPath.empty() == false )
             cache.release( previousPath.c_str() );
@@ -117,6 +128,7 @@ namespace sw
                 engine::getAssetManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
             _acquiredMaterialPath = hashed_string{};
         }
+        _requestedMaterialPath = hashed_string{};
         SceneComponent::onUnregister( manager );
     }
 

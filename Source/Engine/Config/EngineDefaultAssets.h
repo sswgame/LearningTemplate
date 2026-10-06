@@ -27,6 +27,10 @@ namespace sw
         PROPERTY()
         string _defaultMaterial{ "engine/materials/defaultmaterial.material" }; ///< 씬 폴백 머티리얼
         PROPERTY()
+        string _missingMaterial{ "engine/materials/missingmaterial.material" }; ///< 못 읽은 머티리얼 대신 쓰는 마젠타 체커(비어 있으면 씬 기본)
+        PROPERTY()
+        string _missingTexture{ "engine/textures/missing.dds" }; ///< 못 읽은 텍스처 대신 샘플하는 마젠타 체커(비어 있으면 흰색)
+        PROPERTY()
         string _shellInputMap{ "engine/input/default.input.xml" }; ///< App 셸 InputMap
         PROPERTY()
         string _uiInputMap{ "engine/input/ui.input.xml" }; ///< 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다)

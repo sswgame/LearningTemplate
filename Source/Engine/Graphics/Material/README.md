@@ -185,6 +185,8 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 **`Material::forgetRhi` 는 `releaseRhi` 와 같은 상태를 남겨야 합니다.** 빌린 텍스처 목록이 남으면 DirectX 11과 OpenGL의 t5..t8 서수가 밀립니다.
 디바이스 세대 번호나 "전체 GPU 해제", "전체 재초기화" 같은 함수를 다시 만들지 않습니다. 디바이스 수명은 `RHIRenderResource` 통보가 처리합니다.
 
+**화면에 마젠타 · 검정 체커가 보이면 렌더러보다 데이터 경로를 먼저 봅니다.** 못 읽은 텍스처는 `EngineDefaultAssets::_missingTexture`, 못 읽은 머티리얼은 `_missingMaterial` 을 빌립니다(Shipping 도 같습니다). 머티리얼은 요청 경로(`_listAcquiredTexturePath`)와 실제로 빌린 경로(`_listBorrowedTexturePath`)를 따로 적고, 찾기 · 놓기는 빌린 경로로 합니다. 그 텍스처 파일을 나중에 만들어도 핫 리로드는 체커를 바꾸지 않습니다 — 캐시에 있는 경로만 다시 읽으므로 머티리얼을 다시 엽니다. `MeshComponent` 는 요청 경로(`_requestedMaterialPath`)를 기억해 같은 요청을 다시 시도 · 경고하지 않습니다.
+
 **셰이더를 다시 쿠킹하면 머티리얼 상수 버퍼가 커질 수 있습니다.** `MaterialInstance` 는 `_constantByteSize` 로 버퍼를 다시 만듭니다. 상수 버퍼 필드 크기는 리플렉션, 쓰는 크기는 XML의 `shaderType` 에서 오므로 둘이 어긋나면 옆 프로퍼티의 색이 오염됩니다.
 
 ## 더 볼 곳

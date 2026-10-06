@@ -24,6 +24,8 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_defaultMaterial` | `string` | `engine/materials/defaultmaterial.material` |  |  | 씬 폴백 머티리얼 |
+| `_missingMaterial` | `string` | `engine/materials/missingmaterial.material` |  |  | 못 읽은 머티리얼 대신 쓰는 마젠타 체커(비어 있으면 씬 기본) |
+| `_missingTexture` | `string` | `engine/textures/missing.dds` |  |  | 못 읽은 텍스처 대신 샘플하는 마젠타 체커(비어 있으면 흰색) |
 | `_shellInputMap` | `string` | `engine/input/default.input.xml` |  |  | App 셸 InputMap |
 | `_uiInputMap` | `string` | `engine/input/ui.input.xml` |  |  | 런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다) |
 | `_userSettingsSchema` | `string` | `engine/settings/engine.settings.xml` |  |  | 플레이어 옵션 메뉴의 엔진 설정 스키마(`UserSettingsManager`) |

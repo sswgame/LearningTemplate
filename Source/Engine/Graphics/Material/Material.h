@@ -269,7 +269,8 @@ namespace sw
         RHIBackend                 _shaderLayoutBackend;         /**< 레이아웃을 맞춘 백엔드. `_bShaderLayoutSynced` 일 때만 뜻이 있다 */
         IRHIDevice*                _pRHIDevice;
         uint32                     _textureReloadGeneration; ///< SRV 인덱스를 받을 때의 `TextureCache::getReloadGeneration()`
-        vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 빌린 경로. releaseTextureAssets 가 그대로 돌려줌
+        vector<string>             _listAcquiredTexturePath; ///< resolveTextureAssets 가 해석한 요청 경로(프로퍼티의 assetPath). refreshTextureBindings 가 프로퍼티와 맞춘다
+        vector<string>             _listBorrowedTexturePath; ///< 위와 같은 순서로 캐시에서 실제로 빌린 경로(못 읽으면 누락 텍스처). find · release 가 쓴다
         vector<RHIDescriptorIndex> _listMaterialTextureSrv;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>      _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         RHIBlendMode               _blendMode;

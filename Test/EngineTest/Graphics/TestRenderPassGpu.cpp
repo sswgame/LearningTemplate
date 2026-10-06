@@ -4420,6 +4420,53 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceOverridesReachTheGpuOnEveryBackend )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 못 읽은 텍스처는 마젠타 체커(`EngineDefaultAssets::_missingTexture`)를 샘플한다 (4 백엔드)
+ * @details 흰색으로 샘플하면 경고 로그 말고는 빠진 것을 알 수 없다 — 언리얼 · 유니티 · Godot 처럼 체커를 빌린다. 요청 경로와 실제로 빌린 경로가
+ *          다르므로 슬롯은 체커의 SRV 여야 하고, 놓을 때도 빌린 경로(체커)로 돌려줘야 한다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, MissingTextureSamplesTheChecker )
+{
+    SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
+    constexpr const utf8* kPresentTexture = "engine/textures/test/checker.dds";
+    constexpr const utf8* kAbsentTexture  = "engine/textures/test/doesnotexist.dds";
+    sw::string            xml;
+    SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( "engine/materials/benchtextured.material", xml ) );
+    SW_ASSERT_TRUE( xml.find( kPresentTexture ) != sw::string::npos );
+    xml                             = sw::StringUtil::replace( xml, kPresentTexture, kAbsentTexture );
+    const sw::string missingTexture = sw::engine::getEngineDefaultAssets()._missingTexture;
+    SW_ASSERT_FALSE( missingTexture.empty() );
+
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        const sw::string             label       = sw::string( device->getBackendName() ) + ": ";
+        sw::TextureCache&            textures    = sw::engine::getAssetManager().getTextureManager();
+        const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
+        sw::shared_ptr<sw::Material> material    = sw::Material::create();
+        SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
+        SW_ASSERT_TRUE( material->loadFromXml( xml ) ); // albedoMap 만 없는 파일을 가리킨다
+        material->releaseTextureAssets( device.get() );
+        {
+            SW_TEST_DEFENSIVE_SCOPE( "the material names a texture that does not exist" );
+            material->resolveTextureAssets( device.get() );
+        }
+
+        const sw::Texture2D* pChecker = textures.find( missingTexture );
+        SW_ASSERT_TRUE_MSG( pChecker != nullptr, ( label + "못 읽은 텍스처 대신 누락 텍스처를 빌리지 않았습니다" ).c_str() );
+        const uint32 slot = material->findTextureSlot( sw::hashed_string( "albedoMap" ) );
+        SW_ASSERT_TRUE_MSG( slot < material->getMaterialTextureSrvs().size(), ( label + "albedoMap 이 슬롯 목록에 없습니다 — 흰색으로 샘플합니다" ).c_str() );
+        SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs()[slot] == pChecker->getSrv(), ( label + "albedoMap 슬롯이 누락 텍스처가 아닙니다" ).c_str() );
+
+        material->releaseRhi( device.get() );
+        if ( bHeldBefore == false )
+            SW_EXPECT_TRUE_MSG( textures.find( missingTexture ) == nullptr, ( label + "빌린 누락 텍스처를 돌려주지 않았습니다(요청 경로로 놓았다)" ).c_str() );
+    }
+
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the missing texture test" );
+}
+
+/**
  * @brief [RenderPassGpuTest] 깊이 프리패스를 넣어도 같은 그림이 나온다 — 깊이 첨부 이름을 바꿔도
  * @details 깊이 프리패스가 깨지는 방식: (1) 프리패스가 그림자와 같은 셰이더 변형으로 그리면 장면 깊이에 **광원 공간**의 깊이를 쓰고,
  *          (2) 깊이 비교가 Less 면 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 모두 탈락한다(LessEqual 이어야 한다). 언리얼 EarlyZ · 유니티

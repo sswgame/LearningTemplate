@@ -201,8 +201,9 @@ namespace sw
         /** @brief 저장되는 머티리얼 참조입니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default" )
         hashed_string _materialPath;
-        hashed_string _acquiredMaterialPath; ///< 캐시에서 잡아 둔 경로(저장하지 않습니다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이것으로 놓습니다
-        hashed_string _resolvedMeshId;       ///< `_mesh` 가 어느 메시 id 의 것인지(저장하지 않습니다). 지금 id 와 다르면 다시 잡습니다
+        hashed_string _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로(저장하지 않습니다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이것으로 놓습니다
+        hashed_string _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로(저장하지 않습니다). 누락 머티리얼로 대신한 뒤에도 같은 요청을 다시 시도 · 경고하지 않습니다
+        hashed_string _resolvedMeshId;        ///< `_mesh` 가 어느 메시 id 의 것인지(저장하지 않습니다). 지금 id 와 다르면 다시 잡습니다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Units = m )
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )

@@ -189,6 +189,24 @@
        "description": "씬 폴백 머티리얼"
       },
       {
+       "name": "_missingMaterial",
+       "type": "string",
+       "default": "engine/materials/missingmaterial.material",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "못 읽은 머티리얼 대신 쓰는 마젠타 체커(비어 있으면 씬 기본)"
+      },
+      {
+       "name": "_missingTexture",
+       "type": "string",
+       "default": "engine/textures/missing.dds",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "못 읽은 텍스처 대신 샘플하는 마젠타 체커(비어 있으면 흰색)"
+      },
+      {
        "name": "_shellInputMap",
        "type": "string",
        "default": "engine/input/default.input.xml",

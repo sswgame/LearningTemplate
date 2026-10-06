@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -60,6 +61,7 @@ namespace sw
         , _pRHIDevice{ nullptr }
         , _textureReloadGeneration{ 0 }
         , _listAcquiredTexturePath{}
+        , _listBorrowedTexturePath{}
         , _listMaterialTextureSrv{}
         , _listMaterialTextureName{}
         , _blendMode{ RHIBlendMode::Opaque }
@@ -148,12 +150,21 @@ namespace sw
         {
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath.empty() )
                 continue;
-            Texture2D* pTexture = textures.acquire( prop._assetPath, pRhi );
+            // 못 읽은 텍스처는 마젠타 체커를 빌린다 — 흰색이면 화면에서 빠진 것을 알 수 없다(Shipping 도 같다).
+            string     borrowedPath = prop._assetPath;
+            Texture2D* pTexture     = textures.acquire( borrowedPath, pRhi );
             if ( pTexture == nullptr )
             {
-                SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded — sampling falls back to white.",
-                                _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
-                continue;
+                borrowedPath = engine::getEngineDefaultAssets()._missingTexture;
+                pTexture     = borrowedPath.empty() ? nullptr : textures.acquire( borrowedPath, pRhi );
+                if ( pTexture == nullptr )
+                {
+                    SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded and neither could the missing-texture checker — sampling falls back to white.",
+                                    _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str() );
+                    continue;
+                }
+                SW_LOG_WARNING( "Material '%#': texture '%#' for '%#' could not be loaded — sampling the missing-texture checker '%#'.",
+                                _desc._name.c_str(), prop._assetPath.c_str(), prop._name.c_str(), borrowedPath.c_str() );
             }
 
             const uint32 ordinal = static_cast<uint32>( _listMaterialTextureSrv.size() );
@@ -161,11 +172,12 @@ namespace sw
             {
                 SW_LOG_WARNING( "Material '%#': 이 백엔드는 머티리얼 텍스처를 %#개까지만 바인딩합니다 — '%#' 는 흰색으로 남습니다.",
                                 _desc._name.c_str(), shaderslot::kMaterialTextureCount, prop._name.c_str() );
-                textures.release( prop._assetPath, pRhi );
+                textures.release( borrowedPath, pRhi );
                 continue;
             }
 
             _listAcquiredTexturePath.push_back( prop._assetPath );
+            _listBorrowedTexturePath.push_back( std::move( borrowedPath ) );
             _listMaterialTextureSrv.push_back( pTexture->getSrv() );
             _listMaterialTextureName.emplace_back( prop._name.c_str() );
             setTextureParameter( pRhi, hashed_string( prop._name.c_str() ), bNativeBindless ? pTexture->getSrv() : ordinal );
@@ -189,11 +201,11 @@ namespace sw
         size_t     ordinal{ 0 };
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            if ( ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listMaterialTextureSrv.size() )
+            if ( ordinal >= _listAcquiredTexturePath.size() || ordinal >= _listBorrowedTexturePath.size() || ordinal >= _listMaterialTextureSrv.size() )
                 break;
             if ( MaterialUtil::isTextureType( prop._type ) == false || prop._assetPath != _listAcquiredTexturePath[ordinal] )
                 continue;
-            const Texture2D*         pTexture = textures.find( prop._assetPath );
+            const Texture2D*         pTexture = textures.find( _listBorrowedTexturePath[ordinal] );
             const RHIDescriptorIndex srv      = pTexture != nullptr ? pTexture->getSrv() : kInvalidDescriptorIndex;
             if ( srv != _listMaterialTextureSrv[ordinal] )
             {
@@ -224,10 +236,11 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             TextureCache& textures = engine::getAssetManager().getTextureManager();
-            for ( const string& path : _listAcquiredTexturePath )
+            for ( const string& path : _listBorrowedTexturePath )
                 textures.release( path, pRhi );
         }
         _listAcquiredTexturePath.clear();
+        _listBorrowedTexturePath.clear();
         _listMaterialTextureSrv.clear();
         _listMaterialTextureName.clear();
         for ( MaterialProperty& prop : _data._listProperty )

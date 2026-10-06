@@ -6,6 +6,7 @@
 | `textures_raw/terrain/terrain_detail.png` | `Scripts/dev/MakeTerrainShowcase.py` 가 만든 절차 생성 데이터 | 이 저장소 |
 | `textures_raw/perlin.png` | `Scripts/dev/MakeNoiseTexture.py` 가 만든 이음매 없는 Perlin 잡음(채널마다 다른 씨앗) | 이 저장소 |
 | `textures_raw/random/grass.jpg` | ambientCG "Grass001" (<https://ambientcg.com/a/Grass001>) — `Grass001_1K-JPG_Color.jpg` 를 1024 → 512 로 줄임(Lanczos, JPEG 품질 92) | CC0 1.0 |
+| `textures/missing.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 누락 표시 체커(마젠타 · 검정) | 이 저장소 |
 | `textures/test/quadrants.dds` | `Scripts/generate/GenerateSpriteTextures.py` 가 만든 네 칸 시험 텍스처 | 이 저장소 |
 | `textures/test/checker.dds` · `textures/test/pixelstripes.dds` | 이 저장소에서 만든 시험 패턴(체커 · 줄무늬 — 커밋 `6361d2d54` · `bb857b284`) | 이 저장소 |
 

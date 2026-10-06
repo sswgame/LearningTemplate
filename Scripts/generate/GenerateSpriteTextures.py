@@ -2,6 +2,8 @@
 
   - `engine/textures/test/quadrants.dds` + `quadrants.sprite.json` — 네 칸(왼쪽 위 빨강 · 오른쪽 위 초록 · 왼쪽 아래 파랑 · 오른쪽 아래 흰색)
     시험 텍스처입니다. 인스턴스마다 다른 UV 사각형 · 색을 픽셀로 확인하는 시험(RenderPassGpuTest)과 확인용 씬의 애니메이션 아틀라스가 씁니다.
+  - `engine/textures/missing.dds` — 마젠타 · 검정 체커(64x64, 16 텍셀 칸). 못 읽은 텍스처 · 머티리얼 대신 샘플합니다
+    (`EngineDefaultAssets::_missingTexture` · `missingmaterial.material`).
 
 엔진은 실행 중에 DDS 만 읽으므로(`DdsLoader`) PNG 가 아니라 DDS 를 씁니다. 같은 입력이면 바이트까지 같은 파일이 나옵니다.
 
@@ -22,6 +24,11 @@ kQuadrantSize = 64       # 시험 텍스처 한 변(텍셀). 칸 하나가 32x32
 kQuadrantColors = ((255, 0, 0, 255), (0, 255, 0, 255), (0, 0, 255, 255), (255, 255, 255, 255))  # 왼위 · 오위 · 왼아래 · 오아래
 
 kQuadrantsTexturePath = "engine/textures/test/quadrants.dds"
+
+kMissingTextureSize = 64        # 누락 텍스처 한 변(텍셀)
+kMissingCellSize = 16           # 체커 칸 한 변 — 4x4 칸. 칸이 작으면 멀리서 회색으로 뭉개져 눈에 안 띈다
+kMissingColors = ((255, 0, 255, 255), (0, 0, 0, 255))  # 마젠타 · 검정 — 유니티 · 소스 엔진의 누락 표시 색
+kMissingTexturePath = "engine/textures/missing.dds"
 
 
 def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes:
@@ -51,6 +58,16 @@ def makeQuadrantTextureInternal():
     return kQuadrantSize, kQuadrantSize, pixels, listFrame
 
 
+def makeMissingTextureInternal():
+    """누락 텍스처(마젠타 · 검정 체커)의 픽셀을 만듭니다."""
+    pixels = bytearray()
+    for y in range(kMissingTextureSize):
+        for x in range(kMissingTextureSize):
+            cell = (x // kMissingCellSize + y // kMissingCellSize) % 2
+            pixels += bytes(kMissingColors[cell])
+    return kMissingTextureSize, kMissingTextureSize, pixels
+
+
 def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
     """`SpriteClipAsset::toJson` 과 같은 키 · 순서의 클립 글을 만듭니다(atlas · frames · transformKeys · 있으면 animations)."""
     clip = {"atlas": atlasPath, "frames": listFrame, "transformKeys": []}
@@ -67,7 +84,7 @@ def writeFileInternal(path: str, data: bytes) -> None:
 
 
 def generate(repositoryRoot: str) -> None:
-    """두 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
+    """세 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
     resourceRoot = os.path.join(repositoryRoot, "Resource")
 
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
@@ -75,6 +92,8 @@ def generate(repositoryRoot: str) -> None:
     listAnimation = [{"name": "cycle", "start": 0, "count": 4, "loop": True}]
     writeFileInternal(os.path.join(resourceRoot, "engine/textures/test/quadrants.sprite.json"),
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
+    width, height, pixels = makeMissingTextureInternal()
+    writeFileInternal(os.path.join(resourceRoot, kMissingTexturePath), makeDdsBytes(width, height, pixels))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
