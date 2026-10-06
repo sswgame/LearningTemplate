@@ -262,6 +262,18 @@ namespace sw
         _listClip.push_back( state );
     }
 
+    bool CanvasPainter::isOutsideClip( const CanvasTransform& transform, const float2& size ) const
+    {
+        if ( _listClip.empty() )
+            return false;
+        const CanvasTransform combined = _listTransform.empty() ? transform : _listTransform.back().makeConcatenated( transform );
+        CanvasQuad            bounds{};
+        bounds._rect         = float4{ combined._translation._x * _uiScale, combined._translation._y * _uiScale, size._x * _uiScale, size._y * _uiScale };
+        bounds._axis         = float4{ combined._axisX._x, combined._axisX._y, combined._axisY._x, combined._axisY._y };
+        const float4 overlap = CanvasPainterInternal::intersect( CanvasPainterInternal::computeBounds( bounds ), _listClip.back()._bounds );
+        return overlap._z <= overlap._x || overlap._w <= overlap._y;
+    }
+
     void CanvasPainter::popClip()
     {
         SW_LOG_ASSERT( _listClip.empty() == false, "popClip without pushClip" );

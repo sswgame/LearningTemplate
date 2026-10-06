@@ -728,3 +728,62 @@ SW_TEST_CASE( UiPaintTest, ActionTagFollowsInputDevice )
     SW_EXPECT_STREQ( ( input.getInputMap().getGlyphForAction( "Interact", sw::InputGlyphStyle::GamepadXbox ) + " open" ).c_str(), pText->getDisplayText().c_str() );
     input.shutdown();
 }
+
+/**
+ * @brief [UiPaintTest] 자르는 패널 밖에 통째로 있는 자식은 걷지도 칠하지도 않고, 밖에 있는 동안 배율이 바뀌었으면 다시 보일 때 새 배율로 다시 칠한다
+ * @details 위젯 1 만 칸 스크롤 목록의 그리기가 보이는 칸만큼만 들게 하는 컬링(Slate 의 자식 컬링). 변이: `UiPaintPass::paintChild` 가 컬링 때 비트를 남기지 않으면
+ *          배율을 바꾼 뒤 다시 보인 상자가 옛 배율 캐시로 남아(칠한 수 1 · 높이 10) 진다. 컬링을 끄면 밖의 상자도 칠해 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ClippedOutChildrenAreNotPainted )
+{
+    UiPaintFixture   fixture( 400.0f, 400.0f );
+    sw::CanvasPanel* pRoot = fixture.setRoot<sw::CanvasPanel>();
+    sw::BoxPanel*    pList = static_cast<sw::BoxPanel*>( pRoot->addChild( sw::make_unique<sw::BoxPanel>() ) );
+    pList->setOrientation( sw::UiOrientation::Vertical );
+    pList->setClipChildren( true );
+    UiWidgetTestUtil::pin( *pList, 0.0f, 0.0f, 100.0f, 200.0f ); // 처음은 모두 보인다(상자 높이 10 × 10)
+    sw::vector<TestPaintWidget*> listBox;
+    for ( uint32 index = 0; index < 10; ++index )
+        listBox.push_back( UiPaintFixture::addBox( *pList, sw::hashed_string( "box" + sw::to_string( index ) ), sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( 1u, listBox[9]->getPaintCount() );
+    SW_EXPECT_EQUAL( size_t{ 10 }, fixture._canvas._listQuad.size() );
+
+    UiWidgetTestUtil::pin( *pList, 0.0f, 0.0f, 100.0f, 50.0f ); // 다섯만 보인다
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( size_t{ 5 }, fixture._canvas._listQuad.size() );
+
+    fixture._paintContext._uiScale = 2.0f; // 보이는 다섯은 다시 칠하고, 밖의 다섯은 이 강제 칠하기를 비트로 받는다
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( 2u, listBox[0]->getPaintCount() );
+    SW_EXPECT_EQUAL( 1u, listBox[9]->getPaintCount() );
+
+    UiWidgetTestUtil::pin( *pList, 0.0f, 0.0f, 100.0f, 200.0f ); // 다시 모두 보인다
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( 2u, listBox[9]->getPaintCount() );
+    SW_ASSERT_EQUAL( size_t{ 10 }, fixture._canvas._listQuad.size() );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, fixture._canvas._listQuad[9]._rect._w, 1e-3f ); // 새 배율(높이 10 × 2)
+}
+
+/**
+ * @brief [UiPaintTest] 바뀐 것이 없는 트리는 걷지 않고 지난 목록을 내고, 자식을 떼기만 해도(다른 위젯의 기하가 그대로여도) 그 그림이 목록에서 빠진다
+ * @details 트리 출력 재사용의 조건은 "지난 걷기 뒤 무효화가 하나도 없음" 이다. 변이: `WidgetTree::notifyDirty` 가 출력을 낡음으로 적지 않으면 뗀 상자의 사각형이 남아 진다.
+ */
+SW_TEST_CASE( UiPaintTest, UnchangedTreeReusesOutputAndRemovalClearsIt )
+{
+    UiPaintFixture   fixture( 400.0f, 400.0f );
+    sw::CanvasPanel* pRoot  = fixture.setRoot<sw::CanvasPanel>();
+    TestPaintWidget* pFirst = UiPaintFixture::addBox( *pRoot, sw::hashed_string( "first" ), sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } );
+    TestPaintWidget* pLast  = UiPaintFixture::addBox( *pRoot, sw::hashed_string( "last" ), sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f } );
+    UiWidgetTestUtil::pin( *pFirst, 0.0f, 0.0f, 20.0f, 10.0f );
+    UiWidgetTestUtil::pin( *pLast, 100.0f, 0.0f, 20.0f, 10.0f );
+    (void)fixture.runFrame();
+    SW_EXPECT_EQUAL( size_t{ 2 }, fixture._canvas._listQuad.size() );
+    SW_EXPECT_EQUAL( 0u, fixture.runFrame() ); // 바뀐 것 없음 — 같은 목록
+    SW_EXPECT_EQUAL( size_t{ 2 }, fixture._canvas._listQuad.size() );
+
+    (void)pRoot->removeChild( pLast ); // 캔버스 패널의 자리는 그대로 — 레이아웃만 무효화된다
+    (void)fixture.runFrame();
+    SW_ASSERT_EQUAL( size_t{ 1 }, fixture._canvas._listQuad.size() );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._canvas._listQuad[0]._color._x, 1e-4f );
+}

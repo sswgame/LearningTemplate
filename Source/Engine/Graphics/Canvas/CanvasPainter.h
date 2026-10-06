@@ -118,6 +118,12 @@ namespace sw
          */
         void pushClip( const float2& position, const float2& size, float32 cornerRadius );
         void popClip();
+        /**
+         * @brief 지금 변환 뒤에 @p transform 을 건 원점 사각형(크기 @p size, UI 단위)이 지금 자르기 밖에 통째로 있으면 true 입니다. 자르기가 없으면 늘 false 입니다.
+         * @details 위젯 그리기가 스크롤 밖 위젯을 걷지 않는 데 씁니다(Slate 의 자식 컬링과 같다 — 위젯 사각형 기준, 그림자 · 넘친 자손은 보지 않는다).
+         *          변환 스택을 건드리지 않는다 — 1 만 칸 목록에서 칸마다 부르는 값싼 길이다.
+         */
+        bool isOutsideClip( const CanvasTransform& transform, const float2& size ) const;
         /** @brief 변환을 쌓습니다(지금 변환 뒤에 건다). */
         void pushTransform( const CanvasTransform& transform );
         void popTransform();

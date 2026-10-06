@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/UiFocusManager.h"
 
@@ -45,6 +46,8 @@ namespace sw
         , _layoutSafeInsets{}
         , _paintUiScale{ 0.0f }
         , _paintAtlasGeneration{ 0 }
+        , _paintOutput{}
+        , _bPaintOutputStale{ SW_TRUE }
     {
     }
 
@@ -89,6 +92,7 @@ namespace sw
     {
         const uint32 previous = widget._dirtyFlags;
         widget._dirtyFlags |= dirtyReason;
+        _bPaintOutputStale = SW_TRUE; // 무엇이든 바뀌면 다음 그리기는 트리를 걷는다(자식을 떼기만 한 것도 — 레이아웃만 무효화한다)
         if ( ( dirtyReason & WidgetDirty::kVisibility ) != 0 )
             widget._dirtyFlags |= WidgetDirty::kLayout | WidgetDirty::kPaint; // Collapsed 를 오가면 자리가 바뀐다 — 보수적으로 레이아웃
         const uint32 kPaintLike = WidgetDirty::kPaint | WidgetDirty::kTransform;
@@ -140,6 +144,7 @@ namespace sw
         _listLayoutDirtyRoot.clear();
         _listPaintDirty.clear();
         _listStyleDirty.clear();
+        _bPaintOutputStale = SW_TRUE;
     }
 
     void WidgetTree::collectWidgetsInDocumentOrder( vector<Widget*>& outListWidget ) const

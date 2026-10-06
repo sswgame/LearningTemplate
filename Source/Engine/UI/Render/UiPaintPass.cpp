@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
@@ -21,6 +22,8 @@ namespace sw
             static constexpr uint32 kSelfPaintBits = WidgetDirty::kPaint | WidgetDirty::kTransform | WidgetDirty::kStyle | WidgetDirty::kVisibility;
             /** @brief 자손까지 다시 칠하게 하는 무효화입니다 — 불투명도 · 렌더 변환은 자손 캐시에 구워져 있다. */
             static constexpr uint32 kSubtreePaintBits = WidgetDirty::kTransform | WidgetDirty::kVisibility;
+            /** @brief 자르기 밖이라 걷지 않은 위젯에 남기는 비트 — 다시 보일 때 자기와 자손을 다시 칠한다(배율 · 아틀라스가 바뀐 뒤의 옛 캐시). */
+            static constexpr uint32 kCulledRepaintBits = WidgetDirty::kTransform;
             /** @brief 걷기가 끝나면 지우는 비트입니다. */
             static constexpr uint32 kClearBits = kSelfPaintBits;
 
@@ -45,11 +48,24 @@ namespace sw
         tree._paintUiScale         = context._uiScale;
         tree._paintAtlasGeneration = context._atlasGeneration;
 
+        // 지난 걷기 뒤 트리에 무효화가 하나도 없고 배율 · 아틀라스도 그대로면 걷지 않고 지난 목록을 낸다(멈춘 HUD · 메뉴가 위젯 수와 무관하게 이어 붙이기 한 번).
+        if ( tree._paintOutput == nullptr )
+            tree._paintOutput = make_unique<CanvasDrawList>();
+        CanvasDrawList& output = *tree._paintOutput;
+        if ( tree._bPaintOutputStale == SW_FALSE && bScaleChanged == false && bAtlasChanged == false && output._targetSize == outCanvas._targetSize )
+        {
+            outCanvas.appendDrawList( output );
+            return 0;
+        }
+        output.clear();
+        output._targetSize   = outCanvas._targetSize;
         uint32  paintedCount = 0;
         Widget* pRoot        = tree.getRoot();
         if ( pRoot != nullptr )
-            paintedCount = paintWidget( *pRoot, context, painter, outCanvas, bScaleChanged, bAtlasChanged );
+            paintedCount = paintWidget( *pRoot, context, painter, output, bScaleChanged, bAtlasChanged );
         painter.setDrawList( outCanvas );
+        outCanvas.appendDrawList( output );
+        tree._bPaintOutputStale = SW_FALSE;
         // 그리기 · 스타일 목록은 이번 걷기가 다 봤다(안 보이는 아래는 비트가 남아 다시 보일 때 칠한다).
         tree._listPaintDirty.clear();
         tree._listStyleDirty.clear();
@@ -122,12 +138,12 @@ namespace sw
                 vector<uint32> listOrder;
                 pPanel->collectPaintOrder( listOrder );
                 for ( const uint32 index : listOrder )
-                    paintedCount += paintWidget( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
+                    paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
             }
             else
             {
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
-                    paintedCount += paintWidget( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
+                    paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
             }
             if ( bClip )
                 painter.popClip();
@@ -139,6 +155,22 @@ namespace sw
         painter.popOpacity();
         widget._dirtyFlags &= ~Internal::kClearBits;
         return paintedCount;
+    }
+
+    uint32 UiPaintPass::paintChild( Widget& widget, const UiPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,
+                                    bool bAtlasChanged )
+    {
+        // 자르는 조상 밖에 통째로 있는 자식은 걷지 않는다 — 더러운 비트 · 강제 칠하기는 위젯에 남아 다시 보일 때 칠한다(스크롤 목록 1 만 칸이 보이는 칸만큼만 든다).
+        // 강제(배율 · 아틀라스가 바뀜)는 걷지 않은 위젯에 비트로 남긴다 — 다음에 보일 때 그 그림 캐시는 옛 배율이라 다시 칠해야 한다.
+        const WidgetGeometry& geometry = widget.getGeometry();
+        const bool            bOutside = painter.isOutsideClip( makeWidgetTransform( geometry ), geometry._size );
+        if ( bOutside )
+        {
+            if ( bForce || bAtlasChanged )
+                widget._dirtyFlags |= UiPaintPassInternal::kCulledRepaintBits;
+            return 0;
+        }
+        return paintWidget( widget, context, painter, outCanvas, bForce, bAtlasChanged );
     }
 
     void UiPaintPass::repaintCache( const Widget& widget, const UiPaintContext& context, CanvasPainter& painter, const CanvasDrawList& outCanvas,

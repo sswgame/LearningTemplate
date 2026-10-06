@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    struct CanvasDrawList;
+
     class UiFocusManager;
     class UiScreen;
 
@@ -113,5 +115,7 @@ namespace sw
         float4                                                         _layoutSafeInsets;     ///< 지난 레이아웃 걷기의 안전 영역(바뀌면 루트부터 다시 놓는다)
         float32                                                        _paintUiScale;         ///< 지난 그리기 걷기의 UI 배율(바뀌면 모든 그림 캐시를 다시 — 픽셀이 바뀐다)
         uint32                                                         _paintAtlasGeneration; ///< 지난 그리기 걷기의 글리프 아틀라스 세대(바뀌면 글 위젯을 다시)
+        unique_ptr<CanvasDrawList>                                     _paintOutput;          ///< 지난 그리기 걷기가 이어 붙인 트리 전체의 목록(바뀐 것이 없으면 걷지 않고 이것을 낸다)
+        uint8                                                          _bPaintOutputStale;    ///< 지난 걷기 뒤 무효화가 하나라도 있었다(구조 · 레이아웃 · 스타일 · 그리기 무엇이든)
     };
 } // namespace sw

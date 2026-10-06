@@ -79,6 +79,9 @@ namespace sw
         /** @brief 위젯 하나와 그 아래를 칠합니다. @p bForce 면 이 위젯과 자손을 모두 다시 칠합니다. 다시 칠한 수를 돌려준다. */
         static uint32 paintWidget( Widget& widget, const UiPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,
                                    bool bAtlasChanged );
+        /** @brief 패널의 자식 하나 — 지금 자르기 밖에 통째로 있으면 걷지 않고(강제 칠하기는 비트로 남긴다) 아니면 `paintWidget`. */
+        static uint32 paintChild( Widget& widget, const UiPaintContext& context, CanvasPainter& painter, CanvasDrawList& outCanvas, bool bForce,
+                                  bool bAtlasChanged );
         /** @brief 위젯 하나의 캐시(@p outCache)를 다시 칠합니다 — 목록을 비우고 위젯 변환 아래에서 @p bOver 에 따라 `paint` 또는 `paintOverChildren`. */
         static void repaintCache( const Widget& widget, const UiPaintContext& context, CanvasPainter& painter, const CanvasDrawList& outCanvas,
                                   CanvasDrawList& outCache, bool bOver );

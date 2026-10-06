@@ -526,3 +526,14 @@ UMG 는 부모 종류마다 슬롯 객체(`UCanvasPanelSlot` · `UHorizontalBoxS
   시험이 덤프의 위젯 이름으로 사각형을 찾아 알려진 영역(주 단추 가운데 = 강조색, 둥근 모서리 바깥 = 패널 바탕, 자르기 상자 밖 ≠ 잘린 빨강)을 단언하고, 영역마다 평균 색
   (≤ 0.02) · 가장자리 수(≤ 2 %)를 첫 백엔드와 견준다. 견본 위젯의 이름(`DemoPanel` · `Start` · `RoundBox` · `ClipBox` · `NineSlice` · `RtlSample`)을 바꾸면 그 시험도 바꾼다.
   `gv_uiDemo` · `gv_uiOptionsMenu` 는 Shipping 에도 등록된다(시나리오가 배포 실행 파일을 몬다 — hostgpu 는 Shipping 에서 돈다).
+
+## 성능
+
+- **벤치**: `App -gv_benchUiWidgets=10000 -gv_benchUiChurn=10 -gv_profileFrames=600`(Release, VSync 꺼짐 — 1/RT.Frame 이 주사율과 같지 않은지 먼저) — `Debug/UiBenchScreen` 이
+  스크롤 패널 안 줄 바꿈 격자(칸마다 테두리 · 아이콘 · 글, 고정 크기 = 레이아웃 경계)를 짓고 프레임마다 앞쪽 칸 M 개의 글을 바꾼다. Empty 게임의 `-gv_benchUiMarkers=K` 는
+  벤치 큐브에 화면 마커를 붙인다. 대조군은 같은 바이너리의 `-gv_benchUiChurn=0`. 숫자는 백로그 3-1.
+- **자르기 밖 자식은 걷지 않는다**(`UiPaintPass::paintChild` — Slate 의 자식 컬링): 자르는 조상(스크롤 · `_bClipChildren`)의 자르기 밖에 위젯 사각형이 통째로 있으면
+  그 가지를 걷지 않는다. 더러운 비트는 위젯에 남고, 그동안 배율 · 아틀라스가 바뀌었으면 비트를 하나 남겨 다시 보일 때 새로 칠한다. 위젯 사각형 기준이라 그림자 ·
+  넘친 자손은 보지 않는다(그것이 자르기 안으로 들어오는 모양은 잘린다).
+- **바뀌지 않은 트리는 걷지 않는다**: 트리는 지난 걷기의 출력(`WidgetTree::_paintOutput`)을 든다. 그 뒤 무효화가 하나도 없고(`notifyDirty` 가 무엇이든 낡음으로 적는다 —
+  자식을 떼기만 해 레이아웃만 무효화된 것도) 배율 · 아틀라스 · 대상 크기가 그대로면 그 목록을 이어 붙이기만 한다. 멈춘 HUD · 메뉴는 위젯 수와 무관하다.
