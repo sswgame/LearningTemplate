@@ -393,3 +393,38 @@ SW_TEST_CASE( UiBindingTest, DestroyedViewModelIsReleased )
     UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_STREQ( "Gone", pText->getText().c_str() );
 }
+
+/** @brief [UiBindingTest] 문서를 다시 읽어 트리를 새로 지어도 뷰모델은 화면에 남고, 새 위젯에 바인딩이 다시 걸린다 */
+SW_TEST_CASE( UiBindingTest, DocumentReloadRebindsViewModel )
+{
+    UiBindingFixture     fixture;
+    sw::UiDocumentCache& cache = fixture._ui.getDocumentCache();
+    cache.registerMemoryDocument( "test/binding/reload.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                                "\t<BoxPanel>\n"
+                                                                "\t\t<TextWidget _name=\"Label\" _text=\"{bind:_name}\" />\n"
+                                                                "\t</BoxPanel>\n"
+                                                                "</UiDocument>\n" );
+    TestHudViewModel viewModel;
+    viewModel._name       = "Before";
+    sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/binding/reload.ui.xml" ) );
+    SW_ASSERT_NOT_NULL( pScreen );
+    pScreen->setViewModel( &viewModel );
+    UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
+    SW_EXPECT_STREQ( "Before", pScreen->getTree().findWidget<sw::TextWidget>( "Label" )->getText().c_str() );
+
+    cache.registerMemoryDocument( "test/binding/reload.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                                "\t<BoxPanel>\n"
+                                                                "\t\t<TextWidget _name=\"Title\" _text=\"Title\" />\n"
+                                                                "\t\t<TextWidget _name=\"Label\" _text=\"{bind:_name}\" />\n"
+                                                                "\t</BoxPanel>\n"
+                                                                "</UiDocument>\n" );
+    cache.reload( "test/binding/reload.ui.xml", nullptr );
+    SW_EXPECT_TRUE( pScreen->getViewModel() == &viewModel );
+    UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
+    const sw::TextWidget* pLabel = pScreen->getTree().findWidget<sw::TextWidget>( "Label" );
+    SW_ASSERT_NOT_NULL( pLabel );
+    SW_EXPECT_STREQ( "Before", pLabel->getText().c_str() ); // 새 위젯에 다시 걸어 모든 칸을 썼다
+    viewModel.setName( "After" );
+    UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
+    SW_EXPECT_STREQ( "After", pLabel->getText().c_str() );
+}

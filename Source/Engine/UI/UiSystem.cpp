@@ -453,6 +453,8 @@ namespace sw
         screen._listBinding    = std::move( listBinding );
         screen._listStyleSheet = std::move( listStyleSheet );
         screen._lastFocused    = kInvalidWidgetId;
+        // 뷰모델은 화면이 그대로 든다 — 식이 새 위젯 번호를 가리키니 다음 바인딩 단계가 다시 걸고 모든 칸을 쓴다.
+        screen._bindingSet->markRebind();
         rebuildStyleSet( screen );
         // 스크롤 오프셋은 내용 크기 안으로 묶이므로 새 트리를 지금 한 번 맞추고 재 둔 뒤에 돌려준다.
         if ( screen._styleSet != nullptr )
