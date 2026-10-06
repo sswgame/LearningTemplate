@@ -186,7 +186,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`ConfigManager::getConfig<ServerConfig>` (전용 서버 기동, `-server-config=<경로>` 로 바꾼다)",
         readWhen="전용 서버 기동", shipping="**디스크에서 읽는다**(운영자가 고친다) — 없으면 Shipping 서버는 기동 실패", bCommitted=True,
         typeName="ServerConfig", header="Source/Engine/Config/ServerConfig.h", keyStyle=kKeyStyleJsonMember, bOptional=True,
-        note="비밀(DB 비밀번호 · 캐시 AUTH · 키 암호)은 파일에 쓰지 않는다 — `_secretEnvironment` 칸이 환경 변수 이름을 가리킨다"),
+        note="비밀(DB 비밀번호 · 캐시 AUTH · 키 암호)은 파일에 쓰지 않는다 — `_secretEnvironment` 필드가 환경 변수 이름을 가리킨다"),
     ConfigFileEntry(
         page="", pathPattern="Config/Server/chat_banned_words.txt", layer=kLayerServer, fileFormat="txt",
         reader="`ChatWordFilter::loadFile` (`GF_Server_Chat`)", readWhen="채팅 서비스 기동",

@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # ModelImportConfig
 
@@ -13,15 +13,15 @@
 | 배포본 | 없음(임포트는 Dev 만) |
 | 커밋 | 한다 |
 
-JSON 키는 아래 표의 키 그대로입니다. 모르는 키는 로드 오류입니다 — 읽기 코드가 이 표(`ConfigKeyDoc`)로 검사합니다.
+JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 오류이고, 읽기 코드가 이 테이블(`ConfigKeyDoc`)로 검사합니다.
 
-## 칸
+## 필드
 
 파일 뿌리입니다.
 
-정본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
+원본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `rules` | `object[]` | — |  |  | 규칙 목록(아래 키). 첫 매칭이 이긴다. 맞는 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL) |
 
@@ -29,9 +29,9 @@ JSON 키는 아래 표의 키 그대로입니다. 모르는 키는 로드 오류
 
 규칙 하나입니다. 적용 순서는 `translation` 다음 `recenter` — 스킨드 모델에는 둘 다 쓸 수 없다(바인드 행렬이 어긋난다).
 
-정본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
+원본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `name` | `string` | — |  |  | 규칙 이름(로그에 나온다) |
 | `include_patterns` | `string[]` | — |  |  | 맞아야 하는 와일드카드(`*` · `?`, 대소문자 무시) |
@@ -54,20 +54,20 @@ JSON 키는 아래 표의 키 그대로입니다. 모르는 키는 로드 오류
 
 `fracture` 객체입니다(`FractureSettings`).
 
-정본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
+원본: [`Source/Editor/Common/Asset/ModelImportConfig.cpp`](../../Source/Editor/Common/Asset/ModelImportConfig.cpp)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `pattern` | `string` | `uniform` |  |  | uniform · clustered(맞은 자리 둘레에 몰림) · slices(격자에 흔들림) |
 | `volume` | `string` | `mesh` |  |  | mesh(닫힌 메시) · bounds(경계 상자) · hull(볼록 껍질) — 닫히지 않은 모델의 대리 부피 |
 | `pieces` | `number` | `16` |  |  | 조각 수(uniform · clustered) |
 | `seed` | `number` | `1` |  |  | 씨앗 난수 |
-| `levels` | `number[]` | — |  |  | 묶음 레벨마다 묶음 수(위 → 아래), 비면 뿌리 하나 |
+| `levels` | `number[]` | — |  |  | 클러스터 레벨마다 클러스터 수(위 → 아래), 비면 뿌리 하나 |
 | `impact_point` | `number[3]` | `0, 0, 0` |  |  | clustered: 맞은 자리(메시 공간) |
 | `cluster_radius` | `number` | `0.5` |  |  | clustered: 몰리는 반경(미터) |
-| `cluster_fraction` | `number` | `0.7` |  |  | clustered: 반경 안에 놓을 씨앗 몫(0..1) |
-| `slices` | `number[3]` | `4, 1, 1` |  |  | slices: 축마다 칸 수 |
-| `slice_jitter` | `number` | `0.15` |  |  | slices: 칸 크기에 대한 흔들림(0..0.5) |
+| `cluster_fraction` | `number` | `0.7` |  |  | clustered: 반경 안에 놓을 씨앗 비율(0..1) |
+| `slices` | `number[3]` | `4, 1, 1` |  |  | slices: 축마다 셀 수 |
+| `slice_jitter` | `number` | `0.15` |  |  | slices: 셀 크기에 대한 흔들림(0..0.5) |
 | `interior_color` | `number[4]` | `0.62, 0.58, 0.52, 1` |  |  | 안쪽 면 정점 색 |
 | `interior_uv_scale` | `number` | `1` |  |  | 안쪽 면 UV 의 미터당 배율 |
 | `max_hull_points` | `number` | `48` |  |  | 조각 껍질 점의 상한 |

@@ -18,7 +18,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiOptionsMenu, false, "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 지은 탭 · 행(개발 확인 · 스크린샷)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiOptionsMenu, false, "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷)" );
 
 namespace sw
 {

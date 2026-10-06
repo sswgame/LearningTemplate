@@ -45,7 +45,7 @@ namespace sw
         PROPERTY()
         string _uiThemes{ "engine/ui/uithemes.xml" }; ///< 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다)
         PROPERTY()
-        string _uiOptionsMenu{ "engine/ui/options.ui.xml" }; ///< 옵션 메뉴 문서 — 설정 스키마에서 탭 · 행을 짓는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다)
+        string _uiOptionsMenu{ "engine/ui/options.ui.xml" }; ///< 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다)
         PROPERTY()
         string _uiPauseMenu{ "engine/ui/pause.ui.xml" }; ///< 일시정지 메뉴 문서 — 게임 프리셋이 `_bUiPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)
 

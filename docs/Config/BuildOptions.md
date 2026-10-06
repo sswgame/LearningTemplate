@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # CMake 빌드 옵션 (`SW_*`)
 
@@ -22,7 +22,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_ENABLE_TESTING` | BOOL | `ON` |  | 단위/통합 테스트 프로젝트 빌드 및 CTest 등록 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TIME_TRACE` | BOOL | `OFF` |  | Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_TRACY` | BOOL | `${swTracyDefault}` |  | Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
-| `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용 | CI-Debug, CI-Debug-ASAN, CI-Debug-TSAN 외 2 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_ENABLE_UNITY_BUILD` | BOOL | `OFF` |  | 대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용 | CI-Debug, CI-Debug-ASAN, CI-Debug-TSAN 외 2 | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_LLVM_AUTO_BOOTSTRAP` | BOOL | `ON` |  | LLVM이 없을 때 SetupLlvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_RELEASE_DEBUG_INFO` | STRING | `lines` | `lines` · `full` · `none` | Release/Shipping debug info: lines \| full \| none |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_REQUIRE_REFLECTION` | BOOL | `ON` |  | Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
