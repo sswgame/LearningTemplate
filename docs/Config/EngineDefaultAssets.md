@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # EngineDefaultAssets
 
@@ -13,15 +13,15 @@
 | 배포본 | 엔진 팩에 실림 |
 | 커밋 | 한다 |
 
-XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래 칸 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
+XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
 
-## 칸
+## 필드
 
 enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer` 가 PROPERTY 그래프로 합니다. 필드를 하나 추가하면 읽기가 저절로 따라옵니다(필드마다 손으로 읽으면 한 줄을 빠뜨릴 때 값이 조용히 기본값으로 남습니다).
 
-정본: [`Source/Engine/Config/EngineDefaultAssets.h`](../../Source/Engine/Config/EngineDefaultAssets.h)
+원본: [`Source/Engine/Config/EngineDefaultAssets.h`](../../Source/Engine/Config/EngineDefaultAssets.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_defaultMaterial` | `string` | `engine/materials/defaultmaterial.material` |  |  | 씬 폴백 머티리얼 |
 | `_shellInputMap` | `string` | `engine/input/default.input.xml` |  |  | App 셸 InputMap |
@@ -33,7 +33,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_fontCatalog` | `string` | `engine/fonts/fontcatalog.xml` |  |  | 글꼴 카탈로그 — 저장소 글꼴 가족 · 시스템 글꼴 가족(`FontSystem`) |
 | `_uiScaleSettings` | `string` | `engine/ui/uiscale.xml` |  |  | 런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다) |
 | `_uiThemes` | `string` | `engine/ui/uithemes.xml` |  |  | 런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다) |
-| `_uiOptionsMenu` | `string` | `engine/ui/options.ui.xml` |  |  | 옵션 메뉴 문서 — 설정 스키마에서 탭 · 행을 짓는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다) |
+| `_uiOptionsMenu` | `string` | `engine/ui/options.ui.xml` |  |  | 옵션 메뉴 문서. 설정 스키마에서 탭과 행을 만드는 화면(`OptionsMenuScreen`, 게임 프리셋이 덮어쓴다) |
 | `_uiPauseMenu` | `string` | `engine/ui/pause.ui.xml` |  |  | 일시정지 메뉴 문서 — 게임 프리셋이 `_bUiPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`) |
 | `_defaultForwardPipeline` | `string` | `engine/pipeline/forwardpipeline.xml` |  |  | 포워드 렌더 파이프라인(프레임 그래프) |
 | `_defaultDeferredPipeline` | `string` | `engine/pipeline/deferredpipeline.xml` |  |  | 디퍼드 렌더 파이프라인 |

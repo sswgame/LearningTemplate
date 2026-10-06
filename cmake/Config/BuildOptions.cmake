@@ -80,7 +80,7 @@ option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderF
 # 테스트는 어디서든 빌드하고, Shipping 에서는 실행 파일을 Bin 이 아니라 TestBin 으로 뺀다(sw_addTestExecutable).
 # 테스트가 끌고 오는 개발용 DLL 은 각 호출부의 SW_SHIPPING_BUILD 가드가 이미 막고 있다.
 option(SW_ENABLE_TESTING "단위/통합 테스트 프로젝트 빌드 및 CTest 등록" ON)
-option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(소스 묶음 컴파일) 사용" OFF)
+option(SW_ENABLE_UNITY_BUILD "대형 라이브러리 타겟에 CMake UNITY_BUILD(여러 소스를 합쳐 컴파일) 사용" OFF)
 option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 ReflectionParser 및 libclang 필수 요구" ON)
 option(SW_USE_SCCACHE "사용 가능 시 sccache 컴파일러 캐시를 활성화하여 빌드 가속" ON)
 

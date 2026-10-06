@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # EngineConfig
 
@@ -13,15 +13,15 @@
 | 배포본 | configure 때 exe 에 구워 넣음(`ShippingHostDefaults.h`) — 디스크의 파일은 읽지 않는다 |
 | 커밋 | 한다 |
 
-JSON 키는 아래 칸 이름 그대로입니다(앞의 `_` 포함). 적지 않은 칸은 기본값입니다. 모르는 키 · 읽지 못하는 값은 로드 오류입니다.
+JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다.
 
-## 칸
+## 필드
 
 `Config/Engine/EngineConfig.json` 이 담는 엔진 기동 설정입니다.
 
-정본: [`Source/Engine/Config/EngineConfig.h`](../../Source/Engine/Config/EngineConfig.h)
+원본: [`Source/Engine/Config/EngineConfig.h`](../../Source/Engine/Config/EngineConfig.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_window` | `WindowConfig` | — |  |  | 창·백엔드 설정 |
 | `_maxFrameDeltaTime` | `float32` | `0.1` | 0.001 ~ - | s | 한 프레임이 인정하는 최대 가변 델타(초)입니다. 디버거 정지 같은 긴 멈춤을 잘라 냅니다. |
@@ -33,9 +33,9 @@ JSON 키는 아래 칸 이름 그대로입니다(앞의 `_` 포함). 적지 않�
 
 주 창과 기본 렌더링 백엔드 설정입니다. 창 제목은 게임 프리셋(`GameConfig::_windowTitle`)이 정합니다.
 
-정본: [`Source/Engine/Config/EngineConfig.h`](../../Source/Engine/Config/EngineConfig.h)
+원본: [`Source/Engine/Config/EngineConfig.h`](../../Source/Engine/Config/EngineConfig.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_clearColor` | `string` | `0.12 0.15 0.18 1.0` |  |  | 백버퍼 클리어 색(공백 또는 쉼표로 구분한 RGBA) |
 | `_width` | `uint32` | `1280` | 1 ~ - |  | 클라이언트 영역 너비(픽셀) |

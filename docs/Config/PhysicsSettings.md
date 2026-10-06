@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # PhysicsSettings
 
@@ -13,15 +13,15 @@
 | 배포본 | 엔진 팩에 실림 |
 | 커밋 | 한다 |
 
-XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래 칸 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
+XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
 
-## 칸
+## 필드
 
 물리 설정 표 하나입니다. `PhysicsSystem` 이 기동 때 읽어 모든 씬에 나눠 줍니다. 레이어 순서가 레이어 번호입니다(0..31). 레이어 · 재질이 하나도 없으면 `Default` 하나씩을 채웁니다(`ensureDefaults`).
 
-정본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
+원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_gravity` | `float3` | `0.0, -kDefaultGravity, 0.0` |  | m/s2 | 3D gravity |
 | `_gravity2D` | `float2` | `0.0, -kDefaultGravity` |  | m/s2 | 2D gravity |
@@ -34,9 +34,9 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 
 충돌 레이어 하나와 그것이 부딪히는 레이어 이름들입니다. 표는 대칭으로 읽습니다 — 한쪽만 적어도 둘이 부딪힙니다.
 
-정본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
+원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Layer name |
 | `_listCollidesWith` | `vector<hashed_string>` | — |  |  | Layers this one collides with (symmetric) |
@@ -45,9 +45,9 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 
 물리 재질 하나입니다. 두 셰이프가 닿으면 마찰은 기하 평균(√(a·b)), 반발은 큰 쪽을 씁니다(Jolt · Box2D 기본과 같다).
 
-정본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
+원본: [`Source/Engine/Physics/PhysicsSettings.h`](../../Source/Engine/Physics/PhysicsSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Name the bodies and shapes pick it by |
 | `_friction` | `float32` | `0.5` | 0.0 ~ - |  | Coulomb friction coefficient |

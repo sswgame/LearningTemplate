@@ -180,7 +180,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 오버레이(`NoInputs` — ImGuizmo 의 `gizmo` 가 그렇습니다)는 정상적으로 비므로 빼고 셉니다.
 
 구현과 스위치 선언은 `Common/Gui/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
-기준선과 비교 방법은 [docs/06_Backlog.md](../../docs/06_Backlog.md) 0절에 있습니다.
+기준선과 비교 방법은 [검증과 측정](../../docs/08_Verification.md) 1절에 있습니다.
 
 ## 텍스처는 들일 때 임포트한다
 
@@ -293,6 +293,7 @@ ImGui 텍스처 · 게임 뷰 렌더 타깃은 UI 스레드가 놓지만 그리�
 `EditorDrawReleaseQueue::enqueue` 에 맡깁니다. 큐는 해제마다 "다음에 낼 스냅샷 번호" 를 찍어 두고, 렌더 스레드가 그 번호 이상의 스냅샷을
 기록하는 프레임에서 `IRHIDevice::enqueueGpuRelease` 로 넘깁니다 — 그 프레임의 GPU 완료 뒤에 실제로 풀립니다.
 주의: UI 스레드에서 읽은 펜스 값으로 해제하면 뒤에 줄 선 프레임이 놓인 자원을 씁니다.
+새 렌더 타깃은 그리기 전 패킷이 샘플링할 수 있어 만들 때 클리어 색으로 채운다(Vulkan UNDEFINED 레이아웃).
 
 ## ImGui 할당자
 
@@ -396,3 +397,77 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **하는 것**: 오른쪽 클릭 메뉴의 Check Out (Lock) · Release Lock · Refresh Source Control. **스스로 잠그지 않는다** — 저장 · 열기가 자동으로 체크아웃하지 않는다
   (잠금 서버 없는 저장소에서 저장마다 실패가 쌓이는 것을 피했다). 읽기 전용 씬 파일에는 저장하지 않고 이유를 알린다.
 - 시험: `EditorSourceControlTest`(잠금 목록 읽기 · 명령 · 경로 · 상태 글), `FileTest.ReadOnlyFileIsReported`.
+
+## 함정 · 계약
+
+- **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워진다**(`ModelImporter::importModel`) — 손으로 쓴 캐릭터 데이터(소켓 · 알림 표 · 물리 에셋 ·
+  몸 영역)는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둔다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적고 `App --import-models`.
+- **Debug App 의 `--import-textures` 는 BC7 1024² 한 장에 20 분을 넘긴다**(CPU 압축기가 최적화 없이 돈다) — 색 칸 아틀라스(KayKit)는 BC1 규칙
+  (`TextureImportConfig.json` 의 `Character_Atlases`)이라 몇 초다. 큰 BC7 은 Release App 으로 굽는다.
+- **텍스처는 들일 때 임포트한다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
+  원본 ↔ DDS 대조는 원본 폴더마다 `import.stamp`(원본 바이트 + 해석한 규칙 + 임포터 버전의 해시, DDS 해시) — `App --import-textures` · `--check-textures`(헤드리스로
+  에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureImportStampTest`. 함정: 임포트 동작을 바꾸면 `TextureImporterInternal::kImporterVersion` 을 올려야
+  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 임포트한다. 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
+- **모델도 같은 스탬프 절차다** — `models_raw/` 의 glTF → `models/*.mesh`(`App --import-models` · `--check-models`, `AssetImportStampUtil` + 종류마다
+  `IRawAssetImporter`). glTF → 엔진은 X 반전 + 삼각형 감김 뒤집기(노드 행렬식 < 0 이면 한 번 더). `.mesh` 는 지금 형식만 읽는다 — `RHIVertex` 를 바꾸면
+  `MeshAssetFormat::kVersion` 을 올리고 다시 임포트. 메시 캐시는 약한 참조라 쓰는 쪽이 없으면 리로드할 것도 없다(다음 `acquire` 가 새로 읽는다).
+  원본 glb 는 내려받은 그대로 둔다 — 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙으로 지운다. 경계 상자 중심
+  (`recenter: xz`)은 모양이 치우친 모델을 옮기므로 원점이 정해진 키트에는 `translation` 이 맞다.
+- **머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다(`AssetDatabase::ensureMeta`)** — 임포트 결과 옆 폴더(`models/<이름>/`)에 머티리얼을 쓰면 첫 실행이 실행마다 다른 GUID 의 `.meta` 를 만들어 스탬프가 "손으로 바꿨다" 가 된다. 임포터가 경로에서 정해지는 GUID 로 `.meta` 를 미리 쓴다(`ModelImporterInternal::makeImportedGuid`).
+- **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
+  없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
+- **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
+- **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectUndoUtil` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
+  모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
+  오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
+- **에디터 동작 검증은 에디터 안 자체 시험** — `SW_EDITOR_SELF_TEST` 로 등록하고 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 의 기대 목록에 한 줄 더한다
+  (`-gv_editorSelfTest=<패턴>`, 실행 중에는 사용자 `imgui.ini` 를 읽지도 쓰지도 않는다). 워크스페이스는 오브젝트 GUID · 프리팹 경로 사본을 들지 않는다(id · 씬이 정본).
+  입력은 `EditorSelfTestInput`(플랫폼 newFrame 뒤 · NewFrame 앞에 넣는다 — 실제 커서보다 뒤라 이긴다), 누를 위젯은 그린 직후 `EditorSelfTestMarks::note( "키" )`.
+  클릭은 누르기 · 떼기를 단계 둘로, 단계마다 이름표 위로 다시 옮긴 뒤(ImGui 는 한 프레임의 누름 · 뗌을 흘려 처리하고 플랫폼이 실제 커서를 다시 넣는다).
+  떠 있는 창(자기 플랫폼 창)은 플랫폼이 실제 커서로 "커서 아래 뷰포트" 를 넣어 호버가 그리로 간다 — 이름표가 든 뷰포트를 마우스 위치와 함께 넣는다
+  (`AddMouseViewportEvent`, `moveMouseToMark` 가 한다). 시험이 그리는 창은 주 뷰포트 안에 둔다(`SetNextWindowViewport`).
+  설정 파일을 다시 쓰는 경로(테마 저장)를 지나는 시험은 파일 바이트를 떠 두었다 되돌린다(`input.classicDarkSwatch`).
+  입력 시험이 이 PC 에서만 지면 모니터 배율부터 본다 — 시험은 100 % 와 150 % 에서 다른 스타일 크기를 본다.
+- **도크 칸은 창 크기를 비율로 따른다** — ImGui 는 중앙 노드 옆 칸에 마지막 픽셀 크기(`SizeRef`)를 그대로 줘서, 창을 줄이면 옆 패널은 그대로이고 게임 뷰가 32 px 로 눌렸다. `EditorDockLayout::scaleDockSizeToViewport` 가 `DockSpaceOverViewport` 앞에서 `SizeRef` 를 같은 비율로 맞춘다(기준은 마지막 실제 크기 · 처음엔 저장된 루트 크기, 최소화 0×0 은 건너뛴다). 패널 밖으로 넘칠 수 있는 떠 있는 바는 부르는 패널의 뷰포트에 묶는다(`beginFloatingBar` — 묶지 않으면 멀티 뷰포트가 OS 창으로 떼어 낸다). 에디터 창 최소 크기 960×540(`IWindow::setMinimumClientSize`). 시험 `dock.followsWindowSize`.
+- **테마 적용은 스타일 크기를 ImGui 기본(96 DPI)에서 다시 시작한다**(`EditorThemeInternal::resetSizesToDefault`) — `ScaleAllSizes` 는 테마가 적지 않는
+  크기(도킹 구분선 · 테두리 호버 여백 · 창 최소 크기)까지 곱하므로, 안 그러면 1 이 아닌 배율에서 적용마다 거듭 곱해져 구분선 호버 여백(84 px)이 옆 패널의 클릭을 가로챈다. 시험 `theme.reapplyKeepsSizes`.
+- **DebugDrawQueue 는 `endFrame` 에 비워진다** — 에디터 UI 보다 먼저 채운 것(게임 업데이트)만 보인다(`debug_draw` 시각화). 틱에서 채우는 생산자가 생기면
+  이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
+- **패널 · 팝업 · 인스펙터 · 시각화는 자기 .cpp 의 `SW_EDITOR_PANEL` · `SW_EDITOR_POPUP` · `SW_EDITOR_INSPECTOR` · `SW_EDITOR_VISUALIZER` 한 줄로 등록한다**
+  (`EditorRegistry<T>`, (order, id) 정렬, 같은 id 거절). 메뉴 배치는 커맨드 표 줄의 `_menuPath` · `_menuOrder`(백의 자리가 바뀌면 구분선). 매니저 · 메뉴바에
+  손 목록을 다시 만들지 말 것. 시각화 마스크 비트는 등록 순서의 index 라 순서 키를 바꾸면 비트 자리도 바뀐다(지금은 저장하지 않아 무해).
+- **에셋 종류 하나 = `EditorAssetType` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
+  임포트) 각 한 줄 + 필요하면 `Source/Editor/AssetActions/<Kind>AssetTypeActions.cpp`(썸네일 · 열기 · 드롭, 정적 등록).** 종류별 if-체인을 다시 만들지 말 것 —
+  칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
+- **에디터는 `-EnableEditor` 로 켜야 뜬다.** 에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙인다(`-gv_editorPanelDump` 는 스스로 끝나지 않는다). 창 수가 모자라면 코드보다 로컬
+  `Saved/Editor/` 의 `windows.ini` · `imgui.ini` 를 먼저 본다(추적하지 않는 파일 — 세션 간 픽셀 비교도 이것 때문에 안 된다). `-gv_editorOpenPanel=<id|all>`.
+- **에디터 커맨드 정본은 `Common/Gui/EditorCommandGui.cpp` 의 표 하나**(메뉴 · 단축키 · 팔레트, `EditorCommandRegistry::validate` 가 중복 조합을 잡는다). 한 줄짜리 래퍼는 이유가 있어
+  남았다(파일 머리) — "마저 정리" 하지 말 것. 확장자 정본은 `EditorAssetTypeRegistry`(`kArrAssetMatch` 한 줄), 핫 리로드 경로도 같은 줄의 칸(`_pCacheKindName` · `_pfnImportSource`)이다. 복합 접미사
+  `.prefab.xml` 은 접미사 비교로(`hasExtension` 은 마지막 점 뒤만 본다).
+- **nullable 조회는 받아서 확인하고 쓴다** — `editor::getService<T>()` · `game::getService<T>()` · `EditorContext::get()`. 나중에 불리는 람다 안에서는 다시 받는다. `getService<…>()->` 꼴은
+  `CheckNullableServiceUse` 가 막는다. `game::areGameServicesBound()` 는 SceneManager 슬롯 하나만 본다. 진단용 서비스는 `OPT` 로 등록한다(required 면 `areEngineServicesBound()` 가 영영 false).
+- **문서 저장 계약** — dirty 비트는 `IEditorPanel` 이 든다(패널이 자기 `_bDirty` 를 만들면 Ctrl+S · 종료 확인에서 빠진다). `saveDocumentAndClearDirty` 가 성공했을 때만 지운다. 로드 실패는
+  `markDocumentLoadFailed` 로 저장을 막는다. 씬 dirty 는 되돌리기 · 다시 하기 · 스냅샷 되읽기에서도 찍는다. 커맨드 스택이 없어도 `markActiveSceneDirty()` 는 찍는다.
+- **플레이** — 스냅샷은 활성 씬의 세대 · 이름 · 소스 경로를 함께 적는다(Stop 때 세대가 다르면 로드를 거두고 편집하던 씬을 다시 세운 뒤 되돌린다). 플레이 중 인스펙터 직접 편집은 바로
+  적용한다(의도 — Stop 이 되돌린다). 씬을 여는 중의 Play 는 `Starting` 으로 미뤘다가 로드가 끝난 프레임에 시작한다.
+- **되돌리기** — 자식 있는 오브젝트는 서브트리를 후위 순서로 한 트랜잭션에(`recordDestruction`), 생성 · 삭제는 `recordObjectLifetime` 한 절차. 제자리 로드는 지우기 전에 다른 오브젝트의
+  자식을 (자식 핸들, 부모 **안정 키**)로 적고 되붙인다. 오브젝트 → GUID 표와 GUID → 오브젝트 표는 서로의 역이어야 한다(`EditorWorkspace::setGuid`). 모듈 DLL 주소(람다)는 모듈이 내려가기 전에 걷는다.
+- **인스펙터** — 타입 사슬 전부의 확장을 기반 → 파생 순으로(`collectForType`), 확장은 자기가 그린 프로퍼티만 알린다. 각도는 라디안으로 저장하고 에디터만 도로 보인다(`Units=rad`),
+  0..1 비율은 `Units=ratio`, `PropertyUnitsTest.UnitsMatchHowValuesAreStored` 가 본다. 검색은 `EditorListFilter`, 0 건 안내는 `drawNoSearchResultHint`(손으로 쓴 `stristr` 술어는 빈 필터에서
+  목록을 지운다).
+- **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
+  를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
+- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorConfig.json` 테마 · 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. Game View 클리어 색은
+  `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
+  되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.
+  WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
+- **기계 훑기의 알려진 오탐** — 델리게이트로 묶인 `&Class::method` 는 "죽은 함수" 로 잡힌다. `EditorThemeUtil` 팔레트 · 킷의 소비자 없는 세터 · 게터는 정상이다. 쓰이는지는 `= delete` 로
+  바꾸고 빌드해 센다.
+- **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
+- **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
+  말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).
+  컴포넌트 알림은 `AssetHotReload::notifyAssetUsers` 가 `PROPERTY( AssetPath )` 값으로 찾아 `onPropertyChanged` 를 부른다 — 에셋에서 계산한 상태는
+  `onPropertyChanged` 가 **값이 같아도** 다시 맞춰야 한다. 리로드 전용 컴포넌트 훅 · `#if !SW_SHIPPING` 가드는 두지 않는다.
+- **에디터 draw 스냅샷(`EditorDrawDataSnapshot`)은 ImGui 내부에 기댑니다.** `ImDrawList::CloneOutput()` 뒤 쓰기 커서를 "다 썼음" 으로 맞추고, `OwnerViewport` 는 원본 것을 두며, `Textures` 는 비우고 텍스처 갱신은 UI 스레드의 `processTextureUpdates` 가 합니다.
+  떠 있는 뷰포트는 UI 스레드가 그리고, GL 처럼 컨텍스트가 스레드에 묶인 백엔드는 `requiresRenderThreadContext()` 가 참이라 그 GPU 호출을 렌더 스레드의 present 훅에서 합니다. ImGui 버전을 올리면 이 셋을 먼저 다시 확인합니다.
+- **`ed::EndCreate()` 는 `ed::BeginCreate()` 의 반환값과 상관없이 늘 부릅니다.** `BeginCreate` 는 false 를 돌려줘도 내부 활성 상태를 세워 두므로, if 안에서만 닫으면 다음 프레임에 라이브러리 단언으로 멈춥니다.

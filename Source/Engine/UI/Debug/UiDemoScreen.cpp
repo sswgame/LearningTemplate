@@ -18,7 +18,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiDemo, false,
-                                 "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
+                                 "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)" );
 
 namespace sw
 {

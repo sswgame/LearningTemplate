@@ -1,6 +1,6 @@
 /**
  * @file ControlAutomationSteps.h
- * @brief 자동화 시나리오의 행동 층 단계 `<Intent>` · `<Possess>` — 입력 맵 없이 폰에 의도를 넣고 빙의를 옮깁니다(형식은 `Base/Control` README).
+ * @brief 자동화 시나리오의 행동 층 단계 `<Intent>` · `<Possess>` — 입력 맵 없이 폰에 의도를 넣고 빙의를 옮깁니다(형식은 `Source/GameFramework/README.md` 의 "조종 — 폰, 조종자, 의도").
  */
 #pragma once
 #include "Core/Common/Macros.h"

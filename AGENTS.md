@@ -353,6 +353,11 @@ namespace sw
   - `SW_GLOBAL_VARIABLE` (and its test forms) declares `extern`; it is deliberately external linkage and stays out.
   - `main` and functions declared in a header stay at namespace scope.
 
+## Writing — docs, comments, commit messages
+
+- Docs, comments and commit messages follow `docs/10_WritingDocs.md`: sentence rules (§4) and the term table (§5 —
+  established loanwords and English terms, no coined native words). Log and assert strings stay English.
+
 ## C++ style
 
 - Follow `.clang-format`.
@@ -416,3 +421,16 @@ namespace sw
 - Avoid lambdas unless they offer a performance benefit.
 - Apply `const` wherever it is appropriate unless doing so harms performance.
 - For range comparisons, place the variable in the middle (between lower and upper bounds) to reflect mathematical range notation: write `kMin <= value && value <= kMax` instead of `value >= kMin && value <= kMax`.
+
+## Editing traps (편집 함정)
+
+- 한 함수에서 **여러 구간을 빼낼 때는 뒤쪽 구간부터** 한다. 앞쪽을 먼저 빼면 뒤쪽 줄 번호가 밀린다.
+- 파일을 스크립트로 고칠 때 CRLF 를 보존한다. 이 저장소는 CRLF 다.
+- **bash heredoc 은 `\` 를 뭉갠다**(`'\0'` 이 널 바이트가 된 적이 있다). 백슬래시가 든 내용은 파일로 써서 넘긴다.
+- **파서를 고친 뒤 "`.gen.cpp` 가 다시 만들어졌나" 를 산출물 시각으로 판단하지 말 것.** 내용이 같으면 파일을 다시 쓰지 않는다.
+  다시 만들었는지는 옆의 `<이름>.gen.cpp.stamp` 시각으로 본다.
+- `grep -v` 로 거를 때 이름이 비슷한 다른 것(`TestArchive` 등)까지 걸러지지 않는지 본다.
+- **Windows PowerShell 5.1 의 `Get-Content` · `Set-Content` 로 소스를 고치지 말 것** — UTF-8 한국어 주석을 CP949 로 읽어 되돌릴 수 없게 깨고 BOM 을 붙인다. 파이썬(`encoding='utf-8'`)으로 고친다.
+- **실패한 커밋 뒤에는 스테이징이 남는다** — 다음 커밋 전에 `git status`. Git Bash heredoc 은 `\\` 를 뭉갤 수 있다 — 스크립트는 파일로 써서 돌린다.
+- 패치 스크립트를 다시 돌릴 때 바꿀 글(old)이 새 글(new)의 접두이면 같은 내용이 두 번 들어간다 — 멱등하게 짠다. 큰 if-체인을 접을 때는 잘라낸 구간의 타입을 grep 으로 세어 사이의 다른 분기가 같이 잘리지 않았는지 본다.
+- `rm -rf` 할 폴더 안에 셸의 작업 디렉터리가 있으면 반쯤 지워지고 뒤의 `cp -r` 이 그 안에 중첩 복사된다 — 저장소 루트로 옮긴 뒤 지운다. 옛 코드로 App · 벤치를 돌릴 바이너리는 전체 빌드로 만든다(테스트 타깃만 빌드하면 모듈 DLL 이 새 ABI 로 남는다).

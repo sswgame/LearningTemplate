@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # NavMeshSettings
 
@@ -13,15 +13,15 @@
 | 배포본 | 엔진 팩에 실림 |
 | 커밋 | 한다 |
 
-XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래 칸 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
+XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다.
 
-## 칸
+## 필드
 
 내비게이션 표 하나입니다. 씬의 내비게이션(`SceneNavigation`)이 처음 쓸 때 읽습니다. 쿠킹본(`.navmesh`)은 베이크에 들어간 값의 해시(`computeAgentTypeHash`)를 함께 적어 두고, 표가 바뀌면 런타임이 다시 베이크합니다.
 
-정본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
+원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_listAgentType` | `vector<NavAgentTypeDef>` | — |  |  | Agent kinds; each bakes its own navmesh |
 | `_listArea` | `vector<NavAreaDef>` | — |  |  | Areas in index order (at most 16); index 0 is plain ground |
@@ -33,9 +33,9 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 
 에이전트 종류 하나 — 이 몸이 걸을 내비메시를 베이크하는 값입니다.
 
-정본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
+원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Name agents and surfaces pick it by |
 | `_radius` | `float32` | `0.4` | 0.0 ~ - | m | Body radius; walls are eroded by this much |
@@ -57,9 +57,9 @@ XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래
 
 영역 하나 — 이름과 지날 때의 비용 배율입니다. 표의 순서가 영역 번호(0..15)이고 0 번이 보통 땅입니다.
 
-정본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
+원본: [`Source/Engine/Navigation/NavMeshSettings.h`](../../Source/Engine/Navigation/NavMeshSettings.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_name` | `hashed_string` | — |  |  | Area name |
 | `_cost` | `float32` | `1.0` | 1.0 ~ - |  | Path cost multiplier per metre (1 = plain ground) |

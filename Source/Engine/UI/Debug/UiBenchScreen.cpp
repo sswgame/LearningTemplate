@@ -13,8 +13,8 @@
 #include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiWidgets, 0, "UI 벤치 — 격자 칸 수(칸마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)" );
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiChurn, 0, "UI 벤치 — 프레임마다 글을 바꾸는 칸 수(앞쪽 보이는 칸 안에서 돈다)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiWidgets, 0, "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)" );
+SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiChurn, 0, "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)" );
 
 namespace sw
 {

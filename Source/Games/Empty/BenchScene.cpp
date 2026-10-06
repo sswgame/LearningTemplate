@@ -102,7 +102,7 @@ namespace sw
      * @brief `-gv_benchCrowdShare=1` — 벤치 캐릭터의 군중 포즈 공유를 켭니다(`SkeletalMeshComponent::setShareCrowdPose`).
      * @details 끄면(기본) 캐릭터마다 스킨 사본 · 포즈 · 팔레트다. 켜면 같은 상태 · 위상끼리 포즈 하나 · 결과 구간 하나를 나누고, 아주 먼 캐릭터는 VAT 다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=묶음 공유 + 먼 캐릭터 VAT)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchCrowdShare, 0, "벤치 캐릭터 군중 포즈 공유 (0=캐릭터마다 사본 · 1=그룹 공유 + 먼 캐릭터 VAT)" );
 
     /**
      * @brief `-gv_benchCharacterStagger=1` — 벤치 캐릭터의 시작 시각을 인덱스 해시로 흩습니다(군중이 한 프레임으로 맞춰 움직이지 않게).
@@ -266,7 +266,7 @@ namespace sw
      * @details 스폰·파괴 경로(이름 유일화 · 풀 · 등록부)와 "틱 멤버십이 매 프레임 바뀌는" 틱 등록부를 잰다. 새 큐브는 같은 메시
      *          종류·기본 머티리얼이고, 무버(`-gv_benchTickMovers`)도 같이 붙는다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 등록부 측정)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_benchSpawnChurn, 0, "프레임마다 큐브 N 개를 지우고 같은 자리에 새로 만든다 (스폰·파괴·틱 레지스트리 측정)" );
 
     /**
      * @brief `-gv_benchViews=N` — 격자를 둘러보는 캡처 카메라(CCTV) N 개를 둡니다(렌더 텍스처 512², 프레임마다 그린다).

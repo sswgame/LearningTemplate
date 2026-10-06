@@ -28,7 +28,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 | `lint/report/` | `Run*` | `LintReport` |
 | `generate/` | `Generate*` · `Cook*` | 빌드 · configure 가 부르는 생성기(`runGenerator`) |
 | `setup/` | `Setup*` · `Install*` · `Add*` | 외부 도구 찾기 · 설치(`__main__` 이 없는 파일은 라이브러리 — `HostTools`) |
-| `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Configure*` · `Sample*` …) | 사람이 가끔 — 시험 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
+| `dev/` | 동사로 시작(`Run*` · `Compare*` · `Make*` · `Move*` · `Remove*` · `Configure*` · `Sample*` · `List*` …) | 사람이 가끔 — 시험 데이터를 만드는 것은 `Make*`(`generate/` 와 겹치지 않게) |
 | `qa/` | 명사(`GoldenImages` · `Soak` …) | App 을 돌려 견주기 |
 
 `gate/CheckScriptLayout.py` 가 이 표를 지킨다(린트 폴더는 기반 클래스까지). 진입점은 모두 `main(argv)` 로 인자를 받는다(`CheckScriptEntryPoints`).
@@ -160,7 +160,8 @@ Scripts/
   │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
   │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
   │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
-  │     │     └── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
+  │     │     ├── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
+  │     │     └── RunDocStyle.py              # 문서마다 읽기 어려운 문장 모양과 조어 수 (기준은 docs/10_WritingDocs.md, `--files` 로 다시 쓰기 전후 비교)
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
@@ -174,6 +175,9 @@ Scripts/
   │     ├── ConfigureSnapshot.py      # CMake 구성 결과 스냅숏 · 비교(리팩터 전후) · 구성 시간 요약
   │     ├── MakeStressScene.py        # 로드 경로를 재기 위한 큰 씬(사람이 시험 데이터를 만든다 — `Make*`, 빌드가 만드는 것은 generate/)
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
+  │     ├── MakeWorktree.py           # 작업 단위용 git 워크트리 + main 과 나눠 쓰는 도구 · vcpkg 폴더 링크(docs/11_Workflow.md)
+  │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
+  │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
@@ -265,3 +269,102 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 
 리눅스는 `py -3` 대신 `python3`. 병합기가 XML 로 읽지 못하면(2) git 은 그 파일을 충돌로 남긴다. `--prefer ours|theirs` 는 충돌을 그쪽으로 푼다
 (`py -3 -m Scripts asset-merge merge base ours theirs --prefer theirs`).
+
+## 함정 · 계약
+
+- **키트 커밋은 저장소가 고정한 clang-format(`Tools/LLVM/bin/clang-format`, 20)으로.** 시스템의 18 은 멤버 포인터(`float32 Foo::*_pMember`) 줄을 다르게 맞춰 린트가 막는다.
+- **clang-format 은 고정 바이너리 `Tools/LLVM/bin/clang-format.exe`(20.1.8)** 로만 센다(`clang_format_version` 키로 LLVM 과 따로 고정, `Scripts/common/ClangFormat.py`).
+  PATH 의 것으로 세면 틀린다(정답은 0 개). `--dry-run` 에 파일 여럿을 한꺼번에 주면 보고가 조용히 잘린다 — 파일마다 한 번씩 센다:
+
+  ```bash
+  CF=Tools/LLVM/bin/clang-format.exe
+  find Source Test Tools/ReflectionParser \( -name '*.cpp' -o -name '*.h' -o -name '*.inl' \) -print0 \
+    | xargs -0 -P 8 -n 1 -I{} sh -c "\"$CF\" --dry-run --ferror-limit=0 \"{}\" 2>&1 | grep -q warning: && echo {}"
+  ```
+- **clang-tidy 는 버전마다 다른 숫자를 낸다.** `RunClangTidy.py` 가 실행 파일 경로와 버전을 머리에 찍고 `--clang-tidy <경로>` 로 고정한다(VS 의 `VC/Tools/Llvm/x64/bin` 도 찾는다,
+  PCH 는 `/Y-`). 남은 `bugprone-throwing-static-initialization`(전역 변수 등록자 · 설정 싱글턴 ~30 건)은 고치지 않는다 — [결정 기록](../docs/09_Decisions.md) 2절 참고. 숫자가 늘면 **종류**를 먼저 본다(전역
+  변수 개수를 따라간다). 새 지적은 고치거나 `NOLINTNEXTLINE` + 이유(진단이 붙는 줄 바로 위). 끈 검사의 근거는 `.clang-tidy` 에 있다. `performance-enum-size`(열거형 폭에
+  ABI · 직렬화가 달렸다)와 `performance-no-int-to-ptr`(Win32 API)는 기각했다.
+- **게이트는 고치지 않는다** — include 순서 · namespace 블록의 고치기는 `fixer/FormatIncludeOrder` · `FormatNamespaceBlocks`(규칙은 게이트 파일 한 자리). CMake 들여쓰기는
+  `FormatCmakeIndent`(탭, 문자열 안 · vcpkg 툴체인 영역 제외) — 다른 묶음을 받은 뒤 공백 충돌이 나면 `--all` 을 다시 돌린다.
+- **설정 참조 문서(`docs/Config/`)는 생성물이다** — `GenerateConfigReference.py` 가 PROPERTY · `ConfigKeyDoc` · 전역 변수 · `ArgumentList.xxx` ·
+  CMake 옵션 · `*.settings.xml` 에서 만들고 `CheckConfigReference` 가 낡음 · 목록 밖 설정 파일 · 빈 설명을 막는다. 파서는 선언 모양을 읽으므로 칸 대조는
+  `ConfigReferenceTest.FieldsMatchReflection` 이 리플렉션으로 한다. 새 설정 파일 = `ConfigCatalog.py` 한 줄 + 시험 표 한 줄. PROPERTY · gv · 명령줄 ·
+  `SW_*` 옵션을 더하는 커밋은 같은 커밋에서 생성기를 다시 돌린다(커밋 훅이 알린다).
+- **린트 CTest 는 프리셋이 4 개씩 동시에 돌린다**(`Ninja-Debug-lint` 의 `execution.jobs`) — 린트끼리 공유하는 출력이 없어야 한다: 셀프테스트는 `mkdtemp`,
+  게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
+- **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
+  파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
+- **린트 시간은 `RunLintSuite` 가 잰다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
+  넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
+  절반 경고가 먼저 울리게.
+- **파이썬 도구의 단위 시험은 `Test/PythonTest/Test*.py`** — 파일을 놓으면 CTest 항목(`PythonTest_<이름>`, `nogpu`)이다. Blender 애드온처럼 바깥 모듈(bpy)을
+  쓰는 것은 그 import 를 한 파일에 가두고 나머지를 시험한다(`TestBlenderExporter` 가 빈 패키지 모듈을 세워 읽는다).
+- **주석 정리에서 마커(예전 · 날짜 · 백로그)로만 뽑으면 과거형 경위("~를 각자 들고 있었습니다")가 영역마다 ~10 % 남는다** — `(었|았|였)(는데|다|습니다)` 로 한 번 더 훑는다.
+  빌드가 도는 동안 헤더를 고치면 PCH 크기 불일치("modified since the precompiled header")로 빌드가 진다 — 편집과 빌드를 겹치지 말 것.
+- **`git mv` 로 옮긴 시험 파일은 pre-commit 의 `CheckIncludeOrder` · `CheckTestSuites` 가 "변경 없음" 으로 건너뛴다** — 옮긴 뒤에는 `ctest -L lint` 로 확인할 것.
+- **같은 클래스가 `#if` / `#else` 로 헤더에 두 번 있으면 `CheckCodeConventions` 의 헤더 기본값 검사가 그 클래스를 건너뛴다** — D3D11 · D3D12 비Windows 스텁을 지우자
+  숨어 있던 위반 9 건이 드러났다. 다른 플랫폼 스텁이 있는 헤더도 같은 사각일 수 있다.
+- **패딩은 `RunPaddingReport.py`(libclang + 컴파일 DB 플래그) 로 본다** — clang-cl(MS ABI)은 `-Wpadded` 를 내지 않고 `-fdump-record-layouts` 는 필드 위치를 안 준다.
+  libclang 에는 `-resource-dir` 를 직접 줘야 한다(안 주면 MSVC `offsetof` 가 상수식이 아니어서 constexpr 표가 오류로 무너진다). 줄인 타입의 회귀는 "크기 ≤ 필드 합을
+  정렬로 올린 값" static_assert 로 막는다(DrawCandidate · SpriteAnimatorComponent).
+- **생성자 초기화는 `Style/ConstructorInitializesEveryField` 가 막는다** — 기본값 없는 스칼라 · 포인터 · 열거형 · atomic · 비트필드만 대상(컨테이너 · 문자열은 스스로 초기화).
+  MSVC STL 은 atomic 을 값 초기화해 Windows 시험만으로는 빠뜨림이 안 드러난다.
+- **픽서는 UTF-8 로 못 읽는 파일을 고쳐 쓰지 않는다**(`errors="ignore"` 로 읽고 다시 쓰면 그 바이트가 사라진다 — `PythonTest_TestLintFixer`).
+  대상 파일 고르기는 `common.resolveFileArguments` 한 규칙 — 게이트 · 픽서 모두 `--files`(위치 인자 없음), 게이트의 파일 읽기 창구는 `LintGate.readFiles`.
+- **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다
+  (실제로 그랬다). 짓지 않는 소스는 CMake 가 `sw_declareUnbuiltDirectory` 로 적고 `CheckSourceGlob` 은 그 목록만 본다.
+- **쿠킹** — `CookAssets` 는 App 에 의존하고 Shipping 에서는 `all` 에 든다. App 경로는 CMake 가 `--app $<TARGET_FILE:App>` 로 넘긴다(빌드 폴더를 뒤지면 다른 프리셋의 낡은 App
+  을 집는다). 산출물은 `build/<preset>/Cooked/`. 소스 트리에 남은 옛 `.bin` 은 경고와 함께 팩에서 빠진다 — 지운다. 팩 코덱은 `Config/Engine/PackConfig.json`(LZ4 · Zstd 는 pip
+  선택 의존성, 없으면 그 자리에서 멈춘다 — zlib 으로 조용히 물러나면 안 된다), 팩 계약 SSOT 는 `Config/Engine/PackFormat.json`(고치면 configure) · 파이썬 `PackFormatSpec`
+  (`PackStruct.pack()` 은 필드 **이름으로만**).
+- **경고를 재기 전에 그 프리셋을 한 번 빌드한다**(생성 헤더 `FlagOps.gen.h` 가 없으면 `-fsyntax-only` 가 가짜 오류 32 건). 파일을 옮긴 뒤 옛 compile DB 면 "no such file".
+  주석만 바뀐 TU 는 sccache 가 캐시를 재생해 `-Wdocumentation` 이 안 보인다 — `RunBuildWarnings.py --preset Ninja-Debug`. 리눅스 전용 경고는 Windows 의 `RunBuildWarnings` 가 못 본다
+  (WSL-Debug 로그). 한 플랫폼에서만 읽는 필드는 `[[maybe_unused]]`.
+- **include 를 지울 때는 단독 컴파일로 확인한다**(PCH 가 가린다). `.xxx` X-매크로 include 는 빼도 컴파일되지만 함수 본문이 빈다 — 기계로 지우지 말 것. 헤더 안 `= default`
+  소멸자가 `unique_ptr<T>` 멤버를 파괴하면 전방 선언으로는 안 선다.
+- **전방 선언 후보의 이득은 `ninja -t deps` 로 전후를 센다**(그 헤더에 의존하는 오브젝트 수). `RunForwardDeclarationCandidates` 후보 40 건 중 실제로 준 것은 13 건이었다 —
+  짝 `.cpp` 하나뿐인 후보는 include 가 그 `.cpp` 로 옮겨 갈 뿐이라 0, 값으로 거쳐 받던 헤더 · 인라인 멤버 접근 · 인라인 생성자의 `unique_ptr` 소멸자는 깨진다.
+  강제 include `FlagOps.gen.h` 의 `*.gen.h` 는 `Core/Common/BitFlagTrait.h`(`<type_traits>` 만)만 든다 — 여기에 무엇을 더하면 모든 TU 의 누락이 가려진다.
+- **헤더 자립은 정기 실행 + 커밋 훅이 나눠 막는다** — CI `header-self-contained.yml`(매일 · 수동)이 `RunHeaderSelfContained --fail-on-violation` 으로 트리 전체를,
+  게이트 `CheckHeaderSelfContained` 가 커밋 훅에서 빌드 폴더가 있을 때 staged 헤더만 본다(`ctestSkipReason` 으로 CTest 린트에서 빠진다 — 전 트리 3~10 분). 판정은
+  `common/HeaderSelfContained.py` 한 자리. 유니티 빌드(CI 프리셋)의 컴파일 DB 는 TU 가 빌드 폴더 안이라 `CMakeFiles` 앞을 소스 경로로 옮겨 씨앗 TU 를 고른다(안 그러면
+  모든 헤더가 첫 TU 의 플래그를 받는다). 구성만 한 폴더(`FlagOps.gen.h` 자리 표시자)는 검사 불가로 친다 — 가짜 오류 수십 건.
+- **`CheckCodeConventions` 알아 둘 것** — 명명 판정은 `kMapContainerVocabulary` × `kMapNamingSubject` 표 하나. `Style/BitfieldBoolean` · `Naming/DuplicateInternalHelper` ·
+  `Style/HeaderMemberInitializer` 는 전체 스캔에서만 돈다. `Naming/OutParameter` 는 `out` 이 든 지역 변수(`arrOutput`)를 오탐한다. 게이트는 파일을 동시에 훑으니 규칙
+  객체에 상태를 들지 말 것. 자기 시험 조각은 그 검사가 **통과하는** 바탕(`_kCleanFixture`) 위에 위반 하나만 얹는다.
+  `Style/ConstructorOrder` 는 헤더에서 읽은 멤버 순서와 비교하므로, 멤버 선언을 못 읽으면(예전엔 `Widget* const* _ppWidget`) 순서가 맞아도 위반으로 건다 —
+  멤버 정규식 `_kClassMemberRe` 를 넓히면 `_kWholeScanCleanCase` 의 `RangeTable` 조각으로 확인한다.
+  교차 파일 검사(`Style/BitfieldBoolean` · `Naming/Duplicate*` · `Style/HeaderMemberInitializer` · `Style/ConstructorInitializesEveryField`)는 파일별 몫을 워커가
+  `CrossFileFacts` 로 모으고 부모는 합치기만 한다 — 새 교차 파일 검사도 그 모양으로(부모에서 파일을 다시 읽으면 그것이 게이트 시간의 2/3 였다).
+- **린트 정규식에 `(식별자+ … \s*)+` 모양을 쓰지 말 것** — 빈 구분자로 식별자를 몇 조각으로든 나눌 수 있어 맞지 않는 줄에서 역추적이 지수로 는다(한 줄 7 초,
+  커밋 훅이 부하에서 수십 분). 식별자 뒤에 `(?![A-Za-z0-9_:])` 를 붙인다. 느린 게이트는 파일별 시간부터 정렬해 볼 것 — 평균이 아니라 몇 파일이 지배한다.
+  줄 규칙의 `"글자" in line and 정규식` 앞 검사는 그 정규식이 반드시 품는 글자다 — 정규식을 바꾸면 같이 본다.
+  글자마다 도는 파이썬 루프는 트리 전체에서 초 단위다(`CheckNamespaceBlocks` 의 가리기 — 정규식 `sub` 로 바꾸자 직렬 CPU 8.8 → 2.1 s) — 덩어리는 정규식으로 찾고,
+  루프는 반응하는 글자만(`findall(r"[{};]")`) 돈다. 덩어리 글자 집합 + 꼬리 패턴 정규식(`[A-Za-z0-9_./\-]+\.ext`)은 `(?<![집합])` 로 덩어리 첫 글자에서만
+  시작하게 — 없으면 모든 자리에서 끝까지 먹고 되돌아온다(`AssetValidation` 의 참조 토큰, 꼬리 거르기와 함께 2.8 → 1.3 s).
+- **`CheckIncludeOrder` 는 첫 `#if` 를 경계로 삼는다.** include 가 전부 `#if` 안인 파일(`DelayLoadNotifyHook.cpp` · `PlatformOsHeaders.h` · `X11MacroUndef.h`)과 새 플랫폼 전용
+  `.cpp` 는 손으로 순서를 지킨다(Core → Engine).
+- **`CheckFunctionVocabulary` 는 헤더 선언만 본다**(호출부를 보면 `vk*KHR` 를 잡는다). 대문자 규칙은 "셋 이상은 어디서든, 둘은 이름 끝에서". `hashed_string` 은 리터럴에서만
+  암묵 변환, `string_view` 판과 `const hashed_string&` 판을 함께 두면 NamePair 위반, `setX` 의 게터는 `getX`(BareGetter), `calculate` · `calc` · `init*` 축약 금지(`initRhi` 예외).
+- **`FormatBranchBraces` 의 case 규칙** — `break;` 도 한 문장, 본문에 전처리기 지시문이 있으면 손대지 않는다. 플랫폼 전용 파일이나 `#if` 가 든 코드를 텍스트로 변환했으면 그
+  플랫폼에서 빌드한다. clang-format `RemoveBracesLLVM` · `InsertBraces` 는 켜지 말 것(반복문까지 벗긴다).
+- **일괄 이름 바꾸기는 파일 범위를 정한 규칙 표로**, 문자열 · 문자 리터럴(직렬화 키 · 로그 문구)은 건드리지 않는다. 새 이름 충돌은 `-Wshadow` 가 잡는다. `Win32Window.cpp` 는
+  리눅스에서도 컴파일된다(스텁 구간) — 창 API 이름을 바꾸면 스텁 · X11 · Cocoa 까지.
+- **Scripts 규칙** — 폴더는 하는 일로(`generate/` 생성기 · `setup/` 외부 도구 · `lint/*`), 모두 `common` 만 import(`common` → `setup` 역방향 금지). `common` 은 무거운 표준
+  모듈을 쓰는 함수 안에서 import 한다. 동시 처리는 `Scripts/common/Parallel.py` 한 자리 — 파일 읽기 · 하위 프로세스 대기는 스레드, 정규식이 무거우면 `flatMapInProcesses`
+  (코어 수만큼의 덩어리). `App.exe` 찾기 · 실행은 `Scripts/common/AppBinary.py` 하나. 파일을 한 번 읽어 나눠 쓰는 캐시는 CRLF 를 LF 로 바꿔야 결과가 같다.
+- **상수의 자리는 `AGENTS.md` "Constants" 절** — 한 TU 는 Internal, 모듈은 소유 타입, 계약은 계약 헤더(`RHITypes` · `bindingslots.hlsli` · `Defines`), 잘 알려진 값은 집 하나
+  (`CheckWellKnownConstants`), 반복은 `RunRepeatedConstants.py` 로 본다. "X 와 같아야 한다" 주석이 달린 사본이 결함의 모양이다(루트 상수 16/64, 모프 배치 넷).
+  게임플레이 튜닝 값은 컴포넌트 `PROPERTY` · 키트 설정 구조체 칸, 중력은 `PhysicsSystem::getConfiguredGravity` 하나.
+- **커밋 훅은 staged 셰이더가 있으면 `App --cook-shaders` 결과(바이너리 · `cook.stamp`)를 자동으로 stage 한다** — 도우미처럼 바이너리를 커밋하지 않을 때는
+  커밋 뒤 그 경로를 빼고 `--amend` 한다(셰이더 소스가 없는 amend 는 훅이 다시 굽지 않는다).
+- **문서의 경로는 `CheckDocPaths` 가 본다** — 상대 링크 · 제목 앵커 · 백틱 안 저장소 경로 · 코드 블록의 `#include` · `py -3 Scripts/…`,
+  그리고 모든 README · `docs/*.md` 가 `docs/02_DocumentMap.md` 에 있는지. 파일을 옮기거나 지우는 커밋은 .md 를 건드리지 않아 훅이 이 게이트를 돌리지 않으므로
+  `ctest -L lint` 가 잡는다. CI 는 문서만 바뀐 push 에도 린트 잡을 돌리고 빌드 잡만 건너뛴다(`ci.yml` 린트 잡의 `changes` 단계).
+  자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 백로그에만 적는다(백로그는 링크만 본다).
+- **`#!` 스크립트는 git 모드 100755 로 커밋한다**(`CheckExecutableBits`) — Windows 에서 만든 파일은 100644 로 들어가 리눅스에서만 `Permission denied` 가 난다
+  (오버레이 포트 `openssl/unix/configure` 가 리눅스 CI 다섯 잡을 Configure 에서 세웠다). 새 스크립트는 `git update-index --chmod=+x <경로>`.
+- **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
+  났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
+  그 헤더를 include 하는 TU 전부를 다시 지어 본다.

@@ -1,29 +1,82 @@
-# Games (게임 프로젝트 관리)
+# Games — 게임 모듈과 새 게임 만들기
 
-엔진을 기반으로 실제 개발할 게임 컨텐츠(팩)들이 모여있는 폴더입니다.
-어떤 게임을 활성화하여 빌드할지는 CMake 설정인 `SW_ACTIVE_GAME` 변수를 통해 결정합니다. 기본 템플릿은 `Empty`입니다 (`-DSW_ACTIVE_GAME=Empty`).
+## 이것은 무엇이고 왜 있나
 
-이때 컴파일되는 실행 파일과 타겟의 이름은 어떤 게임을 선택하든 항상 **SWGame**으로 고정됩니다. 이는 런타임에 게임 로직을 갈아끼우는 핫리로드(LiveReload) 기능이 고정된 모듈 이름을 안정적으로 찾을 수 있도록 하기 위함입니다.
+엔진 위에서 실제로 도는 게임이 이 폴더에 있습니다. 게임 하나는 폴더 하나(`Source/Games/<게임>/`)이고, 리소스는 게임 팩(`Resource/game/<게임 소문자>/`)에 있습니다.
+여기 있는 게임은 모두 테스트 게임입니다. 장르 키트와 엔진 기능이 실제 게임 흐름에서 맞물리는지 확인하고, 새 게임을 만들 때 본보기로 씁니다.
+
+한 번에 빌드되는 게임은 하나입니다. CMake 옵션 `SW_ACTIVE_GAME` 이 고르고, 게임마다 Debug 프리셋 `Ninja-Debug-<게임>` 이 있습니다.
+어느 게임을 고르든 빌드 타깃 이름은 늘 `SWGame` 입니다. 핫 리로드가 다시 로드할 모듈을 고정된 이름으로 찾기 때문입니다.
+
+## 머릿속 그림
+
+```text
+Source/Games/<게임>/SWGame.module.json   → 프로젝트: 링크할 키트, 끌 모듈
+Source/Games/<게임>/CMakeLists.txt        → sw_addGameModule(SWGame) 한 줄
+Source/Games/<게임>/*Game.cpp             → 게임 인스턴스(GameInstanceBase 파생)
+Config/Game/<게임>.json                   → 게임 프리셋: 팩 루트, 창 제목
+Resource/game/<게임 소문자>/               → 팩: data/gamesettings.xml, maps/, prefabs/, automation/
+```
+
+**게임 매니페스트가 프로젝트입니다.** `SWGame.module.json` 은 언리얼의 `.uproject`, 유니티의 `package.json` 에 해당합니다. 링크할 키트와, 켜고 끌 모듈을 적습니다.
+
+**게임 인스턴스.** `GameInstanceBase` 를 상속한 클래스 하나가 첫 씬을 요청하고, 게임 서비스(카탈로그 등)를 등록하고, 디렉터를 상태 스냅샷에 올립니다.
+
+**씬과 프리팹과 디렉터.** 고정 배치는 씬, 런타임에 생기는 것은 프리팹, 규칙은 키트의 보통 클래스, 그것을 돌리는 것은 디렉터 컴포넌트입니다. 아래 "새 게임 = 씬 + 프리팹 + 디렉터와 뷰 컴포넌트" 절에서 설명합니다.
 
 ## 들어 있는 게임
 
-| 폴더 | 무엇 | 빌드 |
-|------|------|------|
-| `Empty` | 최소 템플릿 + 렌더 벤치 하네스(`-gv_benchMeshes=N`). 기본값 | `-DSW_ACTIVE_GAME=Empty` |
-| `AbilityArena` | 어빌리티 시스템(`GameFramework/Base/Ability`)을 실제로 쓰는 탑다운 웨이브 아레나 — 근접 · 화염구(화상 스택) · 회복(데이터만) · 대시(무적) · 가시 | `-DSW_ACTIVE_GAME=AbilityArena` |
-| `HarvestValley` | 농장 생활(하베스트 문 장르, `GF_Farming`) — 갈기 · 물 · 심기 · 거두기 · 출하 · 잠, 계절 · 비, 직교 탑다운 시점 | `-DSW_ACTIVE_GAME=HarvestValley` |
-| `MeadowVillage` | 키트 조립 시험(농장 `GF_Farming` + 생물 마을 `GF_CreatureLife`) — 공유 상태 `GameStateComponent` 와 키트 디렉터 둘이 한 오브젝트에, 밭이 번 돈으로 마을이 과수원을 심어 부탁이 끝난다 | `-DSW_ACTIVE_GAME=MeadowVillage` |
-| `NileCity` | 도시 건설(파라오 장르, `GF_CityBuilder`) — 절차 나일 강 · 범람원 · 사막, 도로 · 우물 · 농장 → 창고 → 바자 → 집 사슬, 순회 일꾼, 집 진화, 범람, 마우스 짓기 · 허물기, `-gv_nileAutoPlay=1` | `-DSW_ACTIVE_GAME=NileCity` |
-| `Shooter3D` | 1인칭 슈터(기반 `Combat`) — 소총 · 산탄총 · 권총, 히트스캔 · 퍼짐 · 반동, 드론 웨이브, Kenney 조준선(CC0) | `-DSW_ACTIVE_GAME=Shooter3D` |
-| `StarSkirmish` | 실시간 전략(스타크래프트 장르, `GF_RealTimeStrategy`) — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 채취 · 생산 · 건설 · 전투 · 안개, 끌어 고르기 · 오른쪽 클릭 · 부대, 사람 대 AI 또는 `-gv_skirmishAutoPlay=1` AI 대 AI | `-DSW_ACTIVE_GAME=StarSkirmish` |
-| `ThemeParkTycoon` | 놀이공원 경영(롤러코스터 타이쿤 장르, `GF_ThemePark`) — 코스터를 짓고 시험 운행이 평가, 손님 · 줄 · 표 · 평점, 아이소메트릭 직교 시점 · 코스터 탑승. **씬 · 프리팹 · 컴포넌트 구조의 본보기**(아래 레시피) | `-DSW_ACTIVE_GAME=ThemeParkTycoon` |
-| `VoxelCraft` | 복셀 샌드박스(마인크래프트 장르, `GF_Voxel`) — 지형 · 나무 · 광석, 부수기 · 놓기 · 핫바, 청크 다시 짓기 | `-DSW_ACTIVE_GAME=VoxelCraft` |
+| 폴더 | 장르 | 이 게임으로 배우는 것 |
+|------|------|----------------------|
+| `Empty` | 최소 템플릿 | 새 게임의 출발점, 렌더 벤치 하네스(`-gv_benchMeshes=N`) |
+| [`AbilityArena`](AbilityArena/README.md) | 탑다운 웨이브 아레나 | 어빌리티 시스템(GAS), 폰과 AI 조종자 |
+| [`HarvestValley`](HarvestValley/README.md) | 농장 생활 | 키트 하나(`GF_Farming`), 공유 상태, 자동 플레이 빙의 |
+| [`MeadowVillage`](MeadowVillage/README.md) | 농장 + 생물 마을 | 키트 둘을 한 게임에 섞기 |
+| [`NileCity`](NileCity/README.md) | 도시 건설 | 명령형 디렉터, 절차 지형, 커서 아래 땅 고르기 |
+| [`Shooter3D`](Shooter3D/README.md) | 1인칭 슈터 | 캐릭터 외형과 애니메이션, 페이싱 감독, HUD, 카메라 프리셋 |
+| [`StarSkirmish`](StarSkirmish/README.md) | 실시간 전략 | RTS 키트, 끌어 고르기, AI 대 AI |
+| [`ThemeParkTycoon`](ThemeParkTycoon/README.md) | 롤러코스터 타이쿤 | 씬, 프리팹, 디렉터, 뷰 구조의 본보기 |
+| [`VoxelCraft`](VoxelCraft/README.md) | 복셀 샌드박스 | 절차 메시, 1인칭 몸, 청크 다시 만들기 |
 
-고르지 않은 게임은 빌드되지 않습니다(CI 는 `Empty` 만 짓습니다). 다른 게임을 바꿨으면 그 게임을 골라 한 번 지어 확인합니다.
+CI 는 기본 게임 `Empty` 만 빌드합니다. 다른 게임을 고쳤다면 그 게임의 프리셋으로 한 번 빌드해 확인합니다.
 
-#
-모듈마다 소스 폴더에 매니페스트 `<모듈>.module.json` 이 있습니다(언리얼 `.uplugin` · 유니티 `package.json` 자리). 게임의 것은
-`Source/Games/<게임>/SWGame.module.json` 이고, 이것이 **프로젝트**입니다 — 의존(링크하는 키트)과 다른 모듈의 켜기/끄기 표를 듭니다.
+## 따라 해 보기 — 게임 하나를 빌드하고 시나리오 돌리기
+
+```powershell
+cmake --preset Ninja-Debug-HarvestValley          # 빌드 폴더 build/Ninja-Debug-HarvestValley
+cmake --build --preset Ninja-Debug-HarvestValley
+cd build/Ninja-Debug-HarvestValley/Bin
+./App.exe -dx12                                     # 에디터 없이, 시작 씬이 바로 플레이 중
+./App.exe -dx12 -gv_farmAutoPlay=1                  # 자동 플레이
+./App.exe -dx12 -scenario=game/harvestvalley/automation/control.scenario.xml
+echo $LASTEXITCODE                                  # 0 통과, 10 실패, 11 읽기 오류, 12 시간 초과, 13 건너뜀
+```
+
+프리셋마다 빌드 폴더가 따로이므로, 게임을 바꿀 때 한 빌드 폴더를 다시 configure 하지 않습니다. 두 작업이 한 폴더를 나눠 쓰면 서로의 빌드를 깨뜨립니다.
+
+**자동화 시나리오**는 팩의 `automation/*.scenario.xml` 입니다. 고정 프레임 시간과 가상 입력으로 돌고, 결과를 종료 코드로 냅니다. 형식은 [Automation](../Engine/Automation/README.md)에 있습니다.
+그 게임의 시나리오를 모든 백엔드로 한꺼번에 돌리려면 그 프리셋의 호스트 테스트를 씁니다. GPU 와 창이 필요해서 CI 는 돌리지 못합니다.
+
+```powershell
+ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on-failure
+```
+
+`AppScenarioTest` 가 엔진 시나리오(`engine/automation`)와 활성 게임 팩의 시나리오를 백엔드마다 띄웁니다. 시나리오 파일을 놓기만 하면 돌고, CMake 에 목록을 적지 않습니다.
+로그는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log` 에 남습니다.
+
+## 새로운 게임 추가하는 방법
+
+1. **템플릿 복사.** `Source/Games/Empty/` 를 `Source/Games/<게임>/` 으로 복사합니다.
+2. **벤치 하네스 지우기.** `BenchScene.*`, `BenchSceneRig.cpp`, `BenchMoverComponent.*`, `BenchCombatComponent.*` 를 지우고, `EmptyGame` 의 `_benchScene` 멤버와 그것을 쓰는 곳을 지웁니다.
+   이 파일들은 측정용이고 게임 코드가 아닙니다(아래 "Empty 에 벤치가 있는 이유").
+3. **키트 연결.** `<게임>/SWGame.module.json` 의 `_listDependency` 에 쓸 키트를 적습니다. `_kind` 는 `Game` 입니다.
+4. **리소스 폴더와 게임 프리셋.** `Resource/game/<게임 소문자>/` 를 만들고, `Config/Game/<게임>.json` 에 `_packRoot`(`"game/<게임 소문자>"`)와 창 제목 `_windowTitle` 을 적습니다.
+   파일 이름은 게임 폴더 이름과 같아야 하고, 프리셋이 없으면 configure 가 멈춥니다. 시작 씬은 팩의 `data/gamesettings.xml` 의 `startMap`(타이틀 화면이 있으면 `titleScene`) 하나입니다.
+5. **CMake 프리셋.** `CMakePresets.json` 에 `Ninja-Debug-<게임>`(configure 와 build, `SW_ACTIVE_GAME=<게임>`)을 더합니다. `CheckGamePresets.py` 가 검사합니다.
+6. **쓰지 않는 키트 끄기(선택).** `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드와 실행에서 빠집니다.
+7. **씬과 디렉터.** 아래 절의 구조로 첫 씬과 디렉터를 만듭니다. 자동화 시나리오 하나를 `automation/` 에 두면 호스트 테스트가 함께 돌립니다.
+
+### 게임 매니페스트
 
 ```json
 {
@@ -34,90 +87,82 @@
 }
 ```
 
-- `_listTarget`(필수)은 모듈이 들어가는 빌드 타깃입니다 — 게임 · 공유 키트는 `[ "Client", "Server" ]`, 서버 전용 `GF_Server_<X>` 는 `[ "Server" ]`,
-  에디터 · RHI 는 `[ "Client" ]`(`Source/GameFramework/README.md` "클라이언트 · 서버로 나뉘는 기능").
-- 게임이 링크하는 키트는 `_listDependency` 가 정합니다(`sw_addGameModule` 이 읽는다 — CMake 에 다시 적지 않는다).
-- `_listModuleOverride` 로 끈 모듈은 **짓지 않고**(CMake), 시험 실행 파일에서도 그 키트를 include 하는 시험이 빠지며, App 도 올리지 않습니다.
-  Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 기대면 구성이 서고 무엇이 왜 꺼졌는지 말합니다.
-- 키트의 리로드 의존(그 키트가 다시 올라오면 같이 다시 올라올 것)도 키트 매니페스트의 `_listDependency` 입니다.
-- 규칙은 `cmake/Engine/ModuleManifest.cmake` 와 `Engine/Module/ModuleCatalog` 가 같고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 둘의 답을 견줍니다.
+- `_listTarget`(필수)은 모듈이 들어가는 빌드 타깃입니다. 게임과 공유 키트는 `["Client", "Server"]`, 서버 키트 `GF_Server_<X>` 는 `["Server"]`, 에디터와 RHI 는 `["Client"]` 입니다.
+  나뉘는 규칙은 [Kits](../GameFramework/Kits/README.md)의 "클라이언트와 서버로 나뉘는 기능"에 있습니다.
+- 게임이 링크하는 키트는 `_listDependency` 가 정합니다. `sw_addGameModule` 이 이 목록을 읽으므로 CMake 에 다시 적지 않습니다.
+- `_listModuleOverride` 로 끈 모듈은 빌드하지 않고, 테스트 실행 파일에서도 그 키트를 include 하는 테스트가 빠지며, App 도 로드하지 않습니다.
+  Shipping 은 켜진 키트만 정적 링크합니다. 켜진 모듈이 꺼진 모듈에 의존하면 configure 가 무엇이 왜 꺼졌는지 알려 줍니다.
+- 키트의 리로드 의존(그 키트가 다시 로드되면 같이 다시 로드될 것)도 키트 매니페스트의 `_listDependency` 입니다.
+- 빌드 쪽(`cmake/Engine/ModuleManifest.cmake`)과 런타임 쪽(`Engine/Module/ModuleCatalog`)이 같은 규칙으로 해석하고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 둘의 답을 비교합니다.
 
-## 새로운 게임 추가하는 방법
+## 새 게임 = 씬 + 프리팹 + 디렉터와 뷰 컴포넌트
 
-1. **템플릿 복사하기**: `Source/Games/Empty/` 를 `Source/Games/<게임>/` 으로 복사합니다.
-2. **벤치 하네스 지우기**: `BenchScene.*` · `BenchMoverComponent.*` 를 지우고, `EmptyGame` 의
-   `_benchScene` 멤버와 그것을 쓰는 곳(초기화 · 업데이트 · 상태 직렬화 전후)을 지웁니다. 이건 측정용이고 게임 코드가 아닙니다
-   (아래 "Empty 는 왜 비어 있지 않은가" 참고).
-3. **필요한 키트 연결하기**: `<게임>/SWGame.module.json` 의 `_listDependency` 에 필요한 키트를 적습니다(`_kind` 는 `Game`).
-4. **게임 리소스 폴더 · 프리셋 만들기**: `Resource/game/<게임 소문자>/` 을 만들고, 게임 프리셋 `Config/Game/<게임>.json`(파일 이름 = 게임 폴더 이름)에
-   `_packRoot` 를 `"game/<게임 소문자>"`, 창 제목 `_windowTitle` 을 적습니다. 시작 씬은 팩의 `data/gamesettings.xml` `startMap`(타이틀이 있으면 `titleScene`) 하나입니다.
-   프리셋이 없으면 configure 가 멈춥니다.
-5. **CMake 프리셋 더하기**: `CMakePresets.json` 에 `Ninja-Debug-<게임>`(configure · build, `SW_ACTIVE_GAME=<게임>`, 빌드 폴더는 게임마다 따로)을
-   더합니다. 게임은 프리셋으로 바꾸고 한 빌드 폴더를 다시 구성하지 않습니다(`CheckGamePresets.py`).
-6. **쓰지 않는 키트 끄기(선택)**: `_listModuleOverride` 에 `{ "_name": "GF_…", "_bEnabled": false }` 를 적으면 그 키트는 이 게임의 빌드 · 실행에서 빠집니다.
-
-## 새 게임 = 씬 + 프리팹 + 디렉터 · 뷰 컴포넌트
-
-게임 클래스(`XxxWorld`)가 코드로 오브젝트를 만들고 매 프레임 밀어 넣는 대신, 상용 엔진처럼 나눕니다. `ThemeParkTycoon` 이 이 모양입니다
-(`ThemeParkTycoon/README.md`), `HarvestValley` · `NileCity` · `StarSkirmish` 도 같은 모양입니다. `AbilityArena` 도 이 모양입니다 — 유닛마다 입력 · AI 컨트롤러 컴포넌트가 붙고, 어빌리티는 그 컨트롤러가 든 디렉터 핸들로
-디렉터를 찾습니다. `Shooter3D` 도 이 모양입니다 — 1인칭 시점은 GameFramework `FirstPersonCameraComponent` 이고, 플레이어 컴포넌트가 같은 오브젝트에서
-그 시점으로 걷고 쏩니다. `VoxelCraft` 도 같다 — 청크 메시는 프리팹 스폰이 아니라 청크마다 `VoxelChunkComponent` 가 절차로 짓습니다.
-이제 일곱 시험 게임 모두 이 모양입니다.
+게임 클래스가 코드로 오브젝트를 만들고 매 프레임 값을 밀어 넣는 대신, 상용 엔진처럼 역할을 나눕니다. 테스트 게임 일곱 개가 모두 이 구조이고, 본보기는 `ThemeParkTycoon` 입니다.
 
 | 무엇 | 어디 |
 |------|------|
-| 고정 배치(땅 · 해 · 카메라 · 건물 · 장식 설정 · 디렉터) | 씬 `Resource/game/<팩>/maps/*.scene.xml` — 팩의 `data/gamesettings.xml` 의 `startMap` |
-| 데이터로 런타임에 생기는 것(유닛 · 손님 · 탄 · 짓는 건물) | 프리팹 `prefabs/*.prefab.xml` — `game::getService<AssetManager>()->getPrefabCache().spawn( … )` |
-| 규칙 · 상태 | 키트의 보통 클래스 — 씬 없이 시험한다(컴포넌트로 만들지 않는다) |
-| 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(언리얼 GameMode/GameState) — GameFramework `GameDirectorComponent` 를 상속한다(아래) |
-| 엔티티의 모습 | 뷰 컴포넌트 — 디렉터를 읽기만 하고 자기 오브젝트에만 쓴다, `TickGroup::PostUpdate` |
-| 엔티티 하나의 입력 · AI | 컨트롤러 컴포넌트 — 뷰와 같은 규칙(디렉터를 읽기만, 자기 오브젝트에만 쓴다), 기본 그룹 `DuringPhysics` |
-| 장르 무관 카메라 · 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent` · `FirstPersonCameraComponent`) · `World/`(`PropScatterComponent` · `GravityComponent` …) |
-| 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 — 상태 저장 전에 시뮬레이션을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 돌려준다 |
+| 고정 배치(땅, 해, 카메라, 건물, 장식 설정, 디렉터) | 씬 `Resource/game/<팩>/maps/*.scene.xml`. 팩의 `data/gamesettings.xml` 의 `startMap` |
+| 런타임에 데이터로 생기는 것(유닛, 손님, 탄, 건설 중인 건물) | 프리팹 `prefabs/*.prefab.xml` |
+| 규칙과 상태 | 키트의 보통 클래스. 씬 없이 테스트합니다 |
+| 규칙을 돌리고 스폰을 지시 | 디렉터 컴포넌트 하나(`GameDirectorComponent` 파생) |
+| 엔티티의 모습 | 뷰 컴포넌트. 디렉터를 읽기만 하고 자기 오브젝트에만 씁니다(`TickGroup::PostUpdate`) |
+| 엔티티 하나의 입력이나 AI | 폰과 조종자. 몸 컴포넌트는 폰의 의도만 읽습니다 |
+| 장르 무관 카메라와 장식 | GameFramework `Camera/`(`OrthoCameraRigComponent`), `World/`(`PropScatterComponent`) |
+| 게임 클래스 | `requestFirstScene()` 과, 생성자의 `registerDirector<디렉터>()` 한 줄 |
 
-**디렉터는 베이스를 쓴다** — `GameFramework/Base/Framework/GameDirectorComponent`(언리얼 `AGameModeBase` · `AGameStateBase` 의 자리, Lyra 처럼 게임 상태를 한 컴포넌트에).
-골격(틱 그룹 · 상태 바이트 보류 · 틱 뒤 플러시 · 대기 소리 · 세운 것 걷기 · 자동 플레이 · 디렉터 찾기)은 베이스가 들고, 디렉터는 게임마다 다른 것만 적는다:
+### 디렉터가 구현하는 것
 
-| 디렉터가 적는 것 | 언제 |
-|------|------|
-| `startGame()` | `onBeginPlay` — 데이터를 읽고 새 판을 연다. 못 열면 알리고 false(틱도 돌지 않는다) |
-| `writeState` · `readState` | 상태 바이트 — 첫 값은 `StateArchiveUtil::writeHeader` 의 표 · 버전, 형식을 바꾸면 버전을 올린다 |
-| `onStateRestored( bRestored )` | 복원 바이트를 적용한 뒤 — 로그, 실패면 새 판으로 되돌리기. 시작 전에 받은 바이트는 베이스가 들고 있다가 시작한 뒤 적용한다 |
-| `onGameStarted()` | 판이 열리고 첫 플러시 뒤 — 조작 안내 · 카메라 |
-| `tickGame( dt )` | 판이 열린 뒤 매 틱(PrePhysics) |
-| `onFlush( manager, bRespawnViews )` | 틱 뒤 게임 스레드 — 쌓인 스폰을 세운다. `bRespawnViews` 면 처음(또는 걷은 뒤)이라 지금 상태의 모습 전부 |
-| `onViewsDespawned()` · `hasPendingSpawn()` | 걷은 뒤 자기 핸들 목록 비우기 · 틱 끝에 플러시를 잡을지 |
+디렉터는 `GameFramework/Base/Framework/GameDirectorComponent` 를 상속합니다. 언리얼의 `AGameModeBase` 와 `AGameStateBase` 를 합친 것에 해당하고, Lyra 처럼 게임 상태를 한 컴포넌트에 둡니다.
+틱 그룹, 상태 데이터 보류, 틱 뒤 플러시, 대기 소리, 스폰한 것 정리, 자동 플레이, 디렉터 찾기는 베이스가 가지고, 게임마다 다른 것만 구현합니다.
 
-세우기는 `spawnPrefab`(걷을 목록에 든다) · `destroySpawned`, 소리는 `getSoundQueue().queueClip / queueEvent / queueEventAt`(틱 뒤에 낸다), 색만 다른 모습은
-`MaterialTintCache`, 뷰 · 컨트롤러가 디렉터를 찾는 것은 `GameDirectorComponent::resolve<디렉터>( manager, handle )`. 자동 플레이 PROPERTY 는 베이스의 `_bAutoPlay`
-하나이고 게임은 `SW_GAME_AUTOPLAY` 로 전역 변수를 등록한다(`isAutoPlayOn()` 이 둘을 본다).
+| 함수 | 언제 불리나 |
+|------|------------|
+| `startGame()` | `onBeginPlay`. 데이터를 읽고 새 게임을 엽니다. 못 열면 알리고 false 를 돌려주며, 틱도 돌지 않습니다 |
+| `writeState`, `readState` | 상태 데이터. 첫 값은 `StateArchiveUtil::writeHeader` 의 태그와 버전입니다 |
+| `onStateRestored( bRestored )` | 복원 데이터를 적용한 뒤. 실패면 새 게임으로 되돌립니다 |
+| `onGameStarted()` | 게임이 열리고 첫 플러시 뒤. 조작 안내와 카메라 |
+| `tickGame( dt )` | 게임이 열린 뒤 매 틱(PrePhysics) |
+| `onFlush( manager, bRespawnViews )` | 틱 뒤 게임 스레드. 쌓인 스폰을 만듭니다 |
+| `onViewsDespawned()`, `hasPendingSpawn()` | 정리 뒤 핸들 목록 비우기, 틱 끝에 플러시를 잡을지 |
 
-지킬 것:
+`onFlush` 의 `bRespawnViews` 가 참이면 처음이거나 정리한 뒤라서, 지금 상태의 모습을 모두 만들어야 합니다. 시작 전에 받은 복원 데이터는 베이스가 가지고 있다가 시작한 뒤 적용합니다.
+상태 형식을 바꾸면 버전을 올립니다.
 
-- **디렉터의 시뮬레이션은 `writeState` · `readState` 로 넘긴다.** 키트의 보통 클래스는 PROPERTY 가 아니라 핫 리로드 · 세이브에서 사라진다 — 게임 모듈의 정적 ·
-  컴포넌트 멤버는 모듈과 함께 내려간다. 넘길 것은 상태 바이트로만 넘기고, 게임 인스턴스가 생성자에서 `registerDirector<디렉터>()` 로 올린다(디렉터가 아닌 상태 컴포넌트는
-  `registerStatefulComponent<T>()`, 상태 없이 세운 것만 걷는 컴포넌트는 `registerViewOwner<T>()` — `despawnViews()` 를 둔다).
-- **틱 안에서는 구조를 바꾸지 않는다.** 디렉터는 스폰 요청을 쌓고(`hasPendingSpawn`) 베이스가 `executeOrDeferPostTick` 한 번으로 틱 뒤에 `onFlush` 를 부른다(틱 안의 `addComponent` 는 nullptr).
-- **같은 그룹은 병렬이다.** 뷰는 자기 오브젝트에만 쓰고, 남의 컨테이너는 첨자(`operator[]` — Debug 경합 검출기가 쓰기로 센다) 대신 `data()` · const 참조로 읽는다.
-  다른 오브젝트에 값을 넣어야 하면(디렉터 → 카메라 리그) 읽는 쪽보다 **앞 그룹**에서 넣는다.
-- **런타임에만 쓰는 머티리얼 에셋을 두지 않는다.** 프리팹만 가리키는 머티리얼은 처음 스폰할 때 올라가고 마지막 것이 사라질 때 내려간다 — 색만 다르면
-  씬이 늘 들고 있는 머티리얼(팔레트 · 엔진 기본)에서 디렉터가 머티리얼 인스턴스를 만들어 나눠 쓴다(백로그 1-3).
-- **프레임을 넘겨 드는 것은 핸들이다.** 디렉터 · 카메라 · 세운 오브젝트를 `GameObjectHandle` 로 들고 매 프레임 푼다. 씬의 다른 엔티티를 가리키는 PROPERTY 는
-  `GameObjectHandle` 이면 파일 id 로 저장되고 로드 · 쿠킹 뒤에도 이어진다.
-- **씬 · 프리팹 파일은 엔진 직렬화기로 쓴다**(에디터, 또는 오브젝트를 지어 `SceneManager::saveActiveScene` · `PrefabAsset::saveToXmlFile`). 손으로 쓴 XML 은 형식을 깨기 쉽다.
-- **게임 컴포넌트의 첫 `REFLECT` 는 다시 configure 해야 등록된다.** EngineTest 는 게임 모듈을 링크하지 않으므로 게임 팩의 씬 · 프리팹 검사
-  (`ResourceDataSchemaTest`)는 `Source/Games` 헤더에 선언된 타입만 모르는 타입으로 넘긴다. 쿠킹은 다른 게임 팩의 그런 씬을 건너뛴다(활성 팩만 쿠킹 대상).
+스폰은 `spawnPrefab`(정리 목록에 들어갑니다)과 `destroySpawned`, 소리는 `getSoundQueue()` 의 `queueClip`, `queueEvent`, `queueEventAt`(틱 뒤에 냅니다)입니다.
+색만 다른 모습은 `MaterialTintCache`, 뷰와 컨트롤러가 디렉터를 찾는 것은 `GameDirectorComponent::resolve<디렉터>( manager, handle )` 입니다.
+자동 플레이 PROPERTY 는 베이스의 `_bAutoPlay` 하나이고, 게임은 `SW_GAME_AUTOPLAY` 로 전역 변수(`-gv_<게임>AutoPlay`)를 등록합니다. `isAutoPlayOn()` 이 둘을 모두 봅니다.
 
-## Empty 는 왜 비어 있지 않은가
+## Empty 에 벤치가 있는 이유
 
-`Empty` 는 템플릿이면서 동시에 **렌더 경로 측정용 벤치 하네스**를 들고 있습니다.
-`-gv_benchMeshes=N` 을 주면 큐브 N 개를 격자로 세우고 매 프레임 흔듭니다.
+`Empty` 는 템플릿이면서 렌더 경로 측정용 벤치 하네스를 가지고 있습니다. `-gv_benchMeshes=N` 을 주면 큐브 N 개를 격자로 놓고 매 프레임 흔듭니다.
+렌더 비용을 재려면 그릴 것이 씬에 있어야 하고, 씬을 만드는 것은 엔진이 아니라 게임의 일이라서 여기 있습니다.
+`Scripts/dev/RunBackendSmoke.py` 와 [검증과 측정](../../docs/08_Verification.md)의 측정 조건이 이 플래그에 기대므로 타깃과 플래그 이름은 바꾸지 않습니다.
 
-그릴 것이 씬에 올라가야 렌더 비용을 잴 수 있고, **씬을 만드는 것은 엔진이 아니라 게임의 일**이라
-여기 있습니다. `Scripts/dev/RunBackendSmoke.py` 와 `Engine/Graphics/README.md` 의 측정 조건이 이
-플래그에 기대고 있어 타깃·플래그 이름은 바꾸지 않습니다.
+벤치는 `BenchScene` 과 `BenchSceneRig.cpp` 에 있습니다. `-gv_benchTickMovers=N` 은 틱 안에서 위치를 쓰는 `BenchMoverComponent` 를 붙이고,
+`-gv_benchCombat=1` 은 KayKit 스켈레톤이 맞고 쓰러지는 전투 연출(`BenchCombatComponent`, 로그 `[BenchCombat]`)을 돌립니다.
+새 게임을 시작할 때 지울 경계가 파일 경계와 같도록 나눠 두었습니다. 벤치가 아니면 `EmptyGame` 은 첫 씬을 요청합니다. 에디터를 켜면 에디터의 시작 씬 요청이 나중에 와서 그쪽이 열립니다.
 
-그래서 파일을 나눠 두었습니다 — `EmptyGame` 은 작은 템플릿이고, 벤치는 `BenchScene`(+ 틱 안에서 위치를 쓰는
-`BenchMoverComponent`, `-gv_benchTickMovers=N`) · 전투 연출(`BenchCombatComponent`, `-gv_benchCombat=1` — KayKit 스켈레톤이 걸으며 발소리 알림 →
-머리 · 가슴 맞음(히트 존 · 움찔) → 180 프레임 치명적 맞음(래그돌 · 손 소켓의 칼이 물리로 떨어짐) → 900 프레임 기상, 로그 `[BenchCombat]`)에 전부 들어 있습니다. 새 게임을 시작할 때 지울 경계가 파일 경계와 같아야 하기 때문입니다.
-벤치가 아니면 `EmptyGame` 은 첫 씬을 요청합니다(`requestFirstScene`). 에디터가 뜨면 에디터의 시작 씬 요청이 나중이라 그쪽이 열립니다.
+## 함정과 주의
+
+- **디렉터의 시뮬레이션은 `writeState` 와 `readState` 로 넘깁니다.** 키트의 보통 클래스는 PROPERTY 가 아니라서 핫 리로드와 세이브에서 사라집니다. 게임 모듈의 정적 변수와 컴포넌트 멤버는 모듈과 함께 언로드됩니다.
+  게임 인스턴스가 생성자에서 `registerDirector<디렉터>()` 로 올립니다. 디렉터가 아닌 상태 컴포넌트는 `registerStatefulComponent<T>()`,
+  상태 없이 스폰한 것만 정리하는 컴포넌트는 `registerViewOwner<T>()`(`despawnViews()` 를 둡니다)입니다.
+- **틱 안에서는 구조를 바꾸지 않습니다.** 디렉터는 스폰 요청을 쌓고(`hasPendingSpawn`), 베이스가 `executeOrDeferPostTick` 한 번으로 틱 뒤에 `onFlush` 를 부릅니다. 틱 안의 `addComponent` 는 nullptr 를 돌려줍니다.
+- **같은 틱 그룹은 병렬입니다.** 뷰는 자기 오브젝트에만 쓰고, 다른 오브젝트의 컨테이너는 첨자(`operator[]`) 대신 `data()` 나 const 참조로 읽습니다. Debug 경합 검출기가 첨자 접근을 쓰기로 세기 때문입니다.
+  다른 오브젝트에 값을 넣어야 하면(디렉터가 카메라 리그에) 읽는 쪽보다 앞 그룹에서 넣습니다.
+- **런타임에만 쓰는 머티리얼 에셋을 두지 않습니다.** 프리팹만 가리키는 머티리얼은 처음 스폰할 때 게임 스레드에서 로드되고, 마지막 것이 사라질 때 언로드되어 렌더 스레드의 병렬 기록과 겹칩니다.
+  색만 다르면 씬이 늘 가지고 있는 머티리얼(팔레트, 엔진 기본)에서 디렉터가 머티리얼 인스턴스를 만들어 나눠 씁니다(`MaterialTintCache`).
+- **프레임을 넘겨 가지고 있는 것은 핸들입니다.** 디렉터와 카메라와 스폰한 오브젝트를 `GameObjectHandle` 로 가지고 매 프레임 대상을 찾습니다.
+  씬의 다른 엔티티를 가리키는 PROPERTY 가 `GameObjectHandle` 이면 파일 id 로 저장되어 로드와 쿠킹 뒤에도 이어집니다.
+- **씬과 프리팹 파일은 엔진 직렬화기로 씁니다.** 에디터를 쓰거나, 오브젝트를 만든 뒤 `SceneManager::saveActiveScene` 이나 `PrefabAsset::saveToXmlFile` 로 저장합니다. 손으로 쓴 XML 은 형식을 깨기 쉽습니다.
+- **게임 컴포넌트에 처음 `REFLECT` 를 넣으면 다시 configure 해야 등록됩니다.** EngineTest 는 게임 모듈을 링크하지 않습니다.
+  그래서 게임 팩의 씬과 프리팹 검사(`ResourceDataSchemaTest`)는 `Source/Games` 헤더에 선언된 타입을 모르는 타입으로 넘깁니다.
+  쿠킹은 활성 팩만 대상이라 다른 게임 팩의 그런 씬은 건너뜁니다.
+- **고르지 않은 게임은 빌드되지 않습니다.** 게임 소스를 고친 변경은 그 게임 프리셋으로 빌드해야 확인됩니다.
+
+## 더 볼 곳
+
+- [GameFramework](../GameFramework/README.md) — 기반, 폰과 조종자, 디렉터 베이스
+- [Kits](../GameFramework/Kits/README.md) — 키트 목록과 키트 여럿을 섞는 규칙
+- [Automation](../Engine/Automation/README.md) — 시나리오 형식과 종료 코드
+- [시작하기](../../docs/01_GettingStarted.md) — 첫 빌드와 첫 게임 오브젝트

@@ -1,4 +1,4 @@
-<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->
+<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->
 
 # EditorToolDefaults
 
@@ -14,15 +14,15 @@
 | 커밋 | 한다 |
 | 참고 | 기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값 |
 
-JSON 키는 아래 칸 이름 그대로입니다(앞의 `_` 포함). 적지 않은 칸은 기본값입니다. 모르는 키 · 읽지 못하는 값은 로드 오류입니다.
+JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다.
 
-## 칸
+## 필드
 
 editortooldefaults.json 의 에디터 도구 시드입니다. 읽기는 `JsonSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
 
-정본: [`Source/Editor/Common/Config/EditorToolDefaults.h`](../../Source/Editor/Common/Config/EditorToolDefaults.h)
+원본: [`Source/Editor/Common/Config/EditorToolDefaults.h`](../../Source/Editor/Common/Config/EditorToolDefaults.h)
 
-| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |
+| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
 | `_defaultMap` | `string` | — |  |  | 타일맵 패널이 처음 여는 맵(리소스 경로, 비면 없음) |
 | `_warpMap` | `string` | — |  |  | 타일맵 패널의 워프 대상 기본값(리소스 경로) |

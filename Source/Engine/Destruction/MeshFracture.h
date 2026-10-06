@@ -56,16 +56,16 @@ namespace sw
     /** @brief 쪼개기 설정입니다(모델 임포트 규칙 `fracture` 가 채운다). */
     struct SW_API FractureSettings
     {
-        vector<uint32>  _listLevelCount;  ///< 묶음 레벨마다 묶음 수(위 → 아래). 비면 뿌리 하나
+        vector<uint32>  _listLevelCount;  ///< 클러스터 레벨마다 클러스터 수(위 → 아래). 비면 뿌리 하나
         float4          _interiorColor;   ///< 안쪽 면 정점 색
         float3          _impactPoint;     ///< Clustered: 맞은 자리(메시 공간)
         float32         _clusterRadius;   ///< Clustered: 몰리는 반경(미터)
         float32         _clusterFraction; ///< Clustered: 반경 안에 놓을 씨앗의 몫(0..1)
         float32         _interiorUvScale; ///< 안쪽 면 평면 투영 UV 의 미터당 배율
-        float32         _sliceJitter;     ///< Slices: 칸 크기에 대한 흔들림(0..0.5)
+        float32         _sliceJitter;     ///< Slices: 셀 크기에 대한 흔들림(0..0.5)
         uint64          _seed;
         uint32          _pieceCount;       ///< Uniform · Clustered: 조각 수(씨앗 수 — 메시 밖 칸은 빠진다)
-        uint32          _arrSliceCount[3]; ///< Slices: 축마다 칸 수
+        uint32          _arrSliceCount[3]; ///< Slices: 축마다 셀 수
         uint32          _maxHullPoint;     ///< 조각 껍질 점의 상한(넘으면 고른 방향의 끝점만)
         FracturePattern _pattern;
         FractureVolume  _volume; ///< 부피(닫히지 않은 모델은 Bounds · Hull)

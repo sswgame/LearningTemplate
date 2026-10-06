@@ -2,7 +2,7 @@
  * @file TestContainerBench.cpp
  * @brief Core 컨테이너 마이크로벤치 — 해시맵 조회 · 문자열 키 조회 · intern 적중 · 벡터 한 칸씩 늘리기.
  * @details 숫자를 **찍기만** 하고 판정하지 않는다(기계마다 다르다). 판정은 정합성만 본다(넣은 키는 전부 찾고,
- *          넣지 않은 키는 못 찾는다). 회귀의 근거는 `docs/06_Backlog.md` 에 Release 로 잰 표로 남긴다 — 이 케이스는
+ *          넣지 않은 키는 못 찾는다). 회귀의 근거는 `docs/08_Verification.md` 에 Release 로 잰 표로 남긴다 — 이 케이스는
  *          그 표를 같은 코드로 다시 만들기 위한 자리다.
  *
  *          재는 것:

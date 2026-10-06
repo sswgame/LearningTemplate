@@ -105,5 +105,8 @@ Resource/Cache/
 **/shader_cache/
 *.shadercache
 
-# Claude Code (로컬 에이전트 설정)
-.claude/
+# Claude Code — 에이전트 정의 · 훅 · 공유 설정만 추적한다(개인 권한 목록은 settings.local.json)
+.claude/*
+!.claude/agents/
+!.claude/hooks/
+!.claude/settings.json

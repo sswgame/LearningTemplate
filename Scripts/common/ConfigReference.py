@@ -36,7 +36,7 @@ kConfigReferenceJson = "ConfigReference.json"
 #: 손으로 쓰는 색인 한 장 — 생성 페이지가 거기로 고리를 건다.
 kHandWrittenIndex = "docs/07_Configuration.md"
 
-_kGeneratedBanner = "<!-- 생성 문서 — 손으로 고치지 않는다. 정본은 코드다. 다시 만들기: py -3 Scripts/generate/GenerateConfigReference.py -->"
+_kGeneratedBanner = "<!-- 생성 문서입니다. 손으로 고치지 말고 원본 코드를 고친 뒤 다시 만듭니다: py -3 Scripts/generate/GenerateConfigReference.py -->"
 
 #: 스캔에서 빼는 폴더 조각.
 _kListSkipPart = ("/ThirdParty/", "/build/", "/Tools/vcpkg/", "/.git/")
@@ -648,19 +648,19 @@ def findCatalogViolations(repositoryRoot: Path, index: SourceIndex) -> list[str]
 def describeKeyStyleInternal(entry: ConfigFileEntry) -> str:
     """파일의 키가 코드의 무엇과 같은지 한 줄입니다."""
     if entry.keyStyle == kKeyStyleJsonMember:
-        return "JSON 키는 아래 칸 이름 그대로입니다(앞의 `_` 포함). 적지 않은 칸은 기본값입니다. 모르는 키 · 읽지 못하는 값은 로드 오류입니다."
+        return "JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 않은 필드는 기본값입니다. 모르는 키나 읽지 못하는 값은 로드 오류입니다."
     if entry.keyStyle == kKeyStyleXmlMember:
-        return "XML 속성(값 하나) · 자식 원소(목록 · 구조체)의 이름은 아래 칸 이름 그대로입니다. 모르는 이름은 로드 오류입니다."
+        return "XML 속성(값 하나)과 자식 요소(목록, 구조체)의 이름은 아래 필드 이름 그대로입니다. 모르는 이름은 로드 오류입니다."
     if entry.keyStyle == kKeyStyleXmlElementBare:
-        return "XML 자식 원소 이름은 아래 칸 이름에서 앞의 `_` 를 뗀 것입니다(`_startMap` → `<startMap>`). 모르는 원소는 로드 오류입니다."
+        return "XML 자식 요소 이름은 아래 필드 이름에서 앞의 `_` 를 뗀 것입니다(`_startMap` → `<startMap>`). 모르는 요소는 로드 오류입니다."
     if entry.keyStyle == kKeyStyleKeyTable:
-        return "JSON 키는 아래 표의 키 그대로입니다. 모르는 키는 로드 오류입니다 — 읽기 코드가 이 표(`ConfigKeyDoc`)로 검사합니다."
+        return "JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 오류이고, 읽기 코드가 이 테이블(`ConfigKeyDoc`)로 검사합니다."
     return ""
 
 
 def makeFieldTableInternal(typeDoc: TypeDoc) -> list[str]:
     """칸 표입니다."""
-    lines = ["| 칸 | 타입 | 기본값 | 범위 | 단위 | 설명 |", "|---|---|---|---|---|---|"]
+    lines = ["| 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |", "|---|---|---|---|---|---|"]
     for fieldDoc in typeDoc.listField:
         rangeText = ""
         if fieldDoc.minText or fieldDoc.maxText:
@@ -717,11 +717,11 @@ def makeEntryPage(repositoryRoot: Path, entry: ConfigFileEntry, index: SourceInd
             listTypeDoc.append(typeDoc)
 
     for typeIndex, typeDoc in enumerate(listTypeDoc):
-        title = "칸" if typeIndex == 0 else f"`{typeDoc.name}`"
+        title = "필드" if typeIndex == 0 else f"`{typeDoc.name}`"
         lines += [f"## {title}", ""]
         if typeDoc.description:
             lines += [typeDoc.description, ""]
-        lines += [f"정본: [`{typeDoc.source}`](../../{typeDoc.source})", ""]
+        lines += [f"원본: [`{typeDoc.source}`](../../{typeDoc.source})", ""]
         lines += makeFieldTableInternal(typeDoc)
         lines.append("")
     for enumDoc in listEnumDoc:
@@ -732,7 +732,7 @@ def makeEntryPage(repositoryRoot: Path, entry: ConfigFileEntry, index: SourceInd
         lines += [f"| `{valueName}` | {escapeCellInternal(valueDoc)} |" for valueName, valueDoc in enumDoc.listValue]
         lines.append("")
     if entry.ownerDoc:
-        lines += [f"형식의 정본: [`{entry.ownerDoc}`](../../{entry.ownerDoc})", ""]
+        lines += [f"형식 설명: [`{entry.ownerDoc}`](../../{entry.ownerDoc})", ""]
 
     outMetadata["files"].append({
         "page": entry.page, "path": entry.pathPattern, "layer": entry.layer, "type": entry.typeName,
@@ -747,21 +747,21 @@ def makeEntryPage(repositoryRoot: Path, entry: ConfigFileEntry, index: SourceInd
 def makeIndexPage() -> str:
     """색인 — 층별 설정 파일 표와 다른 생성 페이지 고리입니다."""
     lines = [_kGeneratedBanner, "", "# 설정 참조", "",
-             f"설정을 **어디에 두는가**(층 · 우선순위 · 배포본 · 핫 리로드)는 손으로 쓴 [`{kHandWrittenIndex}`](../{kHandWrittenIndex.split('/', 1)[1]}) 가 정한다.",
-             "이 폴더는 코드에서 만든다 — 칸을 고치면 코드를 고치고 `py -3 Scripts/generate/GenerateConfigReference.py` 로 다시 만든다"
-             "(낡으면 `CheckConfigReference` 게이트가 진다).", "",
-             "| 다른 표 | 정본 |", "|---|---|",
-             "| [전역 변수 `-gv_*`](GlobalVariables.md) | `SW_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE(_SHIPPED)` 정의 |",
-             "| [명령줄 인자](CommandLine.md) | `Source/Core/Predefined/ArgumentList.xxx` · `Config/Engine/CookContract.json` |",
-             "| [CMake 빌드 옵션](BuildOptions.md) | `option()` · `set( … CACHE … )` · `CMakePresets.json` |",
+             f"설정을 **어디에 두는가**(층, 우선순위, 배포본, 핫 리로드)는 손으로 쓴 [`{kHandWrittenIndex}`](../{kHandWrittenIndex.split('/', 1)[1]})에 있습니다.",
+             "이 폴더는 코드에서 만듭니다. 필드를 고치려면 코드를 고치고 `py -3 Scripts/generate/GenerateConfigReference.py` 로 다시 만듭니다"
+             "(문서가 낡으면 `CheckConfigReference` 게이트가 실패합니다).", "",
+             "| 다른 목록 | 원본 |", "|---|---|",
+             "| [전역 변수 `-gv_*`](GlobalVariables.md) | `SW_GLOBAL_VARIABLE`, `SW_TEST_GLOBAL_VARIABLE(_SHIPPED)` 정의 |",
+             "| [명령줄 인자](CommandLine.md) | `Source/Core/Predefined/ArgumentList.xxx`, `Config/Engine/CookContract.json` |",
+             "| [CMake 빌드 옵션](BuildOptions.md) | `option()`, `set( … CACHE … )`, `CMakePresets.json` |",
              "| [사용자 설정](UserSettings.md) | `Resource/**/*.settings.xml` |", ""]
     for layer in kListLayerOrder:
         listEntry = [entry for entry in kListConfigFile if entry.layer == layer]
         if not listEntry:
             continue
-        lines += [f"## {layer}", "", "| 파일 | 읽는 곳 · 언제 | 배포본 | 커밋 | 문서 |", "|---|---|---|---|---|"]
+        lines += [f"## {layer}", "", "| 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |", "|---|---|---|---|---|"]
         for entry in listEntry:
-            docText = f"[{entry.page}]({entry.page}.md)" if entry.page else (f"[정본](../../{entry.ownerDoc})" if entry.ownerDoc else "")
+            docText = f"[{entry.page}]({entry.page}.md)" if entry.page else (f"[형식 설명](../../{entry.ownerDoc})" if entry.ownerDoc else "")
             readText = f"{entry.reader} — {entry.readWhen}"
             if entry.note:
                 readText += f". {entry.note}"
@@ -770,16 +770,17 @@ def makeIndexPage() -> str:
         lines.append("")
     lines += ["## 타입 읽는 법", "",
               "`string` = 글, `vector<T>` = 배열(XML 은 자식 원소 목록), `map<K, V>` = 오브젝트, `float2/3/4` = `\"x,y,z\"` 글, enum = 값 이름 글, "
-              "`hashed_string` = 이름 글. 기본값 칸이 `—` 이면 0 · false · 빈 글 · 빈 목록이다.", ""]
+              "`hashed_string` = 이름 글. 기본값이 `—` 이면 0, false, 빈 글, 빈 목록입니다.", ""]
     return "\n".join(lines).rstrip() + "\n"
 
 
 def makeGlobalVariablePage(listVariable: list[GlobalVariableDoc], outMetadata: dict) -> str:
     """전역 변수 표입니다(폴더별)."""
     lines = [_kGeneratedBanner, "", "# 전역 변수 (`-gv_*`)", "", "[설정 색인](README.md)", "",
-             "명령줄 `-gv_<이름>=<값>` · 에디터 Global Variables 패널 · 개발 콘솔로 바꾼다. 종류: **일반**(에디터 목록 · 프리셋 · 명령줄, 배포본 포함) · "
-             "**시험**(배포본에서 등록되지 않아 기본값으로만 읽힌다) · **시험 · 배포본에도**(배포 실행 파일을 스크립트가 조종하는 스위치). "
-             "사용자 설정이 값을 넣는 변수는 `UserSettingsVariables.cpp` 에 있고, 기동 때는 명령줄 `-gv_*` 가 플레이어 값을 이긴다(`docs/07_Configuration.md` 우선순위).", ""]
+             "값은 명령줄 `-gv_<이름>=<값>`, 에디터의 Global Variables 패널, 개발 콘솔로 바꿉니다. "
+             "종류는 셋입니다. **일반** 은 배포본에도 있습니다. **시험** 은 배포본에서 등록되지 않아 기본값으로만 읽힙니다. "
+             "**시험 · 배포본에도** 는 스크립트가 배포 실행 파일을 조종할 때 쓰는 스위치입니다. "
+             "사용자 설정이 값을 넣는 변수는 `UserSettingsVariables.cpp` 에 있고, 시작할 때는 명령줄 `-gv_*` 가 플레이어 값보다 우선합니다(`docs/07_Configuration.md`).", ""]
     mapGroup: dict[str, list[GlobalVariableDoc]] = {}
     for variable in listVariable:
         parts = variable.source.split("/")
@@ -801,8 +802,8 @@ def makeGlobalVariablePage(listVariable: list[GlobalVariableDoc], outMetadata: d
 def makeArgumentPage(listArgument: list[ArgumentDoc], outMetadata: dict) -> str:
     """명령줄 인자 표입니다(목록 순서)."""
     lines = [_kGeneratedBanner, "", "# 명령줄 인자", "", "[설정 색인](README.md)", "",
-             "앞의 `-` · `--` 는 몇 개든 같다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받는다. "
-             "목록 밖: `--crash-reporter=<묶음 폴더>`(App 의 main 이 엔진을 세우기 전에 읽고 끝낸다).", "",
+             "키 앞의 하이픈은 `-` 든 `--` 든 같습니다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받습니다. "
+             "목록 밖의 인자: `--crash-reporter=<번들 폴더>`. App 의 main 이 엔진을 초기화하기 전에 읽고, 크래시 보고만 하고 끝냅니다.", "",
              "| 철자 | 값 | 설명 | 코드 이름 |", "|---|---|---|---|"]
     for argument in listArgument:
         spelling = " · ".join(f"`-{item}`" for item in argument.listSpelling)

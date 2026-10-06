@@ -3,7 +3,7 @@
 """
 입력 · 매핑 · 행동 세 층의 경계를 지킨다 — GameFramework · Games 에서 입력(InputManager · InputMap)을 읽어도 되는 파일은 정해져 있다.
 
-층(Source/GameFramework/README.md "조종 — 폰 · 조종자 · 의도"):
+층(Source/GameFramework/README.md "조종 — 폰, 조종자, 의도"):
   - 입력 층(Engine/Input)은 장치 사건만 안다.
   - 매핑 층(InputMap)을 읽는 것은 **플레이어 조종자** · 플레이어 뷰 카메라 · 명령형 게임의 디렉터(명령 조종자)뿐이다.
   - 폰(몸 · 이동 · 탈것)은 `ControlIntent` 만 읽는다 — 플레이어 · AI · 네트워크 · 리플레이가 같은 의도로 몬다.
