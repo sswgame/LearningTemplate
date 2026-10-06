@@ -12,15 +12,8 @@
  * C++: bindComputeConstantBuffer( cb, 0 ) / bindComputeShaderResource( rest, 0 ) / ( weights, 1 ) / ( palette, 2 ) / ( instances, 3 ) / bindComputeUav( morph, 0 ).
  */
 
-// 결과 · 레스트 버퍼의 원소 배치는 meshmorph.hlsl 과 같다 — 정점 하나 = float4 둘([2i] 위치, [2i+1] 노멀). 레스트 버퍼 뒤쪽(g_SkinDeltaBase 부터)은
-// 모프 차이 하나 = float4 둘([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이).
-#define SW_MORPH_FLOAT4_PER_VERTEX 2u
-// 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)). 팔레트 시작은 인스턴스 표가 더한다.
-#define SW_SKIN_FLOAT4_PER_VERTEX 3u
-// 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.
-#define SW_SKIN_FLOAT4_PER_BONE 3u
-// 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작(스킨 구간 기준) · 원본 시작 · 정점 수 · 팔레트 시작, [2i+1] 모프 가중치 시작(팔레트를 float 배열로 볼 때) · 타깃 수).
-#define SW_SKIN_UINT4_PER_INSTANCE 2u
+// 결과 · 레스트 · 가중치 · 팔레트 · 인스턴스 표의 원소 배치(SW_MORPH_FLOAT4_PER_VERTEX · SW_SKIN_*)는 bindingslots.hlsli 10 절 — C++ 와 같은 정의다.
+// 팔레트 시작은 인스턴스 표가 더한다.
 // 이분 탐색 걸음 상한 — 인스턴스 2^16 개까지. 고정 횟수라 루프가 셰이더 컴파일러에 펼쳐진다.
 #define SW_SKIN_SEARCH_STEPS 16u
 // 정점 하나에 걸리는 모프 차이 상한 — 데이터가 깨져도 루프가 끝나게.

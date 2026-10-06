@@ -42,6 +42,7 @@
 #include "Engine/Graphics/Renderer/Scene/GpuScene.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -6309,10 +6310,10 @@ SW_TEST_CASE( RenderPassGpuTest, PartialStructuredBufferUploadReadsOnlyTheSource
  */
 SW_TEST_CASE( RenderPassGpuTest, WaterWaveShaderMatchesCpu )
 {
-    constexpr uint32  kSampleCount                              = 32;
-    constexpr uint32  kTexelPerRow                              = 8;
-    constexpr float32 kTime                                     = 2.75f;
-    const sw::float4  arrWave[sw::WaterWaveMath::kMaxWaveCount] = {
+    constexpr uint32  kSampleCount                                = 32;
+    constexpr uint32  kTexelPerRow                                = 8;
+    constexpr float32 kTime                                       = 2.75f;
+    const sw::float4  arrWave[sw::shaderslot::kGerstnerWaveCount] = {
         sw::GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f}
             .toVector(),
         sw::GerstnerWave{ 2.1f,  5.0f, 0.12f, 0.6f}

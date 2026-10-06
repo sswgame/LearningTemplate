@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+
 namespace sw
 {
     namespace
@@ -38,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 WaterWaveMath::countActiveWaves( const float4 ( &arrWave )[kMaxWaveCount] )
+    uint32 WaterWaveMath::countActiveWaves( const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
         uint32 count{ 0 };
         for ( const float4& wave : arrWave )
@@ -46,7 +48,7 @@ namespace sw
         return count;
     }
 
-    float3 WaterWaveMath::computeDisplacement( const float2& origin, float32 time, const float4 ( &arrWave )[kMaxWaveCount] )
+    float3 WaterWaveMath::computeDisplacement( const float2& origin, float32 time, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
         using Internal           = WaterWaveMathInternal;
         const uint32 activeCount = countActiveWaves( arrWave );
@@ -65,7 +67,7 @@ namespace sw
         return displacement;
     }
 
-    float3 WaterWaveMath::computeNormal( const float2& origin, float32 time, const float4 ( &arrWave )[kMaxWaveCount] )
+    float3 WaterWaveMath::computeNormal( const float2& origin, float32 time, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
         // 옮겨 간 면의 두 접선(원점 x · z 로 편미분)의 외적이다 — GPU Gems 의 근사(옮겨 간 자리에서 위상을 다시 잰다)가 아니라 정확한 노멀이다.
         using Internal           = WaterWaveMathInternal;
@@ -93,7 +95,7 @@ namespace sw
         return tangentZ.cross( tangentX ).normalize();
     }
 
-    float32 WaterWaveMath::computeSurfaceHeight( const float2& position, float32 time, const float4 ( &arrWave )[kMaxWaveCount], uint32 iterationCount, float2* pOutOrigin )
+    float32 WaterWaveMath::computeSurfaceHeight( const float2& position, float32 time, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount], uint32 iterationCount, float2* pOutOrigin )
     {
         // 원점 p 는 p + 변위(p).xz = 위치 를 풀어 찾는다. Q 가 고리를 막는 범위라 수평 변위의 기울기가 1 보다 작아 고정점 반복이 수렴한다.
         float2 origin = position;

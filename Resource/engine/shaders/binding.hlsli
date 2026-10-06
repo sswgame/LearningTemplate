@@ -140,7 +140,6 @@ SwBatchData swLoadBatch( uint batchIndex )
 // OpenGL 만 **같은 원소의 두 멤버를 다른 원소에서 읽는다**(셰이더 모양에 따라 달라진다 — 드라이버의 SPIR-V 경로가
 // 구조체 멤버 로드를 다루는 방식). 평면 배열은 멤버가 없으니 그 자리가 아예 없다.
 // 색은 담지 않는다 — 정점 셰이더가 색·UV 는 **입력 스트림에서** 읽고 풀에서는 위치와 노멀만 가져간다.
-#define SW_MORPH_FLOAT4_PER_VERTEX 2u
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SRV );
 
 /**
@@ -206,8 +205,7 @@ float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 //      텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 길).
 // ------------------------------------------------------------------------------
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwVertexAnimation, SW_SLOT_VERTEX_ANIMATION_SRV );
-// 노멀 한 칸의 해상도(팔면체 12 + 12 비트). C++ MeshVertexAnimation::packNormal 과 같아야 한다.
-#define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
+// 노멀 한 칸의 해상도(팔면체 12 + 12 비트)는 SW_VERTEX_ANIMATION_NORMAL_STEPS(bindingslots.hlsli 10 절 — C++ packNormal 과 같은 정의).
 
 /** @brief VAT 의 노멀 칸(2^24 아래 정수를 담은 실수)을 단위 노멀로 푼다. C++ `MeshVertexAnimation::unpackNormal` 과 같은 식이다. */
 float3 swUnpackVertexAnimationNormal( float packed )

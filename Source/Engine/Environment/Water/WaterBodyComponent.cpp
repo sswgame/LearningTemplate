@@ -8,6 +8,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
@@ -28,8 +29,8 @@ namespace sw
 
             static const hashed_string& getWaveName( uint32 waveIndex )
             {
-                static const hashed_string s_arrName[WaterWaveMath::kMaxWaveCount] = { hashed_string( "wave0" ), hashed_string( "wave1" ), hashed_string( "wave2" ),
-                                                                                       hashed_string( "wave3" ) };
+                static const hashed_string s_arrName[shaderslot::kGerstnerWaveCount] = { hashed_string( "wave0" ), hashed_string( "wave1" ), hashed_string( "wave2" ),
+                                                                                         hashed_string( "wave3" ) };
                 return s_arrName[waveIndex];
             }
 
@@ -246,9 +247,9 @@ namespace sw
         _riverWidth     = width;
     }
 
-    void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] ) const
+    void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const
     {
-        for ( uint32 waveIndex = 0; waveIndex < WaterWaveMath::kMaxWaveCount; ++waveIndex )
+        for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
             outArrWave[waveIndex] = waveIndex < _listWave.size() ? _listWave[waveIndex].toVector() : float4{ 0.0f, 1.0f, 0.0f, 0.0f };
     }
 
@@ -257,9 +258,9 @@ namespace sw
         using Internal = WaterBodyComponentInternal;
         if ( _material.getInstance() == nullptr )
             return;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
-        for ( uint32 waveIndex = 0; waveIndex < WaterWaveMath::kMaxWaveCount; ++waveIndex )
+        for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
             _material.setVector( Internal::getWaveName( waveIndex ), arrWave[waveIndex] );
         // x = 파도 시간, y = 깊은 물 깊이, z = 거품 폭, w = 잔물결 세기
         _material.setVector( hashed_string( "waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
@@ -412,7 +413,7 @@ namespace sw
         float32 baseHeight{ 0.0f };
         if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
             return false;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
         outHeight = baseHeight + WaterWaveMath::computeSurfaceHeight( float2{ worldX, worldZ }, time < 0.0f ? _waveTime : time, arrWave );
         return true;
@@ -423,7 +424,7 @@ namespace sw
         float32 baseHeight{ 0.0f };
         if ( findBaseHeight( worldX, worldZ, baseHeight ) == false )
             return false;
-        float4 arrWave[WaterWaveMath::kMaxWaveCount];
+        float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
         const float32 waveTime = time < 0.0f ? _waveTime : time;
         float2        origin{};

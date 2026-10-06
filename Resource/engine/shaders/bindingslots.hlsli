@@ -6,7 +6,7 @@
  * 같은 값을 constexpr 로 노출하고, 4개 백엔드(DX11/DX12/Vulkan/GL)는 그 상수로만 바인딩한다.
  * ShaderBindingValidator::validate 가 쿠킹된 바이너리의 리플렉션을 이 표와 대조한다.
  *
- * 규칙: 이 파일에는 #define 과 주석만 둔다 (C++ 컴파일러가 그대로 읽는다). 산술식·함수형 매크로 금지.
+ * 규칙: 이 파일에는 #define 과 주석만 둔다 (C++ 컴파일러가 그대로 읽는다). 산술식·함수형 매크로 금지. 값은 숫자 리터럴(정수 · `u` · `f` 접미)만.
  *
  * 모델 (언리얼 GPUScene 식): 셰이더 선언은 네 백엔드에서 **같다** — register(b#/t#/u#) 하나로 쓰고, 백엔드는
  * 그 번호를 각자의 방식으로 건다. 드로우마다 바뀌는 데이터는 바인딩을 갈아 끼우지 않고 **큰 버퍼에서 인덱스로 읽는다**
@@ -223,5 +223,23 @@
 // ------------------------------------------------------------------------------
 #define SW_PASS_FLAG_NATIVE_BINDLESS   1   // 네이티브 bindless(DX12 · Vulkan) — 텍스처 배열을 인덱스로 읽는다
 #define SW_PASS_FLAG_SKIP_POST         2   // 이 뷰는 후처리를 끈다 — postchain 이 블룸 · 외곽선 · 톤맵을 건너뛰고 원본을 낸다
+
+// ------------------------------------------------------------------------------
+// 10) 버퍼 배치 · 식 상수 — 슬롯 번호는 아니지만 C++ 와 셰이더가 같아야 하는 수. 정본은 여기 하나다(이 파일이 양쪽에서 include 된다).
+//     숫자 리터럴만 둔다(정수 · `u` 접미) — C++ 컴파일러도 읽는다.
+// ------------------------------------------------------------------------------
+// 모프 결과 · 레스트 버퍼 — 정점 하나 = float4 둘([2i] 위치, [2i+1] 노멀). 레스트 버퍼 뒤쪽(g_SkinDeltaBase 부터)은 모프 차이 하나 = float4 둘
+// ([0] 위치 차이 + w 에 타깃 번호, [1] 노멀 차이). 구조체가 아니라 평면 배열인 이유는 binding.hlsli 의 g_SwMorphVertices 주석(GL 이 멤버를 옆 원소에서 읽는다).
+#define SW_MORPH_FLOAT4_PER_VERTEX     2u
+// 스킨 가중치 버퍼 — 원본 정점 하나 = float4 셋([3i] 가중치 넷, [3i+1] 원본 스켈레톤 본 번호 넷, [3i+2] 모프 차이 구간(시작 · 수)).
+#define SW_SKIN_FLOAT4_PER_VERTEX      3u
+// 스킨 팔레트 — 본 하나 = float4 셋(행벡터 규약 4x4 행렬의 0 · 1 · 2 열). 위치 = dot( float4( p, 1 ), 열 ). 본 행 뒤에 모프 가중치가 float4 로 이어진다.
+#define SW_SKIN_FLOAT4_PER_BONE        3u
+// 스킨 인스턴스 표 — 인스턴스 하나 = uint4 둘([2i] 결과 시작 · 원본 시작 · 정점 수 · 팔레트 시작, [2i+1] 모프 가중치 시작 · 타깃 수).
+#define SW_SKIN_UINT4_PER_INSTANCE     2u
+// 정점 애니메이션(VAT) 노멀 — 팔면체 한 칸의 해상도(12 비트). 굽는 쪽(MeshVertexAnimation)과 읽는 쪽(binding.hlsli)이 같아야 한다.
+#define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
+// 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGpuTest.WaterWaveShaderMatchesCpu).
+#define SW_GERSTNER_WAVE_COUNT         4
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

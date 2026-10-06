@@ -4,6 +4,7 @@
 
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -17,7 +18,7 @@ namespace
 {
     struct WaterTestUtil
     {
-        static void makeWaves( float4 ( &outArrWave )[WaterWaveMath::kMaxWaveCount] )
+        static void makeWaves( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] )
         {
             outArrWave[0] = GerstnerWave{ 0.3f, 12.0f, 0.35f, 0.8f }.toVector();
             outArrWave[1] = GerstnerWave{ 2.1f, 5.0f, 0.12f, 0.6f }.toVector();
@@ -32,7 +33,7 @@ namespace
  */
 SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount] = {};
+    float4 arrWave[shaderslot::kGerstnerWaveCount] = {};
     for ( float4& wave : arrWave )
         wave = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
     const float3 still = WaterWaveMath::computeDisplacement( float2{ 3.0f, 4.0f }, 2.0f, arrWave );
@@ -57,7 +58,7 @@ SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
  */
 SW_TEST_CASE( WaterTest, SurfaceHeightQueryInvertsHorizontalDisplacement )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     WaterTestUtil::makeWaves( arrWave );
     float32 worstMiss{ 0.0f };
     for ( uint32 probe = 0; probe < 64; ++probe )
@@ -78,7 +79,7 @@ SW_TEST_CASE( WaterTest, SurfaceHeightQueryInvertsHorizontalDisplacement )
  */
 SW_TEST_CASE( WaterTest, NormalIsPerpendicularToTheDisplacedSurface )
 {
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     WaterTestUtil::makeWaves( arrWave );
     constexpr float32 kStep = 1.0e-2f;
     float32           worstDot{ 0.0f };
@@ -123,7 +124,7 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     SW_EXPECT_FALSE( pWater->coversPosition( 21.0f, -1.0f ) );
     float32 height{ 0.0f };
     SW_ASSERT_TRUE( pWater->computeSurfaceHeight( 12.0f, -4.0f, height ) );
-    float4 arrWave[WaterWaveMath::kMaxWaveCount];
+    float4 arrWave[shaderslot::kGerstnerWaveCount];
     pWater->getWaveVectors( arrWave );
     SW_EXPECT_NEAR_EQUAL( 3.0f + WaterWaveMath::computeSurfaceHeight( float2{ 12.0f, -4.0f }, 1.5f, arrWave ), height, 1.0e-5f );
 

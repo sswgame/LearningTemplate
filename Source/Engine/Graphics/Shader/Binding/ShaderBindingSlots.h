@@ -108,6 +108,22 @@ namespace sw
         inline constexpr uint32 kMaxFrameLight = SW_MAX_FRAME_LIGHT;
 
         // ------------------------------------------------------------------------------
+        // 2-2) 버퍼 배치 · 식 상수. bindingslots.hlsli 10 절이 기준이다(셰이더와 같은 파일).
+        // ------------------------------------------------------------------------------
+        /// @brief 모프 풀 정점 하나의 원소(float4) 수입니다.
+        inline constexpr uint32 kMorphFloat4PerVertex = SW_MORPH_FLOAT4_PER_VERTEX;
+        /// @brief 스킨 원본 정점 하나의 가중치 버퍼 원소(float4) 수입니다.
+        inline constexpr uint32 kSkinFloat4PerVertex = SW_SKIN_FLOAT4_PER_VERTEX;
+        /// @brief 스킨 팔레트 본 하나의 원소(float4) 수입니다.
+        inline constexpr uint32 kSkinFloat4PerBone = SW_SKIN_FLOAT4_PER_BONE;
+        /// @brief 스킨 인스턴스 표 한 줄의 원소(uint4) 수입니다.
+        inline constexpr uint32 kSkinUint4PerInstance = SW_SKIN_UINT4_PER_INSTANCE;
+        /// @brief VAT 노멀 팔면체 한 칸의 해상도입니다.
+        inline constexpr uint32 kVertexAnimationNormalSteps = SW_VERTEX_ANIMATION_NORMAL_STEPS;
+        /// @brief 거스트너 파도 칸 수입니다(진폭 0 인 칸은 빈 칸).
+        inline constexpr uint32 kGerstnerWaveCount = SW_GERSTNER_WAVE_COUNT;
+
+        // ------------------------------------------------------------------------------
         // 3) 컴퓨트 · 샘플러
         // ------------------------------------------------------------------------------
         inline constexpr uint32 kComputeSrvSlotCount = SW_COMPUTE_SRV_SLOT_COUNT;

@@ -858,3 +858,47 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
     }
     SW_EXPECT_TRUE( checkedCount >= 3 );
 }
+
+/**
+ * @brief [ShaderBindingValidatorTest] C++ 와 셰이더가 같아야 하는 배치 수는 bindingslots.hlsli 에만 정의된다
+ * @details 모프 · 스킨 버퍼 배치 · VAT 노멀 칸 · 거스트너 파도 수를 셰이더 파일마다 `#define` 으로 다시 적고 C++ 에 사본을 두면, 한쪽만 바뀐 날
+ *          컴파일은 되고 화면 · 부력만 조용히 틀어진다. 정의는 계약 파일 하나이고 C++ 는 `shaderslot::k*` 로 같은 정의를 읽는다.
+ */
+SW_TEST_CASE( ShaderBindingValidatorTest, LayoutNumbersAreDefinedOnlyInBindingSlots )
+{
+    const utf8* const arrMacro[] = {
+        "SW_MORPH_FLOAT4_PER_VERTEX",
+        "SW_SKIN_FLOAT4_PER_VERTEX",
+        "SW_SKIN_FLOAT4_PER_BONE",
+        "SW_SKIN_UINT4_PER_INSTANCE",
+        "SW_VERTEX_ANIMATION_NORMAL_STEPS",
+        "SW_GERSTNER_WAVE_COUNT",
+    };
+    sw::vector<sw::string> listFile;
+    for ( const utf8* pDomain : { "engine", "common" } )
+    {
+        const sw::string shaderFolder = sw::ResourceUtil::getDomainFolderPath( pDomain, "shaders" );
+        SW_ASSERT_FALSE( shaderFolder.empty() );
+        sw::FileUtil::collectFiles( shaderFolder, ".hlsl", listFile, true );
+        sw::FileUtil::collectFiles( shaderFolder, ".hlsli", listFile, true );
+    }
+    SW_ASSERT_TRUE( listFile.size() >= 10 );
+    for ( const utf8* pMacro : arrMacro )
+    {
+        const sw::string define = sw::string( "#define " ) + pMacro + " ";
+        sw::string       listDefiner;
+        uint32           defineCount{ 0 };
+        bool             bInContract{ false };
+        for ( const sw::string& path : listFile )
+        {
+            sw::string text;
+            SW_ASSERT_TRUE( sw::FileUtil::readTextFile( path, text ) );
+            if ( text.find( define ) == sw::string::npos )
+                continue;
+            ++defineCount;
+            listDefiner += sw::FileUtil::getFileNamePart( path ) + " ";
+            bInContract = bInContract || sw::FileUtil::getFileNamePart( path ) == "bindingslots.hlsli";
+        }
+        SW_EXPECT_TRUE_MSG( defineCount == 1 && bInContract, ( sw::string( pMacro ) + " 정의가 bindingslots.hlsli 하나가 아니다: " + listDefiner ).c_str() );
+    }
+}

@@ -10,10 +10,9 @@
 #ifndef SW_ENGINE_GERSTNER_HLSLI
 #define SW_ENGINE_GERSTNER_HLSLI
 
-#define SW_GERSTNER_WAVE_COUNT 4
+#include "common.hlsli"
 
 static const float kGerstnerGravity = 9.81f;
-static const float kGerstnerTwoPi   = 6.28318530718f;
 
 /** @brief 진폭 · 파장이 0 보다 큰 파도 수 — Q 를 나누는 수다. */
 uint swCountGerstnerWaves( float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
@@ -37,7 +36,7 @@ bool swComputeGerstnerTerm( float4 wave, uint activeCount, float2 origin, float 
 	if ( wave.z <= 0.0f || wave.y <= 0.0f || activeCount == 0u )
 		return false;
 	outDirection        = float2( cos( wave.x ), sin( wave.x ) );
-	outWaveNumber       = kGerstnerTwoPi / wave.y;
+	outWaveNumber       = kTwoPi / wave.y;
 	outSharpness        = wave.w / ( outWaveNumber * wave.z * (float)activeCount );
 	const float speed   = sqrt( kGerstnerGravity * outWaveNumber );
 	outPhase            = outWaveNumber * ( outDirection.x * origin.x + outDirection.y * origin.y ) - speed * time;
