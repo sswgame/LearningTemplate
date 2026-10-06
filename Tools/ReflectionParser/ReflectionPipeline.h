@@ -43,9 +43,9 @@ namespace sw
          * @param outErrorCount 수집 · 코드젠에 실패한 헤더 수
          * @return clang 이 묶음을 파싱하지 못했으면 false(헤더마다 다시 해 본다)
          */
-        bool parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const;
+        [[nodiscard]] bool parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const;
         /** @brief 헤더 하나를 파싱 · 수집 · 코드젠합니다. */
-        bool parseAndGenerate( const PendingInput& pending ) const;
+        [[nodiscard]] bool parseAndGenerate( const PendingInput& pending ) const;
         /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */
         int32 parseEachInParallel( const vector<PendingInput>& listPending ) const;
         /**
@@ -53,16 +53,16 @@ namespace sw
          * @param inputWriteTime 읽기 전에 잰 입력 시각.
          * @param listDependency 이 입력을 파싱한 번역 단위가 include 한 프로젝트 헤더(스탬프에 적는다).
          */
-        bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
-                           const vector<StampDependency>& listDependency ) const;
+        [[nodiscard]] bool writeOutputs( const string& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
+                                         const vector<StampDependency>& listDependency ) const;
         /**
          * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. **실행마다** 씁니다.
          * @details ninja 는 이 파일로 "반사되지 않은 헤더가 바뀌면 이 단계를 다시 돌린다" 를 안다. 빠지면 단계가 늘 더럽다고 보거나(파일 없음)
          *          옛 의존으로 판단한다 — 그래서 모두 최신인 실행도 스탬프에서 모아 쓴다.
          */
-        bool writeDepfile() const;
+        [[nodiscard]] bool writeDepfile() const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
-        bool writeFlagOpsUmbrella() const;
+        [[nodiscard]] bool writeFlagOpsUmbrella() const;
 
     private:
         const ParserOptions* _pOptions;

@@ -39,7 +39,7 @@ namespace sw
             };
 
             /** @brief 매크로 호출 한 줄에서 인자 목록을 추출합니다. */
-            static bool parseMacroLine( const string_view line, const utf8* pMacroName, vector<string>& outListMacroArgument )
+            [[nodiscard]] static bool parseMacroLine( const string_view line, const utf8* pMacroName, vector<string>& outListMacroArgument )
             {
                 const size_t pos = line.find( pMacroName );
                 if ( pos == string_view::npos )
@@ -56,7 +56,7 @@ namespace sw
              * @brief builtins 표를 읽어 TYPE · CONTAINER 줄을 적힌 순서대로 돌려줍니다. 주석 · 전처리 줄은 건너뜁니다.
              * @details 맵 채우기와 `ReflectBuiltins.gen.cpp` 쓰기가 함께 씁니다.
              */
-            static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
+            [[nodiscard]] static bool readRows( const string_view absPath, vector<BuiltinRow>& outListRow )
             {
                 string text;
                 if ( FileUtil::readTextFile( absPath, text ) == false )

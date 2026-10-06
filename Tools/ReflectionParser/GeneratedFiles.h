@@ -54,7 +54,7 @@ namespace sw
          * @brief 내용이 다를 때만 씁니다. 디렉터리가 없으면 만듭니다.
          * @details 같은 내용을 다시 쓰면 시각만 바뀌어, 그 파일을 include 하는 번역 단위가 모두 다시 컴파일됩니다.
          */
-        static bool writeIfChanged( const string& path, const string_view content );
+        [[nodiscard]] static bool writeIfChanged( const string& path, const string_view content );
 
         /**
          * @brief 스탬프를 씁니다. 내용은 원본 경로 한 줄과 `input <쓰기 시각>` 한 줄입니다.
@@ -62,10 +62,10 @@ namespace sw
          *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
          *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
          */
-        static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency );
+        [[nodiscard]] static bool writeStamp( const string& stampPath, const string& inputFile, uint64 inputWriteTime, const vector<StampDependency>& listDependency );
 
         /** @brief 스탬프에 적힌 의존(`dep` 줄)의 경로를 `outListPath` 에 더합니다. 스탬프가 없거나 시각이 없는 꼴이면 false 입니다. depfile 을 모을 때 씁니다. */
-        static bool readStampDependencies( const string& stampPath, vector<string>& outListPath );
+        [[nodiscard]] static bool readStampDependencies( const string& stampPath, vector<string>& outListPath );
 
         /**
          * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.

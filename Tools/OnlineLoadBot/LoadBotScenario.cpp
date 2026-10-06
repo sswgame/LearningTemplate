@@ -106,8 +106,8 @@ namespace sw
                 return value.empty();
             }
 
-            static bool readStep( const JsonValue& value, LoadBotStep& outStep, string& outError, int32 depth );
-            static bool readStepList( const JsonValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
+            [[nodiscard]] static bool readStep( const JsonValue& value, LoadBotStep& outStep, string& outError, int32 depth );
+            [[nodiscard]] static bool readStepList( const JsonValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
         };
     } // namespace
 } // namespace sw

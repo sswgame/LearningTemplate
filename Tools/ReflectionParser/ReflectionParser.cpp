@@ -41,7 +41,7 @@ namespace sw
         struct ReflectionParserInternal
         {
             /** @brief 템플릿 디렉터리를 읽습니다. 두 모드 모두 필요합니다. */
-            static bool loadTemplates( const ParserOptions& options, ParserSession& session )
+            [[nodiscard]] static bool loadTemplates( const ParserOptions& options, ParserSession& session )
             {
                 if ( session._emitTemplateStore.loadDirectory( options._emitTemplatesDir, session._config._emitTemplateExtension ) )
                     return true;
@@ -53,7 +53,7 @@ namespace sw
              * @brief 파싱에 쓰는 표들을 채웁니다: builtins(선택) · 철자 표(필수, 필드 표와 대조).
              * @details 철자 표와 필드 표가 어긋나면 그 토큰은 애노테이션을 적는 자리에서 보이지 않게 사라진다. 시작할 때 막는다.
              */
-            static bool loadTables( const ParserOptions& options, ParserSession& session )
+            [[nodiscard]] static bool loadTables( const ParserOptions& options, ParserSession& session )
             {
                 session._typeNameMap.setStripPrefixes( session._config._listTypeStripPrefix );
                 if ( options._builtinsPath.empty() )

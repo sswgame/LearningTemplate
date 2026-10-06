@@ -13,7 +13,7 @@ namespace sw
     // 1) parse — ReflectBuiltins.xxx 스캔 → TypeNameMap / ContainerTypeMap
     // ------------------------------------------------------------------------------
     /** @brief 맵을 비운 뒤 builtins 헤더에서 등록을 채웁니다. */
-    bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession );
+    [[nodiscard]] bool loadReflectBuiltins( const string_view absPath, ParserSession& outSession );
 
     // ------------------------------------------------------------------------------
     // 2) emit — primitive TypeRegistrar .gen.cpp

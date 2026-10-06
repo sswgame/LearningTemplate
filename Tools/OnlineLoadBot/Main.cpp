@@ -82,7 +82,7 @@ namespace sw
             static constexpr int32  kPercentScale         = 100;
             static constexpr int32  kSpareConnectionCount = 16;
 
-            static bool readValue( string_view argument, string_view key, string& outValue )
+            [[nodiscard]] static bool readValue( string_view argument, string_view key, string& outValue )
             {
                 if ( StringUtil::startsWith( argument, key ) == false )
                     return false;
@@ -90,7 +90,7 @@ namespace sw
                 return true;
             }
 
-            static bool parseArguments( int32 argc, utf8* argv[], LoadBotOptions& outOptions, string& outError )
+            [[nodiscard]] static bool parseArguments( int32 argc, utf8* argv[], LoadBotOptions& outOptions, string& outError )
             {
                 for ( int32 argumentIndex = 1; argumentIndex < argc; ++argumentIndex )
                 {

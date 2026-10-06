@@ -41,7 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
-    inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
+    [[nodiscard]] inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
     {
 #define REGISTER_ANNOTATION_KIND( Name, Token ) \
     if ( spelling == #Token )                   \
@@ -78,7 +78,7 @@ namespace sw
         ~AnnotationMeta() = default;
 
         /** @brief AnnotationMeta.txt 를 로드합니다. */
-        bool loadFile( const string_view absPath );
+        [[nodiscard]] bool loadFile( const string_view absPath );
         /** @brief 파일이 로드되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 

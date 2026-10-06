@@ -26,7 +26,7 @@ namespace sw
          * @brief argv 를 읽고 모드별 필수 인자를 확인합니다.
          * @return 모르는 인자 · 값 없는 플래그 · 빠진 필수 인자가 있으면 이유를 알리고 false
          */
-        bool parse( int32 argc, utf8* argv[] );
+        [[nodiscard]] bool parse( int32 argc, utf8* argv[] );
 
         /**
          * @brief 표에서 만든 사용법을 표준 출력에 씁니다.

@@ -71,7 +71,7 @@ namespace sw
          * @brief 설정 파일을 찾아(현재 디렉터리에서 위로) 읽습니다.
          * @return clang 인자를 얻었으면 true. 없으면 파싱할 수 없습니다(코드젠 전용 모드는 기본값으로 충분합니다).
          */
-        bool load();
+        [[nodiscard]] bool load();
 
         /**
          * @brief 기본 인자에 포함 경로와 강제 include 를 붙여 최종 clang 인자를 만듭니다.

@@ -28,7 +28,7 @@ namespace sw
          * @brief 절대 경로 디렉터리에서 템플릿 파일을 로드합니다. 파일 이름(확장자 뺀 것)이 템플릿 이름입니다.
          * @param extension 템플릿 확장자(parser_config 의 `template_extension`, 기본 ".tpl")
          */
-        bool loadDirectory( const string_view absDir, const string_view extension );
+        [[nodiscard]] bool loadDirectory( const string_view absDir, const string_view extension );
         /** @brief 템플릿이 로드되었는지 반환합니다. */
         bool isLoaded() const noexcept { return _bLoaded == SW_TRUE; }
 

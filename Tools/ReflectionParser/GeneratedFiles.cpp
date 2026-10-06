@@ -39,7 +39,7 @@ namespace sw
              * @details 리눅스(libstdc++)의 파일 시계는 기원이 2174 년이라 지금 시각이 음수이고, 그것을 부호 없이 옮겨 적은 값은 int64 를 넘는다.
              *          `parseInt64` 로 읽으면 리눅스에서 늘 실패한다 — 스탬프가 시각 없는 꼴로 읽혀 매 실행이 모두 다시 파싱하고 depfile 의 의존이 빈다.
              */
-            static bool parseWriteTime( string_view text, uint64& outTime )
+            [[nodiscard]] static bool parseWriteTime( string_view text, uint64& outTime )
             {
                 text                         = StringUtil::trim( text );
                 const auto [pEnd, errorCode] = std::from_chars( text.data(), text.data() + text.size(), outTime );
@@ -59,7 +59,7 @@ namespace sw
              * @brief 스탬프 글을 읽습니다 — 첫 줄 원본 경로, `input <시각>`, 그리고 `dep <시각> <경로>` 줄들. 시각이 없으면 false.
              * @details 경로에는 공백이 있을 수 있어 `dep` 줄은 시각 다음의 **나머지 전부**가 경로다.
              */
-            static bool parseStamp( string_view text, StampRecord& outRecord )
+            [[nodiscard]] static bool parseStamp( string_view text, StampRecord& outRecord )
             {
                 size_t lineStart = 0;
                 bool   bHasInput = false;
@@ -109,7 +109,7 @@ namespace sw
                 return stamp._writeTime;
             }
 
-            static bool readHead( const string& path, vector<uint8>& outBytes )
+            [[nodiscard]] static bool readHead( const string& path, vector<uint8>& outBytes )
             {
                 return FileUtil::readFile( path, outBytes, 0, kHeadProbeBytes );
             }

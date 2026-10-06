@@ -348,8 +348,8 @@ namespace sw
              * @return 모르는 토큰이 없으면 true
              */
             template <typename TParsed>
-            static bool applyAnnotation( const string_view spelling, TParsed& target, const ParserSession& session,
-                                         const string_view owner )
+            [[nodiscard]] static bool applyAnnotation( const string_view spelling, TParsed& target, const ParserSession& session,
+                                                       const string_view owner )
             {
                 vector<string> listUnknownToken;
                 sw::AnnotationApply::apply( spelling, target, session._annotationMeta, listUnknownToken );
@@ -1217,7 +1217,7 @@ namespace sw
              * @details 조건식이 가리키는 이름은 기반 클래스의 것일 수 있어 여기서는 꼴만 본다 — 이름은 등록된 뒤 `PropertyEditCondition::parse` 가 보고,
              *          `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 모든 타입을 대조한다.
              */
-            static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
+            [[nodiscard]] static bool applyDisplayMeta( ParsedPropertyInfo& prop, const CXType fieldType, const string_view owner )
             {
                 // `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자(`HP`)만 받는다 — 표에 있는 단위는 `Units = …` 로 적는다.
                 for ( const auto& [key, value] : prop._listCustomMeta )

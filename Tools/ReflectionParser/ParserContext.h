@@ -41,8 +41,8 @@ namespace sw
          * @param bReportErrors 거짓이면 clang 오류를 오류 로그 대신 추적 로그로 남깁니다(실패하면 다시 해 볼 시도용)
          * @return 파싱 성공 여부(clang 오류가 하나라도 있으면 실패)
          */
-        bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                    bool bReportErrors = true );
+        [[nodiscard]] bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
+                                  bool bReportErrors = true );
 
         /** @brief 생성된 clang TranslationUnit을 반환합니다. */
         CXTranslationUnit getTranslationUnit() const { return _translationUnit; }
