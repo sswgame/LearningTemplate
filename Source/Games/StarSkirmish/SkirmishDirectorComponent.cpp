@@ -6,6 +6,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
@@ -72,6 +73,48 @@ namespace sw
                 return color;
             }
         };
+
+        /** @brief 탐침이 읽는 디렉터 — 씬의 첫 디렉터입니다(탐침은 단언 단계에서만 불린다 — 프레임 경로가 아니다). */
+        const SkirmishDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
+        {
+            const SkirmishDirectorComponent* pFound = nullptr;
+            if ( pManager != nullptr )
+            {
+                pManager->forEachComponentOfType<SkirmishDirectorComponent>( [&pFound]( const SkirmishDirectorComponent* pDirector )
+                {
+                    if ( pFound == nullptr )
+                        pFound = pDirector;
+                } );
+            }
+            return pFound;
+        }
+
+        /** @brief 고른 유닛 중 @p bMoveOnly 면 앞 명령이 이동인 것만 셉니다. */
+        [[nodiscard]] bool countSelected( const GameObjectManager* pManager, bool bMoveOnly, float64& outValue )
+        {
+            const SkirmishDirectorComponent* pDirector = findProbeDirector( pManager );
+            if ( pDirector == nullptr )
+                return false;
+            int32 count = 0;
+            pDirector->getWorld().forEachUnit( [pDirector, bMoveOnly, &count]( const RtsUnit& unit )
+            {
+                const RtsOrder* pOrder = unit.findOrder();
+                if ( pDirector->isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RtsOrderType::Move ) ) )
+                    ++count;
+            } );
+            outValue = static_cast<float64>( count );
+            return true;
+        }
+
+        [[nodiscard]] bool readSelectedCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            return countSelected( pManager, false, outValue );
+        }
+
+        [[nodiscard]] bool readSelectedMovingCount( const GameObjectManager* pManager, float64& outValue )
+        {
+            return countSelected( pManager, true, outValue );
+        }
     } // namespace
 
     /**
@@ -80,6 +123,9 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
+
+    SW_AUTOMATION_PROBE( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", &readSelectedCount );
+    SW_AUTOMATION_PROBE( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", &readSelectedMovingCount );
 } // namespace sw
 
 namespace sw
@@ -393,8 +439,8 @@ namespace sw
         const bool      bControl    = inputMap.isActionDown( hashed_string( "Skirmish.GroupModifier" ) );
         updateDrag( input, point, bPointValid );
 
-        if ( bPointValid && input.wasMouseButtonPressed( MouseButton::Right ) )
-            issueRightClick( point, bShift );
+        if ( bPointValid && inputMap.wasActionTriggered( hashed_string( "Skirmish.Order" ) ) )
+            issueOrder( point, bShift );
 
         // 명령 단축키 — 고른 것이 모두 내 것일 때만.
         if ( _selection.isCommandable( world ) && _selection.getSelected().empty() == false )
@@ -467,13 +513,15 @@ namespace sw
 
     void SkirmishDirectorComponent::updateDrag( const InputManager& input, const float3& point, bool bPointValid )
     {
-        RtsWorld&  world  = _match.getWorld();
-        const bool bShift = input.getInputMap().isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
-        if ( bPointValid && input.wasMouseButtonPressed( MouseButton::Left ) )
+        RtsWorld&           world    = _match.getWorld();
+        const InputMap&     inputMap = input.getInputMap();
+        const hashed_string selectAction( "Skirmish.Select" );
+        const bool          bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
+        if ( bPointValid && inputMap.wasActionPressed( selectAction ) )
         {
             if ( _bAttackMovePending == SW_TRUE )
             {
-                // A 다음 왼쪽 클릭 — 고른 병력을 그 자리로 공격 이동.
+                // A 다음 고르기(왼쪽 클릭) — 고른 병력을 그 자리로 공격 이동.
                 _bAttackMovePending                = SW_FALSE;
                 [[maybe_unused]] const int32 count = world.issueGroupMove( _selection.getSelected(), point, true, bShift );
                 SW_LOG_INFO( "[Skirmish] %# units attack-move to (%#, %#)", count, static_cast<int32>( point._x ), static_cast<int32>( point._z ) );
@@ -485,7 +533,7 @@ namespace sw
         _bDragPointValid = bPointValid ? SW_TRUE : SW_FALSE;
         if ( bPointValid )
             _dragPoint = point;
-        if ( _bDragging == SW_FALSE || input.isMouseButtonDown( MouseButton::Left ) )
+        if ( _bDragging == SW_FALSE || inputMap.isActionDown( selectAction ) )
             return;
 
         // 놓았다 — 짧으면 클릭(그 자리 유닛 하나), 길면 사각형.
@@ -510,7 +558,7 @@ namespace sw
         }
     }
 
-    void SkirmishDirectorComponent::issueRightClick( const float3& point, bool bQueue )
+    void SkirmishDirectorComponent::issueOrder( const float3& point, bool bQueue )
     {
         RtsWorld& world = _match.getWorld();
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
@@ -580,7 +628,7 @@ namespace sw
 
     bool SkirmishDirectorComponent::findGroundPoint( const InputManager& input, float3& outPoint ) const
     {
-        // 리그의 직교 시점으로 마우스 아래 땅을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
+        // 리그의 직교 시점으로 포인터 아래 땅을 찾는다. 리그는 PostUpdate 에서 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
         const OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig == nullptr )
             return false;

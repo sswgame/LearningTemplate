@@ -94,11 +94,12 @@ namespace sw
         void updateInput( const InputManager& input );
         void updateHumanCommands( const InputManager& input );
         void updateDrag( const InputManager& input, const float3& point, bool bPointValid );
-        void issueRightClick( const float3& point, bool bQueue );
+        /** @brief `Skirmish.Order`(오른쪽 클릭) — 고른 것에 커서 자리로 똑똑한 명령(이동 · 공격 · 채취 · 집결)을 냅니다. */
+        void issueOrder( const float3& point, bool bQueue );
         void orderBuild( const utf8* pBuildingId, const float3& point );
         void trainFromPrimary( int32 productIndex );
         void handleEvents();
-        /** @brief 마우스가 가리키는 땅(y = 0) 자리입니다. 맵 밖이면 false 입니다. */
+        /** @brief 포인터가 가리키는 땅(y = 0) 자리입니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */
         [[nodiscard]] bool       findGroundPoint( const InputManager& input, float3& outPoint ) const;
         OrthoCameraRigComponent* findCameraRig() const;
 
