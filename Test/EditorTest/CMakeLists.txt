@@ -44,6 +44,7 @@ sw_addTestExecutable(EditorTest
 		Common/Commands/TestEditorToolAssetCommands.cpp
 		Viewport/TestEditorViewportMath.cpp
 		Common/Workspace/TestEditorWorkspace.cpp
+		Panels/TestContentBrowserLogic.cpp
 		Panels/TestInspectorBuiltinValue.cpp
 		Panels/TestInspectorPropertyLayout.cpp
 		Common/Commands/TestEditorViewportPick.cpp
@@ -76,6 +77,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowserLogic.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"

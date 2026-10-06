@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Panels/ContentBrowserLogic.h"
 
 struct ImDrawList;
 
@@ -98,8 +99,8 @@ namespace sw::editor
         /** @brief 폴더 이동 히스토리 항목 */
         struct HistoryEntry
         {
-            string _folderPathAbs;
-            string _breadcrumb;
+            string                      _folderPathAbs;
+            vector<ContentBrowserCrumb> _listCrumb;
         };
 
         /**
@@ -121,8 +122,10 @@ namespace sw::editor
         void navigateBack();
         /** @brief 다음 히스토리 폴더로 이동합니다. */
         void navigateForward();
-        /** @brief 폴더를 선택하고 내용을 새로고침합니다. */
-        void selectFolder( string_view absolutePath, string_view breadcrumb, bool bRecordHistory = true );
+        /** @brief 폴더를 선택하고 내용을 새로고침합니다. @p listCrumb 는 그 폴더의 경로 줄입니다(조각마다 절대 경로). */
+        void selectFolder( string_view absolutePath, const vector<ContentBrowserCrumb>& listCrumb, bool bRecordHistory = true );
+        /** @brief 폴더가 든 콘텐츠 루트에서 그 폴더까지의 경로 줄을 만듭니다. */
+        void makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const;
         /** @brief 애셋을 선택된 상태로 표시합니다. */
         void selectAsset( const AssetEntry& entry );
         /** @brief 폴더를 열거나 파일 애셋에 포커스/오픈합니다. */
@@ -145,7 +148,7 @@ namespace sw::editor
         vector<const AssetEntry*>             _listVisibleEntry;
         vector<HistoryEntry>                  _listHistory;
         string                                _selectedFolderAbs;
-        string                                _breadcrumb; /**< 예: "Game / Shaders" */
+        vector<ContentBrowserCrumb>           _listCrumb; /**< 지금 폴더의 경로 줄. 예: "Favorites / Shaders / bin" */
         string                                _selectedAssetAbs;
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         float32                               _tileSize;
