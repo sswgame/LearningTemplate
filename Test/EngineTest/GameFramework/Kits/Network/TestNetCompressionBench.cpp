@@ -71,7 +71,7 @@ namespace
     };
 
     /** @brief 코덱 하나로 표본 전부를 압축 · 해제해 보낸 바이트(봉투 규칙)와 패킷당 시간(가장 빠른 판)을 찍는다. */
-    void measureCodec( const utf8* pSetName, const utf8* pCodecName, BenchCodec codecKind, const vector<vector<uint8>>& listMeasure, uint64 rawBytes,
+    void measureCodec( [[maybe_unused]] const utf8* pSetName, [[maybe_unused]] const utf8* pCodecName, BenchCodec codecKind, const vector<vector<uint8>>& listMeasure, uint64 rawBytes,
                        ZstdDictionaryCompressor& dictionaryCompressor )
     {
         using Internal = NetCompressionBenchInternal;
@@ -92,12 +92,12 @@ namespace
             size_t size = 0;
             return codec.compress( sample.data(), sample.size(), compressedBytes.data(), compressedBytes.size(), size, level ) ? static_cast<int32>( size ) : 1 << 20;
         };
-        const int64 compressDeciNanos = test::measureBestDeciNanosPerOp( listMeasure.size(), Internal::kRounds, [&]()
+        [[maybe_unused]] const int64 compressDeciNanos = test::measureBestDeciNanosPerOp( listMeasure.size(), Internal::kRounds, [&]()
         {
             for ( size_t index = 0; index < listMeasure.size(); ++index )
                 listCompressedSize[index] = compressOne( index );
         } );
-        uint64      sentBytes         = 0;
+        uint64                       sentBytes         = 0;
         for ( size_t index = 0; index < listMeasure.size(); ++index )
             sentBytes += static_cast<uint64>( MathUtil::min<int32>( static_cast<int32>( listMeasure[index].size() ), listCompressedSize[index] + Internal::kEnvelopeBytes ) );
 
@@ -110,8 +110,8 @@ namespace
                 listPacked[index].assign( codecKind == BenchCodec::Zstd1Dictionary ? scratchBytes.data() : compressedBytes.data(),
                                           ( codecKind == BenchCodec::Zstd1Dictionary ? scratchBytes.data() : compressedBytes.data() ) + size );
         }
-        uint64      restoredTotal       = 0;
-        const int64 decompressDeciNanos = test::measureBestDeciNanosPerOp( listMeasure.size(), Internal::kRounds, [&]()
+        uint64                       restoredTotal       = 0;
+        [[maybe_unused]] const int64 decompressDeciNanos = test::measureBestDeciNanosPerOp( listMeasure.size(), Internal::kRounds, [&]()
         {
             restoredTotal = 0;
             for ( const vector<uint8>& packed : listPacked )
@@ -127,7 +127,7 @@ namespace
                     restoredTotal += size;
             }
         } );
-        const int64 savedPercent        = rawBytes > 0 ? static_cast<int64>( 100 - ( 100 * sentBytes ) / rawBytes ) : 0;
+        [[maybe_unused]] const int64 savedPercent        = rawBytes > 0 ? static_cast<int64>( 100 - ( 100 * sentBytes ) / rawBytes ) : 0;
         SW_LOG_INFO( "[Bench] NetCompression %# %#: %# packets, raw %# B -> sent %# B (%# pct saved), compress %#.%# ns/packet, decompress %#.%# ns/packet", pSetName,
                      pCodecName, listMeasure.size(), rawBytes, sentBytes, savedPercent, compressDeciNanos / 10, compressDeciNanos % 10, decompressDeciNanos / 10,
                      decompressDeciNanos % 10 );

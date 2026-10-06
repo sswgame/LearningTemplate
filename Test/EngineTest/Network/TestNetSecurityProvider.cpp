@@ -249,7 +249,12 @@ SW_TEST_CASE( NetSecurityProviderTest, TlsHandshakeCarriesDataAndRefusesDowngrad
 
 SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsAreEmpty )
 {
-    string                  error;
+    string error;
+#if defined( SW_SHIPPING )
+    // 배포 구성은 개발용 인증서를 만들지 않는다(사용자 결정) — 경로가 비면 서버 TLS 문맥을 만들지 못하고 까닭을 돌려준다.
+    SW_EXPECT_TRUE( EngineNetSecurity::createServerTlsContext( "", "", "", error ) == nullptr );
+    SW_EXPECT_FALSE( error.empty() );
+#else
     unique_ptr<ITlsContext> server = EngineNetSecurity::createServerTlsContext( "", "", "", error );
     SW_ASSERT_TRUE_MSG( server != nullptr, error.c_str() );
     unique_ptr<ITlsContext> client = EngineNetSecurity::createClientTlsContext( "", "localhost", error );
@@ -261,6 +266,7 @@ SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsA
     error.clear();
     SW_EXPECT_TRUE( EngineNetSecurity::createServerTlsContext( "server.cert.pem", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
+#endif
 }
 
 SW_TEST_CASE( NetSecurityProviderTest, Sha256MatchesFips180Vector )

@@ -67,6 +67,7 @@ namespace
                 const uint64 swDelta      = swAfter - swBefore;
                 const uint64 outsideX100  = requestDelta > swDelta ? ( ( requestDelta - swDelta ) * 100 ) / callCount : 0;
                 SW_LOG_INFO( "[Bench] %# - outside the sw allocator %# allocations per 100 calls (sw %# per call)", pLabel, outsideX100, swDelta / callCount );
+                (void)outsideX100; // Shipping 은 SW_LOG_INFO 가 비어 쓰는 곳이 없다
             }
             else
             {

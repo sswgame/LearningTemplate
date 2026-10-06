@@ -570,7 +570,8 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     SW_EXPECT_EQUAL( 0u, mismatches );
     SW_EXPECT_TRUE( focused > 5u ); // 고를 것이 있는 자리가 충분해야 "같다" 가 뜻이 있다
 
-    // 모듈 리로드: 그 모듈의 컴포넌트를 모두 내리면 목록이 비고, 다시 붙이면 새 것만 든다.
+#if !defined( SW_SHIPPING )
+    // 모듈 리로드(Dev 만 — 배포 구성에는 모듈을 내리는 길이 없다): 그 모듈의 컴포넌트를 모두 내리면 목록이 비고, 다시 붙이면 새 것만 든다.
     const TypeInfo* pType = InteractableComponent::StaticType();
     SW_ASSERT_NOT_NULL( pType );
     manager.endPlay();
@@ -583,4 +584,5 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     const ComponentRegistry::View<InteractableComponent> listAfter = manager.getComponentRegistry().getAll<InteractableComponent>();
     SW_ASSERT_EQUAL( size_t( 1 ), listAfter.size() );
     SW_EXPECT_TRUE( listAfter[0] == pAgain );
+#endif
 }

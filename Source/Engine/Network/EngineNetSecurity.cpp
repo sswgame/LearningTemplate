@@ -17,7 +17,9 @@ namespace sw
     {
         struct EngineNetSecurityInternal
         {
+#if !defined( SW_SHIPPING )
             static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
+#endif
 
             /** @brief 상대 경로를 프로젝트 루트 기준으로 펼칩니다(서버 설정과 같은 기준). 루트를 모르면(시험) 그대로. */
             static string makeProjectPath( string_view path )
