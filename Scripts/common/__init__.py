@@ -10,6 +10,7 @@ Scripts/common package
   - Search: 파일/디렉터리 탐색, C++ 소스 파일 수집 및 vcpkg 판별
   - Archive: 네트워크 다운로드, SHA256 검증, 안전한 압축 해제
   - Host: Git 탐색/실행/파일 쿼리 및 clang-format 배치 실행
+  - GeneratedFile: 생성 파일 쓰기(바뀌었을 때만) · CMake 값 이스케이프 · 생성기 진입점(runGenerator)
   - Process: 자식 프로세스 한 창구(runProcess — UTF-8 디코딩, 못 띄움 · 시간 초과를 ProcessResult 칸으로)
   - PackFormat: .pack 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 객체(PackFormatSpec) — 쿠커와 헤더 생성기가 공유
   - CookContract: 쿠킹 표(Config/Engine/CookContract.json — RHI 백엔드 · 쿡 접미사)를 읽은 객체(CookContractSpec) — 쿠커와 헤더 생성기가 공유
@@ -44,7 +45,7 @@ for _stream in (_sys.stdout, _sys.stderr):
         except (ValueError, OSError):
             pass  # 리다이렉트된 파이프 등 — 그대로 둔다
 
-from . import (AppBinary, Archive, AssetPipeline, BuildTree, ClangFormat, CodeText, Config, Constants, CookContract, Host, PackFormat, Parallel,
+from . import (AppBinary, Archive, AssetPipeline, BuildTree, ClangFormat, CodeText, Config, Constants, CookContract, GeneratedFile, Host, PackFormat, Parallel,
                Paths, Process, Search, ToolLocator, TranslationUnits)
 from .AppBinary import *
 from .Archive import *
@@ -55,6 +56,7 @@ from .CodeText import *
 from .Config import *
 from .Constants import *
 from .CookContract import *
+from .GeneratedFile import *
 from .Host import *
 from .PackFormat import *
 from .Parallel import *

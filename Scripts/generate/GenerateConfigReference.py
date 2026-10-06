@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import getProjectRoot  # noqa: E402
+from common import getProjectRoot, writeGeneratedFile  # noqa: E402
 from common.ConfigReference import buildConfigReference, kConfigReferenceDir  # noqa: E402
 
 
@@ -26,11 +26,8 @@ def writeConfigReference(repositoryRoot: Path) -> int:
     outputDir.mkdir(parents=True, exist_ok=True)
     changedCount = 0
     for relative, text in mapOutput.items():
-        path = repositoryRoot / relative
-        if path.is_file() and path.read_text(encoding="utf-8") == text:
-            continue
-        path.write_text(text, encoding="utf-8")
-        changedCount += 1
+        if writeGeneratedFile(repositoryRoot / relative, text, tag="GenerateConfigReference", bQuiet=True):
+            changedCount += 1
     for path in sorted(outputDir.iterdir()):
         if path.is_file() and path.relative_to(repositoryRoot).as_posix() not in mapOutput:
             path.unlink()

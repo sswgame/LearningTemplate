@@ -17,7 +17,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from common import CookContractSpec, getProjectRoot, kCookContractConfigRelative
+from common import (CookContractSpec, GeneratorError, getProjectRoot, kCookContractConfigRelative, runGenerator,  # noqa: E402
+                    writeGeneratedFile)
+
+kTag = "GenerateCookContract"
 
 
 def emitMacroInternal(macroName: str, listRow: list[str]) -> str:
@@ -88,30 +91,18 @@ def makeHeaderText(spec: CookContractSpec) -> str:
 """
 
 
-def generateCookContractHeader(outputPath: Path) -> int:
+def generateCookContractHeader(outputPath: Path) -> None:
     try:
         spec = CookContractSpec.load(getProjectRoot())
     except (FileNotFoundError, KeyError, ValueError) as exception:
-        sys.stderr.write(f"[Error] {kCookContractConfigRelative}: {exception}\n")
-        return 1
-
-    content = makeHeaderText(spec)
-    outputPath.parent.mkdir(parents=True, exist_ok=True)
-    previous = outputPath.read_text(encoding="utf-8") if outputPath.is_file() else ""
-    if previous != content:
-        outputPath.write_text(content, encoding="utf-8")
-        print(f"[GenerateCookContract] Wrote {outputPath}")
-    else:
-        print(f"[GenerateCookContract] Up to date: {outputPath}")
-    return 0
+        raise GeneratorError(f"{kCookContractConfigRelative}: {exception}") from exception
+    writeGeneratedFile(outputPath, makeHeaderText(spec), tag=kTag)
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 1:
-        sys.stderr.write("Usage: GenerateCookContract.py <output_header_path>\n")
-        return 1
-    return generateCookContractHeader(Path(args[0]))
+    return runGenerator(argv, tag=kTag, description="CookContract.json → C++ X-매크로 헤더",
+                        addArguments=lambda parser: parser.add_argument("output", type=Path, help="쓸 헤더"),
+                        generate=lambda args: generateCookContractHeader(args.output))
 
 
 if __name__ == "__main__":

@@ -15,10 +15,12 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
+from typing import Sequence
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
 
-import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common import writeGeneratedFile  # noqa: E402
 
 #: 포트를 짓는 데만 쓰는 vcpkg 도우미 포트의 이름 접두입니다 — 산출물에 들어가지 않는다.
 kBuildHelperPrefix = "vcpkg-"
@@ -156,13 +158,13 @@ def makeNoticeTextInternal(listPort, shareRoot):
     return "\n".join(listLine) + "\n"
 
 
-def main():
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="vcpkg 설치 트리의 copyright 를 모아 서드파티 고지 파일을 씁니다.")
     parser.add_argument("--manifest", required=True, help="vcpkg.json 경로")
     parser.add_argument("--installed", required=True, help="vcpkg 설치 루트(VCPKG_INSTALLED_DIR)")
     parser.add_argument("--triplet", required=True, help="대상 트리플릿(VCPKG_TARGET_TRIPLET)")
     parser.add_argument("--out", required=True, help="쓸 고지 파일 경로")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     statusPath = os.path.join(args.installed, "vcpkg", "status")
     if os.path.isfile(statusPath) is False:
@@ -172,14 +174,8 @@ def main():
     listPort = collectPortsInternal(readManifestPortsInternal(args.manifest, args.triplet), mapDepends)
     text = makeNoticeTextInternal(listPort, os.path.join(args.installed, args.triplet, "share"))
 
-    if os.path.isfile(args.out):
-        with open(args.out, "r", encoding="utf-8") as handle:
-            if handle.read() == text:
-                return 0
-    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-    with open(args.out, "w", encoding="utf-8", newline="\n") as handle:
-        handle.write(text)
-    print(f"[ThirdPartyNotices] {len(listPort)} libraries -> {args.out}")
+    writeGeneratedFile(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(listPort)} libraries", newline="\n",
+                       bReportUnchanged=False)
     return 0
 
 
