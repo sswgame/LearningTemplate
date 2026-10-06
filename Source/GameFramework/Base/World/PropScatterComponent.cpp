@@ -15,7 +15,6 @@ namespace sw
     {
         struct PropScatterComponentInternal
         {
-            static constexpr float32 kTwoPi = MathUtil::kPi * 2.0f;
 
             /** @brief 자리 하나에 모델 · 크기 · 요를 정해 목록에 넣습니다. 제외 원 안이면 모델만 꺼내고 넣지 않는다. */
             static void plant( const PropScatterParams& params, const float3& position, uint32& inoutState, vector<PropScatterPlacement>& outListPlacement )
@@ -32,7 +31,7 @@ namespace sw
                 placement._position   = position;
                 placement._modelIndex = PropScatterMath::pickModel( params._listModel, pick );
                 placement._scale      = params._scaleMin + PropScatterMath::nextUnit( inoutState ) * ( params._scaleMax - params._scaleMin );
-                placement._yaw        = PropScatterMath::nextUnit( inoutState ) * kTwoPi;
+                placement._yaw        = PropScatterMath::nextUnit( inoutState ) * MathUtil::kTwoPi;
                 if ( placement._modelIndex >= 0 )
                     outListPlacement.push_back( placement );
             }

@@ -25,7 +25,7 @@ namespace sw
                 if ( wave._z <= 0.0f || wave._y <= 0.0f || activeCount == 0 )
                     return false;
                 outTerm._direction  = float2{ MathUtil::cos( wave._x ), MathUtil::sin( wave._x ) };
-                outTerm._waveNumber = 6.28318530718f / wave._y;
+                outTerm._waveNumber = MathUtil::kTwoPi / wave._y;
                 outTerm._amplitude  = wave._z;
                 outTerm._sharpness  = wave._w / ( outTerm._waveNumber * wave._z * static_cast<float32>( activeCount ) );
                 const float32 speed = MathUtil::sqrt( WaterWaveMath::kGravity * outTerm._waveNumber );

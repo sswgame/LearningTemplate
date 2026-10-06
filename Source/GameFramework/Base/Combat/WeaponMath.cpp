@@ -10,7 +10,6 @@ namespace sw
     {
         struct WeaponMathInternal
         {
-            static constexpr float32 kPi = 3.14159265358979f;
         };
     } // namespace
 } // namespace sw
@@ -31,7 +30,7 @@ namespace sw
         const float32 cosMax   = MathUtil::cos( coneHalfAngle );
         const float32 cosTheta = random.nextRange( cosMax, 1.0f );
         const float32 sinTheta = MathUtil::sqrt( MathUtil::max( 0.0f, 1.0f - cosTheta * cosTheta ) );
-        const float32 phi      = random.nextRange( 0.0f, 2.0f * WeaponMathInternal::kPi );
+        const float32 phi      = random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
         return direction * cosTheta + axisA * ( sinTheta * MathUtil::cos( phi ) ) + axisB * ( sinTheta * MathUtil::sin( phi ) );
     }
 } // namespace sw

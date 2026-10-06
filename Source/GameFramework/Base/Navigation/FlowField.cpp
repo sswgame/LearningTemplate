@@ -13,8 +13,7 @@ namespace sw
     {
         struct FlowFieldInternal
         {
-            static constexpr float32 kDiagonalFactor = 1.41421356f;
-            static constexpr float32 kUnreached      = -1.0f;
+            static constexpr float32 kUnreached = -1.0f;
 
             /** @brief 대각선 걸음이 두 직교 이웃을 지나도 되는가(모서리 깎기 금지)입니다. */
             static bool canStep( const NavGrid& grid, const int2& from, int32 direction )
@@ -81,7 +80,7 @@ namespace sw
                     continue;
                 const int2    next      = GridTopology::getNeighbor( cell, direction );
                 const int32   nextIndex = grid.computeIndex( next );
-                const float32 distance  = current._distance + enterCost * ( direction >= 4 ? FlowFieldInternal::kDiagonalFactor : 1.0f );
+                const float32 distance  = current._distance + enterCost * ( direction >= 4 ? MathUtil::kSqrt2 : 1.0f );
                 float32&      slot      = _listDistance[static_cast<size_t>( nextIndex )];
                 if ( slot >= 0.0f && slot <= distance )
                     continue;

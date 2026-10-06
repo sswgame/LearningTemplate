@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -39,28 +40,28 @@ namespace sw
 {
     /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N 입니다. */
     inline constexpr ReflectUnit kArrReflectUnit[] = {
-        {     "mm",       ReflectUnitDimension::Length,                      0.001},
-        {     "cm",       ReflectUnitDimension::Length,                       0.01},
-        {      "m",       ReflectUnitDimension::Length,                        1.0},
-        {     "km",       ReflectUnitDimension::Length,                     1000.0},
-        {    "deg",        ReflectUnitDimension::Angle, 0.017453292519943295769237},
-        {    "rad",        ReflectUnitDimension::Angle,                        1.0},
-        {     "ms",         ReflectUnitDimension::Time,                      0.001},
-        {      "s",         ReflectUnitDimension::Time,                        1.0},
-        {    "min",         ReflectUnitDimension::Time,                       60.0},
-        {      "h",         ReflectUnitDimension::Time,                     3600.0},
-        {"percent",        ReflectUnitDimension::Ratio,                       0.01},
-        {  "ratio",        ReflectUnitDimension::Ratio,                        1.0},
-        {    "m/s",        ReflectUnitDimension::Speed,                        1.0},
-        {   "km/h",        ReflectUnitDimension::Speed,    0.277777777777777777778},
-        {  "deg/s", ReflectUnitDimension::AngularSpeed, 0.017453292519943295769237},
-        {  "rad/s", ReflectUnitDimension::AngularSpeed,                        1.0},
-        {   "m/s2", ReflectUnitDimension::Acceleration,                        1.0},
-        {     "Hz",    ReflectUnitDimension::Frequency,                        1.0},
-        {    "fps",    ReflectUnitDimension::Frequency,                        1.0},
-        {      "g",         ReflectUnitDimension::Mass,                      0.001},
-        {     "kg",         ReflectUnitDimension::Mass,                        1.0},
-        {      "N",        ReflectUnitDimension::Force,                        1.0},
+        {     "mm",       ReflectUnitDimension::Length,                   0.001},
+        {     "cm",       ReflectUnitDimension::Length,                    0.01},
+        {      "m",       ReflectUnitDimension::Length,                     1.0},
+        {     "km",       ReflectUnitDimension::Length,                  1000.0},
+        {    "deg",        ReflectUnitDimension::Angle, MathUtil::kPi64 / 180.0},
+        {    "rad",        ReflectUnitDimension::Angle,                     1.0},
+        {     "ms",         ReflectUnitDimension::Time,                   0.001},
+        {      "s",         ReflectUnitDimension::Time,                     1.0},
+        {    "min",         ReflectUnitDimension::Time,                    60.0},
+        {      "h",         ReflectUnitDimension::Time,                  3600.0},
+        {"percent",        ReflectUnitDimension::Ratio,                    0.01},
+        {  "ratio",        ReflectUnitDimension::Ratio,                     1.0},
+        {    "m/s",        ReflectUnitDimension::Speed,                     1.0},
+        {   "km/h",        ReflectUnitDimension::Speed, 0.277777777777777777778},
+        {  "deg/s", ReflectUnitDimension::AngularSpeed, MathUtil::kPi64 / 180.0},
+        {  "rad/s", ReflectUnitDimension::AngularSpeed,                     1.0},
+        {   "m/s2", ReflectUnitDimension::Acceleration,                     1.0},
+        {     "Hz",    ReflectUnitDimension::Frequency,                     1.0},
+        {    "fps",    ReflectUnitDimension::Frequency,                     1.0},
+        {      "g",         ReflectUnitDimension::Mass,                   0.001},
+        {     "kg",         ReflectUnitDimension::Mass,                     1.0},
+        {      "N",        ReflectUnitDimension::Force,                     1.0},
     };
 
     /** @brief 단위 표를 찾고 값을 바꿉니다. */

@@ -630,17 +630,16 @@ namespace sw
         };
 
         constexpr uint32  kSegmentCount = 3;
-        constexpr float32 kTwoPi        = 6.28318530718f;
         vector<RHIVertex> listVertex;
         listVertex.reserve( static_cast<size_t>( bladeCount ) * kSegmentCount * 12 );
         for ( uint32 bladeIndex = 0; bladeIndex < bladeCount; ++bladeIndex )
         {
-            const float32 angle  = nextUnit() * kTwoPi;
+            const float32 angle  = nextUnit() * MathUtil::kTwoPi;
             const float32 radius = nextUnit() * 0.22f;
             const float32 height = 0.5f + nextUnit() * 0.3f;
             const float32 width  = 0.05f + nextUnit() * 0.03f;
             const float32 lean   = 0.08f + nextUnit() * 0.18f;
-            const float32 facing = nextUnit() * kTwoPi;
+            const float32 facing = nextUnit() * MathUtil::kTwoPi;
             const float3  root{ MathUtil::cos( angle ) * radius, 0.0f, MathUtil::sin( angle ) * radius };
             const float3  across{ MathUtil::cos( facing ), 0.0f, MathUtil::sin( facing ) };
             const float3  outward{ -across._z, 0.0f, across._x };

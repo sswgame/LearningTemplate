@@ -7,6 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Common/EngineDefines.h"
+
 #include "GameFramework/Base/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
@@ -19,7 +21,7 @@ namespace sw
     /** @brief 열차 물리의 상수입니다. 단위는 m · s · m/s · m/s². */
     struct CoasterPhysicsParams
     {
-        float32 _gravity{ 9.81f };
+        float32 _gravity{ constant::kDefaultGravity };
         float32 _rollingResistance{ 0.012f }; ///< 구름 저항 계수 μ — 감속 μg
         float32 _dragCoefficient{ 0.0004f };  ///< 공기 저항 — 감속 k·v²
         float32 _liftSpeed{ 4.0f };           ///< 체인이 끄는 속도 — 그보다 느리면 이 속도로 끈다

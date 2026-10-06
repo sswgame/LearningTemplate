@@ -19,6 +19,8 @@ namespace sw
         inline constexpr float32 kDefaultViewportHeight = 720.0f;
         /** @brief 기본 공간 분할/물리 셀 크기입니다. */
         inline constexpr float32 kDefaultSpatialCellSize = 64.0f;
+        /** @brief 기본 중력 가속도의 크기(m/s²)입니다. 물리 세계 · 탄도 · 파괴 하중 · 코스터가 같은 값을 씁니다. */
+        inline constexpr float32 kDefaultGravity = 9.81f;
         /** @brief 기본 언어 코드입니다. */
         inline constexpr const utf8* kDefaultLanguage = "en_US";
     } // namespace constant

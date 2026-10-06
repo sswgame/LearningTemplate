@@ -16,15 +16,14 @@ namespace sw
     {
         struct MotionWarpingComponentInternal
         {
-            static constexpr float32 kTwoPi = MathUtil::kPi * 2.0f;
 
             /** @brief 각을 (-π, π] 로 감습니다. */
             static float32 wrapAngle( float32 angle )
             {
                 while ( angle > MathUtil::kPi )
-                    angle -= kTwoPi;
+                    angle -= MathUtil::kTwoPi;
                 while ( angle <= -MathUtil::kPi )
-                    angle += kTwoPi;
+                    angle += MathUtil::kTwoPi;
                 return angle;
             }
 

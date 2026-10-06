@@ -14,7 +14,6 @@ namespace sw
         {
             /** @brief 프레이밍이 화면 가로를 셀 때의 비율입니다. 모드는 화면을 모르므로 흔한 16:9 로 셉니다(세로 위치 · 존은 정확하다). */
             static constexpr float32 kComposeAspect = 16.0f / 9.0f;
-            static constexpr float32 kTwoPi         = MathUtil::kPi * 2.0f;
 
             static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::createFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
@@ -29,9 +28,9 @@ namespace sw
             /** @brief 각을 [−π, π) 로 감습니다. */
             static float32 wrapAngle( float32 angle )
             {
-                float32 wrapped = ::fmodf( angle + MathUtil::kPi, kTwoPi );
+                float32 wrapped = ::fmodf( angle + MathUtil::kPi, MathUtil::kTwoPi );
                 if ( wrapped < 0.0f )
-                    wrapped += kTwoPi;
+                    wrapped += MathUtil::kTwoPi;
                 return wrapped - MathUtil::kPi;
             }
 
@@ -218,7 +217,7 @@ namespace sw
         }
 
         const float32 sweep    = def._sweep._yawAmplitude > 0.0f
-                                   ? def._sweep._yawAmplitude * MathUtil::sin( CameraModeInternal::kTwoPi * ( inoutState._time / def._sweep._period + def._sweep._phase ) )
+                                   ? def._sweep._yawAmplitude * MathUtil::sin( MathUtil::kTwoPi * ( inoutState._time / def._sweep._period + def._sweep._phase ) )
                                    : 0.0f;
         const float32 inputYaw = inoutState._yawOffset + inoutState._rotateYawShown + sweep;
         float32       yaw      = view._yaw + inputYaw;

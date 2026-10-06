@@ -669,3 +669,13 @@ SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
     const sw::float4x4 fromNull( static_cast<const float32*>( nullptr ) );
     SW_EXPECT_TRUE( fromNull == sw::float4x4::Identity );
 }
+
+// 리터럴로 흩어져 있던 값을 MathUtil 로 모았다 — 같은 float 이어야 결정적 시뮬레이션 · 파도 CPU↔GPU 값이 그대로다.
+static_assert( sw::MathUtil::kTwoPi == 6.28318530718f, "kTwoPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kTwoPi == 6.2831853f, "kTwoPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kHalfPi == 1.5707964f, "kHalfPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kPi == 3.14159265358979f, "kPi 는 옛 리터럴과 같은 float 이어야 한다" );
+static_assert( sw::MathUtil::kDegreeToRadian == 3.14159265358979f / 180.0f, "kDegreeToRadian 은 옛 식과 같아야 한다" );
+static_assert( sw::MathUtil::kRadianToDegree == 180.0f / 3.14159265358979f, "kRadianToDegree 는 옛 식과 같아야 한다" );
+static_assert( sw::MathUtil::kPi64 / 180.0 == 0.017453292519943295769237, "도 → 라디안(float64)은 ReflectUnits 의 옛 리터럴과 같아야 한다" );
+static_assert( sw::MathUtil::kSqrt2 == 1.41421356f, "kSqrt2 는 옛 kDiagonalFactor 와 같은 float 이어야 한다" );

@@ -14,7 +14,6 @@ namespace sw
     {
         struct LockOnSelectorInternal
         {
-            static constexpr float32 kRadianToDegree = 180.0f / 3.14159265358979f;
 
             /** @brief 눈에서 대상까지의 3D 거리입니다(공중 대상 · 높낮이가 있는 록온도 같은 기준). */
             static float32 computeDistance( const float3& lhs, const float3& rhs ) { return ( lhs - rhs ).getLength(); }
@@ -27,7 +26,7 @@ namespace sw
                 if ( length < 1.0e-6f )
                     return 0.0f;
                 const float32 cosine = MathUtil::clamp( toTarget.dot( forward ) / length, -1.0f, 1.0f );
-                return MathUtil::acos( cosine ) * kRadianToDegree;
+                return MathUtil::acos( cosine ) * MathUtil::kRadianToDegree;
             }
         };
     } // namespace
@@ -39,7 +38,7 @@ namespace sw
     {
         const float32 forwardYaw = MathUtil::atan2( forward._x, forward._z );
         const float32 targetYaw  = MathUtil::atan2( position._x - eye._x, position._z - eye._z );
-        float32       offset     = ( targetYaw - forwardYaw ) * LockOnSelectorInternal::kRadianToDegree;
+        float32       offset     = ( targetYaw - forwardYaw ) * MathUtil::kRadianToDegree;
         while ( offset > 180.0f )
             offset -= 360.0f;
         while ( offset < -180.0f )

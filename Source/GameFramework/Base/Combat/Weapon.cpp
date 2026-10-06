@@ -18,7 +18,6 @@ namespace sw
     {
         struct WeaponInternal
         {
-            static constexpr float32 kDegreeToRadian = 3.14159265358979f / 180.0f;
         };
     } // namespace
 } // namespace sw
@@ -143,7 +142,7 @@ namespace sw
         --_magazineAmmo;
         // 늦은 몫을 다음 간격에서 뺀다(연사가 fps 에 매이지 않는다). 몫은 한 간격까지만 — 한 번 당기면 한 발이다.
         _cooldown.restart( _def._fireInterval );
-        const float32 coneHalfAngle = _currentSpread * WeaponInternal::kDegreeToRadian;
+        const float32 coneHalfAngle = _currentSpread * MathUtil::kDegreeToRadian;
         for ( int32 pelletIndex = 0; pelletIndex < _def._pelletCount; ++pelletIndex )
         {
             GameRay ray;

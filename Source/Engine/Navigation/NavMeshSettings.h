@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
@@ -37,7 +38,7 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Highest step the body walks up", Units = m )
         float32 _maxClimb{ 0.4f };
         PROPERTY( Min = 0.0, Max = 1.553343, Tooltip = "Steepest walkable slope", Units = rad )
-        float32 _maxSlope{ 0.785398f };
+        float32 _maxSlope{ MathUtil::kHalfPi * 0.5f };
         PROPERTY( Min = 0.01, Tooltip = "Voxel size on XZ (smaller is more exact and slower to bake)", Units = m )
         float32 _cellSize{ 0.2f };
         PROPERTY( Min = 0.01, Tooltip = "Voxel size on Y", Units = m )

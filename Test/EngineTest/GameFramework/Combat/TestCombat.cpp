@@ -2,6 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Common/EngineDefines.h"
+
 #include "GameFramework/Base/Combat/Ballistics.h"
 #include "GameFramework/Base/Combat/DamageMath.h"
 #include "GameFramework/Base/Combat/LockOnSelector.h"
@@ -51,7 +53,7 @@ SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
 SW_TEST_CASE( CombatTest, BallisticsDropsAimsArcsAndLeadsMovingTargets )
 {
     // 낙차 — 100 m 를 100 m/s 로 1 초: ½ g.
-    SW_EXPECT_NEAR_EQUAL( 0.5f * Ballistics::kGravity, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ), 1.0e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f * sw::constant::kDefaultGravity, Ballistics::computeDrop( 100.0f, 100.0f, 1.0f ), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Ballistics::computeDrop( 100.0f, 100.0f, 0.0f ), 1.0e-6f );
 
     // 발사각으로 쏜 탄을 걸음으로 흘리면 목표 근처를 지난다(낮은 · 높은 탄도 모두).

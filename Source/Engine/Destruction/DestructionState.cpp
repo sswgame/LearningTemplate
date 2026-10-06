@@ -6,6 +6,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/BitStream.h"
 
+#include "Engine/Common/EngineDefines.h"
 #include "Engine/Destruction/FractureGraph.h"
 
 namespace sw
@@ -445,7 +446,7 @@ namespace sw
             const uint32 current = listQueue[order - 1];
             if ( listDepth[current] == 0 )
                 continue;
-            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * kGravity + listIncoming[current];
+            const float32 load          = graph._listNode[listNode[current]]._volume * _profile._density * constant::kDefaultGravity + listIncoming[current];
             float32       totalCapacity = 0.0f;
             for ( const Neighbor& neighbor : listNeighbor[current] )
             {

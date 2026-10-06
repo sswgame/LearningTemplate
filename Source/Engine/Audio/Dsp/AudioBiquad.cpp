@@ -11,7 +11,7 @@ namespace sw
         const float64 nyquist   = static_cast<float64>( sampleRate ) * 0.5;
         const float64 frequency = MathUtil::clamp( static_cast<float64>( frequencyHz ), 1.0, nyquist * 0.999 );
         const float64 safeQ     = MathUtil::max( static_cast<float64>( q ), 0.01 );
-        const float64 omega     = 2.0 * 3.14159265358979323846 * frequency / static_cast<float64>( sampleRate );
+        const float64 omega     = 2.0 * MathUtil::kPi64 * frequency / static_cast<float64>( sampleRate );
         const float64 sinOmega  = std::sin( omega );
         const float64 cosOmega  = std::cos( omega );
         const float64 alpha     = sinOmega / ( 2.0 * safeQ );
@@ -101,7 +101,7 @@ namespace sw
     float32 AudioBiquadCoefficients::computeMagnitude( float32 frequencyHz, float32 sampleRate ) const
     {
         // H(z) = (b0 + b1 z⁻¹ + b2 z⁻²) / (1 + a1 z⁻¹ + a2 z⁻²), z = e^{jω}.
-        const float64 omega         = 2.0 * 3.14159265358979323846 * static_cast<float64>( frequencyHz ) / static_cast<float64>( sampleRate );
+        const float64 omega         = 2.0 * MathUtil::kPi64 * static_cast<float64>( frequencyHz ) / static_cast<float64>( sampleRate );
         const float64 cos1          = std::cos( omega );
         const float64 sin1          = std::sin( omega );
         const float64 cos2          = std::cos( 2.0 * omega );

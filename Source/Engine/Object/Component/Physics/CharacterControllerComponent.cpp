@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 
@@ -12,7 +14,7 @@ namespace sw
         , _radius{ 0.3f }
         , _halfHeight{ 0.6f }
         , _stepHeight{ 0.3f }
-        , _maxSlopeAngle{ 0.785398f }
+        , _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }
         , _gravityScale{ 1.0f }
         , _mass{ 70.0f }
         , _layer{ "Character" }

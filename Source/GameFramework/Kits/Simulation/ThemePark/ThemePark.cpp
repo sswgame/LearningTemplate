@@ -24,7 +24,6 @@ namespace sw
             static constexpr float32 kNauseaPerRating    = 0.06f;  ///< 멀미 평가 1 이 손님 멀미에 더하는 양
             static constexpr float32 kQueueUnhappiness   = 0.002f; ///< 줄에서 초당 줄어드는 행복
             static constexpr float32 kWanderRadius       = 6.0f;
-            static constexpr float32 kPi                 = 3.14159265358979f;
 
             static float3 lerpPosition( const float3& from, const float3& to, float32 alpha )
             {
@@ -511,7 +510,7 @@ namespace sw
                 sendHome( guest, ParkGuestThought::OutOfCash );
                 return;
             }
-            const float32 angle  = nextRandom() * 2.0f * ThemeParkInternal::kPi;
+            const float32 angle  = nextRandom() * 2.0f * MathUtil::kPi;
             const float32 radius = nextRandom() * ThemeParkInternal::kWanderRadius;
             const float3  anchor = _listRide.empty() ? _settings._gatePosition
                                                      : _listRide[static_cast<size_t>( nextRandom() * static_cast<float32>( _listRide.size() ) ) % _listRide.size()]._entrance;

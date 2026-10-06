@@ -2,6 +2,8 @@
 
 #include "Engine/Object/Component/Physics/CharacterController2DComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 
@@ -11,7 +13,7 @@ namespace sw
         : PhysicsComponent{ PhysicsComponentPhase::Character }
         , _radius{ 0.3f }
         , _halfHeight{ 0.4f }
-        , _maxSlopeAngle{ 0.785398f }
+        , _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }
         , _gravityScale{ 1.0f }
         , _layer{ "Character" }
         , _character{}

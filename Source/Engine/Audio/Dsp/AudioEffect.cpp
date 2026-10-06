@@ -115,7 +115,7 @@ namespace sw
             static float32 computeTimeCoefficient( float32 milliseconds )
             {
                 const float32 samples = MathUtil::max( 1.0f, milliseconds * 0.001f * static_cast<float32>( audio::kSampleRate ) );
-                return MathUtil::pow( 2.718281828f, -1.0f / samples );
+                return MathUtil::pow( MathUtil::kEuler, -1.0f / samples );
             }
 
             float32 _attackCoefficient;  /**< 어택 계수입니다. */
@@ -214,7 +214,7 @@ namespace sw
             void onParameterChanged() override
             {
                 const float32 releaseSamples = MathUtil::max( 1.0f, _listParameter[1] * 0.001f * static_cast<float32>( audio::kSampleRate ) );
-                _releaseCoefficient          = MathUtil::pow( 2.718281828f, -1.0f / releaseSamples );
+                _releaseCoefficient          = MathUtil::pow( MathUtil::kEuler, -1.0f / releaseSamples );
                 const uint32 window          = MathUtil::max( 1u, static_cast<uint32>( _listParameter[2] * 0.001f * static_cast<float32>( audio::kSampleRate ) ) );
                 if ( window != _windowLength || _listDelay.empty() )
                 {
@@ -432,7 +432,7 @@ namespace sw
                 _delayFrames           = MathUtil::clamp( static_cast<uint32>( _listParameter[0] * 0.001f * static_cast<float32>( audio::kSampleRate ) ), 1u, slotCount - 1 );
                 const float32 cutoff   = _listParameter[4];
                 _dampCoefficient       = cutoff >= audio::kFilterOpenHz ? 0.0f
-                                                                        : MathUtil::pow( 2.718281828f, -2.0f * MathUtil::kPi * cutoff / static_cast<float32>( audio::kSampleRate ) );
+                                                                        : MathUtil::pow( MathUtil::kEuler, -2.0f * MathUtil::kPi * cutoff / static_cast<float32>( audio::kSampleRate ) );
             }
 
         private:

@@ -10,6 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/PhysicsShape.h"
@@ -127,11 +128,11 @@ namespace sw
         Vector  _position{};
         uint64  _userData{ 0 };
         float32 _radius{ 0.3f };
-        float32 _halfHeight{ 0.6f };         ///< 원기둥 부분의 반 높이 — 키는 2 × (반 높이 + 반지름)
-        float32 _maxSlopeAngle{ 0.785398f }; ///< 걸어 오를 수 있는 가장 가파른 바닥(라디안, 기본 45 도)
-        float32 _stepHeight{ 0.3f };         ///< 걸어 오를 수 있는 가장 높은 턱(미터). 2D 는 쓰지 않는다
-        float32 _mass{ 70.0f };              ///< 밀어낼 때의 질량(3D)
-        float32 _maxStrength{ 100.0f };      ///< 동적 바디를 미는 가장 큰 힘(3D, 뉴턴)
+        float32 _halfHeight{ 0.6f };                        ///< 원기둥 부분의 반 높이 — 키는 2 × (반 높이 + 반지름)
+        float32 _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }; ///< 걸어 오를 수 있는 가장 가파른 바닥(라디안, 기본 45 도)
+        float32 _stepHeight{ 0.3f };                        ///< 걸어 오를 수 있는 가장 높은 턱(미터). 2D 는 쓰지 않는다
+        float32 _mass{ 70.0f };                             ///< 밀어낼 때의 질량(3D)
+        float32 _maxStrength{ 100.0f };                     ///< 동적 바디를 미는 가장 큰 힘(3D, 뉴턴)
         uint8   _layer{ 0 };
     };
 

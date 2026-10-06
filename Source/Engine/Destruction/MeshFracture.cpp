@@ -1204,7 +1204,7 @@ namespace sw
             const float64 denom   = lengthA * lengthB * lengthC + dotAb * lengthC + dotBc * lengthA + dotCa * lengthB;
             solidAngle += 2.0 * ::atan2( numer, denom );
         }
-        const float64 winding = solidAngle / ( 4.0 * 3.14159265358979323846 );
+        const float64 winding = solidAngle / ( 4.0 * MathUtil::kPi64 );
         return MathUtil::abs( winding ) > 0.5;
     }
 

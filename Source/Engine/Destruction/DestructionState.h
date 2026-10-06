@@ -67,8 +67,6 @@ namespace sw
     class SW_API DestructionState
     {
     public:
-        /** @brief 지지 계산의 중력 가속도(미터/초²)입니다. */
-        static constexpr float32 kGravity = 9.81f;
         /** @brief 무너짐 계산을 되풀이하는 상한입니다(한 번 끊기면 하중이 다시 흐른다). */
         static constexpr uint32 kMaxSupportPass = 8;
 

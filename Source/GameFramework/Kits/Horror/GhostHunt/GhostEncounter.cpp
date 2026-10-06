@@ -16,8 +16,7 @@ namespace sw
     {
         struct GhostEncounterInternal
         {
-            static constexpr float32 kDegreeToRadian     = 3.14159265358979f / 180.0f;
-            static constexpr int32   kFleeDirectionCount = 8;
+            static constexpr int32 kFleeDirectionCount = 8;
 
             /** @brief XZ 로 눕혀 길이 1 로 — 너무 짧으면 0 벡터입니다. */
             static float3 flatten( const float3& direction )
@@ -367,7 +366,7 @@ namespace sw
     {
         const int32   index = _random.nextInt( 0, GhostEncounterInternal::kFleeDirectionCount - 1 );
         const float32 angle = static_cast<float32>( index ) * ( 360.0f / static_cast<float32>( GhostEncounterInternal::kFleeDirectionCount ) ) *
-                              GhostEncounterInternal::kDegreeToRadian;
+                              MathUtil::kDegreeToRadian;
         ghost._fleeDirection = float3{ MathUtil::sin( angle ), 0.0f, MathUtil::cos( angle ) };
     }
 

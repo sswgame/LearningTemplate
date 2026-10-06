@@ -34,7 +34,6 @@ namespace sw
      */
     struct SW_GF_API Ballistics
     {
-        static constexpr float32 kGravity = 9.81f;
 
         /** @brief @p origin 에서 @p direction(단위)으로 @p speed 로 쏜 투사체입니다. */
         static Projectile launch( const float3& origin, const float3& direction, float32 speed, float32 gravityScale, float32 maxAge );

@@ -13,7 +13,6 @@ namespace sw
     {
         struct GridPathfinderInternal
         {
-            static constexpr float32 kDiagonalFactor = 1.41421356f;
         };
     } // namespace
 } // namespace sw
@@ -90,7 +89,7 @@ namespace sw
         const int32 dy       = MathUtil::abs( to._y - from._y );
         const int32 straight = MathUtil::max( dx, dy ) - MathUtil::min( dx, dy );
         const int32 diagonal = MathUtil::min( dx, dy );
-        return _minCellCost * ( static_cast<float32>( straight ) + GridPathfinderInternal::kDiagonalFactor * static_cast<float32>( diagonal ) );
+        return _minCellCost * ( static_cast<float32>( straight ) + MathUtil::kSqrt2 * static_cast<float32>( diagonal ) );
     }
 
     GridPathResult GridPathfinder::findPath( const NavGrid& grid, const GridPathQuery& query, vector<int2>& outListCell )
@@ -158,7 +157,7 @@ namespace sw
                 uint32&     nextStamp = _listStamp[static_cast<size_t>( nextIndex )];
                 if ( nextStamp == _stamp + 1 )
                     continue;
-                const float32 stepCost = static_cast<float32>( grid.getCost( next._x, next._y ) ) * ( bDiagonal ? GridPathfinderInternal::kDiagonalFactor : 1.0f );
+                const float32 stepCost = static_cast<float32>( grid.getCost( next._x, next._y ) ) * ( bDiagonal ? MathUtil::kSqrt2 : 1.0f );
                 const float32 newCost  = costSoFar + stepCost;
                 if ( nextStamp == _stamp && newCost >= _listCostSoFar[static_cast<size_t>( nextIndex )] )
                     continue;

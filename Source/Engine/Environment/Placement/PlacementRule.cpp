@@ -155,7 +155,7 @@ namespace sw
 
         // 최소 거리 격자: 칸 = 최소 거리 / √2 라 칸 하나에 점이 많아야 하나다. 칸 반경 2 를 보면 최소 거리 안의 모든 점을 본다.
         const bool                  bPoisson = rule._minDistance > 0.0f;
-        const float32               cellSize = bPoisson ? rule._minDistance * 0.70710678f : 1.0f;
+        const float32               cellSize = bPoisson ? rule._minDistance * MathUtil::kInvSqrt2 : 1.0f;
         unordered_map<int64, int32> mapCellToPoint;
         vector<float2>              listPoint;
 
