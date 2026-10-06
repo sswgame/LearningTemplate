@@ -28,7 +28,8 @@ PSInput VSMain(SwVertexInput input, uint vertexId : SV_VertexID)
 
 float4 PSMain(PSInput input) : SV_TARGET
 {
-	float3 albedo = swSampleAlbedo(input.uv).rgb;
+	const float4 albedoSample = swSampleAlbedo(input.uv);
+	float3 albedo = albedoSample.rgb;
 	float3 normal = normalize(swSampleNormal(input.uv).xyz * 2.0f - 1.0f);
 	if (length(normal) < 0.1f)
 		normal = float3(0.0f, 0.85f, 0.5f);
@@ -45,6 +46,9 @@ float4 PSMain(PSInput input) : SV_TARGET
 	// discard 하면 LitColor 는 자기 클리어 색 그대로 남는다 — 포워드의 SceneColor 와 같은 배경이다.
 	if (depth >= 1.0f)
 		discard;
+	// 알베도 알파는 G버퍼 패스가 적은 셰이딩 모델이다(binding.hlsli SW_GBUFFER_SHADING) — 보기 모드 Unlit 의 표면은 알베도 그대로.
+	if (albedoSample.a < 0.5f * (SW_GBUFFER_SHADING_LIT + SW_GBUFFER_SHADING_UNLIT))
+		return float4(albedo, 1.0f);
 
 	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 3.0f) * 0.12f;
 	lit += rim * g_KeyLightColor.rgb;

@@ -781,16 +781,34 @@ struct SwSurfaceOutput
 #endif
 #define SW_SURFACE_OUTPUT SwSurfaceOutput
 
+// 보기 모드 Unlit — 조명 · 그림자 · 림 · 반사를 컴파일 아웃하고 알베도를 그대로 낸다. 조명을 하는 셰이더는 **모두** 이 매크로로 가른다.
+// C++ 정본은 FrameRendererUtil 의 kViewModeUnlitDefine 이다 — 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGpuTest.UnlitViewModeChangesThePicture).
+#if defined( SW_VIEWMODE_UNLIT )
+#define SW_VIEWMODE_SKIPS_LIGHTING 1
+#else
+#define SW_VIEWMODE_SKIPS_LIGHTING 0
+#endif
+
+// G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferredlighting 이 읽는다).
+// 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
+#define SW_GBUFFER_SHADING_LIT   1.0f
+#define SW_GBUFFER_SHADING_UNLIT 0.0f
+#if SW_VIEWMODE_SKIPS_LIGHTING
+#define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_UNLIT
+#else
+#define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_LIT
+#endif
+
 /**
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
- * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
+ * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델)와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
  *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
  */
 SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal )
 {
 #if defined( SW_PASS_GBUFFER )
 	SwSurfaceOutput output;
-	output.albedo = float4( albedo.rgb, 1.0f );
+	output.albedo = float4( albedo.rgb, SW_GBUFFER_SHADING );
 	output.normal = float4( saturate( normalize( worldNormal ) * 0.5f + 0.5f ), 1.0f );
 	return output;
 #else

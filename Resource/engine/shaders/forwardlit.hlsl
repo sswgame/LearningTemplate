@@ -64,11 +64,16 @@ SW_SURFACE_OUTPUT PSMain(PSInput input)
 	// 조명 코드가 통째로 컴파일 아웃되므로 런타임 분기가 아니다(언리얼의 베이스 패스와 같은 구성).
 	return swStoreSurface(float4(0, 0, 0, 0), albedo, normal);
 #else
+#if SW_VIEWMODE_SKIPS_LIGHTING
+	// 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
+	float3 lit = albedo.rgb;
+#else
 	// 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다.
 	float  shadow = swSampleShadowAtWorld(input.worldPosition, normal);
 	float3 lit = swShadeLights(albedo.rgb, input.worldPosition, normal, shadow);
 	float rim = pow(1.0f - saturate(dot(normal, float3(0, 0, 1))), 2.0f) * 0.15f;
 	lit += rim * g_KeyLightColor.rgb;
+#endif
 
 	// 알파를 쓰는지가 **퍼뮤테이션으로 갈린다**. 반투명 머티리얼만 MATERIAL_BLEND_TRANSLUCENT 를 always-define
 	// 으로 들고 있고(glassmaterial.material), 불투명 변형은 알파 경로가 아예 컴파일되지 않는다 — 불투명

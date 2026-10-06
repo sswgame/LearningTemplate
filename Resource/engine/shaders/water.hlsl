@@ -89,6 +89,11 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	// 프레넬(슐릭, 물 F0 = 0.02) — 비스듬히 볼수록 하늘이 비친다.
 	const float  facing  = saturate( dot( normal, toView ) );
 	const float  fresnel = 0.02f + 0.98f * pow( 1.0f - facing, 5.0f );
+#if SW_VIEWMODE_SKIPS_LIGHTING
+	// 보기 모드 Unlit — 물 색 그대로, 주광 반사 없음(하늘 반사 · 거품은 조명이 아니라 표면 색이라 남긴다).
+	const float3 body     = input.waterColor.rgb;
+	const float  specular = 0.0f;
+#else
 	const float  shadow  = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 body    = swShadeLights( input.waterColor.rgb, input.worldPosition, normal, shadow );
 
@@ -96,6 +101,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	const float3 toLight  = normalize( -g_KeyLightDirIntensity.xyz );
 	const float3 halfway  = normalize( toLight + toView );
 	const float  specular = pow( saturate( dot( normal, halfway ) ), 180.0f ) * g_KeyLightDirIntensity.w * shadow;
+#endif
 
 	float3 color = lerp( body, input.skyColor, fresnel ) + specular * g_KeyLightColor.rgb;
 	float  alpha = saturate( max( input.waterColor.a, fresnel ) + specular );

@@ -254,12 +254,13 @@ namespace
      * @details 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다 — 몇 장 돌린다. 백버퍼는 핸들이 없어 읽을 수 없으므로 캡처를 켠다.
      */
     bool renderPresentCaptureOf( sw::IRHIDevice* pDevice, sw::Scene& scene, const utf8* pPipelinePath, sw::vector<uint8>& outByte,
-                                 sw::RHITextureMipSpan& outLayout )
+                                 sw::RHITextureMipSpan& outLayout, sw::RenderViewMode viewMode = sw::RenderViewMode::Lit )
     {
         sw::FrameRenderer renderer;
         if ( renderer.initialize( pDevice, pPipelinePath ) == false || renderer.isReady() == false )
             return false;
         renderer.setPresentCaptureEnabled( true );
+        renderer.setViewMode( viewMode );
 
         constexpr uint32 kWarmupFrameCount = 3;
         for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount; ++frameIndex )
@@ -5753,6 +5754,41 @@ SW_TEST_CASE( RenderPassGpuTest, PresentedBackBufferMatchesTheCapture )
     }
     if ( sweep.getReadyCount() == 0 )
         SW_TEST_SKIP( "No RHI backend for the back buffer readback test" );
+}
+
+/**
+ * @brief [RenderPassGpuTest] 보기 모드 Unlit 은 Lit 과 다른 그림이다(조명 · 그림자 · 림이 빠진다) — 포워드 · 디퍼드, 4 백엔드
+ * @details PSO 변형은 `SW_VIEWMODE_UNLIT` 을 받는다. 그 define 을 읽지 않는 셰이더는 Lit 과 같은 그림을 낸다(조용한 실패).
+ *          디퍼드는 조명 패스가 뷰 모드를 모르므로 G버퍼 알베도 알파(셰이딩 모델)로 넘긴다. Unlit 은 큐브의 면마다 밝기가 같아진다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, UnlitViewModeChangesThePicture )
+{
+    test::RHIBackendSweep sweep;
+    for ( test::RHITestDevice& device : sweep )
+    {
+        for ( const utf8* pPipeline : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+        {
+            const sw::string      label = sw::string( device->getBackendName() ) + " " + pPipeline + ": ";
+            LitCubeScene          stage;
+            sw::vector<uint8>     listLit;
+            sw::vector<uint8>     listUnlit;
+            sw::RHITextureMipSpan layoutLit{};
+            sw::RHITextureMipSpan layoutUnlit{};
+            bool                  bOk = stage.populate();
+            bOk                       = bOk && renderPresentCaptureOf( device.get(), stage._scene, pPipeline, listLit, layoutLit, sw::RenderViewMode::Lit );
+            bOk                       = bOk && renderPresentCaptureOf( device.get(), stage._scene, pPipeline, listUnlit, layoutUnlit, sw::RenderViewMode::Unlit );
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "Lit · Unlit 캡처" ).c_str() );
+            if ( bOk == false )
+                continue;
+            const CaptureDifference difference = compareCaptures( listLit, listUnlit );
+            SW_LOG_INFO( "%#lit vs unlit: %#", label, difference.describe() );
+            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "Lit 그림이 배경뿐이다 — 비교가 뜻이 없다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( difference._differCount * 100u > difference._compareCount,
+                                ( label + "Unlit 이 Lit 과 같은 그림이다 (" + difference.describe() + ")" ).c_str() );
+        }
+    }
+    if ( sweep.getReadyCount() == 0 )
+        SW_TEST_SKIP( "No RHI backend for the unlit view mode test" );
 }
 
 /**

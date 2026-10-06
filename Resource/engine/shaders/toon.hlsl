@@ -257,7 +257,7 @@ SW_SURFACE_OUTPUT PSMain( PSInput input, bool bFrontFace : SV_IsFrontFace )
 #if defined( SW_PASS_GBUFFER )
 	// 디퍼드의 G버퍼는 표면만 적는다 — 계단 셰이딩은 포워드 경로의 것이다(디퍼드 조명은 램버트로 칠한다).
 	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), litColor, normal );
-#elif defined( SW_VIEWMODE_UNLIT )
+#elif SW_VIEWMODE_SKIPS_LIGHTING
 	return swStoreSurface( float4( litColor.rgb, litColor.a ), litColor, normal );
 #else
 	const float3 shadeColor = input.color.rgb * material.shadeColor.rgb * swSampleMaterialTexture( material.shadeMap, input.uv ).rgb;

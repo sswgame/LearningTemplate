@@ -34,7 +34,8 @@ PSOutput PSMain(PSInput input)
 {
 	PSOutput output;
 	float3 encodedNormal = saturate(normalize(input.normal) * 0.5f + 0.5f);
-	output.albedo = float4(input.color.rgb, 1.0f);
+	// 알파는 셰이딩 모델(binding.hlsli SW_GBUFFER_SHADING — 보기 모드 Unlit 이면 조명 없이)이다.
+	output.albedo = float4(input.color.rgb, SW_GBUFFER_SHADING);
 	output.normal = float4(encodedNormal, 1.0f);
 	return output;
 }

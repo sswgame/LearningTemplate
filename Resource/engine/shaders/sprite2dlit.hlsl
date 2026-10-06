@@ -72,6 +72,11 @@ float4 PSMain(PSInput input) : SV_TARGET
 		normal = normalize(float3(input.tangent * tangentNormal.x + input.bitangent * tangentNormal.y, -tangentNormal.z));
 	}
 
+#if SW_VIEWMODE_SKIPS_LIGHTING
+	// 보기 모드 Unlit — 2D 빛 · 노멀 맵 없이 알베도 그대로.
+	const float3 lit = albedo.rgb;
+#else
 	const float3 lit = swShadeLights2d(albedo.rgb, input.worldPosition, normal, bHasNormal);
+#endif
 	return float4(lit, albedo.a);
 }
