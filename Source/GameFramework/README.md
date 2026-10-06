@@ -276,7 +276,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
 | 행동 트리 · 감각 | `AI/` | RTS · (모든 적 AI) |
 | 타이밍 판정 · 턴 순서 · 커맨드 입력 · 록온 · 2D 플랫포머 몸 | `Input/` · `TurnOrder` · `LockOnSelector` · `Movement/` | (리듬 · JRPG · 격투 · 액션 · 플랫포머) |
 
-괄호 안의 장르는 이 공통 부분을 쓰도록 설계했지만 아직 키트가 없는 것입니다(`docs/06_Backlog.md` 의 장르 키트 대기열).
+괄호 안의 장르는 이 공통 부분을 쓰도록 설계했지만 아직 키트가 없는 것입니다(`docs/06_Backlog.md` 의 장르 키트 대기열). 키트 여럿을 섞은 본보기는 `MeadowVillage`(Farming + CreatureLife)다.
 
 알림을 꺼내는 `drainEvents( outListEvent )` 는 기반 · 키트 모두 **받는 쪽 목록 뒤에 붙이고 자기 목록을 비웁니다**(바꿔치기하지 않는다). 매 프레임 같은 목록을 다시 쓰는 쪽은 먼저 `clear()` 합니다.
 
@@ -312,6 +312,8 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 - **빌린 객체의 알림은 꺼내지 않는다**(`drainEvents` 는 게임 화면의 것). 키트는 상태를 본다(`QuestLog::getStatus`). 시계 알림은 `getClockEvents` 를 여럿이 읽는다.
 - **판을 여는 것은 그 오브젝트의 첫 디렉터**(`GameStateComponent::initialize`), 시작값 · 공유 상태를 건드리는 시작 배치는 `isFreshGame()` 일 때만.
 - **상태 바이트는 구간**(`StateArchiveUtil::writeSection` — 표 · 판 · 길이). 키트 상태마다 `kStateTag`(4 글자, 저장소에서 하나 — `CheckKitNamespaces`) · `kStateVersion` 을 키트 클래스가 든다.
+- **코드 없이 규칙으로 닫은 것** — 자동 플레이 스위치는 게임 전체의 것(디렉터 하나만은 `_bAutoPlay`), 한 판에 경기 흐름(`MatchState`)은 하나(판 사이는 `RoundSeries`),
+  키트끼리 서로의 고정 걸음 중간 값을 읽지 않는다(디렉터 틱 경계에서만 공유 상태), 섞인 넷 게임은 롤백 상태 버퍼를 상태 구간으로, 모듈 적재 순서는 의존 순 · 이름순(결정적).
 - **이름 공간** — 키트는 키 · 입력 액션 이름을 박지 않고 설정 칸으로 받는다, 키트가 읽는 게임 설정 칸은 `<키트>.` 접두(둘 다 `CheckKitNamespaces`),
   넷 메시지는 키트 영역(`Kits/Network/NetKitMessageRange.h`) — 겹치는 처리기는 라우터가 받지 않는다(`NetMessageRouter::addHandler` 가 false).
 

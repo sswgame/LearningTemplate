@@ -201,6 +201,11 @@ cd build/Ninja-Debug/Bin
     기반의 같은 손셈(NavGrid 4 · FlowField 4 · GridInventory 3 · PlatformTileMap 2 · GridReachability `% 너비` 1, 클래스마다 자기 `isInside` · `computeIndex` ·
     `toIndex` 사본 — NavGrid · GridReachability · ElementGrid)도 `GridTopology` 멤버로 · 게임 손셈(HarvestValley `FarmCropComponent` · `FarmSoilComponent`,
     NileCity `NileDirectorComponent` 의 `index % getWidth()`)은 키트가 `getTopology()` 를 열면 같이.
+- **키트 조립 — 남은 것(2026-10-06).** 틀 · 키트 전부 · 조립 시험 둘(`KitCompositionTest` — Farming + CreatureLife, RTS + CityBuilder)과 `MeadowVillage` 는
+  들어갔다(규칙: `Source/GameFramework/README.md` "키트 여럿을 한 게임에"). 남은 것 — RTS 가 땅 리비전마다 땅 격자 전체를 다시 칠하는 비용(64 × 64 에서 재고
+  결정, 1-8), 둘째 조립(RTS + City)의 시험 게임(필요해지면 MeadowVillage 모양), 온라인 요청 메서드 번호 영역 · 로컬 지갑 = 원장 사본(kit-compose U20 — 온라인
+  사슬로 옮김). 땅을 쓰는 게임은 아직 없다 — 격자 키트를 섞는 게임이 생기면 `GameStateSettings::_land*` 와 키트의 `bindLand` 를 건다(SRPG 는 전투 끝에
+  `releaseLand`, 공원 놀이기구 발자국은 상태 바이트에 싣지 않는다 — 지은 칸은 땅이 든다).
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
   CCTV) · 입력 · 카메라 매니저(뷰 타깃 블렌드), 흔들림 · 제약 · 프레이밍 · 스프링 암)와 4 단계(다중 뷰 렌더 · 컷 프레임 신호 · 초상화 굽기)는 들어갔다
@@ -537,7 +542,9 @@ cd build/Ninja-Debug/Bin
 ### 안 하기로 한 것 (다시 제안하지 말 것)
 
 - **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
-  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
+  선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양. 2026-10-06 키트 조립 점검: 키트 디렉터 사이 순서는 한 오브젝트에
+  붙인 순서가 주고 — `TickRegistry` 가 한 오브젝트의 항목을 한 워커가 붙은 순서로 돌린다 — 다른 오브젝트 사이는 디렉터의 `_tickAfter`(규칙 서브틱 + 선행 조건),
+  키트 코드끼리의 의존은 0 곳이라 스케줄러의 근거가 아직 없다) · 에셋 로더 등록제(종류가 대여섯이 되면 — UE `UFactory`) ·
   참조 카운트 RHI 핸들(한 리소스를 여럿이 나눠 들기 시작하면 — UE `TRefCountPtr`) · Mesh/Material `SlotHandle`(하지 않는다 — `shared_ptr` 이 수명과 RT 안전을 한 번에
   준다) · `ResourceUtil` 소유 객체화(하지 않는다 — UE `FPaths` 도 정적) · 링크 단위 분할(증분 링크 시간이 문제가 되면 별도 PR) — GameFramework 기반(약 58k 줄)을 `GFS_*` DLL 여럿으로 쪼개는 안도 같은 이유로 하지 않는다(2026-10-05 재확인). 기반 폴더의
   층은 폴더 층 게이트(`CheckGameFrameworkLayers`)로 지킨다. · `UnitStatsComponent` 를 기반(`Combat/`)으로(2026-10-05 — 쓰는 게임 · 씬 · 프리팹 0, 옮기면 데미지 숫자(UI 층 4) · `MonsterDef` · `DamageAppliedEvent` 셋을 끊어야 층이 맞는다. 체력 읽기는 `Combat/HealthSourceComponent` 가 맡는다. 다시 볼 조건: 다른 키트 · 게임이 피해 입구(`takeDamage` · 무적 · `DamageAppliedEvent`)를 이 키트 없이 쓰려 할 때 — 그때는 `DamageAppliedEvent` 도 기반으로, `setStats( MonsterDef )` 는 키트의 도우미로, 데미지 숫자는 `HealthListenerComponent` 파생으로 내리고, `CheckGameFrameworkLayers` 자가 시험의 키트 헤더 예를 바꾸고, `generated/GF_ActionCombat/UnitStatsComponent.gen.*` 을 지운 뒤 re-configure) · 피해 입구 인터페이스(19 곳 — 인자 모양이 넷이다. 키트 투사체 · 공격 판정을 다른 체력 모델(어빌리티 시스템 · 게임 컴포넌트)에 쓰는 게임이 생기면 `Combat/` 에 `takeDamage( 양, 쏜 쪽 )` 하나를 `HealthSourceComponent` 옆에 — 언리얼 `AActor::TakeDamage`)
@@ -1676,6 +1683,21 @@ cd build/Ninja-Debug/Bin
 - **상태 바이트 시험은 "다시 쓴 바이트가 같다" 로 끝내지 않는다** — 빠진 칸은 쓰기 · 읽기 양쪽에서 빠져 있어 왕복 바이트가 늘 같다. 같은 걸음을 둘 다 더 돌려
   같은지까지 본다(`ElementGrid` 는 상태 비트만 싣고 남은 시간 값을 빠뜨려 되살린 불이 처음부터 탔다). 그 걸음이 칸을 실제로 쓰는지도 본다 — 판정기 없는
   `InteractionProgress` 는 스킬 체크를 띄우지 않아 난수를 빼도 시험이 통과했다. 변이(칸 하나를 양쪽에서 빼기)로 시험이 지는지 확인한다.
+- **키트를 섞을 때는 공유 상태를 한 오브젝트 맨 앞에 두고 디렉터를 그 뒤에 붙인다**(`GameStateComponent`) — 다른 오브젝트의 디렉터는 같은 그룹에서 동시에 돈다
+  (순서가 필요하면 `_tickAfter`). 시작값(시작 돈 · 공유 일지에 알리는 시작 배치)은 `isFreshGame()` 일 때만. 키트 하나만 쓰는 게임도 같은 모양(디렉터가 기반 상태를 들거나
+  공유 상태 컴포넌트)이다. 같은 틱 흐름을 보는 시험은 **그 틱**에서 단언한다 — 한 틱 뒤에 보면 붙인 순서를 바꿔도 통과한다(`KitCompositionTest` 의 84 틱).
+- **빌린 기반 객체의 알림은 꺼내지 않는다** — `EventBuffer::drainTo` 는 소비자 하나라 키트가 꺼내면 게임 화면 · 다른 키트가 받을 알림이 사라진다. 키트는 상태
+  (`QuestLog::getStatus`)를 본다. 시계 알림은 `GameStateComponent::getClockEvents` 를 여럿이 읽는다(`CheckKitNamespaces` 규칙 6).
+- **상태 바이트는 구간(표 · 판 · 길이)으로 싣는다**(`StateArchiveUtil::writeSection`) — 키트 조각을 이어 쓰면 한 키트의 형식이 바뀔 때 판 전체를 잃는다. 표(4 글자)는
+  저장소에서 하나다(`CheckKitNamespaces` — 주석 네 글자 = 값의 작은 끝 바이트).
+- **키트 조립에서 코드 없이 규칙으로 닫은 것(2026-10-06 판정)** — 자동 플레이 스위치(`-gv_<게임>AutoPlay`)는 게임 전체가 스스로 도는 QA 스위치라 모든 디렉터가 함께
+  켜진다(디렉터 하나만은 PROPERTY `_bAutoPlay`). 한 판에 경기 흐름(`MatchState`)은 하나 — 파티 게임은 미니게임을 차례로, 판 사이 점수는 `RoundSeries`.
+  키트마다 고정 걸음이 달라도 서로의 걸음 중간 값을 읽지 않는다(디렉터 틱 경계에서만 공유 상태를 본다). 알림 채널은 타입이 다르면 다른 알림(타입 이름 겹침은
+  `CheckDuplicateTypeNames`). 섞인 온라인 게임은 `IRollbackGame` 의 상태 버퍼를 상태 구간으로 쓰면 되고, 서버 권한 복제는 키트마다 스냅숏 코덱이 있다.
+  모듈 적재 순서는 매니페스트 의존 순 · 동점 이름순이라 결정적이다(`ArchitectureTest.LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly`).
+- **땅에 놓는 키트는 공유 땅을 빌린다**(`LandRegistry` · `LandBinding`) — 얻기는 사각 전부이거나 아무것도, 상태 바이트는 주인을 이름으로(등록 순서가 실행마다 달라도).
+  RTS 는 막힌 남의 땅을 땅 격자에 칠하고 땅 리비전이 바뀌면 다시 칠한다 — 도로처럼 막히지 않은 남의 땅은 걸을 수 있지만 짓지는 못한다(`canPlaceBuilding`).
+  막힌 땅으로는 짓기 거절이 이미 땅 격자에서 나서 땅 검사를 빼도 시험이 지지 않는다 — 땅 검사의 변이는 막히지 않은 땅(도로)으로 본다.
 
 ### 3-12. 기각한 것 — 숫자와 함께 (다시 제안하지 말 것)
 
