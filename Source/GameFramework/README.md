@@ -267,7 +267,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       가짜, PC 는 `LoopbackPkceLoginClient` — 시스템 브라우저 + 127.0.0.1 리다이렉트 + PKCE S256 · state · nonce, 표 = `id_token|nonce`),
       와이어(`AccountProtocol.h` — 메서드 · 알림 `kPushRevoked` · 코덱 `AccountWire`), 클라이언트(`AccountClient` — 다시 연결되면 토큰으로 재접속을 먼저 보내고
       그동안의 세션 요청은 그 뒤에, 밀려남 알림이면 토큰을 버린다 · `makeConnectCredentials` 로 UDP 자격), 게스트 장치 비밀(`AccountDeviceSecret` — 로컬 저장 Encrypted).
-    - `Server/Account`(`GF_Server_Account`, Server): 로그인 서비스 — 계정(소금 + 느린 해시 Argon2id, 매개변수는 레코드에 — 바뀌면 다음 로그인에 다시 해시),
+    - `Kits/Online/Server/Account`(`GF_Server_Account`, Server): 로그인 서비스 — 계정(소금 + 느린 해시 Argon2id, 매개변수는 레코드에 — 바뀌면 다음 로그인에 다시 해시),
       게스트(장치 비밀 다이제스트 → 계정) · 연동(이름 · 외부 계정을 "없어야 함" 으로 — 다른 계정 것이면 `AlreadyLinked`, 자동 합치기 없음) · 외부 로그인
       (`Platform/PlatformLoginProvider.h` — 맡기고 거두는 확인, 가짜 `FakePlatformLoginProvider`; 제공자는 데이터 `PlatformLoginProviderSettings` →
       공통 구현 `OidcLoginProvider`(JWT RS256 · ES256 · iss · aud · exp · nonce, `JwksKeyCache` — 회전 때 재조회 · 다운이면 캐시로) · `ProfileApiLoginProvider`
@@ -283,7 +283,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       응답 몸 = 결과 + 기다릴 ms + 칸, 공통 오류만 오류 코드(`fromErrorCode`), 메시지 형식 하나를 알림 · 버스 · 기록 레코드가 같이 씀, 버스 주제 `chat.channel.<id>` ·
       `chat.server.<16 진>`), 클라이언트(`ChatClient` — IOnlineClientService, 들어가기 · 나가기 · 말하기 · 귓속말 · 기록 요청마다 완료 델리게이트, 받은 메시지는
       `drainMessages`). 시험: `ChatChannelIdTest`.
-    - `Server/Chat`(`GF_Server_Chat`, Server): 금칙어 거르개(`ChatWordFilter` — 코드 포인트 아호-코라식, 대소 · 전각 정규화, 끼움 글자를 건너뛰고 맞춰 `b.a.d` 도 걸고
+    - `Kits/Online/Server/Chat`(`GF_Server_Chat`, Server): 금칙어 거르개(`ChatWordFilter` — 코드 포인트 아호-코라식, 대소 · 전각 정규화, 끼움 글자를 건너뛰고 맞춰 `b.a.d` 도 걸고
       가릴 때는 구간 안의 끼움 글자도 가림, 가리기 · 거절 두 방식, 잘못된 UTF-8 거절, 목록은 `Config/Server/chat_banned_words.txt` — 저장소에는 시험 낱말만),
       도배 막이(`ChatSpamGuard` — 계정마다 `TokenBucketMap` 몰아 쓰기 5 · 1 초에 하나 + 정규화 해시로 10 초 안 같은 글 셋째 거절), 채팅 로직(`ChatService` — 전송을 모름:
       클라이언트는 `world.` · `custom.` 만 들어가고 `guild.` · `party.` 는 서버 시스템이 `addMember`, 한 계정 16 채널. 말하기 = 제재(채팅 금지 — 첫 말하기 때 읽고 60 초 묵힘,
@@ -300,7 +300,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       초당 넓힘 · 상한 · 지역 풀기 · 시한), 표(`MatchTicket` — 혼자 또는 파티), 만든 경기(`MatchFormed`), 파티 · 로비 스냅숏(`PartySnapshot` · `LobbySnapshot`),
       와이어(`MatchmakingProtocol.h` — 영역 0x0A00, 메서드 + 0x01 부터, 응답 몸 첫 값이 결과, 캐시 기록 `[판 1][몸]`), 클라이언트(`MatchmakingClient` — 요청마다
       완료 델리게이트, 알림(파티 · 초대 · 로비 · 매칭 결과)을 모아 둠, "내 파티" 는 알림이 정본).
-    - `Server/Matchmaking`(`GF_Server_Matchmaking`, Server): 매처(`MatchMaker` — 모드 하나의 대기열, 결정적이고 전송 · 저장을 모른다). 오래 기다린 표가 닻, 두 표의 창 중
+    - `Kits/Online/Server/Matchmaking`(`GF_Server_Matchmaking`, Server): 매처(`MatchMaker` — 모드 하나의 대기열, 결정적이고 전송 · 저장을 모른다). 오래 기다린 표가 닻, 두 표의 창 중
       큰 것 안의 후보를 실력 거리 순으로 넣어 자리를 정확히 채우고, 큰 표부터 실력 합이 낮은 팀에(파티는 쪼개지 않음 — 나눌 수 없으면 그 닻은 이번에 건너뜀),
       기다리면 지역을 풀고, 시한을 넘긴 표는 돌려준다. 경기 id = 권한 서버 씨앗 << 32 | 순번. 파티 · 로비(`PartyLobbyService` — 캐시 기록 하나씩을 비교 후 쓰기
       `CacheRecordUpdater` 로, 한 계정 한 파티는 계정 색인 `mm/acct/<계정>` 의 IfAbsent, 장 · 방장 넘김, 모드별 로비 목록 정렬 집합). 대기열(`MatchQueueService` — 모드마다
@@ -319,14 +319,14 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `ServerDirectory`(`GF_ServerDirectory`, Client · Server): 서버 디렉터리 타입(`ServerDirectoryTypes.h` — 결과 · 점검 창(범위 `all` · 종류, 허용 계정) · 공지 ·
       배정 요청/답 · 목록 줄), 와이어(`ServerDirectoryProtocol.h` — 영역 0x0200: 상태 · 목록(익명) · 배정(로그인 뒤), 알림 kPushStatus, 키트 오류 kUnknownKind),
       클라이언트(`ServerDirectoryClient` — 요청마다 완료 델리게이트, 마지막 상태 · 판 번호).
-    - `Server/ServerDirectory`(`GF_Server_ServerDirectory`, Server): 로직(`ServerDirectoryService` — 배정은 기반 `ServerRegistryReader` 스냅숏으로 동기,
+    - `Kits/Online/Server/ServerDirectory`(`GF_Server_ServerDirectory`, Server): 로직(`ServerDirectoryService` — 배정은 기반 `ServerRegistryReader` 스냅숏으로 동기,
       점검이면 Maintenance + 끝 시각 · 글 키(허용 계정은 점검 상태 서버도 후보), 점검 · 공지 바꾸기는 영속 레코드(`sd_maintenance` · `sd_notice`) + 감사 줄 한 트랜잭션,
       30 초 주기 다시 읽기 + 버스 `sd.changed` 재촉, 보이는 내용의 해시가 바뀌면(기간 경계 포함) 알림), 바인딩(`ServerDirectoryServer` — `sendPushToAll`).
       바꾸기는 C++ API(GM 도구가 조립에서). 시험: `ServerDirectoryServiceTest` · `ServerDirectoryStreamTest`.
     - `Leaderboard`(`GF_Leaderboard`, Client · Server): 순위표 타입(`LeaderboardTypes.h` — 결과 · 정렬 · 갱신 Best · Latest · Sum · 초기화 None · Daily · Weekly · 표 정의
       (`_sourceStat` 통계 연동 · `_bClientSubmit`) · 항목 · 통계 · 상한 · id 규칙 `[0-9a-z_]` · 시즌(보상 구간) · 업적), 와이어(`LeaderboardProtocol.h` — 영역 0x0900,
       응답 몸 = `LeaderboardResult` + 칸, 업적 알림 `kPushAchievement`), 클라이언트(`LeaderboardClient` — 요청마다 완료 델리게이트, 점수 제출은 멱등 키).
-    - `Server/Leaderboard`(`GF_Server_Leaderboard`, Server): 로직(`LeaderboardService` — 정본은 영속 `lb_score`(판 조건, 충돌 4 번 다시), 순위는 캐시 정렬 집합
+    - `Kits/Online/Server/Leaderboard`(`GF_Server_Leaderboard`, Server): 로직(`LeaderboardService` — 정본은 영속 `lb_score`(판 조건, 충돌 4 번 다시), 순위는 캐시 정렬 집합
       `lb/<표>/<기간>`(오름차순은 부호 뒤집기), 준비 표시가 없으면 영속에서 256 개씩 읽어 다시 채우고 그동안 온 읽기는 줄 · 그동안 쓴 점수는 채운 뒤 한 번 더,
       기간 id = `ServiceScheduler::computeLatestOccurrence`(시즌 표는 지금을 품은 시즌 id), 상위 · 내 둘레 조회에 캐시 이름 `lb/name/<계정>`, 통계 `lb_stat` → 연동 표,
       업적 — 문턱을 넘으면 `lb_achievement` "없어야 함" + 보상 우편(재원 발행, 멱등 키 `ach.<계정>.<업적>`) 한 트랜잭션, 시즌 정산 — 예약 작업
@@ -336,7 +336,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `Social`(`GF_Social`, Client · Server): 친구 타입(`SocialTypes.h` — 결과 · 관계 상태(친구 · 보낸 신청 · 받은 신청 · 막음) · 접속 상태(상태 + 활동 글) · 알림 · 상한),
       와이어(`SocialProtocol.h` — 영역 0x0800, 응답 몸 = `SocialResult` + 칸, 이름으로 신청은 정식 계정만, 길드 0x10..), 길드 타입(역할 · 회원 · 정보 · 상한),
       클라이언트(`SocialClient` — 요청마다 완료 델리게이트, 바꾸기는 멱등 키, 알림 `drainNotifications`; 로그인 뒤 `listLinks` 를 먼저).
-    - `Server/Social`(`GF_Server_Social`, Server): 관계 규칙(`SocialLinkRules` — 순수 함수: 서로 신청 = 자동 수락, 나를 막은 사람에게 신청은 조용히 Ok, 막으면 상대 줄 정리,
+    - `Kits/Online/Server/Social`(`GF_Server_Social`, Server): 관계 규칙(`SocialLinkRules` — 순수 함수: 서로 신청 = 자동 수락, 나를 막은 사람에게 신청은 조용히 Ok, 막으면 상대 줄 정리,
       상한 친구 200 · 받은 신청 100 · 보낸 신청 100 · 막음 500), 로직(`SocialService` — 관계 = 방향 있는 레코드 둘 `social_link` + 개수 `social_count` 를 판 조건으로 한
       트랜잭션(충돌이면 다시 읽고 다시 — 4 번), 이 서버 계정의 관계 메모리 `isBlockedLocal`(채팅 정책은 게임 조립이 잇는다), 다른 서버의 바꾸기는 버스 `social.links`,
       접속 상태는 캐시 `social/rp/<계정>`(90 초 · 30 초 연장) + 버스 `social.presence`, 이름 신청은 `IAccountNameIndex` 를 같은 저장소 일에서).
@@ -347,7 +347,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `Trade`(`GF_Trade`, Client · Server): 거래 와이어 타입(`TradeTypes.h` — 다리 · 상태 · 닫힌 까닭 · 결과 · 스냅숏 · 코덱 `TradeWire`), 와이어(`TradeProtocol.h` —
       메서드 · 알림 Invited · Update · Closed, 응답에 요청한 계정의 이동 뒤 잔액), 클라이언트(`TradeClient` — 모든 요청에 멱등 키, 확정은 비추는 스냅숏의 두 판),
       인벤토리 칸 → 다리(`TradeInventoryUtil` — 같은 아이템 칸 합침, 인스턴스 상태 칸 거절, 아이템 → 자산 id 는 게임이 잇는다).
-    - `Server/Trade`(`GF_Server_Trade`, Server): 거래 서비스 — 양쪽 제시 → 잠금 → 양쪽 확정, 정산은 **맡김 없이 원장 이동 하나의 트랜잭션**(두 방향 다리를 분개 하나로 —
+    - `Kits/Online/Server/Trade`(`GF_Server_Trade`, Server): 거래 서비스 — 양쪽 제시 → 잠금 → 양쪽 확정, 정산은 **맡김 없이 원장 이동 하나의 트랜잭션**(두 방향 다리를 분개 하나로 —
       키 = 거래 id, 거래 레코드 · 활성 링크 · 감사 줄과 한 커밋, 모자라면 아무것도 안 움직이고 Failed). 상태 기계는 순수 함수(`TradeStateMachine` — 제시를 바꾸면 양쪽 잠금 ·
       확정이 풀리고 확정은 본 판 둘을 싣는다), 거래 레코드는 저장소에(`TradeStoreLogic` — 계정마다 열린 거래 하나 "없어야 함", 시한 · 남은 링크는 게으르게 정리, 주인 서버
       색인으로 재시작 복구), 거래 가능 정책 `ITradePolicy`. 스트림 바인딩 `TradeServer`(상대는 표시 이름 — 이 프로세스의 디렉터리, 없으면 접속 상태 창구
@@ -359,7 +359,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       온라인 게임에서는 원장(서버)이 소유의 정본이고 `Wallet` · `Inventory` 는 읽기 사본이다 — 오프라인 게임의 `Shop` · `Wallet` 은 그대로 쓴다.
       클라이언트(`EconomyClient` — 요청 넷 · 잔액 캐시, 구매 · 지급 재시도는 같은 멱등 키, 로컬 지갑은 `applyLedgerBalances( wallet )` 로만 맞춘다).
       시험: `EconomyCatalogTest` · `EconomyMirrorTest` · `EconomyClientTest`(루프백 스트림 계정 + 경제).
-    - `Server/Economy`(`GF_Server_Economy`, Server): 구매 · 영수증 저장 논리(`EconomyStoreLogic` — 구매는 계정 → 소각 · 발행 → 계정 분개 하나 + 계정당 구매 수 레코드를
+    - `Kits/Online/Server/Economy`(`GF_Server_Economy`, Server): 구매 · 영수증 저장 논리(`EconomyStoreLogic` — 구매는 계정 → 소각 · 발행 → 계정 분개 하나 + 계정당 구매 수 레코드를
       한 트랜잭션에, 분개 키 = 클라이언트 멱등 키라 재시도는 잔액 · 한도 판정보다 먼저 지난 결과, 재원에 빚이 있으면 그 가상 화폐로 못 산다. 영수증 지급은 거래 id 가
       분개 키라 다른 계정의 같은 영수증은 `AlreadyRedeemed`), 영수증 검증 계약(`Receipt/ReceiptValidator.h` — 맡기고 거두는 `IReceiptValidator` · 등록부, 가짜
       `Receipt/Provider/Fake/` — 개발 전용). 서비스 `EconomyService`(IOnlineService 영역 kEconomy + 전송과 무관한
@@ -367,13 +367,13 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       `ServiceMetrics`("economy")). 시험: `EconomyPurchaseTest` · `ReceiptRedeemTest` · `EconomyServiceTest`.
     - `Mailbox`(`GF_Mailbox`, Client · Server): 우편함 와이어(`MailboxProtocol.h` — 메서드 · `MailboxResult` · 화면 우편 `MailView` · 응답 몸 = 결과 + 칸, 캠페인 키 `campaign/<id>`),
       클라이언트(`MailboxClient` — 첫 쪽 목록 캐시 · 안 읽은 수, 수령 · 모두 받기는 멱등 키, 수령 잔액은 게임이 경제 클라이언트로).
-    - `Server/Mailbox`(`GF_Server_Mailbox`, Server): 우편함 저장 논리(`MailboxStoreLogic` — 수령 = 재원 → 계정 원장 이동 + 상태 받음 + 만료 색인 지우기 한 트랜잭션, 분개 키
+    - `Kits/Online/Server/Mailbox`(`GF_Server_Mailbox`, Server): 우편함 저장 논리(`MailboxStoreLogic` — 수령 = 재원 → 계정 원장 이동 + 상태 받음 + 만료 색인 지우기 한 트랜잭션, 분개 키
       `mail.claim/<우편 토큰>` 이 두 기기 동시 수령 · 응답 유실에도 원장 한 번, 상한을 넘으면 우편이 남는다. 모두 받기는 16 통까지 우편마다 커밋, 지우기는 받았거나 첨부 없는 것만,
       만료 쓸기는 시각 순 색인으로 버림(맡김 → 소각) · 돌려줌(맡김 → 보낸 계정, 상한 무시) · 발행 재원은 지우기만, 캠페인은 목록 첫 쪽 맨 앞에), 서비스 `MailboxService`
       (IOnlineService 영역 kMailbox + `submitCall`, 주기 쓸기 · 캠페인 다시 읽기 일, 지표 `mailbox_expired_total{action}`). 시험: `MailboxTest`.
     - `Admin`(`GF_Admin`, Client · Server — 운영 도구 · 에디터만 의존, 플레이어 게임은 의존하지 않는다): GM 와이어(`AdminProtocol.h` — 메서드 · 권한 등급 넷
       `Viewer` < `Support` < `Operator` < `Super` · 명령별 필요 등급 `getRequiredRole` · `AdminResult` · 요청/응답 한 형식), 클라이언트(`AdminClient` — 바꾸는 명령은 멱등 키).
-    - `Server/Admin`(`GF_Server_Admin`, Server): GM 저장 논리(`AdminStoreLogic` — 등급(`admin_role`)을 명령마다 저장소에서 읽고, 바꾸는 명령은 멱등 기록(범위 `gm.<id>`)을 먼저 보고
+    - `Kits/Online/Server/Admin`(`GF_Server_Admin`, Server): GM 저장 논리(`AdminStoreLogic` — 등급(`admin_role`)을 명령마다 저장소에서 읽고, 바꾸는 명령은 멱등 기록(범위 `gm.<id>`)을 먼저 보고
       효과(원장 분개 · 제재 레코드 · 우편 · 일괄 우편 · 캠페인 · 등급)와 감사 줄과 멱등 기록을 한 트랜잭션에 — 거절 · 커밋 실패면 감사 줄도 없다. 메모(티켓) 필수, 회수는 음수 금지 ·
       환불 회수(`_bRefund`)만 빚 허용, 자기 등급 변경 금지, 일괄 우편은 계정마다 배치 키라 이어 하기에 중복이 없다, 첫 관리자 `seedRole`), 서비스 `AdminService`(IOnlineService
       영역 kAdmin + `submitCall`, 조회는 계정 창구로 표시 이름 · 접속 여부, 정지 · 영구 정지가 새로 걸리면 `IAccountSessionControl` 로 세션 끊기, 제재를 새로 쓰면 버스 `sanction.changed` — 채팅이 묵힌 제재를 버린다). GM 에디터 패널은 백로그
@@ -381,7 +381,7 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
     - `LiveOps`(`GF_LiveOps`, Client · Server): 라이브 운영 타입(`LiveOpsTypes.h` — 결과 · 반복 · 이벤트 정의 · 열린 이벤트), 와이어(`LiveOpsProtocol.h` — 영역 0x0B00,
       열린 이벤트 받기(로그인 뒤), 알림 kPushLiveState(몸 없음 — 다시 받아라), 영속 레코드 `[판 1][정의]`), 클라이언트(`LiveOpsClient` — 알림이 오면 스스로 다시 받는다,
       게임은 `getActiveEvents` · `hasEventKind` 만 본다).
-    - `Server/LiveOps`(`GF_Server_LiveOps`, Server): 열림 판정(`LiveEventRules` — 기간 · 매일/매주 회차(`ServiceScheduler::computeLatestOccurrence`) · 빌드 · 지역 ·
+    - `Kits/Online/Server/LiveOps`(`GF_Server_LiveOps`, Server): 열림 판정(`LiveEventRules` — 기간 · 매일/매주 회차(`ServiceScheduler::computeLatestOccurrence`) · 빌드 · 지역 ·
       출시 비율(`RemoteConfig::computeRolloutBucket` — 원격 설정 플래그와 같은 해시)), 로직(`LiveOpsService` — 정의는 영속 `liveops_event` + 감사 줄 한 트랜잭션, 30 초 주기 +
       버스 `liveops.changed` 재촉, 매개변수 `@<키>` 는 원격 설정 값, 긴급 스위치 `feature.liveops`, 열린 묶음 해시가 바뀌면(회차 경계 포함) 알림), 바인딩(`LiveOpsServer` —
       푸시 기기 등록 · 해지 메서드도). 푸시(`Push/` — 제공자 계약 `IPushNotificationProvider`, 구현은 `Push/Provider/<제품>/` 안 — 지금은 `Fake` 하나. 실제 제공자 둘은
@@ -396,11 +396,11 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
       마이그레이션 `Resource/common/sql/localstore/` · DB `<루트>/localstore.db`, 기반 공장에 `registerLocalStoreBackend` 로 "sqlite").
       **SQL 이식성**: 공통 SQL 은 SQLite 3.35+ · PostgreSQL 이 같은 문법만(`ON CONFLICT … DO NOTHING/UPDATE` · `RETURNING` · `LIMIT ?`), 자리표시자는 늘 `?`(드라이버가 바꾼다),
       갈라지는 곳은 방언 훅뿐이다. 시험: `SqlDriverSqliteTest`(드라이버 계약 `SqlDriverContract.h` · 풀 · 등록부).
-    - `Server/SqlStore`(`GF_Server_SqlStore`, Server): `SqlServiceStore`(기반 `IServiceStore` 의 SQL 구현 — `sw_record` 표, 조건부 쓰기는 영향 받은 행 수로,
+    - `Kits/Storage/Server/SqlStore`(`GF_Server_SqlStore`, Server): `SqlServiceStore`(기반 `IServiceStore` 의 SQL 구현 — `sw_record` 표, 조건부 쓰기는 영향 받은 행 수로,
       마이그레이션은 `Resource/common/sql/servicestore/`), `ServiceStoreFactory`(서버 설정의 저장소 항목 → 저장소, `memory` 는 기반 메모리 구현).
       PostgreSQL 드라이버(`Driver/Postgres/` — libpq 를 아는 유일한 폴더, `?` → `$n` 준비문 캐시 · 이진 결과 · SQLSTATE 로 제약 · 직렬화 실패 · 끊김을 가름, 비밀번호는 접속 글이 아니라 따로).
       시험: `ServiceStoreSqliteTest`(메모리와 같은 계약 일곱 `ServiceStoreContract.h` — 맡긴 쪽 로그 문맥 포함 · 다시 띄우기 · 공장), `ServiceStorePostgresTest` · `SqlDriverPostgresTest`(서버가 있을 때만 — `SW_TEST_POSTGRES_URL`).
-    - `Server/CacheStore`(`GF_Server_CacheStore`, Server): 휘발성 저장 계약(기반 `IEphemeralStore`)의 RESP2 드라이버(`Driver/Resp/` — hiredis 없이 직접: 인코더 · 증분 파서 ·
+    - `Kits/Storage/Server/CacheStore`(`GF_Server_CacheStore`, Server): 휘발성 저장 계약(기반 `IEphemeralStore`)의 RESP2 드라이버(`Driver/Resp/` — hiredis 없이 직접: 인코더 · 증분 파서 ·
       연결, 명령 연결 하나(파이프라인 — 답은 보낸 순서) + 구독 연결 하나, 선택 TLS), `CacheStoreFactory`(서버 설정의 캐시 항목 → 앞, `memory` 는 기반 메모리 구현,
       끝점 `host:port?prefix=&timeoutMs=&tls=&ca=`). **명령은 Valkey(리눅스) · Garnet(윈도우)이 모두 지원하는 것만**: `AUTH` · `GET` · `SET [PX] [NX|XX]` · `DEL` · `PEXPIRE` ·
       `INCRBY` · `WATCH` · `UNWATCH` · `MULTI` · `EXEC` · `ZADD` · `ZINCRBY` · `ZREM` · `ZSCORE` · `ZREVRANK` · `ZREVRANGE … WITHSCORES` · `PUBLISH` · `SUBSCRIBE` · `UNSUBSCRIBE`

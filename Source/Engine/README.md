@@ -52,7 +52,7 @@ Foundation(로그/파일/문자열 등)은 `Source/Core`의 `Core_objects`에서
 금지 include 자동화: `py -3 Scripts/lint/gate/CheckEngineLayers.py` — 위반은 실패입니다.
 
 - Engine → `Editor/` · `GameFramework/` · `Games/` 금지, 그리고 위 티어 방향(표에 없는 새 최상위 폴더도 실패).
-- `Games/` · `GameFramework/` → `Engine/Common/EngineServices.h` 금지 — 게임 쪽은 `GameFramework/Framework/GameService.h` 의 `game::` 만 씁니다.
+- `Games/` · `GameFramework/` → `Engine/Common/EngineServices.h` 금지 — 게임 쪽은 `GameFramework/Base/Framework/GameService.h` 의 `game::` 만 씁니다.
 
 ## 주요 시스템 디렉터리 구조
 - **Object/**: GameObject · Component · Prefab. 틱/구조 동결·사용법은 [Object/README.md](Object/README.md)

@@ -31,6 +31,8 @@ Documentation and code comments in this repo are written in Korean (`/** @brief 
 other documents link to it. A module README holds that folder's contracts, traps and open work — usage lives in the
 header comments (`/** @brief */`), not in a README. Write docs in Korean and in the present tense; how something came
 to be goes in the commit message, and a past defect is written as a present-tense caution.
+`Scripts/lint/gate/CheckDocPaths.py` checks every relative link, heading anchor and backticked repository path, and that
+every README is on the map. A placeholder path is written with angle brackets (`Source/Games/<Game>/`).
 
 ## Build
 
@@ -183,6 +185,7 @@ py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files <path>  # include order/d
 py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games; RuntimeAPI must not include Engine/App
 py -3 Scripts/lint/gate/CheckModuleTargets.py                  # module targets (_listTarget): GF_Server_/GF_Client_ names, dependency and include direction
 py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files
+py -3 Scripts/lint/gate/CheckDocPaths.py                       # links, anchors and backticked repo paths in *.md exist; every README is on docs/02_DocumentMap.md
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
 py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
 py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning fallible verbs (load/save/apply…) are [[nodiscard]]
@@ -194,6 +197,8 @@ py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs
 py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
 py -3 Scripts/lint/gate/CheckWellKnownConstants.py             # π/√2/e/gravity/hash constants only in their home (MathUtil, HashUtil, …)
 py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
+py -3 Scripts/lint/gate/CheckScriptCommonHelpers.py            # Scripts/ use common's one place for processes, build dirs, console, generated files
+py -3 Scripts/lint/gate/CheckScriptLayout.py                   # Scripts/ file-name prefix per folder and lint base classes (Scripts/README.md layout table)
 py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
 py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
 py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree

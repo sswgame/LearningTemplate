@@ -130,6 +130,7 @@ Scripts/
   │     │     ├── CheckShaderConventions.py   # HLSL 명명 규칙(AGENTS.md 의 HLSL 절)
   │     │     ├── CheckCmakeConventions.py    # CMake 명명 규칙
   │     │     ├── CheckCmakeReadme.py         # cmake/README.md 가 가리키는 파일 · 함수가 실재하는지
+  │     │     ├── CheckDocPaths.py            # 문서(.md)의 링크 · 앵커 · 저장소 경로가 실재하는지, 모든 README 가 문서 지도에 있는지
   │     │     ├── CheckPythonConventions.py   # 파이썬 명명 규칙
   │     │     ├── CheckScriptEntryPoints.py   # 진입점이 모듈 수준에서 common 을 import 하는지(콘솔 UTF-8) · main(argv) 로 인자를 받는지
   │     │     ├── CheckScriptCommonHelpers.py # common 의 한 자리(runProcess · BuildTree · writeGeneratedFile · 콘솔)를 비켜 가는 호출
