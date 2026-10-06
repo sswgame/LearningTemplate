@@ -935,6 +935,7 @@ cd build/Ninja-Debug/Bin
 
 - **CMake 를 고치면 구성 결과를 견준다** — `Scripts/dev/ConfigureSnapshot.py prepare/take/diff`(File API · 생성 파일 · ctest 목록). 컴파일러는 빠진 정의 ·
   바뀐 출력 폴더를 잡지 않는다. 죽은 CMake 함수 · common 을 비켜 간 파이썬 호출은 `RunBuildScriptInventory.py`(보고서)가 센다.
+- **픽서는 UTF-8 로 못 읽는 파일을 고쳐 쓰지 않는다**(`errors="ignore"` 로 읽고 다시 쓰면 그 바이트가 사라진다 — `PythonTest_TestLintFixer`).
 - **빌드 출력을 `| head` 로 자르지 말 것** — 파이프가 닫히면 빌드가 중간에 죽고 낡은 바이너리가 남는다. 파일로 받은 뒤 본다.
 
 - **린트의 제외 폴더 비교는 저장소 아래 경로의 폴더 이름으로** — 절대 경로 부분 문자열로 비교하면 경로에 "build" 가 든 워크트리에서 파일을 하나도 안 본다

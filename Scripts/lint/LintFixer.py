@@ -131,10 +131,13 @@ class LintFixer:
         바뀐 것으로 보이고, 진짜 변경이 그 안에 묻힌다.
         """
         try:
-            with filePath.open("r", encoding="utf-8", errors="ignore", newline="") as file:
+            with filePath.open("r", encoding="utf-8", errors="strict", newline="") as file:
                 content = file.read()
-        except Exception as exception:
-            return [f"[{self.tag}] {filePath} 읽기 실패: {exception}"]
+        except UnicodeDecodeError as error:
+            # 고쳐 쓰면 UTF-8 이 아닌 바이트가 사라진다 — 읽지 못한 파일은 손대지 않고 알린다(이 저장소의 소스는 UTF-8 이다).
+            return [f"[{self.tag}] {filePath}: UTF-8 이 아니라 건너뜁니다({error.reason}, 바이트 {error.start}) — 파일을 UTF-8 로 저장하십시오"]
+        except OSError as error:
+            return [f"[{self.tag}] {filePath} 읽기 실패: {error}"]
 
         formatted = content
         listHit: list[FixPass] = []
@@ -152,8 +155,8 @@ class LintFixer:
         try:
             with filePath.open("w", encoding="utf-8", newline="") as file:
                 file.write(formatted)
-        except Exception as exception:
-            return [f"[{self.tag}] {filePath} 쓰기 실패: {exception}"]
+        except OSError as error:
+            return [f"[{self.tag}] {filePath} 쓰기 실패: {error}"]
 
         return [f"[{self.tag}] {filePath}: {hit.done}" for hit in listHit]
 
@@ -176,8 +179,6 @@ class LintFixer:
         return cls().main(argv)
 
     def main(self, argv: Sequence[str] | None = None) -> int:
-
-
         parser = argparse.ArgumentParser(description=self.description)
         addFileArguments(parser)
         parser.add_argument("--check", action="store_true", help="파일을 수정하지 않고 규칙 위반 여부만 검사")
