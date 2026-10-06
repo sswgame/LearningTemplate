@@ -37,6 +37,8 @@ namespace sw::editor
         static bool find( string_view key, EditorSelfTestMark& outMark );
         /** @brief 실행기가 시험을 켜고 끌 때 부릅니다. 끄면 이름표와 남은 입력을 비웁니다. */
         static void setEnabled( bool bEnabled );
+        /** @brief 이름표를 적는 중이면 true 입니다 — 이름표 글을 만드는 데 비용이 드는 자리(항목마다 다른 이름표)가 먼저 묻는다. */
+        static bool isEnabled();
     };
 } // namespace sw::editor
 
@@ -53,6 +55,18 @@ namespace sw::editor
         static void moveMouse( const float2& position, uint32 viewportId = 0 );
         static void setMouseButton( int32 button, bool bDown );
         static void typeText( string_view utf8Text );
+        /**
+         * @brief 이 뒤에 넣는 사건은 다음 ImGui 프레임에 들어갑니다.
+         * @details 플랫폼 백엔드가 프레임마다 실제 커서를 넣으므로 누름 · 뗌을 한 프레임에 몰면 뗄 때 커서가 위젯 밖이다 — 뗌 앞에서 끊고 커서를 다시 옮긴다.
+         */
+        static void waitNextFrame();
+        /** @brief 키 하나(ImGuiKey 값 — 수정자는 ImGuiMod_*)를 누르거나 뗍니다. */
+        static void setKey( int32 imguiKey, bool bDown );
+        /**
+         * @brief 키 이름(`ImGui::GetKeyName` 의 글 — "Enter" · "Escape" · "A" · "F5", 수정자는 "Ctrl" · "Shift" · "Alt")을 ImGuiKey 값으로 찾습니다.
+         * @return 없는 이름이면 false 입니다.
+         */
+        [[nodiscard]] static bool findKeyByName( string_view name, int32& outImguiKey );
         /** @brief 이름표의 가운데로 마우스를 옮깁니다. 이름표가 없으면 false. */
         [[nodiscard]] static bool moveMouseToMark( string_view key );
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 부릅니다. */

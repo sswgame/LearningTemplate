@@ -186,7 +186,9 @@ namespace sw::editor
 
             static void drawAddComponentMenu( GameObject* pObj )
             {
-                if ( ImGui::BeginMenu( "Add Component" ) == false )
+                const bool bMenuOpen = ImGui::BeginMenu( "Add Component" );
+                EditorSelfTestMarks::note( "hierarchy.addComponent" );
+                if ( bMenuOpen == false )
                     return;
 
                 vector<hashed_string> listType;
@@ -203,6 +205,7 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( 180.0f );
                 ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf.data(),
                                           s_searchBuf.capacity() );
+                EditorSelfTestMarks::note( "hierarchy.addComponent.search" );
                 const EditorListFilter compFilter{ s_searchBuf.c_str() };
                 const bool             bHasFilter = compFilter.isActive();
 
@@ -216,6 +219,9 @@ namespace sw::editor
                         if ( EditorSceneCommands::addComponent( pObj, typeName ) == nullptr )
                             ImGui::OpenPopup( "AddCompFailed" );
                     }
+                    // 자동화 시나리오가 타입 이름으로 누른다(EditorClick mark="hierarchy.addComponent.<타입>")
+                    if ( EditorSelfTestMarks::isEnabled() )
+                        EditorSelfTestMarks::note( ( string( "hierarchy.addComponent." ) + typeName.c_str() ).c_str() );
                     if ( pTypeInfo != nullptr )
                         EditorWidgets::drawTooltip( pTypeInfo->getTooltip().c_str() );
                 };
@@ -476,6 +482,8 @@ namespace sw::editor
                     arrLabel.c_str(),
                     ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth |
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
+                if ( bSelected )
+                    EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
 
                 if ( ImGui::IsItemClicked() )
                 {
@@ -614,6 +622,7 @@ namespace sw::editor
                 ImGui::BeginDisabled();
             if ( ImGui::Button( "+ Create" ) )
                 EditorSceneCommands::create( pManager, nullptr );
+            EditorSelfTestMarks::note( "hierarchy.create" );
             EditorWidgets::drawTooltip( "현재 씬의 루트에 새 게임오브젝트를 생성합니다" );
             if ( bEditsAllowed == false )
                 ImGui::EndDisabled();

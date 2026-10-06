@@ -25,6 +25,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -376,6 +377,7 @@ namespace sw::editor
         if ( ImGui::InputText( "Name", nameBuf.data(), nameBuf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
             InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, &nameBuf]()
             { pObj->setName( hashed_string( nameBuf.c_str() ) ); } );
+        EditorSelfTestMarks::note( "inspector.name" );
         EditorWidgets::drawTooltip( "게임오브젝트의 고유 이름 (Enter 키로 적용)" );
 
         bool bActive = pObj->isActive();
