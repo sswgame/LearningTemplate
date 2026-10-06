@@ -56,6 +56,10 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
   파일 쓰기는 `FileUtil::writeFile` 이 원자적), 다른 실행의 칸 기록을 읽어 순번을 잇기, `restoreLatest` · `restoreCheckpoint`. 저장 · 불러오기는 게임이
   넘긴 델리게이트(보통 `saveStateToFile` · `loadStateFromFile`)이고 UI 는 없다. 씬에는 체크포인트 · 보스 앞 · 지역 경계 볼륨
   `AutosaveTriggerComponent`(태그가 맞는 활성자가 트리거에 들면 게임 서비스 `AutosaveManager` 에 까닭과 이름을 넘긴다, 한 번)를 놓는다
+- **Vehicle**(탑승): 타기 = 조종자가 빙의를 탈것으로 옮기는 것. 좌석(`VehicleSeatComponent` — 소켓 또는 좌석 오프셋 · 하차 자리 · 탑승 자세 파라미터 · 운전석)과
+  `MountUtil::mount` / `dismount`(탑승자는 `SocketBindingComponent` 로 좌석에 붙고 폰 이동 · 캐릭터 컨트롤러가 멈춘다, 운전석이면 탑승자의 조종자가 탈것 폰을 쥔다,
+  내리면 하차 자리 — 막혔으면 둘레 여덟 방향 중 빈 곳 — 에서 다시 쥔다). 버튼은 폰의 의도로: 탑승자 쪽 `MountInteractionComponent`(Interact),
+  탈것 쪽 `VehicleExitComponent`(Exit). 말 · 차는 같은 틀이고 의도 → 탈것 이동 규칙만 다르다. 빈 좌석 찾기는 등록부로.
 - **World**(씬 컴포넌트): 장르 무관 씬 컴포넌트 — `FadeOutComponent`, `GravityComponent`, `DontDestroyOnLoadComponent`, 장식 흩뿌리기
   (`PropScatterComponent` — 씨앗 고정 배치를 영역 가장자리 · 안쪽 격자 · 배치 규칙(`Rules` 모드 — Engine `Environment/Placement` 의 `PlacementRule`: 밀도 · 최소 거리 ·
   경사 · 높이 · 레이어 필터, 영역 아래 지형 위)에, 제외 원, 플레이 시작에 세우고 끝에 걷는다. 그릴 것만이면 GPU 인스턴스로 그리는 Engine `FoliageComponent`, 계산은 `PropScatterMath`).
@@ -555,6 +559,7 @@ CMake 는 빌드 타깃(`SW_TARGET_TYPE` — Game 은 둘 다)과 겹치지 않�
 | 3 | `Combat` · `Input` · `Inventory` · `Movement` · `Progression` · `World` |
 | 4 | `AI` · `Appearance` · `Camera` · `Interaction` · `Quest` · `UI` |
 | 5 | `Ability` · `Control` · `Gimmick` · `GameState` |
+| 6 | `Vehicle` |
 
 위층이 알리는 길은 신호다 — 체력 시스템 → HP 바는 `Combat/HealthListenerComponent`, 상호작용 → 기믹 센서는 센서가 완료 수를 끌어 읽는다. 기반을 DLL 여럿으로
 나누지는 않는다(층은 폴더로만 지킨다).
