@@ -151,6 +151,8 @@ namespace sw
     private:
         /** @brief ASCII 숫자를 이 문화권의 숫자 글자로 바꿉니다. */
         void appendDigits( string& inoutText, string_view asciiDigits ) const;
+        /** @brief ASCII 숫자열을 세 자리마다 이 문화권의 묶음 기호로 나눠 이 문화권의 숫자 글자로 붙입니다. */
+        void appendGroupedDigits( string& inoutText, string_view asciiDigits ) const;
     };
 } // namespace sw
 
