@@ -22,7 +22,7 @@ namespace
         uint32 getSurfaceWidth() const override { return 0; }
         uint32 getSurfaceHeight() const override { return 0; }
 
-        bool recreateSurface() override
+        [[nodiscard]] bool recreateSurface() override
         {
             ++_recreateCount;
             return _bRecreateSucceeds;

@@ -50,7 +50,7 @@ namespace sw
             }
 
             /** @brief 프리팹을 저작 파일과 그 쿠킹본(Shipping 은 쿠킹본만 읽는다)으로 쓰고, 캐시에서 버려 다음 로드가 다시 읽게 합니다. */
-            static bool writePrefab( const PrefabAsset& asset, const string& path )
+            [[nodiscard]] static bool writePrefab( const PrefabAsset& asset, const string& path )
             {
                 if ( asset.saveToXmlFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;

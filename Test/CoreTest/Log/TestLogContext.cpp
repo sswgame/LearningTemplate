@@ -20,9 +20,9 @@ namespace
     class LogContextCaptureOutput final : public ILogOutput
     {
     public:
-        bool open() override { return true; }
-        void close() override {}
-        void write( const LogRecord& record ) override
+        [[nodiscard]] bool open() override { return true; }
+        void               close() override {}
+        void               write( const LogRecord& record ) override
         {
             std::scoped_lock<mutex> lock{ _mutex };
             _listFormatted.push_back( record._formatted );

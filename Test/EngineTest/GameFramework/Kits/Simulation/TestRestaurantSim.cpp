@@ -91,7 +91,7 @@ namespace
         ReputationCatalog _reputation;
         ExperienceCurve   _curve;
 
-        bool load()
+        [[nodiscard]] bool load()
         {
             for ( const utf8* pItemId : { "egg", "noodle", "broth", "flour" } )
             {
@@ -161,7 +161,7 @@ namespace
     }
 
     /** @brief 빌린 것(창고 · 지갑 · 시계 · 평판)을 상태 바이트로 옮깁니다 — 되살린 식당이 따로 든 같은 공유 상태로 같은 걸음을 걷게 합니다. */
-    bool copyRestaurantBorrowed( const RestaurantTestBorrowed& source, RestaurantTestBorrowed& outTarget )
+    [[nodiscard]] bool copyRestaurantBorrowed( const RestaurantTestBorrowed& source, RestaurantTestBorrowed& outTarget )
     {
         Archive written;
         source._pantry.writeState( written );

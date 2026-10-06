@@ -161,7 +161,7 @@ namespace appearancetest
         sw::AppearanceDatabase _database;
 
         /** @brief 위 데이터를 읽습니다. @p pRuleXml 로 규칙 표를 바꿀 수 있습니다. */
-        bool load( const utf8* pRuleXml = kRuleXml )
+        [[nodiscard]] bool load( const utf8* pRuleXml = kRuleXml )
         {
             if ( _items.loadFromXmlText( kItemXml, "AppearanceTest.items" ) == false )
                 return false;

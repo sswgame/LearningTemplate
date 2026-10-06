@@ -34,7 +34,7 @@ namespace sw::editor
         struct TestTexturePipelineInternal
         {
             /** @brief 압축 없는 32비트 TGA(왼쪽 위 원점)를 씁니다. 픽셀은 RGBA 순서로 받습니다. */
-            static bool writeTga( const string& path, uint16 width, uint16 height, const vector<uint8>& rgbaBytes )
+            [[nodiscard]] static bool writeTga( const string& path, uint16 width, uint16 height, const vector<uint8>& rgbaBytes )
             {
                 constexpr size_t kHeaderSize = 18;
                 vector<uint8>    bytes( kHeaderSize, 0 );

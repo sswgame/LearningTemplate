@@ -76,7 +76,7 @@ namespace
         ReputationState     _friendship; ///< 마을이 빌리는 평판(호감도)
         WorldClock          _clock;      ///< 마을이 빌리는 시계(날)
 
-        bool load()
+        [[nodiscard]] bool load()
         {
             for ( const utf8* pItemId : { "flower", "berry", "stone" } )
             {

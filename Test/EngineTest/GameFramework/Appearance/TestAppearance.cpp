@@ -24,10 +24,10 @@ namespace
     struct AppearanceTestInternal
     {
         /** @brief 규칙 표 하나만 바꿔 읽고 오류 보고를 돌려줍니다. */
-        static bool loadWithRules( const utf8* pRuleXml, Fixture& outFixture ) { return outFixture.load( pRuleXml ); }
+        [[nodiscard]] static bool loadWithRules( const utf8* pRuleXml, Fixture& outFixture ) { return outFixture.load( pRuleXml ); }
 
         /** @brief 한 덩이를 더 읽고 검사한 결과입니다(모르는 이름 시험). */
-        static bool loadWithExtra( const utf8* pExtraXml, Fixture& outFixture )
+        [[nodiscard]] static bool loadWithExtra( const utf8* pExtraXml, Fixture& outFixture )
         {
             if ( outFixture.load() == false )
                 return false;

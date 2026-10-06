@@ -73,7 +73,7 @@ namespace sw
         }
 
         /** @brief 이름 하나짜리 컴포넌트를 든 씬 XML 을 쓰고 옆에 쿠킹된 바이너리도 둡니다(배포 구성은 바이너리만 읽는다). 성공하면 true 입니다. */
-        bool writeSceneWithComponent( const string& xmlPath, const string& binPath, const utf8* pSceneName, const utf8* pComponentName )
+        [[nodiscard]] bool writeSceneWithComponent( const string& xmlPath, const string& binPath, const utf8* pSceneName, const utf8* pComponentName )
         {
             string xmlStr = "<Scene formatVersion=\"1\" name=\"";
             xmlStr += pSceneName;

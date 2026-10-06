@@ -27,7 +27,7 @@ namespace
                                                  0x54, 0x78, 0xDA, 0x63, 0xF8, 0xCF, 0xC0, 0xF0, 0xFF, 0x3F, 0x00, 0x07, 0xFE, 0x02, 0xFE, 0x4A, 0xD1, 0x84, 0xBF, 0x00,
                                                  0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82 };
 
-        static bool writeBytes( const sw::string& path, const uint8* pData, size_t size )
+        [[nodiscard]] static bool writeBytes( const sw::string& path, const uint8* pData, size_t size )
         {
             return sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeFile( path, pData, size );
         }

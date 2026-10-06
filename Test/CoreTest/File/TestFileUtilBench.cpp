@@ -36,7 +36,7 @@ namespace
         }
 
         /** @brief 지금까지의 (CRT 요청 수, sw 할당 수)입니다. CRT 를 잴 수 없으면 false 입니다. */
-        static bool readCounters( const sw::MemoryProfiler& profiler, uint64& outRequestCount, uint64& outSwCount )
+        [[nodiscard]] static bool readCounters( const sw::MemoryProfiler& profiler, uint64& outRequestCount, uint64& outSwCount )
         {
             uint64 totalBytes{ 0 };
             outSwCount = profiler.getTotalAllocationCount();

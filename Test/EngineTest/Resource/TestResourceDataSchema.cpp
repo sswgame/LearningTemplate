@@ -127,7 +127,7 @@ namespace
         static bool isSkeleton( sw::string_view resourceId ) { return endsWith( resourceId, sw::Skeleton::kExtension ); }
         static bool isAnimGraph( sw::string_view resourceId ) { return endsWith( resourceId, ".animgraph.json" ); }
         /** @brief 애니메이션 그래프(상태 기계) — 모르는 조건 표기는 로드 오류, 노드가 하나도 없으면 빈 그래프다. */
-        static bool loadAnimGraph( const sw::string& resourceId )
+        [[nodiscard]] static bool loadAnimGraph( const sw::string& resourceId )
         {
             sw::AnimGraphAsset graph;
             return graph.loadFromFile( resourceId ) && graph._listNode.empty() == false;
@@ -147,7 +147,7 @@ namespace
         static bool isUiThemes( sw::string_view resourceId ) { return endsWith( resourceId, "uithemes.xml" ); }
 
         /** @brief 스타일 시트를 읽습니다(모르는 칸 · 변수 · 선택자 문법 · 읽지 못한 값). */
-        static bool loadUiStyleSheet( const sw::string& resourceId )
+        [[nodiscard]] static bool loadUiStyleSheet( const sw::string& resourceId )
         {
             sw::UiStyleSheetCache cache;
             sw::string            error;
@@ -160,7 +160,7 @@ namespace
         }
 
         /** @brief UI 문서를 읽고 위젯 트리까지 짓습니다(모르는 타입 · 속성 · 열거자 · 조각). */
-        static bool loadUiDocument( const sw::string& resourceId )
+        [[nodiscard]] static bool loadUiDocument( const sw::string& resourceId )
         {
             sw::UiDocumentCache                             cache;
             sw::string                                      error;
@@ -179,7 +179,7 @@ namespace
         static bool isTranslationTable( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationTable::kExtension ); }
         static bool isTranslationMemory( sw::string_view resourceId ) { return endsWith( resourceId, sw::TranslationMemory::kExtension ); }
 
-        static bool loadScene( const sw::string& resourceId )
+        [[nodiscard]] static bool loadScene( const sw::string& resourceId )
         {
             sw::SceneDocument doc;
             if ( doc.loadXml( resourceId ) == false )
@@ -188,7 +188,7 @@ namespace
             return scene.instantiate( doc );
         }
 
-        static bool loadPrefab( const sw::string& resourceId )
+        [[nodiscard]] static bool loadPrefab( const sw::string& resourceId )
         {
             sw::PrefabAsset prefab;
             const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXmlFile( resourceId );
@@ -199,26 +199,26 @@ namespace
             return pObject != nullptr && prefab.applyStateTo( pObject );
         }
 
-        static bool loadPipeline( const sw::string& resourceId )
+        [[nodiscard]] static bool loadPipeline( const sw::string& resourceId )
         {
             sw::RenderPipelineAsset pipeline;
             return pipeline.loadFromXmlFile( resourceId );
         }
 
-        static bool loadRenderPass( const sw::string& resourceId )
+        [[nodiscard]] static bool loadRenderPass( const sw::string& resourceId )
         {
             sw::RenderPassAsset pass;
             return pass.loadFromXmlFile( resourceId );
         }
 
-        static bool loadEngineDefaultAssets( const sw::string& resourceId )
+        [[nodiscard]] static bool loadEngineDefaultAssets( const sw::string& resourceId )
         {
             sw::EngineDefaultAssets data;
             return data.loadFromResource( resourceId );
         }
 
         /** @brief 시나리오는 형식(루트 · 루트 속성 · <At>)만 읽는다 — 단계 종류 · 탐침은 그 게임 모듈이 올라온 실기동(AppScenarioTest)이 본다. */
-        static bool loadAutomationScenario( const sw::string& resourceId )
+        [[nodiscard]] static bool loadAutomationScenario( const sw::string& resourceId )
         {
             sw::AutomationScenario scenario;
             sw::string             error;
@@ -228,13 +228,13 @@ namespace
             return bLoaded;
         }
 
-        static bool loadInputMap( const sw::string& resourceId )
+        [[nodiscard]] static bool loadInputMap( const sw::string& resourceId )
         {
             sw::InputMap map;
             return map.loadFromResource( resourceId );
         }
 
-        static bool loadMaterial( const sw::string& resourceId )
+        [[nodiscard]] static bool loadMaterial( const sw::string& resourceId )
         {
             const sw::shared_ptr<sw::Material> material = sw::Material::create();
             return material != nullptr && material->loadFromFile( resourceId );
@@ -243,7 +243,7 @@ namespace
         /**
          * @brief 사용자 설정 스키마 — 엔진 적용기 이름 · 전역 변수 대상까지 검사한다. 게임 스키마는 엔진 스키마 위에 덧붙인다(기동과 같은 순서).
          */
-        static bool loadUserSettingsSchema( const sw::string& resourceId )
+        [[nodiscard]] static bool loadUserSettingsSchema( const sw::string& resourceId )
         {
             sw::UserSettingsManager settings;
             sw::UserSettingsTargets targets;
@@ -255,20 +255,20 @@ namespace
             return settings.loadSchema( resourceId );
         }
 
-        static bool loadPhysicsSettings( const sw::string& resourceId )
+        [[nodiscard]] static bool loadPhysicsSettings( const sw::string& resourceId )
         {
             sw::PhysicsSettings settings;
             return settings.loadFromResource( resourceId );
         }
 
-        static bool loadPhysicsAsset( const sw::string& resourceId )
+        [[nodiscard]] static bool loadPhysicsAsset( const sw::string& resourceId )
         {
             sw::PhysicsAsset asset;
             return asset.loadFromResource( resourceId );
         }
 
         /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
-        static bool loadTileMap( const sw::string& resourceId )
+        [[nodiscard]] static bool loadTileMap( const sw::string& resourceId )
         {
             sw::TileMapXmlData map;
             if ( map.load( resourceId ) == false )
@@ -280,13 +280,13 @@ namespace
             return tileSet.loadFromResource( map._tileSetPath ) && map.mapTileCells( tileSet, listBrushIndex );
         }
 
-        static bool loadTileSet( const sw::string& resourceId )
+        [[nodiscard]] static bool loadTileSet( const sw::string& resourceId )
         {
             sw::TileSetAsset tileSet;
             return tileSet.loadFromResource( resourceId );
         }
 
-        static bool loadRender2DSettings( const sw::string& resourceId )
+        [[nodiscard]] static bool loadRender2DSettings( const sw::string& resourceId )
         {
             sw::Render2DSettings settings;
             return settings.loadFromResource( resourceId );
@@ -294,7 +294,7 @@ namespace
 
         /** @brief 로컬라이제이션 JSON 문서(`loadFromJsonText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
         template <typename TDocument>
-        static bool loadLocalizationDocument( const sw::string& resourceId )
+        [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceId )
         {
             sw::string text;
             if ( sw::ResourceUtil::readTextResource( resourceId, text ) == false )
@@ -307,7 +307,7 @@ namespace
             return false;
         }
 
-        static bool loadSpriteClip( const sw::string& resourceId )
+        [[nodiscard]] static bool loadSpriteClip( const sw::string& resourceId )
         {
             sw::SpriteClipAsset clip;
             return clip.loadFromFile( resourceId );
@@ -327,7 +327,7 @@ namespace
         static bool                  isNotifyTable( sw::string_view resourceId ) { return endsWith( resourceId, ".notifies.xml" ); }
         static bool                  isClipData( sw::string_view resourceId ) { return endsWith( resourceId, ".clips.json" ); }
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
-        static bool loadClipData( const sw::string& resourceId )
+        [[nodiscard]] static bool loadClipData( const sw::string& resourceId )
         {
             sw::JsonDocument document;
             // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
@@ -354,24 +354,24 @@ namespace
             return true;
         }
         /** @brief 알림 표 — 처리기 이름 · 인자를 엔진 기본 처리기 등록부에 대조한다. */
-        static bool loadNotifyTable( const sw::string& resourceId )
+        [[nodiscard]] static bool loadNotifyTable( const sw::string& resourceId )
         {
             sw::AnimNotifyTable table;
             return table.loadFromResource( resourceId, sw::AnimNotifyHandlerRegistry::getDefault() );
         }
-        static bool loadSockets( const sw::string& resourceId )
+        [[nodiscard]] static bool loadSockets( const sw::string& resourceId )
         {
             sw::SocketKindTable kinds;
             sw::SocketSet       sockets;
             return kinds.loadFromResource( kDefaultSocketKinds ) && sockets.loadFromResource( resourceId, kinds );
         }
-        static bool loadFitTables( const sw::string& resourceId )
+        [[nodiscard]] static bool loadFitTables( const sw::string& resourceId )
         {
             const sw::FitSolver solver;
             sw::FitTables       tables;
             return tables.loadFromResource( resourceId, solver.getOperatorRegistry() );
         }
-        static bool loadPartFit( const sw::string& resourceId )
+        [[nodiscard]] static bool loadPartFit( const sw::string& resourceId )
         {
             const sw::FitSolver solver;
             sw::FitTables       tables;
@@ -380,16 +380,16 @@ namespace
         }
 
         /** @brief 후처리 리그(대상 · 노드) — 모르는 노드 종류 · 키 · 겹친 이름은 로드 오류다. */
-        static bool isRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::RigAsset::kExtension ); }
-        static bool loadRig( const sw::string& resourceId )
+        static bool               isRig( sw::string_view resourceId ) { return endsWith( resourceId, sw::RigAsset::kExtension ); }
+        [[nodiscard]] static bool loadRig( const sw::string& resourceId )
         {
             sw::RigAsset rig;
             return rig.loadFromResource( resourceId );
         }
 
         /** @brief 리타깃 프로필 — 모르는 키 · 이동 방법 · 겹친 사슬은 로드 오류이고, 적힌 두 스켈레톤에 프로필의 본이 모두 있어야 한다. */
-        static bool isRetargetProfile( sw::string_view resourceId ) { return endsWith( resourceId, sw::RetargetProfile::kExtension ); }
-        static bool loadRetargetProfile( const sw::string& resourceId )
+        static bool               isRetargetProfile( sw::string_view resourceId ) { return endsWith( resourceId, sw::RetargetProfile::kExtension ); }
+        [[nodiscard]] static bool loadRetargetProfile( const sw::string& resourceId )
         {
             sw::RetargetProfile profile;
             if ( profile.loadFromResource( resourceId ) == false )
@@ -403,15 +403,15 @@ namespace
         }
 
         /** @brief 임포트가 쓴 스켈레톤(본 · 부착 표) — 모르는 키 · 없는 본 이름은 로드 오류다. */
-        static bool loadSkeleton( const sw::string& resourceId )
+        [[nodiscard]] static bool loadSkeleton( const sw::string& resourceId )
         {
             sw::Skeleton skeleton;
             return skeleton.loadFromResource( resourceId );
         }
 
         /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
-        static bool isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
-        static bool loadBoneLod( const sw::string& resourceId )
+        static bool               isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
+        [[nodiscard]] static bool loadBoneLod( const sw::string& resourceId )
         {
             sw::string importedPath;
             sw::string siblingPath;
@@ -436,7 +436,7 @@ namespace
 
         // 게임 데이터 — 키트 카탈로그가 읽는다(게임 모듈은 읽은 정의를 조립만 한다). 파일 이름은 게임이 여는 그대로다.
         template <typename TCatalog>
-        static bool loadCatalog( const sw::string& resourceId )
+        [[nodiscard]] static bool loadCatalog( const sw::string& resourceId )
         {
             TCatalog catalog;
             return catalog.loadFromResource( resourceId );
@@ -460,7 +460,7 @@ namespace
             return startsWith( resourceId, "game/" ) && resourceId.find( "/data/appearance/" ) != sw::string_view::npos && endsWith( resourceId, ".xml" );
         }
         /** @brief 외형 데이터는 폴더 한 벌로 읽고 서로 대조한다 — 아이템은 같은 게임의 `data/items.xml` 이다. 파일마다 폴더 전체를 읽는다(작다). */
-        static bool loadAppearanceData( const sw::string& resourceId )
+        [[nodiscard]] static bool loadAppearanceData( const sw::string& resourceId )
         {
             const sw::string folder    = sw::FileUtil::getDirectoryPart( resourceId );
             const sw::string itemsPath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::FileUtil::trimTrailingSlashes( folder ) ), "items.xml" );
@@ -470,13 +470,13 @@ namespace
             sw::AppearanceDatabase database;
             return database.loadFromFolder( folder, &items );
         }
-        static bool loadGameSettings( const sw::string& resourceId )
+        [[nodiscard]] static bool loadGameSettings( const sw::string& resourceId )
         {
             sw::GameSettings settings;
             return settings.loadFromResource( resourceId );
         }
         /** @brief 공원 배치는 같은 폴더의 코스터 레이아웃(`coasters.xml`)을 가리킨다 — 그것을 먼저 읽는다. */
-        static bool loadParkLayout( const sw::string& resourceId )
+        [[nodiscard]] static bool loadParkLayout( const sw::string& resourceId )
         {
             const sw::string         folder = sw::FileUtil::getDirectoryPart( resourceId );
             sw::CoasterLayoutCatalog layouts;

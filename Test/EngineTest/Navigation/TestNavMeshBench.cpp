@@ -40,7 +40,7 @@ namespace
             sw::float3 nextPoint( float32 halfSize ) { return sw::float3{ ( nextUnit() * 2.0f - 1.0f ) * halfSize, 0.0f, ( nextUnit() * 2.0f - 1.0f ) * halfSize }; }
         };
 
-        static bool instantiate( sw::Scene& scene, const utf8* pPath )
+        [[nodiscard]] static bool instantiate( sw::Scene& scene, const utf8* pPath )
         {
             sw::SceneDocument document;
             return document.loadXml( pPath ) && scene.instantiate( document );

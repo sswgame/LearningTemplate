@@ -76,7 +76,7 @@ namespace test
         /** @brief 창은 두고 디바이스만 내린다 — 디바이스를 잃었을 때 무엇이 살아남는지 볼 때. 내리기 전에 GPU 를 기다린다. */
         void shutdownDevice();
         /** @brief 같은 창 위에 같은 백엔드로 디바이스를 새로 세운다 — 앱의 디바이스 교체 경로와 같은 순서다. */
-        bool recreateDevice();
+        [[nodiscard]] bool recreateDevice();
 
         /** @brief 디바이스가 서 있는가. */
         bool isReady() const { return _device != nullptr; }

@@ -23,7 +23,7 @@ namespace
      * @brief PCM 16비트 모노 44.1kHz WAV 파일을 하나 만듭니다.
      * @details 두 케이스가 같이 쓴다.
      */
-    bool writeTestWav( const sw::string& path, uint32 dataByteCount )
+    [[nodiscard]] bool writeTestWav( const sw::string& path, uint32 dataByteCount )
     {
         sw::vector<uint8> bytes;
         bytes.reserve( 44 + dataByteCount );
@@ -66,7 +66,7 @@ namespace
      * @brief 부동소수(IEEE float) 또는 확장형(WAVE_FORMAT_EXTENSIBLE) WAV 를 만듭니다. DAW 가 흔히 내보내는 형식입니다.
      * @param subFormatTag 확장형의 하위 형식(1 PCM · 3 float). 0 이면 확장형이 아닌 `formatTag` 그대로입니다.
      */
-    bool writeFormattedWav( const sw::string& path, uint16 formatTag, uint16 channelCount, uint16 bitsPerSample, uint16 subFormatTag )
+    [[nodiscard]] bool writeFormattedWav( const sw::string& path, uint16 formatTag, uint16 channelCount, uint16 bitsPerSample, uint16 subFormatTag )
     {
         const bool        bExtensible = subFormatTag != 0;
         const uint32      fmtBytes    = bExtensible ? 40u : 16u;

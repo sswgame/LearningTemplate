@@ -37,7 +37,7 @@ namespace
             "  <Profile name='Rigid' rigidity='1'/>";
 
         /** @brief 표 머리(겹 · 영역 · 프로필) + 상호작용 줄들로 표를 읽는다. */
-        static bool loadTables( const FitSolver& solver, string_view interactionLines, FitTables& outTables )
+        [[nodiscard]] static bool loadTables( const FitSolver& solver, string_view interactionLines, FitTables& outTables )
         {
             string text( kTablesHead );
             text += interactionLines;

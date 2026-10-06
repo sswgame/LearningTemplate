@@ -432,8 +432,8 @@ namespace
         }
 
         /** @brief 렌더 텍스처를 되읽어 그려진(모서리와 다른) 픽셀의 평균 (R − B)와 그 수를 냅니다. 실패면 false 입니다. */
-        static bool readTextureRedMinusBlue( sw::IRHIDevice* pDevice, const utf8* pPath, int64& outMeanRedMinusBlue, uint32& outDrawnCount,
-                                             uint32& outWidth )
+        [[nodiscard]] static bool readTextureRedMinusBlue( sw::IRHIDevice* pDevice, const utf8* pPath, int64& outMeanRedMinusBlue, uint32& outDrawnCount,
+                                                           uint32& outWidth )
         {
             outMeanRedMinusBlue           = 0;
             outDrawnCount                 = 0;

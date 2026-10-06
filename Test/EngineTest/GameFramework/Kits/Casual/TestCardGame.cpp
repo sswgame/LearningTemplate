@@ -109,7 +109,7 @@ namespace
 
     /** @brief @p bytes 를 @p outState 에 읽고 끝까지 다 읽었으면 true 입니다. */
     template <typename StateType>
-    bool restoreCardBytes( const vector<uint8>& bytes, StateType& outState )
+    [[nodiscard]] bool restoreCardBytes( const vector<uint8>& bytes, StateType& outState )
     {
         Archive reader( bytes.data(), bytes.size() );
         return outState.readState( reader ) && reader.getRemainingBytes() == 0;
@@ -117,7 +117,7 @@ namespace
 
     /** @brief 마지막 한 바이트를 자른 바이트를 @p outState 에 읽습니다(거절되어야 한다). */
     template <typename StateType>
-    bool restoreTruncatedCardBytes( const vector<uint8>& bytes, StateType& outState )
+    [[nodiscard]] bool restoreTruncatedCardBytes( const vector<uint8>& bytes, StateType& outState )
     {
         Archive reader( bytes.data(), bytes.size() - 1 );
         return outState.readState( reader );

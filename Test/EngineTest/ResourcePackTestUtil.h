@@ -18,7 +18,7 @@ namespace sw::test
          * @brief @p listFileContent 의 (가상 경로, 본문) 쌍을 @p compression 으로 담은 팩을 @p packPath 에 씁니다.
          * @return 파일을 다 썼으면 true. 코덱이 등록돼 있지 않으면 false 입니다.
          */
-        static bool createPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<pair<string, string>>& listFileContent,
-                                    bool bIncludeDebugStringPool = false );
+        [[nodiscard]] static bool createPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<pair<string, string>>& listFileContent,
+                                                  bool bIncludeDebugStringPool = false );
     };
 } // namespace sw::test

@@ -67,7 +67,7 @@ namespace
          * @brief 레이아웃 덤프에서 코드 화면(`## (code)` — 견본 화면) 절의 위젯 이름 → 사각형을 읽어 그림 픽셀로 맞춥니다(루트 = 그림 크기).
          * @return 절을 못 찾으면 false
          */
-        static bool parseDemoRects( const sw::string& text, uint32 imageWidth, uint32 imageHeight, sw::unordered_map<sw::string, AppUiTestRect>& outMap )
+        [[nodiscard]] static bool parseDemoRects( const sw::string& text, uint32 imageWidth, uint32 imageHeight, sw::unordered_map<sw::string, AppUiTestRect>& outMap )
         {
             const size_t sectionStart = text.find( "## (code)\n" );
             if ( sectionStart == sw::string::npos )

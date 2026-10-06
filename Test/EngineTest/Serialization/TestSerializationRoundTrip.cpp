@@ -62,7 +62,7 @@ namespace
         }
 
         /** @brief 씬은 문서를 읽어 만들고, 프리팹은 오브젝트 하나에 적용합니다(ResourceDataSchemaTest 와 같은 로더). */
-        static bool loadObjects( const sw::string& resourceId, LoadedObjects& outLoaded )
+        [[nodiscard]] static bool loadObjects( const sw::string& resourceId, LoadedObjects& outLoaded )
         {
             if ( isScene( resourceId ) )
             {
@@ -130,12 +130,12 @@ namespace
         }
 
         /** @brief 덤프 파일 하나를 씁니다(폴더는 만든다). */
-        static bool writeDumpFile( const sw::string& path, const uint8* pData, size_t size )
+        [[nodiscard]] static bool writeDumpFile( const sw::string& path, const uint8* pData, size_t size )
         {
             return sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeFile( path, pData, size );
         }
 
-        static bool writeDumpText( const sw::string& path, const sw::string& text )
+        [[nodiscard]] static bool writeDumpText( const sw::string& path, const sw::string& text )
         {
             return writeDumpFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() );
         }

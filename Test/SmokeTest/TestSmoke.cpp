@@ -91,7 +91,7 @@ namespace sw
          * @details 만들 때 GameFramework 의 코드(게임 인스턴스 바탕 클래스)가 돌아서, Windows 에서는 SWGame 의 GameFramework
          *          지연 로드가 이 자리에서 풀립니다. 결속 확인이 "아직 안 풀림" 이 아니라 실제로 묶인 이미지를 보게 하려는 것입니다.
          */
-        bool createAndDestroyGame( void* pGameModule )
+        [[nodiscard]] bool createAndDestroyGame( void* pGameModule )
         {
             if ( pGameModule == nullptr )
                 return false;
@@ -118,7 +118,7 @@ namespace sw
         }
 
         /** @brief 모듈 하나를 강제로 리로드하고 onAfter 가 불릴 때까지 기다립니다. 기다리다 넘치면 false 입니다. */
-        bool reloadAndWait( sw::LiveReloadManager& manager, const utf8* pModuleName )
+        [[nodiscard]] bool reloadAndWait( sw::LiveReloadManager& manager, const utf8* pModuleName )
         {
             bool bReloaded{ false };
             manager.setOnAfterReload(

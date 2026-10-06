@@ -24,19 +24,19 @@ namespace
         static inline uint32 s_beforeInputRunCount = 0;
         static inline uint32 s_beforeInputFrame    = 0;
 
-        static bool readSwitchCount( const sw::GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] static bool readSwitchCount( const sw::GameObjectManager* /*pManager*/, float64& outValue )
         {
             outValue = static_cast<float64>( s_switchCount );
             return true;
         }
 
-        static bool readSwitchDown( const sw::GameObjectManager* /*pManager*/, float64& outValue )
+        [[nodiscard]] static bool readSwitchDown( const sw::GameObjectManager* /*pManager*/, float64& outValue )
         {
             outValue = s_bSwitchDown ? 1.0 : 0.0;
             return true;
         }
 
-        static bool readNothing( const sw::GameObjectManager* /*pManager*/, float64& /*outValue*/ ) { return false; }
+        [[nodiscard]] static bool readNothing( const sw::GameObjectManager* /*pManager*/, float64& /*outValue*/ ) { return false; }
 
         /** @brief 등록 단계 — 입력 재생 전에 돈다(행동 층 주입 자리). 프레임을 적어 둔다. */
         static bool runMark( sw::AutomationRunner& runner, const sw::AutomationStep& /*step*/ )

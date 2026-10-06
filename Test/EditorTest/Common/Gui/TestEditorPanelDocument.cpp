@@ -42,7 +42,7 @@ namespace
          *          `saveDocumentAndClearDirty()` 몫이다. 그 순서를 파생이 각자 구현하면 서로 달라진다
          *          (실패해도 지우거나, 성공해도 안 지우거나).
          */
-        bool saveDocument() override
+        [[nodiscard]] bool saveDocument() override
         {
             ++_saveCount;
             return _bSaveSucceeds;

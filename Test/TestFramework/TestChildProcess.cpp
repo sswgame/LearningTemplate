@@ -34,7 +34,7 @@ namespace test
         }
 
         /** @brief 지금 값을 돌려준다(없으면 false). */
-        bool readEnvironmentVariableInternal( const utf8* pName, sw::string& outValue )
+        [[nodiscard]] bool readEnvironmentVariableInternal( const utf8* pName, sw::string& outValue )
         {
             const utf8* pValue = std::getenv( pName );
             if ( pValue == nullptr )

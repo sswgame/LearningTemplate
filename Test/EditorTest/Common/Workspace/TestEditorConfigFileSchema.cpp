@@ -21,7 +21,7 @@ namespace
     {
         /** @brief 엄격하게 읽고, 기본값과 같은 값을 다시 적은 키가 없는지도 봅니다(설정 파일에는 기본값과 다른 값만 적는다). */
         template <typename T>
-        static bool loadStrict( const string& absolutePath )
+        [[nodiscard]] static bool loadStrict( const string& absolutePath )
         {
             T config{};
             if ( ConfigManager::readConfigFile( config, absolutePath ) != ConfigReadResult::Loaded )
@@ -35,13 +35,13 @@ namespace
             return true;
         }
 
-        static bool loadTextureImport( const string& absolutePath )
+        [[nodiscard]] static bool loadTextureImport( const string& absolutePath )
         {
             TextureImportConfig config;
             return config.loadFromFile( absolutePath );
         }
 
-        static bool loadModelImport( const string& absolutePath )
+        [[nodiscard]] static bool loadModelImport( const string& absolutePath )
         {
             ModelImportConfig config;
             return config.loadFromFile( absolutePath );

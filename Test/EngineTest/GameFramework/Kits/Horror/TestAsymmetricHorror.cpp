@@ -67,7 +67,7 @@ namespace
         return nullptr;
     }
 
-    bool loadRules( AsymmetricHorrorRulesCatalog& outCatalog, const utf8* pXml = kHorrorRulesXml ) { return outCatalog.loadFromXmlText( pXml, "AsymmetricHorrorTest" ); }
+    [[nodiscard]] bool loadRules( AsymmetricHorrorRulesCatalog& outCatalog, const utf8* pXml = kHorrorRulesXml ) { return outCatalog.loadFromXmlText( pXml, "AsymmetricHorrorTest" ); }
 
     bool beginMatch( HorrorMatch& outMatch, const AsymmetricHorrorRulesCatalog& catalog )
     {

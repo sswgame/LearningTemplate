@@ -200,7 +200,7 @@ namespace
     };
 
     /** @brief 공백(스페이스 · 탭 · 줄바꿈)을 건너뛰고 10진수 하나를 읽습니다. 숫자가 없으면 false. */
-    bool readPpmNumber( const vector<uint8>& fileBytes, size_t& inoutOffset, uint32& outValue )
+    [[nodiscard]] bool readPpmNumber( const vector<uint8>& fileBytes, size_t& inoutOffset, uint32& outValue )
     {
         while ( inoutOffset < fileBytes.size() && ( fileBytes[inoutOffset] == ' ' || fileBytes[inoutOffset] == '\n' || fileBytes[inoutOffset] == '\r' || fileBytes[inoutOffset] == '\t' ) )
         {
@@ -217,7 +217,7 @@ namespace
     }
 
     /** @brief `-gv_screenshot` 이 쓰는 PPM(P6, 최댓값 255)을 읽습니다. 모양이 다르면 false. */
-    bool parsePpm( const vector<uint8>& fileBytes, PpmImage& outImage )
+    [[nodiscard]] bool parsePpm( const vector<uint8>& fileBytes, PpmImage& outImage )
     {
         if ( fileBytes.size() < 2 || fileBytes[0] != 'P' || fileBytes[1] != '6' )
             return false;
@@ -670,7 +670,7 @@ namespace
     }
 
     /** @brief 파일이 있으면 그 바이트를, 없으면 빈 값과 false 를 돌려줍니다. */
-    bool readOptionalFile( const string& path, vector<uint8>& outBytes )
+    [[nodiscard]] bool readOptionalFile( const string& path, vector<uint8>& outBytes )
     {
         outBytes.clear();
         return path.empty() == false && FileUtil::exists( path ) && FileUtil::readFile( path, outBytes );
