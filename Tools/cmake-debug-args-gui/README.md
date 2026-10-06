@@ -101,7 +101,7 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 
 ## 5. CodeLLDB · launch.json 구성에서 쓰기
 
-`launch.json` 에 직접 적은 디버그 구성(예: Run and Debug 의 "App + Editor DX12 (CodeLLDB)")은 원래 그 안에 적힌 `args` 로만 뜹니다.
+`launch.json` 에 직접 적은 디버그 구성은 원래 그 안에 적힌 `args` 로만 뜹니다.
 구성에 **`"cmakeDebugArgs"`** 한 줄을 넣으면, F5 를 누르는 순간 패널에서 고른 인자 · 환경 변수가 들어갑니다.
 
 | 값 | 결과 |
@@ -109,23 +109,31 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 | `"replace"` | 구성의 `args` 대신 **패널의 인자만** 씁니다. 패널에서 모든 것을 고를 때 |
 | `"append"` | 구성의 `args` **뒤에** 패널의 인자를 붙입니다. 구성이 백엔드 · 에디터를 정하고 패널에서는 전역 변수만 더할 때 |
 
-이 저장소의 `launch.json` 에는 이미 **"App — CMake Debug Args (CodeLLDB)"** 구성(`replace`)이 들어 있습니다. Run and Debug 에서 고르고 F5 를 누르면 됩니다.
+이 저장소의 `launch.json` 은 이 방식으로 정리되어 있습니다. 백엔드 · 에디터마다 구성을 따로 두지 않고, Run and Debug 에서 하나를 고른 뒤 사이드바에서 인자를 정합니다.
+
+| 구성 | 하는 일 |
+|------|---------|
+| **App (CodeLLDB · 사이드바 인자)** | 지금 CMake Tools 구성 프리셋의 빌드 폴더에서 App 을 띄운다(`replace`) |
+| **CMake 실행 대상 (CodeLLDB · 사이드바 인자)** | CMake Tools 상태 표시줄에서 고른 실행 대상을 띄운다(필요하면 먼저 빌드) |
+| **시험 (CodeLLDB)** | 시험 실행 파일을 고르고 `--test_filter` 를 묻는다(사이드바 인자는 넣지 않는다) |
+| **App 에 붙기 (CodeLLDB)** | 떠 있는 App 프로세스를 골라 붙는다 |
+| **App (WSL · 사이드바 인자)** · **시험 (WSL)** | WSL 창에서 쓰는 같은 구성 |
 
 ```jsonc
 {
-    "name": "App — CMake Debug Args (CodeLLDB)",
+    "name": "App (CodeLLDB · 사이드바 인자)",
     "type": "lldb",
     "request": "launch",
-    "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
+    "program": "${command:cmake.buildDirectory}/Bin/App.exe",   // 프리셋을 바꾸면 그 빌드를 띄운다
     "args": [],
     "cmakeDebugArgs": "replace",
-    "cwd": "${workspaceFolder}"
+    "cwd": "${command:cmake.buildDirectory}/Bin"
 }
 ```
 
 - `cmakeDebugArgs` 가 없는 구성은 건드리지 않습니다. CodeLLDB(`lldb`) 말고 MS C++ 디버거(`cppdbg` · `cppvsdbg`) 구성에서도 같은 한 줄로 됩니다.
 - `append` 를 쓰는 구성에 `-dx12` 가 적혀 있으면 패널의 RHI 백엔드는 "지정 안 함" 으로 두세요. 백엔드 인자가 둘이 됩니다.
-- 패널의 **디버그** 버튼(CMake Tools 디버그)도 CodeLLDB 로 띄우고 싶으면 설정에 `"cmake.debugConfig": { "type": "lldb" }` 를 넣습니다.
+- 패널의 **디버그** 버튼(CMake Tools 디버그)도 CodeLLDB 로 띄우려면 설정에 `"cmake.debugConfig": { "type": "lldb" }` 를 넣습니다 — 이 저장소의 `.vscode/settings.json` 에는 들어 있습니다.
   이때 CMake Tools 가 환경 변수를 MS 디버거 모양으로 넘기는데, 확장이 CodeLLDB 모양(`env`)으로 바꿔 주므로 그대로 전달됩니다.
 - 무엇이 들어갔는지는 출력 창 **CMake Debug Args** 에 `injected [...]` 로 남습니다.
 

@@ -30,6 +30,11 @@
     "cmake.options.statusBarVisibility": "compact",
     // 실행 인자 GUI(Tools/cmake-debug-args-gui) 가 소스에서 -gv_* · 인자 목록을 읽는 규칙
     "cmakeDebugArgs.catalog": "Tools/cmake-debug-args-gui/Profiles/SwEngine.json",
+    // CMake Tools 디버그(상태 표시줄 · 사이드바 디버그 버튼)도 launch.json 처럼 CodeLLDB 로 띄운다.
+    // args · environment 는 사이드바가 이 객체에 쓰고 지운다 — type 은 그대로 남는다.
+    "cmake.debugConfig": {
+        "type": "lldb"
+    },
     "lldb.launch.expressions": "native",
     "lldb.launch.terminal": "integrated",
     "editor.colorDecorators": true,
