@@ -1,133 +1,233 @@
 # Automation — 자동화 시나리오
 
-실기동 확인(무기 교체 한 칸 · 창 닫기 · 그림자)을 사람 손이나 바깥 스크립트(OS 입력 · 창 메시지) 대신 **데이터 파일 하나**로 적고, App 명령줄로 돌려
-**종료 코드**로 결과를 냅니다. 참고: 언리얼 Functional Test(레벨 안 단계 · 단언) + Gauntlet(프로세스를 띄워 결과 코드 · 로그를 모음),
-유니티 Test Framework(`InputTestFixture.Press/Release` · 프레임 단위 `yield`). 차이는 코드가 아니라 데이터라는 것(빌드 없이 쓴다).
+## 이것은 무엇이고 왜 있나
 
-| 파일 | 하는 일 |
-|------|---------|
-| `AutomationScenario` | 시나리오 파일을 읽은 값 — 루트 속성 · `<At frame>` · 단계(엘리먼트 이름 + 속성). 형식만 본다 |
-| `AutomationRunner` | 실행기 — 시작 조건 · 단계 검사 · 입력 단계를 가상 입력(`VirtualInputScript`)으로 · 단언 · 끝 · 요약 줄 · JSON 보고 |
-| `AutomationProbe` | 탐침 등록표 — `<Expect probe="…">` 가 읽는 이름 붙은 값. 게임 · 키트가 `SW_AUTOMATION_PROBE` 한 줄로 등록 |
-| `AutomationStepRegistry` | 엔진 밖 단계 종류의 등록표 — GameFramework(행동 층) · 에디터(ImGui) · 플랫폼(창 메시지)이 `SW_AUTOMATION_STEP` 로 더한다 |
+"무기 교체 키를 한 번 누르면 무기가 정확히 다음 무기로 한 번만 바뀌는가", "창을 닫으면 10초 안에 프로세스가 끝나는가" 같은 확인은 실제 App을 띄워야만 할 수 있습니다.
+이런 확인을 사람이 손으로 하거나 OS 입력을 흉내 내는 외부 스크립트로 하면, 실행할 때마다 결과가 달라지고 다시 돌리기도 어렵습니다.
 
-## 실행
+이 모듈은 그런 확인을 **시나리오 파일 하나**로 적게 합니다. 시나리오는 "몇 번째 프레임에 무슨 입력을 넣고 무엇을 확인한다"를 XML로 적은 것입니다.
+App을 `-scenario=` 인자로 실행하면 시나리오대로 입력을 넣고 확인한 뒤, 결과를 **종료 코드**로 돌려줍니다.
+
+언리얼의 Functional Test(레벨 안에서 단계와 단언을 실행)와 Gauntlet(프로세스를 띄워 결과 코드와 로그를 수집)을 합친 것에 해당합니다.
+유니티 Test Framework의 `InputTestFixture.Press/Release` 와 프레임 단위 `yield` 도 같은 일을 합니다. 다른 점은 시나리오가 코드가 아니라 데이터라서, 새 시나리오를 쓰는 데 빌드가 필요 없다는 것입니다.
+
+엔진 계층으로는 8층입니다.
+
+## 머릿속 그림
+
+```mermaid
+flowchart LR
+  File["*.scenario.xml"] --> Scenario["AutomationScenario<br/>파일 형식 검사"]
+  Scenario --> Runner["AutomationRunner"]
+  Runner -- "입력 단계" --> Virtual["가상 입력<br/>VirtualInputScript"]
+  Virtual --> Input["InputManager::beginFrame"]
+  Runner -- "확인 단계" --> Probe["프로브<br/>SW_AUTOMATION_PROBE"]
+  Runner -- "그 밖의 단계" --> Registry["AutomationStepRegistry<br/>SW_AUTOMATION_STEP"]
+  Runner --> Exit["종료 코드<br/>보고 JSON"]
+```
+
+**프레임과 고정 시간.** 시나리오의 프레임 번호는 시작 조건이 처음 참이 된 프레임이 0입니다. 시나리오가 도는 동안 App은 벽시계 대신 고정 프레임 시간(`fixedDelta`)을 씁니다.
+그래서 같은 시나리오는 어느 기계에서나 같은 프레임에 같은 일이 일어납니다.
+
+**단계.** 시나리오의 각 동작을 단계라고 부릅니다. 단계는 입력(`Tap`, `MouseDelta`), 환경(`Variable`, `CloseWindow`), 결과 확인(`Expect`, `ExpectImage`), 끝(`Pass`, `Fail`)으로 나뉩니다.
+엔진이 모르는 단계는 다른 모듈이 레지스트리에 등록합니다.
+
+**프로브.** 프로브(probe)는 시나리오가 읽을 수 있게 게임이 이름을 붙여 내놓은 값입니다. `Shooter3D.WeaponIndex` 처럼 씁니다. `<Expect>` 단계가 프로브 값을 확인합니다.
+
+**종료 코드.** 결과는 프로세스 종료 코드로 나옵니다(`AutomationResult`).
+
+| 코드 | 뜻 |
+|---|---|
+| 0 | 통과 |
+| 10 | 실패. 단언이 하나라도 틀렸습니다 |
+| 11 | 읽기 오류. 파일 형식, 모르는 단계나 속성, 모르는 프로브, 모르는 전역 변수 |
+| 12 | 시간 초과. 시작 조건이나 `<Pass/>` 가 제한 프레임 안에 오지 않았습니다 |
+| 13 | 건너뜀. 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등) |
+
+## 따라 해 보기 — 무기 교체 시나리오
+
+Shooter3D의 `weaponswitch` 시나리오입니다. E 키를 짧게, 길게, 같은 프레임에 눌렀다 떼도 무기가 정확히 한 단계씩 바뀌는지 확인합니다.
+
+**1단계 — 시나리오 파일을 씁니다.** 게임 팩의 `automation/` 폴더에 `<이름>.scenario.xml` 을 만듭니다.
+
+<!-- snippet: Resource/game/shooter3d/automation/weaponswitch.scenario.xml 의 앞부분과 끝 — 5b U7 에서 대조 -->
+```xml
+<Scenario name="shooter3d.weaponswitch" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0">
+		<Variable name="gv_shooterAutoPlay" value="0"/>
+		<Expect probe="Shooter3D.WeaponIndex" equals="0"/>
+	</At>
+	<!-- E 를 한 프레임 -->
+	<At frame="20"><Tap slot="Key.E" hold="1"/></At>
+	<At frame="30"><Expect probe="Shooter3D.WeaponIndex" equals="1"/></At>
+	<!-- ... -->
+	<At frame="280">
+		<Expect probe="Shooter3D.PlayerAlive" equals="1"/>
+		<ExpectLog contains="[Shooter] " atLeast="7" since="1"/>
+		<Pass/>
+	</At>
+</Scenario>
+```
+
+0 프레임에서 자동 플레이를 끄고, 20 프레임에 E를 한 프레임 누르고, 30 프레임에 무기 번호가 1인지 확인합니다. 마지막에 `<Pass/>` 로 끝냅니다.
+같은 프레임의 단계는 적은 순서대로 실행됩니다.
+
+**2단계 — 실행합니다.**
 
 ```powershell
 cd build/Ninja-Debug-Shooter3D/Bin
 ./App.exe -dx12 -scenario=game/shooter3d/automation/weaponswitch.scenario.xml -scenario-report=Saved/Automation/ws.json
-echo $LASTEXITCODE   # 0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀
+echo $LASTEXITCODE
 ```
 
-- 시나리오는 **늘 고정 프레임 시간**입니다 — `EngineLoop` 가 App 의 `gv_fixedFrameDelta` 를 시나리오의 `fixedDelta` 로 둡니다(벽시계와 무관, 같은 입력 → 같은 결과).
-- 끝나면 `EngineLoop::requestQuit( 결과 )` — App 이 그 코드로 끝납니다. 로그에 `[Scenario] PASS <이름> (N frame(s))` 또는 `[Scenario] FAIL …` 한 줄(실패 줄들 포함).
-- 산출물(스크린샷)은 `Saved/Automation/<시나리오 이름>/`. 보고 JSON 은 `-scenario-report` 경로(비면 쓰지 않는다).
+로그에 `[Scenario] PASS shooter3d.weaponswitch (280 frame(s))` 가 찍히고 종료 코드가 0이면 통과입니다. 실패하면 `[Scenario] FAIL` 줄 뒤에 실패한 단언이 한 줄씩 나옵니다.
+`-scenario-report` 를 주면 같은 결과를 JSON으로도 씁니다. 스크린샷 같은 산출물은 `Saved/Automation/<시나리오 이름>/` 에 생깁니다.
 
-## 파일 형식 — `Resource/<영역>/automation/<이름>.scenario.xml`
+**3단계 — CTest에 넣습니다.** 할 일이 없습니다. 파일을 `automation/` 폴더에 두기만 하면 `AppScenarioTest` 가 찾아서 돌립니다(아래 "작동 원리").
 
-```xml
-<Scenario name="shooter3d.weaponswitch" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="600" input="exclusive">
-  <!-- 프레임 번호는 시작 조건이 처음 참인 프레임이 0. 같은 프레임의 단계는 적은 순서. -->
-  <At frame="0"><Variable name="gv_shooterAutoPlay" value="0"/></At>
-  <At frame="30"><Tap slot="Key.E" hold="2"/></At>
-  <At frame="40"><Expect probe="Shooter3D.WeaponIndex" equals="1"/></At>
-  <At frame="300"><Pass/></At>
-</Scenario>
-```
+## 작동 원리
 
-| 루트 속성 | 기본 | 뜻 |
+### 루트 속성
+
+| 속성 | 기본값 | 뜻 |
 |---|---|---|
-| `name` | (필수) | 보고 · 산출물 폴더 이름 |
-| `fixedDelta` | `1/60` | 프레임마다 흘릴 시간(초) |
-| `timeoutFrames` | 3600 | 이 프레임을 넘도록 `<Pass/>` 가 없으면 12 |
-| `startAfter` | `ScenePlaying` | `ScenePlaying`(활성 씬이 플레이를 시작했고 로딩 화면이 걷힌 첫 프레임 — 로딩 화면은 게임 입력을 막는다) · `Immediately` |
-| `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 안 오면 12 |
-| `input` | `exclusive` | `exclusive`(OS 입력 무시 — 기본) · `mixed`(OS 입력도 받는다, 진짜 창 상태를 볼 때) |
+| `name` | 필수 | 보고와 산출물 폴더 이름 |
+| `fixedDelta` | `1/60` | 프레임마다 흐르는 시간(초) |
+| `timeoutFrames` | 3600 | 이 프레임 수 안에 `<Pass/>` 가 없으면 12 |
+| `startAfter` | `ScenePlaying` | 시작 조건. `ScenePlaying` 또는 `Immediately` |
+| `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 오지 않으면 12 |
+| `input` | `exclusive` | `exclusive` 는 OS 입력을 무시하고, `mixed` 는 OS 입력도 받습니다 |
 
-| 단계 | 속성 | 하는 일 | 층 |
+`ScenePlaying` 은 활성 씬이 플레이를 시작했고 로딩 화면이 사라진 첫 프레임입니다. 로딩 화면이 게임 입력을 막기 때문에 그 뒤에 시작합니다.
+`mixed` 는 진짜 OS 창 상태를 확인하는 시나리오에 씁니다. 이때 실행 중에 사람이 키보드나 마우스를 만지면 그 입력도 섞입니다.
+
+### 엔진 단계
+
+엔진이 직접 처리하는 단계입니다. 속성의 허용 값과 오류 메시지는 `AutomationRunner::validateEngineStep` 에 있습니다.
+
+| 단계 | 속성 | 하는 일 |
+|---|---|---|
+| `Press`, `Release` | `slot` | 가상 입력 사건을 넣습니다 |
+| `Tap` | `slot`, `hold`(프레임, 기본 1) | 누르고 `hold` 프레임 뒤에 뗍니다. 0이면 같은 프레임에 뗍니다 |
+| `MouseDelta` | `x`, `y`(픽셀) | 마우스 이동량(`MouseRawDelta`) |
+| `MousePosition` | `x`, `y`(창 클라이언트 영역의 0..1 비율) | 커서를 옮깁니다(`MouseMove`) |
+| `GamepadAxis` | `axis`, `value`, `pad` | 게임패드 축 값 |
+| `Text` | `value` | 글자 입력 |
+| `Variable` | `name`, `value` | 전역 변수(gv) 값을 바꿉니다 |
+| `Expect` | `probe` 와 비교 하나 | 프로브 값을 확인합니다 |
+| `ExpectLog` | `contains`, `count` 또는 `atLeast`, `since` | 시나리오 동안 그 글을 담은 로그 줄 수를 확인합니다 |
+| `Screenshot` | `file` | 그 프레임의 화면을 PPM으로 저장합니다 |
+| `ExpectImage` | `file`, `metric`, `region`, `ratio`, `reference` 와 비교 하나 | 스크린샷 영역의 지표를 확인합니다 |
+| `CloseWindow` | `withinSeconds`(기본 10) | 창 닫기를 요청하고, 그 시간 안에 루프가 끝나야 통과입니다 |
+| `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했을 때, 그 시간 안에 끝나야 통과입니다 |
+| `Pass`, `Fail`, `Skip` | `reason`(`Fail`, `Skip`) | 시나리오를 끝냅니다 |
+
+- `slot` 은 `InputSlotUtil` 의 문자열입니다(`Key.E`, `Mouse.Left`, `Gamepad.A`, 두 번째 패드는 `Gamepad1.A`).
+- `MousePosition` 의 비율은 시작할 때의 창 크기로 픽셀로 바뀝니다. 그 뒤의 마우스 버튼은 이 위치에서 눌립니다. RTS 선택이나 건물 배치처럼 커서 아래를 고르는 조작에 씁니다.
+- 비교 속성은 `equals`, `near`(`tolerance` 와 함께), `atLeast`, `atMost` 중 정확히 하나입니다. `Expect` 는 틀려도 실패를 기록하고 계속 진행합니다.
+- `ExpectLog` 는 실행기 자신의 `[Scenario]` 줄을 세지 않습니다.
+- `Pass` 는 앞에서 실패가 기록되었으면 10으로 끝납니다.
+
+### 등록 단계
+
+엔진 밖 모듈이 `SW_AUTOMATION_STEP` 으로 등록하는 단계입니다. 실행기는 엔진 단계가 아니면 레지스트리(`AutomationStepRegistry`)에서 이름으로 찾습니다.
+
+| 단계 | 속성 | 등록하는 곳 | 하는 일 |
 |---|---|---|---|
-| `Press` · `Release` | `slot`(`InputSlotUtil` 글 — `Key.E` · `Mouse.Left` · `Gamepad.A` · `Gamepad1.A`) | 가상 사건 | 입력 |
-| `Tap` | `slot`, `hold`(프레임, 기본 1, 0 = 같은 프레임에 뗌) | 누름 + hold 뒤 뗌 | 입력 |
-| `MouseDelta` | `x` · `y`(픽셀) | `MouseRawDelta` | 입력 |
-| `MousePosition` | `x` · `y`(창 클라이언트 영역의 비율 0..1 — 시작할 때 창 크기로 픽셀) | 커서를 옮김(`MouseMove`). 뒤의 마우스 버튼은 이 자리에서 눌린다(없으면 (0, 0)) — 커서 아래를 고르는 조작(RTS 선택 · 배치) | 입력 |
-| `GamepadAxis` | `axis` · `value` · `pad` | 축 | 입력 |
-| `Text` | `value` | 글자 입력 | 입력 |
-| `Variable` | `name` · `value` | 전역 변수(gv) 값 설정 — 모르는 변수는 읽기 오류 | 환경 |
-| `Expect` | `probe` + `equals` · `near`(+`tolerance`) · `atLeast` · `atMost` 중 하나 | 탐침 값을 단언, 틀리면 실패를 적고 계속 | 결과 |
-| `ExpectLog` | `contains` + `count` · `atLeast` 중 하나, `since`(프레임) | 시나리오 동안의 로그 줄 수(실행기의 `[Scenario]` 줄은 세지 않는다) | 결과 |
-| `Screenshot` | `file`(상대면 `Saved/Automation/<이름>/`) | 다음에 그리는 렌더 패킷에 실어 그 프레임의 화면(Present 결과)을 PPM 으로 | 결과 |
-| `ExpectImage` | `file` · `metric` · `region`(`x0,y0,x1,y1` 0..1) · `ratio`(darkFraction, 기본 0.7) · `reference`(differentFrom) + 비교 하나 | 영역 지표 단언 — 스크린샷이 써질 때까지 기다린다(최대 30 프레임) | 결과 |
-| `CloseWindow` | `withinSeconds`(기본 10) | 창 닫기 요청 — 그 시간 안에 루프가 끝나야 통과 | 환경 |
-| `ExpectExitWithin` | `seconds`(기본 10) | 앞 단계가 창을 닫게 했다 — 그 시간 안에 끝나야 통과(창 메시지 플랫폼 단계와 함께) | 결과 |
-| `Pass` · `Fail` · `Skip` | `reason`(`Fail` · `Skip`) | 끝 — `Pass` 는 실패가 적혀 있으면 10 | 끝 |
-| `Intent` · `Possess` | `pawn` · `move` · `up` · `yaw` · `pitch` · `buttons` · `frames` / `controller` · `pawn` | GameFramework 등록 — 폰에 의도를 직접 넣기 · 빙의 옮기기(`Source/GameFramework/README.md` Control) | 행동 |
-| `ExpectUi` | `focus`(위젯 이름 · `none`) · `screen`(활성 화면 문서 · `none`) · `screens`(화면 수) 중 하나 이상 | 런타임 UI 단언 — 엔진 UI 가 등록(`Engine/UI/Automation/UiAutomationSteps`), 같은 판정을 nogpu `UiNavigationScriptTest` 가 쓴다 | 결과 |
-| `UiLayoutDump` | `file`(상대면 `Saved/Automation/<이름>/`) | UI 스택의 화면마다 레이아웃 덤프(위젯 이름 · 물리 픽셀 사각형)를 쓴다 — `AppUiTest` 가 스크린샷 안의 위젯을 이름으로 찾는다 | 결과 |
-| 그 밖 | — | 등록표(`AutomationStepRegistry`)에서 이름으로 찾는다 | |
+| `Intent` | `pawn`, `move`, `up`, `yaw`, `pitch`, `buttons`, `frames` | GameFramework `ControlAutomationSteps` | 폰에 이동 의도를 직접 넣습니다 |
+| `Possess` | `controller`, `pawn` | GameFramework `ControlAutomationSteps` | 컨트롤러가 빙의할 폰을 바꿉니다 |
+| `ExpectUi` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UiAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
+| `UiLayoutDump` | `file` | `Engine/UI/Automation/UiAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
+| `EditorClick` | `mark`, `button`(0..4) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데를 클릭합니다 |
+| `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
+| `PostWindowMessage` | `message` | `AutomationWindowSteps` | 자기 창에 OS 메시지를 보냅니다 |
+| `ExpectCursorClip` | `state`(`locked`, `free`) | `AutomationWindowSteps` | 커서 가두기 상태를 확인합니다(`GetClipCursor`) |
+| `RequireForeground` | 없음 | `AutomationWindowSteps` | 전경 창을 얻지 못하면 13으로 끝냅니다 |
 
-- **모르는 엘리먼트 · 모르는 속성 · 형식이 틀린 값 · 모르는 탐침 · 모르는 gv 는 읽기 오류(11)** — 조용히 버리지 않습니다. 단계 종류 · 탐침 검사는
-  시작 조건이 참이 되는 프레임에 합니다(게임 · 에디터 모듈이 등록하는 이름이 그때 차 있다).
-- 입력 단계는 시작할 때 가상 입력 원천으로 옮겨져 그 프레임의 `InputManager::beginFrame` 에 들어갑니다(OS 사건과 같은 자리 — `Engine/Input/README.md`).
-  단언 · 환경 단계는 그 프레임의 씬 틱 뒤(`EngineLoop::endFrame` 의 입력 프레임 닫기 전)에 돕니다. 등록 단계의 `_bBeforeInput` 은 입력 재생 전에 돕니다.
+- `Intent` 와 `Possess` 는 그 프레임의 입력 재생 **전**에 돕니다(등록 시 `_bBeforeInput` 이 참). 빙의와 의도는 [GameFramework README](../../GameFramework/README.md)의 Control 절에 있습니다.
+- `ExpectUi` 와 같은 판정을 nogpu 테스트 `UiNavigationScriptTest` 도 씁니다. `UiLayoutDump` 결과는 `AppUiTest` 가 스크린샷 안의 위젯을 이름으로 찾는 데 씁니다.
+- 에디터 단계는 `-EnableEditor` 로 에디터를 켰을 때만 있습니다. 에디터 패널의 입력은 엔진 입력 계층이 아니라 ImGui가 Win32 메시지를 직접 받으므로, 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
+  이 단계를 쓰는 시나리오는 시작할 때 위젯 이름 기록(`EditorSelfTestMarks::note`)을 켭니다.
+- 창 단계는 Windows에서만 동작하고, 다른 플랫폼에서는 같은 이름으로 13(건너뜀)을 냅니다.
+  `PostWindowMessage` 의 `message` 는 `WM_ACTIVATE_INACTIVE`, `WM_ACTIVATE_ACTIVE`, `WM_KILLFOCUS`, `WM_SETFOCUS`, `WM_LBUTTONDOWN_CLIENT`, `WM_LBUTTONUP_CLIENT`, `WM_CLOSE` 중 하나입니다.
+  `WM_CLOSE` 만 `PostMessage` 로 보내고, 나머지는 처리기가 끝난 뒤 돌아오는 `SendMessage` 로 보냅니다. 버튼 메시지는 클라이언트 영역 가운데를 누릅니다.
+  커서 가두기는 전경 창에서만 걸리므로 `ExpectCursorClip` 앞에 `RequireForeground` 를 둡니다.
 
-## 스크린샷 · 픽셀 지표
+### 실행 순서
 
-`-gv_screenshot` 은 렌더 스레드의 자기 프레임 번호로 찍어 시나리오 프레임과 맞지 않습니다. `<Screenshot>` 은 경로를 **렌더 패킷에 실어** 그 패킷을 그린 뒤
-화면에 나간 그림을 쓰고(`RenderThread` — 시나리오 동안 Present 캡처를 켜 둔다), `<ExpectImage>` 는 완료 수가 오를 때까지 기다린 뒤 PPM 을 읽어 지표를 잽니다.
-지표 값은 늘 로그(`[Scenario] metric darkFraction(0,0,1,0.12) park.ppm = 0.034`)와 보고 JSON 에 적힙니다 — 문턱은 그 숫자로 정합니다.
+- 단계 종류와 프로브 이름은 시작 조건이 참이 되는 프레임에 검사합니다. 게임과 에디터 모듈이 등록하는 이름이 그때 모두 채워져 있기 때문입니다.
+- 입력 단계는 시작할 때 가상 입력 소스로 옮겨지고, 각 프레임의 `InputManager::beginFrame` 에서 OS 사건과 같은 위치로 들어갑니다([Input README](../Input/README.md)).
+- 확인 단계와 환경 단계는 그 프레임의 씬 틱 뒤, `EngineLoop::endFrame` 이 입력 프레임을 닫기 전에 돕니다.
+- `EngineLoop` 는 시나리오를 시작할 때 App의 `gv_fixedFrameDelta` 를 시나리오의 `fixedDelta` 로 바꿉니다.
+- 끝나면 `EngineLoop::requestQuit( 결과 )` 를 부르고, App은 그 코드로 종료합니다.
+
+### 스크린샷과 이미지 지표
+
+`-gv_screenshot` 은 렌더 스레드의 자기 프레임 번호로 찍어서 시나리오 프레임과 맞지 않습니다.
+그래서 `<Screenshot>` 은 저장 경로를 **렌더 패킷에 실어** 보내고, 렌더 스레드가 그 패킷을 그린 뒤 화면에 나간 이미지(Present 결과)를 씁니다.
+`<ExpectImage>` 는 스크린샷이 다 써질 때까지 최대 30 프레임 기다린 뒤 PPM을 읽어 지표를 계산합니다.
 
 | 지표 | 정의 |
 |---|---|
 | `meanLuma` | 영역 평균 휘도(0..1, Rec.709) |
-| `darkFraction` | 영역에서 휘도가 **영역 중앙값 × ratio** 보다 어두운 픽셀 비율 — 그림자 · 실루엣. 영역 전체가 한 밝기면 0 이다(섞여야 값이 난다) |
-| `meanRedMinusBlue` | 평균 (R − B) — 배경 대비 색 |
-| `differentFrom` | `reference` 그림과의 평균 절대 차(0..1) — 백엔드 일치 · 움직임 |
+| `darkFraction` | 휘도가 영역 중앙값 × `ratio`(기본 0.7)보다 어두운 픽셀 비율. 그림자나 실루엣을 봅니다 |
+| `meanRedMinusBlue` | 평균 (R − B). 배경 대비 색을 봅니다 |
+| `differentFrom` | `reference` 이미지와의 평균 절대 차(0..1). 백엔드 일치나 움직임을 봅니다 |
 
-## 탐침 · 단계 등록
+`region` 은 `x0,y0,x1,y1` 형식의 0..1 비율입니다. `darkFraction` 은 영역 전체가 한 밝기면 0이 나오므로, 밝기가 섞인 영역을 골라야 합니다.
+지표 값은 언제나 로그(`[Scenario] metric darkFraction(0,0,1,0.12) park.ppm = 0.034`)와 보고 JSON에 적힙니다. 임계값은 이렇게 측정한 값을 보고 정합니다.
 
-```cpp
-namespace sw
-{
-    namespace
-    {
-        bool readWeaponIndex( const GameObjectManager* pManager, float64& outValue ) { … }
-    } // namespace
-    SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player", &readWeaponIndex );
-} // namespace sw
-```
+### CTest — `AppScenarioTest`
 
-- 탐침은 그 게임의 컴포넌트 .cpp(다른 기호가 쓰이는 파일)에 둡니다 — Shipping 정적 링크에서 등록자가 빠지지 않게(`SW_GAME_AUTOPLAY` 와 같은 처지).
-- 모듈을 내리면(핫 리로드) 그 모듈의 탐침 · 단계도 빠집니다. 같은 이름은 두 번 등록되지 않습니다(뒤 것을 거절하고 오류).
+`Test/AppTest/TestAppScenario.cpp` 는 `Resource/engine/automation/*.scenario.xml` 과 활성 게임 팩의 `automation/*.scenario.xml` 을 모두 찾습니다.
+게임 팩은 `Config/Game/<게임>.json` 의 `_packRoot` 로 정합니다. 찾은 시나리오를 **백엔드마다** `App -scenario=… -scenario-report=…` 로 띄우고 종료 코드 0을 확인합니다.
+13(건너뜀)과 77(이 기계에 없는 백엔드)은 건너뛰고, 시나리오 하나에 180초 제한이 있습니다(`AppTestUtil::kScenarioTimeoutSeconds`).
 
-## CTest — `AppScenarioTest`(hostgpu)
-
-`Test/AppTest/TestAppScenario.cpp` 가 `Resource/engine/automation/*.scenario.xml` 과 활성 게임 팩(`Config/Game/<게임>.json` 의 `_packRoot`)의
-`automation/*.scenario.xml` 을 찾아 **백엔드마다** `App -scenario=… -scenario-report=…` 로 띄우고 종료 코드 0 을 단언합니다(13 건너뜀 · 77 이 기계에 없는 백엔드,
-시나리오마다 180 초 시한). 파일을 놓기만 하면 돈다 — CMake 에 목록을 적지 않는다. 게임은 프리셋마다 하나라 게임 시나리오는 그 프리셋에서 돈다:
+파일 목록을 CMake에 적지 않으므로 파일을 두기만 하면 돕니다. 게임은 프리셋마다 하나이므로, 게임 시나리오는 그 게임의 프리셋에서 돕니다.
 
 ```powershell
 ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --output-on-failure
 ```
 
-로그 · 보고는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log` · `.json`.
+로그와 보고는 `Bin/Saved/Automation/<시나리오>_<백엔드>.log` 와 `.json` 입니다.
 
-## 에디터 단계(에디터 모듈이 등록 — `-EnableEditor`)
+## 확장하는 법
 
-| 단계 | 속성 | 하는 일 |
-|---|---|---|
-| `EditorClick` | `mark`(에디터 자체 시험 이름표 — `EditorSelfTestMarks::note`) · `button`(0..4) | 그 위젯 가운데로 마우스를 옮겨 누르고 뗀다 |
-| `EditorText` | `value` | ImGui 에 글자 입력 |
+**게임 값을 시나리오에서 읽으려면 프로브를 등록합니다.**
 
-에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로(Win32 메시지를 ImGui 백엔드가 직접 받는다) 가상 입력 장치가 아니라 ImGui 사건으로 넣습니다.
-이 단계를 쓰는 시나리오는 시작할 때 위젯 이름표 적기를 켭니다.
+<!-- snippet: Source/Games/Shooter3D/ShooterPlayerComponent.cpp 의 SW_AUTOMATION_PROBE — 5b U7 에서 대조 -->
+```cpp
+namespace sw
+{
+    SW_AUTOMATION_PROBE( shooterWeaponIndex, "Shooter3D.WeaponIndex", "Weapon slot of the first shooter player (0 rifle, 1 shotgun, 2 pistol)",
+                         &ShooterPlayerProbeInternal::readWeaponIndex );
+} // namespace sw
+```
 
-## 창 단계(`AutomationWindowSteps` — Windows 만, 다른 플랫폼은 같은 이름으로 건너뜀 13)
+1. 값을 읽는 함수 `bool read( const GameObjectManager* pManager, float64& outValue )` 를 만듭니다. 값이 없으면 false를 돌려줍니다.
+2. 그 게임의 컴포넌트 `.cpp` 에 `SW_AUTOMATION_PROBE` 한 줄을 둡니다. 다른 심볼이 쓰이는 파일에 두어야 Shipping 정적 링크에서 등록 코드가 빠지지 않습니다.
+3. 시나리오에서 `<Expect probe="게임.이름" .../>` 로 확인합니다.
 
-| 단계 | 속성 | 하는 일 |
-|---|---|---|
-| `PostWindowMessage` | `message` = `WM_ACTIVATE_INACTIVE` · `WM_ACTIVATE_ACTIVE` · `WM_KILLFOCUS` · `WM_SETFOCUS` · `WM_LBUTTONDOWN_CLIENT` · `WM_LBUTTONUP_CLIENT`(클라이언트 가운데) · `WM_CLOSE` | 자기 창에 OS 메시지(SendMessage — 처리기가 돈 뒤 돌아온다, `WM_CLOSE` 만 PostMessage) |
-| `ExpectCursorClip` | `state` = `locked`(클립이 클라이언트 영역 안) · `free`(가상 화면 전체) | `GetClipCursor` 단언 |
-| `RequireForeground` | — | 전경을 얻지 못하면 시나리오를 13 으로 끝낸다(잠금은 전경에서만 건다) |
+**새 단계 종류를 만들려면** `SW_AUTOMATION_STEP( 변수 이름, "단계 이름", 실행 함수, 검사 함수, 입력 전 여부 )` 로 등록합니다. `ControlAutomationSteps.cpp` 와 `UiAutomationSteps.cpp` 가 참고할 예입니다.
+검사 함수는 모르는 속성을 오류로 돌려줘야 합니다.
 
-진짜 OS 창 상태를 보는 시나리오는 `input="mixed"`(OS 포커스 사건을 버리지 않는다) — 도는 동안 사람이 키보드 · 마우스를 만지면 섞인다.
-첫 시나리오: `game/shooter3d/automation/weaponswitch` · `closewindow`, `game/themepark/automation/shadow`.
+## 함정과 주의
+
+- **모르는 것은 조용히 버리지 않습니다.** 모르는 요소, 모르는 속성, 형식이 틀린 값, 모르는 프로브, 모르는 전역 변수는 모두 읽기 오류(11)입니다. 오타가 "통과"로 숨지 않게 하기 위해서입니다.
+- **같은 이름을 두 번 등록하지 마세요.** 프로브와 단계는 같은 이름이 두 번 등록되면 뒤의 것을 거절하고 오류를 냅니다. 모듈을 핫 리로드로 언로드하면 그 모듈의 프로브와 단계도 빠집니다.
+- **이미지 비교에는 `-gv_screenshot` 대신 `<Screenshot>` 을 쓰세요.** `-gv_screenshot` 의 프레임 번호는 렌더 스레드 기준이라 시나리오 프레임과 어긋납니다.
+- **확인하려는 상태가 다른 이유로 바뀌지 않게 전제를 같이 확인하세요.** `weaponswitch` 는 플레이어가 죽으면 라운드가 다시 시작해 무기 번호가 0으로 돌아갑니다. 그래서 마지막에 `Shooter3D.PlayerAlive` 를 확인합니다.
+
+## 더 볼 곳
+
+| 파일 | 내용 |
+|---|---|
+| `AutomationScenario.h` | 시나리오 파일을 읽은 값과 루트 속성 |
+| `AutomationRunner.h` | 실행기와 종료 코드(`AutomationResult`) |
+| `AutomationProbe.h` | 프로브 레지스트리와 `SW_AUTOMATION_PROBE` |
+| `AutomationStepRegistry.h` | 등록 단계 레지스트리와 `SW_AUTOMATION_STEP` |
+| `AutomationImageMetric.h` | 이미지 지표 |
+| `AutomationWindowSteps.cpp` | 창 단계 |
+
+- 시나리오 예: `Resource/engine/automation/`, `Resource/game/<팩>/automation/` (`weaponswitch`, `closewindow`, `shadow`, 게임마다 `control`)
+- 테스트 작성 전반: [Test/README.md](../../../Test/README.md)
