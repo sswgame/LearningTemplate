@@ -60,3 +60,4 @@ CI 는 `nogpu` 시험만 돌립니다 — GPU · 창 · DXC 가 필요한 `hostg
 - [AGENTS.md](AGENTS.md)(규칙 정본) · [코딩 규칙 예시](docs/04_CodingGuidelines.md) — 이름 · include · 선언 순서 규칙(린트가 강제한다).
 - [설정](docs/07_Configuration.md) — 설정 값을 어디에 두는가, 칸 표는 생성 문서 [docs/Config](docs/Config/README.md).
 - [백로그](docs/06_Backlog.md) — 남은 일. 작업을 시작하기 전에 읽는다.
+- [검증과 측정](docs/08_Verification.md) · [결정 기록](docs/09_Decisions.md) — 일을 끝내기 전에 돌릴 것과 측정법, 정한 방향과 기각한 안.

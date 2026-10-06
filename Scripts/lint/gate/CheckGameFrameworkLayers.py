@@ -15,7 +15,7 @@ GameFramework 층 검사 — 기반 폴더의 층(DAG)과 키트의 의존 방�
   4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
-(docs/06_Backlog.md 2절 "안 하기로 한 것").
+(docs/09_Decisions.md 2절 "안 하기로 한 것").
 
   python Scripts/lint/gate/CheckGameFrameworkLayers.py [--root <repo>]
 """

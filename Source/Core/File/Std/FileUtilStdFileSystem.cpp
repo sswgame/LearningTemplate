@@ -2,7 +2,7 @@
  * @file FileUtilStdFileSystem.cpp
  * @brief `FileUtil` 가운데 파일 시스템에 묻는 함수(존재 · 속성 · 크기 · 시각 · 순회 · 만들기 · 지우기 · 복사 · 경로 해석)의 `std::filesystem` 구현입니다.
  * @details **`<filesystem>` 은 이 폴더(`Core/File/Std/`) 밖에서 include 하지 않습니다**(`CheckStdFilesystemIsolation`). 한 함수를 플랫폼 API 로 바꿀 때는
- *          그 정의를 `File/Windows` · `File/Linux` 로 옮기면 되고 호출부는 그대로입니다 — 측정에서 이길 때만 합니다(백로그 3-12).
+ *          그 정의를 `File/Windows` · `File/Linux` 로 옮기면 되고 호출부는 그대로입니다 — 측정에서 이길 때만 합니다(docs/09_Decisions.md 3절).
  *          - 오류는 `error_code` 판으로만 받습니다. 예외 판은 권한 · 경로 변환 실패에서 던집니다.
  *          - 경로는 넓은 문자로 만듭니다(Windows). 좁은 문자 생성자는 ANSI 코드 페이지로 바꾸다 잘못된 UTF-8 바이트에서 **던집니다**.
  *          - `path` 는 표준 할당자를 씁니다(sw 할당자 밖). 호출 하나에 `path` 하나, 순회는 항목마다 둘입니다.

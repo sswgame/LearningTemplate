@@ -2,14 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Pending work lives in docs/06_Backlog.md
+## Pending work lives in docs/06_Backlog.md — lessons, decisions and verification live elsewhere
 
-**Read [docs/06_Backlog.md](docs/06_Backlog.md) before starting work.** It is the shared to-do list
-across machines and sessions and holds only two things: the work that is still open (with the traps to
-know before touching it) and a reference section of lasting lessons from finished work. Update it in the
-same commit as the work it describes: when an item is done, delete it and move any lesson worth keeping
-into the reference section in a line or two. History lives in `git log`; the full old backlog with every
-dated "recently finished" entry is `git show 7ce95fc8:docs/06_Backlog.md`.
+**Read [docs/06_Backlog.md](docs/06_Backlog.md) before starting work.** It is the shared to-do list across machines
+and sessions and holds only open work: what is left, questions waiting for a decision, and work that waits for a
+condition — each with the traps to know before touching it. Update it in the same commit as the work it describes:
+when an item is done, delete it, and move what is worth keeping to where it belongs, in a line or two:
+
+- a lesson, contract or trap about one area → the **"함정 · 계약" section of that area's README** (the folder you changed);
+- a direction chosen, an idea rejected (with its numbers), or an old name → [docs/09_Decisions.md](docs/09_Decisions.md);
+- how to verify or measure → [docs/08_Verification.md](docs/08_Verification.md) (what to run before calling work done, how to
+  read the profile table, test-writing traps, CI).
+
+History lives in `git log`; the full old backlog with every dated "recently finished" entry is
+`git show 7ce95fc8:docs/06_Backlog.md`.
 
 ## Conventions live in AGENTS.md
 
