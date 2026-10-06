@@ -83,6 +83,37 @@ SW_TEST_CASE( CanvasDrawListTest, SameTextureContinuesBatch )
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::CanvasQuadKind::Rect ), list._listQuad[6]._kind );
 }
 
+/**
+ * @brief [CanvasDrawListTest] 경로 그림은 그리기 목록에 경로로 실린다 — 같은 경로는 한 텍스처 자리, 다른 경로 · 텍스처 객체는 다른 자리
+ * @details 게임 스레드는 디바이스가 없어 그림을 경로로만 가리킨다(렌더 스레드가 `TextureCache` 로 푼다). 변이: `CanvasTextureRef::isEqual` 에서 경로 비교를 빼면
+ *          두 경로가 한 자리로 합쳐져 진다.
+ */
+SW_TEST_CASE( CanvasDrawListTest, PathImagesShareSlotsByPath )
+{
+    sw::CanvasDrawList list{};
+    sw::CanvasPainter  painter( list, 1.0f );
+    sw::CanvasBrush    crosshair{};
+    crosshair._imagePath = sw::hashed_string( "game/x/textures/crosshair.dds" );
+    sw::CanvasBrush hitMarker{};
+    hitMarker._imagePath = sw::hashed_string( "game/x/textures/hitmarker.dds" );
+    painter.fillRect( sw::float2{ 0.0f, 0.0f }, sw::float2{ 8.0f, 8.0f }, crosshair );
+    painter.fillRect( sw::float2{ 10.0f, 0.0f }, sw::float2{ 8.0f, 8.0f }, hitMarker );
+    painter.fillRect( sw::float2{ 20.0f, 0.0f }, sw::float2{ 8.0f, 8.0f }, crosshair );
+    painter.fillRect( sw::float2{ 30.0f, 0.0f }, sw::float2{ 8.0f, 8.0f }, CanvasDrawListTestUtil::makeImageBrush( CanvasDrawListTestUtil::makeTexture() ) );
+
+    SW_ASSERT_EQUAL( size_t{ 1 }, list._listBatch.size() );
+    SW_ASSERT_EQUAL( 3u, static_cast<uint32>( list._listBatch[0]._textureCount ) );
+    SW_EXPECT_TRUE( list._listBatch[0]._arrTexture[0]._texturePath == crosshair._imagePath );
+    SW_EXPECT_TRUE( list._listBatch[0]._arrTexture[0]._texture == nullptr );
+    SW_EXPECT_TRUE( list._listBatch[0]._arrTexture[1]._texturePath == hitMarker._imagePath );
+    SW_EXPECT_TRUE( list._listBatch[0]._arrTexture[2]._texturePath.empty() );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CanvasQuadKind::Image ), list._listQuad[0]._kind );
+    SW_EXPECT_EQUAL( 0u, list._listQuad[0]._textureSlot );
+    SW_EXPECT_EQUAL( 1u, list._listQuad[1]._textureSlot );
+    SW_EXPECT_EQUAL( 0u, list._listQuad[2]._textureSlot );
+    SW_EXPECT_EQUAL( 2u, list._listQuad[3]._textureSlot );
+}
+
 /** @brief [CanvasDrawListTest] 9-슬라이스는 조각 아홉(가운데 = 여백을 뺀 나머지), 사각형이 여백 합보다 작으면 여백을 비율대로 줄인다 */
 SW_TEST_CASE( CanvasDrawListTest, NineSliceEmitsNinePiecesAndShrinksMargins )
 {

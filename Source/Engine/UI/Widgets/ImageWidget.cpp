@@ -32,6 +32,14 @@ namespace sw
         invalidate( WidgetDirty::kLayout | WidgetDirty::kPaint );
     }
 
+    void ImageWidget::setImagePath( string_view imagePath )
+    {
+        if ( _imagePath == imagePath )
+            return;
+        _imagePath = string( imagePath );
+        invalidate( WidgetDirty::kPaint );
+    }
+
     void ImageWidget::setBrush( const UiBrush& brush )
     {
         _brush = brush;
@@ -68,9 +76,12 @@ namespace sw
     void ImageWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
     {
         (void)context;
-        if ( _image == nullptr && _brush.isInvisible() )
+        const bool bImagePath = _image == nullptr && _imagePath.empty() == false;
+        if ( _image == nullptr && bImagePath == false && _brush.isInvisible() )
             return;
         CanvasBrush brush = _brush.makeCanvasBrush( _image );
+        if ( bImagePath )
+            brush._imagePath = hashed_string( _imagePath );
         if ( _bMirrorInRtl && isRightToLeft() )
         {
             const float32 u0 = brush._uvRect._x;

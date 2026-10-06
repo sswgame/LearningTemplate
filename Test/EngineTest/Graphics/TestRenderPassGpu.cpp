@@ -7044,6 +7044,7 @@ SW_TEST_CASE( RenderPassGpuTest, TwoSidedMaterialDrawsBackFaces )
  *          엔진 글꼴(라틴, 저장소 글꼴)의 SDF 글리프 "A". 단언은 픽셀 값이 아니라 A 와의 차이로 본다(장면 · 클리어 색 · 톤매핑에 매이지 않게):
  *          캔버스 밖은 A 그대로(Load — Clear 로 열면 장면이 사라진다), 둥근 모서리 바깥 · 가위 밖도 A 그대로, 겹친 곳은 빨강 반 + 파랑 반,
  *          글리프 상자의 밝기 증가가 백엔드끼리 2 % 안. 백버퍼 사본이 캡처와 같다 — 캡처 → 백버퍼 복사가 Canvas 뒤에 있다.
+ *          경로 그림(네 칸 시험 텍스처 — 게임 스레드는 경로만 싣고 렌더러가 `TextureCache` 로 푼다)은 칸마다 제 색이다(왼위 빨강 · 오위 초록 · 왼아래 파랑).
  */
 SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
 {
@@ -7097,6 +7098,9 @@ SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
             green._color = sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f };
             painter.fillRect( sw::float2{ 20.0f, 120.0f }, sw::float2{ 120.0f, 30.0f }, green );
             painter.popClip();
+            sw::CanvasBrush quadrants{};
+            quadrants._imagePath = sw::hashed_string( "engine/textures/test/quadrants.dds" );
+            painter.fillRect( sw::float2{ 190.0f, 40.0f }, sw::float2{ 64.0f, 64.0f }, quadrants );
             sw::CanvasGlyphStyle style{};
             style._fontSize = kGlyphSize;
             SW_EXPECT_TRUE( painter.drawGlyph( glyphOrigin, face, rasterizer->findGlyphIndex( face, 'A' ), style, glyphCache, 1 ) );
@@ -7128,6 +7132,12 @@ SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
             const test::Rgba8 clipped = with.getPixel( 50, 135 );
             SW_EXPECT_TRUE_MSG( clipped._g > 220 && clipped._r < 40, ( label + "가위 안의 초록" ).c_str() );
             SW_EXPECT_TRUE_MSG( isUnchanged( 110, 135 ), ( label + "가위 밖이 칠해졌다" ).c_str() );
+            const test::Rgba8 imageTopLeft    = with.getPixel( 206, 56 );
+            const test::Rgba8 imageTopRight   = with.getPixel( 238, 56 );
+            const test::Rgba8 imageBottomLeft = with.getPixel( 206, 88 );
+            SW_EXPECT_TRUE_MSG( imageTopLeft._r > 200 && imageTopLeft._g < 60 && imageTopLeft._b < 60, ( label + "경로 그림 왼위 칸이 빨강이 아니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( imageTopRight._g > 200 && imageTopRight._r < 60 && imageTopRight._b < 60, ( label + "경로 그림 오위 칸이 초록이 아니다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( imageBottomLeft._b > 200 && imageBottomLeft._r < 60 && imageBottomLeft._g < 60, ( label + "경로 그림 왼아래 칸이 파랑이 아니다" ).c_str() );
 
             // 캔버스 사각형 밖은 A 그대로여야 한다 — Load 대신 지우면 장면(큐브)이 사라진다.
             uint32 changedOutside{ 0 };

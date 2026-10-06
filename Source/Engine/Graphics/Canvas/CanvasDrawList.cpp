@@ -55,7 +55,7 @@ namespace sw
 {
     bool CanvasTextureRef::isEqual( const CanvasTextureRef& other ) const
     {
-        return _texture == other._texture && _atlasPage == other._atlasPage;
+        return _texture == other._texture && _texturePath == other._texturePath && _atlasPage == other._atlasPage;
     }
 
     void CanvasDrawList::clear()

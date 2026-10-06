@@ -7,6 +7,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -21,6 +22,7 @@ namespace sw
 
     class IRHICommandList;
     class IRHIDevice;
+    class Texture2D;
 
     /**
      * @class CanvasRenderer
@@ -61,7 +63,10 @@ namespace sw
                          bool bNativeBindless, uint32 colorVisionMode = 0 ) const;
         /** @brief 마지막 `prepareFrame` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 자리입니다. */
         uint32 getTargetQuadBase( uint32 targetIndex ) const { return targetIndex < _listTargetQuadBase.size() ? _listTargetQuadBase[targetIndex] : 0; }
-        /** @brief GPU 자원을 놓습니다(디바이스가 없으면 핸들만 잊는다). 아틀라스 거울은 남깁니다 — 다음 `prepareFrame` 이 다시 올린다. */
+        /**
+         * @brief GPU 자원을 놓습니다(디바이스가 없으면 핸들만 잊는다). 아틀라스 거울은 남깁니다 — 다음 `prepareFrame` 이 다시 올린다.
+         * @details 경로로 빌린 그림은 캐시에 돌려줍니다(다음 `prepareFrame` 이 다시 빌린다).
+         */
         void release( IRHIDevice* pDevice );
 
         /** @brief 지금 들고 있는 아틀라스 페이지 수입니다(거울 기준). */
@@ -90,10 +95,20 @@ namespace sw
         void applyAtlasUpload( const GlyphAtlasUpload& upload );
         /** @brief 페이지 텍스처를 갖추고(없으면 만든다) 바뀐 구간을 올립니다. */
         void uploadAtlasPage( IRHIDevice& device, AtlasPage& page );
+        /** @brief 경로로 빌린 그림 하나입니다(텍스처는 `TextureCache` 가 소유 — `release` 가 돌려준다). */
+        struct PathTexture
+        {
+            hashed_string _path{};
+            Texture2D*    _pTexture{ nullptr }; ///< 못 읽었으면 nullptr(캐시가 이유를 남겼다 — 다시 묻지 않는다)
+        };
+
         /** @brief 일괄 텍스처 하나의 SRV 입니다. 없으면 kInvalidDescriptorIndex. */
         RHIDescriptorIndex findTextureSrv( const CanvasTextureRef& texture ) const;
+        /** @brief 목록의 경로 그림을 `TextureCache` 에서 빌립니다(처음 보는 경로만). 엔진 서비스가 없으면(시험 하네스 밖) 아무것도 하지 않는다. */
+        void acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list );
 
         vector<AtlasPage>       _listAtlasPage;
+        vector<PathTexture>     _listPathTexture;    ///< 경로 그림(HUD 아이콘 · 조준선 — 몇 개뿐이라 선형 검색)
         vector<uint8>           _regionScratchBytes; ///< 구간 업로드용 빈틈없는 행 사본
         vector<CanvasQuad>      _listQuadScratch;    ///< 대상이 있을 때 주 출력 + 대상 사각형을 이어 붙인 사본
         vector<uint32>          _listTargetQuadBase; ///< 대상마다 버퍼 안 시작 자리

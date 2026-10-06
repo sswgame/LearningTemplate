@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Text/TextTypes.h"
@@ -23,14 +24,18 @@ namespace sw
     /** @brief 칠할 모양 하나의 겉모습입니다(스타일이 위젯마다 계산해 줄 값). 길이는 UI 단위입니다. */
     struct CanvasBrush
     {
-        shared_ptr<const Texture2D> _image{};                          ///< 비면 단색 사각형
+        shared_ptr<const Texture2D> _image{};                          ///< 그림 객체. `_imagePath` 와 둘 다 비면 단색 사각형
+        hashed_string               _imagePath{};                      ///< 그림 경로(DDS) — 객체가 없을 때 렌더 스레드가 `TextureCache` 로 푼다
         float4                      _color{ 1.0f, 1.0f, 1.0f, 1.0f };  ///< 곧은 RGBA. 그림이면 그림에 곱한다
         float4                      _borderColor{};                    ///< 테두리 색(단색 사각형만)
         float4                      _cornerRadius{};                   ///< 왼위 · 오위 · 오아 · 왼아
         float4                      _nineSliceMargin{};                ///< 그림 크기의 비율(왼 · 위 · 오 · 아, 0..1) — 0 이면 늘이기(Slate `FSlateBrush::Margin`)
         float4                      _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 그림에서 쓸 구간(u0, v0, u1, v1)
-        float2                      _imageSize{};                      ///< 9-슬라이스 여백의 기준 크기(Slate `ImageSize`). 0 이면 텍스처 픽셀 크기
-        float32                     _borderWidth{ 0.0f };              ///< 테두리 두께(단색 사각형만)
+        float2                      _imageSize{};                      ///< 9-슬라이스 여백의 기준 크기(Slate `ImageSize`). 0 이면 텍스처 픽셀 크기(경로 그림이면 칠할 크기)
+
+        /** @brief 그림(객체 또는 경로)이 있으면 true 입니다. */
+        bool    hasImage() const { return _image != nullptr || _imagePath.empty() == false; }
+        float32 _borderWidth{ 0.0f }; ///< 테두리 두께(단색 사각형만)
     };
 } // namespace sw
 

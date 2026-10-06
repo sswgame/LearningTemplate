@@ -68,11 +68,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 일괄이 거는 텍스처 하나입니다 — 글리프 아틀라스 페이지 번호 또는 텍스처 에셋. */
+    /**
+     * @brief 일괄이 거는 텍스처 하나입니다 — 글리프 아틀라스 페이지 번호, 텍스처 객체, 또는 텍스처 경로.
+     * @details 경로(`_texturePath`)는 게임 스레드가 디바이스 없이 그림을 가리키는 길입니다 — 렌더 스레드의 캔버스 렌더러가 `TextureCache` 로 풉니다
+     *          (머티리얼의 텍스처 프로퍼티와 같은 길). 셋 중 하나만 씁니다(객체 > 경로 > 아틀라스 페이지).
+     */
     struct SW_API CanvasTextureRef
     {
         shared_ptr<const Texture2D> _texture{};                           ///< 그림 · 9-슬라이스(패킷이 수명을 쥔다 — 머티리얼과 같은 규칙)
-        uint16                      _atlasPage{ invalid_index::kUint16 }; ///< 글리프 아틀라스 페이지(텍스처가 없을 때)
+        hashed_string               _texturePath{};                       ///< 그림의 리소스 경로(DDS — 렌더 스레드가 푼다). 텍스처 객체가 없을 때
+        uint16                      _atlasPage{ invalid_index::kUint16 }; ///< 글리프 아틀라스 페이지(텍스처 · 경로가 없을 때)
 
         /** @brief 같은 텍스처를 가리키면 true 입니다. */
         bool isEqual( const CanvasTextureRef& other ) const;

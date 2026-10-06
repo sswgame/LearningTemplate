@@ -298,8 +298,6 @@ cd build/Ninja-Debug/Bin
     천/머리카락 · 전술 AI · 볼류메트릭 안개/빛/구름 · 캐릭터 셰이딩 · 모션 캡처 공정 · 대규모 좌표 · PCG 저작 그래프 · GI/반사 프로브 · 플랫폼 서비스 ·
     패치/DLC · 모드/UGC.
   - **아주 큼(XL)**: 비주얼 스크립팅 · 월드 파티션/스트리밍/HLOD · 음성 채팅(온라인 구성은 1-7 "네트워크 서비스 계층").
-- **런타임 UI 그리기의 남은 것(runtime-ui 4-5 뒤, `Engine/UI/README.md`).** (1) `ImageWidget::_imagePath` 를 텍스처로 푸는 길 — `TextureCache::acquire` 는 디바이스가
-  있어야 해 게임 스레드의 위젯이 부를 수 없다(머티리얼처럼 패킷 앞에서 올리는 길이 필요). UI 문서(5-1)는 경로를 칸에 읽어 두기만 한다 — 지금 그림은 코드가 `setImage`.
 - **런타임 UI 애니메이션 · 전환의 남은 것(runtime-ui 7-1 · 7-2 뒤, `Engine/UI/README.md`).** (1) 스타일 전환은 부모의 보간 값을 물려받는 글 칸에 내리지 않는다
   (자식 규칙에 `_transition` 을 따로 적는다) — CSS 는 물려받은 값도 보간된다. (2) 한쪽만 정한 칸(위젯 자기 칸 ↔ 시트 값)은 전환 없이 바뀐다 — 위젯 칸 값을 읽는 길이 필요.
   (3) 전환 지연(`transition-delay`) · 키 사이 사건 말고 곡선 위 사건 · 에디터 미리보기(8-5)에서 애니메이션 미리 보기와 Open 을 틀지 않은 값으로 저장하기.
@@ -1284,6 +1282,8 @@ cd build/Ninja-Debug/Bin
   (뷰포트를 거는 새 자리를 만들면 가위도 건다 — 안 그러면 Deferred Context 의 빈 가위로 아무것도 안 그려진다). GL 은 가위 시험을 켜고 끄며, 클리어 · 블릿 동안은 끈다.
 - **UI 는 Present(톤맵) 뒤 Canvas 패스가 같은 출력에 Load 로 그린다** — 스크린샷 캡처 → 백버퍼 복사는 Swapchain 을 쓰는 마지막 패스 끝이다(그 전에 복사하면
   UI 가 캡처에 없다 — `RenderPassGpuTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 견준다). Canvas 는 Swapchain 을 쓰는 마지막 패스여야 한다(검증).
+- **게임 스레드의 UI 그림은 경로로 싣는다** — 위젯은 디바이스가 없어 `TextureCache::acquire` 를 부를 수 없다. 그리기 목록에 경로(`CanvasTextureRef::_texturePath`)를
+  싣고 `CanvasRenderer::prepareFrame`(렌더 스레드 · 기록 전)이 빌린다 — 머티리얼 텍스처와 같은 캐시라 백엔드 교체도 그 길을 탄다.
 - **Vulkan 의 텍스처 하나짜리 프레임버퍼 렌더 패스는 CLEAR 고정이다** — 깊이 없는 컬러 하나를 Load · DontCare 로 여는 패스는 load op 을 키로 드는 합성 경로로 간다
   (`RHIDeviceTest.LoadOpKeepsSingleOffscreenTarget`). 새 렌더 패스 경로를 만들면 Load 가 앞 그림을 지우지 않는지 그 시험으로 본다.
 - **애니메이션이 튀면 본 하나의 프레임 사이 이동량을 재 본다** — Shooter3D 의 튐은 셋이 겹친 것이었다: 반복으로 돌린 겨누기 레이어의 끝 → 처음(1 초마다 32 cm),

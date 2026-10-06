@@ -12,6 +12,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Resource/AssetManager.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -49,6 +51,7 @@ namespace sw
 {
     CanvasRenderer::CanvasRenderer()
         : _listAtlasPage{}
+        , _listPathTexture{}
         , _regionScratchBytes{}
         , _quadBuffer{}
         , _uploadedRevision{ 0 }
@@ -72,6 +75,10 @@ namespace sw
         // 2) 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다.
         for ( AtlasPage& page : _listAtlasPage )
             uploadAtlasPage( device, page );
+        // 경로 그림 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
+        acquirePathTextures( device, inoutFrame._mainOutput );
+        for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
+            acquirePathTextures( device, target._list );
 
         // 3) 사각형 버퍼 — 주 출력 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)이 같고 버퍼가 그대로면 올리지 않는다
         //    (번호 0 은 "모른다" 라 늘 올린다).
@@ -191,6 +198,16 @@ namespace sw
             // 거울은 남긴다 — 다음 prepareFrame 이 텍스처를 다시 만들고 전체를 올린다.
             page._bWholePageDirty = page._bytes.empty() ? SW_FALSE : SW_TRUE;
         }
+        if ( _listPathTexture.empty() == false && engine::areEngineServicesBound() )
+        {
+            TextureCache& textures = engine::getAssetManager().getTextureManager();
+            for ( const PathTexture& pathTexture : _listPathTexture )
+            {
+                if ( pathTexture._pTexture != nullptr )
+                    textures.release( pathTexture._path.view(), pDevice );
+            }
+        }
+        _listPathTexture.clear();
         _quadBuffer.release( pDevice );
         _uploadedRevision  = 0;
         _uploadedQuadCount = 0;
@@ -321,8 +338,40 @@ namespace sw
     {
         if ( texture._texture != nullptr )
             return texture._texture->isRhiValid() ? texture._texture->getSrv() : kInvalidDescriptorIndex;
+        if ( texture._texturePath.empty() == false )
+        {
+            for ( const PathTexture& pathTexture : _listPathTexture )
+            {
+                if ( pathTexture._path == texture._texturePath )
+                    return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRhiValid() ? pathTexture._pTexture->getSrv() : kInvalidDescriptorIndex;
+            }
+            return kInvalidDescriptorIndex;
+        }
         if ( texture._atlasPage < _listAtlasPage.size() )
             return _listAtlasPage[texture._atlasPage]._srv;
         return kInvalidDescriptorIndex;
+    }
+
+    void CanvasRenderer::acquirePathTextures( IRHIDevice& device, const CanvasDrawList& list )
+    {
+        if ( engine::areEngineServicesBound() == false )
+            return;
+        for ( const CanvasBatch& batch : list._listBatch )
+        {
+            for ( uint32 slot = 0; slot < batch._textureCount; ++slot )
+            {
+                const hashed_string& path = batch._arrTexture[slot]._texturePath;
+                if ( path.empty() || batch._arrTexture[slot]._texture != nullptr )
+                    continue;
+                bool bKnown = false;
+                for ( const PathTexture& pathTexture : _listPathTexture )
+                    bKnown = bKnown || pathTexture._path == path;
+                if ( bKnown )
+                    continue;
+                PathTexture& added = _listPathTexture.emplace_back();
+                added._path        = path;
+                added._pTexture    = engine::getAssetManager().getTextureManager().acquire( path.view(), &device );
+            }
+        }
     }
 } // namespace sw

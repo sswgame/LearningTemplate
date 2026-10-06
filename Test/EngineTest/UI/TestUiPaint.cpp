@@ -343,6 +343,29 @@ SW_TEST_CASE( UiPaintTest, BorderPaddingAndImageMirror )
 }
 
 /**
+ * @brief [UiPaintTest] 이미지 위젯의 그림 경로(`_imagePath` — 문서 · `setImagePath`)는 그림 사각형으로 칠해지고 그 일괄이 경로를 든다 · 텍스처 객체가 있으면 객체가 이긴다
+ * @details 게임 스레드의 위젯은 디바이스가 없어 텍스처를 풀 수 없다 — 경로를 그리기 목록에 싣고 렌더 스레드가 푼다. 변이: `ImageWidget::paint` 가 경로를 브러시에
+ *          넣지 않으면 그림 사각형이 나오지 않아 진다.
+ */
+SW_TEST_CASE( UiPaintTest, ImagePathPaintsAnImageQuad )
+{
+    UiPaintFixture   fixture( 200.0f, 100.0f );
+    sw::ImageWidget* pImage = fixture.setRoot<sw::ImageWidget>();
+    pImage->setImagePath( "game/x/textures/crosshair.dds" );
+    (void)fixture.runFrame();
+    SW_ASSERT_EQUAL( size_t{ 1 }, fixture._canvas._listQuad.size() );
+    SW_EXPECT_EQUAL( static_cast<uint32>( sw::CanvasQuadKind::Image ), fixture._canvas._listQuad[0]._kind );
+    SW_ASSERT_EQUAL( size_t{ 1 }, fixture._canvas._listBatch.size() );
+    SW_EXPECT_TRUE( fixture._canvas._listBatch[0]._arrTexture[0]._texturePath == sw::hashed_string( "game/x/textures/crosshair.dds" ) );
+
+    pImage->setImage( sw::make_shared<sw::Texture2D>() );
+    (void)fixture.runFrame();
+    SW_ASSERT_EQUAL( size_t{ 1 }, fixture._canvas._listBatch.size() );
+    SW_EXPECT_TRUE( fixture._canvas._listBatch[0]._arrTexture[0]._texture != nullptr );
+    SW_EXPECT_TRUE( fixture._canvas._listBatch[0]._arrTexture[0]._texturePath.empty() );
+}
+
+/**
  * @brief [UiPaintTest] UiSystem 의 그리기 목록 내용 번호는 내용이 바뀔 때만 오르고, 탐색 입력 방식이면 포커스 위젯 둘레에 테두리 사각형이 하나 더 든다
  * @details 변이: `UiSystem::paintScreens` 의 같은 내용 확인을 빼면 바뀐 것이 없는 프레임에도 번호가 올라 진다.
  */

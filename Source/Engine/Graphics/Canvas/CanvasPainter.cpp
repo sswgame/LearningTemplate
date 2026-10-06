@@ -115,7 +115,7 @@ namespace sw
 
     void CanvasPainter::fillRect( const float2& position, const float2& size, const CanvasBrush& brush )
     {
-        if ( brush._image != nullptr )
+        if ( brush.hasImage() )
         {
             drawImage( position, size, brush );
             return;
@@ -133,10 +133,12 @@ namespace sw
 
     void CanvasPainter::drawImage( const float2& position, const float2& size, const CanvasBrush& brush )
     {
-        if ( brush._image == nullptr )
+        if ( brush.hasImage() == false )
             return;
         CanvasTextureRef texture{};
         texture._texture = brush._image;
+        if ( brush._image == nullptr )
+            texture._texturePath = brush._imagePath;
 
         const float4& margin     = brush._nineSliceMargin;
         const bool    bNineSlice = margin._x > 0.0f || margin._y > 0.0f || margin._z > 0.0f || margin._w > 0.0f;
@@ -153,10 +155,11 @@ namespace sw
             return;
         }
 
-        // 여백의 기준 크기는 브러시가 준 그림 크기(Slate ImageSize), 없으면 텍스처 픽셀 크기다.
+        // 여백의 기준 크기는 브러시가 준 그림 크기(Slate ImageSize), 없으면 텍스처 픽셀 크기다. 경로 그림은 게임 스레드가 크기를 모르므로 칠할 크기다.
         const bool                       bHasImageSize = brush._imageSize._x > 0.0f && brush._imageSize._y > 0.0f;
-        const float2                     imageSize     = bHasImageSize ? brush._imageSize
-                                                                       : float2{ static_cast<float32>( brush._image->getWidth() ), static_cast<float32>( brush._image->getHeight() ) };
+        const float2                     imageSize     = bHasImageSize           ? brush._imageSize
+                                                       : brush._image != nullptr ? float2{ static_cast<float32>( brush._image->getWidth() ), static_cast<float32>( brush._image->getHeight() ) }
+                                                                                 : size;
         CanvasPainterInternal::SliceSpan arrColumn[3];
         CanvasPainterInternal::SliceSpan arrRow[3];
         CanvasPainterInternal::makeSpans( size._x, margin._x * imageSize._x, margin._z * imageSize._x, brush._uvRect._x, brush._uvRect._z, margin._x, margin._z,
