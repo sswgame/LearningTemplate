@@ -4,3 +4,7 @@
 # ==============================================================================
 
 sw_addGameFrameworkKit(GF_Server_Account)
+if(NOT TARGET GF_Server_Account)
+	return()
+endif()
+sw_linkSharedKit(GF_Server_Account GF_Account)

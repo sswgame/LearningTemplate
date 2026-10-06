@@ -4,9 +4,13 @@
 
 #include "Engine/Network/EngineNetSecurity.h"
 
+#include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
+#include "GameFramework/Base/Online/Config/RemoteConfig.h"
+#include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Online/Server/Account/LoginService.h"
 #include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
+#include "GameFramework/Kits/Online/Server/Account/Platform/FakePlatformLoginProvider.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -149,7 +153,7 @@ namespace
 
         LoginResult login( const LoginCredential& credential, uint64 clientKey, int64 nowMs, LoginGrant& outGrant )
         {
-            _service->login( credential, clientKey, nowMs, _nextTag++ );
+            _service->login( credential, AccountClientInfo{}, clientKey, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
             outGrant                         = completion._grant;
             return completion._result;
@@ -157,7 +161,7 @@ namespace
 
         LoginResult resumeSession( const LoginSessionToken& token, uint64 clientKey, int64 nowMs, LoginGrant& outGrant )
         {
-            _service->resumeSession( token, clientKey, nowMs, _nextTag++ );
+            _service->resumeSession( token, AccountClientInfo{}, clientKey, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
             outGrant                         = completion._grant;
             return completion._result;
@@ -189,7 +193,7 @@ namespace
 
         LoginResult revokeAccountSessions( uint64 accountId, int64 nowMs )
         {
-            _service->revokeAccountSessions( accountId, nowMs, _nextTag++ );
+            _service->revokeAccountSessions( accountId, LoginRevokeReason::Administrative, nowMs, _nextTag++ );
             return settle()._result;
         }
 
@@ -203,6 +207,84 @@ namespace
         {
             _service->refreshOnlineSessions( nowMs, maxCount );
             (void)settle();
+        }
+
+        LoginResult guestLogin( uint8 secretSeed, int64 nowMs, LoginGrant& outGrant, const AccountClientInfo& clientInfo = AccountClientInfo{} )
+        {
+            uint8 arrSecret[LoginConstant::kDeviceSecretSize];
+            for ( int32 byteIndex = 0; byteIndex < LoginConstant::kDeviceSecretSize; ++byteIndex )
+                arrSecret[byteIndex] = static_cast<uint8>( secretSeed + byteIndex );
+            _service->guestLogin( arrSecret, clientInfo, secretSeed, nowMs, _nextTag++ );
+            const LoginCompletion completion = settle();
+            outGrant                         = completion._grant;
+            return completion._result;
+        }
+
+        /** @brief 외부 로그인 — 제공자 확인은 다음 `tick` 에 끝나고 저장 일이 그 자리에서 돈다. */
+        LoginResult platformLogin( string_view provider, string_view ticketText, int64 nowMs, LoginGrant& outGrant )
+        {
+            const vector<uint8> ticket( ticketText.begin(), ticketText.end() );
+            _service->platformLogin( provider, ticket, AccountClientInfo{}, 1, nowMs, _nextTag++ );
+            _service->tick( nowMs );
+            const LoginCompletion completion = settle();
+            outGrant                         = completion._grant;
+            return completion._result;
+        }
+
+        LoginResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity )
+        {
+            _service->linkCredential( token, credential, nowMs, _nextTag++ );
+            const LoginCompletion completion = settle();
+            outIdentity                      = completion._identity;
+            return completion._result;
+        }
+
+        LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view ticketText, int64 nowMs )
+        {
+            const vector<uint8> ticket( ticketText.begin(), ticketText.end() );
+            _service->linkPlatform( token, provider, ticket, nowMs, _nextTag++ );
+            _service->tick( nowMs );
+            return settle()._result;
+        }
+
+        LoginResult unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs )
+        {
+            _service->unlinkPlatform( token, provider, nowMs, _nextTag++ );
+            return settle()._result;
+        }
+
+        LoginResult listLinks( const LoginSessionToken& token, int64 nowMs, AccountLinkSummary& outSummary )
+        {
+            _service->listLinks( token, nowMs, _nextTag++ );
+            const LoginCompletion completion = settle();
+            outSummary                       = completion._linkSummary;
+            return completion._result;
+        }
+
+        LoginResult requestDeletion( const LoginSessionToken& token, int64 nowMs, int64& outDueMs )
+        {
+            _service->requestDeletion( token, nowMs, _nextTag++ );
+            const LoginCompletion completion = settle();
+            outDueMs                         = completion._grant._deletionDueMs;
+            return completion._result;
+        }
+
+        LoginResult cancelDeletion( const LoginSessionToken& token, int64 nowMs )
+        {
+            _service->cancelDeletion( token, nowMs, _nextTag++ );
+            return settle()._result;
+        }
+
+        void purgeDueDeletions( int64 nowMs )
+        {
+            _service->purgeDueDeletions( nowMs, 16 );
+            (void)settle();
+        }
+
+        LoginResult revokeAccountSessions( uint64 accountId, LoginRevokeReason reason, int64 nowMs )
+        {
+            _service->revokeAccountSessions( accountId, reason, nowMs, _nextTag++ );
+            return settle()._result;
         }
 
         bool  isAccountOnline( uint64 accountId ) const { return _service->isAccountOnline( accountId ); }
@@ -228,6 +310,38 @@ namespace
 
         void       restart() { _node.restart( _settings ); }
         LoginNode* operator->() { return &_node; }
+    };
+
+    struct TestLoginServiceGuestInternal
+    {
+        static ServiceAuditEntry makeAudit()
+        {
+            ServiceAuditEntry audit;
+            audit._actor   = "gm.0000000000000001";
+            audit._action  = "config.set";
+            audit._subject = "config";
+            audit._timeMs  = 1;
+            return audit;
+        }
+
+        static RemoteConfigValue makeText( const utf8* pText )
+        {
+            RemoteConfigValue value;
+            value._type = RemoteConfigValueType::Text;
+            value._text = pText;
+            return value;
+        }
+
+        static void writeSanction( MemoryServiceDatabase& database, uint64 accountId, ServiceSanctionKind kind, int64 untilMs )
+        {
+            ServiceSanctionState state;
+            (void)ServiceSanction::readState( database, accountId, state );
+            state._arrUntilMs[static_cast<int32>( kind )] = untilMs;
+            state._reasonCode                             = "sanction.cheat";
+            ServiceTransaction transaction;
+            ServiceSanction::stageWrite( transaction, accountId, state );
+            (void)database.commit( transaction );
+        }
     };
 } // namespace
 
@@ -520,8 +634,8 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
     vector<LoginCompletion> listCompletion;
 
     service.registerAccount( Internal::makeCredential( "liam", "password123" ), 0, 1 );
-    service.login( Internal::makeCredential( "liam", "wrong-pass" ), 1, 10, 2 );
-    service.login( Internal::makeCredential( "liam", "password123" ), 1, 20, 3 );
+    service.login( Internal::makeCredential( "liam", "wrong-pass" ), AccountClientInfo{}, 1, 10, 2 );
+    service.login( Internal::makeCredential( "liam", "password123" ), AccountClientInfo{}, 1, 20, 3 );
     (void)store.pollCompletions();
     service.drainCompletions( listCompletion );
     SW_ASSERT_EQUAL( size_t( 3 ), listCompletion.size() );
@@ -546,4 +660,242 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
     store.shutdown();
     (void)store.pollCompletions();
     service.shutdown();
+}
+
+SW_TEST_CASE( LoginServiceTest, GuestLoginIsStablePerDevice )
+{
+    LoginFixture fixture;
+    LoginGrant   first;
+    SW_ASSERT_TRUE( fixture->guestLogin( 1, 0, first ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
+    SW_EXPECT_TRUE( first._identity._bGuest == SW_TRUE );
+    SW_EXPECT_TRUE( first._identity._displayName.rfind( "Guest-", 0 ) == 0 );
+    LoginGrant again;
+    SW_ASSERT_TRUE( fixture->guestLogin( 1, 100, again ) == LoginResult::Ok ); // 같은 장치 → 같은 계정
+    SW_EXPECT_TRUE( again._bCreated == SW_FALSE );
+    SW_EXPECT_EQUAL( first._identity._accountId, again._identity._accountId );
+    SW_EXPECT_EQUAL( first._token._sessionId, again._replacedSessionId ); // 새 로그인이 옛 세션을 밀어낸다
+    LoginGrant other;
+    SW_ASSERT_TRUE( fixture->guestLogin( 2, 200, other ) == LoginResult::Ok ); // 다른 장치 → 다른 계정
+    SW_EXPECT_NOT_EQUAL( first._identity._accountId, other._identity._accountId );
+    SW_EXPECT_EQUAL( 2, fixture._database.countRecords( hashed_string( "account_guest" ) ) ); // 비밀이 아니라 다이제스트가 키
+}
+
+SW_TEST_CASE( LoginServiceTest, LinkingKeepsTheAccountAndClearsGuest )
+{
+    using Internal = TestLoginServiceInternal;
+    LoginFixture fixture;
+    LoginGrant   guest;
+    SW_ASSERT_TRUE( fixture->guestLogin( 3, 0, guest ) == LoginResult::Ok );
+    AccountIdentity linked;
+    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "Mina", "password123" ), 10, linked ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( guest._identity._accountId, linked._accountId );
+    SW_EXPECT_TRUE( linked._bGuest == SW_FALSE );
+    SW_EXPECT_EQUAL( string( "Mina" ), linked._displayName );
+    AccountIdentity online;
+    SW_EXPECT_TRUE( fixture->findIdentityByDisplayName( "mina", online ) ); // 디렉터리 이름 색인도 바뀐다
+
+    LoginGrant byName;
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "mina", "password123" ), 1, 20, byName ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( guest._identity._accountId, byName._identity._accountId );
+    LoginGrant byDevice; // 연동 뒤에도 같은 장치는 비밀번호 없이(기본 설정)
+    SW_ASSERT_TRUE( fixture->guestLogin( 3, 30, byDevice ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( guest._identity._accountId, byDevice._identity._accountId );
+    SW_EXPECT_TRUE( byDevice._identity._bGuest == SW_FALSE );
+
+    AccountIdentity again;
+    SW_EXPECT_TRUE( fixture->linkCredential( byDevice._token, Internal::makeCredential( "mina2", "password123" ), 40, again ) == LoginResult::AlreadyLinked ); // 이름은 하나
+}
+
+SW_TEST_CASE( LoginServiceTest, LinkingAnAlreadyUsedNameOrSubjectFails )
+{
+    using Internal = TestLoginServiceInternal;
+    LoginFixture              fixture;
+    FakePlatformLoginProvider provider{ "fake" };
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "taken", "password123" ), 0 ) == LoginResult::Ok );
+    LoginGrant other;
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:s-1", 0, other ) == LoginResult::Ok );
+    LoginGrant guest;
+    SW_ASSERT_TRUE( fixture->guestLogin( 4, 0, guest ) == LoginResult::Ok );
+
+    const uint64    before = fixture._database.computeContentHash();
+    AccountIdentity identity;
+    SW_EXPECT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "TAKEN", "password123" ), 10, identity ) == LoginResult::AlreadyLinked );
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:s-1", 10 ) == LoginResult::AlreadyLinked ); // 다른 계정 것 — 합치지 않는다
+    SW_EXPECT_EQUAL( before, fixture._database.computeContentHash() );                                                // 아무것도 안 바뀜
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "fake", "reject", 10 ) == LoginResult::ProviderRejected );
+    SW_EXPECT_TRUE( fixture->linkPlatform( guest._token, "none", "subject:x", 10 ) == LoginResult::ProviderUnavailable );
+}
+
+SW_TEST_CASE( LoginServiceTest, PlatformLoginCreatesThenReuses )
+{
+    LoginFixture              fixture;
+    FakePlatformLoginProvider provider{ "fake" };
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
+    SW_EXPECT_FALSE( fixture->_service->registerPlatformProvider( &provider ) ); // 같은 이름 둘
+
+    LoginGrant first;
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77:Hero Name!", 0, first ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
+    SW_EXPECT_TRUE( first._identity._bGuest == SW_FALSE );
+    SW_EXPECT_TRUE( first._identity._displayName.rfind( "HeroName-", 0 ) == 0 ); // 제공자 이름의 ASCII 영숫자 + id 꼬리
+    LoginGrant again;
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77", 100, again ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( again._bCreated == SW_FALSE );
+    SW_EXPECT_EQUAL( first._identity._accountId, again._identity._accountId );
+
+    LoginGrant failed;
+    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "reject", 200, failed ) == LoginResult::ProviderRejected );
+    SW_EXPECT_TRUE( fixture->platformLogin( "fake", "down", 200, failed ) == LoginResult::ProviderUnavailable );
+    SW_EXPECT_TRUE( fixture->platformLogin( "steam", "subject:u-77", 200, failed ) == LoginResult::ProviderUnavailable ); // 올리지 않은 제공자
+    SW_EXPECT_EQUAL( 4, provider.getSubmittedCount() );                                                                   // 없는 제공자는 맡기지도 않는다
+}
+
+SW_TEST_CASE( LoginServiceTest, MultipleLinksAndTheLastMethodCannotBeUnlinked )
+{
+    LoginFixture              fixture;
+    FakePlatformLoginProvider google{ "google" };
+    FakePlatformLoginProvider kakao{ "kakao" };
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &google ) );
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &kakao ) );
+    LoginGrant grant;
+    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", 0, grant ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-1", 10 ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->linkPlatform( grant._token, "kakao", "subject:k-2", 10 ) == LoginResult::AlreadyLinked ); // 제공자마다 하나
+
+    AccountLinkSummary summary;
+    SW_ASSERT_TRUE( fixture->listLinks( grant._token, 20, summary ) == LoginResult::Ok );
+    SW_ASSERT_EQUAL( size_t( 2 ), summary._listProvider.size() );
+    SW_EXPECT_EQUAL( string( "google" ), summary._listProvider[0] );
+    SW_EXPECT_EQUAL( string( "kakao" ), summary._listProvider[1] );
+    SW_EXPECT_EQUAL( 2, summary.getLoginMethodCount() );
+
+    LoginGrant viaKakao; // 둘 다 같은 계정으로 들어온다
+    SW_ASSERT_TRUE( fixture->platformLogin( "kakao", "subject:k-1", 30, viaKakao ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( grant._identity._accountId, viaKakao._identity._accountId );
+
+    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "naver", 40 ) == LoginResult::NotLinked );
+    SW_ASSERT_TRUE( fixture->unlinkPlatform( viaKakao._token, "google", 40 ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( fixture->unlinkPlatform( viaKakao._token, "kakao", 50 ) == LoginResult::LastLoginMethod );
+    LoginGrant newAccount; // 풀린 주체는 이제 새 계정이 된다
+    SW_ASSERT_TRUE( fixture->platformLogin( "google", "subject:g-1", 60, newAccount ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( newAccount._bCreated == SW_TRUE );
+    SW_EXPECT_NOT_EQUAL( grant._identity._accountId, newAccount._identity._accountId );
+}
+
+SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
+{
+    using Internal = TestLoginServiceGuestInternal;
+    LoginFixture fixture;
+    RemoteConfig config;
+    config.submitSet( fixture->_store, nullptr, "account.minimum_build.windows", Internal::makeText( "1.9.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, nullptr, "account.recommended_build.windows", Internal::makeText( "1.10.0" ), Internal::makeAudit() );
+    config.submitSet( fixture->_store, nullptr, "account.store_url.windows", Internal::makeText( "https://store.example/game" ), Internal::makeAudit() );
+    (void)fixture->_store.pollCompletions();
+    fixture->_service->setRemoteConfig( &config );
+
+    SW_EXPECT_EQUAL( 1, AccountUtil::compareBuild( "1.10.0", "1.9.9" ) );
+    SW_EXPECT_EQUAL( 0, AccountUtil::compareBuild( "1.2", "1.2.0" ) );
+    SW_EXPECT_EQUAL( -1, AccountUtil::compareBuild( "1.2.0-rc", "1.2.1" ) );
+
+    AccountClientInfo oldClient;
+    oldClient._build    = "1.8.5";
+    oldClient._platform = "windows";
+    LoginGrant grant;
+    SW_EXPECT_TRUE( fixture->guestLogin( 5, 0, grant, oldClient ) == LoginResult::UpdateRequired );
+    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeUrl );
+    SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_guest" ) ) ); // 일을 맡기지 않았다
+
+    AccountClientInfo behind = oldClient;
+    behind._build            = "1.9.9";
+    SW_ASSERT_TRUE( fixture->guestLogin( 5, 10, grant, behind ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_TRUE );
+    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeUrl );
+
+    AccountClientInfo current = oldClient;
+    current._build            = "1.10.0";
+    SW_ASSERT_TRUE( fixture->guestLogin( 5, 20, grant, current ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_FALSE );
+    SW_EXPECT_TRUE( grant._storeUrl.empty() );
+}
+
+SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
+{
+    using Internal = TestLoginServiceInternal;
+    LoginFixture fixture;
+    uint64       accountId = 0;
+    SW_ASSERT_TRUE( fixture->registerAccount( Internal::makeCredential( "rule_breaker", "password123" ), 0, &accountId ) == LoginResult::Ok );
+    LoginGrant grant;
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 1, 0, grant ) == LoginResult::Ok );
+    vector<LoginEvent> listEvent;
+    fixture->drainEvents( listEvent );
+
+    TestLoginServiceGuestInternal::writeSanction( fixture._database, accountId, ServiceSanctionKind::Suspend, 5000 );
+    SW_ASSERT_TRUE( fixture->revokeAccountSessions( accountId, LoginRevokeReason::Sanctioned, 100 ) == LoginResult::Ok );
+    listEvent.clear();
+    fixture->drainEvents( listEvent );
+    SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
+    SW_EXPECT_TRUE( listEvent[0]._kind == LoginEvent::Kind::Revoked );
+    SW_EXPECT_TRUE( listEvent[0]._reason == LoginRevokeReason::Sanctioned );
+    SW_EXPECT_FALSE( fixture->isAccountOnline( accountId ) );
+
+    LoginGrant refused;
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 2, 200, refused ) == LoginResult::AccountSuspended );
+    SW_EXPECT_EQUAL( int64( 5000 ), refused._sanctionUntilMs );
+    SW_EXPECT_EQUAL( string( "sanction.cheat" ), refused._sanctionReasonCode );
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "wrong-pass" ), 3, 200, refused ) == LoginResult::WrongCredentials ); // 비밀번호가 먼저
+    LoginGrant after;
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "rule_breaker", "password123" ), 4, 5000, after ) == LoginResult::Ok ); // 끝나면 다시
+
+    TestLoginServiceGuestInternal::writeSanction( fixture._database, accountId, ServiceSanctionKind::Ban, ServiceSanctionState::kPermanentMs );
+    LoginGrant resumed;
+    SW_EXPECT_TRUE( fixture->resumeSession( after._token, 4, 6000, resumed ) == LoginResult::AccountSuspended ); // 재접속도 막는다
+}
+
+SW_TEST_CASE( LoginServiceTest, DeletionWaitsForTheGraceThenErasesTheAccountButKeepsAudit )
+{
+    using Internal = TestLoginServiceInternal;
+    LoginFixture              fixture;
+    FakePlatformLoginProvider provider{ "fake" };
+    SW_ASSERT_TRUE( fixture->_service->registerPlatformProvider( &provider ) );
+    LoginGrant guest;
+    SW_ASSERT_TRUE( fixture->guestLogin( 6, 0, guest ) == LoginResult::Ok );
+    AccountIdentity identity;
+    SW_ASSERT_TRUE( fixture->linkCredential( guest._token, Internal::makeCredential( "leaver", "password123" ), 10, identity ) == LoginResult::Ok );
+    SW_ASSERT_TRUE( fixture->linkPlatform( guest._token, "fake", "subject:leave-1", 20 ) == LoginResult::Ok );
+    const uint64 accountId = guest._identity._accountId;
+
+    int64 dueMs = 0;
+    SW_ASSERT_TRUE( fixture->requestDeletion( guest._token, 100, dueMs ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( 100 + fixture._settings._deletionGraceMs, dueMs );
+    SW_EXPECT_FALSE( fixture->isAccountOnline( accountId ) ); // 요청이 세션을 끊는다
+    AccountIdentity ignored;
+    SW_EXPECT_TRUE( fixture->validateSession( guest._token, 110, ignored ) == LoginResult::Revoked );
+
+    // 유예 안 — 로그인은 되고(예약 시각을 알려 준다) 취소할 수 있다.
+    LoginGrant during;
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, 200, during ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( dueMs, during._deletionDueMs );
+    fixture->purgeDueDeletions( dueMs - 1 ); // 아직
+    SW_ASSERT_TRUE( fixture->cancelDeletion( during._token, 300 ) == LoginResult::Ok );
+    fixture->purgeDueDeletions( dueMs + 1 ); // 취소된 예약 — 지우지 않는다
+    LoginGrant kept;
+    SW_ASSERT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, dueMs + 2, kept ) == LoginResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), kept._deletionDueMs );
+
+    // 다시 요청하고 유예가 지나면 지운다 — 이름 · 장치 · 외부 연결이 모두 풀린다. 감사 줄은 남는다.
+    int64 secondDueMs = 0;
+    SW_ASSERT_TRUE( fixture->requestDeletion( kept._token, dueMs + 10, secondDueMs ) == LoginResult::Ok );
+    const int32 auditBefore = fixture._database.countRecords( ServiceAuditLog::getTable() );
+    fixture->purgeDueDeletions( secondDueMs );
+    SW_EXPECT_EQUAL( auditBefore + 1, fixture._database.countRecords( ServiceAuditLog::getTable() ) );
+    LoginGrant gone;
+    SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "leaver", "password123" ), 1, secondDueMs + 1, gone ) == LoginResult::WrongCredentials );
+    SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:leave-1", secondDueMs + 1, gone ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( gone._bCreated == SW_TRUE ); // 같은 외부 주체는 새 계정
+    SW_EXPECT_NOT_EQUAL( accountId, gone._identity._accountId );
+    SW_ASSERT_TRUE( fixture->guestLogin( 6, secondDueMs + 1, gone ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( gone._bCreated == SW_TRUE );
+    SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_deletion" ) ) );
 }

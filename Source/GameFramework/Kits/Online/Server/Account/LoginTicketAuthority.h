@@ -14,27 +14,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Online/Account/AccountTypes.h"
 
 namespace sw
 {
     class ILoginCrypto;
 
-    /** @brief 클라이언트가 받는 표입니다(TLS 로) — 표는 UDP 연결 때 내밀고, 비밀은 내밀지 않고 키 유도에만 쓴다. */
-    struct NetGameTicket
-    {
-        static constexpr int32 kBodySize   = 48;
-        static constexpr int32 kTagSize    = 16;
-        static constexpr int32 kTokenSize  = kBodySize + kTagSize; ///< 64
-        static constexpr int32 kSecretSize = 32;
-
-        uint8 _arrToken[kTokenSize]{};
-        uint8 _arrSecret[kSecretSize]{};
-        int64 _expiresAtMs{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 게임 서버가 표에서 읽은 것입니다. */
     struct NetGameTicketClaim
     {

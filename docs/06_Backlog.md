@@ -417,6 +417,8 @@ cd build/Ninja-Debug/Bin
   **매칭**: `GF_Matchmaking`(타입 · 모드 규칙) · `GF_Server_Matchmaking`(매처 `MatchMaker` — 순수 · 결정적)이 들어갔다. 남은 것(online-rest R5b · R5c): 파티 · 로비(캐시 기록 + 비교 후 쓰기),
   대기열 권한 서버(모드마다 캐시 임대 10 초) · 전용 서버 배정 · `MatchServerAgent` · 바인딩 · 클라이언트. 팀 나누기 · 채우기는 그리디다 — 나눌 수 없는 조합은 그 닻을 건너뛴다;
   작은 n 전수 탐색은 부하 봇의 대기 시간 p99 를 보고 정한다.
+  암호는 `NetSecurityLoginCrypto`(제공자의 Argon2id · HKDF). 공유 `GF_Account`(와이어 타입)와 게스트 · 연동 · 외부 로그인 자리 · 빌드 판 · 제재 확인 · 탈퇴가 들어갔다.
+  남은 것: `AccountClient` · 스트림 바인딩 · UDP 접속 인증기.
   상용 비교: 언리얼은 Online Subsystem/EOS 등 외부 백엔드에 맡기고, 자체 MMO 서버는 IOCP/epoll 서비스 서버를 따로 둔다.
 - **네트워크 보안(2026-10-06 사용자 결정 — "하지 않기로 한 것" 에서 거둠).** 스트림(서비스)은 TLS 1.3, 게임 UDP 는 연결 수립 때 키 교환(X25519) 뒤 패킷마다 AEAD(AES-GCM 또는
   ChaCha20-Poly1305 · 패킷 번호를 nonce 로 · 재전송 방지 창) — Valve GNS · 언리얼 AESGCM PacketHandler 와 같은 모양. 세션 키는 로그인 키트가 발급한 토큰에 묶는다(UDP 접속 = 토큰 제시).

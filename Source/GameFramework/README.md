@@ -250,7 +250,12 @@ App은 이 라이브러리를 링크하지 않습니다. 게임플레이 입력�
         하나). 렌더러 · 오디오는 쓰지 않는다(nogpu 시험 · 게임 자동화). 틱 순서는 받은 것 나눠 주기 → 오브젝트 틱 → 보내기 — 깨끗한 회선이면 틱 N 에
         보낸 것을 틱 N + 1 이 받는다. 시험: `NetSimHarnessTest`.
   - **온라인 서비스** (`Kits/Online/` — 서버 전용은 `Kits/Online/Server/<키트>`, 모듈 `GF_Server_<키트>`. 서버 키트는 같은 기능의 공유 키트만 include 한다)
+    - `Account`(`GF_Account`, Client · Server): 계정 와이어 타입(`AccountTypes.h` — 결과 · 끝난 까닭 · 세션 토큰 · 게임 접속 표 · 클라이언트 정보 · 연동 요약 ·
+      빌드 판 비교 `AccountUtil::compareBuild`).
     - `Server/Account`(`GF_Server_Account`, Server): 로그인 서비스 — 계정(소금 + 느린 해시 Argon2id, 매개변수는 레코드에 — 바뀌면 다음 로그인에 다시 해시),
+      게스트(장치 비밀 다이제스트 → 계정) · 연동(이름 · 외부 계정을 "없어야 함" 으로 — 다른 계정 것이면 `AlreadyLinked`, 자동 합치기 없음) · 외부 로그인
+      (`Platform/PlatformLoginProvider.h` — 맡기고 거두는 확인, 가짜 `FakePlatformLoginProvider`), 한 계정에 외부 계정 여럿 · 마지막 로그인 수단은 해제 불가,
+      빌드 판(원격 설정 최소 · 권장 · 상점 주소), 로그인 · 재접속 직전 제재 확인(`Online/Sanction`), 탈퇴(유예 30 일 · 취소 · 쓸기 — 원장 · 감사는 남김),
       세션 토큰(선택자 + 검증자, 저장소엔 다이제스트만 · 상수 시간 비교 · 재접속마다 회전), 재접속 유예 · 절대 수명, 중복 로그인(기본 새 로그인이 옛 세션을 밀어냄 ·
       `RejectNew`, 묘비로 "다른 곳에서 로그인"), 실패 누적 잠금 · 주소마다 시도 제한(`TokenBucketMap`), 없는 계정에도 해시(열거 막기), 게임(UDP) 접속 표
       (`LoginTicketAuthority` — 주 키로 서명한 상태 없는 표 64 B + 표 비밀). 요청은 저장소에 일로 맡기고(`LoginStoreLogic` 이 저장소 스레드에서) 꼬리표로 거둔다.
