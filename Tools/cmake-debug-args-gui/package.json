@@ -2,7 +2,7 @@
   "name": "cmake-debug-args-gui",
   "displayName": "CMake Debug Arguments GUI",
   "description": "Pick a CMake project's command-line arguments and globals (scanned from source by a profile) in a sidebar and pass them to CMake Tools debug / launch.",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "publisher": "sw-engine",
   "license": "MIT",
   "private": true,
@@ -23,7 +23,8 @@
   "activationEvents": [
     "workspaceContains:CMakeLists.txt",
     "workspaceContains:CMakePresets.json",
-    "onView:cmakeDebugArgsView"
+    "onView:cmakeDebugArgsView",
+    "onDebugResolve"
   ],
   "main": "./Source/Extension.js",
   "contributes": {
@@ -170,6 +171,68 @@
           ]
         }
       }
-    }
+    },
+    "debuggers": [
+      {
+        "type": "lldb",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "cmakeDebugArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the CMake Debug Args view after this configuration's args.",
+                  "Use only the arguments chosen in the CMake Debug Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "CMake Debug Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "cppdbg",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "cmakeDebugArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the CMake Debug Args view after this configuration's args.",
+                  "Use only the arguments chosen in the CMake Debug Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "CMake Debug Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "cppvsdbg",
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "cmakeDebugArgs": {
+                "enum": [
+                  "append",
+                  "replace"
+                ],
+                "enumDescriptions": [
+                  "Add the arguments and environment chosen in the CMake Debug Args view after this configuration's args.",
+                  "Use only the arguments chosen in the CMake Debug Args view (this configuration's args are ignored)."
+                ],
+                "markdownDescription": "CMake Debug Args: inject the arguments and environment variables chosen in the sidebar when this configuration starts."
+              }
+            }
+          }
+        }
+      }
+    ]
   }
 }

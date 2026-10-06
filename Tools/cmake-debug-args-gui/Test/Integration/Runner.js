@@ -103,6 +103,25 @@ async function run() {
     fs.appendFileSync(sourcePath, '\nDEFINE_CVAR( fog_color, std::string, "white", "Fog color" );\n');
     await waitUntil(() => controller.makeViewState(true).catalog.listGlobalVariable.some((variable) => variable.name === 'fog_color'), 'catalog picks up a new definition');
 
+    // 7) launch.json 구성 주입 — VS Code 가 실제 startDebugging 에서 '*' 공급자를 부르는가(CodeLLDB 가 없어 디버그 자체는 실패해도 된다)
+    const listResolved = [];
+    const originalResolve = api.injector.resolveDebugConfiguration.bind(api.injector);
+    api.injector.resolveDebugConfiguration = async (folder, config) => {
+        const resolved = await originalResolve(folder, config);
+        listResolved.push(resolved);
+        return resolved;
+    };
+    await controller.handleMessage({ type: 'addEnvironment', name: 'FOG_LOG', value: '2' });
+    const launchConfig = { type: 'lldb', request: 'launch', name: 'Fixture (CodeLLDB)', program: 'C:/nowhere/app.exe', args: ['--keep'], env: { PATH: 'p' }, cmakeDebugArgs: 'append' };
+    await Promise.resolve(vscode.debug.startDebugging(vscode.workspace.workspaceFolders[0], launchConfig)).catch(() => false);
+    await waitUntil(() => listResolved.length > 0, 'VS Code calls the debug configuration provider');
+    assert.deepEqual(listResolved[0].args, ['--keep', '--fog_mode=B']);
+    assert.deepEqual(listResolved[0].env, { PATH: 'p', FOG_LOG: '2' });
+    assert.equal('cmakeDebugArgs' in listResolved[0], false);
+    const fromCmakeTools = await originalResolve(undefined, { type: 'lldb', name: 'Debug app', args: ['--x'], environment: [{ name: 'FOG_LOG', value: '2' }] });
+    assert.deepEqual(fromCmakeTools.env, { FOG_LOG: '2' }, 'a CMake Tools environment array becomes CodeLLDB env');
+    assert.deepEqual(fromCmakeTools.args, ['--x']);
+
     fs.writeFileSync(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'integration-result.txt'), 'PASS\n');
 }
 

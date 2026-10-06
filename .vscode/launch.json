@@ -2,6 +2,23 @@
     "version": "0.2.0",
     "configurations": [
         {
+            // 인자 · 환경 변수는 사이드바 CMake Debug Args 에서 고른 것을 F5 순간에 넣는다(Tools/cmake-debug-args-gui)
+            "name": "App — CMake Debug Args (CodeLLDB)",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
+            "args": [],
+            "cmakeDebugArgs": "replace",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PATH": "${workspaceFolder}/build/Ninja-Debug/Bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/debug/bin;${workspaceFolder}/build/vcpkg_installed/x64-windows/bin;${env:PATH}"
+            },
+            "terminal": "integrated",
+            "sourceLanguages": [
+                "cpp"
+            ]
+        },
+        {
             "name": "App + Editor DX12 (CodeLLDB)",
             "type": "lldb",
             "request": "launch",

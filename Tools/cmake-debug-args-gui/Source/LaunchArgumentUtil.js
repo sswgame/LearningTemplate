@@ -480,7 +480,88 @@ function makeShellCommandLine(listArgument) {
     return listQuoted.join(' ');
 }
 
+/** @brief 디버그 구성(launch.json)에 패널의 인자를 넣는 방식입니다 — 구성의 `cmakeDebugArgs` 칸 값입니다. */
+const LaunchInjectMode = Object.freeze({
+    Append: 'append',
+    Replace: 'replace',
+});
+
+/** @brief 디버그 구성에서 주입 방식을 적는 칸 이름입니다. 디버거에 넘기기 전에 지웁니다. */
+const kLaunchInjectKey = 'cmakeDebugArgs';
+
+/**
+ * @brief 디버거 종류 → 환경 변수 칸 모양입니다. 표에 없는 디버거(CodeLLDB `lldb` · node · python …)는 `env` 객체를 씁니다.
+ * @details MS C++ 디버거(cppdbg · cppvsdbg)만 `environment: [{ name, value }]` 배열을 읽고, CMake Tools 도 그 모양으로 넘깁니다.
+ */
+const kMapDebuggerEnvironmentStyle = new Map([
+    ['cppdbg', 'array'],
+    ['cppvsdbg', 'array'],
+]);
+
+/** @brief 디버거 종류의 환경 변수 칸 모양(`array` · `object`)입니다. */
+function getDebuggerEnvironmentStyle(debuggerType) {
+    return kMapDebuggerEnvironmentStyle.has(debuggerType) ? kMapDebuggerEnvironmentStyle.get(debuggerType) : 'object';
+}
+
+/**
+ * @brief 디버그 구성 하나를 디버거가 받기 직전에 고칩니다.
+ * @details 둘을 합니다.
+ *          1. 환경 변수 모양 맞추기 — `env` 객체를 읽는 디버거(CodeLLDB 등)인데 `environment` 배열이 있으면 `env` 로 옮깁니다.
+ *             CMake Tools 디버그(`cmake.debugConfig.type: "lldb"`)가 환경 변수를 cppdbg 모양으로 넘기기 때문입니다. 이미 있는 `env` 키가 이깁니다.
+ *          2. 주입 — 구성에 `"cmakeDebugArgs": "append"`(기존 `args` 뒤에) · `"replace"`(기존 `args` 대신)가 있으면 패널의 인자 · 환경 변수를 넣습니다.
+ *             그 칸이 없는 구성은 인자를 건드리지 않습니다(손으로 적은 구성을 몰래 바꾸지 않는다).
+ * @return `{ config, bInjected, problem }` — `config` 는 새 객체이고 @p config 는 바꾸지 않습니다. `problem` 은 모르는 주입 방식 등입니다.
+ */
+function applyLaunchArguments(config, listArgument, listEnvironment) {
+    const result = { config: { ...config }, bInjected: false, problem: '' };
+    const nextConfig = result.config;
+    const environmentStyle = getDebuggerEnvironmentStyle(String(nextConfig.type));
+    if (environmentStyle === 'object' && Array.isArray(nextConfig.environment)) {
+        const environmentFromArray = {};
+        for (const item of nextConfig.environment) {
+            if (item !== null && typeof item === 'object' && typeof item.name === 'string')
+                environmentFromArray[item.name] = item.value === undefined ? '' : String(item.value);
+        }
+        const existingEnvironment = nextConfig.env !== null && typeof nextConfig.env === 'object' ? nextConfig.env : {};
+        nextConfig.env = { ...environmentFromArray, ...existingEnvironment };
+        delete nextConfig.environment;
+    }
+
+    if ((kLaunchInjectKey in nextConfig) === false)
+        return result;
+    const mode = nextConfig[kLaunchInjectKey];
+    delete nextConfig[kLaunchInjectKey];
+    if (mode !== LaunchInjectMode.Append && mode !== LaunchInjectMode.Replace) {
+        result.problem = `"${kLaunchInjectKey}": "${mode}" is not "append" or "replace" - arguments were not injected`;
+        return result;
+    }
+
+    let listExistingArgument = [];
+    if (Array.isArray(nextConfig.args))
+        listExistingArgument = nextConfig.args.map(String);
+    else if (typeof nextConfig.args === 'string')
+        listExistingArgument = splitCommandLineText(nextConfig.args);
+    nextConfig.args = mode === LaunchInjectMode.Replace ? listArgument.slice() : listExistingArgument.concat(listArgument);
+
+    if (environmentStyle === 'array') {
+        const uniqueInjectedName = new Set(listEnvironment.map((item) => item.name));
+        const listExistingEnvironment = Array.isArray(nextConfig.environment) ? nextConfig.environment.filter((item) => uniqueInjectedName.has(item.name) === false) : [];
+        nextConfig.environment = listExistingEnvironment.concat(listEnvironment.map((item) => ({ name: item.name, value: item.value })));
+    } else if (listEnvironment.length > 0) {
+        const existingEnvironment = nextConfig.env !== null && typeof nextConfig.env === 'object' ? nextConfig.env : {};
+        nextConfig.env = { ...existingEnvironment };
+        for (const item of listEnvironment)
+            nextConfig.env[item.name] = item.value;
+    }
+    result.bInjected = true;
+    return result;
+}
+
 module.exports = {
+    LaunchInjectMode,
+    kLaunchInjectKey,
+    getDebuggerEnvironmentStyle,
+    applyLaunchArguments,
     NoteLevel,
     kDefaultCommandLine,
     makeEmptySelection,

@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const vscode = require('vscode');
 
+const { DebugConfigurationInjector } = require('./DebugConfigurationInjector');
 const { LaunchArgumentController } = require('./LaunchArgumentController');
 const { LaunchArgumentViewProvider, kViewId } = require('./LaunchArgumentViewProvider');
 
@@ -45,7 +46,7 @@ function registerCommandInternal(context, controller) {
 
 /**
  * @brief VS Code 가 확장을 켤 때 부릅니다.
- * @return 시험이 쓰는 내부 손잡이 `{ controller, initialization }` 입니다. 작업 폴더가 없으면 undefined 입니다.
+ * @return 시험이 쓰는 내부 손잡이 `{ controller, initialization, injector }` 입니다. 작업 폴더가 없으면 undefined 입니다.
  */
 async function activate(context) {
     const workspaceFolder = findWorkspaceFolderInternal();
@@ -63,11 +64,13 @@ async function activate(context) {
         vscode.window.registerWebviewViewProvider(kViewId, provider, { webviewOptions: { retainContextWhenHidden: true } }),
     );
     registerCommandInternal(context, controller);
+    const injector = new DebugConfigurationInjector(controller, logger);
+    context.subscriptions.push(injector.register());
 
     const initialization = controller.initialize().catch((error) => {
         logger.error(`initialization failed: ${error.stack || error.message}`);
     });
-    return { controller, initialization };
+    return { controller, initialization, injector };
 }
 
 /** @brief VS Code 가 확장을 끌 때 부릅니다. 정리는 `context.subscriptions` 가 합니다. */

@@ -3,7 +3,7 @@
 게임 · 에디터를 띄울 때마다 `-dx12 -EnableEditor -gv_viewMode=2 …` 같은 인자를 손으로 적고 있었다면, 이 확장이 그 일을 대신합니다.
 
 - 엔진 소스에 정의된 **전역 변수(`-gv_*`)와 커맨드라인 인자를 목록으로 보여 줍니다.** 설명 · 기본값 · 타입이 함께 나옵니다.
-- 체크하고 값을 고르면 VS Code 의 **CMake Tools 디버그(F5) · 실행에 그대로 넘어갑니다.**
+- 체크하고 값을 고르면 VS Code 의 **CMake Tools 디버그 · 실행**, 그리고 **`launch.json` 의 CodeLLDB 구성(F5)** 에 그대로 넘어갑니다.
 - 자주 쓰는 조합은 **프리셋**으로 저장해 두었다가 한 번에 불러옵니다.
 - 지금 빌드(Debug · Shipping, 활성 게임)에서 **쓸 수 없는 변수는 이유를 알려 줍니다.**
 
@@ -45,7 +45,7 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 | 상태 알약 | 프로필 이름 · 구성 프리셋 · `Dev`/`Shipping` · `게임 Empty` · 실행 대상. 빌드를 바꾸면 따라 바뀝니다 |
 | 명령줄 | 지금 넘길 인자 전부. **복사** 는 PowerShell 에 그대로 붙여 넣을 수 있게 따옴표까지 넣어 복사합니다 |
 | 빨간 줄 | 값이 틀려서 **명령줄에서 뺀** 항목과 그 이유(예: `-W: 정수여야 합니다`) |
-| 노란 줄 | 점(`.`)이 든 인자가 있을 때의 주의 — 아래 [자주 묻는 것](#6-자주-묻는-것--문제-해결) 참고 |
+| 노란 줄 | 점(`.`)이 든 인자가 있을 때의 주의 — 아래 [자주 묻는 것](#7-자주-묻는-것--문제-해결) 참고 |
 | **디버그** | CMake Tools 디버그를 시작합니다(중단점이 걸립니다) |
 | **실행** | 디버거 없이 실행합니다. 필요하면 먼저 빌드합니다 |
 | **모두 끄기** | 전부 끕니다. 입력해 둔 값은 기억합니다 |
@@ -94,12 +94,42 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 | 와이어프레임으로 보기 | 전역 변수 `gv_viewMode` = `2` |
 | 벤치 큐브 8개, 결정적으로 | `gv_benchMeshes` = `8`, `gv_benchAnimate` = `0` |
 | 40 프레임 뒤 자동 종료 | `gv_profileFrames` = `40` |
-| 스크린샷 찍기 | `gv_screenshot` = `out.ppm` (이 경우 **실행 · 디버그 버튼**을 쓰세요 — 6절) |
+| 스크린샷 찍기 | `gv_screenshot` = `out.ppm` (이 경우 **실행 · 디버그 버튼**을 쓰세요 — 7절) |
 | 다른 명령줄을 통째로 가져오기 | 사용자 · 환경 탭에 `-dx11 -gv_viewMode=1` 처럼 한 줄로 붙여 넣기 → 아는 인자는 알아서 제 칸으로 들어갑니다 |
 
 마음에 드는 조합은 **프리셋** 탭에서 이름을 붙여 저장하세요(예: `벤치 8 · 와이어`).
 
-## 5. 무엇이 어디에 저장되나
+## 5. CodeLLDB · launch.json 구성에서 쓰기
+
+`launch.json` 에 직접 적은 디버그 구성(예: Run and Debug 의 "App + Editor DX12 (CodeLLDB)")은 원래 그 안에 적힌 `args` 로만 뜹니다.
+구성에 **`"cmakeDebugArgs"`** 한 줄을 넣으면, F5 를 누르는 순간 패널에서 고른 인자 · 환경 변수가 들어갑니다.
+
+| 값 | 결과 |
+|----|------|
+| `"replace"` | 구성의 `args` 대신 **패널의 인자만** 씁니다. 패널에서 모든 것을 고를 때 |
+| `"append"` | 구성의 `args` **뒤에** 패널의 인자를 붙입니다. 구성이 백엔드 · 에디터를 정하고 패널에서는 전역 변수만 더할 때 |
+
+이 저장소의 `launch.json` 에는 이미 **"App — CMake Debug Args (CodeLLDB)"** 구성(`replace`)이 들어 있습니다. Run and Debug 에서 고르고 F5 를 누르면 됩니다.
+
+```jsonc
+{
+    "name": "App — CMake Debug Args (CodeLLDB)",
+    "type": "lldb",
+    "request": "launch",
+    "program": "${workspaceFolder}/build/Ninja-Debug/Bin/App.exe",
+    "args": [],
+    "cmakeDebugArgs": "replace",
+    "cwd": "${workspaceFolder}"
+}
+```
+
+- `cmakeDebugArgs` 가 없는 구성은 건드리지 않습니다. CodeLLDB(`lldb`) 말고 MS C++ 디버거(`cppdbg` · `cppvsdbg`) 구성에서도 같은 한 줄로 됩니다.
+- `append` 를 쓰는 구성에 `-dx12` 가 적혀 있으면 패널의 RHI 백엔드는 "지정 안 함" 으로 두세요. 백엔드 인자가 둘이 됩니다.
+- 패널의 **디버그** 버튼(CMake Tools 디버그)도 CodeLLDB 로 띄우고 싶으면 설정에 `"cmake.debugConfig": { "type": "lldb" }` 를 넣습니다.
+  이때 CMake Tools 가 환경 변수를 MS 디버거 모양으로 넘기는데, 확장이 CodeLLDB 모양(`env`)으로 바꿔 주므로 그대로 전달됩니다.
+- 무엇이 들어갔는지는 출력 창 **CMake Debug Args** 에 `injected [...]` 로 남습니다.
+
+## 6. 무엇이 어디에 저장되나
 
 | 내용 | 저장 위치 | 공유 |
 |------|-----------|------|
@@ -110,7 +140,7 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 - **커밋 전에 "모두 끄기" 를 누르세요.** 켜 둔 인자가 `settings.json` 변경으로 보여 실수로 커밋될 수 있습니다.
 - `settings.json` 을 손으로 고치거나 git pull 로 바뀌면 화면이 그 내용을 따라갑니다(모르는 인자는 사용자 인자로 남습니다).
 
-## 6. 자주 묻는 것 · 문제 해결
+## 7. 자주 묻는 것 · 문제 해결
 
 **목록이 비어 있어요.**
 설정 `cmakeDebugArgs.catalog` 가 프로필을 가리키는지 보세요. 이 저장소에서는 이미 들어 있습니다:
@@ -120,6 +150,9 @@ py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py install
 **새로 추가한 전역 변수가 안 보여요.**
 소스를 저장하면 자동으로 다시 읽습니다. 그래도 안 보이면 패널 제목 줄의 새로고침(Rescan Source)을 누르세요.
 다른 게임 폴더(`Source/Games/<게임>`)의 변수는 그 게임이 활성일 때만 보입니다.
+
+**launch.json 의 CodeLLDB 구성으로 띄웠더니 패널 인자가 안 들어가요.**
+그 구성에 `"cmakeDebugArgs": "replace"`(또는 `"append"`)가 있는지 보세요 — [5절](#5-codelldb--launchjson-구성에서-쓰기).
 
 **`gv_screenshot=out.ppm` 이 이상하게 들어가요.** *(노란 경고가 뜰 때)*
 Windows PowerShell 은 `-` 로 시작하고 점(`.`)이 든 인자를 `-gv_screenshot=out` 과 `.ppm` 으로 **쪼갭니다.**
@@ -136,7 +169,7 @@ CMake Tools 에서 아직 구성(configure)을 하지 않은 빌드입니다. �
 
 ---
 
-## 7. 다른 프로젝트에서 쓰기 — 프로필
+## 8. 다른 프로젝트에서 쓰기 — 프로필
 
 확장 코드는 이 엔진을 모릅니다. "소스에서 무엇을 읽을지" 는 **프로필**(JSON) 하나가 정하므로, 다른 CMake 프로젝트에서도 프로필만 쓰면 됩니다.
 프로필이 없어도 사용자 인자 · 환경 변수 · 프리셋 · 실행 · 디버그는 그대로 쓸 수 있습니다.
@@ -164,7 +197,7 @@ CMake Tools 에서 아직 구성(configure)을 하지 않은 빌드입니다. �
 
 CMake 캐시 값은 CMake Tools 가 고른 빌드 폴더의 `CMakeCache.txt` 를 먼저, 아직 구성 전이면 프리셋의 `cacheVariables` 를 봅니다.
 
-## 8. 확장을 고치는 사람에게
+## 9. 확장을 고치는 사람에게
 
 ```powershell
 py -3 Tools/cmake-debug-args-gui/Scripts/ExtensionTool.py test                 # 단위 시험
@@ -194,6 +227,7 @@ Source/
   BuildContextProvider.js       CMake Tools API — 프리셋 · 빌드 폴더 · 캐시 값
   DebugConfigWriter.js          cmake.debugConfig 읽기 · 쓰기(설정 API, 주석 보존)
   TargetRunner.js               디버그(cmake.debugTarget) · 셸 없는 실행
+  DebugConfigurationInjector.js 모든 디버거의 시작 직전 훅 — cmakeDebugArgs 구성에 주입 · CodeLLDB env 변환
 Webview/                        Index.html · Style.css · Main.js (VS Code 테마 색만 쓴다)
 Profiles/                       ProfileSchema.json · SwEngine.json
 Test/                           단위 시험 · Integration/(확장 호스트 시험 + 엔진과 무관한 Fixture)

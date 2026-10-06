@@ -80,6 +80,8 @@ class LaunchArgumentController {
         this._catalogVersion = 0;
         /** @brief 지금 선택입니다. */
         this._selection = LaunchArgumentUtil.makeEmptySelection();
+        /** @brief 진행 중인 첫 초기화입니다. 시작 전이면 null 입니다. */
+        this._initialization = null;
         /** @brief 첫 스캔 · 설정 읽기가 끝났는지입니다. */
         this._bInitialized = false;
         /** @brief 상태 파일을 읽다 생긴 문제입니다(빈 글이면 없음). */
@@ -130,7 +132,13 @@ class LaunchArgumentController {
     }
 
     /** @brief 상태 파일 → 소스 스캔 → 설정 읽기 순으로 첫 상태를 만듭니다. CMake Tools 문맥은 기다리지 않고 뒤따라 옵니다. */
-    async initialize() {
+    initialize() {
+        this._initialization = this._initializeNow();
+        return this._initialization;
+    }
+
+    /** @brief `initialize` 의 본체입니다. */
+    async _initializeNow() {
         this._storeProblem = await this._store.load();
         if (this._storeProblem !== '')
             this._logger.warn(this._storeProblem);
@@ -212,6 +220,19 @@ class LaunchArgumentController {
     async debug() {
         await this.flush();
         await this._runner.debug();
+    }
+
+    /**
+     * @brief 디버그 구성에 넣을 지금 선택의 인자 · 환경 변수입니다(`DebugConfigurationInjector` 가 F5 순간에 부른다).
+     * @details 아직 첫 스캔 전이면 끝날 때까지 기다립니다 — 비어 있는 채로 넣으면 인자 없이 뜬다.
+     */
+    async makeLaunchPayload() {
+        if (this._bInitialized === false && this._initialization !== null)
+            await this._initialization.catch(() => {});
+        return {
+            listArgument: this._composeCommandLine().listArgument,
+            listEnvironment: LaunchArgumentUtil.composeEnvironment(this._selection),
+        };
     }
 
     /** @brief 명령줄을 셸에 붙여 넣을 수 있는 한 줄로 클립보드에 넣습니다. */
