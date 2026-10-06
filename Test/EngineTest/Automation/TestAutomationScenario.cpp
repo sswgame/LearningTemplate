@@ -249,7 +249,7 @@ SW_TEST_CASE( AutomationScenarioTest, ExpectLogCountsLinesSinceAFrame )
     {
         runner.onFrameBegin( input );
         input.beginFrame( 1.0f / 60.0f );
-        SW_LOG_INFO( "[AutoProbe] tick %#", frame );
+        SW_LOG_WARNING( "[AutoProbe] tick %#", frame ); // Warning — Info 는 Shipping 에서 호출째 사라져 셀 줄이 없다
         result = runner.onFrameEnd( input );
         input.endFrame();
     }
