@@ -12,19 +12,50 @@
 		</FontFamilyDesc>
 	</_listFamily>
 	<_listSystemFamily>
-		<SystemFontFamilyDesc _name="Arial" _windowsRegular="arial.ttf" _windowsBold="arialbd.ttf" _linuxRegular="LiberationSans-Regular.ttf" _linuxBold="LiberationSans-Bold.ttf" />
+		<SystemFontFamilyDesc _name="Arial"
+		                      _windowsRegular="arial.ttf"
+		                      _windowsBold="arialbd.ttf"
+		                      _linuxRegular="LiberationSans-Regular.ttf"
+		                      _linuxBold="LiberationSans-Bold.ttf" />
 		<SystemFontFamilyDesc _name="Segoe UI" _windowsRegular="segoeui.ttf" _windowsBold="segoeuib.ttf" />
-		<SystemFontFamilyDesc _name="Noto Sans" _windowsRegular="NotoSans-Regular.ttf" _windowsBold="NotoSans-Bold.ttf" _linuxRegular="NotoSans-Regular.ttf" _linuxBold="NotoSans-Bold.ttf" />
+		<SystemFontFamilyDesc _name="Noto Sans"
+		                      _windowsRegular="NotoSans-Regular.ttf"
+		                      _windowsBold="NotoSans-Bold.ttf"
+		                      _linuxRegular="NotoSans-Regular.ttf"
+		                      _linuxBold="NotoSans-Bold.ttf" />
 		<SystemFontFamilyDesc _name="Malgun Gothic" _windowsRegular="malgun.ttf" _windowsBold="malgunbd.ttf" />
 		<SystemFontFamilyDesc _name="Apple SD Gothic Neo" />
-		<SystemFontFamilyDesc _name="Noto Sans KR" _windowsRegular="NotoSansKR-Regular.ttf" _windowsBold="NotoSansKR-Bold.ttf" _linuxRegular="NotoSansCJK-Regular.ttc" _linuxBold="NotoSansCJK-Bold.ttc" _linuxFaceIndex="1" />
+		<SystemFontFamilyDesc _name="Noto Sans KR"
+		                      _windowsRegular="NotoSansKR-Regular.ttf"
+		                      _windowsBold="NotoSansKR-Bold.ttf"
+		                      _linuxRegular="NotoSansCJK-Regular.ttc"
+		                      _linuxBold="NotoSansCJK-Bold.ttc"
+		                      _linuxFaceIndex="1" />
 		<SystemFontFamilyDesc _name="Yu Gothic UI" _windowsRegular="YuGothR.ttc" _windowsBold="YuGothB.ttc" />
 		<SystemFontFamilyDesc _name="Meiryo" _windowsRegular="meiryo.ttc" _windowsBold="meiryob.ttc" />
-		<SystemFontFamilyDesc _name="Noto Sans JP" _windowsRegular="NotoSansJP-Regular.ttf" _windowsBold="NotoSansJP-Bold.ttf" _linuxRegular="NotoSansCJK-Regular.ttc" _linuxBold="NotoSansCJK-Bold.ttc" />
+		<SystemFontFamilyDesc _name="Noto Sans JP"
+		                      _windowsRegular="NotoSansJP-Regular.ttf"
+		                      _windowsBold="NotoSansJP-Bold.ttf"
+		                      _linuxRegular="NotoSansCJK-Regular.ttc"
+		                      _linuxBold="NotoSansCJK-Bold.ttc" />
 		<SystemFontFamilyDesc _name="Microsoft YaHei" _windowsRegular="msyh.ttc" _windowsBold="msyhbd.ttc" />
-		<SystemFontFamilyDesc _name="Noto Sans SC" _windowsRegular="NotoSansSC-Regular.ttf" _windowsBold="NotoSansSC-Bold.ttf" _linuxRegular="NotoSansCJK-Regular.ttc" _linuxBold="NotoSansCJK-Bold.ttc" _linuxFaceIndex="2" />
+		<SystemFontFamilyDesc _name="Noto Sans SC"
+		                      _windowsRegular="NotoSansSC-Regular.ttf"
+		                      _windowsBold="NotoSansSC-Bold.ttf"
+		                      _linuxRegular="NotoSansCJK-Regular.ttc"
+		                      _linuxBold="NotoSansCJK-Bold.ttc"
+		                      _linuxFaceIndex="2" />
 		<SystemFontFamilyDesc _name="Microsoft JhengHei" _windowsRegular="msjh.ttc" _windowsBold="msjhbd.ttc" />
-		<SystemFontFamilyDesc _name="Noto Sans TC" _windowsRegular="NotoSansTC-Regular.ttf" _windowsBold="NotoSansTC-Bold.ttf" _linuxRegular="NotoSansCJK-Regular.ttc" _linuxBold="NotoSansCJK-Bold.ttc" _linuxFaceIndex="3" />
-		<SystemFontFamilyDesc _name="Noto Sans Arabic" _windowsRegular="NotoSansArabic-Regular.ttf" _windowsBold="NotoSansArabic-Bold.ttf" _linuxRegular="NotoSansArabic-Regular.ttf" _linuxBold="NotoSansArabic-Bold.ttf" />
+		<SystemFontFamilyDesc _name="Noto Sans TC"
+		                      _windowsRegular="NotoSansTC-Regular.ttf"
+		                      _windowsBold="NotoSansTC-Bold.ttf"
+		                      _linuxRegular="NotoSansCJK-Regular.ttc"
+		                      _linuxBold="NotoSansCJK-Bold.ttc"
+		                      _linuxFaceIndex="3" />
+		<SystemFontFamilyDesc _name="Noto Sans Arabic"
+		                      _windowsRegular="NotoSansArabic-Regular.ttf"
+		                      _windowsBold="NotoSansArabic-Bold.ttf"
+		                      _linuxRegular="NotoSansArabic-Regular.ttf"
+		                      _linuxBold="NotoSansArabic-Bold.ttf" />
 	</_listSystemFamily>
 </FontCatalogDesc>
