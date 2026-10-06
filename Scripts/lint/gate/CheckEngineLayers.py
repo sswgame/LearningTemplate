@@ -145,6 +145,8 @@ _kEngineTier: dict[str, int] = {
     # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
     "Graphics": 5,
     "Window": 5,
+    # 글자 — 글꼴 파일(Resource, 4)을 읽어 글리프 · SDF 아틀라스(CPU 바이트) · 줄 바꿈을 만든다. GPU 를 모른다 — 아틀라스 업로드는 렌더러(8)의 캔버스가 한다.
+    "Text": 5,
     # 6: 컴포넌트 모델 · 입력. 컴포넌트가 머티리얼·메시(5)를 든다.
     "Input": 6,
     "Object": 6,
