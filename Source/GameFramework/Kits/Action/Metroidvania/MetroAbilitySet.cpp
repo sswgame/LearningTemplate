@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
 #include "GameFramework/Kits/Action/Metroidvania/MetroidvaniaCatalog.h"
 
 namespace sw

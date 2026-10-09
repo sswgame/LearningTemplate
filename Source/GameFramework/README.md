@@ -105,23 +105,23 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 
 ## 작동 원리
 
-### 기반 폴더의 층
+### 기반의 층
 
-기반 폴더는 층으로 나뉩니다. 폴더는 자기보다 낮은 층의 폴더만 include 하고, 같은 층끼리도 서로 모릅니다.
-층이 순환 없는 그래프라서, 기반 DLL 하나 안에서도 의존 방향을 지킬 수 있습니다. `CheckGameFrameworkLayers` 가 이 규칙을 검사합니다.
+기반은 `Base/<층>/<폴더>/` 두 단입니다. 층은 자기보다 아래 층만 include 하고, 같은 층 안의 폴더는 자기보다 낮은 순서의 폴더만 include 합니다.
+같은 순서끼리도 서로 모릅니다. 층과 순서가 순환 없는 그래프라서, 기반 DLL 하나 안에서도 의존 방향을 지킬 수 있습니다. `CheckGameFrameworkLayers` 가 이 규칙을 검사합니다.
 
-| 층 | 폴더 |
-|----|------|
-| 0 | `Utility` |
-| 1 | `Data`, `Match`, `Navigation`, `Online`, `Spline` |
-| 2 | `Framework` |
-| 3 | `Combat`, `Input`, `Inventory`, `Movement`, `Progression`, `World` |
-| 4 | `AI`, `Appearance`, `Camera`, `Interaction`, `Quest`, `UI` |
-| 5 | `Ability`, `Control`, `Gimmick`, `GameState` |
-| 6 | `Vehicle` |
+| 층 | 폴더(층 안 순서) | 무엇 |
+|----|------------------|------|
+| 0 `Online` | `Online`(한 폴더로 본다) | 온라인 기반 계약. Core 만 봅니다 |
+| 1 `Foundation` | `Utility`(0) · `Data`(1) · `Framework`(2) | 계산 도구, 데이터 틀, 게임 모듈의 수명 · 서비스 창구 · 저장 |
+| 2 `World` | `World` · `Spline`(0) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
+| 3 `Actor` | `Input` · `Movement` · `Navigation` · `Combat` · `Camera`(0), `AI` · `Control`(1) | 액터 하나: 입력, 조종, 이동, 길 찾기, AI, 카메라, 전투 수치 |
+| 4 `UI` | `UI` | HUD, HP 바, 대화, 데미지 숫자 |
+| 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `GameState` · `Vehicle`(2) | 그 위의 규칙 |
 
-테이블의 원본은 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의 `_kBaseTier` 입니다.
-위층에서 아래층으로 알려야 할 때는 신호를 씁니다. 예를 들어 체력 시스템(층 5)은 HP 바(층 4)를 모르고, 같은 오브젝트의 `HealthListenerComponent`(층 3)에 알립니다.
+표의 원본은 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의 `_kBaseLayer` 와 `_kBaseFolderOrder` 입니다.
+UI 는 게임플레이 아래에 있습니다. 언리얼에서 UMG 가 게임플레이 모듈 아래에 있고 게임 코드가 위젯을 만드는 것과 같은 방향이라, 어빌리티가 데미지 숫자를 띄웁니다.
+아래에서 위로 알려야 할 때는 신호를 씁니다. 체력 원천(`Actor/Combat`)은 HP 바(`UI`)를 모르고, 같은 오브젝트의 `HealthListenerComponent` 에 알립니다.
 HP 바가 그 리스너를 상속해 알림을 받습니다.
 
 ### 조종 — 폰, 조종자, 의도
@@ -226,8 +226,9 @@ HP 바(`HealthBarComponent`)와 데미지 숫자(`DamageNumberComponent`)는 같
 
 ### 기반에 폴더를 더할 때
 
-1. `Base/<폴더>/` 를 만듭니다. 폴더는 컴포넌트냐 아니냐 같은 형식이 아니라 기능으로 나눕니다. 형식으로 묶으면 그 폴더가 어느 기능에 의존하는지가 숨습니다.
-2. `CheckGameFrameworkLayers.py` 의 `_kBaseTier` 에 층을 정해 넣습니다. 테이블에 없는 폴더는 게이트가 실패시킵니다.
+1. 그 폴더가 include 할 것을 보고 층을 고른 뒤 `Base/<층>/<폴더>/` 를 만듭니다. 폴더는 컴포넌트냐 아니냐 같은 형식이 아니라 기능으로 나눕니다.
+   형식으로 묶으면 그 폴더가 어느 기능에 의존하는지가 숨습니다.
+2. `CheckGameFrameworkLayers.py` 의 `_kBaseFolderOrder` 에 `<층>/<폴더>` 와 층 안 순서를 넣습니다. 표에 없는 폴더는 게이트가 실패시킵니다.
 3. 헤더에 처음 `REFLECT` 를 넣었으면 다시 configure 합니다. 리플렉션 대상 헤더는 `Base/` 전체를 재귀로 모으므로 새 폴더도 자동으로 들어가지만, 목록은 configure 때 만듭니다.
 
 GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. 다른 폴더가 생기면 같은 게이트가 실패합니다.
@@ -273,18 +274,18 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 
 - [Kits](Kits/README.md) — 키트 목록, 키트를 만드는 규칙, 키트 여럿을 한 게임에 섞는 법
 - [Online](Base/Online/README.md) — 온라인 서비스 기반과 온라인 서비스 키트
-- 기반 폴더 문서: [Ability](Base/Ability/README.md), [Appearance](Base/Appearance/README.md), [Gimmick](Base/Gimmick/README.md),
-  [Interaction](Base/Interaction/README.md), [Spline](Base/Spline/README.md), [AI/Director](Base/AI/Director/README.md), [AI/Schedule](Base/AI/Schedule/README.md)
+- 기반 폴더 문서: [Ability](Base/Gameplay/Ability/README.md), [Appearance](Base/Gameplay/Appearance/README.md), [Gimmick](Base/Gameplay/Gimmick/README.md),
+  [Interaction](Base/Gameplay/Interaction/README.md), [Spline](Base/World/Spline/README.md), [AI/Director](Base/Actor/AI/Director/README.md), [AI/Schedule](Base/Actor/AI/Schedule/README.md)
 - [Games](../Games/README.md) — 새 게임 만들기와 테스트 게임 목록
 - [Input](../Engine/Input/README.md) — 입력 층과 입력 맵
 
 | 폴더 | 들어 있는 것 |
 |------|-------------|
-| `Base/Control` | 폰, 조종자, 조종 시스템, 1인칭 카메라 |
-| `Base/Vehicle` | 좌석과 탑승, 말과 차의 이동 |
-| `Base/Framework` | 게임 인스턴스, 디렉터 베이스, 게임 서비스, 저장, 로딩 화면, 소리 |
-| `Base/Camera` | 카메라 프리셋, 모드, 블렌드, 흔들림, 직교 카메라 리그 |
-| `Base/GameState` | 키트 여럿이 나눠 쓰는 공유 상태(`GameStateComponent`) |
+| `Base/Actor/Control` | 폰, 조종자, 조종 시스템, 1인칭 카메라 |
+| `Base/Gameplay/Vehicle` | 좌석과 탑승, 말과 차의 이동 |
+| `Base/Foundation/Framework` | 게임 인스턴스, 디렉터 베이스, 게임 서비스, 저장, 로딩 화면, 소리 |
+| `Base/Actor/Camera` | 카메라 프리셋, 모드, 블렌드, 흔들림, 직교 카메라 리그 |
+| `Base/Gameplay/GameState` | 키트 여럿이 나눠 쓰는 공유 상태(`GameStateComponent`) |
 | `Base/UI` | HUD, HP 바, 데미지 숫자, 대화 러너, 튜토리얼 힌트, 목표 마커 |
-| `Base/Combat` | 무기, 피해 공식, 체력 원천과 리스너, 턴 순서, 록온 |
-| `Base/Utility` | 씨앗 난수, 고정 스텝 타이머, `Countdown`, 격자 구조, 상태 데이터 도우미 |
+| `Base/Actor/Combat` | 무기, 피해 공식, 체력 원천과 리스너, 턴 순서, 록온 |
+| `Base/Foundation/Utility` | 씨앗 난수, 고정 스텝 타이머, `Countdown`, 격자 구조, 상태 데이터 도우미 |

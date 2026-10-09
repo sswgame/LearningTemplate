@@ -10,10 +10,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Data/GameCatalog.h"
-#include "GameFramework/Base/Data/XmlCatalog.h"
-#include "GameFramework/Base/Inventory/Crafting.h"
-#include "GameFramework/Base/Inventory/GridInventory.h"
+#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

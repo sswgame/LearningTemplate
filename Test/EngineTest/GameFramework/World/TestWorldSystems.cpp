@@ -4,11 +4,11 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/AI/SpawnDirector.h"
-#include "GameFramework/Base/Input/TimingJudge.h"
-#include "GameFramework/Base/Interaction/InteractionProgress.h"
-#include "GameFramework/Base/World/AreaGraph.h"
-#include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/Actor/AI/SpawnDirector.h"
+#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
+#include "GameFramework/Base/World/World/AreaGraph.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -10,11 +10,11 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Progression/Reputation.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
-#include "GameFramework/Base/Utility/GridTopology.h"
-#include "GameFramework/Base/World/LandRegistry.h"
-#include "GameFramework/Base/World/WorldClock.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/World/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 

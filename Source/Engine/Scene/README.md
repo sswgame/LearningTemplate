@@ -47,7 +47,7 @@ Empty 게임에서 지금 씬을 새 파일로 저장하고, 그 파일을 다�
 <!-- snippet: 활성 씬을 새 경로로 저장 — 5b U7 에서 문서 예시 테스트로 대조 -->
 ```cpp
 #include "Engine/Scene/SceneManager.h"
-#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 SceneManager* pSceneManager = game::getService<SceneManager>();
 if ( pSceneManager->saveActiveScene( "game/empty/maps/mylevel.scene.xml" ) == false )

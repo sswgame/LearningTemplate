@@ -13,10 +13,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Data/StatBlock.h"
-#include "GameFramework/Base/Utility/Countdown.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
-#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
 

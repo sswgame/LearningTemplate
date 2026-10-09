@@ -7,9 +7,9 @@
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/AI/BehaviorTree.h"
-#include "GameFramework/Base/AI/Blackboard.h"
-#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Actor/AI/BehaviorTree.h"
+#include "GameFramework/Base/Actor/AI/Blackboard.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 

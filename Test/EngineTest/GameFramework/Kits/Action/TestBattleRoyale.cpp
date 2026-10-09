@@ -5,10 +5,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/Weapon.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Inventory/LootTable.h"
+#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrDrop.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrGear.h"

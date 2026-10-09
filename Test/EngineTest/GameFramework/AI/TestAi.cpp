@@ -2,11 +2,11 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/AI/AiPerception.h"
-#include "GameFramework/Base/AI/BehaviorTree.h"
-#include "GameFramework/Base/AI/Blackboard.h"
-#include "GameFramework/Base/Navigation/NavGrid.h"
-#include "GameFramework/Base/Utility/TimerQueue.h"
+#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/BehaviorTree.h"
+#include "GameFramework/Base/Actor/AI/Blackboard.h"
+#include "GameFramework/Base/Actor/Navigation/NavGrid.h"
+#include "GameFramework/Base/Foundation/Utility/TimerQueue.h"
 
 #include "TestFramework/TestFramework.h"
 

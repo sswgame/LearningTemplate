@@ -8,7 +8,7 @@
  *          `-gv_farmAutoPlay=1` 이면 농부도 AI 가 움직인다(입력 없이 날을 넘겨 보는 확인).
  */
 #pragma once
-#include "GameFramework/Base/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/GameInstanceBase.h"
 
 namespace sw
 {

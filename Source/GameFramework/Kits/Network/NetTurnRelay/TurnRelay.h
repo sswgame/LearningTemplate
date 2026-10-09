@@ -16,7 +16,7 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
 

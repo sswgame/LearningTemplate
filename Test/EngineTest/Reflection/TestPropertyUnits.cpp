@@ -6,7 +6,7 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Base/UI/HealthBarComponent.h"
+#include "GameFramework/Base/UI/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

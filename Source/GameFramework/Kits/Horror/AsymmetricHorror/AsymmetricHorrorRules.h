@@ -10,10 +10,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Data/GameCatalog.h"
-#include "GameFramework/Base/Data/StatBlock.h"
-#include "GameFramework/Base/Data/XmlCatalog.h"
-#include "GameFramework/Base/Input/TimingJudge.h"
+#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

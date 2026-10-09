@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Online/Trade/TradeInventoryUtil.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 
 namespace sw
 {

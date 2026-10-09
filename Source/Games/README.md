@@ -112,7 +112,7 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
 
 ### 디렉터가 구현하는 것
 
-디렉터는 `GameFramework/Base/Framework/GameDirectorComponent` 를 상속합니다. 언리얼의 `AGameModeBase` 와 `AGameStateBase` 를 합친 것에 해당하고, Lyra 처럼 게임 상태를 한 컴포넌트에 둡니다.
+디렉터는 `GameFramework/Base/Foundation/Framework/GameDirectorComponent` 를 상속합니다. 언리얼의 `AGameModeBase` 와 `AGameStateBase` 를 합친 것에 해당하고, Lyra 처럼 게임 상태를 한 컴포넌트에 둡니다.
 틱 그룹, 상태 데이터 보류, 틱 뒤 플러시, 대기 소리, 스폰한 것 정리, 자동 플레이, 디렉터 찾기는 베이스가 가지고, 게임마다 다른 것만 구현합니다.
 
 | 함수 | 언제 불리나 |

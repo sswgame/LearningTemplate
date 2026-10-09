@@ -4,7 +4,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 
 #include "Games/HarvestValley/FarmDirectorComponent.h"
 

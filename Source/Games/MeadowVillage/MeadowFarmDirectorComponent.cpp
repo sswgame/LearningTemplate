@@ -12,9 +12,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/GameState/GameStateComponent.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"

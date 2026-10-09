@@ -4,9 +4,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
 {

@@ -15,14 +15,14 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/Ability/CombatAttributeSet.h"
-#include "GameFramework/Base/Control/AiControllerComponent.h"
-#include "GameFramework/Base/Control/PawnComponent.h"
-#include "GameFramework/Base/Control/PlayerControllerComponent.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Control/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 #include "Games/AbilityArena/ArenaProjectileComponent.h"
 

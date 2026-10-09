@@ -27,7 +27,7 @@
 
 #include "Engine/Spatial/SpatialHashGrid2D.h"
 
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Network/NetKitMessageRange.h"
 

@@ -5,7 +5,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Combat/HealthSourceComponent.h"
+#include "GameFramework/Base/Actor/Combat/HealthSourceComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

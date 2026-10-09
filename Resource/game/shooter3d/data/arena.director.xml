@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shooter3D 페이싱 감독(GameFramework/Base/AI/Director/README.md). 긴장도는 맞은 피해 · 쓰러뜨린 적 · 가까운 적 · 탄 부족에서 온다.
+<!-- Shooter3D 페이싱 감독(GameFramework/Base/Actor/AI/Director/README.md). 긴장도는 맞은 피해 · 쓰러뜨린 적 · 가까운 적 · 탄 부족에서 온다.
      쌓기(스켈레톤이 조금씩) → 절정(밀려오는 무리) → 쉼(내지 않고 탄을 채운다) → 쌓기. 조우 id 의 뜻은 ShooterDirectorComponent 가 안다:
      swarm · elite = 스켈레톤 count 기를 한꺼번에(체력 × scale, elite 는 전사 프리셋), ammo = 탄 채우기, repair = 체력 회복(scale × 10).
      쉼에 들어서면 탄 · 수리를 하나씩(항목 쿨다운 1 초라 두 번 고르기가 같은 것을 두 번 고르지 않는다). -->

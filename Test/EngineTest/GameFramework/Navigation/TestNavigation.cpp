@@ -2,12 +2,12 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Navigation/FlowField.h"
-#include "GameFramework/Base/Navigation/GridPathfinder.h"
-#include "GameFramework/Base/Navigation/GridReachability.h"
-#include "GameFramework/Base/Navigation/NavAgent.h"
-#include "GameFramework/Base/Navigation/NavGrid.h"
-#include "GameFramework/Base/Navigation/NavGridMover.h"
+#include "GameFramework/Base/Actor/Navigation/FlowField.h"
+#include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
+#include "GameFramework/Base/Actor/Navigation/GridReachability.h"
+#include "GameFramework/Base/Actor/Navigation/NavAgent.h"
+#include "GameFramework/Base/Actor/Navigation/NavGrid.h"
+#include "GameFramework/Base/Actor/Navigation/NavGridMover.h"
 
 #include "TestFramework/TestFramework.h"
 

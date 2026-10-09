@@ -10,7 +10,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
-#include "GameFramework/Base/Gimmick/Genre/ShooterGimmicks.h"
+#include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"

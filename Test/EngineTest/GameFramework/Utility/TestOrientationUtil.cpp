@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "GameFramework/Base/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

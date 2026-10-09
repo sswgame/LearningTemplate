@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/ElementChart.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Combat/ElementChart.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
 
 namespace sw

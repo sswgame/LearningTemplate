@@ -128,7 +128,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         page="GameSettings", pathPattern="Resource/game/*/data/gamesettings.xml", layer=kLayerPackData, fileFormat="xml",
         reader="`GameSettings::loadFromResource` (`GameInstanceBase::initialize`)", readWhen="게임 인스턴스 초기화 · 게임 모듈 핫 리로드",
         shipping="게임 팩에 실림", bCommitted=True,
-        typeName="GameSettings", header="Source/GameFramework/Base/Data/GameSettings.h", keyStyle=kKeyStyleXmlElementBare,
+        typeName="GameSettings", header="Source/GameFramework/Base/Foundation/Data/GameSettings.h", keyStyle=kKeyStyleXmlElementBare,
         note="시작 씬(`startMap` · `titleScene`)은 이 파일 하나다 — 모르는 원소는 로드 오류, 커스텀 값은 `<custom><prop key>`"),
     ConfigFileEntry(
         page="", pathPattern="Resource/game/*/data/render2d.xml", layer=kLayerPackData, fileFormat="xml",

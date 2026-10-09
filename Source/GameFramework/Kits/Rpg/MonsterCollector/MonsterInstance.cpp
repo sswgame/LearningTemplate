@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Utility/GameRandom.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

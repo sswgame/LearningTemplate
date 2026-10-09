@@ -13,9 +13,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Base/Utility/Countdown.h"
-#include "GameFramework/Base/Utility/GridTopology.h"
+#include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 

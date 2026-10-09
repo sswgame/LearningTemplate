@@ -5,10 +5,10 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/GameState/GameStateComponent.h"
-#include "GameFramework/Base/Progression/Reputation.h"
-#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
 {

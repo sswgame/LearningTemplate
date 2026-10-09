@@ -79,9 +79,9 @@
 - [Source/GameFramework](../Source/GameFramework/README.md) — 장르 공통 기반과 기반 폴더의 계층, 조종(폰과 조종자), 디렉터 베이스, 카메라
   - [Kits](../Source/GameFramework/Kits/README.md) — 키트 목록, 키트를 만드는 규칙, 키트 여럿을 한 게임에 섞는 법
   - [Online](../Source/GameFramework/Base/Online/README.md) — 온라인 서비스 기반(호스트, 저장소, 캐시, 버스, 원장)과 온라인 서비스 키트
-  - [Ability](../Source/GameFramework/Base/Ability/README.md), [Appearance](../Source/GameFramework/Base/Appearance/README.md), [Gimmick](../Source/GameFramework/Base/Gimmick/README.md),
-    [Interaction](../Source/GameFramework/Base/Interaction/README.md), [Spline](../Source/GameFramework/Base/Spline/README.md),
-    [AI/Director](../Source/GameFramework/Base/AI/Director/README.md), [AI/Schedule](../Source/GameFramework/Base/AI/Schedule/README.md)
+  - [Ability](../Source/GameFramework/Base/Gameplay/Ability/README.md), [Appearance](../Source/GameFramework/Base/Gameplay/Appearance/README.md), [Gimmick](../Source/GameFramework/Base/Gameplay/Gimmick/README.md),
+    [Interaction](../Source/GameFramework/Base/Gameplay/Interaction/README.md), [Spline](../Source/GameFramework/Base/World/Spline/README.md),
+    [AI/Director](../Source/GameFramework/Base/Actor/AI/Director/README.md), [AI/Schedule](../Source/GameFramework/Base/Actor/AI/Schedule/README.md)
 - [Source/Games](../Source/Games/README.md) — 게임을 더하는 법, 게임 목록
   - [AbilityArena](../Source/Games/AbilityArena/README.md), [HarvestValley](../Source/Games/HarvestValley/README.md), [MeadowVillage](../Source/Games/MeadowVillage/README.md), [NileCity](../Source/Games/NileCity/README.md),
     [Shooter3D](../Source/Games/Shooter3D/README.md), [StarSkirmish](../Source/Games/StarSkirmish/README.md),

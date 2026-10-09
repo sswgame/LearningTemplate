@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Actor/Combat/ResourceGauge.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

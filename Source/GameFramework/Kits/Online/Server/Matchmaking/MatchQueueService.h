@@ -16,8 +16,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistryReader.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Server/Matchmaking/MatchMaker.h"
 #include "GameFramework/Kits/Online/Server/Matchmaking/PartyLobbyService.h"

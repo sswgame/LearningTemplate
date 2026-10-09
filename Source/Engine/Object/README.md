@@ -453,7 +453,7 @@ id를 보존하며 다시 만들 때는 `createGameObjectWithId` 를 쓰고, 컴
 **게임 코드에서는 `engine::` 서비스 대신 `game::getService<T>()` 를 쓰세요.** 게임 모듈이 엔진 서비스 헤더를 include하면 계층 검사(`CheckEngineLayers.py`)가 막습니다.
 
 ```cpp
-#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 GameObject* pBullet = game::getService<AssetManager>()->getPrefabCache().spawn(
     pManager, "game/<팩>/prefabs/bullet.prefab.json", "Bullet" );

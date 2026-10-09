@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

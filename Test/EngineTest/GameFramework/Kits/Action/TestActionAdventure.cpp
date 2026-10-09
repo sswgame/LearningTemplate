@@ -3,12 +3,12 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Inventory/Crafting.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Inventory/ItemStackList.h"
-#include "GameFramework/Base/World/AreaGraph.h"
-#include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Base/World/World/AreaGraph.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureCooking.h"
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureDungeon.h"
 #include "GameFramework/Kits/Action/ActionAdventure/AdventureElementGrid.h"

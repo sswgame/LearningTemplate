@@ -6,7 +6,7 @@
 
 #include "Engine/Network/EngineNetSecurity.h"
 
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"

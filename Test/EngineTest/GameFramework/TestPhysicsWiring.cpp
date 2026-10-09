@@ -12,11 +12,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Camera/CameraCollisionProbe.h"
-#include "GameFramework/Base/Gimmick/Genre/PlatformerGimmicks.h"
-#include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Base/Interaction/GrabberComponent.h"
-#include "GameFramework/Base/World/WorldQuery.h"
+#include "GameFramework/Base/Actor/Camera/CameraCollisionProbe.h"
+#include "GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.h"
+#include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/Gameplay/Interaction/GrabberComponent.h"
+#include "GameFramework/Base/World/World/WorldQuery.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"

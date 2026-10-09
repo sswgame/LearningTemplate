@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
 
 namespace sw
 {

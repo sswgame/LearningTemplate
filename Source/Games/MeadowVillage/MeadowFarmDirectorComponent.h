@@ -12,8 +12,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
 
 namespace sw

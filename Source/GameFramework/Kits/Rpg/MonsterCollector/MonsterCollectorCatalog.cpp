@@ -7,8 +7,8 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
 
 namespace sw
 {

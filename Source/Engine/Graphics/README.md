@@ -65,7 +65,7 @@ pMesh->setMaterial( pBase );
 pMesh->setMaterialInstance( std::move( tint ) );
 ```
 
-필요한 헤더는 `Engine/Graphics/Material/MaterialInstance.h`, `Engine/Scene/SceneManager.h`, `Engine/Scene/Scene.h`, `GameFramework/Base/Framework/GameService.h` 입니다.
+필요한 헤더는 `Engine/Graphics/Material/MaterialInstance.h`, `Engine/Scene/SceneManager.h`, `Engine/Scene/Scene.h`, `GameFramework/Base/Foundation/Framework/GameService.h` 입니다.
 빌드하고 실행하면 큐브가 주황색으로 바뀝니다.
 
 `color` 는 셰이더 `forwardlit.hlsl` 안의 머티리얼 구조체 멤버 이름과 같아야 합니다. 엔진은 셰이더를 컴파일한 결과(리플렉션)에서 멤버 위치를 읽어 값을 채웁니다.

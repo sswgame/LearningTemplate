@@ -335,7 +335,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 
 **서비스 테스트는 줄에 적은 `visibility` 값 자체의 오류를 잡지 못합니다.** `EngineServiceTest` 의 기댓값도 같은 X-macro에서 만들기 때문입니다. 줄의 `visibility` 값은 사람이 검토합니다.
 
-**`Games/` 와 `GameFramework/` 는 `Engine/Common/EngineServices.h` 를 include하지 않습니다.** 게임 쪽은 `GameFramework/Base/Framework/GameService.h` 의 `game::getService<T>()` 만 씁니다.
+**`Games/` 와 `GameFramework/` 는 `Engine/Common/EngineServices.h` 를 include하지 않습니다.** 게임 쪽은 `GameFramework/Base/Foundation/Framework/GameService.h` 의 `game::getService<T>()` 만 씁니다.
 
 ## 더 볼 곳
 

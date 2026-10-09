@@ -12,11 +12,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Control/ControlSystem.h"
-#include "GameFramework/Base/Control/PawnComponent.h"
-#include "GameFramework/Base/Control/PlayerControllerComponent.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Control/ControlSystem.h"
+#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelTerrain.h"
 

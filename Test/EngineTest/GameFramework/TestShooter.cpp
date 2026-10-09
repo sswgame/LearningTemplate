@@ -10,13 +10,13 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
-#include "GameFramework/Base/Combat/Weapon.h"
-#include "GameFramework/Base/Combat/WeaponMath.h"
-#include "GameFramework/Base/Control/PawnComponent.h"
-#include "GameFramework/Base/Input/FirstPersonLook.h"
-#include "GameFramework/Base/Movement/LocomotionMath.h"
-#include "GameFramework/Base/Utility/OrientationUtil.h"
-#include "GameFramework/Base/Utility/RayMath.h"
+#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/WeaponMath.h"
+#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Input/FirstPersonLook.h"
+#include "GameFramework/Base/Actor/Movement/LocomotionMath.h"
+#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Foundation/Utility/RayMath.h"
 
 #include "TestFramework/TestFramework.h"
 

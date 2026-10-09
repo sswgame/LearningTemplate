@@ -276,7 +276,7 @@ pFracture->applyRadialDamageAtWorld( center, 1.2f /*반경*/, 400.0f /*변형*/,
   자기에게도 파쇄 데이터가 있으면 몸을 끄지 않고 스스로 부서집니다. 그래서 연쇄 폭발이 근처의 벽과 상자를 부숩니다.
 - `DestructibleComponent` 는 단계마다 중심에 변형을 줘서 조금씩 깎고, 마지막 단계에 통째로 부숩니다. 파쇄 데이터가 없으면 몸을 끕니다.
 
-자세한 내용은 [Gimmick README](../../GameFramework/Base/Gimmick/README.md)에 있고, `GimmickFractureTest` 가 테스트합니다.
+자세한 내용은 [Gimmick README](../../GameFramework/Base/Gameplay/Gimmick/README.md)에 있고, `GimmickFractureTest` 가 테스트합니다.
 
 **쪼개기 알고리즘을 고치려면** 결과가 바뀌는 수정마다 `MeshFractureUtil::kAlgorithmVersion` 을 올립니다. 이 값은 임포트 원본 해시에 섞이므로, 올리면 기존 `.fracture` 가 낡은 것으로 판정되어 다시 임포트됩니다.
 

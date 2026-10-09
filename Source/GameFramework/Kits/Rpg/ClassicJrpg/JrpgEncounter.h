@@ -8,7 +8,7 @@
 #include "Core/Common/Types.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 

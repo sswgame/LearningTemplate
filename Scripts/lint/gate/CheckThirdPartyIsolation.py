@@ -215,7 +215,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         },
         {
             "name": "Detour 헤더를 게임 프레임워크에서 include 한다",
-            "files": {"Source/GameFramework/Base/AI/Probe.cpp": "#include <recastnavigation/DetourNavMeshQuery.h>\nint probe() { return 0; }\n"},
+            "files": {"Source/GameFramework/Base/Actor/AI/Probe.cpp": "#include <recastnavigation/DetourNavMeshQuery.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "Recast 헤더를 경로 없이 내비게이션 인터페이스 폴더에서 include 한다",

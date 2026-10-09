@@ -6,10 +6,10 @@
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Inventory/Crafting.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 
 namespace sw
 {

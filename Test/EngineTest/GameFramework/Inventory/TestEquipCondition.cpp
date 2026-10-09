@@ -2,10 +2,10 @@
 
 #include "EngineTest/AppearanceTestFixture.h"
 
-#include "GameFramework/Base/Inventory/EquipCondition.h"
-#include "GameFramework/Base/Inventory/Equipment.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"
+#include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

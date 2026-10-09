@@ -9,8 +9,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Data/GameCatalog.h"
-#include "GameFramework/Base/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

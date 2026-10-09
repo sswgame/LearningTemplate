@@ -6,9 +6,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Data/StatBlock.h"
-#include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

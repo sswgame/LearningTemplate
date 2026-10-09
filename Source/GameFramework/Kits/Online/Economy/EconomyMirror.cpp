@@ -5,8 +5,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 
 #include <algorithm>
 

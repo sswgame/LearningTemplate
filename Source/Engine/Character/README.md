@@ -330,7 +330,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 - [Animation](../Animation/README.md) — 유닛, 알림 규칙, 후처리 리그 노드, 리타깃
 - [Physics](../Physics/README.md) — 강체, 물리 에셋, 질의
 - [Object](../Object/README.md) — 컴포넌트 수명
-- `Source/GameFramework/Base/Appearance/` — 외형 슬롯, 프리셋, `CharacterAppearanceComponent`
+- `Source/GameFramework/Base/Gameplay/Appearance/` — 외형 슬롯, 프리셋, `CharacterAppearanceComponent`
 
 모션 워핑(`MotionWarpingComponent`)과 이동 보정(`LocomotionWarpingComponent`)은 `Object/Animation/` 에 있고, 규칙은 각 헤더의 주석에 있습니다.
 

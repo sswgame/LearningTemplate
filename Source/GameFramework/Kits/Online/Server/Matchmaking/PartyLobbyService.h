@@ -14,7 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Matchmaking/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Online/Server/Matchmaking/CacheRecordUpdater.h"

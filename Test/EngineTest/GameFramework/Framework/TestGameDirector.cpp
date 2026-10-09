@@ -14,10 +14,10 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Base/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Framework/GameInstanceBase.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

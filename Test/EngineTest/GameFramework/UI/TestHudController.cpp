@@ -8,7 +8,7 @@
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Base/UI/HudControllerComponent.h"
+#include "GameFramework/Base/UI/UI/HudControllerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

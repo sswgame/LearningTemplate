@@ -6,9 +6,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/Weapon.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
 
 namespace sw

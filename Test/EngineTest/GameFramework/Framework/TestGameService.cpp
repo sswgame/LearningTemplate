@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "GameFramework/Base/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
 
 #include "TestFramework/TestFramework.h"
 

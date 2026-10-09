@@ -7,8 +7,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {

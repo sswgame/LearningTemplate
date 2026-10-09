@@ -7,7 +7,7 @@
  *          회복 · 가시처럼 이펙트만 거는 어빌리티는 클래스 없이 프레임워크의 "ApplyEffects" 로 돕니다.
  */
 #pragma once
-#include "GameFramework/Base/Ability/GameplayAbility.h"
+#include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
 
 namespace sw
 {

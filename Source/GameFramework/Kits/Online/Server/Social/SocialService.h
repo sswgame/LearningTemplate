@@ -16,7 +16,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Server/Social/SocialLinkRules.h"
 #include "GameFramework/Kits/Online/Social/SocialTypes.h"

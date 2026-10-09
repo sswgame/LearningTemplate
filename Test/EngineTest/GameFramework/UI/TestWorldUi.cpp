@@ -15,10 +15,10 @@
 
 #include "EngineTest/StateReloadTestUtil.h"
 
-#include "GameFramework/Base/Combat/HealthListenerComponent.h"
-#include "GameFramework/Base/UI/DamageNumberComponent.h"
-#include "GameFramework/Base/UI/HealthBarComponent.h"
-#include "GameFramework/Base/World/FadeOutComponent.h"
+#include "GameFramework/Base/Actor/Combat/HealthListenerComponent.h"
+#include "GameFramework/Base/UI/UI/DamageNumberComponent.h"
+#include "GameFramework/Base/UI/UI/HealthBarComponent.h"
+#include "GameFramework/Base/World/World/FadeOutComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

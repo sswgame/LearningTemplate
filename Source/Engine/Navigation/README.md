@@ -10,7 +10,7 @@ AI 캐릭터가 벽을 돌아 목적지까지 걸어가려면 "어디를 걸을 
 두 엔진 모두 오픈 소스 Recast & Detour 라이브러리를 쓰고, 이 엔진도 같은 라이브러리를 엔진 인터페이스 뒤에 감쌌습니다.
 Recast가 베이크를, Detour가 경로 질의를, DetourCrowd가 군중 이동을 맡습니다.
 
-격자 기반 내비게이션(RTS, 도시 건설)은 이 모듈이 아니라 `GameFramework/Base/Navigation` 의 `NavGrid` 와 `NavAgent` 에 있습니다.
+격자 기반 내비게이션(RTS, 도시 건설)은 이 모듈이 아니라 `GameFramework/Base/Actor/Navigation` 의 `NavGrid` 와 `NavAgent` 에 있습니다.
 두 방식은 공통 이동 인터페이스 `INavMover` 를 함께 구현하므로, 행동 트리 같은 상위 코드는 어느 쪽인지 몰라도 됩니다.
 
 엔진 계층으로는 4층(Resource, Spatial과 같은 층)입니다. 물리의 충돌 모양 서술과 `AABB` 를 읽어 베이크하고, 씬 쪽 코드(`Object/GameObject/SceneNavigation` 과 `Object/Component/Navigation`, 6층)가 이 모듈을 씁니다.
@@ -158,7 +158,7 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `CharacterController` | 같은 오브젝트의 캐릭터 컨트롤러에 원하는 속도를 넘깁니다(`setMoveVelocity`). 벽과 경사는 물리가 처리합니다 |
 | `SteerOnly` | 아무것도 옮기지 않고 속도만 계산합니다 |
 
-`SteerOnly` 는 플레이어와 NPC가 같은 이동 컴포넌트로 걷게 할 때 씁니다. AI 컨트롤러(`GameFramework/Base/Control/AiControllerComponent`)가 그 속도를 이동 의도로 바꾸고, 폰의 이동 컴포넌트가 실제로 옮깁니다.
+`SteerOnly` 는 플레이어와 NPC가 같은 이동 컴포넌트로 걷게 할 때 씁니다. AI 컨트롤러(`GameFramework/Base/Actor/Control/AiControllerComponent`)가 그 속도를 이동 의도로 바꾸고, 폰의 이동 컴포넌트가 실제로 옮깁니다.
 다음 갱신은 옮겨진 위치를 받아 군중에 넣습니다.
 
 ### 베이크 기하 모으기
@@ -254,5 +254,5 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `Resource/engine/navigation/navmeshsettings.xml` | 에이전트 종류, 영역, 재베이크 예산 |
 
 - 테스트: `Test/EngineTest/Navigation/` 의 `NavMeshBakeTest`, `NavMeshQueryTest`, `NavMeshCrowdTest`, `NavMeshAgentTest`, `NavMeshCookTest`, `NavMeshDynamicTest`, `NavMeshBenchTest`
-- 격자 내비게이션: `GameFramework/Base/Navigation` (`NavigationTest.GridMoverSpeaksTheCommonMoverInterface` 가 공통 인터페이스를 확인합니다)
+- 격자 내비게이션: `GameFramework/Base/Actor/Navigation` (`NavigationTest.GridMoverSpeaksTheCommonMoverInterface` 가 공통 인터페이스를 확인합니다)
 - 상위 문서: [Engine/README.md](../README.md)

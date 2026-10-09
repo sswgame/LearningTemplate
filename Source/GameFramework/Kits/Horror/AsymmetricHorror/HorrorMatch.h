@@ -18,13 +18,13 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Combat/Vitality.h"
-#include "GameFramework/Base/Data/StatBlock.h"
-#include "GameFramework/Base/Interaction/InteractionProgress.h"
-#include "GameFramework/Base/Match/MatchState.h"
-#include "GameFramework/Base/Utility/Countdown.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
-#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Actor/Combat/Vitality.h"
+#include "GameFramework/Base/Foundation/Data/StatBlock.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
+#include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

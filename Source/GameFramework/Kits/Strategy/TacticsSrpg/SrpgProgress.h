@@ -10,8 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Progression/LevelProgress.h"
-#include "GameFramework/Base/Progression/RunMap.h"
+#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
+#include "GameFramework/Base/Gameplay/Progression/RunMap.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

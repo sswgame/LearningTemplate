@@ -6,11 +6,11 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/World/AreaGraph.h"
-#include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/World/World/AreaGraph.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
 
 #include <algorithm>
 

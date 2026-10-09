@@ -173,7 +173,7 @@ HUD 의 위젯 값은 문서의 `{bind:필드}` 가 연결합니다. 무기 이�
 
 ## 더 볼 곳
 
-- [Appearance](../../GameFramework/Base/Appearance/README.md) — 외형 데이터 형식
-- [AI/Director](../../GameFramework/Base/AI/Director/README.md) — 페이싱 감독
+- [Appearance](../../GameFramework/Base/Gameplay/Appearance/README.md) — 외형 데이터 형식
+- [AI/Director](../../GameFramework/Base/Actor/AI/Director/README.md) — 페이싱 감독
 - [GameFramework](../../GameFramework/README.md) — 폰과 조종자, 카메라 프리셋, HUD
 - [Automation](../../Engine/Automation/README.md) — 시나리오 형식

@@ -8,11 +8,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/Data/GameDataXml.h"
-#include "GameFramework/Base/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/World/AreaGraph.h"
-#include "GameFramework/Base/World/GameFlags.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Base/World/World/AreaGraph.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
 
 namespace sw
 {

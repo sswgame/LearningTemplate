@@ -184,10 +184,10 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_aiDirectorTrace` | `int32` | `0` | 시험 | AiDirector: log every phase change, spawn, encounter and reward (1=on) | [AiDirector.cpp](../../Source/GameFramework/Base/AI/Director/AiDirector.cpp) |
-| `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Camera/CameraDirectorComponent.cpp) |
-| `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Framework/GameInstanceBase.cpp) |
-| `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystem.cpp](../../Source/GameFramework/Base/AI/Schedule/ScheduleSystem.cpp) |
+| `gv_aiDirectorTrace` | `int32` | `0` | 시험 | AiDirector: log every phase change, spawn, encounter and reward (1=on) | [AiDirector.cpp](../../Source/GameFramework/Base/Actor/AI/Director/AiDirector.cpp) |
+| `gv_cameraPreset` | `string` | — | 시험 · 배포본에도 | 카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로) | [CameraDirectorComponent.cpp](../../Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp) |
+| `gv_firstScene` | `string` | — | 시험 · 배포본에도 | 팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함) | [GameInstanceBase.cpp](../../Source/GameFramework/Base/Foundation/Framework/GameInstanceBase.cpp) |
+| `gv_scheduleTrace` | `string` | — | 시험 | Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes | [ScheduleSystem.cpp](../../Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp) |
 
 ## `Source/Games/AbilityArena`
 

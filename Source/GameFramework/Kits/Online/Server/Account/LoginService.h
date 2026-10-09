@@ -21,9 +21,9 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Server/Account/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Online/Server/Account/LoginTypes.h"

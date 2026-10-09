@@ -3,8 +3,8 @@
 #include "Engine/Utility/TileMap/TileGridUtil.h"
 #include "Engine/Utility/TileMap/TileSetAsset.h"
 
-#include "GameFramework/Base/Navigation/GridPathfinder.h"
-#include "GameFramework/Base/Navigation/NavGrid.h"
+#include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
+#include "GameFramework/Base/Actor/Navigation/NavGrid.h"
 
 #include "TestFramework/TestFramework.h"
 

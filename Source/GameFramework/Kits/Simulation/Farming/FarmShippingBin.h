@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/ItemStackList.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

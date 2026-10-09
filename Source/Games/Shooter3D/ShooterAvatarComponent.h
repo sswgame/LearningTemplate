@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Movement/LocomotionMath.h"
+#include "GameFramework/Base/Actor/Movement/LocomotionMath.h"
 
 namespace sw
 {

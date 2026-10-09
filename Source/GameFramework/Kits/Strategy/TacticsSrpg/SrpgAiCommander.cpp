@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Navigation/GridReachability.h"
+#include "GameFramework/Base/Actor/Navigation/GridReachability.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCombat.h"
 
 namespace sw

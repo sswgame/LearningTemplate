@@ -9,7 +9,7 @@
 
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 

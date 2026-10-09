@@ -13,9 +13,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Interaction/InteractableComponent.h"
-#include "GameFramework/Base/Interaction/InteractionCatalog.h"
-#include "GameFramework/Base/Interaction/InteractorComponent.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
+#include "GameFramework/Base/Gameplay/Interaction/InteractorComponent.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"

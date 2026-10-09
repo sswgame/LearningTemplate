@@ -178,14 +178,14 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 | 시뮬레이션 알림 버퍼 | `EventBuffer<T>` |
 | 직교 카메라와 장식 흩뿌리기 | `OrthoCameraRigComponent`, `PropScatterComponent` |
 | 1인칭 카메라와 마우스 잠금 | `FirstPersonCameraComponent`, `PawnComponent::_bLockMouse` |
-| 무기, 피해 공식, 탄도 | `Base/Combat/` |
-| 인벤토리, 장비, 전리품, 제작 | `Base/Inventory/` |
-| 레벨, 스킬 트리, 평판 | `Base/Progression/` |
-| 퀘스트, 시계, 날씨, 지역 그래프 | `Base/Quest/`, `Base/World/` |
-| 팀, 점수, 부활, 라운드 | `Base/Match/` |
-| 길찾기, 흐름장, 이동 범위 | `Base/Navigation/` |
-| 행동 트리와 감각 | `Base/AI/` |
-| 타이밍 판정, 커맨드 입력, 턴 순서, 록온 | `Base/Input/`, `TurnOrder`, `LockOnSelector` |
+| 무기, 피해 공식, 탄도 | `Base/Actor/Combat/` |
+| 인벤토리, 장비, 전리품, 제작 | `Base/Gameplay/Inventory/` |
+| 레벨, 스킬 트리, 평판 | `Base/Gameplay/Progression/` |
+| 퀘스트, 시계, 날씨, 지역 그래프 | `Base/Gameplay/Quest/`, `Base/World/` |
+| 팀, 점수, 부활, 라운드 | `Base/Gameplay/Match/` |
+| 길찾기, 흐름장, 이동 범위 | `Base/Actor/Navigation/` |
+| 행동 트리와 감각 | `Base/Actor/AI/` |
+| 타이밍 판정, 커맨드 입력, 턴 순서, 록온 | `Base/Actor/Input/`, `TurnOrder`, `LockOnSelector` |
 
 ## 함정과 주의
 

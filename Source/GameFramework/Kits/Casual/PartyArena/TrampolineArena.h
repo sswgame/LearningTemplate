@@ -18,11 +18,11 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Input/TimingJudge.h"
-#include "GameFramework/Base/Match/MatchState.h"
-#include "GameFramework/Base/Utility/Countdown.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
-#include "GameFramework/Base/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
 

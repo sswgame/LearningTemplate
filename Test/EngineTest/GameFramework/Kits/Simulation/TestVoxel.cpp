@@ -4,7 +4,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/World/LandRegistry.h"
+#include "GameFramework/Base/World/World/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"

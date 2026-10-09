@@ -3,7 +3,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Spline/SplinePath.h"
+#include "GameFramework/Base/World/Spline/SplinePath.h"
 
 #include "TestFramework/TestFramework.h"
 

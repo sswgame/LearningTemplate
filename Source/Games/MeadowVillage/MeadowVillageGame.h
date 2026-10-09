@@ -6,9 +6,9 @@
  *          이 클래스는 카탈로그 넷을 읽어 게임 로컬 서비스로 걸고(디렉터가 찾는다), 공유 상태와 두 디렉터를 상태 스냅숏에 올린다.
  */
 #pragma once
-#include "GameFramework/Base/Framework/GameInstanceBase.h"
-#include "GameFramework/Base/Progression/Reputation.h"
-#include "GameFramework/Base/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Foundation/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 

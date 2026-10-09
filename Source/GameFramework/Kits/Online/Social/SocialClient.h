@@ -13,10 +13,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/ServiceClientCallTable.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Social/SocialProtocol.h"
 

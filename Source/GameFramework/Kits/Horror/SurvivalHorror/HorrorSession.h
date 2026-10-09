@@ -13,10 +13,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Combat/ResourceGauge.h"
-#include "GameFramework/Base/Inventory/GridInventory.h"
-#include "GameFramework/Base/Inventory/ItemStackList.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Actor/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 

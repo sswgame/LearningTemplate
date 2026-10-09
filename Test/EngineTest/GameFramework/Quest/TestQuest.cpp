@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Quest/QuestCatalog.h"
-#include "GameFramework/Base/Quest/QuestLog.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
 
 #include "TestFramework/TestFramework.h"
 

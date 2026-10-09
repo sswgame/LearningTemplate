@@ -11,12 +11,12 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Combat/TurnOrder.h"
-#include "GameFramework/Base/Progression/LevelProgress.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
-#include "GameFramework/Base/Utility/GameRandom.h"
-#include "GameFramework/Base/Utility/GridTopology.h"
-#include "GameFramework/Base/World/LandRegistry.h"
+#include "GameFramework/Base/Actor/Combat/TurnOrder.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
+#include "GameFramework/Base/World/World/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 

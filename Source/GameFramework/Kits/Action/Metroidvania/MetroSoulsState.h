@@ -13,7 +13,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

@@ -21,10 +21,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Framework/MaterialTintCache.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"

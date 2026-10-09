@@ -2,7 +2,7 @@
 
 ## 이 게임으로 무엇을 배우나
 
-탑다운 웨이브 아레나입니다. 기반의 어빌리티 시스템(`GameFramework/Base/Ability`, 언리얼 GAS 와 같은 구조)을 실제 게임 흐름에서 씁니다.
+탑다운 웨이브 아레나입니다. 기반의 어빌리티 시스템(`GameFramework/Base/Gameplay/Ability`, 언리얼 GAS 와 같은 구조)을 실제 게임 흐름에서 씁니다.
 키트는 링크하지 않습니다. 어빌리티 시스템이 기반에 있기 때문입니다.
 
 - 코드로 쓴 어빌리티와 데이터만으로 만든 어빌리티를 함께 쓰는 방법
@@ -92,6 +92,6 @@ HP 바는 어빌리티 시스템의 체력 알림을 받는 `HealthBarComponent`
 
 ## 더 볼 곳
 
-- [Ability](../../GameFramework/Base/Ability/README.md) — 어빌리티 시스템과 카탈로그 형식
+- [Ability](../../GameFramework/Base/Gameplay/Ability/README.md) — 어빌리티 시스템과 카탈로그 형식
 - [GameFramework](../../GameFramework/README.md) — 폰과 조종자
 - [Games](../README.md) — 씬, 프리팹, 디렉터 구조

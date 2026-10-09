@@ -5,9 +5,9 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Combat/DamageMath.h"
-#include "GameFramework/Base/Framework/GameEventUtil.h"
-#include "GameFramework/Base/UI/DamageNumberComponent.h"
+#include "GameFramework/Base/Actor/Combat/DamageMath.h"
+#include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Base/UI/UI/DamageNumberComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
 

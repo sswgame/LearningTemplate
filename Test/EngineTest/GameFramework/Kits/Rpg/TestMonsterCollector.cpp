@@ -4,8 +4,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/ElementChart.h"
-#include "GameFramework/Base/Utility/GameRandom.h"
+#include "GameFramework/Base/Actor/Combat/ElementChart.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"

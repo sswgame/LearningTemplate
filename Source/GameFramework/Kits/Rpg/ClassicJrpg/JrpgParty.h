@@ -11,11 +11,11 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Inventory/Equipment.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/Shop.h"
-#include "GameFramework/Base/Progression/LevelProgress.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 

@@ -6,12 +6,12 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Quest/QuestLog.h"
-#include "GameFramework/Base/Utility/GameRandom.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/World/WeatherSystem.h"
+#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Base/World/World/WeatherSystem.h"
 
 namespace sw
 {

@@ -54,7 +54,7 @@ App은 모듈을 로드하면 먼저 버전과 스탬프를 자기 값과 비교
 | `Service/` | 서비스 테이블과 서비스 목록 | App, 모듈 |
 | `Export/` | 모듈 진입점을 만드는 `SW_IMPLEMENT_*_MODULE` 매크로 | 모듈의 `.cpp` 만 |
 
-게임 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/Framework/GameService.h`, `Export/GameModuleExports.h` 만 include합니다.
+게임 모듈은 `ABI/GameAPI.h`, `GameFramework/Base/Foundation/Framework/GameService.h`, `Export/GameModuleExports.h` 만 include합니다.
 에디터 모듈은 `ABI/EditorAPI.h`, `Editor/Common/Workspace/EditorService.h`, `Export/EditorModuleExports.h` 를 include합니다.
 `Export/ModuleForwardUtil.h` 는 불투명 핸들을 구현 객체로 바꿔 전달하는 도우미이고, 널 검사를 한 곳에서 합니다.
 

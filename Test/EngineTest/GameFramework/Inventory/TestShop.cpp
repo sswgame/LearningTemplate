@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -5,9 +5,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/FrameData.h"
-#include "GameFramework/Base/Combat/Weapon.h"
-#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Actor/Combat/FrameData.h"
+#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionCombatRig.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionEnemyBrain.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerBody.h"

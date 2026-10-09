@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
 
 #include "TestFramework/TestFramework.h"
 

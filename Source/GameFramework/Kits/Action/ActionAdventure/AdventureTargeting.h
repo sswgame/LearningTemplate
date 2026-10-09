@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Combat/LockOnSelector.h"
-#include "GameFramework/Base/Utility/Countdown.h"
+#include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

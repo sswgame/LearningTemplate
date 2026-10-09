@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/LockOnSelector.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartGhost.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartTrack.h"
 

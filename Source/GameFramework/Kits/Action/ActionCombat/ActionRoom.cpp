@@ -8,10 +8,10 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Combat/DamageMath.h"
-#include "GameFramework/Base/Framework/GameEventUtil.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Combat/DamageMath.h"
+#include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 
 namespace sw

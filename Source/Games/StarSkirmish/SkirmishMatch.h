@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
 

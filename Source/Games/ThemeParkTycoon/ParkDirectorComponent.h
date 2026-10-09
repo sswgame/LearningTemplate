@@ -19,10 +19,10 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Framework/MaterialTintCache.h"
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"

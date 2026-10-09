@@ -15,10 +15,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Combat/FrameData.h"
-#include "GameFramework/Base/Input/InputCommandBuffer.h"
-#include "GameFramework/Base/Match/RoundSeries.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
+#include "GameFramework/Base/Actor/Combat/FrameData.h"
+#include "GameFramework/Base/Actor/Input/InputCommandBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
 

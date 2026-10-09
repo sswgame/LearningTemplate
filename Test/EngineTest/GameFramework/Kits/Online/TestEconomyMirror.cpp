@@ -1,9 +1,9 @@
 // 경제 거울 — 원장 잔액 → 지갑(사건 · 빚 포함) · 인벤토리(차이만큼, 빚은 0), 스냅숏은 없는 것을 0 으로(먼저 빼고 넣는다).
 #include "pch.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Online/Economy/EconomyMirror.h"
 
 #include "TestFramework/TestFramework.h"

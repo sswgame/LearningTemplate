@@ -18,17 +18,18 @@
 
 ## 단계
 
-### 1. Base 를 층으로 묶는다 (효과 큼, 위험 낮음~중간)
+### 1. Base 를 층으로 묶는다 — 끝남(2026-10-10)
 ```
-Base/Foundation/  Framework · Data · GameState · Utility(Core 로 내릴 것을 뺀 나머지)
-Base/Actor/       Control · Input · Movement · Vehicle · Navigation · AI · Camera · Appearance
-Base/Gameplay/    Ability · Combat · Inventory · Interaction · Progression · Quest · Match · Gimmick
-Base/World/       World · Spline
-Base/UI/          UI
-Base/Online/      Online (그대로)
+Base/Online/      Online                                                        (층 0 — Core 만 본다)
+Base/Foundation/  Utility · Data · Framework                                    (층 1)
+Base/World/       World · Spline                                                (층 2)
+Base/Actor/       Input · Movement · Navigation · Combat · Camera · AI · Control (층 3)
+Base/UI/          UI                                                            (층 4)
+Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction · Quest · Appearance · Gimmick · GameState · Vehicle (층 5)
 ```
-- `Kits/README.md` 와 `GameFramework/README.md` 의 폴더 표를 같이 고친다. 헤더 경로가 `GameFramework/Base/<폴더>/` → `GameFramework/Base/<층>/<폴더>/` 로 바뀌므로 include 일괄 치환(Source · Test · Tools · Scripts · 문서).
-- 층 사이 방향 규칙을 게이트에 넣는다: Foundation 은 아무것도 모르고, Actor · Gameplay 는 Foundation 만, World · UI 는 Actor · Gameplay 까지. (`CheckGameFrameworkLayers` 확장.)
+- 첫 안(Foundation 에 GameState, Actor 에 Appearance · Vehicle, World · UI 를 맨 위)은 include 를 재 보니 성립하지 않았다. GameState 는 인벤토리 · 퀘스트 · 월드를,
+  AI · 기믹 · 상호작용은 월드를, 어빌리티는 데미지 숫자(UI)를, 외형은 인벤토리를, 탈것은 전투를 본다. 그래서 World 를 아래로, UI 를 Gameplay 아래로 내렸다.
+- 층 방향과 층 안 폴더 순서는 `CheckGameFrameworkLayers` 의 `_kBaseLayer` · `_kBaseFolderOrder` 가 지킨다. 이동은 `Scripts/dev/MoveGameFrameworkLayout.py --step 1`.
 
 ### 2. 큰 평평한 폴더를 안쪽으로 나눈다 (낮은 위험)
 - `Framework`: `Save`(SaveGame · Autosave · ComponentStateStore) · `Flow`(GameInstanceBase · LoadingScreenController · ScreenTransitionManager) · `Presentation`(GameSound · GameStrings · MaterialTintCache).

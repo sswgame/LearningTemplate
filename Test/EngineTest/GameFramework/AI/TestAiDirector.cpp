@@ -6,11 +6,11 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/AI/Director/AiDirector.h"
-#include "GameFramework/Base/AI/Director/AiDirectorProfile.h"
-#include "GameFramework/Base/AI/SpawnDirector.h"
-#include "GameFramework/Base/World/GameFlags.h"
-#include "GameFramework/Base/World/WorldClock.h"
+#include "GameFramework/Base/Actor/AI/Director/AiDirector.h"
+#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/SpawnDirector.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 

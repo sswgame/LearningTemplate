@@ -24,8 +24,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
-#include "GameFramework/Base/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Gimmick/Genre/PlatformerGimmicks.h"
+#include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.h"
 
 #include "TestFramework/TestFramework.h"
 

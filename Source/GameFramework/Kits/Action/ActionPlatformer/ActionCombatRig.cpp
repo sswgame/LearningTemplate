@@ -6,9 +6,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Base/Utility/RayMath.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
+#include "GameFramework/Base/Foundation/Utility/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 
 namespace sw

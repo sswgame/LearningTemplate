@@ -13,8 +13,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Guard/TokenBucketMap.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Server/LiveOps/Push/PushNotificationProvider.h"
 

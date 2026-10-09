@@ -6,13 +6,13 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/Shop.h"
-#include "GameFramework/Base/Progression/Reputation.h"
-#include "GameFramework/Base/Quest/QuestCatalog.h"
-#include "GameFramework/Base/Quest/QuestLog.h"
-#include "GameFramework/Base/World/GameFlags.h"
-#include "GameFramework/Base/World/WorldClock.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
+#include "GameFramework/Base/Gameplay/Progression/Reputation.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
+#include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
+#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/World/WorldClock.h"
 
 #include "TestFramework/TestFramework.h"
 

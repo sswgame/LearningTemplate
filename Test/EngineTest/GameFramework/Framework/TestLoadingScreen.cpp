@@ -7,8 +7,8 @@
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Base/Framework/LoadingScreenController.h"
-#include "GameFramework/Base/Framework/ScreenTransitionManager.h"
+#include "GameFramework/Base/Foundation/Framework/LoadingScreenController.h"
+#include "GameFramework/Base/Foundation/Framework/ScreenTransitionManager.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   AbilityArena 의 어빌리티 카탈로그 — 이펙트 · 어빌리티 · 어빌리티 세트.
-  형식은 Source/GameFramework/Base/Ability/README.md 에 있다. 클래스 이름(class="...")은 게임이 등록한다(ArenaAbilities::registerClasses).
+  형식은 Source/GameFramework/Base/Gameplay/Ability/README.md 에 있다. 클래스 이름(class="...")은 게임이 등록한다(ArenaAbilities::registerClasses).
   "ApplyEffects" 는 프레임워크 기본 클래스라 코드 없이 데이터만으로 돈다(회복 · 가시).
 -->
 <AbilityCatalog>

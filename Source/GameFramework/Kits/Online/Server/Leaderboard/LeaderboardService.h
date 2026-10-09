@@ -18,8 +18,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
-#include "GameFramework/Base/Utility/EventBuffer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Online/Leaderboard/LeaderboardTypes.h"
 

@@ -6,10 +6,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Control/PawnComponent.h"
-#include "GameFramework/Base/Vehicle/MountMovementComponent.h"
-#include "GameFramework/Base/Vehicle/MountUtil.h"
-#include "GameFramework/Base/Vehicle/VehicleSeatComponent.h"
+#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Gameplay/Vehicle/MountMovementComponent.h"
+#include "GameFramework/Base/Gameplay/Vehicle/MountUtil.h"
+#include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
 {

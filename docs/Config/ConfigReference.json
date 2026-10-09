@@ -972,7 +972,7 @@
    "types": [
     {
      "name": "GameSettings",
-     "source": "Source/GameFramework/Base/Data/GameSettings.h",
+     "source": "Source/GameFramework/Base/Foundation/Data/GameSettings.h",
      "fields": [
       {
        "name": "_startMap",
@@ -1929,7 +1929,7 @@
    "default": "0",
    "kind": "시험",
    "description": "AiDirector: log every phase change, spawn, encounter and reward (1=on)",
-   "source": "Source/GameFramework/Base/AI/Director/AiDirector.cpp"
+   "source": "Source/GameFramework/Base/Actor/AI/Director/AiDirector.cpp"
   },
   {
    "name": "gv_animationForceVertexAnimation",
@@ -2249,7 +2249,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로)",
-   "source": "Source/GameFramework/Base/Camera/CameraDirectorComponent.cpp"
+   "source": "Source/GameFramework/Base/Actor/Camera/CameraDirectorComponent.cpp"
   },
   {
    "name": "gv_cameraShakeScale",
@@ -2441,7 +2441,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)",
-   "source": "Source/GameFramework/Base/Framework/GameInstanceBase.cpp"
+   "source": "Source/GameFramework/Base/Foundation/Framework/GameInstanceBase.cpp"
   },
   {
    "name": "gv_fixedFrameDelta",
@@ -2721,7 +2721,7 @@
    "default": "",
    "kind": "시험",
    "description": "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes",
-   "source": "Source/GameFramework/Base/AI/Schedule/ScheduleSystem.cpp"
+   "source": "Source/GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.cpp"
   },
   {
    "name": "gv_screenshot",

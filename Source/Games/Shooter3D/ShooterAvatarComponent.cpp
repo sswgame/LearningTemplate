@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
 
 #include "Games/Shooter3D/ShooterAnimParameter.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"

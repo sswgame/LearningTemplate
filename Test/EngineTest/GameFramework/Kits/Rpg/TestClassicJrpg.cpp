@@ -4,11 +4,11 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Input/TimingJudge.h"
-#include "GameFramework/Base/Inventory/Inventory.h"
-#include "GameFramework/Base/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/Inventory/Shop.h"
+#include "GameFramework/Base/Actor/Input/TimingJudge.h"
+#include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
+#include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgBattle.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
 #include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgEncounter.h"

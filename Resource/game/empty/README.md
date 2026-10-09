@@ -11,7 +11,7 @@
 | `maps/toonshowcase.scene.xml` | 셀 셰이딩과 외곽선 | 아래 |
 | `maps/twod.scene.xml` | 2D 기능 전체 | 아래 |
 | `maps/destructionshowcase.scene.xml` | 파괴 | [Destruction](../../../Source/Engine/Destruction/README.md) |
-| `maps/gimmickshowcase.scene.xml` | 발판, 횃불, 스프링 같은 기믹 | [Gimmick](../../../Source/GameFramework/Base/Gimmick/README.md) |
+| `maps/gimmickshowcase.scene.xml` | 발판, 횃불, 스프링 같은 기믹 | [Gimmick](../../../Source/GameFramework/Base/Gameplay/Gimmick/README.md) |
 | `maps/spriteui.scene.xml` | 머리 위 HP 바 같은 월드 UI | [GameFramework](../../../Source/GameFramework/README.md) |
 
 ## 환경 쇼케이스

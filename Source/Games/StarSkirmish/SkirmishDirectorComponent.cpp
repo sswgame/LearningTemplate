@@ -19,9 +19,9 @@
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Window/IWindow.h"
 
-#include "GameFramework/Base/Camera/OrthoCameraRigComponent.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/Utility/StateArchiveUtil.h"
+#include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 

@@ -9,19 +9,19 @@
 
 #include "EngineTest/TestGameObjectMocks.h"
 
-#include "GameFramework/Base/Ability/AbilityCatalog.h"
-#include "GameFramework/Base/Ability/AbilitySystemComponent.h"
-#include "GameFramework/Base/Ability/AbilitySystemEvents.h"
-#include "GameFramework/Base/Ability/AbilityTask.h"
-#include "GameFramework/Base/Ability/CombatAttributeSet.h"
-#include "GameFramework/Base/Ability/GameplayAbility.h"
-#include "GameFramework/Base/Framework/GameEvents.h"
-#include "GameFramework/Base/Framework/GameService.h"
-#include "GameFramework/Base/UI/HealthBarComponent.h"
+#include "GameFramework/Base/Foundation/Framework/GameEvents.h"
+#include "GameFramework/Base/Foundation/Framework/GameService.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
+#include "GameFramework/Base/Gameplay/Ability/AbilityTask.h"
+#include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
+#include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
+#include "GameFramework/Base/UI/UI/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 
-// 어빌리티 시스템(GameFramework/Base/Ability) — 언리얼 GAS 와 같은 규칙(집계 공식 · 지속 · 주기 · 스택 · 태그 개수 · 발동 조건 · 비용 · 쿨다운 ·
+// 어빌리티 시스템(GameFramework/Base/Gameplay/Ability) — 언리얼 GAS 와 같은 규칙(집계 공식 · 지속 · 주기 · 스택 · 태그 개수 · 발동 조건 · 비용 · 쿨다운 ·
 // 트리거 · 작업)을 컴포넌트 시간(`advanceTime`)으로 돌려 확인한다. 틱 중의 다른 오브젝트 적용과 핫 리로드 정리는 매니저 틱 · 보유자 훑기로 본다.
 
 namespace sw

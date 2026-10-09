@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Utility/GameRandom.h"
-#include "GameFramework/Base/Utility/ValueNoise.h"
+#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/ValueNoise.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
 
 namespace sw
