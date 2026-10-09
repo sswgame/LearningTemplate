@@ -21,6 +21,7 @@
 #include "GameFramework/Base/Gimmick/GimmickSensorComponent.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 namespace
 {
@@ -66,14 +67,6 @@ namespace
             pFracture->setAnchorMode( anchorMode );
             return pObject;
         }
-
-        static void tickFrames( sw::GameObjectManager& manager, int32 frameCount )
-        {
-            for ( int32 frame = 0; frame < frameCount; ++frame )
-            {
-                manager.tick( 1.0f / 60.0f );
-            }
-        }
     };
 } // namespace
 
@@ -99,14 +92,14 @@ SW_TEST_CASE( GimmickFractureTest, BarrelChainBreaksNearbyFracturedWall )
     sw::GameObject* pFarWall  = Internal::spawnFractured( manager, "FarWall", sw::float3{ 40.0f, 0.0f, 0.0f }, sw::float3{ 2.0f, 1.5f, 0.15f }, fracturePath,
                                                           sw::FractureAnchorMode::Bottom );
     manager.beginPlay();
-    Internal::tickFrames( manager, 3 );
+    test::tickFrames( manager, 3 );
     const sw::FractureComponent* pNear = pNearWall->getComponent<sw::FractureComponent>();
     const sw::FractureComponent* pFar  = pFarWall->getComponent<sw::FractureComponent>();
     arrBarrel[0]->getComponent<sw::GimmickSensorComponent>()->applyDamage( 40.0f );
-    Internal::tickFrames( manager, 1 );
+    test::tickFrames( manager, 1 );
     SW_EXPECT_TRUE( arrBarrel[0]->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_FALSE( arrBarrel[1]->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() ); // 사슬은 다음 걸음
-    Internal::tickFrames( manager, 6 );
+    test::tickFrames( manager, 6 );
     SW_EXPECT_TRUE( arrBarrel[1]->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_TRUE( pNear->isFractured() );
     // 두 폭발 모두 벽을 맞혔다 — 중심이 다른 폭발 사건 둘 이상(사슬로 터진 드럼통도).
@@ -142,9 +135,9 @@ SW_TEST_CASE( GimmickFractureTest, DestructibleCoverShattersInsteadOfHiding )
     pCover->addComponent<sw::GimmickSensorComponent>();
     sw::DestructibleComponent* pDestructible = pCover->addComponent<sw::DestructibleComponent>();
     manager.beginPlay();
-    Internal::tickFrames( manager, 3 );
+    test::tickFrames( manager, 3 );
     pCover->getComponent<sw::GimmickSensorComponent>()->applyDamage( 60.0f );
-    Internal::tickFrames( manager, 4 );
+    test::tickFrames( manager, 4 );
     SW_EXPECT_TRUE( pDestructible->isDestroyed() );
     const sw::FractureComponent* pFracture = pCover->getComponent<sw::FractureComponent>();
     SW_EXPECT_TRUE( pFracture->isFractured() );

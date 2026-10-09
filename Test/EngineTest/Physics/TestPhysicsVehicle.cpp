@@ -15,6 +15,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 #include <string>
 
@@ -50,14 +51,6 @@ namespace
             return pCar;
         }
 
-        static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
-        {
-            for ( uint32 frame = 0; frame < frameCount; ++frame )
-            {
-                manager.tick( kDeltaTime );
-            }
-        }
-
         static sw::float3 findPosition( const sw::GameObject& car ) { return car.getComponent<sw::RigidBodyComponent>()->getWorldPosition(); }
     };
 } // namespace
@@ -73,26 +66,26 @@ SW_TEST_CASE( PhysicsVehicleTest, CarAcceleratesStopsAndSteers )
     sw::GameObject*              pCar     = Internal::spawnCar( manager, "Car", sw::float3{ 0.0f, 0.9f, 0.0f } );
     sw::WheeledVehicleComponent* pVehicle = pCar->getComponent<sw::WheeledVehicleComponent>();
     manager.beginPlay();
-    Internal::tickFor( manager, 30 ); // 서스펜션이 내려앉는다
+    test::tickFrames( manager, 30 ); // 서스펜션이 내려앉는다
     SW_ASSERT_TRUE( pVehicle->isVehicleCreated() );
     SW_EXPECT_EQUAL( 4u, pVehicle->getVehicleState()._groundedWheelCount );
 
     pVehicle->setDriverInput( 1.0f, 0.0f, 0.0f, 0.0f );
-    Internal::tickFor( manager, 120 );
+    test::tickFrames( manager, 120 );
     const float32 cruiseSpeed = pVehicle->getVehicleState()._forwardSpeed;
     SW_EXPECT_TRUE_MSG( cruiseSpeed > 5.0f, ( "speed after 2 s " + std::to_string( cruiseSpeed ) ).c_str() );
     SW_EXPECT_TRUE( Internal::findPosition( *pCar )._z > 3.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, Internal::findPosition( *pCar )._x, 0.2f );
 
     pVehicle->setDriverInput( 0.0f, 0.0f, 1.0f, 0.0f );
-    Internal::tickFor( manager, 180 );
+    test::tickFrames( manager, 180 );
     SW_EXPECT_TRUE_MSG( sw::MathUtil::abs( pVehicle->getVehicleState()._forwardSpeed ) < 0.5f,
                         ( "speed after braking " + std::to_string( pVehicle->getVehicleState()._forwardSpeed ) ).c_str() );
 
     // 오른쪽으로 꺾고 가면 +X 로 휜다.
     const sw::float3 before = Internal::findPosition( *pCar );
     pVehicle->setDriverInput( 0.6f, 1.0f, 0.0f, 0.0f );
-    Internal::tickFor( manager, 150 );
+    test::tickFrames( manager, 150 );
     const sw::float3 after = Internal::findPosition( *pCar );
     SW_EXPECT_TRUE_MSG( after._x - before._x > 1.0f, ( "x moved " + std::to_string( after._x - before._x ) ).c_str() );
     manager.endPlay();
@@ -111,7 +104,7 @@ SW_TEST_CASE( PhysicsVehicleTest, SameInputSameTrackInOneRun )
         Internal::spawnFloor( manager );
         sw::GameObject* pCar = Internal::spawnCar( manager, "Car", sw::float3{ 0.0f, 0.9f, 0.0f } );
         manager.beginPlay();
-        Internal::tickFor( manager, 30 );
+        test::tickFrames( manager, 30 );
         pCar->getComponent<sw::WheeledVehicleComponent>()->setDriverInput( 1.0f, 0.3f, 0.0f, 0.0f );
         for ( uint32 frame = 0; frame < 120; ++frame )
         {

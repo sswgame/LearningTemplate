@@ -14,6 +14,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 // Fracture2DTest — 2D 다각형 보로노이(넓이 보존 · 변 길이 연결 · 결정적, 오목 모양)와, 같은 구조 · 피해 · 런타임 위의 Box2D 조각.
 
@@ -60,14 +61,6 @@ namespace
   <Debris lifetime="3" maxBodies="64" smallVolume="0.01" fadeTime="0.25" sleepRemoveTime="0.5" keepCollisionVolume="0.5" hullShrink="0.005"/>
 </DestructionProfile>)" );
             return path;
-        }
-
-        static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
-        {
-            for ( uint32 frame = 0; frame < frameCount; ++frame )
-            {
-                manager.tick( 1.0f / 60.0f );
-            }
         }
     };
 } // namespace
@@ -146,19 +139,19 @@ SW_TEST_CASE( Fracture2DTest, WallBreaksIntoBox2DPiecesDeterministically )
     pClient->setAuthority( false );
     server.beginPlay();
     client.beginPlay();
-    Internal::tickFor( server, 3 );
-    Internal::tickFor( client, 3 );
+    test::tickFrames( server, 3 );
+    test::tickFrames( client, 3 );
     SW_ASSERT_TRUE( pServer->hasFractureData() );
     SW_EXPECT_NOT_NULL( pServer->getOwner()->getComponent<sw::MeshComponent>() );
     SW_EXPECT_FALSE( pServer->isFractured() );
 
     pServer->applyRadialDamageAtWorld( sw::float3{ 0.5f, 2.5f, 0.0f }, 1.4f, 200.0f, 3000.0f );
-    Internal::tickFor( server, 2 );
+    test::tickFrames( server, 2 );
     SW_ASSERT_TRUE( pServer->isFractured() );
     SW_EXPECT_TRUE( pServer->getStaticBodyCount() > 0 );
     SW_EXPECT_TRUE( pServer->getDynamicBodyCount() > 0 );
     SW_EXPECT_FALSE( pServer->getOwner()->getComponent<sw::RigidBody2DComponent>()->isSelfActive() );
-    Internal::tickFor( server, 60 );
+    test::tickFrames( server, 60 );
     float32                  maxMove = 0.0f;
     const sw::FractureAsset* pAsset  = pServer->findAsset();
     for ( uint32 leaf = 0; leaf < pAsset->getPieceCount(); ++leaf )
@@ -173,7 +166,7 @@ SW_TEST_CASE( Fracture2DTest, WallBreaksIntoBox2DPiecesDeterministically )
     {
         pClient->applyDamage( event );
     }
-    Internal::tickFor( client, 2 );
+    test::tickFrames( client, 2 );
     SW_EXPECT_EQUAL( pServer->getState().computeStateHash(), pClient->getState().computeStateHash() );
     server.endPlay();
     client.endPlay();

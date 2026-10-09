@@ -13,27 +13,13 @@
 #include "GameFramework/Base/Gimmick/Genre/ShooterGimmicks.h"
 
 #include "TestFramework/TestFramework.h"
-
-namespace
-{
-    struct TestDestructionShowcaseInternal
-    {
-        static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
-        {
-            for ( uint32 frame = 0; frame < frameCount; ++frame )
-            {
-                manager.tick( 1.0f / 60.0f );
-            }
-        }
-    };
-} // namespace
+#include "TestFramework/TestTick.h"
 
 /**
  * @brief [DestructionShowcaseTest] 쇼케이스 씬 — 시작 1 초는 모두 온전, 3 초 뒤 두 드럼통이 터지고 벽(200 조각) · 상자가 조각으로 바뀌어 있다
  */
 SW_TEST_CASE( DestructionShowcaseTest, FuseBarrelChainBreaksWallAndCrates )
 {
-    using Internal = TestDestructionShowcaseInternal;
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::SceneDocument doc;
     SW_ASSERT_TRUE( doc.loadXml( "game/empty/maps/destructionshowcase.scene.xml" ) );
@@ -48,13 +34,13 @@ SW_TEST_CASE( DestructionShowcaseTest, FuseBarrelChainBreaksWallAndCrates )
     SW_ASSERT_NOT_NULL( pWallFracture );
 
     manager.beginPlay();
-    Internal::tickFor( manager, 60 );
+    test::tickFrames( manager, 60 );
     SW_ASSERT_TRUE( pWallFracture->hasFractureData() );
     SW_EXPECT_EQUAL( 200u, pWallFracture->findAsset()->getPieceCount() );
     SW_EXPECT_FALSE( pWallFracture->isFractured() );
     SW_EXPECT_FALSE( pFuse->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
 
-    Internal::tickFor( manager, 180 );
+    test::tickFrames( manager, 180 );
     SW_EXPECT_TRUE( pFuse->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_TRUE( pChain->getComponent<sw::ExplosiveBarrelComponent>()->hasExploded() );
     SW_EXPECT_TRUE( pWallFracture->isFractured() );

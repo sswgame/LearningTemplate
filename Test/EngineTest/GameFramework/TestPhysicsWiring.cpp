@@ -19,6 +19,7 @@
 #include "GameFramework/Base/World/WorldQuery.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 using namespace sw;
 
@@ -29,15 +30,6 @@ namespace
 {
     struct TestPhysicsWiringInternal
     {
-        static constexpr float32 kFrame = 1.0f / 60.0f;
-
-        static void tickFor( GameObjectManager& manager, uint32 frameCount )
-        {
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                manager.tick( kFrame );
-            }
-        }
 
         static RigidBodyComponent* spawnBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents, PhysicsBodyType type,
                                              const utf8* pLayer )
@@ -81,17 +73,17 @@ SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
     float4x4 socket = float4x4::Identity;
     socket.setTranslation( float3{ 0.3f, 1.5f, 0.0f } );
     SW_ASSERT_TRUE( pBinding->bindToSocket( pHolder, hashed_string( "HandR" ), socket ) );
-    TestPhysicsWiringInternal::tickFor( manager, 30 );
+    test::tickFrames( manager, 30 );
     // 붙은 동안은 키네마틱 — 동적 데이터였어도 떨어지지 않고 손을 따른다.
     SW_EXPECT_TRUE( pSword->getBodyType() == PhysicsBodyType::Kinematic );
     SW_EXPECT_NEAR_EQUAL( 1.5f, pSword->getWorldPosition()._y, 1e-3f );
     pHolderScene->setWorldPosition( float3{ 1.0f, 0.0f, 0.0f } );
-    TestPhysicsWiringInternal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
     SW_EXPECT_NEAR_EQUAL( 1.3f, pSword->getWorldPosition()._x, 1e-3f );
 
     SW_ASSERT_TRUE( pBinding->release( SocketReleaseMode::Physics, float3{ 2.0f, 0.0f, 0.0f } ) );
     SW_EXPECT_TRUE( pBinding->getState() == SocketBindingState::ReleasedPhysics );
-    TestPhysicsWiringInternal::tickFor( manager, 120 );
+    test::tickFrames( manager, 120 );
     SW_EXPECT_TRUE( pSword->getBodyType() == PhysicsBodyType::Dynamic );
     const float3 landed = pSword->getWorldPosition();
     SW_EXPECT_TRUE( landed._y < 0.5f ); // 바닥에 떨어졌다
@@ -99,7 +91,7 @@ SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
     SW_EXPECT_TRUE( landed._x > 1.6f ); // 시작 속도로 +X 로 갔다
 
     SW_ASSERT_TRUE( pBinding->returnToSocket() );
-    TestPhysicsWiringInternal::tickFor( manager, 40 );
+    test::tickFrames( manager, 40 );
     SW_EXPECT_TRUE( pBinding->getState() == SocketBindingState::Bound );
     SW_EXPECT_TRUE( pSword->getBodyType() == PhysicsBodyType::Kinematic );
     SW_EXPECT_NEAR_EQUAL( 1.3f, pSword->getWorldPosition()._x, 1e-3f );
@@ -127,7 +119,7 @@ SW_TEST_CASE( PhysicsWiringTest, WorldQueryAndCameraProbeSeeRigidBodies )
     pBody2D->setBodyType( PhysicsBodyType::Static );
     pBody2D->setLocalPosition( float3{ 10.0f, 5.0f, 0.0f } );
     manager.beginPlay();
-    TestPhysicsWiringInternal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
 
     const uint64 viewerId = pViewer->getOwner()->getObjectId();
     WorldRayHit  hit;
@@ -161,13 +153,13 @@ SW_TEST_CASE( PhysicsWiringTest, GrabberHoldsRigidBodyKinematicAndThrows )
                                                                         PhysicsBodyType::Dynamic, "Default" );
     SW_ASSERT_TRUE( pGrabber != nullptr && pCrate != nullptr );
     manager.beginPlay();
-    TestPhysicsWiringInternal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
     SW_ASSERT_TRUE( pGrabber->grab( *pCrate->getOwner() ) );
-    TestPhysicsWiringInternal::tickFor( manager, 30 );
+    test::tickFrames( manager, 30 );
     SW_EXPECT_TRUE( pCrate->getBodyType() == PhysicsBodyType::Kinematic );
     SW_EXPECT_NEAR_EQUAL( 1.0f, pCrate->getWorldPosition()._y, 1e-3f ); // 떨어지지 않고 손 높이(hold offset)
     SW_ASSERT_TRUE( pGrabber->throwHeld( float3{ 0.0f, 0.0f, 6.0f } ) );
-    TestPhysicsWiringInternal::tickFor( manager, 10 );
+    test::tickFrames( manager, 10 );
     SW_EXPECT_TRUE( pCrate->getBodyType() == PhysicsBodyType::Dynamic );
     SW_EXPECT_TRUE( pCrate->getWorldPosition()._z > 1.3f ); // 손(z 0.6)에서 6 m/s 로 10 프레임
     manager.endPlay();
@@ -189,7 +181,7 @@ SW_TEST_CASE( PhysicsWiringTest, PressurePlateWeighsRigidBodyMass )
     GameObject* pPlain = manager.createGameObject( hashed_string( "Plain" ) );
     pPlain->addComponent<SceneComponent>();
     manager.beginPlay();
-    TestPhysicsWiringInternal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
     pSensor->addOccupant( *pHeavy->getOwner() );
     pSensor->addOccupant( *pPlain );
     SW_EXPECT_NEAR_EQUAL( 31.0f, pSensor->computeOccupantWeight(), 1e-3f ); // 30(강체) + 1(기본)
@@ -216,12 +208,12 @@ SW_TEST_CASE( PhysicsWiringTest, ControllerTakesLaunchAndConveyorVelocity )
     SW_ASSERT_NOT_NULL( pLaunchPad );
 
     manager.beginPlay();
-    TestPhysicsWiringInternal::tickFor( manager, 10 );
+    test::tickFrames( manager, 10 );
     SW_EXPECT_TRUE( pController->isGrounded() );
     pLaunchPad->launch( *pHero ); // 기본 (0, 12, 0)
-    TestPhysicsWiringInternal::tickFor( manager, 20 );
+    test::tickFrames( manager, 20 );
     SW_EXPECT_TRUE( pController->getWorldPosition()._y > 2.0f );
-    TestPhysicsWiringInternal::tickFor( manager, 150 );
+    test::tickFrames( manager, 150 );
     SW_EXPECT_TRUE( pController->isGrounded() );
 
     // 컨베이어: 같은 오브젝트의 센서에 든 것을 면 속도 (2, 0, 0) 으로 — 벽(x = 1.8)에서 멈춘다.
@@ -231,9 +223,9 @@ SW_TEST_CASE( PhysicsWiringTest, ControllerTakesLaunchAndConveyorVelocity )
     GimmickSensorComponent* pSensor   = pBelt->addComponent<GimmickSensorComponent>();
     ConveyorComponent*      pConveyor = pBelt->addComponent<ConveyorComponent>();
     SW_ASSERT_TRUE( pSensor != nullptr && pConveyor != nullptr );
-    TestPhysicsWiringInternal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
     pSensor->addOccupant( *pHero );
-    TestPhysicsWiringInternal::tickFor( manager, 180 );
+    test::tickFrames( manager, 180 );
     const float32 x = pController->getWorldPosition()._x;
     SW_EXPECT_TRUE( x > 1.0f );
     SW_EXPECT_TRUE( x < 1.6f ); // 벽 앞(캡슐 반지름 0.3)에서 막혔다

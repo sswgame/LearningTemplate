@@ -19,6 +19,7 @@
 #include "EngineTest/NavMeshTestUtil.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 namespace
 {
@@ -35,14 +36,6 @@ namespace
             pMesh->setLocalPosition( center );
             pMesh->setLocalScale( scale );
             return pObject;
-        }
-
-        static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
-        {
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                manager.tick( kFrame );
-            }
         }
 
         /** @brief 바닥(30 × 30) · 가운데 상자 벽(x -1..1, z -4..4) — 메시로. */
@@ -71,7 +64,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     pAgent->setMaxSpeed( 4.0f );
 
     manager.beginPlay();
-    Internal::tickFor( manager, 2 );
+    test::tickFrames( manager, 2 );
     const sw::INavMesh* pNavMesh = manager.getSceneNavigation().findNavMesh( sw::hashed_string( "TestHumanoid" ) );
     SW_ASSERT_NOT_NULL( pNavMesh );
     SW_EXPECT_TRUE( pNavMesh->getPolygonCount() > 0 );
@@ -116,7 +109,7 @@ SW_TEST_CASE( NavMeshAgentTest, AgentDrivesACharacterController )
     pAgent->setDriveMode( sw::NavAgentDriveMode::CharacterController );
 
     manager.beginPlay();
-    Internal::tickFor( manager, 10 );
+    test::tickFrames( manager, 10 );
     pAgent->setDestination( sw::float3{ 6.0f, 0.0f, 0.0f } );
     bool bEnteredCrates = false;
     for ( uint32 frame = 0; frame < 900 && pAgent->getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )

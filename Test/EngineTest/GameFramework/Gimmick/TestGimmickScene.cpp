@@ -18,6 +18,7 @@
 #include "GameFramework/Base/Spline/SplineComponent.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 using namespace sw;
 
@@ -35,14 +36,6 @@ namespace
             pBox->setTrigger( bTrigger );
             pBox->setLocalPosition( position );
             return pObject;
-        }
-
-        static void tickFrames( GameObjectManager& manager, int32 frameCount )
-        {
-            for ( int32 frame = 0; frame < frameCount; ++frame )
-            {
-                manager.tick( 1.0f / 60.0f );
-            }
         }
 
         static float32 getY( const GameObject* pObject ) { return pObject->getPrimarySceneComponent()->getWorldPosition()._y; }
@@ -74,21 +67,21 @@ SW_TEST_CASE( GimmickSceneTest, PressurePlateInSceneDrivesDoor )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
 
     manager.beginPlay();
-    GimmickSceneTestInternal::tickFrames( manager, 5 );
+    test::tickFrames( manager, 5 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, GimmickSceneTestInternal::getY( pDoor ), 1.0e-4f );
 
     pLight->getPrimarySceneComponent()->setLocalPosition( float3{ 0.5f, 0.0f, 0.0f } );
-    GimmickSceneTestInternal::tickFrames( manager, 20 );
+    test::tickFrames( manager, 20 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, GimmickSceneTestInternal::getY( pDoor ), 1.0e-4f ); // 20 kg — 못 연다
 
     pHeavy->getPrimarySceneComponent()->setLocalPosition( float3{ -0.5f, 0.0f, 0.0f } );
-    GimmickSceneTestInternal::tickFrames( manager, 20 );
+    test::tickFrames( manager, 20 );
     SW_EXPECT_EQUAL( 2, pPlate->getComponent<GimmickSensorComponent>()->getOccupantCount() );
     SW_EXPECT_NEAR_EQUAL( 4.0f, GimmickSceneTestInternal::getY( pDoor ), 1.0e-4f ); // 80 kg — 3 m 열림
     SW_EXPECT_NEAR_EQUAL( 5.0f, pDoor->getPrimarySceneComponent()->getWorldPosition()._x, 1.0e-4f );
 
     pHeavy->getPrimarySceneComponent()->setLocalPosition( float3{ 30.0f, 0.0f, 0.0f } );
-    GimmickSceneTestInternal::tickFrames( manager, 20 );
+    test::tickFrames( manager, 20 );
     SW_EXPECT_NEAR_EQUAL( 1.0f, GimmickSceneTestInternal::getY( pDoor ), 1.0e-4f );
     manager.endPlay();
 }
@@ -118,11 +111,11 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
     SW_ASSERT_TRUE( pCircuit->rebuild() );
 
     manager.beginPlay();
-    GimmickSceneTestInternal::tickFrames( manager, 60 ); // 1 초 — 5 m
+    test::tickFrames( manager, 60 ); // 1 초 — 5 m
     const float3 afterOneSecond = pPlatform->getPrimarySceneComponent()->getWorldPosition();
     SW_EXPECT_NEAR_EQUAL( 5.0f, afterOneSecond._x, 0.1f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, afterOneSecond._y, 1.0e-4f ); // 곡선은 발판 시작 자리 기준
-    GimmickSceneTestInternal::tickFrames( manager, 60 );      // 2 초 — 모퉁이를 돌아 (10, 2, 0)
+    test::tickFrames( manager, 60 );                          // 2 초 — 모퉁이를 돌아 (10, 2, 0)
     SW_EXPECT_NEAR_EQUAL( 10.0f, pPlatform->getPrimarySceneComponent()->getWorldPosition()._x, 0.1f );
 
     const uint64 savedHash = pCircuit->getCircuit().computeStateHash();
@@ -138,7 +131,7 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
 
     // 체크포인트 — 잡고, 더 가고, 돌아오면 같은 해시와 같은 자리.
     pCircuit->captureCheckpoint();
-    GimmickSceneTestInternal::tickFrames( manager, 30 );
+    test::tickFrames( manager, 30 );
     SW_EXPECT_NOT_EQUAL( savedHash, pCircuit->getCircuit().computeStateHash() );
     pCircuit->restoreCheckpoint();
     SW_EXPECT_EQUAL( savedHash, pCircuit->getCircuit().computeStateHash() );
@@ -208,7 +201,7 @@ SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
     manager.beginPlay();
     const float32 gateY = GimmickSceneTestInternal::getY( pGate );
     const float32 liftY = GimmickSceneTestInternal::getY( pLift );
-    GimmickSceneTestInternal::tickFrames( manager, 60 * 3 + 30 ); // 2 초에 토글 — 문 0.8 초 · 엘리베이터 2 초
+    test::tickFrames( manager, 60 * 3 + 30 ); // 2 초에 토글 — 문 0.8 초 · 엘리베이터 2 초
     SW_EXPECT_NEAR_EQUAL( gateY + 3.0f, GimmickSceneTestInternal::getY( pGate ), 1.0e-3f );
     SW_EXPECT_TRUE( GimmickSceneTestInternal::getY( pLift ) > liftY + 1.5f );
     SW_EXPECT_TRUE( pTorch->getComponent<ElementStatusComponent>()->hasStatus( "Burning" ) );
@@ -249,14 +242,14 @@ SW_TEST_CASE( GimmickSceneTest, LaserProximityHazardEnable )
     const int32 proximity = pCircuit->findNode( "near" );
 
     manager.beginPlay();
-    GimmickSceneTestInternal::tickFrames( manager, 3 );
+    test::tickFrames( manager, 3 );
     SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( beam, hashed_string( "Blocked" ) ) );
     SW_EXPECT_FALSE( pCircuit->getCircuit().getOutput( proximity, hashed_string( "Near" ) ) );
     SW_EXPECT_TRUE( pLamp->isActive() );
 
     pBlocker->getPrimarySceneComponent()->setLocalPosition( float3{ 5.0f, 0.0f, 0.0f } ); // 광선 위
     pSeeker->getPrimarySceneComponent()->setLocalPosition( float3{ 3.0f, 0.0f, 30.0f } ); // XY 거리 3(Z 는 그리기 순서)
-    GimmickSceneTestInternal::tickFrames( manager, 4 );
+    test::tickFrames( manager, 4 );
     SW_EXPECT_TRUE( pCircuit->getCircuit().getOutput( beam, hashed_string( "Blocked" ) ) );
     SW_EXPECT_TRUE( pCircuit->getCircuit().getOutput( proximity, hashed_string( "Near" ) ) );
     SW_EXPECT_FALSE( pLamp->isActive() ); // 광선이 막히면 끈다
@@ -264,7 +257,7 @@ SW_TEST_CASE( GimmickSceneTest, LaserProximityHazardEnable )
     // 위험 지대 — 1 초 켜짐 · 1 초 꺼짐, 켜진 동안 0.5 초마다 7(켜지는 걸음 포함). 걸음 7..126 에는 30 · 120 걸음의 두 번이다
     // (첫 켜짐 0 걸음에는 아직 겹친 것이 없다 — 겹침은 첫 물리 step 뒤에 온다).
     (void)pVictim->getComponent<GimmickSensorComponent>()->consumeDamage();
-    GimmickSceneTestInternal::tickFrames( manager, 120 );
+    test::tickFrames( manager, 120 );
     SW_EXPECT_NEAR_EQUAL( 14.0f, pVictim->getComponent<GimmickSensorComponent>()->consumeDamage(), 1.0e-3f );
     manager.endPlay();
 }

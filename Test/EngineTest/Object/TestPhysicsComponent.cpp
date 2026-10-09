@@ -14,6 +14,7 @@
 #include "EngineTest/TestGameObjectMocks.h"
 
 #include "TestFramework/TestFramework.h"
+#include "TestFramework/TestTick.h"
 
 namespace sw
 {
@@ -115,13 +116,6 @@ namespace
         return pBody;
     }
 
-    void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
-    {
-        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-        {
-            manager.tick( kFrame );
-        }
-    }
 } // namespace
 
 /**
@@ -144,7 +138,7 @@ SW_TEST_CASE( PhysicsComponentTest, DynamicBodyLandsAndReportsCollision )
     SW_EXPECT_FALSE( pCrate->getBodyHandle().isValid() );
 
     manager.beginPlay();
-    tickFor( manager, 240 );
+    test::tickFrames( manager, 240 );
     SW_EXPECT_TRUE( pCrate->getBodyHandle().isValid() );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.03f );
     SW_EXPECT_NEAR_EQUAL( -0.5f, pFloor->getWorldPosition()._y, 1e-5f );
@@ -161,7 +155,7 @@ SW_TEST_CASE( PhysicsComponentTest, DynamicBodyLandsAndReportsCollision )
     SW_EXPECT_TRUE( pCrate->getWorldPosition()._y > 3.5f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pCrate->getWorldPosition()._x, 1e-3f );
     SW_EXPECT_EQUAL( 1u, pCrateListener->_collisionEndCount ); // 바닥을 떠났다
-    tickFor( manager, 240 );
+    test::tickFrames( manager, 240 );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.03f );
 
     // 끝나면 바디를 놓는다.
@@ -179,7 +173,7 @@ SW_TEST_CASE( PhysicsComponentTest, PoseIsInterpolatedBetweenSteps )
     sw::RigidBodyComponent* pBall = spawnBody( manager, "Ball", sw::float3{ 0.0f, 50.0f, 0.0f }, sw::float3{ 0.5f, 0.5f, 0.5f }, sw::PhysicsBodyType::Dynamic );
     SW_ASSERT_NOT_NULL( pBall );
     manager.beginPlay();
-    tickFor( manager, 30 );
+    test::tickFrames( manager, 30 );
     const uint64  stepsBefore  = manager.getScenePhysics().getStepCount();
     const float32 heightBefore = pBall->getWorldPosition()._y;
     manager.tick( kFrame * 0.5f );
@@ -204,7 +198,7 @@ SW_TEST_CASE( PhysicsComponentTest, TriggerComponentReportsOverlaps )
     sw::MockCollisionListenerComponent* pListener = pZone->getOwner()->addComponent<sw::MockCollisionListenerComponent>();
     SW_ASSERT_NOT_NULL( pListener );
     manager.beginPlay();
-    tickFor( manager, 180 );
+    test::tickFrames( manager, 180 );
     SW_EXPECT_EQUAL( 1u, pListener->_overlapBeginCount );
     SW_EXPECT_EQUAL( 1u, pListener->_overlapEndCount );
     SW_EXPECT_TRUE( pListener->_overlapStayCount > 0 );
@@ -229,7 +223,7 @@ SW_TEST_CASE( PhysicsComponentTest, JointComponentConnectsToParentBody )
     pJoint->setJointType( sw::PhysicsJointType::Distance );
     pJoint->setLocalPosition( sw::float3{ 0.0f, 0.0f, 0.0f } );
     manager.beginPlay();
-    tickFor( manager, 120 );
+    test::tickFrames( manager, 120 );
     SW_EXPECT_TRUE( pJoint->getJointHandle().isValid() );
     // 줄 길이 2 m 를 지킨다(관절이 없으면 바닥 없이 떨어진다).
     SW_EXPECT_NEAR_EQUAL( 2.0f, sw::float3::getDistance( pAnchor->getWorldPosition(), pBob->getWorldPosition() ), 0.05f );
@@ -249,11 +243,11 @@ SW_TEST_CASE( PhysicsComponentTest, CharacterControllerWalksOnFloor )
     SW_ASSERT_NOT_NULL( pCharacter );
     pCharacter->setLocalPosition( sw::float3{ 0.0f, 1.0f, 0.0f } );
     manager.beginPlay();
-    tickFor( manager, 60 );
+    test::tickFrames( manager, 60 );
     SW_EXPECT_TRUE( pCharacter->isGrounded() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pCharacter->getWorldPosition()._y, 0.05f );
     pCharacter->setMoveVelocity( sw::float3{ 3.0f, 0.0f, 0.0f } );
-    tickFor( manager, 60 );
+    test::tickFrames( manager, 60 );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pCharacter->getWorldPosition()._x, 0.2f );
     manager.endPlay();
 }
@@ -284,12 +278,12 @@ SW_TEST_CASE( PhysicsComponentTest, Components2DLandAndWalk )
     pHero->setLocalPosition( sw::float3{ -3.0f, 1.0f, 3.0f } );
 
     manager.beginPlay();
-    tickFor( manager, 180 );
+    test::tickFrames( manager, 180 );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.03f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pCrate->getWorldPosition()._z, 1e-4f ); // 2D 물리는 Z 를 건드리지 않는다
     SW_EXPECT_TRUE( pHero->isGrounded() );
     pHero->setMoveVelocity( 2.0f );
-    tickFor( manager, 60 );
+    test::tickFrames( manager, 60 );
     SW_EXPECT_NEAR_EQUAL( -1.0f, pHero->getWorldPosition()._x, 0.2f );
     manager.endPlay();
 }
@@ -316,7 +310,7 @@ SW_TEST_CASE( PhysicsComponentTest, PostPhysicsTickSeesThisFramesBodyPose )
     pEarly->setTickGroup( sw::TickGroup::PrePhysics );
 
     manager.beginPlay();
-    tickFor( manager, 10 );
+    test::tickFrames( manager, 10 );
     sw::vector<float32> listEndY;
     for ( uint32 frameIndex = 0; frameIndex < 5; ++frameIndex )
     {
