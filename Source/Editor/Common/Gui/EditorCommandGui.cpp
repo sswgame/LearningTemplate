@@ -31,6 +31,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/CommandStack.h"
 
@@ -319,6 +320,12 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // 2) 활성 조건. 표가 함수 포인터로 가리킨다
             // ------------------------------------------------------------------------------
+            /** @brief RenderDoc 으로 다음 프레임을 캡처합니다(`viewport.renderDocCapture`). */
+            static void commandRenderDocCapture() { RenderDocCapture::triggerCapture(); }
+
+            /** @brief RenderDoc 이 이 프로세스에 붙어 있으면 true 입니다(`-renderdoc` 또는 RenderDoc 에서 실행). */
+            static bool isRenderDocAvailable() { return RenderDocCapture::isAvailable(); }
+
             static bool isCompilerIdle()
             {
                 IModuleCompiler* pCompiler = getService<IModuleCompiler>();
@@ -401,6 +408,7 @@ namespace sw::editor
 
                 {                    "play.start",                          "Play",                      "",      "Play",                                                              "",                                 "Start play-in-editor",                                                                              {},                                                                        {},                                   &commandPlay,                       nullptr,  true,                     nullptr,    0},
                 {           "viewport.screenshot",                    "Screenshot",     editoricon::kCamera,  "Viewport",         "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다", "Save the focused view as PNG under Saved/Screenshots",                                { EditorCommandKey::F9, commandmodifier::kNone },                                                                        {},  &EditorScreenshotCommands::captureFocusedView,                       nullptr,  true,                     nullptr,    0},
+                {     "viewport.renderDocCapture",             "RenderDoc Capture",        editoricon::kBug,  "Viewport",     "다음 프레임을 RenderDoc 으로 캡처합니다(Saved/RenderDoc/)",                "Capture the next frame with RenderDoc",                               { EditorCommandKey::F12, commandmodifier::kCtrl },                                                                        {},                       &commandRenderDocCapture,         &isRenderDocAvailable,  true,                     nullptr,    0},
 
                 {"clipboard.pasteComponentValues",        "Paste Component Values",                      "", "Clipboard",                                                              "",  "Overwrite the selected component from the clipboard",                                                                              {},                                                                        {},                   &commandPasteComponentValues,                       nullptr,  true,                     nullptr,    0},
                 { "clipboard.pasteComponentAsNew",        "Paste Component As New",                      "", "Clipboard",                                                              "",      "Add the copied component to the selected object",                                                                              {},                                                                        {},                    &commandPasteComponentAsNew,                       nullptr,  true,                     nullptr,    0},

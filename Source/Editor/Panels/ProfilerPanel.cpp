@@ -26,6 +26,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -183,6 +184,21 @@ namespace sw::editor
         ImGui::EndDisabled();
         if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
             ImGui::TextColored( ImVec4{ 1.0f, 0.6f, 0.3f, 1.0f }, "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+
+        // RenderDoc — GPU 프레임 캡처(네 백엔드). 붙어 있지 않으면 단추가 회색이고 이유를 툴팁으로 보인다.
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "|" );
+        ImGui::SameLine();
+        const bool bRenderDoc = RenderDocCapture::isAvailable();
+        ImGui::BeginDisabled( bRenderDoc == false );
+        if ( ImGui::SmallButton( "RenderDoc Capture" ) )
+            RenderDocCapture::triggerCapture();
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUi() == false )
+            SW_LOG_WARNING( "RenderDoc replay UI could not be started" );
+        ImGui::EndDisabled();
+        if ( bRenderDoc == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
+            ImGui::SetTooltip( "%s", "Start with -renderdoc or from RenderDoc — RenderDoc 이 이 프로세스에 붙어 있지 않습니다" );
     }
 
     void ProfilerPanel::drawFrameGraph()

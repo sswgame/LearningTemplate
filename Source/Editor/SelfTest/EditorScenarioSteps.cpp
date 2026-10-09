@@ -31,6 +31,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/Utility/CommandStack.h"
@@ -479,6 +480,12 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readRenderDocAvailable( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = RenderDocCapture::isAvailable() ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readObjectCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObjectManager* pActive = editor::getActiveObjectManager();
@@ -710,6 +717,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSceneDirty, "Editor.SceneDirty", "1 while the edited scene has unsaved changes", &EditorScenarioStepsInternal::readSceneDirty );
     SW_AUTOMATION_PROBE( editorWindowTitleDirty, "Editor.WindowTitleDirty", "1 when the editor window title carries the unsaved mark (*)",
                          &EditorScenarioStepsInternal::readWindowTitleDirty );
+    SW_AUTOMATION_PROBE( editorRenderDocAvailable, "Editor.RenderDocAvailable", "1 when RenderDoc is attached (-renderdoc or launched from RenderDoc)",
+                         &EditorScenarioStepsInternal::readRenderDocAvailable );
     SW_AUTOMATION_PROBE( editorObjectCount, "Editor.ObjectCount", "Objects in the active scene", &EditorScenarioStepsInternal::readObjectCount );
     SW_AUTOMATION_PROBE( editorSelectionCount, "Editor.SelectionCount", "Selected objects", &EditorScenarioStepsInternal::readSelectionCount );
     SW_AUTOMATION_PROBE( editorHierarchyVisibleRoots, "Editor.HierarchyVisibleRoots", "Root rows the Hierarchy showed in the last frame (after its filter)",

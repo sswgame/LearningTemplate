@@ -106,7 +106,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **4 캡처 · 디버그 · 품질** | G1 | 보기 모드 Normals · Depth · Overdraw | M | E3 | ★ |
-| | G3 | RenderDoc 캡처 버튼 · `-renderdoc` | S | | |
 | | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
 | | H1 | assert 무시 대화상자 + `-unattended` | S | | ★ |
 | | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
@@ -122,7 +121,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
-원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 23 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 6, 5 단계 4)입니다.
+원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 22 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 5, 5 단계 4)입니다.
 여기에 아이콘 단위 넷과 패널 점검의 단위 열둘(N5 처럼 작은 것은 다른 단위와 합쳐도 됩니다)이 더해집니다.
 
 ---
@@ -2132,64 +2131,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 **적용 뒤 확인:** 쿠킹 → host 시험 네 백엔드, `-gv_viewMode=3/4/5` 스크린샷 넷 × 셋을 눈으로. **겹침:** E3(앞), gfx-editor-rest 3 · shadow-fix(셰이더 다른 줄), 4 차 runtime-ui(UI 패스는 보기 모드를 받지 않는다 — 표 플래그 확인).
 
-### G3 RenderDoc 캡처 단추 · `-renderdoc`
-
-**바꿀 것.**
-1) `ThirdParty/renderdoc/renderdoc_app.h`(RenderDoc 저장소 `renderdoc/api/app/renderdoc_app.h` 원문 그대로 — MIT, 파일 머리에 라이선스가 있다) + `ThirdParty/renderdoc/LICENSE.md`. 서드파티 고지(2 차 net-core-sec D3 의 THIRD_PARTY_NOTICES)에 한 줄.
-   `CheckThirdPartyIsolation` 규칙(우리 헤더에서 ThirdParty include 금지)대로 `.cpp` 에서만 include.
-2) 새 `Engine/Graphics/Capture/RenderDocCapture.h` · `.cpp`(Dev 만 — `#if !defined( SW_SHIPPING )`, Shipping 은 빈 함수):
-```cpp
-namespace sw
-{
-    /**
-     * @struct RenderDocCapture
-     * @brief RenderDoc in-app API — 프레임 캡처를 코드에서 건다(네 백엔드 모두). RenderDoc 이 이 프로세스에 붙어 있어야 한다:
-     *        RenderDoc UI 로 띄웠거나(`renderdoc.dll` 이 이미 올라와 있다), `-renderdoc` 로 **RHI 디바이스를 만들기 전에** 올렸을 때.
-     */
-    struct SW_API RenderDocCapture
-    {
-        /** @brief 이미 올라온 RenderDoc 을 찾고, 없고 `-renderdoc` 이면 설치 경로에서 올립니다. 디바이스 생성 전에 한 번(EngineInitStepList). */
-        static void initialize();
-        /** @brief 쓸 수 있으면 true(API 를 얻었다). */
-        static bool isAvailable();
-        /** @brief 다음 프레임을 캡처합니다. 캡처 파일은 RenderDoc 이 정한 자리(`Saved/RenderDoc/` 로 맞춘다 — SetCaptureFilePathTemplate). */
-        static void triggerCapture();
-        /** @brief RenderDoc 재생 UI 를 띄워 이 프로세스에 붙입니다(이미 떠 있으면 앞으로). */
-        static void launchReplayUi();
-    };
-} // namespace sw
-```
-`.cpp`: Windows `GetModuleHandleW( L"renderdoc.dll" )` → 없고 `-renderdoc` 면 `LoadLibraryW( L"%ProgramFiles%\\RenderDoc\\renderdoc.dll" 을 ExpandEnvironmentStringsW 한 경로 )`, `GetProcAddress( "RENDERDOC_GetAPI" )`;
-Linux `dlopen( "librenderdoc.so", RTLD_NOW | RTLD_NOLOAD )` → 없고 `-renderdoc` 면 `RTLD_NOW`. `RENDERDOC_GetAPI( eRENDERDOC_API_Version_1_6_0, … )`, `SetCaptureFilePathTemplate( "Saved/RenderDoc/capture" )`,
-`MaskOverlayBits( eRENDERDOC_Overlay_None, 0 )`(화면 글자 끔 — 스크린샷 시험이 흔들리지 않게).
-3) `ArgumentList.xxx`: `SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )`. `EngineInitStepList.xxx`: RHI 디바이스 단계 **앞**에 `RenderDoc` 단계(대기 없음 · `initialize` 만).
-4) 개발 명령 `renderdoc.capture` · `renderdoc.ui`. 에디터: 상단 툴바(`EditorPlayToolbar`) `ICON_FA_BUG` 단추 — 한 프레임 전체(씬 뷰 · 게임 뷰)를 캡처한다(쓸 수 없으면 회색 + 툴팁 "Start with -renderdoc or from RenderDoc"), 커맨드 `viewport.renderDocCapture`(Ctrl+F12),
-   프로파일러 패널 "Open Tracy" 옆에 "RenderDoc" 묶음(Capture · Open UI).
-**시험.** 단위 시험은 RenderDoc 설치에 매인다 — `RenderDocCaptureTest.IsUnavailableWithoutRenderDoc`(EngineTest nogpu: 인자 없이 `initialize` → `isAvailable()` false, `triggerCapture` 가 아무것도 안 하고 죽지 않음) 하나.
-실제 캡처는 손 확인(적용 뒤: RenderDoc 이 깔린 PC 에서 `App.exe -dx12 -renderdoc -EnableEditor` → 단추 → `Saved/RenderDoc/*.rdc`, 네 백엔드).
-**확인 = 에디터 시나리오.** `renderdocbutton.scenario.xml`: `-renderdoc` 없이 띄워 탐침 `Editor.RenderDocAvailable` 이 0 인지, RenderDoc 단추(이름표 `toolbar.renderDoc`)를 눌러도 `[Error]` 가 없는지 봅니다.
-실제 캡처는 RenderDoc 이 설치된 기계에서만 되므로 시나리오에 넣지 않습니다.
-
-**남길 교훈.** [결정 기록](../09_Decisions.md) 2절(안 하기로 한 것)에 한 줄: `- **PIX 캡처(DX12 전용 — WinPixGpuCapturer.dll)는 하지 않았다** — RenderDoc 이 네 백엔드를 덮는다. DX12 타이밍 분석이 필요해지면.`
-**커밋 메시지:**
-```
-렌더러 - RenderDoc in-app API(-renderdoc · 캡처 단추 · renderdoc.capture)
-
-문제점:
-- GPU 프레임 캡처는 RenderDoc UI 로 프로세스를 띄워야만 됐고, 에디터 · 게임에서 원하는 프레임을 고르는 단추가 없었다.
-
-해결방안:
-- ThirdParty/renderdoc/renderdoc_app.h(MIT) 를 넣고 RenderDocCapture(Dev 만): 이미 붙은 RenderDoc 을 찾고, -renderdoc 면 RHI 디바이스
-  전에 설치 경로에서 올린다(EngineInitStepList 의 RenderDoc 단계). 캡처 파일은 Saved/RenderDoc/, 화면 글자 끔.
-- 개발 명령 renderdoc.capture · renderdoc.ui, 상단 툴바 단추 · 커맨드 viewport.renderDocCapture(Ctrl+F12), 프로파일러 패널 묶음.
-
-결과:
-- RenderDocCaptureTest.IsUnavailableWithoutRenderDoc. 실제 캡처는 RenderDoc 이 깔린 PC 에서 네 백엔드 손 확인.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**겹침:** 2 차 net-core-sec(THIRD_PARTY_NOTICES) — 그 뒤. 리눅스 `dlopen` 갈래는 CI 로 확인.
-
 ### G4 프로파일러 스레드 미니 타임라인
 
 **바꿀 것.**
@@ -2739,7 +2680,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 22 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 21 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
@@ -2751,7 +2692,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
   `mapCheck.selectsIssueObject` · `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
 - **에디터 시나리오**: 단위마다 하나씩 더한다(머리말의 "확인 = 에디터 시나리오"). `AppScenarioTest` 가 모두 돌리므로 시나리오가 늘면 `AppTest` 의 `HOST_SHARDS` 를 늘린다.
 - **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGpuTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
-  자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake · G3 dlopen). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
+  자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
 
 **겹치는 파일.** 원문이 적은 다른 제안서(2차 ~ 4차)는 모두 main 에 들어갔으므로, 겹침은 이 문서 안의 단위끼리만 봅니다.
 
@@ -2787,7 +2728,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | P2 · P3 · P4 | 에디터 README, 모듈 README | 에디터 설정은 환경설정 섹션, 사용자 단축키 덮어쓰기, 매니페스트 내용도 configure 의존 |
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |
 | A1 | 에디터 README | 활성 팩 기본, 참조 찾기는 `EditorReferenceIndex` |
-| G3 · G4 | [결정 기록](../09_Decisions.md) 2절, 프로파일링 README | PIX 는 하지 않음, 패널 타임라인과 Tracy 의 역할 |
+| G4 | 프로파일링 README | 패널 타임라인과 Tracy 의 역할 |
 | H1 | `Source/Core/README.md` 함정과 주의 | assert 대화상자와 `-unattended` |
 | T1 | [백로그](../06_Backlog.md) 1-6 | `GameCurve` 는 `FloatCurve` 로 옮기지 않음(남은 일) |
 | R3 · R4 | 에디터 README | 컴포넌트 아이콘 테이블, 빌보드 클릭이 레이 피킹보다 먼저 |
@@ -3001,7 +2942,7 @@ T3 의 공용 노드 그래프 틀(찾아 넣기, 핀 타입 색, 오류 노드 
 ### 그 밖에 점검이 적은 것(작은 단위, 다른 단위에 붙여도 됩니다)
 
 - **프로파일러**: 계층 호출 트리, 그래프의 한 프레임을 눌러 그 프레임 값 보기, 스파이크에서 멈추기, 캡처 저장과 열기. 스레드 타임라인은 G4 입니다.
-- **렌더 타깃 보기**: 깊이와 그림자 맵 미리보기(선형화), 채널 고르기, 픽셀 값 읽기. RenderDoc 은 G3 입니다.
+- **렌더 타깃 보기**: 깊이와 그림자 맵 미리보기(선형화), 채널 고르기, 픽셀 값 읽기. RenderDoc 캡처는 이미 있습니다(`RenderDocCapture` · 상단 툴바 단추).
 - **데이터 편집기 정리**: Data Table 의 게임 데이터 탭은 XML 글 상자라 이름과 달리 표가 아닙니다. 리플렉션 구조체 행을 표로 편집하는 일은 9절 로드맵 7(카탈로그 편집기)과 같이 합니다.
   Input Map Editor 의 시연용 단추와 9 개 탭을 정리하고, 언리얼 Enhanced Input 처럼 액션, 매핑, 트리거를 한 화면에 둡니다.
 - **에디터 프레임당 할당 측정**: 메모리 탭의 `Editor` 태그 누적 할당이 6 분에 20 GB 였습니다. `-gv_profileAllocSites`(Debug App)로 프레임당 할당 위치를 세고, 새 로그가 올 때마다 최대 2048 줄을 복사하는 콘솔 스냅숏부터 봅니다.

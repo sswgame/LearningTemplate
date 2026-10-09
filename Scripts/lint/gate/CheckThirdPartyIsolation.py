@@ -69,6 +69,7 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("OpenSSL", ("openssl/",), ("Source/GameFramework/Base/Online/Security/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto"),
                 "Source/GameFramework/CMakeLists.txt"),
     LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
+    LibraryRule("RenderDoc", ("renderdoc_app.h",), ("Source/Engine/Renderer/Capture/",), ("renderdoc",)),
     LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/",),
                 ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/CMakeLists.txt"),
     LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/",),

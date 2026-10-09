@@ -67,6 +67,7 @@
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
+#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
@@ -591,6 +592,9 @@ namespace sw
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
+            // RenderDoc 은 그래픽 API 를 만들 때 끼어든다 — 디바이스보다 먼저 찾고(`-renderdoc` 면 올리고) 백엔드 교체 뒤에도 그대로 쓴다.
+            RenderDocCapture::initialize( loop._owned._pCommandLineManager->isArgumentProvided( CommandLineArgument::RENDERDOC ) );
+
             // 커맨드라인이 백엔드를 명시하지 않았을 때만 설정 기본값이 이긴다.
             RHIBackend commandLineBackend{};
             if ( RHIBackendUtil::findCommandLineBackend( *loop._owned._pCommandLineManager, commandLineBackend ) == false )

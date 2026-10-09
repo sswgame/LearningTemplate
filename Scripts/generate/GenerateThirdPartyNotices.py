@@ -4,11 +4,12 @@
 설치 트리는 워크트리끼리 나눠 쓰므로 트리에 깔린 모든 포트가 아니라, 매니페스트 의존(플랫폼 식을 이 트리플릿으로 푼 것)에서
 `vcpkg/status` 의 `Depends` 를 따라 닫은 집합만 넣습니다. 포트를 짓는 데만 쓰는 도우미(`vcpkg-*`)는 배포물에 들어가지 않아 뺍니다.
 개발 빌드에만 들어가는 라이브러리(ImGui · DXC · Tracy 등)도 넣습니다 — 개발 빌드를 남에게 줄 때도 같은 고지가 필요하다.
+저장소에 원문 그대로 둔 코드(`ThirdParty/<이름>/LICENSE.md` 가 있는 폴더 — RenderDoc in-app API 헤더)는 `--vendored-root` 로 받아 뒤에 붙입니다.
 
 내용이 같으면 파일을 다시 쓰지 않습니다(빌드가 다시 돌지 않게).
 
 사용법: py -3 Scripts/generate/GenerateThirdPartyNotices.py --manifest vcpkg.json --installed build/vcpkg_installed
-        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt
+        --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty]
 """
 import argparse
 import json
@@ -36,6 +37,8 @@ kListPrefaceLine = (
     "under the 3-clause BSD license - see the 'tracy' section below.",
 )
 kSectionRule = "=" * 100
+#: 저장소에 원문 그대로 둔 코드의 라이선스 파일 이름입니다(`ThirdParty/<이름>/LICENSE.md`).
+kVendoredLicenseFileName = "LICENSE.md"
 
 #: 플랫폼 식의 낱말 → 트리플릿에서 참인지. vcpkg 의 플랫폼 식(`windows & !uwp`, `!linux`, `windows | linux`)에 쓰이는 것만.
 kMapTripletWordTest = {
@@ -142,10 +145,22 @@ def collectPortsInternal(setRoot, mapDepends):
     return sorted(name for name in setVisited if name.startswith(kBuildHelperPrefix) is False)
 
 
-def makeNoticeTextInternal(listPort, shareRoot):
-    """포트마다 절 하나(이름 + copyright 전문)를 이어 붙입니다. copyright 가 없는 포트는 그 사실을 적습니다."""
+def collectVendoredLicensesInternal(vendoredRoot):
+    """`<vendoredRoot>/<이름>/LICENSE.md` 가 있는 폴더마다 (이름, 라이선스 경로)입니다. 이름 순서입니다."""
+    if vendoredRoot is None or os.path.isdir(vendoredRoot) is False:
+        return []
+    listVendored = []
+    for name in sorted(os.listdir(vendoredRoot)):
+        licensePath = os.path.join(vendoredRoot, name, kVendoredLicenseFileName)
+        if os.path.isfile(licensePath):
+            listVendored.append((name, licensePath))
+    return listVendored
+
+
+def makeNoticeTextInternal(listPort, shareRoot, listVendored=()):
+    """포트마다 절 하나(이름 + copyright 전문)를 이어 붙이고, 저장소에 둔 코드의 라이선스를 뒤에 붙입니다. copyright 가 없는 포트는 그 사실을 적습니다."""
     listLine = list(kListPrefaceLine)
-    listLine += ["", "Included: " + ", ".join(listPort), ""]
+    listLine += ["", "Included: " + ", ".join(list(listPort) + [name for name, _ in listVendored]), ""]
     for port in listPort:
         listLine += [kSectionRule, port, kSectionRule, ""]
         copyrightPath = os.path.join(shareRoot, port, "copyright")
@@ -154,6 +169,11 @@ def makeNoticeTextInternal(listPort, shareRoot):
                 listLine.append(handle.read().replace("\r\n", "\n").rstrip("\n"))
         else:
             listLine.append("(no license file was installed for this port)")
+        listLine.append("")
+    for name, licensePath in listVendored:
+        listLine += [kSectionRule, name + " (source kept in ThirdParty/" + name + ")", kSectionRule, ""]
+        with open(licensePath, "r", encoding="utf-8", errors="replace") as handle:
+            listLine.append(handle.read().replace("\r\n", "\n").rstrip("\n"))
         listLine.append("")
     return "\n".join(listLine) + "\n"
 
@@ -164,6 +184,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--installed", required=True, help="vcpkg 설치 루트(VCPKG_INSTALLED_DIR)")
     parser.add_argument("--triplet", required=True, help="대상 트리플릿(VCPKG_TARGET_TRIPLET)")
     parser.add_argument("--out", required=True, help="쓸 고지 파일 경로")
+    parser.add_argument("--vendored-root", default=None, help="저장소에 둔 서드파티 코드 폴더(하위 폴더의 LICENSE.md 를 붙인다)")
     args = parser.parse_args(argv)
 
     statusPath = os.path.join(args.installed, "vcpkg", "status")
@@ -172,9 +193,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     mapDepends = readStatusDependsInternal(statusPath, args.triplet)
     listPort = collectPortsInternal(readManifestPortsInternal(args.manifest, args.triplet), mapDepends)
-    text = makeNoticeTextInternal(listPort, os.path.join(args.installed, args.triplet, "share"))
+    listVendored = collectVendoredLicensesInternal(args.vendored_root)
+    text = makeNoticeTextInternal(listPort, os.path.join(args.installed, args.triplet, "share"), listVendored)
 
-    writeGeneratedFile(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(listPort)} libraries", newline="\n",
+    writeGeneratedFile(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(listPort) + len(listVendored)} libraries", newline="\n",
                        bReportUnchanged=False)
     return 0
 

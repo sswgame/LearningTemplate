@@ -27,6 +27,7 @@
 
 ## 2. 안 하기로 한 것 (다시 제안하지 말 것)
 
+- **PIX 캡처(DX12 전용 — WinPixGpuCapturer.dll)는 하지 않았다**(2026-10-10) — RenderDoc in-app API(`RenderDocCapture`, `-renderdoc`)가 네 백엔드를 덮는다(언리얼 RenderDoc 플러그인 · 유니티 Frame Capture 자리). DX12 타이밍 분석이 필요해지면 다시 본다.
 - **지금 하지 않는 구조 후보 — 다시 볼 조건과 함께**(2026-10-03 상용 엔진 비교로 결정): 트랜스폼 SoA 2 단계(UE 액터도 AoS, 측정 근거가 생기면) ·
   선행 조건 스케줄러(시스템이 서로의 결과에 기대기 시작하면 — UE `AddTickPrerequisite` 모양. 2026-10-06 키트 조립 점검: 키트 디렉터 사이 순서는 한 오브젝트에
   붙인 순서가 주고 — `TickRegistry` 가 한 오브젝트의 항목을 한 워커가 붙은 순서로 돌린다 — 다른 오브젝트 사이는 디렉터의 `_tickAfter`(규칙 서브틱 + 선행 조건),
@@ -150,7 +151,7 @@
 | `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
 | `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |
 | `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
-| `Engine/Graphics/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
+| `Engine/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
 | `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
 | `Character/Pose/` · `Animation/AnimNotifyPhase` · `Object/Animation/AnimNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
 | `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |

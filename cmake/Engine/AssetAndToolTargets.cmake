@@ -78,15 +78,17 @@ sw_addRepoPythonTarget(CookAssets "${SW_SCRIPT_COOK_ASSETS}"
 
 # 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가
 # 끌어오는 포트만 모아 쓴다(설치 트리는 워크트리끼리 나눠 쓰므로 트리 전체가 아니다). 포트가 바뀌면 status 가 바뀌어 다시 만든다.
+# 저장소에 원문 그대로 둔 코드(`ThirdParty/<이름>/LICENSE.md`)의 라이선스도 뒤에 붙인다.
 if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET AND EXISTS "${VCPKG_INSTALLED_DIR}/vcpkg/status")
 	set(swThirdPartyNotices "${CMAKE_BINARY_DIR}/Bin/THIRD_PARTY_NOTICES.txt")
+	file(GLOB swVendoredLicenses CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/ThirdParty/*/LICENSE.md")
 	add_custom_command(
 		OUTPUT "${swThirdPartyNotices}"
 		COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
 			--manifest "${CMAKE_SOURCE_DIR}/vcpkg.json" --installed "${VCPKG_INSTALLED_DIR}"
-			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}"
+			--triplet "${VCPKG_TARGET_TRIPLET}" --out "${swThirdPartyNotices}" --vendored-root "${CMAKE_SOURCE_DIR}/ThirdParty"
 		DEPENDS "${CMAKE_SOURCE_DIR}/vcpkg.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
-			"${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py"
+			"${CMAKE_SOURCE_DIR}/Scripts/generate/GenerateThirdPartyNotices.py" ${swVendoredLicenses}
 		COMMENT "Collecting third-party license notices..."
 		VERBATIM
 	)

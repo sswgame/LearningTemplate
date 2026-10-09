@@ -3284,6 +3284,14 @@
    ],
    "value": "글 값(`-이름=값`)",
    "description": "시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다)."
+  },
+  {
+   "name": "RENDERDOC",
+   "spellings": [
+    "renderdoc"
+   ],
+   "value": "플래그(`-이름`)",
+   "description": "RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다."
   }
  ],
  "buildOptions": [

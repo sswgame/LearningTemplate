@@ -1,0 +1,3 @@
+# 원문 그대로 둔 서드파티 헤더 — 저장소 포맷을 적용하지 않는다(RenderDoc 판을 바꿀 때 바이트 비교가 되게).
+DisableFormat: true
+SortIncludes: Never

@@ -208,6 +208,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 |---|---|
 | `Editor.PlayState` | 0 정지, 1 플레이, 2 일시 정지 |
 | `Editor.SceneDirty` | 저장하지 않은 변경이 있으면 1 |
+| `Editor.RenderDocAvailable` | RenderDoc 이 이 프로세스에 붙어 있으면 1(`-renderdoc` 또는 RenderDoc 에서 실행) |
 | `Editor.WindowTitleDirty` | 창 제목이 미저장 표시(`*`)를 달고 있으면 1 — 셸이 실제로 창에 건 제목을 읽는다 |
 | `Editor.ObjectCount`, `Editor.SelectionCount` | 활성 씬의 오브젝트 수, 선택 수 |
 | `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
@@ -220,7 +221,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
 `hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot`, 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
-상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
+상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
 

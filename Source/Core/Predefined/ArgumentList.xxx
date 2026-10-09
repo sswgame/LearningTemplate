@@ -103,3 +103,6 @@ SW_REGISTER_ARGUMENT( CRASH_REPORTER, "", false, "crash-reporter" )
 SW_REGISTER_ARGUMENT( SCENARIO, "", false, "scenario" )
 // 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다).
 SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
+
+// RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.
+SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )

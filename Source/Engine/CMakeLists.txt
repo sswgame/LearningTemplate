@@ -193,6 +193,8 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 	endif()
 	message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
 endif()
+# 2-2b) RenderDoc in-app API — 헤더 하나(include 경로만, 링크할 것 없음). Renderer/Capture/RenderDocCapture.cpp 가 Dev 에서만 쓴다.
+target_link_libraries(Engine PRIVATE renderdoc)
 # 2-3) 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다
 # (CheckThirdPartyIsolation.py) — 다른 코드는 엔진 인터페이스(INavMesh · INavCrowd)만 본다.
 # ------------------------------------------------------------------------------

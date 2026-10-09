@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — RenderDoc 단추(EditorPlus G3): -renderdoc 없이 띄우면 RenderDoc 이 붙지 않고, 상단 툴바의 회색 단추를 눌러도 아무 일이 없다.
+  실제 캡처는 RenderDoc 이 설치된 기계에서만 되므로 시나리오에 넣지 않는다(App.exe -dx12 -renderdoc -EnableEditor → 단추 → Saved/RenderDoc/*.rdc).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/renderdocbutton.scenario.xml -dx12
+-->
+<Scenario name="editor.renderdocbutton" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="30"><DevCommand line="layout.reset"/></At>
+	<At frame="60"><Expect probe="Editor.RenderDocAvailable" equals="0"/></At>
+	<At frame="70"><EditorClick mark="toolbar.renderDoc"/></At>
+	<At frame="110">
+		<ExpectLog contains="RenderDoc capture requested" count="0"/>
+		<ExpectLog contains="[Error]" count="0"/>
+		<Expect probe="Editor.RenderDocAvailable" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>

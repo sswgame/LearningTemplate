@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -14,6 +16,7 @@
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Utility/GameTimeScale.h"
 
@@ -186,6 +189,23 @@ namespace sw::editor
                 _s_bAutoplayDrawn = true;
             }
 
+            /**
+             * @brief RenderDoc 캡처 단추를 그립니다 — 다음 프레임 전체(씬 뷰 · 게임 뷰 · 에디터 UI)를 캡처한다.
+             * @details RenderDoc 이 붙어 있지 않으면 회색이고, 툴팁은 회색 단추 위에서도 이유를 보인다(`AllowWhenDisabled`).
+             */
+            static void drawRenderDocButton()
+            {
+                const bool bAvailable = RenderDocCapture::isAvailable();
+                ImGui::BeginDisabled( bAvailable == false );
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kBug, "RenderDoc" ) ) )
+                    RenderDocCapture::triggerCapture();
+                ImGui::EndDisabled();
+                EditorSelfTestMarks::note( "toolbar.renderDoc" );
+                if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
+                    ImGui::SetTooltip( "%s", bAvailable ? "다음 프레임을 RenderDoc 으로 캡처합니다 (Saved/RenderDoc/, Ctrl+F12)"
+                                                        : "Start with -renderdoc or from RenderDoc — RenderDoc 이 이 프로세스에 붙어 있지 않습니다" );
+            }
+
             /** @brief 미저장 씬에서 Play 를 눌렀을 때의 확인 모달입니다. */
             static void drawUnsavedPlayPopup()
             {
@@ -226,6 +246,8 @@ namespace sw::editor
             EditorWidgets::drawToolbarSeparator();
             EditorPlayToolbarInternal::drawSessionOptions();
             EditorPlayToolbarInternal::drawAutoplayButton();
+            EditorWidgets::drawToolbarSeparator();
+            EditorPlayToolbarInternal::drawRenderDocButton();
         }
         ImGui::End();
         EditorPlayToolbarInternal::drawUnsavedPlayPopup();
