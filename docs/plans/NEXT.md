@@ -7,6 +7,11 @@
 - main 에 들어간 것: 3 차(가상 입력 · 자동화 시나리오 · 빙의 · 탑승), 4 차(런타임 UI 전부 + 원시 장치 조회 → 입력 맵 액션), 5 차 a(문서 분리 · 다시 쓰기 · 작업 방식),
   5 차 b 전부와 그 뒤 추가분(의존성 기준선 · 옵션 창 · 에디터 고정 픽셀 배율 · Dev 산출물 자리 `Bin/Modules` · `Bin/Symbols` · `TestBin` · 크래시 보고 인자 · 반복문 중괄호 · 중복 정리).
 - 6 차(주석을 새 문체로)는 시작하지 않았습니다.
+- 그 뒤 묶음(2026-10-10): AppHost → ModuleHost 개명 · FixedTimestep 을 `Engine/Config` 로(`6863b1f95`), 에디터 격자 월드 고정 · 적응 간격 · 가장자리 흐림(`0c3f1fd37`),
+  텍스처 BC 띠 병렬 압축(`e71f3b8ae`, 모듈 ABI v2 — `importEditorAssets` 가 서비스 표를 받는다), 런타임 UI 그리기 목록 맞바꾸기(`53898be30`), 서드파티 DLL 은 `Bin` 한 벌(`13b41e74a`).
+  검증(묶음 끝에 한 번): Debug 경고 0, `ctest --preset Ninja-Debug-lint` 59/59, Debug `-L nogpu` 42/42 · `-L hostgpu`(에디터 시나리오 4 백엔드 — `viewportgrid` 포함),
+  Shipping 빌드 · `-L hostgpu`, Debug-Server 빌드, App 에디터(DX12) · Vulkan 기동 · 핫 리로드(`-gv_reloadGameAtFrame`) `[Error]` 0, Debug `--import-textures` 경고 한 줄 · `--check-textures` 0 문제.
+  **검증 대기**: 게임별 프리셋(`Ninja-Debug-<Game>`) 빌드, 네 백엔드 × Shooter3D · NileCity 실행, Debug-Server `-L nogpu`, 리눅스(CI 결과로 — 이번 묶음은 Windows 전용 CMake 경로와 ABI 판을 바꿨다).
 
 ## 5 차 b 검증 결과(2026-10-10)
 
