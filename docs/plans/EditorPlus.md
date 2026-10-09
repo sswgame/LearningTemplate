@@ -93,7 +93,8 @@ O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **0 띄워 보며 찾은 결함** | E5 | 창 제목 = `<게임> — <씬>[*] — SW Editor` + `IWindow::setTitle` | S | | ★ |
+| **0 띄워 보며 찾은 결함** | V1 | 씬 뷰 / 게임 뷰 분리 — 에디터 카메라 뷰와 게임 카메라 출력을 따로(14절) + 재생 단추를 툴바로 | L | E2 · E5 | ★ |
+| | E5 | 창 제목 = `<게임> — <씬>[*] — SW Editor` + `IWindow::setTitle` | S | | ★ |
 | **1 확장 지점(C)** | C1 | EditorModule SHARED + `SW_EDITOR_API` + 등록 목록을 모듈 하나에 + 등록 세대 | M | | ★ |
 | | C2 | 매니저가 등록 변화를 따라간다 + 모듈을 내릴 때 그 모듈의 인스턴스를 뗀다 + 시각화 켬/끔을 id 로 | M | C1 | |
 | | C3 | ImGui 컨텍스트 결속기 + 커맨드 등록 줄 `SW_EDITOR_COMMAND` | M | C1 · C2 | |
@@ -2854,7 +2855,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 25 커밋):** E5 → C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 25 커밋):** V1 → E5 → C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
@@ -3120,3 +3121,39 @@ T3 의 공용 노드 그래프 틀(찾아 넣기, 핀 타입 색, 오류 노드 
 - **데이터 편집기 정리**: Data Table 의 게임 데이터 탭은 XML 글 상자라 이름과 달리 표가 아닙니다. 리플렉션 구조체 행을 표로 편집하는 일은 9절 로드맵 7(카탈로그 편집기)과 같이 합니다.
   Input Map Editor 의 시연용 단추와 9 개 탭을 정리하고, 언리얼 Enhanced Input 처럼 액션, 매핑, 트리거를 한 화면에 둡니다.
 - **에디터 프레임당 할당 측정**: 메모리 탭의 `Editor` 태그 누적 할당이 6 분에 20 GB 였습니다. `-gv_profileAllocSites`(Debug App)로 프레임당 할당 위치를 세고, 새 로그가 올 때마다 최대 2048 줄을 복사하는 콘솔 스냅숏부터 봅니다.
+
+## 14. 추가 단위 — 씬 뷰 / 게임 뷰 분리 (V1)
+
+사용자 지적(2026-10-10): "Game View" 라는 이름이지만 편집 중에는 에디터 카메라 화면이다. 상용 엔진과 견줘 둘로 가른다.
+
+**지금.** `GameViewPanel`(제목 "Game View") 하나가 두 역할을 번갈아 한다. 편집 중에는 에디터 카메라(`EditorCamera`)로 그리고 격자 · 기즈모 · 피킹 · 선택 외곽선 · 눈금자 · 시각화 선이 모두 여기 있다.
+Play 중에는 `EditorCamera::getViewportCamera( 씬, isPlayerActive )` 가 게임 카메라를 골라 같은 패널이 게임 화면이 된다. 그래서 (1) 게임 카메라를 보면서 씬 카메라로 편집할 수 없고
+(2) Play 중에 에디터 카메라로 둘러볼 수 없고(Simulate 로 바꿔야 한다) (3) 보조선이 섞이지 않은 순수 게임 화면을 에디터 안에서 볼 수 없다.
+
+**상용 엔진.** 유니티: Scene 뷰(에디터 카메라 · 기즈모 · 격자 · 보기 모드)와 Game 뷰(메인 카메라 출력, 보조선 없음)가 별도 패널이고 동시에 열 수 있다. Play 단추는 패널이 아니라 에디터 상단 툴바에 있다.
+언리얼: 레벨 뷰포트(에디터 카메라) 하나 + 플레이는 PIE 뷰포트 · 새 창(게임 카메라), 뷰포트에서 카메라 조종(pilot)으로 게임 카메라 시점을 본다. 고도: 에디터 뷰포트 + 별도 Game 탭(4.4 이후 임베드).
+공통: **에디터 카메라 뷰와 게임 카메라 출력은 이름도 패널도 다르다.** 이름에 `Game` 은 게임 카메라 출력에만 쓴다.
+
+**무엇.**
+1. `SceneViewPanel`(제목 "Scene") — 지금 `GameViewPanel` 의 에디터 뷰포트 몫 전부: 에디터 카메라 비행 · 궤도, 격자, 기즈모, 피킹, 선택 외곽선, 눈금자, 시각화 · 디버그 선, 보기 모드, 통계 오버레이, 방향 큐브. 2D/3D 모드 전환.
+2. `GameViewPanel`(제목 "Game") — 활성 씬의 게임 카메라 출력만: 기즈모 · 격자 · 선택 외곽선 없음, 게임 UI(런타임 UI 캔버스) 포함. 해상도 · 화면 비율 고르기(자유 · 16:9 · 1080p 고정 …)는 이 단위에서 자유 + 16:9 둘만. 게임 카메라가 없으면 "No camera rendering" 안내(유니티와 같다).
+3. **재생 단추(Play · Simulate · Pause · Step · Stop · Cam · 시간 배율 · 자동 플레이)는 패널에서 에디터 상단 툴바로.** 어느 뷰를 열어 두든 같은 자리. `drawTransportControls` · `drawSessionOptions` · `startSession` 이 `EditorPlayToolbar` 로 간다. 디버그 카테고리 팝업은 Scene 뷰 툴바에.
+4. 렌더: 엔진에는 다중 뷰 렌더(`RenderViewSettings` 뷰 목록 — Renderer README "다중 뷰")가 있다. 에디터 모듈이 뷰를 둘 요청한다: 씬 뷰 RT(에디터 카메라) · 게임 뷰 RT(게임 카메라). **패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 그 뷰는 그리지 않는다** — 게임 뷰를 닫으면 추가 비용 0.
+   `RuntimeAPI/ABI/EditorAPI.h` 의 `getGameViewport`(RT 하나)를 `getSceneViewport` · `getGameViewport` 둘로 늘린다(에디터 ABI — RHI 모듈 ABI 와는 별개이지만 에디터 모듈과 App 을 같이 다시 짓는다). `EditorContext` 의 게임 뷰 상태도 둘로.
+5. Play 중에도 씬 뷰는 에디터 카메라로 계속 둘러볼 수 있다(편집 도구는 Play 중 읽기 전용 — 기즈모로 고치면 Stop 때 사라진다는 표시는 지금 규칙 그대로). 게임 뷰는 게임 카메라만 그린다.
+6. 이름 정리: `gameView.*` 이름표(자동화 · 에디터 시나리오 · 자체 시험)는 기능별로 갈린다 — 뷰포트 캔버스 · 기즈모 · 피킹 · 보기 모드 → `sceneView.*`, 게임 출력 · 해상도 → `gameView.*`, 재생 단추 → `toolbar.play` 등. 코드 이름 `getGameViewCamera` · `Internal::getRenderedCamera` 도 의미대로 이름을 가른다.
+   이 문서의 "게임 뷰" 표기(G2 스크린샷 · G3 RenderDoc · R5 아이콘 · 검증 절차)를 단위마다 맞는 쪽으로 고친다: 스크린샷 단추는 **게임 뷰 그림** + 씬 뷰 툴바에는 "씬 뷰 스크린샷" 따로.
+7. 도크 기본 배치: 씬 뷰와 게임 뷰를 같은 도크 영역의 탭으로 둔다(유니티 기본). 저장된 배치가 옛 "Game View" 창 이름을 가리키면 새 창으로 대체한다(`layout.reset` 이 이미 있다).
+
+**건드리는 곳(예상).** `Editor/Panels/GameViewPanel.*`(분할) · `Editor/Viewport/EditorViewportClient.*`(씬 뷰로) · `Editor/Common/Workspace/EditorContext.*` · `Editor/ImGuiEditor.*`(뷰 요청 · 표시) · `Editor/SelfTest/*`(이름표) ·
+`Source/Editor/Common/Gui/` 툴바 · `RuntimeAPI/ABI/EditorAPI.h` · `RuntimeAPI/Export/EditorModuleExports.h` · `Engine/Graphics/Renderer/Frame/FrameRenderer*`(뷰 둘 요청 · RT 둘) · `Test/AppTest` 시나리오 이름표 · docs/plans/EditorPlus.md 표기.
+
+**확인 = 에디터 시나리오.**
+- `sceneviewgameview.scenario.xml`: 빈 씬 + 게임 카메라 오브젝트를 두고, 씬 뷰 캔버스(이름표 `sceneView.canvas`)로 에디터 카메라를 옮긴 뒤 두 뷰를 `Screenshot` 해서 **두 그림이 다르다**(`ExpectImage metric="differentFrom"`)와, 게임 뷰 그림에는 격자 색(지표)이 없고 씬 뷰 그림에는 있음을 본다.
+- Play 를 눌러(`toolbar.play`) 씬 뷰가 에디터 카메라를 유지하고 게임 뷰만 게임 카메라를 따르는지(카메라 위치 탐침 둘이 다르다), Stop 뒤 원래 상태로 돌아오는지.
+- 게임 뷰 패널을 접었을 때 게임 뷰 RT 요청이 0 이 되는지(프로파일 카운터 또는 탐침).
+- 기존 에디터 시나리오(되돌리기 · 기즈모 · Hierarchy · 타일맵 …)가 이름표 치환 뒤에도 전부 통과.
+- 자체 시험 기대 목록에 `sceneView.gridAndGizmoDraw` · `gameView.hidesEditorOverlays` 를 더한다.
+
+**위험.** 렌더 타깃 둘(에디터 메모리 +1 RT) · 다중 뷰 예산(`gv_renderViewBudget`) · 게임 뷰가 닫혀 있다가 열릴 때 첫 프레임 이전 이미지가 없을 때의 빈 화면 처리.
+이름표 일괄 치환이 커서(자체 시험 · 시나리오 전부) 한 커밋으로 하되 Debug 컴파일과 `-L nogpu` 와 에디터 시나리오 전부를 돌린 뒤 올린다.
