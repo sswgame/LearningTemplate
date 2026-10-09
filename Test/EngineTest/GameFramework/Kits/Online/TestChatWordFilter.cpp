@@ -4,7 +4,7 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 
-#include "GameFramework/Kits/Feature/Online/Server/Chat/ChatWordFilter.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 
 #include "TestFramework/TestFramework.h"
 

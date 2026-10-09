@@ -10,8 +10,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "GameFramework/Kits/Feature/Storage/SqlStore/Sql/SqlDriver.h"
-#include "GameFramework/Kits/Feature/Storage/SqlStore/SqlMigrationRunner.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Shared/SqlMigrationRunner.h"
 
 #include "TestFramework/TestFramework.h"
 

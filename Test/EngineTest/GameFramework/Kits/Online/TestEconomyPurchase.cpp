@@ -5,9 +5,9 @@
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Catalog/OfferCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Server/Economy/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -8,8 +8,8 @@
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Kits/Feature/Online/Server/Trade/TradeService.h"
-#include "GameFramework/Kits/Feature/Online/Server/Trade/TradeStateMachine.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 
 #include "TestFramework/TestFramework.h"
 

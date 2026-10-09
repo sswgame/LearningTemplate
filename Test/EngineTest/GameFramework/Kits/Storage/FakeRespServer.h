@@ -17,7 +17,7 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Kits/Feature/Storage/Server/CacheStore/Driver/Resp/RespCodec.h"
+#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespCodec.h"
 
 #include <algorithm>
 #include <cctype>

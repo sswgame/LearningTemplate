@@ -97,7 +97,7 @@ _kForbiddenRules: list[tuple[str, tuple[str, ...]]] = [
     ),
 ]
 
-# 최상위 소스 폴더 사이의 방향 — include 경로의 **앞부분**으로 본다(`GameFramework/Kits/Feature/Online/Server/` 같은 하위 폴더 이름과 헷갈리지 않게).
+# 최상위 소스 폴더 사이의 방향 — include 경로의 **앞부분**으로 본다(`GameFramework/Kits/Feature/Online/Chat/Server/` 같은 하위 폴더 이름과 헷갈리지 않게).
 #   Core 는 아무것도 모른다(생성 설정 `sw/` 만). App 은 Engine · RuntimeAPI · ModuleHost 만 — 게임 · 에디터는 C-ABI 로만 안다(CLAUDE.md "Target graph").
 #   Server 도 Engine · RuntimeAPI · ModuleHost 만이고, 두 실행 파일이 같이 쓰는 ModuleHost 는 Engine · RuntimeAPI 만 안다(실행 파일을 모른다).
 #   에디터는 게임 · 키트 · 호스트를 모른다(RuntimeAPI · 위임 · 이벤트로). Engine · GameFramework · 게임은 호스트(App · ModuleHost · Server)를 모른다.

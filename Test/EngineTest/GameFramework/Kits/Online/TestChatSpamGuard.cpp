@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Server/Chat/ChatSpamGuard.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 
 #include "TestFramework/TestFramework.h"
 

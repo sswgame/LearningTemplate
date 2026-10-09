@@ -11,8 +11,8 @@
      `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Utility/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
      `<openssl/...>` 는 `Source/Engine/Network/OpenSsl/` 안에서만,
-     `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Driver/Sqlite/`
-     안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/Driver/Postgres/` 안에서만 쓴다
+     `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/`
+     안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/` 안에서만 쓴다
      (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
   2) 그 라이브러리 타깃(`joltphysics` · `Jolt::Jolt` · `box2d` · `box2d::box2d` · `acl` · `tracy` · `Tracy::TracyClient` · `recastnavigation` · `RecastNavigation::*` · `openssl` · `OpenSSL::SSL` · `OpenSSL::Crypto` · `freetype` · `Freetype::Freetype`)을 `target_link_libraries` 로 링크하는 것은
      규칙의 링크 주인 하나다(엔진 백엔드는 `Source/Engine/CMakeLists.txt`, 키트 안 드라이버는 그 키트의 CMakeLists) — 다른 타깃이 링크하면 헤더 경로 · 정의가 그 타깃으로 번진다. 라이브러리를 정의하는
@@ -68,10 +68,10 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     ),
     LibraryRule("OpenSSL", ("openssl/",), ("Source/Engine/Network/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto")),
     LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
-    LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Driver/Sqlite/",),
-                ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Feature/Storage/SqlStore/CMakeLists.txt"),
-    LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), ("Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/Driver/Postgres/",),
-                ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/CMakeLists.txt"),
+    LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/",),
+                ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/CMakeLists.txt"),
+    LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/",),
+                ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/CMakeLists.txt"),
 
     # 엔진 안의 형식 · 압축 · 셰이더 · 그래픽 API — 감싼 클래스 한 자리(XmlDocument · JsonDocument · 코덱 · ShaderCompiler · RHI 백엔드)에서만.
     LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Utility/Xml/",), ()),
@@ -180,7 +180,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         "  내비메시는 Engine/Navigation/INavMesh.h.\n"
         "  암호 · TLS 는 Core/Network/Security/INetSecurityProvider.h(구현 Engine/Network/EngineNetSecurity.h).\n"
         "  글리프 래스터화는 Engine/Text/IFontRasterizer.h(구현 Engine/Text/FreeType/).\n"
-        "  SQL 은 GameFramework/Kits/Feature/Storage/SqlStore/Sql/SqlDriver.h(드라이버는 Kits/Storage/SqlStore/Driver/<제품>/).\n"
+        "  SQL 은 GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h(드라이버는 Kits/Storage/SqlStore/Driver/<제품>/).\n"
         "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Utility/Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
         "  링크는 규칙마다의 CMakeLists(엔진 백엔드는 Source/Engine/CMakeLists.txt, 키트 드라이버는 그 키트의 CMakeLists)에만 둡니다."
     )
@@ -231,7 +231,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         },
         {
             "name": "OpenSSL 을 키트 CMakeLists 에서 링크한다",
-            "files": {"Source/GameFramework/Kits/Feature/Online/Account/CMakeLists.txt": "target_link_libraries(GF_Account PRIVATE OpenSSL::SSL)\n"},
+            "files": {"Source/GameFramework/Kits/Feature/Online/Account/Shared/CMakeLists.txt": "target_link_libraries(GF_Account PRIVATE OpenSSL::SSL)\n"},
         },
         {
             "name": "FreeType 헤더를 글자 백엔드 폴더 밖(UI)에서 include 한다",
@@ -243,15 +243,15 @@ class CheckThirdPartyIsolationGate(LintGate):
         },
         {
             "name": "SQLite 헤더를 SQL 키트의 드라이버 폴더 밖에서 include 한다",
-            "files": {"Source/GameFramework/Kits/Feature/Storage/SqlStore/Sql/Probe.cpp": "#include <sqlite3.h>\nint probe() { return 0; }\n"},
+            "files": {"Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/Probe.cpp": "#include <sqlite3.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "libpq 헤더를 서버 SQL 키트의 드라이버 폴더 밖에서 include 한다",
-            "files": {"Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/Probe.cpp": "#include <libpq-fe.h>\nint probe() { return 0; }\n"},
+            "files": {"Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Probe.cpp": "#include <libpq-fe.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "SQLite 를 서버 키트의 CMakeLists 에서 링크한다",
-            "files": {"Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/CMakeLists.txt": "target_link_libraries(GF_Server_SqlStore PRIVATE unofficial::sqlite3::sqlite3)\n"},
+            "files": {"Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/CMakeLists.txt": "target_link_libraries(GF_Server_SqlStore PRIVATE unofficial::sqlite3::sqlite3)\n"},
         },
     ]
 

@@ -13,8 +13,11 @@
 
 ```text
 Kits/<성격>/<그룹>/<키트>/            →  모듈 GF_<키트>          (클라이언트와 서버가 같이 쓴다)
-Kits/<성격>/<그룹>/Server/<키트>/     →  모듈 GF_Server_<키트>   (서버 전용)
-Kits/<성격>/<그룹>/Client/<키트>/     →  모듈 GF_Client_<키트>   (클라이언트 전용, 필요할 때만)
+
+클라이언트 · 서버로 나뉘는 기능(온라인 서비스, 저장 드라이버)은 기능 폴더 하나 아래 짝으로 둔다:
+Kits/<성격>/<그룹>/<기능>/Shared/     →  모듈 GF_<기능>          (공유)
+Kits/<성격>/<그룹>/<기능>/Server/     →  모듈 GF_Server_<기능>   (서버 전용)
+Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (클라이언트 전용, 필요할 때만)
 ```
 
 **성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)이고,
@@ -143,7 +146,8 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 
 ### 새 키트를 만들 때
 
-1. 성격과 그룹 아래 폴더를 만듭니다(`Kits/Genre/<그룹>/<키트>/` · `Kits/Feature/<그룹>/<키트>/`). 서버 전용이면 `Kits/<성격>/<그룹>/Server/<키트>/` 입니다.
+1. 성격과 그룹 아래 폴더를 만듭니다(`Kits/Genre/<그룹>/<키트>/` · `Kits/Feature/<그룹>/<키트>/`). 클라이언트 · 서버로 나뉘는 기능이면
+   기능 폴더 아래 `Shared/` · `Server/` · `Client/` 에 키트를 하나씩 둡니다(`Kits/Feature/Online/Chat/Shared/` · `Kits/Feature/Online/Chat/Server/`).
 2. 매니페스트 `GF_<키트>.module.json` 을 둡니다. `_kind` 는 `Kit`, `_listDependency` 에는 `GameFramework` 와 필요하면 같은 기능의 공유 키트, `_listTarget` 은 위 규칙대로 적습니다.
 3. `CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<키트>)` 한 줄을 씁니다. 서버 키트는 `sw_linkSharedKit` 으로 공유 키트를 링크합니다.
 4. 규칙은 보통 클래스로 짜고, 테스트를 `Test/EngineTest/GameFramework/Kits/<그룹>/` 에 씬 없이 둡니다. 테스트 실행 파일은 켜진 키트를 레지스트리로 링크합니다.

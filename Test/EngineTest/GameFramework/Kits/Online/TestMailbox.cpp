@@ -7,8 +7,8 @@
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/Server/Mailbox/MailboxService.h"
-#include "GameFramework/Kits/Feature/Online/Server/Mailbox/MailboxStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 
 #include "TestFramework/TestFramework.h"
 

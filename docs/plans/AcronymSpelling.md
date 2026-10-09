@@ -48,7 +48,7 @@ Pascal 형태로 남은 약어 폴더는 열네 곳이다(`Tools/vcpkg` 등 서�
 | `Kits/Rpg` · `Rpg/WitcherRpg` · `Test/.../Kits/Rpg` | `RPG` · `WitcherRPG` | 키트 모듈 `GF_WitcherRpg` → `GF_WitcherRPG`, 매니페스트 · DLL · 게임의 모듈 표(`SWGame.module.json`) |
 | `Rpg/ClassicJrpg` | `ClassicJRPG` | 모듈 `GF_ClassicJRPG` |
 | `Strategy/TacticsSrpg` | `TacticsSRPG` | 모듈 `GF_TacticsSRPG` |
-| `Storage/SqlStore` · `Storage/Server/SqlStore` | `SQLStore` | 모듈 `GF_SQLStore` · `GF_Server_SQLStore`, `CheckThirdPartyIsolation` 의 링크 주인 규칙 |
+| `Storage/SqlStore/Shared` · `Storage/SqlStore/Server` | `SQLStore` | 모듈 `GF_SQLStore` · `GF_Server_SQLStore`, `CheckThirdPartyIsolation` 의 링크 주인 규칙 |
 | `Engine/Network/OpenSsl` | `OpenSSL` | `CheckThirdPartyIsolation` · `Source/Engine/CMakeLists.txt`(이름은 서드파티 제품 이름 `OpenSSL` 을 따른다) |
 | `Core/Uuid` · `Test/CoreTest/Uuid` | `UUID` | include 경로 |
 | `Test/Qa` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/Qa` 서른 곳 안팎 |

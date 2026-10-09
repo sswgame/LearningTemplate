@@ -6,10 +6,10 @@
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/LiveOpsClient.h"
-#include "GameFramework/Kits/Feature/Online/Server/LiveOps/LiveOpsServer.h"
-#include "GameFramework/Kits/Feature/Online/Server/LiveOps/LiveOpsService.h"
-#include "GameFramework/Kits/Feature/Online/Server/LiveOps/Push/Provider/Fake/FakePushProvider.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsClient.h"
 
 #include "TestFramework/TestFramework.h"
 

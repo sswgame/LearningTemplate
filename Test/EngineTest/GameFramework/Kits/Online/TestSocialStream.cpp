@@ -6,10 +6,10 @@
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 
-#include "GameFramework/Kits/Feature/Online/Server/Social/GuildService.h"
-#include "GameFramework/Kits/Feature/Online/Server/Social/SocialServer.h"
-#include "GameFramework/Kits/Feature/Online/Server/Social/SocialService.h"
-#include "GameFramework/Kits/Feature/Online/Social/SocialClient.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Shared/SocialClient.h"
 
 #include "TestFramework/TestFramework.h"
 

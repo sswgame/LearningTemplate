@@ -46,8 +46,11 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
   `Rpg/Overworld` · `Simulation/Voxel` 은 `Feature/World/` 로. 모듈 이름은 그대로이고, 매니페스트 탐색(`Source/*.module.json` 재귀 글롭)은 깊이를 보지 않는다.
 - 성격 폴더 밖의 키트는 `CheckGameFrameworkLayers` 가 막는다. `CheckKitNamespaces` 는 키트 이름을 한 단 깊이에서 읽는다.
 
-### 5. 온라인 짝 맞추기
-- `Kits/Online/<서비스>/`(클라이언트)와 `Kits/Online/Server/<서비스>/`(서버)를 서비스마다 한 폴더 아래 `Client/` · `Server/` 로 묶는 안 — `Kits/README.md` 가 이미 `Kits/<그룹>/Client/<키트>/` · `Server/<키트>/` 꼴을 허용하므로 규칙 변경 없이 옮길 수 있다. `Base/Online` 의 `Service` · `Store` · `Config` 등은 그대로.
+### 5. 온라인 짝 맞추기 — 끝남(2026-10-10)
+- 온라인 서비스 11 개와 저장 드라이버를 기능 폴더 하나 아래 `Shared/`(공유 키트 GF_<기능>) · `Server/`(GF_Server_<기능>)로 묶었다
+  (`Kits/Feature/Online/<서비스>/Shared|Server`, `Kits/Feature/Storage/SqlStore/Shared|Server`, `Kits/Feature/Storage/CacheStore/Server`).
+  공유 키트는 클라이언트 전용이 아니라 양쪽에 들어가므로 `Client/` 가 아니라 `Shared/` 이고, `Client/` 는 GF_Client_<기능> 자리로 남는다.
+- 옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 `CheckGameFrameworkLayers` 가 막는다. `Base/Online` 의 `Service` · `Store` · `Config` 등은 그대로.
 
 ## 건드리지 않는 것
 - 키트끼리 서로 모른다는 규칙, 모듈 이름, 키트 DLL 병합(핫 리로드 단위 유지).

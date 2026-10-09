@@ -6,7 +6,7 @@
 
 #include "GameFramework/Base/Online/Local/LocalStoreFactory.h"
 #include "GameFramework/Base/Online/Local/ThreadedLocalStore.h"
-#include "GameFramework/Kits/Feature/Storage/SqlStore/SqlLocalSlotStorage.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Shared/SqlLocalSlotStorage.h"
 
 // SQLite 로컬 저장(전용 스레드 + SQLite 바닥, GF_SqlStore) — 메모리 · 파일과 같은 계약 아홉 + 공장에 "sqlite" 를 올려 쓰기.
 

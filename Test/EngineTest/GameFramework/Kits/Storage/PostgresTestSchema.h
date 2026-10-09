@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Kits/Feature/Storage/Server/SqlStore/Driver/Postgres/PostgresDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/PostgresDriver.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -3,7 +3,7 @@
 
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
-#include "GameFramework/Kits/Feature/Online/Server/Matchmaking/Rule/CacheRecordUpdater.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/CacheRecordUpdater.h"
 
 #include "TestFramework/TestFramework.h"
 

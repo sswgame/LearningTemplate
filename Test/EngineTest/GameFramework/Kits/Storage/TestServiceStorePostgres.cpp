@@ -6,9 +6,9 @@
 #include "EngineTest/GameFramework/Online/ServiceStoreContract.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Storage/Server/SqlStore/Driver/Postgres/PostgresDriver.h"
-#include "GameFramework/Kits/Feature/Storage/Server/SqlStore/ServiceStoreFactory.h"
-#include "GameFramework/Kits/Feature/Storage/Server/SqlStore/SqlServiceStore.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/PostgresDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/ServiceStoreFactory.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/SqlServiceStore.h"
 
 // SQL 서비스 저장소(PostgreSQL) — 메모리 · SQLite 와 같은 IServiceStore 계약 일곱(픽스처마다 무작위 스키마). 서버가 있어야 돈다(SW_TEST_POSTGRES_URL).
 

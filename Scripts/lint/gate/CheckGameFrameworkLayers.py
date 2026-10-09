@@ -9,10 +9,11 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
      (_kBaseFolderOrder)의 폴더만 include 한다 — 같은 순서끼리도 서로 모른다. 그래서 두 표가 곧 순환이 없다는 증거다.
      표에 없는 층 · 폴더는 실패다(새 폴더는 층과 순서를 정하고 넣는다). `Online` 층은 폴더 하나처럼 본다(안쪽은 자유).
   2) 기반은 키트(`GameFramework/Kits/`)를 include 하지 않는다 — 키트끼리 나눠 쓰는 것은 기반으로 내린다.
-  3) 키트(`Kits/<묶음>/<키트>/`)는 다른 키트를 include 하지 않는다. 묶음이 함께 쓰는 헤더(`Kits/<묶음>/x.h` — 키트 폴더 밖)만 된다.
-     서버 · 클라이언트 전용 키트(`Kits/<묶음>/Server/<키트>/` · `Kits/<묶음>/Client/<키트>/` — 모듈 `GF_Server_<키트>` · `GF_Client_<키트>`)도
-     키트 하나다. 예외는 하나 — 같은 기능의 공유 키트(`Kits/<묶음>/<키트>/`)는 include 해도 된다(서버 → 공유 ← 클라이언트).
-     서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
+  3) 키트는 `Kits/<성격>/<묶음>/<키트>/` 다(성격은 `Genre` · `Feature`). 키트는 다른 키트를 include 하지 않는다. 묶음이 함께 쓰는 헤더
+     (`Kits/<성격>/<묶음>/x.h` — 키트 폴더 밖)만 된다. 클라이언트 · 서버로 나뉘는 기능은 `Kits/<성격>/<묶음>/<기능>/` 아래 `Shared/`(공유 키트
+     `GF_<기능>`) · `Server/`(`GF_Server_<기능>`) · `Client/`(`GF_Client_<기능>`)로 짝을 두고, 셋이 각각 키트 하나다. 예외는 하나 — 서버 · 클라이언트
+     키트는 같은 기능의 `Shared/` 를 include 해도 된다(서버 → 공유 ← 클라이언트). 서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
+     옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 실패다.
   4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
@@ -101,8 +102,9 @@ _kBaseFolderOrder: dict[str, int] = {
     "Gameplay/Vehicle": 2,
 }
 
-# 키트 묶음 안에서 서버 · 클라이언트 전용 키트를 담는 폴더 이름(모듈 `GF_Server_<키트>` · `GF_Client_<키트>`).
-_kSideFolderNames: tuple[str, ...] = ("Server", "Client")
+# 클라이언트 · 서버로 나뉘는 기능 폴더 안의 짝 이름(공유 `GF_<기능>` · 서버 전용 `GF_Server_<기능>` · 클라이언트 전용 `GF_Client_<기능>`).
+_kSharedFolderName = "Shared"
+_kSideFolderNames: tuple[str, ...] = (_kSharedFolderName, "Server", "Client")
 # `Kits/` 바로 아래 성격 폴더 — 장르 키트(`Genre`)와 기능 키트(`Feature` — 네트워크 · 온라인 · 저장 · 월드 라이브러리).
 _kKitKinds: tuple[str, ...] = ("Genre", "Feature")
 # GameFramework 아래 어디서 include 해도 금지인 경로 앞부분.
@@ -113,7 +115,7 @@ def classifyInternal(relativePath: str) -> tuple[str, str]:
     """
     GameFramework 아래 상대 경로 → (종류, 이름). 종류는 "base"(기반 폴더) · "kit"(키트 하나) · "kitGroup"(묶음 공용 헤더) · "root"(루트 파일) ·
     "stray"(최상위의 `Base` · `Kits` 아닌 폴더). 기반 이름은 `<층>/<폴더>`(폴더 하나처럼 보는 층은 `<층>`, 층 바로 아래 파일은 `<층>/`),
-    키트 이름은 `<묶음>/<키트>` 다.
+    키트 이름은 `<묶음>/<키트>`(짝으로 나뉜 기능은 `<묶음>/<기능>/<Shared|Server|Client>`)다. "sideMisplaced" 는 옛 꼴 `<묶음>/Server/<키트>/` 다.
     """
     parts = relativePath.split("/")
     if len(parts) == 1:
@@ -132,20 +134,22 @@ def classifyInternal(relativePath: str) -> tuple[str, str]:
     if parts[1] not in _kKitKinds:
         return "strayKit", parts[1]
     kitParts = parts[2:]
-    # 서버 · 클라이언트 전용 키트는 한 단 더 깊다 — `<그룹>/Server/<키트>/…` 가 키트 `<그룹>/Server/<키트>` 하나다.
-    if len(kitParts) >= 4 and kitParts[1] in _kSideFolderNames:
+    # 짝으로 나뉜 기능은 한 단 더 깊다 — `<그룹>/<기능>/Server/…` 가 키트 `<그룹>/<기능>/Server` 하나다.
+    if len(kitParts) >= 4 and kitParts[2] in _kSideFolderNames:
         return "kit", f"{kitParts[0]}/{kitParts[1]}/{kitParts[2]}"
-    if len(kitParts) == 3 and kitParts[1] in _kSideFolderNames:
-        return "kitGroup", kitParts[0]
+    if len(kitParts) >= 3 and kitParts[1] in _kSideFolderNames:
+        return "sideMisplaced", f"{kitParts[0]}/{kitParts[1]}"
     if len(kitParts) >= 3:
         return "kit", f"{kitParts[0]}/{kitParts[1]}"
     return "kitGroup", kitParts[0]
 
 
 def isSameFeatureSharedKitInternal(sourceKit: str, destKit: str) -> bool:
-    """서버 · 클라이언트 전용 키트(`<묶음>/Server/<키트>`)가 같은 기능의 공유 키트(`<묶음>/<키트>`)를 보는가."""
+    """서버 · 클라이언트 키트(`<묶음>/<기능>/Server`)가 같은 기능의 공유 키트(`<묶음>/<기능>/Shared`)를 보는가."""
     sourceParts = sourceKit.split("/")
-    return len(sourceParts) == 3 and sourceParts[1] in _kSideFolderNames and destKit == f"{sourceParts[0]}/{sourceParts[2]}"
+    if len(sourceParts) != 3 or sourceParts[2] == _kSharedFolderName:
+        return False
+    return destKit == f"{sourceParts[0]}/{sourceParts[1]}/{_kSharedFolderName}"
 
 
 def isKnownBaseInternal(baseName: str) -> bool:
@@ -177,6 +181,9 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
     gameFrameworkRelative = relativeFilePath[len(prefix):]
     sourceKind, sourceName = classifyInternal(gameFrameworkRelative)
     listViolation: list[str] = []
+    if sourceKind == "sideMisplaced":
+        listViolation.append(f"{relativeFilePath}: 서버 · 클라이언트 키트는 Kits/<성격>/<묶음>/<기능>/Server|Client/ 에 둔다(공유 키트는 같은 기능의 Shared/)")
+        return listViolation
     if sourceKind == "strayKit":
         listViolation.append(f"{relativeFilePath}: 키트 성격 폴더 '{sourceName}' — 키트는 Kits/Genre/<그룹>/ 또는 Kits/Feature/<그룹>/ 아래에 둔다")
         return listViolation
@@ -195,7 +202,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         if include.startswith("GameFramework/") is False:
             continue
         destKind, destName = classifyInternal(include[len("GameFramework/"):])
-        if destKind in ("root", "stray", "strayKit"):
+        if destKind in ("root", "stray", "strayKit", "sideMisplaced"):
             continue
         if sourceKind == "base":
             if destKind in ("kit", "kitGroup"):
@@ -302,19 +309,32 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "서버 키트가 다른 서버 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Feature/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Server/Account/AccountService.h"\n',
+                "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/Server/AccountService.h"\n',
             },
         },
         {
             "name": "서버 키트가 다른 기능의 공유 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Feature/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/AccountMessages.h"\n',
+                "Source/GameFramework/Kits/Feature/Online/Trade/Server/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/Shared/AccountMessages.h"\n',
             },
         },
         {
             "name": "키트가 게임을 include",
             "files": {
                 "Source/GameFramework/Kits/Genre/Action/ActionCombat/Probe.cpp": '#include "pch.h"\n\n#include "Games/Shooter3D/ShooterEnemyComponent.h"\n',
+            },
+        },
+        {
+            # 방향이 거꾸로 — 공유 키트(클라이언트에도 들어간다)가 같은 기능의 서버 키트를 본다.
+            "name": "공유 키트가 같은 기능의 서버 키트를 include",
+            "files": {
+                "Source/GameFramework/Kits/Feature/Online/Trade/Shared/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"\n',
+            },
+        },
+        {
+            "name": "서버 키트를 옛 꼴(<묶음>/Server/<키트>/)에 둔다",
+            "files": {
+                "Source/GameFramework/Kits/Feature/Online/Server/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
     ]

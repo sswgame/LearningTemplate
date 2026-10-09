@@ -155,12 +155,27 @@ _kStep4: list[Dir | Files] = [
     *[Dir(f"Kits/{group}", f"Kits/Feature/{group}") for group in ("Network", "Online", "Storage")],
 ]
 
+# ------------------------------------------------------------------------------
+# 5 단계 — 온라인 · 저장 키트를 기능마다 한 폴더 아래 짝으로 둔다: `<그룹>/<기능>/Shared/`(공유 키트 GF_<기능>) ·
+# `<그룹>/<기능>/Server/`(서버 키트 GF_Server_<기능>) · `<그룹>/<기능>/Client/`(클라이언트 키트, 아직 없다).
+# ------------------------------------------------------------------------------
+_kListOnlineService: tuple[str, ...] = ("Account", "Admin", "Chat", "Economy", "Leaderboard", "LiveOps", "Mailbox", "Matchmaking",
+                                        "ServerDirectory", "Social", "Trade")
+_kStep5: list[Dir | Files] = [
+    *[Dir(f"Kits/Feature/Online/Server/{service}", f"Kits/Feature/Online/{service}/Server") for service in _kListOnlineService],
+    *[Dir(f"Kits/Feature/Online/{service}", f"Kits/Feature/Online/{service}/Shared") for service in _kListOnlineService],
+    Dir("Kits/Feature/Storage/Server/SqlStore", "Kits/Feature/Storage/SqlStore/Server"),
+    Dir("Kits/Feature/Storage/Server/CacheStore", "Kits/Feature/Storage/CacheStore/Server"),
+    Dir("Kits/Feature/Storage/SqlStore", "Kits/Feature/Storage/SqlStore/Shared"),
+]
+
 # 단계는 차례로 다시 돌린다 — 1 단계의 폴더 표(Base/World → Base/World/World)는 2 단계가 푼 뒤의 경로를 모른다.
 _kSteps: dict[int, list[Dir | Files]] = {
     1: _kStep1,
     2: _kStep2,
     3: _kStep3,
     4: _kStep4,
+    5: _kStep5,
 }
 
 

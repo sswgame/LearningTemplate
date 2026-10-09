@@ -60,15 +60,15 @@ class CheckProductNamesGate(LintGate):
 
     #: 제품을 골라 올리는 조립점(fnmatch) → 이유.
     mapExemption = {
-        "Source/GameFramework/Kits/Feature/Storage/SqlStore/Sql/SqlDriverRegistry.cpp": "등록부 — 키트가 든 드라이버(SQLite)를 올리는 자리",
-        "Source/GameFramework/Kits/Feature/Storage/Server/SqlStore/ServiceStoreFactory.cpp": "서버 키트의 조립점 — PostgreSQL 드라이버를 올린다",
+        "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriverRegistry.cpp": "등록부 — 키트가 든 드라이버(SQLite)를 올리는 자리",
+        "Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/ServiceStoreFactory.cpp": "서버 키트의 조립점 — PostgreSQL 드라이버를 올린다",
         "Source/Engine/Network/EngineNetSecurity.cpp": "보안 제공자 조립점 — OpenSSL 제공자를 고른다",
         "Source/Engine/Audio/IAudioSystem.cpp": "오디오 백엔드 팩토리 — XAudio2 를 고른다",
         "Source/Editor/Common/Commands/EditorTracyLauncher.*": "외부 프로파일러 GUI 를 띄우는 실행기 — 이름이 곧 대상 도구",
         "Source/Editor/Panels/ProfilerPanel.*": "프로파일러 패널의 'Open Tracy' 버튼 — 외부 뷰어를 띄우는 자리(이름이 곧 대상 도구)",
         "Source/Engine/Utility/Profiling/ProfilerBackend.*": "프로파일러 백엔드 선택점 — Tracy 를 켜고 포트를 묻는 창구(외부 뷰어와 맞물린다)",
         "Source/Engine/Physics/PhysicsSystem.cpp": "물리 백엔드 팩토리 — Jolt · Box2D 백엔드를 고른다",
-        "Source/GameFramework/Kits/Feature/Storage/Server/CacheStore/CacheStoreFactory.*": "서버 캐시 키트의 조립점 — RESP(Valkey · Garnet) 드라이버를 올린다",
+        "Source/GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.*": "서버 캐시 키트의 조립점 — RESP(Valkey · Garnet) 드라이버를 올린다",
     }
 
     description = "제품 이름 식별자가 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 밖에 새지 않는지 검사"

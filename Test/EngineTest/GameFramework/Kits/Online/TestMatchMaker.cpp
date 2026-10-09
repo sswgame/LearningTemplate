@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Server/Matchmaking/Rule/MatchMaker.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Rule/MatchMaker.h"
 
 #include "TestFramework/TestFramework.h"
 

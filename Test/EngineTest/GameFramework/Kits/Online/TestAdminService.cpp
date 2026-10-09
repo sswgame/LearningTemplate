@@ -12,8 +12,8 @@
 #include "GameFramework/Base/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Online/Server/Admin/AdminService.h"
-#include "GameFramework/Kits/Feature/Online/Server/Admin/AdminStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 
 #include "TestFramework/TestFramework.h"
 
