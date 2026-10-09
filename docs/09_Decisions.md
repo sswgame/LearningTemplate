@@ -137,6 +137,7 @@
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |
 | 엔진 루트 `LocalizationTools` · `EngineDevCommands.cpp` | `DevTools/` |
+| `Engine/DevTools/`(`LocalizationTools` · `DevConsoleController` · `EngineDevCommands.cpp`) | `Editor/Common/Localization/` · `Engine/Input/` · 명령마다 소유 코드 옆(`GameTimeScale.cpp` · `GameAutoplay.cpp` · `DebugDrawQueue.cpp` · `Scene/SceneDevCommands.cpp`)(2026-10-10) |
 | `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
 | `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
 | Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |

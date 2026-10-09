@@ -25,7 +25,7 @@
 | 4 | `Resource`, `Spatial`, `Navigation` | 에셋 데이터베이스와 공간 구조 |
 | 5 | `Graphics`(Renderer 제외), `Window`, `Text` | 디바이스와 GPU 에셋 |
 | 6 | `Input`, `Object` | 컴포넌트 모델 |
-| 7 | `Scene`, `Sequencer`, `Character`, `UserSettings`, `Environment`, `DevTools` | 월드와 기능 모듈 |
+| 7 | `Scene`, `Sequencer`, `Character`, `UserSettings`, `Environment` | 월드와 기능 모듈 |
 | 8 | `Graphics/Renderer`, `Module`, `Telemetry`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
 | 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
 
@@ -45,7 +45,7 @@
   글자(`Text`)는 글꼴 파일을 읽어 CPU 메모리에 SDF 아틀라스를 만들 뿐 GPU를 모릅니다. 아틀라스 업로드는 렌더러가 합니다.
 - **티어 6.** 컴포넌트가 머티리얼과 메시(티어 5)를 보관합니다. 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 보관하는 것과 같습니다.
 - **티어 7.** 월드(씬, 씬 매니저)와 오브젝트 위에서 도는 기능 모듈입니다. **월드는 액터를 알고 액터는 월드를 모릅니다.**
-  플레이어 옵션(`UserSettings`)은 입력, 오디오, 언어, 창에 값을 넣으므로 그 위에 있습니다. 개발 도구(`DevTools`)는 씬, 입력, 창, 디버그 그리기를 함께 봅니다.
+  플레이어 옵션(`UserSettings`)은 입력, 오디오, 언어, 창에 값을 넣으므로 그 위에 있습니다.
 - **티어 8.** 그리는 쪽(FrameRenderer, RenderGraph, GpuScene, RenderThread, 셰이더 쿠킹)과 핫 리로드입니다. 언리얼의 Renderer가 Engine을 보는 방향과 같습니다.
   텔레메트리와 크래시 보고는 사용자 설정(티어 7)에서 동의를 읽습니다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(티어 7)를 씁니다.
   런타임 UI는 입력, 글자, 사용자 설정을 쓰지만 렌더러와는 서로 include하지 않습니다. 둘 사이에 오가는 값은 그리기 목록뿐입니다(언리얼의 Slate와 SlateRHIRenderer 관계).
@@ -176,7 +176,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Utility/Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
 명령은 자기 `.cpp` 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록하고, 본문은 `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다.
-게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령(`timescale`, `teleport`, `debugdraw.category`)은 `DevTools/EngineDevCommands.cpp` 에 있습니다.
+게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령도 소유 코드 옆에 있습니다 — `timescale` 은 `Utility/GameTimeScale.cpp`, `autoplay` 는 `Utility/GameAutoplay.cpp`, `debugdraw.category` 는 `Graphics/Debug/DebugDrawQueue.cpp`, 활성 씬을 찾는 `teleport` · `tag.add` · `anim.rewind*` 는 `Scene/SceneDevCommands.cpp`(컴포넌트 모델은 씬을 모른다).
 Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTest`(AppTest)가 바이너리를 검사해 확인합니다.
 
 `Utility/Console/DevConsole` 은 한 줄을 해석하고(`help`, `get`, `set`, 명령, `gv_이름 [값]`), 자동 완성과 기록을 맡습니다. 에디터 Output Log의 입력 줄과 게임 창 콘솔이 함께 씁니다.
@@ -307,7 +307,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 ## 함정과 주의
 
 **폴더를 옮기기 전에 옮길 파일의 include를 티어 표와 비교하세요.** 계획한 위치가 위 티어를 include하는 파일을 받을 수 없는 경우가 많습니다.
-2026년 10월의 폴더 정리에서 `Animation/`, `Utility/Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/Pose/`, `Character/AnimNotify/`, `DevTools/` 로 갔습니다.
+2026년 10월의 폴더 정리에서 `Animation/`, `Utility/Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/Pose/`, `Character/AnimNotify/` 와 한때의 `DevTools/` 로 갔습니다(`DevTools/` 는 뒤에 소유 코드 옆으로 나눠 없앴다).
 
 **`destroy` 본문은 null을 안전하게 다뤄야 합니다.** `destroyAll` 은 초기화에 실패했거나 건너뛴 단계까지 모든 단계를 역순으로 돕니다.
 

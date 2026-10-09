@@ -4,8 +4,10 @@
 
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Utility/Console/DevCommandRegistry.h"
 
 namespace sw
 {
@@ -80,3 +82,38 @@ namespace sw
         GameAutoplay::unregisterAutoplay( _pRegistration );
     }
 } // namespace sw
+
+#if SW_DEV_COMMANDS_ENABLED
+namespace sw
+{
+    namespace
+    {
+        struct GameAutoplayDevCommandsInternal
+        {
+            static bool runAutoplay( const vector<string>& listArgument, string& outReply )
+            {
+                const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
+                if ( pActive == nullptr )
+                {
+                    outReply = "this game has no autoplay (SW_GAME_AUTOPLAY)";
+                    return false;
+                }
+                if ( listArgument.size() > 1 )
+                    return false;
+                if ( listArgument.size() == 1 )
+                {
+                    bool bOn{ false };
+                    if ( StringUtil::tryParseBool( listArgument[0], bOn ) == false )
+                        return false;
+                    (void)GameAutoplay::setOn( bOn ); // 위에서 등록을 확인했다
+                }
+                outReply = string( pActive->_pGameName ) + " autoplay " + ( GameAutoplay::isOn() ? "on" : "off" ) + " (" + pActive->_pVariableName + ")";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( Autoplay, "autoplay", "autoplay [on|off]", "Show or switch the game's autoplay (AI drives the player - SW_GAME_AUTOPLAY)",
+                    &GameAutoplayDevCommandsInternal::runAutoplay );
+} // namespace sw
+#endif
