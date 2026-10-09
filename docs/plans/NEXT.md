@@ -27,7 +27,6 @@
 - Dev 산출물 자리(`17c41b88b`): 모듈 DLL 은 `Bin/Modules`, PDB 는 `Bin/Symbols`, 시험 실행 파일은 모든 구성에서 `TestBin`(키트를 링크한 시험은 키트 DLL 을 옆에 복사),
   옛 자리 · 꺼진 모듈 산출물은 configure 가 지운다. **검증 때 가장 먼저 볼 것**: `-L nogpu` 전부(시험이 TestBin 에서 Bin 작업 폴더로 Engine.dll 을 찾는지),
   App · 에디터 · 핫 리로드(Ctrl+Alt+F11 — 섀도 사본이 `Bin/Modules` 에 생기는지), SmokeTest(모듈 올리고 내리기), 리눅스 WSL 빌드(RPATH).
-  CLAUDE.md 의 시험 실행 예시(`build/Ninja-Debug/Bin/EngineTest.exe`)는 고치지 않았다 — 사용자가 고칠지 정한다(새 자리 `cd build/Ninja-Debug/Bin; ../TestBin/EngineTest.exe`).
 - 크래시 보고 인자(`2b64fb7dc`): `-crash-reporter=<폴더>` 가 명령줄 표(CRASH_REPORTER)로 — 부트스트랩이 핸들러 · 리소스 루트 없이 서고 App 헤드리스 분기가 보낸다.
   검증: CrashBundleTest, `App.exe -crash-reporter="<폴더>"` 를 Resource 없는 폴더에서 띄워 종료 코드 0 · 로그 한 줄.
 - 반복문 중괄호(`443e38c5a` · `f50bc0d35`): 게이트 CheckLoopBraces + FormatBranchBraces 반복문 패스, 트리 전체 2,605 곳 적용.

@@ -114,14 +114,14 @@ Tests are a hand-rolled framework (`Test/TestFramework`), not gtest, but accept 
 ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure   # CI-equivalent, no GPU needed
 ctest --test-dir build/Ninja-Shipping -L hostgpu --output-on-failure  # what CI CANNOT run — run this before you finish
 ctest --preset Ninja-Debug-lint                                   # lint tests only
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=SceneTest.*      # one suite
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
-build/Ninja-Debug/Bin/EngineTest.exe --test_filter=InputManagerTest.*:WindowTest.*-WindowTest.Recreate*  # gtest form: ':' (or ',') joins, everything after the first '-' excludes
-build/Ninja-Debug/Bin/EngineTest.exe --test_list                   # enumerate cases
-py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: finds the exe (Bin/TestBin) and runs it from Bin
-build/Ninja-Debug/Bin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration
-build/Ninja-Debug/Bin/EngineTest.exe --test_shuffle                # order dependence; prints the seed, --test_shuffle=<seed> replays
-build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
+build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=SceneTest.*      # one suite
+build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
+build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=InputManagerTest.*:WindowTest.*-WindowTest.Recreate*  # gtest form: ':' (or ',') joins, everything after the first '-' excludes
+build/Ninja-Debug/TestBin/EngineTest.exe --test_list                   # enumerate cases
+py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: finds the exe (TestBin) and runs it from Bin
+build/Ninja-Debug/TestBin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration
+build/Ninja-Debug/TestBin/EngineTest.exe --test_shuffle                # order dependence; prints the seed, --test_shuffle=<seed> replays
+build/Ninja-Debug/TestBin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
 ```
 
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`, `ServerTest`.
@@ -129,9 +129,10 @@ build/Ninja-Debug/Bin/ReflectionTest.exe --test_shard=0/2          # one shard (
   the Server target builds no editor or App tests, and its presets run `-L nogpu` only (a server build has no GPU suite).
   **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current
   directory to find `Resource/`, and `Bin` is where that walk succeeds. This is what CTest does, in every
-  configuration (`sw_registerTestRun`). In Shipping the binaries themselves live in
-  `build/Ninja-Shipping/TestBin` (so the shipped `Bin` stays free of test binaries and DXC), but the working
-  directory is still `Bin`: `cd build/Ninja-Shipping/Bin && ../TestBin/EngineTest.exe`.
+  configuration (`sw_registerTestRun`). In every configuration the binaries themselves live in
+  `build/<preset>/TestBin` (so `Bin` stays free of test binaries, and in Shipping of DXC), but the working
+  directory is still `Bin`: `cd build/Ninja-Debug/Bin && ../TestBin/EngineTest.exe`. The one-line commands above
+  are shown from the repo root for brevity — run them with `Bin` as the working directory.
 - **A suite CI cannot run declares it in code**: `SW_TEST_REQUIRES_HOST( SuiteName, "reason" );` in the
   suite's own file. That declaration is the whole classification — an executable registered with
   `sw_addTestExecutable( ... HOST_SPLIT )` gets two CTest entries, `<Target>_NoGPU` (`--host_suites=exclude`,
