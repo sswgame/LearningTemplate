@@ -40,6 +40,7 @@
 | [에디터 보강 계획](plans/EditorPlus.md) | 다음 세션의 에디터 보강 단위와 단위마다의 에디터 시나리오(끝나면 지운다) |
 | [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할 단위와 순서(끝나면 지운다) |
 | [GameFramework 폴더 재배치 계획](plans/GameFrameworkLayout.md) | 기반 층 묶기 · 평평한 폴더 나누기 · 키트 그룹(끝나면 지운다) |
+| [약어 철자 통일 계획](plans/AcronymSpelling.md) | 약어를 대문자로 통일하는 규칙 · 코드모드 · 약어별 순서(끝나면 지운다) |
 
 ## 모듈 README
 

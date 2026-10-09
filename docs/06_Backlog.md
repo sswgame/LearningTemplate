@@ -18,6 +18,7 @@
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 - **GameFramework 폴더 재배치 — 계획은 [docs/plans/GameFrameworkLayout.md](plans/GameFrameworkLayout.md).** `Base` 24 개 폴더를 층으로 묶고, 평평한 폴더와 키트 안을 나눈다. 엔진 분할 0-3 뒤에 한다. 단위를 끝내면 계획 문서에서 지운다.
+- **약어 철자 통일 — 계획은 [docs/plans/AcronymSpelling.md](plans/AcronymSpelling.md).** 사용자 결정(2026-10-10): 타입 · 함수 · 변수 · 파일에서 약어를 대문자로(`UISystem` · `updateUI` · `GPUScene`). 폴더 재배치 뒤에 약어마다 한 커밋으로 한다.
 
 ### 1-1. 직렬화 · 리플렉션
 
