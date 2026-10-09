@@ -22,6 +22,19 @@
 - 에디터 고정 픽셀 64 곳 배율(D24), 프로토타입 격자 머티리얼 셋(R7). D25 · R6 · R8 · 백로그 두 줄(월드 공간 UI GPU · 글리프 SDF 컴퓨트)은 이미 들어가 있었다.
 - 실행으로 판정할 에디터 결함(D21 · D26 · D24 확인)은 백로그 1-4 "패널 점검" 항목에 있다.
 
+## 5 차 b 뒤 추가(2026-10-10, 검증 안 함 — Debug 컴파일 경고 0 만)
+
+- Dev 산출물 자리(`17c41b88b`): 모듈 DLL 은 `Bin/Modules`, PDB 는 `Bin/Symbols`, 시험 실행 파일은 모든 구성에서 `TestBin`(키트를 링크한 시험은 키트 DLL 을 옆에 복사),
+  옛 자리 · 꺼진 모듈 산출물은 configure 가 지운다. **검증 때 가장 먼저 볼 것**: `-L nogpu` 전부(시험이 TestBin 에서 Bin 작업 폴더로 Engine.dll 을 찾는지),
+  App · 에디터 · 핫 리로드(Ctrl+Alt+F11 — 섀도 사본이 `Bin/Modules` 에 생기는지), SmokeTest(모듈 올리고 내리기), 리눅스 WSL 빌드(RPATH).
+  CLAUDE.md 의 시험 실행 예시(`build/Ninja-Debug/Bin/EngineTest.exe`)는 고치지 않았다 — 사용자가 고칠지 정한다(새 자리 `cd build/Ninja-Debug/Bin; ../TestBin/EngineTest.exe`).
+- 크래시 보고 인자(`2b64fb7dc`): `-crash-reporter=<폴더>` 가 명령줄 표(CRASH_REPORTER)로 — 부트스트랩이 핸들러 · 리소스 루트 없이 서고 App 헤드리스 분기가 보낸다.
+  검증: CrashBundleTest, `App.exe -crash-reporter="<폴더>"` 를 Resource 없는 폴더에서 띄워 종료 코드 0 · 로그 한 줄.
+- 반복문 중괄호(`443e38c5a` · `f50bc0d35`): 게이트 CheckLoopBraces + FormatBranchBraces 반복문 패스, 트리 전체 2,605 곳 적용.
+- 중복 정리(`41eab8be9` · `6d2ff3838` · `a4751c74b` · `d902b7dbb`): MathUtil::wrapAngle · moveToward · smoothstep 사본, startsWith · trim 손코딩, 시험 test::tickFrames,
+  kHexWidth · kSchemaVersionKey. 경계가 달라지는 곳은 커밋 메시지에 있다(워핑 · 카메라 · 사격 기믹의 ±π). 남긴 것: 난수 통합 · 격자 · 레지스트리 · 타이머 · HP(범위 밖),
+  runSteps · stepFor(타입별 한 줄), kRecordFormat(레코드마다 따로 올리는 판).
+
 ## 다음 세션이 할 일
 
 - 에디터 보강 — 계획은 [에디터 보강 계획](EditorPlus.md)입니다. 단위마다 에디터 시나리오로 확인하고, 끝난 단위는 그 문서에서 지웁니다.
