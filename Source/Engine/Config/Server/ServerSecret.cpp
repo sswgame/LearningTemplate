@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Config/ServerSecret.h"
+#include "Engine/Config/Server/ServerSecret.h"
 
 #include "Core/Log/Logger.h"
 

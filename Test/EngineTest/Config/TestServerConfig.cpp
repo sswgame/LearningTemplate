@@ -4,8 +4,8 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/ServerConfig.h"
-#include "Engine/Config/ServerSecret.h"
+#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

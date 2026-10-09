@@ -20,7 +20,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 전용 서버의 운영 설정 전체입니다(파일 하나).
 
-원본: [`Source/Engine/Config/ServerConfig.h`](../../Source/Engine/Config/ServerConfig.h)
+원본: [`Source/Engine/Config/Server/ServerConfig.h`](../../Source/Engine/Config/Server/ServerConfig.h)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
@@ -45,7 +45,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 영속 저장소(SQL) 하나입니다 — 키트가 `_name` 으로 찾습니다(`accounts` · `trades`).
 
-원본: [`Source/Engine/Config/ServerConfig.h`](../../Source/Engine/Config/ServerConfig.h)
+원본: [`Source/Engine/Config/Server/ServerConfig.h`](../../Source/Engine/Config/Server/ServerConfig.h)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
@@ -58,7 +58,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 메모리 캐시(RESP — Valkey · Garnet, 또는 프로세스 안) 하나입니다.
 
-원본: [`Source/Engine/Config/ServerConfig.h`](../../Source/Engine/Config/ServerConfig.h)
+원본: [`Source/Engine/Config/Server/ServerConfig.h`](../../Source/Engine/Config/Server/ServerConfig.h)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|

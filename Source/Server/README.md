@@ -91,7 +91,7 @@ Dev의 Server는 팩이 아니라 낱개 파일을 읽지만, 같은 규칙으�
 
 ### 서버 설정
 
-`ServerConfig`(`Engine/Config/ServerConfig.h`)에는 받는 주소, 게임 UDP 포트와 샤드 수, 서비스 TCP 포트, 운영 HTTP 포트와 주소(`_opsPort`, `_opsListenAddress`), 틱 수, 따라잡기 상한이 있습니다.
+`ServerConfig`(`Engine/Config/Server/ServerConfig.h`)에는 받는 주소, 게임 UDP 포트와 샤드 수, 서비스 TCP 포트, 운영 HTTP 포트와 주소(`_opsPort`, `_opsListenAddress`), 틱 수, 따라잡기 상한이 있습니다.
 콘솔 입력 여부, 종료 유예 시간, TLS 인증서와 개인키 경로, 저장소(`_listStore`)와 캐시(`_listCache`) 항목도 있습니다. 필드별 설명은 [생성 문서 ServerConfig](../../docs/Config/ServerConfig.md)에 있습니다.
 
 - **Shipping도 디스크에서 읽습니다.** 설정을 바이너리에 넣지 않으므로 운영자가 고칠 수 있습니다. 파일이 없으면 Shipping 서버는 시작하지 않고, Dev는 기본값과 경고로 시작합니다.
@@ -185,7 +185,7 @@ WantedBy=multi-user.target
 | `ServerApp.h` | 시작, 틱 루프, 콘솔 명령, 종료 |
 | `ServerConsole.h` | 표준 입력 명령 스레드 |
 | `Windows/WindowsServiceHost.h` | Windows 서비스 |
-| `Engine/Config/ServerConfig.h` | 서버 설정 |
+| `Engine/Config/Server/ServerConfig.h` | 서버 설정 |
 | `Core/Process/ShutdownSignal.h` | 종료 신호 처리 |
 | `Engine/Observability/` | 지표, 상태 확인, 운영 HTTP |
 

@@ -16,22 +16,23 @@
 
 ## 머릿속 그림
 
-| 티어 | 폴더 | 뜻 |
-|---|---|---|
-| 0 | `Common`, `Compression`, `Observability` | 토대 |
-| 1 | `Reflection`, `Utility` | 리플렉션과 잎 헬퍼 |
-| 2 | `Serialization` | 리플렉션 위의 직렬화 |
-| 3 | `Config`, `Physics` | 리플렉션으로 읽는 설정과 데이터 |
-| 4 | `Resource`, `Spatial`, `Navigation` | 에셋 데이터베이스와 공간 구조 |
-| 5 | `Animation`, `Localization`, `Window` | 에셋 캐시를 가진 기능 데이터와 창 |
-| 6 | `Audio`, `Dialogue`, `Input`, `Text` | 기능 데이터 위의 서브시스템 |
-| 7 | `Graphics`, `UserSettings` | 디바이스와 GPU 에셋, 플레이어 옵션 |
-| 8 | `Object`, `Telemetry` | 컴포넌트 모델 |
-| 9 | `Scene`, `Sequencer`, `Character`, `Environment` | 월드와 기능 모듈 |
-| 10 | `Renderer`, `Module`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
-| 11 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
+| 티어 | 폴더 |
+|---|---|
+| 0 | `Common`, `Compression`, `Observability` |
+| 1 | `Reflection`, `Utility` |
+| 2 | `Serialization` |
+| 3 | `Config`, `Physics` |
+| 4 | `Resource`, `Spatial`, `Navigation` |
+| 5 | `Animation`, `Localization` |
+| 6 | `Audio`, `Dialogue`, `Text` |
+| 7 | `Graphics` |
+| 8 | `Window`, `Object` |
+| 9 | `Input`, `Scene`, `Sequencer`, `Character`, `Environment` |
+| 10 | `UserSettings`, `Module`, `Destruction` |
+| 11 | `Telemetry`, `Renderer`, `UI`, `Automation` |
+| 12 | `EngineLoop` 등 루트 파일 |
 
-표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/dev/MoveEngineFolders.py --sync-tier` 가 게이트 표를 맞추고 이 표의 줄을 찍습니다).
+표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/dev/MoveEngineFolders.py --sync-tier` 가 게이트 표와 이 표를 함께 고칩니다). 폴더마다의 뜻은 아래 목록에 있습니다.
 
 **아래 티어는 위 티어를 include하지 않습니다.** 같은 티어끼리는 include할 수 있습니다. `CheckEngineLayers.py` 게이트가 이 규칙을 확인하고, 위반은 경고가 아니라 실패입니다.
 
@@ -48,7 +49,7 @@
   내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.
 - **기능 데이터.** `Animation` 과 `Localization` 은 자기 에셋 캐시(`AnimationAssetCache`, `SpriteClipCache`, `LocalizationReloadCache`)가 `IAssetCache` 를 구현하므로 `Resource` 위에 있습니다.
   오디오는 립싱크 가져오기가 애니메이션 표정 트랙을 쓰므로, 대화와 글자는 로컬라이즈된 글을 쓰므로 그 위에 있습니다.
-- **디바이스.** RHI, 셰이더, 머티리얼, 메시, 텍스처가 있는 계층입니다. 창은 `Common/IRenderSurface` 인터페이스로만 RHI에 보입니다.
+- **디바이스.** RHI, 셰이더, 머티리얼, 메시, 텍스처가 있는 계층입니다. 창(`Window`)은 RHI 가 정한 `Graphics/RHI/IRenderSurface` 인터페이스를 구현하므로 이 계층 위에 있습니다. 언리얼에서 창 시스템(Slate)이 RHI 위에 있는 것과 같습니다.
   글자(`Text`)는 글꼴 파일을 읽어 CPU 메모리에 SDF 아틀라스를 만들 뿐 GPU를 모릅니다. 아틀라스 업로드는 렌더러가 합니다.
 - **컴포넌트 모델.** 컴포넌트가 머티리얼과 메시를 보관합니다. 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 보관하는 것과 같습니다.
 - **월드와 기능 모듈.** 월드(씬, 씬 매니저)와 오브젝트 위에서 도는 기능 모듈입니다. **월드는 액터를 알고 액터는 월드를 모릅니다.**
@@ -102,7 +103,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 1. 찾는 쪽이 이미 가진 객체로 찾습니다. 오브젝트 핸들은 핸들을 만든 매니저가 찾으므로 Object가 활성 씬(`SceneManager`)을 묻지 않습니다.
 2. 소유를 위로 올립니다. 렌더 패스 에셋 캐시(`RenderPipelineAssetCache`)는 `IRHIDevice` 가 아니라 `FrameRenderer` 가 소유합니다.
-3. 인터페이스를 아래 티어에 두고 위에서 구현합니다. RHI와 렌더러는 창을 `Common/IRenderSurface` 로만 보고, `IWindow` 가 구현하며 `EngineLoop` 이 넘깁니다.
+3. 인터페이스를 아래 티어에 두고 위에서 구현합니다. RHI와 렌더러는 창을 RHI 쪽 인터페이스 `Graphics/RHI/IRenderSurface` 로만 보고, 위 티어의 `IWindow` 가 구현하며 `EngineLoop` 이 넘깁니다.
    그래서 렌더러의 첨부 크기는 창이 아니라 디바이스의 백버퍼 크기(`IRHIDevice::getBackBufferWidth`)입니다.
 4. 서비스 테이블로 내줍니다. 렌더러는 호스트가 내주는 선택 서비스(`_pFrameRenderer`)이고, Scene은 `FrameRenderer*` 를 보관하지 않습니다.
 

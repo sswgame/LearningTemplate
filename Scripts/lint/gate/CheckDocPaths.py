@@ -14,7 +14,7 @@ Scripts/lint/gate/CheckDocPaths.py
 1. 상대 링크 `[글](경로#앵커)` — 문서 폴더 기준으로 그 파일 · 폴더가 있는가. 앵커가 있으면 대상 `.md` 에 그 제목이 있는가
    (GitHub 제목 슬러그). `http:` · `https:` · `mailto:` 는 보지 않는다.
 2. 백틱 안의 저장소 경로 — 첫 조각이 저장소 최상위 폴더(`Source/` · `Test/` · `Scripts/` …)인 경로, 또는 첫 조각이 그 문서
-   폴더의 하위 폴더인 경로. 확장자를 뗀 줄기(`Common/IRenderSurface`)는 같은 이름의 파일이 하나라도 있으면 맞다.
+   폴더의 하위 폴더인 경로. 확장자를 뗀 줄기(`Graphics/RHI/IRenderSurface`)는 같은 이름의 파일이 하나라도 있으면 맞다.
 3. 코드 블록 안의 `#include "Engine/…"` 와 `py -3 Scripts/….py`.
 4. 모든 `README.md`(최상위 제외)와 `docs/*.md` 가 문서 지도(`docs/02_DocumentMap.md`)에서 링크되는가 — 지도에 없는 문서는
    아무도 찾지 못한다.
@@ -50,7 +50,7 @@ _kRootFolderName: frozenset[str] = frozenset(
 #: `#include "X/…"` 에서 Source 아래로 푸는 첫 조각.
 _kSourceFolderName: frozenset[str] = frozenset({"Core", "Engine", "Editor", "GameFramework", "Games", "RuntimeAPI", "App", "ModuleHost", "Server"})
 
-#: 줄기만 적은 경로(`Common/IRenderSurface`)를 풀 때 붙여 보는 확장자.
+#: 줄기만 적은 경로(`Graphics/RHI/IRenderSurface`)를 풀 때 붙여 보는 확장자.
 _kStemExtension: tuple[str, ...] = (".h", ".cpp", ".xxx", ".inl", ".py", ".md", ".cmake", ".json", ".xml", ".hlsl", ".hlsli")
 
 #: 규칙 1 만 보는 문서.

@@ -158,24 +158,20 @@ _kEngineTier: dict[str, int] = {
     "Animation": 5,
     # 문자열 테이블 · 문화권과 로컬라이제이션 파일 핫 리로드 캐시(LocalizationReloadCache).
     "Localization": 5,
-    # 창. 창은 IRenderSurface 로만 RHI 에 보인다.
-    "Window": 5,
     # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽고, 립싱크 가져오기가 애니메이션 표정 트랙을 쓴다.
     "Audio": 6,
     # 대화 그래프 — 로컬라이즈된 글을 든다.
     "Dialogue": 6,
-    # 입력 장치와 액션 맵 — 창의 메시지를 읽는다.
-    "Input": 6,
     # 글자 — 글꼴 파일(Resource)을 읽어 글리프 · SDF 아틀라스(CPU 바이트) · 줄 바꿈을 만든다. GPU 를 모른다 — 아틀라스 업로드는 렌더러의 캔버스가 한다.
     "Text": 6,
     # 디바이스와 GPU 에셋(RHI · Shader · Material · Mesh · Texture · Upload).
     "Graphics": 7,
-    # 플레이어 옵션 — 입력 · 오디오 · 언어 · 창 방식 값을 그 서브시스템에 넣는다(위층은 렌더러를 모른다 — 화면 변경은 호스트가 한다).
-    "UserSettings": 7,
+    # 창 — RHI 가 정한 IRenderSurface 를 구현하므로 Graphics 위다(언리얼 Slate 가 RHI 위인 것과 같다).
+    "Window": 8,
     # 컴포넌트 모델. 컴포넌트가 머티리얼 · 메시(Graphics)를 든다.
     "Object": 8,
-    # 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
-    "Telemetry": 8,
+    # 입력 장치와 액션 맵 — 창의 메시지를 읽는다.
+    "Input": 9,
     # 월드 — 월드는 액터를 알고 액터는 월드를 모른다.
     "Scene": 9,
     # 오브젝트 위에서 도는 기능 모듈.
@@ -184,19 +180,23 @@ _kEngineTier: dict[str, int] = {
     "Character": 9,
     # 지형 · 식생 · 물 — 컴포넌트가 메시 · 머티리얼로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
     "Environment": 9,
-    # 그리는 쪽 — 씬과 컴포넌트를 읽는다.
-    "Renderer": 10,
+    # 플레이어 옵션 — 입력 · 오디오 · 언어 · 창 방식 값을 그 서브시스템에 넣는다(위층은 렌더러를 모른다 — 화면 변경은 호스트가 한다).
+    "UserSettings": 10,
     # 핫 리로드 — 씬과 컴포넌트를 읽는다.
     "Module": 10,
     # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구와 컴포넌트 모델 위에 선다 — 렌더러는 모른다.
     "Destruction": 10,
+    # 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
+    "Telemetry": 11,
+    # 그리는 쪽 — 씬과 컴포넌트를 읽는다.
+    "Renderer": 11,
     # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력 · 글자 · 캔버스 그리기 목록(Graphics) · 사용자 설정을 쓴다.
     # 렌더러와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
-    "UI": 10,
+    "UI": 11,
     # 자동화 시나리오(실행기 · 탐침 · 단계 등록표). 입력 · 씬 · 창을 내려다보고, 스크린샷 · 종료는 EngineLoop 가 넘긴 창구로 한다.
-    "Automation": 10,
+    "Automation": 11,
     # 전부를 엮는 자리.
-    _kRootLayerName: 11,
+    _kRootLayerName: 12,
 }
 
 #: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해

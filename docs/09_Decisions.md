@@ -43,6 +43,10 @@
   올린다. clang-format 은 버전이 곧 출력이라 고정이 아니면 안 된다.
 - **`EditorContext` 의 소유 구조를 더 쪼개는 것.** 조회 · 생명주기를 두 TU 로 갈라 조회만 하는 코드가 ImGui 없이 링크되게 해 둔 것으로
   충분하다(그래서 `Test/EditorTest` 가 성립한다). 매니저 소유를 밖으로 빼는 것은 영향이 크고 얻는 것이 없다.
+- **`Source/Engine/Common/EngineServices.h` 와 `Source/Engine/Config/RHIBackendType.h` 를 위 티어로 옮기는 것**(2026-10-10, Engine 폴더 재배치 0-3 의 4).
+  `EngineServices.h` 는 Engine include 가 0 이고 서비스 이름을 전방 선언으로만 아는 찾기 창구다. 모든 티어의 180 파일이 쓰므로 위로 옮기면 prelude 예외가
+  하나 더 생길 뿐이다(언리얼의 `GEngine` · 서브시스템 찾기도 Engine 코어 모듈에 있다). `RHIBackendType` 은 `EngineConfig` 가 드는 설정값이라 `Graphics/RHI` 로 옮기면
+  Config → Graphics → Config 순환이 된다. 같은 결정에서 `IRenderSurface` 는 쓰는 쪽인 `Graphics/RHI` 로, 서버 설정 둘은 `Config/Server/` 로 옮겼다.
 - **clang-tidy 의 `bugprone-throwing-static-initialization` 남은 건에 `noexcept` 를 붙이는 것.** 전역 변수 등록자 · 설정 싱글턴은
   `string` · `variant` 를 들어 실제로 던질 수 있다. 분석기를 침묵시키는 대신 정보를 지우는 거래다.
 

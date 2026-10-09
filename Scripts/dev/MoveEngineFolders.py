@@ -43,11 +43,13 @@ class MoveStep:
     """
     한 단계 — `listMove` 는 Source/Engine 기준 (옛 경로, 새 경로).
     `listTextReplace` 는 `Engine/` 접두 없는 글(문서의 상대 링크 · 주석의 짧은 경로)을 고치는 (정규식, 새 글)이다. 이력 파일(`_kTupleHistoryFile`)은 건드리지 않는다.
+    `listTestMove` 는 저장소 기준 시험 파일 이동이다(시험은 소스의 최상위 폴더를 따른다 — Test/README.md). 경로 글은 그대로 치환한다.
     """
 
     title: str
     listMove: tuple[tuple[str, str], ...]
     listTextReplace: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    listTestMove: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
 
 #: 옛 이름을 기록으로 남기는 파일 — 치환하지 않는다(이 스크립트의 표도).
@@ -84,6 +86,33 @@ _kMapStep: dict[int, MoveStep] = {
             ("Config/ServerSecret", "Config/Server/ServerSecret"),
         ),
         ((r"(?<![\w/])Common/IRenderSurface", "Graphics/RHI/IRenderSurface"),),
+    ),
+    5: MoveStep(
+        "Utility 해체 — Xml · Json 은 Serialization, TileMap · Console · Profiling 은 자기 최상위 폴더",
+        (
+            ("Utility/Xml/TileMapXml", "TileMap/TileMapXml"),
+            ("Utility/TileMap", "TileMap"),
+            ("Utility/Xml", "Serialization/Xml"),
+            ("Utility/Json", "Serialization/Json"),
+            ("Utility/Console", "Console"),
+            ("Utility/Profiling", "Profiling"),
+        ),
+        (
+            (r"(?<![\w/])Utility/Xml/TileMapXml", "TileMap/TileMapXml"),
+            (r"(?<![\w/])Utility/(TileMap|Console|Profiling)(?![\w])", r"\1"),
+            (r"(?<![\w/])Utility/(Xml|Json)(?![\w])", r"Serialization/\1"),
+        ),
+        (
+            ("Test/EngineTest/Utility/TestJsonDocument.cpp", "Test/EngineTest/Serialization/TestJsonDocument.cpp"),
+            ("Test/EngineTest/Utility/TestXmlDocument.cpp", "Test/EngineTest/Serialization/TestXmlDocument.cpp"),
+            ("Test/EngineTest/Utility/TestTileGridUtil.cpp", "Test/EngineTest/TileMap/TestTileGridUtil.cpp"),
+            ("Test/EngineTest/Utility/TestTileMapXml.cpp", "Test/EngineTest/TileMap/TestTileMapXml.cpp"),
+            ("Test/EngineTest/Utility/TestTileSet.cpp", "Test/EngineTest/TileMap/TestTileSet.cpp"),
+            ("Test/EngineTest/Utility/TestFrameProfileSession.cpp", "Test/EngineTest/Profiling/TestFrameProfileSession.cpp"),
+            ("Test/EngineTest/Utility/TestFrameProfiler.cpp", "Test/EngineTest/Profiling/TestFrameProfiler.cpp"),
+            ("Test/EngineTest/Utility/TestMemoryBudgetMonitor.cpp", "Test/EngineTest/Profiling/TestMemoryBudgetMonitor.cpp"),
+            ("Test/EngineTest/Utility/TestProfilerBackend.cpp", "Test/EngineTest/Profiling/TestProfilerBackend.cpp"),
+        ),
     ),
 }
 
@@ -174,6 +203,10 @@ def runStepInternal(root: Path, stepNumber: int, bDryRun: bool) -> list[Path]:
         for source, target in listPhysicalMoveInternal(engineRoot, oldPath, newPath):
             moveInternal(root, source, target, bDryRun)
         listPattern.append((buildPatternInternal(oldPath, bStem), "Engine/" + newPath))
+    for oldPath, newPath in step.listTestMove:
+        if (root / oldPath).is_file():
+            moveInternal(root, root / oldPath, root / newPath, bDryRun)
+        listPattern.append((re.compile(re.escape(oldPath) + r"(?![\w])"), newPath))
     listChanged = rewriteInternal(root, listPattern, step.listTextReplace, bDryRun)
     listChanged += fixMarkdownLinkInternal(root, step, bDryRun)
     for path in sorted(set(listChanged)):
@@ -323,6 +356,28 @@ def syncTierTableInternal(root: Path, bDryRun: bool) -> None:
         with gatePath.open("w", encoding="utf-8", newline="") as stream:
             stream.write(newText)
         print("  게이트 표를 고쳤다")
+
+    # Source/Engine/README.md "머릿속 그림" 의 `| 티어 | 폴더 |` 표를 같은 값으로 다시 쓴다.
+    readmePath = root / _kEngineRoot / "README.md"
+    with readmePath.open("r", encoding="utf-8", newline="") as stream:
+        readmeText = stream.read()
+    listReadmeLine = readmeText.split(newline)
+    headerIndex = next((index for index, line in enumerate(listReadmeLine) if line.startswith("| 티어 | 폴더 |")), None)
+    if headerIndex is None:
+        return
+    endRowIndex = headerIndex + 2
+    while endRowIndex < len(listReadmeLine) and listReadmeLine[endRowIndex].startswith("|"):
+        endRowIndex += 1
+    listRow = []
+    for tier in sorted(mapRow):
+        listName = ["`EngineLoop` 등 루트 파일" if name == gate._kRootLayerName else f"`{name}`" for name in mapRow[tier]]
+        listRow.append(f"| {tier} | {', '.join(listName)} |")
+    listReadmeLine[headerIndex : endRowIndex] = ["| 티어 | 폴더 |", "|---|---|"] + listRow
+    newReadmeText = newline.join(listReadmeLine)
+    if newReadmeText != readmeText and not bDryRun:
+        with readmePath.open("w", encoding="utf-8", newline="") as stream:
+            stream.write(newReadmeText)
+        print("  README 티어 표를 고쳤다")
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Common/IRenderSurface.h"
+#include "Engine/Graphics/RHI/IRenderSurface.h"
 #include "Engine/Graphics/RHI/RHI.h"
 
 #include "TestFramework/TestFramework.h"

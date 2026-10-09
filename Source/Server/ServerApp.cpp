@@ -23,7 +23,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Config/ServerConfig.h"
+#include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHttpEndpoint.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
