@@ -32,6 +32,8 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/EditorWindowTitle.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Popups/EditorPopupManager.h"
 #include "Editor/SelfTest/EditorRegistryDump.h"
@@ -40,6 +42,7 @@
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
@@ -127,6 +130,22 @@ namespace sw::editor
                 const uint32 droppedCount = pCommandStack->releaseCodeWithin( pBegin, pEnd );
                 if ( droppedCount > 0 )
                     SW_LOG_INFO( "Dropped %# undo commands that run editor module code; scene edits stay undoable", droppedCount );
+            }
+
+            /** @brief 창 제목에 게임 · 씬 · 미저장 · 플레이 상태를 겁니다. 같은 제목이면 `IWindow::setTitle` 이 바로 돌아간다(프레임마다 불러도 된다). */
+            static void updateWindowTitle( EditorContext* pContext )
+            {
+                IWindow* pWindow = IWindow::getActiveWindow();
+                if ( pWindow == nullptr || pContext == nullptr )
+                    return;
+                const Scene* pScene    = editor::getActiveScene();
+                const string scenePath = pScene == nullptr ? string{} : ( pScene->getSourcePath().empty() ? pScene->getName() : pScene->getSourcePath() );
+                const bool   bDirty    = pContext->getWorkspace().isSceneDirty() || pContext->getPanelManager().countDirtyDocuments() > 0;
+                const utf8*  pPlayState{ nullptr };
+                if ( EditorPlaySession::isStopped() == false )
+                    pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
+                const string title = EditorWindowTitleUtil::makeTitle( GameConfig::getActive()._windowTitle, scenePath, bDirty, pPlayState );
+                pWindow->setTitle( title.c_str() );
             }
         };
     } // namespace
@@ -338,7 +357,11 @@ namespace sw::editor
         // 7) 창 닫기 질의 처리기 — 이 DLL 의 메서드를 가리킨다.
         IWindow* pActiveWindow = IWindow::getActiveWindow();
         if ( pActiveWindow != nullptr )
+        {
             pActiveWindow->setCloseQueryHandler( {} );
+            // 에디터가 내려가면 창 제목은 게임 프리셋 그대로다(창 제목의 출처는 그것 하나다).
+            pActiveWindow->setTitle( GameConfig::getActive()._windowTitle.c_str() );
+        }
 
         // 6) 에디터 컨텍스트 · 패널. Undo 스택에서는 이 모듈의 코드를 쥔 명령과 편집 리스너만 뗀다(오브젝트 편집은 엔진 데이터 명령이라 남는다).
         ImGuiEditorInternal::releaseModuleUndoCommands();
@@ -465,6 +488,7 @@ namespace sw::editor
             }
             // -gv_editorSelfTest=<패턴> 이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();
+            ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
         }
 
         {

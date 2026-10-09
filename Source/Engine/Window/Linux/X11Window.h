@@ -52,6 +52,8 @@ namespace sw
         void clearRestorePosition() override;
         /** @brief `WM_NORMAL_HINTS` 의 최소 크기(PMinSize)를 창 관리자에게 알립니다. */
         void applyMinimumClientSize() override;
+        /** @brief `XStoreName` 과 `_NET_WM_NAME`(UTF8_STRING)에 제목을 적습니다. */
+        void applyTitle() override;
 
     private:
         [[maybe_unused]] void*  _pX11Display;

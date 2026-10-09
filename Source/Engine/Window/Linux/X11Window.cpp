@@ -60,15 +60,6 @@ namespace sw
             _restoreX, _restoreY, width, height,
             1, black, white );
 
-        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다 — 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
-        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 옛 창 관리자 몫).
-        const utf8* pTitleText = pTitle != nullptr ? pTitle : "";
-        XStoreName( pDisplay, win, pTitleText );
-        const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
-        const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
-        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( pTitleText ),
-                         static_cast<int32>( StringUtil::strlen( pTitleText ) ) );
-
         Atom wmDeleteMessage = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
         XSetWMProtocols( pDisplay, win, &wmDeleteMessage, 1 );
 
@@ -82,6 +73,7 @@ namespace sw
         _x11WmDelete  = wmDeleteMessage;
         _bShouldClose = SW_FALSE;
         applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 바닥을 갖는다
+        applyTitle();
 
         SW_LOG_INFO( "Native X11 Window created successfully! (%#×%#)", width, height );
         return true;
@@ -193,6 +185,24 @@ namespace sw
         XFlush( pDisplay );
     }
 
+    void X11Window::applyTitle()
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return;
+
+        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다 — 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
+        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 옛 창 관리자 몫).
+        Display*     pDisplay  = static_cast<Display*>( _pX11Display );
+        const Window win       = static_cast<Window>( _x11Window );
+        const string titleText = StringUtil::utf16ToUtf8( _title.c_str() );
+        XStoreName( pDisplay, win, titleText.c_str() );
+        const Atom netWmName  = XInternAtom( pDisplay, "_NET_WM_NAME", 0 );
+        const Atom utf8String = XInternAtom( pDisplay, "UTF8_STRING", 0 );
+        XChangeProperty( pDisplay, win, netWmName, utf8String, 8, PropModeReplace, reinterpret_cast<const uint8*>( titleText.c_str() ),
+                         static_cast<int32>( titleText.size() ) );
+        XFlush( pDisplay );
+    }
+
     float32 X11Window::getContentScale() const
     {
         if ( _pX11Display == nullptr )
@@ -295,6 +305,10 @@ namespace sw
     }
 
     void X11Window::applyMinimumClientSize()
+    {
+    }
+
+    void X11Window::applyTitle()
     {
     }
 

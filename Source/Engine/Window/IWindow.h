@@ -124,6 +124,13 @@ namespace sw
         uint32 getMinimumClientWidth() const { return _minClientWidth; }
         /** @brief `setMinimumClientSize` 의 세로 크기입니다. 0 이면 제한이 없습니다. */
         uint32 getMinimumClientHeight() const { return _minClientHeight; }
+        /**
+         * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이거나 빈 제목이면 아무것도 하지 않습니다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         * @details 제목은 `_title` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
+         */
+        void setTitle( const utf8* pTitle );
+        /** @brief 지금 제목입니다(UTF-16 — 플랫폼 창이 쓰는 그대로). */
+        const wstring& getTitle() const { return _title; }
 
         // ------------------------------------------------------------------------------
         // IRenderSurface: RHI 가 창 시스템을 모르는 채로 묻는 다섯 가지
@@ -211,6 +218,8 @@ namespace sw
          * @details 메시지를 받을 때마다 값을 읽는 플랫폼(Win32 `WM_GETMINMAXINFO`)은 할 일이 없습니다.
          */
         virtual void applyMinimumClientSize() {}
+        /** @brief `_title` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_title` 로 겁니다). */
+        virtual void applyTitle() {}
 
     protected:
         wstring                      _title;

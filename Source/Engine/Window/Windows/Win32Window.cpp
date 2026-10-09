@@ -86,6 +86,12 @@ namespace sw
         }
     }
 
+    void Win32Window::applyTitle()
+    {
+        if ( _hWnd != nullptr )
+            SetWindowTextW( _hWnd, _title.c_str() );
+    }
+
     void Win32Window::applyWindowVisibility( bool bShow )
     {
         if ( _hWnd == nullptr )
@@ -360,6 +366,10 @@ namespace sw
     bool Win32Window::processMessages()
     {
         return _bShouldClose == SW_FALSE;
+    }
+
+    void Win32Window::applyTitle()
+    {
     }
 
     void Win32Window::applyWindowVisibility( bool )

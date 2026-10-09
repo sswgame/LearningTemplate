@@ -17,7 +17,7 @@
 
 ### 이미 끝난 것과 이 계획의 전제
 
-- **단계 0 의 E1 ~ E4 는 끝났습니다.** E1(Win32 창 제목이 첫 글자에서 잘리던 결함)은 2차에서 고쳤고, `CheckWin32WideCalls` 게이트가 다시 생기지 않게 막습니다.
+- **단계 0 의 E1 ~ E5 는 끝났습니다.** E1(Win32 창 제목이 첫 글자에서 잘리던 결함)은 2차에서 고쳤고, `CheckWin32WideCalls` 게이트가 다시 생기지 않게 막습니다.
   E2(에디터 실행의 스크린샷이 까맣던 결함), E3(Unlit 보기 모드가 기본 셰이더에서 무효), E4(Hierarchy 토글 잘림과 타일 이름 끊김)는 5b 에서 고칩니다.
 - 5b 는 패널 점검의 결함 단위(D1 ~ D26)와 에디터 시나리오 기반(B0), editor-res 의 R1, R2, R6, R7, R8 도 넣기로 했습니다. 시작하기 전에 `git log` 로 실제로 들어갔는지 확인합니다.
   들어가지 않은 것이 있으면 이 문서의 해당 단위보다 먼저 넣습니다.
@@ -75,11 +75,10 @@
 
 ## 1. 띄워 보며 본 것 (2026-10-06, 이 PC — 화면 배율 150 %)
 
-O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효, 토글 잘림, 타일 이름 끊김)는 E1 ~ E4 가 고쳐서 표에서 뺐습니다. 증거 파일 이름(`ed3.png` 등)은 그때 스크래치에 있던 스크린샷입니다.
+O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효, 토글 잘림, 타일 이름 끊김, 편집 중인 씬이 안 보이던 것)는 E1 ~ E5 가 고쳐서 표에서 뺐습니다. 증거 파일 이름(`ed3.png` 등)은 그때 스크래치에 있던 스크린샷입니다.
 
 | # | 본 것 | 증거 | 단위 |
 |---|-------|------|------|
-| O6 | **지금 무슨 씬을 편집하는지 화면 어디에도 없다**(제목 · 탭 · 상태줄) | `ed3.png` · `tp1.png` | E5 |
 | O7 | 콘텐츠 브라우저가 **모든 게임 팩 폴더**(abilityarena … voxelcraft)를 보인다 — 활성 게임은 하나 | `ed3.png` | A1 |
 | O8 | 인스펙터의 다중 선택은 **"Multi-Selection (N objects)" 한 줄 + 첫 오브젝트만** 편집한다 | `InspectorPanel.cpp:133` | I1 |
 | O9 | `-gv_editorOpenPanel=all` 이면 모든 패널이 900×620 으로 같은 자리에 떠서 겹친다(도킹 공간 정점 0) | `ed5.log` 덤프 | 의도(덤프용 스위치 — `EditorDockLayout::beginDockspace` 주석). 고치지 않는다 |
@@ -93,7 +92,6 @@ O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **0 띄워 보며 찾은 결함** | E5 | 창 제목 = `<게임> — <씬>[*] — SW Editor` + `IWindow::setTitle` | S | | ★ |
 | **1 확장 지점(C)** | C1 | EditorModule SHARED + `SW_EDITOR_API` + 등록 목록을 모듈 하나에 + 등록 세대 | M | | ★ |
 | | C2 | 매니저가 등록 변화를 따라간다 + 모듈을 내릴 때 그 모듈의 인스턴스를 뗀다 + 시각화 켬/끔을 id 로 | M | C1 | |
 | | C3 | ImGui 컨텍스트 결속기 + 커맨드 등록 줄 `SW_EDITOR_COMMAND` | M | C1 · C2 | |
@@ -125,85 +123,9 @@ O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
-원문의 합계는 단위 29 였습니다. E1 ~ E4 를 빼고 남은 editor-plus 단위는 25 개(0 단계 1, 1 단계 5, 2 단계 4, 3 단계 4, 4 단계 7, 5 단계 4)입니다.
+원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 24 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 7, 5 단계 4)입니다.
 여기에 아이콘 단위 넷과 패널 점검의 단위 열둘(N5 처럼 작은 것은 다른 단위와 합쳐도 됩니다)이 더해집니다.
 
----
-
-## 3. 단계 0 — 띄워 보며 찾은 결함(남은 것 E5)
-
-**상용 비교.** 언리얼과 유니티는 창 제목에 프로젝트 이름, 레벨(씬) 이름, 미저장 표시를 늘 보입니다(`MyGame - Lvl_Main* - Unreal Editor`, `MyGame - Main.unity* - Windows - Unity`).
-같은 단계의 E1 ~ E4 는 끝났습니다(머리말 참고).
-
-### E5 창 제목에 게임 · 씬 · 미저장 표시
-
-**목적.** O6 — 무엇을 편집하는지 늘 보이게. 미저장 `*` 는 Ctrl+S 의 대상을 알려 준다.
-
-**바꿀 것.**
-1. `IWindow` 에 제목 바꾸기(`Source/Engine/Window/IWindow.h` 2) 절, `recreate` 아래):
-```cpp
-        /**
-         * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이면 아무것도 하지 않습니다. 창 스레드(메인 스레드)에서만 부릅니다.
-         * @details 제목은 `_title` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다.
-         */
-        void setTitle( const utf8* pTitle );
-        /** @brief 지금 제목입니다(UTF-16 — 플랫폼 창이 쓰는 그대로). */
-        const wstring& getTitle() const { return _title; }
-    protected:
-        /** @brief 플랫폼 창의 제목을 바꿉니다. 만들어지기 전이면 아무것도 하지 않습니다. */
-        virtual void applyTitle() {}
-```
-`IWindow.cpp`:
-```cpp
-    void IWindow::setTitle( const utf8* pTitle )
-    {
-        const wstring title = StringUtil::isNullOrEmpty( pTitle ) ? wstring{} : StringUtil::utf8ToUtf16( pTitle );
-        if ( title == _title )
-            return;
-        _title = title;
-        applyTitle();
-    }
-```
-Win32: `void Win32Window::applyTitle() { if ( _hWnd != nullptr ) SetWindowTextW( _hWnd, _title.c_str() ); }`.
-X11(`Source/Engine/Window/Linux/X11Window.cpp`)은 창을 만들 때 이미 `XStoreName` 과 `_NET_WM_NAME`(UTF8_STRING)을 함께 적습니다(2차).
-그 코드를 `applyTitle()` 로 옮기고, `initializeWindow` 는 창을 만든 뒤 `applyTitle()` 을 부릅니다. 끝에 `XFlush` 를 더해 실행 중에 바꾼 제목이 바로 보이게 합니다.
-2. 에디터가 제목을 만든다 — ImGui 없는 함수 `EditorWindowTitleUtil::makeTitle`(`Common/Workspace/EditorWindowTitle.h` · `.cpp`, 새):
-```cpp
-    struct EditorWindowTitleUtil
-    {
-        /**
-         * @brief `<게임> — <씬>[*] — SW Editor` 를 씁니다. 씬이 없으면 `<게임> — (no scene) — SW Editor`. 씬은 경로의 마지막 조각에서 `.scene.xml` 을 뗀 이름.
-         * @param bDirty 씬 또는 열린 문서 중 미저장이 있으면 true — 제목에 `*`
-         * @param pPlayState Play/Simulate 중이면 "Playing" · "Simulating" 을 끝에 괄호로, 아니면 nullptr
-         */
-        static string makeTitle( string_view gameName, string_view scenePath, bool bDirty, const utf8* pPlayState );
-    };
-```
-`ImGuiEditor::updateUi` 끝(프레임마다 — 같은 제목이면 `setTitle` 이 바로 돌아간다)에서 `IWindow::getActiveWindow()->setTitle( title.c_str() )`.
-게임 이름은 게임 프리셋의 창 제목(`GameConfig::_windowTitle`)입니다. 창 제목의 출처는 이것 하나입니다([결정 기록](../09_Decisions.md) 5-4). 에디터를 끄면 게임 창 제목은 프리셋 그대로입니다.
-3. 시험 `Test/EditorTest/Common/Workspace/TestEditorWindowTitle.cpp`(`EditorWindowTitleTest`) 넷: 씬 이름 · `*` · Play 표시 · 씬 없음.
-
-**확인 = 에디터 시나리오.** `windowtitle.scenario.xml`: 에디터를 띄우고 `EditorClick mark="hierarchy.create"` 로 오브젝트를 하나 만든 뒤 탐침 `Editor.WindowTitleDirty`(제목이 `*` 로 끝나면 1, 이 단위가 등록)가 1 인지 봅니다.
-이어서 `EditorKey key="S" mods="ctrl"` 로 저장하고 0 으로 돌아오는지 봅니다. 저장이 시험 씬 파일을 바꾸지 않게, 시험 씬을 임시 경로로 연 뒤에 시작합니다.
-
-**남길 교훈.** 없음. **커밋 메시지:**
-```
-에디터 - 창 제목에 게임 · 씬 · 미저장 · 플레이 상태를 보인다
-
-문제점:
-- 무엇을 편집하는지(어느 게임의 어느 씬인지, 저장 안 한 것이 있는지)가 화면 어디에도 없었다.
-- IWindow 에 실행 중에 제목을 바꾸는 함수가 없었다.
-
-해결방안:
-- IWindow::setTitle(UTF-8, 같으면 건너뜀) + 플랫폼 applyTitle(Win32 SetWindowTextW, X11 은 창 생성 때 쓰던 XStoreName + _NET_WM_NAME 코드를 옮김).
-- EditorWindowTitleUtil::makeTitle(ImGui 없음)이 "<게임> — <씬>[*] — SW Editor (Playing)" 을 만들고 에디터가 프레임마다 건다.
-
-결과:
-- EditorWindowTitleTest 넷. 창을 다시 만들어도(recreate) 같은 제목.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** `EditorTest --test_filter=EditorWindowTitleTest.*`, 에디터 띄워 제목 줄(씬 열고 오브젝트 옮기면 `*`), 리눅스는 CI 로 확인(X11 코드). **겹침:** config-docs D6(창 제목의 정본).
 ---
 
 ## 4. 단계 1 — 확장 지점(C): 키트 · 게임이 Dev 전용 확장 모듈로 패널 · 인스펙터 · 시각화 · 커맨드를 단다 ★
@@ -2856,11 +2778,11 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 24 커밋):** E5 → C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 23 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
-- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · E5(`IWindow.h`) · G1(`FrameRendererUtil.h`) · G2(`RenderThread.h`) · G4(`FrameProfiler`) · H1(`Macros.h` · `Logger.h`) · T1 · T2(`ReflectionValidation.h`).
+- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · G1(`FrameRendererUtil.h`) · G2(`RenderThread.h`) · G4(`FrameProfiler`) · H1(`Macros.h` · `Logger.h`) · T1 · T2(`ReflectionValidation.h`).
 - **셰이더 쿠킹:** G1 뒤(`App.exe --cook-shaders` — 매니페스트 · 바이너리 커밋, 충돌 나면 고르지 말고 다시 쿠킹한다).
 - **re-configure:** C1 · C4 · C5 · P2(새 `REFLECT` 헤더) · T1.
 - **자체 시험 기대 목록**(`AppSmokeTest.EditorSelfTestsPassInsideTheEditor`)에 더하는 id: `themepark.extensionPanelDraws` · `themepark.layoutPreviewLoads` · `preferences.searchFiltersSections` ·
@@ -2868,7 +2790,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
   `mapCheck.selectsIssueObject` · `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
 - **에디터 시나리오**: 단위마다 하나씩 더한다(머리말의 "확인 = 에디터 시나리오"). `AppScenarioTest` 가 모두 돌리므로 시나리오가 늘면 `AppTest` 의 `HOST_SHARDS` 를 늘린다.
 - **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGpuTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
-  자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(E5 X11 · C1 SHARED · C4 CMake · G3 dlopen). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
+  자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake · G3 dlopen). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
 
 **겹치는 파일.** 원문이 적은 다른 제안서(2차 ~ 4차)는 모두 main 에 들어갔으므로, 겹침은 이 문서 안의 단위끼리만 봅니다.
 

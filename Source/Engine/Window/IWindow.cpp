@@ -46,6 +46,17 @@ namespace sw
             (void)setDisplayMode( WindowDisplayMode::Windowed, _width < width ? width : _width, _height < height ? height : _height );
     }
 
+    void IWindow::setTitle( const utf8* pTitle )
+    {
+        if ( StringUtil::isNullOrEmpty( pTitle ) )
+            return;
+        const wstring title = StringUtil::utf8ToUtf16( pTitle );
+        if ( title == _title )
+            return;
+        _title = title;
+        applyTitle();
+    }
+
     void IWindow::requestClose()
     {
         _bShouldClose = SW_TRUE;

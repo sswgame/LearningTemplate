@@ -68,6 +68,8 @@ namespace sw
         void captureRestorePosition() override;
         /** @brief 복원 위치를 `CW_USEDEFAULT` 로 되돌립니다. */
         void clearRestorePosition() override;
+        /** @brief `SetWindowTextW` 로 제목 줄을 바꿉니다. */
+        void applyTitle() override;
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );

@@ -16,6 +16,7 @@
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWindowTitle.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
@@ -467,6 +468,17 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 창 제목이 미저장 표시(`*`)를 달고 있으면 1 입니다 — 셸이 실제로 창에 건 제목을 읽는다. */
+            [[nodiscard]] static bool readWindowTitleDirty( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const IWindow* pWindow = IWindow::getActiveWindow();
+                if ( pWindow == nullptr )
+                    return false;
+                const string title = StringUtil::utf16ToUtf8( pWindow->getTitle().c_str() );
+                outValue           = EditorWindowTitleUtil::isDirtyTitle( title ) ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readObjectCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObjectManager* pActive = editor::getActiveObjectManager();
@@ -696,6 +708,8 @@ namespace sw::editor
 
     SW_AUTOMATION_PROBE( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &EditorScenarioStepsInternal::readPlayState );
     SW_AUTOMATION_PROBE( editorSceneDirty, "Editor.SceneDirty", "1 while the edited scene has unsaved changes", &EditorScenarioStepsInternal::readSceneDirty );
+    SW_AUTOMATION_PROBE( editorWindowTitleDirty, "Editor.WindowTitleDirty", "1 when the editor window title carries the unsaved mark (*)",
+                         &EditorScenarioStepsInternal::readWindowTitleDirty );
     SW_AUTOMATION_PROBE( editorObjectCount, "Editor.ObjectCount", "Objects in the active scene", &EditorScenarioStepsInternal::readObjectCount );
     SW_AUTOMATION_PROBE( editorSelectionCount, "Editor.SelectionCount", "Selected objects", &EditorScenarioStepsInternal::readSelectionCount );
     SW_AUTOMATION_PROBE( editorHierarchyVisibleRoots, "Editor.HierarchyVisibleRoots", "Root rows the Hierarchy showed in the last frame (after its filter)",

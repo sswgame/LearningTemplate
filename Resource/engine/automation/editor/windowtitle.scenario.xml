@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 창 제목이 미저장 표시(*)를 따라간다(EditorPlus E5). 새 씬을 임시 경로로 저장해 두고 시작하므로 Ctrl+S 가 저장소의 씬을 바꾸지 않는다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/windowtitle.scenario.xml -dx12
+-->
+<Scenario name="editor.windowtitle" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="30"><DevCommand line="layout.reset"/></At>
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="70"><DevCommand line="scene.saveAs Saved/Automation/editor.windowtitle/windowtitle.scene.xml"/></At>
+	<At frame="85"><Expect probe="Editor.WindowTitleDirty" equals="0"/></At>
+	<At frame="90"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="105">
+		<Expect probe="Editor.SceneDirty" equals="1"/>
+		<Expect probe="Editor.WindowTitleDirty" equals="1"/>
+	</At>
+	<At frame="110"><EditorKey key="Ctrl+S"/></At>
+	<At frame="130">
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+		<Expect probe="Editor.WindowTitleDirty" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>

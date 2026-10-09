@@ -208,6 +208,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 |---|---|
 | `Editor.PlayState` | 0 정지, 1 플레이, 2 일시 정지 |
 | `Editor.SceneDirty` | 저장하지 않은 변경이 있으면 1 |
+| `Editor.WindowTitleDirty` | 창 제목이 미저장 표시(`*`)를 달고 있으면 1 — 셸이 실제로 창에 건 제목을 읽는다 |
 | `Editor.ObjectCount`, `Editor.SelectionCount` | 활성 씬의 오브젝트 수, 선택 수 |
 | `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
 | `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 또는 지난 프레임에 그렸으면 1 |
