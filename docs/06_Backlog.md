@@ -16,6 +16,8 @@
 영역별로 묶었다. 영역 안에서는 위에 있을수록 먼저 볼 것이다. 줄 번호는 2026-10-03 기준이라 어긋날 수 있다 — 함수 이름으로 찾는다.
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
+- **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
+
 ### 1-1. 직렬화 · 리플렉션
 
 - **XML 문자열 속성은 읽을 때 끝 공백(줄바꿈)을 잘라 왕복이 고정점이 아니다**(2026-10-06, `SerializationRoundTripTest` 가 찾음). `MissingComponent::_originalText`
