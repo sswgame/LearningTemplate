@@ -4,7 +4,7 @@
 함수 이름은 약어를 한 단어로 쓰는 규칙(`updateUi` · `initRhi` · `queryAabb`, AGENTS.md "Function names")이라 약어인지 이름에서 보이지 않는다. 사용자 결정(2026-10-10): **다 대문자로 통일한다.**
 
 ## 규칙 (AGENTS.md 에 옮길 문안)
-1. 약어는 대문자로 쓴다: `UI` · `GPU` · `AI` · `HTTP` · `XML` · `JSON` · `SQL` · `IO` · `LOD` · `RTS` · `SRPG` · `HUD` · `URL` · `UUID` · `DDS` · `TLS` · `UDP` · `IK` · `API` · `RPC` · `PSO` · `CPU` · `RHI` · `AABB` · `ID`.
+1. 약어는 대문자로 쓴다: `UI` · `GPU` · `AI` · `HTTP` · `XML` · `JSON` · `SQL` · `IO` · `LOD` · `RTS` · `SRPG` · `HUD` · `URL` · `UUID` · `DDS` · `TLS` · `UDP` · `IK` · `API` · `RPC` · `PSO` · `CPU` · `RHI` · `AABB` · `ID` · `QA` · `DSP` · `MMO` · `ACL` · `GUI`.
    무엇이 약어인지는 한 파일의 등록부(`Scripts/lint/` 아래)가 정한다 — 게이트와 코드모드가 같은 목록을 읽는다. 줄임말(`Nav` · `Anim` · `Gimmick`)은 약어가 아니라서 그대로다.
 2. **타입 · 파일 · 네임스페이스 · 열거형 이름**: 어디에 있든 대문자(`UISystem`, `GPUScene`, `AIPerception`, `HTTPClient`, `XMLCatalog`, `JSONWriter`, `UISystem.h`).
 3. **함수 · 변수 · 멤버 이름**: 단어 가운데나 끝에서는 대문자(`updateUI`, `initRHI`, `queryAABB`, `isValidUTF8`, `entityID`). 이름 맨 앞에서는 소문자 전체(`uiSystem`, `_gpuScene`, `aiTarget`) — 첫 글자가 대문자면 camelCase 가 아니다.
@@ -39,7 +39,7 @@
 - **대소문자만 다른 파일 이름**: Windows 는 대소문자를 구분하지 않아 `git mv UiX.h UIX.h` 가 두 단계(임시 이름 경유)여야 한다. 코드모드가 이 순서를 지킨다.
 
 ### 2-2. 폴더 · 모듈 · 타깃 이름 (사전 목록, 2026-10-10)
-Pascal 형태로 남은 약어 폴더는 열 곳이다(`Tools/vcpkg` 등 서드파티 제외):
+Pascal 형태로 남은 약어 폴더는 열네 곳이다(`Tools/vcpkg` 등 서드파티 제외):
 
 | 지금 | 바뀐 이름 | 따라 바뀌는 것 |
 |---|---|---|
@@ -51,8 +51,14 @@ Pascal 형태로 남은 약어 폴더는 열 곳이다(`Tools/vcpkg` 등 서드�
 | `Storage/SqlStore` · `Storage/Server/SqlStore` | `SQLStore` | 모듈 `GF_SQLStore` · `GF_Server_SQLStore`, `CheckThirdPartyIsolation` 의 링크 주인 규칙 |
 | `Engine/Network/OpenSsl` | `OpenSSL` | `CheckThirdPartyIsolation` · `Source/Engine/CMakeLists.txt`(이름은 서드파티 제품 이름 `OpenSSL` 을 따른다) |
 | `Core/Uuid` · `Test/CoreTest/Uuid` | `UUID` | include 경로 |
+| `Test/Qa` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/Qa` 서른 곳 안팎 |
+| `Engine/Audio/Dsp` | `DSP` | include 경로 |
+| `Kits/Network/NetMmo` | `NetMMO` | 모듈 `GF_NetMMO` |
+| `Engine/Animation/Codec/Acl` | `ACL` | include 경로 · `AclAnimCodec` → `ACLAnimCodec` (ACL 라이브러리 이름과 맞춤) |
+| `Editor/Common/Gui` | `GUI` | include 경로 |
 | `Test/EditorUiTest` | `EditorUITest` | 실행 파일 · CTest 이름 · `CheckTestSuites` 의 `XxxTest` 규칙 · `.vscode/launch.json` · CLAUDE.md 의 시험 목록 |
 
+- **`Scripts/` 의 폴더(`qa` · `lint` · `gate` …)는 파이썬 패키지 이름이라 소문자 규칙이 따로 있다**(`CheckScriptLayout`) — `Scripts/qa` 는 그대로 두고 `Test/Qa` 만 `Test/QA` 로 바꾼다. 줄임말(`Net` · `Dev` · `Anim` · `Resp` · `Std`)과 제품 이름(`Box2D` · `Jolt` · `FreeType`)은 약어가 아니라서 대상이 아니다.
 - 모듈 이름은 DLL 파일 이름 · 핫 리로드의 섀도 복사본 · 매니페스트 · `ResolvedModules.txt` 가 쓰므로 CMake 를 새로 구성(reconfigure)하고 오래된 `Bin/Modules` 산출물은 configure 가 지운다(Dev Bin 정리).
 - `CheckProductNames.py` · `CheckGameFrameworkLayers.py` 의 이름 표를 같이 고친다.
 - 대소문자만 바뀌는 이동은 임시 이름을 거친다(2 단계 `git mv`).
