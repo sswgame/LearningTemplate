@@ -3321,6 +3321,14 @@
    "presets": []
   },
   {
+   "name": "SW_BUILD_UNUSED_KITS",
+   "type": "BOOL",
+   "default": "ON",
+   "choices": [],
+   "description": "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)",
+   "presets": []
+  },
+  {
    "name": "SW_CPP_STANDARD",
    "type": "STRING",
    "default": "17",
