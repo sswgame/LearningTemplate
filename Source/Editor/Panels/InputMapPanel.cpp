@@ -201,7 +201,8 @@ namespace sw::editor
     SW_LOG_CALLER( "InputMapPanel" );
 
     InputMapPanel::InputMapPanel()
-        : _inputMap{}
+        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다(열린 채 시작하면 떠 있는 창으로 화면 가운데를 덮는다)
+        , _inputMap{}
         , _replay{}
         , _inputMapPath{ "engine/input/default.input.xml" }
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }

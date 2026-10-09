@@ -423,6 +423,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   원본 glb 는 내려받은 그대로 둔다 — 비표준 씬 뿌리는 임포터가 받고, 배치 오프셋은 `ModelImportConfig.json` 규칙으로 지운다. 경계 상자 중심
   (`recenter: xz`)은 모양이 치우친 모델을 옮기므로 원점이 정해진 키트에는 `translation` 이 맞다.
 - **머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다(`AssetDatabase::ensureMeta`)** — 임포트 결과 옆 폴더(`models/<이름>/`)에 머티리얼을 쓰면 첫 실행이 실행마다 다른 GUID 의 `.meta` 를 만들어 스탬프가 "손으로 바꿨다" 가 된다. 임포터가 경로에서 정해지는 GUID 로 `.meta` 를 미리 쓴다(`ModelImporterInternal::makeImportedGuid`).
+- **`.meta`(GUID)는 그 에셋을 쓰는 시스템이 만듭니다**(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트). 목록을 보기만 하는 화면(콘텐츠 브라우저)이 `.meta` 를 쓰면 폴더를 한 번 연 것만으로 추적되지 않는 파일이 수십 개 생깁니다. 시험 `contentBrowser.browsingWritesNoMeta`.
+- **콘텐츠 브라우저는 디스크 목록을 들고 있으므로 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다** — 탐색기 · git 의 변경도 이 번호가 셉니다. 에디터 안의 삭제처럼 결과를 바로 아는 경로는 번호를 기다리지 않고 그 자리에서 다시 읽기로 합니다(감시는 한두 프레임 늦다). 시험 `contentBrowser.deleteRefreshesTheList`.
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
@@ -472,6 +474,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
 - **기계 훑기의 알려진 오탐** — 델리게이트로 묶인 `&Class::method` 는 "죽은 함수" 로 잡힌다. `EditorThemeUtil` 팔레트 · 킷의 소비자 없는 세터 · 게터는 정상이다. 쓰이는지는 `= delete` 로
   바꾸고 빌드해 센다.
+- **떠 있는 도구 창의 첫 크기 · 자리는 `IEditorPanel::getInitialPanelSize`(기본 640×420, 96 DPI 기준)를 `EditorChrome::setNextPanelSize` 가 UI 배율로 곱하고 주 뷰포트 작업 영역의 90 % 로 잘라 가운데에 엽니다.** `-gv_editorOpenPanel=all` 은 모든 창에 900×620 을 주므로 첫 크기 결함을 가립니다 — 첫 크기는 깨끗한 `imgui.ini` 로 패널을 하나씩 열어 봅니다. 도구 창은 생성자에서 `IEditorPanel( false )` 로 닫힌 채 시작합니다(Prefab Editor 만 기본 도킹 탭이라 열림). 시험 `panels.toolWindowsOpenAtAUsableSize`.
 - **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
 - **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
   말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).

@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 
 #include <imgui.h>
 
@@ -14,8 +15,9 @@ namespace sw::editor
     {
         struct EditorChromeInternal
         {
-            static constexpr int32 kMaxSectionDepth = 8;
-            static constexpr int32 kMaxOverlayDepth = 8;
+            static constexpr int32   kMaxSectionDepth       = 8;
+            static constexpr int32   kMaxOverlayDepth       = 8;
+            static constexpr float32 kMaxPanelViewportRatio = 0.9f; ///< 처음 여는 떠 있는 창이 주 뷰포트 작업 영역에서 차지할 수 있는 최대 비율
 
             static ImGuiWindowFlags toImGuiPanelFlags( EditorPanelFlags flags )
             {
@@ -117,7 +119,19 @@ namespace sw::editor
     {
         if ( size._x <= 0.0f || size._y <= 0.0f )
             return;
-        ImGui::SetNextWindowSize( ImVec2{ size._x, size._y }, ImGuiCond_FirstUseEver );
+        // 크기는 96 DPI 기준값이다 — 글자 · 여백처럼 UI 배율을 곱하고, 작은 창(960×540 · 배율 1.5)에서도 닫기 단추가 화면 안에 남게 작업 영역의 90 % 로 자른다.
+        const float32        dpiScale  = EditorThemeUtil::getDpiScale();
+        const ImGuiViewport* pViewport = ImGui::GetMainViewport();
+        ImVec2               windowSize{ size._x * dpiScale, size._y * dpiScale };
+        if ( pViewport != nullptr )
+        {
+            windowSize.x = MathUtil::min( windowSize.x, pViewport->WorkSize.x * EditorChromeInternal::kMaxPanelViewportRatio );
+            windowSize.y = MathUtil::min( windowSize.y, pViewport->WorkSize.y * EditorChromeInternal::kMaxPanelViewportRatio );
+            // 떠 있는 창은 모두 같은 자리(왼쪽 위)에 열려 Hierarchy 를 덮었다 — 처음에는 주 뷰포트 가운데에 연다. 도킹된 창에는 둘 다 걸리지 않는다.
+            const ImVec2 center{ pViewport->WorkPos.x + pViewport->WorkSize.x * 0.5f, pViewport->WorkPos.y + pViewport->WorkSize.y * 0.5f };
+            ImGui::SetNextWindowPos( center, ImGuiCond_FirstUseEver, ImVec2{ 0.5f, 0.5f } );
+        }
+        ImGui::SetNextWindowSize( windowSize, ImGuiCond_FirstUseEver );
     }
 
     bool EditorChrome::tryGetMainViewportRect( float2& outPos, float2& outSize )

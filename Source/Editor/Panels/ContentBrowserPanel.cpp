@@ -15,16 +15,14 @@
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Resource/AssetDatabase.h"
-#include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
@@ -37,6 +35,9 @@ namespace sw::editor
         {
             /** @brief 타일 이름 줄 수 — 넘치면 마지막 줄을 말줄임한다(`EditorWidgets::drawClampedLabel`). */
             static constexpr uint32 kTileLabelLineCount = 2;
+
+            /** @brief 삭제 확인 모달의 팝업 이름입니다(OpenPopup 과 BeginPopupModal 이 같은 글을 써야 한다). */
+            static constexpr const utf8* kDeleteConfirmPopupName = "Delete Asset##ConfirmDeleteAsset";
 
             static ImVec4 colorForAsset( string_view path, bool bIsDirectory = false )
             {
@@ -207,9 +208,9 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다).
-            if ( ImGui::MenuItem( "Delete" ) )
-                (void)EditorAssetCommands::deleteAsset( entry._absolutePath ); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
+            // 지우기 전에 확인한다(휴지통이 아니라 되돌릴 수 없다). 모달은 이 메뉴 밖, 창 단위에서 연다.
+            if ( ImGui::MenuItem( "Delete..." ) )
+                requestDeleteAsset( entry._absolutePath );
             ImGui::EndPopup();
         }
     }
@@ -219,9 +220,11 @@ namespace sw::editor
         , _listEntry{}
         , _listHistory{}
         , _selectedFolderAbs{}
-        , _breadcrumb{}
+        , _listCrumb{}
         , _selectedAssetAbs{}
+        , _pendingDeleteAbs{}
         , _searchBuffer{}
+        , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
         , _filterIndex{ 0 }
         , _historyIndex{ -1 }
@@ -229,10 +232,80 @@ namespace sw::editor
         , _pendingImportMutex{}
         , _listPendingImportPath{}
         , _folderJob{}
+        , _folderCache{ &EditorAssetCommands::collectChildFolders }
         , _bRootsDirty{ SW_TRUE }
         , _bFolderDirty{ SW_TRUE }
+        , _bOpenDeleteConfirm{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
+    }
+
+    void ContentBrowserPanel::requestDeleteAsset( string_view absolutePath )
+    {
+        _pendingDeleteAbs   = string{ absolutePath };
+        _bOpenDeleteConfirm = SW_TRUE;
+    }
+
+    bool ContentBrowserPanel::confirmDeleteAsset()
+    {
+        if ( _pendingDeleteAbs.empty() )
+            return false;
+        const bool bDeleted = EditorAssetCommands::deleteAsset( _pendingDeleteAbs );
+        if ( bDeleted )
+        {
+            // 지운 파일이 목록 · 선택에 남지 않게 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
+            _selectedAssetAbs.clear();
+            _bFolderDirty = SW_TRUE;
+            _folderCache.clear();
+        }
+        _pendingDeleteAbs.clear();
+        return bDeleted;
+    }
+
+    void ContentBrowserPanel::drawDeleteConfirmModal()
+    {
+        if ( _bOpenDeleteConfirm == SW_TRUE )
+        {
+            ImGui::OpenPopup( ContentBrowserPanelInternal::kDeleteConfirmPopupName );
+            _bOpenDeleteConfirm = SW_FALSE;
+        }
+        if ( ImGui::BeginPopupModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+            return;
+
+        ImGui::Text( "Delete '%s'? This cannot be undone.", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
+        ImGui::Separator();
+        if ( ImGui::Button( "Delete" ) )
+        {
+            (void)confirmDeleteAsset(); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if ( ImGui::Button( "Cancel" ) || ImGui::IsKeyPressed( ImGuiKey_Escape ) )
+        {
+            _pendingDeleteAbs.clear();
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    void ContentBrowserPanel::syncWithContentChanges()
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+        const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
+        if ( serial == _seenContentChangeSerial )
+            return;
+        _seenContentChangeSerial = serial;
+        _bFolderDirty            = SW_TRUE;
+        _folderCache.clear();
+    }
+
+    void ContentBrowserPanel::openFolder( string_view absolutePath )
+    {
+        vector<ContentBrowserCrumb> listCrumb;
+        makeTrailForFolder( absolutePath, listCrumb );
+        selectFolder( absolutePath, listCrumb );
     }
 
     void ContentBrowserPanel::drawContent()
@@ -258,6 +331,7 @@ namespace sw::editor
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();
         processPendingImports();
+        syncWithContentChanges();
         if ( _bFolderDirty == SW_TRUE )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
@@ -270,6 +344,7 @@ namespace sw::editor
         drawSourcesSection();
         ImGui::SameLine();
         drawAssetView();
+        drawDeleteConfirmModal();
     }
 
     void ContentBrowserPanel::refreshRoots()
@@ -294,7 +369,11 @@ namespace sw::editor
         addRoot( "editor", ResourceUtil::getDomainFolderPath( "editor" ) );
 
         if ( _selectedFolderAbs.empty() && _listRoot.empty() == false )
-            selectFolder( _listRoot.front()._absolutePath, _listRoot.front()._displayName );
+        {
+            vector<ContentBrowserCrumb> listCrumb;
+            makeTrailForFolder( _listRoot.front()._absolutePath, listCrumb );
+            selectFolder( _listRoot.front()._absolutePath, listCrumb );
+        }
 
         _bRootsDirty = SW_FALSE;
     }
@@ -307,18 +386,8 @@ namespace sw::editor
 
     void ContentBrowserPanel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
     {
+        // 목록을 보기만 한다 — `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트)이 만든다.
         _listEntry = std::move( listEntry );
-
-        // 서비스는 루프 **밖에서** 한 번 확인한다. 항목마다 다시 묻는 것은 같은 답을 여러 번 받는 일이다.
-        AssetManager* pResources = editor::getService<AssetManager>();
-        if ( pResources != nullptr )
-        {
-            for ( const AssetEntry& entry : _listEntry )
-            {
-                if ( entry._bIsDirectory == false && entry._relativePath.empty() == false )
-                    pResources->getAssetDatabase().ensureMeta( entry._relativePath, false );
-            }
-        }
 
         std::sort( _listEntry.begin(), _listEntry.end(), []( const AssetEntry& entryA, const AssetEntry& entryB )
         {
@@ -439,6 +508,7 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::Button( "Refresh" ) )
             {
+                _folderCache.clear();
                 _listEntry.clear();
                 _selectedAssetAbs.clear();
                 refreshRoots();
@@ -484,7 +554,9 @@ namespace sw::editor
 
             if ( ImGui::Selectable( kArrFavorites[favIdx]._pLabel, bSelected ) )
             {
-                selectFolder( fullFavPath, string{ "Favorites / " } + kArrFavorites[favIdx]._pLabel );
+                vector<ContentBrowserCrumb> listCrumb;
+                ContentBrowserLogic::makeFavoriteTrail( kArrFavorites[favIdx]._pLabel, fullFavPath, listCrumb );
+                selectFolder( fullFavPath, listCrumb );
             }
         }
 
@@ -513,9 +585,9 @@ namespace sw::editor
         if ( depth == 0 )
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
-        vector<string> listChild;
-        EditorAssetCommands::collectChildFolders( absPath, listChild );
-        const bool hasChildDirs = listChild.empty() == false;
+        // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다(Refresh · 파일 감시가 비운다). 참조는 재귀 중에도 산다.
+        const vector<string>& listChild    = _folderCache.getChildFolders( absPath );
+        const bool            hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 
@@ -530,39 +602,13 @@ namespace sw::editor
 
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
-            // 루트 이름과 그 아래 상대 경로로 브레드크럼을 만든다.
-            string crumb( label );
-            for ( const ContentRoot& root : _listRoot )
-            {
-                const string rootNorm = FileUtil::normalizePath( root._absolutePath );
-                const string absNorm  = FileUtil::normalizePath( absPath );
-                if ( FileUtil::startsWithPathComponent( absNorm, rootNorm ) )
-                {
-                    crumb            = root._displayName;
-                    const string rel = FileUtil::suffixAfterPathComponent( absNorm, rootNorm );
-                    string       pretty;
-                    size_t       start{ 0 };
-                    while ( start < rel.size() )
-                    {
-                        size_t slash = rel.find( '/', start );
-                        if ( slash == string::npos )
-                            slash = rel.size();
-                        if ( pretty.empty() == false )
-                            pretty += " / ";
-                        pretty += rel.substr( start, slash - start );
-                        start = slash + 1;
-                    }
-                    if ( pretty.empty() == false )
-                        crumb += " / " + pretty;
-                    break;
-                }
-            }
-            selectFolder( absPath, crumb );
+            vector<ContentBrowserCrumb> listCrumb;
+            makeTrailForFolder( absPath, listCrumb );
+            selectFolder( absPath, listCrumb );
         }
 
         if ( opened && hasChildDirs )
         {
-            std::sort( listChild.begin(), listChild.end() );
             for ( const string& child : listChild )
             {
                 drawFolderTreeNode( child, FileUtil::getFileNamePart( child ), depth + 1 );
@@ -617,91 +663,48 @@ namespace sw::editor
 
     void ContentBrowserPanel::drawBreadcrumbs()
     {
-        if ( _breadcrumb.empty() )
+        if ( _listCrumb.empty() )
         {
             EditorWidgets::drawEmptyHint( "Select a folder" );
             return;
         }
 
-        // "Game / Shaders" 를 클릭할 수 있는 조각으로 나눈다.
-        vector<string_view> listPart;
+        // 조각마다 절대 경로를 든다 — 누르면 그 조각까지의 경로 줄과 함께 그 폴더로 간다. 경로가 빈 조각("Favorites")은 누를 수 없다.
+        size_t clickedIndex = _listCrumb.size();
+        for ( size_t crumbIndex = 0; crumbIndex < _listCrumb.size(); ++crumbIndex )
         {
-            string_view remaining{ _breadcrumb };
-            size_t      pos{ 0 };
-            while ( pos < remaining.size() )
-            {
-                size_t sep = remaining.find( " / ", pos );
-                if ( sep == string_view::npos )
-                {
-                    listPart.push_back( remaining.substr( pos ) );
-                    break;
-                }
-                listPart.push_back( remaining.substr( pos, sep - pos ) );
-                pos = sep + 3;
-            }
-        }
-
-        string builtCrumb;
-        string builtPath;
-        for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
-        {
-            const string_view part = listPart[partIndex];
-            if ( partIndex > 0 )
+            const ContentBrowserCrumb& crumb = _listCrumb[crumbIndex];
+            if ( crumbIndex > 0 )
             {
                 ImGui::SameLine();
                 ImGui::TextUnformatted( "/" );
                 ImGui::SameLine();
             }
 
-            if ( partIndex == 0 )
-            {
-                builtCrumb = string{ part };
-                for ( const ContentRoot& root : _listRoot )
-                {
-                    if ( root._displayName == part )
-                    {
-                        builtPath = root._absolutePath;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                builtCrumb += " / ";
-                builtCrumb.append( part.data(), part.size() );
-                const string lowerChild = FileUtil::normalizePath( part );
-                string       next       = FileUtil::joinPath( builtPath, part );
-                if ( FileUtil::isDirectory( next ) == false && builtPath.empty() == false )
-                {
-                    vector<string> listChild;
-                    EditorAssetCommands::collectChildFolders( builtPath, listChild );
-                    for ( const string& child : listChild )
-                    {
-                        if ( FileUtil::normalizePath( FileUtil::getFileNamePart( child ) ) == lowerChild )
-                        {
-                            next = FileUtil::normalizeSeparators( child );
-                            break;
-                        }
-                    }
-                }
-                builtPath = std::move( next );
-            }
-
-            const bool bIsLast = ( partIndex + 1 == listPart.size() );
+            ImGui::PushID( static_cast<int32>( crumbIndex ) );
+            const bool bIsLast = ( crumbIndex + 1 == _listCrumb.size() );
             if ( bIsLast )
             {
                 const Color4 accentColor = EditorThemeUtil::getAccentColor();
                 ImGui::TextColored( ImVec4( accentColor._r, accentColor._g, accentColor._b, 1.0f ), "%s", editoricon::kFolderOpen );
                 ImGui::SameLine();
-                ImGui::TextUnformatted( string( part ).c_str() );
+                ImGui::TextUnformatted( crumb._label.c_str() );
             }
-
-            else
+            else if ( crumb._absolutePath.empty() )
             {
-                const string partStr{ part };
-                if ( ImGui::SmallButton( partStr.c_str() ) )
-                    selectFolder( builtPath, builtCrumb );
+                ImGui::TextDisabled( "%s", crumb._label.c_str() );
             }
+            else if ( ImGui::SmallButton( crumb._label.c_str() ) )
+            {
+                clickedIndex = crumbIndex;
+            }
+            ImGui::PopID();
+        }
+
+        if ( clickedIndex < _listCrumb.size() )
+        {
+            const vector<ContentBrowserCrumb> listCrumb( _listCrumb.begin(), _listCrumb.begin() + static_cast<std::ptrdiff_t>( clickedIndex + 1 ) );
+            selectFolder( listCrumb.back()._absolutePath, listCrumb );
         }
     }
 
@@ -836,7 +839,7 @@ namespace sw::editor
         {
             --_historyIndex;
             const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
-            selectFolder( entry._folderPathAbs, entry._breadcrumb, false );
+            selectFolder( entry._folderPathAbs, entry._listCrumb, false );
         }
     }
 
@@ -846,11 +849,25 @@ namespace sw::editor
         {
             ++_historyIndex;
             const HistoryEntry& entry = _listHistory[static_cast<size_t>( _historyIndex )];
-            selectFolder( entry._folderPathAbs, entry._breadcrumb, false );
+            selectFolder( entry._folderPathAbs, entry._listCrumb, false );
         }
     }
 
-    void ContentBrowserPanel::selectFolder( string_view absolutePath, string_view breadcrumb, bool bRecordHistory )
+    void ContentBrowserPanel::makeTrailForFolder( string_view folderAbs, vector<ContentBrowserCrumb>& outListCrumb ) const
+    {
+        const string folderNorm = FileUtil::normalizePath( folderAbs );
+        for ( const ContentRoot& root : _listRoot )
+        {
+            if ( FileUtil::startsWithPathComponent( folderNorm, FileUtil::normalizePath( root._absolutePath ) ) )
+            {
+                ContentBrowserLogic::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
+                return;
+            }
+        }
+        ContentBrowserLogic::makeFolderTrail( {}, {}, folderAbs, outListCrumb );
+    }
+
+    void ContentBrowserPanel::selectFolder( string_view absolutePath, const vector<ContentBrowserCrumb>& listCrumb, bool bRecordHistory )
     {
         const string normalizedPath = FileUtil::normalizeSeparators( absolutePath );
         if ( bRecordHistory )
@@ -864,7 +881,7 @@ namespace sw::editor
                     _listHistory.erase( _listHistory.begin() + ( _historyIndex + 1 ), _listHistory.end() );
                 HistoryEntry newEntry;
                 newEntry._folderPathAbs = normalizedPath;
-                newEntry._breadcrumb    = string{ breadcrumb };
+                newEntry._listCrumb     = listCrumb;
                 _listHistory.push_back( std::move( newEntry ) );
 
                 // **가장 오래된 것부터 버린다.** 상한이 없으면 세션이 길수록 계속 쌓인다.
@@ -879,7 +896,7 @@ namespace sw::editor
 
         // 탐색 · I/O 는 실제 파일 시스템의 대소문자를 쓰고, 저장 경로는 ResourceUtil::makeSavePath 가 상대 경로 조각을 소문자로 바꾼다.
         _selectedFolderAbs = normalizedPath;
-        _breadcrumb        = string{ breadcrumb };
+        _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();
         _bFolderDirty = SW_TRUE;
     }
@@ -899,8 +916,9 @@ namespace sw::editor
     {
         if ( entry._bIsDirectory )
         {
-            string nextCrumb = _breadcrumb.empty() ? string( entry._name ) : string( _breadcrumb + " / " + entry._name );
-            selectFolder( entry._absolutePath, nextCrumb );
+            vector<ContentBrowserCrumb> listCrumb = _listCrumb;
+            ContentBrowserLogic::appendChildCrumb( entry._absolutePath, listCrumb );
+            selectFolder( entry._absolutePath, listCrumb );
             return;
         }
 

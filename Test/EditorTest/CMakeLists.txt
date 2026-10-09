@@ -19,6 +19,7 @@ sw_addTestExecutable(EditorTest
 	SOURCES
 		Common/Workspace/TestAssetHotReload.cpp
 		Common/Workspace/TestConfigHotReload.cpp
+		Common/Config/TestEditorToolDefaults.cpp
 		Common/Workspace/TestEditorConfigFileSchema.cpp
 		Common/Workspace/TestEditorAssetType.cpp
 		Common/Asset/TestEditorAssetValidation.cpp
@@ -31,6 +32,7 @@ sw_addTestExecutable(EditorTest
 		Common/Workspace/TestEditorLayoutStore.cpp
 		Common/Widgets/TestEditorLabelLayout.cpp
 		Common/Widgets/TestEditorListFilter.cpp
+		Common/Widgets/TestEditorNodeGraph.cpp
 		Common/Commands/TestEditorLogCommands.cpp
 		Common/Gui/TestEditorPanelDocument.cpp
 		Common/Workspace/TestEditorRegistry.cpp
@@ -43,8 +45,10 @@ sw_addTestExecutable(EditorTest
 		Common/Workspace/TestEditorTransaction.cpp
 		Common/Commands/TestEditorTransformCommands.cpp
 		Common/Commands/TestEditorToolAssetCommands.cpp
+		Common/Commands/TestSequenceTimingUtil.cpp
 		Viewport/TestEditorViewportMath.cpp
 		Common/Workspace/TestEditorWorkspace.cpp
+		Panels/TestContentBrowserLogic.cpp
 		Panels/TestInspectorBuiltinValue.cpp
 		Panels/TestInspectorPropertyLayout.cpp
 		Common/Commands/TestEditorViewportPick.cpp
@@ -55,6 +59,8 @@ sw_addTestExecutable(EditorTest
 		Common/Workspace/TestEditorSelection.cpp
 		Common/Asset/TestModelImporter.cpp
 		Panels/TestProfilerScopeHistory.cpp
+		Popups/TestQuickLauncherLayout.cpp
+		Panels/TestTileMapPaintUtil.cpp
 		Panels/TestUiPreviewLogic.cpp
 		Common/Asset/TestTexturePipeline.cpp
 		Common/Asset/TestVrmMaterialImporter.cpp
@@ -72,15 +78,19 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorToolAssetCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorInspectorCommands.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/SequenceTimingUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowserLogic.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMapPaintUtil.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UiPreviewLogic.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ConfigHotReload.cpp"

@@ -49,6 +49,12 @@ namespace sw::editor
         void update();
 
         /**
+         * @brief `Resource/` 아래 파일 · 폴더가 바뀔 때마다(종류 무관 — 만들기 · 지우기 · 이름 바꾸기 · 고치기) 하나씩 느는 번호입니다.
+         * @details 디스크 목록을 들고 있는 화면(콘텐츠 브라우저)이 지난번 번호와 다르면 목록을 다시 읽습니다. 에디터 바깥(탐색기 · git)의 변경도 셉니다.
+         */
+        uint64 getContentChangeSerial() const { return _contentChangeSerial; }
+
+        /**
          * @brief 바뀐 에셋 하나를 다시 읽습니다: 임포터(있으면) → 엔진 캐시 `reload` → 활성 씬 `notifyAssetUsers`. 게임 스레드에서, 틱 밖에서 부릅니다.
          * @return 핫 리로드 대상이고 처리했으면 true. 대상이 아니거나 그 이름의 캐시가 등록되지 않았으면 false 입니다.
          */
@@ -71,8 +77,12 @@ namespace sw::editor
     private:
         /** @brief 바뀐 파일 하나를 `reloadChangedAsset` 으로 보냅니다(수정 이벤트만). */
         void onResourceFileChanged( const FileChangeEvent& changeEvent );
+        /** @brief `Resource/` 아래 아무 변경에 변경 번호를 올립니다(`getContentChangeSerial`). */
+        void onResourceTreeChanged( const FileChangeEvent& changeEvent );
 
         unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
         FileWatchHandle                 _resourceWatchHandle;
+        FileWatchHandle                 _contentWatchHandle; ///< 확장자 무관 감시 — 변경 번호만 올린다
+        uint64                          _contentChangeSerial;
     };
 } // namespace sw::editor

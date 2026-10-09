@@ -39,6 +39,7 @@ namespace sw::editor
     SW_LOG_CALLER( "PrefabTool" );
     SW_EDITOR_PANEL( PrefabPanel, "prefab_editor", EditorPanelCategory::Tool, 1400 );
 
+    // 도구 패널이지만 열린 채 시작한다 — 기본 도킹이 가운데 탭(Game View 옆)에 붙여 떠 있는 창으로 화면을 덮지 않는다(`EditorDockLayout::applyDefaultDockLayout`).
     PrefabPanel::PrefabPanel()
         : _selectedPrefabPath{}
         , _selectedInstanceName{}

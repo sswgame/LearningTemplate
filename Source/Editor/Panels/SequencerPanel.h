@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/SequenceTimingUtil.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -44,6 +45,7 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer512> _cinematicNote;
         unique_ptr<ClipSequence>              _sequence;
         unique_ptr<sw::SequencePlayer>        _previewPlayer;
+        vector<SequenceClipTiming>            _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
         int32                                 _currentFrame;
         int32                                 _selected;
         int32                                 _firstFrame;

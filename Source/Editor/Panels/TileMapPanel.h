@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
@@ -105,6 +106,7 @@ namespace sw::editor
         TileSetAsset                          _tileSet;        ///< 읽은 타일셋
         string                                _loadedTileSet;  ///< `_tileSet` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않는다)
         vector<uint16>                        _listBrushIndex; ///< 그릴 때마다 맵에서 옮긴 칸마다 브러시 번호 + 1
+        vector<int2>                          _listStrokeCell; ///< 이번 프레임에 칠할 칸(지난 칸 → 이번 칸 선분). 멤버라 프레임마다 할당하지 않는다
         int32                                 _brushIndex;     ///< 칠할 브러시(타일셋 순번)
         int32                                 _arrEdgeTx[4];
         int32                                 _arrEdgeTy[4];
@@ -115,8 +117,10 @@ namespace sw::editor
         int32                                 _atlasId;
         int32                                 _warpTx;
         int32                                 _warpTy;
+        int2                                  _lastPaintCell; ///< 지난 프레임에 칠한 칸(`_bStrokeActive` 일 때만 뜻이 있다)
         PaintLayer                            _layer;
         TileFlagLayer                         _flagLayer;
         bool                                  _bErase;
+        bool                                  _bStrokeActive; ///< 지난 프레임에 칠하고 있었다 — 이번 프레임은 `_lastPaintCell` 에서 잇는다
     };
 } // namespace sw::editor

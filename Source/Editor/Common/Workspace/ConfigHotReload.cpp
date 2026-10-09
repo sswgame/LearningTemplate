@@ -77,6 +77,9 @@ namespace sw::editor
         const string toolDefaultsPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorToolDefaults );
         if ( FileUtil::pathsEqualNormalized( toolDefaultsPath, fullPath ) == false )
             return false;
+        // 지워진 파일의 사건은 바꿀 것이 없다(없는 파일은 loadFromHostPath 가 기본값으로 성공시킨다 — 쓰던 값을 기본값으로 덮지 않는다).
+        if ( FileUtil::exists( toolDefaultsPath ) == false )
+            return false;
         EditorToolDefaults reloaded{};
         if ( reloaded.loadFromHostPath() == false )
             return false;

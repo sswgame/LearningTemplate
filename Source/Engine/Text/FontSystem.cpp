@@ -279,9 +279,16 @@ namespace sw
         if ( opened._face == kInvalidFontFaceId )
         {
             opened = OpenedFamilyFace{};
+            // 카탈로그의 시스템 가족은 설치가 기계마다 다르다 — 없으면 대체 사슬의 다음 가족을 쓰는 것이 정상이라 Info 다.
+            // 카탈로그에 없거나 저장소 글꼴을 못 연 것은 데이터 잘못이라 Warning 으로 남긴다.
             if ( markWarnedOnce( FontSystemInternal::hashName( family, FontSystemInternal::kFamilyWarningSeed ) ) )
-                SW_LOG_WARNING( "[Text] Font family '%#' is not in the font catalog or not installed on this system - the next family in the fallback chain is used",
-                                string( family ).c_str() );
+            {
+                if ( pSystemFamily != nullptr )
+                    SW_LOG_INFO( "[Text] System font family '%#' is not installed on this machine - the next family in the fallback chain is used", string( family ).c_str() );
+                else
+                    SW_LOG_WARNING( "[Text] Font family '%#' is not in the font catalog or could not be opened - the next family in the fallback chain is used",
+                                    string( family ).c_str() );
+            }
         }
         _mapOpenedFamilyFace.emplace( familyFaceKey, opened );
         outFauxBold   = opened._bFauxBold;

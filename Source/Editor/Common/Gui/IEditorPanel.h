@@ -117,8 +117,12 @@ namespace sw::editor
          *          다른 플래그 때문에 재정의한 패널이 제목의 미저장 표시를 잃지 않습니다.
          */
         virtual EditorPanelFlags getPanelFlags() const { return EditorPanelFlags::None; }
-        /** @brief FirstUseEver 크기입니다. (0,0) 이면 적용하지 않습니다. */
-        virtual float2 getInitialPanelSize() const { return float2{ 0.0f, 0.0f }; }
+        /**
+         * @brief 떠 있는 창으로 처음 열 때의 크기입니다(96 DPI 기준 — UI 배율은 `EditorChrome::setNextPanelSize` 가 곱한다).
+         * @details 기본값이 있어야 한다 — 크기를 정하지 않은 도구 창이 내용 크기로 열려 Data Table 은 높이 100 px(표가 안 보임), User Settings 는
+         *          값 칸 0 폭이었다. 도킹된 창에는 걸리지 않는다.
+         */
+        virtual float2 getInitialPanelSize() const { return float2{ 640.0f, 420.0f }; }
 
         /** @brief 편집이 생겼음을 알립니다. 제목의 미저장 표시와 종료 확인이 이것을 봅니다. */
         void markDocumentDirty() { _bDocumentDirty = true; }

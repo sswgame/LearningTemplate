@@ -12,6 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/TileMapPaintUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -37,6 +38,7 @@ namespace sw::editor
         , _tileSet{}
         , _loadedTileSet{}
         , _listBrushIndex{}
+        , _listStrokeCell{}
         , _brushIndex{ 0 }
         , _arrEdgeTx{ 1, 1, 1, 1 }
         , _arrEdgeTy{ 1, 1, 1, 1 }
@@ -47,9 +49,11 @@ namespace sw::editor
         , _atlasId{ 0 }
         , _warpTx{ 1 }
         , _warpTy{ 1 }
+        , _lastPaintCell{}
         , _layer{ PaintLayer::Flag }
         , _flagLayer{ TileFlagLayer::Walkable }
         , _bErase{ false }
+        , _bStrokeActive{ false }
     {
         const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
         if ( editorToolDefaults._defaultMap.empty() == false )
@@ -137,13 +141,20 @@ namespace sw::editor
 
         ImGui::InvisibleButton( "##tilegrid",
                                 ImVec2( static_cast<float32>( _map._width ) * cell, static_cast<float32>( _map._height ) * cell ) );
-        if ( ImGui::IsItemHovered() && ImGui::IsMouseDown( ImGuiMouseButton_Left ) )
+        const bool bPainting = ImGui::IsItemHovered() && ImGui::IsMouseDown( ImGuiMouseButton_Left );
+        if ( bPainting )
         {
             const ImVec2 mouse = ImGui::GetMousePos();
-            const int32  gx    = static_cast<int32>( ( mouse.x - origin.x ) / cell );
-            const int32  gy    = static_cast<int32>( ( mouse.y - origin.y ) / cell );
-            paintCell( gx, gy );
+            const int2   cellNow{ static_cast<int32>( ( mouse.x - origin.x ) / cell ), static_cast<int32>( ( mouse.y - origin.y ) / cell ) };
+            // 한 프레임에 마우스가 여러 칸을 지나가도 끊기지 않게 지난 프레임에 칠한 칸에서 이번 칸까지 선분으로 칠한다.
+            TileMapPaintUtil::collectLineCells( _bStrokeActive ? _lastPaintCell : cellNow, cellNow, _listStrokeCell );
+            for ( const int2& strokeCell : _listStrokeCell )
+            {
+                paintCell( strokeCell._x, strokeCell._y );
+            }
+            _lastPaintCell = cellNow;
         }
+        _bStrokeActive = bPainting;
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }

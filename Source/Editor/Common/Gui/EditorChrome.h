@@ -152,7 +152,7 @@ namespace sw::editor
         static bool beginPanel( const utf8* pTitle, bool* pOpen, EditorPanelFlags flags = EditorPanelFlags::None );
         /** @brief beginPanel()과 짝을 이룹니다. */
         static void endPanel();
-        /** @brief FirstUseEver 크기를 다음 패널에 적용합니다. */
+        /** @brief 다음 패널의 FirstUseEver 크기(96 DPI 기준 × UI 배율, 주 뷰포트 작업 영역의 90 % 까지)와 자리(주 뷰포트 가운데)를 정합니다. 0 크기면 아무것도 하지 않습니다. */
         static void setNextPanelSize( const float2& size );
         /** @brief 메인 뷰포트 위치/크기를 얻습니다. */
         [[nodiscard]] static bool tryGetMainViewportRect( float2& outPos, float2& outSize );

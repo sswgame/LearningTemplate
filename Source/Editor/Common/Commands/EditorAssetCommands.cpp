@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 
+#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
@@ -44,6 +45,13 @@ namespace sw::editor
     {
         struct EditorAssetCommandsInternal
         {
+            /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(`getChildFolderScanCount`). */
+            static atomic<uint64>& getChildFolderScanCounter()
+            {
+                static atomic<uint64> s_scanCount{ 0 };
+                return s_scanCount;
+            }
+
             /// @brief 파일 대화 상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 **메인 스레드에서** 부릅니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
@@ -639,12 +647,18 @@ namespace sw::editor
     void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
     {
         outList.clear();
+        ++EditorAssetCommandsInternal::getChildFolderScanCounter();
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
             return;
 
         FileUtil::collectFolders( folderAbs, outList, false );
         for ( string& child : outList )
             child = FileUtil::normalizeSeparators( child );
+    }
+
+    uint64 EditorAssetCommands::getChildFolderScanCount()
+    {
+        return EditorAssetCommandsInternal::getChildFolderScanCounter().load();
     }
 
     bool EditorAssetCommands::enterPrefabIsolation( string_view prefabPath )

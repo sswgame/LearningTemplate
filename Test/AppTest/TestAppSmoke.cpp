@@ -729,6 +729,13 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|input.tooltipOnHover",
         "EditorSelfTest|PASS|input.classicDarkSwatch",
         "EditorSelfTest|PASS|hierarchy.visibilityToggleFits",
+        "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
+        "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
+        "EditorSelfTest|PASS|contentBrowser.treeDoesNotReadTheDiskEveryFrame",
+        "EditorSelfTest|PASS|prefab.ignoresOtherFocusedAssets",
+        "EditorSelfTest|PASS|globalVariables.groupsStack",
+        "EditorSelfTest|PASS|panels.toolWindowsOpenAtAUsableSize",
+        "EditorSelfTest|PASS|gameView.overlaysStayInsideTheCanvas",
     };
 
     const string  imguiIniPath = findEditorImguiIniPath();

@@ -106,6 +106,36 @@ SW_TEST_CASE( FontSystemTest, MissingFamilyWarnsOnceAndIsSkipped )
     SW_EXPECT_EQUAL( 2u, fixture._fontSystem->getWarnedOnceCount() );
 }
 
+/**
+ * @brief [FontSystemTest] 카탈로그의 시스템 가족이 이 기계에 설치되지 않은 것은 경고가 아니다 — 사슬에서 빠지고 Info 한 줄, 카탈로그에 없는 가족만 경고다
+ * @details 현지화 대체 목록의 시스템 글꼴(Noto Sans 등)은 기계마다 설치가 달라, 없을 때마다 깨끗한 에디터 실행이 Warning 을 남겼다(패널 점검 D25).
+ */
+SW_TEST_CASE( FontSystemTest, MissingSystemFallbackIsNotAWarning )
+{
+    sw::test::FakeFontSystemFixture fixture;
+    FontSystemTestUtil::configureLatinHangul( *fixture._pRasterizer );
+    sw::FontCatalogDesc      catalog = FontSystemTestUtil::makeLatinHangulCatalog();
+    sw::SystemFontFamilyDesc systemFamily{};
+    systemFamily._name           = "Sw Not Installed Sans";
+    systemFamily._windowsRegular = "SwNotInstalledSans-Regular.ttf";
+    systemFamily._linuxRegular   = "SwNotInstalledSans-Regular.ttf";
+    catalog._listSystemFamily.push_back( systemFamily );
+    SW_ASSERT_TRUE( fixture.initialize( catalog ) );
+
+    test::ScopedLogCollector logs;
+    sw::FontSpec             spec{};
+    spec._family                  = "Sw Not Installed Sans";
+    const sw::FontFaceChain chain = fixture._fontSystem->getFaceChain( spec );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( chain._faceCount ) ); // 기본 가족만
+    SW_EXPECT_TRUE_MSG( logs.countContaining( "Sw Not Installed Sans" ) == 0, logs.joined().c_str() );
+
+    // 카탈로그에 없는 가족은 데이터 잘못이라 그대로 경고한다.
+    SW_TEST_DEFENSIVE_SCOPE( "a family missing from the catalog warns" );
+    spec._family = "No Such Family";
+    (void)fixture._fontSystem->getFaceChain( spec );
+    SW_EXPECT_EQUAL( 1u, logs.countContaining( "No Such Family" ) );
+}
+
 /** @brief [FontSystemTest] 굵기는 가장 가까운 면을 고르고, 굵은 면이 없으면 일반 면 + 가짜 굵게 · 기운 면이 없으면 가짜 기울임 */
 SW_TEST_CASE( FontSystemTest, WeightPicksNearestFaceAndMarksFauxBold )
 {
