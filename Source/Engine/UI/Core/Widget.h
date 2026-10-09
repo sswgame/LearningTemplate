@@ -117,6 +117,8 @@ namespace sw
         void setArrangedGeometry( const WidgetGeometry& geometry );
 
         // --- 그리기 ---------------------------------------------------------------
+        /** @brief 자식을 드는 패널이면 그 패널, 아니면 nullptr 입니다 — 그리기 걷기가 위젯마다 묻는다(`castTo` 의 타입 조회보다 싸다). */
+        virtual PanelWidget* asPanel() { return nullptr; }
         /** @brief 글리프 아틀라스를 쓰는 위젯이면 true 입니다(글 위젯) — 아틀라스 페이지를 비우면(세대가 오르면) 그림 캐시를 다시 칠한다. */
         virtual bool usesGlyphAtlas() const { return false; }
 

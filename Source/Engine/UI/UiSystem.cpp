@@ -1591,9 +1591,8 @@ namespace sw
         SW_PROFILE_COUNT( "Ui.CanvasQuads", _canvasScratch._listQuad.size() );
         if ( _canvasScratch.isSameContent( _canvas ) )
             return;
-        _canvas.clear();
-        _canvas.appendDrawList( _canvasScratch );
-        _canvas._targetSize = _canvasScratch._targetSize;
+        // 바뀐 목록은 맞바꾼다(복사하지 않는다) — 다음 프레임은 지난 목록을 비우고 칠하기 목록으로 쓴다.
+        std::swap( _canvas, _canvasScratch );
         ++_canvasRevision;
     }
 

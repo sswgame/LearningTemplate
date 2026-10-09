@@ -5,7 +5,6 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Core/WidgetTree.h"
@@ -176,9 +175,10 @@ namespace sw
             repaintCache( widget, context, painter, outCanvas, cache._under, false );
             ++paintedCount;
         }
-        outCanvas.appendDrawList( cache._under );
+        if ( cache._under.isEmpty() == false )
+            outCanvas.appendDrawList( cache._under );
 
-        PanelWidget* const pPanel = castTo<PanelWidget>( &widget );
+        PanelWidget* const pPanel = widget.asPanel();
         if ( pPanel != nullptr && pPanel->getChildCount() > 0 )
         {
             const bool bClip = pPanel->clipsChildren();
@@ -224,7 +224,8 @@ namespace sw
 
         if ( bSelfDirty )
             repaintCache( widget, context, painter, outCanvas, cache._over, true );
-        outCanvas.appendDrawList( cache._over );
+        if ( cache._over.isEmpty() == false )
+            outCanvas.appendDrawList( cache._over );
         painter.popOpacity();
         widget._dirtyFlags &= ~Internal::kClearBits;
         return paintedCount;

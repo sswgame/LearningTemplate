@@ -506,6 +506,10 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 - **바뀌지 않은 트리는 순회하지 않습니다.** 트리는 지난 그리기 결과(`WidgetTree::_paintOutput`)를 보관합니다.
   그 뒤 무효화가 하나도 없고 배율, 아틀라스, 대상 크기가 그대로면 그 목록을 이어 붙이기만 합니다. 무효화는 무엇이든 결과를 낡게 만듭니다(`notifyDirty`). 자식을 분리해 레이아웃만 무효화된 경우도 마찬가지입니다.
   그래서 멈춰 있는 HUD와 메뉴의 비용은 위젯 수와 상관없습니다.
+- **바뀐 프레임 목록은 복사하지 않고 맞바꿉니다**(`UiSystem::paintScreens`). 칠하기 목록(`_canvasScratch`)이 지난 목록과 다르면 둘을 바꾸고, 다음 프레임은 지난 목록을 비워 칠합니다.
+  위젯 1 만 칸 벤치에서 사각형 3000 개(430 KB) 복사 55~65 us 가 없어졌습니다. 빈 위젯 캐시(`_over` 는 대개 비었다)는 이어 붙이지 않고, 패널 판정은 `castTo` 대신 `Widget::asPanel` 입니다.
+- **하위 출력을 캐시하려면 합치지 않은 일괄 그대로 들어야 합니다.** `CanvasDrawList::appendDrawList` 는 원본 일괄을 하나씩 앞 일괄에 합칠지(가위 · 텍스처 넷) 정하므로,
+  위젯 캐시를 차례로 붙인 결과와 미리 합친 하위 목록을 붙인 결과는 텍스처 번호 · 일괄 경계가 다를 수 있습니다(`UiDeterminismTest` 골든이 바뀐다).
 - 구간은 `GT.Ui.Animate`, `GT.Ui.Bind`, `GT.Ui.Style`, `GT.Ui.Layout`, `GT.Ui.Paint` 이고, 카운터는 `Ui.StyleWidgets`, `Ui.LayoutWidgets`, `Ui.PaintWidgets`, `Ui.CanvasQuads` 입니다.
 
 ## 확장하는 법
