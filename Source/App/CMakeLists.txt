@@ -17,7 +17,7 @@ list(REMOVE_ITEM APP_SOURCES ${APP_HOST_SOURCES})
 # 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 # 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 if(SW_SHIPPING_BUILD)
-	sw_excludeUnbuiltSources(APP_HOST_SOURCES "Module/LiveReloadManager\\.(cpp|h)$")
+	sw_excludeUnbuiltSources(APP_HOST_SOURCES "Module/(LiveReloadManager|ModuleImagePatch|ModuleCallGuard|ShadowCopyName)\\.(cpp|h)$")
 endif()
 
 add_library(AppHost STATIC ${APP_HOST_SOURCES})

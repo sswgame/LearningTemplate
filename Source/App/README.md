@@ -40,7 +40,7 @@ sequenceDiagram
 상태를 직렬화해 보존하는 일과, 모듈을 언로드하기 전에 태스크와 렌더 워커를 비우는 일(`drainRenderWorkers`)도 ModuleHost가 합니다.
 
 **LiveReloadManager** 는 개발 빌드의 핫 리로드를 맡습니다. Shipping 빌드에서는 파일째 빠집니다.
-섀도 복사본의 바이트를 고치는 `ModuleImagePatch` 와 새 모듈 코드 호출을 감싸는 `ModuleCallGuard` 도 같은 파일에 있습니다.
+섀도 복사본의 바이트를 고치는 `ModuleImagePatch`, 새 모듈 코드 호출을 감싸는 `ModuleCallGuard`, 복사본 이름을 짓는 `ShadowCopyName` 은 각자 파일에 있고 함께 빠집니다.
 
 **FixedTimestep** 은 실제 경과 시간을 가변 델타와 고정 스텝 수로 나눕니다. `AppTest` 가 이 파일만 따로 컴파일해서 테스트합니다.
 

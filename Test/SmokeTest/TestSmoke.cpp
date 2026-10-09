@@ -2,6 +2,8 @@
 
 #include "App/Module/LiveReloadManager.h"
 #include "App/Module/ModuleCompiler.h"
+#include "App/Module/ModuleImagePatch.h"
+#include "App/Module/ShadowCopyName.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Event/EventDispatcher.h"

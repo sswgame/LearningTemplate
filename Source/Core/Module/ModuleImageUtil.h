@@ -4,7 +4,7 @@
  *
  * 게임 · 에디터 모듈(`ModuleHost`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더, 지연 로드 훅이 모두 이 자리를 지난다.
  * 등록부 목록은 `IModuleUnloadListener` 가 들고, 여기서는 그 목록을 훑고 결과를 로그로 남긴 뒤 이미지를 내린다.
- * 섀도 복사본 **파일 바이트**를 고치는 것(`ModuleImagePatch`)은 핫 리로드만 쓰므로 `App/Module/LiveReloadManager` 에 있다.
+ * 섀도 복사본 **파일 바이트**를 고치는 것(`ModuleImagePatch`)은 핫 리로드만 쓰므로 `App/Module/ModuleImagePatch` 에 있다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

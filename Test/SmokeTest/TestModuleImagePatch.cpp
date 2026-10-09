@@ -7,7 +7,7 @@
  */
 #include "pch.h"
 
-#include "App/Module/LiveReloadManager.h"
+#include "App/Module/ModuleImagePatch.h"
 
 #include "Core/Memory/Memory.h"
 
