@@ -233,6 +233,10 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
 - Platform-specific includes go in **one** `#if SW_PLATFORM_WINDOWS / #elif ... / #endif` chain after the
   unconditional includes; inside a branch, project headers, a blank line, then system headers. Never open a
   second block on the same condition family for the system headers (`CheckIncludeOrder.py` rejects it).
+- **Core folders are tiers** (`Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `LogSink`, table in
+  `Scripts/lint/gate/CheckCoreLayers.py`): a file includes only its own folder or a lower tier, `.cpp` included. A lower tier that must
+  reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`, `RaceDetectContext::setReportFunction`).
+  Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`.
 - Use the project type aliases from `Types.h`.
 - Prefer Core and Engine facilities over STL or direct system facilities when
   they meet the need.

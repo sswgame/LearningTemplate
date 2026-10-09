@@ -18,19 +18,25 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | 폴더 | 하는 일 |
 |---|---|
 | `Common/` | 기본 타입, 매크로, 타깃 매크로, 빌드 정보 |
-| `String/` | `hashed_string`, `formatString`, `StringUtil`, `TagID` |
-| `Container/` | 표준 컨테이너 별칭, 핸들, 레지스트리 목록 |
-| `Memory/` | `sw_new`, 할당기, 메모리 태그, `MemoryProfiler` |
-| `Log/` | 로그 매크로와 출력 장치 |
+| `Container/` | 표준 컨테이너 별칭, 핸들, 레지스트리 목록, 문자열 타입과 `StringUtil` · `formatString`, 동시 큐 |
+| `String/` | `hashed_string`, `fixed_string`, `TagID`, `StringBuilder` |
+| `Memory/` | `sw_new`, 할당기, 메모리 태그(`ScopedMemoryTag`), 할당 기록기 인터페이스 |
+| `Log/` | 로그 매크로와 전역 창구(`Logger`) |
+| `LogSink/` | 기본 로그 싱크(`AsyncLogSink`)와 출력 장치 |
 | `GlobalVariable/`, `CommandLine/` | 실행 인자로 바꾸는 전역 변수 |
 | `Task/` | 워커 풀과 태스크 그래프([Task](Task/README.md)) |
-| `Concurrency/` | 락프리 큐, 잠금, 교착과 경합 검출기 |
+| `Concurrency/` | 원시 동기화(`atomic` · `mutex` · `SpinLock` · `Futex`)와 경합 검출 훅 |
+| `Diagnostics/` | 호출 스택, 크래시 보고, `MemoryProfiler`, 교착 검출기, 경합 보고기 |
 | `File/` | 파일 유틸, 비동기 파일 IO, 파일 감시 |
 | `Time/` | 단조 시계와 벽시계 |
 | `Compression/` | 압축 스트림과 코덱 레지스트리 |
 | `Network/` | 네트워크 공통 계층([Network](Network/README.md)) |
-| `Module/`, `Process/` | 동적 라이브러리와 자식 프로세스 |
+| `Module/`, `Process/` | 동적 라이브러리 · 빌드 id, 자식 프로세스 · 종료 신호 · 스레드 크래시 스택 |
 | `Predefined/` | Engine과 ReflectionParser가 함께 읽는 X-macro 목록 |
+
+폴더는 층을 이룹니다. 아래 층은 위 층을 include 하지 않습니다(`.cpp` 포함, `CheckCoreLayers.py` 가 막는다).
+`Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `Uuid` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time`
+→ `GlobalVariable` · `Task` → `File` · `Network` → `Module` → `Diagnostics` · `Event` → `LogSink` 순입니다. 표를 다시 계산하는 도구는 `Scripts/lint/report/RunCoreLayerGraph.py` 입니다.
 
 이 문서에서 기억할 개념은 네 가지입니다.
 
@@ -146,12 +152,13 @@ NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않�
 
 ### 로그
 
-로그는 두 층으로 나뉩니다. 이 둘을 섞지 않습니다.
+로그는 세 부분으로 나뉩니다. 이것들을 섞지 않습니다.
 
-- **파사드**(`ILogSink`, `Logger`)는 매크로가 말을 거는 쪽입니다. 포맷, 타임스탬프, 리스너, 비동기 큐, 상세도, 호출자 이름 테이블을 맡습니다. 테스트 프레임워크는 이 인터페이스를 구현해 기존 싱크를 감쌉니다.
-- **장치**(`ILogOutput`, `ConsoleLogOutput`, `FileLogOutput`)는 완성된 한 줄이 실제로 나가는 곳입니다. 장치마다 자기 잠금을 가지므로 느린 파일 쓰기가 콘솔 쓰기를 막지 않습니다. 출력을 더하려면 `Logger::addOutput` 을 씁니다.
+- **전역 창구**(`Log/Logger.h` 의 `Logger`, `ILogSink`)는 매크로가 말을 거는 쪽입니다. 전역 싱크, 상세도, 호출자 이름 테이블만 맡고 파일 · 크래시 · 모듈을 모르므로 Core 아래층도 씁니다. 테스트 프레임워크는 `ILogSink` 를 구현해 기존 싱크를 감쌉니다.
+- **기본 싱크**(`LogSink/AsyncLogSink`)는 포맷, 타임스탬프, 리스너, 비동기 큐를 맡습니다. 만들면 전역 싱크가 비어 있을 때 자신을 겁니다(`Logger::registerGlobalSink`).
+- **장치**(`ILogOutput`, `ConsoleLogOutput`, `FileLogOutput`)는 완성된 한 줄이 실제로 나가는 곳입니다. 장치마다 자기 잠금을 가지므로 느린 파일 쓰기가 콘솔 쓰기를 막지 않습니다. 출력을 더하려면 `AsyncLogSink::addOutput` 을 씁니다.
 
-두 층이 함께 쓰는 값 타입(`LogLevel`, `LogEntry`, `LogRecord`)은 `LogTypes.h` 에 따로 있습니다. 한쪽 헤더에 두면 장치가 파사드를 include하게 되어 방향이 뒤집힙니다.
+두 층이 함께 쓰는 값 타입(`LogLevel`, `LogEntry`, `LogRecord`)은 `LogTypes.h` 에 따로 있습니다. 한쪽 헤더에 두면 장치가 싱크를 include하게 되어 방향이 뒤집힙니다.
 
 로그는 워커 스레드에서 비동기로 씁니다. 그래서 크래시 직전의 메시지는 사라질 수 있고, 크래시 경로는 `Logger::flushGlobalForCrash` 로 남깁니다. 잠금을 잡지 못하면 포기합니다.
 
@@ -204,6 +211,13 @@ NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않�
 슬롯 인덱스로 O(1) 제거를 하는 목록(프리미티브, 틱, 트랜스폼 계층, 콜라이더)과 구조가 다른 레지스트리(TypeRegistry, 전역 변수, 코덱, RHI 백엔드)는 예외입니다.
 
 ## 함정과 주의
+
+### 층
+
+**아래 층이 위 층을 알아야 하면 include 하지 말고 인터페이스나 함수 포인터를 받으세요.** `mutex` 는 교착 검출기를 `ILockObserver` 로, 할당기는 `MemoryProfiler` 를 `IAllocationTracker` 로, 경합 검출 훅은 보고기를 `RaceDetectContext::setReportFunction` 으로 압니다.
+작업 스레드를 띄우는 곳은 크래시 보고기(`Diagnostics/CrashHandler`)가 아니라 `Process/ThreadCrashStack::initializeCurrentThread` 를 부릅니다.
+**`.cpp` 는 pch 로 `Logger.h` 를 include 없이 받습니다.** Log 아래 층(`Math` · `Memory` · `Container` …)의 `.cpp` 가 로그 매크로를 쓰면 include 간선에 보이지 않는 거꾸로 가는 의존이 됩니다. 이미 있는 다섯 파일은 `CheckCoreLayers.py` 의 `_kHiddenLogUse` 에 있고, Core 를 라이브러리로 나누기 전에 줄입니다.
+**경합 보고기는 정적 등록으로 걸립니다.** `Core` STATIC 을 링크하는 실행 파일(ReflectionParser)은 그 목적 파일이 빠질 수 있어 진입점에서 `DataRaceReporter::install()` 을 부릅니다.
 
 ### 문자열과 이름
 

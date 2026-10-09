@@ -90,8 +90,18 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
     #include "Core/Common/PlatformOsHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
-    #include "Core/Memory/Memory.h"
 #endif
+```
+
+Core 폴더는 층입니다. 아래 층이 위 층을 알아야 하면 include 대신 인터페이스를 받습니다(`CheckCoreLayers.py`):
+
+```cpp
+// Source/Core/Concurrency/mutex.h — Concurrency(티어 1)는 교착 검출기(Diagnostics, 티어 10)를 include 하지 않는다
+class SW_API ILockObserver { public: virtual void recordLockAttempt( void* pLock ) = 0; … };
+ILockObserver* pObserver = mutex::getLockObserver();   // 검출기가 initialize 에서 registerLockObserver( this )
+
+// 작업 스레드 시작 — 크래시 보고기(Diagnostics/CrashHandler)가 아니라 아래층 준비를 부른다
+ThreadCrashStack::initializeCurrentThread();
 ```
 
 ```cpp
