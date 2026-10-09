@@ -16,6 +16,7 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -174,14 +175,14 @@ namespace sw
      * @details 시각은 `H:MM`(0:00..24:00)입니다. 모르는 원소 · 속성 · 활동 · 장소 · 약속 · 묶음 · 요일 · 계절 · 날씨 이름, 겹치는 칸, 시작 ≥ 끝,
      *          묶음 순환은 경고하고 그 항목을 뺍니다(`ResourceDataSchemaTest` 가 경고를 실패로 잡는다).
      */
-    class SW_GF_API ScheduleCatalog
+    class SW_GF_API ScheduleCatalog : public XmlCatalog<ScheduleCatalog>
     {
+        friend class XmlCatalog<ScheduleCatalog>;
+
     public:
         ScheduleCatalog();
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               clear();
+        void clear();
 
         /** @brief "9:30" · "24:00" · "9" 를 분으로 읽습니다. 범위(0..1440) 밖 · 틀린 글이면 false 입니다. */
         [[nodiscard]] static bool parseClockMinutes( string_view text, int32& outMinutes );
@@ -206,6 +207,8 @@ namespace sw
         bool isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeId ) const;
 
     private:
+        static constexpr const utf8* kXmlRootName = "Schedules"; ///< 루트 원소(`XmlCatalog`)
+
         uint32 loadRoot( const XmlNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 · 1)입니다. */
         uint32 loadElement( const XmlNode& node, string_view sourceName );

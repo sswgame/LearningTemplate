@@ -20,7 +20,6 @@ namespace sw
     {
         struct InteractionCatalogInternal
         {
-            static constexpr const utf8* kRootName                  = "Interactions";
             static constexpr const utf8* kArrInteractionAttribute[] = { "id", "prompt", "mode", "duration", "presses", "decay",
                                                                         "maxParticipants", "maxDistance", "maxAngle", "lineOfSight", "cooldown", "requiredTags",
                                                                         "forbiddenTags", "alignment", "highlight", "authority" };
@@ -83,25 +82,6 @@ namespace sw
 namespace sw
 {
     bool InteractionDef::allowsInteractor( const TagContainer& interactorTags ) const { return interactorTags.matchesTags( _requiredTags, _forbiddenTags ); }
-
-    bool InteractionCatalog::loadFromResource( string_view path )
-    {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        if ( GameDataXml::loadRoot( doc, path, InteractionCatalogInternal::kRootName, root, sourceName ) == false )
-            return false;
-        return loadRoot( root, sourceName );
-    }
-
-    bool InteractionCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::parseRoot( doc, xmlText, sourceName, InteractionCatalogInternal::kRootName, root ) == false )
-            return false;
-        return loadRoot( root, sourceName );
-    }
 
     bool InteractionCatalog::readInteraction( const XmlNode& node, InteractionDef& outDef, string_view sourceName ) const
     {

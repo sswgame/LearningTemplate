@@ -7,8 +7,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
-
 namespace sw
 {
     SW_LOG_CALLER( "MonsterCatalog" );
@@ -49,7 +47,7 @@ namespace sw
     bool MonsterCatalog::loadFromResource( string_view assetRelativePath )
     {
         clear();
-        if ( GameDataXml::loadFile( *this, &MonsterCatalog::loadRoot, assetRelativePath, "MonsterCatalog" ) )
+        if ( XmlCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
             return true;
         // 파일 · 루트가 없거나 `<Monster>` 가 하나도 없다(읽기 쪽이 이미 까닭을 알렸다) — 폴백을 심는다.
         SW_LOG_WARNING( "%# gave no monster definitions — using fallback monster definitions.", assetRelativePath );

@@ -125,21 +125,6 @@ namespace sw
     {
     }
 
-    bool ScheduleCatalog::loadFromResource( string_view path )
-    {
-        XmlDocument doc;
-        XmlNode     root;
-        string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "Schedules", root, sourceName ) && loadRoot( root, sourceName ) > 0;
-    }
-
-    bool ScheduleCatalog::loadFromXmlText( string_view xmlText, string_view sourceName )
-    {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "Schedules", root ) && loadRoot( root, sourceName ) > 0;
-    }
-
     void ScheduleCatalog::clear()
     {
         _placeCatalog.clear();

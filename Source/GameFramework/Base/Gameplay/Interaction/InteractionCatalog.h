@@ -30,6 +30,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -127,16 +128,16 @@ namespace sw
      * @class InteractionCatalog
      * @brief `<Interactions>` 의 상호작용 · 스마트 오브젝트 정의입니다. `findShared` 는 경로마다 한 번 읽어 나눠 씁니다(컴포넌트들이 같은 표를 본다).
      */
-    class SW_GF_API InteractionCatalog
+    class SW_GF_API InteractionCatalog : public XmlCatalog<InteractionCatalog>
     {
+        friend class XmlCatalog<InteractionCatalog>;
+
     public:
         /** @brief 컴포넌트가 따로 정하지 않으면 읽는 표입니다. */
         static constexpr const utf8* kDefaultPath = "common/data/interactions/default.interactions.xml";
 
-        [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
-        void               addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
+        void addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
+        void addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
 
         const InteractionDef*         findInteraction( const hashed_string& id ) const { return _interactionCatalog.find( id ); }
         const SmartObjectDef*         findSmartObject( const hashed_string& id ) const { return _smartObjectCatalog.find( id ); }
@@ -153,6 +154,8 @@ namespace sw
         static uint32 getSharedReloadCount();
 
     private:
+        static constexpr const utf8* kXmlRootName = "Interactions"; ///< 루트 원소(`XmlCatalog`)
+
         [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
         [[nodiscard]] bool readInteraction( const XmlNode& node, InteractionDef& outDef, string_view sourceName ) const;
         [[nodiscard]] bool readSmartObject( const XmlNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
