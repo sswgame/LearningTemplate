@@ -1,7 +1,7 @@
 /**
  * @file CrashReportService.h
  * @brief 크래시 보고 — 다음 실행이 지난 크래시의 파일(미니덤프 · 컨텍스트 · 스택 · 빵부스러기 · 그 세션의 로그)을 묶음 폴더 하나로 모으고, 동의에 따라
- *        두거나 · 묻거나 · 보고 프로세스(`App --crash-reporter=<폴더>`)에 넘겨 올립니다.
+ *        두거나 · 묻거나 · 보고 프로세스(`App -crash-reporter=<폴더>`)에 넘겨 올립니다.
  * @details 참고: 언리얼 CrashReportClient(별도 프로세스가 덤프 · 로그 · 컨텍스트를 묶어 "보내기?" 를 묻고 올린다), Sentry · Backtrace(미니덤프 업로드 ·
  *          빵부스러기 · 빌드 id 로 심볼 매칭). 크래시 순간에는 아무것도 보내지 않습니다 — 죽어 가는 프로세스는 할당 없이 파일만 씁니다(`CrashHandler`).
  *          **기본은 기계 안에만**(`telemetry.crashReports` = `local`) — 묶음은 만들지만 보내지 않습니다.
@@ -70,8 +70,9 @@ namespace sw
     class SW_API CrashReportService
     {
     public:
-        static constexpr const utf8* kConsentSettingId  = "telemetry.crashReports";
-        static constexpr const utf8* kReporterArgument  = "--crash-reporter=";
+        static constexpr const utf8* kConsentSettingId = "telemetry.crashReports";
+        /** @brief 보고 프로세스를 띄우는 명령줄 키입니다 — `ArgumentList.xxx` 의 CRASH_REPORTER 철자(`-crash-reporter=<폴더>`). */
+        static constexpr const utf8* kReporterArgument  = "-crash-reporter";
         static constexpr const utf8* kManifestFileName  = "manifest.json";
         static constexpr const utf8* kBundlePrefix      = "crash_";
         static constexpr const utf8* kReportsFolderName = "CrashReports"; ///< 로그 폴더(Saved/Logs) 옆의 묶음 폴더 이름
@@ -109,7 +110,7 @@ namespace sw
          *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(EngineLoop)이 정합니다.
          */
         void setReporterExecutable( string_view executablePath ) { _reporterExecutable = string( executablePath ); }
-        /** @brief 보낼 것이 있고 보고 실행 파일이 정해져 있으면 보고 프로세스(`<실행 파일> --crash-reporter=<묶음 폴더>`)를 기다리지 않고 띄웁니다. 띄웠으면 true 입니다. */
+        /** @brief 보낼 것이 있고 보고 실행 파일이 정해져 있으면 보고 프로세스(`<실행 파일> -crash-reporter="<묶음 폴더>"`)를 기다리지 않고 띄웁니다. 띄웠으면 true 입니다. */
         bool          launchReporterProcess() const;
         const string& getReportsFolder() const { return _reportsFolder; }
 
@@ -118,11 +119,6 @@ namespace sw
          *        아니면 시도 수만 올립니다. 올린 수입니다.
          */
         static uint32 runReporter( string_view reportsFolder, ICrashReportUploader& uploader );
-        /**
-         * @brief 명령줄에 `kReporterArgument` 가 있으면 보고 프로세스로 돌고 종료 코드(0)를 돌려줍니다. 없으면 −1 입니다. 엔진을 세우지 않습니다 —
-         *        크래시 난 게임 코드를 다시 올리지 않는다. 이 저장소는 네트워크 창구를 싣지 않으므로 업로더는 `NullCrashReportUploader` 입니다.
-         */
-        static int32 runReporterFromCommandLine( int32 argc, utf8* pArgv[] );
 
     private:
         [[nodiscard]] bool createBundle( string_view sessionId, const string& contextPath );

@@ -22,7 +22,7 @@ flowchart LR
   Service -- "배치" --> Spool["telemetry/*.jsonl<br/>스풀 파일"]
   Spool -- "닫힌 파일" --> Uploader["ITelemetryUploader<br/>기본: 보내지 않음"]
   Crash["크래시<br/>crash_*.dmp, .txt"] -- "다음 실행" --> Bundle["Saved/CrashReports/crash_&lt;세션&gt;/"]
-  Bundle -- "--crash-reporter" --> Reporter["보고 프로세스<br/>ICrashReportUploader"]
+  Bundle -- "-crash-reporter" --> Reporter["보고 프로세스<br/>ICrashReportUploader"]
 ```
 
 **사건과 스키마.** 사건은 id와 타입이 붙은 필드 값으로 이루어집니다(`TelemetryEvent`). 어떤 사건이 어떤 필드를 가지는지는 스키마 파일(`*.telemetry.xml`)에 미리 적습니다.
@@ -146,8 +146,9 @@ if ( pTelemetry != nullptr )
 
 `local` 로 바꾸면 아직 보내지 않은 번들이 `local` 로 돌아옵니다. 반대로 `send` 로 바꿔도 이미 `local` 로 모인 번들을 거슬러 보내지는 않습니다.
 
-**보고 프로세스.** 보낼 번들이 있으면 `App.exe --crash-reporter="<번들 폴더>"` 를 기다리지 않고 띄웁니다(`Process::launchDetached`).
-App의 `main` 은 엔진과 게임 모듈을 초기화하기 **전에** 이 인자를 보고 `runReporter` 만 실행하고 끝납니다. 크래시를 낸 게임 코드를 다시 로드하지 않기 위해서입니다.
+**보고 프로세스.** 보낼 번들이 있으면 `App.exe -crash-reporter="<번들 폴더>"` 를 기다리지 않고 띄웁니다(`Process::launchDetached`).
+이 인자는 명령줄 표의 `CRASH_REPORTER` 입니다. 엔진 부트스트랩은 명령줄까지만 세우고 크래시 핸들러와 리소스 루트는 세우지 않습니다(이 프로세스가 죽어도 보고 프로세스를 또 띄우지 않게).
+`EngineLoop` 는 서비스와 기동 단계 없이 헤드리스로 끝나고, App 의 헤드리스 분기가 `runReporter` 만 실행합니다. 크래시를 낸 게임 코드를 다시 로드하지 않기 위해서입니다.
 언리얼은 CrashReportClient라는 별도 exe를 쓰지만, 여기서는 같은 exe의 다른 모드로 구현했습니다.
 업로드 결과가 `Sent` 면 상태를 `sent` 로 바꾸고 덤프를 지웁니다. 실패하면 시도 수를 늘리고, 3번 실패하면 더 띄우지 않습니다.
 띄울 실행 파일은 `setReporterExecutable` 로 정한 것뿐이고, `EngineLoop` 가 App 경로를 넣습니다. 그래서 테스트 실행 파일은 자기 자신을 다시 띄우지 않습니다.
@@ -173,7 +174,7 @@ Breakpad, Crashpad, Sentry의 미니덤프 엔드포인트가 받는 이름입�
 
 1. `IHttpClient` 를 구현합니다. 이 저장소에는 `NullHttpClient`(보내지 않고 거절)만 있습니다. 프레임이 멈추지 않도록 요청을 작업 스레드에 넘기는 비동기 구현이어야 합니다.
 2. 텔레메트리는 `TelemetryService::setUploader` 에 그 클라이언트와 엔드포인트, 키를 가진 `HttpTelemetryUploader` 를 넣습니다.
-3. 크래시 보고는 `runReporterFromCommandLine` 이 쓰는 업로더를 `HttpCrashReportUploader` 로 바꿉니다.
+3. 크래시 보고는 App 의 헤드리스 분기(`App::initialize`)가 `runReporter` 에 넘기는 업로더를 `HttpCrashReportUploader` 로 바꿉니다.
 
 **배포 빌드의 심볼을 올리려면** 빌드마다 아래 명령으로 PDB와 `.debug` 를 심볼 서버 배치로 복사하거나, Sentry `sentry-cli debug-files upload` 를 씁니다. 배포물에는 PDB를 넣지 않습니다.
 

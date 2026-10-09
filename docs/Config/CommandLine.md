@@ -4,7 +4,7 @@
 
 [설정 색인](README.md)
 
-키 앞의 하이픈은 `-` 든 `--` 든 같습니다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받습니다. 목록 밖의 인자: `--crash-reporter=<번들 폴더>`. App 의 main 이 엔진을 초기화하기 전에 읽고, 크래시 보고만 하고 끝냅니다.
+키 앞의 하이픈은 `-` 든 `--` 든 같습니다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받습니다.
 
 | 철자 | 값 | 설명 | 코드 이름 |
 |---|---|---|---|
@@ -39,5 +39,6 @@
 | `-loc-project` | 글 값(`-이름=값`) | 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `LOC_PROJECT` |
 | `-export-po` | 플래그(`-이름`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `EXPORT_PO` |
 | `-import-po` | 글 값(`-이름=값`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `IMPORT_PO` |
+| `-crash-reporter` | 글 값(`-이름=값`) | 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportService::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 · 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스). | `CRASH_REPORTER` |
 | `-scenario` | 글 값(`-이름=값`) | 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다 (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/README.md`. | `SCENARIO` |
 | `-scenario-report` | 글 값(`-이름=값`) | 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다). | `SCENARIO_REPORT` |

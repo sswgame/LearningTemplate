@@ -2,15 +2,8 @@
 
 #include "App/App.h"
 
-#include "Engine/Telemetry/CrashReportService.h"
-
 int32 main( int32 argc, utf8* pArgv[] )
 {
-    // 크래시 보고 프로세스(`--crash-reporter=<폴더>`) — 앞 실행이 띄운다. 엔진 · 게임 모듈을 세우지 않고 묶음만 올리고 끝낸다.
-    const int32 reporterExitCode = sw::CrashReportService::runReporterFromCommandLine( argc, pArgv );
-    if ( reporterExitCode >= 0 )
-        return reporterExitCode;
-
     sw::App app{};
     if ( app.initialize( argc, pArgv ) == false )
     {

@@ -35,13 +35,15 @@ namespace sw
         EngineBootstrap& operator=( const EngineBootstrap& ) = delete;
 
         /**
-         * @brief 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · (@p bDiagnostics 면) 교착 감지기 · 메모리 프로파일러를 세우고,
-         *        @p owned 에 명령줄 · 전역 변수를 만들어 서로 잇습니다. 명령줄은 아직 파싱하지 않습니다(`parseCommandLine`).
+         * @brief 이름 풀 · 로거 · (@p bDiagnostics 면) 메모리 프로파일러를 세우고, @p owned 에 명령줄 · 전역 변수를 만들어 @p pArgv 를 파싱한 뒤,
+         *        크래시 핸들러 · 리소스 루트 · 교착 감지기를 세웁니다. 하네스는 시험 프레임워크 인자를 먼저 걸러 낸 나머지를 넘깁니다.
+         * @details 크래시 보고 프로세스(`-crash-reporter=<폴더>`)면 명령줄까지만 세우고 true 입니다(`isCrashReporterRun`) — 핸들러를 세우지 않고
+         *          리소스 루트도 찾지 않는다.
          * @return 리소스 루트를 찾지 못하면 false 입니다(진단은 로거에 남는다).
          */
-        [[nodiscard]] bool initialize( EngineServiceCollection& owned, bool bDiagnostics );
-        /** @brief 인자를 파싱하고 전역 변수에 반영합니다. 하네스는 시험 프레임워크 인자를 먼저 걸러 낸 나머지를 넘깁니다. */
-        void parseCommandLine( int32 argc, utf8* pArgv[] );
+        [[nodiscard]] bool initialize( EngineServiceCollection& owned, bool bDiagnostics, int32 argc, utf8* pArgv[] );
+        /** @brief 명령줄이 크래시 보고 프로세스(`-crash-reporter=<폴더>`)였으면 true 입니다 — 크래시 핸들러 · 리소스 루트를 세우지 않았다. */
+        bool isCrashReporterRun() const { return _bCrashReporterRun; }
         /**
          * @brief 서비스 표에 저장소의 `EngineCreated` 칸과 메모리 프로파일러를 채웁니다. 나머지 `HostCreated` 칸과 `bindEngineServices` 는 호스트의 몫입니다.
          */
@@ -54,10 +56,11 @@ namespace sw
         void shutdown();
 
     private:
-        EngineServiceCollection*     _pOwned;           ///< `initialize` 가 받은 저장소(명령줄 · 전역 변수 · 표 밖 서비스)
-        unique_ptr<Logger>           _logger;           ///< 처음 서고 마지막에 사라진다
-        unique_ptr<DeadlockDetector> _deadlockDetector; ///< 진단 구성에서만 있다
-        unique_ptr<MemoryProfiler>   _memoryProfiler;   ///< 배포본이 아니면 있다(추적은 진단 구성에서만 켜 둔다)
-        bool                         _bStarted;         ///< 이름 풀을 세웠다(= `shutdown` 이 내릴 것이 있다)
+        EngineServiceCollection*     _pOwned;            ///< `initialize` 가 받은 저장소(명령줄 · 전역 변수 · 표 밖 서비스)
+        unique_ptr<Logger>           _logger;            ///< 처음 서고 마지막에 사라진다
+        unique_ptr<DeadlockDetector> _deadlockDetector;  ///< 진단 구성에서만 있다
+        unique_ptr<MemoryProfiler>   _memoryProfiler;    ///< 배포본이 아니면 있다(추적은 진단 구성에서만 켜 둔다)
+        bool                         _bStarted;          ///< 이름 풀을 세웠다(= `shutdown` 이 내릴 것이 있다)
+        bool                         _bCrashReporterRun; ///< 명령줄이 크래시 보고 프로세스였다(핸들러 · 리소스 루트를 세우지 않았다)
     };
 } // namespace sw

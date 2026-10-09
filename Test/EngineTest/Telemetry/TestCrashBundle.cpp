@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/CrashContext.h"
@@ -214,9 +215,10 @@ SW_TEST_CASE( CrashBundleTest, ConsentDecidesWhatLeavesTheMachine )
 }
 
 /**
- * @brief [CrashBundleTest] 보고 프로세스 명령줄 — 인자가 없으면 −1(게임으로 뜬다), 있으면 엔진 없이 묶음 폴더만 돌고 0. 기본 업로더는 보내지 않고 시도만 센다
+ * @brief [CrashBundleTest] 보고 프로세스 명령줄 — `-crash-reporter="<폴더>"` 는 명령줄 표의 CRASH_REPORTER 로 읽히고(따옴표는 OS 가 벗긴다),
+ *        없으면 비어 있다. 보고 프로세스의 기본 업로더(`NullCrashReportUploader`)는 보내지 않고 시도만 센다
  */
-SW_TEST_CASE( CrashBundleTest, ReporterCommandLineRunsWithoutTheEngine )
+SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
 {
     using Internal                   = CrashBundleTestInternal;
     const string       crashFolder   = test::makeTempDirectory( "Logs" );
@@ -230,13 +232,26 @@ SW_TEST_CASE( CrashBundleTest, ReporterCommandLineRunsWithoutTheEngine )
     utf8  arrApp[]        = "App.exe";
     utf8  arrDx[]         = "-dx12";
     utf8* arrNoReporter[] = { arrApp, arrDx };
-    SW_EXPECT_EQUAL( -1, CrashReportService::runReporterFromCommandLine( 2, arrNoReporter ) );
+    {
+        CommandLineManager commandLine;
+        commandLine.initialize();
+        commandLine.parse( 2, arrNoReporter );
+        string folder;
+        SW_EXPECT_FALSE( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, folder ) );
+    }
 
-    string       reporterArgument = string( CrashReportService::kReporterArgument ) + "\"" + reportsFolder + "\"";
+    // 띄우는 쪽은 `-crash-reporter="<폴더>"` 로 적는다 — 프로세스가 받는 argv 에는 따옴표가 벗겨져 있다.
+    string       reporterArgument = string( CrashReportService::kReporterArgument ) + "=" + reportsFolder;
     vector<utf8> argumentBytes( reporterArgument.begin(), reporterArgument.end() );
     argumentBytes.push_back( '\0' );
-    utf8* arrReporter[] = { arrApp, argumentBytes.data() };
-    SW_EXPECT_EQUAL( 0, CrashReportService::runReporterFromCommandLine( 2, arrReporter ) );
+    utf8*              arrReporter[] = { arrApp, argumentBytes.data() };
+    CommandLineManager commandLine;
+    commandLine.initialize();
+    commandLine.parse( 2, arrReporter );
+    string folder;
+    SW_ASSERT_TRUE( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, folder ) );
+    SW_EXPECT_TRUE( folder == reportsFolder );
+    SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, NullCrashReportUploader::get() ) );
     const JsonDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
     SW_EXPECT_TRUE( manifest.getRoot().get( "state" ).asString() == "queued" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).asUint() ) );

@@ -802,8 +802,7 @@ def makeGlobalVariablePage(listVariable: list[GlobalVariableDoc], outMetadata: d
 def makeArgumentPage(listArgument: list[ArgumentDoc], outMetadata: dict) -> str:
     """명령줄 인자 표입니다(목록 순서)."""
     lines = [_kGeneratedBanner, "", "# 명령줄 인자", "", "[설정 색인](README.md)", "",
-             "키 앞의 하이픈은 `-` 든 `--` 든 같습니다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받습니다. "
-             "목록 밖의 인자: `--crash-reporter=<번들 폴더>`. App 의 main 이 엔진을 초기화하기 전에 읽고, 크래시 보고만 하고 끝냅니다.", "",
+             "키 앞의 하이픈은 `-` 든 `--` 든 같습니다. 전역 변수는 [`-gv_<이름>=<값>`](GlobalVariables.md) 로 따로 받습니다.", "",
              "| 철자 | 값 | 설명 | 코드 이름 |", "|---|---|---|---|"]
     for argument in listArgument:
         spelling = " · ".join(f"`-{item}`" for item in argument.listSpelling)

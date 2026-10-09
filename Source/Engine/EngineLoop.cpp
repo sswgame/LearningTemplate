@@ -828,7 +828,7 @@ namespace sw
                     FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
                 crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
                 crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
-                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 kReporterArgument 를 알아듣는다(main.cpp)
+                crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
                 (void)crashReports.collectNewCrashes();
                 (void)crashReports.launchReporterProcess();
             }
@@ -928,9 +928,16 @@ namespace sw
 #else
         constexpr bool kDiagnostics = false;
 #endif
-        if ( _bootstrap.initialize( _owned, kDiagnostics ) == false )
+        if ( _bootstrap.initialize( _owned, kDiagnostics, argc, pArgv ) == false )
             return false;
-        _bootstrap.parseCommandLine( argc, pArgv );
+        // 크래시 보고 프로세스(`-crash-reporter=<폴더>`)는 헤드리스다 — 서비스 · 기동 단계를 세우지 않고 App 이 묶음을 보내고 끝낸다.
+        // 부트스트랩이 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
+        if ( _bootstrap.isCrashReporterRun() )
+        {
+            _hostRole  = role;
+            _bHeadless = true;
+            return true;
+        }
         // 역할은 서비스를 만들기 전에 정한다 — 오디오 장치 · 기동 표 대상 · 읽지 않는 에셋 종류가 이것을 본다. 빌드에 없는 역할로는 서지 않는다.
         _hostRole                   = role;
         const bool bDedicatedServer = role == EngineHostRole::DedicatedServer;

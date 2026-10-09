@@ -3262,6 +3262,14 @@
    "description": "번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`)."
   },
   {
+   "name": "CRASH_REPORTER",
+   "spellings": [
+    "crash-reporter"
+   ],
+   "value": "글 값(`-이름=값`)",
+   "description": "크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportService::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 · 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스)."
+  },
+  {
    "name": "SCENARIO",
    "spellings": [
     "scenario"

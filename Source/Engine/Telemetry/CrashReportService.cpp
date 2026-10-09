@@ -482,7 +482,7 @@ namespace sw
         command += _reporterExecutable;
         command += "\" ";
         command += kReporterArgument;
-        command += "\"";
+        command += "=\"";
         command += _reportsFolder;
         command += "\"";
         const bool bLaunched = Process::launchDetached( command );
@@ -529,24 +529,4 @@ namespace sw
         return sentCount;
     }
 
-    int32 CrashReportService::runReporterFromCommandLine( int32 argc, utf8* pArgv[] )
-    {
-        for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
-        {
-            const string_view argument( pArgv[argIndex] != nullptr ? pArgv[argIndex] : "" );
-            if ( StringUtil::startsWith( argument, kReporterArgument ) == false )
-                continue;
-            string_view folder = argument.substr( StringUtil::strlen( kReporterArgument ) );
-            if ( folder.size() >= 2 && folder.front() == '"' && folder.back() == '"' )
-                folder = folder.substr( 1, folder.size() - 2 );
-            // 이 저장소는 네트워크 창구를 싣지 않는다 — 게임이 IHttpClient 를 구현하면 여기서 HttpCrashReportUploader 를 쓴다.
-            const uint32 sentCount = runReporter( folder, NullCrashReportUploader::get() );
-            // 이 프로세스에는 로거가 없다(엔진을 세우지 않는다) — 결과 한 줄은 표준 출력으로.
-            StringBuilder<constant::kMaxBuffer1024> line;
-            line.appendFormat( "[CrashReporter] %# report(s) sent from '%#'\n", sentCount, folder );
-            std::fputs( line.c_str(), stdout );
-            return 0;
-        }
-        return -1;
-    }
 } // namespace sw

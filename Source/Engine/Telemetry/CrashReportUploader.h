@@ -37,7 +37,7 @@ namespace sw
 {
     /**
      * @class ICrashReportUploader
-     * @brief 묶음 하나를 보냅니다. 보고 프로세스(`App --crash-reporter=<폴더>`)에서 막고 돕니다 — 게임 프로세스를 세우지 않는다.
+     * @brief 묶음 하나를 보냅니다. 보고 프로세스(`App -crash-reporter=<폴더>`)에서 막고 돕니다 — 게임 프로세스를 세우지 않는다.
      */
     class SW_API ICrashReportUploader
     {

@@ -28,6 +28,8 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Telemetry/CrashReportService.h"
+#include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/Utility/GameTimeScale.h"
 #include "Engine/Utility/Profiling/FrameProfiler.h"
 #include "Engine/Window/IWindow.h"
@@ -126,6 +128,18 @@ namespace sw
         {
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
+
+            // 크래시 보고 프로세스(`-crash-reporter=<폴더>`) — 엔진은 명령줄까지만 섰다(서비스 · 게임 모듈 없음). 묶음만 보내고 끝낸다.
+            // 이 저장소는 네트워크 창구를 싣지 않는다 — 게임이 IHttpClient 를 구현하면 여기서 HttpCrashReportUploader 를 쓴다.
+            const CommandLineManager* pReporterCommandLine = _engineLoop.getCommandLineManager();
+            string                    reporterFolder;
+            if ( pReporterCommandLine != nullptr && pReporterCommandLine->getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) &&
+                 reporterFolder.empty() == false )
+            {
+                const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
+                SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
+                return true;
+            }
 
             // 원본 임포트(텍스처 · 모델)는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
             const CommandLineManager* pHeadlessCommandLine = _engineLoop.getCommandLineManager();

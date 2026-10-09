@@ -293,12 +293,11 @@ namespace test
         // 0) 부트스트랩 — `EngineLoop` 과 같은 것(이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구 · 명령줄 · 전역 변수)
         // ------------------------------------------------------------------------------
         // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 시험 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
-        if ( state._bootstrap.initialize( state._owned, true ) == false )
+        // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다(부트스트랩이 나머지를 파싱한다).
+        sw::vector<utf8*> listApplicationArg = TestRegistry::getInstance().configureFromArgs( argc, argv );
+        if ( state._bootstrap.initialize( state._owned, true, static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() ) == false )
             return false;
         state._bBootstrapped = true;
-        // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다.
-        sw::vector<utf8*> listApplicationArg = TestRegistry::getInstance().configureFromArgs( argc, argv );
-        state._bootstrap.parseCommandLine( static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() );
 
         state._owned.createAll();
         host._audioSystem  = sw::IAudioSystem::create();
