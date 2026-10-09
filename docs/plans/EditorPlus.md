@@ -29,7 +29,7 @@
 | 원문 | 지금 |
 |---|---|
 | `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/Gui/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
-| "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Graphics/Renderer/README.md`, 프로파일링은 `Source/Engine/Utility/Profiling/README.md` |
+| "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Renderer/README.md`, 프로파일링은 `Source/Engine/Utility/Profiling/README.md` |
 | "백로그 1-4 의 C, G, H 줄", "대기열 S, M 의 항목" | 이 문서. 백로그 1-4 에는 이 문서를 가리키는 항목 하나만 있습니다 |
 | `cmake/Engine/TargetRules.cmake` | `cmake/Engine/ModuleTargets.cmake`(`sw_addGameFrameworkKit`, `sw_addGameModule` 이 있는 파일) |
 | `EditorViewportToolbarSettings` | `ViewportToolbarSettings`(`Source/Editor/Viewport/EditorViewportToolbar.h`) |
@@ -2096,7 +2096,7 @@ Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실�
 ### G1 보기 모드 Normals · Depth · Overdraw ★
 
 **바꿀 것.**
-1) `Engine/Graphics/Renderer/Frame/FrameRendererUtil.h` — 열거형과 define 표:
+1) `Engine/Renderer/Frame/FrameRendererUtil.h` — 열거형과 define 표:
 ```cpp
     enum class RenderViewMode : uint8
     {
@@ -2899,7 +2899,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 | 단위 | 남길 곳 | 남길 것 |
 |---|---|---|
-| G1 | `Source/Engine/Graphics/Renderer/README.md` 함정과 주의 | 보기 모드는 표 하나, 조명하는 셰이더는 모두 `swApplyViewMode` |
+| G1 | `Source/Engine/Renderer/README.md` 함정과 주의 | 보기 모드는 표 하나, 조명하는 셰이더는 모두 `swApplyViewMode` |
 | C1 ~ C5 | `Source/Editor/README.md` 함정 · 계약, `Source/Engine/Module/README.md` 함정 · 계약 | 확장 모듈 위치, 등록 세대, 언로드 리스너, 결속기, `SW_EDITOR_COMMAND`, EditorExtension 종류 |
 | P2 · P3 · P4 | 에디터 README, 모듈 README | 에디터 설정은 환경설정 섹션, 사용자 단축키 덮어쓰기, 매니페스트 내용도 configure 의존 |
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |

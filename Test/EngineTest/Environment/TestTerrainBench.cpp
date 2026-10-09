@@ -5,9 +5,9 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
-#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"

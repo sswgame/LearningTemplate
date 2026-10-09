@@ -383,7 +383,7 @@ DirectX 11은 뷰포트를 바인딩하는 세 곳이 가위도 함께 바인딩
 ## 더 볼 곳
 
 - [Graphics](../README.md): 렌더링 입문과 한 프레임의 흐름
-- [Renderer](../Renderer/README.md): RHI를 부르는 쪽. 프레임 실행과 소유 규칙
+- [Renderer](../../Renderer/README.md): RHI를 부르는 쪽. 프레임 실행과 소유 규칙
 - [Shader](../Shader/README.md): 바인딩 슬롯 계약과 백엔드별 바인딩 방식
 - [RHI 프레임 계약](../../../../docs/05_RHI_FrameContract.md): 프레임과 렌더 타깃의 순서 규칙
 - [핫 리로드와 C-ABI](../../../../docs/03_LiveReload_and_ABI.md): 백엔드 DLL을 로드하고 교체하는 방법

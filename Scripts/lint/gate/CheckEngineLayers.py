@@ -7,8 +7,7 @@ Engine 레이어 금지 include 검사.
   1) Source/Engine/** 에서 Editor / GameFramework / Games 경로 include 금지.
   2) Source/Games/**, Source/GameFramework/** 에서 Engine/Common/EngineServices.h 금지
      (게임 쪽은 GameFramework/Base/Foundation/Framework/GameService.h 의 game:: 만 사용).
-  3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier).
-     `Graphics/Renderer` 만 최상위 폴더보다 잘게 본다 — 그리는 쪽은 씬 위, 나머지 Graphics 는 컴포넌트 아래.
+  3) Engine 내부 티어: 아래 티어가 위 티어를 include 하지 못한다 (_kEngineTier). 레이어는 Engine 최상위 폴더 하나다.
   4) Source/RuntimeAPI/** 에서 Engine / App / ModuleHost / Games 경로 include 금지 — 호스트 ↔ 모듈 계약이 구현을 알면 안 된다.
      (Export/ 의 모듈 매크로가 Editor · GameFramework 로케이터를 끌어오는 것은 계약이라 막지 않는다.)
   5) 최상위 소스 폴더 사이의 방향(include 경로의 **앞부분**으로 본다): Core 는 아무것도 모르고, App 은 Engine · RuntimeAPI · ModuleHost 만(게임 · 에디터는
@@ -115,9 +114,6 @@ _kForbiddenPrefixRules: tuple[tuple[str, tuple[str, ...]], ...] = (
 # Engine 최상위 폴더를 담지 않는 파일(EngineLoop.cpp 등)의 가상 티어 이름.
 _kRootLayerName = "<root>"
 
-# 최상위 폴더보다 잘게 보는 유일한 자리 — Graphics 안의 "그리는 쪽". 아래 표의 설명 참고.
-_kGraphicsRendererLayerName = "Graphics/Renderer"
-
 # ------------------------------------------------------------------------------
 # Engine 내부 티어 — 숫자가 큰 쪽이 위다. 같은 티어끼리는 서로 참조해도 된다.
 #
@@ -128,11 +124,9 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 # 아래층이 드는" 모양이다 — Object 가 SceneManager 에게 활성 씬을 묻거나, RHI 디바이스가 렌더 패스 에셋 캐시를
 # 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md "상용 엔진과의 대조".
 #
-# `Graphics` 만 최상위 폴더보다 잘게 본다: `Graphics/Renderer`(FrameRenderer · RenderGraph · GpuScene ·
-# RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라 그 위(8)이고, 나머지 `Graphics`(RHI ·
-# Shader · Material · Mesh · Texture · Upload)는 컴포넌트가 드는 **디바이스와 GPU 에셋**이라 그 아래(5)
-# 다 — 언리얼의 RHI/RenderCore 와 Renderer 사이의 선이다. 그래서 RHI·Shader 가 Renderer 를 include 하면
-# 실패한다(`engineLayerOfInternal` 참고).
+# `Renderer`(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라
+# 그 위이고, `Graphics`(RHI · Shader · Material · Mesh · Texture · Upload)는 컴포넌트가 드는 **디바이스와 GPU 에셋**이라
+# 그 아래다 — 언리얼의 RHI/RenderCore 와 Renderer 사이의 선이다. 그래서 RHI · Shader 가 Renderer 를 include 하면 실패한다.
 # ------------------------------------------------------------------------------
 _kEngineTier: dict[str, int] = {
     # 토대 — Engine 의 어느 것도 참조하지 않는다.
@@ -191,7 +185,7 @@ _kEngineTier: dict[str, int] = {
     # 지형 · 식생 · 물 — 컴포넌트가 메시 · 머티리얼로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
     "Environment": 9,
     # 그리는 쪽 — 씬과 컴포넌트를 읽는다.
-    _kGraphicsRendererLayerName: 10,
+    "Renderer": 10,
     # 핫 리로드 — 씬과 컴포넌트를 읽는다.
     "Module": 10,
     # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구와 컴포넌트 모델 위에 선다 — 렌더러는 모른다.
@@ -217,12 +211,10 @@ def engineTierOfInternal(folderName: str) -> int | None:
 
 
 def engineLayerOfInternal(engineRelativePath: str) -> str:
-    """Engine/ 아래 상대 경로 → 레이어 이름. `Graphics/Renderer/**` 만 최상위 폴더보다 잘게 본다."""
+    """Engine/ 아래 상대 경로 → 레이어 이름(최상위 폴더, 루트 파일은 `_kRootLayerName`)."""
     parts = engineRelativePath.split("/")
     if len(parts) == 1:
         return _kRootLayerName
-    if parts[0] == "Graphics" and len(parts) > 2 and parts[1] == "Renderer":
-        return _kGraphicsRendererLayerName
     return parts[0]
 
 
@@ -340,10 +332,10 @@ class CheckEngineLayersGate(LintGate):
             },
         },
         {
-            # Graphics 안의 선 — 디바이스·셰이더가 그리는 쪽을 알면 안 된다.
-            "name": "Graphics 의 아래(RHI)가 Graphics/Renderer 를 include",
+            # 디바이스 · 셰이더가 그리는 쪽을 알면 안 된다.
+            "name": "Graphics(RHI)가 Renderer 를 include",
             "files": {
-                "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"\n',
+                "Source/Engine/Graphics/RHI/Probe.cpp": '#include "pch.h"\n\n#include "Engine/Renderer/Frame/FrameRenderer.h"\n',
             },
         },
         {

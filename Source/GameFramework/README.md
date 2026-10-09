@@ -200,7 +200,7 @@ PROPERTY 는 리플렉션이 저장하지만, 디렉터가 가진 키트 객체�
 
 디렉터는 PostPhysics 그룹에서 입력만 읽고, 포즈는 틱 뒤에 씁니다. 틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦기 때문입니다.
 화면 전체에 그릴지, 화면 일부나 렌더 텍스처에 그릴지는 엔진의 `CameraComponent::setRenderOutput` 이 정합니다. 그래서 CCTV 도 디렉터와 `Fixed` 프리셋, 렌더 텍스처 출력의 조합입니다.
-렌더러 쪽은 [Renderer](../Engine/Graphics/Renderer/README.md)의 "다중 뷰"를 보세요. `-gv_cameraPreset=<id>` 로 시작 프리셋을 고를 수 있습니다.
+렌더러 쪽은 [Renderer](../Engine/Renderer/README.md)의 "다중 뷰"를 보세요. `-gv_cameraPreset=<id>` 로 시작 프리셋을 고를 수 있습니다.
 
 ### 화면에 뜨는 것
 

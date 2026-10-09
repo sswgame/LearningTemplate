@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Renderer/Frame/RenderView.h"
-#include "Engine/Graphics/Renderer/Frame/RenderViewScheduler.h"
+#include "Engine/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/RenderViewScheduler.h"
 
 #include "TestFramework/TestFramework.h"
 

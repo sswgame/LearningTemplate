@@ -41,9 +41,9 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPassAsset.h"
-#include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Utility/CommandStack.h"

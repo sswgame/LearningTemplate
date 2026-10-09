@@ -8,10 +8,10 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Graphics/Renderer/RenderThread.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/RenderThread.h"
 #include "Engine/UI/UiSystem.h"
 
 #include "ModuleHost/LiveReloadManager.h"

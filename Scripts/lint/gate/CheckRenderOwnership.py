@@ -43,8 +43,8 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
 _kTransportedHeaders: list[str] = [
-    "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h",
-    "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h",
+    "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h",
+    "Source/Engine/Renderer/Frame/RenderFramePacket.h",
 ]
 
 _kRawPointerMember = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w:<>]*\s*\*\s+(?P<name>_\w+)\s*(?:\{|;|=)")
@@ -155,14 +155,14 @@ class CheckRenderOwnershipGate(LintGate):
         {
             "name": "스냅샷 구조체에 생포인터",
             "files": {
-                "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
+                "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h": (
                     "#pragma once\n\n"
                     "struct GpuProbe\n"
                     "{\n"
                     "    Material* _pMaterial{ nullptr };\n"
                     "};\n"
                 ),
-                "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
+                "Source/Engine/Renderer/Frame/RenderFramePacket.h": (
                     "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
                 ),
             },
@@ -170,7 +170,7 @@ class CheckRenderOwnershipGate(LintGate):
         {
             "name": "표식이 _pA 만 면제하는 구조체에 생포인터 _pB 를 더함",
             "files": {
-                "Source/Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h": (
+                "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h": (
                     "#pragma once\n\n"
                     "// SW_OWNERSHIP_RAW_OK( _pA ): 정체성 키다.\n"
                     "struct GpuProbeKey\n"
@@ -179,7 +179,7 @@ class CheckRenderOwnershipGate(LintGate):
                     "    Mesh* _pB{ nullptr };\n"
                     "};\n"
                 ),
-                "Source/Engine/Graphics/Renderer/Frame/RenderFramePacket.h": (
+                "Source/Engine/Renderer/Frame/RenderFramePacket.h": (
                     "#pragma once\n\nstruct RenderFramePacketProbe\n{\n    int32 _value{ 0 };\n};\n"
                 ),
             },

@@ -2,7 +2,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/GpuLight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/Light2DComponent.h"
@@ -10,6 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"

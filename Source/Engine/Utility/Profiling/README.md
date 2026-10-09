@@ -117,7 +117,7 @@ Tracy를 켜기 전에 할당된 블록의 해제는 보내지 않습니다. 짝
 ### GPU 구간
 
 엔진은 네 백엔드에서 패스마다 GPU 타임스탬프를 기록하고, 몇 프레임 뒤에 읽습니다(`IRHIDevice::readTimestamps`). 이 값이 표의 `GPU.<패스>` 와 `GPU.Frame` 줄이 됩니다.
-`Graphics/Renderer/Frame/GpuTimelineExporter` 는 **같은 값**을 Tracy의 수동 GPU 컨텍스트(C API `___tracy_emit_gpu_*`)로 넘깁니다.
+`Renderer/Frame/GpuTimelineExporter` 는 **같은 값**을 Tracy의 수동 GPU 컨텍스트(C API `___tracy_emit_gpu_*`)로 넘깁니다.
 TracyD3D12나 TracyVulkan 같은 API별 헤더는 쓰지 않습니다. 그 헤더를 쓰면 쿼리를 한 벌 더 만들어 서로의 시간을 재게 되고, RHI 백엔드 DLL마다 Tracy 클라이언트를 링크해야 합니다.
 
 **언제 보내나.** 렌더 스레드가 끝난 프레임의 타임스탬프를 읽는 시점에, 열고 닫는 짝을 맞춰 한 번에 보냅니다.
@@ -201,5 +201,5 @@ Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 
 - VSync가 정해지는 순서와 백엔드별로 끄는 법: [RHI README](../../Graphics/RHI/README.md)의 "VSync" 절
 - 성능 회귀 검사: `py -3 -m Scripts perf --app <App 경로>` (`Scripts/qa/PerfRegression.py`). 게임마다 Release 프레임 p50과 p99를 이 기계의 기준과 비교합니다.
 - 메모리 예산: `Config/Engine/MemoryBudget.json`, `-gv_memoryReport`
-- GPU 타임스탬프: `Graphics/Renderer/Frame/GpuTimelineExporter`, `IRHIDevice::readTimestamps`
+- GPU 타임스탬프: `Renderer/Frame/GpuTimelineExporter`, `IRHIDevice::readTimestamps`
 - 상위 문서: [Engine/README.md](../../README.md)

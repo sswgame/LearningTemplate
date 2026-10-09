@@ -8,7 +8,6 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
@@ -22,6 +21,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"

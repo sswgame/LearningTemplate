@@ -5,7 +5,7 @@
 2D 게임의 스프라이트는 깊이 버퍼만으로 앞뒤를 정할 수 없습니다. 같은 평면에 놓인 스프라이트가 많고, 디자이너는 "배경 레이어 위에 캐릭터 레이어"처럼 그리는 순서를 직접 정하고 싶어 합니다.
 이 폴더는 그 순서를 정하는 프로젝트 설정(정렬 레이어)과, 9-슬라이스나 타일 방식 스프라이트의 메시를 만드는 코드를 둡니다. 유니티의 Sorting Layer와 Sprite Renderer 그리기 방식에 해당합니다.
 
-컴포넌트(Object 층, 티어 6)가 이 값을 채우고 렌더러(`Graphics/Renderer`, 티어 8)가 읽으므로 그 둘보다 아래인 티어 5에 둡니다.
+컴포넌트(`Object`)가 이 값을 채우고 렌더러(`Renderer`)가 읽으므로 그 둘보다 아래 티어인 `Graphics` 에 둡니다.
 스프라이트 컴포넌트 쪽 설명과 유니티, Godot 대응은 [Object/Component/2D 문서](../../Object/Component/2D/README.md)에 있습니다.
 
 ## 머릿속 그림
@@ -58,4 +58,4 @@
 ## 더 볼 곳
 
 - [Object/Component/2D](../../Object/Component/2D/README.md): 스프라이트, 타일맵, 2D 빛 컴포넌트
-- [Renderer](../Renderer/README.md): 투명 정렬과 GPU 정렬, 추가 뷰의 투명 정렬
+- [Renderer](../../Renderer/README.md): 투명 정렬과 GPU 정렬, 추가 뷰의 투명 정렬

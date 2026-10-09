@@ -208,7 +208,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         },
         {
             "name": "Tracy 헤더를 렌더러에서 include 한다",
-            "files": {"Source/Engine/Graphics/Renderer/Probe.cpp": "#include <tracy/TracyC.h>\nint probe() { return 0; }\n"},
+            "files": {"Source/Engine/Renderer/Probe.cpp": "#include <tracy/TracyC.h>\nint probe() { return 0; }\n"},
         },
         {
             "name": "Tracy 클라이언트를 RHI 백엔드 모듈에서 링크한다",

@@ -2297,7 +2297,7 @@
    "default": "false",
    "kind": "일반",
    "description": "기본 파이프라인을 디퍼드로 (기본 포워드)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
    "name": "gv_destructionMaxDebrisBodies",
@@ -2329,7 +2329,7 @@
    "default": "1",
    "kind": "일반",
    "description": "씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
    "name": "gv_dumpReflection",
@@ -2345,7 +2345,7 @@
    "default": "false",
    "kind": "시험",
    "description": "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp"
   },
   {
    "name": "gv_editorOpenPanel",
@@ -2465,7 +2465,7 @@
    "default": "1",
    "kind": "일반",
    "description": "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRendererCompute.cpp"
   },
   {
    "name": "gv_gpuUploadQueue",
@@ -2505,7 +2505,7 @@
    "default": "0",
    "kind": "일반",
    "description": "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRendererCompute.cpp"
   },
   {
    "name": "gv_motionBlur",
@@ -2649,7 +2649,7 @@
    "default": "",
    "kind": "일반",
    "description": "이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
    "name": "gv_renderScale",
@@ -2665,7 +2665,7 @@
    "default": "4",
    "kind": "일반",
    "description": "한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/RenderViewCollector.cpp"
+   "source": "Source/Engine/Renderer/Frame/RenderViewCollector.cpp"
   },
   {
    "name": "gv_rhiBackBufferFormat",
@@ -2689,7 +2689,7 @@
    "default": "false",
    "kind": "일반",
    "description": "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_rhiSoftwareAdapter",
@@ -2729,7 +2729,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_screenshotAttachment",
@@ -2737,7 +2737,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_screenshotCount",
@@ -2745,7 +2745,7 @@
    "default": "1",
    "kind": "시험 · 배포본에도",
    "description": "연속으로 찍을 스크린샷 수 (기본 1)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_screenshotFrame",
@@ -2753,7 +2753,7 @@
    "default": "10",
    "kind": "시험 · 배포본에도",
    "description": "스크린샷을 찍을 프레임 번호 (기본 10)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_screenshotInterval",
@@ -2761,7 +2761,7 @@
    "default": "1",
    "kind": "시험 · 배포본에도",
    "description": "연속 스크린샷 사이 프레임 수 (기본 1)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_serverExitAfterTicks",
@@ -2945,7 +2945,7 @@
    "default": "true",
    "kind": "일반",
    "description": "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)",
-   "source": "Source/Engine/Graphics/Renderer/RenderThread.cpp"
+   "source": "Source/Engine/Renderer/RenderThread.cpp"
   },
   {
    "name": "gv_userSettingsApply",
@@ -2985,7 +2985,7 @@
    "default": "1",
    "kind": "일반",
    "description": "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
    "name": "gv_viewDistanceScale",
@@ -3001,7 +3001,7 @@
    "default": "0",
    "kind": "일반",
    "description": "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)",
-   "source": "Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp"
+   "source": "Source/Engine/Renderer/Frame/FrameRenderer.cpp"
   },
   {
    "name": "gv_voxelAutoPlay",

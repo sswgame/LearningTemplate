@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 
-#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
 #include <imgui.h>
 

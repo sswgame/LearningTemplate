@@ -17,7 +17,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
-#include "Engine/Graphics/Renderer/Frame/FrameRenderer.h"
+#include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include <imgui.h>
 

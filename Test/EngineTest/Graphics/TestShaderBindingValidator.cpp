@@ -12,8 +12,6 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
-#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
@@ -21,6 +19,8 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Scene/GpuSceneSnapshot.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

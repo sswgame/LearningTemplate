@@ -4,7 +4,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Graphics/Renderer/Graph/RenderGraph.h"
+#include "Engine/Renderer/Graph/RenderGraph.h"
 
 #include "EngineTest/RHIFakeDevice.h"
 

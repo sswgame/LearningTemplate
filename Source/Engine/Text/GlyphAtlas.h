@@ -1,7 +1,7 @@
 /**
  * @file GlyphAtlas.h
  * @brief SDF 글리프 아틀라스입니다 — CPU 바이트 페이지(1 채널) · 스카이라인 패킹 · 새로 쓴 구간 · 오래된 페이지 비우기.
- * @details GPU 를 모릅니다. 렌더러(Graphics/Renderer/Canvas)가 프레임마다 `takeUploads` 의 구간 바이트를 받아 자기 거울 페이지와 텍스처에 반영합니다.
+ * @details GPU 를 모릅니다. 렌더러(Renderer/Canvas)가 프레임마다 `takeUploads` 의 구간 바이트를 받아 자기 거울 페이지와 텍스처에 반영합니다.
  *          그래서 게임 스레드가 페이지를 고치는 동안 렌더 스레드가 같은 바이트를 읽는 일이 없습니다(패킷에 사본이 실린다).
  *          스카이라인(bottom-left): 페이지의 "윤곽선" 마디 목록에서 사각형 윗변이 가장 낮아지는 자리를 고른다 — 글리프처럼 높이가 비슷한 작은 사각형에 알맞다
  *          (Jukka Jylänki, "A Thousand Ways to Pack the Bin").

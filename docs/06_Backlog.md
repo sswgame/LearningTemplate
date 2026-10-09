@@ -143,7 +143,7 @@
 
 - **카메라 — 프리셋 데이터 · 블렌드 · 시퀀서(사용자 승인 로드맵).** 1~3 단계(프리셋 XML · 블렌드 · 디렉터, 모드(직교 · 궤도 · 따라가기 · 1인칭 · 3인칭 ·
   CCTV) · 입력 · 카메라 매니저(뷰 타깃 블렌드), 흔들림 · 제약 · 프레이밍 · 스프링 암)와 4 단계(다중 뷰 렌더 · 컷 프레임 신호 · 초상화 굽기)는 들어갔다
-  (`Source/GameFramework/README.md` "카메라" 절, `Source/Engine/Graphics/Renderer/README.md` "다중 뷰"). 남은 것 —
+  (`Source/GameFramework/README.md` "카메라" 절, `Source/Engine/Renderer/README.md` "다중 뷰"). 남은 것 —
   - 2 단계에서 남은 것: 직교 리그 네 게임(ThemePark · Harvest · Nile · StarSkirmish)은 리그 값이 곧 데이터다(모드 · 블렌드는 공유) — 리그를 지우고 디렉터 + 프리셋
     XML 로 옮기려면 게임 디렉터의 `setViewOverride` · `findGroundPoint` 를 디렉터 창구로 바꿔야 한다. 프레이밍의 가로 존은 16:9 로 센다(모드가 화면 비율을 모른다).
     2D(XY 평면) 카메라는 디렉터 밖의 `Follow2DCameraComponent` 다 — 2D 게임이 프리셋 · 블렌드를 원하면 디렉터 모드에 "XY 평면 따라가기" 를 더하고 그 컴포넌트를 지운다.

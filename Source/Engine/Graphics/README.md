@@ -138,7 +138,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 - 씬의 메시 정점은 정점 버퍼 하나에 이어 붙여 둡니다. 그래서 메시가 달라도 같은 PSO를 쓰는 배치는 간접 드로우(`drawIndirect`) 한 번으로 그릴 수 있습니다.
 - 그리기 전에 컴퓨트 셰이더가 화면 밖 인스턴스를 걸러 냅니다(GPU 컬링). 반투명 인스턴스는 GPU에서 순서를 정렬합니다.
 
-`-gv_drawMerge=0` 을 주면 배치마다 드로우 콜을 따로 부릅니다. 묶기 때문에 생긴 문제인지 가릴 때 씁니다. 자세한 드로우 경로는 [Renderer 문서](Renderer/README.md)에 있습니다.
+`-gv_drawMerge=0` 을 주면 배치마다 드로우 콜을 따로 부릅니다. 묶기 때문에 생긴 문제인지 가릴 때 씁니다. 자세한 드로우 경로는 [Renderer 문서](../Renderer/README.md)에 있습니다.
 
 ### 셰이더가 값을 받는 방법
 
@@ -166,7 +166,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 - GPU 리소스를 보관하는 클래스는 `RHIRenderResource` 를 상속합니다. 그래픽 API를 실행 중에 바꾸면 엔진이 이 클래스들에게 옛 디바이스의 리소스를 해제하고 새 디바이스에서 다시 만들라고 알립니다.
 - GPU 버퍼 해제는 GPU가 그 버퍼를 다 쓸 때까지 미룹니다.
 
-이 규칙의 전체와 이유는 [Renderer 문서](Renderer/README.md)의 "소유와 수명"에 있습니다.
+이 규칙의 전체와 이유는 [Renderer 문서](../Renderer/README.md)의 "소유와 수명"에 있습니다.
 
 ## 확장하는 법
 
@@ -234,7 +234,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 | 문서 | 내용 |
 |---|---|
 | [RHI](RHI/README.md) | 디바이스, 커맨드 리스트, 스왑체인, 백엔드별 차이, 디바이스 종료 순서 |
-| [Renderer](Renderer/README.md) | 파이프라인 XML, 렌더 그래프, GPUScene, 프레임 실행, 소유와 수명 규칙 |
+| [Renderer](../Renderer/README.md) | 파이프라인 XML, 렌더 그래프, GPUScene, 프레임 실행, 소유와 수명 규칙 |
 | [Shader](Shader/README.md) | 셰이더 컴파일과 쿠킹, 리플렉션, 바인딩 슬롯 표 |
 | [Material](Material/README.md) | 머티리얼, 머티리얼 인스턴스, 퍼뮤테이션, 툰 머티리얼 |
 | [2D](2D/README.md) | 스프라이트 정렬 레이어, 9-슬라이스 |
@@ -247,7 +247,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 | 폴더 | 내용 |
 |---|---|
 | `RHI/` | 그래픽 API 공통 인터페이스와 네 백엔드 |
-| `Renderer/` | 파이프라인, 렌더 그래프, GPUScene, 프레임 실행, 렌더 스레드 |
+| `../Renderer/` | 파이프라인, 렌더 그래프, GPUScene, 프레임 실행, 렌더 스레드 — Graphics 위 티어의 형제 폴더 |
 | `Shader/` | 셰이더 컴파일, 쿠킹, 리플렉션, 바인딩 슬롯 |
 | `Material/` | 머티리얼, 머티리얼 인스턴스, 머티리얼 캐시 |
 | `Mesh/` | 메시 에셋, 기본 도형, `.mesh` 파일 읽기 |

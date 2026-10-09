@@ -2,7 +2,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Object/Component/2D/PixelPerfectCameraComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -10,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
+#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 

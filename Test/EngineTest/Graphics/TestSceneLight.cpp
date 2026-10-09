@@ -3,7 +3,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Graphics/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
@@ -12,6 +11,7 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Light/GpuLightBuffer.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"

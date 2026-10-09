@@ -5,8 +5,8 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Graphics/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 

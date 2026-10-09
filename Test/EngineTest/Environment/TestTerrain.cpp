@@ -8,9 +8,9 @@
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"

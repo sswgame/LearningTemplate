@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -39,12 +40,18 @@ _kSetTextExtension = frozenset({".h", ".hpp", ".cpp", ".inl", ".c", ".xxx", ".cm
 
 @dataclass(frozen=True)
 class MoveStep:
-    """한 단계 — `listMove` 는 Source/Engine 기준 (옛 경로, 새 경로), `listTextReplace` 는 (파일, 옛 글, 새 글) 그대로 치환."""
+    """
+    한 단계 — `listMove` 는 Source/Engine 기준 (옛 경로, 새 경로).
+    `listTextReplace` 는 `Engine/` 접두 없는 글(문서의 상대 링크 · 주석의 짧은 경로)을 고치는 (정규식, 새 글)이다. 이력 파일(`_kTupleHistoryFile`)은 건드리지 않는다.
+    """
 
     title: str
     listMove: tuple[tuple[str, str], ...]
-    listTextReplace: tuple[tuple[str, str, str], ...] = field(default_factory=tuple)
+    listTextReplace: tuple[tuple[str, str], ...] = field(default_factory=tuple)
 
+
+#: 옛 이름을 기록으로 남기는 파일 — 치환하지 않는다(이 스크립트의 표도).
+_kTupleHistoryFile = ("docs/09_Decisions.md", "docs/plans/EnginePartition.md", "Scripts/dev/MoveEngineFolders.py")
 
 _kMapStep: dict[int, MoveStep] = {
     1: MoveStep(
@@ -54,6 +61,11 @@ _kMapStep: dict[int, MoveStep] = {
             ("Resource/SpriteClipCache", "Animation/SpriteClipCache"),
             ("Resource/LocalizationReloadCache", "Localization/LocalizationReloadCache"),
         ),
+    ),
+    2: MoveStep(
+        "Graphics/Renderer 를 Engine/Renderer 로",
+        (("Graphics/Renderer", "Renderer"),),
+        ((r"(?<![\w])Graphics/Renderer(?![\w])", "Renderer"),),
     ),
 }
 
@@ -110,7 +122,7 @@ def listTrackedTextFileInternal(root: Path) -> list[Path]:
     return listFile
 
 
-def rewriteInternal(root: Path, listPattern: list[tuple[re.Pattern[str], str]], listTextReplace: tuple[tuple[str, str, str], ...],
+def rewriteInternal(root: Path, listPattern: list[tuple[re.Pattern[str], str]], listTextReplace: tuple[tuple[str, str], ...],
                     bDryRun: bool) -> list[Path]:
     listChanged: list[Path] = []
     for path in listTrackedTextFileInternal(root):
@@ -119,13 +131,13 @@ def rewriteInternal(root: Path, listPattern: list[tuple[re.Pattern[str], str]], 
                 text = stream.read()
         except (UnicodeDecodeError, OSError):
             continue
+        if path.relative_to(root).as_posix() in _kTupleHistoryFile:
+            continue
         newText = text
         for pattern, replacement in listPattern:
             newText = pattern.sub(replacement, newText)
-        relative = path.relative_to(root).as_posix()
-        for fileName, oldText, replaceText in listTextReplace:
-            if relative == fileName and oldText in newText and replaceText not in newText:
-                newText = newText.replace(oldText, replaceText)
+        for patternText, replaceText in listTextReplace:
+            newText = re.sub(patternText, replaceText, newText)
         if newText != text:
             listChanged.append(path)
             if not bDryRun:
@@ -145,8 +157,71 @@ def runStepInternal(root: Path, stepNumber: int, bDryRun: bool) -> list[Path]:
             moveInternal(root, source, target, bDryRun)
         listPattern.append((buildPatternInternal(oldPath, bStem), "Engine/" + newPath))
     listChanged = rewriteInternal(root, listPattern, step.listTextReplace, bDryRun)
-    for path in listChanged:
+    listChanged += fixMarkdownLinkInternal(root, step, bDryRun)
+    for path in sorted(set(listChanged)):
         print(f"  치환: {path.relative_to(root).as_posix()}")
+    return listChanged
+
+
+_kMarkdownLinkRe = re.compile(r"\]\(([^)\s#]+)(#[^)\s]*)?\)")
+
+
+def mapOldToNewInternal(listMovePair: list[tuple[str, str]], posixPath: str) -> str | None:
+    """Source/Engine 기준 옛 경로(파일 · 폴더 · 줄기) → 새 경로. 이동 표에 걸리지 않으면 None."""
+    for oldPath, newPath in listMovePair:
+        if posixPath == oldPath or posixPath.startswith(oldPath + "/"):
+            return newPath + posixPath[len(oldPath):]
+        if posixPath.startswith(oldPath + ".") and "/" not in posixPath[len(oldPath):]:
+            return newPath + posixPath[len(oldPath):]
+    return None
+
+
+def fixMarkdownLinkInternal(root: Path, step: MoveStep, bDryRun: bool) -> list[Path]:
+    """
+    문서의 상대 링크를 옮긴 자리에 맞춘다. 문서가 옮겨졌으면 옛 자리에서, 아니면 제자리에서 링크를 풀고,
+    그 대상이 이동 표에 걸리면 새 대상으로 바꾼 뒤 문서의 새 자리 기준 상대 경로로 다시 적는다. 지금 자리에서 이미 풀리는 링크는 그대로 둔다.
+    """
+    engineRoot = (root / _kEngineRoot).resolve()
+    listMovePair = list(step.listMove)
+    listInverse = [(newPath, oldPath) for oldPath, newPath in listMovePair]
+    listChanged: list[Path] = []
+    for path in listTrackedTextFileInternal(root):
+        if path.suffix.lower() != ".md" or path.relative_to(root).as_posix() in _kTupleHistoryFile:
+            continue
+        with path.open("r", encoding="utf-8", newline="") as stream:
+            text = stream.read()
+        newDir = path.parent.resolve()
+        oldDir = newDir
+        try:
+            engineRelative = newDir.relative_to(engineRoot).as_posix()
+            oldRelative = mapOldToNewInternal(listInverse, engineRelative)
+            if oldRelative is not None:
+                oldDir = engineRoot / oldRelative
+        except ValueError:
+            pass
+
+        def replaceLink(match: re.Match[str]) -> str:
+            target = match.group(1)
+            if "://" in target or target.startswith("mailto:") or (newDir / target).exists():
+                return match.group(0)
+            oldResolved = Path(os.path.normpath(oldDir / target))
+            try:
+                oldEngineRelative = oldResolved.relative_to(engineRoot).as_posix()
+            except ValueError:
+                oldEngineRelative = None
+            mapped = mapOldToNewInternal(listMovePair, oldEngineRelative) if oldEngineRelative is not None else None
+            newTarget = engineRoot / mapped if mapped is not None else oldResolved
+            if not newTarget.exists():
+                return match.group(0)
+            relativeText = Path(os.path.relpath(newTarget, newDir)).as_posix()
+            return f"]({relativeText}{match.group(2) or ''})"
+
+        newText = _kMarkdownLinkRe.sub(replaceLink, text)
+        if newText != text:
+            listChanged.append(path)
+            if not bDryRun:
+                with path.open("w", encoding="utf-8", newline="") as stream:
+                    stream.write(newText)
     return listChanged
 
 

@@ -96,7 +96,7 @@ HLSL과 C++가 이 파일을 같이 include하므로 슬롯 번호를 두 곳에
 - `ShaderBindingLayoutCache` 는 "경로, define, 백엔드"를 키로 레이아웃을 캐시합니다. PSO를 만들 때 여기서 레이아웃을 얻고, 핫 리로드 때 `invalidateByShaderPath` 로 무효화합니다.
 - `ShaderBindingValidator` 는 쿠킹된 바이너리의 리플렉션이 계약과 맞는지 검사합니다. PSO 레이아웃을 만들 때, 쿠킹할 때, 테스트에서 돕니다.
 - `GpuLight.h` 와 `GpuSpriteInstanceData.h` 는 셰이더가 읽는 레이아웃 그대로의 값입니다(라이트 64바이트, 스프라이트 인스턴스 16바이트).
-  컴포넌트(Object 층)가 직접 채우므로 Object가 include할 수 있는 층에 있어야 합니다. `Graphics/Renderer` 는 Object보다 위 층이라 그곳에 둘 수 없고, 셰이더 계약을 두는 이 폴더가 가장 가까운 아래 층입니다.
+  컴포넌트(Object 층)가 직접 채우므로 Object가 include할 수 있는 층에 있어야 합니다. `Renderer` 는 Object보다 위 층이라 그곳에 둘 수 없고, 셰이더 계약을 두는 이 폴더가 가장 가까운 아래 층입니다.
 
 ### 바인딩 모델 — 드로우마다 바뀌는 것은 버퍼의 원소
 
@@ -185,7 +185,7 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 
 1. `binding.hlsli` 의 PassCB에 `uint g_<Name>Index;` 를 더합니다.
 2. 엔진이 `FrameResourceRegistry` 에 `"<Name>"` 으로 그 텍스처를 등록합니다.
-3. 패스 입력이라면 [Renderer 문서](../Renderer/README.md)의 "새 입력 역할 더하기"를 따릅니다.
+3. 패스 입력이라면 [Renderer 문서](../../Renderer/README.md)의 "새 입력 역할 더하기"를 따릅니다.
 
 ### 새 슬롯 더하기
 
@@ -266,7 +266,7 @@ OpenGL 드라이버가 DXC의 early-return을 잘못 컴파일한 적이 있습�
 ## 더 볼 곳
 
 - [Graphics](../README.md): 셰이더가 값을 받는 방법의 개요
-- [Renderer](../Renderer/README.md): 드로우 경로, 패스 입력 역할, 쿠킹 요청을 모으는 쪽
+- [Renderer](../../Renderer/README.md): 드로우 경로, 패스 입력 역할, 쿠킹 요청을 모으는 쪽
 - [Material](../Material/README.md): 머티리얼 프로퍼티와 퍼뮤테이션
 - [RHI](../RHI/README.md): 백엔드 디바이스와 커맨드 리스트
 

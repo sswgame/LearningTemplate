@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Renderer/Frame/RenderView.h"
+#include "Engine/Renderer/Frame/RenderView.h"
 
 #include "RuntimeAPI/ABI/GameAPI.h"
 

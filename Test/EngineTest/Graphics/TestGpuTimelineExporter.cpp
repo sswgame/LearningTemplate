@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
-#include "Engine/Graphics/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Graphics/Renderer/Frame/GpuTimelineExporter.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/GpuTimelineExporter.h"
 
 #include "EngineTest/ProfilerTestUtil.h"
 

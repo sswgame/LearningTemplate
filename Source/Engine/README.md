@@ -25,10 +25,10 @@
 | 4 | `Resource`, `Spatial`, `Navigation` | 에셋 데이터베이스와 공간 구조 |
 | 5 | `Animation`, `Localization`, `Window` | 에셋 캐시를 가진 기능 데이터와 창 |
 | 6 | `Audio`, `Dialogue`, `Input`, `Text` | 기능 데이터 위의 서브시스템 |
-| 7 | `Graphics`(Renderer 제외), `UserSettings` | 디바이스와 GPU 에셋, 플레이어 옵션 |
+| 7 | `Graphics`, `UserSettings` | 디바이스와 GPU 에셋, 플레이어 옵션 |
 | 8 | `Object`, `Telemetry` | 컴포넌트 모델 |
 | 9 | `Scene`, `Sequencer`, `Character`, `Environment` | 월드와 기능 모듈 |
-| 10 | `Graphics/Renderer`, `Module`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
+| 10 | `Renderer`, `Module`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
 | 11 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
 
 표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/dev/MoveEngineFolders.py --sync-tier` 가 게이트 표를 맞추고 이 표의 줄을 찍습니다).
@@ -57,7 +57,7 @@
   텔레메트리와 크래시 보고는 사용자 설정에서 동의를 읽습니다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구를 씁니다.
   런타임 UI는 입력, 글자, 사용자 설정을 쓰지만 렌더러와는 서로 include하지 않습니다. 둘 사이에 오가는 값은 그리기 목록뿐입니다(언리얼의 Slate와 SlateRHIRenderer 관계).
 
-`Graphics` 만 폴더보다 잘게 봅니다. `Graphics/Renderer` 는 그리는 쪽 티어이고 나머지 `Graphics` 는 디바이스 티어입니다. 상용 엔진의 RHI, RenderCore와 Renderer 사이의 경계와 같습니다.
+`Renderer` 는 그리는 쪽 티어이고 `Graphics` 는 디바이스 티어입니다. 상용 엔진의 RHI, RenderCore와 Renderer 사이의 경계와 같습니다.
 
 티어가 아닌 파일이 두 종류 있고, 게이트도 이 둘을 예외로 둡니다.
 
@@ -275,7 +275,7 @@ GameFramework의 데이터 테이블 캐시(`GameDataCache`)는 게임 서비스
 | 에셋 | `AssetRegistry`, `FStreamableManager` | `Resource` | 같다 |
 | 디바이스 | `RHI` | `Graphics/RHI` | 같다 |
 | GPU 에셋 | `UMaterialInterface`, `UStaticMesh` | `Graphics/Material`, `Mesh`, `Texture` | 같다 |
-| 렌더러 | `Renderer` | `Graphics/Renderer` | 같다 |
+| 렌더러 | `Renderer` | `Renderer` | 같다 |
 | 월드 | `UWorld`, `AActor` | `Scene`, `Object` | 더 좁다 |
 | 월드와 렌더러 | `FScene` 인터페이스 | `SceneManager` | 같다 |
 | 기능 모듈 | `LevelSequence` | `Sequencer` | 같다 |
@@ -358,7 +358,8 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 | [Scene](Scene/README.md) | 씬 파일, 로드, 전환, 쿠킹 |
 | [Reflection](Reflection/README.md) | 리플렉션 매크로와 타입 레지스트리 |
 | [Serialization](Serialization/README.md) | 바이너리, JSON, XML 직렬화와 델타 직렬화(`ObjectDiffSerializer`) |
-| [Graphics](Graphics/README.md) | RHI, 셰이더, 머티리얼, 렌더러 |
+| [Graphics](Graphics/README.md) | RHI, 셰이더, 머티리얼, 메시, 텍스처 |
+| [Renderer](Renderer/README.md) | 파이프라인, 렌더 그래프, GPUScene, 프레임 실행 |
 | [Input](Input/README.md) | 입력 장치와 액션 맵 |
 | [UI](UI/README.md) | 런타임 UI |
 | [Text](Text/README.md) | 글꼴과 글자 렌더링 데이터 |

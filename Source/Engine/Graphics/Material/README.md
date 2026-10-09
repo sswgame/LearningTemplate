@@ -138,7 +138,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 뒤집어 그린 껍질이 원래 메시 밖으로 삐져나온 부분이 외곽선으로 보이는 방식입니다. 패스는 불투명 패스 뒤, 반투명 패스 앞에 선언합니다. 외곽선이 깊이를 써서 뒤의 반투명을 가리기 때문입니다.
 
 - **머티리얼이 이 패스에 들어갈지를 정합니다.** 패스 종류 테이블의 `_pRequiredMaterialDefine`(`MATERIAL_OUTLINE`)이 없는 배치는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다.
-  판정은 `FrameRendererUtil::drawsMaterialInPass` 하나입니다. 그래서 외곽선을 모르는 셰이더가 이 패스의 앞면 컬링으로 그려지는 일이 없습니다([Renderer 문서](../Renderer/README.md)).
+  판정은 `FrameRendererUtil::drawsMaterialInPass` 하나입니다. 그래서 외곽선을 모르는 셰이더가 이 패스의 앞면 컬링으로 그려지는 일이 없습니다([Renderer 문서](../../Renderer/README.md)).
 - **컬은 테이블의 `kCullFront` 가 기본입니다.** XML의 "Back"은 이것을 바꾸지 않습니다. 양면 머티리얼도 껍질은 뒤집어 그립니다. 거울 배치는 Front와 Back이 바뀝니다.
 - **두께**는 `outlineWidthMode` 로 고릅니다. 0은 월드 단위(미터, 노멀 방향으로 민다)이고 1은 화면 단위(화면 높이 비율)입니다.
   화면 단위는 클립 공간에서 투영한 노멀 방향으로 `width × 2 × w` 를 더해 거리와 무관한 두께를 냅니다. `outlineMaxDistance` 를 넘으면 가늘어지고, 가로세로 비는 `g_OutlineParams.yz` 로 맞춥니다.
@@ -193,7 +193,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 
 - [Graphics](../README.md): 머티리얼 인스턴스로 색 바꾸기 따라 해 보기
 - [Shader](../Shader/README.md): 머티리얼 버퍼(t9)의 바인딩, 쿠킹 규칙
-- [Renderer](../Renderer/README.md): 머티리얼 원소의 영속 ID, 머티리얼로 배치를 거르는 패스
+- [Renderer](../../Renderer/README.md): 머티리얼 원소의 영속 ID, 머티리얼로 배치를 거르는 패스
 - [툰 쇼케이스](../../../../Resource/game/empty/README.md): 툰과 PBR 구를 나란히 보는 씬
 
 | 파일 | 내용 |

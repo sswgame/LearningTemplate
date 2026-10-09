@@ -87,26 +87,10 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_deferred` | `bool` | `false` | 일반 | 기본 파이프라인을 디퍼드로 (기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_drawMerge` | `int32` | `1` | 일반 | 씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_dumpRenderGraph` | `bool` | `false` | 시험 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRendererPassExecute.cpp) |
-| `gv_gpuCulling` | `int32` | `1` | 일반 | GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용) | [FrameRendererCompute.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp) |
 | `gv_gpuUploadQueue` | `int32` | `1` | 일반 | GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다) | [GpuUploadQueue.cpp](../../Source/Engine/Graphics/Upload/GpuUploadQueue.cpp) |
-| `gv_morphDiag` | `int32` | `0` | 일반 | 메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRendererCompute.cpp) |
-| `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred) | [FrameRenderer.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Graphics/Renderer/Frame/RenderViewCollector.cpp) |
 | `gv_rhiBackBufferFormat` | `int32` | `0` | 일반 | 요청 백버퍼 포맷: 0=R8G8B8A8_UNORM, 1=B8G8R8A8_UNORM (실제 채택값은 getBackBufferFormat) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
 | `gv_rhiBackend` | `RHIBackend` | `SW_RHI_BACKEND_DEFAULT` | 일반 | Current RHI Backend | [RHI.cpp](../../Source/Engine/Graphics/RHI/RHI.cpp) |
-| `gv_rhiImmediateSubmit` | `bool` | `false` | 일반 | RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
 | `gv_rhiSoftwareAdapter` | `int32` | `0` | 시험 | 소프트웨어 어댑터로 띄운다: 0=하드웨어, 1=WARP(DX11 · DX12) · CPU 디바이스(Vulkan) | [IRHIDevice.cpp](../../Source/Engine/Graphics/RHI/IRHIDevice.cpp) |
-| `gv_screenshot` | `string` | — | 시험 · 배포본에도 | 화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_screenshotAttachment` | `string` | — | 시험 · 배포본에도 | Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_screenshotCount` | `int32` | `1` | 시험 · 배포본에도 | 연속으로 찍을 스크린샷 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_screenshotFrame` | `int32` | `10` | 시험 · 배포본에도 | 스크린샷을 찍을 프레임 번호 (기본 10) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_screenshotInterval` | `int32` | `1` | 시험 · 배포본에도 | 연속 스크린샷 사이 프레임 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Graphics/Renderer/RenderThread.cpp) |
-| `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp) |
-| `gv_viewMode` | `int32` | `0` | 일반 | 씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe) | [FrameRenderer.cpp](../../Source/Engine/Graphics/Renderer/Frame/FrameRenderer.cpp) |
 
 ## `Source/Engine/Object`
 
@@ -116,6 +100,27 @@
 | `gv_animationLod` | `int32` | `1` | 일반 | Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every unit every frame) | [AnimationSystem.cpp](../../Source/Engine/Object/Animation/AnimationSystem.cpp) |
 | `gv_animationRewind` | `int32` | `0` | 시험 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
+
+## `Source/Engine/Renderer`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_deferred` | `bool` | `false` | 일반 | 기본 파이프라인을 디퍼드로 (기본 포워드) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_drawMerge` | `int32` | `1` | 일반 | 씬 배치 멀티 드로우 묶기 (0=배치마다 호출, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_dumpRenderGraph` | `bool` | `false` | 시험 | 렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다 | [FrameRendererPassExecute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererPassExecute.cpp) |
+| `gv_gpuCulling` | `int32` | `1` | 일반 | GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
+| `gv_morphDiag` | `int32` | `0` | 일반 | 메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표) | [FrameRendererCompute.cpp](../../Source/Engine/Renderer/Frame/FrameRendererCompute.cpp) |
+| `gv_renderPipeline` | `string` | — | 일반 | 이 파이프라인 XML 로 그린다 (비우면 기본 포워드 · gv_deferred) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_renderViewBudget` | `int32` | `4` | 일반 | 한 프레임에 그리는 추가 뷰(CCTV · 백미러 · PiP)의 최대 수 (0 = 제한 없음) | [RenderViewCollector.cpp](../../Source/Engine/Renderer/Frame/RenderViewCollector.cpp) |
+| `gv_rhiImmediateSubmit` | `bool` | `false` | 일반 | RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshot` | `string` | — | 시험 · 배포본에도 | 화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotAttachment` | `string` | — | 시험 · 배포본에도 | Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotCount` | `int32` | `1` | 시험 · 배포본에도 | 연속으로 찍을 스크린샷 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotFrame` | `int32` | `10` | 시험 · 배포본에도 | 스크린샷을 찍을 프레임 번호 (기본 10) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_screenshotInterval` | `int32` | `1` | 시험 · 배포본에도 | 연속 스크린샷 사이 프레임 수 (기본 1) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_useRenderThread` | `bool` | `true` | 일반 | 전용 RenderThread 사용 (false = 게임 스레드 인라인 submit) | [RenderThread.cpp](../../Source/Engine/Renderer/RenderThread.cpp) |
+| `gv_vertexPool` | `int32` | `1` | 일반 | 씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
+| `gv_viewMode` | `int32` | `0` | 일반 | 씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe) | [FrameRenderer.cpp](../../Source/Engine/Renderer/Frame/FrameRenderer.cpp) |
 
 ## `Source/Engine/Resource`
 

@@ -165,7 +165,7 @@ Godot처럼 레이어마다 자식을 복제해 그리지 않으므로, 되풀�
 ### 새 2D 컴포넌트 만들기
 
 1. 스프라이트처럼 그려지는 컴포넌트는 `SpriteComponent` 를 쓰거나, 인스턴스를 많이 그린다면 `SpriteInstanceBatch` 로 배치를 만듭니다.
-   배치를 보관하는 컴포넌트는 `setOwnerComponent( this )` 를 부르고 활성 상태가 바뀌면 `markAllEntriesDirty` 를 부릅니다([Renderer 문서](../../../Graphics/Renderer/README.md)의 "씬과 스냅샷").
+   배치를 보관하는 컴포넌트는 `setOwnerComponent( this )` 를 부르고 활성 상태가 바뀌면 `markAllEntriesDirty` 를 부릅니다([Renderer 문서](../../../Renderer/README.md)의 "씬과 스냅샷").
 2. 카메라 위치를 읽는 컴포넌트는 카메라를 움직이는 컴포넌트보다 뒤 틱 그룹에 둡니다.
 3. 정렬은 `SpriteRenderUtil` 의 정렬 키를 씁니다. 키를 직접 만들지 않습니다.
 
@@ -183,5 +183,5 @@ Godot처럼 레이어마다 자식을 복제해 그리지 않으므로, 되풀�
 ## 더 볼 곳
 
 - [Graphics/2D](../../../Graphics/2D/README.md): 정렬 키, 투명 정렬 축, 9-슬라이스 메시
-- [Renderer](../../../Graphics/Renderer/README.md): 인스턴스 배치와 투명 정렬
+- [Renderer](../../../Renderer/README.md): 인스턴스 배치와 투명 정렬
 - [Empty 게임 팩](../../../../../Resource/game/empty/README.md): 2D 데모 씬 설명

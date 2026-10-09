@@ -14,9 +14,9 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
-#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Utility/Profiling/FrameProfileSession.h"
 #include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
