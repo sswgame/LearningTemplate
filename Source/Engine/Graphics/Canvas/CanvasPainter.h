@@ -124,6 +124,11 @@ namespace sw
          *          변환 스택을 건드리지 않는다 — 1 만 칸 목록에서 칸마다 부르는 값싼 길이다.
          */
         bool isOutsideClip( const CanvasTransform& transform, const float2& size ) const;
+        /**
+         * @brief 지금 자르기의 세로 범위(위 · 아래, 화면 UI 단위)를 돌려줍니다. 자르기가 없거나 변환이 쌓여 있으면 false 입니다.
+         * @details 자식이 세로로 차례대로 놓이는 패널(세로 상자 · 가로 흐름)이 보이는 자식 범위를 이분 탐색으로 찾는 데 씁니다.
+         */
+        [[nodiscard]] bool findClipVerticalRange( float32& outTop, float32& outBottom ) const;
         /** @brief 변환을 쌓습니다(지금 변환 뒤에 건다). */
         void pushTransform( const CanvasTransform& transform );
         void popTransform();

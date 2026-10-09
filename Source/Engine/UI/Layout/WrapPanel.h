@@ -39,6 +39,7 @@ namespace sw
         float32 getLineSpacing() const { return _lineSpacing; }
         /** @brief 줄 사이 간격입니다. kLayout. */
         void setLineSpacing( float32 lineSpacing );
+        bool isChildOrderTopToBottom() const override { return _orientation == UiOrientation::Horizontal && _lineSpacing >= 0.0f; }
 
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;

@@ -8,8 +8,12 @@
 			<BorderPanel _name="Window" _styleClass="window">
 				<_slot _anchorMin="0.5,0.5"
 				       _anchorMax="0.5,0.5"
-				       _offsetMin="-480,-320"
-				       _offsetMax="480,320" />
+				       _offsetMax="0,0"
+				       _minSize="960,640"
+				       _maxSize="960,640"
+				       _bAutoSize="true"
+				       _growHorizontal="Both"
+				       _growVertical="Both" />
 				<BoxPanel _spacing="12" _orientation="Vertical">
 					<TextWidget _name="Title" _styleClass="title" _text="Options" />
 					<WrapPanel _name="Tabs" _itemSpacing="6" _lineSpacing="6" />

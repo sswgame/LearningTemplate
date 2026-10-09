@@ -124,9 +124,19 @@ namespace sw
             float32                 bottom = slot._anchorMax._y * size._y + slot._offsetMax._y;
             if ( slot._bAutoSize )
             {
-                const float2 desired = child.getDesiredSize();
-                CanvasPanelInternal::growEdges( slot._growHorizontal, desired._x + slot._padding._x + slot._padding._z, left, right );
-                CanvasPanelInternal::growEdges( slot._growVertical, desired._y + slot._padding._y + slot._padding._w, top, bottom );
+                // 자동 크기는 패널보다 커지지 않는다 — 원하는 크기가 화면보다 크면(작은 해상도 × 큰 배율) 패널에 맞춰 줄이고, 안쪽 스크롤이 나머지를 받는다.
+                const float2  desired = child.getDesiredSize();
+                const float32 width   = MathUtil::min( desired._x + slot._padding._x + slot._padding._z, size._x );
+                const float32 height  = MathUtil::min( desired._y + slot._padding._y + slot._padding._w, size._y );
+                CanvasPanelInternal::growEdges( slot._growHorizontal, width, left, right );
+                CanvasPanelInternal::growEdges( slot._growVertical, height, top, bottom );
+                // 줄인 상자가 패널 밖으로 나가지 않게 민다(가운데 · 끝 기준으로 커진 상자가 변을 넘을 수 있다).
+                const float32 shiftX = MathUtil::max( 0.0f, -left ) - MathUtil::max( 0.0f, right - size._x );
+                const float32 shiftY = MathUtil::max( 0.0f, -top ) - MathUtil::max( 0.0f, bottom - size._y );
+                left += shiftX;
+                right += shiftX;
+                top += shiftY;
+                bottom += shiftY;
             }
             arrangeChild( context, child, float2{ left, top }, float2{ MathUtil::max( 0.0f, right - left ), MathUtil::max( 0.0f, bottom - top ) } );
         }

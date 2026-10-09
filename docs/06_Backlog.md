@@ -99,6 +99,13 @@
   패드 A · B · 십자키가 게임에도 간다(shooter3d 는 패드 `Back` 이 `CycleCamera` 와 겹친다), 플레이어별 재배치(`InputMap::loadUserBindings`)가 셸 맵에 걸려
   있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
+- **패널 점검(2026-10-07) 결함 중 실행으로 판정할 것** — 코드로만 고쳤거나 원인 후보만 있는 것이다. 다음 검증 세션이 에디터를 띄워 가른다.
+  (1) D21 Dialogue Graph 캔버스가 처음 열 때 일부만 덮는다 — 가설 고침(`30f18a1fc`: 캔버스 크기가 앞 프레임과 같을 때만 내용 맞추기). 열기 · Reload 직후
+  캔버스 배경이 패널을 다 덮는지 스크린샷으로 본다. 그대로면 다음 후보는 imgui-node-editor 의 `FinishNavigation` 이 옛 보기 사각형을 되돌리는 것이다.
+  (2) D26 자체 시험 `input.hierarchySearchTyping` 이 늘 진다 — 유력 후보는 처음 열린 떠 있는 Input Map 창이 검색 칸을 덮은 것(D20 `374751407` 이 닫힌 채 시작하게 고쳤다).
+  `-gv_editorSelfTest=input.hierarchySearchTyping` 이 지면 실패 줄의 `hoveredWindow` · `active` 로 다음 단계를 정한다(`30d177c95`).
+  (3) D24 고정 픽셀에 배율을 곱한 64 곳(`EditorThemeUtil::getDpiScale`)은 배율 1.5 · 2 로 띄워 넘치거나 겹치는 곳이 없는지 본다.
+  D1(뷰포트 클릭) · D2(기즈모)는 실행으로 확인했다(`20b7b5df5` · `6777ef3ce`). D4 는 점검 보고서가 저장소에 남지 않아 내용을 알 수 없다 — 다시 보이면 새 항목으로 적는다.
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
 
 ### 1-5. 핫 리로드 · 모듈
@@ -234,17 +241,19 @@
   명령이라 엔진 화면이 모른다(게임이 `PauseMenuScreen` 을 덮어쓰거나 명령 표를 거는 길). (2) 명령 조종자 게임(NileCity · StarSkirmish · ThemePark)과
   MeadowVillage 는 `_bUiPauseMenu` 를 켜지 않았다 — Esc 를 게임이 따로 쓰는지 보고 켠다. (3) 열거형 행은 콤보(펼침)뿐 — 패드에 맞는 좌우 고르기 위젯이 없다.
   (4) 키 바인딩 창의 Esc 길게 누르기는 키보드 Esc 만 — 패드 사용자는 취소가 없다(패드 B 를 바인딩할 수 있어야 해서). (5) 해상도 바꾸고 15 초 되돌림 ·
-  키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때. (6) 옵션 창은 고정 960×640 UI 단위라 뷰포트가 그보다 작으면
-  (720p · UI 배율 1.5 = 853×480) 화면 밖으로 넘친다(`UiDeterminismTest` 골든 options.layout.txt) — 일시정지 창처럼 자동 크기 + 최대 크기로.
+  키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때. (6) 옵션 창을 자동 크기(최소 · 최대 960×640)로 바꾸고 캔버스의 자동 크기 자식을
+  패널 안으로 줄이게 했다(시험 없이 반영) — `UiDeterminismTest` 골든 `options.layout.txt` 를 `SW_UPDATE_GOLDEN=1` 로 다시 쓰고 1280×720 · 150 % 조건이
+  화면 안(853×480 UI 단위)에 드는지 diff 로 본다. 다른 골든(자동 크기 캔버스 자식이 있는 견본)도 함께 바뀌는지 본다.
 - **알림 · 힌트 · 목표 마커의 남은 것(runtime-ui 8-3 뒤, `Engine/UI/README.md`).** (1) 들어오기 · 나가기 애니메이션 — 항목은 화면이 아니라 조각이라 문서 Open · Close 가 닿지 않는다,
   `showEntry` · 제거 때 `UiSystem::tween` 으로 `_opacity` 를 걸고 지우기를 페이드 뒤로 미룬다. (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글
   ("Game saved" · "다시 시작하면 적용")은 글 그대로라 글 수집에 들지 않는다 — 코드 글 키(`SW_LOCTEXT` 꼴)로 바꿀 것. (4) 입력 힌트 위젯을 따로 두지 않았다 —
   리치 텍스트 태그 하나로 충분한지 게임 HUD(8-1)에서 본다. (5) 항목마다 이름 `Message` · `Count` 가 트리 안에 겹쳐
   둘째 항목부터 "name is used twice" 경고가 난다 — 항목 조각을 `UserWidget` 으로 감싸 이름을 `<번호>.Message` 로.
 - **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 위젯 1 만 칸(패널 하나) · 글 10 칸/프레임 바뀜에서 `GT.Ui` p50 ≈ 1.7 ms
-  (목표 0.3 ms) — 무엇이든 바뀐 프레임은 트리를 걷고, 자식 1 만 개의 자르기 검사 · 보이는 위젯 ~1200 개의 그림 캐시 이어 붙이기가 남는다. (1) 패널마다 하위 출력 캐시
-  (바뀐 가지만 걷고 나머지는 이어 붙이기 한 번 — Slate 의 Invalidation Panel) 또는 정렬된 흐름 패널(Box · Wrap)의 보이는 범위 이분 탐색. 긴 목록은 지금도
-  `ListViewWidget`(보이는 행만 짓는다)이 답이다. (2) 창 크기 바꿈(전체 재배치) 한 프레임 · 첫 프레임 글리프 래스터화가 몇 프레임에 퍼지는지는 표 밖이다(워밍업 60 프레임이 버린다).
+  (목표 0.3 ms). 2026-10-10 에 측정 없이 둘을 넣었다: 세로 상자 · 가로 흐름의 보이는 자식 범위 이분 탐색(자식 64 개 이상, `UiPaintPass`)과
+  `CanvasDrawList::appendDrawList` 의 통째 복사(사각형마다 push_back · 일괄 복사의 shared_ptr 원자 증감을 뺐다). (1) Release 벤치(README "성능" 의 명령, 세 번)로
+  전후 `GT.Ui.Paint` p50 · p99 를 재어 08 에 적는다. (2) 0.3 ms 에 못 미치면 다음은 패널마다 하위 출력 캐시(바뀐 가지만 걷는다 — Slate 의 Invalidation Panel)다.
+  긴 목록은 지금도 `ListViewWidget`(보이는 행만 짓는다)이 답이다. (2) 창 크기 바꿈(전체 재배치) 한 프레임 · 첫 프레임 글리프 래스터화가 몇 프레임에 퍼지는지는 표 밖이다(워밍업 60 프레임이 버린다).
 - **런타임 UI 오른쪽에서 왼쪽(RTL)의 남은 것(runtime-ui 9-3 뒤, `Engine/UI/README.md`).** (3) 가로 스크롤 패널은 RTL 에서도 왼쪽부터 보인다(Slate · CSS 는 오른쪽) —
   내용 자리를 거울로 놓으려면 `scrollIntoView` 의 부호도 바꿔야 한다.
 - **오디오 엔진(2026-10-04, `Engine/Audio/README.md`)의 남은 것.** 믹서 · DSP · 공간화 · 이벤트 · 스냅샷 · 적응형 음악 · 씬 묶기는 들어갔다. (1) 데이터 핫 리로드 —

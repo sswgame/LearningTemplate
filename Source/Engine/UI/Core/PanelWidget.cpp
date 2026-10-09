@@ -14,6 +14,7 @@ namespace sw
         : Widget{}
         , _listChild{}
         , _bClipChildren{ false }
+        , _maxChildSlotHeight{ 0.0f }
     {
     }
 
@@ -106,6 +107,7 @@ namespace sw
 
     void PanelWidget::arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
     {
+        _maxChildSlotHeight = MathUtil::max( _maxChildSlotHeight, size._y );
         if ( isRightToLeft() && mirrorsChildrenInRightToLeft() )
         {
             const float2 mirrored{ getGeometry()._size._x - localPosition._x - size._x, localPosition._y };

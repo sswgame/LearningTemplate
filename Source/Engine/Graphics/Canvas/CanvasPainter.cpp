@@ -262,6 +262,16 @@ namespace sw
         _listClip.push_back( state );
     }
 
+    bool CanvasPainter::findClipVerticalRange( float32& outTop, float32& outBottom ) const
+    {
+        if ( _listClip.empty() || _listTransform.empty() == false || _uiScale <= 0.0f )
+            return false;
+        const ClipState& clip = _listClip.back();
+        outTop                = clip._bounds._y / _uiScale;
+        outBottom             = clip._bounds._w / _uiScale;
+        return true;
+    }
+
     bool CanvasPainter::isOutsideClip( const CanvasTransform& transform, const float2& size ) const
     {
         if ( _listClip.empty() )

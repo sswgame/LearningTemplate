@@ -37,6 +37,7 @@ namespace sw
         float32 getSpacing() const { return _spacing; }
         /** @brief 자식 사이 간격(UI 단위)을 바꿉니다. 바뀌면 kLayout. */
         void setSpacing( float32 spacing );
+        bool isChildOrderTopToBottom() const override { return _orientation == UiOrientation::Vertical && _spacing >= 0.0f; }
 
     protected:
         float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;

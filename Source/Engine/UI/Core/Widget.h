@@ -108,6 +108,8 @@ namespace sw
         /** @brief 원하는 크기입니다(마지막 measure 결과, UI 단위). */
         const float2&         getDesiredSize() const { return _desiredSize; }
         const WidgetGeometry& getGeometry() const { return _geometry; }
+        /** @brief 마지막 배치의 슬롯 자리(부모 로컬, 렌더 변환 전)입니다. */
+        const float2& getSlotPosition() const { return _lastSlotPosition; }
         /**
          * @brief 놓인 결과(레이아웃 사각형 + 누적 렌더 변환)를 적습니다. 레이아웃 걷기가 부르고, 레이아웃 없이 고정 배치로 짓는 시험도 부릅니다.
          * @details 기하가 바뀌면 kPaint 입니다(같으면 아무것도 하지 않는다).

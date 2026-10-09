@@ -55,6 +55,14 @@ namespace sw
         /** @brief 자손 @p widget 이 보이도록 내용을 옮깁니다(포커스 탐색 뒤 — `UiFocusManager::navigate`). 옮겼으면 true 입니다. 기본은 아무것도 하지 않습니다. */
         virtual bool scrollIntoView( const Widget& widget );
         void         setClipChildren( bool bClip );
+        /**
+         * @brief 자식 슬롯의 위 변이 자식 순서대로 내려가는(같거나 커지는) 패널이면 true 입니다(세로 상자 · 가로 흐름).
+         * @details 그리기가 자르기 안에 드는 자식 범위를 이분 탐색으로 찾습니다(`UiPaintPass`). 자식의 렌더 변환은 보지 않으므로,
+         *          렌더 변환으로 슬롯에서 멀리 옮긴 자식은 슬롯이 자르기 밖이면 그려지지 않습니다.
+         */
+        virtual bool isChildOrderTopToBottom() const { return false; }
+        /** @brief 배치된 자식 슬롯 높이의 최댓값입니다(줄지 않는다 — 보이는 범위를 찾을 때 위쪽 여유). */
+        float32 getMaxChildSlotHeight() const { return _maxChildSlotHeight; }
 
     protected:
         /**
@@ -79,6 +87,7 @@ namespace sw
 
         vector<unique_ptr<Widget>> _listChild;
         PROPERTY( DisplayName = "Clip Children" )
-        bool _bClipChildren;
+        bool    _bClipChildren;
+        float32 _maxChildSlotHeight;
     };
 } // namespace sw

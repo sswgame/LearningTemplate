@@ -35,6 +35,61 @@ namespace sw
             static constexpr float32 kFocusRingWidth  = 2.0f;
             static constexpr float32 kFocusRingOutset = 3.0f;
             static constexpr float32 kFocusRingRadius = 6.0f;
+            /** @brief 보이는 자식 범위를 이분 탐색으로 찾는 자식 수 문턱입니다 — 그보다 적으면 자식마다 자르기 검사가 더 싸다. */
+            static constexpr uint32 kVisibleRangeSearchMinChildCount = 64;
+
+            /**
+             * @brief 자식 슬롯이 위에서 아래로 놓인 패널에서 자르기 안에 들 수 있는 자식 범위 [@p outBegin, @p outEnd) 를 찾습니다.
+             * @details 슬롯 위 변(`_lastSlotPosition._y`, 패널 로컬)이 자식 순서대로 같거나 커지므로, 위 변이 (자르기 위 − 최대 슬롯 높이) 보다 작은 자식은
+             *          아래 변도 자르기 위에 있다. 끝은 위 변이 자르기 아래를 넘는 첫 자식이다. 탐색이 Collapsed 자식(지난 슬롯이 낡았다)을 만나면
+             *          범위를 줄이지 않는다(0 · 자식 수). 패널 기하가 축 정렬이 아니거나 자르기가 없으면 false 입니다.
+             */
+            static bool findVisibleChildRange( const PanelWidget& panel, const CanvasPainter& painter, uint32& outBegin, uint32& outEnd )
+            {
+                outBegin           = 0;
+                outEnd             = panel.getChildCount();
+                float32 clipTop    = 0.0f;
+                float32 clipBottom = 0.0f;
+                if ( panel.getChildCount() < kVisibleRangeSearchMinChildCount || panel.isChildOrderTopToBottom() == false )
+                    return false;
+                const WidgetGeometry& geometry = panel.getGeometry();
+                if ( geometry.isAxisAligned() == false || painter.findClipVerticalRange( clipTop, clipBottom ) == false )
+                    return false;
+                const float32 localTop    = clipTop - geometry._translation._y - panel.getMaxChildSlotHeight();
+                const float32 localBottom = clipBottom - geometry._translation._y;
+
+                // 첫 자식: 슬롯 위 변이 localTop 이상인 첫 자리.
+                uint32 low  = 0;
+                uint32 high = panel.getChildCount();
+                while ( low < high )
+                {
+                    const uint32  middle = low + ( high - low ) / 2;
+                    const Widget& child  = *panel.getChild( middle );
+                    if ( child.getVisibility() == WidgetVisibility::Collapsed )
+                        return false;
+                    if ( child.getSlotPosition()._y < localTop )
+                        low = middle + 1;
+                    else
+                        high = middle;
+                }
+                const uint32 begin = low;
+                // 끝: 슬롯 위 변이 localBottom 을 넘는 첫 자리.
+                high = panel.getChildCount();
+                while ( low < high )
+                {
+                    const uint32  middle = low + ( high - low ) / 2;
+                    const Widget& child  = *panel.getChild( middle );
+                    if ( child.getVisibility() == WidgetVisibility::Collapsed )
+                        return false;
+                    if ( child.getSlotPosition()._y <= localBottom )
+                        low = middle + 1;
+                    else
+                        high = middle;
+                }
+                outBegin = begin;
+                outEnd   = low;
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -142,7 +197,17 @@ namespace sw
             }
             else
             {
-                for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                // 범위 밖 자식은 걷지 않는다 — 자르기 밖 자식과 같게 강제 칠하기를 비트로 남긴다.
+                uint32 begin = 0;
+                uint32 end   = pPanel->getChildCount();
+                if ( Internal::findVisibleChildRange( *pPanel, painter, begin, end ) && ( bChildForce || bAtlasChanged ) )
+                {
+                    for ( uint32 index = 0; index < begin; ++index )
+                        pPanel->getChild( index )->_dirtyFlags |= Internal::kCulledRepaintBits;
+                    for ( uint32 index = end; index < pPanel->getChildCount(); ++index )
+                        pPanel->getChild( index )->_dirtyFlags |= Internal::kCulledRepaintBits;
+                }
+                for ( uint32 index = begin; index < end; ++index )
                     paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
             }
             if ( bClip )
