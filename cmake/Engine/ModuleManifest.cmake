@@ -340,7 +340,8 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL(vcpkg 가 모듈 옆에 복사한 것)은 이름 꼴이 달라 남는다.
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
+#      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 시험 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
 #   실행 중인 App · 시험이 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
@@ -356,7 +357,12 @@ function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
 		get_filename_component(swStem "${swPath}" NAME_WE)
 		get_filename_component(swSuffix "${swPath}" LAST_EXT)
 		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
-		if(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
+		get_filename_component(swFileName "${swPath}" NAME)
+		if(swFileName MATCHES "_temp_")
+			list(APPEND swStale "${swPath}")
+		elseif(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
+			list(APPEND swStale "${swPath}")
+		elseif((swSuffix STREQUAL ".dll" OR swSuffix STREQUAL ".pdb") AND NOT swStemNoPrefix MATCHES "${swModulePattern}")
 			list(APPEND swStale "${swPath}")
 		endif()
 	endforeach()

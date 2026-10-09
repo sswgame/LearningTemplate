@@ -36,6 +36,7 @@ cmake/
     │                               (include 되는 순간 실행된다 — 타깃 규칙 셋보다 먼저여야 한다)
     ├── UnbuiltSources.cmake      — 이 구성이 일부러 짓지 않는 소스 목록(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙 → CheckSourceGlob)
     ├── ModuleTargets.cmake       — 모듈 · 실행 파일 타깃: 내보내기 · 동적 모듈 레지스트리 · ABI 도장 · 모듈 팩토리 · delay-load
+    ├── StageModuleRuntimeDlls.cmake — `cmake -P` 스크립트: 모듈의 서드파티 DLL 을 모듈마다 스테이지에서 applocal 로 모아 `Bin` 에 한 벌(sw_stageModuleRuntimeDlls)
     ├── TestTargets.cmake         — 시험 타깃 · CTest 등록(실행 파일 · 샤드 · 새니타이저 보정 · 스크립트 시험)
     ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 짓지 않고 `Bin/Modules/` 에 복사,
     │                               `Bin` 의 옛 자리 · 꺼진 모듈 산출물 지우기(sw_removeStaleBinaryOutputs)
@@ -103,6 +104,10 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   시험 실행 파일은 `TestBin` 이다. 런타임은 `FileUtil::getBinaryDirectory`(TestBin → Bin) · `ModuleImageUtil::findModuleLibraryPath`(Modules → Bin)로 찾는다.
   시험이 키트를 링크하면 그 DLL 을 TestBin 에 복사한다 — 키트는 자료를 내보내 lld 가 지연 로드를 거절한다(`cannot delay-load ... due to import of data`).
   옛 자리 산출물과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`, 잠긴 파일은 경고).
+- **서드파티 DLL 은 `Bin` 에 한 벌이다.** vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽어 의존 DLL 을 타깃 **옆에** 복사하는 POST_BUILD 를 단다.
+  `Bin/Modules` 에 가는 모듈은 `sw_addModuleLibrary` 가 그 순간만 끄고, `sw_stageModuleRuntimeDlls` 가 모듈마다 `build/<프리셋>/ModuleRuntimeStage/<모듈>` 에 하드 링크를 두고
+  `vcpkg z-applocal` 을 돌려 복사된 것만 `Bin` 으로 옮긴다(병렬 링크가 같은 폴더를 다투지 않는다). 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더를 먼저 보므로
+  `Bin/Modules` 에 사본이 남으면 그것이 쓰인다 — configure 가 `Bin/Modules` 의 모듈 이름 꼴이 아닌 DLL · PDB 와 남은 섀도 복사본(`_temp_`)을 지운다.
 - **vcpkg 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다**(`build/vcpkg_installed` junction). 해시만 보고 설치하던 때는 옛 vcpkg.json 의 워크트리가
   configure(빌드 중 GLOB 로 도는 재구성 포함)하면 다른 워크트리가 쓰는 포트를 지웠다(recast · tracy). 지금 게이트(`Vcpkg.cmake` 5 절)는 스탬프가 다르면
   `vcpkg install --dry-run` 계획을 보고 — 지을 것이 없으면 skip, 지우게 되면 멈추고 경고(스탬프도 덮지 않는다), 빠진 포트가 있을 때만 install. 재현:

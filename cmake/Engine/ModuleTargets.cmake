@@ -33,6 +33,25 @@ endfunction()
 # 모듈 · 핫 리로드 타깃의 런타임 출력 — 모듈 DLL(rhi · kit · game · editor)은 `Bin/Modules/`, 모두가 링크하는 GameFramework 는 `Bin/` 이다.
 # 런타임은 `ModuleImageUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
 # 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
+# vcpkg 의 applocal 이 `Bin/Modules` 의 모듈 옆에 서드파티 DLL 을 복사하지 않게 하고, 같은 일을 모듈마다 스테이지 폴더에서 해 `Bin` 으로 옮긴다
+# (`StageModuleRuntimeDlls.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
+# 실행 파일 폴더를 본다. vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽으므로 부르는 쪽(`sw_addModuleLibrary`)이 그 순간만 끈다.
+function(sw_stageModuleRuntimeDlls TARGET_NAME)
+	if(NOT WIN32 OR NOT DEFINED Z_VCPKG_EXECUTABLE OR NOT DEFINED VCPKG_INSTALLED_DIR)
+		return()
+	endif()
+	add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+		COMMAND "${CMAKE_COMMAND}"
+			"-DMODULE_FILE=$<TARGET_FILE:${TARGET_NAME}>"
+			"-DSTAGE_DIR=${CMAKE_BINARY_DIR}/ModuleRuntimeStage/${TARGET_NAME}"
+			"-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin"
+			"-DVCPKG_EXECUTABLE=${Z_VCPKG_EXECUTABLE}"
+			"-DINSTALLED_BIN_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}$<$<CONFIG:Debug>:/debug>/bin"
+			-P "${CMAKE_SOURCE_DIR}/cmake/Engine/StageModuleRuntimeDlls.cmake"
+		VERBATIM
+	)
+endfunction()
+
 function(sw_setModuleBinOutput TARGET_NAME KIND)
 	set(outputDir "${CMAKE_BINARY_DIR}/Bin/Modules")
 	if(KIND STREQUAL "gameframework")
@@ -387,7 +406,16 @@ function(sw_addModuleLibrary TARGET_NAME)
 		set(libType ${ARG_DEV_TYPE})
 	endif()
 
+	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stageModuleRuntimeDlls`).
+	set(bStageRuntimeDlls OFF)
+	if(VCPKG_APPLOCAL_DEPS AND NOT libType STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
+		set(VCPKG_APPLOCAL_DEPS OFF)
+		set(bStageRuntimeDlls ON)
+	endif()
 	add_library(${TARGET_NAME} ${libType} ${ARG_SOURCES})
+	if(bStageRuntimeDlls)
+		sw_stageModuleRuntimeDlls(${TARGET_NAME})
+	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	if(ARG_LINK_PUBLIC)
