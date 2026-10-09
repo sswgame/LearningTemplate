@@ -218,6 +218,12 @@
 - **4 글자 표식은 리틀 엔디언 FourCC 하나로 통일했습니다**(2026-10-06). 세이브와 쿠킹 바이너리를 다시 만들었습니다.
 - **엔진의 각도 필드는 라디안입니다**(2026-10-06). 도 단위 필드를 두지 않고, `PropertyUnitsTest` 가 이 규칙에 예외를 두지 않습니다.
 
+- **이름은 상용 엔진과 견주어 정한다(2026-10-10, 이름 점검).** 이름 점검이 모호하다고 한 것을 모두 바꾸지 않는다. 그대로 두는 것: `GameObjectManager`(한 씬의 `GameObject` 를 만들고 소유하고 틱한다),
+  `GpuScene`(언리얼 `GPUScene` 과 같은 용어), `PhysicsWorld`(사용자 결정 — `IPhysicsScene` 과 이름이 비슷해도 둔다), `GameConfig`(프리셋 JSON) 와 `GameSettings`(팩의 `gamesettings.xml`) — 언리얼도 프로젝트
+  설정과 게임 설정이 따로 있다, `GameplayAbilityDef`(카탈로그 정의: id · 클래스 이름 · `GameplayAbilityConfig`)와 `GameplayAbilityConfig`(어빌리티 하나의 설정) — 정의가 설정을 품는 층이라 둘 다 필요하다,
+  `AbilitySpec`(언리얼 `FGameplayAbilitySpec` — 부여된 인스턴스), `TypeInfo` · `Info` 값 묶음, `InputManager` · `AssetManager`. 나눈다: `ResourceUtil` 은 경로 쪽과 읽기 쪽으로(언리얼 `FPaths` / `FFileHelper` 가 같은 선),
+  `EditorUtil` 은 경로를 `EditorPaths` 로 뺀다. `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils` 도 같은 묶음). 전체 목록과 이유는 [이름 정리 계획](plans/NamingPass.md).
+
 ### 5-5. 그래픽스와 RHI
 
 - **런타임 UI 를 위해 RHI 에 R8 텍스처, 영역 업로드, 프리멀티플라이 블렌드, 가위 사각형을 더했습니다**(2026-10-06). 사각형 클리핑은 가위로 합니다. Slate, Dear ImGui, Godot 모두 같은 방식이고, 배치가 끊기지 않습니다.

@@ -48,7 +48,7 @@
 ### 채택 — 구조와 얽힌 큰 이름 (건별 결정 뒤)
 - `ResourceUtil`(참조 313): 경로 해석·저장 경로 쪽과 읽기 쪽을 `ResourcePaths` / `ResourceIO` 로 이름만 나눌지. 소유 객체화는 하지 않는다. 같은 모양의 `EditorUtil`(경로 · 프리팹 스폰 · 배지 문자열), `FrameRendererUtil`(어태치먼트 이름 · 상수 · 스핀 데모 상수)은 만능 통이라 이 둘이 먼저 쉽다.
 - `MathUtil::getRandom` 은 중복 정리 계획의 "결정적 난수를 Core 로" 단계와 함께 옮긴다.
-- 사용자 확인이 필요한 것: `PhysicsWorld`(단순 AABB 바디 월드)와 `IPhysicsScene`(Jolt · Box2D 강체) 둘이 이름만 비슷하다 — `AABBBodyWorld` 로 바꿀지. `GameConfig`(프리셋 JSON)와 `GameSettings`(팩 `gamesettings.xml`)를 `GamePreset` / `GamePackSettings` 로 바꿀지. `GameplayAbilityConfig`(`GameplayAbility.h`)와 `GameplayAbilityDef`(`AbilityCatalog.h`)가 같은 어빌리티의 다른 설정인데 둘 다 필요한지 — 코드를 읽고 결정.
+- 사용자 결정(2026-10-10): `PhysicsWorld` 는 그대로 둔다. 나머지는 상용 엔진과 견주어 정했다 — `GameConfig` · `GameSettings` 는 그대로(언리얼도 프로젝트 설정과 게임 설정이 따로), `GameplayAbilityConfig` · `GameplayAbilityDef` 는 그대로(정의가 설정을 품는 층), `ResourceUtil` 은 `ResourcePaths` · `ResourceIO` 로 나누기(언리얼 `FPaths` / `FFileHelper`), `EditorUtil` 은 경로를 `EditorPaths` 로 빼기, `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils`). 결정은 [결정 기록](../09_Decisions.md) 5-4.
 
 ## 순서
 1. 린트와 어휘표 문서(위 "린트로 먼저", "문서로 해결") — 코드 변경이 가장 작다.
