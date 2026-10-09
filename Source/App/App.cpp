@@ -47,9 +47,11 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct RHIBackendSwitcherInternal
         {
-            /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없으면 nullptr 입니다. */
+            /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
             static GlobalVariableInfo* findBackendVariable()
             {
+                if ( engine::areEngineServicesBound() == false )
+                    return nullptr;
                 return engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
             }
         };
@@ -136,7 +138,7 @@ namespace sw
             if ( pReporterCommandLine != nullptr && pReporterCommandLine->getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) &&
                  reporterFolder.empty() == false )
             {
-                const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
+                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
                 SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
                 return true;
             }

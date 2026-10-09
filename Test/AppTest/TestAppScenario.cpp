@@ -95,6 +95,7 @@ namespace
         }
     };
 
+#if !defined( SW_SHIPPING )
     /**
      * @struct EditorStateSnapshot
      * @brief 에디터 상태 폴더(`<저장소>/Saved/Editor`)의 파일 바이트를 들고 있다가 되돌립니다 — 에디터 시나리오가 테마 · 레이아웃 · 최근 씬을
@@ -150,6 +151,7 @@ namespace
             }
         }
     };
+#endif
 } // namespace
 
 /**

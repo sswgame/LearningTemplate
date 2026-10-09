@@ -936,6 +936,8 @@ namespace sw
         // 부트스트랩이 이 모드에서는 크래시 핸들러(죽으면 보고 프로세스를 또 띄운다) · 리소스 루트를 세우지 않았다.
         if ( _bootstrap.isCrashReporterRun() )
         {
+            // 다른 헤드리스 작업처럼 작업 직전에 누수 기준선을 잡는다 — 없으면 종료 때 살아 있는 부트스트랩 블록을 모두 누수로 찍는다.
+            MemoryProfiler::captureMemoryLeakBaseline();
             _hostRole  = role;
             _bHeadless = true;
             return true;
