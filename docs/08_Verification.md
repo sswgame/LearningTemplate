@@ -8,9 +8,13 @@
 숫자 기준선(테스트 수 · 창 수 · 시간)은 적어 두지 않는다. 금방 낡는다. **비교가 필요하면 바꾸기 전과 후를 그 자리에서 잰다.**
 통과 기준은 "전부 통과, 스킵은 Dev 전용 케이스 · 그 플랫폼에 없는 타깃뿐" 이다.
 
+개발 기본 빌드(`cmake --build --preset Ninja-Debug`)는 시험 실행 파일을 짓지 않는다. 시험까지 지으려면 `--target all AllTests` 를 붙인다.
+`ctest` 는 실행 파일 시험 앞에 셋업 항목 `BuildTestBinaries` 를 스스로 돌려 둘을 먼저 짓는다(빌드 없이 돌리려면 `-FS BuildTestBinaries`).
+`py -3 -m Scripts test` 도 먼저 짓는다(`--no-build` 로 건너뛴다). CI · 검증 프리셋(`CI-*`, `*-Shipping*`, `Ninja-Debug-ASAN`)의 `cmake --build --preset` 은 시험까지 짓는다.
+
 ```powershell
-cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다
-cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다
+cmake --build --preset Ninja-Debug            # 경고 0 이어야 한다(시험 제외 — 시험까지는 --target all AllTests)
+cmake --build --preset Ninja-Shipping         # Debug 가 숨기는 결함이 여기서 드러난다(시험까지)
 ctest --preset Ninja-Debug-lint               # 컨벤션 · include 순서 · 린트 자기 시험
 ctest --test-dir build/Ninja-Debug -L nogpu --output-on-failure
 ctest --test-dir build/Ninja-Shipping -L nogpu --output-on-failure
@@ -130,6 +134,9 @@ cd build/Ninja-Debug/Bin
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
+- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 재서
+  중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
+  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계).
 - **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/TestBench.h`.
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.

@@ -14,7 +14,7 @@ import argparse
 import json
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Sequence
 
 from .Paths import getProjectRoot
 
@@ -24,6 +24,8 @@ kCMakeCacheFileName = "CMakeCache.txt"
 #: CMake 가 "이 구성이 일부러 짓지 않는 소스" 를 적는 자리(빌드 폴더 기준) — CMake 의 `SW_UNBUILT_SOURCE_LIST`.
 kUnbuiltSourceListRelPath = "generated/sw/config/UnbuiltSources.txt"
 kAppExecutableNames: tuple[str, ...] = ("App.exe", "App")
+#: 시험까지 짓는 타깃 — 기본 `all` 은 시험 실행 파일을 짓지 않는다(`Test/` 는 `EXCLUDE_FROM_ALL`, `cmake/Engine/TestTargets.cmake` 의 `AllTests`).
+kTestBuildTargets: tuple[str, ...] = ("all", "AllTests")
 
 
 class BuildTreeError(Exception):
@@ -181,6 +183,13 @@ class BuildTree:
             return None
         lines = listPath.read_text(encoding="utf-8", errors="replace").splitlines()
         return {line.strip().replace("\\", "/").lower() for line in lines if line.strip()}
+
+    def buildCommand(self, listTarget: Sequence[str] = kTestBuildTargets, jobCount: int | None = None) -> list[str]:
+        """이 트리를 짓는 명령(`cmake --build <폴더> --target …`). 기본은 시험까지(`kTestBuildTargets`)."""
+        command = ["cmake", "--build", str(self.path), "--target", *listTarget]
+        if jobCount:
+            command += ["-j", str(jobCount)]
+        return command
 
 
 def addBuildTreeArguments(parser: argparse.ArgumentParser, *, defaultPreset: str | None = kDefaultPreset, bMultiple: bool = False) -> None:

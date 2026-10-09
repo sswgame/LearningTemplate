@@ -19,11 +19,13 @@
 
 ## 단계
 
-### 0. 기준선 (먼저, 다른 빌드가 돌지 않을 때)
+### 0. 기준선 (먼저, 다른 빌드가 돌지 않을 때) — 도구 완료, 측정 남음
+도구: `py -3 Scripts/dev/RunBuildBaseline.py --preset Ninja-Debug --preset Ninja-Release` · `py -3 Scripts/lint/report/RunIncludeCost.py`.
+
 같은 PC · 같은 프리셋(`Ninja-Debug`, `Ninja-Release`)에서 표 하나를 채운다: 풀 빌드(콜드, sccache 비움) · 헤더 하나 수정(`Core/Container/vector.h`) · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜) 각 3 회의 중앙값.
 측정 PC 이름(CPU)을 표 머리에 적는다 — 이 저장소의 측정은 PC 마다 다르다. 전 TU `-ftime-trace` 집계 스크립트(`Scripts/lint/report/RunIncludeCost.py`)를 만들어 누적 파싱 시간 상위 헤더 20 개를 뽑는다. 결과는 [검증과 측정](../08_Verification.md) 에 둔다.
 
-### 1. 시험을 기본 빌드에서 뺀다 (구조 정리와 무관, 먼저 해도 된다)
+### 1. 시험을 기본 빌드에서 뺀다 — 완료(`AllTests` 타깃 + ctest 픽스처, 결정은 [docs/09](../09_Decisions.md) 5-2)
 `cmake --build --preset Ninja-Debug` 가 시험 614 TU(26 %)까지 짓는다. 개발 기본 타깃을 `App` · `Server` 로 줄이고(시험 실행 파일은 `EXCLUDE_FROM_ALL` 이 아니라 별도 `all-with-tests` 타깃과 `ctest` 가 짓게 하는 쪽을 비교), CI · 검증 프리셋은 시험까지 짓는다.
 주의: `ctest` 만 부르면 시험 실행 파일이 없어 실패하므로 `Scripts` 의 `test` 명령과 `docs/08_Verification.md` 의 "무엇을 돌려야 하나" 절이 시험 빌드를 먼저 부르게 한다.
 

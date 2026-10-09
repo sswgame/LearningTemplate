@@ -4,6 +4,41 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
+# AllTests — 시험 실행 파일 전부를 짓는 타깃. `Test/` 는 `EXCLUDE_FROM_ALL` 이라 기본 `all` 은 시험을 짓지 않는다.
+#   시험까지 짓기: `cmake --build --preset <프리셋> --target all AllTests`. CI · 검증 프리셋은 build 프리셋의 `targets` 로 둘 다 짓는다.
+#   시험 폴더 밖 타깃이 없어도(SW_ENABLE_TESTING OFF) 프리셋이 깨지지 않게 여기서 늘 만든다.
+# ------------------------------------------------------------------------------
+if(NOT TARGET AllTests)
+	add_custom_target(AllTests)
+	set_target_properties(AllTests PROPERTIES FOLDER "Test")
+endif()
+
+#: 시험 실행 파일 항목이 기다리는 ctest 픽스처 — 그 셋업 항목이 `all` 과 `AllTests` 를 짓는다(`sw_registerTestBuildFixture`).
+set(SW_TEST_BUILD_FIXTURE "SWTestBinaries")
+
+# ------------------------------------------------------------------------------
+# sw_registerTestBuildFixture — `ctest` 가 시험 실행 파일 없이 지지 않게, 첫 항목으로 빌드를 부르는 셋업 항목 하나
+#
+# 실행 파일 시험(`sw_registerTestRun`)은 모두 이 픽스처를 요구한다. ctest 는 `-L` · `-R` 로 거른 실행에도 요구된 셋업 항목을 스스로 더하고,
+# 셋업이 지면 그 픽스처를 요구한 항목은 돌지 않는다. 이미 지은 트리면 ninja 가 할 일이 없어 몇 초다. 린트 · 스크립트 항목은 요구하지 않는다
+# (`ctest -L lint` 는 빌드하지 않는다). 빌드 없이 돌리려면 `ctest -FS BuildTestBinaries`(셋업 항목을 건너뛴다).
+# 직렬인 이유: 빌드가 CPU 를 다 쓰는 동안 다른 항목이 돌면 제한 시간이 가짜로 진다.
+# ------------------------------------------------------------------------------
+function(sw_registerTestBuildFixture)
+	set(swDefaultTarget all)
+	if(CMAKE_GENERATOR MATCHES "^Visual Studio")
+		set(swDefaultTarget ALL_BUILD)
+	endif()
+	add_test(NAME BuildTestBinaries COMMAND "${CMAKE_COMMAND}" --build "${CMAKE_BINARY_DIR}" --target ${swDefaultTarget} AllTests)
+	set_tests_properties(BuildTestBinaries PROPERTIES
+		FIXTURES_SETUP ${SW_TEST_BUILD_FIXTURE}
+		RUN_SERIAL TRUE
+		TIMEOUT 7200
+		LABELS "build"
+	)
+endfunction()
+
+# ------------------------------------------------------------------------------
 # ASan 테스트 보정 — 등록된 CTest 이름 하나에 적용한다.
 #
 # 실행 파일 시험(`sw_registerTestRun`)이 부른다. 스크립트 시험(`sw_registerScriptTest`)은 새니타이저와 무관하다(파이썬 프로세스).
@@ -62,6 +97,7 @@ function(sw_registerTestRun TEST_NAME TARGET_NAME)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin"
 		LABELS "${ARG_LABELS}"
 		TIMEOUT ${ARG_TIMEOUT}
+		FIXTURES_REQUIRED ${SW_TEST_BUILD_FIXTURE}
 	)
 	if(ARG_RUN_SERIAL)
 		set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL TRUE)
@@ -113,6 +149,7 @@ function(sw_addTestExecutable TARGET_NAME)
 	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp" "${CMAKE_SOURCE_DIR}/Test/TestFramework/TestHostRuntime.cpp")
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
+	add_dependencies(AllTests ${TARGET_NAME})
 
 	# 시험 실행 파일은 모든 구성에서 `Bin` 옆 `TestBin` 으로 뺀다 — Bin 에는 App · 모듈 · 런타임 DLL 만 둔다(Dev 도 Shipping 과 같은 모양).
 	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`). Dev 시험이 링크한 Engine.dll · 서드파티 DLL 은 Bin 에 있다 — Windows 로더는 작업 폴더를

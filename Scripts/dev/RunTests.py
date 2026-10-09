@@ -7,7 +7,10 @@
 작업 폴더가 **`Bin`** 이어야 한다는 것(아니면 `Resource/` 를 못 찾는다), 그리고 실행 파일은 **`TestBin`** 에
 있다는 것. 셋 다 CLAUDE.md 의 함정 목록에 있다. 이 스크립트가 셋을 대신 안다.
 
-사용법 (빌드 후):
+돌리기 전에 시험까지 짓는다(`cmake --build <폴더> --target all AllTests`) — 기본 빌드(`all`)는 시험 실행 파일을 짓지 않고,
+옛 실행 파일로 돌면 고친 것을 시험하지 않은 채 통과한다. 이미 지은 트리면 ninja 가 할 일이 없어 몇 초다. `--no-build` 는 건너뛴다.
+
+사용법:
     py -3 Scripts/dev/RunTests.py SceneTest.*                         # Debug, 그 스위트가 사는 실행 파일에서
     py -3 Scripts/dev/RunTests.py "SceneTest.*,ResourceTest.Ensure*"   # 여러 패턴 · 여러 실행 파일
     py -3 Scripts/dev/RunTests.py ResourceTest.* --preset Ninja-Shipping
@@ -55,13 +58,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--repeat", type=int, default=0, help="고른 케이스를 N 번 되풀이한다(--test_repeat)")
     parser.add_argument("--shuffle", nargs="?", const="random", default=None, help="순서를 섞는다 — 씨앗을 주면 그 순서를 다시 만든다")
     parser.add_argument("--list", action="store_true", help="돌리지 않고 어느 실행 파일에 어떤 케이스가 있는지만 찍는다")
+    parser.add_argument("--no-build", dest="bBuild", action="store_false", help="시험 빌드(all · AllTests)를 건너뛰고 있는 실행 파일로 돌린다")
     # 모르는 인자는 실행 파일 몫이다. 위치 인자 REMAINDER 로 받으면 패턴 뒤의 --list · --repeat 까지 삼킨다.
     args, listPassthrough = parser.parse_known_args(argv)
 
     tree = BuildTree.fromArguments(args)
+    if args.bBuild:
+        if not tree.bConfigured:
+            print(f"[RunTests] {tree.path} 가 구성되지 않았습니다 — 먼저 cmake --preset {tree.name}", file=sys.stderr)
+            return 2
+        buildCommand = tree.buildCommand()
+        print(f"[RunTests] {' '.join(buildCommand)}", flush=True)
+        buildResult = runProcess(buildCommand, bCapture=False)
+        if not buildResult.bSucceeded:
+            print("[RunTests] 시험 빌드가 졌습니다" if buildResult.bLaunched else "[RunTests] cmake 를 찾지 못했습니다 (PATH)", file=sys.stderr)
+            return 2
     workingDir, listExecutable = findTestExecutables(tree)
     if not listExecutable:
-        print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name})", file=sys.stderr)
+        print(f"[RunTests] {tree.path} 에 테스트 실행 파일이 없습니다 — 먼저 빌드하세요 (cmake --build --preset {tree.name} --target all AllTests)", file=sys.stderr)
         return 2
 
     # 실행 파일마다 `--test_list` 로 묻는다 — 엔진 서비스를 세우느라 하나에 수백 ms 라 동시에.

@@ -315,6 +315,14 @@
   ],
   "buildPresets": [
     {
+      "name": "with-tests",
+      "hidden": true,
+      "targets": [
+        "all",
+        "AllTests"
+      ]
+    },
+    {
       "name": "Ninja-Debug",
       "configurePreset": "Ninja-Debug"
     },
@@ -352,6 +360,7 @@
     },
     {
       "name": "Ninja-Debug-ASAN",
+      "inherits": "with-tests",
       "configurePreset": "Ninja-Debug-ASAN"
     },
     {
@@ -360,6 +369,7 @@
     },
     {
       "name": "Ninja-Shipping",
+      "inherits": "with-tests",
       "configurePreset": "Ninja-Shipping"
     },
     {
@@ -368,6 +378,7 @@
     },
     {
       "name": "Ninja-Shipping-Server",
+      "inherits": "with-tests",
       "configurePreset": "Ninja-Shipping-Server"
     },
     {
@@ -380,6 +391,7 @@
     },
     {
       "name": "WSL-Shipping",
+      "inherits": "with-tests",
       "configurePreset": "WSL-Shipping"
     },
     {
@@ -388,34 +400,42 @@
     },
     {
       "name": "WSL-Shipping-Server",
+      "inherits": "with-tests",
       "configurePreset": "WSL-Shipping-Server"
     },
     {
       "name": "CI-Debug",
+      "inherits": "with-tests",
       "configurePreset": "CI-Debug"
     },
     {
       "name": "CI-Debug-ASAN",
+      "inherits": "with-tests",
       "configurePreset": "CI-Debug-ASAN"
     },
     {
       "name": "CI-Debug-STL",
+      "inherits": "with-tests",
       "configurePreset": "CI-Debug-STL"
     },
     {
       "name": "CI-Debug-TSAN",
+      "inherits": "with-tests",
       "configurePreset": "CI-Debug-TSAN"
     },
     {
       "name": "CI-Shipping",
+      "inherits": "with-tests",
       "configurePreset": "CI-Shipping"
     },
     {
       "name": "CI-Fuzz",
+      "inherits": "with-tests",
       "configurePreset": "CI-Fuzz"
     },
     {
       "name": "CI-Shipping-Server",
+      "inherits": "with-tests",
       "configurePreset": "CI-Shipping-Server"
     }
   ],

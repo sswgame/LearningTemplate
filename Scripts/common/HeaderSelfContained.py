@@ -7,13 +7,14 @@
 그 "다른 헤더" 가 정리되는 날 내 코드를 안 고쳤는데 엉뚱한 파일에서 빌드가 깨진다. 그래서 헤더마다 `#include "그 헤더"` 한 줄짜리
 TU 를 `-fsyntax-only` 로 컴파일한다.
 
-쓰는 곳은 셋이다(같은 판정을 따로 만들지 말 것):
+쓰는 곳은 넷이다(같은 판정을 따로 만들지 말 것):
 
 | 쓰는 곳 | 범위 | 실패하면 |
 | --- | --- | --- |
 | `report/RunHeaderSelfContained.py` | 트리 전체 · 폴더 | 보고만(`--fail-on-violation` 이면 1 — CI 정기 잡) |
 | `gate/CheckHeaderSelfContained.py` | 커밋 훅의 staged 헤더 | 커밋을 막는다(빌드 폴더가 없으면 건너뛴다) |
 | `report/RunForwardDeclarationCandidates.py --verify-unused` | include 한 줄을 뺀 사본 | 후보 분류 |
+| `report/RunIncludeCost.py` | TU 전부(헤더가 아니라 소스를 PCH 없이) + `-ftime-trace` | 보고만 — 헤더별 누적 파싱 시간 |
 
 **플래그는 진짜 빌드에서 빌려 온다.** 컴파일 DB 에서 그 헤더와 경로가 가장 길게 겹치는 TU 의 명령줄을 쓴다 — Editor 헤더는 Editor TU 의
 플래그로 본다. PCH(MSVC `/Yu` · `/Fp` · `/FI…cmake_pch`, clang `-Xclang -include-pch` · `-include …cmake_pch`)는 뗀다 — 두면 pch 가 미리
@@ -128,8 +129,8 @@ def isPchTokenInternal(token: str) -> bool:
     return "cmake_pch" in token
 
 
-def makeSyntaxOnlyCommand(entry: dict, probeSource: Path) -> list[str]:
-    """TU 의 명령줄에서 PCH · 출력 · 의존 파일 · 소스 파일을 떼고 `-fsyntax-only` 로 바꾼다."""
+def makeSyntaxOnlyCommand(entry: dict, probeSource: Path, listExtraFlag: Sequence[str] = ()) -> list[str]:
+    """TU 의 명령줄에서 PCH · 출력 · 의존 파일 · 소스 파일을 떼고 `-fsyntax-only` 로 바꾼다. `listExtraFlag` 는 소스 앞에 붙인다."""
     rawCommand = entry.get("command") or " ".join(entry.get("arguments", []))
     listToken = shlex.split(rawCommand, posix=False)
     command: list[str] = []
@@ -161,13 +162,13 @@ def makeSyntaxOnlyCommand(entry: dict, probeSource: Path) -> list[str]:
         command.append(token)
         index += 1
 
-    command.extend(["-fsyntax-only", "-Wno-unused-command-line-argument", str(probeSource)])
+    command.extend(["-fsyntax-only", "-Wno-unused-command-line-argument", *listExtraFlag, str(probeSource)])
     return command
 
 
-def runSyntaxOnly(entry: dict, probeSource: Path, buildDir: Path) -> str | None:
+def runSyntaxOnly(entry: dict, probeSource: Path, buildDir: Path, listExtraFlag: Sequence[str] = ()) -> str | None:
     """`probeSource` 를 `entry` 의 플래그로 단독 컴파일한다. 서면 None, 못 서면 첫 오류(없으면 "컴파일 실패")."""
-    completed = subprocess.run(" ".join(makeSyntaxOnlyCommand(entry, probeSource)), shell=True, capture_output=True,
+    completed = subprocess.run(" ".join(makeSyntaxOnlyCommand(entry, probeSource, listExtraFlag)), shell=True, capture_output=True,
                                text=True, errors="replace", cwd=str(buildDir))
     if completed.returncode == 0:
         return None

@@ -117,7 +117,10 @@ if(SW_ENABLE_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Test")
 	include(CTest)
 	set(CTEST_TEST_TIMEOUT 180)
 	enable_testing()
-	add_subdirectory(Test)
+	# 시험 실행 파일은 기본 `all` 에 넣지 않는다 — 개발 빌드가 시험 TU 까지 짓지 않게. `AllTests` 타깃 · 시험 프리셋(build 프리셋의 `targets`) ·
+	# ctest 의 빌드 픽스처가 짓는다(`sw_registerTestBuildFixture`, 이유는 docs/09_Decisions.md).
+	add_subdirectory(Test EXCLUDE_FROM_ALL)
+	sw_registerTestBuildFixture()
 	# 린트 시험 — 목록은 `Scripts/lint/gate/` · `selftest/` 폴더다(GenerateLintTargets.py 가 만든 LintTargets.cmake 의 등록 함수).
 	sw_registerGeneratedLintTests()
 endif()

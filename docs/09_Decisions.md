@@ -192,6 +192,12 @@
 - **Dev `Bin` 은 실행 파일 · 엔진 · 서드파티 DLL 만 두고, 모듈은 `Bin/Modules`, PDB 는 `Bin/Symbols`, 시험은 `TestBin` 에 냅니다**(2026-10-10). 언리얼이 플러그인 DLL 을
   플러그인의 `Binaries/` 에, 유니티가 네이티브 플러그인을 `Plugins/` 에 따로 두는 것과 같습니다. 서드파티 DLL 폴더 · Vulkan 레이어 json 은 옮기지 않았습니다.
   모듈이 쓰는 서드파티 DLL 도 `Bin` 한 벌입니다(vcpkg applocal 이 모듈 옆에 사본을 두지 않게 한다 — 언리얼이 서드파티 DLL 을 `Binaries/ThirdParty` 한 자리에 모으는 것과 같은 방향).
+- **개발 기본 빌드(`all`)는 시험을 짓지 않습니다**(2026-10-10). Debug CPU 시간의 26 %(시험 614 TU)가 시험이었습니다. `Test/` 는 `EXCLUDE_FROM_ALL` 이고,
+  시험 실행 파일은 `AllTests` 타깃이 모읍니다. CI · 검증 프리셋(`CI-*`, `*-Shipping*`, `Ninja-Debug-ASAN`)은 build 프리셋의 `targets`(`all` · `AllTests`)로 시험까지 짓습니다.
+  `ctest` 는 셋업 픽스처(`BuildTestBinaries` — `all` · `AllTests` 를 짓는 항목, 실행 파일 시험이 요구한다)로 먼저 짓습니다. 이미 지은 트리면 몇 초이고, 옛 실행 파일로 통과하는 일도 막습니다.
+  `py -3 -m Scripts test` 도 먼저 짓습니다. 비교한 다른 길은 둘입니다. 캐시 옵션으로 `all` 에 넣고 빼면 프리셋마다 configure 가 갈리고, 같은 폴더에서 바꿀 때 재구성이 돕니다.
+  `all-with-tests` 를 `all` 전부에 의존시키려면 디렉터리를 훑어야 하고, `ALL` 없는 사용자 타깃을 가려낼 수 없습니다(CMake 가 알려 주지 않는다).
+  언리얼은 시험을 별도 타깃으로 짓고, CMake 관례(`BUILD_TESTING`)도 시험을 따로 켭니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
 - **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [백로그](06_Backlog.md) 1-9): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.

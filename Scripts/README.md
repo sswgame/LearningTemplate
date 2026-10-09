@@ -156,6 +156,7 @@ Scripts/
   │     │     │                               #   `--define SW_ENABLE_DEADLOCK_DETECTION` 처럼 어느 프리셋도 켜지 않는 옵션이 아직 컴파일되는지도 묻는다)
   │     │     ├── RunClangTidy.py
   │     │     ├── RunHeaderSelfContained.py   # 혼자 서지 못하는 헤더 (CI header-self-contained 가 매일 --fail-on-violation 으로)
+  │     │     ├── RunIncludeCost.py           # 헤더별 누적 파싱 시간 상위 (전 TU `-ftime-trace`, PCH 없이 구문 검사)
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
@@ -184,7 +185,8 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
-  │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 그 케이스가 사는 실행 파일을 `Bin` 에서
+  │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
+  │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
   │     └── StoreSymbols.py           # 빌드의 PDB · .debug 를 심볼 저장소 배치(GUID+age · .build-id)로
   │

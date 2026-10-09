@@ -84,7 +84,8 @@ py -3 Scripts/setup/SetupEnvironment.py       # toolchain (LLVM/Ninja/sccache) b
 py -3 Scripts/setup/SetupSccache.py --config-only  # after adding/removing a git worktree (configure also does it)
 py -3 Scripts/setup/SetupVcpkg.py --install   # vcpkg manifest restore
 cmake --preset Ninja-Debug
-cmake --build --preset Ninja-Debug
+cmake --build --preset Ninja-Debug           # App · Server · modules — no tests
+cmake --build --preset Ninja-Debug --target all AllTests   # plus the test executables
 ```
 
 - Presets: `Ninja-Debug`, `Ninja-Debug-ASAN`, `Ninja-Release`, `Ninja-Shipping` (Windows clang-cl),
@@ -118,12 +119,15 @@ build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=SceneTest.*      # one su
 build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=-RHIDeviceTest.* # leading '-' excludes
 build/Ninja-Debug/TestBin/EngineTest.exe --test_filter=InputManagerTest.*:WindowTest.*-WindowTest.Recreate*  # gtest form: ':' (or ',') joins, everything after the first '-' excludes
 build/Ninja-Debug/TestBin/EngineTest.exe --test_list                   # enumerate cases
-py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: finds the exe (TestBin) and runs it from Bin
+py -3 -m Scripts test SceneTest.* [--preset Ninja-Shipping]         # by name: builds all + AllTests, finds the exe (TestBin), runs it from Bin
 build/Ninja-Debug/TestBin/CoreTest.exe --test_filter=ProcessTest.* --test_repeat=50  # flaky hunt; a failure names its iteration
 build/Ninja-Debug/TestBin/EngineTest.exe --test_shuffle                # order dependence; prints the seed, --test_shuffle=<seed> replays
 build/Ninja-Debug/TestBin/ReflectionTest.exe --test_shard=0/2          # one shard (also GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS)
 ```
 
+- **The default build does not build tests** (`Test/` is `EXCLUDE_FROM_ALL`; the `AllTests` target collects them). `ctest` builds
+  `all` + `AllTests` first through the setup test `BuildTestBinaries` (skip it with `-FS BuildTestBinaries`); the `CI-*`, `*-Shipping*` and
+  `Ninja-Debug-ASAN` build presets build the tests too. Run the exe directly only after building `AllTests`.
 - Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`, `ServerTest`.
   `ServerTest` launches the built `Server` (Game · Server targets) without a window or GPU and runs under `nogpu` on both platforms;
   the Server target builds no editor or App tests, and its presets run `-L nogpu` only (a server build has no GPU suite).
