@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 블록아웃용 격자 머티리얼(언리얼 WorldGridMaterial 에 해당). 격자는 메시 UV 를 따른다 — 월드 좌표 판은 백로그 1-3. -->
+<MaterialDesc formatVersion="0" name="PrototypeGridLight" shaderPath="engine/shaders/forwardlit.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="roughness" type="Range" shaderType="Float" defaultValue="0.8" min="0.0" max="1.0" group="Surface"/>
+		<item name="albedoMap" type="Texture2D" assetPath="engine/textures/prototype/grid_light.dds" displayName="Albedo" group="Surface" bSrgb="1"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>
