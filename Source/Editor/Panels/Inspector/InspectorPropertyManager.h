@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Container/map.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
@@ -21,6 +21,7 @@ namespace sw::editor
         InspectorPropertyManager()  = default;
         ~InspectorPropertyManager() = default;
 
+        /** @brief 타입 이름에 위젯을 겁니다. 같은 이름이 있으면 바꿉니다. */
         void                registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty );
         IInspectorProperty* find( string_view typeName ) const;
         /** @brief `ReflectBuiltins.xxx` 의 내장 타입마다 위젯을 등록합니다(`InspectorWidgetFor<T>` 가 갈래를 정합니다). */
@@ -30,6 +31,6 @@ namespace sw::editor
         static bool drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot );
 
     private:
-        map<string, unique_ptr<IInspectorProperty>> _mapProperty;
+        NameRegistry<unique_ptr<IInspectorProperty>> _registry; ///< 프로퍼티 타입 이름 → 위젯
     };
 } // namespace sw::editor

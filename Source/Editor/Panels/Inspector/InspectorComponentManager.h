@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Container/map.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -51,6 +51,7 @@ namespace sw::editor
         InspectorComponentManager()  = default;
         ~InspectorComponentManager() = default;
 
+        /** @brief 타입 이름에 확장을 겁니다. 같은 이름이 있으면 바꿉니다. */
         void                 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
         IInspectorComponent* find( string_view typeName ) const;
         /**
@@ -62,7 +63,7 @@ namespace sw::editor
         void registerDefaults();
 
     private:
-        map<string, unique_ptr<IInspectorComponent>> _mapInspector;
+        NameRegistry<unique_ptr<IInspectorComponent>> _registry; ///< 컴포넌트 타입 이름 → 확장
     };
 } // namespace sw::editor
 

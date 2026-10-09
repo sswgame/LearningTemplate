@@ -593,15 +593,13 @@ namespace sw::editor
 
     void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
     {
-        _mapProperty[string{ typeName }] = std::move( pProperty );
+        _registry.addOrReplace( hashed_string( typeName ), std::move( pProperty ) );
     }
 
     IInspectorProperty* InspectorPropertyManager::find( string_view typeName ) const
     {
-        const auto it = _mapProperty.find( string{ typeName } );
-        if ( it != _mapProperty.end() )
-            return it->second.get();
-        return nullptr;
+        const unique_ptr<IInspectorProperty>* pProperty = _registry.find( hashed_string( typeName ) );
+        return pProperty != nullptr ? pProperty->get() : nullptr;
     }
 
     void InspectorPropertyManager::registerDefaults()

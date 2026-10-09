@@ -11,15 +11,13 @@ namespace sw::editor
 {
     void InspectorComponentManager::registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector )
     {
-        _mapInspector[string{ typeName }] = std::move( pInspector );
+        _registry.addOrReplace( hashed_string( typeName ), std::move( pInspector ) );
     }
 
     IInspectorComponent* InspectorComponentManager::find( string_view typeName ) const
     {
-        const auto it = _mapInspector.find( string{ typeName } );
-        if ( it != _mapInspector.end() )
-            return it->second.get();
-        return nullptr;
+        const unique_ptr<IInspectorComponent>* pInspector = _registry.find( hashed_string( typeName ) );
+        return pInspector != nullptr ? pInspector->get() : nullptr;
     }
 
     void InspectorComponentManager::collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const
