@@ -109,7 +109,8 @@ cd build/Ninja-Debug/Bin
 - **런타임 UI 벤치**(2026-10-07, Release · DX12 · VSync 꺼짐 · 600 프레임 × 세 번, i5-8500): `-gv_benchUiWidgets=10000`(엔진 `UiBenchScreen` — 스크롤 밖이 대부분) ·
   `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`(Empty 벤치 큐브에 화면 마커). 글 10 칸/프레임: `GT.Ui.Paint` p50 12.6 → 1.6 ms(자르기 밖 자식 컬링),
   `GT.Ui.Layout` 0.11 ms(30 위젯), `RT.Canvas` Upload 0.05 + Draw 0.013 ms. 바뀜 없음(대조군): `GT.Ui.Paint` 2.1 → 0.12 ms(바뀌지 않은 트리 출력 재사용), 업로드 p50 0.
-  마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 구간 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Ui.CanvasQuads`(값은 per_frame 열).
+  마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 2026-10-10(보이는 자식 이분 탐색 · 그리기 목록 통째 복사 뒤, 세 번): 글 10 칸/프레임 `GT.Ui.Paint` p50 0.29~0.36 · p99 0.66~0.79 ms,
+  `GT.Ui.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 구간 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Ui.CanvasQuads`(값은 per_frame 열).
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.
