@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Input/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyMap.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

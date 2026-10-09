@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Physics/CollisionLayers.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

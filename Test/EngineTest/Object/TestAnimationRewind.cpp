@@ -5,8 +5,8 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
-#include "Engine/Animation/Pose.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"

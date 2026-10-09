@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 
 namespace sw
 {

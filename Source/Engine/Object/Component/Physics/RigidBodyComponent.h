@@ -12,10 +12,10 @@
 
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
 #include "Engine/Object/Component/Physics/SocketPhysicsBody.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Physics/PhysicsDesc.h"
-#include "Engine/Physics/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

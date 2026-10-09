@@ -20,7 +20,7 @@
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"

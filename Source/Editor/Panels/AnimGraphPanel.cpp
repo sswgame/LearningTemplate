@@ -12,7 +12,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 
 #include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>

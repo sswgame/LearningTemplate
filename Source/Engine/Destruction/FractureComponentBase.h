@@ -31,7 +31,7 @@
 #include "Core/Network/Replication/TickRingBuffer.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/DestructionProfile.h"
 #include "Engine/Destruction/DestructionState.h"

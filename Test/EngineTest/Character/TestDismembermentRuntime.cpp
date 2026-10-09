@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/DismembermentComponent.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
@@ -14,8 +14,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/AnimationTestUtil.h"

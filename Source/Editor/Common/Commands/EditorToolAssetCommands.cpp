@@ -17,8 +17,8 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"

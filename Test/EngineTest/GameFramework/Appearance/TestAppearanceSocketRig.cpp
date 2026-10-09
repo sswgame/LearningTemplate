@@ -3,7 +3,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/Socket/SocketSet.h"

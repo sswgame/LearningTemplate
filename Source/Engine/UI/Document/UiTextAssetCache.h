@@ -10,7 +10,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {

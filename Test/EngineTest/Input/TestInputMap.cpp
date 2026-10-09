@@ -5,7 +5,7 @@
 
 #include "Engine/EngineLoop.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 
 #include "TestFramework/TestFramework.h"

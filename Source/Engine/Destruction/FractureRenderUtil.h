@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Destruction/FractureAsset.h"
 
 namespace sw

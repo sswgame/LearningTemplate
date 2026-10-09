@@ -5,7 +5,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 
 namespace sw
 {

@@ -163,7 +163,7 @@ pRagdoll->setPhysicsAssetPath( "game/shooter3d/characters/skeleton_warrior/skele
 - **떼기**는 지금 월드 위치에서 출발하므로 튀지 않습니다.
 - **물리로 떼기**는 `ISocketPhysicsBody`(`Object/Component/Physics/SocketPhysicsBody.h`)에 맡깁니다. 강체 컴포넌트가 이 인터페이스를 구현하고, 시작할 때 같은 오브젝트의 `RigidBodyComponent` 를 자동으로 연결합니다.
   붙어 있는 동안은 키네마틱으로 손을 따르고, 떼면 동적 바디가 되어 시작 속도를 받고, 되돌아가면 다시 키네마틱이 됩니다. 강체는 그 유닛의 루트에 둡니다.
-- **되돌아가기**는 지금 월드 위치에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/BlendCurve.h`)으로 섞습니다.
+- **되돌아가기**는 지금 월드 위치에서 소켓까지 `BlendCurveSpec`(카메라 블렌드와 같은 구현, `Engine/Animation/Graph/BlendCurve.h`)으로 섞습니다.
 - **주인 바꾸기**(`transferTo`)는 다시 스폰하지 않습니다. 땅에 떨어진 무기를 줍거나 다른 캐릭터에게 넘길 때 씁니다.
 
 2D 도 같습니다. 2D 오브젝트도 씬 컴포넌트(X, Y 와 Z축 회전)를 쓰기 때문입니다.

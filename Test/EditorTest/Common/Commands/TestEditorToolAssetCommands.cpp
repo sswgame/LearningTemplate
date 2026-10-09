@@ -6,8 +6,8 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"

@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/Image/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/HostTargetTestUtil.h"

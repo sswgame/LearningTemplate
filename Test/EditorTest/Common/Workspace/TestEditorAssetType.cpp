@@ -10,7 +10,7 @@
 
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 #include "TestFramework/TestFramework.h"
 

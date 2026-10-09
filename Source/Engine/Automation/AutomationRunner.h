@@ -12,7 +12,7 @@
 #include "Core/Delegate/Delegate.h"
 
 #include "Engine/Automation/AutomationScenario.h"
-#include "Engine/Input/VirtualInputScript.h"
+#include "Engine/Input/Virtual/VirtualInputScript.h"
 
 namespace sw
 {

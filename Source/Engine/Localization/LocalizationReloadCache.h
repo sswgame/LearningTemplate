@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 namespace sw
 {

@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureComponent.h"
 #include "Engine/Destruction/MeshFracture.h"

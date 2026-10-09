@@ -8,7 +8,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"

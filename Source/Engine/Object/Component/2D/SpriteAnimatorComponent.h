@@ -8,9 +8,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/AnimGraphPlayer.h"
-#include "Engine/Animation/SpriteClipPlayable.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Sprite/SpriteClipPlayable.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"

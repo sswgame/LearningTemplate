@@ -8,7 +8,7 @@
     #include "Core/Container/StringUtil.h"
 
     #include "Engine/Input/InputManager.h"
-    #include "Engine/Input/InputMap.h"
+    #include "Engine/Input/Map/InputMap.h"
     #include "Engine/Window/DevConsoleWindow.h"
     #include "Engine/Window/IWindow.h"
 

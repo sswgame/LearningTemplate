@@ -2,7 +2,7 @@
 
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 

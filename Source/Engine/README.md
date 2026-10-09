@@ -176,7 +176,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 코드로 만드는 값은 `WeakInternCache` 로 보관합니다. 내장 도형, 9-슬라이스 메시, 스프라이트 텍스처 인스턴스가 여기에 속합니다. 둘 다 `WeakInternTable` 위에 있습니다.
 `WeakInternCache` 는 `IAssetCache` 이므로 `AssetManager` 가 생성자에서 내장 캐시(`_listBuiltInAssetCache`)로 등록하고, 종료할 때 약한 참조 항목까지 지웁니다.
 
-기능 에셋 캐시는 자기 기능 폴더에 있고 `Resource` 의 `IAssetCache` 를 구현합니다. 스켈레톤 · 클립 · 리그는 `Animation/AnimationAssetCache`, 스프라이트 클립은 `Animation/SpriteClipCache` 입니다.
+기능 에셋 캐시는 자기 기능 폴더에 있고 `Resource` 의 `IAssetCache` 를 구현합니다. 스켈레톤 · 클립 · 리그는 `Animation/AnimationAssetCache`, 스프라이트 클립은 `Animation/Sprite/SpriteClipCache` 입니다.
 `Localization/LocalizationReloadCache` 는 로컬라이제이션 파일의 핫 리로드 진입점입니다. 글 자체는 `LocalizationManager` 가 가지고, 이 캐시의 `clear()` 는 아무것도 지우지 않습니다.
 `AssetManager.cpp` 는 이 캐시들을 소유하는 배선 파일이라 티어 예외입니다. `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
 

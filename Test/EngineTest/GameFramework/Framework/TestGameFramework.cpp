@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"

@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 

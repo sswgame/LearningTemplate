@@ -20,8 +20,8 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsDesc.h"
-#include "Engine/Physics/PhysicsShape.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

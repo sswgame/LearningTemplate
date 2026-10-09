@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
-#include "Engine/Animation/SpriteClipCache.h"
+#include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
@@ -20,8 +20,8 @@
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/ResourcePackManager.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
+#include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw

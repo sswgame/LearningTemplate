@@ -14,9 +14,9 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Input/VirtualInputScript.h"
+#include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Navigation/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"

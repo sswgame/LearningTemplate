@@ -4,7 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 
 namespace sw

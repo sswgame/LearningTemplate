@@ -19,7 +19,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

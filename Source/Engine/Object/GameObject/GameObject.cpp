@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Reflection/ReflectionCore.h"
 
 namespace sw

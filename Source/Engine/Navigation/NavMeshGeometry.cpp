@@ -6,7 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Physics/PhysicsShape.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw
 {

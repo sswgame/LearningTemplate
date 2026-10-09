@@ -7,8 +7,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Physics/AABB.h"
-#include "Engine/Physics/CollisionLayers.h"
+#include "Engine/Physics/Collision/AABB.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
 
 namespace sw
 {

@@ -10,9 +10,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/AnimGraphPlayer.h"
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

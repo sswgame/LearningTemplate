@@ -20,7 +20,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

@@ -22,8 +22,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Physics/Collision/PhysicsContact.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsContact.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
 #include <box2d/box2d.h>

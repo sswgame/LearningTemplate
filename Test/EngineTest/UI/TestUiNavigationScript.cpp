@@ -7,9 +7,9 @@
 
 #include "Engine/Automation/AutomationScenario.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSlotUtil.h"
-#include "Engine/Input/VirtualInputScript.h"
+#include "Engine/Input/Map/InputMap.h"
+#include "Engine/Input/Virtual/VirtualInputScript.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/UI/Automation/UiAutomationSteps.h"

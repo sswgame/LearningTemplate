@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Animation/BlendCurve.h"
+#include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw

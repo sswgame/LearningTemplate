@@ -93,7 +93,7 @@ cd build/Ninja-Debug/Bin
 | | `Sound` | Play → OnPlay | sound |
 | | `Enable` | Enable, Toggle → Enabled | startEnabled |
 
-`Mover` 의 speed 는 호 길이 기준 m/s 이고, mode 는 `Once`, `Loop`, `PingPong` 중 하나입니다. curve 는 엔진 `BlendCurve` 의 이름입니다(`Engine/Animation/BlendCurve.h`).
+`Mover` 의 speed 는 호 길이 기준 m/s 이고, mode 는 `Once`, `Loop`, `PingPong` 중 하나입니다. curve 는 엔진 `BlendCurve` 의 이름입니다(`Engine/Animation/Graph/BlendCurve.h`).
 `Door` 의 openRotation 과 `Rotator` 의 각도는 도 단위입니다. `Rotator` 의 targetAngle 이 0 이면 계속 돕니다. `Elevator` 의 floors 는 `"0 4 8"` 처럼 층 높이 목록입니다.
 
 ### 평가 순서와 상태

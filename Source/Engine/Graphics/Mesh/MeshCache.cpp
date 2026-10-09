@@ -11,7 +11,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/WeakInternTable.h"
+#include "Engine/Resource/Cache/WeakInternTable.h"
 
 namespace sw
 {

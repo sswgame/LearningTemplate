@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Physics/ContinuousCollision.h"
+#include "Engine/Physics/Collision/ContinuousCollision.h"
 
 namespace sw
 {

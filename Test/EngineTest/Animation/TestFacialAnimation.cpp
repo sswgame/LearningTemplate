@@ -6,7 +6,7 @@
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

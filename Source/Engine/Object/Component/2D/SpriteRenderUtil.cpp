@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Resource/WeakInternCache.h"
+#include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
 {

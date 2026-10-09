@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Animation/SpriteClipCache.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

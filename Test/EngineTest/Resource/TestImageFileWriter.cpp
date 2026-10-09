@@ -2,8 +2,8 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Resource/DdsLoader.h"
-#include "Engine/Resource/ImageFileWriter.h"
+#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/ImageFileWriter.h"
 
 #include "TestFramework/TestFramework.h"
 

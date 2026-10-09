@@ -9,7 +9,7 @@
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCore.h"

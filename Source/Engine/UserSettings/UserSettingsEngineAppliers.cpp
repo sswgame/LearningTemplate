@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Audio/IAudioSystem.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 

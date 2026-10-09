@@ -27,7 +27,7 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

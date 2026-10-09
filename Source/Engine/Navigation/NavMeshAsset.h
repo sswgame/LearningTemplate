@@ -17,7 +17,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Navigation/INavMesh.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
-#include "Engine/Animation/Skeleton.h"
-#include "Engine/Animation/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

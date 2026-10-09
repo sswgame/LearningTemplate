@@ -9,7 +9,7 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/BlendCurve.h"
+#include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"

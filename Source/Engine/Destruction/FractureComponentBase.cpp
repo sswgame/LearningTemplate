@@ -8,7 +8,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureRenderUtil.h"
@@ -20,8 +20,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsShape.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

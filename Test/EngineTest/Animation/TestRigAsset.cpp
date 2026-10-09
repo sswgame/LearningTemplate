@@ -3,11 +3,11 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/AnimationTestUtil.h"

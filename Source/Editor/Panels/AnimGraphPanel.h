@@ -5,8 +5,8 @@
 
 #include "Editor/Common/Gui/EditorGraphDocumentPanel.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimGraphPlayer.h"
 
 namespace sw::editor
 {

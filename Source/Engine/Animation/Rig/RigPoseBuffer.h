@@ -9,7 +9,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 
 namespace sw
 {

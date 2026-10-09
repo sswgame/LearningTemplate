@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/Image/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw

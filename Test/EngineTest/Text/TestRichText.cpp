@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/TextLayout.h"
 

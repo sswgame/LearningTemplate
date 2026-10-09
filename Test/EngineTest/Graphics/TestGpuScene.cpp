@@ -9,7 +9,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"

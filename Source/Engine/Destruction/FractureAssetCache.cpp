@@ -3,7 +3,7 @@
 #include "Engine/Destruction/FractureAssetCache.h"
 
 #include "Engine/Destruction/FractureAsset.h"
-#include "Engine/Resource/SharedAssetTable.h"
+#include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
 {

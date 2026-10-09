@@ -10,7 +10,7 @@
     #include "Engine/Input/Devices/KeyboardDevice.h"
     #include "Engine/Input/Devices/MouseDevice.h"
     #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Input/InputKeyMap.h"
+    #include "Engine/Input/Map/InputKeyMap.h"
     #include "Engine/Input/Linux/LinuxJoystickGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"

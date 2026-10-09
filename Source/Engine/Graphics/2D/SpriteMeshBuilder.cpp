@@ -7,7 +7,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Resource/WeakInternCache.h"
+#include "Engine/Resource/Cache/WeakInternCache.h"
 
 namespace sw
 {

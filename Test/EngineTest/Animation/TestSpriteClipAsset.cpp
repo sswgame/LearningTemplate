@@ -3,8 +3,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Animation/SpriteClipCache.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 

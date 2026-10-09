@@ -241,19 +241,19 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 
 ### 바인딩 종류 하나 더하기
 
-1. `InputMap.h` 의 `BindingKind` 에 값을 더하고, `kArrBindingKindInfo` 테이블에 한 줄을 더합니다. 테이블 크기는 `static_assert` 가 확인합니다.
+1. `Map/InputMap.h` 의 `BindingKind` 에 값을 더하고, `kArrBindingKindInfo` 테이블에 한 줄을 더합니다. 테이블 크기는 `static_assert` 가 확인합니다.
 2. `bind*` 함수는 `beginBinding` 으로 시작해 종류별 필드만 채우고 `commitBinding` 으로 끝냅니다.
    바인딩은 현재 값, 기본값, 상태 세 목록에 같은 인덱스로 들어가므로 목록에 직접 `push_back` 하지 않습니다.
-3. 평가(`InputMapEvaluate.cpp`)와 저장, 로드(`InputMapSerialization.cpp`)의 `switch` 에 경우를 더합니다. 모든 열거자를 다룬 `switch` 에는 `default:` 를 두지 않으므로(`-Werror=switch`), 경우를 빠뜨리면 빌드가 실패합니다.
+3. 평가(`Map/InputMapEvaluate.cpp`)와 저장, 로드(`Map/InputMapSerialization.cpp`)의 `switch` 에 경우를 더합니다. 모든 열거자를 다룬 `switch` 에는 `default:` 를 두지 않으므로(`-Werror=switch`), 경우를 빠뜨리면 빌드가 실패합니다.
 4. 상대값이면 `BindingKinds::isRelative` 가 참을 돌려주게 합니다.
 
-`InputMap` 은 클래스 하나지만 구현 파일을 책임별로 나눴습니다. 등록과 레이어는 `InputMap.cpp`, 매 프레임 평가는 `InputMapEvaluate.cpp`,
-파일 읽기와 쓰기는 `InputMapSerialization.cpp`, 선입력과 커맨드 입력은 `InputMapCombo.cpp`, UI 프롬프트 문자열은 `InputMapGlyph.cpp` 입니다.
+`InputMap` 은 클래스 하나지만 구현 파일을 책임별로 나눴습니다. 등록과 레이어는 `Map/InputMap.cpp`, 매 프레임 평가는 `Map/InputMapEvaluate.cpp`,
+파일 읽기와 쓰기는 `Map/InputMapSerialization.cpp`, 선입력과 커맨드 입력은 `Map/InputMapCombo.cpp`, UI 프롬프트 문자열은 `Map/InputMapGlyph.cpp` 입니다.
 
 ### 원시 사건 종류 하나 더하기
 
 `RawInputEventType` 에는 값을 뒤에만 더합니다. 입력 리플레이 파일이 이 번호를 저장하기 때문입니다.
-`RawInputEvent` 의 메모리 배치가 바뀌면 `InputReplay.cpp` 의 `kReplayVersion`(지금 4)을 올립니다. 리플레이 파일이 `RawInputEvent` 를 통째로 저장하기 때문입니다.
+`RawInputEvent` 의 메모리 배치가 바뀌면 `Virtual/InputReplay.cpp` 의 `kReplayVersion`(지금 4)을 올립니다. 리플레이 파일이 `RawInputEvent` 를 통째로 저장하기 때문입니다.
 
 ## 함정과 주의
 
@@ -298,9 +298,9 @@ Win32는 BMP 밖의 글자(이모지, 확장 한자)를 서로게이트 `WM_CHAR
 | 파일 | 내용 |
 |---|---|
 | `InputManager.h` | 장치, 큐, 가상 입력, 키보드 포커스, 마우스 잠금 |
-| `InputMap.h` | 바인딩 종류, 트리거, 액션 상태, 레이어 |
+| `Map/InputMap.h` | 바인딩 종류, 트리거, 액션 상태, 레이어 |
 | `RawInputEvent.h` | 원시 사건과 `make*()` 팩토리 함수 |
-| `VirtualInputScript.h` | 프레임 번호에 적은 가상 사건 |
-| `InputReplay.h` | 입력 층 녹화와 재생 |
+| `Virtual/VirtualInputScript.h` | 프레임 번호에 적은 가상 사건 |
+| `Virtual/InputReplay.h` | 입력 층 녹화와 재생 |
 | `Test/EngineTest/Input/` | 기능별 사용 예(테스트) |
 | `Source/Editor/Panels/InputMapPanel.cpp` | 액션 바인딩을 편집하고 시험하는 에디터 패널 |

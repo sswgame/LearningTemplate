@@ -13,7 +13,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePackManager.h"
 
 #include "sw/config/CookContract.gen.h"
 

@@ -2,7 +2,7 @@
 
 #include "Engine/Destruction/Fracture2DComponent.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/FractureRenderUtil.h"
 #include "Engine/Destruction/PolygonFracture.h"

@@ -24,8 +24,8 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/ResourcePackManager.h"
-#include "Engine/Resource/ResourcePackReader.h"
+#include "Engine/Resource/Pack/ResourcePackManager.h"
+#include "Engine/Resource/Pack/ResourcePackReader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/ResourcePackTestUtil.h"

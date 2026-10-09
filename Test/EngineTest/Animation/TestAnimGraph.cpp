@@ -2,8 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Animation/AnimGraphAsset.h"
-#include "Engine/Animation/AnimGraphPlayer.h"
+#include "Engine/Animation/Graph/AnimGraphAsset.h"
+#include "Engine/Animation/Graph/AnimGraphPlayer.h"
 
 #include "EngineTest/AnimationTestUtil.h"
 

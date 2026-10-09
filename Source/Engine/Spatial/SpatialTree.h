@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

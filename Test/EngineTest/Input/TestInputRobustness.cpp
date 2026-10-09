@@ -5,10 +5,10 @@
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
-#include "Engine/Input/InputReplay.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Input/VirtualInputScript.h"
+#include "Engine/Input/Virtual/InputReplay.h"
+#include "Engine/Input/Virtual/VirtualInputScript.h"
 
 #include "TestFramework/TestFramework.h"
 

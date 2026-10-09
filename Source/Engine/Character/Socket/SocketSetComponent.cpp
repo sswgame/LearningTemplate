@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Socket/SocketSet.h"

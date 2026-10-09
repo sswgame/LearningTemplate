@@ -242,7 +242,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 `PortraitRenderer` 는 프리팹 하나를 격리된 스튜디오에서 그려 RGBA8로 읽어 옵니다. 명령은 `App --render-portraits=<prefab,..> [--portrait-size=N] [--portrait-dir=D]` 이고, 런타임 진입점은 `EngineLoop::renderPortraits` 입니다.
 격리는 두 가지입니다. `SceneManager` 에 등록하지 않은 별도 `Scene` 이라 게임 씬의 빛과 안개, 오브젝트가 끼어들지 않고, 게임 틱과 저장, 에디터도 이 씬을 보지 않습니다.
 또 별도 `FrameRenderer` 인스턴스라 주 렌더러의 TAA 기록, 풀, `GpuScene` 을 건드리지 않습니다. 직접 경로 `execute( pScene )` 에 출력 크기만 덮어씁니다.
-같은 디바이스를 쓰므로 렌더 스레드를 멈추고(`RenderThread::waitIdle`) 그립니다. 메시 로컬 경계 상자를 감싸는 구로 프레이밍하고, 키 라이트 하나와 환경광만 비춥니다. 파일은 `Resource/ImageFileWriter` 로 PNG나 DDS로 씁니다.
+같은 디바이스를 쓰므로 렌더 스레드를 멈추고(`RenderThread::waitIdle`) 그립니다. 메시 로컬 경계 상자를 감싸는 구로 프레이밍하고, 키 라이트 하나와 환경광만 비춥니다. 파일은 `Resource/Image/ImageFileWriter` 로 PNG나 DDS로 씁니다.
 
 ### Cook/ — 무엇을 쿠킹할지
 

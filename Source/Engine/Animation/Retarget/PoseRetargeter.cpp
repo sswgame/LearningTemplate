@@ -7,7 +7,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 
 namespace sw
 {

@@ -8,7 +8,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 
 namespace sw::editor
 {

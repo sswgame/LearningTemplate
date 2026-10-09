@@ -5,7 +5,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/AnimNotify/AnimNotifyComponent.h"
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"

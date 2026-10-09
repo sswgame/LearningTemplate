@@ -19,10 +19,10 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Physics/CollisionLayers.h"
-#include "Engine/Physics/PhysicsContact.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/Collision/PhysicsContact.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/PhysicsDesc.h"
-#include "Engine/Physics/PhysicsQuery.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
 namespace sw

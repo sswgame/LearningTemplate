@@ -5,7 +5,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Hit/Dismemberment.h"
@@ -16,7 +16,7 @@
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/PhysicsAsset.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
 
 namespace sw
 {

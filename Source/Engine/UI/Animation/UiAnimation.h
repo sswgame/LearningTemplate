@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/BlendCurve.h"
+#include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -24,7 +24,7 @@ namespace sw
         float32 _time{ 0.0f };
         PROPERTY( DisplayName = "Value", Tooltip = "Value in the target property's text form (0.5 · 0,12 · 1,0,0,1 · Collapsed)" )
         string _value{};
-        PROPERTY( DisplayName = "Curve", Tooltip = "Curve from the previous key to this key (Animation/BlendCurve — the camera and sequencer curves)" )
+        PROPERTY( DisplayName = "Curve", Tooltip = "Curve from the previous key to this key (Animation/Graph/BlendCurve — the camera and sequencer curves)" )
         BlendCurve _curve{ BlendCurve::EaseInOut };
     };
 } // namespace sw

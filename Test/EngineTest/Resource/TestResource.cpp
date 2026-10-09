@@ -11,8 +11,8 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/DdsLoader.h"
-#include "Engine/Resource/ResourcePackManager.h"
+#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/HostTargetTestUtil.h"

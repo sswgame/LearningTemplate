@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 

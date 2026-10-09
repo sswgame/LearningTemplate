@@ -53,7 +53,7 @@ namespace sw
 
             /**
              * @brief 광선을 축 하나의 슬랩으로 잘라 [inoutNear, inoutFar] 를 좁힙니다. 이 축에서 빗나가면 false 입니다.
-             * @details 슬랩 검사는 축마다 똑같아 세 축이 이것 하나를 씁니다(`Physics/ContinuousCollision.cpp` 의 `clipSlab` 과 같은 모양).
+             * @details 슬랩 검사는 축마다 똑같아 세 축이 이것 하나를 씁니다(`Physics/Collision/ContinuousCollision.cpp` 의 `clipSlab` 과 같은 모양).
              *          이 축으로 나아가지 않으면 시작 좌표가 슬랩 안에 있는지만 봅니다.
              */
             static bool clipRaySlab( float32 origin, float32 direction, float32 slabMin, float32 slabMax, float32& inoutNear,

@@ -10,7 +10,7 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/Image/DdsLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

@@ -9,7 +9,7 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Window/IWindow.h"
 
 // 이 파일은 플랫폼 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금 · 표시,

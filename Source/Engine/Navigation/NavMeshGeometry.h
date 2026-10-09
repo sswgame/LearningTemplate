@@ -12,7 +12,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Navigation/NavigationTypes.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 namespace sw
 {

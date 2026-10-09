@@ -6,8 +6,8 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
-#include "Engine/Physics/PhysicsAsset.h"
-#include "Engine/Resource/SharedAssetTable.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
+#include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
 {

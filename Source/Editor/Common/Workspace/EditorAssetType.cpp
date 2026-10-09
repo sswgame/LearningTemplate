@@ -12,7 +12,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Environment/Terrain/HeightfieldData.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

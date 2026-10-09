@@ -8,9 +8,9 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 
-#include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

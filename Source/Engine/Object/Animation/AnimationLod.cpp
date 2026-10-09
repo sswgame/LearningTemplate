@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Animation/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 

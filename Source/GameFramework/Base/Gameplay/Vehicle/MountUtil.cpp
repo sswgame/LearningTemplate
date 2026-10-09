@@ -12,9 +12,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsQuery.h"
-#include "Engine/Physics/PhysicsShape.h"
 
 #include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"

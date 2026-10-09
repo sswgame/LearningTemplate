@@ -12,7 +12,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"

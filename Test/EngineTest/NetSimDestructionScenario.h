@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
-#include "Engine/Physics/CollisionLayers.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"

@@ -7,7 +7,7 @@
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Object/Component/3D/SkeletalAnimatorComponent.h"
@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
 namespace sw

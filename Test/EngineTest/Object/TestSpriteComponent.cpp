@@ -2,8 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Animation/SpriteClipCache.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"

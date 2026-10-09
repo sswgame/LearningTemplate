@@ -7,7 +7,7 @@
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
-#include "Engine/Physics/ContinuousCollision.h"
+#include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsWorld.h"
 

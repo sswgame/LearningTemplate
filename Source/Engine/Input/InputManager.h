@@ -16,9 +16,9 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
-#include "Engine/Input/IVirtualInputSource.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw
 {

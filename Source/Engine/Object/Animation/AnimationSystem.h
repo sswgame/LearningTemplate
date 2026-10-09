@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationDebugState.h"
 #include "Engine/Object/Animation/AnimationLod.h"

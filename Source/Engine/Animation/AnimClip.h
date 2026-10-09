@@ -11,7 +11,7 @@
 
 #include "Engine/Animation/AnimPlayback.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 
 namespace sw
 {

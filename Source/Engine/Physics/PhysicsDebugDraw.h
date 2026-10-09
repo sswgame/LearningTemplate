@@ -10,7 +10,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Physics/PhysicsShape.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw
 {

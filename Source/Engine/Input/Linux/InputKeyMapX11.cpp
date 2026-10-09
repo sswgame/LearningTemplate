@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Input/InputKeyMap.h"
+#include "Engine/Input/Map/InputKeyMap.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/X11Headers.h"

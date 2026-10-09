@@ -6,9 +6,9 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Skeleton.h"
-#include "Engine/Animation/SkeletonBoneLod.h"
-#include "Engine/Resource/SharedAssetTable.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Resource/Cache/SharedAssetTable.h"
 
 namespace sw
 {

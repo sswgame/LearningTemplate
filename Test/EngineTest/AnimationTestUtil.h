@@ -6,10 +6,10 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimGraphPlayer.h"
 #include "Engine/Animation/AnimPlayback.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
-#include "Engine/Animation/Skeleton.h"
+#include "Engine/Animation/Graph/AnimGraphPlayer.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 
 namespace test
 {

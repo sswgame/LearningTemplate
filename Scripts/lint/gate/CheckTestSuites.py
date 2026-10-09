@@ -410,7 +410,7 @@ class CheckTestSuitesGate(LintGate):
             "name": "CoreTest 가 Engine 헤더를 include",
             "files": {
                 **_kCleanFixture,
-                "Test/CoreTest/TestProbe.cpp": '#include "Engine/Physics/AABB.h"\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n',
+                "Test/CoreTest/TestProbe.cpp": '#include "Engine/Physics/Collision/AABB.h"\nSW_TEST_CASE( ProbeTest, One )\n{\n}\n',
             },
         },
         {

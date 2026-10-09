@@ -101,10 +101,10 @@ pBoxBody->addImpulse( float3{ 0.0f, 5.0f, 0.0f } );
 | 파일 | 내용 |
 |---|---|
 | `PhysicsTypes.h` | 핸들, 바디 종류, 관절 종류, 모터, 접촉 단계 |
-| `PhysicsShape.h` | 셰이프 서술자 |
+| `Collision/PhysicsShape.h` | 셰이프 서술자 |
 | `PhysicsDesc.h` | 바디, 관절, 캐릭터 서술자 |
-| `PhysicsQuery.h` | 질의 필터, 레이 캐스트와 셰이프 캐스트 결과 |
-| `PhysicsContact.h` | 접촉과 트리거 이벤트 |
+| `Collision/PhysicsQuery.h` | 질의 필터, 레이 캐스트와 셰이프 캐스트 결과 |
+| `Collision/PhysicsContact.h` | 접촉과 트리거 이벤트 |
 | `IPhysicsScene.h` | 씬 인터페이스 |
 
 3D 셰이프는 상자, 구, 캡슐, 볼록 껍질, 삼각 메시이고 2D 셰이프는 상자, 원, 캡슐, 다각형, 사슬입니다.
@@ -285,7 +285,7 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 |---|---|
 | `IPhysicsScene.h` | 씬 인터페이스 |
 | `PhysicsSettings.h` | 레이어, 재질, 중력, 서브 스텝 |
-| `PhysicsRagdoll.h` | 래그돌과 히트박스 빌더 |
+| `Asset/PhysicsRagdoll.h` | 래그돌과 히트박스 빌더 |
 | `PhysicsWorld.h` | 겹침 월드 |
-| `ContinuousCollision.h` | AABB 와 구의 스윕 |
+| `Collision/ContinuousCollision.h` | AABB 와 구의 스윕 |
 | `Object/GameObject/ScenePhysics.h` | 씬의 물리, 고정 스텝 |

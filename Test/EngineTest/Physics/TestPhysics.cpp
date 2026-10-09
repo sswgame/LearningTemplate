@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Engine/Physics/AABB.h"
-#include "Engine/Physics/CollisionLayers.h"
-#include "Engine/Physics/ContinuousCollision.h"
+#include "Engine/Physics/Collision/AABB.h"
+#include "Engine/Physics/Collision/CollisionLayers.h"
+#include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 #include "TestFramework/TestFramework.h"

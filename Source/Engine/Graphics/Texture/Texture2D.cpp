@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/Image/DdsLoader.h"
 
 namespace sw
 {

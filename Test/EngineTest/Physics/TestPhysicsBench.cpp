@@ -2,7 +2,7 @@
 
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 #include "TestFramework/TestBench.h"

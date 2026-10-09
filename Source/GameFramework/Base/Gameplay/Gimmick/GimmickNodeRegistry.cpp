@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/BlendCurve.h"
+#include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"

@@ -13,7 +13,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Physics/PhysicsShape.h"
+#include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
 namespace sw

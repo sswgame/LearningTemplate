@@ -5,13 +5,13 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
-#include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"

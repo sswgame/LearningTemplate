@@ -7,8 +7,8 @@
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Math/MathUtil.h"
 
-    #include "Engine/Animation/Pose.h"
-    #include "Engine/Animation/Skeleton.h"
+    #include "Engine/Animation/Skeletal/Pose.h"
+    #include "Engine/Animation/Skeletal/Skeleton.h"
     #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
     #include "Engine/Object/GameObject/GameObject.h"
 

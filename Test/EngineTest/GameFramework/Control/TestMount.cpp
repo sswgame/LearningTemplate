@@ -9,7 +9,7 @@
 
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/Component/Physics/RigidBodyComponent.h"
@@ -18,8 +18,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
+#include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/PhysicsQuery.h"
 
 #include "EngineTest/NavMeshTestUtil.h"
 #include "EngineTest/TestGameObjectMocks.h"

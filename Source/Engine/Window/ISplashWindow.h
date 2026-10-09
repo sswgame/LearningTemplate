@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/DdsLoader.h"
+#include "Engine/Resource/Image/DdsLoader.h"
 
 namespace sw
 {

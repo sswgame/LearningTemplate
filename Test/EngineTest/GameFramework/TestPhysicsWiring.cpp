@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/BlendCurve.h"
+#include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"

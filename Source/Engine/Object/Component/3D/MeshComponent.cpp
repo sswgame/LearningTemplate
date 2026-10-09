@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 

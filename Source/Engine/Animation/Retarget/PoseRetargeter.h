@@ -9,10 +9,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 
 namespace sw
 {

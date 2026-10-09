@@ -6,7 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Physics/PhysicsWorld.h"
 
 namespace sw

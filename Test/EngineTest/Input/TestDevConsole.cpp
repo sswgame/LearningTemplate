@@ -8,7 +8,7 @@
 #include "Engine/EngineLoop.h"
 #include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Window/NativeWindowEvent.h"

@@ -9,8 +9,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 

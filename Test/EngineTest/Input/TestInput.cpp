@@ -6,11 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
-#include "Engine/Input/InputKeyMap.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputKeyMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
-#include "Engine/Input/VirtualJoystick.h"
+#include "Engine/Input/Virtual/VirtualJoystick.h"
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
 #include "Engine/Window/NativeWindowEvent.h"
 

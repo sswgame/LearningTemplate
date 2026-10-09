@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Input/IVirtualInputSource.h"
+#include "Engine/Input/Virtual/IVirtualInputSource.h"
 
 namespace sw
 {

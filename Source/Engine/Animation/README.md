@@ -308,9 +308,9 @@ KayKit 기사가 비탈 위에서 발을 디디고, 움직이는 구를 바라�
 
 | 파일 | 형식이 적힌 곳 |
 |---|---|
-| `.skeleton.json` | `Skeleton.h` |
+| `.skeleton.json` | `Skeletal/Skeleton.h` |
 | `.animclip` | `AnimClip.h` |
-| `.bonelod.json` | `SkeletonBoneLod.h` |
+| `.bonelod.json` | `Skeletal/SkeletonBoneLod.h` |
 | `.mesh` 의 스킨 스트림과 모프 블록 | `Graphics/Mesh/MeshAssetFormat.h` |
 | `.facial.json` | `Facial/FacialRig.h` |
 | `engine/animation/lipsync.json`, `.visemes.json` | `Facial/LipSync.h` |
@@ -394,8 +394,8 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 | `Object/Animation/AnimationSystem.h` | 단계, 유닛 평가, 일 인터페이스 |
 | `Object/Component/3D/SkeletalAnimatorComponent.h` | 재생, 레이어, 파라미터, 알림 |
 | `Object/Component/3D/SkeletalMeshComponent.h` | 유닛, LOD 설정, 군중 공유 |
-| `Pose.h` | 포즈, 섞기, 모델 공간, 스킨 팔레트 |
-| `AnimPlayer.h`, `AnimGraphPlayer.h` | 크로스페이드, 상태 기계 |
+| `Skeletal/Pose.h` | 포즈, 섞기, 모델 공간, 스킨 팔레트 |
+| `AnimPlayer.h`, `Graph/AnimGraphPlayer.h` | 크로스페이드, 상태 기계 |
 | `AnimPlayback.h` | 커서, 알림 트랙 |
 | `Rig/RigAsset.h`, `Rig/RigInstance.h` | 리그 에셋과 실행 상태 |
 | `Object/Animation/AnimationLod.h`, `AnimationCrowd.h` | LOD, 군중 공유 |

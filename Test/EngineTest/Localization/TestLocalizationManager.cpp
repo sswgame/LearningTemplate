@@ -8,7 +8,7 @@
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Resource/IAssetCache.h"
+#include "Engine/Resource/Cache/IAssetCache.h"
 
 #include "EngineTest/GameTestUtil.h"
 #include "EngineTest/LocalizationTestUtil.h"

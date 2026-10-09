@@ -3068,7 +3068,7 @@ Prefab Editor 의 오버라이드 표는 "바뀐 것만" 을 기본으로 하고
 ### N8 Animation Graph 를 런타임 기능에 맞추기(M, 선행 T3)
 
 **무엇.** 패널 점검은 Animation Graph 를 "미완성" 으로 분류했습니다. 노드 추가, 끌기, 연결, 저장과 dirty 표시는 동작합니다.
-런타임 에셋(`Source/Engine/Animation/AnimGraphAsset.h`)은 전이 조건(`_parameter`, `_op`, `_threshold`), 블렌드(`_blendSeconds`), 반복(`_loopOverride`)을 이미 지원하지만 편집기에서는 고칠 수 없습니다.
+런타임 에셋(`Source/Engine/Animation/Graph/AnimGraphAsset.h`)은 전이 조건(`_parameter`, `_op`, `_threshold`), 블렌드(`_blendSeconds`), 반복(`_loopOverride`)을 이미 지원하지만 편집기에서는 고칠 수 없습니다.
 "Link Selected" 는 선택이 아니라 목록의 마지막 두 노드를 잇습니다(`AnimGraphPanel.cpp`). 이 단위에서 상태 이름과 클립 지정, 전이 조건과 블렌드와 반복 편집, 오른쪽 클릭 노드 메뉴, "Link Selected" 고침, 플레이 중 현재 상태와 전이 강조를 넣습니다.
 T3 의 공용 노드 그래프 틀(찾아 넣기, 핀 타입 색, 오류 노드 표시)을 그대로 씁니다. 백로그 1-6 애니메이션의 "에디터 그래프 패널이 조건과 블렌드를 편집" 과 같은 항목이므로, 이 단위를 끝내면 그 줄도 지웁니다.
 

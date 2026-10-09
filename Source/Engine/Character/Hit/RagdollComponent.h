@@ -20,10 +20,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/Physics/PhysicsComponent.h"
-#include "Engine/Physics/PhysicsRagdoll.h"
+#include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Animation/Pose.h"
+#include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 

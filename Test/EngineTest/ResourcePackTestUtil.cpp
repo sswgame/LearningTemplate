@@ -8,7 +8,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/PackCompressionUtil.h"
+#include "Engine/Resource/Pack/PackCompressionUtil.h"
 
 namespace sw::test
 {

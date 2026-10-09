@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Physics/AABB.h"
+#include "Engine/Physics/Collision/AABB.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

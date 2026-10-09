@@ -21,7 +21,7 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"

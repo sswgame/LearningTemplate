@@ -5,8 +5,8 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputMap.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputMap.h"
 
 #include <imgui.h>
 
