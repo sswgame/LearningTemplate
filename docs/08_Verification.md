@@ -99,7 +99,7 @@ cd build/Ninja-Debug/Bin
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
   `EngineLoop::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUi` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
-- **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.13.1 뷰어, `Source/Engine/Utility/Profiling/README.md`). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
+- **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어, `Source/Engine/Utility/Profiling/README.md`). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
   "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. GPU 줄도 쿼리는 한 벌이다
   (엔진 타임스탬프 → Tracy 수동 GPU 컨텍스트). DX11 · Vulkan 은 GPU 시계를 컨텍스트를 열 때 한 번만 맞춰(큐를 기다린다) 긴 실행에서 GPU 줄이 조금씩 밀린다.
 - **GPU 비용은 `GPU.<패스>` 타임스탬프로 나눈다.** 패스를 지워서 나누면 타깃 사슬이 바뀌어 답이 뒤집힌다(추정 38 us, 실측 123 us). `RT.BeginFrame` 은 GPU 시간의 대리값이 아니다.

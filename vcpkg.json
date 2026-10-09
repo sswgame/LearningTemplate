@@ -1,7 +1,7 @@
 {
   "name": "sw-engine",
   "version-string": "1.0.0",
-  "builtin-baseline": "c5a15727ee70fddf0296f0d8aafc3f58916fefac",
+  "builtin-baseline": "0699a19d0c6386247ce50d4dedbb8217d484d536",
   "dependencies": [
     "pugixml",
     "nlohmann-json",

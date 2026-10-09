@@ -154,9 +154,9 @@ p50은 같은 히스토그램 버킷(±9%) 안에 있습니다. 구간 하나의
 
 ### Tracy 뷰어 연결하기
 
-뷰어 바이너리는 저장소에 넣지 않습니다. 클라이언트(vcpkg `tracy` 포트)와 **같은 버전 0.13.1** 의 Windows 릴리스를 받아 씁니다. 버전이 다르면 프로토콜이 맞지 않아 연결되지 않습니다.
+뷰어 바이너리는 저장소에 넣지 않습니다. 클라이언트(vcpkg `tracy` 포트)와 **같은 버전 0.14.1** 의 Windows 릴리스를 받아 씁니다. 버전이 다르면 프로토콜이 맞지 않아 연결되지 않습니다.
 
-1. <https://github.com/wolfpld/tracy/releases/tag/v0.13.1> 에서 `windows-0.13.1.zip` 을 받아 풀고, `tracy-profiler.exe` 를 `Tools/Tracy/` 에 둡니다(git이 무시하는 위치). 다른 곳에 두면 `-gv_tracyViewerPath=<경로>` 로 알려 줍니다.
+1. <https://github.com/wolfpld/tracy/releases/tag/v0.14.1> 에서 `windows-0.14.1.zip` 을 받아 풀고, `tracy-profiler.exe` 를 `Tools/Tracy/` 에 둡니다(git이 무시하는 위치). 다른 곳에 두면 `-gv_tracyViewerPath=<경로>` 로 알려 줍니다.
 2. App을 `-gv_tracy=1` 로 실행합니다. 로그에 `Tracy profiler started (data port 8086 …)` 가 나옵니다.
 3. 뷰어에서 `Connect`(주소 `127.0.0.1`)를 누르거나, `tracy-profiler.exe -a 127.0.0.1` 로 실행합니다.
 
@@ -169,7 +169,7 @@ p50은 같은 히스토그램 버킷(±9%) 안에 있습니다. 구간 하나의
 - **"Open Tracy" 버튼**은 Tracy 출력을 켜고(`ProfilerBackend::startTracy`), 뷰어를 `-a 127.0.0.1 -p <포트>` 로 띄웁니다(`EditorTracyLauncher`). 뷰어는 `-gv_tracyViewerPath`, `Tools/Tracy/tracy-profiler.exe` 순서로 찾습니다.
 
 Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 띄웁니다. 언리얼 에디터가 Insights를 따로 띄우는 것과 같은 방식입니다.
-뷰어 소스(0.13.1 기준 약 23만 줄)는 vcpkg 포트가 라이브러리로 설치하지 않고, 빌드에 열 개 남짓의 의존 라이브러리와 **Tracy가 버전을 고정하고 패치한 ImGui** 를 씁니다.
+뷰어 소스(0.14.1 기준 약 23만 줄)는 vcpkg 포트가 라이브러리로 설치하지 않고, 빌드에 열 개 남짓의 의존 라이브러리와 **Tracy가 버전을 고정하고 패치한 ImGui** 를 씁니다.
 한 프로세스에 ImGui 두 벌은 둘 수 없으므로, 넣으려면 뷰어 소스를 저장소에 가져와 우리 ImGui(vcpkg 1.92 docking)에 맞게 손으로 고쳐야 합니다.
 
 ## 확장하는 법

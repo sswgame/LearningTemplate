@@ -71,6 +71,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("worktree-make", "dev.MakeWorktree", "작업 단위용 git 워크트리를 만들고 도구 · vcpkg 폴더를 main 체크아웃과 나눠 쓰게 연결한다"),
     Subcommand("worktree-remove", "dev.RemoveWorktree", "워크트리를 나눠 쓰는 링크를 먼저 끊고 지운다(브랜치 wt/<이름> 도)"),
     Subcommand("ci-jobs", "dev.ListCiJobs", "GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로 읽는다"),
+    Subcommand("deps-outdated", "dev.ListOutdatedDeps", "vcpkg 의존성의 지금 판과 레지스트리 최신 판을 견준다(오버레이 포함)"),
     Subcommand("defender", "setup.AddDefenderExclusions", "Windows Defender 빌드 디렉터리 제외 등록"),
 )
 

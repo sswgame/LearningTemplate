@@ -147,14 +147,14 @@ namespace sw
                                            [[maybe_unused]] const utf8* pPoolName )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_memory_alloc_named( pPtr, size, 0, pPoolName );
+        ___tracy_emit_memory_alloc_named( pPtr, size, pPoolName );
 #endif
     }
 
     void TracyProfilerBackend::onFree( [[maybe_unused]] const void* pPtr, [[maybe_unused]] const utf8* pPoolName )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_memory_free_named( pPtr, 0, pPoolName );
+        ___tracy_emit_memory_free_named( pPtr, pPoolName );
 #endif
     }
 

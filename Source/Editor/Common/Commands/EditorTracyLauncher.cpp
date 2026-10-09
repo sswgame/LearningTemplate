@@ -16,10 +16,10 @@ namespace sw::editor
     SW_LOG_CALLER( "EditorTracy" );
 
     /**
-     * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 판 0.13.1). 파일이나 그 파일이 든 폴더.
+     * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 판 0.14.1). 파일이나 그 파일이 든 폴더.
      * @details 비우면 `<프로젝트>/Tools/Tracy/` 를 본다. 뷰어는 저장소에 넣지 않는다(`Source/Engine/Utility/Profiling/README.md`).
      */
-    SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "", "Tracy 뷰어(tracy-profiler 0.13.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)" );
 
     const utf8* EditorTracyLauncher::getViewerFileName()
     {
@@ -81,7 +81,7 @@ namespace sw::editor
         string viewerPath;
         if ( findViewerPath( gv_tracyViewerPath, EditorUtil::getProjectRootPath(), viewerPath ) == false )
         {
-            SW_LOG_WARNING( "Tracy viewer not found — download the 0.13.1 Windows release and put %# in Tools/Tracy (or set gv_tracyViewerPath)",
+            SW_LOG_WARNING( "Tracy viewer not found — download the 0.14.1 Windows release and put %# in Tools/Tracy (or set gv_tracyViewerPath)",
                             getViewerFileName() );
             return EditorTracyLaunchResult::ViewerNotFound;
         }
@@ -109,7 +109,7 @@ namespace sw::editor
             case EditorTracyLaunchResult::TracyNotCompiled:
                 return "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)";
             case EditorTracyLaunchResult::ViewerNotFound:
-                return "Tracy viewer not found: put tracy-profiler (0.13.1) in Tools/Tracy or set gv_tracyViewerPath";
+                return "Tracy viewer not found: put tracy-profiler (0.14.1) in Tools/Tracy or set gv_tracyViewerPath";
             case EditorTracyLaunchResult::ViewerLaunchFailed:
                 return "Failed to launch the Tracy viewer (see the log)";
         }

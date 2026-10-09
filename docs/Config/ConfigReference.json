@@ -2872,7 +2872,7 @@
    "type": "string",
    "default": "",
    "kind": "일반",
-   "description": "Tracy 뷰어(tracy-profiler 0.13.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
+   "description": "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)",
    "source": "Source/Editor/Common/Commands/EditorTracyLauncher.cpp"
   },
   {
