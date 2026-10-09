@@ -31,7 +31,9 @@ namespace sw
         }
         SW_LOG_INFO( "Modules: %# active, %# off", outResolution._listLoadOrder.size(), outResolution._listInactive.size() );
         for ( [[maybe_unused]] const ModuleInactiveEntry& inactive : outResolution._listInactive ) // Shipping 은 로그가 빠진다
+        {
             SW_LOG_INFO( "Module %# is off — %#", inactive._name.c_str(), inactive._reason.c_str() );
+        }
         return true;
     }
 } // namespace sw

@@ -47,7 +47,9 @@ namespace
             _salt.assign( pSalt, pSalt + saltSize );
             _info.assign( pInfo, pInfo + infoSize );
             for ( int32 index = 0; index < outSize; ++index )
+            {
                 pOut[index] = static_cast<uint8>( index );
+            }
             return true;
         }
         bool computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut,
@@ -173,7 +175,9 @@ SW_TEST_CASE( NetReplayWindowTest, NonceIsIvXorBigEndianPacketNumber )
 {
     uint8 arrIv[NetSecurityConstant::kAeadNonceSize];
     for ( int32 index = 0; index < NetSecurityConstant::kAeadNonceSize; ++index )
+    {
         arrIv[index] = static_cast<uint8>( 0xA0 + index );
+    }
     uint8 arrNonce[NetSecurityConstant::kAeadNonceSize];
     NetSessionKeyUtil::makeNonce( arrIv, 0x0102ull, arrNonce );
     SW_EXPECT_EQUAL( arrIv[0], arrNonce[0] );
@@ -190,7 +194,9 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     RecordingSecurityProvider provider;
     uint8                     arrShared[NetSecurityConstant::kX25519KeySize];
     for ( int32 index = 0; index < NetSecurityConstant::kX25519KeySize; ++index )
+    {
         arrShared[index] = static_cast<uint8>( 0x40 + index );
+    }
     NetSessionKeys keys;
     SW_ASSERT_TRUE( NetSessionKeyUtil::computeSessionKeys( provider, arrShared, nullptr, 0x1122334455667788ull, 0x0102030405060708ull, 0xAABBCCDDu, keys ) );
 
@@ -212,7 +218,9 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     // 세션 비밀이 있으면 그것이 소금이다 — 비밀을 모르는 중간자는 같은 키를 못 만든다.
     NetSessionSecret secret;
     for ( int32 index = 0; index < NetSecurityConstant::kSha256Size; ++index )
+    {
         secret._arrByte[index] = static_cast<uint8>( 0xF0 ^ index );
+    }
     SW_ASSERT_TRUE( NetSessionKeyUtil::computeSessionKeys( provider, arrShared, &secret, 1, 2, 3, keys ) );
     SW_EXPECT_TRUE( std::memcmp( provider._salt.data(), secret._arrByte, sizeof( secret._arrByte ) ) == 0 );
 

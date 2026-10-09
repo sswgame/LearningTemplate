@@ -191,7 +191,9 @@ SW_TEST_CASE( UiPaintTest, OnlyDirtyWidgetsRepaint )
     pColumn->setOrientation( sw::UiOrientation::Vertical );
     sw::vector<TestPaintWidget*> listBox;
     for ( uint32 index = 0; index < 100; ++index )
+    {
         listBox.push_back( UiPaintFixture::addBox( *pColumn, sw::hashed_string( "box" + sw::to_string( index ) ), sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    }
     SW_EXPECT_EQUAL( 101u, fixture.runFrame() ); // 처음은 모두(패널 포함)
     const size_t quadCount = fixture._canvas._listQuad.size();
     SW_EXPECT_EQUAL( size_t{ 100 }, quadCount );
@@ -774,7 +776,9 @@ SW_TEST_CASE( UiPaintTest, ClippedOutChildrenAreNotPainted )
     UiWidgetTestUtil::pin( *pList, 0.0f, 0.0f, 100.0f, 200.0f ); // 처음은 모두 보인다(상자 높이 10 × 10)
     sw::vector<TestPaintWidget*> listBox;
     for ( uint32 index = 0; index < 10; ++index )
+    {
         listBox.push_back( UiPaintFixture::addBox( *pList, sw::hashed_string( "box" + sw::to_string( index ) ), sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
+    }
     (void)fixture.runFrame();
     SW_EXPECT_EQUAL( 1u, listBox[9]->getPaintCount() );
     SW_EXPECT_EQUAL( size_t{ 10 }, fixture._canvas._listQuad.size() );

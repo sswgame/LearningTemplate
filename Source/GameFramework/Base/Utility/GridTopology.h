@@ -86,7 +86,9 @@ namespace sw
             {
                 // 세대가 한 바퀴 돌았다 — 옛 표시가 새 세대와 겹치지 않게 지운다.
                 for ( uint32& stamp : _listStamp )
+                {
                     stamp = 0u;
+                }
                 _generation = 1u;
             }
             _listQueue.clear();

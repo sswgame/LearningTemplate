@@ -215,7 +215,9 @@ namespace sw
             return;
         _listRuntime.resize( pCatalog->getDungeons().size() );
         for ( size_t index = 0; index < _listRuntime.size(); ++index )
+        {
             _listRuntime[index]._listDevice.resize( pCatalog->getDungeons()[index]._listDevice.size() );
+        }
     }
 
     AdventureDungeonState::DungeonRuntime* AdventureDungeonState::findRuntime( const hashed_string& dungeonId, const AdventureDungeonDef** ppOutDef )

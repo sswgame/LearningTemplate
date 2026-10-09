@@ -84,7 +84,9 @@ namespace sw
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
             for ( int32 x = 0; x < kFieldWidth; ++x )
+            {
                 replant( x, y, season );
+            }
         }
         _bViewsDirty = SW_TRUE;
         return true;
@@ -178,7 +180,9 @@ namespace sw
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
         for ( GameObjectHandle& handle : _listTileView )
+        {
             destroySpawned( manager, handle );
+        }
         _listTileView.clear();
         spawnField( manager );
         _bViewsDirty = SW_FALSE;

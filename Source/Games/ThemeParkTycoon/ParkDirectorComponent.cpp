@@ -329,7 +329,9 @@ namespace sw
         _simulation.writeState( outArchive );
         outArchive << static_cast<uint32>( _listPlacement.size() );
         for ( const RidePlacement& placement : _listPlacement )
+        {
             outArchive << placement._rideIndex;
+        }
         outArchive << static_cast<uint32>( _listCoaster.size() );
         for ( const unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
         {
@@ -459,7 +461,9 @@ namespace sw
         else
         {
             for ( const int32 placementIndex : _listPendingRideView )
+            {
                 spawnRideView( manager, placementIndex );
+            }
         }
         _listPendingRideView.clear();
     }
@@ -650,7 +654,9 @@ namespace sw
     {
         // 열차만 나아간다. 차 · 평지 놀이기구의 모습은 뷰가 PostUpdate 에서 이 상태를 읽어 맞춘다.
         for ( unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
+        {
             pCoaster->_train.step( deltaTime );
+        }
     }
 
     void ParkDirectorComponent::updateCameraOverride()

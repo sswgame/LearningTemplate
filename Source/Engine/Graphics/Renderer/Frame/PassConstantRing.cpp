@@ -48,7 +48,9 @@ namespace sw
     void PassConstantRing::release( IRHIDevice* pDevice )
     {
         for ( RHIConstantBufferSlot& slot : _listSlot )
+        {
             slot.release( pDevice );
+        }
         forget();
     }
 

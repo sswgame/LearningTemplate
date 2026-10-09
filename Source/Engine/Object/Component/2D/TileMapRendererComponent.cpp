@@ -76,12 +76,16 @@ namespace sw
             for ( int32 y = 0; y < _map._height; ++y )
             {
                 for ( int32 x = 0; x < _map._width; ++x )
+                {
                     refreshCellEntry( x, y );
+                }
             }
             return;
         }
         for ( const uint32 cellIndex : _listAnimatedCell )
+        {
             refreshCellEntry( static_cast<int32>( cellIndex % static_cast<uint32>( _map._width ) ), static_cast<int32>( cellIndex / static_cast<uint32>( _map._width ) ) );
+        }
     }
 
     bool TileMapRendererComponent::loadTileMap()
@@ -150,7 +154,9 @@ namespace sw
         for ( int32 y = 0; y < _map._height; ++y )
         {
             for ( int32 x = 0; x < _map._width; ++x )
+            {
                 refreshCellEntry( x, y );
+            }
         }
         refreshCollision();
         return true;
@@ -284,7 +290,9 @@ namespace sw
         if ( pManager != nullptr )
         {
             for ( const SlotHandle& body : _listBody )
+            {
                 pManager->getOverlapWorld2D().getPhysicsWorld().removeBody( body );
+            }
         }
         _listBody.clear();
     }

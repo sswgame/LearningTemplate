@@ -95,7 +95,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const ItemStack& stack : _listStack )
+        {
             total += stack._count;
+        }
         return total;
     }
 
@@ -104,7 +106,9 @@ namespace sw
         outListItem.clear();
         outListItem.reserve( _listStack.size() );
         for ( const ItemStack& stack : _listStack )
+        {
             outListItem.push_back( stack._itemId );
+        }
     }
 
     ItemStack* ItemStackList::findStack( const hashed_string& itemId )

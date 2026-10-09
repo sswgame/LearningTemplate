@@ -55,7 +55,9 @@ namespace sw::editor
         outCounts._listKindCount.clear();
         outCounts._listKindCount.reserve( kindCount );
         for ( uint32 index = 0; index < kindCount; ++index )
+        {
             outCounts._listKindCount.push_back( EditorResourceCatalogCount{ pInfo[index]._kind, pInfo[index]._pBrowserLabel, 0 } );
+        }
 
         for ( const string& filePath : listFilePath )
         {

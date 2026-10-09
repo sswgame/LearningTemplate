@@ -131,7 +131,9 @@ namespace sw
                     {
                         vector<b2Vec2> listPoint;
                         for ( const float2& point : shape._listPoint )
+                        {
                             listPoint.push_back( Box2DUtil::toBox2D( point ) );
+                        }
                         const int32 count = static_cast<int32>( listPoint.size() < B2_MAX_POLYGON_VERTICES ? listPoint.size() : B2_MAX_POLYGON_VERTICES );
                         if ( count == 0 )
                             return false;

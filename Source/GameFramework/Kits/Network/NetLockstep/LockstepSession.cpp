@@ -47,7 +47,9 @@ namespace sw
         for ( uint32 tick = 0; tick < static_cast<uint32>( _inputDelay ); ++tick )
         {
             for ( int32 player = 0; player < _playerCount; ++player )
+            {
                 (void)storeInput( player, tick, listEmpty );
+            }
         }
     }
 

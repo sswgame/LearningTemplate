@@ -212,7 +212,9 @@ namespace sw
         // 효과(뽑기)가 손을 바꾸기 전에 낸 패를 손에서 뺀다.
         const Card card = _hand.removeAt( handIndex );
         for ( const DeckBattleEffect& effect : pDef->_listEffect )
+        {
             applyEffect( effect );
+        }
         if ( pDef->_bExhaust == SW_TRUE )
             _exhaustPile.push( card );
         else

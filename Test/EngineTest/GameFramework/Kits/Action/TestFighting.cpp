@@ -178,19 +178,25 @@ namespace
             const float32 arrFloat[] = { fighter._x, fighter._z, fighter._y, fighter._dirX, fighter._dirZ,
                                          fighter._velocityY, fighter._gravity, fighter._carryX, fighter._carryZ };
             for ( const float32 value : arrFloat )
+            {
                 writer.writeFloat( value );
+            }
             const int32 arrCounter[] = { fighter._health, fighter._stateFrames, fighter._hitstop, fighter._moveIndex, fighter._bufferedMove,
                                          fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
                                          fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
             for ( const int32 counter : arrCounter )
+            {
                 writer.writeVarInt( counter );
+            }
             writer.writeVarUint( static_cast<uint64>( fighter._state ) );
             writer.writeVarUint( static_cast<uint64>( fighter._posture ) );
             writer.writeVarUint( static_cast<uint64>( fighter._guard ) );
             const uint8 arrFlag[] = { fighter._bAirborne, fighter._bScrewUsed, fighter._bBoundUsed, fighter._bWallSplatUsed,
                                       fighter._bRage, fighter._bRageUsed, fighter._bHeatUsed, fighter._bThrowAttempted };
             for ( const uint8 flag : arrFlag )
+            {
                 writer.writeBool( flag == SW_TRUE );
+            }
             writer.writeBool( fighter._timeline.isPlaying() );
             writer.writeBool( fighter._timeline.hasContact() );
             writer.writeBool( fighter._timeline.wasBlocked() );
@@ -198,7 +204,9 @@ namespace
             writer.writeVarInt( fighter._timeline.getHitstopRemaining() );
             writer.writeVarInt( fighter._inputBuffer.getFrameCount() );
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
+            {
                 writer.writeBits( FightingMatch::encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
+            }
         }
         const RoundSeries& series = match.getSeries();
         writer.writeVarUint( static_cast<uint64>( series.getPhase() ) );
@@ -208,7 +216,9 @@ namespace
         writer.writeVarInt( series.getWinner() );
         writer.writeVarUint( static_cast<uint64>( series.getParticipantCount() ) );
         for ( int32 player = 0; player < series.getParticipantCount(); ++player )
+        {
             writer.writeVarInt( series.getTotal( player ) );
+        }
         return writer.releaseBytes();
     }
 
@@ -254,14 +264,18 @@ SW_TEST_CASE( FightingTest, CommandPriorityStringWindowPostureAndConditions )
     listEvent.clear();
     runFrames( match, 1, makeInput( 0, 5, kFightingButton1 ), idle1, listEvent );
     while ( match.getFighter( 0 )._timeline.getFrame() < 13 )
+    {
         runFrames( match, 1, makeInput( 0, 5 ), idle1, listEvent );
+    }
     pressAndWait( match, makeInput( 0, 5, kFightingButton2 ), idle1, 40, listEvent );
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "jab2" ) );
 
     listEvent.clear();
     runFrames( match, 1, makeInput( 0, 5, kFightingButton1 ), idle1, listEvent );
     while ( match.getFighter( 0 )._timeline.getFrame() <= 18 )
+    {
         runFrames( match, 1, makeInput( 0, 5 ), idle1, listEvent );
+    }
     SW_EXPECT_TRUE( match.getFighter( 0 )._state == FighterState::Attacking );
     pressAndWait( match, makeInput( 0, 5, kFightingButton2 ), idle1, 40, listEvent );
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "two" ) );
@@ -280,7 +294,9 @@ SW_TEST_CASE( FightingTest, CommandPriorityStringWindowPostureAndConditions )
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "screw" ) );
     runFrames( match, 1, makeInput( 0, 6, kButton3 ), idle1, listEvent );
     while ( match.getFighter( 0 )._state == FighterState::Attacking )
+    {
         runFrames( match, 1, makeInput( 0, 5 ), idle1, listEvent );
+    }
     SW_EXPECT_TRUE( match.getFighter( 0 )._posture == FighterPosture::Stance );
     pressAndWait( match, makeInput( 0, 5, kButton4 ), idle1, 30, listEvent );
     SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "flamingoKick" ) );
@@ -396,7 +412,9 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
     const InputFrame walk1 = makeInput( 1, 6 );
     pressAndWait( match, makeInput( 0, 3, kFightingButton2 ), walk1, 0, listEvent );
     while ( match.getFighter( 0 )._state == FighterState::Attacking )
+    {
         runFrames( match, 1, makeInput( 0, 6 ), walk1, listEvent );
+    }
     SW_EXPECT_EQUAL( 15, findHitDamage( listEvent, 0, "launcher" ) );
     SW_ASSERT_TRUE( match.getFighter( 1 )._state == FighterState::Juggle );
 
@@ -439,7 +457,9 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
     // 떨어지면 다운 — 다운된 상대에게만 나가는 d+3 이 groundHit 으로 맞는다.
     int32 guard = 0;
     while ( match.getFighter( 1 )._state == FighterState::Juggle && guard++ < 120 )
+    {
         runFrames( match, 1, makeInput( 0, 6 ), walk1, listEvent );
+    }
     SW_ASSERT_TRUE( match.getFighter( 1 )._state == FighterState::Down );
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 2, kButton3 ), walk1, 20, listEvent );
@@ -454,7 +474,9 @@ SW_TEST_CASE( FightingTest, LauncherJuggleScalesDamageAndScrewOncePerCombo )
     listEvent.clear();
     pressAndWait( match, makeInput( 0, 4, kButton4 ), walk1, 0, listEvent );
     while ( match.getFighter( 0 )._state == FighterState::Attacking )
+    {
         runFrames( match, 1, makeInput( 0, 5 ), walk1, listEvent );
+    }
     SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::WallSplat, 0 ) );
     SW_ASSERT_TRUE( match.getFighter( 1 )._state == FighterState::WallSplat );
     pressAndWait( match, makeInput( 0, 7, kButton3 ), walk1, 20, listEvent );
@@ -476,7 +498,9 @@ SW_TEST_CASE( FightingTest, ThrowBreaksOnlyWithMatchingButtonInWindow )
         match.initialize( tester, tester );
         runFrames( match, 1, makeInput( 0, 5, kFightingButton1 | kButton3 ), makeInput( 1, 5 ), listEvent );
         while ( match.getFighter( 1 )._state != FighterState::ThrowBreak && match.getFrame() < 30 )
+        {
             runFrames( match, 1, makeInput( 0, 5 ), makeInput( 1, 5 ), listEvent );
+        }
         SW_ASSERT_TRUE( match.getFighter( 1 )._state == FighterState::ThrowBreak );
         SW_EXPECT_EQUAL( 1, countEvents( listEvent, FightingEvent::Kind::ThrowGrab, 0 ) );
         SW_EXPECT_TRUE( findLastStartedMove( listEvent, 0 ) == hashed_string( "throw" ) ); // 1+3 이 1 을 이긴다(우선도 2)
@@ -700,7 +724,9 @@ SW_TEST_CASE( FightingTest, RollbackStateBytesKeepTheirLayout )
     const uint8 arrHeader[] = { 0x46, 0x47, 0x48, 0x54, 0x04, 0x00, 0x01 };
     SW_ASSERT_TRUE( bytes.size() > sizeof( arrHeader ) );
     for ( size_t index = 0; index < sizeof( arrHeader ); ++index )
+    {
         SW_EXPECT_EQUAL( static_cast<int32>( arrHeader[index] ), static_cast<int32>( bytes[index] ) );
+    }
     SW_EXPECT_TRUE( bytes == writeExpectedFightingState( match, 0 ) );
 
     // 1 라운드 시간 초과(체력이 많은 0 승) 바로 뒤 — 대기 10.

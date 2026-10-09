@@ -114,10 +114,14 @@ namespace
             while ( index < line.size() )
             {
                 while ( index < line.size() && line[index] == ' ' )
+                {
                     ++index;
+                }
                 const size_t start = index;
                 while ( index < line.size() && line[index] != ' ' )
+                {
                     ++index;
+                }
                 if ( index > start )
                     listWord.push_back( line.substr( start, index - start ) );
             }
@@ -306,5 +310,7 @@ SW_TEST_CASE( AppUiTest, DemoScreenMatchesAcrossBackends )
     if ( listCapture.empty() )
         SW_TEST_SKIP( "no backend could run the UI demo scenario on this machine" );
     for ( size_t index = 1; index < listCapture.size(); ++index )
+    {
         Internal::expectMatchesReference( listCapture[0], listCapture[index] );
+    }
 }

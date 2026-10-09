@@ -51,7 +51,9 @@ namespace sw
         if ( length <= MathUtil::kEpsilon )
             return false;
         for ( const AABB& box : _listBox )
+        {
             CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, box, nearest, bHit );
+        }
         outDistance = nearest;
         return bHit;
     }

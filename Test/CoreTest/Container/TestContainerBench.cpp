@@ -68,18 +68,24 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
 
     sw::unordered_map<uint64, uint32> mapGrown;
     for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
         mapGrown.emplace( listKey[index], index );
+    }
     SW_ASSERT_EQUAL( kKeyCount, static_cast<uint32>( mapGrown.size() ) );
 
     // 버킷 수를 손으로 잡은 판 — 2 의 거듭제곱이 아닌 수를 준다.
     sw::unordered_map<uint64, uint32> mapReserved;
     mapReserved.reserve( 3000 );
     for ( uint32 index = 0; index < 3000; ++index )
+    {
         mapReserved.emplace( listKey[index], index );
+    }
 
     sw::unordered_set<uint64> setKey;
     for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
         setKey.insert( listKey[index] );
+    }
 
     const uint64* pKey     = listKey.data();
     const uint64* pMissKey = listMissKey.data();
@@ -102,7 +108,9 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
         {
         uint64 found = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
+        {
             found += std::as_const( mapGrown ).find( pMissKey[index] ) != mapGrown.end() ? 1u : 0u;
+        }
         wrongCount += static_cast<uint32>( found );
         s_benchSink = found;
     } );
@@ -126,7 +134,9 @@ SW_TEST_CASE( ContainerBenchTest, IntegerKeyLookup )
          {
         uint64 found = 0;
         for ( uint32 index = 0; index < kKeyCount; ++index )
+        {
             found += setKey.contains( pKey[index] ) ? 1u : 0u;
+        }
         wrongCount += ( found == kKeyCount ) ? 0u : 1u;
         s_benchSink = found;
     } );
@@ -147,11 +157,15 @@ SW_TEST_CASE( ContainerBenchTest, StringKeyLookup )
     sw::vector<sw::string> listName;
     listName.reserve( kKeyCount );
     for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
         listName.push_back( sw::string( "engine/materials/bench_" ) + sw::to_string( mixKey( index ) % 1000003u ) + "_" + sw::to_string( index ) );
+    }
 
     sw::unordered_map<sw::string, uint32> mapName;
     for ( uint32 index = 0; index < kKeyCount; ++index )
+    {
         mapName.emplace( listName[index], index );
+    }
 
     uint32      wrongCount = 0;
     const int64 deci       = test::measureBestDeciNanosPerOp( kKeyCount, kRoundCount, [&]()
@@ -180,10 +194,14 @@ SW_TEST_CASE( ContainerBenchTest, HashedStringInternHit )
     constexpr uint32       kRepeatCount = 256;
     sw::vector<sw::string> listName;
     for ( uint32 index = 0; index < kNameCount; ++index )
+    {
         listName.push_back( sw::string( "ContainerBenchName_" ) + sw::to_string( index ) );
+    }
     sw::vector<uint32> listExpected;
     for ( const sw::string& name : listName )
+    {
         listExpected.push_back( sw::hashed_string( sw::string_view( name ) ).getIndex() );
+    }
 
     uint32      wrongCount = 0;
     const int64 deci       = test::measureBestDeciNanosPerOp( kNameCount * kRepeatCount, kRoundCount, [&]()
@@ -236,13 +254,17 @@ SW_TEST_CASE( ContainerBenchTest, SlotHandleTableGet )
     sw::vector<sw::SlotHandle>  listHandle;
     listHandle.reserve( kSlotCount );
     for ( uint32 index = 0; index < kSlotCount; ++index )
+    {
         listHandle.push_back( table.insert( index ) );
+    }
 
     // 조회 순서를 흩는다. 인덱스 순서대로 읽으면 청크 하나가 캐시에 머물러 실제보다 빨라 보인다.
     sw::vector<sw::SlotHandle> listProbe;
     listProbe.reserve( kProbeCount );
     for ( uint32 index = 0; index < kProbeCount; ++index )
+    {
         listProbe.push_back( listHandle[static_cast<uint32>( mixKey( index ) % kSlotCount )] );
+    }
 
     const sw::SlotHandle* pProbe     = listProbe.data();
     uint32                wrongCount = 0;

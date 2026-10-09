@@ -112,7 +112,9 @@ SW_TEST_CASE( NavigationTest, PathfinderFindsCheapestPathAroundWalls )
     SW_EXPECT_TRUE( isValidCellPath( grid, listCell ) );
     bool bUsedGap = false;
     for ( const int2& cell : listCell )
+    {
         bUsedGap = bUsedGap || ( cell._x == 10 && cell._y >= 16 );
+    }
     SW_EXPECT_TRUE( bUsedGap );
     // 가장 싼 길: (2,2)→(9,15) 대각 7 + 직 6, 틈 (10,16) 대각, (11,15)→(17,2) … 비용 = 값 10 × 거리. 옥타일 하한보다 작을 수 없다.
     const float32 cost = computeCellPathCost( grid, listCell );
@@ -126,7 +128,9 @@ SW_TEST_CASE( NavigationTest, PathfinderFindsCheapestPathAroundWalls )
     SW_EXPECT_TRUE( listSmooth.size() < listCell.size() );
     bool bVisible = true;
     for ( size_t cellIndex = 1; cellIndex < listSmooth.size(); ++cellIndex )
+    {
         bVisible = bVisible && grid.hasLineOfSight( listSmooth[cellIndex - 1], listSmooth[cellIndex] );
+    }
     SW_EXPECT_TRUE( bVisible );
 
     // 도로 — 값 2 인 띠(y = 0)를 깔면 곧은 길(값 10)보다 그쪽으로 간다.
@@ -139,7 +143,9 @@ SW_TEST_CASE( NavigationTest, PathfinderFindsCheapestPathAroundWalls )
     SW_ASSERT_TRUE( pathfinder.findPath( road, query, listCell ) == GridPathResult::Found );
     int32 roadCellCount = 0;
     for ( const int2& cell : listCell )
+    {
         roadCellCount += cell._y == 0 ? 1 : 0;
+    }
     SW_EXPECT_TRUE( roadCellCount >= 12 );
 }
 
@@ -300,13 +306,17 @@ SW_TEST_CASE( NavigationTest, AgentsFollowPathsAndFlowFieldsWithoutOverlapping )
             for ( size_t agentIndex = 0; agentIndex < listAgent.size(); ++agentIndex )
             {
                 for ( size_t otherIndex = agentIndex + 1; otherIndex < listAgent.size(); ++otherIndex )
+                {
                     minSeparation = MathUtil::min( minSeparation, float3::getDistance( listAgent[agentIndex].getPosition(), listAgent[otherIndex].getPosition() ) );
+                }
             }
         }
     }
     int32 nearGoalCount = 0;
     for ( const NavAgent& member : listAgent )
+    {
         nearGoalCount += float3::getDistance( member.getPosition(), float3{ 17.5f, 0.0f, 3.5f } ) < 3.0f ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 10, nearGoalCount );
     SW_EXPECT_TRUE( minSeparation > 0.35f ); // 지름 0.8 — 조금 겹쳐도 겹쳐 쌓이지는 않는다
 
@@ -317,7 +327,9 @@ SW_TEST_CASE( NavigationTest, AgentsFollowPathsAndFlowFieldsWithoutOverlapping )
     listThroughWall.push_back( float3{ 12.5f, 0.0f, 5.5f } );
     pushed.followPath( listThroughWall );
     for ( int32 frameIndex = 0; frameIndex < 240; ++frameIndex )
+    {
         pushed.update( grid, listNoNeighbor, 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE( pushed.getState() == NavAgentState::Stuck );
     SW_EXPECT_TRUE( grid.isWalkable( grid.computeCell( pushed.getPosition() ) ) );
 }
@@ -338,7 +350,9 @@ SW_TEST_CASE( NavigationTest, GridMoverSpeaksTheCommonMoverInterface )
     SW_EXPECT_TRUE( mover.getMoveStatus() == NavMoveStatus::Moving );
     const vector<float3> listNoNeighbor;
     for ( int32 frameIndex = 0; frameIndex < 600 && mover.getMoveStatus() == NavMoveStatus::Moving; ++frameIndex )
+    {
         agent.update( grid, listNoNeighbor, 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE( mover.getMoveStatus() == NavMoveStatus::Arrived );
     SW_EXPECT_TRUE( float3::getDistance( mover.getMovePosition(), float3{ 17.3f, 0.0f, 2.7f } ) < 0.3f );
 
@@ -387,7 +401,9 @@ SW_TEST_CASE( NavigationTest, ReachabilityHonoursTerrainCostsAlliesAndAttackRang
     SW_EXPECT_TRUE( listAttack.size() > listStand.size() );
     bool bEnemyInRange = false;
     for ( const int2& cell : listAttack )
+    {
         bEnemyInRange = bEnemyInRange || cell == enemy;
+    }
     SW_EXPECT_TRUE( bEnemyInRange );
 
     vector<int2> listRing;

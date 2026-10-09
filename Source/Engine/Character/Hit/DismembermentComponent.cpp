@@ -124,7 +124,9 @@ namespace sw
                     vertex._arrUv[0]       = geometry._listUv[index]._x;
                     vertex._arrUv[1]       = geometry._listUv[index]._y;
                     for ( float32& channel : vertex._arrColor )
+                    {
                         channel = 1.0f;
+                    }
                     inoutListVertex.push_back( vertex );
                     if ( pInOutListSkin != nullptr )
                         pInOutListSkin->push_back( geometry.isSkinned() ? toMeshSkin( geometry._listSkin[index] ) : MeshSkinVertex{} );
@@ -285,7 +287,9 @@ namespace sw
         const Skeleton&    skeleton = pUnit->getSkeleton();
         CharacterBoneArray bones;
         for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+        {
             (void)bones.addBone( skeleton.getBone( boneIndex )._name, skeleton.getBone( boneIndex )._parentIndex, skeleton.getBone( boneIndex )._referencePose.toMatrix() );
+        }
         bones.computeModelTransforms();
         vector<uint16> listVertexRegion;
         _regionTable.assignRegions( welded, bones, listVertexRegion );

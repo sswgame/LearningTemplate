@@ -219,11 +219,15 @@ namespace sw
                 _subscribeConnection.takePushValues( listValue );
             }
             for ( const RespValue& value : listValue )
+            {
                 handlePushValue( value );
+            }
         }
         const int32 messageCount = static_cast<int32>( _listMessage.size() );
         for ( EphemeralMessage& message : _listMessage )
+        {
             outListMessage.push_back( std::move( message ) );
+        }
         _listMessage.clear();
         return messageCount;
     }
@@ -746,7 +750,9 @@ namespace sw
                     _subscriptionAckCount = std::max( _subscriptionAckCount, _subscriptionSentCount );
             }
             for ( const RespValue& value : listValue )
+            {
                 handlePushValue( value );
+            }
             if ( _subscriptionAckCount < targetAckCount )
                 RespEphemeralStoreInternal::sleepOneMillisecond();
         }

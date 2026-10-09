@@ -116,7 +116,9 @@ namespace sw
         {
             _listSourceBase.push_back( _skinSourceVertexCount );
             for ( const RHIVertex& vertex : pSource->getVertices() )
+            {
                 listRest.push_back( GpuMeshMorphPoolInternal::makeRestVertex( vertex ) );
+            }
             // 모프 차이를 정점별로 모은다 — 컴퓨트는 정점 하나의 차이 구간(시작 · 수)을 돌며 (위치 · 노멀 차이, 타깃 번호)를 가중치만큼 더한다.
             const uint32                   vertexCount = pSource->getVertexCount();
             vector<vector<uint32>>         listVertexTarget( vertexCount );
@@ -182,11 +184,15 @@ namespace sw
         _listBuiltMorph.assign( listMorphMesh.begin(), listMorphMesh.end() );
         _listBuiltMorphContentId.clear();
         for ( const Mesh* pMesh : listMorphMesh )
+        {
             _listBuiltMorphContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+        }
         _listBuiltSkin.assign( listSkinMesh.begin(), listSkinMesh.end() );
         _listBuiltSkinContentId.clear();
         for ( const Mesh* pMesh : listSkinMesh )
+        {
             _listBuiltSkinContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+        }
 
         // 모프 구간 — 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
         vector<GpuMorphVertex> listRest;
@@ -207,7 +213,9 @@ namespace sw
             if ( bSameMorph == false )
             {
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
+                {
                     listRest.push_back( GpuMeshMorphPoolInternal::makeRestVertex( vertex ) );
+                }
             }
             morphCount += count;
         }
@@ -251,7 +259,9 @@ namespace sw
         }
         // 모프 가중치는 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
         for ( GpuSkinInstanceRow& row : _listSkinRow )
+        {
             row._morphWeightBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
+        }
         _vertexCount = _skinVertexBase + resultOffset;
 
         if ( _vertexCount == 0 )
@@ -286,7 +296,9 @@ namespace sw
         // 메시 → 팔레트 항목 표를 한 번 짓는다 — 인스턴스마다 목록을 훑으면 캐릭터 천 명에서 백만 번 비교다.
         _mapScratchPaletteIndex.clear();
         for ( uint32 paletteIndex = 0; paletteIndex < static_cast<uint32>( listPalette.size() ); ++paletteIndex )
+        {
             _mapScratchPaletteIndex.emplace( listPalette[paletteIndex]._pMesh, paletteIndex );
+        }
 
         // 풀 순서로 다시 모은다. 팔레트가 없는(아직 평가되지 않은) 메시는 단위 행렬 — 바인드 포즈다.
         const size_t paletteElementCount = static_cast<size_t>( _skinBoneCount ) * shaderslot::kSkinFloat4PerBone;
@@ -306,7 +318,9 @@ namespace sw
                 if ( bHasBone )
                 {
                     for ( uint32 rowIndex = 0; rowIndex < shaderslot::kSkinFloat4PerBone; ++rowIndex )
+                    {
                         pRow[rowIndex] = ( *pListRow )[rowStart + rowIndex];
+                    }
                     continue;
                 }
                 pRow[0] = float4{ 1.0f, 0.0f, 0.0f, 0.0f };

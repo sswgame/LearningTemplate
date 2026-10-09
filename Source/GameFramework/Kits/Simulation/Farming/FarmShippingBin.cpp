@@ -37,7 +37,9 @@ namespace sw
     {
         int32 earned = 0;
         for ( const auto& [itemId, count] : _bin.getItems() )
+        {
             earned += catalog.findSellPrice( itemId ) * count;
+        }
         _bin.clear();
         if ( 0 < earned )
             inoutWallet.add( _currency, earned );

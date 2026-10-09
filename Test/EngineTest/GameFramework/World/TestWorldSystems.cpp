@@ -401,10 +401,14 @@ SW_TEST_CASE( WorldSystemsTest, SkillChecksJudgeTimingAndRepeatWithTheSameSeed )
     // 30 초에 평균 2 초 간격(+ 응답 대기) — 여러 번 뜬다. 맞힘 · 늦게 누름 · 응답 없음이 차례로.
     SW_ASSERT_TRUE( listFirst.size() >= 6 );
     for ( size_t index = 0; index + 1 < listFirst.size(); ++index )
+    {
         SW_EXPECT_TRUE( listFirst[index]._bSuccess == ( index % 3 == 0 ) );
+    }
     int32 failedCount = 0;
     for ( size_t index = 0; index + 1 < listFirst.size(); ++index )
+    {
         failedCount += listFirst[index]._bSuccess ? 0 : 1;
+    }
     SW_EXPECT_TRUE( firstNoise >= failedCount ); // 실패는 소음을 낸다
 
     // 같은 씨앗이면 같은 때 같은 사람에게 — 다른 씨앗이면 다르다.
@@ -418,7 +422,9 @@ SW_TEST_CASE( WorldSystemsTest, SkillChecksJudgeTimingAndRepeatWithTheSameSeed )
     SW_EXPECT_EQUAL( firstNoise, secondNoise );
     bool bDiffers = listFirst.size() != listOther.size();
     for ( size_t index = 0; bDiffers == false && index < listFirst.size(); ++index )
+    {
         bDiffers = MathUtil::abs( listFirst[index]._startTime - listOther[index]._startTime ) > 1.0e-4f || listFirst[index]._actorId != listOther[index]._actorId;
+    }
     SW_EXPECT_TRUE( bDiffers );
 }
 
@@ -438,7 +444,9 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
     SW_EXPECT_EQUAL( 2, director.getAliveCount( hashed_string( "bug" ) ) );
     // 벌레는 상한(2), 거인은 아직 10 초 전 — 예산만 쌓이고 상한(3)에서 멈춘다.
     for ( int32 step = 0; step < 6; ++step )
+    {
         SW_EXPECT_EQUAL( 0, director.update( 1.0f ) );
+    }
     SW_EXPECT_NEAR_EQUAL( 3.0f, director.getBudget(), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 8.0f, director.getTime(), 1.0e-5f );
     SW_EXPECT_EQUAL( 0, director.update( 1.5f ) );
@@ -469,7 +477,9 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
     indoor.initialize( &table, 7u );
     indoor.setAllowedTags( { hashed_string( "Indoor" ) } );
     for ( int32 step = 0; step < 20; ++step )
+    {
         (void)indoor.update( 1.0f );
+    }
     SW_EXPECT_EQUAL( 0, indoor.getAliveCount( hashed_string( "giant" ) ) );
     SW_EXPECT_EQUAL( 2, indoor.getAliveCount( hashed_string( "bug" ) ) );
     indoor.setAllowedTags( {} );
@@ -499,7 +509,9 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
     }
     bool bDiffers = listFirst.size() != listOther.size();
     for ( size_t index = 0; bDiffers == false && index < listFirst.size(); ++index )
+    {
         bDiffers = ( listFirst[index]._entryId == listOther[index]._entryId ) == false;
+    }
     SW_EXPECT_TRUE( bDiffers );
     for ( const SpawnEvent& event : listFirst )
     {

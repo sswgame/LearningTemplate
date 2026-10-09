@@ -15,7 +15,9 @@ namespace sw
         point._value       = value;
         size_t insertIndex = _listPoint.size();
         while ( insertIndex > 0 && _listPoint[insertIndex - 1]._time > time )
+        {
             --insertIndex;
+        }
         _listPoint.insert( _listPoint.begin() + static_cast<ptrdiff_t>( insertIndex ), point );
     }
 

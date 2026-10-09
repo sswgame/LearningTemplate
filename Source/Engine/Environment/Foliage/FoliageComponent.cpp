@@ -191,7 +191,9 @@ namespace sw
         vector<float32> listWeight;
         listWeight.reserve( layer._listMesh.size() );
         for ( const FoliageMesh& mesh : layer._listMesh )
+        {
             listWeight.push_back( mesh._weight );
+        }
         if ( pTerrain != nullptr )
         {
             const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
@@ -201,7 +203,9 @@ namespace sw
         // 지형이 없으면 오너 높이의 평면이다.
         PlacementScatter::scatter( layer._rule, computeRegion(), nullptr, _listExclusion, listWeight, outListInstance );
         for ( PlacementInstance& instance : outListInstance )
+        {
             instance._height += origin._y;
+        }
         return true;
     }
 
@@ -267,7 +271,9 @@ namespace sw
             vector<uint64> listKey;
             listKey.reserve( mapCellToInstance.size() );
             for ( const auto& [key, listIndex] : mapCellToInstance )
+            {
                 listKey.push_back( key );
+            }
             std::sort( listKey.begin(), listKey.end() );
             for ( const uint64 key : listKey )
             {
@@ -337,7 +343,9 @@ namespace sw
             material.setVector( hashed_string( "viewParams" ), float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
             material.setVector( hashed_string( "fadeParams" ), float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
             for ( uint32 slot = 0; slot < FoliageInfluencerComponent::kMaxInfluencerCount; ++slot )
+            {
                 material.setVector( Internal::getInfluencerName( slot ), arrSphere[slot] );
+            }
         }
     }
 
@@ -345,7 +353,9 @@ namespace sw
     {
         uint32 count{ 0 };
         for ( const Cell& cell : _listCell )
+        {
             count += cell._batch->isVisible() ? 1u : 0u;
+        }
         return count;
     }
 } // namespace sw

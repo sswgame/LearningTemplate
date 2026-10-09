@@ -378,7 +378,9 @@ namespace sw::editor
         // 기다릴 상대가 없다.
         abandonPendingDraw();
         for ( EditorDrawDataSnapshot& snapshot : _arrDrawSnapshot )
+        {
             snapshot.clear();
+        }
 
         _dockLayout.save();
 
@@ -489,7 +491,9 @@ namespace sw::editor
             const uint32 writeSlot =
                 ( _publishedDrawSlot.load( std::memory_order_acquire ) + 1u ) % constant::kMaxFrameCountInFlight;
             while ( _inFlightDrawSlot.load( std::memory_order_acquire ) == writeSlot )
+            {
                 std::this_thread::yield();
+            }
 
             // 번호는 내기 전에 알린다. 이 뒤에 놓는 자원은 이 스냅샷이 그릴 수 있으므로 다음 번호를 받아야 한다.
             ++_lastDrawSnapshotSequence;
@@ -720,7 +724,9 @@ namespace sw::editor
     void ImGuiEditor::waitForDrawSnapshotIdle()
     {
         while ( _inFlightDrawSlot.load( std::memory_order_acquire ) != _s_kInvalidDrawSlot )
+        {
             std::this_thread::yield();
+        }
     }
 
     void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData )

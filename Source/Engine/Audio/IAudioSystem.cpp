@@ -87,7 +87,9 @@ namespace sw
         _pEngine->setBusUserVolume( hashed_string( AudioBusNames::kSfx ), _sfxVolume );
         _pEngine->setBusMuted( hashed_string( AudioBusNames::kMaster ), _bMuted );
         for ( const AudioBusVolume& busVolume : _listBusVolume )
+        {
             _pEngine->setBusUserVolume( busVolume._bus, busVolume._volume );
+        }
 
         _listOfflineBlock.assign( static_cast<size_t>( audio::kBlockFrameCount ) * audio::kChannelCount, 0.0f );
         _bOutputOpen  = openOutput();

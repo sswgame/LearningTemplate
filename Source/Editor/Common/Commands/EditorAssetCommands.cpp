@@ -639,9 +639,13 @@ namespace sw::editor
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );
 
         for ( const string& folder : listFolder )
+        {
             EditorAssetCommandsInternal::appendFolderListingEntry( outList, folder, true, rootNorm );
+        }
         for ( const string& file : listFile )
+        {
             EditorAssetCommandsInternal::appendFolderListingEntry( outList, file, false, rootNorm );
+        }
     }
 
     void EditorAssetCommands::collectChildFolders( string_view folderAbs, vector<string>& outList )
@@ -653,7 +657,9 @@ namespace sw::editor
 
         FileUtil::collectFolders( folderAbs, outList, false );
         for ( string& child : outList )
+        {
             child = FileUtil::normalizeSeparators( child );
+        }
     }
 
     uint64 EditorAssetCommands::getChildFolderScanCount()

@@ -85,7 +85,9 @@ namespace
         {
             int32 count = 0;
             for ( const RtsEvent& event : _listEvent )
+            {
                 count += event._kind == kind && ( player == -2 || event._player == player ) ? 1 : 0;
+            }
             return count;
         }
 
@@ -181,7 +183,9 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
     const RtsUnitId baseId     = scene.spawn( "base", player, 4.5f, 4.5f );
     const RtsUnitId barracksId = scene.spawn( "barracks", player, 20.5f, 4.5f );
     for ( int32 index = 0; index < 9; ++index )
+    {
         (void)scene.spawn( "worker", player, 10.5f + static_cast<float32>( index ), 20.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    }
     scene.run( 0.1f );
     const RtsPlayer* pPlayer = scene._world.findPlayer( player );
     SW_EXPECT_EQUAL( 9, pPlayer->_supplyUsed );
@@ -209,7 +213,9 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
 
     // 대기열은 다섯 — 여섯째는 거절, 취소는 값을 돌려준다.
     for ( int32 index = 0; index < 5; ++index )
+    {
         SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RtsCommandResult::Ok );
+    }
     SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RtsCommandResult::QueueFull );
     SW_EXPECT_EQUAL( 650, scene.minerals( player ) );
     SW_EXPECT_TRUE( scene._world.cancelTrain( barracksId ) );
@@ -331,14 +337,18 @@ SW_TEST_CASE( RealTimeStrategyTest, CombatAppliesArmorMinimumDamageAirTargetsAnd
     // 공격 이동 — 해병 셋이 가는 길의 질럿을 잡고 계속 간다.
     vector<RtsUnitId> listMarine;
     for ( int32 index = 0; index < 3; ++index )
+    {
         listMarine.push_back( scene.spawn( "marine", blue, 3.5f, 28.5f + static_cast<float32>( index ) ) );
+    }
     const float3 goal{ 20.5f, 0.0f, 22.5f };
     SW_EXPECT_EQUAL( 3, scene._world.issueGroupMove( listMarine, goal, true ) );
     scene.run( 25.0f );
     SW_EXPECT_NULL( scene._world.findUnit( zealotId ) );
     int32 aliveMarine = 0;
     for ( const RtsUnitId marineId : listMarine )
+    {
         aliveMarine += scene._world.findUnit( marineId ) != nullptr ? 1 : 0;
+    }
     SW_EXPECT_TRUE( aliveMarine >= 2 );
     bool bKilledByMarine = false;
     for ( const RtsEvent& event : scene._listEvent )
@@ -387,17 +397,23 @@ SW_TEST_CASE( RealTimeStrategyTest, LargeGroupsShareOneFlowFieldAroundWalls )
     RtsTestScene scene;
     SW_ASSERT_TRUE( scene.initialize() );
     for ( int32 y = 0; y < 34; ++y )
+    {
         scene._world.setTerrainBlocked( 20, y, true ); // 위쪽 끝만 열린 벽
+    }
     const int32       player = scene.addPlayer( 0, 0, 0, float3{} );
     vector<RtsUnitId> listMarine;
     for ( int32 index = 0; index < 8; ++index )
+    {
         listMarine.push_back( scene.spawn( "marine", player, 8.5f + static_cast<float32>( index % 4 ), 9.5f + static_cast<float32>( index / 4 ) ) );
+    }
     const float3 goal{ 30.5f, 0.0f, 10.5f };
     SW_EXPECT_EQUAL( 8, scene._world.issueGroupMove( listMarine, goal, false ) );
     const FlowField* pShared = scene._world.findUnit( listMarine[0] )->findOrder()->_pFlowField;
     SW_ASSERT_NOT_NULL( pShared );
     for ( const RtsUnitId marineId : listMarine )
+    {
         SW_EXPECT_TRUE( scene._world.findUnit( marineId )->findOrder()->_pFlowField == pShared );
+    }
 
     scene.run( 50.0f );
     for ( const RtsUnitId marineId : listMarine )
@@ -457,12 +473,16 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
 
     // 부대의 해병이 죽으면 부대에서 빠진다.
     for ( int32 index = 0; index < 3; ++index )
+    {
         (void)scene.spawn( "marine", red, 11.5f + static_cast<float32>( index ), 9.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    }
     scene.run( 10.0f );
     SW_EXPECT_NULL( scene._world.findUnit( marineB ) );
     int32 aliveCount = 0;
     for ( const RtsUnitId unitId : { marineA, workerA, marineB } )
+    {
         aliveCount += scene._world.findUnit( unitId ) != nullptr ? 1 : 0;
+    }
     SW_EXPECT_TRUE( selection.recallGroup( scene._world, 1 ) );
     SW_EXPECT_EQUAL( aliveCount, static_cast<int32>( selection.getSelected().size() ) );
     SW_EXPECT_TRUE( selection.recallGroup( scene._world, 5 ) == false );
@@ -477,9 +497,13 @@ SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuild
     const RtsUnitId humanBase = scene.spawn( "base", human, 6.5f, 6.5f );
     (void)scene.spawn( "base", cpu, 42.5f, 42.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     for ( int32 index = 0; index < 8; ++index )
+    {
         (void)scene.spawn( "minerals", RtsWorld::kNoOwner, 40.5f + static_cast<float32>( index ), 52.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    }
     for ( int32 index = 0; index < 4; ++index )
+    {
         (void)scene.spawn( "worker", cpu, 41.5f + static_cast<float32>( index ), 49.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
+    }
 
     RtsAiSettings aiSettings;
     aiSettings._workerId         = hashed_string( "worker" );
@@ -530,7 +554,9 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
     SW_ASSERT_TRUE( original.initialize() );
     RtsWorld& world = original._world;
     for ( int32 y = 0; y < 34; ++y )
+    {
         world.setTerrainBlocked( 20, y, true ); // 위쪽 끝만 열린 벽
+    }
     const int32     player = original.addPlayer( 0, 0, 0, float3{ 6.0f, 0.0f, 6.0f } );
     const RtsUnitId baseId = original.spawn( "base", player, 4.5f, 4.5f );
     const RtsUnitId oreId  = original.spawn( "minerals", RtsWorld::kNoOwner, 6.5f, 12.5f );
@@ -539,7 +565,9 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
     SW_ASSERT_TRUE( world.issueGather( worker, oreId ) == RtsCommandResult::Ok );
     vector<RtsUnitId> listMarine;
     for ( int32 index = 0; index < 8; ++index )
+    {
         listMarine.push_back( original.spawn( "marine", player, 8.5f + static_cast<float32>( index % 4 ), 16.5f + static_cast<float32>( index / 4 ) ) );
+    }
     const float3 goal{ 30.5f, 0.0f, 10.5f };
     SW_ASSERT_EQUAL( 8, world.issueGroupMove( listMarine, goal, false ) );
     RtsSelection selection;
@@ -582,14 +610,18 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
         const FlowField* pShared = restoredWorld.findUnit( listMarine[0] )->findOrder()->_pFlowField;
         SW_ASSERT_NOT_NULL( pShared );
         for ( const RtsUnitId marineId : listMarine )
+        {
             SW_EXPECT_TRUE( restoredWorld.findUnit( marineId )->findOrder()->_pFlowField == pShared );
+        }
     }
 
     BLOCK( "움직이던 무리는 목표까지 가고 일꾼은 계속 캔다" )
     {
         restored.run( 0.2f );
         for ( const RtsUnitId marineId : listMarine )
+        {
             SW_EXPECT_FALSE( restoredWorld.findUnit( marineId )->isIdle() ); // 멈춰 있다고 명령을 끝내지 않는다
+        }
         restored.run( 50.0f );
         for ( const RtsUnitId marineId : listMarine )
         {
@@ -662,7 +694,9 @@ SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
     SW_ASSERT_TRUE( cannon.isValid() && blockId.isValid() );
     const float32 seconds = 120.0f;
     for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( seconds * 10.0f ); ++frameIndex )
+    {
         world.update( 0.1f );
+    }
     const float32 shotCount = ( 100000.0f - world.findUnit( blockId )->_hp ) / 10.0f;
     SW_EXPECT_NEAR_EQUAL( seconds / 1.2f, shotCount, 1.5f );
 }

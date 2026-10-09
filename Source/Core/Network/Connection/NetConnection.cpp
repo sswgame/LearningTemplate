@@ -98,7 +98,9 @@ namespace sw
         _outgoingReliable.reset();
         _incomingReliable.reset();
         for ( deque<vector<uint8>>& listIncoming : _arrIncoming )
+        {
             listIncoming.clear();
+        }
         _listOutgoingSequenced.clear();
         _listOutgoingUnreliable.clear();
         _listSequencedReceive.clear();
@@ -522,12 +524,16 @@ namespace sw
                                                            : NetConnectionInternal::smoothTowards( _stats._rtt, sample, NetConnectionInternal::kRttSmoothing );
             }
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
+            {
                 _outgoingReliable.remove( pSent->_arrReliableId[index] );
+            }
         }
         detectLostPackets( ack );
         // 가장 오래된 미확인 신뢰 id 를 앞으로.
         while ( _oldestUnackedReliableId != _nextReliableSendId && _outgoingReliable.exists( _oldestUnackedReliableId ) == false )
+        {
             ++_oldestUnackedReliableId;
+        }
     }
 
     void NetConnection::detectLostPackets( uint16 ack )

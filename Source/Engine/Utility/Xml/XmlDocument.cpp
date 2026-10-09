@@ -94,7 +94,9 @@ namespace sw
 
                 size_t indentLen = 0;
                 while ( indentLen < line.size() && ( line[indentLen] == '\t' || line[indentLen] == ' ' ) )
+                {
                     ++indentLen;
+                }
 
                 // 접을 대상: 충분히 길고, 여는 태그이며, 속성이 둘 이상인 줄.
                 const bool bOpenTag = ( indentLen + 1 < line.size() ) && line[indentLen] == '<' &&
@@ -129,7 +131,9 @@ namespace sw
                 {
                     size_t tokenStart = listAttrEnd[attrIndex - 1];
                     while ( tokenStart < line.size() && line[tokenStart] == ' ' )
+                    {
                         ++tokenStart;
+                    }
 
                     result.push_back( '\n' );
                     // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage) — 길이를 함께 넘긴다(위 첫 속성과 같다)

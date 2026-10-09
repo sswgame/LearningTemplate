@@ -53,6 +53,8 @@ namespace sw
         const float32 insetBottom = MathUtil::max( 0.0f, origin._y + size._y - safeBottom );
         const float2  innerSize{ MathUtil::max( 0.0f, size._x - insetLeft - insetRight ), MathUtil::max( 0.0f, size._y - insetTop - insetBottom ) };
         for ( uint32 index = 0; index < getChildCount(); ++index )
+        {
             arrangeChild( context, *getChild( index ), float2{ insetLeft, insetTop }, innerSize );
+        }
     }
 } // namespace sw

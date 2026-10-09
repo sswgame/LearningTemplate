@@ -64,7 +64,9 @@ namespace
         {
             const int64 deadline = MonotonicClock::nowNanoseconds() + kRunTimeoutSeconds * 1000000000LL;
             while ( finished.load() == 0 && MonotonicClock::nowNanoseconds() < deadline )
+            {
                 std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            }
             if ( finished.load() == 0 )
             {
                 timedOut.store( 1 );

@@ -200,7 +200,9 @@ namespace sw
         // 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
+        {
             applyPatch( pInstance, patch );
+        }
     }
 
     const ComponentDefaults::ResolvedDefaults& ComponentDefaults::resolveFor( const TypeInfo& typeInfo )

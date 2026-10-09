@@ -70,7 +70,9 @@ namespace sw
                                    &SpriteMeshBuilder::getSlicedMeshCache(),
                                    &SpriteRenderUtil::getTextureInstanceCache() };
         for ( IAssetCache* pCache : _listBuiltInAssetCache )
+        {
             registerAssetCache( pCache );
+        }
     }
 
     AssetManager::~AssetManager() = default;
@@ -215,7 +217,9 @@ namespace sw
     void AssetManager::clearAssetCaches()
     {
         for ( IAssetCache* pCache : _registeredAssetCache.getItems() )
+        {
             pCache->clear();
+        }
     }
 
     void AssetManager::warnAboutRemainingModuleCaches() const

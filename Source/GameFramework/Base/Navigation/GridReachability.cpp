@@ -30,7 +30,9 @@ namespace sw
         if ( isInside( cell ) == false || _listCost[static_cast<size_t>( computeIndex( cell ) )] == kUnreached )
             return false;
         for ( int32 index = computeIndex( cell ); index >= 0; index = _listParent[static_cast<size_t>( index )] )
+        {
             outListCell.push_back( int2{ index % _width, index / _width } );
+        }
         std::reverse( outListCell.begin(), outListCell.end() );
         return true;
     }

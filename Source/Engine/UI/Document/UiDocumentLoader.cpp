@@ -119,7 +119,9 @@ namespace sw
                 if ( StringUtil::isNullOrEmpty( pText ) == false )
                     destination.setValue( pText );
                 for ( XmlNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
                     copyPropertyElement( context, child, destination, path + "." + child.getName(), inoutNode );
+                }
             }
 
             /** @brief 고르게 경로를 적습니다(캐시 열쇠 · 조각 사슬 비교). */
@@ -306,7 +308,9 @@ namespace sw
                     {
                         string chain;
                         for ( const string& path : listStack )
+                        {
                             chain += path + " -> ";
+                        }
                         chain += node._fragment;
                         return failInstantiate( context, document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
                     }

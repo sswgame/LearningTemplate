@@ -24,7 +24,9 @@ namespace sw
                 string value; // 반환은 모두 이 객체다(복사 없이 돌려준다)
                 size_t valueStart = eqPos + 1;
                 while ( valueStart < token.size() && ( token[valueStart] == ' ' || token[valueStart] == '\t' ) )
+                {
                     ++valueStart;
+                }
 
                 if ( valueStart >= token.size() )
                     return value;
@@ -92,9 +94,13 @@ namespace sw
     vector<string> AnnotationApply::splitAnnotationArgs( string_view args )
     {
         while ( args.empty() == false && ( args.back() == ')' || args.back() == ';' ) )
+        {
             args.remove_suffix( 1 );
+        }
         while ( args.empty() == false && ( args.front() == '(' || args.front() == ';' ) )
+        {
             args.remove_prefix( 1 );
+        }
 
         vector<string> listToken;
         bool           bInQuote   = false;

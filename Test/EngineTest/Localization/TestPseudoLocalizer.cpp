@@ -105,7 +105,9 @@ SW_TEST_CASE( PseudoLocalizerTest, PseudoCultureIsSelectableAtRuntime )
 #if !defined( SW_SHIPPING )
     bool bListed{ false };
     for ( const sw::string& language : loc.getAvailableLanguages() )
+    {
         bListed = bListed || language == "qps_ploc";
+    }
     SW_EXPECT_TRUE( bListed );
 
     SW_ASSERT_TRUE( loc.hasLanguage( "qps-ploc" ) );

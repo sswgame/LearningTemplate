@@ -44,7 +44,9 @@ namespace
         {
             float32 maxZ = -1.0e9f;
             for ( const sw::float3& point : path._listPoint )
+            {
                 maxZ = sw::MathUtil::max( maxZ, point._z );
+            }
             return maxZ;
         }
     };

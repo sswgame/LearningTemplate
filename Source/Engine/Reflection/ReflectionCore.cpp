@@ -819,7 +819,9 @@ namespace sw
         {
             out.append( "  parents: " );
             for ( size_t chainIndex = 1; chainIndex < listChain.size(); ++chainIndex )
+            {
                 out.appendFormat( "%#%#", chainIndex == 1 ? "" : " -> ", listChain[chainIndex]->_fullyQualifiedName.c_str() );
+            }
             out.append( "\n" );
         }
         if ( unresolvedParent.empty() == false )
@@ -862,7 +864,9 @@ namespace sw
                         out.appendFormat( "  [%#]", pFlagName );
                 }
                 for ( const hashed_string& alias : prop._listAlias )
+                {
                     out.appendFormat( "  alias=%#", alias.c_str() );
+                }
                 out.append( "\n" );
             }
             for ( const FunctionInfo& method : level._listMethod )
@@ -894,11 +898,15 @@ namespace sw
         // 값 순으로 — 이름표는 밀집 해시라 등록 순서가 남지 않는다.
         vector<pair<int64, const utf8*>> listEntry;
         for ( const auto& [value, name] : pEnum->_mapValueToName )
+        {
             listEntry.emplace_back( value, name.c_str() );
+        }
         std::sort( listEntry.begin(), listEntry.end(), []( const auto& lhs, const auto& rhs )
         { return lhs.first < rhs.first; } );
         for ( const auto& [value, pName] : listEntry )
+        {
             out.appendFormat( "  %# = %#\n", pName, value );
+        }
         if ( pEnum->_bHasInvalid != SW_FALSE )
             out.appendFormat( "  (Invalid = %#)\n", pEnum->_invalidValue );
         if ( pEnum->_bHasCount != SW_FALSE )
@@ -1343,7 +1351,9 @@ namespace sw
 
         // 루트가 0 번 칸이 되도록 뒤집어 적고, 깊이는 마지막에 publish 한다. 깊이를 본 쪽은 칸이 다 채워진 뒤에 보게 된다.
         for ( uint32 index = 0; index < chainCount; ++index )
+        {
             _arrAncestorNameIndex[index].store( arrChain[chainCount - 1 - index], std::memory_order_relaxed );
+        }
         _ancestorDepth.store( static_cast<uint8>( chainCount - 1 ), std::memory_order_release );
         return true;
     }

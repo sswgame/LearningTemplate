@@ -204,7 +204,9 @@ namespace
         bool loginAliceOnAAndBobOnB( AccountId& outAliceId, AccountId& outBobId )
         {
             for ( int32 attempt = 0; attempt < 400 && ( _aliceOnA._client.isReady() == false || _bobOnB._client.isReady() == false ); ++attempt )
+            {
                 step();
+            }
             const bool bRegistered = waitAccount( _aliceOnA, _aliceOnA._account.registerAccount( "alice", "password123" ) )._result == LoginResult::Ok &&
                                      waitAccount( _bobOnB, _bobOnB._account.registerAccount( "bob", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply aliceLogin = waitAccount( _aliceOnA, _aliceOnA._account.login( "alice", "password123" ) );
@@ -264,7 +266,9 @@ SW_TEST_CASE( OnlineMultiServerTest, LoginOnAnotherServerClosesTheOldConnectionT
     SW_ASSERT_TRUE( rig._serverA._accountServer.findSessionId( aliceId ) != 0 );
 
     for ( int32 attempt = 0; attempt < 400 && rig._aliceOnB._client.isReady() == false; ++attempt )
+    {
         rig.step();
+    }
     const AccountClientReply secondLogin = rig.waitAccount( rig._aliceOnB, rig._aliceOnB._account.login( "alice", "password123" ) );
     SW_ASSERT_TRUE( secondLogin._result == LoginResult::Ok );
     vector<AccountClientEvent> listEvent;

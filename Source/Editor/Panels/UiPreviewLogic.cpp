@@ -80,7 +80,9 @@ namespace sw::editor
             UiPreviewWidgetRow row{};
             row._widget = pWidget->getId();
             for ( const PanelWidget* pParent = pWidget->getParent(); pParent != nullptr; pParent = pParent->getParent() )
+            {
                 ++row._depth;
+            }
             const TypeInfo* pType = pWidget->getTypeInfo();
             row._label            = pType != nullptr ? string( pType->_name.c_str() ) : string( "Widget" );
             if ( pWidget->getName().empty() == false )
@@ -98,7 +100,9 @@ namespace sw::editor
             const Widget* pWidget  = listWidget[index - 1];
             bool          bVisible = pWidget->isVisible();
             for ( const PanelWidget* pParent = pWidget->getParent(); pParent != nullptr && bVisible; pParent = pParent->getParent() )
+            {
                 bVisible = pParent->isVisible(); // 접힌 조상 아래의 기하는 지난 배치다
+            }
             if ( bVisible == false )
                 continue;
             const UiRect bounds = pWidget->getGeometry().computeScreenBounds();

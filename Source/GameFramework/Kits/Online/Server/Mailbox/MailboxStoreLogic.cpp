@@ -127,7 +127,9 @@ namespace sw
                 request._actorId   = input._accountId;
                 request._actorKind = LedgerActorKind::Player;
                 for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
+                {
                     request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( input._accountId ), attachment._assetId, attachment._amount } );
+                }
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
                     ServiceTransaction    transaction;
@@ -185,7 +187,9 @@ namespace sw
                 request._actorKind = LedgerActorKind::System;
                 request._pPolicy   = nullptr; // 돌려주기는 상한을 보지 않는다 — 보낸 쪽이 가득 차도 재화가 사라지면 안 된다
                 for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
+                {
                     request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetId, attachment._amount } );
+                }
                 LedgerTransferOutcome outcome;
                 return Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) == LedgerResult::Ok && outcome._bReplayed == SW_FALSE;
             }
@@ -300,7 +304,9 @@ namespace sw
                 request._actorId   = input._accountId;
                 request._actorKind = LedgerActorKind::Player;
                 for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
+                {
                     request._listPosting.push_back( LedgerPosting{ funding, LedgerHolder::makeAccount( input._accountId ), attachment._assetId, attachment._amount } );
+                }
                 const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outcome );
                 if ( staged != LedgerResult::Ok )
                 {

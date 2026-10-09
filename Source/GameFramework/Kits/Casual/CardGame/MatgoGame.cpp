@@ -92,9 +92,13 @@ namespace sw
         _listPlayer.clear();
         _listPlayer.resize( static_cast<size_t>( MathUtil::max( 1, settings._playerCount ) ) );
         for ( size_t player = 0; player < _listPlayer.size() && player < layout._listHand.size(); ++player )
+        {
             _listPlayer[player]._hand = layout._listHand[player];
+        }
         for ( size_t player = 0; player < _listPlayer.size() && player < layout._listCaptured.size(); ++player )
+        {
             _listPlayer[player]._captured = layout._listCaptured[player];
+        }
         _floor         = layout._floor;
         _drawPile      = layout._drawPile;
         _currentPlayer = MathUtil::clamp( layout._firstPlayer, 0, getPlayerCount() - 1 );
@@ -137,7 +141,9 @@ namespace sw
             {
                 // 쪽(바닥에 없었다) · 따닥(바닥에 둘) — 다 먹고 피를 뺏는다.
                 for ( const uint16 floorCardId : listSameMonth )
+                {
                     captureFloorCard( player, floorCardId );
+                }
                 captureCard( player, played );
                 captureCard( player, flipped );
                 _eventBuffer.push( MatgoEvent{ player, 0, played._id, matchCount == 0 ? MatgoEvent::Kind::Jjok : MatgoEvent::Kind::Ttadak } );
@@ -188,7 +194,9 @@ namespace sw
         }
         // 한 장이면 그것, 셋(뻑)이면 다 먹고 피를 뺏는다.
         for ( const uint16 floorCardId : listSameMonth )
+        {
             captureFloorCard( player, floorCardId );
+        }
         captureCard( player, card );
         if ( matchCount >= 3 )
         {
@@ -381,7 +389,9 @@ namespace sw
             score._gwang = bRainGwang ? settings._gwangRainThreeScore : settings._gwangThreeScore;
         score._godori = godoriCount >= 3 ? settings._godoriScore : 0;
         for ( int32 ribbon = static_cast<int32>( HwatuRibbon::Hong ); ribbon < MatgoGameInternal::kRibbonCount; ++ribbon )
+        {
             score._dan += arrRibbonCount[ribbon] >= 3 ? settings._danScore : 0;
+        }
         score._yeol  = MatgoGameInternal::computeCountScore( score._yeolCount, settings._yeolThreshold );
         score._tti   = MatgoGameInternal::computeCountScore( score._ttiCount, settings._ttiThreshold );
         score._pi    = MatgoGameInternal::computeCountScore( score._piCount, settings._piThreshold );

@@ -115,7 +115,9 @@ namespace sw
             bRemoved           = true;
             bool bOtherWitness = false;
             for ( const PendingReport& other : _listPending )
+            {
                 bOtherWitness = bOtherWitness || other._incidentId == report._incidentId;
+            }
             if ( bOtherWitness == false )
                 pushEvent( WesternLawEvent::Kind::ReportPrevented, report._regionId, 0, report._incidentId, report._crimeId, witnessId );
         }
@@ -136,7 +138,9 @@ namespace sw
             return;
         // 신고 — 먼저 다다른 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서로 보아 결과가 늘 같다.
         for ( PendingReport& report : _listPending )
+        {
             report._remaining.tick( deltaTime );
+        }
         for ( size_t index = 0; index < _listPending.size(); )
         {
             if ( _listPending[index]._remaining.isActive() )

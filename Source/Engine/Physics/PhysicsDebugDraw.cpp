@@ -116,7 +116,9 @@ namespace sw
                 PhysicsDebugDrawInternal::drawCircle( renderer, frame, bottom, axisZ, axisY, shape._radius, color );
                 const float3 arrSide[4] = { axisX, -axisX, axisZ, -axisZ };
                 for ( const float3& side : arrSide )
+                {
                     renderer.drawLine( frame.apply( top + side * shape._radius ), frame.apply( bottom + side * shape._radius ), color );
+                }
                 break;
             }
             case PhysicsShapeType3D::ConvexHull:
@@ -124,11 +126,15 @@ namespace sw
                 // 껍질의 면은 백엔드가 짓는다 — 점 사이의 별 모양(중심에서 각 점)으로 부피만 보인다.
                 float3 center{};
                 for ( const float3& point : shape._listPoint )
+                {
                     center += point;
+                }
                 if ( shape._listPoint.empty() == false )
                     center = center * ( 1.0f / static_cast<float32>( shape._listPoint.size() ) );
                 for ( const float3& point : shape._listPoint )
+                {
                     renderer.drawLine( frame.apply( center ), frame.apply( point ), color );
+                }
                 break;
             }
             case PhysicsShapeType3D::TriangleMesh:

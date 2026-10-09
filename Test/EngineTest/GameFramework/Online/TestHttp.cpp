@@ -139,7 +139,9 @@ SW_TEST_CASE( HttpTest, ParserHandlesLengthChunkedCloseAndLimits )
     // 한 바이트씩 넣어도 같은 결과
     HttpParseState state = HttpParseState::NeedMore;
     for ( const utf8 ch : fixed )
+    {
         state = parser.append( reinterpret_cast<const uint8*>( &ch ), 1 );
+    }
     SW_ASSERT_TRUE( state == HttpParseState::Complete );
     SW_EXPECT_EQUAL( 200, parser.getStatusCode() );
     SW_EXPECT_EQUAL( size_t( 5 ), parser.getBody().size() );

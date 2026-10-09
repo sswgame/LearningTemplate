@@ -904,12 +904,16 @@ SW_TEST_CASE( GameObjectTest, DuplicateNamesUniquifyWithoutRescan )
     sw::vector<sw::GameObject*> listObj;
     listObj.reserve( kCount );
     for ( uint32 index = 0; index < kCount; ++index )
+    {
         listObj.push_back( manager.createGameObject( sw::hashed_string( "Dup" ) ) );
+    }
     SW_EXPECT_STREQ( "Dup", listObj[0]->getName().c_str() );
     SW_EXPECT_STREQ( "Dup_2", listObj[1]->getName().c_str() );
     SW_EXPECT_STREQ( "Dup_3000", listObj[kCount - 1]->getName().c_str() );
     for ( uint32 index = 0; index < kCount; index += 997 )
+    {
         SW_EXPECT_TRUE( manager.findGameObjectByName( listObj[index]->getName() ) == listObj[index] );
+    }
 
     // 지우고 다시 만들면 지운 번호를 되쓴다. 빈 번호가 없으면 다음 새 번호다.
     manager.destroyObject( listObj[1], false );
@@ -944,7 +948,9 @@ SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
     constexpr uint32            kChurnCount = 20000;
     sw::vector<sw::GameObject*> listLive;
     for ( uint32 index = 0; index < kLiveCount; ++index )
+    {
         listLive.push_back( manager.createGameObject( sw::hashed_string( "ChurnBullet" ) ) );
+    }
 
     const uint32 indexBefore = sw::hashed_string( "SameNameChurn.ProbeBefore" ).getIndex();
     for ( uint32 cycle = 0; cycle < kChurnCount; ++cycle )
@@ -959,7 +965,9 @@ SW_TEST_CASE( GameObjectTest, SameNameChurnKeepsInternPoolBounded )
     // 프로브 문자열 하나 + 여유 하나. 번호가 오르기만 하면 약 2 만이 된다.
     SW_EXPECT_TRUE( indexAfter - indexBefore <= 2 );
     for ( sw::GameObject* pObj : listLive )
+    {
         SW_EXPECT_TRUE( manager.findGameObjectByName( pObj->getName() ) == pObj );
+    }
 }
 
 /**
@@ -1427,7 +1435,9 @@ SW_TEST_CASE( GameObjectTest, DirtyRootListSurvivesIndexedRemoval )
     // 남은 루트는 전부 움직이고 플러시되어야 한다.
     const uint32 arrRemaining[3] = { 0, 2, 3 };
     for ( uint32 index : arrRemaining )
+    {
         listRoot[index]->setLocalPosition( sw::float3{ static_cast<float32>( index ) * 10.0f, 1.0f, 0.0f } );
+    }
     SW_EXPECT_EQUAL( size_t( 3 ), manager.getTransformHierarchy().getDirtyRootCount() );
     manager.flushSceneTransforms();
     for ( uint32 index : arrRemaining )
@@ -2162,7 +2172,9 @@ SW_TEST_CASE( GameObjectTest, IntraObjectAttachDoesNotMakeObjectItsOwnChild )
 
     // 자기 자신은 자식 목록에 없어야 한다.
     for ( sw::GameObject* pChild : childrenOf( *pObj ) )
+    {
         SW_EXPECT_TRUE( pChild != pObj );
+    }
 
     // 계층 갱신이 돌아와야 한다 — 자기 자신을 자식으로 보면 여기서 스택이 넘친다.
     pObj->setActive( false );

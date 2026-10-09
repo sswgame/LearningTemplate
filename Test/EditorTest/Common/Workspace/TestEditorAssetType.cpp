@@ -78,7 +78,9 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     sw::AssetCookPath::appendSourceSuffixes( sw::AssetKind::Prefab, listCookSuffix );
     SW_ASSERT_EQUAL( listCookSuffix.size(), listPrefabSuffix.size() );
     for ( size_t index = 0; index < listCookSuffix.size(); ++index )
+    {
         SW_EXPECT_TRUE( listPrefabSuffix[index] == listCookSuffix[index] );
+    }
     sw::vector<sw::string> listSceneSuffix;
     EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, listSceneSuffix );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listSceneSuffix.size() );
@@ -87,7 +89,9 @@ SW_TEST_CASE( EditorAssetTypeTest, SceneAndPrefabFollowTheCookersSourceRule )
     // 카탈로그가 세는 길 — JSON 프리팹도 세고, 쿠킹본 · 쿠킹하지 않는 이름은 세지 않는다.
     const sw::string folder = test::makeTempDirectory( "assetkind" );
     for ( const utf8* pName : { "a.prefab.xml", "b.prefab.json", "c.prefab.bin", "d.scene.xml", "e.scenery.xml" } )
+    {
         SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( folder + "/" + pName, "<x/>" ) );
+    }
     sw::vector<sw::string> listPrefabFile;
     sw::vector<sw::string> listSceneFile;
     SW_ASSERT_TRUE( EditorAssetTypeRegistry::collectFiles( EditorAssetType::Prefab, folder, listPrefabFile ) );
@@ -427,6 +431,8 @@ SW_TEST_CASE( EditorAssetTypeTest, RawHeightfieldRoutesToTheHeightfieldImporter 
     EditorAssetTypeRegistry::appendReloadableSuffixes( listSuffix );
     bool bWatchesR16 = false;
     for ( const sw::string& suffix : listSuffix )
+    {
         bWatchesR16 = bWatchesR16 || suffix == ".r16";
+    }
     SW_EXPECT_TRUE( bWatchesR16 );
 }

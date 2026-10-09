@@ -215,7 +215,9 @@ SW_TEST_CASE( AiTest, BlackboardObserverAbortsSwitchBranches )
     BehaviorTreeRunner runner;
     runner.initialize( &tree );
     for ( int32 tickIndex = 0; tickIndex < 3; ++tickIndex )
+    {
         SW_EXPECT_TRUE( runner.tick( blackboard, &agent, 0.1f ) == BehaviorStatus::Running );
+    }
     SW_EXPECT_EQUAL( 1, agent._patrolStarts );
     SW_EXPECT_EQUAL( 3, agent._patrolTicks );
 

@@ -18,7 +18,9 @@ namespace
     void pushFrames( InputCommandBuffer& buffer, uint8 direction, uint16 buttons, int32 count )
     {
         for ( int32 index = 0; index < count; ++index )
+        {
             buffer.push( InputFrame{ buttons, direction } );
+        }
     }
 } // namespace
 

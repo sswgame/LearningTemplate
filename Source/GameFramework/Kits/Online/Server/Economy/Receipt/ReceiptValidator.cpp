@@ -85,12 +85,16 @@ namespace sw
     void ReceiptValidatorRegistry::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
         for ( IReceiptValidator* pValidator : _listValidator )
+        {
             pValidator->pollCompletions( outListResult );
+        }
     }
 
     void ReceiptValidatorRegistry::shutdown()
     {
         for ( IReceiptValidator* pValidator : _listValidator )
+        {
             pValidator->shutdown();
+        }
     }
 } // namespace sw

@@ -122,17 +122,23 @@ namespace sw
         for ( int32 suit = 0; suit < StandardSuit::kCount; ++suit )
         {
             for ( int32 rank = StandardRank::kAce; rank <= StandardRank::kKing; ++rank )
+            {
                 outPile.push( Card{ cardId++, static_cast<uint8>( suit ), static_cast<uint8>( rank ) } );
+            }
         }
         for ( int32 jokerIndex = 0; jokerIndex < jokerCount; ++jokerIndex )
+        {
             outPile.push( Card{ cardId++, StandardSuit::kJoker, 0 } );
+        }
     }
 
     void CardDeckUtil::makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile )
     {
         outPile.clear();
         for ( size_t index = listCardInDrawOrder.size(); index > 0; --index )
+        {
             outPile.push( listCardInDrawOrder[index - 1] );
+        }
     }
 
     void CardActionUtil::encodeAction( const CardAction& action, vector<uint8>& outBuffer )

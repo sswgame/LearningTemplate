@@ -134,7 +134,9 @@ namespace sw
         {
             bool bDuplicate = false;
             for ( const BonePair& existing : _listPair )
+            {
                 bDuplicate = bDuplicate || existing._target == listTargetBone[index];
+            }
             if ( bDuplicate )
                 continue;
             BonePair pair{};
@@ -193,7 +195,9 @@ namespace sw
             // 다리를 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내린다 — 발이 목표에서 떨어지지 않게(발이 미끄러지지 않게).
             float32 reach = 0.0f;
             for ( size_t boneIndex = 1; boneIndex < chain._listTargetBone.size(); ++boneIndex )
+            {
                 reach += ( _targetBuffer.getModelPosition( chain._listTargetBone[boneIndex] ) - _targetBuffer.getModelPosition( chain._listTargetBone[boneIndex - 1] ) ).getLength();
+            }
             const float3  toGoal     = goal - _targetBuffer.getModelPosition( chain._listTargetBone.front() );
             const float32 usable     = reach * 0.999f;
             const float32 horizontal = toGoal._x * toGoal._x + toGoal._z * toGoal._z;
@@ -257,7 +261,9 @@ namespace sw
             AnimClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
             retargeter.retarget( sourcePose, targetPose );
             for ( uint32 boneIndex = 0; boneIndex < targetPose.getBoneCount(); ++boneIndex )
+            {
                 raw._listSample.push_back( targetPose.getBoneTransform( boneIndex ) );
+            }
         }
 
         outClip = AnimClip{};
@@ -266,9 +272,13 @@ namespace sw
         outClip.setName( sourceClip.getName() );
         outClip.setLooping( sourceClip.isLoopingByDefault() );
         for ( const AnimNotifyEvent& event : sourceClip.getNotifyTrack().getEvents() )
+        {
             outClip.addNotify( event );
+        }
         for ( const AnimCurve& curve : sourceClip.getCurves() )
+        {
             outClip.addCurve( curve );
+        }
         // 루트 모션 트랙은 원본 뿌리를 가리켰으면 대상 뿌리로 옮긴다.
         const int32 sourceRootMotion = sourceClip.getRootMotionTrack();
         if ( 0 <= sourceRootMotion && static_cast<size_t>( sourceRootMotion ) < listTrackToBone.size() &&

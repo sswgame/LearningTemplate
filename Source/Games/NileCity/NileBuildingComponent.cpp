@@ -120,9 +120,13 @@ namespace sw
     void NileBuildingComponent::collectModelPaths( vector<string>& outListPath )
     {
         for ( const utf8* pName : NileBuildingComponentInternal::kArrHouseModel )
+        {
             outListPath.push_back( makeModelPath( pName ) );
+        }
         for ( const utf8* pName : NileBuildingComponentInternal::kArrOtherModel )
+        {
             outListPath.push_back( makeModelPath( pName ) );
+        }
     }
 
     string NileBuildingComponent::makeModelPath( const utf8* pName )

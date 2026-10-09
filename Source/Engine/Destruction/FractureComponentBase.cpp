@@ -100,7 +100,9 @@ namespace sw
             {
                 vector<float2> listSorted;
                 for ( const float3& point : listPoint )
+                {
                     listSorted.push_back( float2{ point._x, point._y } );
+                }
                 std::sort( listSorted.begin(), listSorted.end(), []( const float2& lhs, const float2& rhs )
                 { return lhs._x < rhs._x || ( lhs._x == rhs._x && lhs._y < rhs._y ); } );
                 outListPolygon.clear();
@@ -109,7 +111,9 @@ namespace sw
                 for ( const float2& point : listSorted )
                 {
                     while ( outListPolygon.size() >= 2 && cross( outListPolygon[outListPolygon.size() - 2], outListPolygon.back(), point ) <= 0.0f )
+                    {
                         outListPolygon.pop_back();
+                    }
                     outListPolygon.push_back( point );
                 }
                 const size_t lowerCount = outListPolygon.size();
@@ -117,7 +121,9 @@ namespace sw
                 {
                     const float2& point = listSorted[index - 1];
                     while ( outListPolygon.size() > lowerCount && cross( outListPolygon[outListPolygon.size() - 2], outListPolygon.back(), point ) <= 0.0f )
+                    {
                         outListPolygon.pop_back();
+                    }
                     outListPolygon.push_back( point );
                 }
                 if ( outListPolygon.size() > 1 )
@@ -224,7 +230,9 @@ namespace sw
                     vector<PhysicsShapeHandle> listChild;
                     listChild.reserve( listLeaf.size() );
                     for ( const uint32 leaf : listLeaf )
+                    {
                         listChild.push_back( findLeafShape( leaf ) );
+                    }
                     outShape          = _scene.createCompoundShape( listChild );
                     desc._sharedShape = outShape;
                 }
@@ -375,7 +383,9 @@ namespace sw
                     vector<PhysicsShapeHandle> listChild;
                     listChild.reserve( listLeaf.size() );
                     for ( const uint32 leaf : listLeaf )
+                    {
                         listChild.push_back( findLeafShape( leaf ) );
+                    }
                     outShape          = _scene.createCompoundShape( listChild );
                     desc._sharedShape = outShape;
                 }
@@ -705,7 +715,9 @@ namespace sw
         const bool bMoved  = updateGroups( _frameSimulatedTime );
         bool       bFading = false;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
+        {
             bFading = bFading || runtime._bFading == SW_TRUE;
+        }
         if ( bMoved || _bPoseDirty == SW_TRUE )
         {
             if ( _bBaked == SW_TRUE )
@@ -776,7 +788,9 @@ namespace sw
         _state.initialize( _asset->_graph, _profile, listAnchor );
         _listPiecePose.assign( _asset->getPieceCount(), BoneTransform{} );
         for ( uint32 leaf = 0; leaf < _asset->getPieceCount(); ++leaf )
+        {
             _listPiecePose[leaf] = FractureRenderUtil::makeBoneTransform( _asset->_graph._listNode[leaf]._centroid, quaternion::Identity, float3{}, 1.0f );
+        }
         _listLeafStaticBody.assign( _asset->getPieceCount(), PhysicsBodyHandle{} );
         _eventLog._seed = _seed;
         _bStateReady    = SW_TRUE;
@@ -844,7 +858,9 @@ namespace sw
             }
             convertWorldDamage( pending, listEvent );
             for ( const DestructionDamageEvent& event : listEvent )
+            {
                 applyMeshEvent( physics, event );
+            }
         }
         _lastApplyMicroseconds = static_cast<float32>( stopwatch.getElapsedMicroseconds() );
     }
@@ -913,7 +929,9 @@ namespace sw
             {
                 const FractureNode& data = _asset->_graph._listNode[node];
                 for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount && bReach == false; ++leaf )
+                {
                     bReach = float3::getDistance( _asset->_graph._listNode[leaf]._centroid, center ) < radius;
+                }
             }
             if ( bReach == false )
                 continue;
@@ -1085,7 +1103,9 @@ namespace sw
         if ( bFirst )
         {
             for ( const DestructionGroup& group : _state.getGroups() )
+            {
                 listCreated.push_back( group._id );
+            }
         }
         else
         {
@@ -1157,7 +1177,9 @@ namespace sw
         // 붙어 있던 것이 갈라지거나 떨어졌으면 그 모양에 기대는 것(내비메시)에 알린다. 떨어진 덩어리끼리의 갈라짐은 알리지 않는다.
         bool bAnchoredChanged = bFirst;
         for ( const FractureGroupRuntime& removed : listRemoved )
+        {
             bAnchoredChanged = bAnchoredChanged || removed._bAnchored == SW_TRUE;
+        }
         for ( const uint32 groupId : listCreated )
         {
             const DestructionGroup* pGroup = _state.findGroup( groupId );
@@ -1190,7 +1212,9 @@ namespace sw
             const FractureNode& data = _asset->_graph._listNode[node];
             volume += data._volume;
             for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount; ++leaf )
+            {
                 listLeaf.push_back( leaf );
+            }
         }
         inoutRuntime._volume       = volume * cube;
         inoutRuntime._spawnOrder   = _nextSpawnOrder++;
@@ -1228,7 +1252,9 @@ namespace sw
         vector<PhysicsBodyHandle> listBody;
         _physics->createStaticLeafBodies( listCreate, _objectPosition, _objectRotation, layer, getOwner() != nullptr ? getOwner()->getObjectId() : 0, listBody );
         for ( size_t index = 0; index < listCreate.size() && index < listBody.size(); ++index )
+        {
             _listLeafStaticBody[listCreate[index]] = listBody[index];
+        }
     }
 
     void FractureComponentBase::rebuildLeafRuntimeMap()
@@ -1243,7 +1269,9 @@ namespace sw
             {
                 const FractureNode& data = _asset->_graph._listNode[node];
                 for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount; ++leaf )
+                {
                     _listRuntimeOfLeaf[leaf] = index;
+                }
             }
         }
     }
@@ -1365,7 +1393,9 @@ namespace sw
             if ( pose.getBoneCount() != _listPiecePose.size() )
                 continue;
             for ( uint32 leaf = 0; leaf < static_cast<uint32>( _listPiecePose.size() ); ++leaf )
+            {
                 pose.setBoneTransform( leaf, _listPiecePose[leaf] );
+            }
             pUnit->applyExternalPose();
             pUnit->setBoundsRadius( assetRadius + maxOffset );
             pUnit->markRenderStateDirty();
@@ -1456,7 +1486,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
+        {
             count += runtime._body.isValid() ? 1u : 0u;
+        }
         return count;
     }
 
@@ -1464,7 +1496,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( const PhysicsBodyHandle& body : _listLeafStaticBody )
+        {
             count += body.isValid() ? 1u : 0u;
+        }
         return count;
     }
 
@@ -1472,7 +1506,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( const FractureGroupRuntime& runtime : _listRuntime )
+        {
             count += ( runtime._bAnchored == SW_FALSE && runtime._bGone == SW_FALSE ) ? 1u : 0u;
+        }
         return count;
     }
 

@@ -48,7 +48,9 @@ namespace sw
             for ( const uint32 version : listVersion )
             {
                 for ( int32 shift = 0; shift < 32; shift += 8 )
+                {
                     hash = ( hash ^ ( ( version >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+                }
             }
             return hash;
         }

@@ -51,7 +51,9 @@ namespace sw
             {
                 uint32 result = 1;
                 while ( result < value )
+                {
                     result <<= 1;
+                }
                 return result;
             }
         };

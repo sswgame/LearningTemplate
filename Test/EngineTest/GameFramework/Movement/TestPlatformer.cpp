@@ -114,7 +114,9 @@ SW_TEST_CASE( PlatformerTest, WallsDashesDoubleJumpsPlatformsLaddersAndHazards )
     (void)scene.run( PlatformerInput{}, 10 );
     SW_EXPECT_TRUE( scene._motor.isGrounded() );
     for ( int32 frame = 0; frame < 60 && scene._motor.isGrounded(); ++frame )
+    {
         (void)scene.run( scene.press( 1.0f, false ), 1 );
+    }
     SW_EXPECT_FALSE( scene._motor.isGrounded() );
     (void)scene.run( scene.press( 1.0f, false ), 2 );
     const uint32 coyoteEvent = scene.run( scene.press( 1.0f, true ), 1 );

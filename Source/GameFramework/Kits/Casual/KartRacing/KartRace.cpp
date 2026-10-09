@@ -33,9 +33,13 @@ namespace sw
                 const float32 targetYaw  = MathUtil::atan2( target._x - from._x, target._z - from._z );
                 float32       delta      = targetYaw - currentYaw;
                 while ( delta > MathUtil::kPi )
+                {
                     delta -= 2.0f * MathUtil::kPi;
+                }
                 while ( delta < -MathUtil::kPi )
+                {
                     delta += 2.0f * MathUtil::kPi;
+                }
                 const float32 newYaw = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
                 return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
             }
@@ -251,7 +255,9 @@ namespace sw
     {
         const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step();
+        }
         return stepCount;
     }
 
@@ -380,7 +386,9 @@ namespace sw
                 kart._listLapTime.pop_back();
                 kart._bestLapTime = 0.0f;
                 for ( const float32 lapTime : kart._listLapTime )
+                {
                     kart._bestLapTime = kart._bestLapTime <= 0.0f ? lapTime : MathUtil::min( kart._bestLapTime, lapTime );
+                }
             }
             pushEvent( KartRaceEvent::Kind::LapRevoked, racer, -1, kart._lap, _raceTime );
         }
@@ -709,7 +717,9 @@ namespace sw
         const int32 racerCount = static_cast<int32>( _listRacer.size() );
         _listPlaceOrder.resize( static_cast<size_t>( racerCount ) );
         for ( int32 racer = 0; racer < racerCount; ++racer )
+        {
             _listPlaceOrder[static_cast<size_t>( racer )] = racer;
+        }
         // 들어온 차는 들어온 순서, 나머지는 진행값 — 같으면 번호(결정적).
         std::stable_sort( _listPlaceOrder.begin(), _listPlaceOrder.end(), [this]( int32 lhs, int32 rhs )
         {

@@ -280,7 +280,9 @@ namespace sw
         _pendingDeltaSeconds += MathUtil::max( context._deltaSeconds, 0.0f );
         _worldGravity = context._worldGravity;
         for ( const unique_ptr<RigNode>& node : _listNode )
+        {
             node->prepare( context );
+        }
     }
 
     void RigInstance::evaluate( Pose& inoutLocalPose, const vector<int32>& listParent, const float4x4& worldFromModel )
@@ -289,7 +291,9 @@ namespace sw
             return;
         _pose.initialize( inoutLocalPose, listParent );
         for ( RigMorphWeight& morph : _listMorphWeight )
+        {
             morph._weight = 0.0f; // 이름 목록은 남긴다 — 프레임마다 다시 잡지 않게
+        }
 
         RigEvaluateContext context{};
         context._pPose          = &_pose;
@@ -310,7 +314,9 @@ namespace sw
             {
                 _listBlendScratch.resize( listWritten.size() );
                 for ( size_t index = 0; index < listWritten.size(); ++index )
+                {
                     _listBlendScratch[index] = _pose.getLocal( listWritten[index] );
+                }
             }
             context._nodeWeight = weight;
             _listNode[nodeIndex]->evaluate( context );
@@ -318,7 +324,9 @@ namespace sw
             {
                 // 노드 앞 포즈와 섞는다 — 로컬에서 섞으므로 쓰지 않은 자손은 그대로 따라온다.
                 for ( size_t index = 0; index < listWritten.size(); ++index )
+                {
                     _pose.setLocal( listWritten[index], BoneTransform::blend( _listBlendScratch[index], _pose.getLocal( listWritten[index] ), weight ) );
+                }
             }
         }
         _pose.writeTo( inoutLocalPose );
@@ -329,6 +337,8 @@ namespace sw
     void RigInstance::reset()
     {
         for ( const unique_ptr<RigNode>& node : _listNode )
+        {
             node->reset();
+        }
     }
 } // namespace sw

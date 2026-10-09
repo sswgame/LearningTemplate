@@ -235,7 +235,9 @@ namespace sw
             {
                 const float32 weight = channel._duration > 0.0f ? evaluateUiCurve( channel._curve, channel._elapsed / channel._duration ) : 1.0f;
                 for ( uint32 index = 0; index < 4; ++index )
+                {
                     outArr[index] = MathUtil::lerp( channel._arrFrom[index], channel._arrTo[index], weight );
+                }
             }
 
             /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutSpec 에 더합니다. */
@@ -248,10 +250,14 @@ namespace sw
                 while ( position < item.size() )
                 {
                     while ( position < item.size() && ( item[position] == ' ' || item[position] == '\t' ) )
+                    {
                         ++position;
+                    }
                     const size_t begin = position;
                     while ( position < item.size() && item[position] != ' ' && item[position] != '\t' )
+                    {
                         ++position;
+                    }
                     if ( position == begin )
                         break;
                     if ( tokenCount == 4 )

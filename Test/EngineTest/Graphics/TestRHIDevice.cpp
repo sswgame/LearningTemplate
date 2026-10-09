@@ -488,7 +488,9 @@ SW_TEST_CASE( RHIDeviceTest, BindlessTextureReleaseKeepsBufferIndices )
         const sw::RHIDescriptorIndex newIndex = pResource->registerBindlessResource( newBuffer );
         SW_EXPECT_TRUE( newIndex != sw::kInvalidDescriptorIndex );
         for ( uint32 slot = 0; slot < 3; ++slot )
+        {
             SW_EXPECT_TRUE_MSG( newIndex != arrIndex[slot], "texture release handed a live buffer index to a new buffer" );
+        }
 
         // 반대 방향 오용(텍스처 인덱스를 unregisterBindlessResource 에)은 검사할 수 없다 — 공간이 다르므로
         // 그 정수는 살아 있는 버퍼 슬롯을 정당하게 가리키고, 백엔드는 둘을 구분할 방법이 없다. 그래서
@@ -667,17 +669,23 @@ SW_TEST_CASE( RHIDeviceTest, TextureReadbackMatchesUpload )
     // R8G8B8A8 4x4 → 2x2 → 1x1 = 21 픽셀. 픽셀마다 다른 값을 넣어 행/밉 어긋남을 잡는다.
     uint8 arrRgba[21 * 4]{};
     for ( uint32 byteIndex = 0; byteIndex < sizeof( arrRgba ); ++byteIndex )
+    {
         arrRgba[byteIndex] = static_cast<uint8>( byteIndex * 7 + 3 );
+    }
 
     // BC1 8x8(4 블록) → 4x4(1 블록) = 5 블록 x 8 바이트.
     uint8 arrBc1[5 * 8]{};
     for ( uint32 byteIndex = 0; byteIndex < sizeof( arrBc1 ); ++byteIndex )
+    {
         arrBc1[byteIndex] = static_cast<uint8>( 200 - byteIndex * 3 );
+    }
 
     // BC6H(HDR, `.hdr` 임포트 결과) 4x4 = 블록 하나 x 16 바이트.
     uint8 arrBc6h[16]{};
     for ( uint32 byteIndex = 0; byteIndex < sizeof( arrBc6h ); ++byteIndex )
+    {
         arrBc6h[byteIndex] = static_cast<uint8>( 17 + byteIndex * 11 );
+    }
 
     struct Case
     {
@@ -1713,7 +1721,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
         arrVertex[vertexIndex]._arrPosition[1] = arrPosition[vertexIndex][1];
         arrVertex[vertexIndex]._arrPosition[2] = 0.5f;
         for ( uint32 channel = 0; channel < 4; ++channel )
+        {
             arrVertex[vertexIndex]._arrColor[channel] = 1.0f;
+        }
     }
 
     test::RHIBackendSweep sweep;
@@ -1878,7 +1888,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
             for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
             {
                 for ( size_t byteIndex = 0; byteIndex < bytes.size(); ++byteIndex )
+                {
                     bytes[byteIndex] = static_cast<uint8>( ( byteIndex * 7 + slice * 41 ) & 0xFF );
+                }
                 sw::RHITextureUploadDesc upload{};
                 upload._pData      = bytes.data();
                 upload._sizeBytes  = static_cast<uint32>( bytes.size() );
@@ -1890,7 +1902,9 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
             for ( uint32 slice = 0; slice < shape._arraySize; ++slice )
             {
                 for ( size_t byteIndex = 0; byteIndex < bytes.size(); ++byteIndex )
+                {
                     bytes[byteIndex] = static_cast<uint8>( ( byteIndex * 7 + slice * 41 ) & 0xFF );
+                }
                 sw::vector<uint8>     readBytes;
                 sw::RHITextureMipSpan layout{};
                 const bool            bRead = pResource->readbackTexture2D( uploaded, 0, slice, readBytes, layout );
@@ -1999,7 +2013,9 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
         };
         sw::RHIMemoryKindStats arrBefore[std::size( arrCase )]{};
         for ( size_t caseIndex = 0; caseIndex < std::size( arrCase ); ++caseIndex )
+        {
             arrBefore[caseIndex] = ledger.getStats( arrCase[caseIndex]._kind );
+        }
 
         const sw::RHITextureHandle sampled   = pResource->createTexture2D( sampledDesc );
         const sw::RHITextureHandle target    = pResource->createTexture2D( targetDesc );
@@ -2184,7 +2200,9 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
                 for ( uint32 col = 0; col < shape._width; ++col )
                 {
                     for ( uint32 channel = 0; channel < bytesPerPixel; ++channel )
+                    {
                         regionBytes[static_cast<size_t>( row ) * rowBytes + col * bytesPerPixel + channel] = static_cast<uint8>( row * 16 + col + 1 );
+                    }
                 }
             }
             sw::RHITextureRegionUploadDesc region = shape;
@@ -2427,7 +2445,9 @@ SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
         }
 
         for ( const sw::RHITextureHandle target : arrTarget )
+        {
             pResource->destroyTexture( target );
+        }
         pResource->destroyPipelineState( pso );
         probe.shutdown();
     }
@@ -2495,7 +2515,9 @@ SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
             {
                 bool bExpectRed{ false };
                 for ( const sw::RHIScissorRect& scissor : arrScissor )
+                {
                     bExpectRed = bExpectRed || ( scissor._y <= row && row < scissor._y + scissor._height && scissor._x <= col && col < scissor._x + scissor._width );
+                }
                 const uint8* pPixel = findPixel( pixels, layout, col, row );
                 const bool   bRed   = pPixel[0] > 200 && pPixel[1] < 80 && pPixel[2] < 80;
                 const bool   bClear = isNear( pPixel[0], 13, 2 ) && isNear( pPixel[1], 13, 2 ) && isNear( pPixel[2], 20, 2 );

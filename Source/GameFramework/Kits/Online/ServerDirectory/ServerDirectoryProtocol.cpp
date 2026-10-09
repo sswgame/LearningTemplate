@@ -18,7 +18,9 @@ namespace sw
             return;
         outWriter.writeVarUint( window._listAllowedAccount.size() );
         for ( const AccountId accountId : window._listAllowedAccount )
+        {
             outWriter.writeVarUint( accountId );
+        }
     }
 
     bool ServerDirectoryProtocol::readMaintenance( BitReader& reader, bool bIncludeAllowList, MaintenanceWindow& outWindow )
@@ -36,7 +38,9 @@ namespace sw
             if ( count > static_cast<uint64>( ServerDirectoryLimit::kMaxAllowedAccountCount ) )
                 return false;
             for ( uint64 index = 0; index < count; ++index )
+            {
                 outWindow._listAllowedAccount.push_back( reader.readVarUint() );
+            }
         }
         return reader.hasOverflowed() == false;
     }
@@ -67,10 +71,14 @@ namespace sw
     {
         outWriter.writeVarUint( status._listMaintenance.size() );
         for ( const MaintenanceWindow& window : status._listMaintenance )
+        {
             writeMaintenance( outWriter, window, false );
+        }
         outWriter.writeVarUint( status._listNotice.size() );
         for ( const ServiceNotice& notice : status._listNotice )
+        {
             writeNotice( outWriter, notice );
+        }
     }
 
     bool ServerDirectoryProtocol::readStatus( BitReader& reader, ServerDirectoryStatus& outStatus )

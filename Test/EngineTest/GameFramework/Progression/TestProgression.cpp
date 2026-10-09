@@ -193,8 +193,10 @@ SW_TEST_CASE( ProgressionTest, RunMapsConnectFloorsWithoutCrossingAndEndAtTheBos
                 if ( other._floor != node._floor || other._column != node._column + 1 )
                     continue;
                 for ( const int32 otherNext : other._listNext )
+                {
                     SW_EXPECT_FALSE( mapA.getNodes()[static_cast<size_t>( otherNext )]._column == node._column &&
                                      mapA.getNodes()[static_cast<size_t>( otherNext )]._floor == node._floor + 1 );
+                }
             }
         }
     }

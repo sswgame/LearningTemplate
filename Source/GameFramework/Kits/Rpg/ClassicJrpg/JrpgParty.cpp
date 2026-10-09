@@ -87,7 +87,9 @@ namespace sw
         member._name    = string( name );
         member._equipment.initialize( _pItemCatalog, _equipLayout );
         for ( int32 index = 0; index < kJrpgStatCount; ++index )
+        {
             member._arrStat[index] = pClass->_arrBase[index];
+        }
         const int32 targetLevel = MathUtil::clamp( level, 1, _pCatalog->getCurve().getMaxLevel() );
         member._level.setLevel( _pCatalog->getCurve(), targetLevel );
         _listMember.push_back( member );
@@ -125,7 +127,9 @@ namespace sw
 
         member._classId = classId;
         for ( int32 index = 0; index < kJrpgStatCount; ++index )
+        {
             member._arrStat[index] /= 2;
+        }
         member._arrStat[static_cast<size_t>( JrpgStat::MaxHp )] = MathUtil::max( 1, member.getStat( JrpgStat::MaxHp ) );
         member._hp                                              = MathUtil::clamp( member._hp, 1, member.getStat( JrpgStat::MaxHp ) );
         member._mp                                              = MathUtil::clamp( member._mp, 0, member.getStat( JrpgStat::MaxMp ) );
@@ -399,7 +403,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const JrpgMember& member : _listMember )
+        {
             count += member.isAlive() ? 1 : 0;
+        }
         return count;
     }
 
@@ -417,7 +423,9 @@ namespace sw
     {
         JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
         for ( int32 index = 0; index < kJrpgStatCount; ++index )
+        {
             member._arrStat[index] += classDef._arrGrowth[index];
+        }
         // 오른 최대치만큼 지금 HP · MP 도 오른다(쓰러진 멤버는 그대로).
         if ( member.isAlive() )
         {

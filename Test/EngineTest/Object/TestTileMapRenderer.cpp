@@ -48,7 +48,9 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     SW_ASSERT_TRUE( map.resetTiles( 4, 2 ) );
     map._tileSetPath = "engine/tilesets/test.tileset.xml";
     for ( int32 x = 0; x < 3; ++x )
+    {
         SW_ASSERT_TRUE( map.setTileBrush( x, 1, "ground" ) );
+    }
     SW_ASSERT_TRUE( map.setTileBrush( 3, 1, "water" ) );
     pTiles->setTileMapData( map, tileSet );
     SW_ASSERT_TRUE( pTiles->rebuild() );

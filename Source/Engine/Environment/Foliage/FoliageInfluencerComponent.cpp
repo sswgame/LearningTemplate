@@ -29,7 +29,9 @@ namespace sw
         float32 arrDistance[kMaxInfluencerCount]{};
         uint32  count{ 0 };
         for ( float4& sphere : outArrSphere )
+        {
             sphere = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
+        }
         for ( const FoliageInfluencerComponent* pInfluencer : manager.getComponentRegistry().getAll<FoliageInfluencerComponent>() )
         {
             if ( pInfluencer->isPendingDestroy() || pInfluencer->isActive() == false || pInfluencer->_radius <= 0.0f )

@@ -30,7 +30,9 @@ namespace sw
             pJob->Release();
         }
         while ( _pendingTaskCount.load( std::memory_order_acquire ) != 0 )
+        {
             std::this_thread::yield();
+        }
     }
 
     int32 JoltJobSystem::GetMaxConcurrency() const
@@ -94,7 +96,9 @@ namespace sw
     void JoltJobSystem::QueueJobs( Job** ppJob, JPH::uint jobCount )
     {
         for ( JPH::uint jobIndex = 0; jobIndex < jobCount; ++jobIndex )
+        {
             QueueJob( ppJob[jobIndex] );
+        }
     }
 
     void JoltJobSystem::FreeJob( Job* pJob )

@@ -40,9 +40,13 @@ namespace sw
         bool           bValid = true;
         vector<string> listName;
         for ( const FontFamilyDesc& family : _listFamily )
+        {
             listName.push_back( family._name );
+        }
         for ( const SystemFontFamilyDesc& family : _listSystemFamily )
+        {
             listName.push_back( family._name );
+        }
         for ( size_t index = 0; index < listName.size(); ++index )
         {
             if ( listName[index].empty() )

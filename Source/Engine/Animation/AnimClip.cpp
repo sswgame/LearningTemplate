@@ -180,7 +180,9 @@ namespace sw
     {
         outListBone.resize( _listTrackName.size() );
         for ( size_t trackIndex = 0; trackIndex < _listTrackName.size(); ++trackIndex )
+        {
             outListBone[trackIndex] = skeleton.findBoneIndex( _listTrackName[trackIndex] );
+        }
     }
 
     bool AnimClip::samplePose( float32 time, const vector<int32>& listTrackToBone, Pose& inoutPose, Pose& scratchTrackPose, bool bAnchorRootMotion,
@@ -284,7 +286,9 @@ namespace sw
         writer.writeString( _name.c_str() );
         writer.writeUint( static_cast<uint32>( _listTrackName.size() ) );
         for ( const hashed_string& trackName : _listTrackName )
+        {
             writer.writeString( trackName.c_str() );
+        }
         writer.writeInt( _rootMotionTrack );
         writer.writeUint( static_cast<uint32>( _codecId ) );
         writer.writeUint( static_cast<uint32>( _codecByteCount ) );
@@ -335,7 +339,9 @@ namespace sw
         {
             _listTrackName.reserve( trackCount );
             for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
+            {
                 _listTrackName.push_back( hashed_string( reader.readString() ) );
+            }
         }
         _rootMotionTrack           = reader.readInt();
         const uint32 codecValue    = reader.readUint();

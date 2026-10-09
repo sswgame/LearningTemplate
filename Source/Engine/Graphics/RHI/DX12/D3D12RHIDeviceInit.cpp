@@ -186,7 +186,9 @@ namespace sw
             std::scoped_lock<mutex> lock{ _onlineBlockMutex };
             _listFreeOnlineBlock.clear();
             for ( uint32 block = kOnlineBlockCount; block > 0; --block )
+            {
                 _listFreeOnlineBlock.push_back( block - 1 );
+            }
             _bOnlineHeapExhaustedLogged = SW_FALSE;
         }
 

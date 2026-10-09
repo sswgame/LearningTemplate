@@ -155,7 +155,9 @@ namespace sw
         if ( pFrom == nullptr )
             return;
         for ( const NetEntityState& entity : pFrom->_listEntity )
+        {
             outListEntity.push_back( entity._entityId );
+        }
     }
 
     bool ReplicationClient::sendInput( uint32 tick, const vector<uint8>& listInput )

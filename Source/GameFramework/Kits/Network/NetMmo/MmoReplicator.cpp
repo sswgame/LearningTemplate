@@ -391,10 +391,14 @@ namespace sw
             budget.reserveBits( writer.getBitCount() + BitMath::computeVarUintBits( listLeave.size() - sentCount ) );
             size_t count = 0;
             while ( sentCount + count < listLeave.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listLeave[sentCount + count] ) ) )
+            {
                 ++count;
+            }
             writer.writeVarUint( count );
             for ( size_t index = 0; index < count; ++index )
+            {
                 writer.writeVarUint( listLeave[sentCount + index] );
+            }
             if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다 — 남은 것은 보이는 채로 두고 다음 틱에
             for ( size_t index = 0; index < count; ++index )

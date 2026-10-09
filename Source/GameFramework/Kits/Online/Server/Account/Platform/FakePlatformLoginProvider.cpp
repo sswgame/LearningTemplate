@@ -38,7 +38,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listDone.size() );
         for ( PlatformLoginVerification& verification : _listDone )
+        {
             outListVerification.push_back( std::move( verification ) );
+        }
         _listDone.clear();
         return count;
     }

@@ -41,7 +41,9 @@ namespace
     {
         const int32 stepCount = static_cast<int32>( seconds * 10.0f + 0.5f );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             world.update( 0.1f );
+        }
     }
 
     int32 countUnits( const ConquestWorld& world, const hashed_string& unitId, ConquestTeam team )
@@ -293,10 +295,14 @@ SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptur
     siege.initialize( &catalog );
     (void)siege.spawnUnit( "ram", ConquestTeam::Player, 50.0f, ConquestOrder::Charge ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     for ( int32 index = 0; index < 4; ++index )
+    {
         (void)siege.spawnUnit( "cavalry", ConquestTeam::Player, 45.0f - static_cast<float32>( index ), ConquestOrder::Charge ); // 시험 준비 — 아래 단언이 본다
+    }
     vector<ConquestEvent> listEvent;
     for ( int32 second = 0; second < 90 && siege.isVictory() == false; ++second )
+    {
         runWorld( siege, 1.0f );
+    }
     siege.drainEvents( listEvent );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::GateBroken ) );
     SW_EXPECT_TRUE( hasEvent( listEvent, ConquestEvent::Kind::SiteCaptured ) );
@@ -452,7 +458,9 @@ SW_TEST_CASE( SideScrollConquestTest, StateRoundTripContinuesTheSameWar )
     (void)world.spawnUnit( "ram", ConquestTeam::Player, 10.0f, ConquestOrder::Charge ); // 시험 준비 — 결과는 아래 단언이 전투 결과로 확인한다
     world.setCommanderMove( 1.0f );
     for ( int32 frame = 0; frame < 100; ++frame )
+    {
         world.update( frame % 3 == 0 ? 0.13f : 0.07f );
+    }
 
     Archive written;
     world.writeState( written );

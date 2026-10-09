@@ -89,11 +89,15 @@ namespace sw
         budget.reserveBits( BitMath::computeVarUintBits( first ) + BitMath::computeVarUintBits( maxCount ) );
         uint32 count = 0;
         while ( count < maxCount && budget.tryReserveBits( computeEntryBits( getEntry( first + count ) ) ) )
+        {
             ++count;
+        }
         writer.writeVarUint( first );
         writer.writeVarUint( count );
         for ( uint32 index = 0; index < count; ++index )
+        {
             writeEntry( writer, getEntry( first + index ) );
+        }
         return static_cast<int32>( count );
     }
 
@@ -259,7 +263,9 @@ namespace sw
         // 창 아래는 더 받지 않는다 — 받은 것으로 친다.
         _firstMissingTick = MathUtil::max( _firstMissingTick, _windowFirst );
         while ( _firstMissingTick != kNoWindowEnd && find( _firstMissingTick ) != nullptr )
+        {
             ++_firstMissingTick;
+        }
     }
 
     bool NetInputReceiveBuffer::readEntry( BitReader& reader, NetInputEntry& outEntry ) const

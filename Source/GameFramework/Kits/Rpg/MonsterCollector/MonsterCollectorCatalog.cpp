@@ -171,7 +171,9 @@ namespace sw
     {
         int32 level = 1;
         while ( level < kMaxLevel && computeTotalExp( group, level + 1 ) <= exp )
+        {
             ++level;
+        }
         return level;
     }
 
@@ -187,7 +189,9 @@ namespace sw
                     continue;
                 bool bTimeMatches = table._listTime.empty();
                 for ( const hashed_string& time : table._listTime )
+                {
                     bTimeMatches = bTimeMatches || time == timeOfDay;
+                }
                 if ( bTimeMatches == false )
                     continue;
                 for ( const MonsterEncounterSlot& slot : table._listSlot )

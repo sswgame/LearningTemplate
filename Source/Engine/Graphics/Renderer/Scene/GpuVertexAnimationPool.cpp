@@ -19,14 +19,18 @@ namespace sw
         // 표는 굽고 나면 변하지 않는다 — 목록(포인터 · 내용 번호)이 같으면 다시 올리지 않는다.
         bool bSame = _listBuilt.size() == listMesh.size();
         for ( size_t index = 0; bSame && index < listMesh.size(); ++index )
+        {
             bSame = _listBuilt[index] == listMesh[index] && listMesh[index] != nullptr && _listBuiltContentId[index] == listMesh[index]->getContentId();
+        }
         if ( bSame )
             return;
 
         _listBuilt.assign( listMesh.begin(), listMesh.end() );
         _listBuiltContentId.clear();
         for ( const Mesh* pMesh : listMesh )
+        {
             _listBuiltContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+        }
         _mapBase.clear();
         _mapBaseByAnimation.clear();
 

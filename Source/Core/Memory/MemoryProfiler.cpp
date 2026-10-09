@@ -445,7 +445,9 @@ namespace sw
     {
         uint64 total = 0;
         for ( const MemoryProfileStats& stat : _arrStat )
+        {
             total += stat._currentAllocatedBytes.load( std::memory_order_relaxed );
+        }
         return total;
     }
 
@@ -489,7 +491,9 @@ namespace sw
     void MemoryProfiler::clearBudgets()
     {
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
             setBudget( static_cast<MemoryTag>( tagIndex ), 0 );
+        }
     }
 
     uint32 MemoryProfiler::reportExceededBudgets( vector<MemoryTag>* pOutListNewlyExceeded )
@@ -572,7 +576,9 @@ namespace sw
     {
         uint64 totalBytes{ 0 };
         for ( const MemoryProfileStats& stat : _arrStat )
+        {
             totalBytes += stat._totalAllocatedBytes.load( std::memory_order_relaxed );
+        }
         return totalBytes;
     }
 
@@ -580,7 +586,9 @@ namespace sw
     {
         uint64 total = 0;
         for ( const MemoryProfileStats& stat : _arrStat )
+        {
             total += stat._totalAllocationCount.load( std::memory_order_relaxed );
+        }
         return total;
     }
 
@@ -588,7 +596,9 @@ namespace sw
     {
         uint64 total = 0;
         for ( const MemoryProfileStats& stat : _arrStat )
+        {
             total += stat._currentAllocationCount.load( std::memory_order_relaxed );
+        }
         return total;
     }
 

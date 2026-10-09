@@ -51,9 +51,13 @@ namespace sw
             table._maxRolls   = MathUtil::max( table._minRolls, node.getAttributeInt( "rollsMax", table._minRolls ) );
             table._noneWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "none", table._noneWeight ) );
             for ( XmlNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
+            {
                 table._listEntry.push_back( LootTableInternal::readEntry( child ) );
+            }
             for ( XmlNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
+            {
                 table._listAlways.push_back( LootTableInternal::readEntry( child ) );
+            }
             addTable( table );
             ++loadedCount;
         }
@@ -100,7 +104,9 @@ namespace sw
         }
         float32 totalWeight = table._noneWeight / luck;
         for ( const LootEntry& entry : table._listEntry )
+        {
             totalWeight += entry._weight;
+        }
         if ( totalWeight <= 0.0f )
             return;
         const int32 rollCount = random.nextInt( table._minRolls, table._maxRolls );
@@ -134,15 +140,21 @@ namespace sw
     {
         float32 missChance = 1.0f;
         for ( const LootEntry& entry : table._listAlways )
+        {
             missChance *= 1.0f - entry._chance * computeEntryChance( entry, itemId, depth );
+        }
         float32 totalWeight = table._noneWeight;
         for ( const LootEntry& entry : table._listEntry )
+        {
             totalWeight += entry._weight;
+        }
         if ( totalWeight > 0.0f )
         {
             float32 pickChance = 0.0f;
             for ( const LootEntry& entry : table._listEntry )
+            {
                 pickChance += entry._weight / totalWeight * computeEntryChance( entry, itemId, depth );
+            }
             const float32 rolls = 0.5f * static_cast<float32>( table._minRolls + table._maxRolls );
             missChance *= MathUtil::pow( 1.0f - MathUtil::saturate( pickChance ), rolls );
         }

@@ -41,11 +41,15 @@ namespace sw
         {
             outArchive << static_cast<uint32>( listUnit.size() );
             for ( const RtsUnitId unitId : listUnit )
+            {
                 outArchive << unitId.packed();
+            }
         };
         writeList( _listSelected );
         for ( const vector<RtsUnitId>& listGroup : _arrGroup )
+        {
             writeList( listGroup );
+        }
     }
 
     bool RtsSelection::readState( Archive& archive )
@@ -75,7 +79,9 @@ namespace sw
         }
         _listSelected = std::move( listSelected );
         for ( int32 group = 0; group < kGroupCount; ++group )
+        {
             _arrGroup[group] = std::move( arrGroup[group] );
+        }
         return true;
     }
 
@@ -120,7 +126,9 @@ namespace sw
             if ( pPrimary == nullptr || pPrimary->isMobile() )
             {
                 for ( const RtsUnitId unitId : listMobile )
+                {
                     addUnit( unitId );
+                }
                 return;
             }
         }
@@ -130,7 +138,9 @@ namespace sw
         if ( listMobile.empty() == false )
         {
             for ( const RtsUnitId unitId : listMobile )
+            {
                 addUnit( unitId );
+            }
         }
         else
         {
@@ -215,7 +225,9 @@ namespace sw
         { return world.findUnit( unitId ) == nullptr; };
         _listSelected.erase( std::remove_if( _listSelected.begin(), _listSelected.end(), isDead ), _listSelected.end() );
         for ( vector<RtsUnitId>& listGroup : _arrGroup )
+        {
             listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), isDead ), listGroup.end() );
+        }
     }
 
     const vector<RtsUnitId>& RtsSelection::getGroup( int32 group ) const

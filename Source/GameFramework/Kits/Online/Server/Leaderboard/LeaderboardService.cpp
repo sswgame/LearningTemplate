@@ -572,9 +572,13 @@ namespace sw
         if ( _dependencies._pRouter != nullptr )
         {
             for ( const auto& [requestId, read] : _mapReadyRequestToRead )
+            {
                 _dependencies._pRouter->cancel( requestId );
+            }
             for ( const auto& [requestId, queryId] : _mapRequestToQuery )
+            {
                 _dependencies._pRouter->cancel( requestId );
+            }
         }
         _mapReadyRequestToRead.clear();
         _mapRequestToQuery.clear();
@@ -898,22 +902,30 @@ namespace sw
         if ( bReadOk == false || _dependencies._pRouter == nullptr )
         {
             for ( const PendingRead& read : listWaiting )
+            {
                 completeRead( read, LeaderboardResult::Unavailable );
+            }
             return;
         }
         const LeaderboardDefinition* pBoard = listWaiting.empty() ? nullptr : findBoard( listWaiting.front()._boardId );
         const LeaderboardOrder       order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
         for ( const LeaderboardScoreRow& row : listScore )
+        {
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountId ), toCacheScore( order, row._score ) ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
+        }
         for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수 — 영속에서 읽은 옛 값을 덮는다(이미 캐시 점수)
+        {
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountId ), row._score ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
+        }
         (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeReadyKey( rankKey ), vector<uint8>{ 1 }, 0 ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
         // 캐시 앞은 맡긴 순서대로 답한다 — 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
+        {
             startRead( read );
+        }
     }
 
     void LeaderboardService::onRankReply( const EphemeralReply& reply )

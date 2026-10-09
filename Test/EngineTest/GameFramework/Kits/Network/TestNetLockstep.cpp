@@ -37,7 +37,9 @@ namespace
         for ( const vector<uint8>& input : listInput )
         {
             for ( const uint8 byte : input )
+            {
                 hash = ( hash ^ byte ) * sw::HashUtil::kFnvPrime32;
+            }
             hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime32;
         }
         return hash;
@@ -282,7 +284,9 @@ namespace
         body.writeVarUint( static_cast<uint64>( first ) );
         body.writeVarUint( listInput.size() );
         for ( const uint8 input : listInput )
+        {
             body.writeBits( input, 8 );
+        }
         SW_EXPECT_TRUE( NetHandleResult::Handled == session.handleMessage( 0, writer.getBytes() ) );
     }
 
@@ -441,7 +445,9 @@ namespace
         harness.setLinkConditions( clientC, cut );
         const NetSimWorld* arrWorld[2] = { &harness.getServer(), harness.findClient( clientA ) };
         for ( int32 index = 0; index < 2; ++index )
+        {
             result._arrTickAtCut[index] = getLeaveLockstepSession( *arrWorld[index] )._session.getCurrentTick();
+        }
         harness.stepTicks( 240 );
         for ( int32 index = 0; index < 2; ++index )
         {
@@ -484,7 +490,9 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( host.receiveMessage( connectionId, channel, buffer ) )
+            {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer ) );
+            }
         }
         if ( frame % 2 != 0 || frame > 60 * 5 )
             continue; // 마지막 1 초는 입력 없이 남은 것을 비운다
@@ -506,7 +514,9 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
     // 셋 모두 많이 나갔고, 함께 지난 틱마다 상태가 같다.
     uint32 commonTick = 0xFFFFFFFFu;
     for ( const LockstepSession& session : listSession )
+    {
         commonTick = std::min( commonTick, session.getCurrentTick() );
+    }
     SW_EXPECT_TRUE( commonTick > 120 );
     for ( uint32 tick = 0; tick < commonTick; ++tick )
     {
@@ -514,7 +524,9 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         SW_EXPECT_TRUE( listHashByTick[0][tick] == listHashByTick[2][tick] );
     }
     for ( const LockstepSession& session : listSession )
+    {
         SW_EXPECT_FALSE( session.isDesynced() );
+    }
 
     // 비동기 — 한 사람이 다른 체크섬을 내면 모두 안다.
     const uint32 badTick = commonTick + 100;
@@ -529,7 +541,9 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
+            {
                 (void)listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer );
+            }
         }
     }
     for ( const LockstepSession& session : listSession )
@@ -554,7 +568,9 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     RollbackSettings settings;
     settings._inputDelay = 2;
     for ( int32 index = 0; index < 2; ++index )
+    {
         arrSession[index].initialize( &cluster.getHost( index ), &arrGame[index], 2, index, settings );
+    }
 
     vector<uint8> buffer;
     int32         arrLocalFrame[2] = { 0, 0 };
@@ -566,7 +582,9 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
+            {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionId, buffer ) );
+            }
             if ( arrSession[index].advanceFrame( scriptInput( index, arrLocalFrame[index] ) ) )
                 ++arrLocalFrame[index];
         }
@@ -579,13 +597,17 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
     SW_EXPECT_TRUE( confirmed > 350 );
     int32 mismatchCount = 0;
     for ( int32 checkFrame = 0; checkFrame < confirmed; ++checkFrame )
+    {
         mismatchCount += arrGame[0]._game._mapHistory[checkFrame] == arrGame[1]._game._mapHistory[checkFrame] ? 0 : 1;
+    }
     SW_EXPECT_EQUAL( 0, mismatchCount );
 
     // 상대가 멈추면(끊긴 것처럼) 최대 예측만큼 가고 멈춘다.
     const int32 before = arrSession[0].getFrame();
     for ( int32 frame = 0; frame < 30; ++frame )
+    {
         (void)arrSession[0].advanceFrame( 0 );
+    }
     SW_EXPECT_TRUE( arrSession[0].getFrame() - before <= settings._maxPrediction + 2 );
     SW_EXPECT_TRUE( arrSession[0].getStallCount() > 0 );
 }
@@ -652,10 +674,14 @@ SW_TEST_CASE( NetLockstepTest, RollbackIgnoresInputsOutsideTheFrameWindow )
     sendRollbackInput( session, 2, vector<uint8>{ 2, 3, 4, 5 } );
     sendRollbackInput( session, 3 + RollbackSession::kHistorySize, vector<uint8>{ 9 } );
     for ( int32 frame = 0; frame < 6; ++frame )
+    {
         SW_EXPECT_TRUE( session.advanceFrame( 0 ) );
+    }
     SW_EXPECT_EQUAL( 5, session.getConfirmedFrame() );
     for ( int32 frame = 2; frame < 6; ++frame )
+    {
         SW_EXPECT_EQUAL( frame, static_cast<int32>( game._mapInput[frame][1] ) );
+    }
 }
 
 /**
@@ -679,7 +705,9 @@ SW_TEST_CASE( NetLockstepTest, LeavingPlayerDoesNotStallOthers )
     const size_t commonCount = std::min( first._arrHashByTick[0].size(), first._arrHashByTick[1].size() );
     int32        mismatch    = 0;
     for ( size_t tick = 0; tick < commonCount; ++tick )
+    {
         mismatch += first._arrHashByTick[0][tick] == first._arrHashByTick[1][tick] ? 0 : 1;
+    }
     SW_EXPECT_EQUAL( 0, mismatch );
 
     const LockstepLeaveResult second = runLockstepLeave( 5u );
@@ -740,11 +768,15 @@ SW_TEST_CASE( NetLockstepTest, FarFutureInputIsIgnored )
     // 내 입력은 지금(0) + kMaxInputLead 까지만 예약된다.
     int32 acceptedCount = 0;
     for ( int32 index = 0; index < 1000; ++index )
+    {
         acceptedCount += session.submitLocalInput( vector<uint8>{ 0x33 } ) ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( static_cast<int32>( LockstepSession::kMaxInputLead ) - 2, acceptedCount );
     vector<vector<uint8>> listInput;
     for ( int32 tick = 0; tick < 3; ++tick )
+    {
         SW_EXPECT_TRUE( session.tryAdvance( listInput ) );
+    }
     SW_ASSERT_EQUAL( size_t{ 2 }, listInput.size() );
     SW_EXPECT_TRUE( listInput[0] == vector<uint8>{ 0x22 } && listInput[1] == vector<uint8>{ 0x11 } );
     SW_EXPECT_FALSE( session.tryAdvance( listInput ) );
@@ -769,7 +801,9 @@ SW_TEST_CASE( NetLockstepTest, OversizeInputIsRefusedOnBothEnds )
     body.writeVarUint( 0 );
     body.writeVarUint( static_cast<uint64>( NetLockstepMessage::kMaxInputBytes ) + 1 );
     for ( int32 index = 0; index <= NetLockstepMessage::kMaxInputBytes; ++index )
+    {
         body.writeBits( 0x5A, 8 );
+    }
     SW_EXPECT_TRUE( NetHandleResult::Malformed == session.handleMessage( 0, writer.getBytes() ) );
 }
 
@@ -781,7 +815,9 @@ SW_TEST_CASE( NetLockstepTest, PendingChecksumsExpireOneTickAtATime )
     LockstepSession session;
     session.initialize( nullptr, 2, 0, 0 );
     for ( uint32 tick = 0; tick < 10; ++tick )
+    {
         session.reportChecksum( tick, 7u ); // 상대(플레이어 1)는 알리지 않는다 — 열 틱이 기다린다
+    }
     SW_EXPECT_EQUAL( 10, session.getPendingChecksumCount() );
     NetMessageWriter      writer;
     vector<vector<uint8>> listInput;

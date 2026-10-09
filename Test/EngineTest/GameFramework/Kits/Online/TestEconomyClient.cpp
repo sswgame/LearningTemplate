@@ -166,7 +166,9 @@ namespace
         bool waitFor( const EconomyReplyCapture& capture )
         {
             for ( int32 attempt = 0; attempt < 400 && capture._count == 0; ++attempt )
+            {
                 step();
+            }
             return capture._count == 1;
         }
 
@@ -189,7 +191,9 @@ namespace
         bool login()
         {
             for ( int32 attempt = 0; attempt < 400 && _player._client.isReady() == false; ++attempt )
+            {
                 step();
+            }
             const bool               bRegistered = waitAccount( _player._account.registerAccount( "buyer", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply loggedIn    = waitAccount( _player._account.login( "buyer", "password123" ) );
             _playerId                            = loggedIn._grant._identity._accountId;
@@ -262,7 +266,9 @@ SW_TEST_CASE( EconomyClientTest, FeatureFlagAndSignInGateRequests )
 {
     EconomyRig rig;
     for ( int32 attempt = 0; attempt < 400 && rig._player._client.isReady() == false; ++attempt )
+    {
         rig.step();
+    }
     EconomyReplyCapture beforeLogin;
     (void)rig._player._economy.requestWallet( beforeLogin.makeDelegate() );
     SW_ASSERT_TRUE( rig.waitFor( beforeLogin ) );

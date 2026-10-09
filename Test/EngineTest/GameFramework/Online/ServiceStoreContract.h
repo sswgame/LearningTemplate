@@ -244,7 +244,9 @@ namespace test
             using namespace sw;
             ServiceTransaction seed;
             for ( uint64 index = 0; index < 5; ++index )
+            {
                 seed.put( context._table, makeChannelKey( index ), makeBytes( static_cast<uint8>( index ) ) );
+            }
             seed.put( context._table, "chao", makeBytes( 50 ) ); // 접두어 범위 바로 바깥
             seed.put( context._table, "chan0", makeBytes( 51 ) );
             seed.put( context._table, "cham", makeBytes( 52 ) );
@@ -305,7 +307,9 @@ namespace test
             using namespace sw;
             vector<uint8> bytes( static_cast<size_t>( IServiceStoreConnection::kMaxRecordSize ) );
             for ( size_t index = 0; index < bytes.size(); ++index )
+            {
                 bytes[index] = static_cast<uint8>( index * 31u ); // 0x00 · 0xFF 모두 든다
+            }
             ServiceTransaction big;
             big.put( context._table, "big", bytes );
             if ( context.recordStep( connection.commit( big ) == ServiceStoreResult::Ok ) == false )

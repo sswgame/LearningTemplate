@@ -35,7 +35,9 @@ namespace sw
     {
         _itemCount = itemCount;
         for ( uint32& item : _listRowItem )
+        {
             item = invalid_index::kUint32; // 모두 다시 묶는다
+        }
         _scrollOffset = MathUtil::clamp( _scrollOffset, 0.0f, getMaxScrollOffset() );
         invalidate( WidgetDirty::kLayout );
     }
@@ -86,7 +88,9 @@ namespace sw
         // 그 위젯을 든 줄(이 패널의 자식)을 찾아 그 줄의 항목이 보이게.
         const Widget* pRow = &widget;
         while ( pRow != nullptr && pRow->getParent() != this )
+        {
             pRow = pRow->getParent();
+        }
         if ( pRow == nullptr )
             return false;
         const uint32  itemIndex = findItemIndex( *pRow );

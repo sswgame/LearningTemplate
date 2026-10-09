@@ -345,7 +345,9 @@ SW_TEST_CASE( LedgerTest, MalformedRequestsAreRejectedWithoutWrites )
     SW_EXPECT_TRUE( Ledger::executeTransfer( database, makeRequest( "e", "test.x", {} ), outcome ) == LedgerResult::Invalid );
     vector<LedgerPosting> listTooMany;
     for ( int32 index = 0; index <= LedgerConstant::kMaxPostingCount; ++index )
+    {
         listTooMany.push_back( makePosting( alice, LedgerHolder::makeAccount( kLedgerBob ), "cur.gold", 1 ) );
+    }
     SW_EXPECT_TRUE( Ledger::executeTransfer( database, makeRequest( "n", "test.x", listTooMany ), outcome ) == LedgerResult::Invalid );
     SW_EXPECT_EQUAL( database.computeContentHash(), before );
 }

@@ -360,7 +360,9 @@ SW_TEST_CASE( ComponentSubTickHybridTest, DeepHierarchyMultiComponentMultiSubTic
     sw::GameObject* pChild       = manager.createGameObject( sw::hashed_string( "Child" ) );
     // 계층은 씬 컴포넌트 사이에서 맺어진다(위 시험과 같다).
     for ( sw::GameObject* pObj : { pGrandparent, pParent, pChild } )
+    {
         SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );
+    }
 
     SW_ASSERT_TRUE( pParent->attachToParent( pGrandparent ) );
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
@@ -670,7 +672,9 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
     std::atomic<uint32> globalTickSeq{ 1 };
     std::atomic<uint32> arrExecutionOrder[kTotalSubTicks + 16];
     for ( size_t index = 0; index < kTotalSubTicks + 16; ++index )
+    {
         arrExecutionOrder[index].store( 0, std::memory_order_relaxed );
+    }
 
     vector<sw::GameObject*>             listActor;
     vector<MockSubTickStressComponent*> listCompA;

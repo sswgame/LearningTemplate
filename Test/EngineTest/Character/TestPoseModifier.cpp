@@ -276,7 +276,9 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
     pModifier->dispatchBeginPlay();
 
     for ( uint32 frame = 0; frame < 4; ++frame )
+    {
         manager.tick( 1.0f / 60.0f );
+    }
     // 면: 상자 윗면 가운데와 법선을 같은 회전(오일러 → 쿼터니언)으로 구해 발 X · Z 의 높이를 잰다.
     const quaternion tilt        = quaternion::createFromYawPitchRoll( float3{ 0.0f, 0.0f, 0.25f } );
     const float3     normal      = float3::transform( float3::UnitY, tilt );
@@ -356,7 +358,9 @@ SW_TEST_CASE( PoseModifierTest, PhysicsAssetShapesBecomeSpringColliders )
         pModifier->dispatchBeginPlay();
         SW_EXPECT_EQUAL( bShared == 1 ? 3u : 0u, static_cast<uint32>( pModifier->getRigInstance().getSharedColliders().size() ) );
         for ( uint32 frame = 0; frame < 120; ++frame )
+        {
             manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
+        }
         // 머리 구: 머리 본(y 1.0) + (0, 0.15, 0), 반지름 0.15. 꼬리 끝(본 4)은 꼬리 뿌리(y 1.5)에서 0.4 아래로 매달려 그 안을 지난다.
         arrClearance[bShared] = ( TestPoseModifierInternal::getBoneModel( *pUnit, 4 ) - float3{ 0.0f, 1.15f, 0.0f } ).getLength();
     }

@@ -115,7 +115,9 @@ namespace sw
         if ( pWidget == nullptr )
             return false;
         for ( const Widget* pCurrent = pWidget; pCurrent != nullptr; pCurrent = pCurrent->getParent() )
+        {
             outPath._listWidget.push_back( pCurrent->getId() );
+        }
         // 잎 → 뿌리로 모았다 — 뒤집는다.
         const uint32 count = static_cast<uint32>( outPath._listWidget.size() );
         for ( uint32 index = 0; index < count / 2; ++index )

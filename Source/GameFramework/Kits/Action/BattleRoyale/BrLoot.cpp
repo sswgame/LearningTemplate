@@ -35,7 +35,9 @@ namespace sw
     {
         ItemStackList items;
         for ( int32 rollIndex = 0; rollIndex < rollCount; ++rollIndex )
+        {
             (void)lootCatalog.roll( tableId, random, items );
+        }
         vector<hashed_string> listItemId;
         items.getItemIds( listItemId );
         std::sort( listItemId.begin(), listItemId.end(), HashedStringLexicalLess{} );

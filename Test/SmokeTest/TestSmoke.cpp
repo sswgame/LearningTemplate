@@ -1725,7 +1725,9 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
     { ++mapModuleTypeCount[info._moduleName]; } );
     // GF_Overworld 는 리플렉션 타입이 없는 키트다(올리기만 본다) — 타입 수는 타입을 내는 모듈만 본다.
     for ( const utf8* pModule : { "GameFramework", "GF_ActionCombat", "SWGame", "EditorModule" } )
+    {
         SW_EXPECT_TRUE_MSG( mapModuleTypeCount[sw::hashed_string( pModule )] > 0, pModule );
+    }
 
     const test::PropertyCarryReport report = test::makePropertyCarryReport();
     SW_EXPECT_TRUE( report._checkedCount > 100 );

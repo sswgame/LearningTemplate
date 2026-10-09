@@ -142,7 +142,9 @@ namespace sw
             {
                 const size_t elementIndex = static_cast<size_t>( index );
                 for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+                {
                     getFlagLayer( info._layer )[elementIndex] = TileMapXmlInternal::readFlag( tileNode, info );
+                }
 
                 // 높이 · 틴트가 없는 맵은 레이어 값으로 보기를 만든다.
                 Visual tileVisual{};
@@ -210,7 +212,9 @@ namespace sw
             _tileSetPath    = string( tileLayer.getAttributeText( "tileSet" ) );
             XmlNode palette = tileLayer.findChild( "palette" );
             for ( XmlNode entry = palette.isValid() ? palette.findChild( "b" ) : XmlNode{}; entry; entry = entry.findNextSibling( "b" ) )
+            {
                 _listPaletteName.push_back( string( entry.getAttributeText( "name" ) ) );
+            }
             const utf8*       pCells = tileLayer.findChildText( "cells" );
             const string_view cells  = ( pCells != nullptr ) ? string_view( pCells ) : string_view{};
             _listTileCell.reserve( count );
@@ -218,10 +222,14 @@ namespace sw
             while ( cursor < cells.size() )
             {
                 while ( cursor < cells.size() && ( cells[cursor] == ' ' || cells[cursor] == '\n' || cells[cursor] == '\r' || cells[cursor] == '\t' ) )
+                {
                     ++cursor;
+                }
                 const size_t start = cursor;
                 while ( cursor < cells.size() && cells[cursor] >= '0' && cells[cursor] <= '9' )
+                {
                     ++cursor;
+                }
                 if ( cursor == start )
                 {
                     if ( cursor < cells.size() )
@@ -264,7 +272,9 @@ namespace sw
         _height            = height;
         const size_t count = static_cast<size_t>( width ) * static_cast<size_t>( height );
         for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+        {
             getFlagLayer( info._layer ).assign( count, info._defaultValue );
+        }
         _listVisual.assign( count, Visual{} );
         _listWarp.clear();
         if ( _tileSetPath.empty() == false || _listTileCell.empty() == false )
@@ -320,7 +330,9 @@ namespace sw
         {
             size_t paletteIndex = 0;
             while ( paletteIndex < _listPaletteName.size() && _listPaletteName[paletteIndex] != brushName )
+            {
                 ++paletteIndex;
+            }
             if ( paletteIndex == _listPaletteName.size() )
                 _listPaletteName.push_back( string( brushName ) );
             value = static_cast<uint16>( paletteIndex + 1 );
@@ -370,7 +382,9 @@ namespace sw
         // 왕복이 어긋나지 않는다(통행 가능 · 조우 없음 · 기본 틴트).
         size_t tileCount = MathUtil::min( count, _listVisual.size() );
         for ( const vector<uint8>& listFlag : _arrFlagLayer )
+        {
             tileCount = MathUtil::min( tileCount, listFlag.size() );
+        }
         if ( tileCount < count )
         {
             SW_LOG_WARNING( "타일 배열이 %#×%# 보다 짧습니다(%# 칸) — 모자란 칸은 기본값으로 적습니다.",
@@ -423,7 +437,9 @@ namespace sw
             tileLayer.appendAttribute( "tileSet", _tileSetPath );
             XmlNode palette = tileLayer.appendChild( "palette" );
             for ( const string& name : _listPaletteName )
+            {
                 palette.appendChild( "b" ).appendAttribute( "name", name );
+            }
             string cells = "\n";
             for ( int32 y = 0; y < _height; ++y )
             {

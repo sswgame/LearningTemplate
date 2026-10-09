@@ -156,7 +156,9 @@ namespace sw
     {
         string stampText = inputFile + "\n" + GeneratedFilesInternal::kStampInputTimeKey + " " + to_string( inputWriteTime ) + "\n";
         for ( const StampDependency& dependency : listDependency )
+        {
             stampText += string( GeneratedFilesInternal::kStampDependencyKey ) + " " + to_string( dependency._writeTime ) + " " + dependency._path + "\n";
+        }
         if ( FileUtil::writeTextFile( stampPath, stampText ) == false )
         {
             SW_LOG_ERROR( "Failed to write %#", stampPath );
@@ -179,7 +181,9 @@ namespace sw
         if ( GeneratedFilesInternal::parseStamp( stampText, record ) == false )
             return false;
         for ( const auto& [writeTime, path] : record._listDependency )
+        {
             outListPath.emplace_back( path );
+        }
         return true;
     }
 
@@ -224,7 +228,9 @@ namespace sw
         listToolFile.push_back( options._builtinsPath );
         listToolFile.push_back( options._annotationMetaPath );
         for ( const string& configFile : config._listLoadedFile )
+        {
             listToolFile.push_back( configFile );
+        }
         if ( options._emitTemplatesDir.empty() == false )
             FileUtil::collectFiles( options._emitTemplatesDir, config._emitTemplateExtension, listToolFile, false );
 

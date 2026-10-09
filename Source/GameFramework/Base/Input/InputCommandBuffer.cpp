@@ -21,7 +21,9 @@ namespace sw
                 {
                     count += step._direction != 0 ? 1 : 0;
                     for ( uint16 bits = step._buttons; bits != 0; bits = static_cast<uint16>( bits & ( bits - 1 ) ) )
+                    {
                         ++count;
+                    }
                 }
                 return count;
             }
@@ -32,7 +34,9 @@ namespace sw
                 outHold = word.empty() == false && word[0] >= 'A' && word[0] <= 'Z';
                 string lower( word );
                 for ( utf8& letter : lower )
+                {
                     letter = static_cast<utf8>( letter >= 'A' && letter <= 'Z' ? letter - 'A' + 'a' : letter );
+                }
                 if ( lower == "f" )
                     return 6;
                 if ( lower == "b" )
@@ -200,7 +204,9 @@ namespace sw
             return false;
         clear();
         for ( const InputFrame& frame : listFrame )
+        {
             push( frame );
+        }
         return true;
     }
 

@@ -195,9 +195,13 @@ namespace sw
         emitFileHeader( buffer );
         buffer.append( _session._config._emitGeneratedNsOpen );
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
+        {
             emitTypeRegistrar( buffer, typeInfo );
+        }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
+        {
             emitEnumRegistrar( buffer, enumInfo );
+        }
         buffer.append( _session._config._emitGeneratedNsClose );
 
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
@@ -409,7 +413,9 @@ namespace sw
             emit.line( "p._listAlias = {" );
             emit.push();
             for ( const string& alias : prop._listAlias )
+            {
                 emit.linef( "%#,", CodeEmit::hs( alias ) );
+            }
             emit.pop();
             emit.line( "};" );
         }
@@ -584,7 +590,9 @@ namespace sw
             emit.line( "{" );
             emit.push();
             for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
+            {
                 emitPropertyInfoEntry( emit, typeInfo, prop );
+            }
             emit.pop();
             emit.line( "};" );
         }
@@ -642,7 +650,9 @@ namespace sw
             emit.line( "{" );
             emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
+            {
                 emit.linef( "{ %#, %# },", CodeEmit::hs( en._name ), valueExpr( en ) );
+            }
             emit.pop();
             emit.line( "};" );
 
@@ -650,7 +660,9 @@ namespace sw
             emit.line( "{" );
             emit.push();
             for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
+            {
                 emit.linef( "{ %#, %# },", valueExpr( en ), CodeEmit::hs( en._name ) );
+            }
             emit.pop();
             emit.line( "};" );
         }

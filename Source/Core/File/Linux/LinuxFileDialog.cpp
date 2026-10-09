@@ -161,7 +161,9 @@ namespace sw
                 utf8   arrBuffer[constant::kMaxBuffer4096];
                 string output;
                 while ( fgets( arrBuffer, sizeof( arrBuffer ), pPipe ) != nullptr )
+                {
                     output += arrBuffer;
+                }
 
                 const int32 status = pclose( pPipe );
                 if ( status == -1 )
@@ -172,7 +174,9 @@ namespace sw
                     outExitCode = -1;
 
                 while ( output.empty() == false && ( output.back() == '\n' || output.back() == '\r' ) )
+                {
                     output.pop_back();
+                }
                 return output;
             }
 
@@ -186,7 +190,9 @@ namespace sw
                     const size_t end = ( sep == string::npos ) ? output.size() : sep;
                     string       part{ output.substr( start, end - start ) };
                     while ( part.empty() == false && ( part.back() == '\n' || part.back() == '\r' ) )
+                    {
                         part.pop_back();
+                    }
                     if ( part.empty() == false )
                         outListPath.push_back( FileUtil::normalizeSeparators( part ) );
                     if ( sep == string::npos )

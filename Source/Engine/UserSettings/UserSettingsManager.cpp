@@ -276,13 +276,17 @@ namespace sw
 
         vector<Internal::FileEntry> listEntry;
         for ( const string& key : values.getMemberNames() )
+        {
             listEntry.push_back( Internal::FileEntry{ key, Internal::toText( values.get( key, false ) ) } );
+        }
 
         // 버전 올리기 — 배포된 플레이어 데이터라 옛 판을 읽어야 한다(게임 데이터와 달리 다시 쓸 수 없다).
         const uint32 fileVersion   = static_cast<uint32>( root.get( Internal::kVersionKey ).asUint( 0 ) );
         const uint32 schemaVersion = _schema.getVersion();
         for ( uint32 version = fileVersion; version < schemaVersion; ++version )
+        {
             Internal::applyUpgradeSteps( _schema, version, listEntry, sourceName );
+        }
         if ( fileVersion > schemaVersion )
             SW_LOG_WARNING( "User settings '%#' is version %#, newer than this build (%#) - keys this build does not know are dropped", sourceName, fileVersion, schemaVersion );
 
@@ -313,7 +317,9 @@ namespace sw
             _listState[settingIndex]._committedValue = normalized;
         }
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
+        {
             refreshScalabilityGroup( group, true );
+        }
 
         _bUserFileLoaded = true;
         broadcast( {}, UserSettingEventKind::Loaded );
@@ -680,7 +686,9 @@ namespace sw
             (void)setPendingAt( settingIndex, _listState[settingIndex]._defaultValue, UserSettingValueResult::Accepted );
         }
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
+        {
             refreshScalabilityGroup( group, false );
+        }
     }
 
     void UserSettingsManager::confirmChanges()

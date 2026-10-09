@@ -45,7 +45,9 @@ namespace sw
         _listRecord.initialize( kHistorySize );
         _listReceive.assign( static_cast<size_t>( _playerCount ), NetInputReceiveBuffer{} );
         for ( NetInputReceiveBuffer& buffer : _listReceive )
+        {
             buffer.initialize( kHistorySize, kInputFormat, NetInputWindowMode::Manual );
+        }
         _sendWindow.initialize( kFrameWindow, kInputFormat );
         // 지연 프레임들은 모두 중립 입력 — 모두가 아는 값이라 상대도 이미 확인한 것으로 둔다.
         PeerState peer;
@@ -63,7 +65,9 @@ namespace sw
         for ( int32 frame = 0; frame < _settings._inputDelay; ++frame )
         {
             for ( int32 player = 0; player < _playerCount; ++player )
+            {
                 receiveInput( player, frame, neutralInput );
+            }
             (void)_sendWindow.push( static_cast<uint32>( frame ), &neutralInput, 1 );
         }
     }
@@ -72,7 +76,9 @@ namespace sw
     {
         int32 confirmed = _frame;
         for ( int32 player = 0; player < _playerCount; ++player )
+        {
             confirmed = MathUtil::min( confirmed, getConfirmedInputFrame( player ) );
+        }
         return confirmed;
     }
 
@@ -117,7 +123,9 @@ namespace sw
         const uint32 first = static_cast<uint32>( MathUtil::max( 0, _frame - kFrameWindow ) );
         const uint32 end   = static_cast<uint32>( _frame + kFrameWindow );
         for ( NetInputReceiveBuffer& buffer : _listReceive )
+        {
             buffer.setWindow( first, end );
+        }
     }
 
     int32 RollbackSession::getConfirmedInputFrame( int32 player ) const
@@ -147,7 +155,9 @@ namespace sw
                 _pGame->saveState( record._listState );
             record._listInput.resize( static_cast<size_t>( _playerCount ) );
             for ( int32 player = 0; player < _playerCount; ++player )
+            {
                 record._listInput[static_cast<size_t>( player )] = predictInput( player, replay );
+            }
             _pGame->advanceFrame( record._listInput, true );
             ++_resimulatedFrameCount;
         }
@@ -210,7 +220,9 @@ namespace sw
         _pGame->saveState( record._listState );
         record._listInput.resize( static_cast<size_t>( _playerCount ) );
         for ( int32 player = 0; player < _playerCount; ++player )
+        {
             record._listInput[static_cast<size_t>( player )] = predictInput( player, _frame );
+        }
         _pGame->advanceFrame( record._listInput, false );
         ++_frame;
         moveReceiveWindows();
@@ -256,7 +268,9 @@ namespace sw
             peer._remoteAdvantage = advantage;
         }
         for ( const uint32 newFrame : _listNewFrameScratch )
+        {
             markMisprediction( player, static_cast<int32>( newFrame ), buffer.find( newFrame )->_bytes[0] );
+        }
         if ( _pHost != nullptr )
             (void)NetMessageRouter::relayToOtherPeers( *_pHost, context );
         return NetHandleResult::Handled;

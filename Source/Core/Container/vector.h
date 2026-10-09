@@ -265,7 +265,9 @@ namespace sw
         else
         {
             for ( size_t index = 0; index < count; ++index )
+            {
                 sw_placement_new( ( _pData + ( index ) ) ) T( pSource[index] );
+            }
         }
     }
 
@@ -273,7 +275,9 @@ namespace sw
     inline void vector<T, Allocator>::clearInternal() noexcept
     {
         for ( size_t index = 0; index < _size; ++index )
+        {
             _pData[index].~T();
+        }
         _size = 0;
     }
 
@@ -423,11 +427,17 @@ namespace sw
                 {
                     const size_t assignCount = ( _size < other._size ) ? _size : other._size;
                     for ( size_t index = 0; index < assignCount; ++index )
+                    {
                         _pData[index] = other._pData[index];
+                    }
                     for ( size_t index = assignCount; index < other._size; ++index )
+                    {
                         sw_placement_new( ( _pData + ( index ) ) ) T( other._pData[index] );
+                    }
                     for ( size_t index = other._size; index < _size; ++index )
+                    {
                         _pData[index].~T();
+                    }
                     _size = other._size;
                     return *this;
                 }
@@ -1033,7 +1043,9 @@ namespace sw
         if ( count < _size )
         {
             for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
+            {
                 _pData[itemIndex].~T();
+            }
         }
         else if ( count > _size )
         {
@@ -1042,7 +1054,9 @@ namespace sw
             if ( count > _capacity )
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
             for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
+            {
                 sw_placement_new( ( _pData + ( itemIndex ) ) ) T();
+            }
         }
         _size = count;
     }
@@ -1054,7 +1068,9 @@ namespace sw
         if ( count < _size )
         {
             for ( size_t itemIndex = count; itemIndex < _size; ++itemIndex )
+            {
                 _pData[itemIndex].~T();
+            }
         }
         else if ( count > _size )
         {
@@ -1066,12 +1082,16 @@ namespace sw
                 const T valueCopy( value );
                 reserveInternal( MathUtil::max( count, _capacity * 2 ) );
                 for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
+                {
                     sw_placement_new( ( _pData + ( itemIndex ) ) ) T( valueCopy );
+                }
             }
             else
             {
                 for ( size_t itemIndex = _size; itemIndex < count; ++itemIndex )
+                {
                     sw_placement_new( ( _pData + ( itemIndex ) ) ) T( value );
+                }
             }
         }
         _size = count;

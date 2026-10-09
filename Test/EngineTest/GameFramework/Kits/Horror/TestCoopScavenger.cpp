@@ -180,14 +180,18 @@ namespace
     {
         int32 count = 0;
         for ( const ScavengerEvent& event : listEvent )
+        {
             count += event._kind == kind ? 1 : 0;
+        }
         return count;
     }
 
     void runScavenger( ScavengerExpedition& expedition, float32 seconds, vector<ScavengerEvent>& outListEvent )
     {
         for ( float32 time = 0.0f; time < seconds - 1.0e-4f; time += 0.5f )
+        {
             expedition.update( 0.5f );
+        }
         expedition.drainEvents( outListEvent );
     }
 } // namespace
@@ -297,7 +301,9 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
     }
     vector<hashed_string> listPath;
     for ( const AreaDef& area : facility.getGraph().getAreas() )
+    {
         SW_EXPECT_TRUE( facility.getGraph().findPath( "ship", area._id, facility.getFlags(), listPath ) );
+    }
 
     // 같은 씨앗 · 같은 위성이면 같은 지도와 고철.
     ScavengerFacility again;
@@ -455,7 +461,9 @@ SW_TEST_CASE( CoopScavengerTest, BodyRecoveryFinesAndWipeLoss )
         SW_EXPECT_TRUE( expedition.findCrewMember( 0 )->isDead() );
         int32 bodyUid = -1;
         for ( const ScavengerScrap& scrap : expedition.getFacility().getGroundScrap() )
+        {
             bodyUid = scrap._bodyOf == 0 ? scrap._uid : bodyUid;
+        }
         SW_EXPECT_TRUE( bodyUid > 0 );
         SW_EXPECT_TRUE( expedition.getPhase() == ScavengerPhase::Landed ); // 1 이 살아 있다
         // 1 이 시신을 메고 돌아온다 — 메는 동안 다른 것은 줍지 못한다.

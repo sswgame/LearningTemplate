@@ -75,7 +75,9 @@ namespace sw
         if ( collectUnknownAttributes( node, ppKnown, knownCount, listName, pfnAlsoKnown ) == 0 )
             return true;
         for ( const utf8* pName : listName )
+        {
             XmlNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
+        }
         return false;
     }
 
@@ -85,7 +87,9 @@ namespace sw
         if ( collectUnknownChildren( node, ppKnown, knownCount, listName ) == 0 )
             return true;
         for ( const utf8* pName : listName )
+        {
             XmlNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
+        }
         return false;
     }
 } // namespace sw

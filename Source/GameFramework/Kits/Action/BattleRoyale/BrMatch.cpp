@@ -102,7 +102,9 @@ namespace sw
     {
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             stepFixed( _stepTimer.getStep() );
+        }
     }
 
     void BrMatch::setPlayerPosition( int32 player, const float2& position )
@@ -189,7 +191,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const BrPlayer& player : _listPlayer )
+        {
             count += player.isDead() ? 0 : 1;
+        }
         return count;
     }
 
@@ -458,7 +462,9 @@ namespace sw
             // 붙은 팀원은 모두 이 판의 사람 번호여야 한다.
             int32 knownReviverCount = 0;
             for ( uint32 reviver = 0; reviver < playerCount; ++reviver )
+            {
                 knownReviverCount += player._revive.hasParticipant( reviver ) ? 1 : 0;
+            }
             if ( knownReviverCount != player._revive.getParticipantCount() )
                 return false;
             if ( player._inventory.readState( archive ) == false || player._loadout.readState( archive ) == false )

@@ -274,7 +274,9 @@ namespace sw
                 const uint32                             id = pWords[offset + 1];
                 ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {}, 0 };
                 for ( uint32 wordIndex = 2; wordIndex < instructionWordCount; ++wordIndex )
+                {
                     st._listMemberTypeId.push_back( pWords[offset + wordIndex] );
+                }
                 mapType[id] = std::move( st );
             }
             else if ( opcode == spirv::kOpTypePointer && instructionWordCount >= 4 )
@@ -513,10 +515,14 @@ namespace sw
                 input._location   = locationIt->second;
                 size_t digitBegin = name.size();
                 while ( digitBegin > 0 && name[digitBegin - 1] >= '0' && name[digitBegin - 1] <= '9' )
+                {
                     --digitBegin;
+                }
                 input._semantic = name.substr( 0, digitBegin );
                 for ( size_t digitIndex = digitBegin; digitIndex < name.size(); ++digitIndex )
+                {
                     input._semanticIndex = input._semanticIndex * 10 + static_cast<uint32>( name[digitIndex] - '0' );
+                }
                 data._listVertexInput.push_back( std::move( input ) );
             }
             std::sort( data._listVertexInput.begin(), data._listVertexInput.end(),

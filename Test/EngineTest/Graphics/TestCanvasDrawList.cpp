@@ -73,7 +73,9 @@ SW_TEST_CASE( CanvasDrawListTest, SameTextureContinuesBatch )
     sw::CanvasPainter                         painter( list, 1.0f );
     const sw::shared_ptr<const sw::Texture2D> texture = CanvasDrawListTestUtil::makeTexture();
     for ( uint32 index = 0; index < 6; ++index )
+    {
         painter.fillRect( sw::float2{ 0.0f, 0.0f }, sw::float2{ 4.0f, 4.0f }, CanvasDrawListTestUtil::makeImageBrush( texture ) );
+    }
     painter.fillRect( sw::float2{ 0.0f, 0.0f }, sw::float2{ 4.0f, 4.0f }, sw::CanvasBrush{} );
 
     SW_ASSERT_EQUAL( size_t{ 1 }, list._listBatch.size() );
@@ -306,13 +308,17 @@ SW_TEST_CASE( CanvasDrawListTest, ManySmallUploadsMergeToBoundingRect )
 {
     sw::vector<sw::GlyphAtlasRect> listRegion;
     for ( uint16 index = 0; index < 3; ++index )
+    {
         listRegion.push_back( sw::GlyphAtlasRect{ 2, static_cast<uint16>( 10 + index * 20 ), 5, 8, 8 } );
+    }
     sw::CanvasRenderer::mergeUploadRegions( listRegion, sw::CanvasRenderer::kMaxRegionUploadPerPage );
     SW_EXPECT_EQUAL( size_t{ 3 }, listRegion.size() );
 
     listRegion.clear();
     for ( uint16 index = 0; index <= sw::CanvasRenderer::kMaxRegionUploadPerPage; ++index )
+    {
         listRegion.push_back( sw::GlyphAtlasRect{ 2, static_cast<uint16>( 100 + index * 10 ), static_cast<uint16>( 40 + index ), 6, 9 } );
+    }
     sw::CanvasRenderer::mergeUploadRegions( listRegion, sw::CanvasRenderer::kMaxRegionUploadPerPage );
     SW_ASSERT_EQUAL( size_t{ 1 }, listRegion.size() );
     const uint16 lastIndex = static_cast<uint16>( sw::CanvasRenderer::kMaxRegionUploadPerPage );

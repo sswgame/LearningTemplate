@@ -176,7 +176,9 @@ namespace sw
             _body.setWaterBlock( pCatalog->findBlockIndex( hashed_string( "water" ) ) );
             const utf8* arrStartBlock[] = { "planks", "cobblestone", "brick", "log", "sand", "leaves" };
             for ( const utf8* pId : arrStartBlock )
+            {
                 (void)_hotbar.addBlock( pCatalog->findBlockIndex( hashed_string( pId ) ), 64 );
+            }
         }
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -319,7 +321,9 @@ namespace sw
         _intentSlots._place                                         = pawn.findButton( hashed_string( "Voxel.Place" ) );
         _intentSlots._hotbarScroll                                  = pawn.findAnalog( hashed_string( "Voxel.HotbarScroll" ) );
         for ( int32 slotIndex = 0; slotIndex < VoxelHotbar::kSlotCount; ++slotIndex )
+        {
             _intentSlots._arrSlot[slotIndex] = pawn.findButton( hashed_string( kArrSlotName[slotIndex] ) );
+        }
     }
 
     void VoxelPlayerComponent::readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint,

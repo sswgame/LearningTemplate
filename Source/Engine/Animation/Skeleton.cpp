@@ -41,7 +41,9 @@ namespace sw
         vector<float4x4> listModel;
         referencePose.computeModelSpace( _listParentIndex, listModel );
         for ( size_t boneIndex = 0; boneIndex < _listBone.size(); ++boneIndex )
+        {
             _listBone[boneIndex]._inverseBind = listModel[boneIndex].invert();
+        }
     }
 
     int32 Skeleton::findBoneIndex( const hashed_string& name ) const

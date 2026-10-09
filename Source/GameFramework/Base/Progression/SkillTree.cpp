@@ -151,7 +151,9 @@ namespace sw
     {
         int32 spent = 0;
         for ( size_t index = 0; index < _listRank.size(); ++index )
+        {
             spent += _listRank[index] * _pTree->_listSkill[index]._cost;
+        }
         return spent;
     }
 
@@ -228,7 +230,9 @@ namespace sw
         const int32 refunded = getSpentPoints();
         _points += refunded;
         for ( int32& rank : _listRank )
+        {
             rank = 0;
+        }
         return refunded;
     }
 

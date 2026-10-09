@@ -279,7 +279,9 @@ namespace sw
         vector<string> listEmittedPath;
         listEmittedPath.reserve( outListEvent.size() );
         for ( const FileChangeEvent& changeEvent : outListEvent )
+        {
             listEmittedPath.push_back( FileUtil::normalizePath( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ) );
+        }
 
         // 되찾은 개수를 쓰는 곳은 아래 로그뿐이다. SW_LOG_INFO 는 Shipping 에서 통째로 사라지므로
         // 그 구성에서는 쓰이지 않는 변수가 된다.
@@ -333,7 +335,9 @@ namespace sw
                 vector<string> listFile;
                 FileUtil::collectFiles( entry._pathPrefix, {}, listFile, true );
                 for ( const string& filePath : listFile )
+                {
                     FileWatchDispatcherInternal::pollFileChange( _mapPollMtime, outListEvent, entry._listExtension, filePath );
+                }
             }
         }
     }

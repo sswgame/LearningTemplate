@@ -178,7 +178,9 @@ SW_TEST_CASE( InventoryTest, LootTablesRollWeightsNestedTablesAndLuckDeterminist
     GameRandom    randomLucky( 77u );
     ItemStackList itemsLucky;
     for ( int32 index = 0; index < 200; ++index )
+    {
         (void)loot.roll( hashed_string( "wolf" ), randomLucky, itemsLucky, 2.0f );
+    }
     SW_EXPECT_EQUAL( 200, itemsLucky.getItemCount( hashed_string( "ore" ) ) );
 
     // 확률 표시 · 서로 부르는 표 · 없는 표.

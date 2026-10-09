@@ -287,7 +287,9 @@ namespace sw
         request._actorKind         = LedgerActorKind::Player;
         const LedgerHolder account = LedgerHolder::makeAccount( input._accountId );
         for ( const OfferGrant& grant : pOffer->_listGrant )
+        {
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetId, grant._amount } );
+        }
         LedgerTransferOutcome outcome;
         const LedgerResult    result = Ledger::executeTransfer( connection, request, outcome );
         if ( result == LedgerResult::JournalKeyReused )

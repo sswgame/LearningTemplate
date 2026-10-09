@@ -128,7 +128,9 @@ namespace sw
             static void applyBindings( ParserConfig& config, const nlohmann::json& obj, std::initializer_list<StringBinding> listBinding )
             {
                 for ( const auto& [member, key] : listBinding )
+                {
                     assignIfPresent( config.*member, obj, key );
+                }
             }
 
             static void applyPathsSection( ParserConfig& config, const nlohmann::json& obj )
@@ -544,7 +546,9 @@ namespace sw
         vector<string> listArg = _listBaseArg;
         listArg.reserve( listArg.size() + listIncludePath.size() + _listForceInclude.size() * 2 );
         for ( const string& includePath : listIncludePath )
+        {
             listArg.push_back( _flagIncludePrefix + includePath );
+        }
         for ( const string& forceInclude : _listForceInclude )
         {
             listArg.push_back( _flagForceInclude );

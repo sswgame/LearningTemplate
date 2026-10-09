@@ -765,7 +765,9 @@ namespace sw
             {
                 uint64 word = 0;
                 for ( size_t byteIndex = 0; byteIndex < byteCount; ++byteIndex )
+                {
                     word |= static_cast<uint64>( pByte[byteIndex] ) << ( byteIndex * 8 );
+                }
                 hash ^= word * HashUtil::kSplitMixMultiplier0;
                 hash = ( ( hash << 27 ) | ( hash >> 37 ) ) * HashUtil::kSplitMixMultiplier1;
             }

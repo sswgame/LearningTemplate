@@ -195,7 +195,9 @@ namespace sw
         }
         _frameRate = static_cast<float32>( root.get( "frame_rate" ).asFloat() );
         for ( size_t visemeIndex = 0; visemeIndex < visemes.size(); ++visemeIndex )
+        {
             _listViseme.push_back( hashed_string( visemes.at( visemeIndex ).asString() ) );
+        }
         vector<float32> listFrame( _listViseme.size() );
         for ( size_t frameIndex = 0; frameIndex < frames.size(); ++frameIndex )
         {
@@ -230,7 +232,9 @@ namespace sw
         const JsonValue visemes = root.set( "visemes" );
         visemes.setArray();
         for ( const hashed_string& name : _listViseme )
+        {
             visemes.pushBack().setString( name.c_str() );
+        }
         const JsonValue frames = root.set( "frames" );
         frames.setArray();
         const uint32 visemeCount = getVisemeCount();
@@ -280,7 +284,9 @@ namespace sw
         const size_t end   = MathUtil::min( center + half, listSample.size() );
         float64      sum   = 0.0;
         for ( size_t index = begin; index < end; ++index )
+        {
             sum += static_cast<float64>( listSample[index] ) * static_cast<float64>( listSample[index] );
+        }
         return static_cast<float32>( MathUtil::sqrt( sum / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
     }
 
@@ -289,14 +295,18 @@ namespace sw
         outTrack            = VisemeTrack{};
         outTrack._frameRate = settings._frameRate;
         for ( const LipSyncViseme& viseme : settings._listViseme )
+        {
             outTrack._listViseme.push_back( viseme._name );
+        }
         const uint32 visemeCount = static_cast<uint32>( settings._listViseme.size() );
         if ( sampleRate == 0 || visemeCount < 2 || listSample.empty() )
             return;
 
         LipSyncInternal::BandPass arrFilter[3];
         for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
+        {
             arrFilter[bandIndex].configure( settings._arrBandRange[bandIndex][0], settings._arrBandRange[bandIndex][1], static_cast<float32>( sampleRate ) );
+        }
         const size_t    frameSamples = MathUtil::max<size_t>( static_cast<size_t>( static_cast<float32>( sampleRate ) / settings._frameRate ), 1u );
         const size_t    frameCount   = ( listSample.size() + frameSamples - 1 ) / frameSamples;
         vector<float32> listScore( visemeCount );
@@ -328,7 +338,9 @@ namespace sw
             const float64 bandSum = arrBandEnergy[0] + arrBandEnergy[1] + arrBandEnergy[2];
             float32       arrShape[3]{ 0.0f, 0.0f, 0.0f };
             for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
+            {
                 arrShape[bandIndex] = bandSum > 0.0 ? static_cast<float32>( arrBandEnergy[bandIndex] / bandSum ) : 0.0f;
+            }
             const float32 shapeLength = MathUtil::sqrt( arrShape[0] * arrShape[0] + arrShape[1] * arrShape[1] + arrShape[2] * arrShape[2] );
             float32       maxScore    = -MathUtil::kMaxFloat;
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
@@ -348,7 +360,9 @@ namespace sw
                 sum += listScore[visemeIndex];
             }
             for ( uint32 visemeIndex = 1; visemeIndex < visemeCount; ++visemeIndex )
+            {
                 pWeight[visemeIndex] = openness * listScore[visemeIndex] / sum;
+            }
         }
     }
 } // namespace sw

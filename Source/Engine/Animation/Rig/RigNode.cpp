@@ -268,7 +268,9 @@ namespace sw
             // 사슬은 각 본이 다음 본의 조상이어야 한다(사이에 본이 끼어도 된다 — 팔뚝 → 손목 → 손).
             int32 current = static_cast<int32>( outListBone[index] );
             while ( current >= 0 && current != static_cast<int32>( outListBone[index - 1] ) )
+            {
                 current = _pSkeleton->getBone( static_cast<uint32>( current ) )._parentIndex;
+            }
             if ( current < 0 )
             {
                 SW_LOG_ERROR( "Rig '%#': chain bone '%#' is not a descendant of '%#'", _label, listName[index].c_str(), listName[index - 1].c_str() );

@@ -263,7 +263,9 @@ namespace sw
             {
                 uint8 difference = 0;
                 for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
+                {
                     difference = static_cast<uint8>( difference | ( pFirst[byteIndex] ^ pSecond[byteIndex] ) );
+                }
                 return difference == 0;
             }
 
@@ -372,7 +374,9 @@ namespace sw
                         return false;
                     uint64 value = 0;
                     for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+                    {
                         value |= static_cast<uint64>( arrByte[byteIndex] ) << ( byteIndex * 8 );
+                    }
                     if ( value != 0 )
                     {
                         outId = value;
@@ -1044,7 +1048,9 @@ namespace sw
             return LoginResult::StoreUnavailable;
         const size_t prefixSize = ServiceKeyUtil::makeHex64( identity._accountId ).size() + 1;
         for ( const ServiceRecord& link : listLink )
+        {
             outSummary._listProvider.push_back( link._key.substr( prefixSize ) );
+        }
         outSummary._bHasCredential = profile._nameKey.empty() ? SW_FALSE : SW_TRUE;
         outSummary._bGuest         = profile._bGuest;
         outSummary._deletionDueMs  = profile._deletionDueMs;

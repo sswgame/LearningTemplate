@@ -445,11 +445,15 @@ namespace sw::editor
                     inoutVertex._arrJoint[0]  = skin._rigidBone;
                     inoutVertex._arrWeight[0] = 1.0f;
                     for ( uint32 influence = 1; influence < kInfluenceCount; ++influence )
+                    {
                         inoutVertex._arrWeight[influence] = 0.0f;
+                    }
                     return;
                 }
                 for ( float32& weight : inoutVertex._arrWeight )
+                {
                     weight /= weightSum;
+                }
             }
 
             /** @brief 리틀 엔디언 uint32 를 읽습니다. */
@@ -616,7 +620,9 @@ namespace sw::editor
                     float32 arrWorld[16]{};
                     cgltf_node_transform_world( &node, arrWorld );
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < node.mesh->primitives_count; ++primitiveIndex )
+                    {
                         appendPrimitive( node.mesh->primitives[primitiveIndex], node.mesh, arrWorld, nullptr, inoutMesh );
+                    }
                 }
                 for ( cgltf_size childIndex = 0; childIndex < node.children_count; ++childIndex )
                 {
@@ -828,7 +834,9 @@ namespace sw::editor
                         const float4x4& existing  = listInverseBind[it->second];
                         float32         maxDiffer = 0.0f;
                         for ( uint32 element = 0; element < 16; ++element )
+                        {
                             maxDiffer = MathUtil::max( maxDiffer, MathUtil::abs( ( &existing._11 )[element] - ( &inverseBind._11 )[element] ) );
+                        }
                         if ( maxDiffer > 1e-3f )
                             SW_LOG_WARNING( "glTF '%#': joint '%#' has different bind matrices in two skins - the first is used", sourcePath,
                                             makeNodeName( data, *skin.joints[jointIndex] ).c_str() );
@@ -907,11 +915,15 @@ namespace sw::editor
                     return;
                 outChannel._listTime.resize( sampler.input->count );
                 for ( cgltf_size keyIndex = 0; keyIndex < sampler.input->count; ++keyIndex )
+                {
                     (void)readFloats( sampler.input, keyIndex, &outChannel._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
+                }
                 outChannel._listValue.resize( sampler.output->count * componentCount );
                 for ( cgltf_size valueIndex = 0; valueIndex < sampler.output->count; ++valueIndex )
+                {
                     // 못 읽은 값은 0 으로 남는다(resize 기본값)
                     (void)readFloats( sampler.output, valueIndex, &outChannel._listValue[valueIndex * componentCount], componentCount );
+                }
             }
 
             /**
@@ -932,7 +944,9 @@ namespace sw::editor
 
                 size_t nextKey = 0;
                 while ( nextKey < keyCount && channel._listTime[nextKey] <= time )
+                {
                     ++nextKey;
+                }
                 if ( nextKey == 0 || nextKey == keyCount )
                 {
                     const size_t key = nextKey == 0 ? 0 : keyCount - 1;
@@ -972,7 +986,9 @@ namespace sw::editor
                 else
                 {
                     for ( uint32 component = 0; component < width; ++component )
+                    {
                         pOutValue[component] = MathUtil::lerp( pFrom[component], pTo[component], alpha );
+                    }
                 }
                 return true;
             }
@@ -1019,7 +1035,9 @@ namespace sw::editor
                         readChannel( *channel.sampler, 3, joint._scale );
                 }
                 for ( const JointChannels& joint : listChannel )
+                {
                     duration = MathUtil::max( duration, MathUtil::max( findLastTime( joint._translation ), MathUtil::max( findLastTime( joint._rotation ), findLastTime( joint._scale ) ) ) );
+                }
 
                 const uint32 intervalCount = duration > 0.0f ? MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( duration * sampleRate - 1e-3f ) ) ) : 0u;
                 outRawClip                 = AnimRawClip{};
@@ -1068,10 +1086,14 @@ namespace sw::editor
                     data._interpolation  = channel.sampler->interpolation;
                     data._listTime.resize( channel.sampler->input->count );
                     for ( cgltf_size keyIndex = 0; keyIndex < channel.sampler->input->count; ++keyIndex )
+                    {
                         (void)readFloats( channel.sampler->input, keyIndex, &data._listTime[keyIndex], 1 ); // 못 읽은 키는 0 으로 남는다(resize 기본값)
+                    }
                     data._listValue.resize( channel.sampler->output->count );
                     for ( cgltf_size valueIndex = 0; valueIndex < channel.sampler->output->count; ++valueIndex )
+                    {
                         (void)readFloats( channel.sampler->output, valueIndex, &data._listValue[valueIndex], 1 ); // 못 읽은 값은 0 으로 남는다(resize 기본값)
+                    }
                     const float32 lastTime = findLastTime( data );
                     duration               = MathUtil::max( duration, lastTime );
                     // 키 시각(선형 · 계단) 또는 표본율 격자(큐빅)에서 값을 뽑는다.
@@ -1081,7 +1103,9 @@ namespace sw::editor
                         listTime.clear();
                         const uint32 intervalCount = MathUtil::max( 1u, static_cast<uint32>( MathUtil::ceil( lastTime * sampleRate ) ) );
                         for ( uint32 sampleIndex = 0; sampleIndex <= intervalCount; ++sampleIndex )
+                        {
                             listTime.push_back( lastTime * static_cast<float32>( sampleIndex ) / static_cast<float32>( intervalCount ) );
+                        }
                     }
                     vector<float32> listValue( targetCount );
                     for ( cgltf_size targetIndex = 0; targetIndex < targetCount; ++targetIndex )
@@ -1403,7 +1427,9 @@ namespace sw::editor
                 {
                     string joined;
                     for ( const string& key : result._listIgnoredMaterialKey )
+                    {
                         joined += ( joined.empty() ? "" : ", " ) + key;
+                    }
                     SW_LOG_WARNING( "VRM '%#': material keys the toon material does not support (ignored): %#", sourcePath, joined.c_str() );
                 }
                 SW_LOG_INFO( "VRM '%#': %# material sections, %# texture sources", sourcePath, result._listSection.size(), result._listTexture.size() );
@@ -1420,7 +1446,9 @@ namespace sw::editor
                 {
                     static constexpr utf8 kArrDigit[] = "0123456789abcdef";
                     for ( uint32 digit = digitCount; digit > 0; --digit )
+                    {
                         inoutText += kArrDigit[( value >> ( ( digit - 1 ) * 4 ) ) & 0xFu];
+                    }
                 };
                 string text;
                 appendHex( text, high >> 32, 8 );
@@ -1471,7 +1499,9 @@ namespace sw::editor
                     binding._pSkin            = &skin;
                     binding._listJointToBone.resize( skin.joints_count, -1 );
                     for ( cgltf_size jointIndex = 0; jointIndex < skin.joints_count; ++jointIndex )
+                    {
                         binding._listJointToBone[jointIndex] = mapJointBone[skin.joints[jointIndex]];
+                    }
                 }
                 // 스킨 없는 메시를 몸에 합칠 때 쓰는 고정 본 풀이(뿌리 본 0 에 가중치 1)입니다.
                 SkinBinding rigidBinding{};
@@ -1498,7 +1528,9 @@ namespace sw::editor
                         // glTF 규약: 스킨드 메시는 노드 변환을 쓰지 않는다 — 정점은 바인드 공간이다.
                         const SkinBinding& binding = listBinding[static_cast<size_t>( pNode->skin - data.skins )];
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
+                        {
                             appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, &binding, body );
+                        }
                         continue;
                     }
                     const cgltf_node* pJoint = findJointAncestor( *pNode, mapJointBone );
@@ -1507,7 +1539,9 @@ namespace sw::editor
                         float32 arrWorld[16]{};
                         cgltf_node_transform_world( pNode, arrWorld );
                         for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
+                        {
                             appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrWorld, &rigidBinding, body );
+                        }
                         continue;
                     }
 
@@ -1528,7 +1562,9 @@ namespace sw::editor
                     attachment._fileStem       = makeNumberedStem( baseStem, useCount );
                     MergedMesh part;
                     for ( cgltf_size primitiveIndex = 0; primitiveIndex < pNode->mesh->primitives_count; ++primitiveIndex )
+                    {
                         appendPrimitive( pNode->mesh->primitives[primitiveIndex], pNode->mesh, arrIdentity, nullptr, part );
+                    }
                     expandTriangles( part, 0, attachment._mesh );
                     if ( attachment._mesh._listVertex.empty() == false )
                         outResult._listAttachment.push_back( std::move( attachment ) );
@@ -1578,7 +1614,9 @@ namespace sw::editor
                 // 관절의 레스트 TRS(glTF 공간, 뿌리 접기 전) — 채널이 없는 성분은 이 값이다.
                 vector<BoneTransform> listRest( skeleton.getBoneCount() );
                 for ( const auto& [pNode, boneIndex] : mapJointBone )
+                {
                     listRest[static_cast<uint32>( boneIndex )] = readNodeLocal( *pNode );
+                }
 
                 vector<uint8>                 listRequestedFound( rule._listClipName.size(), SW_FALSE );
                 unordered_map<string, uint32> mapStemUse;
@@ -1606,16 +1644,22 @@ namespace sw::editor
                     imported._clip.setName( hashed_string( clipName ) );
                     imported._clip.setRootMotionTrack( rootMotionBone );
                     for ( const AnimCurve& curve : listMorphCurve )
+                    {
                         imported._clip.addCurve( curve );
+                    }
                     const auto itExtra = mapExtra.find( clipName );
                     if ( itExtra != mapExtra.end() )
                     {
                         if ( itExtra->second._loopOverride >= 0 )
                             imported._clip.setLooping( itExtra->second._loopOverride != 0 );
                         for ( const AnimNotifyEvent& event : itExtra->second._listNotify )
+                        {
                             imported._clip.addNotify( event );
+                        }
                         for ( const AnimCurve& curve : itExtra->second._listCurve )
+                        {
                             imported._clip.addCurve( curve );
+                        }
                         mapExtra.erase( itExtra );
                     }
                     if ( imported._clip.compressFrom( rawClip, *pCodec, settings, &imported._stats ) == false )
@@ -1753,7 +1797,9 @@ namespace sw::editor
         ModelImporterInternal::MergedMesh merged;
         merged._bBakeMaterialColor = listToon.empty();
         for ( const cgltf_node* pRoot : listRoot )
+        {
             ModelImporterInternal::appendNode( *pRoot, merged );
+        }
         if ( pData->animations_count > 0 )
             SW_LOG_WARNING( "glTF '%#' has %# animations but no skin - node animations are not imported", sourcePath, pData->animations_count );
 
@@ -1994,7 +2040,9 @@ namespace sw::editor
         vector<string> listFile;
         (void)FileUtil::collectFiles( sideFolder, "", listFile, true );
         for ( string& file : listFile )
+        {
             file = FileUtil::normalizeSeparators( file );
+        }
         std::sort( listFile.begin(), listFile.end() );
         for ( const string& file : listFile )
         {

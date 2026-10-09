@@ -118,7 +118,9 @@ namespace sw
 
         // 4) 아이템 상자 · 부스트 패드를 거리로 푼다.
         for ( const KartItemBoxDef& box : def._listItemBox )
+        {
             _listItemBoxPosition.push_back( makeSurfacePoint( box._at, box._offset ) );
+        }
         for ( const KartBoostPadDef& pad : def._listBoostPad )
         {
             KartBoostPad boostPad;
@@ -400,7 +402,9 @@ namespace sw
                     float3{ pointNode.getAttributeFloat( "x", 0.0f ), pointNode.getAttributeFloat( "y", 0.0f ), pointNode.getAttributeFloat( "z", 0.0f ) } );
             }
             for ( XmlNode node = trackNode.findChild( "Checkpoint" ); node; node = node.findNextSibling( "Checkpoint" ) )
+            {
                 def._listCheckpoint.push_back( node.getAttributeFloat( "at", 0.0f ) );
+            }
             for ( XmlNode node = trackNode.findChild( "ItemBox" ); node; node = node.findNextSibling( "ItemBox" ) )
             {
                 KartItemBoxDef box;

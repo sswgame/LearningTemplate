@@ -2106,13 +2106,17 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererParityAllBackends )
 
                 float32 arrMean[3]{};
                 for ( uint32 channel = 0; channel < 3; ++channel )
+                {
                     arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+                }
                 if ( bHasReferenceMean == false )
                 {
                     bHasReferenceMean   = true;
                     referenceDrawnCount = drawnCount;
                     for ( uint32 channel = 0; channel < 3; ++channel )
+                    {
                         referenceMean[channel] = arrMean[channel];
+                    }
                 }
                 else
                 {
@@ -2405,12 +2409,16 @@ SW_TEST_CASE( RenderPassGpuTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     // 이미 상주하면 요청이 쌓이지 않는다 — 매 프레임 GT 가 전부 요청해도 값이 싸야 한다.
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+    {
         queue.requestMesh( arrMesh[meshIndex] );
+    }
     SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
     SW_EXPECT_EQUAL( 0u, queue.flush() );
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
+    {
         arrMesh[meshIndex]->releaseRhi( device.get() );
+    }
 }
 
 /**
@@ -2597,7 +2605,9 @@ SW_TEST_CASE( RenderPassGpuTest, DeferredPipelineDrawsGeometry )
                 const uint8* pPixel = image.getRawPixel( col, row );
                 uint64       key    = 0;
                 for ( uint32 b = 0; b < bytesPerPixel && b < 8; ++b )
+                {
                     key |= static_cast<uint64>( pPixel[b] ) << ( b * 8 );
+                }
                 bool bFound = false;
                 for ( uint32 slot = 0; slot < distinct; ++slot )
                 {
@@ -2665,7 +2675,9 @@ SW_TEST_CASE( RenderPassGpuTest, MergedSceneDrawsMatchPerBatch )
         }
         const uint32 pixelCount = image.getPixelCount();
         for ( uint32 channel = 0; channel < 3; ++channel )
+        {
             result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+        }
         result._bOk = pixelCount > 0;
         return result;
     };
@@ -3030,7 +3042,9 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
         }
         const uint32 pixelCount = image.getPixelCount();
         for ( uint32 channel = 0; channel < 3; ++channel )
+        {
             result._arrMean[channel] = pixelCount > 0 ? static_cast<float32>( arrSum[channel] ) / static_cast<float32>( pixelCount ) : 0.0f;
+        }
         result._bOk   = pixelCount > 0;
         result._image = std::move( image );
         return result;
@@ -3084,7 +3098,9 @@ SW_TEST_CASE( RenderPassGpuTest, MorphPoolIdentityMatchesRest )
 
             // (B) 풀 항등 — 모프를 켜되 컴퓨트를 건너뛰고 레스트 버퍼를 정점 셰이더에 물린다. 정답은 A 다.
             for ( sw::shared_ptr<sw::Mesh>& mesh : arrMesh )
+            {
                 mesh->setGpuMorphEnabled( true );
+            }
             renderer.setMeshMorphDiag( 2 );
             const Snapshot identity = snapshot( renderer, *device, scene );
             SW_EXPECT_TRUE_MSG( identity._bOk, ( label + ": 풀 항등 그림을 못 읽었다" ).c_str() );
@@ -3559,7 +3575,9 @@ SW_TEST_CASE( RenderPassGpuTest, MeshPoolsRebuildWhenMeshContentChanges )
             // 같은 메시, 다른 내용 — 삼각형 하나.
             sw::vector<sw::RHIVertex> listTriangle;
             for ( uint32 vertexIndex = 0; vertexIndex < 3; ++vertexIndex )
+            {
                 listTriangle.push_back( mesh->getVertices()[vertexIndex] );
+            }
             mesh->setVertices( listTriangle );
 
             SW_EXPECT_TRUE_MSG( vertexPool.build( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
@@ -5225,7 +5243,9 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteFramesAndTintsArePerInstance )
                     // 이 카메라는 화면 오른쪽이 +X 라 구간 순서가 곧 월드 X 순서다.
                     sw::float3 arrMean[kSpriteCount] = {};
                     for ( uint32 spanIndex = 0; spanIndex < kSpriteCount; ++spanIndex )
+                    {
                         arrMean[spanIndex] = meanAround( ( listSpan[spanIndex]._start + listSpan[spanIndex]._end ) / 2, row );
+                    }
 
                     // 우세 채널로 본다: 빨강 · 초록 · 자홍(빨강 + 파랑, 초록 없음) · 파랑. 경계(섞인 색)라면 두 채널 이상이 함께 높다.
                     constexpr float32 kHigh = 120.0f;
@@ -5487,7 +5507,9 @@ SW_TEST_CASE( RenderPassGpuTest, HalfResolutionBloomBlursByTheSourceTexel )
             bOk = renderer.initialize( device.get(), halfPath ) && renderer.isReady();
             SW_EXPECT_TRUE_MSG( bOk, ( label + "반해상도 원본 · 블룸 파이프라인을 만들지 못했다" ).c_str() );
             for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+            {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.02f, 0.02f, 0.05f, 1.0f } );
+            }
             bOk = bOk && sceneColor.readTransient( renderer, "SceneColor" ) && bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
             renderer.shutdown();
@@ -5528,7 +5550,9 @@ SW_TEST_CASE( RenderPassGpuTest, MultiViewRendersEachCaptureCameraToItsTexture )
                                                             MultiViewScene::makeTextureOutput( "rendertarget/test_blue", 0.0f ), sw::CameraRole::Capture ) != nullptr;
         SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
         SW_EXPECT_EQUAL( 2u, renderer.getExtraViewCount() );
         SW_EXPECT_EQUAL( 2u, renderer.getLastRenderedExtraViewCount() );
 
@@ -5575,7 +5599,9 @@ SW_TEST_CASE( RenderPassGpuTest, PostProcessOffViewSkipsThePostChain )
         bOk                              = bOk && stage.addViewCamera( "CameraPostOff", redTarget, outputOff, sw::CameraRole::Capture ) != nullptr;
         SW_EXPECT_TRUE_MSG( bOk, ( label + "무대 준비" ).c_str() );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
 
         int64  onDiff   = 0;
         int64  offDiff  = 0;
@@ -5660,7 +5686,9 @@ SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewDrawsOnlyInsideItsRectangle )
         bOk                = bOk && stage.addViewCamera( "PictureInPicture", sw::float3{ -MultiViewScene::kCubeDistance, 0.0f, 0.0f }, output, sw::CameraRole::Game ) != nullptr;
         renderer.setPresentCaptureEnabled( true );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+        }
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
         bOk = bOk && renderer.readbackPresentCapture( bytes, layout );
@@ -5720,7 +5748,9 @@ SW_TEST_CASE( RenderPassGpuTest, PresentedBackBufferMatchesTheCapture )
         renderer.setPresentCaptureEnabled( true );
         const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        }
         test::RHITestImage window;
         bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
         sw::vector<uint8>     captureBytes;
@@ -5896,7 +5926,9 @@ SW_TEST_CASE( RenderPassGpuTest, ScreenRectViewLandsInItsCornerOfTheBackBuffer )
         renderer.setPresentCaptureEnabled( false );
         const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        }
         test::RHITestImage window;
         bOk = bOk && renderSceneFrameReadingBackBuffer( renderer, device.get(), stage._scene, clear, window );
         SW_EXPECT_TRUE_MSG( bOk, ( label + "그리기 · 백버퍼 읽기" ).c_str() );
@@ -6003,7 +6035,9 @@ SW_TEST_CASE( RenderPassGpuTest, ExtraViewSortsTransparencyFromItsOwnEye )
             viewScene.getObjectManager()->flushSceneTransforms();
         }
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( viewRenderer, device.get(), viewScene, clear );
+        }
         test::RHITestImage viewImage;
         if ( bOk )
         {
@@ -6036,7 +6070,9 @@ SW_TEST_CASE( RenderPassGpuTest, ExtraViewSortsTransparencyFromItsOwnEye )
         mainRenderer.setOutputSizeOverride( kWidth, kHeight );
         mainRenderer.setPresentCaptureEnabled( true );
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( mainRenderer, device.get(), mainScene, clear );
+        }
         sw::vector<uint8>     mainBytes;
         sw::RHITextureMipSpan mainLayout{};
         bOk = bOk && mainRenderer.readbackPresentCapture( mainBytes, mainLayout );
@@ -6098,7 +6134,9 @@ SW_TEST_CASE( RenderPassGpuTest, GlContextBindWaitsForAShortHolder )
     } );
     const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
     while ( bHeld.load() == false && bHolderDone.load() == false && deadline.isExpired() == false )
+    {
         std::this_thread::yield();
+    }
     const bool bHolderTookIt = bHeld.load();
     const bool bBound        = pDevice->bindGraphicsContext(); // 30 ms 안에 놓이므로 기다리면 된다
     holder.join();
@@ -6165,7 +6203,9 @@ SW_TEST_CASE( RenderPassGpuTest, CameraCutResetsTaaHistory )
             bOk = renderer.initialize( device.get(), sw::engine::getEngineDefaultAssets()._defaultDeferredPipeline ) && renderer.isReady() && stage.populate();
             bOk = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "1.0 0.02 0.02 1.0" );
             for ( uint32 frameIndex = 0; frameIndex < 4 && bOk; ++frameIndex )
+            {
                 bOk = renderSceneFrame( renderer, device.get(), stage._scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            }
             bOk                          = bOk && stage._material->setParameter( nullptr, sw::hashed_string( "color" ), "0.02 0.02 1.0 1.0" );
             sw::CameraComponent* pCamera = stage._scene.getActiveGameCamera();
             bOk                          = bOk && pCamera != nullptr;
@@ -6671,7 +6711,9 @@ SW_TEST_CASE( RenderPassGpuTest, PixelArtSpritesSnapToTheAssetPixelGrid )
             scene.getObjectManager()->flushSceneTransforms();
             sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
             for ( uint32 frame = 0; frame < 3; ++frame )
+            {
                 (void)renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            }
             test::RHITestImage image;
             outListPixel.clear();
             if ( image.readTransient( renderer, "SceneColor" ) == false )
@@ -6811,7 +6853,9 @@ SW_TEST_CASE( RenderPassGpuTest, Light2DFalloffAndShadowOnEveryBackend )
             outListWorldX.clear();
             outListRed.clear();
             for ( uint32 frame = 0; frame < 4 && bOk; ++frame )
+            {
                 bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
+            }
             test::RHITestImage image;
             if ( bOk == false || image.readTransient( renderer, "SceneColor" ) == false )
                 return false;
@@ -7229,7 +7273,9 @@ SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
         renderer.setPresentCaptureEnabled( true );
         const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        }
         sw::vector<uint8>     bytesWithout;
         sw::RHITextureMipSpan layoutWithout{};
         bOk = bOk && renderer.readbackPresentCapture( bytesWithout, layoutWithout );
@@ -7476,7 +7522,9 @@ SW_TEST_CASE( RenderPassGpuTest, WorldWidgetRenderTextureIsSampled )
         renderer.setCanvasFrame( frame );
         const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
+        {
             bOk = renderSceneFrame( renderer, device.get(), stage._scene, clear );
+        }
         sw::vector<uint8>     bytes;
         sw::RHITextureMipSpan layout{};
         bOk = bOk && renderer.readbackPresentCapture( bytes, layout );

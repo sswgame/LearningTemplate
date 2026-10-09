@@ -86,7 +86,9 @@ namespace sw
             return RoundSeriesOutcome::Rejected;
         const int32 participantCount = getParticipantCount();
         for ( int32 participant = 0; participant < participantCount; ++participant )
+        {
             _listTotal[static_cast<size_t>( participant )] += getPlacementPoint( computeRank( listRoundScore, participant ) );
+        }
         return finishRound();
     }
 
@@ -154,7 +156,9 @@ namespace sw
         outWriter.writeVarInt( _winner );
         outWriter.writeVarUint( static_cast<uint64>( _listTotal.size() ) );
         for ( const int32 total : _listTotal )
+        {
             outWriter.writeVarInt( total );
+        }
     }
 
     bool RoundSeries::readState( BitReader& reader )
@@ -200,7 +204,9 @@ namespace sw
         const int32 score = listRoundScore[static_cast<size_t>( participant )];
         int32       rank  = 1;
         for ( const int32 other : listRoundScore )
+        {
             rank += other > score ? 1 : 0;
+        }
         return rank;
     }
 

@@ -46,7 +46,9 @@ namespace sw
                     outArrSlot[index] = slot;
                 }
                 for ( uint32 index = target._textureCount; index < mergedCount; ++index )
+                {
                     target._arrTexture[index] = *arrPending[index];
+                }
                 target._textureCount = static_cast<uint8>( mergedCount );
                 return true;
             }
@@ -95,7 +97,9 @@ namespace sw
                 batch._firstQuad   = static_cast<uint32>( _listQuad.size() );
                 batch._quadCount   = 0;
                 for ( uint32 index = 0; index < shaderslot::kMaterialTextureCount; ++index )
+                {
                     arrSlot[index] = index;
+                }
             }
             // 사각형은 통째로 복사하고, 텍스처 번호가 바뀐 일괄만 번호를 다시 매긴다(사각형마다 push_back 하지 않는다).
             const size_t firstNew = _listQuad.size();

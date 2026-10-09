@@ -589,11 +589,15 @@ namespace sw
 
         // 2) 부착. 모든 오브젝트가 생긴 뒤라 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
         for ( const Entry& entry : _listEntry )
+        {
             resolveEntry( entry );
+        }
 
         // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다 — 가리키던 오브젝트가 뒤에 읽혔어도 찾는다.
         for ( const Entry& entry : _listEntry )
+        {
             resolveObjectReferences( entry );
+        }
 
         // 4) 값을 다 읽고 이었다 — 컴포넌트가 값을 자원으로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착 · 핸들이 풀린 뒤라 그것을 읽어도
         //    이 실행의 오브젝트다(언리얼 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 이은 뒤에 온다). 상태 없이 지은 항목(프리팹 스폰)은 스폰이 이미 불렀다.
@@ -700,7 +704,9 @@ namespace sw
             vector<GameObjectHandle> listHandle;
             listHandle.reserve( elementCount );
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+            {
                 listHandle.push_back( resolveObjectReference( *static_cast<const GameObjectHandle*>( pSequence->getElementConst( pContainer, elementIndex ) ) ) );
+            }
             pSequence->clear( pContainer );
             for ( size_t elementIndex = 0; elementIndex < listHandle.size(); ++elementIndex )
             {
@@ -755,10 +761,14 @@ namespace sw
         {
             pMap->clear( pContainer );
             for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
+            {
                 pMap->insertKeyValue( pContainer, &listKey[entryIndex], pValueBlock + valueStride * entryIndex );
+            }
         }
         for ( size_t entryIndex = 0; entryIndex < listKey.size(); ++entryIndex )
+        {
             pMap->destroyValue( pValueBlock + valueStride * entryIndex );
+        }
         Memory::freeAligned( pValueBlock );
         return bCopied;
     }

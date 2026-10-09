@@ -47,7 +47,9 @@ namespace sw
                 if ( pPanel == nullptr )
                     return;
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                {
                     prefixNames( *pPanel->getChild( index ), prefix );
+                }
             }
 
             /** @brief 값 위젯에 거는 칸 — 형식마다 위젯의 값 칸(6-3 설정 바인딩의 규약)입니다. 키 바인딩은 단추라 칸이 없습니다. */
@@ -314,7 +316,9 @@ namespace sw
         vector<const UserSettingDef*> listSetting;
         _pSettings->collectSettings( _listCategory[_selectedTab], listSetting );
         for ( const UserSettingDef* pSetting : listSetting )
+        {
             (void)buildRow( *pRows, *pSetting );
+        }
     }
 
     bool OptionsMenuScreen::buildRow( PanelWidget& rows, const UserSettingDef& setting )
@@ -339,7 +343,9 @@ namespace sw
         WidgetTree& tree = getTree();
         // 견본에 적힌 바인딩(게임이 덮어쓴 행 견본)도 그대로 건다.
         for ( const UiBindingDesc& binding : listBinding )
+        {
             addBinding( binding );
+        }
 
         if ( TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( prefix + "." + Internal::kLabelName ) ); pLabel != nullptr )
             pLabel->setText( setting._textKey.empty() ? string_view( prefix ) : string_view( setting._textKey ) );

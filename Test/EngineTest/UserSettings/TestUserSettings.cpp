@@ -615,7 +615,9 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
 #if !defined( SW_SHIPPING )
     bool bListed{ false };
     for ( const sw::UserSettingOption& option : listOption )
+    {
         bListed = bListed || option._value == "qps_ploc";
+    }
     SW_EXPECT_TRUE( bListed );
     SW_EXPECT_TRUE( settings.setPendingValue( "language.text", "qps_ploc" ) == sw::UserSettingSetResult::Accepted );
     SW_EXPECT_TRUE( sw::PseudoLocalizer::isPseudoText( localization.getString( sw::hashed_string( "MENU_START" ) ) ) );

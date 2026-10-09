@@ -201,7 +201,9 @@ namespace sw
         // 있다(게임뷰 리사이즈가 대표적인 경로다). 즉시 파괴하면 검증 레이어가 in-use 위반을 낸다.
         // 면별 프레임버퍼의 0 번은 `_framebuffer` 와 같다 — 한 번만 놓는다.
         for ( size_t slice = 1; slice < record._listSliceFramebuffer.size(); ++slice )
+        {
             enqueueFramebufferRelease( record._listSliceFramebuffer[slice], VK_NULL_HANDLE );
+        }
         record._listSliceFramebuffer.clear();
         enqueueFramebufferRelease( record._framebuffer,
                                    ( record._renderPass != _offscreenRenderPass ) ? record._renderPass : VK_NULL_HANDLE );
@@ -252,7 +254,9 @@ namespace sw
         // PSO 호환용. 파이프라인은 이 RP 와 "호환되는" RP 어디에서든 쓰인다(포맷 · 개수 · 샘플 수만 같으면 된다).
         VulkanRHIRenderPassCache::RenderPassSpec spec{};
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
+        {
             spec.addColor( key._arrColorFormat[colorIndex], VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+        }
         if ( key._depthFormat != 0 )
             spec.setDepth( key._depthFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
 

@@ -103,7 +103,9 @@ namespace sw
                 // 다른 스레드가 보고 중이다. 그 스레드가 끝낼 때까지 기다린다(nanosleep 은 시그널 안에서 불러도 된다). 상한을 둔다.
                 const timespec waitStep{ 0, 10 * 1000 * 1000 };
                 for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadId.load() != 0; ++waitIndex )
+                {
                     ::nanosleep( &waitStep, nullptr );
+                }
                 return;
             }
 
@@ -229,7 +231,9 @@ namespace sw
         restoreAction.sa_handler = SIG_DFL;
         sigemptyset( &restoreAction.sa_mask );
         for ( int32 signalNumber : kArrFatalSignal )
+        {
             sigaction( signalNumber, &restoreAction, nullptr );
+        }
 
         // 이 스레드의 대체 스택도 걷어 낸다. 커널이 들고 있는 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트 · 도구)와 엉키지 않는다.
         // 다른 스레드의 것은 그 스레드가 끝날 때 돌려준다.

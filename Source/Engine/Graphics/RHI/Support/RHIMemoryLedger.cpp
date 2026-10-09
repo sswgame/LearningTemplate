@@ -188,7 +188,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         uint64                  total{ 0 };
         for ( const RHIMemoryKindStats& stat : _arrStat )
+        {
             total += stat._liveBytes;
+        }
         return total;
     }
 
@@ -251,7 +253,9 @@ namespace sw
         const RHIGpuMemorySummary summary = makeSummary();
         uint32                    liveCount{ 0 };
         for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
+        {
             liveCount += getStats( static_cast<RHIMemoryKind>( kindIndex ) )._liveCount;
+        }
 
         const uint64 trackedX10 = RHIMemoryLedgerInternal::toMegabytesX10( summary._trackedBytes );
         SW_LOG_INFO( "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,

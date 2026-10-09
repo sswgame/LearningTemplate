@@ -938,7 +938,9 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
             s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 2000 );
             while ( s_bGateOpen.load( std::memory_order_acquire ) == false && deadline.isExpired() == false )
+            {
                 std::this_thread::yield();
+            }
         }
 
         static void high() { s_highOrder.store( s_startOrder.fetch_add( 1, std::memory_order_relaxed ) + 1, std::memory_order_relaxed ); }
@@ -956,7 +958,9 @@ SW_TEST_CASE( TaskTest, HighPriorityTaskJumpsTheQueue )
     {
         const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 2000 );
         while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && deadline.isExpired() == false )
+        {
             std::this_thread::yield();
+        }
     }
     SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
 
@@ -1053,7 +1057,9 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
 
     // 워밍업 — 풀 슬랩·스테이지 노드·목록 용량은 처음 한 번만 잡는다.
     for ( uint32 round = 0; round < 4; ++round )
+    {
         dispatchOnce();
+    }
 
     // 스테이지 노드를 **여러 개** 미리 만들어 둔다. 하나만으로는 부하가 걸린 기계에서 진다:
     // `waitStage` 는 남은 태스크가 0 이 되면 돌아오지만, 그 0 을 만든 워커가 스테이지의 자기 참조를
@@ -1083,7 +1089,9 @@ SW_TEST_CASE( TaskTest, StageDispatchDoesNotAllocate )
         ++attemptCount;
         const uint64 before = pMemory->getTotalAllocationCount();
         for ( uint32 round = 0; round < kRound; ++round )
+        {
             dispatchOnce();
+        }
         allocations = std::min( allocations, pMemory->getTotalAllocationCount() - before );
     }
     pMemory->setTrackingEnabled( bWasTracking );
@@ -1112,14 +1120,18 @@ SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
         {
             s_callCount.fetch_add( 1, std::memory_order_relaxed );
             for ( uint32 index = start; index < end; ++index )
+            {
                 s_arrHit[index].fetch_add( 1, std::memory_order_relaxed );
+            }
         }
     };
     auto resetHits = [&]( uint32 count )
     {
         s_callCount = 0;
         for ( uint32 index = 0; index < count; ++index )
+        {
             s_arrHit[index] = 0;
+        }
     };
 
     // 문턱 아래: 한 번에, 나누지 않는다.
@@ -1127,7 +1139,9 @@ SW_TEST_CASE( TaskTest, RunParallelSplitsOnlyAboveThreshold )
     taskMgr.runParallel( 10, 16, SW_DELEGATE_FUNCTION( sw::ParallelBlockDelegate, RangeContext::countRange ) );
     SW_EXPECT_EQUAL( uint32( 1 ), s_callCount.load() );
     for ( uint32 index = 0; index < 10; ++index )
+    {
         SW_EXPECT_EQUAL( uint32( 1 ), s_arrHit[index].load() );
+    }
 
     // 문턱 위: 여러 청크로 나뉘되 인덱스는 한 번씩.
     resetHits( 4096 );

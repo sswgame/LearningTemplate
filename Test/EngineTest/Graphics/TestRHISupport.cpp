@@ -298,10 +298,14 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
     SW_EXPECT_EQUAL( 1u, writeCount );
 
     for ( uint32 slot = 1; slot < kSlotCount; ++slot )
+    {
         shadow.fillSlot( slot, writeSlot );
+    }
     SW_EXPECT_EQUAL( kSlotCount, writeCount );
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+    {
         SW_EXPECT_TRUE( sw::Memory::compare( arrSlot[slot], arrFirst, kSlotBytes ) == 0 );
+    }
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
 
     // 다 채운 뒤에는 링이 더 돌아도 아무것도 쓰지 않는다.
@@ -320,7 +324,9 @@ SW_TEST_CASE( RHIConstantBufferMirrorTest, FillsStaleSlotsOnceAndForgets )
     SW_EXPECT_EQUAL( 0u, shadow.getPendingBufferCount() );
     const uint32 writeCountBeforeForget = writeCount;
     for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+    {
         shadow.fillSlot( slot, writeSlot );
+    }
     SW_EXPECT_EQUAL( writeCountBeforeForget, writeCount );
 }
 
@@ -340,7 +346,9 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
     const utf8* const arrExpected[] = { "releaseRhi", "waitIdleInternal", "detachCommandRecordingInternal", "shutdownInternal" };
     SW_ASSERT_EQUAL( static_cast<size_t>( std::size( arrExpected ) ), device._listShutdownStep.size() );
     for ( size_t index = 0; index < std::size( arrExpected ); ++index )
+    {
         SW_EXPECT_STREQ( arrExpected[index], device._listShutdownStep[index] );
+    }
 }
 
 /**
@@ -539,7 +547,9 @@ SW_TEST_CASE( RHIMemoryLedgerTest, TextureDescPicksTheKindAndLogicalSize )
     mipped._mipLevels         = 9;
     uint64 expectedMipBytes{ 0 };
     for ( uint32 size = 256; size >= 1; size /= 2 )
+    {
         expectedMipBytes += static_cast<uint64>( size ) * size * 4ull;
+    }
     SW_EXPECT_EQUAL( expectedMipBytes, sw::RHIMemoryLedger::computeTextureLogicalBytes( mipped ) );
 
     sw::RHITextureDesc compressed{};
@@ -579,7 +589,9 @@ SW_TEST_CASE( RHIMemoryLedgerTest, TextureDescPicksTheKindAndLogicalSize )
 SW_TEST_CASE( RHIMemoryLedgerTest, KindNamesAndOrderByLiveBytes )
 {
     for ( uint32 kindIndex = 0; kindIndex < sw::kRHIMemoryKindCount; ++kindIndex )
+    {
         SW_EXPECT_TRUE( sw::string_view( sw::RHIMemoryLedger::getKindName( static_cast<sw::RHIMemoryKind>( kindIndex ) ) ) != "Invalid" );
+    }
     SW_EXPECT_STREQ( "Invalid", sw::RHIMemoryLedger::getKindName( sw::RHIMemoryKind::MaxKinds ) );
 
     sw::RHIMemoryLedger ledger;
@@ -678,7 +690,9 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
 
     sw::string joined;
     for ( const sw::string& line : listLine )
+    {
         joined += line + "\n";
+    }
     const sw::string_view text{ joined.c_str(), joined.size() };
     SW_EXPECT_TRUE_MSG( text.find( "GPU memory by kind (live, FakeBackend · allocation size)  3.0 MB in 1 resources  + 1 of unknown size" ) != sw::string_view::npos, joined.c_str() );
     SW_EXPECT_TRUE_MSG( text.find( "TransientPool  3.0 MB  100.0%  1 resources" ) != sw::string_view::npos, joined.c_str() );

@@ -39,7 +39,9 @@ namespace sw
         _height = height;
         _listCell.assign( static_cast<size_t>( _width * _height ), -1 );
         for ( const GridItem& item : _listItem )
+        {
             stampItem( item, item._instanceId );
+        }
         ++_revision;
         return true;
     }
@@ -277,7 +279,9 @@ namespace sw
         for ( int32 cellY = item._y; cellY < item._y + footHeight && cellY < _height; ++cellY )
         {
             for ( int32 cellX = item._x; cellX < item._x + footWidth && cellX < _width; ++cellX )
+            {
                 _listCell[static_cast<size_t>( cellY * _width + cellX )] = value;
+            }
         }
     }
 

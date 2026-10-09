@@ -263,10 +263,14 @@ namespace sw
         while ( _queue.dequeue( record ) )
         {
             for ( uint32 index = 0; index < deviceCount; ++index )
+            {
                 arrDevice[index]->write( record );
+            }
         }
         for ( uint32 index = 0; index < deviceCount; ++index )
+        {
             arrDevice[index]->flushWithoutWaiting();
+        }
     }
 
     void Logger::flushGlobalForCrash()
@@ -455,7 +459,9 @@ namespace sw
         }
 
         for ( uint32 index = 0; index < deviceCount; ++index )
+        {
             arrDevice[index]->write( record );
+        }
     }
 
     void Logger::writeLogInternal( LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line )

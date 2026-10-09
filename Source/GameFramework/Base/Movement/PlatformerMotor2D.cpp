@@ -49,7 +49,9 @@ namespace sw
         for ( int32 y = minY; y <= maxY; ++y )
         {
             for ( int32 x = minX; x <= maxX; ++x )
+            {
                 setTile( x, y, tile );
+            }
         }
     }
 
@@ -71,7 +73,9 @@ namespace sw
         }
         int32 width = 0;
         for ( const string_view line : listLine )
+        {
             width = MathUtil::max( width, static_cast<int32>( line.size() ) );
+        }
         initialize( width, static_cast<int32>( listLine.size() ), tileSize, origin );
         for ( size_t row = 0; row < listLine.size(); ++row )
         {

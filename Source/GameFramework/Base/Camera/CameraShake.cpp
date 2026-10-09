@@ -125,7 +125,9 @@ namespace sw
     {
         const float32 elapsed = MathUtil::max( 0.0f, deltaTime );
         for ( CameraImpulse& impulse : _listImpulse )
+        {
             impulse._elapsed += elapsed;
+        }
         _listImpulse.erase( std::remove_if( _listImpulse.begin(), _listImpulse.end(), []( const CameraImpulse& impulse )
         { return impulse.isFinished(); } ),
                             _listImpulse.end() );
@@ -135,7 +137,9 @@ namespace sw
     {
         CameraShakeOffset sum{};
         for ( const CameraImpulse& impulse : _listImpulse )
+        {
             sum += impulse.computeOffset( listenerPosition );
+        }
         return sum;
     }
 } // namespace sw

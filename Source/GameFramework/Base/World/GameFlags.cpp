@@ -47,7 +47,9 @@ namespace sw
             void skipSpace()
             {
                 while ( _position < _text.size() && ( _text[_position] == ' ' || _text[_position] == '\t' || _text[_position] == '\r' || _text[_position] == '\n' ) )
+                {
                     ++_position;
+                }
             }
 
             bool isAtEnd()
@@ -92,7 +94,9 @@ namespace sw
                 if ( bNegative )
                     ++_position;
                 while ( _position < _text.size() && isNameChar( _text[_position] ) )
+                {
                     ++_position;
+                }
                 const string_view token = _text.substr( start, _position - start );
                 if ( token.empty() || ( bNegative && token.size() == 1 ) )
                 {
@@ -308,7 +312,9 @@ namespace sw
         outListEntry.clear();
         outListEntry.reserve( _mapFlag.size() );
         for ( const auto& [name, value] : _mapFlag )
+        {
             outListEntry.push_back( GameFlagEntry{ name, value } );
+        }
         const HashedStringLexicalLess lexicalLess;
         std::sort( outListEntry.begin(), outListEntry.end(), [&]( const GameFlagEntry& lhs, const GameFlagEntry& rhs )
         {

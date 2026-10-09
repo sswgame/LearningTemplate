@@ -254,9 +254,13 @@ namespace sw
         vector<SceneComponent*, InlineAllocator<SceneComponent*, 16>> listChain;
         for ( SceneComponent* pNode = const_cast<SceneComponent*>( this ); pNode != nullptr && pNode->_bIsTransformDirty.load( std::memory_order_relaxed ) == SW_TRUE;
               pNode                 = pNode->_pParent )
+        {
             listChain.push_back( pNode );
+        }
         for ( auto it = listChain.rbegin(); it != listChain.rend(); ++it )
+        {
             ( *it )->updateWorldTransformFromParent();
+        }
     }
 
     float4x4 SceneComponent::getCameraRelativeWorldMatrix( const double3& cameraWorldPos ) const

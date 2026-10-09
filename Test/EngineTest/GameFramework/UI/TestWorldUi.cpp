@@ -104,7 +104,9 @@ SW_TEST_CASE( WorldUiTest, HPBarFillsItsMarkerBarsAndTheTrailFollows )
 
     // 시간이 지나면 흔적이 채움까지 줄어 사라진다 — 두 막대가 0.4.
     for ( uint32 step = 0; step < 100; ++step )
+    {
         pBar->onTick( 0.1f );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.4f, pBar->getRemainRatio(), 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.4f, pTrail->getPercent(), 1e-4f );
 

@@ -86,7 +86,9 @@ SW_TEST_CASE( LoadingScreenTest, LoadingScreenStaysForMinimumTime )
 
     // 로드는 끝났지만 아직 0.5 초가 안 됐다 — 그대로 떠 있다.
     for ( uint32 frame = 0; frame < 3; ++frame )
+    {
         fixture.runFrame( false );
+    }
     SW_EXPECT_TRUE( fixture._loading.isShowing() );
     SW_EXPECT_NEAR_EQUAL( 0.4f, fixture._loading.getShownSeconds(), 1e-4f );
     SW_EXPECT_TRUE( fixture._fade.getOverlayAlpha() == 0.0f );
@@ -103,7 +105,9 @@ SW_TEST_CASE( LoadingScreenTest, LoadingScreenStaysForMinimumTime )
     // 로드가 길면 그동안 계속 떠 있다.
     SW_ASSERT_TRUE( fixture._loading.beginLoading() );
     for ( uint32 frame = 0; frame < 20; ++frame )
+    {
         fixture.runFrame( true );
+    }
     SW_EXPECT_TRUE( fixture._loading.isShowing() );
 }
 
@@ -119,7 +123,9 @@ SW_TEST_CASE( LoadingScreenTest, FadeOverlayFollowsScreenFadeAlpha )
 
     fixture._fade.beginFadeOut( 1.0f );
     for ( uint32 frame = 0; frame < 5; ++frame )
+    {
         fixture.runFrame( false );
+    }
     const sw::UiScreen* pFade = fixture._loading.findFadeScreen();
     SW_ASSERT_NOT_NULL( pFade );
     SW_EXPECT_TRUE( pFade->getDesc()._layer == sw::UiLayer::Overlay );
@@ -131,11 +137,15 @@ SW_TEST_CASE( LoadingScreenTest, FadeOverlayFollowsScreenFadeAlpha )
 
     // 다 어두워지면 1, 페이드 인이 끝나면 0 — 패널 화면을 닫는다.
     for ( uint32 frame = 0; frame < 6; ++frame )
+    {
         fixture.runFrame( false );
+    }
     SW_EXPECT_NEAR_EQUAL( 1.0f, fixture._loading.findFadeScreen()->getTree().getRoot()->getOpacity(), 1e-4f );
     fixture._fade.beginFadeIn( 0.2f );
     for ( uint32 frame = 0; frame < 3; ++frame )
+    {
         fixture.runFrame( false );
+    }
     SW_EXPECT_TRUE( fixture._fade.getOverlayAlpha() == 0.0f );
     SW_EXPECT_NULL( fixture._loading.findFadeScreen() );
 }

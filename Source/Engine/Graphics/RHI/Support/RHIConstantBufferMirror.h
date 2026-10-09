@@ -64,7 +64,9 @@ namespace sw
             }
             // 지우기는 훑기가 끝난 뒤에 한다. 이 표의 erase 는 마지막 원소를 빈 자리로 옮기므로 훑는 도중에 지우면 원소를 건너뛴다.
             for ( const RHIBufferHandle buffer : _listFilledScratch )
+            {
                 _mapPendingWrite.erase( buffer );
+            }
         }
 
         /** @brief 버퍼를 잊습니다(`destroyBuffer`). */

@@ -63,7 +63,9 @@ namespace sw
         if ( _listChild.empty() )
             return;
         for ( const unique_ptr<Widget>& child : _listChild )
+        {
             child->detachFromTree();
+        }
         _listChild.clear();
         invalidate( WidgetDirty::kLayout );
     }
@@ -78,7 +80,9 @@ namespace sw
     {
         outListIndex.clear();
         for ( uint32 index = 0; index < getChildCount(); ++index )
+        {
             outListIndex.push_back( index );
+        }
     }
 
     uint32 PanelWidget::findChildIndex( const Widget* pChild ) const

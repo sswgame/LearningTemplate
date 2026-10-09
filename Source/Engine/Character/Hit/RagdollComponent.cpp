@@ -203,7 +203,9 @@ namespace sw
         _pBoneNameSkeleton = &skeleton;
         _listBoneName.resize( skeleton.getBoneCount() );
         for ( uint32 boneIndex = 0; boneIndex < skeleton.getBoneCount(); ++boneIndex )
+        {
             _listBoneName[boneIndex] = skeleton.getBone( boneIndex )._name;
+        }
     }
 
     PhysicsSkeletonView RagdollComponent::makeSkeletonView( const SkeletalMeshComponent& unit ) const
@@ -423,7 +425,9 @@ namespace sw
         _listPartialMask.resize( bodyCount, SW_FALSE );
         _listBlendStartWeight.resize( bodyCount, 1.0f );
         for ( float32& reactionTime : _listReactionTime )
+        {
             reactionTime = MathUtil::max( 0.0f, reactionTime - deltaSeconds );
+        }
         float32 blendFactor = 0.0f;
         if ( _state == RagdollState::BlendingBack )
         {
@@ -496,7 +500,9 @@ namespace sw
             return;
         bool bAnyWeight = false;
         for ( const float32 weight : _listBoneWeight )
+        {
             bAnyWeight = bAnyWeight || weight > 0.0f;
+        }
         if ( bAnyWeight == false )
             return;
         const vector<int32>& listParent = skeleton.getParentIndices();
@@ -573,7 +579,9 @@ namespace sw
         // 래그돌 자세를 새 오브젝트 자리 기준으로 옮겨 둔다 — 그 자세에서 클립으로 섞는다.
         const float4x4 newUnitInverse = _pUnit->getWorldMatrix().invert();
         for ( float4x4& model : _listPhysicsModel )
+        {
             model = model * oldUnitWorld * newUnitInverse;
+        }
         _listBlendStartWeight.assign( _ragdoll._listBody.size(), 1.0f );
         _blendBackElapsed = 0.0f;
         _state            = RagdollState::BlendingBack;
@@ -703,7 +711,9 @@ namespace sw
             return;
         bool bAnyDynamic = false;
         for ( const uint8 bDynamic : _listAppliedDynamic )
+        {
             bAnyDynamic = bAnyDynamic || bDynamic == SW_TRUE;
+        }
         if ( bAnyDynamic == false )
         {
             _bHasPhysicsPose = false;
@@ -717,7 +727,9 @@ namespace sw
             return;
         float32 maxSpeed = 0.0f;
         for ( const PhysicsBodyHandle& body : _ragdoll._listBody )
+        {
             maxSpeed = MathUtil::max( maxSpeed, pScene->getLinearVelocity( body ).getLength() );
+        }
         _settleElapsed = maxSpeed < _settleSpeed ? _settleElapsed + _lastDeltaSeconds : 0.0f;
         _bSettled      = _settleElapsed >= _settleSeconds;
         if ( _bSettled && _bAutoGetUp )

@@ -84,9 +84,13 @@ namespace sw
                     return;
                 collectPrefabRefsFromText( node.getText(), outListPath );
                 for ( XmlAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
+                {
                     collectPrefabRefsFromText( attr.getValue(), outListPath );
+                }
                 for ( XmlNode childNode = node.findChild(); childNode; childNode = childNode.findNextSibling() )
+                {
                     collectPrefabRefsFromXml( childNode, outListPath );
+                }
             }
 
             static void collectPrefabRefsFromJson( JsonValue value, vector<string>& outListPath )
@@ -103,14 +107,18 @@ namespace sw
                 {
                     const vector<string> listKey = value.getMemberNames();
                     for ( const string& key : listKey )
+                    {
                         collectPrefabRefsFromJson( value.get( key ), outListPath );
+                    }
                     return;
                 }
                 if ( value.isArray() )
                 {
                     const size_t count = value.size();
                     for ( size_t index = 0; index < count; ++index )
+                    {
                         collectPrefabRefsFromJson( value.at( index ), outListPath );
+                    }
                 }
             }
 

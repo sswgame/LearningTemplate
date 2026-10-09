@@ -325,7 +325,9 @@ SW_TEST_CASE( StringTest, StringSplitter )
         sw::string_splitter          splitter( "x,y,z", ',' );
         sw::vector<std::string_view> listResult;
         for ( const std::string_view token : splitter )
+        {
             listResult.push_back( token );
+        }
 
         SW_EXPECT_EQUAL( 3u, static_cast<uint32>( listResult.size() ) );
         if ( listResult.size() == 3 )
@@ -1228,7 +1230,9 @@ SW_TEST_CASE( StringTest, FormatStringLongTextSurvivesWidthSpec )
     sw::string longText;
     longText.reserve( 600 );
     for ( uint32 index = 0; index < 60; ++index )
+    {
         longText += "0123456789";
+    }
 
     utf8 buffer[1024]{};
 
@@ -1721,7 +1725,9 @@ SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
     sw::StringBuilder<sw::constant::kMaxBuffer16> builder;
     builder.append( "0123456789" );
     for ( uint32 repeat = 0; repeat < 4; ++repeat )
+    {
         builder.append( builder.view() );
+    }
     SW_EXPECT_EQUAL( 160u, static_cast<uint32>( builder.view().size() ) );
     SW_EXPECT_TRUE( builder.view().substr( 150 ) == "0123456789" );
 }

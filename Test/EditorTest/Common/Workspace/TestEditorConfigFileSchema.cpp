@@ -31,7 +31,9 @@ namespace
             if ( FileUtil::readTextFile( absolutePath, text ) == false || ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
                 return false;
             for ( const string& key : listEchoKey )
+            {
                 SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' restates the default - write only values that differ (docs/Config lists the defaults)" );
+            }
             return true;
         }
 
@@ -88,7 +90,9 @@ SW_TEST_CASE( EditorConfigFileSchemaTest, EveryEditorConfigFileLoadsStrictly )
     {
         string relative = FileUtil::normalizeSeparators( string_view( filePath ).substr( editorConfigDir.size() ) );
         while ( relative.empty() == false && relative.front() == '/' )
+        {
             relative.erase( 0, 1 );
+        }
         const EditorConfigFileSchemaInternal::ConfigKind* pKind = EditorConfigFileSchemaInternal::findKind( relative );
         SW_EXPECT_TRUE_MSG( pKind != nullptr, "종류 표에 없는 에디터 설정 파일입니다: " + relative );
         if ( pKind == nullptr || pKind->_pLoad == nullptr )

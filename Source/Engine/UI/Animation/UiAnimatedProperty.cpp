@@ -73,7 +73,9 @@ namespace sw
                 const uint8 count = findComponentCount( builtinIndex );
                 bool        bSame = true;
                 for ( uint8 index = 0; index < count; ++index )
+                {
                     bSame = bSame && arrCurrent[index] == arrComponent[index];
+                }
                 if ( bSame )
                     return false;
                 if ( builtinIndex == ReflectBuiltinIndex::kfloat32 )
@@ -98,7 +100,9 @@ namespace sw
     {
         UiAnimatedValue result{};
         for ( uint32 index = 0; index < componentCount && index < 4; ++index )
+        {
             result._arrComponent[index] = MathUtil::lerp( from._arrComponent[index], to._arrComponent[index], weight );
+        }
         result._text = weight >= 1.0f ? to._text : from._text;
         return result;
     }

@@ -94,7 +94,9 @@ namespace sw
     void NetMessageRouter::rebuildKindTable()
     {
         for ( INetMessageHandler*& pSlot : _arrKindHandler )
+        {
             pSlot = nullptr;
+        }
         for ( INetMessageHandler* pHandler : _listHandler )
         {
             const uint8  rangeBase = pHandler->getMessageRangeBase();
@@ -145,7 +147,9 @@ namespace sw
     {
         host.drainInbound( _inbound );
         for ( const NetHostEvent& event : _inbound._listEvent )
+        {
             dispatchEvent( event );
+        }
         if ( pOutListEvent != nullptr )
             pOutListEvent->insert( pOutListEvent->end(), _inbound._listEvent.begin(), _inbound._listEvent.end() );
         for ( const NetInboundMessage& message : _inbound._listMessage )

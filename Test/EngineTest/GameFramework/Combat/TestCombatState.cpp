@@ -284,7 +284,9 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Startup );
     SW_EXPECT_EQUAL( 0u, timeline.collectActiveHitboxes( listHitbox ) );
     while ( timeline.getFrame() < 10 )
+    {
         (void)timeline.advanceFrame();
+    }
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Active );
     SW_EXPECT_EQUAL( 1u, timeline.collectActiveHitboxes( listHitbox ) );
     // 닿은 프레임이 10 이면 표의 숫자와 같다.
@@ -299,7 +301,9 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 
     // 히트스톱 3 — 프레임이 멈춘다.
     for ( int32 index = 0; index < 3; ++index )
+    {
         SW_EXPECT_TRUE( timeline.advanceFrame() == false );
+    }
     SW_EXPECT_EQUAL( 11, timeline.getFrame() );
     SW_EXPECT_TRUE( timeline.advanceFrame() );
     SW_EXPECT_EQUAL( 12, timeline.getFrame() );
@@ -311,19 +315,25 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "backdash" ) ) == false );
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "sweep" ) ) == false );
     while ( timeline.getFrame() < 21 )
+    {
         (void)timeline.advanceFrame();
+    }
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "jab2" ) ) == false );
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "backdash" ) ) );
 
     // 헛치면 onHit 창은 열리지 않는다.
     timeline.start( *pJab );
     while ( timeline.getFrame() < 12 )
+    {
         (void)timeline.advanceFrame();
+    }
     SW_EXPECT_TRUE( timeline.canCancelInto( hashed_string( "jab2" ) ) == false );
 
     // 끝 — 26 프레임째가 마지막 후딜, 그다음은 Finished.
     while ( timeline.getFrame() < 26 )
+    {
         (void)timeline.advanceFrame();
+    }
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Recovery );
     SW_EXPECT_TRUE( timeline.advanceFrame() );
     SW_EXPECT_TRUE( timeline.getPhase() == MovePhase::Finished );
@@ -473,9 +483,13 @@ SW_TEST_CASE( CombatStateTest, MaxHealthChangesAndTimelineRestores )
     walked.start( move );
     walked.registerContact( true );
     while ( walked.isInHitstop() )
+    {
         (void)walked.advanceFrame();
+    }
     for ( int32 step = 1; step < 6; ++step )
+    {
         (void)walked.advanceFrame();
+    }
     walked.applyHitstop( 3 );
     SW_EXPECT_EQUAL( walked.getFrame(), timeline.getFrame() );
     SW_EXPECT_EQUAL( walked.getHitstopRemaining(), timeline.getHitstopRemaining() );

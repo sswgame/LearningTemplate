@@ -147,11 +147,15 @@ namespace sw
             {
                 bool bFound = ( _pGameMixerDesc != nullptr && _pGameMixerDesc->findAttenuation( event._attenuation ) != nullptr );
                 for ( const AudioAttenuationDesc& attenuation : library._listAttenuation )
+                {
                     bFound = bFound || attenuation._name == event._attenuation;
+                }
                 for ( const auto& entry : _mapGameLibrary )
                 {
                     for ( const AudioAttenuationDesc& attenuation : entry.second->_listAttenuation )
+                    {
                         bFound = bFound || attenuation._name == event._attenuation;
+                    }
                 }
                 if ( bFound == false )
                 {
@@ -190,7 +194,9 @@ namespace sw
         for ( const AudioEventDesc& event : pLibrary->_listEvent )
         {
             for ( const AudioClipEntry& clip : event._listClip )
+            {
                 _clipStore.requestClip( clip._path );
+            }
         }
         Command command;
         command._type     = CommandType::SetLibrary;
@@ -255,7 +261,9 @@ namespace sw
             return 0;
         }
         for ( const AudioClipEntry& clip : pEvent->_listClip )
+        {
             _clipStore.requestClip( clip._path );
+        }
 
         Command command;
         command._type      = CommandType::PostEvent;
@@ -320,10 +328,14 @@ namespace sw
         for ( const AudioMusicSegmentDesc& segment : pMusic->_listSegment )
         {
             for ( const AudioMusicLayerDesc& layer : segment._listLayer )
+            {
                 _clipStore.requestClip( layer._path );
+            }
         }
         for ( const AudioMusicTransitionDesc& transition : pMusic->_listTransition )
+        {
             _clipStore.requestClip( transition._stinger );
+        }
         Command command;
         command._type   = CommandType::StartMusic;
         command._pMusic = std::move( pMusic );
@@ -537,7 +549,9 @@ namespace sw
             _listApplyingCommand.swap( _listPendingCommand );
         }
         for ( Command& command : _listApplyingCommand )
+        {
             applyCommand( command );
+        }
         _listApplyingCommand.clear();
     }
 
@@ -624,7 +638,9 @@ namespace sw
             {
                 _pMixer = std::move( command._pMixer );
                 for ( const BusUserState& state : _listBusUserState )
+                {
                     applyBusUserState( state );
+                }
                 // 살아 있는 보이스는 같은 이름의 버스로 옮긴다(없으면 sfx · master).
                 for ( VoiceSlot& slot : _listVoice )
                 {
@@ -1010,7 +1026,9 @@ namespace sw
         mixer.process( _listBlockOutput.data(), audio::kBlockFrameCount );
         // 장치는 [-1, 1] 밖을 감아 돌릴 수 있다 — 마지막에 자른다(리미터가 master 에 있으면 여기 닿지 않는다).
         for ( float32& sample : _listBlockOutput )
+        {
             sample = MathUtil::clamp( sample, -1.0f, 1.0f );
+        }
 
         _renderedFrameCount += audio::kBlockFrameCount;
         publishState( realCount, virtualCount );
@@ -1024,7 +1042,9 @@ namespace sw
             if ( it->second._bRemoved )
             {
                 for ( const VoiceSlot& slot : _listVoice )
+                {
                     bInUse = bInUse || ( slot._bInUse && slot._emitterId == it->first );
+                }
             }
             if ( it->second._bRemoved && bInUse == false )
                 it = _mapEmitter.erase( it );
@@ -1044,7 +1064,9 @@ namespace sw
         stats._playedEventCount   = _playedEventCount;
         stats._droppedEventCount  = _droppedEventCount;
         for ( const EventInstance& instance : _listInstance )
+        {
             stats._instanceCount += instance._bInUse ? 1u : 0u;
+        }
 
         std::scoped_lock<mutex> lock{ _publishMutex };
         _listPublishedPlaying.clear();

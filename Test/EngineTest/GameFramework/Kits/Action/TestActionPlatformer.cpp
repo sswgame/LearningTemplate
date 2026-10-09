@@ -243,7 +243,9 @@ SW_TEST_CASE( ActionPlatformerTest, GradeWeighsClearTimeHitsAndSecrets )
     ActionStageRun perfect;
     SW_ASSERT_TRUE( perfect.start( &scene._catalog, "1-1" ) );
     for ( int32 second = 0; second < 50; ++second )
+    {
         perfect.update( 1.0f );
+    }
     SW_EXPECT_TRUE( perfect.collectSecret( "gem1" ) && perfect.collectSecret( "gem2" ) );
     SW_EXPECT_TRUE( perfect.clearStage() );
     perfect.update( 30.0f ); // 깬 뒤의 시간은 세지 않는다
@@ -257,7 +259,9 @@ SW_TEST_CASE( ActionPlatformerTest, GradeWeighsClearTimeHitsAndSecrets )
     ActionStageRun sloppy;
     SW_ASSERT_TRUE( sloppy.start( &scene._catalog, "1-1" ) );
     for ( int32 second = 0; second < 120; ++second )
+    {
         sloppy.update( 1.0f );
+    }
     sloppy.registerHit();
     sloppy.registerHit();
     SW_EXPECT_TRUE( sloppy.collectSecret( "gem2" ) );
@@ -273,7 +277,9 @@ SW_TEST_CASE( ActionPlatformerTest, GradeWeighsClearTimeHitsAndSecrets )
     ActionStageRun reckless;
     SW_ASSERT_TRUE( reckless.start( &scene._catalog, "1-1" ) );
     for ( int32 second = 0; second < 120; ++second )
+    {
         reckless.update( 1.0f );
+    }
     reckless.registerHit();
     reckless.registerHit();
     (void)reckless.die();
@@ -368,7 +374,9 @@ SW_TEST_CASE( ActionPlatformerTest, GrapplePendulumHoldsRopeAndReleaseKeepsVeloc
     scene._body.setPosition( float2{ 8.5f, 9.5f } );
     (void)scene.run( grab, 1 );
     for ( int32 frame = 0; frame < 120 && scene._body.getPosition()._x < anchor._x; ++frame )
+    {
         (void)scene.run( hold, 1 );
+    }
     const float2 releaseVelocity = scene._body.getVelocity();
     const float2 releasePosition = scene._body.getPosition();
     SW_EXPECT_TRUE( releaseVelocity._x > 12.0f );
@@ -421,7 +429,9 @@ SW_TEST_CASE( ActionPlatformerTest, DrillDigsThroughDirtAndPopsOutWithJump )
     upJump._motor._bJumpHeld = SW_TRUE;
     uint32 events            = 0;
     for ( int32 frame = 0; frame < 60 && scene._body.getMode() == ActionMoveMode::Drill; ++frame )
+    {
         events |= scene.run( upJump, 1 );
+    }
     SW_EXPECT_TRUE( ( events & ActionBodyEvent::kDrillExited ) != 0 );
     SW_EXPECT_TRUE( ( events & ActionBodyEvent::kDrillJumped ) != 0 );
     SW_EXPECT_NEAR_EQUAL( 16.0f, scene._body.getMotor().getVelocity()._y, 1.0e-3f );
@@ -438,7 +448,9 @@ SW_TEST_CASE( ActionPlatformerTest, DrillDigsThroughDirtAndPopsOutWithJump )
     up._motor._move = float2{ 0.0f, 1.0f };
     events          = 0;
     for ( int32 frame = 0; frame < 60 && scene._body.getMode() == ActionMoveMode::Drill; ++frame )
+    {
         events |= scene.run( up, 1 );
+    }
     SW_EXPECT_TRUE( ( events & ActionBodyEvent::kDrillExited ) != 0 );
     SW_EXPECT_FALSE( ( events & ActionBodyEvent::kDrillJumped ) != 0 );
     float32 plainApex = 0.0f;
@@ -468,7 +480,9 @@ SW_TEST_CASE( ActionPlatformerTest, MeleeComboCancelsOnHitWithHitstopAndBuffer )
     rig.advanceFrame( nullptr, player );
     SW_EXPECT_EQUAL( 0, rig.getComboIndex() );
     for ( int32 frame = 0; frame < 4; ++frame )
+    {
         rig.advanceFrame( nullptr, player );
+    }
     rig.pressAttack();
     bool bAdvanced = false;
     for ( int32 frame = 0; frame < 9; ++frame )
@@ -478,7 +492,9 @@ SW_TEST_CASE( ActionPlatformerTest, MeleeComboCancelsOnHitWithHitstopAndBuffer )
     }
     SW_EXPECT_FALSE( bAdvanced );
     for ( int32 frame = 0; frame < 10; ++frame )
+    {
         rig.advanceFrame( nullptr, player );
+    }
     SW_EXPECT_FALSE( rig.getTimeline().isPlaying() );
     SW_EXPECT_EQUAL( -1, rig.getComboIndex() );
 
@@ -512,7 +528,9 @@ SW_TEST_CASE( ActionPlatformerTest, MeleeComboCancelsOnHitWithHitstopAndBuffer )
     // slash2 의 창(4..)보다 일찍 눌러도 버퍼가 들고 있다가 slash3 으로.
     rig.pressAttack();
     for ( int32 frame = 0; frame < 6; ++frame )
+    {
         rig.advanceFrame( nullptr, player );
+    }
     SW_EXPECT_EQUAL( 2, rig.getComboIndex() );
     SW_EXPECT_TRUE( rig.getTimeline().getMove()._id == hashed_string( "slash3" ) );
 
@@ -544,16 +562,22 @@ SW_TEST_CASE( ActionPlatformerTest, GunEnemyPatternAndParryReflectAreDeterminist
     SW_EXPECT_TRUE( rig.getProjectiles()[0]._team == ActionTeam::Player );
     SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, true ) == WeaponFireResult::Cooling );
     for ( int32 frame = 0; frame < 16; ++frame )
+    {
         rig.advanceFrame( &scene._map, float2{ 2.0f, 2.0f } );
+    }
     SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, false ) == WeaponFireResult::SemiAutoHeld );
     SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, true ) == WeaponFireResult::Fired );
     for ( int32 frame = 0; frame < 16; ++frame )
+    {
         rig.advanceFrame( &scene._map, float2{ 2.0f, 2.0f } );
+    }
     SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, true ) == WeaponFireResult::EmptyMagazine );
     SW_EXPECT_TRUE( rig.getGun().isReloading() );
     // 탄은 벽(x = 23)에 닿으면 사라진다.
     for ( int32 frame = 0; frame < 120; ++frame )
+    {
         rig.advanceFrame( &scene._map, float2{ 2.0f, 2.0f } );
+    }
     SW_EXPECT_EQUAL( 0, static_cast<int32>( rig.getProjectiles().size() ) );
 
     // 적 패턴 — 멀면 순찰(바라보는 쪽으로), 가까워지면 조준 10 프레임 뒤 사격 한 번, 맞으면 경직.
@@ -581,7 +605,9 @@ SW_TEST_CASE( ActionPlatformerTest, GunEnemyPatternAndParryReflectAreDeterminist
     SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "cooldown" ) );
     SW_EXPECT_FALSE( brain.notifyHit() ); // 쉬는 중에는 경직이 없다
     for ( int32 frame = 0; frame < 30; ++frame )
+    {
         (void)brain.advanceFrame( 10.0f );
+    }
     SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "patrol" ) );
     SW_EXPECT_TRUE( brain.notifyHit() );
     SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "stagger" ) );
@@ -623,7 +649,9 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     SW_EXPECT_TRUE( run.collectSecret( "gem2" ) );
     run.registerHit();
     for ( int32 tick = 0; tick < 10; ++tick )
+    {
         run.update( 0.5f );
+    }
     const vector<uint8> runBytes = capturePlatformerBytes( run );
     ActionStageRun      restoredRun;
     restoredRun.bindCatalog( &scene._catalog );
@@ -681,7 +709,9 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     rig.equipGun( makePistol(), 4, 3u );
     rig.pressAttack();
     for ( int32 frame = 0; frame < 2; ++frame )
+    {
         rig.advanceFrame( nullptr, player );
+    }
     SW_EXPECT_TRUE( rig.fireGun( float2{ 2.0f, 2.0f }, float2{ 1.0f, 0.0f }, true ) == WeaponFireResult::Fired );
     ActionProjectile incoming;
     incoming._position = float2{ 15.0f, 2.0f };
@@ -724,7 +754,9 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     (void)brain.advanceFrame( 10.0f );
     (void)brain.advanceFrame( 5.0f );
     for ( int32 frame = 0; frame < 3; ++frame )
+    {
         (void)brain.advanceFrame( 5.0f );
+    }
     SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "aim" ) );
     const vector<uint8> brainBytes = capturePlatformerBytes( brain );
     ActionEnemyBrain    restoredBrain;

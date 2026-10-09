@@ -116,7 +116,9 @@ namespace sw
         scaled._halfHeight              = shape._halfHeight * absScale._y;
         scaled._localPosition           = float3{ shape._localPosition._x * scale._x, shape._localPosition._y * scale._y, shape._localPosition._z * scale._z };
         for ( float3& point : scaled._listPoint )
+        {
             point = float3{ point._x * scale._x, point._y * scale._y, point._z * scale._z };
+        }
         return scaled;
     }
 
@@ -131,7 +133,9 @@ namespace sw
         scaled._halfHeight             = shape._halfHeight * absY;
         scaled._localPosition          = float2{ shape._localPosition._x * scale._x, shape._localPosition._y * scale._y };
         for ( float2& point : scaled._listPoint )
+        {
             point = float2{ point._x * scale._x, point._y * scale._y };
+        }
         return scaled;
     }
 } // namespace sw

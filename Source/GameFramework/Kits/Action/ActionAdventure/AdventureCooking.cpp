@@ -181,7 +181,9 @@ namespace sw
             return result;
         ItemStackList pot;
         for ( const hashed_string& ingredientId : listIngredient )
+        {
             pot.addItem( ingredientId, 1 );
+        }
         if ( inventory.hasItems( pot ) == false )
             return AdventureCookResult::MissingIngredients;
 
@@ -205,11 +207,15 @@ namespace sw
         }
 
         for ( const auto& [itemId, count] : pot.getItems() )
+        {
             (void)inventory.removeItem( itemId, count ); // 재료는 위 hasItems 가 확인했다
+        }
         if ( inventory.addItem( outDish._itemId, 1 ) == 1 )
             return AdventureCookResult::Ok;
         for ( const auto& [itemId, count] : pot.getItems() )
+        {
             (void)inventory.addItem( itemId, count );
+        }
         return AdventureCookResult::NoRoom;
     }
 } // namespace sw

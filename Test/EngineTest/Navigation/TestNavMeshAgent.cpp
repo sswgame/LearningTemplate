@@ -40,7 +40,9 @@ namespace
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
                 manager.tick( kFrame );
+            }
         }
 
         /** @brief 바닥(30 × 30) · 가운데 상자 벽(x -1..1, z -4..4) — 메시로. */
@@ -90,7 +92,9 @@ SW_TEST_CASE( NavMeshAgentTest, AgentWalksAroundCratesToTheDestination )
     sw::INavMover& mover = pAgent->getMover();
     SW_EXPECT_TRUE( mover.moveTo( sw::float3{ -6.0f, 0.0f, 2.0f } ) );
     for ( uint32 frame = 0; frame < 600 && mover.getMoveStatus() != sw::NavMoveStatus::Arrived; ++frame )
+    {
         manager.tick( Internal::kFrame );
+    }
     SW_EXPECT_TRUE( mover.getMoveStatus() == sw::NavMoveStatus::Arrived );
     SW_EXPECT_TRUE( ( mover.getMovePosition() - sw::float3{ -6.0f, 0.0f, 2.0f } ).getLength() < 0.6f );
     manager.endPlay();

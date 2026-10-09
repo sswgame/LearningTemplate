@@ -119,13 +119,17 @@ namespace sw
             {
                 // 전부 도는 길에는 넘친 핸들도 이미 들어 있다(`_mapHandleBound` 는 모두를 든다).
                 for ( const auto& pair : _mapHandleBound )
+                {
                     func( pair.first );
+                }
                 return;
             }
 
             // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. **항상 함께** 본다.
             for ( const SlotHandle handle : _listOversizedHandle )
+            {
                 func( handle );
+            }
 
             range.forEachCell( [this, &func]( int32 cellX, int32 cellY )
             {
@@ -133,7 +137,9 @@ namespace sw
                 if ( bucketIt == _mapBucket.end() )
                     return;
                 for ( const SlotHandle handle : bucketIt->second )
+                {
                     func( handle );
+                }
             } );
         }
 

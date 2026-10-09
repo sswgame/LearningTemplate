@@ -751,7 +751,9 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     const utf8* arrDeepFqn[10] = { "swtest::Deep0", "swtest::Deep1", "swtest::Deep2", "swtest::Deep3", "swtest::Deep4",
                                    "swtest::Deep5", "swtest::Deep6", "swtest::Deep7", "swtest::Deep8", "swtest::Deep9" };
     for ( uint32 index = 0; index < 10; ++index )
+    {
         registry.registerClass( makeType( arrDeepFqn[index] + 8, arrDeepFqn[index], index == 0 ? nullptr : arrDeepFqn[index - 1] ) );
+    }
     registry.buildLookupCaches();
 
     auto find = [&]( const utf8* pFqn )
@@ -917,7 +919,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyMatchesMergedList )
 
     // 부모가 없는 기반은 자기 목록으로 답한다 — 병합 목록이 곧 자기 목록이다.
     for ( const sw::PropertyInfo& prop : pBase->getPropertiesWithBase() )
+    {
         SW_EXPECT_TRUE( pBase->findPropertyInHierarchy( prop._name ) == pBase->findProperty( prop._name ) );
+    }
 }
 
 /**
@@ -960,7 +964,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
 
     // 이름마다 병합 목록의 그 항목 자신.
     for ( const sw::PropertyInfo& prop : listMerged )
+    {
         SW_EXPECT_TRUE( pLeaf->findPropertyInHierarchy( prop._name ) == &prop );
+    }
     // 파생이 다시 적은 이름은 파생의 오프셋.
     const sw::PropertyInfo* pBeta = pLeaf->findPropertyInHierarchy( sw::hashed_string( "_beta" ) );
     SW_ASSERT_NOT_NULL( pBeta );
@@ -1119,7 +1125,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, EveryBitFieldLiesBetweenItsNeighbours )
 
     sw::string report;
     for ( const sw::string& violation : listViolation )
+    {
         report += "\n  " + violation;
+    }
     SW_EXPECT_TRUE( bitFieldCount > 0 ); // 엔진 타입이 등록돼 있어야 이 검사가 무엇을 본다
     SW_EXPECT_TRUE_MSG( listViolation.empty(), report.c_str() );
 }

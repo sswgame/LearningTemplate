@@ -319,7 +319,9 @@ namespace sw
     {
         uint8 arrAccountByte[8];
         for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+        {
             arrAccountByte[byteIndex] = static_cast<uint8>( accountId >> ( byteIndex * 8 ) );
+        }
         uint64 hash = StringUtil::computeHash64( flag.data(), flag.size(), false );
         hash        = StringUtil::computeHash64( reinterpret_cast<const utf8*>( arrAccountByte ), sizeof( arrAccountByte ), false, hash );
         return static_cast<int32>( RemoteConfigInternal::mixBits( hash ) % static_cast<uint64>( RemoteConfigValue::kFullRolloutPoints ) );

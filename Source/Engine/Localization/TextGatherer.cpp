@@ -49,7 +49,9 @@ namespace sw
                     if ( isPair( '/', '/' ) )
                     {
                         while ( _position < _text.size() && _text[_position] != '\n' )
+                        {
                             ++_position;
+                        }
                         continue;
                     }
                     if ( isPair( '/', '*' ) )
@@ -79,7 +81,9 @@ namespace sw
                     {
                         const size_t start = _position;
                         while ( _position < _text.size() && isIdentifierCharacter( _text[_position] ) )
+                        {
                             ++_position;
+                        }
                         const string_view identifier = _text.substr( start, _position - start );
                         if ( isCodeMacro( identifier ) && _bPreprocessorLine == false )
                             readMacroCall( identifier );
@@ -145,7 +149,9 @@ namespace sw
                     else if ( isPair( '/', '/' ) )
                     {
                         while ( _position < _text.size() && _text[_position] != '\n' )
+                        {
                             ++_position;
+                        }
                     }
                     else if ( isPair( '/', '*' ) )
                         skipBlockComment();
@@ -285,7 +291,9 @@ namespace sw
                     return false;
                 const string_view body = _text.substr( bodyStart, bodyEnd - bodyStart );
                 for ( const utf8 character : body )
+                {
                     _line += character == '\n' ? 1u : 0u;
+                }
                 outValue.append( body );
                 _position = bodyEnd + closing.size();
                 return true;
@@ -427,7 +435,9 @@ namespace sw
                     }, true );
                 }
                 for ( XmlNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
                     gatherNode( child, originName, gatherer, depth + 1 );
+                }
             }
 
             static void appendOrigin( vector<string>& inoutListOrigin, string_view origin )

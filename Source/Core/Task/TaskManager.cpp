@@ -708,7 +708,9 @@ namespace sw
             else if ( pGroup->_indexBody.isBound() )
             {
                 for ( uint32 elementIndex = chunkStart; elementIndex < chunkEnd; ++elementIndex )
+                {
                     pGroup->_indexBody( elementIndex );
+                }
             }
         }
     }
@@ -1194,12 +1196,16 @@ namespace sw
         if ( pNode->_priority == TaskPriority::High )
         {
             while ( _globalHighQueue.enqueue( item ) == false )
+            {
                 std::this_thread::yield();
+            }
         }
         else if ( pNode->_priority == TaskPriority::Low )
         {
             while ( _globalLowQueue.enqueue( item ) == false )
+            {
                 std::this_thread::yield();
+            }
         }
         else
         {
@@ -1292,7 +1298,9 @@ namespace sw
                     break;
                 // 시계는 32번에 한 번만 확인한다. 매번 보면 그것 자체가 스핀 비용이다.
                 for ( uint32 spin = 0; spin < 32; ++spin )
+                {
                     sw::cpuPause();
+                }
                 const int64 spentMicro = spinStopwatch.getElapsedMicroseconds();
                 if ( spentMicro >= kWorkerIdleSpinMicro )
                     break;

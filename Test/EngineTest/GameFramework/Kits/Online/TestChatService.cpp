@@ -115,7 +115,9 @@ namespace
                 vector<ServerBusMessage> listMessage;
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
+                {
                     _service.handleBusMessage( message._topic, message._bytes );
+                }
                 _service.tick( nowMs );
                 (void)_store.pollCompletions();
                 _presence.tick();
@@ -128,7 +130,9 @@ namespace
         {
             int32 count = 0;
             for ( const ChatDelivery& delivery : _listDelivery )
+            {
                 count += delivery._recipientId == recipientId ? 1 : 0;
+            }
             return count;
         }
 
@@ -196,7 +200,9 @@ SW_TEST_CASE( ChatServiceTest, JoinRulesChannelLimitAndDeliveryWithEcho )
     SW_EXPECT_TRUE( node._listCompletion[2]._reply._result == ChatResult::NotMember );
 
     for ( int32 index = 0; index < ChatLimit::kMaxChannelPerMember; ++index ) // bob 은 world 를 나갔다 — 열여섯이 차면 다음은 거절
+    {
         (void)node._service.addMember( 11, string( "custom.c" ) + static_cast<utf8>( 'a' + index ), 300 );
+    }
     SW_EXPECT_TRUE( node._service.addMember( 11, "custom.zz", 300 ) == ChatResult::TooManyChannels );
     SW_EXPECT_TRUE( node._service.addMember( 10, "custom.zz", 300 ) == ChatResult::Ok );
     SW_EXPECT_TRUE( node._service.addMember( 10, "custom.yy", 300 ) == ChatResult::Ok );
@@ -212,7 +218,9 @@ SW_TEST_CASE( ChatServiceTest, MuteIsReadBeforeTheFirstSendAndRefreshedByTheBus 
     node._directory._mapOnline[10] = "alice";
     node._service.joinChannel( 10, "world.kr", 0, 1 );
     for ( int32 index = 0; index < 5; ++index ) // 제재 첫 읽기를 기다려 넷이 줄을 서고, 다섯째는 바로 거절
+    {
         node._service.sendMessage( 10, "world.kr", string( "can you hear me " ) + static_cast<utf8>( '0' + index ), 100, static_cast<uint64>( 2 + index ) );
+    }
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 0 ) );
     node.step( 100 );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 6 ) );
@@ -259,7 +267,9 @@ SW_TEST_CASE( ChatServiceTest, FilterAndSpamApplyToChannelMessages )
     SW_EXPECT_STREQ( node._listCompletion[0]._reply._message._text.c_str(), "you *******" );
 
     for ( int32 index = 0; index < 4; ++index )
+    {
         node._service.sendMessage( 10, "world.kr", string( "msg" ) + static_cast<utf8>( 'a' + index ), 10, static_cast<uint64>( 10 + index ) );
+    }
     node._service.sendMessage( 10, "world.kr", "one too many", 10, 20 ); // 몰아 쓰기 5 개(앞 글 하나 포함)를 넘었다
     node.step( 10 );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 6 ) );
@@ -363,7 +373,9 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     node._service.joinChannel( 10, "world.kr", 0, 1 );
     node.step( 0 );
     for ( int32 index = 0; index < 5; ++index )
+    {
         node._service.sendMessage( 10, "world.kr", string( "line " ) + static_cast<utf8>( '0' + index ), 1000 * ( index + 1 ), static_cast<uint64>( 10 + index ) );
+    }
     node._service.sendWhisper( 10, 11, "secret", 5500, 16 );
     node.step( 6000 );
     SW_EXPECT_EQUAL( node._service.getQueuedHistoryCount(), 0 );

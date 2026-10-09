@@ -33,7 +33,9 @@ namespace
             // 1) 반복되는 헤더 비슷한 구간 (압축이 잘 먹는다)
             const utf8* pTag = "{ \"component\": \"MeshComponent\", \"transform\": [ ";
             for ( const utf8* p = pTag; *p != '\0' && byteBuffer.size() < byteSize; ++p )
+            {
                 byteBuffer.push_back( static_cast<uint8>( *p ) );
+            }
 
             // 2) 유사 난수 실수 바이트 (잘 안 먹는다)
             for ( uint32 index = 0; index < 24 && byteBuffer.size() < byteSize; ++index )
@@ -299,7 +301,9 @@ SW_TEST_CASE( CompressionCodecTest, RegisteredExternalCodecsAreReachableFromStre
     {
         sw::CompressionCodecRegistry& reg = *sw::CompressionCodecRegistry::getActive();
         for ( sw::CompressionCodecType type : listAddedType )
+        {
             reg.unregisterCodec( type );
+        }
     } ) );
 
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 64 * 1024 );

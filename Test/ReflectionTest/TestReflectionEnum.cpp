@@ -373,7 +373,9 @@ SW_TEST_CASE( ReflectionEnumInfoTest, EnumInfoAddressIsStableAndShared )
 
     // 많이 올려 밀집 배열이 여러 번 커지게 한다.
     for ( int32 index = 0; index < 256; ++index )
+    {
         registry.registerEnum( makeEnum( "swtest::GrowthEnum" + sw::to_string( index ), 1 ) );
+    }
     SW_EXPECT_TRUE( registry.findEnum( sw::hashed_string( "sw::CameraRole" ) ) == pRole );
 
     // 별칭은 같은 객체다 — 다시 등록돼 열거자가 늘면 별칭으로 찾아도 늘어 있다.

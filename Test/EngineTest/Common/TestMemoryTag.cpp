@@ -114,7 +114,9 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
     const sw::string xmlPath = test::makeTempPath( "sw_test_memtag_scene.scene.xml" );
     sw::string       xmlText = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"TagTown\">\n  <entities>\n";
     for ( uint32 entityIndex = 0; entityIndex < 64; ++entityIndex )
+    {
         xmlText += "    <entity id=\"" + sw::to_string( entityIndex + 1 ) + "\" name=\"Villager" + sw::to_string( entityIndex ) + "\"/>\n";
+    }
     xmlText += "  </entities>\n</Scene>\n";
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlText.data() ), static_cast<uint64>( xmlText.size() ) ) );
 

@@ -107,7 +107,9 @@ namespace
         {
             const AiDirectorEvent* pFound = nullptr;
             for ( const AiDirectorEvent& event : listEvent )
+            {
                 pFound = event._kind == kind ? &event : pFound;
+            }
             return pFound;
         }
 
@@ -228,7 +230,9 @@ SW_TEST_CASE( AiDirectorTest, IntensityModelBuildsDecaysAndFloors )
     // 바닥: 탄이 모자라면(값 1 × 0.5) 스트레스가 다 식어도 0.5 아래로 내려가지 않는다.
     SW_EXPECT_TRUE( model.setSignal( hashed_string( "lowAmmo" ), 1.0f ) );
     for ( int32 step = 0; step < 40; ++step )
+    {
         model.update( 1.0f );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.0f, model.getStress(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, model.getIntensity(), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, model.getSignal( hashed_string( "lowAmmo" ) ), 1.0e-6f );
@@ -267,7 +271,9 @@ SW_TEST_CASE( AiDirectorTest, PhasesFollowIntensityThroughBuildUpPeakRelax )
 
     // 절정은 5 초.
     for ( int32 step = 0; step < 9; ++step )
+    {
         director.update( 0.5f );
+    }
     SW_EXPECT_TRUE( director.getPhase() == hashed_string( "Peak" ) );
     director.update( 0.5f );
     SW_EXPECT_TRUE( director.getPhase() == hashed_string( "Relax" ) );
@@ -280,7 +286,9 @@ SW_TEST_CASE( AiDirectorTest, PhasesFollowIntensityThroughBuildUpPeakRelax )
         SW_EXPECT_TRUE( director.getPhase() == hashed_string( "Relax" ) );
     }
     for ( int32 step = 0; step < 3 && director.getPhase() == hashed_string( "Relax" ); ++step )
+    {
         director.update( 0.1f );
+    }
     SW_EXPECT_TRUE( director.getPhase() == hashed_string( "BuildUp" ) );
     SW_EXPECT_EQUAL( 1, director.getCycle() );
     SW_EXPECT_NEAR_EQUAL( 17.0f, director.getTime(), 0.15f );
@@ -291,9 +299,13 @@ SW_TEST_CASE( AiDirectorTest, PhasesFollowIntensityThroughBuildUpPeakRelax )
     {
         SW_ASSERT_TRUE( director.getBuiltinIntensityModel().addSignal( hashed_string( "damage" ), 10.0f ) );
         for ( int32 step = 0; step < 400 && director.getPhase() != hashed_string( "Relax" ); ++step )
+        {
             director.update( 0.1f );
+        }
         for ( int32 step = 0; step < 400 && director.getPhase() != hashed_string( "BuildUp" ); ++step )
+        {
             director.update( 0.1f );
+        }
     }
     director.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, Internal::countKind( listEvent, AiDirectorEventKind::Encounter, "tank" ) );
@@ -304,7 +316,9 @@ SW_TEST_CASE( AiDirectorTest, PhasesFollowIntensityThroughBuildUpPeakRelax )
     AiDirector quiet;
     quiet.initialize( &profile, nullptr, 11u );
     for ( int32 step = 0; step < 599; ++step )
+    {
         quiet.update( 0.1f );
+    }
     SW_EXPECT_TRUE( quiet.getPhase() == hashed_string( "BuildUp" ) );
     quiet.update( 0.2f );
     SW_EXPECT_TRUE( quiet.getPhase() == hashed_string( "Peak" ) );
@@ -330,7 +344,9 @@ SW_TEST_CASE( AiDirectorTest, SpawnBudgetFollowsThePhase )
 
     // 쌓기 0..10 초: 배율이 1 → 2 로 오른다 — 초당 1 × 평균 1.5 = 15 개. 보스는 Special 태그라 쌓기에선 나오지 않는다.
     for ( int32 step = 0; step < 100; ++step )
+    {
         director.update( 0.1f );
+    }
     director.drainEvents( listEvent );
     const int32 buildUpSpawns = Internal::countKind( listEvent, AiDirectorEventKind::Spawned );
     SW_EXPECT_TRUE_MSG( 14 <= buildUpSpawns && buildUpSpawns <= 15, std::to_string( buildUpSpawns ).c_str() );
@@ -341,7 +357,9 @@ SW_TEST_CASE( AiDirectorTest, SpawnBudgetFollowsThePhase )
     SW_ASSERT_TRUE( director.forcePhase( hashed_string( "Peak" ) ) );
     listEvent.clear();
     for ( int32 step = 0; step < 49; ++step )
+    {
         director.update( 0.1f );
+    }
     director.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 1, Internal::countKind( listEvent, AiDirectorEventKind::Spawned, "boss" ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, director.getSpawnDirector().getBudgetScale(), 1.0e-6f );
@@ -352,7 +370,9 @@ SW_TEST_CASE( AiDirectorTest, SpawnBudgetFollowsThePhase )
     const float32 budgetAtRest = director.getSpawnDirector().getBudget();
     listEvent.clear();
     for ( int32 step = 0; step < 95; ++step )
+    {
         director.update( 0.1f );
+    }
     SW_EXPECT_TRUE( director.getPhase() == hashed_string( "Relax" ) );
     director.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 0, Internal::countKind( listEvent, AiDirectorEventKind::Spawned ) );
@@ -362,7 +382,9 @@ SW_TEST_CASE( AiDirectorTest, SpawnBudgetFollowsThePhase )
     AiDirector fresh;
     fresh.initialize( &profile, &table, 5u );
     for ( int32 step = 0; step < 20; ++step )
+    {
         fresh.update( 0.1f );
+    }
     listEvent.clear();
     fresh.drainEvents( listEvent );
     const AiDirectorEvent* pSpawned = Internal::findLast( listEvent, AiDirectorEventKind::Spawned );
@@ -408,7 +430,9 @@ SW_TEST_CASE( AiDirectorTest, CooldownsAndCapsHoldForEverySeed )
         director.initialize( &profile, nullptr, seed );
         vector<AiDirectorEvent> listEvent;
         for ( int32 step = 0; step < 600; ++step )
+        {
             director.update( 0.1f );
+        }
         director.drainEvents( listEvent );
         float32 lastPool = -100.0f;
         float32 lastBird = -100.0f;
@@ -510,7 +534,9 @@ SW_TEST_CASE( AiDirectorTest, RewardDensityFollowsNeedAndPhase )
         SW_EXPECT_TRUE( director.forcePhase( hashed_string( pPhase ) ) );
         SW_EXPECT_TRUE( director.getBuiltinIntensityModel().setSignal( hashed_string( "lowAmmo" ), need ) );
         for ( int32 step = 0; step < 100; ++step )
+        {
             director.update( 0.1f );
+        }
         vector<AiDirectorEvent> listEvent;
         director.drainEvents( listEvent );
         SW_EXPECT_EQUAL( 0, Internal::countKind( listEvent, AiDirectorEventKind::Reward, "crate" ) );
@@ -692,7 +718,9 @@ SW_TEST_CASE( AiDirectorTest, StateRoundTripContinuesFromTheSamePlace )
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
     SW_ASSERT_EQUAL( listAfterOriginal.size(), listAfterRestored.size() );
     for ( size_t index = 0; index < listAfterOriginal.size(); ++index )
+    {
         SW_EXPECT_TRUE( listAfterOriginal[index]._kind == listAfterRestored[index]._kind && listAfterOriginal[index]._id == listAfterRestored[index]._id );
+    }
     SW_EXPECT_TRUE( Internal::countKind( listAfterOriginal, AiDirectorEventKind::Spawned ) > 0 );
 
     // 모양이 다른 프로필(단계 하나 · 풀 하나)은 거절하고 그대로다.

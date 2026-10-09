@@ -213,7 +213,9 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
     GameObject*        pChild   = pObjects->createGameObject( hashed_string( "LeftHand" ) );
     GameObject*        pRight   = pObjects->createGameObject( hashed_string( "Right" ) );
     for ( GameObject* pObj : { pLeft, pChild, pRight } )
+    {
         SW_ASSERT_NOT_NULL( pObj->addComponent<SceneComponent>() );
+    }
     SW_ASSERT_TRUE( pChild->attachToParent( pLeft ) );
     pObjects->mergePendingAdds();
     const uint64 leftId  = pLeft->getObjectId();

@@ -46,9 +46,13 @@ namespace sw
             {
                 const uint32 count = static_cast<uint32>( listChainBone.size() );
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     pOutPosition[index] = pose.getModelPosition( listChainBone[index] );
+                }
                 for ( uint32 index = 0; index + 1 < count; ++index )
+                {
                     pOutLength[index] = ( pOutPosition[index + 1] - pOutPosition[index] ).getLength();
+                }
             }
 
             /** @brief 풀어 낸 위치로 사슬을 돌리고(뿌리부터) 제한을 겁니다. */
@@ -141,7 +145,9 @@ namespace sw
         const float3 goal  = space.projectPoint( target, root );
         float32      total = 0.0f;
         for ( uint32 index = 0; index + 1 < count; ++index )
+        {
             total += arrLength[index];
+        }
 
         const bool bLimited = RigIkSolverInternal::hasAnyLimit( listLimit );
         if ( ( goal - root ).getLength() >= total )
@@ -149,7 +155,9 @@ namespace sw
             // 닿지 않는다 — 목표 쪽으로 곧게 편다.
             const float3 direction = ( goal - root ).normalize();
             for ( uint32 index = 1; index < count; ++index )
+            {
                 arrPosition[index] = arrPosition[index - 1] + direction * arrLength[index - 1];
+            }
             RigIkSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
             return false;
         }

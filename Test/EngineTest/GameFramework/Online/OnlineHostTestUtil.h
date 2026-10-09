@@ -168,7 +168,9 @@ namespace test
         {
             int32 count = 0;
             for ( const Pending& pending : _listPending )
+            {
                 count += pending._onFound.isBound() ? 1 : 0;
+            }
             return count;
         }
 
@@ -238,7 +240,9 @@ namespace test
         ~OnlineTestServer()
         {
             for ( size_t index = _listKit.size(); index > 0; --index ) // 키트 먼저 — 저장 일을 거두고 캐시 · 접속 상태 요청을 취소한다
+            {
                 _listKit[index - 1]->stop();
+            }
             _store.shutdown();
             _host.shutdown(); // 키트 밖(시험이 직접 올린 서비스)의 캐시 요청은 여기서 Unavailable 로 끝난다
             (void)_store.pollCompletions();
@@ -298,7 +302,9 @@ namespace test
         ~OnlineTestClients() override
         {
             for ( sw::unique_ptr<sw::OnlineServiceClient>& client : _listClient )
+            {
                 client->shutdown();
+            }
             _requestClient.shutdown();
             _transport->shutdown();
             _endpoint.shutdown();
@@ -310,7 +316,9 @@ namespace test
             sw::unique_ptr<sw::OnlineServiceClient>& client = _listClient.emplace_back( sw::make_unique<sw::OnlineServiceClient>() );
             SW_EXPECT_TRUE( client->registerClientService( &_loginClientService ) );
             for ( sw::IOnlineClientService* pService : listService )
+            {
                 SW_EXPECT_TRUE( client->registerClientService( pService ) );
+            }
             _listHandle.push_back( _endpoint.connect( sw::NetAddress::makeLoopback( port ) ) );
             return static_cast<int32>( _listClient.size() ) - 1;
         }
@@ -334,7 +342,9 @@ namespace test
             (void)_endpoint.pump( *this );
             _requestClient.update();
             for ( sw::unique_ptr<sw::OnlineServiceClient>& client : _listClient )
+            {
                 client->tick( nowMs );
+            }
         }
 
         // IStreamEndpointListener — 연결마다 그 클라이언트로
@@ -390,7 +400,9 @@ namespace test
         {
             clients.tick( nowMs );
             for ( OnlineTestServer* pServer : listServer )
+            {
                 pServer->tick( nowMs );
+            }
         }
     }
 } // namespace test

@@ -54,7 +54,9 @@ extern "C" int32 LLVMFuzzerInitialize( int32* pArgc, FuzzerArgumentList* pArgume
     if ( LoaderFuzzerInternal::isSet( "SW_FUZZ_LIST" ) )
     {
         for ( const test::LoaderFuzzTarget& target : test::getLoaderFuzzTargets() )
+        {
             std::fprintf( stdout, "%s\n", target._pName );
+        }
         std::exit( 0 );
     }
     static test::TestHostRuntime s_runtime;

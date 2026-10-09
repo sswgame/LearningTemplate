@@ -304,7 +304,9 @@ namespace sw
         if ( pPanel != nullptr )
         {
             for ( const unique_ptr<Widget>& child : pPanel->_listChild )
+            {
                 child->attachToTree( pTree, pPanel );
+            }
         }
     }
 
@@ -316,7 +318,9 @@ namespace sw
         if ( pPanel != nullptr )
         {
             for ( const unique_ptr<Widget>& child : pPanel->_listChild )
+            {
                 child->detachFromTree();
+            }
         }
         onDetachedFromTree();
         _styleTransition.reset(); // 트리의 전환 목록은 다음 진행에서 이 번호를 버린다

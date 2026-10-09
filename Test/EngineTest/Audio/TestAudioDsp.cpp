@@ -54,7 +54,9 @@ namespace
             constexpr uint32    kFrameCount = 9600;
             sw::vector<float32> listSample  = makeStereoSine( frequencyHz, 0.25f, kFrameCount );
             for ( uint32 offset = 0; offset < kFrameCount; offset += sw::audio::kBlockFrameCount )
+            {
                 effect.process( listSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, kFrameCount - offset ) );
+            }
             const float32 amplitude = test::AudioTestUtil::computeToneAmplitude( listSample, 0, 4800, 4800, frequencyHz );
             return sw::AudioMath::linearToDb( amplitude / 0.25f );
         }
@@ -64,7 +66,9 @@ namespace
         {
             const uint32 frameCount = static_cast<uint32>( inoutListSample.size() / 2 );
             for ( uint32 offset = 0; offset < frameCount; offset += sw::audio::kBlockFrameCount )
+            {
                 effect.process( inoutListSample.data() + static_cast<size_t>( offset ) * 2, sw::MathUtil::min( sw::audio::kBlockFrameCount, frameCount - offset ) );
+            }
         }
 
         /** @brief 임펄스(첫 샘플 1) 버퍼입니다. */
@@ -187,7 +191,9 @@ SW_TEST_CASE( AudioDspTest, LimiterHoldsTheCeiling )
     AudioDspTestInternal::processAll( *pLimiter, listQuiet );
     // 미리 보기 2 ms = 96 프레임 늦춘 같은 소리다.
     for ( uint32 frameIndex = 96; frameIndex < 9600; frameIndex += 37 )
+    {
         SW_EXPECT_NEAR_EQUAL( listOriginal[( frameIndex - 96 ) * 2], listQuiet[frameIndex * 2], 1e-5f );
+    }
 }
 
 /**

@@ -113,7 +113,9 @@ SW_TEST_CASE( PlacementRuleTest, PoissonMinimumDistanceHolds )
     for ( size_t first = 0; first < listInstance.size(); ++first )
     {
         for ( size_t second = first + 1; second < listInstance.size(); ++second )
+        {
             closest = MathUtil::min( closest, ( listInstance[first]._planePosition - listInstance[second]._planePosition ).getLength() );
+        }
     }
     SW_EXPECT_TRUE( closest >= 1.5f );
 
@@ -123,7 +125,9 @@ SW_TEST_CASE( PlacementRuleTest, PoissonMinimumDistanceHolds )
     for ( size_t first = 0; first < listInstance.size(); ++first )
     {
         for ( size_t second = first + 1; second < listInstance.size(); ++second )
+        {
             closestFree = MathUtil::min( closestFree, ( listInstance[first]._planePosition - listInstance[second]._planePosition ).getLength() );
+        }
     }
     SW_EXPECT_TRUE( closestFree < 1.5f );
 }
@@ -141,7 +145,9 @@ SW_TEST_CASE( PlacementRuleTest, SlopeAndHeightFiltersAreRespected )
     SW_ASSERT_TRUE( listInstance.empty() == false );
     bool bFlatOnly = true;
     for ( const PlacementInstance& instance : listInstance )
+    {
         bFlatOnly = bFlatOnly && instance._planePosition._x >= 50.0f && PlacementScatter::computeSlope( instance._normal ) <= rule._slopeMax;
+    }
     SW_EXPECT_TRUE( bFlatOnly );
 
     // 비탈만 — 경사 하한 20 도, 높이 5..15 m(x 10..30).
@@ -174,7 +180,9 @@ SW_TEST_CASE( PlacementRuleTest, LayerFilterAndDensityMap )
     SW_ASSERT_TRUE( listInstance.empty() == false );
     bool bUpperOnly = true;
     for ( const PlacementInstance& instance : listInstance )
+    {
         bUpperOnly = bUpperOnly && instance._planePosition._y > 50.0f;
+    }
     SW_EXPECT_TRUE( bUpperOnly );
 
     PlacementRule densityRule      = PlacementRuleTestUtil::makeRule();
@@ -216,7 +224,9 @@ SW_TEST_CASE( PlacementRuleTest, ExclusionAreasStayEmptyAndKeepTheRest )
         ++keptCount;
     }
     for ( const PlacementInstance& instance : listExcluded )
+    {
         bOutside = bOutside && PlacementScatter::isExcluded( listExclusion, instance._planePosition ) == false;
+    }
     SW_EXPECT_TRUE( bOutside );
     SW_EXPECT_EQUAL( keptCount, listExcluded.size() );
 }
@@ -231,7 +241,9 @@ SW_TEST_CASE( PlacementRuleTest, ScatterOnTwoDimensionalTiles )
     for ( uint32 tileY = 0; tileY < 4; ++tileY )
     {
         for ( uint32 tileX = 4; tileX < 8; ++tileX )
+        {
             listTile[tileY * 8 + tileX] = 1u;
+        }
         listTile[tileY * 8 + 3] = PlacementTileSurface::kBlockedTile;
     }
     PlacementTileSurface surface;
@@ -254,7 +266,9 @@ SW_TEST_CASE( PlacementRuleTest, ScatterOnTwoDimensionalTiles )
     {
         bOnGrass = bOnGrass && surface.getTileAt( listInstance[first]._planePosition ) == 0u && listInstance[first]._height == 0.0f;
         for ( size_t second = first + 1; second < listInstance.size(); ++second )
+        {
             closest = MathUtil::min( closest, ( listInstance[first]._planePosition - listInstance[second]._planePosition ).getLength() );
+        }
     }
     SW_EXPECT_TRUE( bOnGrass );
     SW_EXPECT_TRUE( closest >= 0.4f );

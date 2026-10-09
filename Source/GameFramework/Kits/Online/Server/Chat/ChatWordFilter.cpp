@@ -130,7 +130,9 @@ namespace sw
             {
                 int32 failIndex = _listNode[static_cast<size_t>( nodeIndex )]._fail;
                 while ( failIndex != 0 && findChild( failIndex, codepoint ) < 0 )
+                {
                     failIndex = _listNode[static_cast<size_t>( failIndex )]._fail;
+                }
                 const int32 failChild = findChild( failIndex, codepoint );
                 Node&       child     = _listNode[static_cast<size_t>( childIndex )];
                 child._fail           = failChild >= 0 ? failChild : 0;
@@ -158,7 +160,9 @@ namespace sw
                 lineEnd = content.size();
             string_view line( content.data() + lineStart, lineEnd - lineStart );
             while ( line.empty() == false && ( line.back() == '\r' || line.back() == ' ' || line.back() == '\t' ) )
+            {
                 line.remove_suffix( 1 );
+            }
             if ( line.empty() == false && line.front() != '#' )
                 listWord.emplace_back( line );
             lineStart = lineEnd + 1;
@@ -186,7 +190,9 @@ namespace sw
                 continue;
             listOriginalIndex.push_back( index );
             while ( nodeIndex != 0 && findChild( nodeIndex, codepoint ) < 0 )
+            {
                 nodeIndex = _listNode[static_cast<size_t>( nodeIndex )]._fail;
+            }
             const int32 childIndex  = findChild( nodeIndex, codepoint );
             nodeIndex               = childIndex >= 0 ? childIndex : 0;
             const int32 matchLength = _listNode[static_cast<size_t>( nodeIndex )]._matchLength;
@@ -196,7 +202,9 @@ namespace sw
             const int32 filteredLast  = static_cast<int32>( listOriginalIndex.size() ) - 1;
             const int32 originalFirst = listOriginalIndex[static_cast<size_t>( filteredLast - matchLength + 1 )];
             for ( int32 maskIndex = originalFirst; maskIndex <= index; ++maskIndex )
+            {
                 listMasked[static_cast<size_t>( maskIndex )] = 1;
+            }
         }
 
         if ( bAnyMatch == false )
@@ -208,7 +216,9 @@ namespace sw
             return ChatFilterVerdict::Rejected;
         outText.clear();
         for ( size_t index = 0; index < listCodepoint.size(); ++index )
+        {
             StringUtil::appendUtf8( outText, listMasked[index] != 0 ? ChatWordFilterInternal::kMaskCodepoint : listCodepoint[index] );
+        }
         return ChatFilterVerdict::Masked;
     }
 } // namespace sw

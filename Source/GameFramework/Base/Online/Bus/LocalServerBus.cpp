@@ -77,7 +77,9 @@ namespace sw
         vector<ServerBusMessage>& listMessage = inboxIt->second._listMessage;
         const int32               takenCount  = static_cast<int32>( listMessage.size() );
         for ( ServerBusMessage& message : listMessage )
+        {
             outListMessage.push_back( std::move( message ) );
+        }
         listMessage.clear();
         return takenCount;
     }

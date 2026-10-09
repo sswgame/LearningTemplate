@@ -102,7 +102,9 @@ namespace
                 const float32 time  = static_cast<float32>( start + sampleIndex ) / static_cast<float32>( kSampleRate );
                 float32       value = 0.0f;
                 for ( size_t harmonic = 0; harmonic < listHarmonicFrequency.size(); ++harmonic )
+                {
                     value += listHarmonicAmplitude[harmonic] * MathUtil::sin( 2.0f * MathUtil::kPi * listHarmonicFrequency[harmonic] * time );
+                }
                 inoutListSample.push_back( 0.5f * value / amplitudeSum );
             }
         }
@@ -188,7 +190,9 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
     SW_ASSERT_NOT_NULL( pJaw );
     float32 maxJaw = 0.0f;
     for ( float32 time = 0.0f; time <= talk.getPlayLength(); time += 0.05f )
+    {
         maxJaw = MathUtil::max( maxJaw, pJaw->evaluate( time ) );
+    }
     SW_EXPECT_TRUE( maxJaw > 0.5f );
 
     FacialRig rig;
@@ -250,7 +254,9 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
     SW_EXPECT_EQUAL( track.getFrameCount(), copy.getFrameCount() );
     SW_EXPECT_TRUE( copy._listViseme == track._listViseme );
     for ( size_t index = 0; index < track._listWeight.size(); ++index )
+    {
         SW_EXPECT_NEAR_EQUAL( track._listWeight[index], copy._listWeight[index], 0.0006f );
+    }
     SW_EXPECT_TRUE( VisemeTrack::makePathForAudio( "game/empty/voice/line.wav" ) == "game/empty/voice/line.visemes.json" );
     SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "game/empty/voice/line.wav" ) );
     SW_EXPECT_TRUE( LipSyncImport::isVoiceAudio( "voice/line.ogg" ) );

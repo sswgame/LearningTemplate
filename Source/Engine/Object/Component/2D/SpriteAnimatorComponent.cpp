@@ -117,7 +117,9 @@ namespace sw
         if ( _listAnimation.empty() && pClip != nullptr )
         {
             for ( const SpriteClipAnimation& animation : pClip->_listAnimation )
+            {
                 _listAnimation.push_back( animation._name );
+            }
         }
 
         if ( _listAnimation.empty() == false )

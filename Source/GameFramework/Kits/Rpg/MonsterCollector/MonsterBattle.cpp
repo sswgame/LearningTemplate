@@ -199,7 +199,9 @@ namespace sw
         if ( _outcome == MonsterBattleOutcome::Ongoing )
             applyEndOfRound();
         for ( Side& entry : _arrSide )
+        {
             entry._action = MonsterAction{};
+        }
     }
 
     void MonsterBattle::executeAction( int32 side )
@@ -356,7 +358,9 @@ namespace sw
         const int32                rate     = pSpecies != nullptr ? pSpecies->_catchRate : 1;
         const MonsterCaptureResult result   = computeCapture( target.getMaxHp(), target._hp, rate, ballMultiplier, target._status, _random );
         for ( int32 shake = 1; shake <= result._shakes; ++shake )
+        {
             pushEvent( MonsterBattleEvent::Kind::CaptureShake, kFoeSide, shake, target._speciesId );
+        }
         if ( result._bCaught == false )
         {
             pushEvent( MonsterBattleEvent::Kind::BrokeFree, kFoeSide, result._shakes, target._speciesId );
@@ -400,7 +404,9 @@ namespace sw
         if ( leaving._status == MonsterStatus::Toxic )
             leaving._statusTurns = 1;
         for ( int32& stage : entry._arrStage )
+        {
             stage = 0;
+        }
         entry._activeIndex  = partyIndex;
         entry._bNeedsSwitch = false;
         pushEvent( MonsterBattleEvent::Kind::Switched, side, partyIndex, getActive( side )._speciesId );
@@ -461,7 +467,9 @@ namespace sw
 
         bool bHasOther = false;
         for ( const MonsterInstance& monster : _arrSide[side]._listMonster )
+        {
             bHasOther = bHasOther || monster.isFainted() == false;
+        }
         if ( bHasOther == false )
         {
             setOutcome( side == kPlayerSide ? MonsterBattleOutcome::Lost : MonsterBattleOutcome::Won );
@@ -510,7 +518,9 @@ namespace sw
                 for ( const hashed_string& type : MonsterBattleInternal::findTypes( *_pCatalog, getActive( side ) ) )
                 {
                     for ( const hashed_string& immuneType : pWeather->_listChipImmuneType )
+                    {
                         bImmune = bImmune || type == immuneType;
+                    }
                 }
                 if ( bImmune == false )
                     applyDamage( side, MathUtil::max( 1, getActive( side ).getMaxHp() / pWeather->_chipDivisor ), MonsterBattleEvent::Kind::WeatherDamage,

@@ -311,7 +311,9 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
 {
     BlendSpace2D blendSpace;
     for ( int32 index = 0; index < 32; ++index )
+    {
         blendSpace.addSample( 100.0f + static_cast<float32>( index ), 100.0f, "Far", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+    }
 
     blendSpace.addSample( 0.1f, 0.0f, "Near", float4x4::createTranslation( float3{ 0.0f, 0.0f, 100.0f } ) );
     SW_EXPECT_EQUAL( 33u, static_cast<uint32>( blendSpace.getSampleCount() ) );
@@ -355,12 +357,16 @@ SW_TEST_CASE( AnimationTest, AnimPlayerClampsNegativeSpeed )
     player.setSpeed( -1.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, player.getSpeed(), 1e-4f );
     for ( int32 step = 0; step < 4; ++step )
+    {
         player.update( 0.5f, nullptr );
+    }
     SW_EXPECT_TRUE( player.isCrossfading() );
 
     player.setSpeed( 1.0f );
     for ( int32 step = 0; step < 3; ++step )
+    {
         player.update( 0.5f, nullptr );
+    }
     SW_EXPECT_FALSE( player.isCrossfading() );
     SW_EXPECT_TRUE( player.getCurrentPlayable() == &run );
 }
@@ -630,6 +636,8 @@ SW_TEST_CASE( AnimationTest, AnimPlayerLongLoopKeepsAdvancing )
     player.update( 1000000.25f, nullptr ); // 열하루 남짓 켜 둔 셈
     SW_EXPECT_TRUE( player.getCurrentTime() >= 0.0f && player.getCurrentTime() < idle.getPlayLength() );
     for ( int32 frame = 0; frame < 50; ++frame )
+    {
         player.update( 0.01f, nullptr );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.75f, player.getCurrentNormalizedTime(), 1e-3f );
 }

@@ -80,7 +80,9 @@ namespace sw
     {
         size_t insertIndex = _listEvent.size();
         while ( insertIndex > 0 && _listEvent[insertIndex - 1]._time > event._time )
+        {
             --insertIndex;
+        }
         _listEvent.insert( _listEvent.begin() + static_cast<ptrdiff_t>( insertIndex ), event );
     }
 
@@ -97,7 +99,9 @@ namespace sw
         }
         collectRange( step._previousTime, playLength, bIncludeStart, playLength, weight, pSource, outListFired );
         for ( uint32 loopIndex = 1; loopIndex < step._wrapCount; ++loopIndex )
+        {
             collectRange( 0.0f, playLength, true, playLength, weight, pSource, outListFired );
+        }
         collectRange( 0.0f, step._currentTime, true, playLength, weight, pSource, outListFired );
     }
 

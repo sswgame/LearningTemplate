@@ -38,7 +38,9 @@ namespace sw
         _listHeight.resize( data._listHeight.size() );
         const float32 heightRange = heightMax - heightMin;
         for ( size_t sampleIndex = 0; sampleIndex < data._listHeight.size(); ++sampleIndex )
+        {
             _listHeight[sampleIndex] = origin._y + heightMin + static_cast<float32>( data._listHeight[sampleIndex] ) * ( 1.0f / 65535.0f ) * heightRange;
+        }
         _listHoleCell = data._listHoleCell;
         return true;
     }

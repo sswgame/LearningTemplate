@@ -22,7 +22,9 @@ namespace sw
     void ServiceKeyUtil::appendHex64( string& outKey, uint64 value )
     {
         for ( int32 digitIndex = ServiceKeyUtilInternal::kHexWidth - 1; digitIndex >= 0; --digitIndex )
+        {
             outKey.push_back( ServiceKeyUtilInternal::kHexDigit[( value >> ( digitIndex * 4 ) ) & 0xFu] );
+        }
     }
 
     bool ServiceKeyUtil::parseHex64( string_view text, uint64& outValue )

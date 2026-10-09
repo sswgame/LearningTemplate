@@ -147,7 +147,9 @@ namespace sw
             }
         }
         for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )
+        {
             _listDefending[memberIndex] = _listCommand[memberIndex]._kind == JrpgCommandKind::Defend ? SW_TRUE : SW_FALSE;
+        }
 
         syncActors();
         _turnOrder.restartRound();
@@ -184,7 +186,9 @@ namespace sw
         }
         pushEvent( JrpgBattleEvent::Kind::FleeFailed, false, -1, -1, _fleeAttempts );
         for ( JrpgCommand& command : _listCommand )
+        {
             command = JrpgCommand{};
+        }
         resolveRound();
         return false;
     }
@@ -500,7 +504,9 @@ namespace sw
             for ( const hashed_string& type : listDamageType )
             {
                 for ( const hashed_string& weakness : pEnemy->_listWeakness )
+                {
                     bWeak = bWeak || type == weakness;
+                }
             }
         }
         const int32 dealt = MathUtil::min( enemy._hp, bWeak ? static_cast<int32>( static_cast<float32>( damage ) * _settings._weaknessMultiplier ) : damage );

@@ -82,7 +82,9 @@ namespace
     void runSteps( KartRace& race, int32 stepCount )
     {
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             race.step();
+        }
     }
 
     const KartRaceEvent* findEvent( const vector<KartRaceEvent>& listEvent, KartRaceEvent::Kind kind, int32 racer = -1 )
@@ -334,7 +336,9 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     KartRace race;
     race.initialize( settings, &track, &items );
     for ( int32 racer = 0; racer < 4; ++racer )
+    {
         SW_ASSERT_TRUE( race.addRacer( ArcadeVehicleSettings{}, false ) == racer );
+    }
     race.start();
     race.step();
     vector<KartRaceEvent> listEvent;
@@ -448,11 +452,15 @@ SW_TEST_CASE( KartRacingTest, AiFinishesDeterministicallyWithRubberBand )
         KartRace race;
         race.initialize( settings, &track, &items );
         for ( int32 racer = 0; racer < 3; ++racer )
+        {
             SW_ASSERT_TRUE( race.addRacer( ArcadeVehicleSettings{}, true ) == racer );
+        }
         race.start();
         SW_EXPECT_TRUE( race.getPhase() == KartRacePhase::Countdown );
         for ( int32 stepIndex = 0; stepIndex < 60 * 120 && race.getPhase() != KartRacePhase::Ended; ++stepIndex )
+        {
             race.step();
+        }
         SW_ASSERT_TRUE( race.getPhase() == KartRacePhase::Ended );
         int32 placeMask = 0;
         for ( int32 racer = 0; racer < 3; ++racer )
@@ -466,7 +474,9 @@ SW_TEST_CASE( KartRacingTest, AiFinishesDeterministicallyWithRubberBand )
         SW_EXPECT_TRUE( race.getBestLapTime() > 10.0f );
     }
     for ( int32 racer = 0; racer < 3; ++racer )
+    {
         SW_EXPECT_TRUE( arrFinishTime[0][racer] == arrFinishTime[1][racer] );
+    }
 
     // 2) 러버밴딩 — 1 등과 60 m 벌어진 AI 는 최고 속도가 오르고, 사람보다 앞선 AI 는 조금 내린다. 끄면 1.
     for ( int32 bandIndex = 0; bandIndex < 2; ++bandIndex )
@@ -568,7 +578,9 @@ SW_TEST_CASE( KartRacingTest, StateRoundTripContinuesTheSameRace )
         settings._seed          = seed;
         outRace.initialize( settings, &track, &items );
         for ( int32 racer = 0; racer < racerCount; ++racer )
+        {
             SW_EXPECT_TRUE( outRace.addRacer( ArcadeVehicleSettings{}, racer > 0 ) == racer ); // 0 번만 사람
+        }
         outRace.start();
     };
     auto drive = []( KartRace& race, int32 stepCount )

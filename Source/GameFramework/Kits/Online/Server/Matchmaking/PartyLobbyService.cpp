@@ -352,7 +352,9 @@ namespace sw
         if ( _pRouter != nullptr )
         {
             for ( const auto& [requestId, step] : _mapRequestToStep )
+            {
                 _pRouter->cancel( requestId );
+            }
         }
         _mapRequestToStep.clear();
         _mapListIdToList.clear();
@@ -855,7 +857,9 @@ namespace sw
     void PartyLobbyService::refreshIndexTtl( const PartySnapshot& party )
     {
         for ( const AccountId memberId : party._listMemberId )
+        {
             submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberId ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장
+        }
     }
 
     void PartyLobbyService::notifyParty( const PartySnapshot& party, AccountId removedId )

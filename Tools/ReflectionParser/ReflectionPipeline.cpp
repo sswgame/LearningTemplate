@@ -119,7 +119,9 @@ namespace sw
                         if ( prop._repNotify.empty() == false )
                             out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
                         for ( const string& alias : prop._listAlias )
+                        {
                             out.appendFormat( "  alias=%#", alias );
+                        }
                         out.append( "\n" );
                     }
                     for ( const ParsedFunctionInfo& method : type._listMethod )
@@ -149,7 +151,9 @@ namespace sw
                     out.appendFormat( "ENUM %# : %#%#\n", enumInfo._fullyQualifiedName, enumInfo._underlyingType,
                                       enumInfo._bIsBitFlag == SW_TRUE ? "  [Flags]" : "" );
                     for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                    {
                         out.appendFormat( "  %# = %#\n", enumerator._name, enumerator._value );
+                    }
                 }
                 std::fwrite( out.c_str(), 1, out.size(), stdout );
                 std::fflush( stdout );
@@ -264,7 +268,9 @@ namespace sw
         _listIncludePath.reserve( options._listIncludePath.size() + 1 );
         _listIncludePath.push_back( options._outputDir );
         for ( const string& includePath : options._listIncludePath )
+        {
             _listIncludePath.push_back( includePath );
+        }
     }
 
     int32 ReflectionPipeline::run()
@@ -532,10 +538,14 @@ namespace sw
         // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
         string text;
         for ( const string& target : listTarget )
+        {
             text += ReflectionPipelineInternal::escapeDepfilePath( target ) + " ";
+        }
         text += ":";
         for ( const string& dependency : listDependency )
+        {
             text += " \\\n  " + ReflectionPipelineInternal::escapeDepfilePath( dependency );
+        }
         text += "\n";
         if ( GeneratedFileUtil::writeIfChanged( _pOptions->_depfilePath, text ) == false )
         {

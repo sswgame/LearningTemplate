@@ -66,7 +66,9 @@ namespace sw
             {
                 uint32 count = 0;
                 for ( const utf8 character : text )
+                {
                     count += character == '\n' ? 1u : 0u;
+                }
                 return count;
             }
 
@@ -437,7 +439,9 @@ namespace sw
         const JsonValue fields = root.set( "fields" );
         fields.setObject();
         for ( const TelemetryValue& value : event.getValues() )
+        {
             TelemetryServiceInternal::setValueJson( fields.set( value._name.c_str(), false ), value );
+        }
         return doc.dump( -1 );
     }
 
@@ -492,7 +496,9 @@ namespace sw
         outListBreadcrumb.clear();
         const size_t count = _listBreadcrumb.size();
         for ( size_t offset = 0; offset < count; ++offset )
+        {
             outListBreadcrumb.push_back( _listBreadcrumb[( _breadcrumbHead + offset ) % count] );
+        }
     }
 
     void TelemetryService::collectSpoolFiles( vector<string>& outListFilePath ) const
@@ -640,7 +646,9 @@ namespace sw
         const TelemetryPipelineSettings& settings   = _schema.getSettings();
         uint64                           totalBytes = _currentFileBytes;
         for ( const string& path : _listClosedFile )
+        {
             totalBytes += FileUtil::getFileSize( path );
+        }
         // 지금 파일은 지우지 않는다 — 상한을 넘는 만큼 가장 오래된 닫힌 파일부터(보내지 못한 채) 버린다.
         while ( _listClosedFile.empty() == false )
         {

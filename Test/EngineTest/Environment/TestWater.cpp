@@ -37,7 +37,9 @@ SW_TEST_CASE( WaterTest, SingleSineWaveMatchesClosedForm )
 {
     float4 arrWave[shaderslot::kGerstnerWaveCount] = {};
     for ( float4& wave : arrWave )
+    {
         wave = float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+    }
     const float3 still = WaterWaveMath::computeDisplacement( float2{ 3.0f, 4.0f }, 2.0f, WaterTestUtil::kGravity, arrWave );
     SW_EXPECT_NEAR_EQUAL( 0.0f, still.getLength(), 1.0e-7f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, WaterWaveMath::computeNormal( float2{ 3.0f, 4.0f }, 2.0f, WaterTestUtil::kGravity, arrWave )._y, 1.0e-7f );

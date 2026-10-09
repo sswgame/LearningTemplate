@@ -294,7 +294,9 @@ namespace sw
             {
                 relativePath = normalizedScene.substr( normalizedRoot.size() );
                 while ( relativePath.empty() == false && relativePath.front() == '/' )
+                {
                     relativePath.erase( relativePath.begin() );
+                }
             }
 
             string outputPath = normalizedOut;

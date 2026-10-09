@@ -12,14 +12,18 @@ namespace
     {
         int32 total = 0;
         for ( const int32 value : listValue )
+        {
             total += value;
+        }
         return total;
     }
 
     void fillWith( sw::vector_reference<int32> listValue, int32 value )
     {
         for ( int32& element : listValue )
+        {
             element = value;
+        }
     }
 
     struct SpanBase

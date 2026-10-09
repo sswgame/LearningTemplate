@@ -129,7 +129,9 @@ namespace sw
             {
                 PositionWelder welder;
                 for ( RHIVertex& vertex : inoutListVertex )
+                {
                     setPosition( vertex, welder.weld( getPosition( vertex ) ) );
+                }
             }
 
             static RHIVertex lerpVertex( const RHIVertex& from, const RHIVertex& to, float32 t )
@@ -141,9 +143,13 @@ namespace sw
                     result._arrNormal[axis]   = from._arrNormal[axis] + ( to._arrNormal[axis] - from._arrNormal[axis] ) * t;
                 }
                 for ( uint32 axis = 0; axis < 2; ++axis )
+                {
                     result._arrUv[axis] = from._arrUv[axis] + ( to._arrUv[axis] - from._arrUv[axis] ) * t;
+                }
                 for ( uint32 axis = 0; axis < 4; ++axis )
+                {
                     result._arrColor[axis] = from._arrColor[axis] + ( to._arrColor[axis] - from._arrColor[axis] ) * t;
+                }
                 const float3 normal  = float3{ result._arrNormal[0], result._arrNormal[1], result._arrNormal[2] };
                 const float3 unit    = CharacterGeometryUtil::makeUnitOr( normal, float3{ 0.0f, 1.0f, 0.0f } );
                 result._arrNormal[0] = unit._x;
@@ -196,7 +202,9 @@ namespace sw
                 unordered_map<uint64, vector<uint32>> mapStart;
                 mapStart.reserve( listSegment.size() );
                 for ( uint32 index = 0; index < static_cast<uint32>( listSegment.size() ); ++index )
+                {
                     mapStart[makePointKey( listSegment[index]._from )].push_back( index );
+                }
                 vector<uint8> listUsed( listSegment.size(), 0 );
                 uint32        openCount = 0;
                 for ( uint32 start = 0; start < static_cast<uint32>( listSegment.size() ); ++start )
@@ -414,7 +422,9 @@ namespace sw
                 {
                     uint32 arrCount[3];
                     for ( uint32 axis = 0; axis < 3; ++axis )
+                    {
                         arrCount[axis] = MathUtil::max( settings._arrSliceCount[axis], 1u );
+                    }
                     const float32 jitter = MathUtil::clamp( settings._sliceJitter, 0.0f, 0.5f );
                     for ( uint32 cellZ = 0; cellZ < arrCount[2]; ++cellZ )
                     {
@@ -519,7 +529,9 @@ namespace sw
                 for ( Triangle& triangle : inoutListTriangle )
                 {
                     for ( RHIVertex& vertex : triangle._arrVertex )
+                    {
                         setPosition( vertex, welder.weld( getPosition( vertex ) ) );
+                    }
                 }
                 vector<Triangle> listKept;
                 listKept.reserve( inoutListTriangle.size() );
@@ -535,7 +547,9 @@ namespace sw
                 {
                     uint64 arrKey[3];
                     for ( uint32 corner = 0; corner < 3; ++corner )
+                    {
                         arrKey[corner] = makePointKey( getPosition( listKept[index]._arrVertex[corner] ) );
+                    }
                     uint32 first = 0;
                     for ( uint32 corner = 1; corner < 3; ++corner )
                     {
@@ -578,7 +592,9 @@ namespace sw
                     vertex._arrNormal[1]   = normal._y;
                     vertex._arrNormal[2]   = normal._z;
                     for ( float32& channel : vertex._arrColor )
+                    {
                         channel = 1.0f;
+                    }
                     inoutList.push_back( vertex );
                 }
             }
@@ -633,7 +649,9 @@ namespace sw
                         continue;
                     size_t group = 0;
                     while ( group < listTag.size() && listTag[group] != tag )
+                    {
                         ++group;
+                    }
                     if ( group == listTag.size() )
                     {
                         listTag.push_back( tag );
@@ -686,7 +704,9 @@ namespace sw
                     // 갈래(한 점에서 나가는 경계가 둘 이상)가 있으면 이 무리는 건드리지 않는다.
                     bool bSimple = true;
                     for ( const auto& [key, listTo] : mapNext )
+                    {
                         bSimple = bSimple && listTo.size() == 1;
+                    }
                     if ( bSimple == false )
                         continue;
                     unordered_map<uint64, uint8> mapUsed;
@@ -729,7 +749,9 @@ namespace sw
                         for ( const uint32 index : listGroupTriangle[group] )
                         {
                             for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                            {
                                 mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
+                            }
                         }
                         continue;
                     }
@@ -761,20 +783,26 @@ namespace sw
                     for ( const vector<uint64>& loop : listGroupLoop[group] )
                     {
                         for ( const uint64 key : loop )
+                        {
                             mapOnLoop[key] = SW_TRUE;
+                        }
                     }
                     bool bInnerPoint = false;
                     for ( const uint32 index : listGroupTriangle[group] )
                     {
                         for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                        {
                             bInnerPoint = bInnerPoint || mapOnLoop.find( makePointKey( getPosition( vertex ) ) ) == mapOnLoop.end();
+                        }
                     }
                     if ( bInnerPoint )
                     {
                         for ( const uint32 index : listGroupTriangle[group] )
                         {
                             for ( const RHIVertex& vertex : inoutListTriangle[index]._arrVertex )
+                            {
                                 mapKeep[makePointKey( getPosition( vertex ) )] = SW_TRUE;
+                            }
                         }
                         listGroupLoop[group].clear();
                         continue;
@@ -790,7 +818,9 @@ namespace sw
                     for ( const vector<uint64>& loop : listGroupLoop[group] )
                     {
                         for ( const uint64 key : loop )
+                        {
                             bAnyRemoved = bAnyRemoved || isRemovable( key );
+                        }
                     }
                 }
                 if ( bAnyRemoved == false )
@@ -837,14 +867,18 @@ namespace sw
                             for ( const vector<uint64>& loop : listGroupLoop[group] )
                             {
                                 for ( const uint64 key : loop )
+                                {
                                     mapKeep[key] = SW_TRUE;
+                                }
                             }
                             listRebuild[group] = SW_FALSE;
                             bFailed            = true;
                             break;
                         }
                         for ( const uint32 index : listGroupTriangle[group] )
+                        {
                             listDrop[index] = 1;
+                        }
                         for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
                         {
                             Triangle cap;
@@ -885,7 +919,9 @@ namespace sw
                 for ( const Triangle& triangle : listTriangle )
                 {
                     for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
                         outListScratch.push_back( vertex );
+                    }
                 }
                 return outListScratch;
             }
@@ -1089,12 +1125,16 @@ namespace sw
                 }
             }
             for ( const uint32 face : listVisible )
+            {
                 listFace[face]._bAlive = SW_FALSE;
+            }
             for ( const std::pair<uint32, uint32>& edge : listHorizon )
+            {
                 listFace.push_back( Face{
                     { edge.first, edge.second, point },
                     SW_TRUE
                 } );
+            }
         }
         for ( const Face& face : listFace )
         {
@@ -1109,7 +1149,9 @@ namespace sw
         unordered_map<uint64, uint32> mapEdgeCount;
         vector<uint64>                listKey( listVertex.size() );
         for ( size_t index = 0; index < listVertex.size(); ++index )
+        {
             listKey[index] = MeshFractureInternal::makePointKey( MeshFractureInternal::getPosition( listVertex[index] ) );
+        }
         if ( listVertex.size() < 3 )
             return false;
         for ( size_t index = 0; index + 2 < listVertex.size(); index += 3 )
@@ -1174,7 +1216,9 @@ namespace sw
         {
             outCentroid = float3{};
             for ( const RHIVertex& vertex : listVertex )
+            {
                 outCentroid += MeshFractureInternal::getPosition( vertex );
+            }
             if ( listVertex.empty() == false )
                 outCentroid /= static_cast<float32>( listVertex.size() );
             return 0.0f;
@@ -1285,7 +1329,9 @@ namespace sw
                 for ( const Triangle& triangle : listPieceTriangle )
                 {
                     for ( const RHIVertex& vertex : triangle._arrVertex )
+                    {
                         radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), listSite[site] ) );
+                    }
                 }
                 for ( const std::pair<float32, uint32>& entry : listOrder )
                 {
@@ -1299,7 +1345,9 @@ namespace sw
                     for ( const Triangle& triangle : listPieceTriangle )
                     {
                         for ( const RHIVertex& vertex : triangle._arrVertex )
+                        {
                             maxDistance = MathUtil::max( maxDistance, normal.dot( MeshFractureInternal::getPosition( vertex ) ) - offset );
+                        }
                     }
                     if ( maxDistance <= 0.0f )
                         continue;
@@ -1320,7 +1368,9 @@ namespace sw
                     for ( const Triangle& triangle : listPieceTriangle )
                     {
                         for ( const RHIVertex& vertex : triangle._arrVertex )
+                        {
                             radiusSquared = MathUtil::max( radiusSquared, float3::getDistanceSquared( MeshFractureInternal::getPosition( vertex ), listSite[site] ) );
+                        }
                     }
                 }
             }
@@ -1403,11 +1453,15 @@ namespace sw
             const auto appendTriangle = [&outAsset]( const Triangle& triangle, FractureSurfaceSlot slot )
             {
                 for ( const RHIVertex& vertex : triangle._arrVertex )
+                {
                     outAsset._listVertex.push_back( vertex );
+                }
                 outAsset._listTriangleSlot.push_back( static_cast<uint8>( slot ) );
             };
             for ( const Triangle& triangle : listSiteSurface[site] )
+            {
                 appendTriangle( triangle, FractureSurfaceSlot::Outer );
+            }
             for ( const Triangle& triangle : listTriangle )
             {
                 if ( triangle._tag >= 0 )

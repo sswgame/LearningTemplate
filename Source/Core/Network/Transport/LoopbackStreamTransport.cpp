@@ -384,7 +384,9 @@ namespace sw
             {
                 int32 count = 0;
                 for ( const LoopbackHandleSlot& slot : _listSlot )
+                {
                     count += slot._bUsed == SW_TRUE ? 1 : 0;
+                }
                 return count;
             }
 
@@ -428,7 +430,9 @@ namespace sw
                         StreamSendSpan arrSpan[8];
                         const int32    spanCount = queue.collectSpans( arrSpan, 8, take );
                         for ( int32 index = 0; index < spanCount; ++index )
+                        {
                             event._bytes.insert( event._bytes.end(), arrSpan[index]._pData, arrSpan[index]._pData + arrSpan[index]._size );
+                        }
                         const int32 moved = static_cast<int32>( event._bytes.size() );
                         budget -= moved;
                         _stats._receivedBytes += static_cast<uint64>( moved );

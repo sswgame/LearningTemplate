@@ -414,7 +414,9 @@ SW_TEST_CASE( SceneComponentTest, LazyReadDoesNotStrandDirtySiblings )
         pSecond->setLocalPosition( sw::float3( 0.0f, 0.0f, 1.0f ) );
         manager.flushSceneTransforms();
         for ( sw::MockTickSceneComponent* pNode : arrNode )
+        {
             pNode->_worldUpdateCount = 0;
+        }
 
         const sw::float3 movedPos( 4.0f, 0.0f, 0.0f );
         if ( bBatch )
@@ -621,7 +623,9 @@ namespace
         std::thread other( [&]()
         {
             for ( const KeyedTickWrite& keyed : listWrite )
+            {
                 bAllQueued = queueTickWrite( hierarchy, keyed ) && bAllQueued;
+            }
             sw::engine::getTaskManager().releaseCurrentThreadHelperSlot();
         } );
         other.join();
@@ -754,5 +758,7 @@ SW_TEST_CASE( SceneComponentTest, WorldSettersRespectARotatedScaledParent )
     const float32*     pExpected = target.data();
     const float32*     pActual   = result.data();
     for ( uint32 index = 0; index < 16; ++index )
+    {
         SW_EXPECT_NEAR_EQUAL( pExpected[index], pActual[index], 1e-4f );
+    }
 }

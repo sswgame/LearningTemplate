@@ -67,10 +67,14 @@ namespace sw
         _listAnimated.resize( count );
         _listLength.resize( count );
         for ( uint32 index = 0; index < count; ++index )
+        {
             _listAnimated[index] = float3::transform( pose.getModelPosition( listBone[index] ), worldFromModel );
+        }
         _listLength[0] = 0.0f;
         for ( uint32 index = 1; index < count; ++index )
+        {
             _listLength[index] = ( _listAnimated[index] - _listAnimated[index - 1] ).getLength();
+        }
 
         const float3 root      = _listAnimated[0];
         const bool   bTeleport = _bInitialized == SW_TRUE && ( root - _lastRootPosition ).getLength() > settings._teleportDistance;
@@ -140,6 +144,8 @@ namespace sw
         // 본을 뿌리부터 입자 쪽으로 돌린다(부모를 돌리면 자식 자리가 바뀌므로 차례로).
         const float4x4 modelFromWorld = worldFromModel.invert();
         for ( uint32 index = 0; index + 1 < count; ++index )
+        {
             pose.aimBoneAt( listBone[index], listBone[index + 1], float3::transform( _listPosition[index + 1], modelFromWorld ) );
+        }
     }
 } // namespace sw

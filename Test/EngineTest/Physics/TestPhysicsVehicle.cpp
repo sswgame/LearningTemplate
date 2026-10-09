@@ -53,7 +53,9 @@ namespace
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( kDeltaTime );
+            }
         }
 
         static sw::float3 findPosition( const sw::GameObject& car ) { return car.getComponent<sw::RigidBodyComponent>()->getWorldPosition(); }

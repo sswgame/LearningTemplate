@@ -79,7 +79,9 @@ namespace sw
             {
                 uint64 value = 0;
                 for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
+                {
                     value = ( value << 8 ) | pData[byteIndex];
+                }
                 return value;
             }
 

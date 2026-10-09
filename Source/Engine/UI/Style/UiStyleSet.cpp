@@ -25,7 +25,9 @@ namespace sw
             {
                 uint64 hash = HashUtil::mix64( reinterpret_cast<uintptr_t>( pParent ) );
                 for ( const uint32 ruleIndex : listRuleIndex )
+                {
                     hash = HashUtil::combine( hash, ruleIndex );
+                }
                 return hash;
             }
         };
@@ -57,7 +59,9 @@ namespace sw
             if ( sheet == nullptr )
                 continue;
             for ( const UiStyleRule& rule : sheet->_listRule )
+            {
                 _listRule.push_back( RuleRef{ &rule, order++ } );
+            }
         }
         // 삽입 정렬 — 규칙 수십 개, 시트를 걸 때 한 번이다(같은 특정도의 순서를 지킨다).
         for ( size_t index = 1; index < _listRule.size(); ++index )

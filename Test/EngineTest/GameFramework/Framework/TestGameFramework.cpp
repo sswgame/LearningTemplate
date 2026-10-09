@@ -197,7 +197,9 @@ namespace
         SW_EXPECT_TRUE( expected._originArea == actual._originArea );
         SW_ASSERT_EQUAL( expected._listTag.size(), actual._listTag.size() );
         for ( size_t tagIndex = 0; tagIndex < expected._listTag.size(); ++tagIndex )
+        {
             SW_EXPECT_EQUAL( expected._listTag[tagIndex], actual._listTag[tagIndex] );
+        }
         SW_EXPECT_NEAR_EQUAL( expected._originPosition._x, actual._originPosition._x, 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( expected._originPosition._z, actual._originPosition._z, 1.0e-6f );
         SW_EXPECT_EQUAL( expected._originMinute, actual._originMinute );
@@ -673,7 +675,9 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionAgreesWithWorldFlagConditions 
     const utf8* const arrCondition[] = { "gold >= 10", "gold >= 11", "gold <= 10", "gold <= 9", "gold > 9", "gold > 10",
                                          "gold < 11", "gold < 10", "gold == 10", "gold != 3", "gold>=-1", "" };
     for ( const utf8* pCondition : arrCondition )
+    {
         SW_EXPECT_TRUE_MSG( takesTrueBranch( pCondition ) == flags.evaluate( pCondition ), pCondition );
+    }
 }
 
 // ------------------------------------------------------------------------------
@@ -903,16 +907,22 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
     // 10,000개의 Monster ID 채우기
     writeInstance._state._listMonsterId.reserve( 10000 );
     for ( int32 index = 0; index < 10000; ++index )
+    {
         writeInstance._state._listMonsterId.push_back( 100000 + index * 3 );
+    }
 
     // 5,000개의 Skill Name 채우기
     writeInstance._state._listSkillName.reserve( 5000 );
     for ( int32 index = 0; index < 5000; ++index )
+    {
         writeInstance._state._listSkillName.push_back( string( "Skill_Ultimate_Power_Strike_" ) + std::to_string( index ).c_str() );
+    }
 
     // 2,000개의 Flag 채우기
     for ( int32 index = 0; index < 2000; ++index )
+    {
         writeInstance._state._mapFlag[string( "quest_flag_key_" ) + std::to_string( index ).c_str()] = index * 7;
+    }
 
     vector<uint8> snapshot;
     SW_EXPECT_TRUE( writeInstance.captureSnapshot( snapshot ) );
@@ -1250,7 +1260,9 @@ SW_TEST_CASE( GameFrameworkTest, SceneObjectCountBeyondTheDataIsNotReserved )
     {
         uint64 totalBytes = 0;
         for ( uint32 tagIndex = 0; tagIndex < static_cast<uint32>( MemoryTag::MaxTags ); ++tagIndex )
+        {
             totalBytes += pProfiler->getStats( static_cast<MemoryTag>( tagIndex ) )._totalAllocatedBytes.load();
+        }
         return totalBytes;
     };
 
@@ -2067,7 +2079,9 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashDoesNotShortenHitInvulnerability
     // 0.4초를 흘린다 — 대시 무적(0.22)보다 길고 피격 무적(0.7)보다 짧다.
     int32 damageAfterDash = 0;
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
         damageAfterDash += room.update( 0.02f, input )._damageToPlayer;
+    }
 
     SW_EXPECT_TRUE_MSG( damageAfterDash == 0, "대시가 맞고 얻은 무적을 깎았습니다" );
 }
@@ -2106,7 +2120,9 @@ SW_TEST_CASE( GameFrameworkTest, ActionRoom_DashGaugeFillsAtTheCooldownRate )
     // 방금 다시 대시했다. 쿨다운의 절반을 흘렸으면 게이지도 절반이어야 한다.
     input._bDashPressed = SW_FALSE;
     for ( int32 frameIndex = 0; frameIndex < cooldownFrameCount / 2; ++frameIndex )
+    {
         room.update( kStep, input );
+    }
 
     const float32 fill = room.getDashFill();
     SW_EXPECT_TRUE_MSG( fill > 0.4f && fill < 0.6f, "쿨다운 절반인데 게이지는 절반이 아닙니다" );
@@ -2234,7 +2250,9 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSameTileMover )
     TileMap tileMap;
     tileMap.resize( 8, 3 );
     for ( int32 x = 0; x < 8; ++x )
+    {
         tileMap.setWalkable( x, 1, true );
+    }
     tileMap.setEncounter( 3, 1, true );
     tileMap.setEncounter( 4, 1, true );
     TileWarp warp{};
@@ -2254,7 +2272,9 @@ SW_TEST_CASE( GameFrameworkTest, StateRoundTripContinuesTheSameTileMover )
     controller.setEncounterRate( 0.5f ); // 조우 칸 두 걸음마다
     // 0.1 초 프레임 — 걸음(0.18 초)은 두 프레임마다 하나다. 네 프레임 뒤 (3,1) 조우 칸을 걷는 중이다.
     for ( int32 frame = 0; frame < 4; ++frame )
+    {
         controller.update( 0.1f, intent, -1 );
+    }
     SW_ASSERT_EQUAL( 3, controller.getTileX() );
     SW_ASSERT_TRUE( controller.getLocomotion().getState() == LocomotionState::Walk );
 
@@ -2302,7 +2322,9 @@ SW_TEST_CASE( GameFrameworkTest, OverworldTileMover_StepsFromTheControlIntent )
     for ( int32 y = 0; y < 4; ++y )
     {
         for ( int32 x = 0; x < 4; ++x )
+        {
             tileMap.setWalkable( x, y, true );
+        }
     }
 
     OverworldTileMover mover;
@@ -2455,7 +2477,9 @@ SW_TEST_CASE( GameFrameworkTest, TransitionActionCanStartAnotherTransition )
 
     // 넉넉히 돌린다 — 두 전환이 차례로 다 끝나야 한다.
     for ( int32 frameIndex = 0; frameIndex < 200; ++frameIndex )
+    {
         manager.update( 0.016f );
+    }
 
     SW_EXPECT_EQUAL( 1, firstActionCount );
     SW_EXPECT_TRUE_MSG( secondActionCount == 1, "액션 안에서 건 전환이 덮여서 그쪽 액션이 안 불렸습니다" );
@@ -2568,7 +2592,9 @@ SW_TEST_CASE( GameFrameworkTest, Follow2DCameraKeepsItsPlaceAndFollowsOnlyWhenAs
 
     constexpr float32 kFrame = 1.0f / 60.0f;
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         pController->onTick( kFrame );
+    }
     SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( -10.0f, pScene->getLocalPosition()._z, 1e-4f );
@@ -2576,7 +2602,9 @@ SW_TEST_CASE( GameFrameworkTest, Follow2DCameraKeepsItsPlaceAndFollowsOnlyWhenAs
     // 흔들고 나면 놓인 자리로 돌아온다.
     pController->shake( 2.0f, 0.25f );
     for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
+    {
         pController->onTick( kFrame );
+    }
     SW_EXPECT_FALSE( pController->isShaking() );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
@@ -2585,7 +2613,9 @@ SW_TEST_CASE( GameFrameworkTest, Follow2DCameraKeepsItsPlaceAndFollowsOnlyWhenAs
     pController->setTargetPosition( float2( 20.0f, 3.0f ) );
     pController->setFollowSpeed( 10.0f );
     for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
         pController->onTick( kFrame );
+    }
     SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
 }
@@ -2608,7 +2638,9 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
     constexpr float32 kFrame = 1.0f / 60.0f;
     pController->shake( 2.0f, 0.5f );
     for ( int32 frameIndex = 0; frameIndex < 5; ++frameIndex )
+    {
         pController->onTick( kFrame );
+    }
     const float3 shaken = pScene->getLocalPosition();
     SW_ASSERT_TRUE_MSG( MathUtil::abs( shaken._x - 5.0f ) > 1e-3f || MathUtil::abs( shaken._y - 3.0f ) > 1e-3f, "흔들림이 위치에 얹히지 않았습니다" );
 
@@ -2619,7 +2651,9 @@ SW_TEST_CASE( GameFrameworkTest, CameraShakeOffsetDoesNotSurviveAStateReload )
     SW_EXPECT_TRUE( pController->isShaking() );
 
     for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
         pController->onTick( kFrame );
+    }
     SW_EXPECT_FALSE( pController->isShaking() );
     SW_EXPECT_NEAR_EQUAL( 5.0f, pScene->getLocalPosition()._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pScene->getLocalPosition()._y, 1e-4f );
@@ -2700,7 +2734,9 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
 
     // 1) 떨어져서 바닥에 닿는다.
     for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
         pGravity->onTick( 1.0f / 60.0f );
+    }
     SW_ASSERT_TRUE( pGravity->isGrounded() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSceneComp->getLocalPosition()._y, 1e-3f );
 
@@ -2710,7 +2746,9 @@ SW_TEST_CASE( GameFrameworkTest, GroundedObjectFallsAgainAfterBeingLifted )
     SW_EXPECT_TRUE_MSG( pGravity->isGrounded() == false, "위로 올렸는데 여전히 땅에 붙어 있습니다" );
 
     for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
         pGravity->onTick( 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE_MSG( pGravity->isGrounded(), "다시 떨어지지 않았습니다" );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pSceneComp->getLocalPosition()._y, 1e-3f );
 

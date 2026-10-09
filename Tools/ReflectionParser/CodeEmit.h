@@ -159,7 +159,9 @@ namespace sw
         void writeIndent()
         {
             for ( uint8 indentIndex = 0; indentIndex < _indent; ++indentIndex )
+            {
                 _out.append( '\t' );
+            }
         }
 
         CodeEmitBuffer& _out;

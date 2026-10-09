@@ -78,25 +78,33 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
         {
             const sw::Stopwatch stopwatch;
             for ( size_t objectIndex = 0; objectIndex < listObject.size(); ++objectIndex )
+            {
                 listXml[objectIndex] = sw::ObjectStateSerializer::saveToXmlString( listObject[objectIndex] );
+            }
             listXmlWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
             for ( const sw::string& xml : listXml )
+            {
                 (void)sw::ObjectStateSerializer::loadFromXmlString( pScratch, xml ); // 성공 여부는 SerializationRoundTripTest 가 본다 — 여기서는 시간만
+            }
             listXmlReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
             for ( size_t objectIndex = 0; objectIndex < listObject.size(); ++objectIndex )
+            {
                 listJson[objectIndex] = sw::ObjectStateSerializer::saveToJsonString( listObject[objectIndex] );
+            }
             listJsonWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
             for ( const sw::string& json : listJson )
+            {
                 (void)sw::ObjectStateSerializer::loadFromJsonString( pScratch, json ); // 시간만 잰다
+            }
             listJsonReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
@@ -111,7 +119,9 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
         {
             const sw::Stopwatch stopwatch;
             for ( const sw::vector<uint8>& bytes : listBinary )
+            {
                 (void)sw::ObjectStateSerializer::loadFromBinaryBuffer( pScratch, bytes.data(), bytes.size() ); // 시간만 잰다
+            }
             listBinaryReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
     }

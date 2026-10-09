@@ -133,7 +133,9 @@ namespace sw
         if ( pManager != nullptr )
         {
             for ( GameObjectHandle& handle : _listSpawned )
+            {
                 destroySpawned( *pManager, handle );
+            }
         }
         _listSpawned.clear();
         _compactThreshold = GameDirectorComponentInternal::kMinCompactThreshold;

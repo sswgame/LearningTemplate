@@ -22,7 +22,9 @@ namespace sw
                 {
                     bool bKnown{ false };
                     for ( const utf8* pKnown : arrKnown )
+                    {
                         bKnown = bKnown || fieldName == pKnown;
+                    }
                     if ( bKnown == false )
                     {
                         outUnknown = fieldName;
@@ -54,7 +56,9 @@ namespace sw
                 const JsonValue arrayValue = parent.set( pName, false );
                 arrayValue.setArray();
                 for ( const string& value : listValue )
+                {
                     arrayValue.pushBack().setString( value );
+                }
             }
 
             /** @brief 문서 머리(`culture` · `entries`)를 읽습니다. */
@@ -123,7 +127,9 @@ namespace sw
         const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, sourceHash, 16 );
         string       text( arrBuffer, length );
         while ( text.size() < 16 )
+        {
             text.insert( text.begin(), '0' );
+        }
         return text;
     }
 
@@ -427,7 +433,9 @@ namespace sw
             if ( error.empty() && bMissingField )
                 error = string( sourceName ) + ": needs \"name\", \"sourceCulture\", \"stringTables\" and string lists";
             for ( string& culture : loaded._listCulture )
+            {
                 culture = CultureTable::normalizeCode( culture );
+            }
         }
         if ( error.empty() == false )
         {

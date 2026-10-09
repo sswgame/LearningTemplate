@@ -82,7 +82,9 @@ namespace sw
                 const uint32                      count   = MathUtil::min( static_cast<uint32>( listSrv.size() ),
                                                                            shaderslot::kMaterialTextureCount );
                 for ( uint32 texIndex = 0; texIndex < count; ++texIndex )
+                {
                     batch._arrMaterialTexSrv[texIndex] = listSrv[texIndex];
+                }
             }
 
             /**
@@ -237,7 +239,9 @@ namespace sw
         // 배치 방출은 불투명 · 투명이 같은 함수를 쓰고, 그 함수는 후보 인덱스 배열을 받는다. 그래서 정렬된 항목에서 인덱스만 뽑아 둔다.
         _listScratchOpaqueIdx.resize( _listScratchOpaqueEntry.size() );
         for ( size_t entryIndex = 0; entryIndex < _listScratchOpaqueEntry.size(); ++entryIndex )
+        {
             _listScratchOpaqueIdx[entryIndex] = _listScratchOpaqueEntry[entryIndex]._srcIdx;
+        }
     }
 
     bool GpuSceneBuilder::fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate )
@@ -748,7 +752,9 @@ namespace sw
             else
             {
                 for ( uint32 candidateIndex = 0; candidateIndex < count; ++candidateIndex )
+                {
                     fillPayload( _listScratchCandidate[candidateIndex], _listScratchRaw[candidateIndex] );
+                }
             }
 
             if ( bBatchKeysSame == false )
@@ -825,7 +831,9 @@ namespace sw
     {
         // 배치가 메시의 소유를 들고 있으므로(스냅샷 소유 규칙) 큐에 넘겨도 워커가 도는 동안 사라지지 않는다.
         for ( const GpuMeshBatch& batch : _snapshot._listAllBatch )
+        {
             queue.requestMesh( batch._mesh );
+        }
     }
 
     void GpuSceneBuilder::collectSkinPalettes( GameObjectManager& objects )
@@ -850,7 +858,9 @@ namespace sw
                 entry._firstMorphWeight = static_cast<uint32>( listWeight->size() );
                 entry._morphWeightCount = static_cast<uint32>( pListMorphWeight->size() );
                 for ( const float32 weight : *pListMorphWeight )
+                {
                     listWeight->push_back( MathUtil::clamp( weight, 0.0f, 1.0f ) );
+                }
             }
             for ( const float4x4& matrix : listPalette )
             {
@@ -940,7 +950,9 @@ namespace sw
         if ( moveCount > moveBudget )
             std::sort( _listTransparentSortKey.begin(), _listTransparentSortKey.end(), isFartherFirst );
         for ( size_t sortIndex = 0; sortIndex < transparentCount; ++sortIndex )
+        {
             _listScratchTransparentIdx[sortIndex] = _listTransparentSortKey[sortIndex]._candidateIndex;
+        }
     }
 
     bool GpuSceneBuilder::isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
@@ -1004,12 +1016,16 @@ namespace sw
             order._tailBase                     = tailBase;
             shared_ptr<vector<uint32>> listRank = make_shared<vector<uint32>>( tailCount );
             for ( uint32 rank = 0; rank < tailCount; ++rank )
+            {
                 ( *listRank )[_listViewSortKey[rank]._candidateIndex] = rank;
+            }
 
             // 2) 배치 안을 rank 순으로 다시 놓은 꼬리 슬롯(컬링 없는 백엔드의 인스턴스 슬롯 스트림)과, 배치마다 가장 먼저 그릴 인스턴스의 rank.
             shared_ptr<vector<uint32>> listTailSlot = make_shared<vector<uint32>>( tailCount );
             for ( uint32 tailIndex = 0; tailIndex < tailCount; ++tailIndex )
+            {
                 ( *listTailSlot )[tailIndex] = tailBase + tailIndex;
+            }
             vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
             for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
             {
@@ -1020,14 +1036,18 @@ namespace sw
                 const uint32 begin = batch._instanceBase - tailBase;
                 const uint32 end   = begin + batch._instanceCount;
                 for ( uint32 tailIndex = begin; tailIndex < end; ++tailIndex )
+                {
                     listBatchFirstRank[batchIndex] = MathUtil::min( listBatchFirstRank[batchIndex], ( *listRank )[tailIndex] );
+                }
                 std::sort( listTailSlot->begin() + begin, listTailSlot->begin() + end,
                            [&listRank, tailBase]( uint32 slotA, uint32 slotB )
                 { return ( *listRank )[slotA - tailBase] < ( *listRank )[slotB - tailBase]; } );
             }
             order._listBatchOrder.resize( listBatch.size() );
             for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
+            {
                 order._listBatchOrder[batchIndex] = batchIndex;
+            }
             std::stable_sort( order._listBatchOrder.begin(), order._listBatchOrder.end(),
                               [&listBatchFirstRank]( uint32 batchA, uint32 batchB )
             { return listBatchFirstRank[batchA] < listBatchFirstRank[batchB]; } );
@@ -1365,7 +1385,9 @@ namespace sw
         // 지연 회수한다. 자리를 옮기지 않으므로 인덱스는 안정적이다.
         ++_buildCounter;
         for ( MaterialGroupState& state : _listMaterialGroupState )
+        {
             state._bHasLast = SW_FALSE;
+        }
 
         if ( _listScratchOpaqueEntry.empty() == false )
         {

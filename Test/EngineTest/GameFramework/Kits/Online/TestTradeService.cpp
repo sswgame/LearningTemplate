@@ -358,7 +358,9 @@ SW_TEST_CASE( TradeServiceTest, UntradableAssetsTooManyLegsAndDuplicateConfirm )
                         ._result == TradeResult::NotTradable );
     vector<TradeLeg> listTooMany;
     for ( int32 index = 0; index <= TradeConstant::kMaxLegsPerSide; ++index )
+    {
         listTooMany.push_back( TradeLeg{ "item.gem" + to_string( index ), 1 } );
+    }
     SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, listTooMany, 1100 )._result == TradeResult::TooManyLegs );
     SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, {
                                                         TradeLeg{"item.sword", 1},

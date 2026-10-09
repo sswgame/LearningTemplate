@@ -30,7 +30,9 @@ namespace sw
         utf8   arrShort[kMaxPosixLength + 1]{};
         size_t length = 0;
         while ( length < kMaxPosixLength && pName[length] != '\0' )
+        {
             ++length;
+        }
         Memory::copy( arrShort, pName, length );
         pthread_setname_np( pthread_self(), arrShort );
 #endif

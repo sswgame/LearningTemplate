@@ -106,7 +106,9 @@ SW_TEST_CASE( RemoteConfigTest, RolloutIsDeterministicPerAccount )
     const int32 halfCount = Internal::countEnabled( config, "feature.half" );
     SW_EXPECT_TRUE( 450 <= halfCount && halfCount <= 550 );
     for ( uint64 accountId = 1; accountId <= 50; ++accountId )
+    {
         SW_EXPECT_EQUAL( config.isFeatureEnabled( "feature.half", accountId ), config.isFeatureEnabled( "feature.half", accountId ) );
+    }
     SW_EXPECT_TRUE( config.isFeatureEnabled( "feature.missing", 7, true ) ); // 없는 플래그는 기본값
     SW_EXPECT_FALSE( config.isFeatureEnabled( "feature.missing", 7, false ) );
 }

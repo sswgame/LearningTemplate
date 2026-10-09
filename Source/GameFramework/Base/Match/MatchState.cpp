@@ -207,7 +207,9 @@ namespace sw
         }
         int32 remaining = 0;
         for ( const MatchTeam& other : _listTeam )
+        {
             remaining += other._bEliminated ? 0 : 1;
+        }
         target._placement = remaining + 1;
         pushEvent( MatchEvent::Kind::TeamEliminated, -1, -1, team, target._placement );
     }
@@ -240,7 +242,9 @@ namespace sw
         // 게이지가 바닥난 팀이 생기면 늘 끝난다(기체 대전). 섬멸 규칙이면 하나 남을 때.
         bool bAnyCostLoss = false;
         for ( const MatchTeam& team : _listTeam )
+        {
             bAnyCostLoss = bAnyCostLoss || ( team._bEliminated && team._bUnlimitedCost == SW_FALSE && team._costPool <= 0 );
+        }
         if ( standingCount == 0 )
             endMatch( -1 );
         else if ( standingCount == 1 && ( _settings._bLastTeamStandingWins || bAnyCostLoss ) && _listTeam.size() > 1 )
@@ -295,7 +299,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const MatchParticipant& participant : _listParticipant )
+        {
             count += participant._team == team && participant._bEliminated == SW_FALSE ? 1 : 0;
+        }
         return count;
     }
 

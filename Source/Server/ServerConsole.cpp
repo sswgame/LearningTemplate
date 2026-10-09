@@ -41,7 +41,9 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         for ( string& line : _listLine )
+        {
             outListLine.push_back( std::move( line ) );
+        }
         _listLine.clear();
     }
 

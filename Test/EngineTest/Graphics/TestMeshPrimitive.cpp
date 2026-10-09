@@ -360,7 +360,9 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
         {
             bool bAllWhite = true;
             for ( const sw::RHIVertex& vertex : pMesh->getVertices() )
+            {
                 bAllWhite = bAllWhite && vertex._arrColor[0] == 1.0f && vertex._arrColor[1] == 1.0f && vertex._arrColor[2] == 1.0f && vertex._arrColor[3] == 1.0f;
+            }
             SW_EXPECT_TRUE_MSG( bAllWhite, ( sw::string( "vertex colors are not white: " ) + pId ).c_str() );
         }
     }

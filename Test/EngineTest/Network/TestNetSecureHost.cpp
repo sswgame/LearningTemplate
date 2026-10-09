@@ -69,7 +69,9 @@ namespace
                                         ( static_cast<uint32>( pData[3] ) << 24 );
                 const uint32 checksum = NetHost::computePacketChecksum( headerId, bytes.data() + 8, size - 8 );
                 for ( int32 index = 0; index < 4; ++index )
+                {
                     bytes[static_cast<size_t>( 4 + index )] = static_cast<uint8>( checksum >> ( index * 8 ) );
+                }
             }
             _listSent.push_back( bytes );
             _lastTo = to;
@@ -205,7 +207,9 @@ SW_TEST_CASE( NetSecureHostTest, TamperedAndReplayedPacketsAreDroppedAndCounted 
     SW_EXPECT_EQUAL( 2, static_cast<int32>( buffer[1] ) );
     SW_EXPECT_FALSE( pair._server.receiveMessage( connectionId, channel, buffer ) );
     for ( size_t index = sentBefore; index < pair._clientTap._listSent.size(); ++index )
+    {
         pair._clientTap.replay( index );
+    }
     pair.run( 0.1 );
     SW_EXPECT_FALSE( pair._server.receiveMessage( connectionId, channel, buffer ) );
     SW_EXPECT_TRUE( pair._server.getReplayRejectedCount() >= 1 );

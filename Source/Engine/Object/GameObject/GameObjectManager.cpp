@@ -72,7 +72,9 @@ namespace sw
                 if ( cache._generation != generation )
                 {
                     for ( ComponentTypeCache::Slot& slot : cache._arrSlot )
+                    {
                         slot = ComponentTypeCache::Slot{ 0, nullptr };
+                    }
                     cache._generation = generation;
                 }
                 const uint32              nameIndex = typeName.getIndex();

@@ -31,7 +31,9 @@ namespace sw
                 if ( bufferedBitCount > 0 )
                     text.push_back( pAlphabet[( buffer << ( 6 - bufferedBitCount ) ) & 0x3Fu] );
                 while ( bPad && text.size() % 4 != 0 )
+                {
                     text.push_back( '=' );
+                }
                 return text;
             }
 
@@ -49,7 +51,9 @@ namespace sw
             {
                 outBytes.clear();
                 while ( text.empty() == false && text.back() == '=' )
+                {
                     text.remove_suffix( 1 );
+                }
                 if ( text.size() % 4 == 1 )
                     return false; // 6 비트 하나로는 바이트가 되지 않는다
                 outBytes.reserve( text.size() * 3 / 4 );

@@ -105,7 +105,9 @@ SW_TEST_CASE( CombatTest, TurnOrderSortsRoundsByPriorityAndRunsTimelinesBySpeed 
     SW_EXPECT_EQUAL( 1, listPreview[0] );
     SW_EXPECT_EQUAL( 2, listPreview[1] );
     for ( const int32 expected : listPreview )
+    {
         SW_EXPECT_EQUAL( expected, rounds.next() );
+    }
     SW_EXPECT_EQUAL( 2, rounds.getRound() );
     rounds.removeActor( 2 );
     rounds.restartRound();

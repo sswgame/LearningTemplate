@@ -123,7 +123,9 @@ namespace sw
                     arrWord[6]  = desc._bTiled;
                     uint64 hash = HashUtil::kFnvOffset64;
                     for ( const uint32 word : arrWord )
+                    {
                         hash = ( hash ^ word ) * HashUtil::kFnvPrime64;
+                    }
                     return static_cast<size_t>( hash );
                 }
             };
@@ -200,7 +202,9 @@ namespace sw
             for ( const Internal::Span& row : listRow )
             {
                 for ( const Internal::Span& column : listColumn )
+                {
                     Internal::appendQuad( column, row, mirror, outListVertex );
+                }
             }
         }
     }

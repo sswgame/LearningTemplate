@@ -53,7 +53,9 @@ namespace
             _server.initialize( &world.getHost(), ReplicationServerSettings{} );
             world.getRouter().addHandler( &_server );
             for ( uint32 index = 0; index < NetReplicationBenchInternal::kEntityCount; ++index )
+            {
                 _listEntity.push_back( NetEntityState{ vector<uint8>( NetReplicationBenchInternal::kStateBytes, static_cast<uint8>( index ) ), index + 1, 1 } );
+            }
         }
 
         void onTickEnd( NetSimWorld& world, float32 deltaTime ) override
@@ -65,13 +67,17 @@ namespace
             for ( uint32 index = tick % Internal::kChangeStride; index < static_cast<uint32>( _listEntity.size() ); index += Internal::kChangeStride )
             {
                 for ( uint32 byte = 0; byte < 4; ++byte )
+                {
                     _listEntity[index]._buffer[byte] = static_cast<uint8>( tick >> ( 8 * byte ) );
+                }
             }
             const uint64    allocationBefore = Internal::readAllocationCount();
             const Stopwatch stopwatch;
             _server.beginTick( tick );
             for ( const NetEntityState& entity : _listEntity )
+            {
                 _server.setEntity( entity._entityId, entity._typeId, entity._buffer );
+            }
             _server.endTick();
             _server.sendSnapshots();
             if ( _pProbe->_bMeasuring == SW_TRUE )
@@ -136,7 +142,9 @@ SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHert
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     for ( uint32 index = 0; index < Internal::kClientCount; ++index )
+    {
         SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions{} ) > 0 );
+    }
     harness.stepTicks( Internal::kWarmupTicks );
     SW_ASSERT_TRUE( harness.areAllClientsConnected() );
 
@@ -168,5 +176,7 @@ SW_TEST_CASE( NetReplicationBenchTest, SixteenClientsThousandEntitiesAtSixtyHert
     vector<NetSimWorld*> listClient;
     harness.collectClients( listClient );
     for ( NetSimWorld* pClient : listClient )
+    {
         SW_EXPECT_NOT_NULL( static_cast<BenchClientSession*>( pClient->getSession() )->getClient().getLatest() );
+    }
 }

@@ -40,7 +40,9 @@ namespace sw
         _listChunk.clear();
         _listChunk.resize( static_cast<size_t>( _chunkCountX * _chunkCountZ ) );
         for ( VoxelChunk& chunk : _listChunk )
+        {
             chunk._listBlock.assign( static_cast<size_t>( kVoxelChunkVolume ), kVoxelAirBlock );
+        }
     }
 
     bool VoxelWorld::bindLand( LandRegistry* pLand, const int2& origin )
@@ -139,7 +141,9 @@ namespace sw
                 const VoxelBlockIndex block = chunk._listBlock[index];
                 uint32                run   = 1;
                 while ( index + run < chunk._listBlock.size() && chunk._listBlock[index + run] == block )
+                {
                     ++run;
+                }
                 outArchive << block;
                 outArchive << run;
                 index += run;

@@ -235,7 +235,9 @@ namespace
         sw::vector<uint8> bytes;
         bytes.reserve( hex.size() / 2 );
         for ( size_t charIndex = 0; charIndex + 1 < hex.size(); charIndex += 2 )
+        {
             bytes.push_back( static_cast<uint8>( ( hexDigitValue( hex[charIndex] ) << 4 ) | hexDigitValue( hex[charIndex + 1] ) ) );
+        }
         return bytes;
     }
 
@@ -540,7 +542,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
                 if ( tag.back() == '/' )
                     tag.pop_back();
                 while ( tag.empty() == false && tag.back() == ' ' )
+                {
                     tag.pop_back();
+                }
 
                 size_t spacePos = tag.find( ' ' );
                 if ( spacePos != sw::string::npos )
@@ -551,7 +555,9 @@ struct SimpleXmlBackend : public sw::IXmlBackend
                     while ( attrPos < attrs.size() )
                     {
                         while ( attrPos < attrs.size() && attrs[attrPos] == ' ' )
+                        {
                             ++attrPos;
+                        }
                         size_t eqPos = attrs.find( '=', attrPos );
                         if ( eqPos == sw::string::npos )
                             break;
@@ -2705,7 +2711,9 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
     SW_EXPECT_FALSE( info.usesPodCopyFastPath() );
 
     for ( sw::float3& value : sw::ExternalStorageTestActor::s_arrExternalPosition )
+    {
         value = sw::float3{ 0.0f, 0.0f, 0.0f };
+    }
 
     sw::ExternalStorageTestActor source;
     source._storageIndex = 1;

@@ -1063,7 +1063,9 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishSurviveSaveFromAnotherRun )
     SW_ASSERT_TRUE( instance.captureSnapshot( snapshot ) );
     SW_ASSERT_TRUE( 16 <= snapshot.size() );
     for ( size_t byteIndex = 8; byteIndex < 16; ++byteIndex )
+    {
         snapshot[byteIndex] = static_cast<uint8>( snapshot[byteIndex] ^ 0xFFu ); // 다른 실행 — 프로세스 표를 바꾼다
+    }
     SW_ASSERT_TRUE( instance.restoreSnapshot( snapshot ) );
     pManager->mergePendingAdds();
     pManager->tick( 0.0f );

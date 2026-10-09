@@ -299,7 +299,9 @@ namespace sw
 
         SrpgCombatInternal::resolveStrike( field, forecast._attack, SrpgStrikeRole::Main, outResult );
         for ( const SrpgStrikePreview& sync : forecast._listSync )
+        {
             SrpgCombatInternal::resolveStrike( field, sync, SrpgStrikeRole::Sync, outResult ); // 동기 공격은 EN · 탄을 쓰지 않는다
+        }
         if ( forecast._supportAttack.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE )
         {
             field.consumeWeapon( forecast._supportAttack._attacker, forecast._supportAttack._weapon );
@@ -346,7 +348,9 @@ namespace sw
         pMutableAttacker->_bAttacked = SW_TRUE;
         pMutableAttacker->_bMoved    = SW_TRUE;
         for ( const SrpgStrikePreview& strike : listStrike )
+        {
             SrpgCombatInternal::resolveStrike( field, strike, SrpgStrikeRole::Map, outResult );
+        }
         return outResult._status;
     }
 } // namespace sw

@@ -19,14 +19,18 @@ namespace sw
             static void writeLittle( uint8* pOut, uint64 value, int32 byteCount )
             {
                 for ( int32 index = 0; index < byteCount; ++index )
+                {
                     pOut[index] = static_cast<uint8>( value >> ( index * 8 ) );
+                }
             }
 
             static void wipeBytes( void* pData, size_t size )
             {
                 volatile uint8* pByte = static_cast<volatile uint8*>( pData );
                 for ( size_t index = 0; index < size; ++index )
+                {
                     pByte[index] = 0;
+                }
             }
         };
     } // namespace
@@ -76,6 +80,8 @@ namespace sw
     {
         std::memcpy( pOutNonce, pIv, NetSecurityConstant::kAeadNonceSize );
         for ( int32 index = 0; index < 8; ++index )
+        {
             pOutNonce[NetSecurityConstant::kAeadNonceSize - 1 - index] ^= static_cast<uint8>( packetNumber >> ( index * 8 ) );
+        }
     }
 } // namespace sw

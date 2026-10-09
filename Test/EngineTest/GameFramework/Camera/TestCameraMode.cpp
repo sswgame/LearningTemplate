@@ -86,7 +86,9 @@ SW_TEST_CASE( CameraModeTest, ThirdPersonArmPullsInOnCollisionAndEasesBack )
     const float32 expected = 2.0f + 3.0f * ( 1.0f - ::expf( -0.1f / 0.3f ) );
     SW_EXPECT_NEAR_EQUAL( -expected, easing._position._z, 1.0e-3f );
     for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+    {
         (void)evaluateCameraMode( def, target, 0.1f, state, &probe );
+    }
     SW_EXPECT_NEAR_EQUAL( 5.0f, state._armLength, 1.0e-3f );
 }
 

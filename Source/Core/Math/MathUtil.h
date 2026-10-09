@@ -96,7 +96,9 @@ namespace sw
 #else
             uint32 index = 0;
             while ( ( ( value >> index ) & 1u ) == 0 )
+            {
                 ++index;
+            }
             return index;
 #endif
         }

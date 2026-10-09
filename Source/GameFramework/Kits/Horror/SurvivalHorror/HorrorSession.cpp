@@ -271,7 +271,9 @@ namespace sw
             return false;
         }
         for ( const hashed_string& outputId : listOutput )
+        {
             pushEvent( SurvivalHorrorEvent::Kind::Combined, outputId, static_cast<float32>( pRecipe->_outputs.getItemCount( outputId ) ) );
+        }
         return true;
     }
 
@@ -442,7 +444,9 @@ namespace sw
             return false;
         pushEvent( SurvivalHorrorEvent::Kind::DocumentRead, documentId );
         for ( const hashed_string& clueId : pDocument->_listClue )
+        {
             addClue( clueId );
+        }
         return true;
     }
 

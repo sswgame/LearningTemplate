@@ -211,7 +211,9 @@ namespace sw
             hash = Internal::combineText( hash, definition._eventId );
             hash = HashUtil::combine( hash, static_cast<uint64>( windowEndMs ) ); // 반복 회차가 바뀌어도 바뀐다
             for ( const LiveEventParameter& parameter : definition._listParameter )
+            {
                 hash = Internal::combineText( Internal::combineText( hash, parameter._key ), parameter._value );
+            }
         }
         return hash;
     }
@@ -263,7 +265,9 @@ namespace sw
             state._kind           = definition._kind;
             state._windowEndMs    = windowEndMs;
             for ( const LiveEventParameter& parameter : definition._listParameter )
+            {
                 state._listParameter.push_back( LiveEventParameter{ parameter._key, resolveValue( parameter._value ) } );
+            }
         }
     }
 

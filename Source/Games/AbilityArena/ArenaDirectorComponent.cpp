@@ -426,7 +426,9 @@ namespace sw
     {
         (void)bRespawnViews; // 플레이어 · 웨이브는 틱이 청한다(`_bUnitsRequested`) — 여기는 쌓인 것만 세운다
         for ( const SpawnRequest& request : _listPendingUnit )
+        {
             (void)spawnUnit( manager, request ); // 하나가 실패해도 나머지는 선다 — 실패한 플레이어는 다시 서기 시간이 지나 다시 세운다
+        }
         _listPendingUnit.clear();
         syncPlayerPossession( manager );
     }
@@ -666,7 +668,9 @@ namespace sw
     {
         bool bPlayerPresent = hasPendingUnit( ArenaUnitKind::Player );
         for ( const ArenaUnit& unit : _listUnit )
+        {
             bPlayerPresent = bPlayerPresent || unit._kind == ArenaUnitKind::Player;
+        }
         if ( bPlayerPresent )
         {
             _playerRespawnTimer = -1.0f;

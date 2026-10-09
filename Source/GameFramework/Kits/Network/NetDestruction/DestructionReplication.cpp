@@ -178,7 +178,9 @@ namespace sw
     void DestructionReplicationServer::onConnectionOpened( int32 connectionId )
     {
         for ( const Entry& entry : _listEntry )
+        {
             _listRequest.push_back( Request{ connectionId, entry._netId } );
+        }
     }
 
     void DestructionReplicationServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
@@ -734,7 +736,9 @@ namespace sw
         // 그룹 번호는 늘기만 한다 — 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것, 큰 것은 그 사건이 아직 오지 않은 것(자세를 먼저 받았다).
         uint32 maxGroupId = 0;
         for ( const DestructionGroup& group : component.getState().getGroups() )
+        {
             maxGroupId = MathUtil::max( maxGroupId, group._id );
+        }
         for ( size_t trackIndex = 0; trackIndex < entry._listChunk.size(); )
         {
             ChunkTrack& track     = entry._listChunk[trackIndex];

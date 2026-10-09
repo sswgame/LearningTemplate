@@ -320,7 +320,9 @@ namespace sw
         if ( _dependencies._pRouter != nullptr )
         {
             for ( const auto& [cacheRequestId, read] : _mapCacheRequestToRead )
+            {
                 _dependencies._pRouter->cancel( cacheRequestId );
+            }
         }
         _mapCacheRequestToRead.clear();
         _mapQuery.clear();

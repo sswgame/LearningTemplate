@@ -25,10 +25,14 @@ namespace sw
                 while ( cursor < text.size() )
                 {
                     while ( cursor < text.size() && ( text[cursor] == ' ' || text[cursor] == ',' || text[cursor] == '\t' ) )
+                    {
                         ++cursor;
+                    }
                     const size_t start = cursor;
                     while ( cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t' )
+                    {
                         ++cursor;
+                    }
                     if ( cursor == start )
                         break;
                     int32 value = 0;
@@ -78,7 +82,9 @@ namespace sw
                     return false;
                 constexpr uint32 kArrCellOfNeighbor[8] = { 0, 1, 2, 3, 5, 6, 7, 8 };
                 for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
+                {
                     outArrNeighbor[neighbor] = arrCell[kArrCellOfNeighbor[neighbor]];
+                }
                 return true;
             }
         };

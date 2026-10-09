@@ -127,7 +127,9 @@ namespace sw
         const auto addHouseRow = [this]( int32 minX, int32 maxX, int32 y, int32 minPopulation )
         {
             for ( int32 x = minX; x <= maxX; ++x )
+            {
                 addBuilding( "house", x, y, minPopulation );
+            }
         };
 
         // 1 구역(x 18..26, y 5..13) — 도로 고리 · 우물 · 농장 · 창고 · 바자 · 집 · 신전.
@@ -145,7 +147,9 @@ namespace sw
         addHouseRow( 18, 26, 12, 0 );
         addBuilding( "shrine", 23, 5, 0 );
         for ( int32 y = 7; y <= 10; ++y )
+        {
             addBuilding( "house", 26, y, 0 );
+        }
         addBuilding( "garden", 21, 11, 0 );
         addBuilding( "garden", 25, 11, 0 );
         addBuilding( "tax_collector", 18, 8, 20 );

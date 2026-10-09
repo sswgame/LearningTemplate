@@ -37,7 +37,9 @@ namespace sw
             if ( animation._firstFrame != _firstFrame || animation._frameCount != _frameCount )
                 continue;
             for ( const AnimNotifyEvent& event : animation._listNotify )
+            {
                 _notifyTrack.addEvent( event );
+            }
             break;
         }
     }
@@ -51,7 +53,9 @@ namespace sw
     {
         float32 start = 0.0f;
         for ( int32 frame = 0; frame < frameInRange && frame < _frameCount; ++frame )
+        {
             start += getFrameDuration( frame );
+        }
         return start;
     }
 

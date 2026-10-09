@@ -84,12 +84,18 @@ namespace
             {
                 outNameSet._uniqueBindingName.insert( constantBuffer._name );
                 for ( const sw::ShaderVariableInfo& variable : constantBuffer._listVariable )
+                {
                     outNameSet._uniqueMemberName.insert( variable._name );
+                }
             }
             for ( const sw::ShaderReflectedBinding& resource : reflection._listResource )
+            {
                 outNameSet._uniqueBindingName.insert( resource._name );
+            }
             for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
+            {
                 outNameSet._uniqueBindingName.insert( element._name );
+            }
         }
     }
 
@@ -329,7 +335,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, AllCookedShadersMatchContract )
                 sw::vector<sw::ShaderBindingValidatorIssue> listIssue;
                 const uint32                                issueCount = sw::ShaderBindingValidator::validate( reflection, target._format, path, &listIssue );
                 for ( const sw::ShaderBindingValidatorIssue& issue : listIssue )
+                {
                     SW_LOG_WARNING( "%# — %#: %#", path.c_str(), issue._resource.c_str(), issue._message.c_str() );
+                }
                 violationCount += issueCount;
                 ++checkedCount;
             }
@@ -409,7 +417,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReflectionNamesAreUniformAcrossBackend
                     continue;
                 per.bHasPass = true;
                 for ( const sw::ShaderVariableInfo& var : cb._listVariable )
+                {
                     per.passMembers += var._name + "@" + sw::to_string( var._offset ) + ";";
+                }
             }
             for ( const sw::ShaderBufferInfo& element : reflection._listStructuredElement )
             {
@@ -577,7 +587,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
             {
                 uint32 nameIndex = 0;
                 while ( nameIndex < 3 && element._name != arrInstanceBufferName[nameIndex] )
+                {
                     ++nameIndex;
+                }
                 if ( nameIndex == 3 )
                     continue;
                 ++arrCheckedPerName[nameIndex];
@@ -615,7 +627,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct 
     if ( checkedCount == 0 )
         SW_TEST_SKIP( "g_SwInstances 를 선언한 쿠킹된 셰이더가 없습니다 (--cook-shaders 를 먼저 돌리세요)" );
     for ( uint32 nameIndex = 0; nameIndex < 3; ++nameIndex )
+    {
         SW_EXPECT_TRUE_MSG( arrCheckedPerName[nameIndex] > 0, ( sw::string( arrInstanceBufferName[nameIndex] ) + " 를 담은 쿠킹된 셰이더가 없다 — 이름이 바뀌어 검사가 눈을 감았다" ).c_str() );
+    }
 }
 
 /**
@@ -662,7 +676,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
     if ( allNameSet._entryCount == 0 )
         SW_TEST_SKIP( "쿠킹된 리플렉션 매니페스트를 찾지 못했습니다 (App.exe --cook-shaders 필요)" );
     for ( uint32 formatIndex = 0; formatIndex < kFormatCount; ++formatIndex )
+    {
         SW_EXPECT_TRUE_MSG( arrNameSet[formatIndex]._entryCount > 0, ( sw::string( arrFormatName[formatIndex] ) + " 매니페스트가 없다 — 그 백엔드의 이름은 검사되지 않는다" ).c_str() );
+    }
 
     // 1) 계약 표
     for ( const sw::ShaderReservedBinding& reserved : sw::ShaderBindingValidator::getReservedBindings() )
@@ -691,7 +707,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
     const utf8* arrResourceName[] = { sw::shaderslot::resname::kMorphRestVertices, sw::shaderslot::resname::kMorphVerticesRw, sw::shaderslot::resname::kSkinWeights,
                                       sw::shaderslot::resname::kSkinPalette, sw::shaderslot::resname::kSkinInstances };
     for ( const utf8* pName : arrResourceName )
+    {
         SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueBindingName, pName ), ( sw::string( "리소스 '" ) + pName + "' 가 어느 매니페스트에도 없다" ).c_str() );
+    }
 
     // 3) PassCB · 루트 상수 멤버 — 엔진이 리플렉션 멤버 이름으로 값을 채운다
     const sw::PassConstantNames& passNames       = sw::passConstantNames();
@@ -716,7 +734,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swVertexAnimationTime,
     };
     for ( const sw::hashed_string* pName : arrMemberName )
+    {
         SW_EXPECT_TRUE_MSG( hasName( allNameSet._uniqueMemberName, pName->c_str() ), ( sw::string( "cbuffer 멤버 '" ) + pName->c_str() + "' 가 어느 매니페스트에도 없다" ).c_str() );
+    }
 
     // 4) 레지스트리 이름 — 리소스 `g_<이름>` 으로 걸린다(ShaderBindingLayout 의 canonical 이름)
     const sw::hashed_string* arrRegistryName[] = {
@@ -793,7 +813,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableIsConsistent )
     {
         SW_EXPECT_TRUE( list[indexA]._name != nullptr && list[indexA]._name[0] != '\0' );
         for ( size_t indexB = indexA + 1; indexB < list.size(); ++indexB )
+        {
             SW_EXPECT_TRUE_MSG( sw::string( list[indexA]._name ) != list[indexB]._name, list[indexA]._name );
+        }
     }
 }
 
@@ -852,7 +874,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ConsumedVertexAttributeMaskFollowsShad
         const uint32     mask = maskOf( fileName.c_str(), inputCount );
         uint32           bitCount{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < sw::constant::kVertexAttributeCount; ++attributeIndex )
+        {
             bitCount += ( mask >> attributeIndex ) & 1u;
+        }
         SW_EXPECT_TRUE_MSG( bitCount == inputCount, ( fileName + ": 셰이더가 읽는 정점 입력 중 PSO 가 걸지 않는 것이 있다" ).c_str() );
         ++checkedCount;
     }
@@ -931,7 +955,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, RootConstantLimitIsTheShaderContract )
             {
                 size_t valueStart = equal + 1;
                 while ( valueStart < line.size() && line[valueStart] == ' ' )
+                {
                     ++valueStart;
+                }
                 if ( valueStart < line.size() && line[valueStart] >= '0' && line[valueStart] <= '9' )
                     listOffender += sw::FileUtil::getFileNamePart( path ) + " ";
             }

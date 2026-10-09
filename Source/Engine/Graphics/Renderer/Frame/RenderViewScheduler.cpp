@@ -46,7 +46,9 @@ namespace sw
     uint32 RenderViewScheduler::schedule( float64 now, const Candidate* pCandidate, uint32 candidateCount, uint32 budget, uint8* pOutRender )
     {
         for ( Entry& entry : _listEntry )
+        {
             entry._bSeen = SW_FALSE;
+        }
         _listScratchDue.clear();
         _listScratchOverdue.clear();
         _listScratchRenderCount.clear();
@@ -78,7 +80,9 @@ namespace sw
         {
             _listScratchOrder.resize( _listScratchDue.size() );
             for ( uint32 order = 0; order < static_cast<uint32>( _listScratchOrder.size() ); ++order )
+            {
                 _listScratchOrder[order] = order;
+            }
             std::stable_sort( _listScratchOrder.begin(), _listScratchOrder.end(),
                               [this]( uint32 lhs, uint32 rhs )
             {
@@ -87,13 +91,17 @@ namespace sw
                 return _listScratchRenderCount[lhs] < _listScratchRenderCount[rhs];
             } );
             for ( uint32 order = 0; order < budget; ++order )
+            {
                 pOutRender[_listScratchDue[_listScratchOrder[order]]] = SW_TRUE;
+            }
             chosenCount = budget;
         }
         else
         {
             for ( const uint32 index : _listScratchDue )
+            {
                 pOutRender[index] = SW_TRUE;
+            }
         }
 
         for ( uint32 index = 0; index < candidateCount; ++index )

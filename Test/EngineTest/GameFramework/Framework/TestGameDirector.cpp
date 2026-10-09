@@ -330,7 +330,9 @@ SW_TEST_CASE( GameDirectorTest, TickAfterOrdersDirectorsOnDifferentObjects )
 
     pManager->beginPlay();
     for ( int32 tick = 0; tick < 100; ++tick )
+    {
         pManager->tick( 1.0f / 60.0f );
+    }
     SW_EXPECT_EQUAL( 100, pBefore->_ruleTickCount.load() );
     SW_EXPECT_EQUAL( 100, pAfter->_ruleTickCount.load() ); // 규칙은 한 틱에 한 번(주 틱과 서브틱 둘 다 돌지 않는다)
     SW_EXPECT_EQUAL( 0, pAfter->_watchMismatchCount.load() );

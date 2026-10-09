@@ -85,7 +85,9 @@ namespace sw
                 continue;
             uint32 bestScore = 0;
             for ( const int32 seat : pot._listEligibleSeat )
+            {
                 bestScore = MathUtil::max( bestScore, listScore[static_cast<size_t>( seat )] );
+            }
             // 이긴 자리를 버튼 왼쪽부터의 순서로 — 나머지 칩이 그 순서로 간다.
             vector<int32> listWinner;
             for ( int32 offset = 0; offset < seatCount; ++offset )
@@ -99,7 +101,9 @@ namespace sw
             const int32 share       = pot._amount / winnerCount;
             const int32 remainder   = pot._amount % winnerCount;
             for ( int32 index = 0; index < winnerCount; ++index )
+            {
                 outListWon[static_cast<size_t>( listWinner[static_cast<size_t>( index )] )] += share + ( index < remainder ? 1 : 0 );
+            }
         }
     }
 
@@ -124,7 +128,9 @@ namespace sw
         _listSeat.clear();
         _listSeat.resize( listStack.size() );
         for ( size_t seat = 0; seat < listStack.size(); ++seat )
+        {
             _listSeat[seat]._stack = listStack[seat];
+        }
         _button      = static_cast<int32>( listStack.size() ) - 1;
         _currentSeat = -1;
         _street      = PokerStreet::HandOver;
@@ -301,7 +307,9 @@ namespace sw
                     _lastRaiseSize = increase; // 모자란 올인은 최소 증액을 바꾸지 않는다
                 _currentBet = raiseTo;
                 for ( PokerSeat& other : _listSeat )
+                {
                     other._bActed = SW_FALSE;
+                }
             }
             _eventBuffer.push( PokerEvent{ seat, raiseTo, bAllIn ? PokerEvent::Kind::AllIn : PokerEvent::Kind::Raise } );
         }
@@ -350,7 +358,9 @@ namespace sw
             beginStreet( static_cast<PokerStreet>( static_cast<uint8>( _street ) + 1 ) );
             int32 canActCount = 0;
             for ( int32 index = 0; index < getSeatCount(); ++index )
+            {
                 canActCount += canAct( index ) ? 1 : 0;
+            }
             if ( canActCount >= 2 )
             {
                 _currentSeat = findNextSeat( _button, true );
@@ -388,7 +398,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const PokerSeat& pokerSeat : _listSeat )
+        {
             total += pokerSeat._contributed;
+        }
         return total;
     }
 
@@ -411,7 +423,9 @@ namespace sw
                 arrCard[cardCount++] = pokerSeat._arrHole[0];
                 arrCard[cardCount++] = pokerSeat._arrHole[1];
                 for ( int32 index = 0; index < _board.getCount(); ++index )
+                {
                     arrCard[cardCount++] = _board.getAt( index );
+                }
                 score = PokerHandEvaluator::evaluateBest( arrCard, cardCount )._score;
             }
             listScore.push_back( score );

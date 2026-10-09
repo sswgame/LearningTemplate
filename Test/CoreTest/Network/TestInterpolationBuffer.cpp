@@ -83,7 +83,9 @@ SW_TEST_CASE( InterpolationBufferTest, ConsumedSamplesKeepOneBehindTheRenderTick
     InterpolationBuffer<int32> buffer;
     buffer.initialize( 8 );
     for ( uint32 tick = 0; tick <= 18; tick += 6 )
+    {
         buffer.insert( tick, static_cast<int32>( tick ), false );
+    }
     buffer.removeConsumed( 13.0f ); // 0 · 6 을 버리고 12 · 18 이 남는다
     SW_EXPECT_EQUAL( 2, buffer.getCount() );
     const IntSample* pFrom = nullptr;

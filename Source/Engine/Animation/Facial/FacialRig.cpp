@@ -94,7 +94,9 @@ namespace sw
                 return false;
             }
             for ( size_t targetIndex = 0; targetIndex < targets.size(); ++targetIndex )
+            {
                 _blink._listTarget.push_back( hashed_string( targets.at( targetIndex ).asString() ) );
+            }
             _blink._minInterval = static_cast<float32>( blink.get( "min_interval" ).asFloat() );
             _blink._maxInterval = static_cast<float32>( blink.get( "max_interval" ).asFloat() );
             _blink._duration    = static_cast<float32>( blink.get( "duration" ).asFloat() );
@@ -122,7 +124,9 @@ namespace sw
                 return false;
             }
             for ( size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex )
+            {
                 _gaze._listEyeBone.push_back( hashed_string( bones.at( boneIndex ).asString() ) );
+            }
             _gaze._forwardAxis             = float3{ arrForward }.normalize();
             _gaze._maxAngleDegrees         = static_cast<float32>( gaze.get( "max_angle_degrees" ).asFloat() );
             _gaze._saccadeMinInterval      = static_cast<float32>( gaze.get( "saccade_min_interval" ).asFloat() );

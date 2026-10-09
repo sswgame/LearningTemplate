@@ -40,7 +40,9 @@ namespace sw
         if ( archive.isError() || bSelectedValid == false )
             return false;
         for ( int32 slotIndex = 0; slotIndex < kSlotCount; ++slotIndex )
+        {
             _arrSlot[slotIndex] = arrSlot[slotIndex];
+        }
         _selectedIndex = selectedIndex;
         return true;
     }

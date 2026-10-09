@@ -142,7 +142,9 @@ namespace sw
                 std::sort( listNameHash.begin(), listNameHash.end() );
                 appendUint32( buffer, static_cast<uint32>( listNameHash.size() + ( unnamedBits != 0 ? 1 : 0 ) ) );
                 for ( const uint32 nameHash : listNameHash )
+                {
                     appendEnumEntry( buffer, nameHash, 0 );
+                }
                 if ( unnamedBits != 0 )
                     appendEnumEntry( buffer, 0, unnamedBits );
             }

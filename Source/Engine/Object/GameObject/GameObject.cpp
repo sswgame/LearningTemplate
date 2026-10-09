@@ -666,7 +666,9 @@ namespace sw
         // 파괴 뒤에는 물을 수 없으니 지금 본다. 틱에 참여하던 것이 하나라도 있었을 때만 틱 항목을 다시 짓는다.
         bool bTickWork = false;
         for ( Component* pComp : listOwned )
+        {
             bTickWork = bTickWork || ( pComp != nullptr && pComp->hasTickWork() );
+        }
         for ( Component* pComp : listOwned )
         {
             if ( pComp != nullptr )

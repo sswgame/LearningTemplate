@@ -547,7 +547,9 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
     SW_TEST_DEFER_CLEANUP( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [=]()
     {
         for ( const sw::string& p : { pathA, binA, pathB, binB, pathC, binC } )
+        {
             SW_EXPECT_TRUE( sw::FileUtil::removeFile( p ) );
+        }
     } ) );
 
     for ( const auto& nameAndPath : {

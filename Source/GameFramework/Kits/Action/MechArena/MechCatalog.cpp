@@ -78,7 +78,9 @@ namespace sw
     {
         int32 offset = 0;
         for ( int32 index = 0; index < mode && index < static_cast<int32>( _listMode.size() ); ++index )
+        {
             offset += static_cast<int32>( _listMode[static_cast<size_t>( index )]._listWeapon.size() );
+        }
         return offset;
     }
 

@@ -48,7 +48,9 @@ namespace sw
     {
         value.setArray();
         for ( uint32 index = 0; index < count; ++index )
+        {
             value.pushBack().setFloat( static_cast<float64>( pValue[index] ) );
+        }
     }
 
     bool AnimJsonUtil::readBoneTransform( const JsonValue& object, BoneTransform& outTransform )

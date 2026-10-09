@@ -161,7 +161,9 @@ namespace sw
         }
         bool bAnyLeft = false;
         for ( const SrpgRosterEntry& entry : _listRoster )
+        {
             bAnyLeft = bAnyLeft || entry._bLost == SW_FALSE;
+        }
         _bInMission = SW_FALSE;
         if ( outcome == SrpgOutcome::Defeat || bAnyLeft == false )
             _bFailed = SW_TRUE;

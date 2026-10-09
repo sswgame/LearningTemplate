@@ -413,7 +413,9 @@ namespace sw
             addSweptPairIfTouched( handle, body, displacement, candidate );
         }
         for ( const BodyHandle farMover : listFarMover )
+        {
             addSweptPairIfTouched( handle, body, displacement, farMover );
+        }
     }
 
     void PhysicsWorld::addSweptPairIfTouched( BodyHandle handle, const PhysicsBody& body, const float3& displacement, BodyHandle candidate )

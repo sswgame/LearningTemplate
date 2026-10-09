@@ -296,7 +296,9 @@ namespace sw
         _listTool.clear();
         _listTool.push_back( nullptr );
         for ( const CityBuildingDef& def : _catalog.getBuildings() )
+        {
             _listTool.push_back( &def );
+        }
         _selectedTool = 0;
         return true;
     }
@@ -305,7 +307,9 @@ namespace sw
     {
         WorldClockSettings settings;
         for ( const utf8* pMonth : { "Akhet1", "Akhet2", "Akhet3", "Akhet4", "Peret1", "Peret2", "Peret3", "Peret4", "Shemu1", "Shemu2", "Shemu3", "Shemu4" } )
+        {
             settings._listSeason.push_back( hashed_string( pMonth ) );
+        }
         settings._daysPerSeason = 1;
         settings._startHour     = 0.0f; // 첫 달도 꼭 한 달
         settings._secondsPerDay = _secondsPerMonth;
@@ -323,7 +327,9 @@ namespace sw
             // 같은 넘김의 알림(다음 날 넘김 전까지)에 해 넘김이 있으면 새 해다.
             bool bNewYear = false;
             for ( size_t next = index + 1; next < _listClockEvent.size() && _listClockEvent[next]._kind != WorldClockEvent::Kind::DayChanged; ++next )
+            {
                 bNewYear = bNewYear || _listClockEvent[next]._kind == WorldClockEvent::Kind::YearChanged;
+            }
             _city.settleMonth( bNewYear );
         }
     }

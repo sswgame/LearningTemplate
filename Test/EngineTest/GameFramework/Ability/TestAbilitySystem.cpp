@@ -231,7 +231,9 @@ namespace
     void advanceRepeatedly( AbilitySystemComponent& abilitySystem, float32 deltaTime, int32 count )
     {
         for ( int32 stepIndex = 0; stepIndex < count; ++stepIndex )
+        {
             abilitySystem.advanceTime( deltaTime );
+        }
     }
 
     /** @brief 시험 카탈로그 — 비용 · 쿨다운 · 피해 · 회복 · 세트. */
@@ -402,7 +404,9 @@ SW_TEST_CASE( AbilitySystemTest, StackingAggregatesUpToTheLimitAndExpiresOneStac
     const ActiveEffectHandle firstHandle = pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pStack ) );
     pAbilitySystem->advanceTime( 1.5f );
     for ( int32 applyIndex = 0; applyIndex < 3; ++applyIndex )
+    {
         SW_EXPECT_TRUE( pAbilitySystem->applyGameplayEffectSpecToSelf( pAbilitySystem->makeOutgoingSpec( pStack ) ) == firstHandle );
+    }
 
     SW_EXPECT_EQUAL( 1u, pAbilitySystem->getActiveEffectCount() );
     SW_EXPECT_EQUAL( 3, pAbilitySystem->getActiveEffectStackCount( firstHandle ) );
@@ -512,7 +516,9 @@ SW_TEST_CASE( AbilitySystemTest, DamageExecutionMitigatesByArmorAndKillsExactlyO
     SW_EXPECT_EQUAL( 1, hitCount );
 
     for ( int32 hitIndex = 0; hitIndex < 5; ++hitIndex )
+    {
         (void)pAttacker->applyGameplayEffectSpecToTarget( spec, pTarget ); // 핸들은 쓰지 않는다 — 아래 체력 단언이 본다
+    }
     dispatcher.processEvents();
 
     SW_EXPECT_NEAR_EQUAL( 0.0f, pTarget->getAttributeValue( CombatAttributes::health() ), 0.001f );

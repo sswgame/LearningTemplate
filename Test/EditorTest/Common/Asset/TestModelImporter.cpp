@@ -473,13 +473,17 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_ASSERT_TRUE( hips > 0 );
     SW_EXPECT_EQUAL( result._skeleton.findBoneIndex( sw::hashed_string( "root" ) ), result._skeleton.getBone( static_cast<uint32>( hips ) )._parentIndex );
     for ( uint32 boneIndex = 0; boneIndex < result._skeleton.getBoneCount(); ++boneIndex )
+    {
         SW_EXPECT_TRUE( result._skeleton.getBone( boneIndex )._parentIndex < static_cast<int32>( boneIndex ) ); // 부모가 앞
+    }
     SW_EXPECT_TRUE( result._mesh.hasSkin() );
     SW_EXPECT_EQUAL( 41u, result._mesh._skinBoneCount );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( result._listClip.size() ) );
     bool bSwordOnRightHand = false;
     for ( const sw::editor::ModelImportAttachment& attachment : result._listAttachment )
+    {
         bSwordOnRightHand = bSwordOnRightHand || ( attachment._name == "1H_Sword" && attachment._parentBone == sw::hashed_string( "handslot.r" ) );
+    }
     SW_EXPECT_TRUE( bSwordOnRightHand );
     // 클립 길이 · 압축(ACL) — 오차 1 mm 아래
     for ( const sw::editor::ModelImportClip& imported : result._listClip )
@@ -564,7 +568,9 @@ SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
     // 본 메시는 전부(9 정점)이고, 색은 흰색이다 — baseColorFactor 는 툰 머티리얼의 baseColor 다(감마 → 선형).
     SW_EXPECT_EQUAL( size_t( 9 ), result._mesh._listVertex.size() );
     for ( const sw::RHIVertex& vertex : result._listSection[0]._mesh._listVertex )
+    {
         SW_EXPECT_NEAR_EQUAL( 1.0f, vertex._arrColor[0], 1e-6f );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.21404f, result._listSection[0]._material._baseColor._x, 1e-4f );
 
     // 모르는 MToon 키가 있으면 임포트가 실패한다.

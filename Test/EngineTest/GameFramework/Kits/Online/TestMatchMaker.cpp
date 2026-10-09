@@ -20,7 +20,9 @@ namespace
         ticket._region     = string( region );
         ticket._enqueuedMs = enqueuedMs;
         for ( size_t index = 0; index < listRating.size(); ++index )
+        {
             ticket._listMember.push_back( MatchMember{ ticketId * 10 + index, listRating[index] } );
+        }
         return ticket;
     }
 
@@ -52,7 +54,9 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
     MatchMaker maker;
     maker.initialize( makeMode( 2, 2 ), 7 );
     for ( uint64 ticketId = 1; ticketId <= 4; ++ticketId )
+    {
         SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketId, { static_cast<int32>( 1450 + ticketId * 20 ) } ) ) == MatchmakingResult::Ok );
+    }
     vector<MatchFormed> listMatch;
     vector<MatchTicket> listTimedOut;
     maker.process( 0, listMatch, listTimedOut );
@@ -107,7 +111,9 @@ SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )
     MatchMaker stackMaker;
     stackMaker.initialize( makeMode( 2, 3 ), 1 );
     for ( uint64 ticketId = 1; ticketId <= 3; ++ticketId )
+    {
         SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( ticketId, { 1500 }, "kr", static_cast<int64>( ticketId ) ) ) == MatchmakingResult::Ok );
+    }
     SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( 4, { 1520, 1520, 1520 }, "kr", 4 ) ) == MatchmakingResult::Ok );
     SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( 5, { 1520 }, "kr", 5 ) ) == MatchmakingResult::Ok );
     vector<MatchFormed> listStackMatch;
@@ -158,7 +164,9 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
         MatchMaker maker;
         maker.initialize( mode, 3 );
         for ( uint64 ticketId = 1; ticketId <= 9; ++ticketId )
+        {
             SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketId, { static_cast<int32>( 1000 + ( ticketId * 37 ) % 400 ) }, "kr", static_cast<int64>( ticketId ) ) ) == MatchmakingResult::Ok );
+        }
         vector<MatchTicket> listTimedOut;
         maker.process( 20000, *pOut, listTimedOut );  // 창 100 + 19 × 25 = 575 — 실력 1037..1333 이 모두 든다
         maker.process( 90000, *pOut, listTimedOut );  // 남은 하나는 60 초를 넘겼다

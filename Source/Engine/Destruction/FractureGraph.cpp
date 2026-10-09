@@ -26,7 +26,9 @@ namespace sw
             {
                 uint32 root = item;
                 while ( inoutListParent[root] != root )
+                {
                     root = inoutListParent[root];
+                }
                 while ( inoutListParent[item] != root )
                 {
                     const uint32 next     = inoutListParent[item];
@@ -77,7 +79,9 @@ namespace sw
                     return;
                 }
                 for ( const uint32 child : build._listChild )
+                {
                     collectLeaves( listBuild, child, outListLeaf );
+                }
             }
 
             /** @brief 노드들을 @p clusterCount 개로 나눕니다(가장 먼 점 고르기 + k-평균). 결과는 묶음마다 노드 목록이고 빈 묶음은 없습니다. */
@@ -160,7 +164,9 @@ namespace sw
 
                 outListGroup.assign( listSite.size(), vector<uint32>{} );
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     outListGroup[listAssign[index]].push_back( listCurrent[index] );
+                }
                 for ( size_t group = outListGroup.size(); group > 0; --group )
                 {
                     if ( outListGroup[group - 1].empty() )
@@ -183,12 +189,16 @@ namespace sw
                         listLeaf.clear();
                         collectLeaves( listBuild, node, listLeaf );
                         for ( const uint32 leaf : listLeaf )
+                        {
                             listOwner[leaf] = node;
+                        }
                     }
                 }
                 vector<uint32> listParent( listBuild.size() );
                 for ( uint32 index = 0; index < static_cast<uint32>( listParent.size() ); ++index )
+                {
                     listParent[index] = index;
+                }
                 for ( const FractureLink& link : listLink )
                 {
                     const uint32 ownerA = listOwner[link._leafA];
@@ -208,7 +218,9 @@ namespace sw
                         const uint32 root = findRoot( listParent, node );
                         size_t       part = 0;
                         while ( part < listRootSeen.size() && listRootSeen[part] != root )
+                        {
                             ++part;
+                        }
                         if ( part == listRootSeen.size() )
                         {
                             listRootSeen.push_back( root );
@@ -217,7 +229,9 @@ namespace sw
                         listPart[part].push_back( node );
                     }
                     for ( vector<uint32>& part : listPart )
+                    {
                         listSplit.push_back( std::move( part ) );
+                    }
                 }
                 inoutListGroup = std::move( listSplit );
             }
@@ -238,7 +252,9 @@ namespace sw
     {
         uint32 maxDepth = 0;
         for ( const FractureNode& node : _listNode )
+        {
             maxDepth = MathUtil::max( maxDepth, static_cast<uint32>( node._depth ) );
+        }
         return _listNode.empty() ? 0u : maxDepth + 1;
     }
 
@@ -346,7 +362,9 @@ namespace sw
 
         vector<uint32> listCurrent( leafCount );
         for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
+        {
             listCurrent[leaf] = leaf;
+        }
 
         for ( size_t level = listLevelCount.size(); level > 0; --level )
         {
@@ -402,7 +420,9 @@ namespace sw
             }
         }
         for ( uint32 order = 0; order < static_cast<uint32>( listClusterOrder.size() ); ++order )
+        {
             listFinalOf[listClusterOrder[order]] = leafCount + order;
+        }
 
         const uint32  nodeCount = leafCount + static_cast<uint32>( listClusterOrder.size() );
         FractureGraph result;
@@ -457,7 +477,9 @@ namespace sw
 
         vector<uint32> listNewOfOld( leafCount, 0 );
         for ( uint32 leaf = 0; leaf < leafCount; ++leaf )
+        {
             listNewOfOld[outListLeafOrder[leaf]] = leaf;
+        }
         result._listLink = inoutGraph._listLink;
         for ( FractureLink& link : result._listLink )
         {

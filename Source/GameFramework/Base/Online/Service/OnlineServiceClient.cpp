@@ -233,7 +233,9 @@ namespace sw
         if ( _state == OnlineClientState::VersionMismatch )
             return;
         for ( IOnlineClientService* pService : _listService )
+        {
             pService->onClientDisconnected( *this );
+        }
         _state         = OnlineClientState::Disconnected;
         _nextConnectMs = _nowMs + _backoffMs;
         _backoffMs     = _backoffMs <= 0 ? OnlineServiceClientInternal::kFirstBackoffMs : std::min( _backoffMs * 2, _settings._maxBackoffMs );
@@ -330,7 +332,9 @@ namespace sw
             _state     = OnlineClientState::Ready;
             _backoffMs = 0;
             for ( IOnlineClientService* pService : _listService ) // 재접속 요청이 모은 요청보다 먼저 나간다
+            {
                 pService->onClientReady( *this );
+            }
             flushQueuedCalls();
             return;
         }

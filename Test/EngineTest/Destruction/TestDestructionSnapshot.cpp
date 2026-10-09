@@ -35,7 +35,9 @@ namespace
         {
             sw::vector<uint8> listAnchor( asset.getPieceCount(), 0 );
             for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
+            {
                 listAnchor[leaf] = asset._listPiece[leaf]._boundsMin._y < 0.01f ? 1 : 0;
+            }
             return listAnchor;
         }
 

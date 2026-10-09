@@ -45,7 +45,9 @@ namespace
     void runSteps( ArcadeVehicleMotor& motor, const ArcadeVehicleInput& input, int32 stepCount )
     {
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             motor.update( input, kVehicleStep );
+        }
     }
 
     int32 countEvents( const vector<ArcadeVehicleEvent>& listEvent, ArcadeVehicleEvent::Kind kind )

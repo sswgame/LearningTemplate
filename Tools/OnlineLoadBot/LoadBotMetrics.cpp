@@ -134,7 +134,9 @@ namespace sw
         string text;
         Internal::appendCell( text, "action", Internal::kActionColumnWidth, true );
         for ( const string_view header : { "count", "errors", "p50 ms", "p95 ms", "p99 ms", "max ms" } )
+        {
             Internal::appendCell( text, header, Internal::kNumberColumnWidth, false );
+        }
         text += '\n';
         for ( const LoadBotActionSummary& summary : listSummary )
         {
@@ -192,11 +194,15 @@ namespace sw
         const JsonValue mapError = root.set( "_mapError", false );
         mapError.setObject();
         for ( const auto& [errorKey, count] : _mapErrorKeyToCount )
+        {
             mapError.set( errorKey, false ).setInt( count );
+        }
         const JsonValue mapPush = root.set( "_mapPush", false );
         mapPush.setObject();
         for ( const auto& [pushKind, count] : _mapPushKindToCount )
+        {
             mapPush.set( LoadBotMetricsInternal::makeNumberText( pushKind ), false ).setInt( count );
+        }
         const JsonValue connection = root.set( "_connection", false );
         connection.setObject();
         connection.set( "_opened", false ).setInt( _openedCount );
@@ -214,7 +220,9 @@ namespace sw
     {
         int64 count = 0;
         for ( const vector<int64>& listSample : _listSampleByAction )
+        {
             count += static_cast<int64>( listSample.size() );
+        }
         return count;
     }
 
@@ -222,7 +230,9 @@ namespace sw
     {
         int64 count = 0;
         for ( const int64 errorCount : _listErrorCountByAction )
+        {
             count += errorCount;
+        }
         return count;
     }
 

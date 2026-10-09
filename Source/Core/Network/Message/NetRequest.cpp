@@ -101,7 +101,9 @@ namespace sw
             _mapPending.clear();
         }
         for ( auto& [requestId, pending] : mapPending )
+        {
             finish( requestId, std::move( pending ), NetRequestStatus::Cancelled, nullptr, 0 );
+        }
     }
 
     void NetRequestClient::finish( uint64 requestId, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize )
@@ -241,7 +243,9 @@ namespace sw
             }
         }
         for ( auto& [requestId, pending] : listLost )
+        {
             finish( requestId, std::move( pending ), NetRequestStatus::ConnectionLost, nullptr, 0 );
+        }
     }
 
     void NetRequestClient::update()
@@ -264,7 +268,9 @@ namespace sw
             }
         }
         for ( auto& [requestId, pending] : listExpired )
+        {
             finish( requestId, std::move( pending ), NetRequestStatus::DeadlineExceeded, nullptr, 0 );
+        }
     }
 
     int32 NetRequestClient::getPendingCount() const
@@ -524,7 +530,9 @@ namespace sw
         }
         sendResponse( token._handle, token._requestId, status, pBody, bodySize ); // 연결이 닫혔으면 끝점이 Closed 로 버린다 — 기억은 이미 했다
         for ( const NetRequestToken& waiter : listWaiter )
+        {
             sendResponse( waiter._handle, waiter._requestId, status, pBody, bodySize );
+        }
         return true;
     }
 

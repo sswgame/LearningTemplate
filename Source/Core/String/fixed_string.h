@@ -322,7 +322,9 @@ namespace sw
             if constexpr ( sizeof( T ) == 1 )
             {
                 for ( uint32 step = 0; step < 3 && cut > 0 && ( static_cast<uint8>( pSource[cut] ) & 0xC0 ) == 0x80; ++step )
+                {
                     --cut;
+                }
             }
             else if constexpr ( sizeof( T ) == 2 )
             {

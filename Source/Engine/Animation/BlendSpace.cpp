@@ -140,7 +140,9 @@ namespace sw
         // 가장 가까운 표본의 상대 가중치가 1 이므로 합은 1 이상이다 — 작아서 버리는 일이 없다.
         float32 totalWeight = 0.0f;
         for ( const BlendSample2D& sample : _listSample )
+        {
             totalWeight += nearestDistSq / float2::getDistanceSquared( targetParam, sample._parameter );
+        }
         const float32 invTotalWeight = nearestDistSq / totalWeight;
 
         float3         sampleScale{};

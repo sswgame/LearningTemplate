@@ -164,7 +164,9 @@ SW_TEST_CASE( AnimationRewindTest, RecordsStateWithinTheWindow )
         SW_ASSERT_NOT_NULL( pTrack );
         const AnimationRewindFrame& latest = pTrack->getFrame( pTrack->_count - 1 );
         for ( const hashed_string& notify : latest._state._listNotify )
+        {
             bNotifySeen = bNotifySeen || notify == hashed_string( "Step" );
+        }
     }
     const AnimationRewindRecorder& rewind = system.getRewind();
     const AnimationRewindTrack*    pTrack = rewind.findTrack( pUnit->getHandle() );
@@ -257,7 +259,9 @@ SW_TEST_CASE( AnimationRewindTest, TrackOutlivesItsUnitUntilTheWindowPasses )
     AnimationSystem&                             system = manager.getAnimationSystem();
     TestAnimationRewindInternal::ScopedRecording recording( 1.0f );
     for ( uint32 frame = 0; frame < 10; ++frame )
+    {
         system.evaluate( 1.0f / 30.0f );
+    }
     const ComponentHandle handle = pUnit->getHandle();
     manager.destroyObject( pUnit->getOwner() );
     manager.processDeferredDestruction();

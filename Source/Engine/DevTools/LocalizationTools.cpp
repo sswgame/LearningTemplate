@@ -75,7 +75,9 @@ namespace sw
                         gatherer.addTextOrKey( value, rule._context, origin );
                 }
                 for ( XmlNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
                     applyAssetRule( rule, child, gatherer, origin, depth + 1 );
+                }
             }
 
             /** @brief 번역 하나를 원문에 대어 검사합니다 — 구문 · 자리표시자 이름 · 리치 텍스트 태그 열 · 최대 길이. */
@@ -264,7 +266,9 @@ namespace sw
                     if ( pSource->_maxLength != 0 )
                         entry._listExtractedComment.push_back( "Max length: " + to_string( pSource->_maxLength ) );
                     for ( const string& origin : pSource->_listOrigin )
+                    {
                         entry._listReference.push_back( origin );
+                    }
                     ++outResult._entryCount;
 
                     const TranslationEntry* pTranslation = translation.findEntry( key );
@@ -310,7 +314,9 @@ namespace sw
                 for ( const SourceStringTable& table : outListTable )
                 {
                     for ( const auto& [key, entry] : table.getEntries() )
+                    {
                         outMapSource.emplace( key, &entry );
+                    }
                 }
                 return true;
             }
@@ -341,7 +347,9 @@ namespace sw
             {
                 std::sort( listPack.begin(), listPack.end() );
                 for ( const string& packFolder : listPack )
+                {
                     listGameFolder.push_back( FileUtil::joinPath( packFolder, localizationFolder ) );
+                }
             }
         }
         else
@@ -422,7 +430,9 @@ namespace sw
         SourceStringTable&               gatherTable = listTable.front();
         vector<const SourceStringTable*> listOtherTable;
         for ( size_t tableIndex = 1; tableIndex < listTable.size(); ++tableIndex )
+        {
             listOtherTable.push_back( &listTable[tableIndex] );
+        }
         outResult._gatherTablePath = LocalizationProject::makeSiblingPath( absolute, project._listStringTable.front() );
 
         // 1) 코드
@@ -441,7 +451,9 @@ namespace sw
             {
                 bool bCode{ false };
                 for ( const utf8* pExtension : LocalizationToolsInternal::kArrCodeExtension )
+                {
                     bCode = bCode || FileUtil::hasExtension( filePath, pExtension );
+                }
                 string text;
                 if ( bCode == false || FileUtil::readTextFile( filePath, text ) == false )
                     continue;
@@ -494,10 +506,14 @@ namespace sw
         for ( const SourceStringTable& table : listTable )
         {
             for ( const auto& [key, entry] : table.getEntries() )
+            {
                 mapSource.emplace( key, &entry );
+            }
         }
         for ( const string& culture : project._listCulture )
+        {
             LocalizationToolsInternal::updateTranslation( absolute, culture, mapSource, bWrite, outResult );
+        }
         return true;
     }
 
@@ -510,11 +526,17 @@ namespace sw
         // 줄을 모아 한 번에 쓴다 — 정보 로그가 빠지는 배포 구성에서도 같은 코드다.
         string details;
         for ( const string& key : report._listAdded )
+        {
             details.append( "\n  + " ).append( key );
+        }
         for ( const string& key : report._listChanged )
+        {
             details.append( "\n  ~ " ).append( key );
+        }
         for ( const string& key : report._listRemoved )
+        {
             details.append( "\n  - " ).append( key );
+        }
         for ( const LocalizationCultureReport& culture : result._listCulture )
         {
             details.append( "\n  " ).append( culture._culture ).append( ": " ).append( to_string( culture._currentCount ) ).append( " current, " );
@@ -594,7 +616,9 @@ namespace sw
             if ( LocalizationToolsInternal::loadMemory( LocalizationToolsInternal::makeMemoryPath( absolute, culture ), culture, memory, memoryReport ) == false )
             {
                 for ( const TextGatherIssue& issue : memoryReport._listIssue )
+                {
                     SW_LOG_ERROR( "[ExportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
+                }
                 bAllWritten = false;
                 continue;
             }
@@ -633,7 +657,9 @@ namespace sw
         const string culture = CultureTable::normalizeCode( file._language );
         bool         bListed{ false };
         for ( const string& projectCulture : project._listCulture )
+        {
             bListed = bListed || projectCulture == culture;
+        }
         if ( bListed == false )
         {
             SW_LOG_ERROR( "[ImportPo] '%#' is for culture '%#', which project '%#' does not list", poPath, culture.c_str(), project._name.c_str() );
@@ -660,7 +686,9 @@ namespace sw
         if ( LocalizationToolsInternal::loadMemory( memoryPath, culture, memory, memoryReport ) == false )
         {
             for ( const TextGatherIssue& issue : memoryReport._listIssue )
+            {
                 SW_LOG_ERROR( "[ImportPo] translation memory '%#' cannot be read: %#", issue._location.c_str(), issue._message.c_str() );
+            }
             return false;
         }
 

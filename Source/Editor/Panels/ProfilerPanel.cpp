@@ -195,7 +195,9 @@ namespace sw::editor
             if ( _scopeHistory.copySeries( pSeriesName, _listScratchSeries ) == false )
                 continue;
             for ( const float32 value : _listScratchSeries )
+            {
                 maxMicro = MathUtil::max( maxMicro, value );
+            }
         }
         const float32 maxMs = maxMicro / 1000.0f;
         for ( const utf8* pSeriesName : kArrSeriesName )
@@ -206,7 +208,9 @@ namespace sw::editor
                 continue;
             }
             for ( float32& value : _listScratchSeries )
+            {
                 value /= 1000.0f;
+            }
             fixed_string<constant::kMaxBuffer64> overlay;
             formatstring( overlay.data(), overlay.capacity(), "%# %# ms", pSeriesName,
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
@@ -335,7 +339,9 @@ namespace sw::editor
                 _bCatalogDirty = SW_TRUE;
 
             for ( const EditorResourceCatalogCount& row : _catalogCounts._listKindCount )
+            {
                 ImGui::BulletText( "%s: %zu", row._pLabel, row._count );
+            }
         }
 
         ImGui::Separator();

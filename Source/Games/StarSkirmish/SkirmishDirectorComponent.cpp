@@ -368,7 +368,9 @@ namespace sw
         for ( int32 category = 0; category < Internal::kUnitLookCategory; ++category )
         {
             for ( int32 selected = 0; selected < 2; ++selected )
+            {
                 _listUnitLook[static_cast<size_t>( category * 2 + selected )] = _tintCache.acquire( pMaterial, Internal::computeLookColor( category, selected == 1 ) );
+            }
         }
     }
 
@@ -454,7 +456,9 @@ namespace sw
             if ( bHold || inputMap.wasActionTriggered( hashed_string( "Skirmish.Stop" ) ) )
             {
                 for ( const RtsUnitId unitId : _selection.getSelected() )
+                {
                     (void)( bHold ? world.issueHold( unitId ) : world.issueStop( unitId ) );
+                }
             }
             if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command1" ) ) )
                 trainFromPrimary( 0 );

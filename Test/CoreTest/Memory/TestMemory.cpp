@@ -345,7 +345,9 @@ SW_TEST_CASE( MemoryTest, PoolAllocatorHandsOutSixteenByteAlignedBlocks )
 
     // 돌려주고 다시 받아도 정렬은 그대로다(프리 리스트 경로).
     for ( void* pBlock : listBlock )
+    {
         pool.free( pBlock );
+    }
 
     for ( uint32 index = 0; index < 32; ++index )
     {
@@ -376,15 +378,21 @@ SW_TEST_CASE( MemoryTest, ThreadSafePoolNeverHandsOutTheSameBlockTwice )
         {
             sw::vector<void*> listLocal;
             for ( uint32 index = 0; index < kBlocksPerThread; ++index )
+            {
                 listLocal.push_back( pool.allocate() );
+            }
 
             std::scoped_lock<std::mutex> lock{ collectMutex };
             for ( void* pBlock : listLocal )
+            {
                 listAll.push_back( pBlock );
+            }
         } );
     }
     for ( std::thread& worker : listWorker )
+    {
         worker.join();
+    }
 
     SW_EXPECT_EQUAL( static_cast<size_t>( kThreadCount * kBlocksPerThread ), listAll.size() );
 
@@ -523,7 +531,9 @@ SW_TEST_CASE( MemoryTest, PoolFreeListDoesNotLoopAfterChurn )
     }
 
     for ( void* pBlock : listBlock )
+    {
         pool.free( pBlock );
+    }
 
     sw::unordered_set<void*> setFresh;
     for ( uint32 index = 0; index < kBlockCount; ++index )

@@ -207,7 +207,9 @@ namespace sw
         for ( const vector<MatchMember>& team : outMatch._listTeam )
         {
             for ( const MatchMember& member : team )
+            {
                 ratingSum += member._rating;
+            }
         }
         outMatch._averageRating = static_cast<int32>( ratingSum / totalSlots );
         return true;

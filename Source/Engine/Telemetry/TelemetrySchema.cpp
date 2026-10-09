@@ -191,7 +191,9 @@ namespace sw
             }
             bool bDuplicate = false;
             for ( const TelemetryEventDef& other : listEvent )
+            {
                 bDuplicate = bDuplicate || other._id == event._id;
+            }
             if ( bDuplicate )
             {
                 SW_LOG_WARNING( "%#: event '%#' is declared twice", sourceName, event._id.c_str() );

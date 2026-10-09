@@ -118,7 +118,9 @@ namespace sw
                 const int32     firstCorner           = ( arrOcclusion[0] + arrOcclusion[2] < arrOcclusion[1] + arrOcclusion[3] ) ? 1 : 0;
                 constexpr int32 kArrTriangleCorner[6] = { 0, 1, 2, 0, 2, 3 };
                 for ( const int32 corner : kArrTriangleCorner )
+                {
                     outList.push_back( arrVertex[( corner + firstCorner ) % 4] );
+                }
             }
 
             static constexpr float32 getFaceShadeValue( VoxelFace face )

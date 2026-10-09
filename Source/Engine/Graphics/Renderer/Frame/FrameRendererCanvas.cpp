@@ -15,7 +15,9 @@ namespace sw
     void FrameRenderer::prepareCanvasTargets()
     {
         for ( CanvasTargetState& state : _listCanvasTarget )
+        {
             state._bSeen = SW_FALSE;
+        }
         const bool bServices = engine::areEngineServicesBound();
         for ( const CanvasTargetDrawList& target : _canvasFrame._listTarget )
         {

@@ -64,7 +64,9 @@ namespace sw
             _pendingCount -= static_cast<int32>( listCompletion.size() );
         }
         for ( LocalStoreCompletion& completion : listCompletion )
+        {
             outListCompletion.push_back( std::move( completion ) );
+        }
         return static_cast<int32>( listCompletion.size() );
     }
 
@@ -112,7 +114,9 @@ namespace sw
             {
                 std::unique_lock<mutex> lock{ _mutex };
                 while ( _listQueuedRequest.empty() && _bStopping == SW_FALSE )
+                {
                     _requestReady.wait( lock );
+                }
                 if ( _listQueuedRequest.empty() )
                     return; // 내리는 중이고 남은 일이 없다
                 request = std::move( _listQueuedRequest.front() );

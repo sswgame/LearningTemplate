@@ -495,7 +495,9 @@ namespace sw
         {
             bool bDuplicate = findSetting( def._id ) != nullptr;
             for ( const UserSettingDef& other : overlay._listSetting )
+            {
                 bDuplicate = bDuplicate || ( &other != &def && other._id == def._id );
+            }
             if ( bDuplicate )
             {
                 SW_LOG_ERROR( "%#: setting '%#' is defined twice", sourceName, def._id.c_str() );
@@ -527,7 +529,9 @@ namespace sw
     {
         _mapSettingIndex.clear();
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listSetting.size() ); ++settingIndex )
+        {
             _mapSettingIndex[_listSetting[settingIndex]._id] = settingIndex;
+        }
     }
 
     const UserSettingDef* UserSettingsSchema::findSetting( const hashed_string& id ) const
@@ -792,7 +796,9 @@ namespace sw
                     continue;
                 bool bHasPreset = false;
                 for ( const ScalabilityPresetDef& preset : group._listPreset )
+                {
                     bHasPreset = bHasPreset || StringUtil::equals( preset._name.c_str(), option._value, true );
+                }
                 if ( bHasPreset == false )
                 {
                     SW_LOG_ERROR( "<Scalability> '%#': option '%#' has no <Preset>", group._settingId.c_str(), option._value );

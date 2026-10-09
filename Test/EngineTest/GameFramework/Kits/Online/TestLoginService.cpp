@@ -70,12 +70,18 @@ namespace
             {
                 uint64 hash = sw::HashUtil::kFnvOffset64 ^ ( seed + static_cast<uint64>( blockIndex ) * sw::HashUtil::kGoldenRatio64 );
                 for ( int32 index = 0; index < firstSize; ++index )
+                {
                     hash = ( hash ^ pFirst[index] ) * sw::HashUtil::kFnvPrime64;
+                }
                 hash = ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;
                 for ( int32 index = 0; index < secondSize; ++index )
+                {
                     hash = ( hash ^ pSecond[index] ) * sw::HashUtil::kFnvPrime64;
+                }
                 for ( int32 byteIndex = 0; byteIndex < 8 && blockIndex * 8 + byteIndex < outSize; ++byteIndex )
+                {
                     pOut[blockIndex * 8 + byteIndex] = static_cast<uint8>( hash >> ( byteIndex * 8 ) );
+                }
             }
         }
 
@@ -99,7 +105,9 @@ namespace
         {
             int32 count = 0;
             for ( const LoginEvent& event : listEvent )
+            {
                 count += event._kind == kind ? 1 : 0;
+            }
             return count;
         }
     };
@@ -214,7 +222,9 @@ namespace
         {
             uint8 arrSecret[LoginConstant::kDeviceSecretSize];
             for ( int32 byteIndex = 0; byteIndex < LoginConstant::kDeviceSecretSize; ++byteIndex )
+            {
                 arrSecret[byteIndex] = static_cast<uint8>( secretSeed + byteIndex );
+            }
             _service->guestLogin( arrSecret, clientInfo, secretSeed, nowMs, _nextTag++ );
             const LoginCompletion completion = settle();
             outGrant                         = completion._grant;
@@ -399,7 +409,9 @@ SW_TEST_CASE( LoginServiceTest, WrongPasswordLocksAndUnknownAccountLooksTheSame 
     SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "nobody", "password123" ), 1, 0, grant ) == LoginResult::WrongCredentials );
     SW_EXPECT_EQUAL( hashCountBefore + 1, fixture->_crypto._passwordHashCount ); // 없는 계정도 해시를 한 번 돌린다
     for ( int32 attempt = 0; attempt < 4; ++attempt )
+    {
         SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 2 + static_cast<uint64>( attempt ), 100, grant ) == LoginResult::WrongCredentials );
+    }
     SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "wrong-pass" ), 9, 100, grant ) == LoginResult::AccountLocked );
     SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "carol", "password123" ), 10, 200, grant ) == LoginResult::AccountLocked ); // 맞아도 잠금 동안은
     SW_EXPECT_EQUAL( fixture._settings._lockoutMs - 100, grant._retryAfterMs );
@@ -412,7 +424,9 @@ SW_TEST_CASE( LoginServiceTest, AttemptsAreRateLimitedPerClient )
     LoginFixture fixture;
     LoginGrant   grant;
     for ( int32 attempt = 0; attempt < fixture._settings._attemptBurst; ++attempt )
+    {
         SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, 0, grant ) == LoginResult::WrongCredentials );
+    }
     const int32 hashCountBefore = fixture->_crypto._passwordHashCount;
     SW_EXPECT_TRUE( fixture->login( Internal::makeCredential( "ghost", "whatever1" ), 77, 0, grant ) == LoginResult::RateLimited );
     SW_EXPECT_EQUAL( fixture._settings._attemptRefillMs, grant._retryAfterMs );

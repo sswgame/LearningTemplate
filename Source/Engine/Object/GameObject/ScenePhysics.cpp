@@ -66,7 +66,9 @@ namespace sw
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
         {
             for ( PhysicsComponent* pComponent : _arrListComponent[phase] )
+            {
                 pComponent->releasePhysics( *this );
+            }
         }
         _pScene3D.reset();
         _pScene2D.reset();
@@ -157,7 +159,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( uint32 phase = 0; phase < ScenePhysicsInternal::kPhaseCount; ++phase )
+        {
             count += static_cast<uint32>( _arrListComponent[phase].size() );
+        }
         return count;
     }
 
@@ -177,7 +181,9 @@ namespace sw
         {
             vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
             for ( size_t index = 0; index < listComponent.size(); ++index )
+            {
                 listComponent[index]->beginPhysicsFrame( *this );
+            }
         }
 
         const uint32  stepCount = _accumulator.advance( deltaTime );
@@ -188,7 +194,9 @@ namespace sw
             {
                 vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
                 for ( size_t index = 0; index < listComponent.size(); ++index )
+                {
                     listComponent[index]->prePhysicsStep( *this, fixedStep, stepIndex, stepCount );
+                }
             }
             if ( _pScene3D != nullptr )
             {
@@ -207,7 +215,9 @@ namespace sw
             {
                 vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
                 for ( size_t index = 0; index < listComponent.size(); ++index )
+                {
                     listComponent[index]->postPhysicsStep( *this );
+                }
             }
         }
 
@@ -216,7 +226,9 @@ namespace sw
         {
             vector<PhysicsComponent*>& listComponent = _arrListComponent[phase];
             for ( size_t index = 0; index < listComponent.size(); ++index )
+            {
                 listComponent[index]->endPhysicsFrame( *this, alpha );
+            }
         }
 
         dispatchEvents( manager );

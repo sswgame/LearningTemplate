@@ -20,7 +20,9 @@ namespace sw
             static void appendWidget( const Widget& widget, uint32 depth, float32 physicalScale, string& inoutText )
             {
                 for ( uint32 level = 0; level < depth; ++level )
+                {
                     inoutText += "  ";
+                }
                 const TypeInfo* pType = widget.getTypeInfo();
                 const utf8*     pName = widget.getName().empty() == false ? widget.getName().c_str() : ( pType != nullptr ? pType->_name.c_str() : "Widget" );
                 inoutText += pName;
@@ -39,7 +41,9 @@ namespace sw
                 if ( pPanel == nullptr )
                     return;
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                {
                     appendWidget( *pPanel->getChild( index ), depth + 1, physicalScale, inoutText );
+                }
             }
         };
     } // namespace

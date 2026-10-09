@@ -145,7 +145,9 @@ SW_TEST_CASE( AudioMixerTest, CyclesAndBadRootsAreLoadErrors )
     SW_ASSERT_TRUE( desc.makeProcessingOrder( listOrder ) );
     sw::vector<uint32> listPosition( listOrder.size() );
     for ( uint32 position = 0; position < listOrder.size(); ++position )
+    {
         listPosition[listOrder[position]] = position;
+    }
     SW_EXPECT_TRUE( listPosition[2] < listPosition[3] ); // sfx → fx
     SW_EXPECT_TRUE( listPosition[3] < listPosition[0] ); // fx → master
 }

@@ -43,7 +43,9 @@ namespace sw
                 std::scoped_lock<mutex> lock{ registryMutexInternal() };
                 listResource.reserve( registryInternal().size() );
                 for ( RHIRenderResource* pResource : registryInternal() )
+                {
                     listResource.push_back( pResource );
+                }
             }
 
             for ( RHIRenderResource* pResource : listResource )

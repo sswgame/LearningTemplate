@@ -274,9 +274,13 @@ namespace sw
                 }
             }
             for ( const string& comment : entry._listExtractedComment )
+            {
                 text.append( "#. " ).append( comment ).append( "\n" );
+            }
             for ( const string& reference : entry._listReference )
+            {
                 text.append( "#: " ).append( reference ).append( "\n" );
+            }
             if ( entry._bFuzzy )
                 text.append( "#, fuzzy\n" );
             if ( entry._previousSource.empty() == false )

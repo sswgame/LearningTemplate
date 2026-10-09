@@ -83,7 +83,9 @@ namespace
         writer.writeVarUint( firstTick );
         writer.writeVarUint( listPayload.size() );
         for ( const vector<uint8>& payload : listPayload )
+        {
             writer.writeBlob( payload.data(), static_cast<int32>( payload.size() ) );
+        }
         return writer.getBytes();
     }
 
@@ -112,7 +114,9 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
     NetSnapshot baseline;
     baseline._tick = 10;
     for ( uint32 entityId = 1; entityId <= 4; ++entityId )
+    {
         baseline._listEntity.push_back( NetEntityState{ makeFloatBytes( static_cast<float32>( entityId ) ), entityId, 7 } );
+    }
     NetSnapshot current;
     current._tick = 12;
     current._listEntity.push_back( NetEntityState{ makeFloatBytes( 1.0f ), 1, 7 } );  // 그대로
@@ -147,7 +151,9 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
     NetSnapshot big;
     big._tick = 13;
     for ( uint32 entityId = 1; entityId <= 60; ++entityId )
+    {
         big._listEntity.push_back( NetEntityState{ vector<uint8>( 20, static_cast<uint8>( entityId ) ), entityId, 1 } );
+    }
     BitWriter   smallWriter;
     NetSnapshot partial;
     big.writeDelta( smallWriter, nullptr, 300, partial );
@@ -167,15 +173,21 @@ SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
     NetSnapshot baseline;
     baseline._tick = 10;
     for ( uint32 entityId = 1; entityId <= 50; ++entityId )
+    {
         baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId ) ), entityId, 1 } );
+    }
     NetSnapshot current;
     current._tick = 11;
     for ( uint32 entityId = 5; entityId <= 60; ++entityId ) // 1..4 사라짐, 51..60 새것, 7 의 배수는 바뀜
+    {
         current._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId % 7 == 0 ? 0xEE : entityId ) ), entityId, 1 } );
+    }
     // 다시 쓰는 자리 — 크기 · 내용이 다른 옛 재구성이 들어 있다.
     NetSnapshot written;
     for ( uint32 entityId = 100; entityId < 180; ++entityId )
+    {
         written._listEntity.push_back( NetEntityState{ vector<uint8>( 32, 0x11 ), entityId, 9 } );
+    }
     NetSnapshot decoded = written;
     BitWriter   writer;
     current.writeDelta( writer, &baseline, 1000, written );
@@ -277,9 +289,13 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+        {
             SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
+        }
         while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+        {
             SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
+        }
         if ( clientHost.getConnectionState( 0 ) != NetConnectionState::Connected )
             continue;
 
@@ -361,10 +377,12 @@ SW_TEST_CASE( NetClientServerTest, PredictionReconcilesAndLagCompensationRewinds
     // 랙 보정 — 목표는 틱마다 x 로 1 m 씩 간다. 10 틱 전을 보던 사수는 그 자리를 맞힌다.
     LagCompensationHistory history( 32 );
     for ( uint32 tick = 0; tick <= 30; ++tick )
+    {
         history.record( tick, vector<LagRecord>{
                                   LagRecord{float3{ static_cast<float32>( tick ), 0.0f, 10.0f }, 0.5f, 7},
                                   LagRecord{                         float3{ 0.0f, 0.0f, 0.0f }, 0.5f, 1}
         } );
+    }
     LagRecord sample;
     SW_ASSERT_TRUE( history.sampleAt( 20.5f, 7, sample ) );
     SW_EXPECT_NEAR_EQUAL( 20.5f, sample._position._x, 1.0e-4f );
@@ -426,9 +444,13 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
         int32          connectionId = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+        {
             SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
+        }
         while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+        {
             SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
+        }
         if ( frame % 2 == 0 )
         {
             server.beginTick( serverTick );
@@ -606,7 +628,9 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
     NetSnapshot baseline;
     baseline._tick = 5;
     for ( uint32 index = 0; index < 400; ++index )
+    {
         baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 4, 1 ), 1000000 + index, 1 } );
+    }
     NetSnapshot current;
     current._tick = 6;
     current._listEntity.push_back( NetEntityState{ vector<uint8>( 300, 7 ), 3, 1 } ); // 상한을 넘는다

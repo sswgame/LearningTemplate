@@ -39,7 +39,9 @@ namespace sw
                 {
                     const int32 gap = NetSequence::computeDifference( sequence, _newest );
                     for ( int32 offset = 1; offset < gap && offset <= static_cast<int32>( _listEntry.size() ); ++offset )
+                    {
                         _listSequence[computeIndex( static_cast<uint16>( _newest + offset ) )] = kEmpty;
+                    }
                 }
                 _newest     = sequence;
                 _bHasNewest = true;

@@ -243,7 +243,9 @@ SW_TEST_CASE( AssetStreamingTest, MultiThreadedConcurrentStreamingStress )
     }
 
     for ( auto& workerThread : listThread )
+    {
         workerThread.join();
+    }
 
     // 백그라운드 태스크 대기 및 락-프리 완료 큐 드레인
     if ( sw::engine::areEngineServicesBound() )
@@ -388,7 +390,9 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
             s_runningCount.fetch_add( 1, std::memory_order_acq_rel );
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
             while ( s_releasedCount.load( std::memory_order_acquire ) <= ticket && deadline.isExpired() == false )
+            {
                 std::this_thread::yield();
+            }
         }
     };
     for ( uint32 index = 0; index < workerCount; ++index )
@@ -400,7 +404,9 @@ SW_TEST_CASE( AssetStreamingTest, HighPriorityRequestOvertakesAnEarlierNormalOne
     {
         const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 2000 );
         while ( s_runningCount.load( std::memory_order_acquire ) < workerCount && deadline.isExpired() == false )
+        {
             std::this_thread::yield();
+        }
     }
     SW_ASSERT_EQUAL( workerCount, s_runningCount.load() );
 
@@ -499,7 +505,9 @@ SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
     sw::engine::getAsyncFileIo().waitIdle();
     sw::engine::getTaskManager().waitAll();
     for ( uint32 pump = 0; pump < 4; ++pump )
+    {
         queue.update();
+    }
 
     SW_EXPECT_EQUAL( callbackCount.load(), 1u );
     SW_EXPECT_EQUAL( successCount.load(), 0u );

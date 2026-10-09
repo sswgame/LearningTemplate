@@ -85,7 +85,9 @@ namespace
         void run( float32 seconds )
         {
             for ( float32 elapsed = 0.0f; elapsed < seconds - 0.001f; elapsed += 0.1f )
+            {
                 _state.update( 0.1f, _flags );
+            }
         }
     };
 
@@ -104,7 +106,9 @@ namespace
     {
         grid.initialize( 8, 3, AdventureElementSettings{} );
         for ( int32 column = 0; column < 8; ++column )
+        {
             grid.setMaterial( int2{ column, 1 }, AdventureMaterial::Grass );
+        }
         grid.setMaterial( int2{ 3, 0 }, AdventureMaterial::Ice );
         grid.setMaterial( int2{ 3, 2 }, AdventureMaterial::Wood );
         grid.setWind( wind );
@@ -320,7 +324,9 @@ SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
     SW_EXPECT_FALSE( vitals.applyDamage( 5 ) );
     SW_EXPECT_EQUAL( 7, vitals.computeHealthQuarters() );
     for ( int32 piece = 0; piece < 3; ++piece )
+    {
         SW_EXPECT_FALSE( vitals.addHeartPiece() );
+    }
     SW_EXPECT_EQUAL( 3, vitals.getHeartPieceCount() );
     SW_EXPECT_TRUE( vitals.addHeartPiece() );
     SW_EXPECT_EQUAL( 4, vitals.getHeartCount() );
@@ -335,17 +341,23 @@ SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
 
     // 오르기 10/초 · 100 — 열 번째 초에 바닥나 떨어진다.
     for ( int32 second = 0; second < 9; ++second )
+    {
         SW_EXPECT_TRUE( vitals.updateStamina( AdventureStaminaAction::Climb, 1.0f ) == AdventureStaminaOutcome::Continue );
+    }
     SW_EXPECT_TRUE( vitals.updateStamina( AdventureStaminaAction::Climb, 1.0f ) == AdventureStaminaOutcome::Fall );
     SW_EXPECT_TRUE( vitals.getStamina().isExhausted() );
     SW_EXPECT_TRUE( vitals.updateStamina( AdventureStaminaAction::Sprint, 0.1f ) == AdventureStaminaOutcome::Stop );
     SW_EXPECT_TRUE( vitals.updateStamina( AdventureStaminaAction::Glide, 0.1f ) == AdventureStaminaOutcome::Fall );
     for ( int32 tick = 0; tick < 15; ++tick )
+    {
         (void)vitals.updateStamina( AdventureStaminaAction::Idle, 0.1f );
+    }
     SW_EXPECT_TRUE( vitals.getStamina().isExhausted() ); // 반쯤 찼지만 아직 붉은 바퀴
     SW_EXPECT_FALSE( vitals.trySpendStamina( 5.0f ) );
     for ( int32 tick = 0; tick < 25; ++tick )
+    {
         (void)vitals.updateStamina( AdventureStaminaAction::Idle, 0.1f );
+    }
     SW_EXPECT_FALSE( vitals.getStamina().isExhausted() );
     SW_EXPECT_TRUE( vitals.trySpendStamina( 5.0f ) );
 
@@ -354,7 +366,9 @@ SW_TEST_CASE( ActionAdventureTest, HeartsMagicAndStamina )
     AdventureStaminaOutcome outcome = AdventureStaminaOutcome::Continue;
     int32                   tick    = 0;
     for ( ; tick < 100 && outcome == AdventureStaminaOutcome::Continue; ++tick )
+    {
         outcome = vitals.updateStamina( AdventureStaminaAction::Swim, 1.0f );
+    }
     SW_EXPECT_TRUE( outcome == AdventureStaminaOutcome::Drown );
     SW_EXPECT_EQUAL( 13, tick );
     SW_EXPECT_EQUAL( 8, vitals.computeHealthQuarters() );
@@ -431,7 +445,9 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
     SW_EXPECT_FALSE( grid.isBurning( int2{ 2, 1 } ) );
     SW_EXPECT_TRUE( grid.getMaterial( int2{ 3, 0 } ) == AdventureMaterial::Water ); // 이웃 얼음이 녹았다
     for ( int32 stepIndex = 0; stepIndex < 20; ++stepIndex )
+    {
         grid.step();
+    }
     SW_EXPECT_EQUAL( 0, grid.countBurning() );
     SW_EXPECT_TRUE( grid.getMaterial( int2{ 7, 1 } ) == AdventureMaterial::Empty );
     SW_EXPECT_TRUE( grid.getMaterial( int2{ 3, 1 } ) == AdventureMaterial::Empty );
@@ -446,9 +462,13 @@ SW_TEST_CASE( ActionAdventureTest, FireSpreadsDownwindAndBurnsOut )
     (void)gridA.applyFire( int2{ 0, 1 } ); // 시험 준비 — 결과는 아래 상태 해시 비교가 본다
     (void)gridB.applyFire( int2{ 0, 1 } ); // 시험 준비 — 결과는 아래 상태 해시 비교가 본다
     for ( int32 stepIndex = 0; stepIndex < 6; ++stepIndex )
+    {
         gridA.step();
+    }
     for ( int32 tick = 0; tick < 12; ++tick )
+    {
         (void)gridB.update( 0.125f );
+    }
     SW_EXPECT_EQUAL( gridA.getStepCount(), gridB.getStepCount() );
     SW_EXPECT_EQUAL( gridA.computeStateHash(), gridB.computeStateHash() );
 
@@ -596,7 +616,9 @@ SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
     SW_EXPECT_EQUAL( 0, inventory.getItemCount( "treeBranch" ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, wear.strike( inventory, branchSlot, 10.0f )._damage, 0.001f ); // 빈 손
     for ( int32 hit = 0; hit < 50; ++hit )
+    {
         (void)wear.strike( inventory, swordSlot, 30.0f );
+    }
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "masterSword" ) ); // 내구도 없는 검은 닳지 않는다
 
     AreaGraph areaGraph;
@@ -667,7 +689,9 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     fillMeadow( grid, int2{ 1, 0 } );
     SW_ASSERT_TRUE( grid.applyFire( int2{ 0, 1 } ) );
     for ( int32 stepIndex = 0; stepIndex < 3; ++stepIndex )
+    {
         grid.step();
+    }
     const vector<uint8>  gridBytes = captureAdventureBytes( grid );
     AdventureElementGrid restoredGrid;
     fillMeadow( restoredGrid, int2{ 0, 0 } );
@@ -727,12 +751,16 @@ SW_TEST_CASE( ActionAdventureTest, StateRoundTripContinuesTheSameAdventure )
     AdventureVitals vitals;
     vitals.initialize( AdventureVitalsSettings{} );
     for ( int32 piece = 0; piece < 5; ++piece )
+    {
         (void)vitals.addHeartPiece();
+    }
     SW_EXPECT_FALSE( vitals.applyDamage( 3 ) );
     SW_EXPECT_TRUE( vitals.upgradeMagic() );
     SW_EXPECT_TRUE( vitals.trySpendMagic( 30.0f ) );
     for ( int32 second = 0; second < 3; ++second )
+    {
         (void)vitals.updateStamina( AdventureStaminaAction::Climb, 1.0f );
+    }
     const vector<uint8> vitalsBytes = captureAdventureBytes( vitals );
     AdventureVitals     restoredVitals;
     restoredVitals.initialize( AdventureVitalsSettings{} );

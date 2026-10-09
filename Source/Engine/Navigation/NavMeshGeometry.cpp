@@ -242,7 +242,9 @@ namespace sw
         const float32 spanZ = _bounds._max._z - _bounds._min._z;
         float32       size  = cellSize;
         while ( static_cast<int64>( spanX / size + 1.0f ) * static_cast<int64>( spanZ / size + 1.0f ) > Internal::kMaxIndexCellCount )
+        {
             size *= 2.0f;
+        }
         _indexCellSize         = size;
         _indexOrigin           = float2{ _bounds._min._x, _bounds._min._z };
         _indexWidth            = static_cast<int32>( spanX / size ) + 1;
@@ -270,11 +272,15 @@ namespace sw
             for ( int32 cellZ = cellZ0; cellZ <= cellZ1; ++cellZ )
             {
                 for ( int32 cellX = cellX0; cellX <= cellX1; ++cellX )
+                {
                     ++_listCellStart[static_cast<size_t>( cellZ ) * static_cast<size_t>( _indexWidth ) + static_cast<size_t>( cellX ) + 1];
+                }
             }
         }
         for ( size_t cellIndex = 1; cellIndex <= cellCount; ++cellIndex )
+        {
             _listCellStart[cellIndex] += _listCellStart[cellIndex - 1];
+        }
         _listCellTriangle.assign( _listCellStart[cellCount], 0 );
         vector<uint32> listCursor( _listCellStart.begin(), _listCellStart.end() - 1 );
         for ( uint32 triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex )
@@ -299,7 +305,9 @@ namespace sw
         {
             outListTriangle.resize( triangleCount );
             for ( uint32 triangleIndex = 0; triangleIndex < triangleCount; ++triangleIndex )
+            {
                 outListTriangle[triangleIndex] = triangleIndex;
+            }
             return;
         }
         const int32 cellX0 = MathUtil::clamp( static_cast<int32>( MathUtil::floor( ( min._x - _indexOrigin._x ) / _indexCellSize ) ), 0, _indexWidth - 1 );
@@ -314,7 +322,9 @@ namespace sw
             {
                 const size_t cellIndex = static_cast<size_t>( cellZ ) * static_cast<size_t>( _indexWidth ) + static_cast<size_t>( cellX );
                 for ( uint32 slot = _listCellStart[cellIndex]; slot < _listCellStart[cellIndex + 1]; ++slot )
+                {
                     outListTriangle.push_back( _listCellTriangle[slot] );
+                }
             }
         }
         // 여러 칸에 걸친 삼각형은 한 번만 — 정렬 뒤 겹친 것을 지운다.

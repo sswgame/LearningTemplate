@@ -124,7 +124,9 @@ namespace sw::editor
         {
             SW_LOG_WARNING( "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
             for ( GameObject* pCopy : listCopy )
+            {
                 pManager->destroyObject( pCopy );
+            }
             return nullptr;
         }
 
@@ -272,7 +274,9 @@ namespace sw::editor
 
         EditorTransaction::beginTransaction( "Destroy GameObject" );
         for ( GameObject* pDoomed : listSubtree )
+        {
             EditorTransaction::recordDestruction( pDoomed, "Destroy GameObject" );
+        }
         EditorTransaction::endTransaction();
         pManager->destroyObject( pObj );
         return true;
@@ -564,7 +568,9 @@ namespace sw::editor
 
         stats._listDistribution.reserve( mapTypeToCount.size() );
         for ( const auto& [typeName, count] : mapTypeToCount )
+        {
             stats._listDistribution.push_back( ComponentDistributionRow{ typeName, count } );
+        }
 
         // 많은 것부터 보여 주는 편이 읽기 쉽다. 수가 같으면 이름순으로 안정화한다.
         std::sort( stats._listDistribution.begin(), stats._listDistribution.end(),

@@ -39,7 +39,9 @@ namespace sw
         bool bSameSet = ( _listBuilt.size() == _listScratchSorted.size() ) &&
                         std::equal( _listBuilt.begin(), _listBuilt.end(), _listScratchSorted.begin() );
         for ( size_t index = 0; bSameSet && index < _listScratchSorted.size(); ++index )
+        {
             bSameSet = _listBuiltContentId[index] == _listScratchSorted[index]->getContentId();
+        }
         if ( bSameSet && ( _vertexBuffer != 0 || _listScratchSorted.empty() ) )
             return false;
 
@@ -47,7 +49,9 @@ namespace sw
         _listBuilt = _listScratchSorted;
         _listBuiltContentId.clear();
         for ( const Mesh* pMesh : _listBuilt )
+        {
             _listBuiltContentId.push_back( pMesh->getContentId() );
+        }
 
         vector<RHIVertex> listVertex;
         for ( const Mesh* pMesh : _listBuilt )

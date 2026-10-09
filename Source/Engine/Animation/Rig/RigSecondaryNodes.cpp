@@ -40,7 +40,9 @@ namespace sw
             {
                 outListInverse.assign( size * size, 0.0f );
                 for ( uint32 index = 0; index < size; ++index )
+                {
                     outListInverse[index * size + index] = 1.0f;
+                }
                 for ( uint32 column = 0; column < size; ++column )
                 {
                     uint32  pivot     = column;
@@ -306,12 +308,16 @@ namespace sw
                 const quaternion current   = ( RigIkSolver::makeInverse( _driverReference ) * pose.getLocalRotation( _driver ) ).normalize();
                 const uint32     poseCount = static_cast<uint32>( _listPose.size() );
                 for ( uint32 index = 0; index < poseCount; ++index )
+                {
                     _listKernel[index] = RigSecondaryNodesInternal::computeKernel( RigSecondaryNodesInternal::computeAngleBetween( current, _listPose[index]._rotation ), _radius );
+                }
                 for ( uint32 row = 0; row < poseCount; ++row )
                 {
                     float32 weight = 0.0f;
                     for ( uint32 column = 0; column < poseCount; ++column )
+                    {
                         weight += _listInverseKernel[row * poseCount + column] * _listKernel[column];
+                    }
                     _listPoseWeight[row] = MathUtil::saturate( weight );
                 }
                 for ( uint32 index = 0; index < poseCount; ++index )
@@ -319,7 +325,9 @@ namespace sw
                     const float32     weight     = _listPoseWeight[index];
                     const DriverPose& driverPose = _listPose[index];
                     for ( const RigMorphWeight& morph : driverPose._listMorph )
+                    {
                         context._pInstance->addMorphWeight( morph._name, morph._weight * weight * context._nodeWeight );
+                    }
                     if ( weight <= 0.0f )
                         continue;
                     for ( const CorrectiveBone& corrective : driverPose._listBone )

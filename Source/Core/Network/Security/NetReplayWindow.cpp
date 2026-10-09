@@ -14,7 +14,9 @@ namespace sw
     void NetReplayWindow::reset()
     {
         for ( uint64& word : _arrBit )
+        {
             word = 0;
+        }
         _highest      = 0;
         _bHasReceived = SW_FALSE;
     }
@@ -43,7 +45,9 @@ namespace sw
             if ( advance >= kWindowSize )
             {
                 for ( uint64& word : _arrBit )
+                {
                     word = 0;
+                }
             }
             else
             {

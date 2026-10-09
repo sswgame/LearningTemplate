@@ -208,7 +208,9 @@ namespace sw
 
         releaseViewTransients( _mainView );
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
             releaseViewTransients( *pView );
+        }
         // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 ensurePresentCapture 가 새 크기로 만든다.
         if ( _presentCapture != 0 && _pDevice != nullptr )
             _pDevice->getResourceFactory()->destroyTexture( _presentCapture );

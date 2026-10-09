@@ -31,7 +31,9 @@ namespace sw
             ~LocalizedTextArena()
             {
                 for ( utf8* pBlock : _listBlock )
+                {
                     Memory::free( pBlock );
+                }
             }
 
             /** @brief @p text 와 같은 내용의 안정된 C 문자열을 돌려줍니다(없으면 복사해 둡니다). */

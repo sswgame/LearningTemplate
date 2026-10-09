@@ -114,7 +114,9 @@ namespace sw
             return;
         }
         for ( int32 index = 0; index < byteCount; ++index )
+        {
             writeBits( pData[index], 8 );
+        }
     }
 
     void BitWriter::writeBlob( const uint8* pData, int32 byteCount )
@@ -253,7 +255,9 @@ namespace sw
             return true;
         }
         for ( int32 index = 0; index < byteCount; ++index )
+        {
             pOutData[index] = static_cast<uint8>( readBits( 8 ) );
+        }
         return true;
     }
 

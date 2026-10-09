@@ -235,7 +235,9 @@ namespace sw
         vector<uint8> listUnlocked;
         listUnlocked.resize( _listLink.size() );
         for ( size_t linkIndex = 0; linkIndex < _listLink.size(); ++linkIndex )
+        {
             listUnlocked[linkIndex] = isUnlocked( _listLink[linkIndex], flags ) ? SW_TRUE : SW_FALSE;
+        }
 
         vector<int32> listParent;
         listParent.resize( _catalog.getCount(), -2 ); // −2 = 아직, −1 = 출발
@@ -262,7 +264,9 @@ namespace sw
         if ( listParent[static_cast<size_t>( toIndex )] == -2 )
             return false;
         for ( int32 areaIndex = toIndex; areaIndex >= 0; areaIndex = listParent[static_cast<size_t>( areaIndex )] )
+        {
             outListArea.push_back( _catalog.getAt( static_cast<size_t>( areaIndex ) )._id );
+        }
         std::reverse( outListArea.begin(), outListArea.end() );
         return true;
     }
@@ -352,7 +356,9 @@ namespace sw
     {
         resetState();
         for ( const hashed_string& areaId : listDiscovered )
+        {
             (void)discoverArea( areaId );
+        }
         for ( const hashed_string& areaId : listVisited )
         {
             const int32 areaIndex = _catalog.findIndex( areaId );

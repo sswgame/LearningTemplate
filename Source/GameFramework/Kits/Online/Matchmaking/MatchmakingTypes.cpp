@@ -101,7 +101,9 @@ namespace sw
             return 0;
         int64 ratingSum = 0;
         for ( const MatchMember& member : _listMember )
+        {
             ratingSum += member._rating;
+        }
         return static_cast<int32>( ratingSum / static_cast<int64>( _listMember.size() ) );
     }
 } // namespace sw

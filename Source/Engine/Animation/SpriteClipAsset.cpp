@@ -263,7 +263,9 @@ namespace sw
         const int32 endFrame  = MathUtil::min( frameIndex, getFrameCount() );
         float32     startTime = 0.0f;
         for ( int32 earlierFrame = 0; earlierFrame < endFrame; ++earlierFrame )
+        {
             startTime += getFrameDurationSeconds( earlierFrame, fallbackSeconds );
+        }
         return startTime;
     }
 

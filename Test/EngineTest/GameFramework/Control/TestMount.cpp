@@ -200,7 +200,9 @@ SW_TEST_CASE( MountTest, MountAndDismountRoundTrip )
         manager.beginPlay();
         pPlayer->possess( *pRider->getComponent<PawnComponent>() );
         for ( uint32 frame = 0; frame < 5; ++frame )
+        {
             Internal::tick( manager, input );
+        }
 
         Internal::tapKey( manager, input, Key::E );
         SW_ASSERT_TRUE( pPlayer->getPawn() == pVehicle->getComponent<PawnComponent>()->getHandle() );
@@ -216,7 +218,9 @@ SW_TEST_CASE( MountTest, MountAndDismountRoundTrip )
         const float3 carStart = Internal::findPosition( *pVehicle );
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
+        {
             Internal::tick( manager, input );
+        }
         (void)input.postRawEvent( RawInputEvent::makeKeyUp( Key::W ) );
         Internal::tick( manager, input );
         const float3 carMoved = Internal::findPosition( *pVehicle );
@@ -353,7 +357,9 @@ SW_TEST_CASE( MountTest, RiderStillTakesHitsWhileMounted )
 
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
+        {
             Internal::tick( manager, input );
+        }
         const float3           feet   = Internal::findPosition( *pRider );
         const IPhysicsScene3D* pScene = manager.getScenePhysics().findScene3D();
         SW_ASSERT_NOT_NULL( pScene );
@@ -463,13 +469,17 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     pRiderAi->possess( *pHorse->getComponent<PawnComponent>() );
     pRiderAi->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 120; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
     SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Canter ), pMovement->getForwardSpeed(), 1.0e-3f );
 
     pRiderAi->holdButton( "Sprint", true );
     for ( uint32 frame = 0; frame < 60; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Gallop );
     SW_EXPECT_TRUE( pMovement->getForwardSpeed() > pMovement->computeGaitSpeed( MountGait::Canter ) );
 
@@ -479,7 +489,9 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
     pMovement->setMaxGait( MountGait::Trot );
     for ( uint32 frame = 0; frame < 120; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Trot );
     SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Trot ), pMovement->getForwardSpeed(), 1.0e-3f );
     // 말은 자기 요로 간다 — 곧장 앞이면 X 로 흐르지 않는다.
@@ -513,7 +525,9 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         pNpc->possess( *pNpcRider->getComponent<PawnComponent>() );
         pHorseAi->possess( *pPlayerHorse->getComponent<PawnComponent>() ); // 탄 사람이 없을 때 말을 쥐는 말 AI
         for ( uint32 frame = 0; frame < 5; ++frame )
+        {
             Internal::tick( manager, input );
+        }
 
         Internal::tapKey( manager, input, Key::E );
         SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
@@ -571,7 +585,9 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
     pDriver->possess( *pCar->getComponent<PawnComponent>() );
     pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 60; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE( pVehicle->getMotor().getForwardSpeed() > 5.0f );
     SW_EXPECT_TRUE( Internal::findPosition( *pCar )._z > 3.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, pVehicle->getMotor().getYaw(), 1.0e-4f );
@@ -580,7 +596,9 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
     // 오른쪽 앞의 목적지 — 차가 오른쪽으로 돈다.
     pDriver->moveTo( float3{ 100.0f, 0.0f, Internal::findPosition( *pCar )._z + 100.0f } );
     for ( uint32 frame = 0; frame < 30; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE( pVehicle->getMotor().getYaw() > 0.1f );
 }
 
@@ -662,11 +680,15 @@ SW_TEST_CASE( MountTest, PhysicsCarFromIntent )
     manager.beginPlay();
     pDriver->possess( *pCar->getComponent<PawnComponent>() );
     for ( uint32 frame = 0; frame < 30; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
 
     pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 120; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     SW_EXPECT_TRUE_MSG( pWheels->getVehicleState()._forwardSpeed > 5.0f, ( "speed " + std::to_string( pWheels->getVehicleState()._forwardSpeed ) ).c_str() );
 
     // 뒤의 목적지 — 브레이크로 서고 나서 후진한다.

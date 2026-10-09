@@ -23,7 +23,9 @@ namespace sw
                 if ( pPanel == nullptr )
                     return;
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                {
                     collectRecursive( *pPanel->getChild( index ), inoutListWidget );
+                }
             }
         };
     } // namespace
@@ -140,7 +142,9 @@ namespace sw
     void WidgetTree::clearAllDirty()
     {
         for ( const auto& [id, pWidget] : _mapIdToWidget )
+        {
             pWidget->_dirtyFlags = WidgetDirty::kNone;
+        }
         _listLayoutDirtyRoot.clear();
         _listPaintDirty.clear();
         _listStyleDirty.clear();

@@ -337,7 +337,9 @@ namespace sw
             (void)FileUtil::collectFolders( topFolder, listGameFolder, false ); // 방금 찾은 폴더다
             std::sort( listGameFolder.begin(), listGameFolder.end() );
             for ( const string& gameFolder : listGameFolder )
+            {
                 listDomain.push_back( string( path::kGamePack ) + "/" + FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameFolder ) ) );
+            }
         }
 
         uint32 writtenCount{ 0 };
@@ -372,7 +374,9 @@ namespace sw
             lineStart        = lineEnd + 1;
 
             while ( line.empty() == false && ( line.back() == '\r' || line.back() == ' ' || line.back() == '\t' ) )
+            {
                 line.remove_suffix( 1 );
+            }
             if ( line.empty() || line.front() == '#' )
                 continue;
 

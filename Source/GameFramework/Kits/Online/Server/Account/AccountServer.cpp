@@ -220,12 +220,16 @@ namespace sw
         _listCompletionScratch.clear();
         _pLoginService->drainCompletions( _listCompletionScratch );
         for ( const LoginCompletion& completion : _listCompletionScratch )
+        {
             handleCompletion( host, completion );
+        }
         // 완료 뒤에 사건 — 로그인 응답 · 탈퇴 응답을 먼저 보내고, 밀려난 세션은 그 뒤 끊는다.
         _listEventScratch.clear();
         _pLoginService->drainEvents( _listEventScratch );
         for ( const LoginEvent& event : _listEventScratch )
+        {
             handleEvent( host, event );
+        }
         publishRemoteRevocations( host );
         _presence.tick( nowMs );
         if ( nowMs >= _nextPurgeMs )

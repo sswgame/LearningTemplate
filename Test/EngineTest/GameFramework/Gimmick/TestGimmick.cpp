@@ -44,7 +44,9 @@ namespace
         {
             string joined;
             for ( const string& error : listError )
+            {
                 joined += "\n  " + error;
+            }
             return joined;
         }
 
@@ -79,7 +81,9 @@ namespace
         static void stepTimes( GimmickCircuit& circuit, int32 count )
         {
             for ( int32 stepIndex = 0; stepIndex < count; ++stepIndex )
+            {
                 circuit.step();
+            }
         }
     };
 } // namespace
@@ -508,7 +512,9 @@ SW_TEST_CASE( GimmickTest, SameInputsSameStateHash )
     SW_EXPECT_TRUE( bytesA.size() == bytesB.size() );
     const size_t accumulatorOffset = sizeof( uint32 ) * 3 + sizeof( uint64 );
     for ( size_t byteIndex = accumulatorOffset; byteIndex < accumulatorOffset + sizeof( float32 ); ++byteIndex )
+    {
         bytesB[byteIndex] = bytesA[byteIndex];
+    }
     SW_EXPECT_TRUE( bytesA == bytesB );
     SW_EXPECT_NOT_EQUAL( runA.computeStateHash(), runC.computeStateHash() );
 }

@@ -180,7 +180,9 @@ namespace sw
         NavQueryFilter filter;
         const size_t   count = _listArea.size() < NavigationConstant::kMaxAreaCount ? _listArea.size() : NavigationConstant::kMaxAreaCount;
         for ( size_t areaIndex = 0; areaIndex < count; ++areaIndex )
+        {
             filter._arrAreaCost[areaIndex] = _listArea[areaIndex]._cost;
+        }
         return filter;
     }
 

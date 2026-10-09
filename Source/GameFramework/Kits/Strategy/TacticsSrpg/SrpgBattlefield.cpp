@@ -96,7 +96,9 @@ namespace sw
         for ( int32 cellY = MathUtil::min( fromCell._y, toCell._y ); cellY <= MathUtil::max( fromCell._y, toCell._y ); ++cellY )
         {
             for ( int32 cellX = MathUtil::min( fromCell._x, toCell._x ); cellX <= MathUtil::max( fromCell._x, toCell._x ); ++cellX )
+            {
                 count += setTerrain( int2{ cellX, cellY }, terrainId ) ? 1 : 0;
+            }
         }
         return count;
     }
@@ -683,7 +685,9 @@ namespace sw
         collectDevelopOptions( unitIndex, listOption );
         bool bAllowed = false;
         for ( const hashed_string& option : listOption )
+        {
             bAllowed = bAllowed || option == targetUnitId;
+        }
         if ( bAllowed == false )
             return false;
         SrpgUnit& unit = _listUnit[static_cast<size_t>( unitIndex )];
@@ -727,7 +731,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const SrpgUnit& unit : _listUnit )
+        {
             count += unit._team == team && unit._bAlive == SW_TRUE ? 1 : 0;
+        }
         return count;
     }
 

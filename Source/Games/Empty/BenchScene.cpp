@@ -501,7 +501,9 @@ namespace sw
                     batch.setSpinSeed( entry, index + 1u );
             }
             for ( const shared_ptr<MeshInstanceBatch>& batch : _listInstanceBatch )
+            {
                 pObjects->getPrimitiveRegistry().addInstanceBatch( batch.get() );
+            }
             _instanceCubeCount = meshCount;
             spawnLight( pScene, halfExtentOf( side, kBenchSpacing ) );
             spawnBenchLights( pScene, halfExtentOf( side, kBenchSpacing ) );
@@ -1029,7 +1031,9 @@ namespace sw
         // 카메라로 그리므로(App::getEditorViewCamera), 게임 카메라만 옮기면 에디터에서는
         // 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
+        {
             frameOneCamera( pCam, side, spacing );
+        }
     }
 
     void BenchScene::frameOneCamera( CameraComponent* pCamera, uint32 side, float32 spacing )
@@ -1223,7 +1227,9 @@ namespace sw
 
         // 1) 값만 흔든다 — 배치 구성은 그대로고 머티리얼 바이트만 바뀐다.
         for ( uint32 step = 0; step < valueChurn && _listChurnInstance.empty() == false; ++step )
+        {
             churnInstanceValue( _listChurnInstance[nextChurnRandom() % _listChurnInstance.size()].get() );
+        }
 
         // 2) 집합을 흔든다 — 붙이면 배치가 갈리고 원소가 늘고, 떼면 회수·재사용이 돈다.
         for ( uint32 step = 0; step < addChurn; ++step )

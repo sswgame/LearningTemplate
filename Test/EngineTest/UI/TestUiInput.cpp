@@ -200,7 +200,9 @@ SW_TEST_CASE( UiInputTest, DPadRepeatsWhileHeld )
     fixture.attachScript();
 
     for ( uint32 frame = 0; frame < 40; ++frame )
+    {
         fixture.runFrame();
+    }
     SW_EXPECT_EQUAL( 3, fixture.getFocusedIndex() );
 }
 
@@ -221,10 +223,14 @@ SW_TEST_CASE( UiInputTest, StickNavigatesOnceThenRepeats )
     SW_EXPECT_FALSE( fixture.isDownForGame( "Move" ) );
     fixture.endFrame();
     for ( uint32 frame = 2; frame < 20; ++frame ) // 0.3 초 — 아직 반복 전
+    {
         fixture.runFrame();
+    }
     SW_EXPECT_EQUAL( 1, fixture.getFocusedIndex() );
     for ( uint32 frame = 20; frame < 28; ++frame ) // 0.45 초 — 첫 반복
+    {
         fixture.runFrame();
+    }
     SW_EXPECT_EQUAL( 2, fixture.getFocusedIndex() );
 }
 
@@ -362,6 +368,8 @@ SW_TEST_CASE( UiInputTest, RightStickScrollsFocusedList )
     SW_EXPECT_NEAR_EQUAL( 20.0f, pScroll->getScrollOffset()._y, 0.01f );
     fixture.endFrame();
     for ( uint32 frame = 2; frame < 6; ++frame )
+    {
         fixture.runFrame();
+    }
     SW_EXPECT_NEAR_EQUAL( 100.0f, pScroll->getScrollOffset()._y, 0.01f );
 }

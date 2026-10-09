@@ -175,7 +175,9 @@ namespace sw
         }
         map<int32, string> mapAppliedChecksum;
         for ( const vector<SqlValue>& row : rowSet._listRow )
+        {
             mapAppliedChecksum[static_cast<int32>( row[0]._integer )] = string( row[1].getText() );
+        }
 
         for ( const SqlMigration& migration : listMigration )
         {

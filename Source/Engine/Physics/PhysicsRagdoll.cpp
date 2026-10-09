@@ -130,7 +130,9 @@ namespace sw
         {
             int32 parentBone = skeleton._listParentIndex[static_cast<size_t>( outRagdoll._listBoneIndex[bodyIndex] )];
             while ( parentBone >= 0 && outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )] < 0 )
+            {
                 parentBone = skeleton._listParentIndex[static_cast<size_t>( parentBone )];
+            }
             if ( parentBone < 0 )
                 continue;
             const int32 parentBody                = outRagdoll._listBodyOfBone[static_cast<size_t>( parentBone )];
@@ -184,7 +186,9 @@ namespace sw
     void PhysicsRagdollBuilder::setBodyType( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type )
     {
         for ( const PhysicsBodyHandle& body : ragdoll._listBody )
+        {
             scene.setBodyType( body, type );
+        }
     }
 
     void PhysicsRagdollBuilder::driveToPose( IPhysicsScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,

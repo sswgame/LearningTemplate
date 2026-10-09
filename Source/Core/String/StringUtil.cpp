@@ -265,7 +265,9 @@ namespace sw
                 StringType   result;
                 result.resize( length );
                 for ( size_t charIndex = 0; charIndex < length; ++charIndex )
+                {
                     result[charIndex] = mapChar( pInput[charIndex] );
+                }
                 return result;
             }
 
@@ -1067,12 +1069,16 @@ namespace sw
         const size_t     minSize    = ( beforeSize < afterSize ) ? beforeSize : afterSize;
         size_t           prefix     = 0;
         while ( prefix < minSize && before[prefix] == after[prefix] )
+        {
             ++prefix;
+        }
 
         size_t suffix = 0;
         while ( suffix < ( beforeSize - prefix ) && suffix < ( afterSize - prefix ) &&
                 before[beforeSize - 1 - suffix] == after[afterSize - 1 - suffix] )
+        {
             ++suffix;
+        }
 
         span._prefixLength = static_cast<uint32>( prefix );
         span._suffixLength = static_cast<uint32>( suffix );

@@ -70,7 +70,9 @@ namespace sw
         // 자른 조상(스크롤 패널)이 새 포커스를 보이게 옮긴다 — 안쪽부터. 지난 배치의 기하로 세고, 옮긴 자리는 다음 레이아웃 걷기가 놓는다.
         const Widget* pFocused = tree.findWidgetById( next );
         for ( PanelWidget* pAncestor = pFocused != nullptr ? pFocused->getParent() : nullptr; pAncestor != nullptr; pAncestor = pAncestor->getParent() )
+        {
             (void)pAncestor->scrollIntoView( *pFocused );
+        }
         return true;
     }
 

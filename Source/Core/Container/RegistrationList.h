@@ -89,7 +89,9 @@ namespace sw
             {
                 insertIndex = 0;
                 while ( insertIndex < _listItem.size() && isBefore( _listOrder[insertIndex], _listName[insertIndex], order, name ) )
+                {
                     ++insertIndex;
+                }
             }
             _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
             _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), string( name ) );

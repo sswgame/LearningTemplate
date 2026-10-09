@@ -109,7 +109,9 @@ namespace sw
         {
             float32 sum = 0.0f;
             for ( uint32 channelIndex = 0; channelIndex < _channelCount; ++channelIndex )
+            {
                 sum += _listSample[static_cast<size_t>( frameIndex ) * _channelCount + channelIndex];
+            }
             outListSample[frameIndex] = sum * scale;
         }
     }

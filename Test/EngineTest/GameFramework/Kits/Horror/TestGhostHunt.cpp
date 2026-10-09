@@ -123,7 +123,9 @@ namespace
         void run( float32 seconds )
         {
             for ( float32 elapsed = 0.0f; elapsed < seconds - 0.001f; elapsed += 0.1f )
+            {
                 _mansion.update( 0.1f );
+            }
         }
 
         /** @brief 지금 방의 유령 하나를 기절시켜 반대로 당겨 잡습니다. */
@@ -281,7 +283,9 @@ SW_TEST_CASE( GhostHuntTest, SuctionTugOfWarRewardsOppositePull )
     const uint32 escapeGhost = escape.spawnGhost( "goob", float3{} );
     SW_ASSERT_TRUE( stunAndGrab( escape, escapeGhost ) );
     for ( int32 tick = 0; tick < 10; ++tick )
+    {
         (void)escape.updateSuction( float3{}, 0.1f ); // 당기지 않아도 기본 흡입은 든다
+    }
     escape.stopSuction();
     SW_EXPECT_TRUE( escape.findGhost( escapeGhost )->_state == GhostState::Hidden );
     SW_EXPECT_NEAR_EQUAL( 30.0f, escape.findGhost( escapeGhost )->_hp, 0.01f );

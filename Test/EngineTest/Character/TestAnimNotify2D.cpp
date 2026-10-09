@@ -111,7 +111,9 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
     SpriteClipAsset clip;
     clip._listFrame.resize( 4 );
     for ( SpriteClipFrame& frame : clip._listFrame )
+    {
         frame._durationMs = 100;
+    }
     SpriteClipAnimation attack;
     attack._name       = "Attack";
     attack._firstFrame = 0;

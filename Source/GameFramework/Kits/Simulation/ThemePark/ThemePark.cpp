@@ -100,7 +100,9 @@ namespace sw
     {
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             stepFixed( _stepTimer.getStep() );
+        }
     }
 
     void ThemeParkSimulation::bindLand( LandRegistry* pLand )
@@ -415,7 +417,9 @@ namespace sw
                     const ParkRide& ride      = _listRide[static_cast<size_t>( guest._targetRideIndex )];
                     size_t          lineIndex = 0;
                     while ( lineIndex < ride._listQueue.size() && ride._listQueue[lineIndex] != guest._id )
+                    {
                         ++lineIndex;
+                    }
                     float3        toGate = _settings._gatePosition - ride._entrance;
                     const float32 length = toGate.getLength();
                     toGate               = length > 1.0e-3f ? toGate * ( 1.0f / length ) : float3{ 0.0f, 0.0f, -1.0f };
@@ -606,7 +610,9 @@ namespace sw
         {
             outArchive << static_cast<uint32>( listId.size() );
             for ( const uint32 id : listId )
+            {
                 outArchive << id;
+            }
         };
         outArchive << _settings._entryFee;
         outArchive << static_cast<uint32>( _listRide.size() );
@@ -670,7 +676,9 @@ namespace sw
                 return false;
             outListId.resize( count );
             for ( uint32& id : outListId )
+            {
                 archive >> id;
+            }
             return archive.isOk();
         };
         int32 entryFee = 0;

@@ -125,7 +125,9 @@ namespace sw
         leaveCrowd( nullptr );
         // 등록된 일에 알린다 — 일이 이 유닛 포인터를 들고 있으면 놓게 한다.
         for ( IAnimationPhaseTask* pTask : _listTask )
+        {
             pTask->onAnimationUnitDetached( *this );
+        }
         _listTask.clear();
     }
 
@@ -594,7 +596,9 @@ namespace sw
             refreshBoneLodMasks();
         bool bActive = _bPoseDirty == SW_TRUE || _leader.isValid();
         for ( const IAnimationPhaseTask* pTask : _listTask )
+        {
             bActive = bActive || pTask->isAnimationActive();
+        }
         if ( bActive == false )
             return false;
 
@@ -613,7 +617,9 @@ namespace sw
             _bInterpolationReady = SW_FALSE;
         _bInterpolateFrame = ( _frameContext._bPoseNeeded == SW_FALSE && bInterpolationOn && _bInterpolationReady == SW_TRUE ) ? SW_TRUE : SW_FALSE;
         for ( IAnimationPhaseTask* pTask : _listTask )
+        {
             pTask->prepareAnimationFrame( *this, _frameContext );
+        }
         return true;
     }
 
@@ -646,7 +652,9 @@ namespace sw
     void SkeletalMeshComponent::runTasks( AnimationPhase phase )
     {
         for ( IAnimationPhaseTask* pTask : _listTask )
+        {
             pTask->runAnimationPhase( phase, *this, _frameContext );
+        }
     }
 
     void SkeletalMeshComponent::copyLeaderPose( const SkeletalMeshComponent& leader )
@@ -657,7 +665,9 @@ namespace sw
             // 리더 스켈레톤이 바뀌었을 때만 이름 표를 다시 짓는다(본 수십 개의 이름 찾기).
             _listLeaderBone.resize( _skeleton->getBoneCount() );
             for ( uint32 boneIndex = 0; boneIndex < _skeleton->getBoneCount(); ++boneIndex )
+            {
                 _listLeaderBone[boneIndex] = leaderSkeleton.findBoneIndex( _skeleton->getBone( boneIndex )._name );
+            }
             _pLeaderSkeletonForMap = &leaderSkeleton;
         }
         const Pose& leaderPose = leader.getLocalPose();
@@ -744,13 +754,17 @@ namespace sw
     void SkeletalMeshComponent::collectDebugState( AnimationDebugState& inoutState ) const
     {
         for ( const IAnimationPhaseTask* pTask : _listTask )
+        {
             pTask->collectDebugState( inoutState );
+        }
     }
 
     void SkeletalMeshComponent::finishAnimationFrame()
     {
         for ( IAnimationPhaseTask* pTask : _listTask )
+        {
             pTask->finishAnimationFrame( *this );
+        }
     }
 
     void SkeletalMeshComponent::collectSyncPlayers( vector<AnimPlayer*>& inoutListPlayer, vector<float32>& inoutListWeight, vector<hashed_string>& inoutListGroup )

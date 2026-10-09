@@ -80,7 +80,9 @@ namespace
             sw::BoxPanel*    pContent = fixture.addPanel<sw::BoxPanel>( pScroll, "content" );
             pContent->setOrientation( sw::UiOrientation::Vertical );
             for ( uint32 index = 0; index < 5; ++index )
+            {
                 fixture.addFixed( pContent, sw::hashed_string( "item" + sw::to_string( index ) ), 50.0f, 40.0f );
+            }
             fixture.update();
             return pScroll;
         }

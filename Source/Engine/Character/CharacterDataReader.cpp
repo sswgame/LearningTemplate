@@ -75,7 +75,9 @@ namespace sw
         vector<const utf8*> listUnknown;
         (void)XmlNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
+        {
             addError( node, string( "has unknown attribute '" ) + pName + "'" );
+        }
     }
 
     void CharacterDataReader::reportUnknownElement( const XmlNode& node )

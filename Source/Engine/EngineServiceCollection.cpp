@@ -149,7 +149,9 @@ namespace sw
     {
         // X-macro 는 목록 순서로만 펼쳐지므로 해제 표를 만들어 거꾸로 돈다.
         for ( size_t order = 0; order < SW_COUNT_OF( EngineServiceCollectionInternal::kArrResetEntry ); ++order )
+        {
             EngineServiceCollectionInternal::kArrResetEntry[EngineServiceCollectionInternal::getResetIndex( order )]._pReset( *this );
+        }
     }
 
     vector<const utf8*> EngineServiceCollection::makeDestroyOrder()
@@ -157,7 +159,9 @@ namespace sw
         vector<const utf8*> listName;
         listName.reserve( SW_COUNT_OF( EngineServiceCollectionInternal::kArrResetEntry ) );
         for ( size_t order = 0; order < SW_COUNT_OF( EngineServiceCollectionInternal::kArrResetEntry ); ++order )
+        {
             listName.push_back( EngineServiceCollectionInternal::kArrResetEntry[EngineServiceCollectionInternal::getResetIndex( order )]._pName );
+        }
         return listName;
     }
 } // namespace sw

@@ -56,7 +56,9 @@ namespace sw
     {
         float32 totalWeight = 0.0f;
         for ( const PropScatterModel& model : listModel )
+        {
             totalWeight += model._weight > 0.0f ? model._weight : 0.0f;
+        }
         if ( totalWeight <= 0.0f )
             return -1;
         // 누적 비중의 경계보다 작으면 그 모델 — 비중 0.45 · 0.35 · 0.2 면 0.45 · 0.8 이 경계다.
@@ -131,7 +133,9 @@ namespace sw
         vector<float32> listWeight;
         listWeight.reserve( params._listModel.size() );
         for ( const PropScatterModel& model : params._listModel )
+        {
             listWeight.push_back( model._weight );
+        }
         vector<PlacementExclusion> listExclusion;
         listExclusion.reserve( params._listExclusion.size() );
         for ( const PropScatterExclusion& exclusion : params._listExclusion )

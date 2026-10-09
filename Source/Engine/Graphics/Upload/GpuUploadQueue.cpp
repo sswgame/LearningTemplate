@@ -99,13 +99,17 @@ namespace sw
             {
                 // 태스크를 못 만들었으면 여기서 직접 만든다. 조용히 안 올리는 것보다 낫다.
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     uploadOne( index );
+                }
             }
         }
         else
         {
             for ( uint32 index = 0; index < count; ++index )
+            {
                 uploadOne( index );
+            }
         }
 
         _listPendingMesh.clear();

@@ -259,7 +259,9 @@ namespace sw
             {
                 _multiChars.reserve( listDelim.size() );
                 for ( const auto& delimiter : listDelim )
+                {
                     _multiChars.push_back( delimiter[0] );
+                }
                 _mode = Mode::MultiChar;
             }
             advance();
@@ -414,7 +416,9 @@ namespace sw
         _listSplit.reserve( count + 1 );
 
         for ( auto it = _beginIt; it != end(); ++it )
+        {
             _listSplit.push_back( *it );
+        }
     }
 
     template <typename TChar>
@@ -431,7 +435,9 @@ namespace sw
 
         _listSplit.reserve( 8 );
         for ( auto it = _beginIt; it != end(); ++it )
+        {
             _listSplit.push_back( *it );
+        }
     }
 
     template <typename TChar>
@@ -442,7 +448,9 @@ namespace sw
 
         _listSplit.reserve( 8 );
         for ( auto it = _beginIt; it != end(); ++it )
+        {
             _listSplit.push_back( *it );
+        }
     }
 #pragma endregion
 

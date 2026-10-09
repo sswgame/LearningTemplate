@@ -44,7 +44,9 @@ namespace sw
     {
         uint32 count{ 0 };
         for ( const float4& wave : arrWave )
+        {
             count += ( wave._z > 0.0f && wave._y > 0.0f ) ? 1u : 0u;
+        }
         return count;
     }
 

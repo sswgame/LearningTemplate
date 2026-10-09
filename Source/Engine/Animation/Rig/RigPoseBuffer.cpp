@@ -139,7 +139,9 @@ namespace sw
             _listModelScale[boneIndex]       = RigPoseBufferInternal::multiply( _listLocalScale[boneIndex], _listModelScale[parent] );
         }
         for ( uint32 boneIndex = _firstDirty; boneIndex < boneCount; ++boneIndex )
+        {
             _listDirty[boneIndex] = SW_FALSE;
+        }
         _firstDirty = boneCount;
     }
 

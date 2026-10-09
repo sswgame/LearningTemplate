@@ -285,7 +285,9 @@ namespace sw
             ShopRuntime runtime;
             runtime._shopId = shop._id;
             for ( const ShopStockDef& stock : shop._listStock )
+            {
                 runtime._listStockCount.push_back( stock._count );
+            }
             _listRuntime.push_back( runtime );
         }
     }
@@ -411,7 +413,9 @@ namespace sw
             if ( pShop == nullptr )
                 continue;
             for ( float32& factor : runtime._listSellFactor )
+            {
                 factor = MathUtil::min( 1.0f, factor + pShop->_recoveryPerDay );
+            }
             if ( pShop->_restockDays <= 0 )
                 continue;
             ++runtime._daysSinceRestock;

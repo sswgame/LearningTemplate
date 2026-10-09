@@ -69,7 +69,9 @@ SW_TEST_CASE( RhythmTest, BeatSecondsRoundTripAcrossBpmChangesStopsAndMeasures )
 
     const float32 arrBeat[] = { -1.0f, 0.0f, 1.5f, 7.75f, 8.0f, 9.25f, 11.0f, 13.5f, 16.0f, 17.25f, 30.0f };
     for ( const float32 beat : arrBeat )
+    {
         SW_EXPECT_NEAR_EQUAL( beat, chart.convertSecondsToBeat( chart.convertBeatToSeconds( beat ) ), 1.0e-4f );
+    }
     SW_EXPECT_NEAR_EQUAL( 240.0f, chart.findBpmAt( 9.0f ), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 60.0f, chart.findBpmAt( 20.0f ), 1.0e-3f );
 
@@ -163,7 +165,9 @@ SW_TEST_CASE( RhythmTest, ComboBreaksOnBadAndScoreAccuracyRankAndReplayAreDeterm
     SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
     string noteXml;
     for ( int32 beat = 1; beat <= 10; ++beat )
+    {
         noteXml += "<Note lane=\"0\" beat=\"" + std::to_string( beat ) + "\"/>";
+    }
     RhythmChart chart;
     SW_ASSERT_TRUE( chart.loadFromXmlText( makeSimpleChartXml( noteXml.c_str() ), "RhythmTest" ) );
 
@@ -263,7 +267,9 @@ SW_TEST_CASE( RhythmTest, AutoPlayHitsEveryNoteWithTheBestGrade )
     session.initialize( &chart, &judge, settings );
     session.press( 3, 0.2f ); // 오토플레이는 사람의 입력을 받지 않는다
     for ( int32 frame = 0; frame < 60 * 8; ++frame )
+    {
         session.update( static_cast<float32>( frame ) / 60.0f );
+    }
 
     SW_EXPECT_TRUE( session.getState() == RhythmPlayState::Cleared );
     SW_EXPECT_EQUAL( 10, chart.getJudgmentCount() );

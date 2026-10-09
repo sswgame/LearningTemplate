@@ -108,7 +108,9 @@ namespace sw
     {
         size_t extraEstimated = 0;
         for ( const auto& [name, value] : vars )
+        {
             extraEstimated += value.size();
+        }
 
         string out;
         out.reserve( tpl.size() + extraEstimated + 64 );
@@ -148,7 +150,9 @@ namespace sw
                 const size_t start = keyEnd;
                 ++keyEnd;
                 while ( keyEnd < tpl.size() && EmitTemplateStoreInternal::isIdentChar( tpl[keyEnd] ) )
+                {
                     ++keyEnd;
+                }
                 key = tpl.substr( start, keyEnd - start );
             }
             else

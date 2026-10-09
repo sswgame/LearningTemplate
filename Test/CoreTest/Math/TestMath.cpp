@@ -424,7 +424,9 @@ SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
     {
         const float32* pElement = &proj._11;
         for ( uint32 index = 0; index < 16; ++index )
+        {
             SW_EXPECT_TRUE( std::isfinite( pElement[index] ) );
+        }
     }
 
     // 폭 1 로 계산된다: 직교의 x 배율은 2 / 1, 비대칭 원근의 x 배율은 2 * near / 1 이다.
@@ -557,7 +559,9 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
     const float32* pExpected = &expected._11;
     const float32* pActual   = &actual._11;
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+    {
         SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pActual[elementIndex], 1e-5f );
+    }
 
     // 쿼터니언 오버로드도 같은 값이어야 한다 — 오일러 쪽이 그쪽으로 넘기므로 둘이 갈라지면
     // 애니메이션(쿼터니언)과 컴포넌트(오일러)가 서로 다른 행렬을 쓰게 된다.
@@ -565,7 +569,9 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
     const sw::float4x4   fromQuat     = sw::float4x4::createTrs( position, rotationQuat, scale );
     const float32*       pFromQuat    = &fromQuat._11;
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+    {
         SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pFromQuat[elementIndex], 1e-5f );
+    }
 
     // 점 하나를 실제로 변환해 본다 — 16개 성분이 맞아도 규격을 잘못 읽었으면 여기서 갈린다.
     const sw::float4 point{ 1.0f, 2.0f, 3.0f, 1.0f };
@@ -604,7 +610,9 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
             const sw::float4x4 actual  = sw::float4x4::createTrs( position, rotation, scale );
             const float32*     pActual = &actual._11;
             for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+            {
                 SW_EXPECT_EQUAL( pExpected[elementIndex], pActual[elementIndex] );
+            }
         }
     }
 
@@ -617,7 +625,9 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
     const float32*     pExpected  = &expectedYaw._11;
     const float32*     pActualYaw = &actualYaw._11;
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
+    {
         SW_EXPECT_NEAR_EQUAL( pExpected[elementIndex], pActualYaw[elementIndex], 1e-5f );
+    }
 }
 
 /**
@@ -655,7 +665,9 @@ SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
     for ( uint32 row = 0; row < 4; ++row )
     {
         for ( uint32 column = 0; column < 4; ++column )
+        {
             SW_EXPECT_NEAR_EQUAL( ( &mirrored._11 )[row * 4 + column], ( &recomposed._11 )[row * 4 + column], 1e-3f );
+        }
     }
 
     // 굴절: 굴절률 1 이면 그대로, 전반사면 영 벡터

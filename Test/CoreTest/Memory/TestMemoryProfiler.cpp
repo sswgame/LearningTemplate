@@ -131,7 +131,9 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
     // 표에 항목이 있어야 결과 버퍼가 생긴다.
     sw::vector<sw::vector<uint8>> listKeepAlive;
     for ( uint32 index = 0; index < 64; ++index )
+    {
         listKeepAlive.emplace_back( 256 + index );
+    }
 
     const MemoryTag tag       = MemoryProfiler::getCurrentMemoryTag();
     const uint64    before    = pProfiler->getStats( tag )._currentAllocatedBytes.load();
@@ -418,7 +420,9 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
     {
         SW_MEMORY_SCOPE( UI );
         for ( uint32 index = 0; index < kBlockCount; ++index )
+        {
             ppBlock[index] = Memory::allocate( kBlockBytes );
+        }
         // 스코프가 UI 여도 명시한 태그로 센다.
         pExplicit = Memory::allocate( kBlockBytes, MemoryTag::Physics );
     } );
@@ -430,7 +434,9 @@ SW_TEST_CASE( MemoryProfilerTest, TagsFollowTheBlockAcrossThreads )
 
     // 이 스레드(태그가 UI 가 아니다)에서 푼다.
     for ( void* pBlock : listBlock )
+    {
         Memory::free( pBlock );
+    }
     Memory::free( pExplicit );
     SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::UI )._currentAllocatedBytes.load() < uiBase + kBlockBytes );
     SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Physics )._currentAllocatedBytes.load() < physicsBase + kBlockBytes );

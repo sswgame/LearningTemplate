@@ -59,7 +59,9 @@ namespace
             for ( int32 z = 0; z < _world.getSizeZ(); ++z )
             {
                 for ( int32 x = 0; x < _world.getSizeX(); ++x )
+                {
                     (void)_world.setBlock( x, floorY, z, stone );
+                }
             }
         }
     };
@@ -127,7 +129,9 @@ SW_TEST_CASE( VoxelTest, WorldMarksNeighbourChunksWhenBorderBlocksChange )
     for ( int32 chunkZ = 0; chunkZ < 3; ++chunkZ )
     {
         for ( int32 chunkX = 0; chunkX < 3; ++chunkX )
+        {
             scene._world.clearChunkDirty( chunkX, chunkZ );
+        }
     }
     SW_ASSERT_TRUE( scene._world.setBlock( 20, 5, 20, stone ) ); // 가운데 청크의 안쪽
     SW_EXPECT_TRUE( scene._world.isChunkDirty( 1, 1 ) );
@@ -269,7 +273,9 @@ SW_TEST_CASE( VoxelTest, MesherEmitsExposedFacesWithOutwardWindingAndOcclusion )
     SW_EXPECT_EQUAL( 5u, neighborMesh.getFaceCount() );
     bool bLocal = true;
     for ( const VoxelMeshVertex& vertex : neighborMesh._listOpaqueVertex )
+    {
         bLocal = bLocal && vertex._position._x >= 0.0f && vertex._position._x <= 1.0f;
+    }
     SW_EXPECT_TRUE( bLocal );
 
     // 물 둘은 서로 사이 면이 없고 반투명 목록으로 간다.
@@ -312,7 +318,9 @@ SW_TEST_CASE( VoxelTest, BodyLandsJumpsOneBlockAndSlidesAlongWalls )
     VoxelBody body;
     body.setPosition( float3{ 8.5f, 15.0f, 8.5f } );
     for ( int32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
         body.step( scene._world, float3{ 0.0f, 0.0f, 0.0f }, false, false, 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE( body.isOnGround() );
     SW_EXPECT_NEAR_EQUAL( 10.0f, body.getPosition()._y, 0.01f );
 
@@ -337,10 +345,14 @@ SW_TEST_CASE( VoxelTest, BodyLandsJumpsOneBlockAndSlidesAlongWalls )
     for ( int32 x = 13; x < 16; ++x )
     {
         for ( int32 z = 0; z < scene._world.getSizeZ(); ++z )
+        {
             SW_ASSERT_TRUE( scene._world.setBlock( x, 10, z, stone ) );
+        }
     }
     for ( int32 frameIndex = 0; frameIndex < 240; ++frameIndex )
+    {
         body.step( scene._world, float3{ 1.0f, 0.0f, 0.0f }, true, false, 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE( body.getPosition()._y >= 11.0f - 0.01f ); // 단 위로 올라왔다
     SW_EXPECT_TRUE( body.getPosition()._x < 16.0f - 0.29f );  // 벽 앞에서 멈췄다
     SW_EXPECT_TRUE( body.getPosition()._x > 15.0f );
@@ -348,7 +360,9 @@ SW_TEST_CASE( VoxelTest, BodyLandsJumpsOneBlockAndSlidesAlongWalls )
     // 벽에 비스듬히(+X +Z) — X 는 막히고 Z 로 미끄러진다.
     const float32 startZ = body.getPosition()._z;
     for ( int32 frameIndex = 0; frameIndex < 60; ++frameIndex )
+    {
         body.step( scene._world, float3{ 0.7071f, 0.0f, 0.7071f }, false, false, 1.0f / 60.0f );
+    }
     SW_EXPECT_TRUE( body.getPosition()._z - startZ > 2.0f );
     SW_EXPECT_TRUE( body.getPosition()._x < 16.0f - 0.29f );
 
@@ -413,7 +427,9 @@ SW_TEST_CASE( VoxelTest, StateRoundTripKeepsEditsAndMarksChunksDirty )
     for ( int32 chunkZ = 0; chunkZ < 2; ++chunkZ )
     {
         for ( int32 chunkX = 0; chunkX < 3; ++chunkX )
+        {
             restored._world.clearChunkDirty( chunkX, chunkZ );
+        }
     }
     VoxelHotbar restoredHotbar;
     Archive     reader( written.getData(), written.getSize() );
@@ -428,7 +444,9 @@ SW_TEST_CASE( VoxelTest, StateRoundTripKeepsEditsAndMarksChunksDirty )
     for ( int32 chunkZ = 0; chunkZ < 2; ++chunkZ )
     {
         for ( int32 chunkX = 0; chunkX < 3; ++chunkX )
+        {
             SW_EXPECT_TRUE( restored._world.isChunkDirty( chunkX, chunkZ ) );
+        }
     }
     SW_EXPECT_EQUAL( 40, restoredHotbar.countBlock( stone ) );
     SW_EXPECT_EQUAL( 4, restoredHotbar.getSelectedIndex() );

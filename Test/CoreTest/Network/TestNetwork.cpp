@@ -32,7 +32,9 @@ namespace
     {
         vector<uint8> buffer( static_cast<size_t>( size ), 0 );
         for ( int32 index = 0; index < 4 && index < size; ++index )
+        {
             buffer[static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
+        }
         return buffer;
     }
 
@@ -56,7 +58,9 @@ namespace
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
         while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        {
             outListMessage.push_back( buffer );
+        }
     }
 
     /** @brief 클라이언트(호스트 1)가 64 KB 신뢰 메시지 @p count 개를 보내고 서버가 모두 받기까지의 손 시각(초)입니다 — 1/60 초마다, @p maxSeconds 를 넘으면 −1. */
@@ -145,7 +149,9 @@ namespace
     {
         int32 value = 0;
         for ( int32 index = 0; index < 4 && index < static_cast<int32>( buffer.size() ); ++index )
+        {
             value |= static_cast<int32>( buffer[static_cast<size_t>( index )] ) << ( index * 8 );
+        }
         return value;
     }
 } // namespace
@@ -471,11 +477,15 @@ SW_TEST_CASE( NetworkTest, ConnectionsResendReliableMessagesInOrderAndDropStaleS
         (void)sender.readPacket( time + 0.04, ackReader ); // ack 만 받으면 된다 — 결과는 아래 수신 메시지로 확인한다
         vector<uint8> buffer;
         while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        {
             listReceived.push_back( readMessageValue( buffer ) );
+        }
     }
     SW_ASSERT_TRUE( listReceived.size() == 40 );
     for ( int32 index = 0; index < 40; ++index )
+    {
         SW_EXPECT_EQUAL( index, listReceived[static_cast<size_t>( index )] );
+    }
     SW_EXPECT_TRUE( sender.getStats()._resentMessageCount > 0 );
     SW_EXPECT_EQUAL( 0, sender.getPendingReliableCount() );
     SW_EXPECT_NEAR_EQUAL( 0.04f, sender.getStats()._rtt, 0.01f );
@@ -529,7 +539,9 @@ SW_TEST_CASE( NetworkTest, SequencedChannelKeepsOneStreamPerMessageKind )
         vector<uint8> directBuffer;
         int32         directCount = 0;
         while ( direct.receiveMessage( NetChannelType::UnreliableSequenced, directBuffer ) )
+        {
             ++directCount;
+        }
         SW_EXPECT_EQUAL( 2, directCount );
     }
     // 다음 간격 — 자세만 새로. 이 패킷이 먼저 도착해도 앞 패킷의 스냅샷(다른 종류)은 받는다.
@@ -544,7 +556,9 @@ SW_TEST_CASE( NetworkTest, SequencedChannelKeepsOneStreamPerMessageKind )
     vector<vector<uint8>> listReceived;
     vector<uint8>         buffer;
     while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+    {
         listReceived.push_back( buffer );
+    }
     SW_ASSERT_EQUAL( size_t{ 2 }, listReceived.size() );
     SW_EXPECT_TRUE( listReceived[0] == poseNew );     // 새 자세
     SW_EXPECT_TRUE( listReceived[1] == snapshotNew ); // 옛 패킷이지만 스냅샷 흐름에서는 처음이자 가장 새 것 — 옛 자세(2)는 버렸다
@@ -595,7 +609,9 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     }
     SW_ASSERT_TRUE( listReceived.size() == 200 );
     for ( int32 index = 0; index < 200; ++index )
+    {
         SW_EXPECT_EQUAL( index, listReceived[static_cast<size_t>( index )] );
+    }
     // RTT · 손실률 · 깨짐은 패킷이 쌓여야 보인다(메시지 200 개는 패킷 스무 개 남짓에 다 실렸다) — 6 초 동안 매 프레임 입력 같은 비신뢰 메시지를 보낸다.
     const NetConnectionStats& stats = pair.getClient( 0 ).findConnection( 0 )->getStats();
     for ( int32 frame = 0; frame < 60 * 6; ++frame )
@@ -823,7 +839,9 @@ SW_TEST_CASE( NetworkTest, MalformedPayloadIsNotAcknowledged )
         BitReader nextReader( next.getBytes().data(), next.getByteCount() );
         (void)receiver.readPacket( time + 0.03, nextReader ); // 중복이면 false — 결과는 아래 수신 메시지로 확인한다
         while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        {
             ++receivedCount;
+        }
     }
     SW_ASSERT_EQUAL( 1, receivedCount );
     SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
@@ -1025,7 +1043,9 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
     SW_ASSERT_EQUAL( static_cast<int32>( sizeof( arrExpected ) ), writer.getByteCount() );
     SW_EXPECT_EQUAL( 216, writer.getBitCount() );
     for ( size_t index = 0; index < sizeof( arrExpected ); ++index )
+    {
         SW_EXPECT_EQUAL( static_cast<int32>( arrExpected[index] ), static_cast<int32>( writer.getBytes()[index] ) );
+    }
 
     // 무작위 — 폭 1..32 비트와 경계를 가리지 않는 바이트 덩어리를 섞어 쓰고 그대로 읽는다. 쓰기를 비워도 다시 쓸 수 있다.
     uint32 state = 0x2545F491u;
@@ -1042,7 +1062,9 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
             {
                 arrWidth[field] = -static_cast<int32>( nextRandom( state ) % 7 ); // 0..6 바이트
                 for ( int32 byteIndex = 0; byteIndex < -arrWidth[field]; ++byteIndex )
+                {
                     arrBlob[field][byteIndex] = static_cast<uint8>( nextRandom( state ) );
+                }
                 writer.writeBytes( arrBlob[field], -arrWidth[field] );
                 continue;
             }
@@ -1058,7 +1080,9 @@ SW_TEST_CASE( NetworkTest, BitStreamKeepsWireLayoutAndRoundTripsRandomFields )
                 uint8 arrRead[6]{};
                 SW_ASSERT_TRUE( reader.readBytes( arrRead, -arrWidth[field] ) );
                 for ( int32 byteIndex = 0; byteIndex < -arrWidth[field]; ++byteIndex )
+                {
                     SW_ASSERT_EQUAL( static_cast<int32>( arrBlob[field][byteIndex] ), static_cast<int32>( arrRead[byteIndex] ) );
+                }
                 continue;
             }
             SW_ASSERT_TRUE( reader.readBits( arrWidth[field] ) == arrValue[field] );
@@ -1282,7 +1306,9 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
             time += 1.0 / 60.0;
             server.update( time );
             for ( NetHost& client : arrClient )
+            {
                 client.update( time );
+            }
         }
     };
     runAll( 0.5 );
@@ -1290,7 +1316,9 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
 
     // 클라이언트마다 자기 번호를 보낸다 — 서버의 연결 id 가 그 클라이언트의 주소와 맞아야 한다.
     for ( int32 index = 0; index < kClientCount; ++index )
+    {
         SW_ASSERT_TRUE( arrClient[index].sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( index ) ) );
+    }
     runAll( 0.2 );
     int32          connectionId = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
@@ -1340,7 +1368,9 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
             time += 1.0 / 60.0;
             server.update( time );
             for ( NetHost& client : arrClient )
+            {
                 client.update( time );
+            }
         }
     };
     runAll( 0.5 );
@@ -1376,7 +1406,9 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
     SW_EXPECT_EQUAL( 2, writer.sendToPeers( server, NetChannelType::ReliableOrdered ) );
     runAll( 0.2 );
     for ( NetHost& client : arrClient )
+    {
         SW_EXPECT_TRUE( client.receiveMessage( connectionId, channel, buffer ) );
+    }
 }
 
 /**
@@ -1435,7 +1467,9 @@ SW_TEST_CASE( NetworkTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
     const vector<vector<uint8>> listSent = { makePatternMessage( 1u, NetConnection::kMaxReliableMessageSize ), makePatternMessage( 2u, 7 ),
                                              makePatternMessage( 3u, 40000 ), makePatternMessage( 4u, NetConnection::kMaxSingleMessageSize + 1 ) };
     for ( const vector<uint8>& message : listSent )
+    {
         SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
+    }
 
     vector<vector<uint8>> listReceived;
     for ( int32 step = 0; step < 60 * 20 && listReceived.size() < listSent.size(); ++step )
@@ -1448,7 +1482,9 @@ SW_TEST_CASE( NetworkTest, ReliableMessagesUpTo64KbArriveWholeOverABadLine )
 
     SW_ASSERT_EQUAL( listSent.size(), listReceived.size() );
     for ( size_t index = 0; index < listSent.size(); ++index )
+    {
         SW_EXPECT_TRUE_MSG( listReceived[index] == listSent[index], "every message arrives whole, byte for byte, in the order sent" );
+    }
     const NetConnection* pClientSide = cluster.getClient( 0 ).findConnection( 0 );
     SW_ASSERT_TRUE( pClientSide != nullptr );
     SW_EXPECT_TRUE( pClientSide->getStats()._resentMessageCount > 0 ); // 잃은 조각을 다시 보냈다(회선이 실제로 나빴다)
@@ -1479,7 +1515,9 @@ SW_TEST_CASE( NetworkTest, OversizedMessagesAreRefusedLoudlyAndAFullWindowQuietl
     const vector<uint8>      largest    = makePatternMessage( 5u, NetConnection::kMaxReliableMessageSize );
     const int32              perMessage = NetConnection::kMaxReliableMessageSize / NetConnection::kMaxSingleMessageSize;
     for ( int32 index = 0; index < 3; ++index )
+    {
         SW_EXPECT_TRUE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
+    }
     SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
     SW_EXPECT_FALSE( connection.sendMessage( NetChannelType::ReliableOrdered, largest.data(), static_cast<int32>( largest.size() ) ) );
     SW_EXPECT_EQUAL( 3 * perMessage, connection.getPendingReliableCount() );
@@ -1553,7 +1591,9 @@ SW_TEST_CASE( NetworkTest, LargeReliableMessageDoesNotStarveSequencedMessages )
         SW_ASSERT_TRUE( sender.sendMessage( NetChannelType::UnreliableSequenced, snapshot.data(), static_cast<int32>( snapshot.size() ) ) );
         exchange( 0.05 * frame );
         while ( receiver.receiveMessage( NetChannelType::UnreliableSequenced, buffer ) )
+        {
             ++snapshotCount;
+        }
     }
     SW_EXPECT_TRUE_MSG( snapshotCount >= 9, "about every other packet carries the snapshot" );
     SW_EXPECT_TRUE_MSG( fragmentCount - sender.getPendingReliableCount() >= 9, "the reliable transfer keeps going too" );
@@ -1564,7 +1604,9 @@ SW_TEST_CASE( NetworkTest, LargeReliableMessageDoesNotStarveSequencedMessages )
     {
         exchange( 0.05 * frame );
         while ( receiver.receiveMessage( NetChannelType::ReliableOrdered, buffer ) )
+        {
             listReceived.push_back( buffer );
+        }
     }
     SW_ASSERT_EQUAL( size_t{ 1 }, listReceived.size() );
     SW_EXPECT_TRUE( listReceived[0] == large );
@@ -1638,7 +1680,9 @@ SW_TEST_CASE( NetworkTest, ReliableUnorderedSkipsTheHeadOfLineButStaysReliable )
         vector<int32> listValue;
         vector<uint8> buffer;
         while ( receiver.receiveMessage( channel, buffer ) )
+        {
             listValue.push_back( readMessageValue( buffer ) );
+        }
         return listValue;
     };
 

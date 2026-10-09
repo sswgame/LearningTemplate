@@ -192,7 +192,9 @@ namespace sw
         {
             bool bFound = false;
             for ( const int32 dayOfSeason : _listDayOfSeason )
+            {
                 bFound = bFound || dayOfSeason == context._dayOfSeason;
+            }
             Internal::mark( result, ScheduleConditionClause::DayOfSeason, bFound );
         }
         if ( _listSeason.empty() == false )
@@ -207,9 +209,13 @@ namespace sw
         {
             bool bPassed = true;
             for ( const TagID& tag : _listRequiredTag )
+            {
                 bPassed = bPassed && Internal::hasTag( context, tag );
+            }
             for ( const TagID& tag : _listForbiddenTag )
+            {
                 bPassed = bPassed && Internal::hasTag( context, tag ) == false;
+            }
             Internal::mark( result, ScheduleConditionClause::Tags, bPassed );
         }
         if ( _chance < 1.0f )

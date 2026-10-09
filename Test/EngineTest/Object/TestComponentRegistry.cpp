@@ -41,7 +41,9 @@ namespace sw
             {
                 vector<const Component*> listComponent;
                 for ( T* pComponent : manager.getComponentRegistry().getAll<T>( channel ) )
+                {
                     listComponent.push_back( pComponent );
+                }
                 std::sort( listComponent.begin(), listComponent.end() );
                 return listComponent;
             }
@@ -270,5 +272,7 @@ SW_TEST_CASE( ComponentRegistryTest, EnvironmentFindersSeeTheSameAsTheSceneScan 
     std::sort( listDistance.begin(), listDistance.end() );
     SW_ASSERT_EQUAL( static_cast<uint32>( std::min<size_t>( listDistance.size(), FoliageInfluencerComponent::kMaxInfluencerCount ) ), count );
     for ( uint32 slot = 0; slot < count; ++slot )
+    {
         SW_EXPECT_NEAR_EQUAL( listDistance[slot], ( float3{ arrSphere[slot]._x, arrSphere[slot]._y, arrSphere[slot]._z } - view ).getLengthSquared(), 1.0e-3f );
+    }
 }

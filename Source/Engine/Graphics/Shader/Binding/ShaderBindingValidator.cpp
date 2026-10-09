@@ -236,7 +236,9 @@ namespace sw
                     push( res._name, kind, res._registerSpace, res._bindPoint, res._bindCount );
                 }
                 for ( const ShaderBufferInfo& cb : reflection._listConstantBuffer )
+                {
                     push( cb._name, ShaderBindingKind::ConstantBuffer, cb._registerSpace, cb._bindPoint, ReflectedBinding::kUnknownCount );
+                }
             }
 
             static void report( vector<ShaderBindingValidatorIssue>* pOutIssue, string_view shaderLabel, const string& resource, string&& message, uint32& ioCount )

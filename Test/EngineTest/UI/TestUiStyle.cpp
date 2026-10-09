@@ -156,7 +156,9 @@ SW_TEST_CASE( UiStyleTest, FieldTableMatchesReflection )
     const sw::vector<sw::PropertyInfo>& listProperty = sw::WidgetStyle::StaticType()->getPropertiesWithBase();
     SW_ASSERT_EQUAL( static_cast<uint32>( sw::UiStyleField::Count ), static_cast<uint32>( listProperty.size() ) );
     for ( uint32 index = 0; index < static_cast<uint32>( listProperty.size() ); ++index )
+    {
         SW_EXPECT_STREQ( sw::UiStyleFieldTable::getEntry( static_cast<sw::UiStyleField>( index ) )._pName, listProperty[index]._name.c_str() );
+    }
 }
 
 /** @brief [UiStyleTest] 겹치면 #이름 > .클래스 > 타입, 특정도가 같으면 뒤 규칙이 이긴다 */
@@ -379,7 +381,9 @@ SW_TEST_CASE( UiStyleTest, ComputedStylesAreShared )
     UiStyleFixture fixture;
     sw::string     body = "\t<BoxPanel>\n";
     for ( uint32 index = 0; index < 100; ++index )
+    {
         body += "\t\t<ButtonWidget _styleClass=\"primary\" />\n";
+    }
     body += "\t</BoxPanel>\n";
     sw::UiScreen* pScreen = fixture.open( "<UiStyleSheet _schemaVersion=\"1\">\n"
                                           "\t<Rule _selector=\"ButtonWidget.primary\" _backgroundColor=\"0,0,1,1\" />\n"
@@ -391,7 +395,9 @@ SW_TEST_CASE( UiStyleTest, ComputedStylesAreShared )
     const sw::UiComputedStyle* pFirst = pRoot->getChild( 0 )->getComputedStyle();
     SW_ASSERT_NOT_NULL( pFirst );
     for ( uint32 index = 1; index < pRoot->getChildCount(); ++index )
+    {
         SW_EXPECT_TRUE( pRoot->getChild( index )->getComputedStyle() == pFirst );
+    }
     SW_EXPECT_EQUAL( 2u, pScreen->getStyleSet()->getComputedStyleCount() ); // 루트 하나 + 버튼 하나
 }
 

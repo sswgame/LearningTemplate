@@ -280,7 +280,9 @@ namespace test
         {
             sw::string upper( text );
             for ( utf8& character : upper )
+            {
                 character = static_cast<utf8>( std::toupper( static_cast<uint8>( character ) ) );
+            }
             return upper;
         }
 
@@ -406,7 +408,9 @@ namespace test
                 }
                 replyArrayHeader( outBytes, static_cast<int64>( listQueued.size() ) );
                 for ( const sw::RespValue& queued : listQueued )
+                {
                     executeDataCommand( queued, outBytes );
+                }
                 return;
             }
             if ( connection._bInMulti )

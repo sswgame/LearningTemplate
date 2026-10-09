@@ -82,7 +82,9 @@ namespace
         {
             uint32 count = 0;
             for ( const AnimFiredNotify& fired : listFired )
+            {
                 count += ( fired._name == hashed_string( pName ) && fired._phase == phase ) ? 1u : 0u;
+            }
             return count;
         }
 
@@ -90,7 +92,9 @@ namespace
         {
             uint32 count = 0;
             for ( const string& entry : listLog )
+            {
                 count += entry == pEntry ? 1u : 0u;
+            }
             return count;
         }
 
@@ -150,7 +154,9 @@ SW_TEST_CASE( AnimNotifyTest, StateNotifyBeginsAndEndsOncePerCrossing )
     AnimClipCursor          cursor;
     vector<AnimFiredNotify> listFired;
     for ( uint32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+    {
         track.collectFired( cursor.advance( 0.1f, 1.0f, true ), 1.0f, 1.0f, &clip, listFired );
+    }
 
     SW_EXPECT_EQUAL( 1u, TestAnimNotifyInternal::countPhase( listFired, "Swing", AnimNotifyPhase::Begin ) );
     SW_EXPECT_EQUAL( 1u, TestAnimNotifyInternal::countPhase( listFired, "Swing", AnimNotifyPhase::End ) );
@@ -312,7 +318,9 @@ SW_TEST_CASE( AnimNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
 
     // 0.05 초씩 열 번(0.5 초) — Ping(0.1) 한 번, Swing 은 0.2 에 열리고 0.5 에 닫힌다.
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         manager.getAnimationSystem().evaluate( 0.05f );
+    }
     SW_EXPECT_EQUAL( 1u, TestAnimNotifyInternal::countLog( listLog, "Notify:Ping" ) );
     SW_EXPECT_EQUAL( 1u, TestAnimNotifyInternal::countLog( listLog, "Begin:Swing" ) );
     SW_EXPECT_EQUAL( 1u, TestAnimNotifyInternal::countLog( listLog, "End:Swing" ) );
@@ -321,7 +329,9 @@ SW_TEST_CASE( AnimNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
     // 다음 바퀴의 구간 안(0.3 초)에서 멈추면 끝을 대신 낸다.
     listLog.clear();
     for ( uint32 frameIndex = 0; frameIndex < 16; ++frameIndex )
+    {
         manager.getAnimationSystem().evaluate( 0.05f );
+    }
     SW_EXPECT_EQUAL( 1u, pNotify->getActiveStateCount() );
     pAnimator->stop();
     manager.getAnimationSystem().evaluate( 0.05f );

@@ -43,7 +43,9 @@ namespace sw
             {
                 float32 offset = spacing * static_cast<float32>( count );
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     offset += listSize[index];
+                }
                 return offset;
             }
 
@@ -73,7 +75,9 @@ namespace sw
             {
                 float32 total = spacing * static_cast<float32>( span - 1 );
                 for ( uint32 index = start; index < start + span; ++index )
+                {
                     total += listSize[index];
+                }
                 return total;
             }
 

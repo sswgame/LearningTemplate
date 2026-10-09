@@ -75,7 +75,9 @@ namespace sw::editor
         {
             int32 maxId{ 0 };
             for ( const TItem& item : list )
+            {
                 maxId = MathUtil::max( maxId, item._id );
+            }
             return maxId + 1;
         }
 

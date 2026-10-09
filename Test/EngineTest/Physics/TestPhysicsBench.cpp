@@ -38,7 +38,9 @@ namespace
         for ( uint32 row = 0; row < kStaticRowCount; ++row )
         {
             for ( uint32 column = 0; column < kStaticRowCount; ++column )
+            {
                 world.addBody( makeBoxAt( static_cast<float32>( column ) * kStaticSpacing, static_cast<float32>( row ) * kStaticSpacing ), 0, objectId++ );
+            }
         }
 
         sw::vector<sw::PhysicsWorld::BodyHandle> listContinuousBody;

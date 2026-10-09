@@ -25,9 +25,13 @@ namespace sw
             {
                 RenderPassInputSignature contract{};
                 for ( const Role role : listRequired )
+                {
                     contract._arrRequired[contract._requiredCount++] = role;
+                }
                 for ( const Role role : listOptional )
+                {
                     contract._arrOptional[contract._optionalCount++] = role;
+                }
                 return contract;
             }
 
@@ -210,7 +214,9 @@ namespace sw
             {
                 InfoTable table{};
                 for ( uint32 index = 0; index < kRenderPassTypeCount; ++index )
+                {
                     table._arrRow[index] = makeInfo( static_cast<RenderPassType>( index ) );
+                }
                 return table;
             }
 

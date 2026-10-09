@@ -34,7 +34,9 @@ namespace
         static void tickFor( GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
                 manager.tick( kFrame );
+            }
         }
 
         static RigidBodyComponent* spawnBox( GameObjectManager& manager, const utf8* pName, const float3& position, const float3& halfExtents, PhysicsBodyType type,

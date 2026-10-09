@@ -14,7 +14,9 @@ namespace sw
     {
         _frameIndex = constant::kMaxFrameCountInFlight - 1;
         for ( uint64& fenceValue : _arrFenceValue )
+        {
             fenceValue = 0;
+        }
     }
 
     bool FrameResourceRing::beginFrame( uint64 completedFenceValue )

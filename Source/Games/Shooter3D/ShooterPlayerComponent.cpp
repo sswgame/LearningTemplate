@@ -305,7 +305,9 @@ namespace sw
         }
 
         for ( WeaponState& weapon : _arrWeapon )
+        {
             weapon.update( step );
+        }
         _vitality.update( step );
         _timeSinceShot += step;
         _hitMarkerTimer -= step;
@@ -372,7 +374,9 @@ namespace sw
     void ShooterPlayerComponent::addWaveAmmo()
     {
         for ( WeaponState& weapon : _arrWeapon )
+        {
             weapon.addReserveAmmo( weapon.getDef()._magazineSize * 2 );
+        }
     }
 
     void ShooterPlayerComponent::restoreHealth( float32 amount )
@@ -651,7 +655,9 @@ namespace sw
         if ( pMovement != nullptr )
             pMovement->teleport( _spawnPosition );
         for ( WeaponState& weapon : _arrWeapon )
+        {
             weapon.addReserveAmmo( weapon.getDef()._maxReserveAmmo );
+        }
         GameObject*                 pOwner  = getOwner();
         FirstPersonCameraComponent* pCamera = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         if ( pCamera != nullptr )
@@ -710,9 +716,13 @@ namespace sw
         if ( pDirector != nullptr )
         {
             for ( const EffectRequest& effect : _listPendingEffect )
+            {
                 pDirector->spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
+            }
             for ( const TracerRequest& tracer : _listPendingTracer )
+            {
                 pDirector->spawnTracer( tracer._from, tracer._to, _tracerWidth, Internal::kTracerColor, _tracerLifetime );
+            }
         }
         _listPendingEffect.clear();
         _listPendingTracer.clear();

@@ -148,7 +148,9 @@ namespace
     bool updateRoomUntilCleared( ActionRoom& room, const ActionRoomFrameInput& input, int32 maxFrame )
     {
         for ( int32 frameIndex = 0; frameIndex < maxFrame && room.isCleared() == false; ++frameIndex )
+        {
             (void)room.update( 0.02f, input ); // 이 시험은 룸 이벤트를 본다 — 프레임 결과는 쓰지 않는다
+        }
         return room.isCleared();
     }
 
@@ -209,7 +211,9 @@ SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfter
 
     // 더 흘려도 다시 깎이지 않는다.
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
     manager.endPlay();
 }
@@ -257,7 +261,9 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     SW_EXPECT_EQUAL( 100, pAlly->getHp() );
     SW_EXPECT_TRUE( manager.findGameObjectById( bulletId ) != nullptr );
     manager.endPlay();
@@ -377,7 +383,9 @@ SW_TEST_CASE( ActionCombatTest, WallsStopProjectilesButProjectilesPassEachOther 
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     // 나란히 난 둘은 서로를 지나쳐 유닛에 닿았다(무적 0 이라 둘 다 깎는다). 벽 줄의 총알은 벽에서 멈췄다 — 남은 것은 벽과 유닛뿐이다.
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), manager.getAllGameObjects().size() );
@@ -400,7 +408,9 @@ SW_TEST_CASE( ActionCombatTest, PiercingProjectilePassesThroughAsManyUnitsAsItsP
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 20; ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     SW_EXPECT_EQUAL( 90, pFirst->getHp() );
     SW_EXPECT_EQUAL( 90, pSecond->getHp() );
     SW_EXPECT_EQUAL( 100, pThird->getHp() );
@@ -458,7 +468,9 @@ SW_TEST_CASE( ActionCombatTest, AttackHitsEachUnitInItsHitboxOncePerSwing )
 
     // 판정이 꺼진 뒤 들어온 유닛은 맞지 않는다.
     for ( int32 frameIndex = 0; frameIndex < 20 && pAttack->isAttackActive(); ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     SW_ASSERT_FALSE( pAttack->isAttackActive() );
     pWalkerBody->setLocalPosition( float3( 6.0f, 0.0f, 0.0f ) );
     manager.tick( 0.1f );
@@ -543,9 +555,13 @@ SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPa
     pEnemyShot->setInstigator( pEnemy->getHandle() );
     pEnemyPass->setInstigator( pEnemy->getHandle() );
     for ( ProjectileComponent* pOwn : { pInterceptor, pPelletA, pPelletB, pPlainShot } )
+    {
         pOwn->setInstigator( pPlayer->getHandle() );
+    }
     for ( ProjectileComponent* pOwn : { pInterceptor, pPelletA, pPelletB } )
+    {
         pOwn->setInterceptor( true );
+    }
     SW_EXPECT_TRUE( pInterceptor->isInterceptor() );
     SW_EXPECT_FALSE( pPlainShot->isInterceptor() );
     const uint64 enemyShotId   = pEnemyShot->getOwner()->getObjectId();
@@ -557,7 +573,9 @@ SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPa
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 15; ++frameIndex )
+    {
         manager.tick( 0.1f );
+    }
     SW_EXPECT_TRUE( manager.findGameObjectById( enemyShotId ) == nullptr );
     SW_EXPECT_TRUE( manager.findGameObjectById( interceptorId ) == nullptr );
     SW_EXPECT_EQUAL( 100, pGuard->getHp() );
@@ -934,7 +952,9 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
     SW_EXPECT_TRUE( listGate[1]._bLocked == SW_FALSE );
     // 클리어는 한 번만 알린다.
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         (void)room.update( 0.02f, input );
+    }
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), listCleared.size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listGate.size() );
 
@@ -1111,7 +1131,9 @@ SW_TEST_CASE( ActionCombatTest, BossFireRateDoesNotDependOnFrameRate )
         const int32 frameCount = static_cast<int32>( 120.0f * framesPerSecond + 0.5f );
         int32       shotCount  = 0;
         for ( int32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
             shotCount += room.update( 1.0f / framesPerSecond, input )._enemyVolleyCount;
+        }
         SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( shotCount ), 1.0f );
     }
 }
@@ -1272,7 +1294,9 @@ SW_TEST_CASE( ActionCombatTest, StateRoundTripContinuesTheSameRoom )
     ActionRoomFrameInput keepAway;
     keepAway._playerPos = float2{ 7.0f, 12.0f }; // 멀리 서서 탄을 받는다
     for ( int32 frameIndex = 0; frameIndex < 80; ++frameIndex )
+    {
         (void)room.update( 0.02f, keepAway ); // 첫 사격(1.2 초)을 지나 탄이 날고 있다
+    }
 
     const vector<uint8> bytes = captureRoomBytes( room );
     ActionRoom          restored;

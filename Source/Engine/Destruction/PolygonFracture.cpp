@@ -78,7 +78,9 @@ namespace sw
                     listClean.push_back( corner );
                 }
                 while ( listClean.size() > 1 && float2::getDistanceSquared( listClean.back()._point, listClean.front()._point ) <= kLineEpsilon * kLineEpsilon )
+                {
                     listClean.pop_back();
+                }
                 outListOutput = std::move( listClean );
             }
 
@@ -132,7 +134,9 @@ namespace sw
                     addIfInside( impact + float2{ MathUtil::cos( angle ) * radius, MathUtil::sin( angle ) * radius } );
                 }
                 for ( uint32 attempt = 0; outListSite.size() < target && attempt < target * kSiteAttemptFactor; ++attempt )
+                {
                     addIfInside( float2{ boundsMin._x + extent._x * random.nextFloat01(), boundsMin._y + extent._y * random.nextFloat01() } );
+                }
             }
 
             static RHIVertex makeVertex( const float2& point, float32 normalZ, const float2& boundsMin, const float2& extent )
@@ -144,7 +148,9 @@ namespace sw
                 vertex._arrUv[0]       = extent._x > 0.0f ? ( point._x - boundsMin._x ) / extent._x : 0.0f;
                 vertex._arrUv[1]       = extent._y > 0.0f ? 1.0f - ( point._y - boundsMin._y ) / extent._y : 0.0f;
                 for ( float32& channel : vertex._arrColor )
+                {
                     channel = 1.0f;
+                }
                 return vertex;
             }
         };
@@ -185,7 +191,9 @@ namespace sw
         }
         vector<uint32> listOrder( listShape.size() );
         for ( uint32 index = 0; index < static_cast<uint32>( listOrder.size() ); ++index )
+        {
             listOrder[index] = index;
+        }
         if ( PolygonTriangulationUtil::computeSignedArea( listShape, listOrder ) < 0.0f )
             std::reverse( listShape.begin(), listShape.end() );
 
@@ -197,7 +205,9 @@ namespace sw
 
         vector<Corner> listSource;
         for ( const float2& point : listShape )
+        {
             listSource.push_back( Corner{ point, Internal::kOuterTag } );
+        }
         vector<vector<Corner>>             listCell( siteCount );
         vector<Corner>                     listScratch;
         vector<std::pair<float32, uint32>> listNear;
@@ -215,7 +225,9 @@ namespace sw
             {
                 float32 radiusSquared = 0.0f;
                 for ( const Corner& corner : listCorner )
+                {
                     radiusSquared = MathUtil::max( radiusSquared, float2::getDistanceSquared( corner._point, listSite[site] ) );
+                }
                 if ( entry.first * 0.25f > radiusSquared )
                     break;
                 const float2  delta  = listSite[entry.second] - listSite[site];
@@ -242,7 +254,9 @@ namespace sw
         {
             listPoint.clear();
             for ( const Corner& corner : listCell[site] )
+            {
                 listPoint.push_back( corner._point );
+            }
             float2        pieceCentroid{};
             const float32 area = listPoint.size() >= 3 ? computeArea( listPoint, pieceCentroid ) : 0.0f;
             if ( area <= 1.0e-10f )
@@ -308,11 +322,15 @@ namespace sw
             const vector<Corner>& listCorner = listCell[listSiteOfPiece[listLeafOrder[leaf]]];
             listPoint.clear();
             for ( const Corner& corner : listCorner )
+            {
                 listPoint.push_back( corner._point );
+            }
             listIndex.clear();
             vector<uint32> listLoop( listPoint.size() );
             for ( uint32 index = 0; index < static_cast<uint32>( listLoop.size() ); ++index )
+            {
                 listLoop[index] = index;
+            }
             (void)PolygonTriangulationUtil::triangulate( listPoint, vector<vector<uint32>>{ listLoop }, listIndex );
 
             FracturePiece piece;
@@ -324,9 +342,13 @@ namespace sw
                 const float2& b = listPoint[listIndex[index + 1]];
                 const float2& c = listPoint[listIndex[index + 2]];
                 for ( const float2* pPoint : { &a, &b, &c } )
+                {
                     outAsset._listVertex.push_back( Internal::makeVertex( *pPoint, 1.0f, boundsMin, extent ) );
+                }
                 for ( const float2* pPoint : { &a, &c, &b } )
+                {
                     outAsset._listVertex.push_back( Internal::makeVertex( *pPoint, -1.0f, boundsMin, extent ) );
+                }
                 outAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
                 outAsset._listTriangleSlot.push_back( static_cast<uint8>( FractureSurfaceSlot::Outer ) );
             }

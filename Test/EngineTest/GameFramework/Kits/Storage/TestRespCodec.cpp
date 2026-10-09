@@ -83,7 +83,9 @@ SW_TEST_CASE( RespCodecTest, ParsesTheSameValuesWhenFedOneByteAtATime )
     SW_ASSERT_EQUAL( size_t( 8 ), listWhole.size() );
     SW_ASSERT_EQUAL( listWhole.size(), listByte.size() );
     for ( size_t index = 0; index < listWhole.size(); ++index )
+    {
         SW_EXPECT_TRUE( isSameValue( listWhole[index], listByte[index] ) );
+    }
 
     SW_EXPECT_TRUE( listWhole[0].isText( "OK" ) );
     SW_EXPECT_TRUE( listWhole[1].isError() && listWhole[1].getText() == "ERR bad thing" );

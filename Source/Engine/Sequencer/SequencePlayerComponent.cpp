@@ -136,8 +136,12 @@ namespace sw
         vector<SequenceTrackItem> listEvent;
         listEvent.reserve( listCrossed.size() );
         for ( const SequenceTrackItem* pItem : listCrossed )
+        {
             listEvent.push_back( *pItem );
+        }
         for ( const SequenceTrackItem& event : listEvent )
+        {
             _sequenceEventMulticast.broadcast( event );
+        }
     }
 } // namespace sw

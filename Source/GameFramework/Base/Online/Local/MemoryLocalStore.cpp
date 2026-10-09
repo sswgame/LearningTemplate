@@ -134,7 +134,9 @@ namespace sw
     {
         const int32 completionCount = static_cast<int32>( _listCompletion.size() );
         for ( LocalStoreCompletion& completion : _listCompletion )
+        {
             outListCompletion.push_back( std::move( completion ) );
+        }
         _listCompletion.clear();
         return completionCount;
     }

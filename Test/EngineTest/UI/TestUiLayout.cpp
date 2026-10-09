@@ -77,7 +77,9 @@ namespace
             pContent->setOrientation( sw::UiOrientation::Vertical );
             const utf8* const arrName[] = { "item0", "item1", "item2", "item3", "item4" };
             for ( uint32 index = 0; index < 5; ++index )
+            {
                 outListItem.push_back( fixture.addFixed( pContent, sw::hashed_string( arrName[index] ), 50.0f, 40.0f ) );
+            }
             return pScroll;
         }
     };

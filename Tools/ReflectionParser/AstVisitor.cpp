@@ -799,7 +799,9 @@ namespace sw
 
                 // 반환 타입 뒤의 첫 `(` 부터 짝이 맞는 `)` 까지가 인자 목록이다.
                 while ( cursorIndex < listToken.size() && listToken[cursorIndex]._spelling != "(" )
+                {
                     ++cursorIndex;
+                }
                 vector<string> listName;
                 if ( cursorIndex >= listToken.size() )
                     return listName;
@@ -1489,7 +1491,9 @@ namespace sw
 
         _listTargetFile.reserve( _listTargetPath.size() );
         for ( const string& path : _listTargetPath )
+        {
             _listTargetFile.push_back( clang_getFile( translationUnit, path.c_str() ) );
+        }
         _listHeader.resize( _listTargetPath.size() );
     }
 

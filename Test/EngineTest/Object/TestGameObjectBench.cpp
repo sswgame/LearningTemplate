@@ -329,7 +329,9 @@ SW_TEST_CASE( GameObjectBenchTest, FindById )
     sw::vector<uint64> listProbe;
     listProbe.reserve( kProbeCount );
     for ( uint32 index = 0; index < kProbeCount; ++index )
+    {
         listProbe.push_back( listObjectId[( static_cast<uint64>( index ) * 2654435761ull ) % kObjectCount] );
+    }
 
     // 다섯 판 중 가장 빠른 판 — 첫 판의 캐시 · 페이지 비용을 걸러낸다.
     int64  bestNanos  = std::numeric_limits<int64>::max();
@@ -502,7 +504,9 @@ SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
     {
         listObject.clear();
         for ( uint32 index = 0; index < kObjectCount; ++index )
+        {
             listObject.push_back( manager.createGameObject( sw::hashed_string( "BenchObject" ) ) );
+        }
 
         const sw::Stopwatch stopwatch;
         for ( sw::GameObject* pObj : listObject )
@@ -515,7 +519,9 @@ SW_TEST_CASE( GameObjectBenchTest, AddComponentByName )
         listRound.push_back( stopwatch.getElapsedMicroseconds() );
 
         for ( sw::GameObject* pObj : listObject )
+        {
             manager.destroyObject( pObj );
+        }
         manager.processDeferredDestruction();
     }
 

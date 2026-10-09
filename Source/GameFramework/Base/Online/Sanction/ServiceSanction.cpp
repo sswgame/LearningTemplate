@@ -68,7 +68,9 @@ namespace sw
         if ( reader.readVarUint() != ServiceSanctionInternal::kFormat )
             return ServiceStoreResult::Unavailable;
         for ( int32 kindIndex = 0; kindIndex < ServiceSanctionInternal::kKindCount; ++kindIndex )
+        {
             outState._arrUntilMs[kindIndex] = reader.readVarInt();
+        }
         if ( ServiceKeyUtil::readString( reader, ServiceSanctionInternal::kMaxReasonSize, outState._reasonCode ) == false || reader.hasOverflowed() )
             return ServiceStoreResult::Unavailable;
         outState._version = record._version;
@@ -105,7 +107,9 @@ namespace sw
         BitWriter writer;
         writer.writeVarUint( ServiceSanctionInternal::kFormat );
         for ( int32 kindIndex = 0; kindIndex < ServiceSanctionInternal::kKindCount; ++kindIndex )
+        {
             writer.writeVarInt( state._arrUntilMs[kindIndex] );
+        }
         ServiceKeyUtil::writeString( writer, state._reasonCode );
         inoutTransaction.put( getTable(), key, writer.releaseBytes(), state._version );
     }

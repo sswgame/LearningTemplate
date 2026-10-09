@@ -15,9 +15,13 @@ namespace sw
             static float32 wrapAngle( float32 angle )
             {
                 while ( angle > MathUtil::kPi )
+                {
                     angle -= 2.0f * MathUtil::kPi;
+                }
                 while ( angle < -MathUtil::kPi )
+                {
                     angle += 2.0f * MathUtil::kPi;
+                }
                 return angle;
             }
         };

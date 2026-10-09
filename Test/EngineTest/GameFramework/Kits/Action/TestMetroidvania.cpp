@@ -434,7 +434,9 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
         GameRandom    runRandom( 1234u );
         ItemStackList runDrops;
         for ( int32 spawnIndex = 0; spawnIndex < 20; ++spawnIndex )
+        {
             (void)run.registerKill( hashed_string( string( "husk_" ) + static_cast<utf8>( 'a' + spawnIndex ) ), "husk", flags, &loot, runRandom, runDrops );
+        }
         arrShard[runIndex] = runDrops.getItemCount( "shard" );
         SW_EXPECT_EQUAL( 100, geoOf( runWallet ) );
     }
@@ -454,7 +456,9 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
     // 창 안(0.05 초 일찍) — 피해 없이 패리, 반격 배율은 한 번만.
     player.pressParry();
     for ( int32 frame = 0; frame < 3; ++frame )
+    {
         player.update( kMetroidvaniaStep );
+    }
     MetroDefenseOutcome outcome = player.receiveAttack( 25.0f, 10.0f );
     SW_EXPECT_TRUE( outcome._result == MetroDefenseResult::Parried );
     SW_EXPECT_TRUE( outcome._parryGrade == hashed_string( "Parry" ) );
@@ -466,7 +470,9 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
     // 창 밖(0.3 초 일찍) — 그냥 맞는다. 한 번 쓴 누름은 다음 공격에 다시 쓰이지 않는다.
     player.pressParry();
     for ( int32 frame = 0; frame < 18; ++frame )
+    {
         player.update( kMetroidvaniaStep );
+    }
     outcome = player.receiveAttack( 25.0f, 10.0f );
     SW_EXPECT_TRUE( outcome._result == MetroDefenseResult::Hit );
     SW_EXPECT_NEAR_EQUAL( 25.0f, outcome._healthDamage, 1.0e-3f );
@@ -476,7 +482,9 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
     player.update( kMetroidvaniaStep );
     SW_EXPECT_TRUE( player.receiveAttack( 5.0f, 0.0f )._result == MetroDefenseResult::Parried );
     for ( int32 frame = 0; frame < 70; ++frame )
+    {
         player.update( kMetroidvaniaStep );
+    }
     SW_EXPECT_FALSE( player.isRiposteReady() );
 
     // 막기 — 피해만큼 스태미나를 쓰고 체력은 조금. 스태미나가 모자라면 가드 붕괴.
@@ -505,10 +513,14 @@ SW_TEST_CASE( MetroidvaniaTest, ParryWindowOpensRiposteAndGuardSpendsStamina )
 
     // 스태미나 — 공격 다섯 번(20 씩)이면 바닥, 쉬면 다시 찬다.
     for ( int32 attackIndex = 0; attackIndex < 5; ++attackIndex )
+    {
         SW_EXPECT_TRUE( attacker.tryAttack() );
+    }
     SW_EXPECT_FALSE( attacker.tryAttack() );
     for ( int32 frame = 0; frame < 60; ++frame )
+    {
         attacker.update( kMetroidvaniaStep );
+    }
     SW_EXPECT_TRUE( attacker.tryAttack() );
 }
 
@@ -621,7 +633,9 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     (void)duelist.receiveAttack( 20.0f, 10.0f );
     duelist.pressParry();
     for ( int32 frame = 0; frame < 5; ++frame )
+    {
         duelist.update( kMetroidvaniaStep );
+    }
     duelist.setGuarding( true );
     const vector<uint8> duelistBytes = captureMetroBytes( duelist );
     MetroDuelist        restoredDuelist;

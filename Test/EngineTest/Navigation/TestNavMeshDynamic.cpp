@@ -169,13 +169,17 @@ SW_TEST_CASE( NavMeshDynamicTest, DestructionRebakesTheBrokenWallTiles )
     sw::SceneNavigation&   navigation = manager.getSceneNavigation();
     manager.beginPlay();
     for ( uint32 frame = 0; frame < 60; ++frame )
+    {
         manager.tick( Internal::kFrame );
+    }
     const sw::INavMesh* pNavMesh = navigation.findNavMesh( sw::hashed_string{} );
     SW_ASSERT_NOT_NULL( pNavMesh );
     SW_EXPECT_EQUAL( 0u, navigation.getRebakedTileCount() );
 
     for ( uint32 frame = 0; frame < 240; ++frame )
+    {
         manager.tick( Internal::kFrame );
+    }
     navigation.flushTileBakes();
     const sw::GameObject* pWall = manager.findGameObjectByName( sw::hashed_string( "BrickWall" ) );
     SW_ASSERT_NOT_NULL( pWall );

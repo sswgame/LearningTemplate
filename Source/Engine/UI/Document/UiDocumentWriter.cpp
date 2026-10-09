@@ -98,7 +98,9 @@ namespace sw
             {
                 const XmlNode destination = destinationParent.appendChild( source.getName() );
                 for ( XmlAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
                     destination.appendAttribute( attribute.getName(), attribute.getValue() );
+                }
                 for ( XmlNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     const bool bEmpty = child.getFirstAttribute().isValid() == false && child.findChild().isValid() == false && StringUtil::isNullOrEmpty( child.getText() );
@@ -135,7 +137,9 @@ namespace sw
                 if ( pPanel == nullptr || castTo<const UserWidget>( &widget ) != nullptr )
                     return;
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                {
                     writeWidget( *pPanel->getChild( index ), element, listBinding );
+                }
             }
         };
     } // namespace
@@ -168,7 +172,9 @@ namespace sw
         {
             const XmlNode list = documentRoot.appendChild( "_listStyleSheet" );
             for ( const string& path : listStyleSheet )
+            {
                 list.appendChild( "item" ).setValue( string_view( path ) );
+            }
         }
 
         // 애니메이션 — 그릇(UiAnimationList)으로 직렬화한 `_listAnimation` 원소를 그대로 옮긴다.

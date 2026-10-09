@@ -449,7 +449,9 @@ SW_TEST_CASE( DataStructureTest, LockFreeObjectPoolCatchesDoubleReleaseWhileOthe
         SW_EXPECT_TRUE( arrTaken[0] != pSecond && arrTaken[1] != pSecond && arrTaken[2] != pSecond );
 
         for ( PoolLifeProbe*& pTaken : arrTaken )
+        {
             pool.release( pTaken );
+        }
         pool.release( pSecond );
     }
     SW_EXPECT_EQUAL( 0, PoolLifeProbe::s_liveCount );
@@ -1076,7 +1078,9 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
     {
         const int32 baseVal = producerIndex * kItemsPerProducer;
         for ( int32 index = 1; index <= kItemsPerProducer; ++index )
+        {
             expectedSum += ( baseVal + index );
+        }
 
         listProducer.emplace_back( [&queue, &activeProducers, baseVal]()
         {
@@ -1092,10 +1096,14 @@ SW_TEST_CASE( DataStructureTest, ConcurrentQueueMPMCStress )
     }
 
     for ( auto& producer : listProducer )
+    {
         producer.join();
+    }
 
     for ( auto& consumer : listConsumer )
+    {
         consumer.join();
+    }
 
     SW_EXPECT_EQUAL( kTotalItems, countConsumed.load() );
     SW_EXPECT_EQUAL( expectedSum, sumConsumed.load() );
@@ -1203,7 +1211,9 @@ SW_TEST_CASE( DataStructureTest, HashMapEraseFixesCollisionChainAtEveryPosition 
     {
         sw::unordered_map<int32, int32, AlwaysCollideHasher> map;
         for ( int32 key = 0; key < kCount; ++key )
+        {
             map[key] = key * 100;
+        }
 
         SW_ASSERT_EQUAL( size_t( kCount ), map.size() );
 
@@ -1329,7 +1339,9 @@ SW_TEST_CASE( DataStructureTest, HashMapOddReserveGrowAndEraseStaysConsistent )
 
     // 지운 자리에 다시 넣으면 전부 찾는다.
     for ( uint64 index = 0; index < kCount; index += 3 )
+    {
         map.emplace( mixKey( index ), index + 1 );
+    }
     for ( uint64 index = 0; index < kCount; ++index )
     {
         const auto iter = map.find( mixKey( index ) );
@@ -1356,7 +1368,9 @@ SW_TEST_CASE( DataStructureTest, StringHashAgreesAcrossKeyFormsAndSeparatesKeys 
     {
         sw::string text;
         for ( uint32 index = 0; index < length; ++index )
+        {
             text.push_back( static_cast<utf8>( 'a' + ( ( index * 7 + length ) % 26 ) ) );
+        }
         const size_t fromString = hasher( text );
         const size_t fromView   = hasher( sw::string_view( text.data(), text.size() ) );
         const size_t fromCStr   = hasher( text.c_str() );

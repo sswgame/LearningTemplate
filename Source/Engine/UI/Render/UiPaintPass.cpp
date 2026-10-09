@@ -193,7 +193,9 @@ namespace sw
                 vector<uint32> listOrder;
                 pPanel->collectPaintOrder( listOrder );
                 for ( const uint32 index : listOrder )
+                {
                     paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
+                }
             }
             else
             {
@@ -203,12 +205,18 @@ namespace sw
                 if ( Internal::findVisibleChildRange( *pPanel, painter, begin, end ) && ( bChildForce || bAtlasChanged ) )
                 {
                     for ( uint32 index = 0; index < begin; ++index )
+                    {
                         pPanel->getChild( index )->_dirtyFlags |= Internal::kCulledRepaintBits;
+                    }
                     for ( uint32 index = end; index < pPanel->getChildCount(); ++index )
+                    {
                         pPanel->getChild( index )->_dirtyFlags |= Internal::kCulledRepaintBits;
+                    }
                 }
                 for ( uint32 index = begin; index < end; ++index )
+                {
                     paintedCount += paintChild( *pPanel->getChild( index ), context, painter, outCanvas, bChildForce, bAtlasChanged );
+                }
             }
             if ( bClip )
                 painter.popClip();

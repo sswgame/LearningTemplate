@@ -89,7 +89,9 @@ namespace sw
                 {
                     bool bKnown = false;
                     for ( uint32 parameterIndex = 0; parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
+                    {
                         bKnown = bKnown || parameter._name == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
+                    }
                     if ( bKnown == false )
                     {
                         SW_LOG_ERROR( "%#: effect '%#' on bus '%#' has no parameter '%#'", sourceName, effect._type.c_str(), bus._name.c_str(), parameter._name.c_str() );
@@ -242,7 +244,9 @@ namespace sw
                 if ( busIndex >= 0 )
                 {
                     for ( const AudioSendDesc& existing : _listBus[static_cast<size_t>( busIndex )]._listSend )
+                    {
                         bFound = bFound || existing._bus == send._target;
+                    }
                 }
                 if ( bFound == false )
                 {
@@ -259,7 +263,9 @@ namespace sw
                 {
                     const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( pEffect->_type );
                     for ( uint32 parameterIndex = 0; pTypeInfo != nullptr && parameterIndex < pTypeInfo->_parameterCount; ++parameterIndex )
+                    {
                         bKnown = bKnown || effect._parameter == hashed_string( pTypeInfo->_pParameter[parameterIndex]._pName );
+                    }
                 }
                 if ( bKnown == false )
                 {

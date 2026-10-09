@@ -88,7 +88,9 @@ namespace
                     const uint32 value  = kArrInterestingInt[random.below( std::size( kArrInterestingInt ) )];
                     const size_t offset = random.below( size );
                     for ( size_t byteIndex = 0; byteIndex < 4 && offset + byteIndex < size; ++byteIndex )
+                    {
                         inoutBytes[offset + byteIndex] = static_cast<uint8>( value >> ( 8 * byteIndex ) );
+                    }
                     break;
                 }
                 case 3: // 자르기
@@ -129,12 +131,16 @@ namespace
                 {
                     size_t start = random.below( size );
                     while ( start < size && ( inoutBytes[start] < '0' || inoutBytes[start] > '9' ) )
+                    {
                         ++start;
+                    }
                     if ( start >= size )
                         break;
                     size_t end = start;
                     while ( end < size && ( ( inoutBytes[end] >= '0' && inoutBytes[end] <= '9' ) || inoutBytes[end] == '.' ) )
+                    {
                         ++end;
+                    }
                     const string_view replacement = kArrInterestingNumberText[random.below( std::size( kArrInterestingNumberText ) )];
                     inoutBytes.erase( inoutBytes.begin() + static_cast<ptrdiff_t>( start ), inoutBytes.begin() + static_cast<ptrdiff_t>( end ) );
                     inoutBytes.insert( inoutBytes.begin() + static_cast<ptrdiff_t>( start ), replacement.begin(), replacement.end() );

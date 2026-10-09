@@ -68,7 +68,9 @@ namespace sw
             {
                 uint32 bits = 0;
                 while ( ( 1u << bits ) < value )
+                {
                     ++bits;
+                }
                 return bits;
             }
 
@@ -211,7 +213,9 @@ namespace sw
         for ( int32 tileZ = MathUtil::max( 0, minZ ); tileZ <= MathUtil::min( _grid._tileCountZ - 1, maxZ ); ++tileZ )
         {
             for ( int32 tileX = MathUtil::max( 0, minX ); tileX <= MathUtil::min( _grid._tileCountX - 1, maxX ); ++tileX )
+            {
                 outListTile.push_back( int2{ tileX, tileZ } );
+            }
         }
     }
 
@@ -309,11 +313,15 @@ namespace sw
         vector<float32>                listOffsetPoint;
         vector<const NavConvexVolume*> listVolume;
         for ( const NavConvexVolume& volume : geometry.getConvexVolumes() )
+        {
             listVolume.push_back( &volume );
+        }
         if ( pExtraVolume != nullptr )
         {
             for ( const NavConvexVolume& volume : *pExtraVolume )
+            {
                 listVolume.push_back( &volume );
+            }
         }
         for ( const NavConvexVolume* pVolume : listVolume )
         {
@@ -536,7 +544,9 @@ namespace sw
     void RecastNavMesh::applyQueryFilter( const NavQueryFilter& filter, dtQueryFilter& outFilter )
     {
         for ( uint32 areaIndex = 0; areaIndex < NavigationConstant::kMaxAreaCount; ++areaIndex )
+        {
             outFilter.setAreaCost( static_cast<int32>( areaIndex + 1 ), filter._arrAreaCost[areaIndex] );
+        }
         outFilter.setIncludeFlags( filter._includeAreaMask );
         outFilter.setExcludeFlags( filter._excludeAreaMask );
     }
@@ -614,7 +624,9 @@ namespace sw
             return NavPathStatus::Failed;
         outPath._listPoint.reserve( static_cast<size_t>( straightCount ) );
         for ( int32 pointIndex = 0; pointIndex < straightCount; ++pointIndex )
+        {
             outPath._listPoint.push_back( Internal::toFloat3( &arrStraight[pointIndex * 3] ) );
+        }
         outPath._polyCount    = static_cast<uint32>( polyCount );
         const bool bTruncated = dtStatusDetail( straightStatus, DT_BUFFER_TOO_SMALL );
         outPath._status       = ( bPartial || bTruncated ) ? NavPathStatus::Partial : NavPathStatus::Complete;

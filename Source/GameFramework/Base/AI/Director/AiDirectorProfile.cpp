@@ -176,11 +176,17 @@ namespace sw
             ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), vocabulary._listWeather );
         }
         for ( XmlNode node = root.findChild( "Intensity" ); node; node = node.findNextSibling( "Intensity" ) )
+        {
             bValid = readIntensity( node, sourceName ) && bValid;
+        }
         for ( XmlNode node = root.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
+        {
             bValid = readPhase( node, sourceName ) && bValid;
+        }
         for ( XmlNode node = root.findChild( "Pool" ); node; node = node.findNextSibling( "Pool" ) )
+        {
             bValid = readPool( node, vocabulary, sourceName ) && bValid;
+        }
         bValid = resolveReferences( sourceName ) && bValid;
         if ( bValid == false )
             clear();
@@ -244,7 +250,9 @@ namespace sw
         phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
         for ( XmlNode child = node.findChild( "Curve" ); child; child = child.findNextSibling( "Curve" ) )
+        {
             bValid = Internal::validateAttributes( child, Internal::kArrCurveAttribute, false, sourceName ) && bValid;
+        }
         (void)phase._spawnCurve.readPoints( node, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
         for ( XmlNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
@@ -403,7 +411,9 @@ namespace sw
         {
             bValid = validatePacingNames( pool._listPacing, pool._id, sourceName ) && bValid;
             for ( const AiDirectorEncounterDef& encounter : pool._listEncounter )
+            {
                 bValid = validatePacingNames( encounter._listPacing, encounter._id, sourceName ) && bValid;
+            }
             if ( pool._trigger == AiDirectorPoolTrigger::PhaseEnter )
             {
                 pool._phaseIndex = findPhaseIndex( pool._phase );

@@ -54,7 +54,9 @@ SW_TEST_CASE( NavMeshCookTest, CookedTilesMatchTheRuntimeBakeAndStaleOnesAreReje
     pRuntimeMesh->collectTiles( listRuntimeTile );
     SW_ASSERT_EQUAL( entry._listTile.size(), listRuntimeTile.size() );
     for ( size_t tileIndex = 0; tileIndex < listRuntimeTile.size(); ++tileIndex )
+    {
         SW_EXPECT_TRUE( entry._listTile[tileIndex]._bytes == listRuntimeTile[tileIndex]._bytes );
+    }
 
     // 쿠킹본을 준 씬은 끼운다.
     const sw::shared_ptr<const sw::NavMeshAsset> pCooked = sw::make_shared<sw::NavMeshAsset>( cooked );

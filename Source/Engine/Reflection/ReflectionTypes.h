@@ -736,7 +736,9 @@ namespace sw
             {
                 int64 knownBits{ 0 };
                 for ( const auto& [bitValue, name] : _mapValueToName )
+                {
                     knownBits |= bitValue;
+                }
                 if ( ( number & ~knownBits ) != 0 )
                     return false;
             }
@@ -1263,7 +1265,9 @@ namespace sw
             {
                 --depth;
                 for ( const EventInfo& event : arrChain[depth]->_listEvent )
+                {
                     func( event );
+                }
             }
         }
 

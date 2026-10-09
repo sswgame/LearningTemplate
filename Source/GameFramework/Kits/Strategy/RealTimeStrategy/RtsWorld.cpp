@@ -163,7 +163,9 @@ namespace sw
         _listPlayer.push_back( player );
         _teamCount = MathUtil::max( _teamCount, player._team + 1 );
         while ( static_cast<int32>( _listTeamVisibility.size() ) < _teamCount )
+        {
             _listTeamVisibility.emplace_back( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), static_cast<uint8>( RtsVisibility::Unexplored ) );
+        }
         return static_cast<int32>( _listPlayer.size() ) - 1;
     }
 
@@ -193,7 +195,9 @@ namespace sw
             if ( unit._bAlive || unit._id.isValid() == false )
                 continue;
             for ( RtsOrder& order : unit._listOrder )
+            {
                 releaseOrder( unit, order );
+            }
             unit._listOrder.clear();
             unit._id = RtsUnitId{};
             ++_listGeneration[index];
@@ -366,7 +370,9 @@ namespace sw
     void RtsWorld::clearOrders( RtsUnit& unit )
     {
         for ( RtsOrder& order : unit._listOrder )
+        {
             releaseOrder( unit, order );
+        }
         unit._listOrder.clear();
         beginOrder( unit );
     }
@@ -613,7 +619,9 @@ namespace sw
         }
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             stepFixed( _stepTimer.getStep() );
+        }
     }
 
     void RtsWorld::drainEvents( vector<RtsEvent>& outListEvent )
@@ -665,7 +673,9 @@ namespace sw
             player._supplyUsed += unit._pDef->_supplyCost + unit._supplyReserved;
         }
         for ( RtsPlayer& player : _listPlayer )
+        {
             player._supplyCap = MathUtil::min( player._supplyCap, _pCatalog->getSupplyMax() );
+        }
     }
 
     int32 RtsWorld::computeBucketIndex( const float3& position ) const
@@ -1305,7 +1315,9 @@ namespace sw
             return;
         unit._hp = 0.0f;
         for ( RtsOrder& order : unit._listOrder )
+        {
             releaseOrder( unit, order );
+        }
         unit._listOrder.clear();
         unit._agent.stop();
         if ( unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
@@ -1446,9 +1458,13 @@ namespace sw
             if ( unit._pDef->_id == defId )
                 ++count;
             for ( const hashed_string& queued : unit._listProduction )
+            {
                 count += queued == defId ? 1 : 0;
+            }
             for ( const RtsOrder& order : unit._listOrder )
+            {
                 count += order._type == RtsOrderType::Build && order._buildId == defId && order._targetUnit.isValid() == false ? 1 : 0;
+            }
         }
         return count;
     }
@@ -1544,7 +1560,9 @@ namespace sw
                     for ( int32 y = cell._y - 1; y <= cell._y + footprint && bClear; ++y )
                     {
                         for ( int32 x = cell._x - 1; x <= cell._x + footprint && bClear; ++x )
+                        {
                             bClear = _grid.isWalkable( x, y );
+                        }
                     }
                     if ( bClear )
                     {
@@ -1678,7 +1696,9 @@ namespace sw
             }
             outArchive << static_cast<uint32>( unit._listProduction.size() );
             for ( const hashed_string& productionId : unit._listProduction )
+            {
                 StateArchiveUtil::writeName( outArchive, productionId );
+            }
             outArchive << unit._position;
             outArchive << unit._rallyPoint;
             outArchive << unit._moveGoal;
@@ -1706,7 +1726,9 @@ namespace sw
         }
         outArchive << static_cast<uint32>( _listFreeSlot.size() );
         for ( const uint32 slot : _listFreeSlot )
+        {
             outArchive << slot;
+        }
         outArchive << static_cast<uint32>( _listPlayer.size() );
         for ( const RtsPlayer& player : _listPlayer )
         {
@@ -1720,7 +1742,9 @@ namespace sw
         }
         outArchive << static_cast<uint32>( _listTeamVisibility.size() );
         for ( const vector<uint8>& listVisibility : _listTeamVisibility )
+        {
             outArchive << listVisibility;
+        }
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         outArchive << _time;
         outArchive << _visionTimer._remaining;
@@ -1856,7 +1880,9 @@ namespace sw
             return false;
         vector<RtsPlayer> listPlayer( playerCount );
         for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
+        {
             listPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
+        }
         for ( RtsPlayer& player : listPlayer )
         {
             archive >> player._startPosition;

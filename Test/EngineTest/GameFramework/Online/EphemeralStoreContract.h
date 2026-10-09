@@ -207,7 +207,9 @@ namespace test
             const string     key   = fixture.makeKey( "binary" );
             vector<uint8>    bytes( static_cast<size_t>( IEphemeralStore::kMaxValueSize ) );
             for ( size_t index = 0; index < bytes.size(); ++index )
+            {
                 bytes[index] = static_cast<uint8>( index * 31u ); // 0x00 · 0xFF 모두 든다
+            }
             SW_EXPECT_TRUE( executeResult( store, EphemeralRequest::makeSet( key, bytes, 0 ) ) == EphemeralResult::Ok );
             EphemeralReply reply;
             SW_ASSERT_TRUE( executeRequest( store, EphemeralRequest::makeGet( key ), reply ) );
@@ -227,7 +229,9 @@ namespace test
             const string     key   = fixture.makeKey( "order" );
             vector<uint64>   listRequestId;
             for ( int32 index = 0; index < 50; ++index )
+            {
                 listRequestId.push_back( store.submit( EphemeralRequest::makeIncrement( key, 1, 0 ) ) );
+            }
             vector<EphemeralReply> listReply;
             const Deadline         deadline = Deadline::afterMilliseconds( 10000 );
             while ( listReply.size() < listRequestId.size() && deadline.isExpired() == false )

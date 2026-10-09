@@ -62,16 +62,22 @@ namespace sw
                 // 오른쪽으로 아직 안 쓴 단단한 칸이 이어지는 만큼 폭을 잡는다.
                 int32 runWidth = 1;
                 while ( x + runWidth < width && listSolid[Internal::indexOf( width, x + runWidth, y )] != 0 && listUsed[Internal::indexOf( width, x + runWidth, y )] == 0 )
+                {
                     ++runWidth;
+                }
                 // 아래 행의 같은 자리에 **같은 폭의 줄**이 있을 때만 내려간다(그 줄이 양옆으로 더 이어지면 멈춘다) — 바닥 줄 위에 기둥 하나가
                 // 서 있으면 기둥이 바닥을 쪼개지 않고 바닥 하나 · 기둥 하나가 된다.
                 int32 runHeight = 1;
                 while ( y + runHeight < height && Internal::hasSameRunBelow( listSolid, listUsed, width, x, y + runHeight, runWidth ) )
+                {
                     ++runHeight;
+                }
                 for ( int32 row = y; row < y + runHeight; ++row )
                 {
                     for ( int32 column = x; column < x + runWidth; ++column )
+                    {
                         listUsed[Internal::indexOf( width, column, row )] = 1;
+                    }
                 }
                 outListRect.push_back( TileRect{ x, y, runWidth, runHeight } );
             }

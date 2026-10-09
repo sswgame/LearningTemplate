@@ -211,7 +211,9 @@ SW_TEST_CASE( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
     SW_EXPECT_TRUE( text.find( sw::string( sw::CrashBreadcrumbStore::kMaxLength - 1, 'z' ) + "\n" ) != sw::string::npos );
     uint32 lineCount = 0;
     for ( const utf8 character : text )
+    {
         lineCount += character == '\n' ? 1u : 0u;
+    }
     SW_EXPECT_EQUAL( sw::CrashBreadcrumbStore::kMaxBreadcrumb, lineCount );
 
     sw::writeCrashContextFile( "breadcrumb test", nullptr, 1, 2 );

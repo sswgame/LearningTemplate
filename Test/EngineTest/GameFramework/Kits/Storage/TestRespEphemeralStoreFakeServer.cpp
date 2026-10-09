@@ -108,7 +108,9 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, OneByteChunksGiveTheSameResult )
 
     vector<uint8> bytes( 4096 );
     for ( size_t index = 0; index < bytes.size(); ++index )
+    {
         bytes[index] = static_cast<uint8>( index * 7u + 13u ); // \r · \n · 0 이 몸 안에 든다
+    }
     EphemeralReply reply;
     SW_EXPECT_TRUE( test::EphemeralStoreContract::executeResult( store, EphemeralRequest::makeSet( "big", bytes, 0 ) ) == EphemeralResult::Ok );
     SW_ASSERT_TRUE( test::EphemeralStoreContract::executeRequest( store, EphemeralRequest::makeGet( "big" ), reply ) );
@@ -129,13 +131,17 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, DroppedConnectionAnswersEveryPen
 
     server.setHoldReplies( true );
     for ( int32 index = 0; index < 5; ++index )
+    {
         (void)store.submit( EphemeralRequest::makeGet( "k" ) );
+    }
     vector<EphemeralReply> listReply;
     SW_EXPECT_EQUAL( 0, RespStoreHarness::collectReplies( store, 5, 50, listReply ) ); // 서버가 붙잡고 있다
     server.dropAllConnections();
     SW_ASSERT_EQUAL( 5, RespStoreHarness::collectReplies( store, 5, 3000, listReply ) );
     for ( const EphemeralReply& reply : listReply )
+    {
         SW_EXPECT_TRUE( reply._result == EphemeralResult::Unavailable );
+    }
     SW_EXPECT_EQUAL( 5, RespStoreHarness::collectReplies( store, 6, 50, listReply ) ); // 한 번씩만
     SW_EXPECT_EQUAL( 0, store.getPendingCount() );
 
@@ -167,7 +173,9 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TimedOutRequestIsUnavailableAndT
     const Deadline  deadline = Deadline::afterMilliseconds( 3000 );
     EphemeralResult result   = EphemeralResult::Unavailable;
     while ( result == EphemeralResult::Unavailable && deadline.isExpired() == false ) // 물러남(첫 번은 0) 동안은 바로 Unavailable
+    {
         result = test::EphemeralStoreContract::executeResult( store, EphemeralRequest::makeSet( "n2", vector<uint8>{ 2 }, 0 ) );
+    }
     SW_EXPECT_TRUE( result == EphemeralResult::Ok );
     SW_EXPECT_EQUAL( 2, server.getAcceptedCount() );
 }

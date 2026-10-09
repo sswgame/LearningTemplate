@@ -334,7 +334,9 @@ namespace sw
             {
                 destroyOffscreenFramebuffer( record );
                 for ( VkImageView sliceView : record._listSliceView )
+                {
                     vkDestroyImageView( _device, sliceView, nullptr );
+                }
                 record._listSliceView.clear();
                 // 뷰는 이미지보다 **반드시 먼저** 없앤다. 깊이 텍스처의 `_sampleView` 도 포함한다(빠뜨리면 살아 있는 뷰를
                 // 두고 vkDestroyImage 를 부른다). destroyTexture 경로도 둘 다 지운다.
@@ -367,7 +369,9 @@ namespace sw
                 _slotSetLayout = nullptr;
             }
             for ( VulkanDescriptorPoolSet& poolSet : _arrFrameDescriptorPoolSet )
+            {
                 destroyDescriptorPoolSet( poolSet );
+            }
             for ( unique_ptr<VulkanDescriptorPoolSet>& pPoolSet : _listCmdListDescriptorPoolSet )
             {
                 if ( pPoolSet != nullptr )

@@ -180,7 +180,9 @@ namespace sw::editor
                 if ( extensions.isObject() )
                 {
                     for ( const string& extension : extensions.getMemberNames() )
+                    {
                         appendIgnored( pOutListIgnored, extension );
+                    }
                 }
                 if ( textureInfo.get( "texCoord", false ).asInt( 0 ) != 0 )
                     appendIgnored( pOutListIgnored, "texCoord" );

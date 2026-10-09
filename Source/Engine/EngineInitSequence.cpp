@@ -66,10 +66,14 @@ namespace sw
                 while ( cursor < text.size() )
                 {
                     while ( cursor < text.size() && isDependencySeparator( text[cursor] ) )
+                    {
                         ++cursor;
+                    }
                     size_t tokenEnd = cursor;
                     while ( tokenEnd < text.size() && isDependencySeparator( text[tokenEnd] ) == false )
+                    {
                         ++tokenEnd;
+                    }
                     if ( tokenEnd > cursor )
                     {
                         const string_view dependencyName  = text.substr( cursor, tokenEnd - cursor );
@@ -158,7 +162,9 @@ namespace sw
             return;
         _listOrder.reserve( graph._listOrder.size() );
         for ( const uint32 nodeIndex : graph._listOrder )
+        {
             _listOrder.push_back( static_cast<EngineInitStep>( nodeIndex ) );
+        }
         _listDependency = std::move( graph._listDependency );
     }
 
@@ -231,7 +237,9 @@ namespace sw
         // 표의 줄 순서는 의존을 지키는 기동 순서이므로(`EngineInitTableCheck`) 줄의 역순이 곧 해제 순서다. 정렬 결과(`_listOrder`)를
         // 쓰지 않는 것은 표 오류로 정렬이 비었어도 부트스트랩이 만든 객체를 해제해야 하기 때문이다.
         for ( uint32 stepIndex = static_cast<uint32>( EngineInitStep::Count ); stepIndex > 0; --stepIndex )
+        {
             _pArrEntry[stepIndex - 1]._pDestroy( _pHost );
+        }
     }
 
     void EngineInitSequence::shutdownDependentsOf( EngineInitStep step )
@@ -325,7 +333,9 @@ namespace sw
         vector<EngineInitNode> listNode;
         listNode.reserve( static_cast<size_t>( EngineInitStep::Count ) );
         for ( const EngineInitNode& node : EngineInitSequenceInternal::kArrStepNode )
+        {
             listNode.push_back( node );
+        }
         return listNode;
     }
 
@@ -354,7 +364,9 @@ namespace sw
         vector<string_view> listName;
         listName.reserve( nodeCount );
         for ( const EngineInitNode& node : listNode )
+        {
             listName.push_back( node._pName );
+        }
         vector<uint32> listUnsorted;
         if ( TopologicalSortUtil::sortByDependency( listName, outGraph._listDependency, outGraph._listOrder, listUnsorted ) == false )
         {
@@ -362,7 +374,9 @@ namespace sw
             StringBuilder<constant::kMaxBuffer512> sb;
             sb.append( "Startup steps in or behind a dependency cycle:" );
             for ( const uint32 nodeIndex : listUnsorted )
+            {
                 sb.append( ' ' ).append( listNode[nodeIndex]._pName );
+            }
             outError = string( sb.c_str() );
             return false;
         }

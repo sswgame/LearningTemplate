@@ -130,7 +130,9 @@ namespace sw
         if ( pCatalog != nullptr )
         {
             for ( const DishDef& dish : pCatalog->getDishes() )
+            {
                 _listMenu.push_back( MenuEntry{ dish._id, dish._basePrice, SW_TRUE } );
+            }
         }
         _today   = RestaurantDaySummary{};
         _minutes = 0.0f;
@@ -259,7 +261,9 @@ namespace sw
             return;
         const int32 stepCount = _stepTimer.consume( deltaMinutes );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             stepFixed();
+        }
     }
 
     int32 RestaurantSimulation::admitCustomer( const hashed_string& typeId )
@@ -612,7 +616,9 @@ namespace sw
             return 0.0f;
         float32 total = 0.0f;
         for ( const float32 satisfaction : _listSatisfaction )
+        {
             total += satisfaction;
+        }
         return 1.0f + 4.0f * total / static_cast<float32>( _listSatisfaction.size() );
     }
 

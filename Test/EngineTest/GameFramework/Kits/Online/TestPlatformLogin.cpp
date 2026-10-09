@@ -427,7 +427,9 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     SW_ASSERT_EQUAL( size_t( 2 ), listPage.size() );
     int32 rejectedPageCount = 0;
     for ( const HttpClientResponse& page : listPage )
+    {
         rejectedPageCount += page._statusCode == 400 ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 1, rejectedPageCount );
 
     // 사용자가 거절했다 — 취소로 끝난다.

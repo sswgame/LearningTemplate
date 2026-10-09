@@ -108,7 +108,9 @@ namespace sw
         if ( _bButtonsResolved == SW_FALSE )
         {
             for ( int32 buttonIndex = 0; buttonIndex < kAbilityButtonCount; ++buttonIndex )
+            {
                 _arrButtonIndex[buttonIndex] = pawn.findButton( hashed_string( kArrAbilityButton[buttonIndex]._pName ) );
+            }
             _bButtonsResolved = SW_TRUE;
         }
         // 발동은 누름, 지난 틱에 누르고 있던 버튼을 놓으면 뗌(차지 · 콤보 어빌리티가 뗌을 받는다). AI 의 한 번 누름은 다음 틱에 뗌이 된다.

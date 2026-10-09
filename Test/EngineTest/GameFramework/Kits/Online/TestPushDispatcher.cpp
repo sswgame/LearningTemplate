@@ -126,7 +126,9 @@ SW_TEST_CASE( PushDispatcherTest, TransientFailuresBackOffThenGiveUp )
     node._provider.scriptResult( "token-a", PushDeliveryStatus::Transient, 99 );
     SW_ASSERT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 10000 ) );
     for ( int64 nowMs = 10000; nowMs <= 60000; nowMs += 1000 )
+    {
         node.step( nowMs );
+    }
     SW_EXPECT_EQUAL( node._provider.getSent().size(), size_t( 5 + PushLimit::kMaxRetry ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._droppedCount, uint64( 1 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getInFlightCount(), 0 );
@@ -139,7 +141,9 @@ SW_TEST_CASE( PushDispatcherTest, AccountRateLimit )
     PushNode              node( &database );
     node.registerDevice( 1, "fake", "token-a", 0 );
     for ( int32 index = 0; index < 6; ++index )
+    {
         SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
+    }
     SW_EXPECT_FALSE( node._dispatcher.notifyAccount( 1, Internal::makeMessage(), 0 ) );
     SW_EXPECT_EQUAL( node._dispatcher.getStats()._rateLimitedCount, uint64( 1 ) );
     SW_EXPECT_TRUE( node._dispatcher.notifyAccount( 2, Internal::makeMessage(), 0 ) ); // 계정마다 따로
@@ -154,7 +158,9 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldestAndUnregister )
     PushNode              node( &database );
     const hashed_string   table( "liveops_device" );
     for ( int32 index = 0; index < PushLimit::kMaxDevicePerAccount; ++index )
+    {
         node.registerDevice( 1, "fake", "token-" + std::to_string( index ), 100 + index );
+    }
     SW_EXPECT_EQUAL( database.countRecords( table ), PushLimit::kMaxDevicePerAccount );
     node.registerDevice( 1, "fake", "token-new", 500 ); // 한도 — 가장 오래된 token-0 을 밀어낸다
     SW_EXPECT_EQUAL( database.countRecords( table ), PushLimit::kMaxDevicePerAccount );

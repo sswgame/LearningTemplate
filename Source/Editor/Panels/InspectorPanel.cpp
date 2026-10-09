@@ -447,7 +447,9 @@ namespace sw::editor
         pContext->getInspectorComponentManager().collectForType( *pTypeInfo, listInspector );
         vector<hashed_string> listDrawnName;
         for ( IInspectorComponent* pInspector : listInspector )
+        {
             pInspector->drawHeader( pComp );
+        }
         for ( IInspectorComponent* pInspector : listInspector )
         {
             // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다
@@ -467,7 +469,9 @@ namespace sw::editor
         _pEditTargetComponent = nullptr;
 
         for ( IInspectorComponent* pInspector : listInspector )
+        {
             pInspector->drawFooter( pComp, pRhiDevice );
+        }
     }
 
     void InspectorPanel::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
@@ -689,7 +693,9 @@ namespace sw::editor
                 if ( ImGui::SmallButton( "Select All" ) )
                 {
                     for ( const auto& [val, _] : enumInfo._mapValueToName )
+                    {
                         editedValue |= val;
+                    }
                 }
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( "Clear All" ) )

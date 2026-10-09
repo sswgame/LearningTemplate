@@ -226,7 +226,9 @@ namespace sw
     {
         outArchive << static_cast<uint32>( _listParticipant.size() );
         for ( const uint32 participant : _listParticipant )
+        {
             outArchive << participant;
+        }
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _seed;
         outArchive << _skillCheckActor;
@@ -247,7 +249,9 @@ namespace sw
             return false;
         restored._listParticipant.assign( participantCount, 0u );
         for ( uint32& participant : restored._listParticipant )
+        {
             archive >> participant;
+        }
         if ( StateArchiveUtil::readRandom( archive, restored._random ) == false )
             return false;
         archive >> restored._seed;

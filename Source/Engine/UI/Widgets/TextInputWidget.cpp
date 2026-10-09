@@ -39,7 +39,9 @@ namespace sw
                     return false;
                 size_t end = inoutText.size() - 1;
                 while ( end > 0 && ( static_cast<uint8>( inoutText[end] ) & 0xC0u ) == 0x80u )
+                {
                     --end;
+                }
                 inoutText.resize( end );
                 return true;
             }

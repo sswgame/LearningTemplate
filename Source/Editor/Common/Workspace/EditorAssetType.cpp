@@ -235,7 +235,9 @@ namespace sw::editor
                 if ( row._pSuffix == nullptr )
                     return;
                 for ( uint32 index = 0; index < row._suffixCount; ++index )
+                {
                     outListSuffix.push_back( row._pSuffix[index] );
+                }
             }
 
             /** @brief 전용 패널이 있는 종류의 접미사를 펼쳐 패널 매핑을 만듭니다. */
@@ -250,7 +252,9 @@ namespace sw::editor
                     listSuffix.clear();
                     appendRowSuffixes( row, listSuffix );
                     for ( const string_view suffix : listSuffix )
+                    {
                         listMapping.push_back( EditorAssetPanelMapping{ row._kind, suffix } );
+                    }
                 }
                 return listMapping;
             }
@@ -273,7 +277,9 @@ namespace sw::editor
                 vector<EditorAssetBrowserFilter> listFilter{};
                 listFilter.push_back( EditorAssetBrowserFilter{ "All", EditorAssetType::Unknown, false } );
                 for ( const EditorAssetTypeInfo& info : kArrKindInfo )
+                {
                     listFilter.push_back( EditorAssetBrowserFilter{ info._pBrowserLabel, info._kind, false } );
+                }
                 listFilter.push_back( EditorAssetBrowserFilter{ "Other", EditorAssetType::Unknown, true } );
                 return listFilter;
             }

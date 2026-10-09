@@ -533,7 +533,9 @@ namespace sw
                 SW_LOG_WARNING( "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
             vector<hashed_string> listRoutineId;
             for ( const ScheduleRoutineDef& routine : npc._listRoutine )
+            {
                 listRoutineId.push_back( routine._id );
+            }
             hashed_string current = npc._archetype;
             for ( size_t step = 0; step <= archetypeCount && current.empty() == false; ++step )
             {

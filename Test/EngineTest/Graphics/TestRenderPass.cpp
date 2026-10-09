@@ -332,7 +332,9 @@ SW_TEST_CASE( RenderPassTest, RenderGraphLinearChainProducesSinglePassLevels )
     const sw::vector<sw::vector<sw::hashed_string>>& levels = graph.getExecutionLevels();
     SW_ASSERT_EQUAL( size_t( 3 ), levels.size() );
     for ( const sw::vector<sw::hashed_string>& level : levels )
+    {
         SW_EXPECT_EQUAL( size_t( 1 ), level.size() );
+    }
 }
 
 /**
@@ -399,7 +401,9 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
+        {
             SW_EXPECT_TRUE( sw::isPipelinePassType( pass._resolvedType ) );
+        }
         SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( res.getGraphPass().size() ) );
     }
 }
@@ -646,7 +650,9 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
             pass._name = pType;
             pass._type = pType;
             for ( const utf8* pInput : listInput )
+            {
                 pass._listInput.push_back( pInput );
+            }
             pass._listOutput.push_back( pOutput );
             res.getDesc()._listPass.push_back( pass );
         };
@@ -880,7 +886,9 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
         pass._type            = pType;
         pass._depthAttachment = "MainDepth";
         for ( const utf8* pOutput : listOutput )
+        {
             pass._listOutput.push_back( pOutput );
+        }
         desc._listPass.push_back( pass );
     };
 
@@ -946,14 +954,18 @@ SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
         gbuffer._type            = "GBuffer";
         gbuffer._depthAttachment = "MainDepth";
         for ( const utf8* pOutput : { "MainNormal", "MainAlbedo", "MainDepth" } ) // 노멀을 먼저 — 순서가 아니라 역할로 골라야 한다
+        {
             gbuffer._listOutput.push_back( pOutput );
+        }
         res.getDesc()._listPass.push_back( gbuffer );
 
         sw::RenderGraphPassDesc lighting{};
         lighting._name = "Lighting";
         lighting._type = "Lighting";
         for ( const utf8* pInput : { "MainAlbedo", "MainNormal", "MainDepth", "SunShadow" } )
+        {
             lighting._listInput.push_back( pInput );
+        }
         lighting._listOutput.push_back( "Lit" );
         res.getDesc()._listPass.push_back( lighting );
     };

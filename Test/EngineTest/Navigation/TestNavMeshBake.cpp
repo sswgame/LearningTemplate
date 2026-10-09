@@ -176,7 +176,9 @@ SW_TEST_CASE( NavMeshBakeTest, CookedAssetRoundTripsTilesByteForByte )
     pSecond->collectTiles( listSecond );
     SW_ASSERT_EQUAL( listFirst.size(), listSecond.size() );
     for ( size_t tileIndex = 0; tileIndex < listFirst.size(); ++tileIndex )
+    {
         SW_EXPECT_TRUE( listFirst[tileIndex]._bytes == listSecond[tileIndex]._bytes );
+    }
 
     sw::NavMeshAsset      asset;
     sw::NavMeshAssetEntry entry;

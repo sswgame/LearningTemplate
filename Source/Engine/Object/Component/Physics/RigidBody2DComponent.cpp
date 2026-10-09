@@ -19,9 +19,13 @@ namespace sw
             {
                 float32 delta = to - from;
                 while ( delta > MathUtil::kPi )
+                {
                     delta -= 2.0f * MathUtil::kPi;
+                }
                 while ( delta < -MathUtil::kPi )
+                {
                     delta += 2.0f * MathUtil::kPi;
+                }
                 return from + delta * weight;
             }
 
@@ -186,7 +190,9 @@ namespace sw
         PhysicsBodyDesc2D desc;
         desc._listShape.reserve( _listShape.size() );
         for ( const PhysicsShapeDesc2D& shape : _listShape )
+        {
             desc._listShape.push_back( PhysicsComponentUtil::makeScaledShape( shape, scale ) );
+        }
         desc._position           = position;
         desc._rotation           = angle;
         desc._userData           = getOwner()->getObjectId();

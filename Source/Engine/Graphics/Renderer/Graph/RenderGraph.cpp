@@ -571,7 +571,9 @@ namespace sw
         const auto appendNames = [&out]( const vector<hashed_string>& listName )
         {
             for ( size_t nameIndex = 0; nameIndex < listName.size(); ++nameIndex )
+            {
                 out.appendFormat( "%#%#", nameIndex == 0 ? "" : ", ", listName[nameIndex].c_str() );
+            }
         };
         for ( size_t levelIndex = 0; levelIndex < _listCompiledLevel.size(); ++levelIndex )
         {

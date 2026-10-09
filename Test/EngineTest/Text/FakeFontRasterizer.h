@@ -189,7 +189,9 @@ namespace sw::test
             for ( const FontFamilyDesc& family : catalog._listFamily )
             {
                 for ( const FontFaceDesc& face : family._listFace )
+                {
                     _fontSystem->registerMemoryFontFile( face._path, vector<uint8>( 1, static_cast<uint8>( 1 ) ) );
+                }
             }
             return _fontSystem->initializeFromCatalog( catalog );
         }

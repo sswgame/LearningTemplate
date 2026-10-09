@@ -36,7 +36,9 @@ namespace sw::editor
     void EditorVisualizerGeometryUtil::appendDebugDrawSegments( const DebugDrawQueue& queue, bool bFlat2D, vector<EditorWorldSegment>& outListSegment )
     {
         for ( const DebugLine& line : queue.getVisibleLines() )
+        {
             outListSegment.push_back( EditorWorldSegment{ line._from, line._to, line._color } );
+        }
 
         // 구는 축마다 대원 하나씩 — 어느 방향에서 봐도 윤곽이 보인다. 2D 뷰는 XY 원 하나다.
         constexpr float32 kStep       = ( MathUtil::kPi * 2.0f ) / static_cast<float32>( kSphereCircleSegmentCount );

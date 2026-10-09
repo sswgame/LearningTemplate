@@ -286,7 +286,9 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
     SW_EXPECT_NULL( scene.findShadowCastingDirectionalLight() );
     collectSceneLights( &scene, listLight );
     for ( const sw::GpuLight& light : listLight )
+    {
         SW_EXPECT_TRUE( light._params._x < 0.5f );
+    }
 }
 
 /**

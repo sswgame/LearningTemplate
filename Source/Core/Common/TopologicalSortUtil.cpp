@@ -36,7 +36,9 @@ namespace sw
                         // 경로에서 그 노드가 처음 나온 자리부터가 순환이다. 시작 노드로 닫는다.
                         size_t start = 0;
                         while ( listPath[start] != dependency )
+                        {
                             ++start;
+                        }
                         outListCycle.assign( listPath.begin() + static_cast<std::ptrdiff_t>( start ), listPath.end() );
                         outListCycle.push_back( dependency );
                         return true;
@@ -64,7 +66,9 @@ namespace sw
 
         vector<uint32> listRemaining( nodeCount, 0 );
         for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+        {
             listRemaining[nodeIndex] = static_cast<uint32>( listDependency[nodeIndex].size() );
+        }
         vector<uint8> listEmitted( nodeCount, SW_FALSE );
 
         // 노드가 수십 개라 매번 처음부터 훑는다(우선순위 큐가 필요 없는 크기).

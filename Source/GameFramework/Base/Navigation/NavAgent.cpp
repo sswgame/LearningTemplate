@@ -155,7 +155,9 @@ namespace sw
             // 중간 경로점은 가까이 가면 넘긴다. 마지막 점은 도착 감속.
             while ( _waypointIndex + 1 < _listPathPoint.size() &&
                     NavAgentInternal::getFlatDistance( _position, _listPathPoint[_waypointIndex] ) < _settings._waypointDistance )
+            {
                 ++_waypointIndex;
+            }
             const float3& waypoint = _listPathPoint[_waypointIndex];
             const bool    bLast    = _waypointIndex + 1 == _listPathPoint.size();
             return bLast ? Steering::arrive( _position, waypoint, _settings._maxSpeed, _settings._slowDistance )

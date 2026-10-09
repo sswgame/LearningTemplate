@@ -105,7 +105,9 @@ namespace sw
             {
                 uint32 count = 0;
                 for ( const utf8 character : text )
+                {
                     count += character == '\n' ? 1u : 0u;
+                }
                 return count;
             }
 
@@ -425,7 +427,9 @@ namespace sw
         }
         std::sort( listByTime.begin(), listByTime.end() );
         for ( size_t index = 0; index + kMaxReports < listByTime.size(); ++index )
+        {
             (void)FileUtil::removeDirectory( listByTime[index].second ); // 실패는 removeDirectory 가 경고로 남기고, 다음 정리가 다시 지운다
+        }
     }
 
     void CrashReportService::collectReports( vector<CrashReportSummary>& outListReport ) const
@@ -470,7 +474,9 @@ namespace sw
         collectReports( listReport );
         uint32 count = 0;
         for ( const CrashReportSummary& report : listReport )
+        {
             count += report._state == CrashReportState::Queued && report._attempts < kMaxAttempts ? 1u : 0u;
+        }
         return count;
     }
 
@@ -511,7 +517,9 @@ namespace sw
             bundle._manifest      = manifest.dump( -1 );
             const JsonValue files = root.get( "files" );
             for ( size_t index = 0; index < files.size(); ++index )
+            {
                 bundle._listFilePath.push_back( FileUtil::joinPath( folder, files.at( index ).get( "name" ).asString() ) );
+            }
             const CrashReportUploadResult result = uploader.upload( bundle );
             if ( result == CrashReportUploadResult::Sent )
             {

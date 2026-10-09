@@ -145,9 +145,13 @@ namespace sw
             {
                 XmlNode partial = parent.appendChild( pName );
                 for ( const XmlAttribute& attribute : listAttribute )
+                {
                     partial.appendAttribute( attribute.getName(), attribute.getValue() );
+                }
                 for ( const XmlNode& child : listChild )
+                {
                     partial.appendClone( child );
+                }
             }
 
             /** @brief 기준 원소의 속성을 덮어쓴 값(있으면)으로 쓰고, 기준에 없는 덮어쓴 속성을 더합니다. @p pName 이 있으면 `_name` 을 그것으로. */
@@ -275,7 +279,9 @@ namespace sw
                             continue;
                         bool bFound = false;
                         for ( const KeyedComponent& component : listBase )
+                        {
                             bFound = bFound || component._key == pAfter;
+                        }
                         const XmlNode added = findFirstElement( entry );
                         if ( bFound || added.isValid() == false )
                             continue;
@@ -305,7 +311,9 @@ namespace sw
                         const utf8* pKey     = entry.findAttribute( kKey, false );
                         bool        bMatched = false;
                         for ( const KeyedComponent& component : listBase )
+                        {
                             bMatched = bMatched || ( pKey != nullptr && component._key == pKey && component._bUsed );
+                        }
                         if ( bMatched == false )
                             SW_LOG_WARNING( "Prefab override for component '%#' of '%#' is dropped - the prefab no longer has that component", pKey != nullptr ? pKey : "",
                                             _instanceName.empty() ? string_view( "?" ) : _instanceName );
@@ -314,7 +322,9 @@ namespace sw
                     {
                         bool bMatched = false;
                         for ( const KeyedComponent& component : listBase )
+                        {
                             bMatched = bMatched || component._key == removedKey;
+                        }
                         if ( bMatched == false )
                             SW_LOG_TRACE( "Removed prefab component '%#' is already gone from the prefab", removedKey );
                     }

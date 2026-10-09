@@ -377,7 +377,9 @@ SW_TEST_CASE( StreamTransportTest, SendQueueTracksWatermarksAcrossChunks )
     const int32    spanCount = queue.collectSpans( arrSpan, 4, 1 << 30 );
     int32          total     = 0;
     for ( int32 index = 0; index < spanCount; ++index )
+    {
         total += arrSpan[index]._size;
+    }
     SW_EXPECT_EQUAL( 140000, total );
     SW_EXPECT_TRUE( arrSpan[0]._pData[0] == bytes[0] && arrSpan[1]._pData[0] == bytes[static_cast<size_t>( StreamSendQueue::kChunkBytes )] );
 
@@ -489,25 +491,37 @@ SW_TEST_CASE( StreamTransportTest, PlatformManyConnectionsEchoConcurrently )
 
     vector<StreamConnectionHandle> listHandle;
     for ( int32 index = 0; index < kConnectionCount; ++index )
+    {
         listHandle.push_back( client->connect( NetAddress::makeLoopback( server->getListenPort() ) ) );
+    }
     const Deadline openDeadline = Deadline::afterMilliseconds( 10000 );
     while ( clientRecorder.getOpenedCount() + clientRecorder.getClosedCount() < kConnectionCount && openDeadline.isExpired() == false )
+    {
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
     SW_ASSERT_EQUAL( kConnectionCount, clientRecorder.getOpenedCount() );
 
     const vector<uint8> payload = makePattern( kPayloadBytes, 5u );
     for ( const StreamConnectionHandle& handle : listHandle )
+    {
         SW_EXPECT_TRUE( client->send( handle, payload.data(), kPayloadBytes ) != StreamSendResult::Closed );
+    }
     const Deadline echoDeadline = Deadline::afterMilliseconds( 20000 );
     while ( clientRecorder.getReceivedCount() < kConnectionCount * kPayloadBytes && echoDeadline.isExpired() == false )
+    {
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
     SW_EXPECT_EQUAL( kConnectionCount * kPayloadBytes, clientRecorder.getReceivedCount() );
 
     for ( const StreamConnectionHandle& handle : listHandle )
+    {
         client->close( handle, StreamCloseMode::Graceful );
+    }
     const Deadline closeDeadline = Deadline::afterMilliseconds( 10000 );
     while ( ( echo.getClosedCount() < kConnectionCount || clientRecorder.getClosedCount() < kConnectionCount ) && closeDeadline.isExpired() == false )
+    {
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
     SW_EXPECT_EQUAL( kConnectionCount, echo.getOpenedCount() );
     SW_EXPECT_EQUAL( kConnectionCount, echo.getClosedCount() );
     SW_EXPECT_EQUAL( kConnectionCount, clientRecorder.getClosedCount() );

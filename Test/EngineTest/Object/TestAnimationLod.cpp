@@ -317,7 +317,9 @@ SW_TEST_CASE( AnimationLodTest, FrustumVisibilityAcrossViews )
     system.setLodViews( listView );
     const uint32 before = pUnit->getPoseEvaluationCount();
     for ( uint32 frame = 0; frame < 3; ++frame )
+    {
         system.evaluate( 0.016f );
+    }
     SW_EXPECT_FALSE( pUnit->isVisibleHint() );
     SW_EXPECT_EQUAL( before, pUnit->getPoseEvaluationCount() );
 

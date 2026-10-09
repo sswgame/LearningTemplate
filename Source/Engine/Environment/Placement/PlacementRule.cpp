@@ -117,7 +117,9 @@ namespace sw
             return 0;
         float32 totalWeight = 0.0f;
         for ( const float32 weight : listEntryWeight )
+        {
             totalWeight += MathUtil::max( weight, 0.0f );
+        }
         if ( totalWeight <= 0.0f )
             return -1;
         float32 cumulative = 0.0f;

@@ -76,7 +76,9 @@ namespace
             const sw::vector<uint8>& listActual   = actual.getFlagLayer( info._layer );
             SW_ASSERT_EQUAL( listExpected.size(), listActual.size() );
             for ( size_t tileIndex = 0; tileIndex < listExpected.size(); ++tileIndex )
+            {
                 SW_EXPECT_EQUAL( uint32( listExpected[tileIndex] ), uint32( listActual[tileIndex] ) );
+            }
         }
 
         SW_ASSERT_EQUAL( expected._listVisual.size(), actual._listVisual.size() );
@@ -199,7 +201,9 @@ SW_TEST_CASE( TileMapXmlTest, ExtraTilesBeyondTheDeclaredCountAreIgnored )
 {
     sw::string xml = "<TileMap><width>2</width><height>1</height><tiles>";
     for ( uint32 tileIndex = 0; tileIndex < 10; ++tileIndex )
+    {
         xml += "<t h=\"3\">0</t>";
+    }
     xml += "</tiles></TileMap>";
 
     sw::TileMapXmlData loaded;
@@ -293,7 +297,9 @@ SW_TEST_CASE( TileMapXmlTest, FlagLayerTableKeepsTheFileFormat )
 {
     static_assert( SW_COUNT_OF( sw::kArrTileFlagLayerInfo ) == sw::kTileFlagLayerCount, "레이어마다 한 줄" );
     for ( size_t layerIndex = 0; layerIndex < sw::kTileFlagLayerCount; ++layerIndex )
+    {
         SW_EXPECT_TRUE( sw::kArrTileFlagLayerInfo[layerIndex]._layer == static_cast<sw::TileFlagLayer>( layerIndex ) );
+    }
 
     const sw::TileFlagLayerInfo& walkable = sw::kArrTileFlagLayerInfo[static_cast<size_t>( sw::TileFlagLayer::Walkable )];
     SW_EXPECT_NULL( walkable._pXmlAttribute );

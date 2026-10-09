@@ -451,7 +451,9 @@ namespace sw
         _shipment = FarmShippingBin{};
         _listSeed.clear();
         for ( const CropDef& crop : _cropCatalog.getCrops() )
+        {
             _listSeed.push_back( crop._seedItem );
+        }
         // 시작 돈 · 씨앗은 새 판에만 — 되살린 판에 덧쌓이지 않게.
         if ( bFresh )
         {
@@ -589,7 +591,9 @@ namespace sw
     {
         const float4 arrSoilColor[3] = { _grassSoilColor, _tilledSoilColor, _wateredSoilColor };
         for ( int32 soilState = 0; soilState < 3; ++soilState )
+        {
             _arrSoilLook[soilState] = _tintCache.acquire( pSoilMaterial, arrSoilColor[soilState] );
+        }
         _plainCropLook    = _tintCache.acquire( pCropMaterial, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
         _witheredCropLook = _tintCache.acquire( pCropMaterial, _witheredCropColor );
         _listCropLook.clear();
@@ -624,7 +628,9 @@ namespace sw
         // 버튼 — 도구를 먼저 바꾸고 쓴다(같은 틱에 둘 다 누를 수 있다).
         int32 arrButtonIndex[kButtonCount];
         for ( int32 button = 0; button < kButtonCount; ++button )
+        {
             arrButtonIndex[button] = pawn.findButton( hashed_string( Internal::kArrButtonName[button] ) );
+        }
         const auto wasTriggered = [&intent, &arrButtonIndex]( FarmButton button )
         { return intent.wasTriggered( arrButtonIndex[static_cast<int32>( button )] ); };
 

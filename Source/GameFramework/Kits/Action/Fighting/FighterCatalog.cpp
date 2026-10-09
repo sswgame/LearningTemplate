@@ -101,9 +101,13 @@ namespace sw
     {
         FighterDef copy = fighter;
         for ( const FighterMove& move : fighter._listMove )
+        {
             FighterCatalogInternal::addStance( copy, move._stance );
+        }
         for ( const FighterMove& move : fighter._listMove )
+        {
             FighterCatalogInternal::addStance( copy, move._enterStance );
+        }
         (void)_catalog.add( copy ); // 빈 id 는 카탈로그가 거른다
     }
 

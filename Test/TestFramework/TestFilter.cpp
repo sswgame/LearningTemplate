@@ -22,9 +22,13 @@ namespace test
                 const size_t separator = part.find_first_of( ",:", start );
                 sw::string   token     = part.substr( start, separator == sw::string::npos ? sw::string::npos : separator - start );
                 while ( token.empty() == false && token.front() == ' ' )
+                {
                     token.erase( token.begin() );
+                }
                 while ( token.empty() == false && token.back() == ' ' )
+                {
                     token.pop_back();
+                }
                 if ( token.empty() == false )
                     outListPattern.push_back( token );
                 if ( separator == sw::string::npos )
@@ -70,7 +74,9 @@ namespace test
         }
 
         while ( patternPos < pattern.size() && pattern[patternPos] == '*' )
+        {
             ++patternPos;
+        }
         return patternPos == pattern.size();
     }
 

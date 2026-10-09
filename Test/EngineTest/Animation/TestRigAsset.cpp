@@ -34,7 +34,9 @@ namespace
         {
             Skeleton skeleton;
             for ( const BoneSpec& spec : listSpec )
+            {
                 (void)skeleton.addBone( hashed_string( spec._pName ), spec._parent, test::makeBoneTransform( spec._offset ), float4x4::Identity );
+            }
             skeleton.computeInverseBindFromReference();
             return skeleton;
         }
@@ -138,7 +140,9 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
         R"({ "nodes": [], "extra": true })",
     };
     for ( const string_view bad : listBad )
+    {
         SW_EXPECT_TRUE( TestRigAssetInternal::parseRig( bad ) == nullptr );
+    }
 
     // 읽히지만 묶이지 않는다 — 없는 대상 · 없는 본 · 사슬이 아닌 본 순서.
     const string_view listUnbindable[] = {
@@ -398,7 +402,9 @@ SW_TEST_CASE( RigAssetTest, PlanarRigStaysInPlane )
         TestRigAssetInternal::evaluateReference( instance, skeleton, pose, listModel );
     }
     for ( const float4x4& model : listModel )
+    {
         SW_EXPECT_NEAR_EQUAL( 0.0f, model.getTranslation()._z, 1e-3f );
+    }
     SW_EXPECT_TRUE( TestRigAssetInternal::isNear( float3{ 1.2f, 1.0f, 0.0f }, listModel[2].getTranslation(), 5e-3f ) );
 }
 

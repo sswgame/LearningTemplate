@@ -61,7 +61,9 @@ SW_TEST_CASE( NetClockTest, RenderTickStopsAtTheNewestReceivedTick )
     clock.observeServerTick( 100 );
     SW_EXPECT_NEAR_EQUAL( 97.0f, clock.getRenderTick(), 1.0e-3f );
     for ( int32 frame = 0; frame < 30; ++frame )
+    {
         clock.advance( 1.0f / 30.0f );
+    }
     SW_EXPECT_NEAR_EQUAL( 103.0f, clock.getServerTick(), 1.0e-3f );
     SW_EXPECT_NEAR_EQUAL( 100.0f, clock.getRenderTick(), 1.0e-3f );
 }

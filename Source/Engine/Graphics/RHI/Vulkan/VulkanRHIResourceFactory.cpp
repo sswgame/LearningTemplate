@@ -822,7 +822,9 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
+            {
                 vkDestroyImageView( dev, sliceView, nullptr );
+            }
             if ( view != VK_NULL_HANDLE )
                 vkDestroyImageView( dev, view, nullptr );
             if ( sampleView != VK_NULL_HANDLE )

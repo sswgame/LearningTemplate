@@ -55,7 +55,9 @@ namespace sw
         }
         outWriter.writeVarUint( reply._listAchievement.size() );
         for ( const AchievementState& achievement : reply._listAchievement )
+        {
             writeAchievement( outWriter, achievement );
+        }
     }
 
     bool LeaderboardProtocol::readReply( BitReader& reader, LeaderboardReply& outReply )

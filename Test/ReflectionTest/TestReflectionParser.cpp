@@ -1067,7 +1067,9 @@ SW_TEST_CASE( ReflectionParserTest, ContainerIsRecognizedByItsOuterTemplateNameO
 
     // 템플릿이 아니면 컨테이너가 아니다 — 이름에 규칙 철자가 들어 있어도.
     for ( const utf8* pPlain : { "sw::TextureAsset", "Offset2D", "game::Bitmap", "Playlist", "sw::settings::Window" } )
+    {
         SW_EXPECT_TRUE_MSG( sw::ParserUtil::outerTemplateName( pPlain ).empty(), pPlain );
+    }
     // 템플릿이어도 이름이 같아야 한다.
     SW_EXPECT_STREQ( "TextureAssetRef", sw::string( sw::ParserUtil::outerTemplateName( "sw::TextureAssetRef<sw::Texture>" ) ).c_str() );
 }
@@ -1703,7 +1705,9 @@ SW_TEST_CASE( ReflectionParserTest, PropertyRoleAnnotationsAreValidated )
 
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     for ( size_t brokenIndex = 1; brokenIndex < 4; ++brokenIndex )
+    {
         SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+    }
 #if defined( SW_DEBUG )
     SW_EXPECT_TRUE_MSG( run._log.find( "RoleMissingSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "RoleShapeSampleActor::_hp" ) != sw::string::npos, run._log.c_str() );
@@ -1757,7 +1761,9 @@ SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
 
     SW_EXPECT_TRUE_MSG( run._exitCode != 0, run._log.c_str() );
     for ( size_t brokenIndex = 2; brokenIndex < 7; ++brokenIndex )
+    {
         SW_EXPECT_TRUE_MSG( run._listGeneratedCpp[brokenIndex].find( "struct Registrar" ) == sw::string::npos, run._listGeneratedCpp[brokenIndex].c_str() );
+    }
 #if defined( SW_DEBUG )
     SW_EXPECT_TRUE_MSG( run._log.find( "Units = furlong" ) != sw::string::npos, run._log.c_str() );
     SW_EXPECT_TRUE_MSG( run._log.find( "DisplayMetaUnitSampleActor::_value' writes Meta = \"Units=m\"" ) != sw::string::npos, run._log.c_str() );

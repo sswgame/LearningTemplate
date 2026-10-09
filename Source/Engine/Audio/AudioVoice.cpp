@@ -129,7 +129,9 @@ namespace sw
         mixInto( pScratch, frameCount );
         _lowPass.process( pScratch, frameCount );
         for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+        {
             pBusInput[sampleIndex] += pScratch[sampleIndex];
+        }
     }
 
     void AudioVoice::mixInto( float32* pBusInput, uint32 frameCount )

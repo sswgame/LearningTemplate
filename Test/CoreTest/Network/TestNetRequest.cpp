@@ -247,7 +247,9 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
     RequestRig  rig( settings );
     ResponseLog log;
     for ( int32 index = 0; index < 3; ++index )
+    {
         SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log ) != 0 );
+    }
     rig._pair.step( 4 );
     SW_EXPECT_EQUAL( 2, rig._echo._callCount );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( log._listStatus.size() ) );

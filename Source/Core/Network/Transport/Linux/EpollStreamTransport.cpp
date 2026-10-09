@@ -577,7 +577,9 @@ namespace sw
                 loop._listWorkIndex.swap( loop._listCommandIndex );
             }
             for ( const uint32 index : loop._listWorkIndex )
+            {
                 handleCommand( index, loopIndex );
+            }
             handled += static_cast<int32>( loop._listWorkIndex.size() );
             const int64 now = MonotonicClock::nowNanoseconds();
             if ( now >= inoutNextSweep )
@@ -593,7 +595,9 @@ namespace sw
             ThreadName::setCurrentThreadName( "StreamIo" );
             int64 nextSweep = 0;
             while ( _bStopping.load( std::memory_order_acquire ) == false || _openCount.load( std::memory_order_acquire ) > 0 )
+            {
                 (void)runOnce( loopIndex, Internal::kLoopWaitMilli, nextSweep );
+            }
         }
     };
 } // namespace sw
@@ -634,7 +638,9 @@ namespace sw
         if ( state._bThreaded == SW_TRUE )
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
+            {
                 state._arrLoop[index]._thread = std::thread( &State::runThread, &state, index );
+            }
         }
         return true;
     }
@@ -672,7 +678,9 @@ namespace sw
             }
         }
         for ( int32 index = 0; index < state._loopCount; ++index )
+        {
             state.wakeLoop( index );
+        }
         if ( state._bThreaded == SW_TRUE )
         {
             for ( int32 index = 0; index < state._loopCount; ++index )
@@ -685,7 +693,9 @@ namespace sw
         {
             const Deadline deadline = Deadline::afterMilliseconds( 5000 );
             while ( state._openCount.load() > 0 && deadline.isExpired() == false )
+            {
                 (void)state.runOnce( 0, 10, state._manualNextSweepNanoseconds );
+            }
         }
         for ( int32 index = 0; index < state._loopCount; ++index )
         {

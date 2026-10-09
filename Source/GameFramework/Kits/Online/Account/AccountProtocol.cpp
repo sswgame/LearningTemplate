@@ -146,7 +146,9 @@ namespace sw
         outWriter.writeVarUint( static_cast<uint64>( result ) );
         outWriter.writeVarUint( summary._listProvider.size() );
         for ( const string& provider : summary._listProvider )
+        {
             writeText( outWriter, provider );
+        }
         outWriter.writeVarInt( summary._deletionDueMs );
         outWriter.writeBool( summary._bHasCredential == SW_TRUE );
         outWriter.writeBool( summary._bGuest == SW_TRUE );

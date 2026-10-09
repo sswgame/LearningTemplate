@@ -47,7 +47,9 @@ namespace sw
         if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게
         {
             for ( const auto& [lookupId, call] : _mapLookupToCall )
+            {
                 _pPresence->cancel( lookupId );
+            }
         }
         _mapTagToCall.clear();
         _mapLookupToCall.clear();
@@ -196,7 +198,9 @@ namespace sw
         _listUpdateScratch.clear();
         _pTradeService->drainUpdates( _listUpdateScratch );
         for ( const TradeSnapshot& snapshot : _listUpdateScratch )
+        {
             pushSnapshot( host, snapshot );
+        }
     }
 
     void TradeServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )

@@ -263,7 +263,9 @@ namespace
             (void)_session.submitLocalInput( vector<uint8>{ static_cast<uint8>( world.getLocalTick() ) } );
             vector<vector<uint8>> listInput;
             while ( _session.tryAdvance( listInput ) )
+            {
                 ++_advancedCount;
+            }
         }
 
         int32 getAdvancedCount() const { return _advancedCount; }
@@ -331,7 +333,9 @@ namespace
         bad._duplicateRate         = 0.05f;
         bad._reorderRate           = 0.05f;
         for ( int32 index = 0; index < 3; ++index )
+        {
             (void)harness.addClient( NetSimLinkConditions::makeSymmetric( bad ) );
+        }
         // 상자가 떨어지는 동안(움직이는 상태)에 멈춰 잰다.
         harness.stepTicks( 90 );
         vector<NetSimWorld*> listClient;
@@ -360,7 +364,9 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     for ( int32 index = 0; index < 3; ++index )
+    {
         SW_ASSERT_TRUE( harness.addClient( NetSimLinkConditions::makeSymmetric( makeConditions( 0.03, 0.005, 0.02f ) ) ) > 0 );
+    }
     harness.stepTicks( 300 );
 
     SW_EXPECT_TRUE( harness.areAllClientsConnected() );
@@ -381,7 +387,9 @@ SW_TEST_CASE( NetSimHarnessTest, EveryWorldRunsItsOwnSceneAndPhysics )
     }
     // 상자는 서버 물리에서 바닥에 멈췄다(높이 0.5).
     for ( const RigidBodyComponent* pCrate : getServerSession( harness ).getCrates() )
+    {
         SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.05f );
+    }
 }
 
 /**
@@ -444,7 +452,9 @@ SW_TEST_CASE( NetSimHarnessTest, LateJoinConvergesAndLeaveNotifiesServer )
     harness.stepTicks( 5 );
     bool bSawRemoteDisconnect = false;
     for ( const NetHostEvent& event : game._record._listEvent )
+    {
         bSawRemoteDisconnect = bSawRemoteDisconnect || ( event._kind == NetHostEvent::Kind::Disconnected && event._reason == NetDisconnectReason::Remote );
+    }
     SW_EXPECT_TRUE( bSawRemoteDisconnect );
     SW_EXPECT_EQUAL( 2, harness.getServer().getHost().getConnectedCount() );
     // 남은 클라이언트는 계속 받는다.
@@ -494,7 +504,9 @@ SW_TEST_CASE( NetSimHarnessTest, SpoofedConnectRequestsDoNotFillTheServer )
     NetSimLinkConditions spoofed;
     spoofed._downstream._pDropFilter = &dropEverything;
     for ( int32 index = 0; index < 4; ++index )
+    {
         SW_ASSERT_TRUE( harness.addClient( spoofed ) > 0 );
+    }
     harness.stepTicks( 30 );
     SW_EXPECT_EQUAL( 0, harness.getServer().getHost().getConnectedCount() );
 

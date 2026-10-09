@@ -23,7 +23,9 @@ SW_TEST_CASE( FixedStepAccumulatorTest, StepsAndAlpha )
     sw::FixedStepAccumulator sixty;
     uint32                   totalSteps = 0;
     for ( uint32 frameIndex = 0; frameIndex < 600; ++frameIndex )
+    {
         totalSteps += sixty.advance( 1.0f / 60.0f );
+    }
     SW_EXPECT_EQUAL( 600u, totalSteps );
 }
 

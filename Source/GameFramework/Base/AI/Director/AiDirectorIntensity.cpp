@@ -146,7 +146,9 @@ namespace sw
         outArchive << _calmSeconds;
         outArchive << static_cast<uint32>( _listSignalValue.size() );
         for ( const float32 value : _listSignalValue )
+        {
             outArchive << value;
+        }
     }
 
     bool AiDirectorIntensityModel::readState( Archive& archive )
@@ -160,7 +162,9 @@ namespace sw
             return false;
         vector<float32> listSignalValue( signalCount, 0.0f );
         for ( float32& value : listSignalValue )
+        {
             archive >> value;
+        }
         if ( archive.isError() )
             return false;
         _stress          = stress;

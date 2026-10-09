@@ -45,23 +45,31 @@ namespace sw
             static void makeKeyConfirmAad( uint32 serverIndex, uint64 serverSalt, uint8* pOutAad )
             {
                 for ( int32 index = 0; index < 4; ++index )
+                {
                     pOutAad[index] = static_cast<uint8>( serverIndex >> ( index * 8 ) );
+                }
                 for ( int32 index = 0; index < 8; ++index )
+                {
                     pOutAad[4 + index] = static_cast<uint8>( serverSalt >> ( index * 8 ) );
+                }
             }
 
             /** @brief 데이터 · 끊기 패킷의 AAD — 프로토콜 id 4 LE ‖ 몸의 머리(종류 · 연결 값 · 패킷 번호). */
             static void makePacketAad( uint32 protocolId, const uint8* pBodyHead, uint8* pOutAad )
             {
                 for ( int32 index = 0; index < 4; ++index )
+                {
                     pOutAad[index] = static_cast<uint8>( protocolId >> ( index * 8 ) );
+                }
                 std::memcpy( pOutAad + 4, pBodyHead, kSecureHeadSize );
             }
 
             static void writeUint32( vector<uint8>& outBytes, size_t offset, uint32 value )
             {
                 for ( int32 index = 0; index < 4; ++index )
+                {
                     outBytes[offset + static_cast<size_t>( index )] = static_cast<uint8>( value >> ( index * 8 ) );
+                }
             }
 
             static uint64 makeAddressKey( const NetAddress& address ) { return ( static_cast<uint64>( address._ipv4 ) << 16 ) | address._port; }
@@ -190,9 +198,13 @@ namespace sw
         // FNV-1a 32 — 머리 값(프로토콜 id)을 먼저 섞어 다른 게임 · 판의 패킷은 체크섬부터 틀린다.
         uint32 hash = HashUtil::kFnvOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
+        {
             hash = ( hash ^ ( ( headerId >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+        }
         for ( int32 index = 0; index < size; ++index )
+        {
             hash = ( hash ^ pBody[index] ) * HashUtil::kFnvPrime32;
+        }
         return hash;
     }
 
@@ -377,7 +389,9 @@ namespace sw
     void NetHost::sendBatch( const OutgoingBatch& batch )
     {
         for ( const OutgoingDatagram& datagram : batch._listDatagram )
+        {
             (void)_pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+        }
     }
 
     void NetHost::takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished )
@@ -392,7 +406,9 @@ namespace sw
     void NetHost::deliverFinished( vector<FinishedConnect>& listFinished )
     {
         for ( FinishedConnect& finished : listFinished )
+        {
             finished._promise.setValue( finished._result );
+        }
         listFinished.clear();
     }
 
@@ -589,9 +605,13 @@ namespace sw
         uint8         arrHead[NetHostInternal::kSecureHeadSize]{};
         arrHead[0] = static_cast<uint8>( type ); // 종류 3 비트 + 0 5 비트 — BitWriter 는 낮은 비트부터라 받는 쪽 readBits( 3 ) · peekPacketType 이 그대로 읽는다
         for ( int32 index = 0; index < 4; ++index )
+        {
             arrHead[1 + index] = static_cast<uint8>( token >> ( index * 8 ) );
+        }
         for ( int32 index = 0; index < 8; ++index )
+        {
             arrHead[5 + index] = static_cast<uint8>( packetNumber >> ( 56 - index * 8 ) );
+        }
         uint8 arrAad[NetHostInternal::kAadSize]{};
         NetHostInternal::makePacketAad( _protocolId, arrHead, arrAad );
         uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
@@ -618,7 +638,9 @@ namespace sw
         }
         uint64 packetNumber = 0;
         for ( int32 index = 0; index < 8; ++index )
+        {
             packetNumber = ( packetNumber << 8 ) | pBody[5 + index];
+        }
         if ( security._replayWindow.isAcceptable( packetNumber ) == false )
         {
             ++_replayRejectedCount;
@@ -783,7 +805,9 @@ namespace sw
                     // 몫이 남고 실을 것이 더 있으면 같은 차례에 더 — 큰 신뢰 메시지 · 몰린 스냅샷의 속도는 상한이 정한다.
                     for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( time );
                           ++packetCount )
+                    {
                         sendPayload( time, slot );
+                    }
                     break;
                 }
                 case NetConnectionState::Disconnected:
@@ -1144,7 +1168,9 @@ namespace sw
         if ( pTransport != nullptr )
         {
             for ( const OutgoingDatagram& datagram : batch._listDatagram )
+            {
                 (void)pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+            }
         }
         deliverFinished( listFinished );
     }
@@ -1157,14 +1183,18 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             for ( size_t index = 0; index < _listSlot.size(); ++index )
+            {
                 closeSlot( static_cast<int32>( index ), NetDisconnectReason::Requested, true );
+            }
             takePending( batch, listFinished );
             pTransport = _pTransport;
         }
         if ( pTransport != nullptr )
         {
             for ( const OutgoingDatagram& datagram : batch._listDatagram )
+            {
                 (void)pTransport->send( datagram._to, batch._bytes.data() + datagram._offset, datagram._size );
+            }
         }
         deliverFinished( listFinished );
     }
@@ -1286,7 +1316,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         int32                   count = 0;
         for ( const Slot& slot : _listSlot )
+        {
             count += slot._state == NetConnectionState::Connected ? 1 : 0;
+        }
         return count;
     }
 

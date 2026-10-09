@@ -125,7 +125,9 @@ SW_TEST_CASE( OnlineLoadBotTest, PercentilesUseNearestRank )
 {
     vector<int64> listSample;
     for ( int64 value = 1; value <= 100; ++value )
+    {
         listSample.push_back( value );
+    }
     SW_EXPECT_EQUAL( LoadBotMetrics::computePercentile( listSample, 50 ), int64( 50 ) );
     SW_EXPECT_EQUAL( LoadBotMetrics::computePercentile( listSample, 95 ), int64( 95 ) );
     SW_EXPECT_EQUAL( LoadBotMetrics::computePercentile( listSample, 99 ), int64( 99 ) );

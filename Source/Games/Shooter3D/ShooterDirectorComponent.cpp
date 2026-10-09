@@ -99,7 +99,9 @@ namespace sw
                     const float32 arrPush[4] = { resolved._x - box._min._x, box._max._x - resolved._x, resolved._z - box._min._z, box._max._z - resolved._z };
                     int32         shallow    = 0;
                     for ( int32 sideIndex = 1; sideIndex < 4; ++sideIndex )
+                    {
                         shallow = arrPush[sideIndex] < arrPush[shallow] ? sideIndex : shallow;
+                    }
                     if ( shallow == 0 )
                         resolved._x = box._min._x - radius;
                     else if ( shallow == 1 )
@@ -276,7 +278,9 @@ namespace sw
             vector<uint32> listSpawnId;
             _director.getSpawnDirector().collectAliveSpawnIds( listSpawnId );
             for ( const uint32 spawnId : listSpawnId )
+            {
                 requestEnemies( 1, 1.0f, spawnId, false );
+            }
         }
     }
 
@@ -458,10 +462,14 @@ namespace sw
         if ( bRespawnViews )
             spawnEffectPools( manager );
         for ( const EnemyRequest& request : _listPendingEnemy )
+        {
             spawnEnemy( manager, request );
+        }
         _listPendingEnemy.clear();
         for ( const EffectRequest& effect : _listPendingEffect )
+        {
             spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
+        }
         _listPendingEffect.clear();
         if ( _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 ) )
             syncAutoPlayPossession( manager );
@@ -765,7 +773,9 @@ namespace sw
         StringBuilder<constant::kMaxBuffer1024> row;
         row.appendFormat( "%#,%.5f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", _traceFrame, deltaTime, feet._x, feet._z, pPlayer->getLookYaw(), body._x, body._y, body._z, bodyYaw );
         for ( const float3& bone : arrBone )
+        {
             row.appendFormat( ",%.4f,%.4f,%.4f", bone._x, bone._y, bone._z );
+        }
         row.appendFormat( ",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%#\n", camera._x, camera._y, camera._z, cameraYaw, enemy._x, enemy._z, enemyHipsY, state.c_str() );
         _motionTrace += row.c_str();
         ++_traceFrame;

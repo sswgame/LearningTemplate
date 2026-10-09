@@ -106,7 +106,9 @@ namespace
         {
             outGrid.initialize( 120, 21, 1.0f, float3{ -10.0f, 0.0f, -10.0f } );
             for ( int32 cellY = 0; cellY <= 17; ++cellY )
+            {
                 outGrid.setBlocked( 50, cellY, true );
+            }
         }
 
         /** @brief 활동 시작 · 끝을 받아 적는 애니메이션 훅입니다. */
@@ -202,7 +204,9 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
                                         "invalid flags expression",
                                         "parent cycle" };
     for ( const utf8* pExpected : arrExpected )
+    {
         SW_EXPECT_TRUE_MSG( logs.countContaining( pExpected ) >= 1, ( string( "missing warning: " ) + pExpected + logs.joined() ).c_str() );
+    }
     const ScheduleNpcDef* pNpc = catalog.findNpc( "x" );
     SW_ASSERT_NOT_NULL( pNpc );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( pNpc->_listRoutine.size() ) );
@@ -490,7 +494,9 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
         pSystem->initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
     }
     for ( int32 npcIndex = 0; npcIndex < onScreen.getNpcCount(); ++npcIndex )
+    {
         onScreen.setNpcLod( npcIndex, ScheduleLod::Near );
+    }
     const int32 pierre = onScreen.findNpcIndex( "pierre" );
 
     // 같은 입력을 같은 시각에 — 10:07 말 걸기(30 분 — 만료 10:37 은 화면 밖 사건 간격 15 분의 칸 위가 아니다), 15:00 비.
@@ -638,7 +644,9 @@ SW_TEST_CASE( ScheduleTest, DeterminismHashAndNetSummary )
     const int32 noon = Internal::makeMinute( Internal::kSaturday, 12, 10 );
     first.advanceTo( noon );
     for ( int32 minute = second.getMinute() + 7; minute <= noon; minute += 7 )
+    {
         second.advanceTo( minute ); // 다른 간격으로 흘려도
+    }
     second.advanceTo( noon );
     otherSeed.advanceTo( noon );
     SW_EXPECT_EQUAL( first.computeStateHash(), second.computeStateHash() );
@@ -690,7 +698,9 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
     NavGrid grid;
     grid.initialize( 20, 10, 1.0f, float3{} );
     for ( int32 cellY = 1; cellY <= 9; ++cellY )
+    {
         grid.setBlocked( 10, cellY, true ); // y = 0 줄만 열린 울타리 — 아래로 돌아간다
+    }
     GridPathfinder         pathfinder;
     NavGridSchedulePathing pathing( &grid, &pathfinder, SchedulePlane::XY );
 
@@ -776,5 +786,7 @@ SW_TEST_CASE( ScheduleTest, AnimatorHookPlaysOnlyForNearNpcs )
     SW_EXPECT_TRUE( animator._listStarted[0]._animation == hashed_string( "Sweep" ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( animator._listEnded.size() ) ); // 집의 StayHome 이 끝났다
     for ( const ScheduleActivityCue& cue : animator._listEnded )
+    {
         SW_EXPECT_EQUAL( pierre, cue._npcIndex );
+    }
 }

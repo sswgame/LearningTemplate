@@ -276,7 +276,9 @@ namespace sw
         {
             _console.drainLines( _listPendingCommand );
             for ( const string& line : _listPendingCommand )
+            {
                 executeCommand( line );
+            }
             _listPendingCommand.clear();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();

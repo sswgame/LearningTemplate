@@ -27,7 +27,9 @@ namespace
             const uint8* pIn  = static_cast<const uint8*>( pSrc );
             uint8*       pOut = static_cast<uint8*>( pDst );
             for ( size_t index = 0; index < srcSize; ++index )
+            {
                 pOut[index] = static_cast<uint8>( pIn[index] ^ kMask );
+            }
             outCompressedSize = srcSize;
             return true;
         }
@@ -93,7 +95,9 @@ SW_TEST_CASE( CompressionTest, RleCodecRepetitionAndLiterals )
     // 2) 비반복 리터럴 데이터
     sw::vector<uint8> literalData( 256 );
     for ( size_t index = 0; index < literalData.size(); ++index )
+    {
         literalData[index] = static_cast<uint8>( index & 0xFF );
+    }
 
     compBuffer.resize( codec.compressBound( literalData.size() ) );
     SW_EXPECT_TRUE( codec.compress( literalData.data(), literalData.size(), compBuffer.data(), compBuffer.size(), compSize ) );

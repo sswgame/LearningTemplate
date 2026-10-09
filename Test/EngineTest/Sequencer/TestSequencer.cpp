@@ -168,7 +168,9 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
     // 켜진 채 머무는 프레임에서는 아무것도 흔들리지 않는다 — 한 호출 안에서 꺼졌다 켜지면 메시가 렌더 더티를 찍는다.
     manager.getPrimitiveRegistry().clearDirty();
     for ( int32 frame = 6; frame < 10; ++frame )
+    {
         sw::SequenceTimelineUtil::applyFrame( &manager, asset, frame );
+    }
     SW_EXPECT_FALSE( manager.getPrimitiveRegistry().hasDirty() );
     SW_EXPECT_FALSE( pOff->isSelfActive() ); // 꺼 둔 컴포넌트는 그대로
 

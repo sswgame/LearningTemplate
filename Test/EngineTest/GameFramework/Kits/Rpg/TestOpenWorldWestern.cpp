@@ -113,7 +113,9 @@ namespace
     {
         int32 count = 0;
         for ( const WesternLawEvent& event : listEvent )
+        {
             count += event._kind == kind ? 1 : 0;
+        }
         return count;
     }
 
@@ -286,7 +288,9 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
     SW_EXPECT_TRUE( flags.evaluate( "honor_high && !honor_neutral" ) );
 
     for ( int32 index = 0; index < 20; ++index )
+    {
         (void)honor.applyCrime( hashed_string( "murder" ) ); // 변화량은 보지 않는다 — 누적 값을 아래 단언이 본다
+    }
     SW_EXPECT_EQUAL( -400, honor.getValue() );
     SW_EXPECT_TRUE( honor.getTierName() == hashed_string( "Outlaw" ) );
     SW_EXPECT_NEAR_EQUAL( 1.1f, honor.computePriceScale(), 1.0e-5f ); // 무법자는 웃돈
@@ -307,12 +311,16 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
     SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
     horse.setRidden( true ); // 타면 초당 1
     for ( int32 step = 0; step < 39; ++step )
+    {
         horse.update( 0.5f, 0.0f ); // 19.5
+    }
     SW_EXPECT_EQUAL( 1, horse.getBondLevel() );
     horse.update( 0.5f, 0.0f ); // 20 — 단계 2 문턱
     SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
     for ( int32 step = 0; step < 59; ++step )
+    {
         horse.update( 0.25f, 0.0f ); // 34.75
+    }
     SW_EXPECT_EQUAL( 2, horse.getBondLevel() );
 
     Archive archive;
@@ -325,7 +333,9 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
     SW_ASSERT_TRUE( restored.readState( reader ) );
     restored.setRidden( true );
     for ( int32 step = 0; step < 60; ++step )
+    {
         restored.update( 0.25f, 0.0f ); // 49.75
+    }
     SW_EXPECT_EQUAL( 2, restored.getBondLevel() );
     restored.update( 0.25f, 0.0f ); // 50 — 단계 3 문턱
     SW_EXPECT_EQUAL( 3, restored.getBondLevel() );
@@ -366,13 +376,17 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondUnlocksAbilitiesCoresSlowRegenAndFe
     // 질주로 바닥내면 탈진, 코어가 낮으면 회복이 느리다.
     int32 frames = 0;
     while ( horse.gallop( 0.1f ) && frames < 1000 )
+    {
         ++frames;
+    }
     SW_EXPECT_TRUE( horse.getStamina().isExhausted() );
     vector<WesternHorseEvent> listEvent;
     horse.drainEvents( listEvent );
     int32 exhausted = 0;
     for ( const WesternHorseEvent& event : listEvent )
+    {
         exhausted += event._kind == WesternHorseEvent::Kind::Exhausted ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 1, exhausted );
 
     WesternHorse starved;
@@ -455,7 +469,9 @@ SW_TEST_CASE( OpenWorldWesternTest, PlayerCoresDrainWithColdUnlessDressedAndDead
     SW_EXPECT_TRUE( shooter.markTarget( 1 ) && shooter.markTarget( 2 ) && shooter.markTarget( 2 ) );
     SW_EXPECT_FALSE( shooter.markTarget( 3 ) );
     for ( int32 index = 0; index < 50 && shooter.isDeadEyeActive(); ++index )
+    {
         shooter.update( 0.1f, 0.0f, 20.0f );
+    }
     SW_EXPECT_FALSE( shooter.isDeadEyeActive() ); // 100 / 초당 25 → 4 초
     SW_EXPECT_FALSE( shooter.activateDeadEye() ); // 최소량 아래
     SW_EXPECT_NEAR_EQUAL( 1.0f, shooter.getTimeScale(), 1.0e-5f );
@@ -534,7 +550,9 @@ SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
     horse.update( 5.0f, 0.0f );
     SW_ASSERT_EQUAL( 2, horse.getBondLevel() );
     for ( int32 frame = 0; frame < 3; ++frame )
+    {
         (void)horse.gallop( 0.1f );
+    }
     SW_EXPECT_TRUE( horse.frighten( 0.5f ) == WesternHorseReaction::Calm );
 
     const vector<uint8> horseBytes = captureWesternBytes( horse );
@@ -673,7 +691,9 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     // 겁: 같은 씨앗의 말은 언젠가 떨어뜨린다 — 그 순간 강제 하차, 조종자는 탑승자를 다시 쥔다.
     WesternHorseReaction reaction = WesternHorseReaction::Calm;
     for ( int32 attempt = 0; attempt < 12 && reaction != WesternHorseReaction::Bucked; ++attempt )
+    {
         reaction = pHorseMount->frighten( 1.5f );
+    }
     SW_ASSERT_TRUE( reaction == WesternHorseReaction::Bucked );
     SW_EXPECT_TRUE( pHorseObject->getComponent<VehicleSeatComponent>()->isFree() );
     SW_EXPECT_TRUE( pRiderAi->getPawn() == pRiderPawn->getHandle() );
@@ -684,17 +704,23 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     pHorseAi->possess( *pHorsePawn );
     pRiderAi->unpossess();
     for ( int32 settleFrame = 0; settleFrame < 90; ++settleFrame ) // 떨어뜨릴 때 달리던 말이 선다
+    {
         manager.tick( kDeltaTime );
+    }
     pRider->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, 0.0f } );
     pHorseObject->getPrimarySceneComponent()->setWorldPosition( float3{ 4.0f, 0.0f, -6.0f } ); // 따라가기 거리(8) 안 — 휘파람 없이는 안 온다
     horse.update( 60.0f, 0.0f );
     pMovement->setGallopAllowed( true );
     for ( int32 waitFrame = 0; waitFrame < 30; ++waitFrame )
+    {
         manager.tick( kDeltaTime );
+    }
     SW_EXPECT_TRUE( pHorseObject->getPrimarySceneComponent()->getWorldPosition()._z < -5.5f );
     pHorseAi->whistle();
     for ( int32 comeFrame = 0; comeFrame < 300 && pHorseAi->isCalled(); ++comeFrame )
+    {
         manager.tick( kDeltaTime );
+    }
     SW_EXPECT_FALSE( pHorseAi->isCalled() );
     const float3 horseAt = pHorseObject->getPrimarySceneComponent()->getWorldPosition();
     SW_EXPECT_TRUE_MSG( MathUtil::abs( horseAt._z ) < 3.5f, ( "horse at z " + std::to_string( horseAt._z ) ).c_str() );

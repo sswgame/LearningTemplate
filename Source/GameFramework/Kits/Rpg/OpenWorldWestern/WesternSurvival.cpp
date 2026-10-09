@@ -38,7 +38,9 @@ namespace sw
         , _bDeadEyeActive{ SW_FALSE }
     {
         for ( float32& core : _arrCore )
+        {
             core = kCoreMax;
+        }
     }
 
     void WesternSurvival::initialize( const WesternCatalog* pCatalog )
@@ -64,7 +66,9 @@ namespace sw
         _arrGauge[static_cast<size_t>( WesternCore::Stamina )].initialize( stamina );
         _arrGauge[static_cast<size_t>( WesternCore::DeadEye )].initialize( deadEye );
         for ( float32& core : _arrCore )
+        {
             core = kCoreMax;
+        }
         _listClothing.clear();
         _listMark.clear();
         _deadEyeLevel   = 1;

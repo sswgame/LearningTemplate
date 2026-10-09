@@ -70,7 +70,9 @@ namespace sw
     void LoopbackPkceLoginClient::shutdown()
     {
         for ( PendingLogin& pending : _listPending )
+        {
             finish( pending, false, true, "client shut down", vector<uint8>{} );
+        }
         _listPending.clear();
         _redirectServer.shutdown();
         _httpClient.shutdown();
@@ -166,7 +168,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listDone.size() );
         for ( PlatformLoginClientResult& result : _listDone )
+        {
             outListResult.push_back( std::move( result ) );
+        }
         _listDone.clear();
         return count;
     }

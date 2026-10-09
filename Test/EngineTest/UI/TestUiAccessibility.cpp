@@ -335,7 +335,9 @@ SW_TEST_CASE( UiAccessibilityTest, SubtitleReadingTime )
     // 한글은 바이트가 아니라 글자로 센다 — 40 글자(120 바이트) = 2.4 초.
     sw::string hangul;
     for ( uint32 index = 0; index < 40; ++index )
+    {
         hangul += "\xEA\xB0\x80"; // U+AC00
+    }
     SW_EXPECT_NEAR_EQUAL( 2.4f, sw::UiSubtitleService::computeReadingSeconds( hangul ), 1e-4f );
 
     const ScopedVariable   enabled( "gv_subtitles", "true" );

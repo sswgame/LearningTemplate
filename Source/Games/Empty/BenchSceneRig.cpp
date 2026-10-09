@@ -76,7 +76,9 @@ namespace sw
                     const float32 y     = listVertex[index]._arrPosition[1];
                     uint32        lower = 0;
                     while ( lower + 2 < boneCount && y < listModel[lower + 1].getTranslation()._y )
+                    {
                         ++lower;
+                    }
                     const float32   top      = listModel[lower].getTranslation()._y;
                     const float32   bottom   = listModel[lower + 1].getTranslation()._y;
                     const float32   fraction = MathUtil::saturate( ( top - y ) / MathUtil::max( top - bottom, 1e-4f ) );

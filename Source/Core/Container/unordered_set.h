@@ -475,7 +475,9 @@ namespace sw
             // 2의 거듭제곱으로 올린다(`reserve( 3000 )` 이면 4096). `bucketIndexOf` 가 마스크로 자르는 전제다.
             size_t bucketCount = _listBucket.empty() ? kMinBucketCount : _listBucket.size();
             while ( bucketCount < count )
+            {
                 bucketCount *= 2;
+            }
             _listBucket.assign( bucketCount, kEmptySlot );
             for ( size_t denseIndex = 0; denseIndex < _listDenseData.size(); ++denseIndex )
             {

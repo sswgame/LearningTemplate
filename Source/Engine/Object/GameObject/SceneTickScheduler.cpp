@@ -62,7 +62,9 @@ namespace sw
                 threadState._pTickWriter    = entry._pObject;
                 runTickItemIfLive( deltaTime, entry._firstItem );
                 for ( uint32 index = 1; index < entry._itemCount; ++index )
+                {
                     runTickItemIfLive( deltaTime, entry._pItem[index] );
+                }
             }
 
             /** @brief 한 그룹의 칸 목록을 [start, end) 로 나눠 도는 잡 본문입니다. 워커는 포인터만 받습니다. 한 칸은 한 오브젝트라 나눠지지 않습니다. */
@@ -75,7 +77,9 @@ namespace sw
                 {
                     TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
                     for ( uint32 index = start; index < end; ++index )
+                    {
                         tickEntry( threadState, _deltaTime, _pEntry[index] );
+                    }
                     threadState._pTickingObject = nullptr;
                     threadState._pTickWriter    = nullptr;
                 }
@@ -178,7 +182,9 @@ namespace sw
 
             // 스테이지는 그룹 순서로 지어진다(한 스테이지 = 한 그룹).
             while ( stageIndex < listStage.size() && listStage[stageIndex]._group < group )
+            {
                 ++stageIndex;
+            }
             for ( ; stageIndex < listStage.size() && listStage[stageIndex]._group == group; ++stageIndex )
             {
                 const TickStage& stage = listStage[stageIndex];

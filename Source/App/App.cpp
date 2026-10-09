@@ -442,7 +442,9 @@ namespace sw
             {
                 SW_PROFILE_SCOPE( "GT.Game.fixedUpdate" );
                 for ( uint32 stepIndex = 0; stepIndex < frameTime._fixedStepCount; ++stepIndex )
+                {
                     _moduleHost->fixedUpdateGame( frameTime._fixedDeltaTime );
+                }
             }
 
             {

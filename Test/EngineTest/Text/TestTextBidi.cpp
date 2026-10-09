@@ -27,7 +27,9 @@ namespace
             sw::vector<uint32> listCodepoint;
             size_t             offset = 0;
             while ( offset < text.size() )
+            {
                 listCodepoint.push_back( sw::StringUtil::decodeUtf8( text, offset ) );
+            }
             sw::vector<uint8> listLevel;
             sw::TextBidi::resolveLevels( listCodepoint, paragraphDirection, listLevel );
             sw::vector<uint32> listVisual;

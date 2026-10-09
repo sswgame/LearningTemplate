@@ -149,7 +149,9 @@ namespace sw
         AdminProtocolInternal::writeAttachments( outWriter, request._listAttachment );
         outWriter.writeVarUint( request._listAccountId.size() );
         for ( const AccountId accountId : request._listAccountId )
+        {
             outWriter.writeVarUint( accountId );
+        }
         ServiceKeyUtil::writeString( outWriter, request._displayName );
         ServiceKeyUtil::writeString( outWriter, request._subject );
         ServiceKeyUtil::writeString( outWriter, request._assetId );
@@ -179,7 +181,9 @@ namespace sw
             return false;
         outRequest._listAccountId.resize( static_cast<size_t>( accountCount ) );
         for ( AccountId& accountId : outRequest._listAccountId )
+        {
             accountId = reader.readVarUint();
+        }
         const bool bTextOk = ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._displayName ) &&
                              ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._subject ) &&
                              ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, outRequest._assetId ) &&
@@ -217,14 +221,20 @@ namespace sw
         outWriter.writeBool( reply._identity._bGuest == SW_TRUE );
         ServiceKeyUtil::writeString( outWriter, reply._sanction._reasonCode );
         for ( int32 kindIndex = 0; kindIndex < AdminProtocolInternal::kSanctionKindCount; ++kindIndex )
+        {
             outWriter.writeVarInt( reply._sanction._arrUntilMs[kindIndex] );
+        }
         AdminProtocolInternal::writeBalances( outWriter, reply._listBalance );
         outWriter.writeVarUint( reply._listJournal.size() );
         for ( const AdminJournalLine& line : reply._listJournal )
+        {
             AdminProtocolInternal::writeJournal( outWriter, line );
+        }
         outWriter.writeVarUint( reply._listAudit.size() );
         for ( const ServiceAuditEntry& entry : reply._listAudit )
+        {
             AdminProtocolInternal::writeAudit( outWriter, entry );
+        }
     }
 
     bool AdminProtocol::readReply( BitReader& reader, AdminReply& outReply )
@@ -245,7 +255,9 @@ namespace sw
         if ( ServiceKeyUtil::readString( reader, kMaxTextSize, outReply._sanction._reasonCode ) == false )
             return false;
         for ( int32 kindIndex = 0; kindIndex < AdminProtocolInternal::kSanctionKindCount; ++kindIndex )
+        {
             outReply._sanction._arrUntilMs[kindIndex] = reader.readVarInt();
+        }
         if ( AdminProtocolInternal::readBalances( reader, outReply._listBalance ) == false )
             return false;
         const uint64 journalCount = reader.readVarUint();

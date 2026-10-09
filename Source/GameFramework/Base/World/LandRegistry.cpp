@@ -159,7 +159,9 @@ namespace sw
         outArchive << _topology._height;
         outArchive << static_cast<uint32>( _listOwnerName.size() );
         for ( const hashed_string& ownerName : _listOwnerName )
+        {
             StateArchiveUtil::writeName( outArchive, ownerName );
+        }
         for ( const Cell& cell : _listCell )
         {
             outArchive << cell._owner;

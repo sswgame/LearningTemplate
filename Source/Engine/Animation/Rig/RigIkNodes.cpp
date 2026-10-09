@@ -340,7 +340,9 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override
             {
                 for ( const ChainEntry& entry : _listChain )
+                {
                     inoutListBone.push_back( entry._bone );
+                }
                 inoutListBone.push_back( _bone );
             }
 
@@ -493,7 +495,9 @@ namespace sw
             {
                 _bPelvisInitialized = SW_FALSE;
                 for ( Foot& foot : _listFoot )
+                {
                     foot._bInitialized = SW_FALSE;
+                }
             }
 
         private:

@@ -93,7 +93,9 @@ namespace
         const vector<EngineInitNode> listNode = EngineInitSequence::makeStepNodes();
         vector<uint32>               listIndex;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( listNode.size() ); ++nodeIndex )
+        {
             listIndex.push_back( nodeIndex );
+        }
         return joinNodeOrder( listNode, listIndex );
     }
 
@@ -420,7 +422,9 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     {
         bSceneInitialized = bSceneInitialized || step == EngineInitStep::Scene;
         for ( const EngineInitStep clientStep : arrClientOnly )
+        {
             SW_EXPECT_TRUE_MSG( step != clientStep, EngineInitSequence::getStepName( step ) );
+        }
     }
     SW_EXPECT_TRUE( bSceneInitialized );
     SW_EXPECT_EQUAL( static_cast<size_t>( EngineInitStep::Count ) - SW_COUNT_OF( arrClientOnly ), recorder._listInitialized.size() );

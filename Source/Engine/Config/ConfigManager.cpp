@@ -129,7 +129,9 @@ namespace sw
         vector<string> listRangeError;
         ConfigManagerInternal::collectRangeErrors( typeInfo, pInstance, string(), listRangeError );
         for ( const string& rangeError : listRangeError )
+        {
             SW_LOG_ERROR( "Config %#: %#", pSourceLabel, rangeError.c_str() );
+        }
         return listOrphan.empty() && listRangeError.empty();
     }
 

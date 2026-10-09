@@ -112,14 +112,18 @@ namespace
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( kFrame );
+            }
         }
 
         static uint32 countSkinnedUnits( const sw::GameObject& object )
         {
             uint32 count = 0;
             for ( sw::Component* pComp : object.getComponents() )
+            {
                 count += sw::castTo<sw::SkeletalMeshComponent>( pComp ) != nullptr ? 1u : 0u;
+            }
             return count;
         }
     };
@@ -220,7 +224,9 @@ SW_TEST_CASE( FractureComponentTest, ReplayedEventLogGivesTheSameStateAndRaycast
     SW_EXPECT_TRUE( pServerWall->isFractured() );
 
     for ( const sw::DestructionDamageEvent& event : log._listEvent )
+    {
         pClientWall->applyDamage( event );
+    }
     Internal::tickFor( client, 120 );
     SW_EXPECT_EQUAL( pServerWall->getState().computeStateHash(), pClientWall->getState().computeStateHash() );
     SW_EXPECT_TRUE( pClientWall->isFractured() );
@@ -286,7 +292,9 @@ SW_TEST_CASE( FractureComponentTest, DebrisBudgetIsCountedPerScene )
     SW_EXPECT_TRUE( arrBodyCount[0] > 256u );
     SW_EXPECT_EQUAL( arrBodyCount[0], arrBodyCount[1] );
     for ( sw::GameObjectManager& manager : arrWorld )
+    {
         manager.endPlay();
+    }
 }
 
 /**

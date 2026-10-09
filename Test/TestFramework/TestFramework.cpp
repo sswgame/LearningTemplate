@@ -161,9 +161,13 @@ namespace test
         sw::string trimArgValue( std::string_view value )
         {
             while ( value.empty() == false && ( value.front() == '"' || value.front() == '\'' ) )
+            {
                 value.remove_prefix( 1 );
+            }
             while ( value.empty() == false && ( value.back() == '"' || value.back() == '\'' ) )
+            {
                 value.remove_suffix( 1 );
+            }
             return sw::string( value );
         }
 
@@ -522,7 +526,9 @@ namespace test
         sw::vector<sw::string> listSelected;
         listSelected.reserve( _listTest.size() );
         for ( const TestCaseInfo* pTestInfo : selectCasesForThisShard() )
+        {
             listSelected.push_back( pTestInfo->fullName() );
+        }
 
         const uint32 selectedCount = static_cast<uint32>( listSelected.size() );
         const uint32 totalCount    = static_cast<uint32>( _listTest.size() );
@@ -547,7 +553,9 @@ namespace test
         {
             std::fprintf( stdout, "Host suites - CI cannot run these (%u):\n", static_cast<uint32>( _mapHostSuiteReason.size() ) );
             for ( const auto& [suiteName, reason] : _mapHostSuiteReason )
+            {
                 std::fprintf( stdout, "  %s - %s\n", suiteName.c_str(), reason.c_str() );
+            }
         }
         std::fflush( stdout );
     }
@@ -865,7 +873,9 @@ namespace test
         {
             std::fprintf( stdout, " Host suites left out (run them with --host_suites=only):" );
             for ( const auto& [suiteName, reason] : _mapHostSuiteReason )
+            {
                 std::fprintf( stdout, " %s", suiteName.c_str() );
+            }
             std::fprintf( stdout, "\n" );
         }
         if ( bHostOnlyRanNothing )
@@ -877,7 +887,9 @@ namespace test
         sw::vector<sw::pair<float64, const TestCaseInfo*>> listElapsed;
         listElapsed.reserve( mapSlowestElapsed.size() );
         for ( const auto& [pTestInfo, slowestElapsed] : mapSlowestElapsed )
+        {
             listElapsed.push_back( { slowestElapsed, pTestInfo } );
+        }
         if ( listElapsed.size() > kSlowestShown )
         {
             std::partial_sort( listElapsed.begin(), listElapsed.begin() + kSlowestShown, listElapsed.end(),
@@ -887,7 +899,9 @@ namespace test
             } );
             std::fprintf( stdout, " Slowest cases:\n" );
             for ( size_t index = 0; index < kSlowestShown; ++index )
+            {
                 std::fprintf( stdout, "   %9.2f ms  %s\n", listElapsed[index].first, listElapsed[index].second->fullName().c_str() );
+            }
         }
 
         printKnownErrorLogSummary();

@@ -18,7 +18,9 @@ namespace sw::editor
             {
                 size_t offset = 0;
                 while ( offset < text.size() && text[offset] == ' ' )
+                {
                     ++offset;
+                }
                 return text.substr( offset );
             }
         };

@@ -71,13 +71,19 @@ namespace sw
         }
         const int32 gateCount = Internal::writeCount( outWriter, snapshot._listGateProgress.size() );
         for ( int32 index = 0; index < gateCount; ++index )
+        {
             Internal::writeRatio( outWriter, snapshot._listGateProgress[static_cast<size_t>( index )] );
+        }
         const int32 palletCount = Internal::writeCount( outWriter, snapshot._listPalletState.size() );
         for ( int32 index = 0; index < palletCount; ++index )
+        {
             outWriter.writeInt( static_cast<int32>( snapshot._listPalletState[static_cast<size_t>( index )] ), 0, static_cast<int32>( PalletState::Broken ) );
+        }
         const int32 windowCount = Internal::writeCount( outWriter, snapshot._listWindowBlocked.size() );
         for ( int32 index = 0; index < windowCount; ++index )
+        {
             outWriter.writeBool( snapshot._listWindowBlocked[static_cast<size_t>( index )] == SW_TRUE );
+        }
 
         const int32 survivorCount = Internal::writeCount( outWriter, snapshot._listSurvivor.size() );
         for ( int32 index = 0; index < survivorCount; ++index )
@@ -124,17 +130,23 @@ namespace sw
         if ( reader.hasOverflowed() )
             return false;
         for ( int32 index = 0; index < gateCount; ++index )
+        {
             outSnapshot._listGateProgress.push_back( Internal::readRatio( reader ) );
+        }
         const int32 palletCount = reader.readInt( 0, Internal::kMaxCount );
         if ( reader.hasOverflowed() )
             return false;
         for ( int32 index = 0; index < palletCount; ++index )
+        {
             outSnapshot._listPalletState.push_back( static_cast<PalletState>( reader.readInt( 0, static_cast<int32>( PalletState::Broken ) ) ) );
+        }
         const int32 windowCount = reader.readInt( 0, Internal::kMaxCount );
         if ( reader.hasOverflowed() )
             return false;
         for ( int32 index = 0; index < windowCount; ++index )
+        {
             outSnapshot._listWindowBlocked.push_back( reader.readBool() ? SW_TRUE : SW_FALSE );
+        }
 
         const int32 survivorCount = reader.readInt( 0, Internal::kMaxCount );
         if ( reader.hasOverflowed() )

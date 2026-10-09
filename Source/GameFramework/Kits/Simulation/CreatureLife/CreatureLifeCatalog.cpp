@@ -180,7 +180,9 @@ namespace sw
     {
         _listHabitatOrder.clear();
         for ( int32 index = 0; index < static_cast<int32>( _habitatCatalog.getCount() ); ++index )
+        {
             _listHabitatOrder.push_back( index );
+        }
         std::stable_sort( _listHabitatOrder.begin(), _listHabitatOrder.end(), [this]( int32 lhs, int32 rhs )
         {
             return _habitatCatalog.getAt( static_cast<size_t>( lhs ) ).countClaimedCells() > _habitatCatalog.getAt( static_cast<size_t>( rhs ) ).countClaimedCells();

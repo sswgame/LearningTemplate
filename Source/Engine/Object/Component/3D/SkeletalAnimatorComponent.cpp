@@ -79,7 +79,9 @@ namespace sw
         inoutState._stateName = _owner._graphPlayer.getCurrentStateName();
         inoutState._stateTime = _owner._stateTime;
         for ( const AnimFiredNotify& notify : _owner._listFiredNotify )
+        {
             inoutState._listNotify.push_back( notify._name );
+        }
         inoutState._listCurveName.insert( inoutState._listCurveName.end(), _owner._listCurveName.begin(), _owner._listCurveName.end() );
         inoutState._listCurveValue.insert( inoutState._listCurveValue.end(), _owner._listCurveValue.begin(), _owner._listCurveValue.end() );
         inoutState._rootMotionTranslation = _owner._rootMotionDelta._translation;
@@ -211,7 +213,9 @@ namespace sw
         _graphPlayer.setGraph( _graph._listNode.empty() ? nullptr : &_graph );
         // 워커의 전이는 읽어 둔 클립만 찾으므로 노드의 클립은 지금(게임 스레드) 읽는다.
         for ( const AnimGraphNode& node : _graph._listNode )
+        {
             (void)preloadClip( hashed_string( node._name ) );
+        }
     }
 
     void SkeletalAnimatorComponent::setClipFolder( string_view folder )
@@ -222,7 +226,9 @@ namespace sw
         _mapClip.clear();
         _mapTrackToBone.clear();
         for ( const AnimGraphNode& node : _graph._listNode )
+        {
             (void)preloadClip( hashed_string( node._name ) );
+        }
     }
 
     void SkeletalAnimatorComponent::setAnimGraphPath( string_view path )
@@ -421,7 +427,9 @@ namespace sw
         frame._deltaSeconds     = _lastDeltaSeconds;
         frame._bClipWrapped     = step._wrapCount > 0 ? SW_TRUE : SW_FALSE;
         for ( IRootMotionModifier* pModifier : _listRootMotionModifier )
+        {
             pModifier->modifyRootMotion( *this, frame );
+        }
 
         const bool bMoves = frame._worldTranslation.getLengthSquared() > 0.0f;
         if ( bMoves )
@@ -447,7 +455,9 @@ namespace sw
         _listFiredNotify.clear();
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
         for ( LayerState& layer : _listLayer )
+        {
             layer._player.update( deltaSeconds, &_listFiredNotify );
+        }
 
         // 페이드가 다른 페이드로 끊기면 플레이어는 섞이던 한 칸을 버린다(최대 절반이 한 프레임에 사라져 튄다). 끊긴 순간의 포즈(지난 기본 포즈)를
         // 새 페이드 길이 동안 지금 포즈 위에서 사라지게 해 이어 붙인다 — 상태가 짧게 오가도 포즈는 이어진다.
@@ -520,7 +530,9 @@ namespace sw
             _mapTrackToBone.clear();
             _pTrackMapSkeleton = &skeleton;
             for ( LayerState& layer : _listLayer )
+            {
                 layer._pMaskSkeleton = nullptr;
+            }
         }
         vector<int32>& listBone = _mapTrackToBone[&clip];
         if ( listBone.size() != clip.getTrackCount() )

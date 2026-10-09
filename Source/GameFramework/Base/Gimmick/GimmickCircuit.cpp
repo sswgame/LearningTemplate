@@ -21,7 +21,9 @@ namespace sw
             {
                 const uint8* pByte = static_cast<const uint8*>( pData );
                 for ( size_t index = 0; index < size; ++index )
+                {
                     hash = ( hash ^ pByte[index] ) * HashUtil::kFnvPrime64;
+                }
                 return hash;
             }
 
@@ -155,7 +157,9 @@ namespace sw
                 {
                     vector<hashed_string> listParamName;
                     for ( const GimmickParamSpec& spec : kind._listParam )
+                    {
                         listParamName.push_back( spec._name );
+                    }
                     outListError.push_back( Internal::describeNode( def, nodeDef ) + ": unknown parameter '" + param._name.c_str() + "' (parameters: " +
                                             Internal::joinNames( listParamName ) + ")" );
                 }
@@ -368,7 +372,9 @@ namespace sw
             node._previousInputBits = context._inputBits;
         }
         for ( NodeRuntime& node : _listNode )
+        {
             node._sensorImpulse = 0.0f;
+        }
         ++_stepIndex;
     }
 
@@ -378,7 +384,9 @@ namespace sw
             return 0;
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step();
+        }
         return stepCount;
     }
 
@@ -461,9 +469,13 @@ namespace sw
             Internal::writeValue( outBytes, node._sensorImpulse );
         }
         for ( const float32 value : _listFloatState )
+        {
             Internal::writeValue( outBytes, value );
+        }
         for ( const int32 value : _listIntState )
+        {
             Internal::writeValue( outBytes, value );
+        }
     }
 
     bool GimmickCircuit::loadState( const vector<uint8>& bytes )
@@ -492,9 +504,13 @@ namespace sw
             (void)Internal::readValue( bytes, offset, node._sensorImpulse );     // 크기는 위에서 expectedSize 로 확인했다
         }
         for ( float32& value : _listFloatState )
+        {
             (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
+        }
         for ( int32& value : _listIntState )
+        {
             (void)Internal::readValue( bytes, offset, value ); // 크기는 위에서 expectedSize 로 확인했다
+        }
         return true;
     }
 

@@ -374,7 +374,9 @@ SW_TEST_CASE( GpuSceneTest, InstanceRingStandalone )
     {
         list.resize( count );
         for ( uint32 index = 0; index < count; ++index )
+        {
             list[index]._boundsRadius = seed + static_cast<float32>( index );
+        }
     };
 
     // f1: 전부 새로 쓰고 발행 → p1 을 든다.
@@ -1247,7 +1249,9 @@ SW_TEST_CASE( GpuSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
         sw::shared_ptr<sw::Mesh>  mesh = sw::Mesh::create();
         sw::vector<sw::RHIVertex> listVertex;
         for ( uint32 index = 0; index < vertexCount; ++index )
+        {
             listVertex.push_back( cube->getVertices()[index % cube->getVertices().size()] );
+        }
         mesh->setVertices( std::move( listVertex ) );
         return mesh;
     };
@@ -1308,7 +1312,9 @@ SW_TEST_CASE( GpuSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
         builder.exportCpuSnapshot( snapshot );
         uint32 visibleCount = 0;
         for ( const sw::MeshComponent* pComp : listComp )
+        {
             visibleCount += pComp->isVisible() ? 1u : 0u;
+        }
         SW_ASSERT_EQUAL( visibleCount, static_cast<uint32>( snapshot.getInstances().size() ) );
         for ( const sw::GpuMeshBatch& batch : snapshot._listAllBatch )
         {
@@ -1765,17 +1771,23 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryCountsEachMarkOnce )
         listThread.emplace_back( [&registry, &listMesh, &bGo]()
         {
             while ( bGo.load( std::memory_order_acquire ) == false )
+            {
                 std::this_thread::yield();
+            }
             for ( uint32 repeat = 0; repeat < kRepeat; ++repeat )
             {
                 for ( sw::MeshComponent* pMesh : listMesh )
+                {
                     registry.markDirty( pMesh );
+                }
             }
         } );
     }
     bGo.store( true, std::memory_order_release );
     for ( std::thread& thread : listThread )
+    {
         thread.join();
+    }
 
     SW_EXPECT_TRUE( registry.hasDirty() );
     registry.consumeDirty( listSlot, listTransformSlot );
@@ -1823,14 +1835,18 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
     sw::PrimitiveRegistry& registry = pObjects->getPrimitiveRegistry();
     SW_ASSERT_EQUAL( size_t( kMeshCount ), registry.getAll().size() );
     for ( uint32 index = 0; index < kMeshCount; ++index )
+    {
         SW_ASSERT_TRUE( registry.getAll()[index] == listMesh[index] );
+    }
     registry.clearDirty();
     SW_ASSERT_FALSE( registry.hasDirty() );
 
     // 1) 경계 칸 — 뒤섞은 순서로 찍어도 오름차순으로 한 번씩.
     const uint32 arrMarked[] = { 128, 0, 199, 63, 127, 64 };
     for ( const uint32 slot : arrMarked )
+    {
         registry.markDirty( listMesh[slot] );
+    }
     registry.markDirty( listMesh[64] ); // 두 번 찍어도 하나
     sw::vector<uint32> listSlot;
     sw::vector<uint32> listTransformSlot; // 이 테스트는 렌더 상태만 찍는다 — 트랜스폼 목록은 늘 비어 있어야 한다
@@ -1839,7 +1855,9 @@ SW_TEST_CASE( GpuSceneTest, PrimitiveRegistryDirtyBitsCrossWordBoundaries )
     const uint32 arrExpected[] = { 0, 63, 64, 127, 128, 199 };
     SW_ASSERT_EQUAL( size_t( 6 ), listSlot.size() );
     for ( size_t index = 0; index < listSlot.size(); ++index )
+    {
         SW_EXPECT_EQUAL( arrExpected[index], listSlot[index] );
+    }
     SW_EXPECT_FALSE( registry.hasDirty() );
 
     // 2) 지우기의 자리 옮김 — 마지막 칸(199, 더티)이 지운 칸(5)으로 오면 비트도 5 로 온다.
@@ -1971,7 +1989,9 @@ SW_TEST_CASE( GpuSceneTest, ParallelCollectMatchesSerial )
         {
             float64 sum = 0.0;
             for ( const sw::GpuInstance& inst : builder.getInstances() )
+            {
                 sum += static_cast<float64>( inst._boundsCenter._x );
+            }
             return sum;
         };
         const float64 expectedSum = static_cast<float64>( primitiveCount ) * static_cast<float64>( primitiveCount - 1 ) * 0.5;
@@ -1979,7 +1999,9 @@ SW_TEST_CASE( GpuSceneTest, ParallelCollectMatchesSerial )
 
         // 전부 옮기면 부분 수집이 안 되어 다시 전체 수집(병렬)이다 — 합이 N 만큼 밀린다.
         for ( sw::MeshComponent* pMesh : pObjects->getPrimitiveRegistry().getAll() )
+        {
             pMesh->setLocalPosition( pMesh->getLocalPosition() + sw::float3( 1.0f, 0.0f, 0.0f ) );
+        }
         builder.buildFromScene( &scene, camPos );
         SW_ASSERT_EQUAL( primitiveCount, static_cast<uint32>( builder.getInstances().size() ) );
         SW_EXPECT_NEAR_EQUAL( expectedSum + static_cast<float64>( primitiveCount ), sumOfX(), 0.5 );
@@ -2016,7 +2038,9 @@ SW_TEST_CASE( GpuSceneTest, IncrementalTransparentTailMatchesFreshBuild )
         constexpr uint32                     kInstanceCount = 3;
         sw::shared_ptr<sw::MaterialInstance> arrInstance[kInstanceCount];
         for ( uint32 instanceIndex = 0; instanceIndex < kInstanceCount; ++instanceIndex )
+        {
             arrInstance[instanceIndex] = sw::MaterialInstance::create( glass.get() );
+        }
 
         constexpr uint32               kOpaqueCount      = 1500;
         constexpr uint32               kTransparentCount = 300;
@@ -2200,7 +2224,9 @@ namespace
             for ( const sw::GpuMeshBatch& batch : builder.getTransparentBatches() )
             {
                 for ( uint32 index = 0; index < batch._instanceCount; ++index )
+                {
                     listX.push_back( builder.getInstances()[batch._instanceBase + index]._boundsCenter._x );
+                }
             }
             return listX;
         }

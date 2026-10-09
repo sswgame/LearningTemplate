@@ -58,7 +58,9 @@ namespace sw
         _pHost    = pHost;
         _serverId = pHost->getServerBus()->getServerId();
         for ( const auto& [accountId, identity] : _mapAccountToIdentity )
+        {
             writeAccountEntries( identity, false );
+        }
     }
 
     void OnlinePresence::shutdown()
@@ -67,7 +69,9 @@ namespace sw
         {
             EphemeralStoreRouter* pRouter = _pHost->getEphemeralRouter();
             for ( const auto& [requestId, pending] : _mapRequestToPending )
+            {
                 pRouter->cancel( requestId );
+            }
         }
         detach();
         _mapAccountToIdentity.clear();
@@ -134,7 +138,9 @@ namespace sw
             return;
         _nextRefreshMs = nowMs + _settings._refreshIntervalMs;
         for ( const auto& [accountId, identity] : _mapAccountToIdentity )
+        {
             writeAccountEntries( identity, true );
+        }
     }
 
     bool OnlinePresence::handlePushMessage( const ServerBusMessage& message )

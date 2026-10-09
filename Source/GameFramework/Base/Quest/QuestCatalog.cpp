@@ -86,7 +86,9 @@ namespace sw
                     stage._listObjective.push_back( objective );
                 }
                 for ( XmlNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
+                {
                     stage._listBranch.push_back( QuestBranch{ QuestCatalogInternal::readId( node, "choice" ), QuestCatalogInternal::readId( node, "next" ) } );
+                }
                 QuestCatalogInternal::readReward( stageNode, stage._reward );
                 if ( stage._id.empty() )
                     SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pId );

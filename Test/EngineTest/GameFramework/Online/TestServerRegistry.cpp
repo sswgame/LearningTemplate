@@ -63,7 +63,9 @@ namespace
             reader.requestRefresh();
             reader.tick( nowMs );
             for ( int32 pumpIndex = 0; pumpIndex < 4 && reader.isRefreshing(); ++pumpIndex )
+            {
                 (void)node._router.pump();
+            }
             (void)node._router.pump(); // 정리 쓰기의 답
         }
 

@@ -254,7 +254,9 @@ SW_TEST_CASE( ResourceTest, AssetStreamingQueueLifecycleAndThrottling )
     }
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( queue.getPendingCount() != 0 && waitDeadline.isExpired() == false )
+    {
         std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
     SW_ASSERT_EQUAL( size_t( 0 ), queue.getPendingCount() );
 
     // 완료 큐의 맨 앞은 취소한 요청의 것이다. 프레임당 상한을 지킨다.
@@ -940,7 +942,9 @@ SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
     SW_EXPECT_STREQ( "prefabs/b.prefab.xml", AssetCookPath::toSourcePath( "prefabs/b.prefab", AssetKind::Prefab ).c_str() );
     SW_EXPECT_STREQ( "engine/materials/x.material", AssetCookPath::toSourcePath( "engine/materials/x.material", AssetKind::Material ).c_str() );
     for ( const utf8* pName : { "maps/level", "maps/level.xml", "maps/level.scene", "maps/level.scene.bin" } )
+    {
         SW_EXPECT_TRUE( AssetCookPath::isCookableSource( AssetCookPath::toSourcePath( pName, AssetKind::Scene ), AssetKind::Scene ) );
+    }
 }
 
 /**
@@ -966,7 +970,9 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
         lineEnd = metaText.size();
     sw::string expected = metaText.substr( keyPos + 5, lineEnd - keyPos - 5 );
     while ( expected.empty() == false && ( expected.back() == '\r' || expected.back() == ' ' ) )
+    {
         expected.pop_back();
+    }
 
     sw::Uuid   guid{};
     const bool bFound = sw::engine::getAssetManager().getAssetDatabase().tryGetGuid( pAsset, guid );

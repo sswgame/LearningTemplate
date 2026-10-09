@@ -43,7 +43,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const MonsterMoveSlot& slot : _arrMove )
+        {
             count += slot.isEmpty() ? 0 : 1;
+        }
         return count;
     }
 
@@ -159,7 +161,9 @@ namespace sw
         monster._level     = MathUtil::clamp( level, 1, MonsterCollectorCatalog::kMaxLevel );
         monster._exp       = MonsterCollectorCatalog::computeTotalExp( pSpecies->_expGroup, monster._level );
         for ( int32& iv : monster._arrIv )
+        {
             iv = random.nextInt( 0, kMaxIv );
+        }
         const vector<MonsterNatureDef>& listNature = catalog.getNatures();
         if ( listNature.empty() == false )
             monster._natureId = listNature[static_cast<size_t>( random.nextInt( 0, static_cast<int32>( listNature.size() ) - 1 ) )]._id;
@@ -179,7 +183,9 @@ namespace sw
             {
                 // 가장 오래된 칸을 빼고 앞으로 당긴다 — 칸 순서가 배운 순서를 유지한다.
                 for ( int32 slot = 0; slot + 1 < MonsterInstance::kMoveSlotCount; ++slot )
+                {
                     monster._arrMove[slot] = monster._arrMove[slot + 1];
+                }
                 targetSlot = MonsterInstance::kMoveSlotCount - 1;
             }
             monster._arrMove[targetSlot] = MonsterMoveSlot{ learn._moveId, pMove->_pp, pMove->_pp };
@@ -195,7 +201,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const int32 ev : inoutMonster._arrEv )
+        {
             total += ev;
+        }
         for ( int32 index = 0; index < kMonsterStatCount; ++index )
         {
             const int32 room = MathUtil::min( kMaxEvPerStat - inoutMonster._arrEv[index], kMaxEvTotal - total );
@@ -304,7 +312,9 @@ namespace sw
         inoutMonster._status      = MonsterStatus::None;
         inoutMonster._statusTurns = 0;
         for ( MonsterMoveSlot& slot : inoutMonster._arrMove )
+        {
             slot._pp = slot._ppMax;
+        }
     }
 
     MonsterStorage::MonsterStorage()
@@ -342,7 +352,9 @@ namespace sw
             return false;
         int32 usableOthers = 0;
         for ( int32 index = 0; index < static_cast<int32>( _listParty.size() ); ++index )
+        {
             usableOthers += ( index != partyIndex && _listParty[static_cast<size_t>( index )].isFainted() == false ) ? 1 : 0;
+        }
         if ( usableOthers == 0 )
             return false;
         _listBox.push_back( _listParty[static_cast<size_t>( partyIndex )] );
@@ -371,7 +383,9 @@ namespace sw
     void MonsterStorage::restoreParty()
     {
         for ( MonsterInstance& monster : _listParty )
+        {
             MonsterRules::restore( monster );
+        }
     }
 
     bool MonsterStorage::hasUsableMonster() const

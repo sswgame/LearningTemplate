@@ -68,7 +68,9 @@ namespace test
             _objects.collect( world.getObjectManager() );
             _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationSettings{} );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
+            {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
+            }
             world.getRouter().addHandler( &_replication );
         }
 
@@ -105,7 +107,9 @@ namespace test
             _objects.collect( world.getObjectManager() );
             _replication.initialize( &world.getHost(), &world.getObjectManager(), DestructionReplicationSettings{} );
             for ( uint32 index = 0; index < static_cast<uint32>( _objects._listFracture.size() ); ++index )
+            {
                 _replication.registerObject( index + 1, *_objects._listFracture[index] );
+            }
             world.getRouter().addHandler( &_replication );
         }
 
@@ -290,7 +294,9 @@ namespace test
         if ( harness.initialize( settings, &game ) == false )
             return result;
         for ( int32 index = 0; index < 3; ++index )
+        {
             (void)harness.addClient( NetSimLinkConditions::makeSymmetric( options._conditions ) );
+        }
 
         ShowcaseObjects&     server      = getServerSession( harness )._objects;
         const uint32         objectCount = static_cast<uint32>( server._listFracture.size() );
@@ -485,7 +491,9 @@ namespace test
         result._destructionBytesPerSecond    = static_cast<float32>( getServerSession( harness )._replication.getStats()._sentBytes ) / seconds;
         result._poseMessageCount             = getServerSession( harness )._replication.getStats()._poseMessageCount;
         for ( const FractureComponent* pFracture : server._listFracture )
+        {
             result._serverEventCount += pFracture->getState().getEventCount();
+        }
         result._meanEventLagTicks = eventLagCount > 0 ? static_cast<float32>( eventLagSum ) / static_cast<float32>( eventLagCount ) : 0.0f;
         result._bValid            = true;
         return result;

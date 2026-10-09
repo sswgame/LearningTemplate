@@ -42,7 +42,9 @@ namespace sw
                 void runRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
+                    {
                         _ppUnit[index]->runAnimationPhase( _phase );
+                    }
                 }
             };
         };
@@ -109,7 +111,9 @@ namespace sw
     {
         bool bAnyShared = false;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
+        {
             bAnyShared = bAnyShared || pUnit->isShareCrowdPose() || pUnit->getCrowdMode() != AnimationCrowdMode::Own;
+        }
         if ( bAnyShared == false && _crowd.getBuckets().empty() )
             return;
         SW_PROFILE_SCOPE( "GT.Animation.crowd" );
@@ -184,7 +188,9 @@ namespace sw
             {
                 const AnimationLodState fullState{};
                 for ( IAnimationLodClient* pClient : _listLodClient )
+                {
                     pClient->applyAnimationLod( fullState );
+                }
             }
             _bLodApplied                    = SW_FALSE;
             _expectedEvaluationMicroseconds = 0.0f;
@@ -212,7 +218,9 @@ namespace sw
             {
                 screenSize = 0.0f;
                 for ( const AnimationLodView& view : _listLodView )
+                {
                     screenSize = MathUtil::max( screenSize, AnimationLodUtil::computeScreenSize( view, center, radius ) );
+                }
                 bVisible = screenSize > 0.0f;
             }
             AnimationLodState& state = _listScratchLodState[clientIndex];
@@ -274,12 +282,16 @@ namespace sw
         // Kahn 위상 정렬을 레벨 단위로 한다: 레벨 n 의 유닛은 의존이 모두 레벨 n 보다 앞이다.
         unordered_map<const SkeletalMeshComponent*, uint32> mapIndex;
         for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+        {
             mapIndex.emplace( _listUnit[unitIndex], static_cast<uint32>( unitIndex ) );
+        }
 
         vector<vector<uint32>> listDependent( unitCount );
         vector<uint32>         listPendingCount( unitCount, 0 );
         for ( SkeletalMeshComponent* pUnit : _listUnit )
+        {
             pUnit->setHasAnimationDependents( false );
+        }
         for ( size_t unitIndex = 0; unitIndex < unitCount; ++unitIndex )
         {
             for ( const ComponentHandle handle : _listUnit[unitIndex]->getAnimationDependencies() )
@@ -353,7 +365,9 @@ namespace sw
             // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
             _bRewindApplied = SW_FALSE;
             for ( SkeletalMeshComponent* pUnit : _listUnit )
+            {
                 pUnit->markPoseDirty();
+            }
         }
 #endif
         updateLod();
@@ -395,7 +409,9 @@ namespace sw
         // 포즈 단계의 벽시계 시간을 잰다 — 예산 배분이 "유닛 하나에 얼마" 를 이 평균으로 본다(언리얼 예산 배분기도 전체 시간을 재서 나눈다).
         uint32 poseUnitCount = 0;
         for ( const SkeletalMeshComponent* pUnit : _listActive )
+        {
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
+        }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
         runPhase( AnimationPhase::BasePose );
         runPhase( AnimationPhase::Attachment );
@@ -411,7 +427,9 @@ namespace sw
         }
 
         for ( SkeletalMeshComponent* pUnit : _listActive )
+        {
             pUnit->finishAnimationFrame();
+        }
         _crowd.endFrame();
 #if SW_ANIMATION_REWIND_ENABLED
         recordRewindFrame();
@@ -426,7 +444,9 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
         for ( const SkeletalMeshComponent* pUnit : _listActive )
+        {
             _rewind.recordUnit( *pUnit, _frameIndex );
+        }
         AnimationDebugState state;
         for ( const IAnimationLodClient* pClient : _listLodClient )
         {
@@ -485,7 +505,9 @@ namespace sw
         vector<float32>       listWeight;
         vector<hashed_string> listGroup;
         for ( SkeletalMeshComponent* pUnit : _listActive )
+        {
             pUnit->collectSyncPlayers( listPlayer, listWeight, listGroup );
+        }
         if ( listPlayer.size() < 2 )
             return;
 

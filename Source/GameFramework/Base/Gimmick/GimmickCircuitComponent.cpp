@@ -177,7 +177,9 @@ namespace sw
         if ( bBuilt == false )
             _circuit.clear();
         for ( const string& error : _listError )
+        {
             SW_LOG_ERROR( "%#", error );
+        }
         _listBinding.clear();
         return bBuilt;
     }
@@ -372,7 +374,9 @@ namespace sw
     void GimmickCircuitComponent::applyActuators( GameObjectManager& manager )
     {
         for ( int32 node = 0; node < _circuit.getNodeCount() && static_cast<size_t>( node ) < _listBinding.size(); ++node )
+        {
             applyActuator( manager, node, _listBinding[static_cast<size_t>( node )] );
+        }
     }
 
     void GimmickCircuitComponent::applyActuator( GameObjectManager& manager, int32 node, Binding binding )

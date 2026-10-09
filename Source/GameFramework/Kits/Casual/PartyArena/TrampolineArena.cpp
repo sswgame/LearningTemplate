@@ -209,7 +209,9 @@ namespace sw
     {
         _match.start();
         for ( int32 player = 0; player < getPlayerCount(); ++player )
+        {
             respawn( player );
+        }
         _eventBuffer.clear(); // 첫 출발은 부활로 알리지 않는다
     }
 
@@ -230,7 +232,9 @@ namespace sw
     {
         const int32 stepCount = _timer.consume( frameTime );
         for ( int32 index = 0; index < stepCount; ++index )
+        {
             step();
+        }
         return stepCount;
     }
 
@@ -241,7 +245,9 @@ namespace sw
         const float32 deltaTime = _settings._step;
         _time += deltaTime;
         for ( int32 player = 0; player < getPlayerCount(); ++player )
+        {
             updatePlayer( player, deltaTime );
+        }
         updateAttacks();
         _itemSpawner.update( deltaTime );
         pickUpItems();

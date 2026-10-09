@@ -65,7 +65,9 @@ namespace
         static void touchRange( uint32 start, uint32 end )
         {
             for ( uint32 index = start; index < end; ++index )
+            {
                 s_pHit[index].fetch_add( 1, std::memory_order_relaxed );
+            }
         }
 
         /** @brief 요소당 약 1 us 의 계산 본문. */
@@ -73,7 +75,9 @@ namespace
         {
             uint32 accumulated = 0;
             for ( uint32 index = start; index < end; ++index )
+            {
                 accumulated += spinWork( index, 1500 );
+            }
             s_workSink.fetch_add( accumulated, std::memory_order_relaxed );
         }
 
@@ -94,7 +98,9 @@ namespace
         {
             const sw::Stopwatch stopwatch;
             while ( stopwatch.getElapsedMicroseconds() < 2000 )
+            {
                 sw::cpuPause();
+            }
             s_lowInFlight.fetch_sub( 1, std::memory_order_relaxed );
         }
     };
@@ -106,7 +112,9 @@ namespace
         listHit.resize( count );
         s_pHit = listHit.data();
         for ( uint32 index = 0; index < count; ++index )
+        {
             s_pHit[index].store( 0, std::memory_order_relaxed );
+        }
     }
 
     /** @brief 표의 모든 칸이 정확히 @p expected 인지. */
@@ -140,7 +148,9 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
 
     // 워밍업 — 풀 슬랩·스테이지 노드는 처음 한 번만 잡는다.
     for ( uint32 round = 0; round < 16; ++round )
+    {
         manager.runParallel( kCount, 1, body );
+    }
 
     sw::vector<int64> listCold;
     listCold.reserve( kColdRound );
@@ -238,7 +248,9 @@ SW_TEST_CASE( TaskManagerBenchTest, StageLikeRenderGraphLevel )
     };
 
     for ( uint32 round = 0; round < 16; ++round )
+    {
         levelOnce();
+    }
 
     sw::vector<int64> listCold;
     for ( uint32 round = 0; round < kRound; ++round )
@@ -317,7 +329,9 @@ SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
     }
 
     for ( uint32 round = 0; round < 4; ++round )
+    {
         manager.runParallel( kCount, 1, body );
+    }
 
     sw::vector<int64> listParallel;
     for ( uint32 round = 0; round < kRound; ++round )

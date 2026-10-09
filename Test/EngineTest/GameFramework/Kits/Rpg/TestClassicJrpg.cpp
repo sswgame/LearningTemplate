@@ -189,7 +189,9 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     SW_EXPECT_EQUAL( 1, changed._level.getLevel() );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( changed._level.getXp() ) );
     for ( int32 index = 0; index < kJrpgStatCount; ++index )
+    {
         SW_EXPECT_EQUAL( arrBefore[index] / 2, changed._arrStat[index] ); // 절반을 지킨다(직업 레벨 1 능력치로 돌아가지 않는다)
+    }
     SW_EXPECT_TRUE( changed._arrStat[static_cast<size_t>( JrpgStat::MaxHp )] != world._catalog.findClass( hashed_string( "warrior" ) )->_arrBase[0] );
     SW_EXPECT_TRUE( changed.knowsSpell( hashed_string( "frizz" ) ) ); // 배운 주문은 남는다(DQ3)
     SW_EXPECT_TRUE( party.canUseSpell( mage, hashed_string( "sizz" ) ) );
@@ -209,7 +211,9 @@ SW_TEST_CASE( ClassicJrpgTest, ClassChangeHalvesStatsKeepsSpellsAndResetsLevel )
     party.drainEvents( listEvent );
     int32 classChanged = 0;
     for ( const JrpgPartyEvent& event : listEvent )
+    {
         classChanged += event._kind == JrpgPartyEvent::Kind::ClassChanged ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 2, classChanged );
 }
 
@@ -473,7 +477,9 @@ SW_TEST_CASE( ClassicJrpgTest, ComboPointsJointTechniqueAndFleeChance )
         outFirstChance = fleeBattle.computeFleeChance();
         int32 attempts = 1;
         while ( fleeBattle.tryFlee() == false && attempts < 20 )
+        {
             ++attempts;
+        }
         return fleeBattle.getOutcome() == JrpgBattleOutcome::Fled ? attempts : -1;
     };
     float32     firstChance = 0.0f;
@@ -529,7 +535,9 @@ SW_TEST_CASE( ClassicJrpgTest, WuxiaInnerEnergyAndManualProficiencyUnlockTechniq
     party.drainEvents( listPartyEvent );
     bool bStormUnlocked = false;
     for ( const JrpgPartyEvent& event : listPartyEvent )
+    {
         bStormUnlocked = bStormUnlocked || ( event._kind == JrpgPartyEvent::Kind::TechniqueUnlocked && event._id == hashed_string( "pine_storm" ) );
+    }
     SW_EXPECT_TRUE( bStormUnlocked );
     SW_EXPECT_TRUE( party.canUseSpell( 0, hashed_string( "pine_storm" ) ) );
     SW_EXPECT_TRUE( party.getMember( 0 )._inner <= JrpgParty::kInnerMax );
@@ -626,8 +634,10 @@ SW_TEST_CASE( ClassicJrpgTest, StepEncounterRewardSplitAndDeterminism )
     SW_ASSERT_TRUE( listA.size() == listB.size() );
     bool bSameBattle = true;
     for ( size_t index = 0; index < listA.size(); ++index )
+    {
         bSameBattle = bSameBattle && listA[index]._kind == listB[index]._kind && listA[index]._actor == listB[index]._actor &&
                       listA[index]._target == listB[index]._target && listA[index]._value == listB[index]._value;
+    }
     SW_EXPECT_TRUE( bSameBattle );
 }
 
@@ -661,7 +671,9 @@ SW_TEST_CASE( ClassicJrpgTest, StateRoundTripContinuesTheSameBattle )
     JrpgEncounterWalker walker;
     walker.initialize( &world._catalog, 12 );
     for ( int32 stepIndex = 0; stepIndex < 6; ++stepIndex )
+    {
         (void)walker.step( hashed_string( "field" ) );
+    }
 
     // 되살린 쪽은 같은 가방 · 지갑을 빌린다(가방을 다시 열지 않는다).
     GameStateRefs refs;

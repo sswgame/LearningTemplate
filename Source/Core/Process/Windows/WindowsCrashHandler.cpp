@@ -236,7 +236,9 @@ namespace sw
                     return;
                 // 다른 스레드가 보고 중이다. 그 스레드가 덤프를 다 쓰고 프로세스를 끝낼 때까지 기다린다(보고가 멈춘 경우를 위해 상한을 둔다).
                 for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadId.load() != 0; ++waitIndex )
+                {
                     Sleep( 10 );
+                }
                 return;
             }
 

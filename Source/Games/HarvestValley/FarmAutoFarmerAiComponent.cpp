@@ -164,7 +164,9 @@ namespace sw
         const bool bTired       = director.getStamina() < 8 || director.getHourOfDay() >= 22.0f || director.getDayStarted() < pState->getClock().getDay();
         int32      produceCount = 0;
         for ( const CropDef& crop : catalog.getCrops() )
+        {
             produceCount += bag.getItemCount( crop._produceItem );
+        }
         Internal::Task task;
         if ( produceCount > 0 && ( bTired || produceCount >= 6 ) )
         {
@@ -177,7 +179,9 @@ namespace sw
             for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
             {
                 for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                {
                     cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
+                }
             }
             // 칸 순서로 훑어 첫 할 일. 우선순위가 같은 칸이면 앞 칸.
             int32 bestPriority = 0;

@@ -215,7 +215,9 @@ namespace sw
     void UiLayoutPass::invalidateAllLayout( WidgetTree& tree )
     {
         for ( const auto& [id, pWidget] : tree._mapIdToWidget )
+        {
             pWidget->_dirtyFlags |= UiLayoutPassInternal::kLayoutBits;
+        }
         if ( tree.getRoot() != nullptr )
             tree.addLayoutRoot( *tree.getRoot() );
     }
@@ -248,7 +250,9 @@ namespace sw
         if ( pPanel == nullptr )
             return;
         for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+        {
             clearLayoutFlags( *pPanel->getChild( index ) );
+        }
     }
 
     void UiLayoutPass::layoutTreeRoot( Widget& root, const UiLayoutContext& context )

@@ -244,7 +244,9 @@ namespace sw
         {
             bool bStillZoned = false;
             for ( const ZoneValue& current : _listZoneCurrent )
+            {
                 bStillZoned = bStillZoned || current._snapshot == previous._snapshot;
+            }
             if ( bStillZoned == false )
                 pEngine->setSnapshotIntensity( previous._snapshot, 0.0f );
         }

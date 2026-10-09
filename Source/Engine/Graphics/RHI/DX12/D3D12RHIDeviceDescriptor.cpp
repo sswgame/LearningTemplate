@@ -106,7 +106,9 @@ namespace sw
             arrParam[paramIndex].ShaderVisibility          = D3D12_SHADER_VISIBILITY_ALL;
         };
         for ( uint32 slot = 0; slot < shaderslot::kConstantBufferSlotCount; ++slot )
+        {
             setRootDescriptor( kCbvRootParam0 + slot, D3D12_ROOT_PARAMETER_TYPE_CBV, slot );
+        }
 
         // t/u 슬롯 테이블. 범위 하나씩. 테이블 시작은 드로우 · 디스패치 직전 flushSlotTables 가 온라인 블록에 굳혀 건다.
         D3D12_DESCRIPTOR_RANGE srvSlotRange{};

@@ -67,7 +67,9 @@ namespace sw
         vector<float3> listWorldPoint;
         listWorldPoint.reserve( _listControlPoint.size() );
         for ( const float3& point : _listControlPoint )
+        {
             listWorldPoint.push_back( float3::transform( point, worldMatrix ) );
+        }
         if ( _worldPath.initialize( listWorldPoint, _type, _bClosed, _samplesPerSegment ) == false )
             _worldPath.clear();
     }

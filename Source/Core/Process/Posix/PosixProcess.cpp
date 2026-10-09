@@ -274,7 +274,9 @@ namespace sw
         {
             outLine = arrLineBuffer;
             while ( outLine.empty() == false && ( outLine.back() == '\n' || outLine.back() == '\r' ) )
+            {
                 outLine.pop_back();
+            }
             return true;
         }
 

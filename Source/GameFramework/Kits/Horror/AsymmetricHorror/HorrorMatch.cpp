@@ -236,7 +236,9 @@ namespace sw
         _survivorTeam = _match.addTeam( hashed_string( "Survivors" ) );
         _killerTeam   = _match.addTeam( hashed_string( "Killer" ) );
         for ( HorrorSurvivor& survivor : _listSurvivor )
+        {
             survivor._participant = _match.addParticipant( _survivorTeam, hashed_string( "Survivor" ) );
+        }
         _killer._participant = _match.addParticipant( _killerTeam, hashed_string( "Killer" ) );
         _match.start();
         _bStarted = SW_TRUE;
@@ -248,7 +250,9 @@ namespace sw
             return;
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step( _timer.getStep() );
+        }
     }
 
     // --- 생존자 행동 ------------------------------------------------------------------------------
@@ -458,7 +462,9 @@ namespace sw
         bool bThroughHatch = false;
         bool bCanLeave     = false;
         for ( const HorrorGate& gate : _listGate )
+        {
             bCanLeave = bCanLeave || ( gate._progress.isCompleted() && isNear( target._position, gate._position, rules._interactRange ) );
+        }
         if ( bCanLeave == false && _bHatchOpen == SW_TRUE && isNear( target._position, _hatchPosition, rules._interactRange ) )
         {
             bCanLeave     = true;
@@ -665,7 +671,9 @@ namespace sw
         leaveActivity( occupant );
         releaseHealers( occupant, true );
         while ( target._vitality.isAlive() )
+        {
             (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
+        }
         _listVitalityScratch.clear();
         target._vitality.drainEvents( _listVitalityScratch );
         target._state          = SurvivorState::Carried;
@@ -785,7 +793,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const HorrorSurvivor& survivor : _listSurvivor )
+        {
             count += survivor.isStanding() ? 1 : 0;
+        }
         return count;
     }
 
@@ -825,10 +835,14 @@ namespace sw
             outSnapshot._listGeneratorFlag.push_back( flag );
         }
         for ( const HorrorGate& gate : _listGate )
+        {
             outSnapshot._listGateProgress.push_back( gate._progress.getProgress() );
+        }
         outSnapshot._listPalletState = _listPalletState;
         for ( const HorrorWindow& window : _listWindow )
+        {
             outSnapshot._listWindowBlocked.push_back( window._blockedRemaining > 0.0f ? SW_TRUE : SW_FALSE );
+        }
     }
 
     void HorrorMatch::writeState( BitWriter& outWriter ) const
@@ -860,7 +874,9 @@ namespace sw
         // 무대 — 자리를 먼저 싣고(읽는 쪽이 add… 로 다시 세운다) 그 위에 상태를 덮는다.
         outArchive << static_cast<uint32>( _listHook.size() );
         for ( const float3& position : _listHook )
+        {
             outArchive << position;
+        }
         outArchive << static_cast<uint32>( _listPallet.size() );
         for ( size_t index = 0; index < _listPallet.size(); ++index )
         {
@@ -1154,7 +1170,9 @@ namespace sw
         {
             stepKiller( deltaTime );
             for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
+            {
                 stepSurvivor( survivor, deltaTime );
+            }
             stepGenerators( deltaTime );
             stepGates( deltaTime );
             stepEndgame( deltaTime );

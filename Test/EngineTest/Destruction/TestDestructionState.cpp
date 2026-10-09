@@ -46,7 +46,9 @@ namespace
         {
             sw::vector<uint8> listAnchor( graph._leafCount, 0 );
             for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
+            {
                 listAnchor[leaf] = graph._listNode[leaf]._centroid._y < 1.0f ? 1 : 0;
+            }
             return listAnchor;
         }
 
@@ -76,7 +78,9 @@ namespace
         {
             uint32 count = 0;
             for ( const sw::DestructionGroup& group : state.getGroups() )
+            {
                 count += group._bAnchored == SW_TRUE ? 1u : 0u;
+            }
             return count;
         }
     };

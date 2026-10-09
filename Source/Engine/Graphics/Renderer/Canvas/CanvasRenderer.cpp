@@ -69,16 +69,22 @@ namespace sw
 
         // 1) 아틀라스 업로드를 거울에 옮긴다(소비한 업로드는 비운다 — 같은 프레임 묶음을 다시 그려도 두 번 올리지 않게).
         for ( const GlyphAtlasUpload& upload : inoutFrame._listAtlasUpload )
+        {
             applyAtlasUpload( upload );
+        }
         inoutFrame._listAtlasUpload.clear();
 
         // 2) 페이지 텍스처 — 없으면 만들고(새 디바이스 · 백엔드 교체 뒤에도 거울에서 다시 올린다) 바뀐 구간을 올린다.
         for ( AtlasPage& page : _listAtlasPage )
+        {
             uploadAtlasPage( device, page );
+        }
         // 경로 그림 — 게임 스레드는 디바이스가 없어 경로만 실었다. 머티리얼 텍스처와 같은 캐시에서 빌린다(기록 전이라 만들 수 있다).
         acquirePathTextures( device, inoutFrame._mainOutput );
         for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
+        {
             acquirePathTextures( device, target._list );
+        }
 
         // 3) 사각형 버퍼 — 주 출력 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)이 같고 버퍼가 그대로면 올리지 않는다
         //    (번호 0 은 "모른다" 라 늘 올린다).
@@ -105,7 +111,9 @@ namespace sw
             _listQuadScratch.clear();
             _listQuadScratch.insert( _listQuadScratch.end(), inoutFrame._mainOutput._listQuad.begin(), inoutFrame._mainOutput._listQuad.end() );
             for ( const CanvasTargetDrawList& target : inoutFrame._listTarget )
+            {
                 _listQuadScratch.insert( _listQuadScratch.end(), target._list._listQuad.begin(), target._list._listQuad.end() );
+            }
             pQuads = _listQuadScratch.data();
         }
         if ( _quadBuffer._capacityElements < quadCount || _quadBuffer.isValid() == false )
@@ -365,7 +373,9 @@ namespace sw
                     continue;
                 bool bKnown = false;
                 for ( const PathTexture& pathTexture : _listPathTexture )
+                {
                     bKnown = bKnown || pathTexture._path == path;
+                }
                 if ( bKnown )
                     continue;
                 PathTexture& added = _listPathTexture.emplace_back();

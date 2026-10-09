@@ -116,7 +116,9 @@ namespace sw
                     // 그림을 예쁘게 보려는 것이 아니라 "무엇이 들어 있나" 를 보려는 것이다.
                     const uint16* pHalf = reinterpret_cast<const uint16*>( pPixel );
                     for ( uint32 channel = 0; channel < 3; ++channel )
+                    {
                         outBytes.push_back( FrameRendererUtil::halfToUnorm8( pHalf[channel] ) );
+                    }
                     continue;
                 }
                 outBytes.push_back( bBgra ? pPixel[2] : pPixel[0] );

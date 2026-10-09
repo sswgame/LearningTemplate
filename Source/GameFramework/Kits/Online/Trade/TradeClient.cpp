@@ -79,7 +79,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listReply.size() );
         for ( TradeClientReply& reply : _listReply )
+        {
             outListReply.push_back( std::move( reply ) );
+        }
         _listReply.clear();
         return count;
     }
@@ -88,7 +90,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listUpdate.size() );
         for ( TradeClientUpdate& update : _listUpdate )
+        {
             outListUpdate.push_back( std::move( update ) );
+        }
         _listUpdate.clear();
         return count;
     }

@@ -42,7 +42,9 @@ namespace sw
                     }
                 }
                 for ( int32 y = groundY + 1; y <= topY; ++y )
+                {
                     placeBlock( world, x, y, z, logBlock );
+                }
             }
         };
     } // namespace
@@ -97,7 +99,9 @@ namespace sw
                     VoxelTerrainInternal::placeBlock( world, x, y, z, block );
                 }
                 for ( int32 y = height + 1; y < settings._waterLevel; ++y )
+                {
                     VoxelTerrainInternal::placeBlock( world, x, y, z, waterBlock );
+                }
             }
         }
 
@@ -120,7 +124,9 @@ namespace sw
                     for ( int32 dz = -3; dz <= 3 && bCrowded == false; ++dz )
                     {
                         for ( int32 dx = -3; dx <= 3 && bCrowded == false; ++dx )
+                        {
                             bCrowded = world.getBlock( x + dx, groundY + 1, z + dz ) == logBlock;
+                        }
                     }
                     if ( bCrowded )
                         continue;

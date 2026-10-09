@@ -118,7 +118,9 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
             if ( pComp == nullptr )
                 continue;
             for ( const sw::ObjectIdentity::ComponentEntry& entry : identity._listComponent )
+            {
                 sameIdCount += ( pComp->getComponentId() == entry._componentId ) ? 1u : 0u;
+            }
         }
         SW_EXPECT_EQUAL( 0u, sameIdCount );
     }

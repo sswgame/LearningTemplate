@@ -95,10 +95,14 @@ namespace sw
             {
                 outArchive << static_cast<uint32>( pilot._listDeckMech.size() );
                 for ( const MechDef* pMech : pilot._listDeckMech )
+                {
                     StateArchiveUtil::writeName( outArchive, pMech->_id );
+                }
                 outArchive << static_cast<uint32>( pilot._listSkill.size() );
                 for ( const MechSkillDef* pSkill : pilot._listSkill )
+                {
                     StateArchiveUtil::writeName( outArchive, pSkill->_id );
+                }
                 outArchive << pilot._spawnPosition;
                 outArchive << pilot._team;
                 outArchive << pilot._deckIndex;
@@ -115,7 +119,9 @@ namespace sw
                 outArchive << pilot._bWasOverheated;
                 outArchive << static_cast<uint32>( pilot._listParticipant.size() );
                 for ( const int32 participant : pilot._listParticipant )
+                {
                     outArchive << participant;
+                }
                 outArchive << pilot._position;
                 outArchive << pilot._velocity;
                 outArchive << pilot._forward;
@@ -294,7 +300,9 @@ namespace sw
             {
                 int32 costSum = 0;
                 for ( const MechPilot& pilot : _listPilot )
+                {
                     costSum += pilot._team == static_cast<int32>( team ) ? pilot._listDeckMech.front()->_cost : 0;
+                }
                 gauge = static_cast<int32>( MathUtil::round( static_cast<float32>( costSum ) * _settings._gaugeScale ) );
             }
             (void)_match.addTeam( _listTeamName[team], gauge );
@@ -303,12 +311,16 @@ namespace sw
         {
             pilot._listParticipant.clear();
             for ( const MechDef* pMech : pilot._listDeckMech )
+            {
                 pilot._listParticipant.push_back( _match.addParticipant( pilot._team, pMech->_id, pMech->_cost ) );
+            }
         }
         _match.start();
         _bStarted = SW_TRUE;
         for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
+        {
             spawnPilot( pilot, false );
+        }
     }
 
     void MechArenaWorld::update( float32 deltaTime )
@@ -317,7 +329,9 @@ namespace sw
             return;
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step( _timer.getStep() );
+        }
     }
 
     void MechArenaWorld::setInput( int32 pilot, const MechInput& input )
@@ -394,7 +408,9 @@ namespace sw
         if ( isEnded() == false )
         {
             for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
+            {
                 stepPilot( pilot, deltaTime );
+            }
             stepProjectiles( deltaTime );
         }
         stepMatch( deltaTime );
@@ -425,9 +441,13 @@ namespace sw
         pilot._staggerRemaining.tick( deltaTime );
         pilot._transformCooldown.tick( deltaTime );
         for ( WeaponState& weapon : pilot._listWeaponState )
+        {
             weapon.update( deltaTime );
+        }
         for ( Countdown& cooldown : pilot._listSpecialCooldown )
+        {
             cooldown.tick( deltaTime );
+        }
         stepSkills( pilotIndex, deltaTime );
 
         bool bControl = false;
@@ -769,7 +789,9 @@ namespace sw
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
         const WeaponDef& def = weapon.getDef();
         for ( const GameRay& ray : shot._listRay )
+        {
             launch( pilotIndex, target, ray._direction, def._projectileSpeed, def._range, def._damage, slot );
+        }
     }
 
     void MechArenaWorld::fireSpecial( int32 pilotIndex, int32 slotIndex, const MechWeaponSlotDef& slot )
@@ -878,7 +900,9 @@ namespace sw
             target._melee.cancel();
             target._lockOn.release();
             for ( Countdown& remaining : target._listSkillRemaining )
+            {
                 remaining.clear();
+            }
             ++target._deaths;
             if ( bAttacker && TeamAttitudeUtil::isHostile( _listPilot[static_cast<size_t>( attacker )]._team, target._team ) )
                 ++_listPilot[static_cast<size_t>( attacker )]._kills;
@@ -1136,7 +1160,9 @@ namespace sw
         outSnapshot._arenaHalfSize = _settings._arenaHalfSize;
         outSnapshot._ceiling       = _settings._ceiling;
         for ( int32 team = 0; team < static_cast<int32>( _listTeamName.size() ); ++team )
+        {
             outSnapshot._listTeamGauge.push_back( getTeamGauge( team ) );
+        }
         for ( int32 index = 0; index < getPilotCount(); ++index )
         {
             const MechPilot&  pilot = _listPilot[static_cast<size_t>( index )];
@@ -1162,7 +1188,9 @@ namespace sw
             }
             const int32 skillCount = MathUtil::min( countActiveSkills( pilot ), 32 );
             for ( int32 skill = 0; skill < skillCount; ++skill )
+            {
                 entry._activeSkillMask |= pilot._listSkillRemaining[static_cast<size_t>( skill )].isActive() ? ( 1u << static_cast<uint32>( skill ) ) : 0u;
+            }
             outSnapshot._listPilot.push_back( entry );
         }
         for ( const MechProjectile& projectile : _listProjectile )
@@ -1185,7 +1213,9 @@ namespace sw
     {
         outArchive << static_cast<uint32>( _listTeamName.size() );
         for ( const hashed_string& name : _listTeamName )
+        {
             StateArchiveUtil::writeName( outArchive, name );
+        }
         outArchive << _bStarted;
         outArchive << _bEndReported;
         outArchive << _tick;
@@ -1193,7 +1223,9 @@ namespace sw
         _match.writeState( outArchive );
         outArchive << static_cast<uint32>( _listPilot.size() );
         for ( const MechPilot& pilot : _listPilot )
+        {
             MechArenaWorldInternal::writePilot( outArchive, pilot );
+        }
         outArchive << static_cast<uint32>( _listProjectile.size() );
         for ( const MechProjectile& projectile : _listProjectile )
         {
@@ -1362,7 +1394,9 @@ namespace sw
             return false;
         outPilot._listParticipant.assign( participantCount, -1 );
         for ( int32& participant : outPilot._listParticipant )
+        {
             archive >> participant;
+        }
         archive >> outPilot._position;
         archive >> outPilot._velocity;
         archive >> outPilot._forward;

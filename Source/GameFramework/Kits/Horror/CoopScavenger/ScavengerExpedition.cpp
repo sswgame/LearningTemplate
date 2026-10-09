@@ -353,7 +353,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const ScavengerScrap& scrap : _listShipScrap )
+        {
             total += scrap._value;
+        }
         return total;
     }
 
@@ -366,7 +368,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const ScavengerCrewMember& member : _listCrew )
+        {
             count += member.isDead() ? 0 : 1;
+        }
         return count;
     }
 
@@ -505,12 +509,18 @@ namespace sw
         // 잃을 것을 씨앗으로 고른다(섞은 앞쪽) — 남는 것은 실은 순서를 지킨다.
         vector<int32> listOrder;
         for ( int32 index = 0; index < total; ++index )
+        {
             listOrder.push_back( index );
+        }
         for ( int32 index = total - 1; index > 0; --index )
+        {
             std::swap( listOrder[static_cast<size_t>( index )], listOrder[static_cast<size_t>( _random.nextInt( 0, index ) )] );
+        }
         vector<uint8> listLost( static_cast<size_t>( total ), SW_FALSE );
         for ( int32 index = 0; index < loseCount; ++index )
+        {
             listLost[static_cast<size_t>( listOrder[static_cast<size_t>( index )] )] = SW_TRUE;
+        }
         vector<ScavengerScrap> listKept;
         for ( int32 index = 0; index < total; ++index )
         {

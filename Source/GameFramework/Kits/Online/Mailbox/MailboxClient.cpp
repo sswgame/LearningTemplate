@@ -57,7 +57,9 @@ namespace sw
     {
         int32 unreadCount = 0;
         for ( const MailView& mail : _listMail )
+        {
             unreadCount += mail._state == ServiceMailState::Unread ? 1 : 0;
+        }
         return unreadCount;
     }
 

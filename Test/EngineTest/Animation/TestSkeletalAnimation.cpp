@@ -355,7 +355,9 @@ SW_TEST_CASE( SkeletalAnimationTest, NotifyFiresExactlyOnceAcrossLoopBoundary )
     // 작은 걸음 백 번(한 바퀴 = 1 초 = 0.01 × 100)이면 각각 정확히 한 번.
     listFired.clear();
     for ( uint32 stepIndex = 0; stepIndex < 100; ++stepIndex )
+    {
         player.update( 0.01f, &listFired );
+    }
     uint32 lateCount  = 0;
     uint32 startCount = 0;
     for ( const AnimFiredNotify& fired : listFired )
@@ -453,14 +455,18 @@ SW_TEST_CASE( SkeletalAnimationTest, LodSkipsPoseEvaluation )
 
     pUnit->setUpdateRateDivisor( 2 );
     for ( uint32 frame = 0; frame < 4; ++frame )
+    {
         system.evaluate( 0.016f );
+    }
     SW_EXPECT_EQUAL( baseCount + 2u, pUnit->getPoseEvaluationCount() );
     SW_EXPECT_EQUAL( 5u, task._timeCallCount );
 
     pUnit->setUpdateRateDivisor( 1 );
     pUnit->setVisibleHint( false );
     for ( uint32 frame = 0; frame < 3; ++frame )
+    {
         system.evaluate( 0.016f );
+    }
     SW_EXPECT_EQUAL( baseCount + 2u, pUnit->getPoseEvaluationCount() );
     pUnit->setAnimateWhenOffscreen( true );
     system.evaluate( 0.016f );

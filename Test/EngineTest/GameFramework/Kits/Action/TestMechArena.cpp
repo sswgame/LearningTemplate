@@ -73,7 +73,9 @@ namespace
     {
         MechPilotConfig config;
         for ( const utf8* pMech : listMech )
+        {
             config._listMechId.push_back( hashed_string( pMech ) );
+        }
         config._team          = team;
         config._spawnPosition = position;
         return config;
@@ -82,7 +84,9 @@ namespace
     void runSteps( MechArenaWorld& world, int32 stepCount )
     {
         for ( int32 index = 0; index < stepCount; ++index )
+        {
             world.update( kMechArenaStep );
+        }
     }
 
     /** @brief 버튼을 한 걸음 누르고 한 걸음 뗍니다(눌린 순간이 한 번 생긴다). */
@@ -101,7 +105,9 @@ namespace
     {
         int32 count = 0;
         for ( const MechArenaEvent& event : listEvent )
+        {
             count += event._kind == kind && ( pilot < 0 || event._pilot == pilot ) ? 1 : 0;
+        }
         return count;
     }
 } // namespace
@@ -152,8 +158,10 @@ SW_TEST_CASE( MechArenaTest, BoostOverheatLocksDashUntilCooled )
 
     // 대시 25 × 4 = 100 — 네 번째에 열이 가득 차 오버히트.
     for ( int32 dash = 0; dash < 4; ++dash )
+    {
         tapButton( world, pilot, []( MechInput& input )
         { input._bDash = SW_TRUE; } );
+    }
     vector<MechArenaEvent> listEvent;
     world.drainEvents( listEvent );
     SW_EXPECT_EQUAL( countEvents( listEvent, MechArenaEvent::Kind::Overheated, pilot ), 1 );
@@ -541,7 +549,9 @@ SW_TEST_CASE( MechArenaTest, StateRoundTripContinuesTheSameArena )
     SW_ASSERT_EQUAL( world.addPilot( makePilot( { "sniper" }, 1, float3{ 5.0f, 0.0f, 30.0f } ) ), 1 );
     world.start();
     for ( int32 frame = 0; frame < 120; ++frame )
+    {
         feedInput( world, frame );
+    }
     world.applyDamage( 1, 0, 200.0f, 0.0f, 0.0f ); // 절반 아래 — 체력 조건 스킬이 켜진 채로 싣는다
 
     const vector<uint8> listWritten = toBytes( world );

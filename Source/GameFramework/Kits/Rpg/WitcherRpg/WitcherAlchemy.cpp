@@ -67,7 +67,9 @@ namespace sw
         if ( pRecipe == nullptr )
             return result;
         for ( const auto& output : pRecipe->_outputs.getItems() )
+        {
             refill( output._itemId ); // 갓 만든 것은 가득 — 모르는 아이템(재료)은 `refill` 이 건너뛴다
+        }
         return result;
     }
 
@@ -189,7 +191,9 @@ namespace sw
     {
         float32 toxicity = _floatingToxicity;
         for ( const WitcherActiveEffect& effect : _listEffect )
+        {
             toxicity += effect._lockedToxicity;
+        }
         return toxicity;
     }
 

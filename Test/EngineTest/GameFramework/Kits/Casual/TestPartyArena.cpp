@@ -47,7 +47,9 @@ namespace
     {
         int32 count = 0;
         for ( const TrampolineEvent& event : listEvent )
+        {
             count += event._kind == kind ? 1 : 0;
+        }
         return count;
     }
 
@@ -156,7 +158,9 @@ SW_TEST_CASE( PartyArenaTest, TimedBouncesBuildComboUpToTheCap )
         jump._bJumpPressed = SW_TRUE;
         stepWith( arena, 0, jump );
         for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
+        {
             arena.step();
+        }
         listCombo.push_back( arena.findPlayer( 0 )->_combo );
     }
     SW_ASSERT_EQUAL( static_cast<int32>( listCombo.size() ), 5 );
@@ -169,7 +173,9 @@ SW_TEST_CASE( PartyArenaTest, TimedBouncesBuildComboUpToTheCap )
     SW_ASSERT_TRUE( runUntilLanded( arena, 0, listEvent ) );
     listEvent.clear();
     for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
+    {
         arena.step();
+    }
     arena.drainEvents( listEvent );
     SW_EXPECT_EQUAL( countEvents( listEvent, TrampolineEvent::Kind::ComboBroken ), 1 );
     SW_EXPECT_EQUAL( arena.findPlayer( 0 )->_combo, 0 );
@@ -186,7 +192,9 @@ SW_TEST_CASE( PartyArenaTest, EarlyPressCountsOnlyInsideTheWindow )
         vector<TrampolineEvent> listEvent;
         (void)runUntilLanded( arena, 0, listEvent ); // 첫 착지 — 이후 튕김의 걸음 수를 잰다
         for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
+        {
             arena.step();
+        }
         int32 airSteps = 0;
         while ( arena.findPlayer( 0 )->_state == TrampolinePlayerState::Air && airSteps < 600 )
         {
@@ -195,16 +203,24 @@ SW_TEST_CASE( PartyArenaTest, EarlyPressCountsOnlyInsideTheWindow )
         }
         // 같은 높이로 다시 튄 뒤, 닿기 leadSteps 걸음 전에 누른다.
         for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
+        {
             arena.step();
+        }
         for ( int32 frame = 0; frame < airSteps - leadSteps; ++frame )
+        {
             arena.step();
+        }
         TrampolineInput jump;
         jump._bJumpPressed = SW_TRUE;
         stepWith( arena, 0, jump );
         for ( int32 frame = 0; frame < 40 && arena.findPlayer( 0 )->_state != TrampolinePlayerState::Contact; ++frame )
+        {
             arena.step();
+        }
         for ( int32 frame = 0; frame < 20 && arena.findPlayer( 0 )->_state == TrampolinePlayerState::Contact; ++frame )
+        {
             arena.step();
+        }
         return arena.findPlayer( 0 )->_combo;
     };
     SW_EXPECT_EQUAL( bounceWithLead( 2 ), 1 );
@@ -259,7 +275,9 @@ SW_TEST_CASE( PartyArenaTest, AirAttackRingsOutOpponentAndCreditsAttacker )
 
     // 부활 대기 1 초 뒤 무적을 달고 돌아온다.
     for ( int32 frame = 0; frame < 70; ++frame )
+    {
         arena.step();
+    }
     SW_EXPECT_TRUE( arena.findPlayer( 1 )->_state != TrampolinePlayerState::Respawning );
     SW_EXPECT_TRUE( arena.findPlayer( 1 )->_invulnerableTimer.isActive() );
 }
@@ -315,7 +333,9 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
         settings._lifetime              = 1.0f;
         spawner.initialize( settings, seed );
         for ( int32 frame = 0; frame < 60 * 3; ++frame )
+        {
             spawner.update( kPartyArenaStep );
+        }
         vector<PartyItemEvent> listEvent;
         spawner.drainEvents( listEvent );
         for ( const PartyItemEvent& event : listEvent )
@@ -337,7 +357,9 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
     SW_EXPECT_EQUAL( firstEvents, secondEvents );
     SW_ASSERT_EQUAL( static_cast<int32>( listFirst.size() ), static_cast<int32>( listSecond.size() ) );
     for ( size_t index = 0; index < listFirst.size(); ++index )
+    {
         SW_EXPECT_NEAR_EQUAL( float3::getDistance( listFirst[index], listSecond[index] ), 0.0f, 0.0001f );
+    }
     SW_EXPECT_TRUE( firstEvents > 5 ); // 0.5 초마다 나오고 1 초 수명으로 사라진다
 
     // 아레나 — 0 번이 아이템 쪽으로 가서 주우면 다음 튕김이 두 배 높이.
@@ -424,7 +446,9 @@ SW_TEST_CASE( PartyArenaTest, InputBytesRoundTripAndSameInputsReplay )
         vector<int32> listScore;
         arena.computeRoundScores( listScore );
         for ( int32 score : listScore )
+        {
             outListValue.push_back( static_cast<float32>( score ) );
+        }
     };
     vector<float32> listFirst;
     vector<float32> listSecond;
@@ -432,7 +456,9 @@ SW_TEST_CASE( PartyArenaTest, InputBytesRoundTripAndSameInputsReplay )
     runScript( listSecond );
     SW_ASSERT_EQUAL( static_cast<int32>( listFirst.size() ), static_cast<int32>( listSecond.size() ) );
     for ( size_t index = 0; index < listFirst.size(); ++index )
+    {
         SW_EXPECT_TRUE( listFirst[index] == listSecond[index] );
+    }
 }
 
 SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
@@ -473,7 +499,9 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
     series.drainEvents( listEvent );
     int32 won = 0;
     for ( const PartySeriesEvent& event : listEvent )
+    {
         won += event._kind == PartySeriesEvent::Kind::SeriesWon ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( won, 1 );
 }
 
@@ -537,7 +565,9 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
             listEvent.clear();
             spawner.drainEvents( listEvent );
             for ( const PartyItemEvent& event : listEvent )
+            {
                 spawnCount += event._kind == PartyItemEvent::Kind::Spawned ? 1 : 0;
+            }
         }
         SW_EXPECT_NEAR_EQUAL( seconds / 0.47f, static_cast<float32>( spawnCount ), 1.0f );
     }

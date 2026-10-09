@@ -115,7 +115,9 @@ namespace sw
         }
         outWriter.writeVarUint( reply._listMail.size() );
         for ( const MailView& mail : reply._listMail )
+        {
             MailboxProtocolInternal::writeMail( outWriter, mail );
+        }
     }
 
     bool MailboxProtocol::readReply( BitReader& reader, MailboxReply& outReply )

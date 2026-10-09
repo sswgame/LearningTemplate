@@ -60,7 +60,9 @@ namespace sw
         outListLayout.clear();
         outListLayout.reserve( _mapPsoLayout.size() );
         for ( const auto& [pso, pLayout] : _mapPsoLayout )
+        {
             outListLayout.push_back( RegisteredLayout{ pso, pLayout } );
+        }
     }
 
     void RenderPsoCache::setEnginePso( RenderPassType passType, RHIPipelineStateHandle pso )

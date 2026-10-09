@@ -49,7 +49,9 @@ namespace sw
         if ( XmlNameCheck::collectUnknownAttributes( node, ppKnownName, knownCount, listUnknown ) == 0 )
             return true;
         for ( const utf8* pName : listUnknown )
+        {
             report.addError( "%#: <%#> has unknown attribute '%#'", sourceName, node.getName(), pName );
+        }
         return false;
     }
 

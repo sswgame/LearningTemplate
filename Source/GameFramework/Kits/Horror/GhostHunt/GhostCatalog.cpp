@@ -66,7 +66,9 @@ namespace sw
             {
                 _vacuum._listStagePower.clear();
                 for ( uint32 stage = 0; stage < stageCount; ++stage )
+                {
                     _vacuum._listStagePower.push_back( MathUtil::max( 0.0f, arrStage[stage] ) );
+                }
             }
             _vacuum._range          = MathUtil::max( 0.1f, vacuum.getAttributeFloat( "range", _vacuum._range ) );
             _vacuum._alignThreshold = MathUtil::clamp( vacuum.getAttributeFloat( "alignThreshold", _vacuum._alignThreshold ), -1.0f, 1.0f );

@@ -27,7 +27,9 @@ namespace
         manifest._targetMask        = static_cast<uint8>( sw::ModuleTarget::Client ) | static_cast<uint8>( sw::ModuleTarget::Server );
         manifest._sourcePath        = sw::string( pName ) + ".module.json";
         for ( const utf8* pDependency : listDependency )
+        {
             manifest._listDependency.push_back( sw::ModuleDependency{ pDependency, sw::ModuleVersion{} } );
+        }
         return manifest;
     }
 
@@ -48,7 +50,9 @@ namespace
     {
         sw::string text;
         for ( const sw::string& name : resolution._listLoadOrder )
+        {
             text += ( text.empty() ? "" : " " ) + name;
+        }
         return text;
     }
 } // namespace
@@ -253,7 +257,9 @@ SW_TEST_CASE( ModuleCatalogTest, BuildAndRuntimeAgree )
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( sw::FileUtil::joinPath( directory, "ResolvedModules.txt" ), buildOrder ) );
     sw::string runtimeOrder;
     for ( const sw::string& name : resolution._listLoadOrder )
+    {
         runtimeOrder += name + "\n";
+    }
     SW_EXPECT_STREQ( sw::StringUtil::replace( buildOrder, "\r\n", "\n" ).c_str(), runtimeOrder.c_str() );
 }
 

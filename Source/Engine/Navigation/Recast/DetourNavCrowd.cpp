@@ -285,7 +285,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
+        {
             count += isActiveAgent( static_cast<NavCrowdAgentId>( agentIndex ) ) ? 1u : 0u;
+        }
         return count;
     }
 

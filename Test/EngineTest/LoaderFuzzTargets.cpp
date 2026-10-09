@@ -125,7 +125,9 @@ namespace test
                     vector<uint8>                bytes;
                     static constexpr string_view kArrPath[] = { "a.txt", "dir/b.bin", "c.xml" };
                     for ( const string_view entryPath : kArrPath )
+                    {
                         (void)reader.readFile( entryPath, bytes ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                    }
                     reader.close();
                 }
             }

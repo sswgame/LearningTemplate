@@ -41,7 +41,9 @@ namespace
         {
             float32 total = 0.0f;
             for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+            {
                 total += asset._graph._listNode[piece]._volume;
+            }
             return total;
         }
     };
@@ -189,7 +191,9 @@ SW_TEST_CASE( FractureTest, SlicesCutEvenSlabsLinkedByTheirCrossSection )
     // 단면 1 × 0.5 = 0.5, 이웃 셋.
     SW_ASSERT_EQUAL( size_t( 3 ), asset._graph._listLink.size() );
     for ( const sw::FractureLink& link : asset._graph._listLink )
+    {
         SW_EXPECT_NEAR_EQUAL( 0.5f, link._area, 1e-4f );
+    }
 }
 
 /**
@@ -285,7 +289,9 @@ SW_TEST_CASE( FractureTest, ConcaveMeshPiecesStayClosed )
     SW_ASSERT_TRUE_MSG( sw::MeshFractureUtil::fracture( listPrism, settings, asset, error ), error.c_str() );
     SW_EXPECT_NEAR_EQUAL( 1.5f, TestFractureInternal::sumPieceVolumes( asset ), 2e-3f );
     for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+    {
         SW_EXPECT_TRUE( sw::MeshFractureUtil::isClosedMesh( asset.getPieceVertices( piece ) ) );
+    }
 }
 
 /**

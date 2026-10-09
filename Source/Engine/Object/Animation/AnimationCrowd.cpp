@@ -33,7 +33,9 @@ namespace sw
                 void runRange( uint32 start, uint32 end )
                 {
                     for ( uint32 index = start; index < end; ++index )
+                    {
                         _ppBucket[index]->evaluate( _clock );
+                    }
                 }
             };
 

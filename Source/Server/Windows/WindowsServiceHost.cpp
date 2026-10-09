@@ -86,7 +86,9 @@ namespace sw
     {
         bool bService = false;
         for ( int32 index = 1; index < argc; ++index )
+        {
             bService = bService || string_view( pArgv[index] ) == "--service";
+        }
         if ( bService == false )
             return -1;
         WindowsServiceHostInternal::enterExecutableDirectory();

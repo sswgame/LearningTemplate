@@ -31,7 +31,9 @@ namespace sw
         {
             size_t cap = kMinCapacity;
             while ( cap < capacity )
+            {
                 cap <<= 1;
+            }
             capacity = cap;
 
             _capacityMask = capacity - 1;

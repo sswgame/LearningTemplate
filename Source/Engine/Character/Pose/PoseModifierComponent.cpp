@@ -287,7 +287,9 @@ namespace sw
         _pSocketTable = pTable;
         _listTableUnit.clear();
         for ( SkeletalMeshComponent* pUnit : listUnitByIndex )
+        {
             _listTableUnit.push_back( pUnit != nullptr ? pUnit->getHandle() : ComponentHandle{} );
+        }
         bindRig();
     }
 
@@ -317,7 +319,9 @@ namespace sw
         if ( _pUnit != nullptr && pManager != nullptr )
         {
             for ( const ComponentHandle handle : _listDependency )
+            {
                 _pUnit->removeAnimationDependency( castTo<SkeletalMeshComponent>( pManager->resolveComponent( handle ) ) );
+            }
         }
         _listDependency.clear();
     }

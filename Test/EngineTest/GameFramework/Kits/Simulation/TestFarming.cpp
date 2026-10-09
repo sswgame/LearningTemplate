@@ -87,7 +87,9 @@ SW_TEST_CASE( FarmingTest, RegrowingCropsStayAndRainWatersTilledSoil )
     field.advanceDay( "Spring", true );
     SW_EXPECT_TRUE( field.findTile( 1, 0 )->_bWatered == SW_TRUE );
     for ( int32 dayIndex = 0; dayIndex < 3; ++dayIndex )
+    {
         field.advanceDay( "Spring", true );
+    }
     hashed_string produce;
     int32         count = 0;
     SW_ASSERT_TRUE( field.harvest( 0, 0, produce, count ) == FarmActionResult::Done );

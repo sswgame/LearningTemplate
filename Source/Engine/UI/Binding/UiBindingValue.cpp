@@ -277,7 +277,9 @@ namespace sw
     {
         void* pOwner = pRoot;
         for ( uint32 index = 0; index + 1 < static_cast<uint32>( _listProperty.size() ) && pOwner != nullptr; ++index )
+        {
             pOwner = _listProperty[index]->getRawPtr( pOwner );
+        }
         return pOwner;
     }
 

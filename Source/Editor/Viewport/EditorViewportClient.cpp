@@ -621,7 +621,9 @@ namespace sw::editor
         {
             float3 centroid{};
             for ( GameObject* pObj : listGizmo )
+            {
                 centroid = centroid + pObj->getPrimarySceneComponent()->getWorldPosition();
+            }
             const float32 invCount = 1.0f / static_cast<float32>( listGizmo.size() );
             centroid               = float3{ centroid._x * invCount, centroid._y * invCount, centroid._z * invCount };
             float4x4 groupWorld{};

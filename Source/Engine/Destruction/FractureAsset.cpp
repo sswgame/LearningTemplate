@@ -25,7 +25,9 @@ namespace sw
                 void writeUint32( uint32 value )
                 {
                     for ( uint32 shift = 0; shift < 32; shift += 8 )
+                    {
                         _bytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+                    }
                 }
                 void writeUint64( uint64 value )
                 {
@@ -184,7 +186,9 @@ namespace sw
         outBytes.reserve( 64 + _listVertex.size() * sizeof( RHIVertex ) + _graph._listNode.size() * 36 );
         FractureAssetInternal::Writer writer{ outBytes };
         for ( const uint8 magic : FractureAssetInternal::kArrMagic )
+        {
             outBytes.push_back( magic );
+        }
         writer.writeUint32( kVersion );
         writer.writeUint32( _graph._leafCount );
         writer.writeUint32( static_cast<uint32>( _graph._listNode.size() ) );
@@ -207,7 +211,9 @@ namespace sw
             writer.writeUint32( node._depth );
         }
         for ( const uint32 child : _graph._listChildNode )
+        {
             writer.writeUint32( child );
+        }
         for ( const FractureLink& link : _graph._listLink )
         {
             writer.writeUint32( link._leafA );
@@ -226,18 +232,30 @@ namespace sw
         for ( const RHIVertex& vertex : _listVertex )
         {
             for ( const float32 value : vertex._arrPosition )
+            {
                 writer.writeFloat32( value );
+            }
             for ( const float32 value : vertex._arrNormal )
+            {
                 writer.writeFloat32( value );
+            }
             for ( const float32 value : vertex._arrUv )
+            {
                 writer.writeFloat32( value );
+            }
             for ( const float32 value : vertex._arrColor )
+            {
                 writer.writeFloat32( value );
+            }
         }
         for ( const uint8 slot : _listTriangleSlot )
+        {
             outBytes.push_back( slot );
+        }
         for ( const float3& point : _listHullPoint )
+        {
             writer.writeFloat3( point );
+        }
     }
 
     bool FractureAsset::readFromBytes( const uint8* pData, size_t size )
@@ -288,7 +306,9 @@ namespace sw
         }
         _graph._listChildNode.resize( childCount );
         for ( uint32& child : _graph._listChildNode )
+        {
             child = reader.readUint32();
+        }
         _graph._listLink.resize( linkCount );
         for ( FractureLink& link : _graph._listLink )
         {
@@ -310,20 +330,32 @@ namespace sw
         for ( RHIVertex& vertex : _listVertex )
         {
             for ( float32& value : vertex._arrPosition )
+            {
                 value = reader.readFloat32();
+            }
             for ( float32& value : vertex._arrNormal )
+            {
                 value = reader.readFloat32();
+            }
             for ( float32& value : vertex._arrUv )
+            {
                 value = reader.readFloat32();
+            }
             for ( float32& value : vertex._arrColor )
+            {
                 value = reader.readFloat32();
+            }
         }
         _listTriangleSlot.resize( vertexCount / 3 );
         for ( uint8& slot : _listTriangleSlot )
+        {
             slot = reader.readUint8();
+        }
         _listHullPoint.resize( hullCount );
         for ( float3& point : _listHullPoint )
+        {
             point = reader.readFloat3();
+        }
 
         string error;
         if ( reader._bFailed || reader._offset != size || isValid( &error ) == false )

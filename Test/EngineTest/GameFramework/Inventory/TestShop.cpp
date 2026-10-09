@@ -148,7 +148,9 @@ SW_TEST_CASE( ShopTest, FailedBuyChangesNothing )
 
     // 자리 — 네 칸을 칼(겹치지 않는다)로 채우면 물약이 들어갈 데가 없다.
     for ( int32 slotIndex = 0; slotIndex < 4; ++slotIndex )
+    {
         SW_EXPECT_EQUAL( 1, scene._inventory.addItem( idSword(), 1 ) );
+    }
     SW_EXPECT_TRUE( scene._shop.buy( idGeneral(), idPotion(), 1, scene._wallet, scene._inventory ) == ShopResult::NoRoom );
     SW_EXPECT_EQUAL( 50, scene._wallet.getBalance( idGold() ) ); // 돈을 먼저 거두고 실패하지 않는다
     SW_EXPECT_EQUAL( 5, scene._shop.getStockCount( idGeneral(), idPotion() ) );
@@ -234,7 +236,9 @@ SW_TEST_CASE( ShopTest, SellingFloodsThePriceAndItRecoversDaily )
     scene._shop.advanceDay();
     SW_EXPECT_NEAR_EQUAL( 0.55f, scene._shop.getSellFactor( idCompany(), idScrap() ), 1.0e-4f );
     for ( int32 dayIndex = 0; dayIndex < 10; ++dayIndex )
+    {
         scene._shop.advanceDay();
+    }
     SW_EXPECT_NEAR_EQUAL( 1.0f, scene._shop.getSellFactor( idCompany(), idScrap() ), 1.0e-4f );
     SW_EXPECT_EQUAL( 20, scene._shop.computeSellTotal( idCompany(), idScrap(), 1 ) );
 

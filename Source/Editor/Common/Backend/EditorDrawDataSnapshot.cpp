@@ -16,7 +16,9 @@ namespace sw::editor
             {
                 outDrawData.Clear();
                 for ( ImDrawList* pOwned : outListOwned )
+                {
                     IM_DELETE( pOwned );
+                }
                 outListOwned.clear();
 
                 if ( pSrc == nullptr || pSrc->Valid == false )
@@ -66,7 +68,9 @@ namespace sw::editor
             {
                 drawData.Clear();
                 for ( ImDrawList* pOwned : listOwned )
+                {
                     IM_DELETE( pOwned );
+                }
                 listOwned.clear();
             }
         };

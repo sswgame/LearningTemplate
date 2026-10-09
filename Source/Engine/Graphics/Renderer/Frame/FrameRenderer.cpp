@@ -364,7 +364,9 @@ namespace sw
 
         _listGpuPassSite.clear();
         for ( const GpuPassScope& scope : _listGpuPassScope )
+        {
             _listGpuPassSite.push_back( scope._pZoneSite );
+        }
         std::ignore = _gpuTimeline.exportFrame( *pBackend, _gpuTimestampFrame, *s_pFrameSite, *s_pComputeSite, _listGpuPassSite );
 #endif
     }
@@ -385,7 +387,9 @@ namespace sw
 
         // 추가 뷰는 통째로 놓는다(빌린 렌더 텍스처 · 컬링 상수버퍼 · 리스트). 주 시점의 리스트도 이 디바이스의 것이다.
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
             releaseExtraView( *pView );
+        }
         _listExtraView.clear();
         _mainView._commandList.reset();
         _directViewScheduler.clear();
@@ -488,7 +492,9 @@ namespace sw
             _frameCmd.reset();
             _mainView._commandList.reset();
             for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+            {
                 pView->_commandList.reset();
+            }
         }
 
         if ( _frameCmd == nullptr )

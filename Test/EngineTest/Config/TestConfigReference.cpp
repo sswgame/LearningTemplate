@@ -39,19 +39,27 @@ SW_TEST_CASE( ConfigReferenceTest, FieldsMatchReflection )
             sw::vector<sw::string> listDocName;
             const sw::JsonValue    listField = typeEntry.get( "fields" );
             for ( size_t fieldIndex = 0; fieldIndex < listField.size(); ++fieldIndex )
+            {
                 listDocName.push_back( listField.at( fieldIndex ).get( "name" ).asString() );
+            }
             sw::vector<sw::string> listReflectedName;
             for ( const sw::PropertyInfo& prop : pType->getPropertiesWithBase() )
+            {
                 listReflectedName.push_back( prop._name.c_str() );
+            }
             std::sort( listDocName.begin(), listDocName.end() );
             std::sort( listReflectedName.begin(), listReflectedName.end() );
 
             sw::string docText;
             sw::string reflectedText;
             for ( const sw::string& name : listDocName )
+            {
                 docText += name + " ";
+            }
             for ( const sw::string& name : listReflectedName )
+            {
                 reflectedText += name + " ";
+            }
             SW_EXPECT_TRUE_MSG( docText == reflectedText,
                                 typeName + ": 문서 [" + docText + "] / 리플렉션 [" + reflectedText + "] - Scripts/common/ConfigReference.py 가 선언을 잘못 읽었다" );
             ++comparedCount;

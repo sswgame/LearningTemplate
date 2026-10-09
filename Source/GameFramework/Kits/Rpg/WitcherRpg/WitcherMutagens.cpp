@@ -113,7 +113,9 @@ namespace sw
             return 0;
         int32 matches = 0;
         for ( const hashed_string& skillId : _listGroup[static_cast<size_t>( group )]._listSkill )
+        {
             matches += skillId.empty() == false && _pCatalog->getSkillColor( skillId ) == pMutagen->_color ? 1 : 0;
+        }
         return matches;
     }
 

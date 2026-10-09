@@ -501,7 +501,9 @@ SW_TEST_CASE( FileTest, ReadersNeverObserveHalfWrittenFile )
     // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( attemptCount.load() == 0 && waitDeadline.isExpired() == false )
+    {
         std::this_thread::yield();
+    }
     const uint32 readBeforeWrite = goodReadCount.load() + tornReadCount.load();
 
     // 쓰는 동안 겹친 읽기가 몇 번은 있어야 한다 — 60 번을 쓰고도 모자라면 더 쓴다(상한이 있다).

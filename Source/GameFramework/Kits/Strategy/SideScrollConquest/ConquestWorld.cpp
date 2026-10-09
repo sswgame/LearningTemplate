@@ -117,7 +117,9 @@ namespace sw
             for ( const ConquestGarrisonDef& garrison : def._listGarrison )
             {
                 for ( int32 count = 0; count < garrison._count; ++count )
+                {
                     (void)spawnUnit( garrison._unitId, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 — 카탈로그 로드가 이미 경고했다
+                }
             }
         }
         _commander         = ConquestCommander{};
@@ -132,7 +134,9 @@ namespace sw
             return;
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step( _timer.getStep() );
+        }
     }
 
     void ConquestWorld::setCommanderMove( float32 axis )
@@ -213,7 +217,9 @@ namespace sw
             return ConquestResult::SiteNotOwned;
         bool bTrainable = false;
         for ( const hashed_string& trainable : building._pDef->_listTrainable )
+        {
             bTrainable = bTrainable || trainable == unitId;
+        }
         if ( bTrainable == false )
             return ConquestResult::CannotTrainHere;
         if ( computePopulation() + pUnit->_population > computePopulationCap() )
@@ -472,7 +478,9 @@ namespace sw
                 total += site._pDef->_workers;
         }
         for ( const ConquestBuilding& building : _listBuilding )
+        {
             total -= building._workers;
+        }
         return total;
     }
 
@@ -535,7 +543,9 @@ namespace sw
         _elapsed += deltaTime;
         stepCommander( deltaTime );
         for ( int32 unitIndex = 0; unitIndex < static_cast<int32>( _listUnit.size() ); ++unitIndex )
+        {
             stepUnit( unitIndex, deltaTime );
+        }
         _listUnit.erase( std::remove_if( _listUnit.begin(), _listUnit.end(), []( const ConquestUnit& unit )
         { return unit._bAlive == SW_FALSE; } ),
                          _listUnit.end() );
@@ -797,8 +807,10 @@ namespace sw
             return;
         const int32 waveSize = computeWaveSize();
         for ( int32 index = 0; index < waveSize; ++index )
+        {
             // 모르는 waveUnit 이면 -1 — 카탈로그 로드가 이미 경고했다
             (void)spawnUnit( rules._waveUnit, ConquestTeam::Enemy, pSpawnSite->_pDef->_x + static_cast<float32>( index ) * rules._formationSpacing, ConquestOrder::Charge );
+        }
         pushEvent( ConquestEvent::Kind::WaveSpawned, pSpawnSite->_pDef->_id, waveSize, ConquestTeam::Enemy );
     }
 

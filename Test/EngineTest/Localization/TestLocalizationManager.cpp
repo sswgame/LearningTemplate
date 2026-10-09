@@ -337,7 +337,9 @@ SW_TEST_CASE( LocalizationManagerTest, LocTextMacroLooksUpNamespaceDotKey )
     }
     bool bReported{ false };
     for ( const sw::string& key : loc.getMissingKeys() )
+    {
         bReported = bReported || key == "Menu.Options";
+    }
     SW_EXPECT_TRUE( bReported );
 
     const sw::string formatted = SW_LOCFORMAT( "Menu", "Count", "{n} items", sw::TextArgumentList().addInteger( "n", 3 ) );

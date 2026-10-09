@@ -12,10 +12,14 @@ namespace sw
         for ( const UiAnimationTrack& track : _listTrack )
         {
             for ( const UiAnimationKey& key : track._listKey )
+            {
                 duration = MathUtil::max( duration, key._time );
+            }
         }
         for ( const UiAnimationEvent& event : _listEvent )
+        {
             duration = MathUtil::max( duration, event._time );
+        }
         return duration;
     }
 } // namespace sw

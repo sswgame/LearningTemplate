@@ -133,7 +133,9 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     SW_ASSERT_NOT_NULL( pRoot );
     constexpr float32 kStep = 0.125f;
     for ( uint32 frameIndex = 0; frameIndex < 3; ++frameIndex )
+    {
         manager.getAnimationSystem().evaluate( kStep );
+    }
     SW_EXPECT_EQUAL( 1u, pWarping->getOpenWindowCount() );
     manager.getAnimationSystem().evaluate( kStep );
     const float3 position = pRoot->getWorldPosition();
@@ -171,7 +173,9 @@ SW_TEST_CASE( MotionWarpingTest, RootMotionMovesThroughCharacterController )
 
     manager.beginPlay();
     for ( uint32 frameIndex = 0; frameIndex < 120; ++frameIndex )
+    {
         manager.tick( TestMotionWarpingInternal::kFrame );
+    }
     const float32 z = pController->getWorldPosition()._z;
     SW_EXPECT_TRUE( z > 0.5f );
     SW_EXPECT_TRUE( z < 0.95f );

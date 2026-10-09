@@ -264,7 +264,9 @@ namespace sw
                                      0.0f );
         // 처음 버퍼들은 여기서 채운다. 이후는 버퍼가 끝날 때마다 콜백이 하나씩 채운다.
         for ( uint32 bufferIndex = 0; bufferIndex < XAudio2SystemInternal::kStreamBufferCount; ++bufferIndex )
+        {
             callback.submitNext();
+        }
         _impl->_pStreamVoice->Start( 0 );
         SW_LOG_INFO( "XAudio2 stream ready (%# Hz, %# frames x %#).", audio::kSampleRate, XAudio2SystemInternal::kStreamBufferFrameCount,
                      XAudio2SystemInternal::kStreamBufferCount );

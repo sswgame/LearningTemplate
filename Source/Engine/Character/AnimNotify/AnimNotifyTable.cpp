@@ -240,6 +240,8 @@ namespace sw
     {
         outListName.clear();
         for ( const Entry& entry : _listEntry )
+        {
             outListName.push_back( entry._name );
+        }
     }
 } // namespace sw

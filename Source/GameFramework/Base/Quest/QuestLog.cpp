@@ -142,7 +142,9 @@ namespace sw
         }
         bool bHasRequired = false;
         for ( const QuestObjective& objective : pStage->_listObjective )
+        {
             bHasRequired = bHasRequired || objective._bOptional == SW_FALSE;
+        }
         if ( bHasRequired )
             return;
         if ( pStage->_listBranch.empty() == false )

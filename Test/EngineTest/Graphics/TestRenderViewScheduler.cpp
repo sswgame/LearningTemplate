@@ -29,7 +29,9 @@ SW_TEST_CASE( RenderViewSchedulerTest, UpdateRateSkipsFrames )
         uint8 arrRender[2]{};
         (void)scheduler.schedule( static_cast<float64>( frameIndex ) / 60.0, arrCandidate, 2, 0, arrRender );
         for ( uint32 index = 0; index < 2; ++index )
+        {
             arrRenderCount[index] += arrRender[index] == SW_TRUE ? 1u : 0u;
+        }
         if ( arrRender[0] == SW_TRUE && firstRenderCount < 8 )
             firstRenders[firstRenderCount++] = frameIndex;
     }
@@ -71,7 +73,9 @@ SW_TEST_CASE( RenderViewSchedulerTest, BudgetRotatesWithoutStarving )
     RenderViewScheduler            scheduler;
     RenderViewScheduler::Candidate arrCandidate[3]{};
     for ( uint32 index = 0; index < 3; ++index )
+    {
         arrCandidate[index]._viewId = 100 + index;
+    }
 
     uint32 arrRenderCount[3]{};
     for ( uint32 frameIndex = 0; frameIndex < 30; ++frameIndex )
@@ -80,11 +84,15 @@ SW_TEST_CASE( RenderViewSchedulerTest, BudgetRotatesWithoutStarving )
         const uint32 chosen = scheduler.schedule( static_cast<float64>( frameIndex ) / 60.0, arrCandidate, 3, 2, arrRender );
         SW_EXPECT_EQUAL( 2u, chosen );
         for ( uint32 index = 0; index < 3; ++index )
+        {
             arrRenderCount[index] += arrRender[index] == SW_TRUE ? 1u : 0u;
+        }
     }
     // 예산 둘을 셋이 나눠 쓴다 — 셋 다 20 번(±1) 근처다. 늦은 쪽을 먼저 고르지 않으면 한 뷰가 0 번이다.
     for ( uint32 index = 0; index < 3; ++index )
+    {
         SW_EXPECT_TRUE_MSG( 19u <= arrRenderCount[index] && arrRenderCount[index] <= 21u, ( "뷰가 굶었다: " + to_string( arrRenderCount[index] ) ).c_str() );
+    }
 }
 
 /**

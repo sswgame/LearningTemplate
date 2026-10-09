@@ -42,6 +42,8 @@ namespace sw
     void OverlayPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
     {
         for ( uint32 index = 0; index < getChildCount(); ++index )
+        {
             arrangeChild( context, *getChild( index ), float2{}, size );
+        }
     }
 } // namespace sw

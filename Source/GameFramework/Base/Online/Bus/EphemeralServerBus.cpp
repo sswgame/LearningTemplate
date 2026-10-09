@@ -29,14 +29,18 @@ namespace sw
             static void appendUint64( vector<uint8>& outBytes, uint64 value )
             {
                 for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+                {
                     outBytes.push_back( static_cast<uint8>( value >> ( byteIndex * 8 ) ) );
+                }
             }
 
             static uint64 readUint64( const uint8* pData )
             {
                 uint64 value = 0;
                 for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+                {
                     value |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
+                }
                 return value;
             }
         };

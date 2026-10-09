@@ -146,7 +146,9 @@ namespace sw
             {
                 _listScratchPoolMesh.reserve( _snapshot._listAllBatch.size() );
                 for ( const GpuMeshBatch& batch : _snapshot._listAllBatch )
+                {
                     _listScratchPoolMesh.push_back( batch._mesh.get() );
+                }
             }
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
             if ( _vertexPool.build( pDevice, _listScratchPoolMesh ) )
@@ -315,7 +317,9 @@ namespace sw
             const uint32   capacity = MathUtil::max( instanceCount, 256u );
             vector<uint32> listSlot( capacity );
             for ( uint32 slotIndex = 0; slotIndex < capacity; ++slotIndex )
+            {
                 listSlot[slotIndex] = slotIndex;
+            }
             _instanceSlotStream         = pDevice->getResourceFactory()->createVertexBuffer( listSlot.data(), capacity * static_cast<uint32>( sizeof( uint32 ) ) );
             _instanceSlotStreamCapacity = ( _instanceSlotStream != 0 ) ? capacity : 0;
             if ( _instanceSlotStream == 0 )
@@ -422,7 +426,9 @@ namespace sw
         if ( pDevice == nullptr )
             return;
         for ( auto& pair : _mapMaterialGroupBuffer )
+        {
             pair.second._slot.release( pDevice );
+        }
         _mapMaterialGroupBuffer.clear();
         for ( GpuMeshBatch& batch : _snapshot._listAllBatch )
         {

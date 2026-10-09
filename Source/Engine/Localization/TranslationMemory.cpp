@@ -19,7 +19,9 @@ namespace sw
             {
                 outListCodepoint.clear();
                 for ( size_t offset = 0; offset < text.size(); )
+                {
                     outListCodepoint.push_back( StringUtil::decodeUtf8( text, offset ) );
+                }
             }
 
             static bool isTrailingPunctuation( utf8 character )
@@ -178,7 +180,9 @@ namespace sw
             normalized.push_back( StringUtil::toLowerChar( character ) );
         }
         while ( normalized.empty() == false && TranslationMemoryInternal::isTrailingPunctuation( normalized.back() ) )
+        {
             normalized.pop_back();
+        }
         return normalized;
     }
 
@@ -196,7 +200,9 @@ namespace sw
         vector<uint32> listLastRow( listRight.size() + 1 );
         vector<uint32> listThisRow( listRight.size() + 1 );
         for ( size_t column = 0; column <= listRight.size(); ++column )
+        {
             listLastRow[column] = static_cast<uint32>( column );
+        }
         for ( size_t row = 1; row <= listLeft.size(); ++row )
         {
             listThisRow[0] = static_cast<uint32>( row );

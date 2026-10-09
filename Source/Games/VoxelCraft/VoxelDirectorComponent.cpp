@@ -275,7 +275,9 @@ namespace sw
         for ( int32 chunkZ = 0; chunkZ < kChunkCountZ; ++chunkZ )
         {
             for ( int32 chunkX = 0; chunkX < kChunkCountX; ++chunkX )
+            {
                 _world.clearChunkDirty( chunkX, chunkZ ); // 방금 모두 맡겼다
+            }
         }
     }
 

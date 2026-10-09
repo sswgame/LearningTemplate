@@ -86,7 +86,9 @@ namespace sw
         {
             outWriter.writeVarUint( reply._listHistory.size() );
             for ( const ChatMessage& message : reply._listHistory )
+            {
                 writeMessage( outWriter, message );
+            }
             ServiceKeyUtil::writeString( outWriter, reply._nextCursor );
         }
     }

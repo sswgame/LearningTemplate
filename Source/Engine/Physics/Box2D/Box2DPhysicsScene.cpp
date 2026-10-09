@@ -118,7 +118,9 @@ namespace sw
             const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyId ) == false;
             const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
             for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
+            {
                 PhysicsDebugDrawUtil::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
+            }
         } );
         _characters.forEachHandle( [&]( SlotHandle, const CharacterRecord& record )
         {
@@ -198,7 +200,9 @@ namespace sw
             vector<b2Vec2> listPoint;
             listPoint.reserve( shape._listPoint.size() );
             for ( const float2& point : shape._listPoint )
+            {
                 listPoint.push_back( b2TransformPoint( b2Transform{ center, rotation }, Box2DUtil::toBox2D( point ) ) );
+            }
             b2SurfaceMaterial surface   = b2DefaultSurfaceMaterial();
             surface.friction            = material._friction;
             surface.restitution         = material._restitution;
@@ -265,7 +269,9 @@ namespace sw
                 vector<b2Vec2> listPoint;
                 listPoint.reserve( shape._listPoint.size() );
                 for ( const float2& point : shape._listPoint )
+                {
                     listPoint.push_back( Box2DUtil::toBox2D( point ) );
+                }
                 const int32  pointCount = static_cast<int32>( listPoint.size() < B2_MAX_POLYGON_VERTICES ? listPoint.size() : B2_MAX_POLYGON_VERTICES );
                 const b2Hull hull       = b2ComputeHull( listPoint.data(), pointCount );
                 if ( hull.count == 0 )
@@ -428,7 +434,9 @@ namespace sw
         // Box2D 는 바디를 넣을 때 넓은 단계 트리를 늘 고쳐 묶음 경로가 따로 없다 — 하나씩 만든다.
         outListBody.reserve( outListBody.size() + listDesc.size() );
         for ( const PhysicsBodyDesc2D& desc : listDesc )
+        {
             outListBody.push_back( createBody( desc ) );
+        }
     }
 
     void Box2DPhysicsScene::destroyBody( PhysicsBodyHandle body )
@@ -463,10 +471,14 @@ namespace sw
                     listDoomed.push_back( PhysicsJointHandle::fromSlot( slot ) );
             } );
             for ( const PhysicsJointHandle& joint : listDoomed )
+            {
                 _joints.erase( joint.getSlot() );
+            }
             forgetPairJointsOf( body );
             for ( const b2ShapeId& shapeId : record._listShapeId )
+            {
                 _mapShapeToBody.erase( Box2DUtil::makeShapeKey( shapeId ) );
+            }
             b2DestroyBody( record._bodyId );
             listDestroyed.push_back( body );
             --_bodyCount;
@@ -700,7 +712,9 @@ namespace sw
             if ( bPair == false )
                 continue;
             for ( int32 pointIndex = 0; pointIndex < contact.manifold.pointCount; ++pointIndex )
+            {
                 impulse += contact.manifold.points[pointIndex].normalImpulse;
+            }
         }
         // `normalImpulse` 는 마지막 서브 스텝의 것이다 — 한 스텝의 충격량은 서브 스텝 수를 곱한 값이다(`totalNormalImpulse` 는 이완 반복까지 더해 약 두 배다).
         return impulse * static_cast<float32>( _settings._subStepCount2D );

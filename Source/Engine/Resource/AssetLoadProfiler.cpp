@@ -28,7 +28,9 @@ namespace sw
             {
                 uint64 total = 0;
                 for ( const uint64 nanos : summary._arrPhaseNanos )
+                {
                     total += nanos;
+                }
                 return total;
             }
         };
@@ -47,7 +49,9 @@ namespace sw
     {
         uint64 total = 0;
         for ( const uint64 nanos : _arrPhaseNanos )
+        {
             total += nanos;
+        }
         return total;
     }
 

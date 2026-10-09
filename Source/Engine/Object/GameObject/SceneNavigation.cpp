@@ -72,9 +72,13 @@ namespace sw
             static float32 wrapAngle( float32 angle )
             {
                 while ( angle > MathUtil::kPi )
+                {
                     angle -= 2.0f * MathUtil::kPi;
+                }
                 while ( angle < -MathUtil::kPi )
+                {
                     angle += 2.0f * MathUtil::kPi;
+                }
                 return angle;
             }
 
@@ -191,7 +195,9 @@ namespace sw
                 const float3 arrCorner[4] = { from - side + lift, from + side + lift, to + side + lift, to - side + lift };
                 const uint32 arrIndex[12] = { 0, 1, 2, 0, 2, 3, 0, 2, 1, 0, 3, 2 };
                 for ( const uint32 index : arrIndex )
+                {
                     outListVertex.push_back( makeVertex( arrCorner[index], color ) );
+                }
             }
 
             template <typename T>
@@ -236,7 +242,9 @@ namespace sw
         void waitDone() const
         {
             while ( _bDone.load( std::memory_order_acquire ) == false )
+            {
                 std::this_thread::yield();
+            }
         }
     };
 } // namespace sw
@@ -267,7 +275,9 @@ namespace sw
         {
             // 일이 이 내비메시 · 입력을 읽고 있다 — 끝날 때까지 놓지 않는다.
             for ( const unique_ptr<NavTileBakeJob>& pJob : _listJob )
+            {
                 pJob->waitDone();
+            }
         }
 
         bool isTileInFlight( const int2& tile ) const
@@ -330,7 +340,9 @@ namespace sw
             pAgent->_bOnNavMesh   = SW_FALSE;
         }
         for ( NavMeshObstacleComponent* pObstacle : _listObstacle )
+        {
             pObstacle->_bCarved = SW_FALSE;
+        }
         _listRuntime.clear();
         _dirtyLock.lock();
         _listDirtyArea.clear();
@@ -585,7 +597,9 @@ namespace sw
             {
                 pRuntime->_pNavMesh->collectTilesOverlapping( volume.computeBounds(), listTile );
                 for ( const int2& tile : listTile )
+                {
                     pRuntime->addDirtyTile( tile );
+                }
             }
             SW_LOG_INFO( "Navmesh '%#' loaded from the cooked file: %# tiles, %# polygons, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
                          pRuntime->_bakeStats._polygonCount, pRuntime->_bakeStats._milliseconds );
@@ -704,7 +718,9 @@ namespace sw
     {
         uint32 count = 0;
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
+        {
             count += static_cast<uint32>( pRuntime->_listDirtyTile.size() + pRuntime->_listJob.size() );
+        }
         _dirtyLock.lock();
         count += static_cast<uint32>( _listDirtyArea.size() );
         _dirtyLock.unlock();
@@ -732,7 +748,9 @@ namespace sw
                     continue;
                 }
                 for ( const hashed_string& agentType : pSurface->getAgentTypes() )
+                {
                     (void)ensureNavMesh( agentType );
+                }
             }
         }
         updateObstacles();
@@ -804,7 +822,9 @@ namespace sw
             shared_ptr<vector<NavConvexVolume>> pVolume = make_shared<vector<NavConvexVolume>>();
             collectObstacleVolumes( *pVolume );
             for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
+            {
                 pRuntime->_pVolume = pVolume;
+            }
             _bObstacleVolumeDirty = false;
         }
         if ( bGeometryDirty )
@@ -825,7 +845,9 @@ namespace sw
             {
                 pRuntime->_pNavMesh->collectTilesOverlapping( area, listTile );
                 for ( const int2& tile : listTile )
+                {
                     pRuntime->addDirtyTile( tile );
+                }
             }
         }
     }
@@ -895,7 +917,9 @@ namespace sw
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : _listRuntime )
         {
             for ( const unique_ptr<NavTileBakeJob>& pJob : pRuntime->_listJob )
+            {
                 pJob->waitDone();
+            }
         }
     }
 
@@ -1160,7 +1184,9 @@ namespace sw
             {
                 const float4 color = Internal::makeAreaColor( listArea[triangleIndex], triangleIndex );
                 for ( uint32 corner = 0; corner < 3; ++corner )
+                {
                     listVertex.push_back( Internal::makeVertex( listCorner[triangleIndex * 3 + corner] + float3{ 0.0f, Internal::kViewLift, 0.0f }, color ) );
+                }
             }
         }
         // 에이전트 경로 띠 — 자리 → 다음 모퉁이 → 목적지.
@@ -1260,7 +1286,9 @@ namespace sw
                     PhysicsComponentUtil::readWorldPose( *pBody, position, rotation, scale );
                     const float4x4 world = float4x4::createTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
+                    {
                         outGeometry.addPhysicsShape( PhysicsComponentUtil::makeScaledShape( shape, scale ), world, verdict._area );
+                    }
                 } );
             }
         } );

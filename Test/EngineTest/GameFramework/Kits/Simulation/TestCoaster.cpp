@@ -88,7 +88,9 @@ SW_TEST_CASE( CoasterTest, CircuitClosesAndFramesStayOrthonormal )
 
     bool bAllOrthonormal = true;
     for ( float32 distance = 0.0f; distance < track.getLength(); distance += 0.7f )
+    {
         bAllOrthonormal = bAllOrthonormal && isOrthonormal( track.sample( distance ) );
+    }
     SW_EXPECT_TRUE( bAllOrthonormal );
 
     // 스테이션 · 리프트 · 브레이크 표시가 그 구간에 실린다.
@@ -116,7 +118,9 @@ SW_TEST_CASE( CoasterTest, FrictionlessDropConservesEnergy )
     train.initialize( &track, params, 0.0f );
     train.setSpeed( 1.0f );
     while ( train.getDistance() < 60.0f && train.getElapsedTime() < 30.0f )
+    {
         train.step( 1.0f / 60.0f );
+    }
 
     const float32 expectedSpeed = MathUtil::sqrt( 1.0f + 2.0f * 9.81f * 20.0f );
     SW_EXPECT_NEAR_EQUAL( expectedSpeed, train.getSpeed(), expectedSpeed * 0.02f );

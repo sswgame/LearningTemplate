@@ -28,7 +28,9 @@ namespace
             NetAddress    from{};
             vector<uint8> buffer;
             while ( _pReceiver->receive( from, buffer ) )
+            {
                 outListReceived.push_back( buffer.empty() ? -1 : static_cast<int32>( buffer[0] ) | ( buffer.size() > 1 ? static_cast<int32>( buffer[1] ) << 8 : 0 ) );
+            }
         }
 
         bool sendNumbered( int32 number, int32 size = 2 )
@@ -70,7 +72,9 @@ SW_TEST_CASE( NetEmulationTest, LatencyHoldsPacketsUntilTheirTime )
     link._sender.setDefaultConditions( conditions );
     listReceived.clear();
     for ( int32 number = 0; number < 20; ++number )
+    {
         SW_ASSERT_TRUE( link.sendNumbered( number ) );
+    }
     link.advance( 0.079, listReceived );
     SW_EXPECT_TRUE( listReceived.empty() ); // 지연 − 흔들림 전에는 아무것도 없다
     link.advance( 0.121, listReceived );
@@ -109,7 +113,9 @@ SW_TEST_CASE( NetEmulationTest, LossDuplicationAndReorderingFollowTheRates )
     SW_EXPECT_EQUAL( size_t( stats._sentCount ), listReceived.size() );
     int32 inversionCount = 0;
     for ( size_t index = 1; index < listReceived.size(); ++index )
+    {
         inversionCount += listReceived[index] < listReceived[index - 1] ? 1 : 0;
+    }
     SW_EXPECT_TRUE( inversionCount > 50 ); // 늦춘 패킷이 뒤에 닿는다
 }
 
@@ -127,7 +133,9 @@ SW_TEST_CASE( NetEmulationTest, BandwidthQueuesPerLinkAndOverridesOneConnection 
     SW_EXPECT_EQUAL( 0, link._sender.findConditions( NetAddress::makeLoopback( 7999 ) )._bandwidthBytesPerSecond );
 
     for ( int32 number = 0; number < 10; ++number )
+    {
         SW_ASSERT_TRUE( link.sendNumbered( number, 1000 ) );
+    }
     // 8000 바이트가 큐 상한 — 여덟이 줄을 서고 둘은 버린다.
     SW_EXPECT_EQUAL( uint64( 2 ), link._sender.getStats()._queueDropCount );
     vector<int32> listReceived;

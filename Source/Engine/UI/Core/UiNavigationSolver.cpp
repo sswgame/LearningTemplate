@@ -29,7 +29,9 @@ namespace sw
                 if ( pPanel == nullptr )
                     return;
                 for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+                {
                     collectFocusable( *pPanel->getChild( index ), inoutListWidget );
+                }
             }
 
             /**

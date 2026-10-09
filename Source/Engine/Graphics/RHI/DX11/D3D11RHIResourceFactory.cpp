@@ -369,8 +369,10 @@ namespace sw
         outBytes.assign( outLayout._sizeBytes, 0 );
         const uint32 rowCount = outLayout._sizeBytes / outLayout._rowBytes;
         for ( uint32 row = 0; row < rowCount; ++row )
+        {
             Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
                           static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, outLayout._rowBytes );
+        }
         _pDevice->_deviceContext->Unmap( staging.Get(), 0 );
         return true;
     }

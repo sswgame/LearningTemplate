@@ -83,7 +83,9 @@ SW_TEST_CASE( NetInputWindowTest, TickGapRestartsAndTickDropResets )
     window.initialize( 32, NetInputWindowTestInternal::kBlobFormat );
     const uint8 value = 1;
     for ( uint32 tick = 0; tick < 5; ++tick )
+    {
         SW_ASSERT_TRUE( window.push( tick, &value, 1 ) );
+    }
     window.acknowledge( 3 );
     SW_ASSERT_TRUE( window.push( 10, &value, 1 ) );
     SW_EXPECT_EQUAL( 10u, window.getFirstPendingTick() );
@@ -133,7 +135,9 @@ SW_TEST_CASE( NetInputWindowTest, ByteBudgetSendsTheOldestFirst )
     window.initialize( 32, NetInputWindowTestInternal::kBlobFormat );
     const vector<uint8> big( 200, 3 );
     for ( uint32 tick = 0; tick < 10; ++tick )
+    {
         SW_ASSERT_TRUE( window.push( tick, big.data(), static_cast<int32>( big.size() ) ) );
+    }
 
     BitWriter     writer;
     NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
@@ -263,7 +267,9 @@ SW_TEST_CASE( NetInputWindowTest, FixedEntriesMatchTheHandWrittenRollbackLayout 
         manual.writeVarUint( 0 );
         manual.writeVarUint( 5 );
         for ( uint32 frame = 0; frame < 5; ++frame )
+        {
             manual.writeBits( frame * 3 + 1, 8 );
+        }
         SW_EXPECT_EQUAL( manual.getBitCount(), written.getBitCount() );
         SW_EXPECT_TRUE( manual.getBytes() == written.getBytes() );
     }

@@ -47,12 +47,18 @@ namespace sw
         {
             std::scoped_lock<mutex> lock{ _mutex };
             for ( auto& [path, handle] : _mapInFlightIo )
+            {
                 listIo.push_back( handle );
+            }
         }
         for ( const AsyncReadHandle& handle : listIo )
+        {
             (void)handle.cancel();
+        }
         for ( const AsyncReadHandle& handle : listIo )
+        {
             handle.wait();
+        }
 
         if ( engine::areEngineServicesBound() )
             engine::getTaskManager().waitAll();

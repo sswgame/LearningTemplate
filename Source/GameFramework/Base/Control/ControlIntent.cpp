@@ -83,7 +83,9 @@ namespace sw
         Internal::writeValue( writer, OrientationUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
         Internal::writeValue( writer, _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( const float32 analog : _arrAnalog )
+        {
             Internal::writeValue( writer, analog, kAxisSteps, Internal::kAxisMaxStep );
+        }
         writer.writeVarUint( _buttonDown );
         writer.writeVarUint( _buttonTriggered );
     }
@@ -97,7 +99,9 @@ namespace sw
         _controlYaw    = Internal::readValue( reader, kAngleStepsPerRadian, Internal::kYawMaxStep );
         _controlPitch  = Internal::readValue( reader, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( float32& analog : _arrAnalog )
+        {
             analog = Internal::readValue( reader, kAxisSteps, Internal::kAxisMaxStep );
+        }
         _buttonDown      = static_cast<uint32>( reader.readVarUint() );
         _buttonTriggered = static_cast<uint32>( reader.readVarUint() );
         if ( reader.hasOverflowed() )
@@ -117,7 +121,9 @@ namespace sw
         _controlYaw    = Internal::quantizeValue( OrientationUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
         _controlPitch  = Internal::quantizeValue( _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( float32& analog : _arrAnalog )
+        {
             analog = Internal::quantizeValue( analog, kAxisSteps, Internal::kAxisMaxStep );
+        }
     }
 
     bool ControlIntent::operator==( const ControlIntent& other ) const

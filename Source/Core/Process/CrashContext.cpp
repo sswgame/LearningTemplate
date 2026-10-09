@@ -54,7 +54,9 @@ namespace sw
 #endif
             s_bStderrHeld.store( true );
             while ( true )
+            {
                 std::this_thread::sleep_for( std::chrono::hours( 1 ) );
+            }
         }
 
         /// @brief `overflowStackInternal` 의 재귀를 멈추는 척하는 값입니다. 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 합니다.
@@ -111,7 +113,9 @@ namespace sw
 
             static const utf8 kHex[] = "0123456789abcdef";
             for ( uint32 digit = 0; digit < 16; ++digit )
+            {
                 s_arrSession[digit] = kHex[( mixed >> ( digit * 4 ) ) & 0xFu];
+            }
             s_arrSession[16] = '\0';
             return s_arrSession;
         }
@@ -223,7 +227,9 @@ namespace sw
         const uint32 first  = pushed - count;
         uint32       length = 0;
         for ( uint32 index = 0; index < count; ++index )
+        {
             appendLine( pOutText, capacity, length, "%#\n", _arrEntry[( first + index ) % kMaxBreadcrumb].c_str() );
+        }
         return length;
     }
 
@@ -406,7 +412,9 @@ namespace sw
                 std::thread holder( &holdStderrForeverInternal );
                 holder.detach();
                 while ( s_bStderrHeld.load() == false )
+                {
                     std::this_thread::yield();
+                }
                 volatile int32* pNull = nullptr;
                 *pNull                = 1;
                 break;

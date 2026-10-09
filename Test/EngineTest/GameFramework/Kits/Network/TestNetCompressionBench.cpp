@@ -95,11 +95,15 @@ namespace
         [[maybe_unused]] const int64 compressDeciNanos = test::measureBestDeciNanosPerOp( listMeasure.size(), Internal::kRounds, [&]()
         {
             for ( size_t index = 0; index < listMeasure.size(); ++index )
+            {
                 listCompressedSize[index] = compressOne( index );
+            }
         } );
         uint64                       sentBytes         = 0;
         for ( size_t index = 0; index < listMeasure.size(); ++index )
+        {
             sentBytes += static_cast<uint64>( MathUtil::min<int32>( static_cast<int32>( listMeasure[index].size() ), listCompressedSize[index] + Internal::kEnvelopeBytes ) );
+        }
 
         // 해제 — 한 번 압축해 둔 것을 전부 푼다(이기는 패킷만이 아니라 — 받는 쪽의 최악).
         vector<vector<uint8>> listPacked( listMeasure.size() );
@@ -143,10 +147,14 @@ namespace
         vector<vector<uint8>> listTrain;
         vector<vector<uint8>> listMeasure;
         for ( size_t index = 0; index < listSample.size(); ++index )
+        {
             ( index % 2 == 0 ? listTrain : listMeasure ).push_back( listSample[index] );
+        }
         uint64 rawBytes = 0;
         for ( const vector<uint8>& sample : listMeasure )
+        {
             rawBytes += sample.size();
+        }
         SW_LOG_INFO( "[Bench] NetCompression %#: %# measured packets, average %# B", pSetName, listMeasure.size(), listMeasure.empty() ? 0 : rawBytes / listMeasure.size() );
 
         ZstdDictionaryCompressor dictionaryCompressor;
@@ -185,10 +193,14 @@ namespace
             (void)deltaTime;
             const uint32 tick = world.getLocalTick();
             for ( uint32 index = tick % NetCompressionBenchInternal::kMoveStride; index < static_cast<uint32>( _listEntity.size() ); index += NetCompressionBenchInternal::kMoveStride )
+            {
                 writeState( _listEntity[index]._buffer, index, tick );
+            }
             _server.beginTick( tick );
             for ( const NetEntityState& entity : _listEntity )
+            {
                 _server.setEntity( entity._entityId, entity._typeId, entity._buffer );
+            }
             _server.endTick();
             _server.sendSnapshots();
         }
@@ -205,7 +217,9 @@ namespace
             for ( int32 axis = 0; axis < 3; ++axis )
             {
                 for ( int32 byte = 0; byte < 3; ++byte )
+                {
                     outBytes[static_cast<size_t>( axis * 3 + byte )] = static_cast<uint8>( arrPosition[axis] >> ( byte * 8 ) );
+                }
             }
             const uint32 heading = static_cast<uint32>( angle * 10430.378f ) & 0xFFFFu;
             outBytes[9]          = static_cast<uint8>( heading );
@@ -324,7 +338,9 @@ namespace
                         rest /= 10;
                     } while ( rest != 0 );
                     while ( digitCount > 0 )
+                    {
                         text += arrDigit[--digitCount];
+                    }
                 }
                 pCursor += 2;
                 continue;
@@ -349,7 +365,9 @@ SW_TEST_CASE( NetCompressionBenchTest, ReplicationSnapshotPackets )
     conditions._downstream._pDropFilter        = &DatagramTap::capture;
     conditions._downstream._pDropFilterContext = &tap;
     for ( uint32 index = 0; index < Internal::kClientCount; ++index )
+    {
         SW_ASSERT_TRUE( harness.addClient( conditions ) > 0 );
+    }
     harness.stepTicks( Internal::kWarmupTicks );
     SW_ASSERT_TRUE( harness.areAllClientsConnected() );
     tap._bCapturing = SW_TRUE;
@@ -404,7 +422,9 @@ SW_TEST_CASE( NetCompressionBenchTest, ChatMessages )
         messageBytes.push_back( 0x40 );
         messageBytes.push_back( 0x00 );
         for ( int32 byte = 0; byte < 4; ++byte )
+        {
             messageBytes.push_back( static_cast<uint8>( channel >> ( byte * 8 ) ) );
+        }
         messageBytes.push_back( static_cast<uint8>( nameSize ) );
         messageBytes.insert( messageBytes.end(), pName, pName + nameSize );
         messageBytes.push_back( static_cast<uint8>( text.size() ) );

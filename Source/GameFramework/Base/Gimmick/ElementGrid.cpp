@@ -84,7 +84,9 @@ namespace sw
         for ( int32 y = 0; y < _height; ++y )
         {
             for ( int32 x = 0; x < _width; ++x )
+            {
                 count += hasStatus( int2{ x, y }, status ) ? 1 : 0;
+            }
         }
         return count;
     }
@@ -195,9 +197,11 @@ namespace sw
             return;
         }
         for ( int32 neighbor = 0; neighbor < GridTopology::kOrthogonalCount; ++neighbor )
+        {
             _listPending.push_back( PendingChange{
                 GridTopology::getNeighbor( position, neighbor ),
                 ruleIndex } );
+        }
     }
 
     void ElementGrid::step()
@@ -314,7 +318,9 @@ namespace sw
     {
         const int32 stepCount = _timer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             step();
+        }
         return stepCount;
     }
 
@@ -331,7 +337,9 @@ namespace sw
             hash = ( hash ^ cell._material ) * HashUtil::kFnvPrime32;
             hash = ( hash ^ cell._statusBits ) * HashUtil::kFnvPrime32;
             for ( const uint8 value : cell._arrStatusValue )
+            {
                 hash = ( hash ^ value ) * HashUtil::kFnvPrime32;
+            }
         }
         return hash;
     }
@@ -345,7 +353,9 @@ namespace sw
             outArchive << cell._material;
             outArchive << cell._statusBits;
             for ( const uint8 value : cell._arrStatusValue )
+            {
                 outArchive << value; // 상태 값(남은 시간 · 세기) — 비트만 실으면 되살린 불이 처음부터 탄다
+            }
         }
         StateArchiveUtil::writeInt2( outArchive, _wind );
         StateArchiveUtil::writeStepTimer( outArchive, _timer );
@@ -369,7 +379,9 @@ namespace sw
             archive >> cell._material;
             archive >> cell._statusBits;
             for ( uint8& value : cell._arrStatusValue )
+            {
                 archive >> value;
+            }
         }
         int2           wind      = {};
         FixedStepTimer timer     = _timer;

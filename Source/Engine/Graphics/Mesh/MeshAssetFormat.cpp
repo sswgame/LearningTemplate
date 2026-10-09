@@ -101,7 +101,9 @@ namespace sw
         outBytes.clear();
         outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount );
         for ( const uint8 magic : MeshAssetFormatInternal::kArrMagic )
+        {
             outBytes.push_back( magic );
+        }
         MeshAssetFormatInternal::appendUint32( outBytes, kVersion );
         MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( data._listVertex.size() ) );
         MeshAssetFormatInternal::appendUint32( outBytes, kVertexSize );
@@ -111,29 +113,43 @@ namespace sw
         for ( const RHIVertex& vertex : data._listVertex )
         {
             for ( const float32 value : vertex._arrPosition )
+            {
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
             for ( const float32 value : vertex._arrNormal )
+            {
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
             for ( const float32 value : vertex._arrUv )
+            {
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
             for ( const float32 value : vertex._arrColor )
+            {
                 MeshAssetFormatInternal::appendFloat32( outBytes, value );
+            }
         }
         if ( bSkin )
         {
             for ( const MeshSkinVertex& skin : data._listSkinVertex )
             {
                 for ( const uint16 joint : skin._arrJoint )
+                {
                     MeshAssetFormatInternal::appendUint16( outBytes, joint );
+                }
                 for ( const float32 weight : skin._arrWeight )
+                {
                     MeshAssetFormatInternal::appendFloat32( outBytes, weight );
+                }
             }
         }
         if ( data._listMorphTarget.empty() )
             return;
         // 선택 덩어리 — 모프 타깃. 길이는 내용을 다 쓴 뒤 채운다.
         for ( const uint8 letter : MeshAssetFormatInternal::kArrMorphChunk )
+        {
             outBytes.push_back( letter );
+        }
         const size_t lengthOffset = outBytes.size();
         MeshAssetFormatInternal::appendUint32( outBytes, 0u );
         const size_t contentStart = outBytes.size();
@@ -149,12 +165,16 @@ namespace sw
                 MeshAssetFormatInternal::appendUint32( outBytes, delta._vertexIndex );
                 const float32 arrValue[6] = { delta._position._x, delta._position._y, delta._position._z, delta._normal._x, delta._normal._y, delta._normal._z };
                 for ( const float32 value : arrValue )
+                {
                     MeshAssetFormatInternal::appendFloat32( outBytes, value );
+                }
             }
         }
         const uint32 contentLength = static_cast<uint32>( outBytes.size() - contentStart );
         for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+        {
             outBytes[lengthOffset + byteIndex] = static_cast<uint8>( ( contentLength >> ( byteIndex * 8 ) ) & 0xFFu );
+        }
     }
 
     void MeshAssetFormat::makeBytes( const vector<RHIVertex>& listVertex, vector<uint8>& outBytes )
@@ -286,7 +306,9 @@ namespace sw
                     delta._vertexIndex = MeshAssetFormatInternal::readUint32( pChunk );
                     float32 arrValue[6]{};
                     for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
+                    {
                         arrValue[valueIndex] = MeshAssetFormatInternal::readFloat32( pChunk + 4 + valueIndex * 4 );
+                    }
                     delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
                     delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
                     pChunk += MeshAssetFormatInternal::kMorphDeltaSize;

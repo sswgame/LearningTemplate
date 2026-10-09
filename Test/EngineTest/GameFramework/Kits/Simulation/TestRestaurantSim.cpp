@@ -143,7 +143,9 @@ namespace
         sim.openDay( weatherId );
         const int32 updateCount = static_cast<int32>( 300.0f / stepMinutes );
         for ( int32 updateIndex = 0; updateIndex < updateCount; ++updateIndex )
+        {
             sim.update( stepMinutes );
+        }
         RestaurantDaySummary summary;
         sim.closeDay( summary );
         return summary;
@@ -324,7 +326,9 @@ SW_TEST_CASE( RestaurantSimTest, KitchenCooksInParallelUpToCooksAndStations )
     SW_EXPECT_TRUE( sim.canServe( "ramen" ) );
 
     for ( int32 customerIndex = 0; customerIndex < 3; ++customerIndex )
+    {
         SW_EXPECT_TRUE( sim.admitCustomer( "student" ) > 0 );
+    }
     SW_EXPECT_EQUAL( -1, sim.admitCustomer( "ghost" ) );
     sim.update( 1.0f );
     SW_EXPECT_EQUAL( 3, sim.countOccupiedSeats() );
@@ -516,7 +520,9 @@ SW_TEST_CASE( RestaurantSimTest, CustomersPickDishesLikeTheSeededWeightedDraw )
     SW_ASSERT_TRUE( sim.canServe( "omelette" ) );
     SW_ASSERT_FALSE( sim.canServe( "cake" ) );
     for ( int32 customerIndex = 0; customerIndex < 6; ++customerIndex )
+    {
         (void)sim.admitCustomer( "student" );
+    }
     sim.update( 1.0f );
     SW_ASSERT_TRUE( sim.getOrders().size() == 6 );
 
@@ -551,11 +557,15 @@ SW_TEST_CASE( RestaurantSimTest, ZeroWeightDishIsNotOrderedBesidePositiveOnes )
     SW_ASSERT_TRUE( sim.canServe( "ramen" ) );
     SW_ASSERT_TRUE( sim.canServe( "omelette" ) );
     for ( int32 customerIndex = 0; customerIndex < 6; ++customerIndex )
+    {
         (void)sim.admitCustomer( "student" );
+    }
     sim.update( 1.0f );
     SW_ASSERT_TRUE( sim.getOrders().size() == 6 );
     for ( const KitchenOrder& order : sim.getOrders() )
+    {
         SW_EXPECT_TRUE( order._dishId == hashed_string( "omelette" ) );
+    }
     SW_EXPECT_EQUAL( 0, sim.getToday()._noChoice );
 }
 
@@ -610,7 +620,9 @@ SW_TEST_CASE( RestaurantSimTest, StateRoundTripContinuesTheSameRestaurant )
     SW_EXPECT_TRUE( sim.setMenuPrice( "ramen", 45 ) );
     sim.openDay( "sunny" );
     for ( int32 minute = 0; minute < 60; ++minute )
+    {
         sim.update( 1.0f );
+    }
     SW_EXPECT_TRUE( sim.getToday()._arrivals > 0 );
 
     Archive written;

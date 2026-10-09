@@ -86,7 +86,9 @@ namespace sw
             return nullptr;
         float32 total = 0.0f;
         for ( const WeatherDef& weather : _pCatalog->getWeathers() )
+        {
             total += &weather == pExclude ? 0.0f : weather.computeWeight( season );
+        }
         if ( total <= 0.0f )
             return pExclude; // 다른 것이 없다 — 그대로 이어간다
         float32 pick = random.nextFloat() * total;

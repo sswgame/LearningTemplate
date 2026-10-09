@@ -586,7 +586,9 @@ namespace sw
 
         // 2단계: 락 밖에서 콜백을 부른다(재진입 안전)
         for ( auto& [delegate, pInfo] : listPendingCallback )
+        {
             delegate( pInfo );
+        }
     }
 
     /**
@@ -635,7 +637,9 @@ namespace sw
         vector<string>                      listName;
         listName.reserve( static_cast<uint32>( _mapVariable.size() ) );
         for ( const auto& [name, info] : _mapVariable )
+        {
             listName.push_back( name );
+        }
         return listName;
     }
 

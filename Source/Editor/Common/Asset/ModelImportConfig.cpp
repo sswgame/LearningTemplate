@@ -72,7 +72,9 @@ namespace sw::editor
         text += _bImportAttachments == SW_TRUE ? "1" : "0";
         text += ";codec=" + _animationCodec + ";root=" + _rootMotionBone + ";clips=";
         for ( const string& clipName : _listClipName )
+        {
             text += clipName + ",";
+        }
         // 실수는 비트 그대로 섞는다 — 글자로 반올림하면 작은 변경이 같은 해시가 된다.
         const float32 arrValue[3] = { _animationSampleRate, _animationPrecision, _animationShellDistance };
         for ( const float32 value : arrValue )
@@ -94,10 +96,14 @@ namespace sw::editor
         text += FractureSettings::getVolumeName( _fracture._volume );
         text += ";pieces=" + to_string( _fracture._pieceCount ) + ";seed=" + to_string( _fracture._seed ) + ";hull=" + to_string( _fracture._maxHullPoint ) + ";levels=";
         for ( const uint32 count : _fracture._listLevelCount )
+        {
             text += to_string( count ) + ",";
+        }
         text += ";slices=";
         for ( const uint32 count : _fracture._arrSliceCount )
+        {
             text += to_string( count ) + ",";
+        }
         const float32 arrValue[11] = { _fracture._impactPoint._x, _fracture._impactPoint._y, _fracture._impactPoint._z, _fracture._clusterRadius,
                                        _fracture._clusterFraction, _fracture._sliceJitter, _fracture._interiorUvScale, _fracture._interiorColor._x,
                                        _fracture._interiorColor._y, _fracture._interiorColor._z, _fracture._interiorColor._w };
@@ -217,7 +223,9 @@ namespace sw::editor
         {
             const JsonValue clips = ruleValue.get( "clips" );
             for ( size_t clipIndex = 0; clips.isArray() && clipIndex < clips.size(); ++clipIndex )
+            {
                 inoutRule._listClipName.push_back( clips.at( clipIndex ).asString() );
+            }
         }
         if ( ruleValue.has( "animation_codec" ) )
         {
@@ -326,7 +334,9 @@ namespace sw::editor
                 return false;
             }
             for ( uint32 axis = 0; axis < 3; ++axis )
+            {
                 settings._arrSliceCount[axis] = static_cast<uint32>( arrSlice[axis] );
+            }
         }
         if ( fractureValue.has( "levels" ) )
         {

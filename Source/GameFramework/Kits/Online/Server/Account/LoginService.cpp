@@ -527,12 +527,16 @@ namespace sw
         vector<LoginSessionRef> listOnline;
         listOnline.reserve( _mapAccountToSession.size() );
         for ( const auto& [accountId, sessionId] : _mapAccountToSession )
+        {
             listOnline.push_back( LoginSessionRef{ accountId, sessionId, LoginRevokeReason::None } );
+        }
         std::sort( listOnline.begin(), listOnline.end(), LoginServiceInternal::SessionRefLess{} );
         unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work       = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
         const int32                                            checkCount = std::min( maxCount, static_cast<int32>( listOnline.size() ) );
         for ( int32 checkIndex = 0; checkIndex < checkCount; ++checkIndex )
+        {
             work->_listOnline.push_back( listOnline[( _refreshCursor + static_cast<size_t>( checkIndex ) ) % listOnline.size()] );
+        }
         _refreshCursor = ( _refreshCursor + static_cast<size_t>( checkCount ) ) % listOnline.size();
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -606,7 +610,9 @@ namespace sw
             _mapAccountToSession[online._accountId] = online._sessionId;
         }
         for ( const LoginEvent& event : outcome._listEvent )
+        {
             _eventBuffer.push( event );
+        }
         // 신원 캐시 — 붙어 있는 계정만.
         const bool bGrantOperation = completion._operation == LoginOperation::Login || completion._operation == LoginOperation::Resume ||
                                      completion._operation == LoginOperation::GuestLogin || completion._operation == LoginOperation::PlatformLogin;

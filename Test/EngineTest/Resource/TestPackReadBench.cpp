@@ -116,7 +116,9 @@ namespace
         sw::vector<sw::pair<sw::string, sw::string>> listFile;
         listFile.reserve( PackReadBenchInternal::kEntryCount );
         for ( uint32 index = 0; index < PackReadBenchInternal::kEntryCount; ++index )
+        {
             listFile.emplace_back( makeEntryKey( index ), makeEntryContent( index ) );
+        }
 
         const sw::string packPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packreadbench" ), pName );
         if ( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, compression, listFile ) == false )

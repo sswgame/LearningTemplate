@@ -26,7 +26,9 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
             pView->_bSeenThisFrame = SW_FALSE;
+        }
 
         const uint32 requestCount = MathUtil::min( static_cast<uint32>( listRequest.size() ), kMaxExtraRenderView );
         for ( uint32 requestIndex = 0; requestIndex < requestCount; ++requestIndex )
@@ -109,7 +111,9 @@ namespace sw
         { return pView->_bSeenThisFrame == SW_FALSE; } ),
                               _listExtraView.end() );
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( _listExtraView.size() ); ++viewIndex )
+        {
             _listExtraView[viewIndex]->_cullSlot = kFirstExtraCullView + viewIndex;
+        }
         _gpuScene.setCullViewCount( _pDevice, kFirstExtraCullView + static_cast<uint32>( _listExtraView.size() ) );
     }
 
@@ -158,7 +162,9 @@ namespace sw
         {
             view._listInstanceSlot.resize( instanceCount );
             for ( uint32 slot = 0; slot < pOrder->_tailBase; ++slot )
+            {
                 view._listInstanceSlot[slot] = slot;
+            }
             Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, pOrder->_pListTailSlot->data(), tailCount * sizeof( uint32 ) );
             // 지난 프레임 기록이 이 버퍼를 읽었을 수 있다 — 반환은 디바이스가 미룬다(releaseHandle).
             if ( view._instanceSlotStream != 0 )

@@ -112,7 +112,9 @@ namespace sw
         for ( const auto& libraryEntry : _mapLibrary )
         {
             for ( const AudioAttenuationDesc& attenuation : libraryEntry.second->_listAttenuation )
+            {
                 _listAttenuation.push_back( attenuation );
+            }
         }
         for ( VoiceSlot& slot : _listVoice )
         {
@@ -411,7 +413,9 @@ namespace sw
 
         // 버스 오프셋: 세기 × dB 를 더한다.
         for ( uint32 busIndex = 0; busIndex < mixer.getBusCount(); ++busIndex )
+        {
             mixer.setBusVolumeOffsetDb( busIndex, 0.0f );
+        }
         for ( const SnapshotState& snapshot : _listSnapshot )
         {
             for ( const AudioSnapshotBusDesc& busVolume : snapshot._pDesc->_listBusVolume )

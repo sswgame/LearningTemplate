@@ -206,7 +206,9 @@ SW_TEST_CASE( CreatureLifeTest, VisitConditionMatchesThePhaseWeatherTable )
             const DayPhase phase       = static_cast<DayPhase>( phaseIndex );
             bool           bPhaseMatch = expectation._phaseCount == 0;
             for ( size_t listIndex = 0; listIndex < expectation._phaseCount; ++listIndex )
+            {
                 bPhaseMatch = bPhaseMatch || expectation._pPhaseBegin[listIndex] == phase;
+            }
             for ( const utf8* pWeather : arrWeather )
             {
                 const bool bWeatherMatch = expectation._pWeather[0] == '\0' || StringUtil::equals( expectation._pWeather, pWeather );

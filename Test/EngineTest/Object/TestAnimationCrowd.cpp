@@ -171,7 +171,9 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
     system.evaluate( 0.1f );
     uint32 totalEvaluations = 0;
     for ( const unique_ptr<AnimationCrowdBucket>& bucket : crowd.getBuckets() )
+    {
         totalEvaluations += bucket->getEvaluationCount();
+    }
     SW_EXPECT_EQUAL( 8u, totalEvaluations );
     SW_EXPECT_EQUAL( 0u, system.getPoseEvaluatedUnitCount() );
 }
@@ -209,7 +211,9 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
 
     // 섞기가 끝나면(0.3 초) Sway 묶음으로 돌아간다.
     for ( uint32 frame = 0; frame < 8; ++frame )
+    {
         system.evaluate( 0.05f );
+    }
     SW_EXPECT_TRUE( pAnimator->getCurrentStateName() == hashed_string( "Sway" ) );
     SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Shared );
     SW_ASSERT_NOT_NULL( pUnit->findCrowdBucket() );
@@ -252,7 +256,9 @@ SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
     AnimationLodState farState{};
     farState._bVertexAnimation = SW_TRUE;
     for ( SkeletalMeshComponent* pUnit : { pFarA, pFarB, pLeader } )
+    {
         pUnit->applyAnimationLod( farState );
+    }
     system.evaluate( 0.0f );
 
     SW_EXPECT_TRUE( pFarA->getCrowdMode() == AnimationCrowdMode::VertexAnimation );
@@ -314,7 +320,9 @@ SW_TEST_CASE( AnimationCrowdTest, VertexAnimationBakeMatchesSkinning )
     skinAt( 0.3f, listExpected );
     float32 maxError = 0.0f;
     for ( uint32 vertexIndex = 0; vertexIndex < animation._vertexCount; ++vertexIndex )
+    {
         maxError = MathUtil::max( maxError, ( animation.samplePosition( 0.3f, vertexIndex ) - listExpected[vertexIndex] ).getLength() );
+    }
     SW_EXPECT_TRUE( maxError < 1e-4f );
     // 표가 레스트 포즈가 아니다(클립이 정점을 옮겼다).
     float32 maxMove = 0.0f;
@@ -337,7 +345,9 @@ SW_TEST_CASE( AnimationCrowdTest, VertexAnimationBakeMatchesSkinning )
         float3{ 0.0f,  0.0f,  -1.0f}
     };
     for ( const float3& normal : arrNormal )
+    {
         SW_EXPECT_TRUE( normal.dot( MeshVertexAnimation::unpackNormal( MeshVertexAnimation::packNormal( normal ) ) ) > 0.9998f );
+    }
 }
 
 /**

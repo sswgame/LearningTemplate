@@ -283,7 +283,9 @@ namespace test
             using namespace sw;
             ILocalStore& store = fixture.getStore();
             for ( int32 index = 0; index < 20; ++index )
+            {
                 (void)store.submitWrite( "flush", vector<uint8>{ static_cast<uint8>( index ) }, LocalStoreWriteOptions{} );
+            }
             store.shutdown(); // 남은 쓰기를 끝까지
             vector<LocalStoreCompletion> listCompletion;
             (void)store.pollCompletions( listCompletion );

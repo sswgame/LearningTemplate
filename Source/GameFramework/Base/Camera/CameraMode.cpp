@@ -122,7 +122,9 @@ namespace sw
         }
         target._focus = ( boundsMin + boundsMax ) * 0.5f;
         for ( uint32 index = 0; index < pointCount; ++index )
+        {
             target._groupRadius = MathUtil::max( target._groupRadius, ( pPoint[index] - target._focus ).getLength() );
+        }
         return target;
     }
 

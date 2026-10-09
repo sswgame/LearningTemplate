@@ -34,7 +34,9 @@ namespace sw
         {
             uint32 index{ 0 };
             while ( pStamp[index] != '\0' && pStamp[index] != 'v' )
+            {
                 ++index;
+            }
             if ( pStamp[index] == 'v' )
                 ++index;
             uint32 version{ 0 };

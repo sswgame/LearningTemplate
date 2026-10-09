@@ -96,7 +96,9 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
     pair.step( 2 );
     const vector<uint8> body( 1000, 0x42 );
     for ( int32 index = 0; index < 40; ++index )
+    {
         (void)pair._client.sendMessage( pair._clientHandle, body.data(), 1000 );
+    }
     for ( int32 index = 0; index < 20; ++index ) // 서버는 pump 하지 않고 전송만 돈다
     {
         (void)pair._serverTransport->pollIo( 0 );
@@ -118,7 +120,9 @@ SW_TEST_CASE( StreamEndpointTest, PingMeasuresRoundTripAndFailedConnectStillClos
     test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{} );
     const Deadline           deadline = Deadline::afterMilliseconds( 2000 );
     while ( pair._client.getRoundTripSeconds( pair._clientHandle ) < 0.0 && deadline.isExpired() == false )
+    {
         pair.step( 1 );
+    }
     SW_EXPECT_TRUE( pair._client.getRoundTripSeconds( pair._clientHandle ) >= 0.0 );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( clientRecord._listMessage.size() ) ); // 핑 · 퐁은 리스너에 오지 않는다
 

@@ -185,7 +185,9 @@ namespace
             {
                 _nowMs += 20;
                 for ( ClientSide* pClient : _listClient )
+                {
                     pClient->_client.tick( _nowMs );
+                }
                 if ( _server != nullptr )
                     _server->_host.tick( _nowMs );
             }
@@ -194,7 +196,9 @@ namespace
         bool waitReady( ClientSide& client )
         {
             for ( int32 attempt = 0; attempt < 400 && client._client.isReady() == false; ++attempt )
+            {
                 step();
+            }
             return client._client.isReady();
         }
 
@@ -467,7 +471,9 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
         vector<LocalStoreCompletion> listCompletion;
         (void)localStore.pollCompletions( listCompletion );
         for ( const LocalStoreCompletion& completion : listCompletion )
+        {
             (void)firstSecret.handleCompletion( completion );
+        }
     }
     SW_ASSERT_TRUE( firstSecret.getState() == AccountDeviceSecretState::Ready );
     AccountDeviceSecret again; // 다음 실행 — 같은 비밀을 읽는다
@@ -475,7 +481,9 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     vector<LocalStoreCompletion> listCompletion;
     (void)localStore.pollCompletions( listCompletion );
     for ( const LocalStoreCompletion& completion : listCompletion )
+    {
         (void)again.handleCompletion( completion );
+    }
     SW_ASSERT_TRUE( again.getState() == AccountDeviceSecretState::Ready );
     SW_EXPECT_EQUAL( 0, Memory::compare( firstSecret.getSecret(), again.getSecret(), LoginConstant::kDeviceSecretSize ) );
 

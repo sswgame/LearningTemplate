@@ -61,7 +61,9 @@ namespace sw
         const int32 teamCount = MathUtil::min( static_cast<int32>( snapshot._listTeamGauge.size() ), Internal::kMaxCount );
         outWriter.writeInt( teamCount, 0, Internal::kMaxCount );
         for ( int32 index = 0; index < teamCount; ++index )
+        {
             outWriter.writeVarInt( snapshot._listTeamGauge[static_cast<size_t>( index )] );
+        }
 
         const int32 pilotCount = MathUtil::min( static_cast<int32>( snapshot._listPilot.size() ), Internal::kMaxCount );
         outWriter.writeInt( pilotCount, 0, Internal::kMaxCount );
@@ -117,7 +119,9 @@ namespace sw
             return false;
         outSnapshot._listTeamGauge.resize( static_cast<size_t>( teamCount ) );
         for ( int32& gauge : outSnapshot._listTeamGauge )
+        {
             gauge = static_cast<int32>( reader.readVarInt() );
+        }
 
         const int32 pilotCount = reader.readInt( 0, Internal::kMaxCount );
         if ( reader.hasOverflowed() )

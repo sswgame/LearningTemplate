@@ -62,7 +62,9 @@ namespace sw
                 ~SqliteConnection() override
                 {
                     for ( auto& [sql, pStatement] : _mapStatement )
+                    {
                         sqlite3_finalize( pStatement );
+                    }
                     sqlite3_close_v2( _pDatabase );
                 }
 
@@ -75,7 +77,9 @@ namespace sw
                     if ( pStatement == nullptr )
                         return fail( SqlResult::Error );
                     for ( int32 paramIndex = 0; paramIndex < paramCount; ++paramIndex )
+                    {
                         bindValue( pStatement, paramIndex + 1, pParam[paramIndex] );
+                    }
                     int32 code = sqlite3_step( pStatement );
                     while ( code == SQLITE_ROW )
                     {

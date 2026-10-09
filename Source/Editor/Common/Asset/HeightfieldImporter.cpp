@@ -44,7 +44,9 @@ namespace sw::editor
                 outData._resolution = side;
                 outData._listHeight.resize( sampleCount );
                 for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+                {
                     outData._listHeight[sampleIndex] = static_cast<uint16>( bytes[sampleIndex * 2] | ( bytes[sampleIndex * 2 + 1] << 8 ) );
+                }
                 return true;
             }
 

@@ -50,7 +50,9 @@ namespace sw
             {
                 int32 sibling = parentNode._firstChild;
                 while ( _listNode[static_cast<size_t>( sibling )]._nextSibling >= 0 )
+                {
                     sibling = _listNode[static_cast<size_t>( sibling )]._nextSibling;
+                }
                 _listNode[static_cast<size_t>( sibling )]._nextSibling = index;
             }
         }
@@ -171,7 +173,9 @@ namespace sw
             const BehaviorNode& node       = getNode( index );
             int32               childCount = 0;
             for ( int32 child = node._firstChild; child >= 0; child = getNode( child )._nextSibling )
+            {
                 ++childCount;
+            }
             const bool bComposite = node._type == BehaviorNodeType::Selector || node._type == BehaviorNodeType::Sequence;
             const bool bLeaf      = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition || node._type == BehaviorNodeType::Wait;
             if ( bComposite && childCount == 0 )
@@ -298,7 +302,9 @@ namespace sw
             return;
         const BehaviorNode& node = _pTree->getNode( index );
         for ( int32 child = node._firstChild; child >= 0; child = _pTree->getNode( child )._nextSibling )
+        {
             abortNode( child );
+        }
         if ( node._type == BehaviorNodeType::Action && node._function != nullptr )
         {
             _context._nodeIndex    = index;
@@ -325,7 +331,9 @@ namespace sw
             {
                 int32 child = node._firstChild;
                 for ( int32 skip = 0; skip < cursor && child >= 0; ++skip )
+                {
                     child = _pTree->getNode( child )._nextSibling;
+                }
                 status = BehaviorStatus::Success;
                 while ( child >= 0 )
                 {
@@ -346,7 +354,9 @@ namespace sw
                 const int32 start = ( node._bReactive != SW_FALSE ) ? 0 : cursor;
                 int32       child = node._firstChild;
                 for ( int32 skip = 0; skip < start && child >= 0; ++skip )
+                {
                     child = _pTree->getNode( child )._nextSibling;
+                }
                 status = BehaviorStatus::Failure;
                 for ( int32 order = start; child >= 0; ++order, child = _pTree->getNode( child )._nextSibling )
                 {
@@ -357,7 +367,9 @@ namespace sw
                     {
                         int32 running = node._firstChild;
                         for ( int32 skip = 0; skip < cursor && running >= 0; ++skip )
+                        {
                             running = _pTree->getNode( running )._nextSibling;
+                        }
                         if ( running >= 0 && running != child )
                             abortNode( running );
                         cursor = order;

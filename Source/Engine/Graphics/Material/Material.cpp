@@ -237,7 +237,9 @@ namespace sw
         {
             TextureCache& textures = engine::getAssetManager().getTextureManager();
             for ( const string& path : _listBorrowedTexturePath )
+            {
                 textures.release( path, pRhi );
+            }
         }
         _listAcquiredTexturePath.clear();
         _listBorrowedTexturePath.clear();
@@ -497,7 +499,9 @@ namespace sw
         }
         _data._bytes.assign( maxEnd, 0 );
         for ( MaterialProperty& prop : _data._listProperty )
+        {
             MaterialUtil::packPropertyIntoBuffer( prop, _data._bytes );
+        }
 
         const uint32 alignedTotal = MathUtil::align( static_cast<uint32>( _data._bytes.size() ), 256u );
         _data._bytes.resize( alignedTotal, 0 );

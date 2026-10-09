@@ -243,7 +243,9 @@ namespace sw
     {
         bool bAll = true;
         for ( const NavTileData& tile : listTile )
+        {
             bAll = navMesh.replaceTile( tile ) && bAll;
+        }
         return bAll;
     }
 

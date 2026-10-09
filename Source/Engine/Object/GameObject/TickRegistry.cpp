@@ -115,7 +115,9 @@ namespace sw
                 unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapLookup;
                 mapLookup.reserve( count );
                 for ( size_t index = 0; index < count; ++index )
+                {
                     mapLookup[SubTickHandle{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId, 0 }] = index;
+                }
 
                 outListAdjacent.assign( count, vector<size_t>{} );
                 outListInDegree.assign( count, 0 );
@@ -373,10 +375,14 @@ namespace sw
         {
             const uint32 begin = cursor;
             while ( cursor < listItem.size() && listItem[cursor]._group == group && listItem[cursor]._bHasPrerequisite == SW_FALSE )
+            {
                 ++cursor;
+            }
             const uint32 end = cursor;
             while ( cursor < listItem.size() && listItem[cursor]._group == group )
+            {
                 ++cursor;
+            }
             TickObjectEntry entry{};
             if ( begin < end )
             {
@@ -429,7 +435,9 @@ namespace sw
         if ( pObj == nullptr )
             return;
         for ( uint32 group = 0; group < kGroupCount; ++group )
+        {
             setMembership( pObj, group, false, TickObjectEntry{} );
+        }
         const uint64 objectId = pObj->getObjectId();
         // 스테이지가 이 오브젝트의 항목을 들고 있거나(선행 조건을 가진 쪽) 이 오브젝트를 기다린다(가리켜진 쪽) — 다음 틱 전에 다시 짓는다.
         if ( _uniqueDependentObjectId.erase( objectId ) > 0 || _uniqueReferencedObjectId.contains( objectId ) )
@@ -442,7 +450,9 @@ namespace sw
     void TickRegistry::clear()
     {
         for ( vector<TickObjectEntry>& listEntry : _arrListEntry )
+        {
             listEntry.clear();
+        }
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };
             _listDirtyObjectId.clear();
@@ -499,7 +509,9 @@ namespace sw
         unordered_map<SubTickHandle, size_t, SubTickHandleHash> mapCandidate;
         mapCandidate.reserve( listCandidate.size() );
         for ( size_t index = 0; index < listCandidate.size(); ++index )
+        {
             mapCandidate[SubTickHandle{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId, 0 }] = index;
+        }
         for ( TickRegistryInternal::StageCandidate& candidate : listCandidate )
         {
             for ( const SubTickHandle& prerequisite : *candidate._pListPrerequisite )

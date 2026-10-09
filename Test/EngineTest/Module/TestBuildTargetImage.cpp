@@ -39,7 +39,9 @@ namespace
         {
             size_t matched = 0;
             while ( matched < text.size() && StringUtil::toLowerChar( haystack[index + matched] ) == StringUtil::toLowerChar( text[matched] ) )
+            {
                 ++matched;
+            }
             if ( matched == text.size() )
                 return true;
         }
@@ -123,6 +125,8 @@ SW_TEST_CASE( BuildTargetImageTest, ServerImageHasTheMarkerAndNoGraphicsLibrary 
         vector<uint8> bytes;
         SW_ASSERT_TRUE( FileUtil::readFile( imagePath, bytes ) );
         for ( const utf8* pLibrary : kArrGraphicsLibrary )
+        {
             SW_EXPECT_FALSE_MSG( containsText( bytes, pLibrary, true ), ( imagePath + " links " + pLibrary ).c_str() );
+        }
     }
 }

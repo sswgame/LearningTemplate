@@ -127,7 +127,9 @@ namespace sw
         outArchive << _bHumanPlayer;
         _world.writeState( outArchive );
         for ( const Wallet& wallet : _arrWallet )
+        {
             wallet.writeState( outArchive );
+        }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( _arrAiActive[player] == SW_TRUE )
@@ -217,10 +219,14 @@ namespace sw
         // 본진(8..11, 8..11) · 뒤쪽 광물 줄(x 3, y 6..13) · 아래 간헐천(8..9, 2..3) · 사이에 일꾼 넷.
         (void)spawnAt( "command_center", player, 8, 8, bMirror );
         for ( int32 y = 6; y <= 13; ++y )
+        {
             spawnResource( "minerals", 3, y, bMirror );
+        }
         spawnResource( "geyser", 8, 2, bMirror );
         for ( int32 index = 0; index < 4; ++index )
+        {
             (void)spawnAt( "worker", player, 6, 8 + index, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
+        }
 
         // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).
         const RtsPlayer*  pPlayer = _world.findPlayer( player );

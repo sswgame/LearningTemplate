@@ -544,7 +544,9 @@ namespace sw
             {
                 listCarried[cursor]._pSource->getChildren( listChild );
                 for ( GameObject* pChild : listChild )
+                {
                     listCarried.push_back( CarriedObject{ pChild } );
+                }
             }
 
             // 상태를 모두 찍은 뒤에 만든다 — 만드는 동안 원본은 그대로다.

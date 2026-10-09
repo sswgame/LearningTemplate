@@ -79,10 +79,14 @@ namespace sw
         for ( int32 row = 0; row < KlondikeState::kColumnCount; ++row )
         {
             for ( int32 column = row; column < KlondikeState::kColumnCount; ++column )
+            {
                 (void)remaining.drawInto( state._arrTableau[column], 1 );
+            }
         }
         for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
+        {
             state._arrFaceDownCount[column] = MathUtil::max( 0, state._arrTableau[column].getCount() - 1 );
+        }
         state._stock = remaining;
         initializeFromState( settings, state );
     }
@@ -205,9 +209,13 @@ namespace sw
         pushHistory();
         CardPile& source = _state._arrTableau[fromColumn];
         for ( int32 index = baseIndex; index < source.getCount(); ++index )
+        {
             _state._arrTableau[toColumn].push( source.getAt( index ) );
+        }
         while ( source.getCount() > baseIndex )
+        {
             (void)source.removeAt( source.getCount() - 1 ); // 카드는 위에서 옮겼다 — 뺀 카드는 버린다
+        }
         revealColumnTop( fromColumn );
         return true;
     }

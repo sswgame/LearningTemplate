@@ -139,9 +139,13 @@ namespace sw
         out.append( "Usage: ReflectionParser --input <header.h> ... --output <dir> --annotation-meta <file> --emit-templates <dir> [...]\n" );
         out.append( "   or: ReflectionParser --builtins <file> --emit-templates <dir> --emit-builtins-gen <file.cpp>\n" );
         for ( const OptionRow& row : kArrOptionRow )
+        {
             out.appendFormat( "  %# %#  %#\n", row._pFlag, row._pValueName, row._pHelp );
+        }
         for ( const SwitchRow& row : kArrSwitchRow )
+        {
             out.appendFormat( "  %#  %#\n", row._pFlag, row._pHelp );
+        }
         std::fwrite( out.c_str(), 1, out.size(), stdout );
         std::fflush( stdout );
     }

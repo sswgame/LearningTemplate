@@ -158,7 +158,9 @@ namespace sw
         vector<ReflectValue> listArg;
         listArg.reserve( listArgText.size() );
         for ( const string& text : listArgText )
+        {
             listArg.push_back( ReflectValue::makeText( text ) );
+        }
         return call( function, pInstance, listArg, pOutResult );
     }
 

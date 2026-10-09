@@ -227,7 +227,9 @@ namespace
         void settle()
         {
             for ( uint32 frame = 0; frame < UiDeterminismTestUtil::kSettleFrames; ++frame )
+            {
                 runFrame();
+            }
         }
 
         /** @brief 견본을 엽니다. 연 화면의 핸들입니다. */
@@ -385,10 +387,14 @@ namespace
         {
             sw::unique_ptr<sw::Widget> arrCell[kCellCount];
             for ( const uint32 cell : arrCreateOrder )
+            {
                 arrCell[cell] = makeCell( cell );
+            }
             sw::unique_ptr<sw::CanvasPanel> root = sw::make_unique<sw::CanvasPanel>();
             for ( sw::unique_ptr<sw::Widget>& cell : arrCell )
+            {
                 (void)root->addChild( std::move( cell ) );
+            }
             sw::UiScreenDesc desc{};
             desc._layer = sw::UiLayer::Hud;
             return sw::make_unique<sw::UiScreen>( desc, std::move( root ) );
@@ -425,7 +431,9 @@ SW_TEST_CASE( UiDeterminismTest, RebuildGivesSameDump )
 {
     for ( const UiDeterminismSample sample :
           { UiDeterminismSample::Pause, UiDeterminismSample::Options, UiDeterminismSample::Hud, UiDeterminismSample::Notifications } )
+    {
         UiDeterminismSampleUtil::expectRebuildIsSame( sample );
+    }
 }
 
 /**

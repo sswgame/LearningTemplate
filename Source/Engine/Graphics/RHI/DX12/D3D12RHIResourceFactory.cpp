@@ -257,7 +257,9 @@ namespace sw
         constexpr uint32 kCopyAlignment = 4;
         uint32           totalSize      = 0;
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
+        {
             totalSize += MathUtil::align( pRegions[regionIndex]._size, kCopyAlignment );
+        }
         if ( totalSize == 0 )
             return;
 
@@ -377,7 +379,9 @@ namespace sw
             uint8*                                    pDstBase  = static_cast<uint8*>( pMapped ) + footprint.Offset;
             const uint32                              rowBytes  = MathUtil::min( span._rowBytes, static_cast<uint32>( arrRowSize[mip] ) );
             for ( uint32 row = 0; row < arrRowCount[mip]; ++row )
+            {
                 Memory::copy( pDstBase + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, span._pData + static_cast<uint64>( row ) * span._rowBytes, rowBytes );
+            }
         }
 
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
@@ -447,7 +451,9 @@ namespace sw
         uint8*       pDstBase = static_cast<uint8*>( pMapped ) + stagingOffset;
         const uint8* pSrcBase = static_cast<const uint8*>( desc._pData );
         for ( uint32 row = 0; row < desc._height; ++row )
+        {
             Memory::copy( pDstBase + static_cast<uint64>( row ) * rowPitch, pSrcBase + static_cast<uint64>( row ) * rowBytes, rowBytes );
+        }
 
         D3D12RHIDevice::StructuredUploadSlot& slot  = _pDevice->_arrStructuredUploadSlot[slotIndex];
         ID3D12GraphicsCommandList*            pList = slot._copyCommandList.Get();
@@ -578,8 +584,10 @@ namespace sw
         outBytes.assign( outLayout._sizeBytes, 0 );
         const uint32 copyRowBytes = MathUtil::min( outLayout._rowBytes, static_cast<uint32>( rowSize ) );
         for ( uint32 row = 0; row < rowCount; ++row )
+        {
             Memory::copy( outBytes.data() + static_cast<uint64>( row ) * outLayout._rowBytes,
                           static_cast<const uint8*>( pMapped ) + footprint.Offset + static_cast<uint64>( row ) * footprint.Footprint.RowPitch, copyRowBytes );
+        }
         D3D12_RANGE noWrite{ 0, 0 };
         readback->Unmap( 0, &noWrite );
         return true;
@@ -858,9 +866,13 @@ namespace sw
                 if ( it->second._bHasDsv != SW_FALSE )
                     _pDevice->_listFreeOffscreenDsvIndex.push_back( it->second._dsvIndex );
                 for ( const uint32 rtvIndex : it->second._listExtraRtvIndex )
+                {
                     _pDevice->_listFreeOffscreenRtvIndex.push_back( rtvIndex - offscreenRtvBase );
+                }
                 for ( const uint32 dsvIndex : it->second._listExtraDsvIndex )
+                {
                     _pDevice->_listFreeOffscreenDsvIndex.push_back( dsvIndex );
+                }
                 _pDevice->_mapOffscreenTexture.erase( it );
             }
         }

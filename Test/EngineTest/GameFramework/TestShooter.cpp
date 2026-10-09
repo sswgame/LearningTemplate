@@ -168,7 +168,9 @@ SW_TEST_CASE( ShooterTest, FireRateDoesNotDependOnFrameRate )
     const float32 seconds = 10.0f;
     const float32 design  = seconds / rifle._fireInterval; // 105.26 발
     for ( const float32 framesPerSecond : { 30.0f, 60.0f, 144.0f } )
+    {
         SW_EXPECT_NEAR_EQUAL( design, static_cast<float32>( countShotsHeldFor( rifle, framesPerSecond, seconds ) ), 1.0f );
+    }
 
     // 간격보다 긴 프레임(5 fps · 200 ms)은 프레임마다 한 발 — 50 발이고 따라잡으려 몰아 쏘지 않는다.
     SW_EXPECT_EQUAL( 50, countShotsHeldFor( rifle, 5.0f, seconds ) );
@@ -179,7 +181,9 @@ SW_TEST_CASE( ShooterTest, FireRateDoesNotDependOnFrameRate )
     WeaponShot    shot;
     const GameRay aim = makeForwardRay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
+    {
         state.update( 0.05f );
+    }
     SW_EXPECT_TRUE( state.pullTrigger( aim, true, shot ) == WeaponFireResult::Fired );
     state.update( 0.05f );
     SW_EXPECT_TRUE( state.pullTrigger( aim, false, shot ) == WeaponFireResult::Cooling );

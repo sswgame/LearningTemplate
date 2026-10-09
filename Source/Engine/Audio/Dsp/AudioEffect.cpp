@@ -163,7 +163,9 @@ namespace sw
                     // 창(최근 window + 1 샘플)의 최솟값 — 단조 덱. 늦춘 샘플(window 전)까지 창에 들어야 평균이 그 샘플의 필요 게인 이하다.
                     const uint64 index = _sampleIndex;
                     while ( _minCount > 0 && _listMinValue[( _minHead + _minCount - 1 ) % _listMinValue.size()] >= required )
+                    {
                         --_minCount;
+                    }
                     _listMinValue[( _minHead + _minCount ) % _listMinValue.size()] = required;
                     _listMinIndex[( _minHead + _minCount ) % _listMinIndex.size()] = index;
                     ++_minCount;
@@ -263,9 +265,13 @@ namespace sw
                 for ( uint32 channel = 0; channel < 2; ++channel )
                 {
                     for ( uint32 combIndex = 0; combIndex < kCombCount; ++combIndex )
+                    {
                         _arrComb[channel][combIndex]._listBuffer.assign( scaleLength( kArrCombTuning[combIndex] + channel * kStereoSpread ), 0.0f );
+                    }
                     for ( uint32 allpassIndex = 0; allpassIndex < kAllpassCount; ++allpassIndex )
+                    {
                         _arrAllpass[channel][allpassIndex]._listBuffer.assign( scaleLength( kArrAllpassTuning[allpassIndex] + channel * kStereoSpread ), 0.0f );
+                    }
                 }
                 _listPreDelay.assign( static_cast<size_t>( audio::kSampleRate / 5 + 1 ) * 2, 0.0f );
                 onParameterChanged();
@@ -326,7 +332,9 @@ namespace sw
                         comb._filterStore = 0.0f;
                     }
                     for ( Allpass& allpass : _arrAllpass[channel] )
+                    {
                         allpass._listBuffer.assign( allpass._listBuffer.size(), 0.0f );
+                    }
                 }
                 _listPreDelay.assign( _listPreDelay.size(), 0.0f );
             }
@@ -532,7 +540,9 @@ namespace sw
     {
         _listParameter.reserve( typeInfo._parameterCount );
         for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
+        {
             _listParameter.push_back( typeInfo._pParameter[parameterIndex]._defaultValue );
+        }
     }
 
     int32 IAudioEffect::findParameterIndex( const hashed_string& name ) const

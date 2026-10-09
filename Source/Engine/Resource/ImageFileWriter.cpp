@@ -25,13 +25,17 @@ namespace sw
             static void appendUint32Le( vector<uint8>& inoutBytes, uint32 value )
             {
                 for ( uint32 shift = 0; shift < 32; shift += 8 )
+                {
                     inoutBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+                }
             }
 
             static void appendUint32Be( vector<uint8>& inoutBytes, uint32 value )
             {
                 for ( int32 shift = 24; shift >= 0; shift -= 8 )
+                {
                     inoutBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+                }
             }
 
             /** @brief PNG 청크 하나(길이 · 종류 · 내용 · CRC)를 붙입니다. CRC 는 종류 + 내용에 겁니다. */
@@ -41,7 +45,9 @@ namespace sw
                 vector<uint8> typeAndDataBytes;
                 typeAndDataBytes.reserve( dataBytes.size() + 4 );
                 for ( uint32 index = 0; index < 4; ++index )
+                {
                     typeAndDataBytes.push_back( static_cast<uint8>( pType[index] ) );
+                }
                 typeAndDataBytes.insert( typeAndDataBytes.end(), dataBytes.begin(), dataBytes.end() );
                 inoutBytes.insert( inoutBytes.end(), typeAndDataBytes.begin(), typeAndDataBytes.end() );
                 appendUint32Be( inoutBytes, StringUtil::computeCrc32( typeAndDataBytes.data(), typeAndDataBytes.size() ) );
@@ -73,15 +79,21 @@ namespace sw
         Internal::appendUint32Le( bytes, 0 );          // 깊이
         Internal::appendUint32Le( bytes, 1 );          // 밉 수
         for ( uint32 index = 0; index < 11; ++index )
+        {
             Internal::appendUint32Le( bytes, 0 ); // 예약
+        }
         Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatSize );
         Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatFourCcFlag );
         Internal::appendUint32Le( bytes, DdsFormat::kDx10FourCc );
         for ( uint32 index = 0; index < 5; ++index )
+        {
             Internal::appendUint32Le( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)
+        }
         Internal::appendUint32Le( bytes, Internal::kDdsCapsTexture );
         for ( uint32 index = 0; index < 4; ++index )
+        {
             Internal::appendUint32Le( bytes, 0 ); // caps2 · caps3 · caps4 · 예약
+        }
         Internal::appendUint32Le( bytes, Internal::kDxgiR8G8B8A8Unorm );
         Internal::appendUint32Le( bytes, Internal::kDimensionTexture2D );
         Internal::appendUint32Le( bytes, 0 ); // misc

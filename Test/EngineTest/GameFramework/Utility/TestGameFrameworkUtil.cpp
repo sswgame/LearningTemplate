@@ -51,7 +51,9 @@ namespace
             (void)sourceName;
             _itemCount = 0;
             for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+            {
                 ++_itemCount;
+            }
             return static_cast<uint32>( _itemCount );
         }
 
@@ -151,9 +153,13 @@ SW_TEST_CASE( GameFrameworkUtilTest, FixedStepTimerCarriesRemainderAndClampsFram
     int32          coarseSteps = 0;
     int32          fineSteps   = 0;
     for ( int32 frameIndex = 0; frameIndex < 30; ++frameIndex )
+    {
         coarseSteps += coarse.consume( 1.0f / 30.0f );
+    }
     for ( int32 frameIndex = 0; frameIndex < 144; ++frameIndex )
+    {
         fineSteps += fine.consume( 1.0f / 144.0f );
+    }
     SW_EXPECT_TRUE( MathUtil::abs( coarseSteps - fineSteps ) <= 1 );
 }
 
@@ -212,7 +218,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownRepeatRateDoesNotDependOnFrameRate
     const float32 interval = 0.095f;
     const float32 seconds  = 10.0f;
     for ( const float32 framesPerSecond : { 30.0f, 60.0f, 144.0f } )
+    {
         SW_EXPECT_NEAR_EQUAL( seconds / interval, static_cast<float32>( countRepeatsFor( interval, framesPerSecond, seconds ) ), 1.0f );
+    }
     SW_EXPECT_EQUAL( 50, countRepeatsFor( interval, 5.0f, seconds ) );
 }
 
@@ -231,7 +239,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
             const int32 stepCount  = static_cast<int32>( 10.0f / deltaTime + 0.5f );
             int32       placeCount = 0;
             for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+            {
                 placeCount += placeCooldown.tickRepeat( deltaTime, 0.25f, true ) ? 1 : 0;
+            }
             SW_EXPECT_NEAR_EQUAL( 41.0f, static_cast<float32>( placeCount ), 1.0f );
         }
     }
@@ -241,7 +251,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, CountdownTickRepeatKeepsTheHeldRate )
         swingCooldown.start( 0.75f );
         int32 swingCount = 0;
         for ( int32 stepIndex = 0; stepIndex < 50; ++stepIndex ) // 5 초 사정거리 밖
+        {
             swingCount += swingCooldown.tickRepeat( 0.1f, 1.5f, false ) ? 1 : 0;
+        }
         SW_EXPECT_EQUAL( 0, swingCount );
         SW_EXPECT_TRUE( swingCooldown.tickRepeat( 0.1f, 1.5f, true ) ); // 들어온 걸음에 한 번
         SW_EXPECT_FALSE( swingCooldown.tickRepeat( 0.1f, 1.5f, true ) );
@@ -278,7 +290,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, RateAccumulatorCarriesTheFractionAcrossStep
     {
         arrival.add( 0.25f ); // 2 진수로 정확한 몫 — 합이 정확히 25
         while ( arrival.takeOne() )
+        {
             ++arrivalCount;
+        }
     }
     SW_EXPECT_EQUAL( 25, arrivalCount );
     SW_EXPECT_TRUE( 0.0f <= arrival.getFraction() && arrival.getFraction() < 1.0f );
@@ -357,7 +371,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, GridTopologyAndSearchScratchReuseTheirStora
     SW_EXPECT_FALSE( search.isVisited( topology.toIndex( int2{ 1, 1 } ) ) );
     int32 pathLength = 0;
     for ( int32 index = topology.toIndex( int2{ 3, 2 } ); index >= 0; index = search.getParent( index ) )
+    {
         ++pathLength;
+    }
     SW_EXPECT_EQUAL( 6, pathLength );                // 맨해튼 5 걸음 + 시작 칸
     SW_EXPECT_EQUAL( 1, search.getVisitOrder()[1] ); // 첫 이웃은 +x 쪽
 
@@ -423,7 +439,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXmlReadsRootsIdsNumbersAndTokens )
     SW_ASSERT_TRUE( GameDataXml::parseRoot( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
     int32 idCount = 0;
     for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+    {
         idCount += GameDataXml::findRequiredId( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 1, idCount );
 
     const float4 color = GameDataXml::parseFloat4( "0.5, 0.25  1", float4{ 9.0f, 9.0f, 9.0f, 0.75f } );
@@ -469,7 +487,9 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
             (void)sourceName;
             _itemCount = 0;
             for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+            {
                 ++_itemCount;
+            }
             return static_cast<uint32>( _itemCount );
         }
         bool loadRootWithBonus( const XmlNode& root, const int32& bonus, string_view sourceName )

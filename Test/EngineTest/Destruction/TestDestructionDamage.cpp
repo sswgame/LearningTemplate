@@ -39,7 +39,9 @@ namespace
         {
             sw::vector<uint8> listAnchor( asset.getPieceCount(), 0 );
             for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
+            {
                 listAnchor[leaf] = asset._listPiece[leaf]._boundsMin._y < 0.01f ? 1 : 0;
+            }
             return listAnchor;
         }
 
@@ -56,7 +58,9 @@ namespace
         {
             uint32 count = 0;
             for ( const sw::DestructionGroup& group : state.getGroups() )
+            {
                 count += static_cast<uint32>( group._listNode.size() );
+            }
             return count;
         }
 
@@ -104,7 +108,9 @@ SW_TEST_CASE( DestructionDamageTest, StrainAccumulatesAndOpensLevelsProgressivel
     SW_EXPECT_TRUE( change.hasGroupChange() );
     uint32 freeLeafCount = 0;
     for ( const sw::DestructionGroup& group : state.getGroups() )
+    {
         freeLeafCount += group._bAnchored == SW_FALSE ? group._leafCount : 0u;
+    }
     SW_EXPECT_TRUE( freeLeafCount >= 1 );
 }
 
@@ -172,7 +178,9 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     log._listEvent.push_back( Internal::makeHit( sw::float3{ 0.0f, 0.5f, 0.0f }, 300.0f, 1.2f, sw::DestructionDamageKind::Radial ) );
     sw::DestructionChange change;
     for ( const sw::DestructionDamageEvent& event : log._listEvent )
+    {
         (void)server.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
+    }
 
     sw::vector<uint8> bytes;
     log.makeBytes( bytes );
@@ -183,7 +191,9 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     sw::DestructionState client;
     client.initialize( asset._graph, Internal::makeProfile(), anchors );
     for ( const sw::DestructionDamageEvent& event : received._listEvent )
+    {
         (void)client.applyDamage( event, change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
+    }
     SW_EXPECT_EQUAL( server.computeStateHash(), client.computeStateHash() );
     SW_EXPECT_EQUAL( 3u, client.getEventCount() );
     SW_EXPECT_TRUE( server.getGroups().size() > 1 );
@@ -192,7 +202,9 @@ SW_TEST_CASE( DestructionDamageTest, SameEventLogGivesTheSameStateOnAnotherMachi
     sw::DestructionState reordered;
     reordered.initialize( asset._graph, Internal::makeProfile(), anchors );
     for ( size_t index = received._listEvent.size(); index > 0; --index )
+    {
         (void)reordered.applyDamage( received._listEvent[index - 1], change ); // 바뀜 여부는 보지 않는다 — 아래 상태 해시로 비교한다
+    }
     SW_EXPECT_NOT_EQUAL( server.computeStateHash(), reordered.computeStateHash() );
 
     test::ScopedDefensiveTestLog expected( "a truncated or foreign event log is rejected" );
@@ -234,13 +246,17 @@ SW_TEST_CASE( DestructionDamageTest, EventLogHashMatchesTheRecordedValueOnEveryB
     if ( pPrint != nullptr && pPrint[0] == '1' )
     {
         for ( size_t index = 0; index < listHash.size(); ++index )
+        {
             std::fprintf( stdout, "golden[%zu] = 0x%016" PRIX64 "ull\n", index, listHash[index] );
+        }
     }
     // Windows Debug 에서 뜬 값 — Windows Shipping 에서도 같다(적용 때 확인). 리눅스는 CI 의 리눅스 잡이 지킨다.
     constexpr uint64 kArrGolden[] = { 0xCB9A665FA74275FEull, 0xDACF675D07084B52ull, 0x349FA0F7E0A77667ull, 0xC2948E404FB7B710ull, 0x417A0BF6BAD099C0ull };
     SW_ASSERT_EQUAL( sizeof( kArrGolden ) / sizeof( kArrGolden[0] ), listHash.size() );
     for ( size_t index = 0; index < listHash.size(); ++index )
+    {
         SW_EXPECT_TRUE_MSG( kArrGolden[index] == listHash[index], "destruction hash differs from the recorded value - a compiler or build setting changed the arithmetic" );
+    }
 }
 
 /**

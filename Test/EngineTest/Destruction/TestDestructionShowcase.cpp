@@ -21,7 +21,9 @@ namespace
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( 1.0f / 60.0f );
+            }
         }
     };
 } // namespace

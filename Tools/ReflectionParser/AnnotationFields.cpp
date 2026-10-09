@@ -83,7 +83,9 @@ namespace sw
                 emit.linef( "%#_mapCustomMeta = {", prefix );
                 emit.push();
                 for ( const auto& [key, val] : listPair )
+                {
                     emit.linef( "{ %#, %# },", CodeEmit::hs( key ), CodeEmit::quoted( val ) );
+                }
                 emit.pop();
                 emit.line( "};" );
             }

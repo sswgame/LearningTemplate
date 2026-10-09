@@ -69,7 +69,9 @@ namespace sw
     {
         float32 multiplier = 1.0f;
         for ( const hashed_string& defend : listDefend )
+        {
             multiplier *= getMultiplier( attack, defend );
+        }
         return multiplier;
     }
 

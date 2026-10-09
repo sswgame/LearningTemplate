@@ -69,7 +69,9 @@ namespace sw
             for ( int32 y = 0; y < grid.getHeight(); ++y )
             {
                 for ( int32 x = 0; x < grid.getWidth(); ++x )
+                {
                     minCost = MathUtil::min( minCost, grid.getCost( x, y ) );
+                }
             }
             _minCellCost = static_cast<float32>( minCost == kNavBlockedCost ? 1 : minCost );
         }
@@ -210,14 +212,18 @@ namespace sw
         outListPoint.clear();
         outListPoint.reserve( listCell.size() );
         for ( const int2& cell : listCell )
+        {
             outListPoint.push_back( grid.computeCellCenter( cell ) );
+        }
     }
 
     float32 GridPathfinder::computePathLength( const NavGrid& grid, const vector<int2>& listCell )
     {
         float32 length = 0.0f;
         for ( size_t cellIndex = 1; cellIndex < listCell.size(); ++cellIndex )
+        {
             length += float3::getDistance( grid.computeCellCenter( listCell[cellIndex - 1] ), grid.computeCellCenter( listCell[cellIndex] ) );
+        }
         return length;
     }
 } // namespace sw

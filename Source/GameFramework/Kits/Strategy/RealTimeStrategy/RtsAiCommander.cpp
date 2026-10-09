@@ -256,7 +256,9 @@ namespace sw
         } );
         bool bTrained = false;
         for ( const RtsUnitId producerId : listIdleProducer )
+        {
             bTrained = world.train( producerId, self._settings._armyUnitId ) == RtsCommandResult::Ok || bTrained;
+        }
         return bTrained ? BehaviorStatus::Success : BehaviorStatus::Failure;
     }
 

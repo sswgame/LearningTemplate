@@ -122,7 +122,9 @@ namespace sw
 
         _listJoltMaterial.reserve( _settings._listMaterial.size() );
         for ( const PhysicsMaterialDef& material : _settings._listMaterial )
+        {
             _listJoltMaterial.push_back( JPH::Ref<JoltPhysicsMaterial>{ JoltUtil::createObject<JoltPhysicsMaterial>( material._name, material._friction, material._restitution ) } );
+        }
     }
 
     JoltPhysicsScene::~JoltPhysicsScene()
@@ -195,7 +197,9 @@ namespace sw
             const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyId ) == false;
             const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
             for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
+            {
                 PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
+            }
         } );
         _characters.forEachHandle( [&]( SlotHandle, const CharacterRecord& record )
         {
@@ -268,7 +272,9 @@ namespace sw
                 JPH::Array<JPH::Vec3> listPoint;
                 listPoint.reserve( shape._listPoint.size() );
                 for ( const float3& point : shape._listPoint )
+                {
                     listPoint.push_back( JoltUtil::toJolt( point ) );
+                }
                 JPH::ConvexHullShapeSettings settings{ listPoint, JPH::cDefaultConvexRadius, pMaterial };
                 settings.SetEmbedded();
                 settings.SetDensity( material._density );
@@ -280,11 +286,15 @@ namespace sw
                 JPH::VertexList listVertex;
                 listVertex.reserve( shape._listPoint.size() );
                 for ( const float3& point : shape._listPoint )
+                {
                     listVertex.push_back( JPH::Float3{ point._x, point._y, point._z } );
+                }
                 JPH::IndexedTriangleList listTriangle;
                 listTriangle.reserve( shape._listIndex.size() / 3 );
                 for ( size_t index = 0; index + 2 < shape._listIndex.size(); index += 3 )
+                {
                     listTriangle.push_back( JPH::IndexedTriangle{ shape._listIndex[index], shape._listIndex[index + 1], shape._listIndex[index + 2], 0 } );
+                }
                 JPH::PhysicsMaterialList listMaterial;
                 listMaterial.push_back( pMaterial );
                 JPH::MeshShapeSettings settings{ std::move( listVertex ), std::move( listTriangle ), std::move( listMaterial ) };
@@ -559,7 +569,9 @@ namespace sw
             }
         } );
         for ( const PhysicsJointHandle& joint : listDoomed )
+        {
             destroyJoint( joint );
+        }
         // 차체가 지워지는 바퀴 차도 함께.
         vector<PhysicsVehicleHandle> listDoomedVehicle;
         _vehicles.forEachHandle( [&]( SlotHandle slot, const VehicleRecord& vehicle )
@@ -574,7 +586,9 @@ namespace sw
             }
         } );
         for ( const PhysicsVehicleHandle& vehicle : listDoomedVehicle )
+        {
             destroyVehicle( vehicle );
+        }
     }
 
     void JoltPhysicsScene::destroyBodies( span<const PhysicsBodyHandle> listBody )
@@ -852,7 +866,9 @@ namespace sw
             JPH::EstimateCollisionResponse( bodyA, bodyB, manifold, estimate, ioSettings.mCombinedFriction, ioSettings.mCombinedRestitution );
             float32 impulse = 0.0f;
             for ( const float32 contactImpulse : estimate.mContactImpulse )
+            {
                 impulse += contactImpulse;
+            }
             report._impulse = impulse;
         }
         std::scoped_lock<mutex> lock{ _reportMutex };

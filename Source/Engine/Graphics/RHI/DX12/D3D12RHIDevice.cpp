@@ -249,7 +249,9 @@ namespace sw
                 continue;
             }
             for ( const uint32 block : batch._listBlock )
+            {
                 _listFreeOnlineBlock.push_back( block );
+            }
             batch._listBlock.clear();
             _listOnlineRecyclePool.push_back( std::move( batch._listBlock ) );
             VectorUtil::removeAtSwap( _listPendingOnlineRecycle, index );

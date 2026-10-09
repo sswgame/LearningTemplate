@@ -57,7 +57,9 @@ namespace
         bytes.insert( bytes.end(), { 'd', 'a', 't', 'a' } );
         appendUint32( dataByteCount );
         for ( uint32 byteIndex = 0; byteIndex < dataByteCount; ++byteIndex )
+        {
             bytes.push_back( static_cast<uint8>( byteIndex ) );
+        }
 
         return sw::FileUtil::writeFile( path, bytes.data(), bytes.size() );
     }
@@ -76,7 +78,9 @@ namespace
         auto              appendUint32 = [&bytes]( uint32 value )
         {
             for ( uint32 shift = 0; shift < 32; shift += 8 )
+            {
                 bytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+            }
         };
         auto appendUint16 = [&bytes]( uint16 value )
         {
@@ -383,7 +387,9 @@ SW_TEST_CASE( AudioSystemTest, ShutdownWhileDecodeTasksAreStillInFlight )
         SW_ASSERT_TRUE( pAudioSystem->initialize() );
 
         for ( int32 playIndex = 0; playIndex < kPlayCount; ++playIndex )
+        {
             pAudioSystem->play( listWavPath[static_cast<size_t>( playIndex )] );
+        }
 
         // **일부러 기다리지 않는다.** 디코드 태스크가 도는 채로 내리는 것이 이 케이스의 전부다.
         pAudioSystem->shutdown();
@@ -539,7 +545,9 @@ SW_TEST_CASE( AudioSystemTest, OggWithOutOfPacketCommentLengthsIsRejected )
     {
         sw::vector<uint8> bytes = originalBytes;
         for ( size_t byteIndex = 0; byteIndex < 4; ++byteIndex )
+        {
             bytes[corruption._offset + byteIndex] = static_cast<uint8>( corruption._value >> ( 8 * byteIndex ) );
+        }
         sw::AudioPcm corruptPcm;
         SW_EXPECT_FALSE( sw::AudioClipDecoder::decodeOgg( bytes.data(), bytes.size(), corruptPcm ) );
     }

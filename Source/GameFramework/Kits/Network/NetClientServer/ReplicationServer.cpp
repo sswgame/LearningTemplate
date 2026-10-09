@@ -115,9 +115,13 @@ namespace sw
         _pHost->collectConnected( _listConnectionScratch );
         _listClientScratch.resize( _listConnectionScratch.size() );
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
+        {
             acquireClient( _listConnectionScratch[index] );
+        }
         for ( size_t index = 0; index < _listConnectionScratch.size(); ++index )
+        {
             _listClientScratch[index] = &_listClient[static_cast<size_t>( _listConnectionScratch[index] )];
+        }
         _snapshotScratch.prepare( _parallel );
         _pRangeConnection = _listConnectionScratch.data();
         _ppRangeClient    = _listClientScratch.data();
@@ -129,7 +133,9 @@ namespace sw
     {
         SnapshotScratch& scratch = _snapshotScratch.acquire( _parallel );
         for ( uint32 index = start; index < end; ++index )
+        {
             sendSnapshot( _pRangeConnection[index], *_ppRangeClient[index], scratch );
+        }
     }
 
     void ReplicationServer::sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch )
@@ -162,7 +168,9 @@ namespace sw
         vector<int32>& listOrder = scratch._listOrder;
         listOrder.resize( listOrderEntity.size() );
         for ( size_t index = 0; index < listOrderEntity.size(); ++index )
+        {
             listOrder[index] = static_cast<int32>( filtered.findEntity( listOrderEntity[index] ) - filtered._listEntity.data() );
+        }
 
         // 기준 — 클라이언트가 확인한 틱의 우리가 보낸 재구성. 너무 오래돼 덮였으면 기준 없이.
         const NetSnapshot* pBaseline = nullptr;

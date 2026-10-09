@@ -36,7 +36,9 @@ namespace
         static void tickFor( GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
                 manager.tick( kFrame );
+            }
         }
 
         static void spawnFloor( GameObjectManager& manager )

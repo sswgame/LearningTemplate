@@ -483,7 +483,9 @@ namespace sw
         vector<PhysicsBodyHandle> listFound;
         listFound.reserve( collector.mHits.size() );
         for ( const JPH::CollideShapeResult& hit : collector.mHits )
+        {
             listFound.push_back( findHandle( hit.mBodyID2 ) );
+        }
         std::sort( listFound.begin(), listFound.end() );
         listFound.erase( std::unique( listFound.begin(), listFound.end() ), listFound.end() );
         uint32 count = 0;

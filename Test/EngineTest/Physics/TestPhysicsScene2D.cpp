@@ -84,7 +84,9 @@ namespace
     void stepFor( sw::IPhysicsScene2D& scene, uint32 stepCount )
     {
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             scene.step( kStep2D );
+        }
     }
 } // namespace
 
@@ -337,7 +339,9 @@ SW_TEST_CASE( PhysicsScene2DTest, StepIsDeterministic )
         }
         stepFor( *pScene, 180 );
         for ( const sw::PhysicsBodyHandle& body : listBody )
+        {
             arrListPosition[runIndex].push_back( getPosition( *pScene, body ) );
+        }
     }
     for ( size_t bodyIndex = 0; bodyIndex < arrListPosition[0].size(); ++bodyIndex )
     {

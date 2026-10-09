@@ -207,7 +207,9 @@ namespace sw::editor
                 const string newKey{ _newKeyBuffer.c_str() };
                 bool         bExists{ false };
                 for ( const LocalizationRecord& record : _localizationSheet._listRecord )
+                {
                     bExists = bExists || record._key == newKey;
+                }
 
                 if ( bExists == false )
                 {
@@ -290,7 +292,9 @@ namespace sw::editor
             const LocalizationRecord& record   = _localizationSheet._listRecord[recordIndex];
             bool                      bMatches = filter.matchesAny( { record._key, record._source } );
             for ( const string& translation : record._listTranslation )
+            {
                 bMatches = bMatches || filter.matchesAny( { translation } );
+            }
             if ( bMatches )
                 listVisibleIndex.push_back( recordIndex );
         }
@@ -312,7 +316,9 @@ namespace sw::editor
             const string sourceHeader = "Source (" + _localizationSheet._sourceCulture + ")";
             ImGui::TableSetupColumn( sourceHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.28f );
             for ( const string& culture : _localizationSheet._listCulture )
+            {
                 ImGui::TableSetupColumn( culture.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
+            }
             ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableHeadersRow();
 

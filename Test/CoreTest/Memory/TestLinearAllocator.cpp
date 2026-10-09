@@ -88,7 +88,9 @@ SW_TEST_CASE( LinearAllocatorTest, RequestLargerThanTheDefaultBlockGetsItsOwnBlo
 
     // 용량을 잘라 잡았다면 마지막 바이트에서 남의 메모리를 밟는다(ASan 이 여기서 운다).
     for ( size_t index = 0; index < kLargeSize; ++index )
+    {
         pLarge[index] = static_cast<uint8>( index & 0xFFu );
+    }
 
     SW_EXPECT_EQUAL( uint32( 0 ), static_cast<uint32>( pLarge[0] ) );
     SW_EXPECT_EQUAL( uint32( ( kLargeSize - 1 ) & 0xFFu ), static_cast<uint32>( pLarge[kLargeSize - 1] ) );
@@ -150,17 +152,23 @@ SW_TEST_CASE( LinearAllocatorTest, ConcurrentAllocateNeverHandsOutOverlappingMem
                     continue;
 
                 for ( size_t byteIndex = 0; byteIndex < kChunkSize; ++byteIndex )
+                {
                     pChunk[byteIndex] = pattern;
+                }
                 listLocal.push_back( Chunk{ pChunk, pattern } );
             }
 
             std::scoped_lock<std::mutex> lock{ collectMutex };
             for ( const Chunk& chunk : listLocal )
+            {
                 listAll.push_back( chunk );
+            }
         } );
     }
     for ( std::thread& worker : listWorker )
+    {
         worker.join();
+    }
 
     SW_ASSERT_EQUAL( static_cast<size_t>( kThreadCount * kChunkPerThread ), listAll.size() );
 
@@ -168,7 +176,9 @@ SW_TEST_CASE( LinearAllocatorTest, ConcurrentAllocateNeverHandsOutOverlappingMem
     vector<uint8*> listAddress;
     listAddress.reserve( listAll.size() );
     for ( const Chunk& chunk : listAll )
+    {
         listAddress.push_back( chunk._pData );
+    }
 
     std::sort( listAddress.begin(), listAddress.end() );
     uint32 duplicateCount = 0;

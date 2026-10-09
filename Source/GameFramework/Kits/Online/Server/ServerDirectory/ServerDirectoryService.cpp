@@ -215,7 +215,9 @@ namespace sw
     void ServerDirectoryService::shutdown()
     {
         for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
+        {
             reader->shutdown();
+        }
         _listReader.clear();
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
@@ -226,7 +228,9 @@ namespace sw
         if ( _dependencies._pStore == nullptr || _dependencies._pRouter == nullptr )
             return;
         for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
+        {
             reader->tick( nowMs );
+        }
         const bool bPeriodic = nowMs - _lastReloadMs >= _settings._reloadPeriodMs;
         if ( _bReloading == SW_FALSE && ( _bReloadRequested == SW_TRUE || bPeriodic ) )
             startReload( nowMs );
@@ -348,7 +352,9 @@ namespace sw
         // 막히지 않았는데 이 종류에 점검이 걸려 있다 — 허용 계정이다. 점검 상태 서버도 후보.
         bool bAllowedDuringMaintenance = false;
         for ( const MaintenanceWindow& active : _listMaintenance )
+        {
             bAllowedDuringMaintenance = bAllowedDuringMaintenance || ( active.isActive( nowMs ) && active.appliesTo( request._kind ) );
+        }
 
         ServerSelectionQuery query;
         query._kind                = request._kind;

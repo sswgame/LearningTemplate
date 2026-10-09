@@ -54,7 +54,9 @@ namespace
         static void tickFrames( GameObjectManager& manager, int32 frameCount )
         {
             for ( int32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( 1.0f / 60.0f );
+            }
         }
 
         static float3 getPosition( const GameObject* pObject ) { return pObject->getPrimarySceneComponent()->getWorldPosition(); }
@@ -352,7 +354,9 @@ SW_TEST_CASE( GimmickGenreTest, AbilityGateAndGatheringNode )
     SW_EXPECT_TRUE( pGateLogic->isOpen() ); // 한 번 열리면 남는다
 
     for ( int32 use = 0; use < 3; ++use )
+    {
         SW_EXPECT_TRUE( pGather->gather( *pHero ) );
+    }
     SW_EXPECT_TRUE( pGather->isDepleted() );
     SW_EXPECT_FALSE( pGather->gather( *pHero ) );
     Internal::tickFrames( manager, 30 * 60 + 2 );

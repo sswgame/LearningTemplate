@@ -268,7 +268,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, OverridesPairComponentsByKeyAndRevert
     {
         uint32 count = 0;
         for ( const PrefabOverrideItem& item : listItem )
+        {
             count += item._bModified ? 1 : 0;
+        }
         return count;
     };
     vector<PrefabOverrideItem> listOverride;
@@ -445,7 +447,9 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheS
 
     const utf8* const arrLabel[] = { "animation graph", "dialogue graph", "tile map", "sprite clip", "sequence" };
     for ( const utf8* pLabel : arrLabel )
+    {
         SW_EXPECT_TRUE_MSG( collector.hasWarningContaining( string( "Could not read the " ) + pLabel + " '" ), pLabel );
+    }
 
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( missing, tileMap, tileStatus ) == ToolAssetLoadResult::Missing );
     SW_EXPECT_STREQ( ( "No file yet: " + missing ).c_str(), tileStatus.c_str() );

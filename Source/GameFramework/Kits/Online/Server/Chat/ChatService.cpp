@@ -97,11 +97,15 @@ namespace sw
             {
                 ServiceTransaction transaction;
                 for ( const ChatMessage& message : _listMessage )
+                {
                     transaction.put( ChatServiceInternal::getHistoryTable(), ChatServiceInternal::makeHistoryKey( message ), ChatProtocol::encodeRecord( message ) );
+                }
                 _bCommitted = connection.commit( transaction ) == ServiceStoreResult::Ok ? SW_TRUE : SW_FALSE;
 
                 for ( const string& channelId : _listTrimChannel )
+                {
                     trimChannel( connection, channelId );
+                }
             }
 
             void complete() override { _pService->applyHistoryWrite( _bCommitted == SW_TRUE, static_cast<int32>( _listMessage.size() ) ); }
@@ -238,7 +242,9 @@ namespace sw
         if ( _dependencies._pPresence != nullptr ) // 맡긴 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게(저장 일을 거둔 뒤 — 그 완료가 찾기를 낼 수 있다)
         {
             for ( const auto& [requestId, pending] : _mapPresenceRequestToWhisper )
+            {
                 _dependencies._pPresence->cancel( requestId );
+            }
         }
         _mapAccountToMember.clear();
         _mapChannelToMember.clear();
@@ -388,9 +394,13 @@ namespace sw
             return;
         const vector<string> listChannel = memberIt->second._listChannel;
         for ( const string& channelId : listChannel )
+        {
             removeLocalMember( accountId, memberIt->second, channelId );
+        }
         for ( const PendingSend& send : memberIt->second._listPendingSend )
+        {
             completeSimple( ChatServiceInternal::toMethod( send._recipientId != kInvalidAccountId ), send._requestTag, ChatResult::Unavailable );
+        }
         _mapAccountToMember.erase( memberIt );
         _spamGuard.forget( accountId );
     }

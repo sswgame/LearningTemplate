@@ -297,7 +297,9 @@ SW_TEST_CASE( UiOptionsMenuTest, NavigationVisitsEveryRow )
         listVisited.push_back( fixture._ui.getFocusManager().getFocusedWidget() );
     }
     for ( uint32 row = 0; row < pMenu->getRowCount(); ++row )
+    {
         SW_EXPECT_EQUAL( pMenu->findRowValueWidget( pMenu->getRowSetting( row ) )->getId(), listVisited[row] );
+    }
 
     SW_EXPECT_TRUE( pMenu->onUnhandledAction( sw::UiActionName::kTabNext ) );
     SW_EXPECT_EQUAL( 1u, pMenu->getSelectedTab() );
@@ -335,6 +337,8 @@ SW_TEST_CASE( UiOptionsMenuTest, PauseActionOpensPauseMenu )
     fixture.tapKey( sw::Key::Escape ); // 일시정지 메뉴의 뒤로 — 닫는다(다시 열지 않는다)
     // pause.ui.xml 의 Close 애니메이션(0.12 초)이 끝나야 화면이 지워진다 — 그동안 Esc 를 다시 받아 여는 일은 없다.
     for ( uint32 frame = 0; frame < 30 && fixture._ui.getScreenCount() != 0; ++frame )
+    {
         fixture.runFrame();
+    }
     SW_EXPECT_EQUAL( 0u, fixture._ui.getScreenCount() );
 }

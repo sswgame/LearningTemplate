@@ -504,14 +504,18 @@ namespace sw
         StringBuilder<constant::kMaxBuffer512> sb;
         sb.ensureCapacity( static_cast<uint32>( r.size() + 1 + rel.size() ) );
         for ( const utf8 ch : r )
+        {
             sb.append( ( ch == '\\' ) ? '/' : ch );
+        }
 
         if ( rel.empty() == false )
         {
             if ( sb.view().empty() == false && sb.view().back() != '/' )
                 sb.append( '/' );
             for ( const utf8 ch : rel )
+            {
                 sb.append( ( ch == '\\' ) ? '/' : ch );
+            }
         }
 
         return string( sb.view() );

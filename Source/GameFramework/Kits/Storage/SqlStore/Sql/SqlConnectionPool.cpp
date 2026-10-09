@@ -94,7 +94,9 @@ namespace sw
         const int32 workerCount = std::max( settings._workerCount, 1 );
         _listWorker.reserve( static_cast<size_t>( workerCount ) );
         for ( int32 workerIndex = 0; workerIndex < workerCount; ++workerIndex )
+        {
             _listWorker.emplace_back( &SqlConnectionPool::runWorker, this, workerIndex );
+        }
         return true;
     }
 
@@ -161,7 +163,9 @@ namespace sw
             _pendingCount -= static_cast<int32>( listReady.size() );
         }
         for ( unique_ptr<ISqlJob>& job : listReady )
+        {
             job->complete();
+        }
         return static_cast<int32>( listReady.size() );
     }
 

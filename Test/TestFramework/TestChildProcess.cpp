@@ -95,7 +95,9 @@ namespace test
 
         // 자식이 떠 있는 동안만 환경을 걸어 둔다(자식은 띄우는 순간의 것을 물려받았다).
         for ( const SavedVariable& saved : listSaved )
+        {
             setEnvironmentVariableInternal( saved._pName, saved._bHadValue ? saved._value.c_str() : nullptr );
+        }
 
         if ( result._bLaunched == false )
             return result;

@@ -86,7 +86,9 @@ namespace sw
                     ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                     const size_t               elementCount = pSequence->getSize( pValue );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+                    {
                         validate( *pElement, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1 );
+                    }
                 }
 
                 // 타입 검증은 기반부터 — 파생의 검증이 기반이 이미 본 것을 다시 적지 않게 순서를 정해 둔다.

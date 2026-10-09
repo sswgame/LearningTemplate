@@ -116,7 +116,9 @@ namespace sw
         const vector<SpawnEntryDef>& listEntry = _pTable->getEntries();
         float32                      total     = 0.0f;
         for ( size_t index = 0; index < listEntry.size(); ++index )
+        {
             total += isEligible( static_cast<int32>( index ) ) ? listEntry[index]._weight : 0.0f;
+        }
         if ( total <= 0.0f )
             return;
         float32 pick = _random.nextFloat() * total;
@@ -220,7 +222,9 @@ namespace sw
         outListSpawnId.clear();
         outListSpawnId.reserve( _listAlive.size() );
         for ( const SpawnAlive& alive : _listAlive )
+        {
             outListSpawnId.push_back( alive._spawnId );
+        }
     }
 
     void SpawnDirector::writeState( Archive& outArchive ) const

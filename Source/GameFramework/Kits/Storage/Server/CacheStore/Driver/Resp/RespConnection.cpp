@@ -148,14 +148,18 @@ namespace sw
     void RespConnection::takeReplyRecords( vector<RespReplyRecord>& outListRecord )
     {
         for ( RespReplyRecord& record : _listReplyRecord )
+        {
             outListRecord.push_back( std::move( record ) );
+        }
         _listReplyRecord.clear();
     }
 
     void RespConnection::takePushValues( vector<RespValue>& outListValue )
     {
         for ( RespValue& value : _listPushValue )
+        {
             outListValue.push_back( std::move( value ) );
+        }
         _listPushValue.clear();
     }
 

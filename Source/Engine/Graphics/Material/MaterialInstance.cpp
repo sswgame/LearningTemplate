@@ -362,7 +362,9 @@ namespace sw
             return;
         const vector<RHIDescriptorIndex>& listParentSrv = _pParentMaterial->getMaterialTextureSrvs();
         for ( uint32 slot = 0; slot < slotCount; ++slot )
+        {
             pOutSlot[slot] = slot < listParentSrv.size() ? listParentSrv[slot] : kInvalidDescriptorIndex;
+        }
         for ( const TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture == nullptr )
@@ -381,7 +383,9 @@ namespace sw
         _listVectorOverride.clear();
         // 텍스처는 렌더 스레드가 돌려준 뒤 뺀다(syncTextureOverrides) — 여기서 지우면 빌린 참조를 잃는다.
         for ( TextureOverride& texture : _listTextureOverride )
+        {
             texture._assetPath.clear();
+        }
         _listKeywordOverride.clear();
         _listMultiCompileOverride.clear();
         _qualityOverride = MaterialQualityLevel::Count;
@@ -806,7 +810,9 @@ namespace sw
         _listKeywordOverride.clear();
         _listMultiCompileOverride.clear();
         for ( TextureOverride& texture : _listTextureOverride )
+        {
             texture._assetPath.clear(); // 렌더 스레드가 돌려준 뒤 뺀다
+        }
 
         // `assetPath` 가 있는 항목은 텍스처 덮어쓰기다. 빠뜨리면 .materialinstance 의 텍스처가 조용히 부모 것으로 남는다.
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )

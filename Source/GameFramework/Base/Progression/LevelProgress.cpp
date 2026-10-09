@@ -50,7 +50,9 @@ namespace sw
     {
         vector<int64> listXpToNext;
         for ( XmlNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
+        {
             listXpToNext.push_back( MathUtil::max( 1, child.getAttributeInt( "xp", 1 ) ) );
+        }
         if ( listXpToNext.empty() == false )
         {
             setTable( listXpToNext );
@@ -74,7 +76,9 @@ namespace sw
     {
         int64 total = 0;
         for ( int32 current = 1; current < MathUtil::min( level, _maxLevel ); ++current )
+        {
             total += getXpToNext( current );
+        }
         return total;
     }
 

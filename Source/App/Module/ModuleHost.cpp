@@ -250,7 +250,9 @@ namespace sw
 
             vector<string> listDependency;
             for ( const ModuleDependency& dependency : pManifest->_listDependency )
+            {
                 listDependency.push_back( dependency._name );
+            }
             if ( _pLiveReloadManager->registerModule( moduleName, listDependency ) == false )
             {
                 SW_LOG_ERROR( "Kit module register failed (%#)", moduleName );

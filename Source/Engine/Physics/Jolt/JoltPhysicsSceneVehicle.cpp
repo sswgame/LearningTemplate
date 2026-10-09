@@ -87,7 +87,9 @@ namespace sw
         }
         // 구동 토크는 차축마다 고르게.
         for ( JPH::VehicleDifferentialSettings& differential : pController->mDifferentials )
+        {
             differential.mEngineTorqueRatio = 1.0f / static_cast<float32>( pController->mDifferentials.size() );
+        }
         settings.mController = pController;
 
         VehicleRecord record;
@@ -163,7 +165,9 @@ namespace sw
         outState._engineRpm                              = pController->GetEngine().GetCurrentRPM();
         outState._gear                                   = pController->GetTransmission().GetCurrentGear();
         for ( const JPH::Wheel* pWheel : pRecord->_pConstraint->GetWheels() )
+        {
             outState._groundedWheelCount += pWheel->HasContact() ? 1u : 0u;
+        }
         return true;
     }
 } // namespace sw

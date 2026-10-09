@@ -194,9 +194,13 @@ SW_TEST_CASE( EconomyPurchaseTest, LimitHoldsUnderConcurrentPurchases )
     EconomyResult arrResult[8]{};
     std::thread   arrThread[8];
     for ( int32 threadIndex = 0; threadIndex < 8; ++threadIndex )
+    {
         arrThread[threadIndex] = std::thread( &TestEconomyPurchaseInternal::buyStarter, &fixture, static_cast<uint64>( 100 + threadIndex ), &arrResult[threadIndex] );
+    }
     for ( std::thread& thread : arrThread )
+    {
         thread.join();
+    }
     int32 okCount = 0;
     for ( const EconomyResult result : arrResult )
     {

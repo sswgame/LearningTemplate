@@ -59,7 +59,9 @@ namespace sw
     void FarmCropComponent::collectModelPaths( vector<string>& outListPath )
     {
         for ( const utf8* pName : FarmCropComponentInternal::kArrModelName )
+        {
             outListPath.push_back( makeModelPath( pName ) );
+        }
     }
 
     const utf8* FarmCropComponent::findReadyModel( const hashed_string& cropId )

@@ -535,7 +535,9 @@ SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
     world.queryAabb( farBox, 0, hits );
     bool bFound{ false };
     for ( const PhysicsWorld::BodyHandle& hit : hits )
+    {
         bFound = bFound || hit == handle;
+    }
     SW_EXPECT_TRUE( bFound );
     world.removeBody( handle );
 }
@@ -733,7 +735,9 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
     PhysicsWorld world;
     // 멀리 떨어진 바디를 채워 둔다 — 바디가 적으면 질의가 그리드를 건너뛰고 모든 바디를 돌아, 범위를 넓히지 않아도 찾는다.
     for ( uint64 fillerIndex = 0; fillerIndex < 60; ++fillerIndex )
+    {
         world.addBody( makeBoxAt( 5000.0f + static_cast<float32>( fillerIndex ) * 2.0f, 5000.0f ), 0, 100 + fillerIndex );
+    }
 
     AABB crosser;
     crosser._min                         = float3( 100.0f, -100.0f, 0.0f );

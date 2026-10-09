@@ -202,8 +202,10 @@ namespace sw
         unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getId() );
         ComboBoxPopupScreen* const      pPopup = popup.get();
         for ( uint32 index = 0; index < static_cast<uint32>( listButton.size() ); ++index )
+        {
             (void)listButton[index]->getOnClicked().add( [pPopup, index]( WidgetId )
             { pPopup->choose( index ); } );
+        }
         _popupScreen = pUi->pushScreen( std::move( popup ) );
     }
 
@@ -218,6 +220,8 @@ namespace sw
         arrow._color             = float4{ 0.85f, 0.88f, 0.95f, isEnabledInHierarchy() ? 1.0f : 0.4f };
         const float32 arrWidth[] = { 10.0f, 6.0f, 2.0f };
         for ( uint32 step = 0; step < 3; ++step )
+        {
             painter.fillRect( float2{ centerX - arrWidth[step] * 0.5f, top + 2.0f * static_cast<float32>( step ) }, float2{ arrWidth[step], 2.0f }, arrow );
+        }
     }
 } // namespace sw

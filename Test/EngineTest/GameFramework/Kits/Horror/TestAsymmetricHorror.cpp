@@ -46,14 +46,18 @@ namespace
     {
         const int32 stepCount = static_cast<int32>( seconds / kAsymmetricHorrorStep + 0.5f );
         for ( int32 index = 0; index < stepCount; ++index )
+        {
             match.update( kAsymmetricHorrorStep );
+        }
     }
 
     int32 countEvents( const vector<AsymmetricHorrorEvent>& listEvent, AsymmetricHorrorEvent::Kind kind )
     {
         int32 count = 0;
         for ( const AsymmetricHorrorEvent& event : listEvent )
+        {
             count += event._kind == kind ? 1 : 0;
+        }
         return count;
     }
 
@@ -164,7 +168,9 @@ SW_TEST_CASE( AsymmetricHorrorTest, SkillChecksAndKicksMoveGeneratorProgress )
     SW_ASSERT_NOT_NULL( pStarted );
     const float32 targetTime = pStarted->_value;
     while ( match.findActivityProgress( survivor )->getTime() + kAsymmetricHorrorStep * 0.5f < targetTime )
+    {
         match.update( kAsymmetricHorrorStep );
+    }
     const float32 beforeHit = match.findGenerator( generator )->_progress.getProgress();
     SW_EXPECT_TRUE( match.respondSkillCheck( survivor, match.findActivityProgress( survivor )->getTime() ) );
     SW_EXPECT_TRUE( match.findGenerator( generator )->_progress.getProgress() > beforeHit + 0.04f );

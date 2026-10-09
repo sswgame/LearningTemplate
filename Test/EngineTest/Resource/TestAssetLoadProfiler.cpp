@@ -21,7 +21,9 @@ namespace
     {
         const Deadline deadline = Deadline::afterMilliseconds( milliseconds );
         while ( deadline.isExpired() == false )
+        {
             std::this_thread::yield();
+        }
     }
 
     const AssetLoadKindSummary* findAssetLoadKind( const vector<AssetLoadKindSummary>& listSummary, const utf8* pKind )

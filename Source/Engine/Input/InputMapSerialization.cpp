@@ -695,7 +695,9 @@ namespace sw
             actionNode.appendAttribute( InputMapXml::kAttrName, actionName.c_str() );
             actionNode.appendAttribute( InputMapXml::kAttrValueType, InputMapSerializationInternal::toValueTypeName( pEntry->_valueType ) );
             for ( const ActionBinding& binding : pEntry->_listBinding )
+            {
                 bAllWritten = InputMapSerializationInternal::writeDefinitionBinding( actionNode, actionName.c_str(), binding ) && bAllWritten;
+            }
         }
         if ( bAllWritten == false )
             return false;

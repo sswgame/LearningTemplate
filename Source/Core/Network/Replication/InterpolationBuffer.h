@@ -82,7 +82,9 @@ namespace sw
             SW_ASSERT( _capacity > 0 );
             auto iter = _listSample.begin();
             while ( iter != _listSample.end() && iter->_tick < tick )
+            {
                 ++iter;
+            }
             if ( iter != _listSample.end() && iter->_tick == tick )
             {
                 if ( bReplaceSameTick )
@@ -96,7 +98,9 @@ namespace sw
                 _listSample.insert( iter, sample );
             }
             while ( static_cast<int32>( _listSample.size() ) > _capacity )
+            {
                 _listSample.pop_front();
+            }
         }
 
         /**
@@ -135,7 +139,9 @@ namespace sw
         void removeConsumed( float32 renderTick )
         {
             while ( _listSample.size() > 2 && static_cast<float32>( _listSample[1]._tick ) <= renderTick )
+            {
                 _listSample.pop_front();
+            }
         }
 
         bool  isEmpty() const { return _listSample.empty(); }

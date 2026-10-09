@@ -102,7 +102,9 @@ namespace
             mutation->bindOutputs( &_result, &_finalBytes, &_mutateCount );
             _updater.update( "mm/test", 60000, std::move( mutation ) );
             for ( int32 round = 0; round < 16; ++round )
+            {
                 (void)_router.pump();
+            }
         }
     };
 } // namespace

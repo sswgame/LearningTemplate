@@ -347,7 +347,9 @@ SW_TEST_CASE( UiBindingTest, ManyNotifiesInOneFrameUpdateOnce )
     UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
     const uint32 writesBefore = pScreen->getBindingSet().getWriteCount();
     for ( int32 ammo = 1; ammo <= 10; ++ammo )
+    {
         viewModel.setAmmo( ammo );
+    }
     UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_STREQ( "10", pText->getText().c_str() );
     SW_EXPECT_EQUAL( writesBefore + 1, pScreen->getBindingSet().getWriteCount() );

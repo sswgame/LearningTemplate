@@ -225,7 +225,9 @@ SW_TEST_CASE( CameraPresetTest, DampingIsFrameRateIndependent )
     const CameraPose once  = dampPose( start, goal, damping, 0.1f );
     CameraPose       steps = start;
     for ( int32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+    {
         steps = dampPose( steps, goal, damping, 0.01f );
+    }
     SW_EXPECT_NEAR_EQUAL( 10.0f * ( 1.0f - ::expf( -0.5f ) ), once._position._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( once._position._x, steps._position._x, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( quaternion::getAngleBetween( once._rotation, steps._rotation ), 0.0f, 1.0e-3f );
@@ -392,7 +394,9 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     SW_EXPECT_TRUE( pDirector->isBlending() );
     SW_EXPECT_FALSE( pCamera->isOrthographic() ); // 가중치 0.5 전에는 원근 그대로
     for ( int32 frameIndex = 0; frameIndex < 4; ++frameIndex )
+    {
         pDirector->onTick( 0.25f );
+    }
     SW_EXPECT_FALSE( pDirector->isBlending() );
     SW_EXPECT_TRUE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( 30.0f, pCamera->getOrthoHeight(), 1.0e-4f );

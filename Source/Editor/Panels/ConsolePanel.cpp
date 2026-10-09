@@ -144,7 +144,9 @@ namespace sw::editor
         _cachedFilter      = filterStr;
         _cachedTagRevision = _tagFilter.getRevision();
         for ( int32 levelIndex = 0; levelIndex < 4; ++levelIndex )
+        {
             _arrCachedLevelEnabled[levelIndex] = _arrLevelEnabled[levelIndex];
+        }
     }
 
     void ConsolePanel::drawContent()

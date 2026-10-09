@@ -172,7 +172,9 @@ namespace sw
         vector<EphemeralMessage>& listMessage = inboxIt->second._listMessage;
         const int32               takenCount  = static_cast<int32>( listMessage.size() );
         for ( EphemeralMessage& message : listMessage )
+        {
             outListMessage.push_back( std::move( message ) );
+        }
         listMessage.clear();
         return takenCount;
     }
@@ -502,7 +504,9 @@ namespace sw
     {
         const int32 replyCount = static_cast<int32>( _listReply.size() );
         for ( EphemeralReply& reply : _listReply )
+        {
             outListReply.push_back( std::move( reply ) );
+        }
         _listReply.clear();
         return replyCount;
     }

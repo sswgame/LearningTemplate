@@ -36,7 +36,9 @@ namespace
     {
         sw::vector<uint8> bytes( byteCount );
         for ( uint32 offset = 0; offset < byteCount; ++offset )
+        {
             bytes[offset] = expectedByteAt( offset );
+        }
         const sw::string path = sw::FileUtil::joinPath( test::makeTempDirectory( "asyncfileio" ), pName );
         if ( sw::FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
             return {};
@@ -82,7 +84,9 @@ namespace
             _bEntered.store( true );
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
             while ( _bOpen.load() == false && deadline.isExpired() == false )
+            {
                 std::this_thread::yield();
+            }
         }
 
         /** @brief IO 스레드가 콜백에 들어올 때까지 기다립니다. */
@@ -90,7 +94,9 @@ namespace
         {
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 10000 );
             while ( _bEntered.load() == false && deadline.isExpired() == false )
+            {
                 std::this_thread::yield();
+            }
             return _bEntered.load();
         }
     };
@@ -247,9 +253,13 @@ SW_TEST_CASE( AsyncFileIoTest, BackloggedRequestsCompleteInPriorityOrder )
         const int32 arrExpected[] = { 2, 3, 1, 4, 0 };
         SW_ASSERT_EQUAL( log._listTag.size(), size_t{ 5 } );
         for ( uint32 index = 0; index < 5; ++index )
+        {
             SW_EXPECT_TRUE_MSG( log._listTag[index] == arrExpected[index], sw::AsyncFileIo::getBackendName( io.getBackendKind() ) );
+        }
         for ( const sw::AsyncReadHandle& handle : listHandle )
+        {
             SW_EXPECT_TRUE( handle.getStatus() == sw::AsyncIoStatus::Succeeded );
+        }
         io.shutdown();
     }
 }
@@ -417,7 +427,9 @@ SW_TEST_CASE( AsyncFileIoTest, ManyRangesOfOneOpenFile )
         } );
     }
     for ( std::thread& thread : listThread )
+    {
         thread.join();
+    }
     SW_EXPECT_EQUAL( syncOkCount.load(), kRangeCount );
     uint8 overrun[8]{};
     SW_EXPECT_FALSE( file.readAt( kFileBytes - 4, overrun, sizeof( overrun ) ) );

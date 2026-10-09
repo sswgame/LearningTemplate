@@ -86,7 +86,9 @@ namespace sw
     {
         vector<Actor> listSorted = listActor;
         for ( Actor& actor : listSorted )
+        {
             actor._tieBreak = random.nextUint();
+        }
         std::sort( listSorted.begin(), listSorted.end(), []( const Actor& lhs, const Actor& rhs )
         {
             if ( lhs._priority != rhs._priority )
@@ -97,7 +99,9 @@ namespace sw
         } );
         outListQueue.clear();
         for ( const Actor& actor : listSorted )
+        {
             outListQueue.push_back( actor._actorId );
+        }
     }
 
     int32 TurnOrder::popTimeline( vector<Actor>& listActor )
@@ -115,7 +119,9 @@ namespace sw
             }
         }
         for ( Actor& actor : listActor )
+        {
             actor._gauge = MathUtil::max( 0.0f, actor._gauge - bestTime * actor._speed );
+        }
         listActor[bestIndex]._gauge = kTimelineThreshold;
         return listActor[bestIndex]._actorId;
     }
@@ -145,7 +151,9 @@ namespace sw
         {
             vector<Actor> listCopy = _listActor;
             for ( int32 index = 0; index < count; ++index )
+            {
                 outListActor.push_back( popTimeline( listCopy ) );
+            }
             return;
         }
         vector<int32> listQueue = _listRoundQueue;

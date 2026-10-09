@@ -501,7 +501,9 @@ namespace sw
             const MemoryTag memoryTag = MemoryProfiler::getCurrentMemoryTag();
             _listThread.reserve( _threadCount );
             for ( uint32 index = 0; index < _threadCount; ++index )
+            {
                 _listThread.emplace_back( &ThreadPoolAsyncFileIoBackend::runWorker, this, memoryTag );
+            }
             return true;
         }
 

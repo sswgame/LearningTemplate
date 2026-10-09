@@ -65,7 +65,9 @@ namespace sw
         const int32   stepCount   = MathUtil::max( 1, static_cast<int32>( MathUtil::ceil( clampedTime / _settings._maxStep ) ) );
         const float32 stepTime    = clampedTime / static_cast<float32>( stepCount );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             integrate( world, wishDirection, bJump, bSprint, stepTime );
+        }
     }
 
     bool VoxelBody::overlapsBlock( const VoxelCoord& coord ) const

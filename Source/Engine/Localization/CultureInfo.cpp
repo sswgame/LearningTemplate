@@ -130,7 +130,9 @@ namespace sw
                 const uint32 length = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
                 string       text( arrBuffer, length );
                 while ( text.size() < width )
+                {
                     text.insert( text.begin(), '0' );
+                }
                 return text;
             }
 
@@ -307,7 +309,9 @@ namespace sw
         operands._visibleFractionCount = visibleFractionCount;
         float64 scale                  = 1.0;
         for ( uint32 digit = 0; digit < visibleFractionCount; ++digit )
+        {
             scale *= 10.0;
+        }
         const float64 fraction   = ( absoluteValue - static_cast<float64>( operands._integerDigits ) ) * scale;
         operands._fractionDigits = static_cast<int64>( fraction + 0.5 );
         return operands;
@@ -327,7 +331,9 @@ namespace sw
     {
         outListName.clear();
         for ( const CultureInfoInternal::RuleRow& row : CultureInfoInternal::kArrRule )
+        {
             outListName.push_back( row._pName );
+        }
     }
 
     const utf8* PluralRuleUtil::getCategoryName( PluralCategory category )
@@ -425,7 +431,9 @@ namespace sw
             return 0;
         uint32 visible = static_cast<uint32>( text.size() - dotPos - 1 );
         while ( visible > minFraction && text[dotPos + visible] == '0' )
+        {
             --visible;
+        }
         return visible;
     }
 
@@ -524,7 +532,9 @@ namespace sw
             }
             uint32 runLength = 0;
             while ( position + runLength < pattern.size() && pattern[position + runLength] == character )
+            {
                 ++runLength;
+            }
             position += runLength;
 
             const uint32 monthIndex = value._month >= 1 && value._month <= 12 ? static_cast<uint32>( value._month - 1 ) : 0u;
@@ -632,7 +642,9 @@ namespace sw
         map<string, CultureInfo> mapResolved;
         vector<string>           listPending;
         for ( const string& rawCode : cultures.getMemberNames() )
+        {
             listPending.push_back( rawCode );
+        }
 
         while ( listPending.empty() == false )
         {
@@ -703,7 +715,9 @@ namespace sw
             return false;
         }
         for ( auto& [code, info] : mapResolved )
+        {
             _mapCulture[code] = std::move( info );
+        }
         return true;
     }
 
@@ -747,6 +761,8 @@ namespace sw
     {
         outListCode.clear();
         for ( const auto& [code, info] : _mapCulture )
+        {
             outListCode.push_back( code );
+        }
     }
 } // namespace sw

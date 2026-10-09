@@ -64,7 +64,9 @@ namespace sw
         _requestClient.initialize( &_endpoint );
         _listBot.reserve( static_cast<size_t>( _scenario._botCount ) );
         for ( int32 botIndex = 0; botIndex < _scenario._botCount; ++botIndex )
+        {
             _listBot.push_back( make_unique<LoadBot>( this, botIndex ) );
+        }
         _bInitialized = SW_TRUE;
         return true;
     }
@@ -75,7 +77,9 @@ namespace sw
             return;
         _bInitialized = SW_FALSE;
         for ( unique_ptr<LoadBot>& bot : _listBot )
+        {
             bot->shutdown();
+        }
         _requestClient.shutdown();
         _pTransport->shutdown();
         _endpoint.shutdown();
@@ -125,7 +129,9 @@ namespace sw
         }
         int32 runningCount = 0;
         for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
+        {
             runningCount += _listBot[static_cast<size_t>( botIndex )]->tick( nowMs ) ? 1 : 0;
+        }
 
         const int64 endMs     = static_cast<int64>( _scenario._rampUpSeconds + _scenario._durationSeconds ) * LoadBotRunnerInternal::kMillisecondsPerSecond;
         const bool  bAllDone  = _launchedCount == getBotCount() && runningCount == 0;
@@ -137,7 +143,9 @@ namespace sw
     {
         int32 runningCount = 0;
         for ( int32 botIndex = 0; botIndex < _launchedCount; ++botIndex )
+        {
             runningCount += _listBot[static_cast<size_t>( botIndex )]->isFinished() ? 0 : 1;
+        }
         return runningCount;
     }
 

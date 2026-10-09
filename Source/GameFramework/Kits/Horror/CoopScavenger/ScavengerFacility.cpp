@@ -137,7 +137,9 @@ namespace sw
                 listDepth[static_cast<size_t>( room )]  = listDepth[static_cast<size_t>( listParent[static_cast<size_t>( room )] )] + 1;
             }
             for ( int32 room = 0; room < _roomCount; ++room )
+            {
                 ScavengerFacilityInternal::appendArea( xml, nullptr, room, "Facility", listDepth[static_cast<size_t>( room )] + 1, room );
+            }
 
             xml += "<Link from=\"outside\" to=\"ship\" kind=\"Ship\"/>";
             ScavengerFacilityInternal::appendLink( xml, -1, 0, "MainEntrance", false );
@@ -158,13 +160,17 @@ namespace sw
             // 화재 출구 — 정문에서 가장 깊은 방부터(같으면 번호 순).
             vector<int32> listExitCandidate;
             for ( int32 room = 1; room < _roomCount; ++room )
+            {
                 listExitCandidate.push_back( room );
+            }
             std::stable_sort( listExitCandidate.begin(), listExitCandidate.end(),
                               [&]( int32 lhs, int32 rhs )
             { return listDepth[static_cast<size_t>( lhs )] > listDepth[static_cast<size_t>( rhs )]; } );
             const int32 exitCount = MathUtil::min( settings._fireExits, static_cast<int32>( listExitCandidate.size() ) );
             for ( int32 exitIndex = 0; exitIndex < exitCount; ++exitIndex )
+            {
                 ScavengerFacilityInternal::appendLink( xml, -1, listExitCandidate[static_cast<size_t>( exitIndex )], "FireExit", false );
+            }
         }
         else
         {
@@ -274,7 +280,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const ScavengerScrap& scrap : _listGroundScrap )
+        {
             total += scrap.isBody() ? 0 : scrap._value;
+        }
         return total;
     }
 

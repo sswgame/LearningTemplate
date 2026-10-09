@@ -238,7 +238,9 @@ namespace sw
         if ( bBgra )
         {
             for ( size_t texel = 0; texel < texelCount; ++texel )
+            {
                 std::swap( rgbaBytes[texel * 4], rgbaBytes[texel * 4 + 2] );
+            }
         }
         _heightfield.setSplat( image._width, image._height, rgbaBytes );
     }
@@ -287,7 +289,9 @@ namespace sw
             Chunk&       chunk  = _listChunk[chunkIndex];
             chunk._lod          = 0;
             for ( uint32& neighborLod : chunk._arrNeighborLod )
+            {
                 neighborLod = 0;
+            }
             chunk._batch = sw::make_unique<MeshInstanceBatch>( Mesh::create(), _material.getMaterial(), _material.getInstance(), 1u );
             chunk._batch->setOwnerComponent( this );
             chunk._batch->setWorld( 0, float4x4::createTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );

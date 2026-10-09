@@ -198,22 +198,30 @@ SW_TEST_CASE( VectorTest, BitwiseCopyKeepsValues )
 
     sw::vector<PaddedPod> listSource{};
     for ( uint32 index = 0; index < 64; ++index )
+    {
         listSource.push_back( PaddedPod{ static_cast<uint8>( index ), index * 1000003ull, static_cast<uint8>( 255 - index ) } );
+    }
 
     // 1) 복사 생성
     sw::vector<PaddedPod> listCopy{ listSource };
     SW_ASSERT_EQUAL( listSource.size(), listCopy.size() );
     for ( size_t index = 0; index < listSource.size(); ++index )
+    {
         SW_EXPECT_TRUE( listSource[index] == listCopy[index] );
+    }
 
     // 2) 이미 내용이 있는 대상에 복사 대입 — 길이가 줄어드는 쪽도 본다.
     sw::vector<PaddedPod> listTarget{};
     for ( uint32 index = 0; index < 200; ++index )
+    {
         listTarget.push_back( PaddedPod{ 7, 7, 7 } );
+    }
     listTarget = listSource;
     SW_ASSERT_EQUAL( listSource.size(), listTarget.size() );
     for ( size_t index = 0; index < listSource.size(); ++index )
+    {
         SW_EXPECT_TRUE( listSource[index] == listTarget[index] );
+    }
 
     // 3) 빈 원본을 대입하면 비어야 한다.
     const sw::vector<PaddedPod> listEmpty{};
@@ -232,7 +240,9 @@ SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
     {
         sw::vector<TrackedValue> listSource{};
         for ( int32 index = 0; index < 100; ++index ) // 여러 번 재할당된다
+        {
             listSource.push_back( TrackedValue{ index } );
+        }
         SW_EXPECT_EQUAL( 100, TrackedValue::s_liveCount );
 
         sw::vector<TrackedValue> listTarget{};
@@ -241,7 +251,9 @@ SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
         SW_ASSERT_EQUAL( size_t( 100 ), listTarget.size() );
         SW_EXPECT_EQUAL( 200, TrackedValue::s_liveCount );
         for ( int32 index = 0; index < 100; ++index )
+        {
             SW_EXPECT_EQUAL( index, listTarget[static_cast<size_t>( index )]._value );
+        }
     }
     SW_EXPECT_EQUAL( 0, TrackedValue::s_liveCount );
 }
@@ -270,7 +282,9 @@ SW_TEST_CASE( VectorTest, InsertMoreThanSizeDoesNotReadOutOfBounds )
         SW_EXPECT_EQUAL( size_t( 7 ), list.size() );
         SW_EXPECT_EQUAL( 1, list[0] );
         for ( size_t index = 1; index <= 5; ++index )
+        {
             SW_EXPECT_EQUAL( 9, list[index] );
+        }
         SW_EXPECT_EQUAL( 2, list[6] );
     }
 
@@ -281,7 +295,9 @@ SW_TEST_CASE( VectorTest, InsertMoreThanSizeDoesNotReadOutOfBounds )
         const int32 arrExpected[] = { 1, 0, 0, 2, 3, 4, 5 };
         SW_ASSERT_EQUAL( size_t( 7 ), list.size() );
         for ( size_t index = 0; index < list.size(); ++index )
+        {
             SW_EXPECT_EQUAL( arrExpected[index], list[index] );
+        }
     }
 }
 
@@ -427,7 +443,9 @@ SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
     {
         sw::vector<sw::string> list;
         for ( int32 index = 0; index < 5; ++index )
+        {
             list.push_back( sw::string( 1, static_cast<utf8>( 'a' + index ) ) );
+        }
 
         list.erase( list.begin() + 3, list.begin() + 1 );
 
@@ -440,7 +458,9 @@ SW_TEST_CASE( VectorTest, ReversedRangeAndHugeCountDoNotWrap )
     {
         sw::vector<sw::string> list;
         for ( int32 index = 0; index < 5; ++index )
+        {
             list.push_back( sw::string( 1, static_cast<utf8>( 'a' + index ) ) );
+        }
 
         list.erase( list.begin() + 1, list.begin() + 3 );
 
@@ -520,7 +540,9 @@ SW_TEST_CASE( VectorTest, CopyAssignReusesElementStorage )
     // 용량이 모자라면 늘린다.
     sw::vector<sw::string> bigger;
     for ( uint32 index = 0; index < 8; ++index )
+    {
         bigger.emplace_back( "value-long-enough-to-leave-sso-behind" );
+    }
     target = bigger;
     SW_EXPECT_EQUAL( size_t( 8 ), target.size() );
     SW_EXPECT_TRUE( target[7] == bigger[7] );
@@ -570,7 +592,9 @@ SW_TEST_CASE( VectorTest, ResizeFromOwnElementAndRangeInsertIterator )
     listText.resize( 64, listText[0] );
     SW_ASSERT_EQUAL( 64u, static_cast<uint32>( listText.size() ) );
     for ( const sw::string& text : listText )
+    {
         SW_EXPECT_TRUE( text == "first-element-long-enough-to-live-on-the-heap" );
+    }
 
     sw::vector<int32> listNumber{ 1, 2, 3 };
     listNumber.shrink_to_fit();

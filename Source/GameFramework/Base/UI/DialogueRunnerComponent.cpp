@@ -353,7 +353,9 @@ namespace sw
                 _listCurrentChoice.clear();
                 _listCurrentChoice.reserve( node._listChoice.size() );
                 for ( const string& choice : node._listChoice )
+                {
                     _listCurrentChoice.push_back( DialogueGraphAsset::resolveLocalizedText( choice ) );
+                }
 
                 notifyChoices();
                 return;

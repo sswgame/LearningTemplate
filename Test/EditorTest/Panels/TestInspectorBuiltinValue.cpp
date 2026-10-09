@@ -168,7 +168,9 @@ SW_TEST_CASE( InspectorBuiltinValueTest, PrepareMethodArgsKeepsOrResetsSlots )
 
     FunctionInfo manyArg;
     for ( uint32 index = 0; index <= InspectorBuiltinValueUtil::kMaxMethodArgCount; ++index )
+    {
         manyArg._listParameter.push_back( sw::FunctionParameterInfo( "", "int32", "", nullptr ) );
+    }
     SW_EXPECT_FALSE( InspectorBuiltinValueUtil::prepareMethodArgs( manyArg, listSlot ) );
     SW_EXPECT_EQUAL( size_t{ InspectorBuiltinValueUtil::kMaxMethodArgCount }, listSlot.size() );
 }

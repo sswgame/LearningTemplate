@@ -202,7 +202,9 @@ namespace sw
         if ( _pInner == nullptr )
             return;
         for ( const Pending& pending : listDue )
+        {
             (void)_pInner->send( pending._to, pending._buffer.data(), static_cast<int32>( pending._buffer.size() ) ); // 안쪽 실패는 손실과 같다
+        }
         _pInner->update( time );
     }
 
@@ -228,7 +230,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         uint64                  total = 0;
         for ( const LinkState& link : _listLink )
+        {
             total += link._queuedBytes;
+        }
         return total;
     }
 

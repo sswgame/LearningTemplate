@@ -71,7 +71,9 @@ namespace sw
                                                                                  transform._rotation._w, transform._scale._x, transform._scale._y,
                                                                                  transform._scale._z };
             for ( const float32 value : arrValue )
+            {
                 RawAnimCodecInternal::appendFloat( outBytes, value );
+            }
         }
         return true;
     }

@@ -47,9 +47,13 @@ namespace sw
                 kind._name     = hashed_string( pName );
                 kind._category = category;
                 for ( const utf8* pPort : listInput )
+                {
                     kind._listInput.push_back( hashed_string( pPort ) );
+                }
                 for ( const utf8* pPort : listOutput )
+                {
                     kind._listOutput.push_back( hashed_string( pPort ) );
+                }
                 kind._listParam.assign( listParam.begin(), listParam.end() );
                 kind._floatStateCount = floatCount;
                 kind._intStateCount   = intCount;
@@ -77,7 +81,9 @@ namespace sw
             {
                 uint32 count = 0;
                 for ( ; value != 0; value &= value - 1 )
+                {
                     ++count;
+                }
                 return count;
             }
 
@@ -486,7 +492,9 @@ namespace sw
                 if ( floorCount == 0 )
                     return failParam( context, "floors needs at least one height (\"0 4 8\")" );
                 for ( uint32 floor = 0; floor < floorCount; ++floor )
+                {
                     context._pFloatState[1 + floor] = arrFloor[floor];
+                }
                 context._pIntState[1]   = static_cast<int32>( floorCount );
                 context._pIntState[0]   = MathUtil::clamp( static_cast<int32>( context.getNumber( 2 ) ), 0, static_cast<int32>( floorCount ) - 1 );
                 context._pFloatState[0] = context._pFloatState[1 + context._pIntState[0]];

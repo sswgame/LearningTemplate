@@ -273,7 +273,9 @@ namespace
             _bStarted.store( true, std::memory_order_release );
             const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 2000 );
             while ( _bRelease.load( std::memory_order_acquire ) == false && deadline.isExpired() == false )
+            {
                 std::this_thread::yield();
+            }
         }
     };
 } // namespace
@@ -290,7 +292,9 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     sw::GameObjectManager manager;
     sw::RegisterMockComponents();
     for ( uint32 index = 0; index < 4; ++index )
+    {
         manager.createGameObject( hashed_string( "ForeignWaitTicker" ) )->addComponent<MockMeshComponent>();
+    }
     manager.tick( 0.016f );
 
     BlockingForeignTask task;
@@ -300,7 +304,9 @@ SW_TEST_CASE( GameObjectManagerTest, TickDoesNotWaitForForeignTasks )
     // 워커가 집어 갔을 때부터 잰다. 아직 큐에 있으면 틱의 합류 대기가 그것을 도와 실행해 버릴 수 있다.
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 2000 );
     while ( task._bStarted.load( std::memory_order_acquire ) == false && waitDeadline.isExpired() == false )
+    {
         std::this_thread::yield();
+    }
     SW_ASSERT_TRUE( task._bStarted.load( std::memory_order_acquire ) );
 
     const sw::Stopwatch tickStopwatch;
@@ -723,14 +729,20 @@ SW_TEST_CASE( GameObjectManagerPoolTest, ConcurrentDestroyDestroysTheObjectOnlyO
             listThread.emplace_back( [&manager, &listObject, &bGo]()
             {
                 while ( bGo.load( std::memory_order_acquire ) == false )
+                {
                     std::this_thread::yield();
+                }
                 for ( GameObject* pObj : listObject )
+                {
                     manager.destroyObject( pObj );
+                }
             } );
         }
         bGo.store( true, std::memory_order_release );
         for ( std::thread& thread : listThread )
+        {
             thread.join();
+        }
 
         manager.processDeferredDestruction();
         SW_ASSERT_TRUE( manager.getAllGameObjects().empty() );

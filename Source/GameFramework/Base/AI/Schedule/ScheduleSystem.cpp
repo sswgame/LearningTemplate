@@ -279,7 +279,9 @@ namespace sw
             NpcRuntime            npc;
             npc._defIndex = defIndex;
             for ( const TagID& tag : def._listTag )
+            {
                 npc._tags.addTag( tag );
+            }
             const SchedulePlaceDef* pHome = _pCatalog->findPlace( def._home );
             if ( pHome != nullptr )
                 npc._origin = ScheduleLocation{ pHome->_position, pHome->_area };
@@ -288,7 +290,9 @@ namespace sw
         }
         _bSuppressEvents = SW_TRUE; // 처음 상태는 사건이 아니다
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        {
             planNpc( npcIndex, _minute, _listNpc[static_cast<size_t>( npcIndex )]._origin );
+        }
         _bSuppressEvents = SW_FALSE;
         rebuildAppointmentChecks( getDay() );
     }
@@ -376,7 +380,9 @@ namespace sw
                     next = MathUtil::min( next, check._minute );
             }
             for ( const NpcRuntime& npc : _listNpc )
+            {
                 next = MathUtil::min( next, npc._wakeMinute );
+            }
             if ( next > absoluteMinute )
                 break;
             _minute = MathUtil::max( _minute, next );
@@ -405,7 +411,9 @@ namespace sw
         advanceTo( absoluteMinute );
         _bSuppressEvents = SW_FALSE;
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        {
             emitSnapped( npcIndex );
+        }
     }
 
     void ScheduleSystem::setNpcLod( int32 npcIndex, ScheduleLod lod )
@@ -484,7 +492,9 @@ namespace sw
         interruption._expireMinute = expireMinute;
         size_t insertIndex         = npc._listInterruption.size();
         while ( insertIndex > 0 && npc._listInterruption[insertIndex - 1]._priority > interruption._priority )
+        {
             --insertIndex;
+        }
         npc._listInterruption.insert( npc._listInterruption.begin() + static_cast<ptrdiff_t>( insertIndex ), interruption );
         emitEvent( ScheduleEvent::Kind::Interrupted, npcIndex, nullptr, interruptId );
         npc._wakeMinute = computeWakeMinute( npcIndex );
@@ -649,11 +659,15 @@ namespace sw
                 npcState._listInterruption.push_back( interruptionState );
             }
             for ( const TagID& tag : npc._tags.getTags() )
+            {
                 npcState._listTag.push_back( tag.getString() != nullptr ? string( tag.getString() ) : string() );
+            }
             outState._listNpc.push_back( npcState );
         }
         for ( const int32 appointmentIndex : _listBrokenAppointment )
+        {
             outState._listBrokenAppointment.push_back( string( _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )]._id.c_str() ) );
+        }
         if ( _pLocator == &_defaultLocator )
             _defaultLocator.fillState( outState._listReservation );
     }
@@ -694,7 +708,9 @@ namespace sw
             NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
             npc._tags.clear();
             for ( const string& tagName : npcState._listTag )
+            {
                 npc._tags.addTag( TagID::request( tagName ) );
+            }
             for ( const ScheduleInterruptionSaveState& interruptionState : npcState._listInterruption )
             {
                 const ScheduleInterruptDef* pDef = _pCatalog->findInterrupt( interruptionState._id );
@@ -806,7 +822,9 @@ namespace sw
             hash = Internal::hashValue( hash, npc._originMinute );
             hash = Internal::hashPosition( hash, npc._origin._position );
             for ( const ScheduleSegment& segment : npc._listSegment )
+            {
                 hash = Internal::hashValue( hash, Internal::computeSegmentKey( segment ) );
+            }
             for ( const Interruption& interruption : npc._listInterruption )
             {
                 hash = Internal::hashName( hash, interruption._id );
@@ -814,7 +832,9 @@ namespace sw
             }
         }
         for ( const int32 appointmentIndex : _listBrokenAppointment )
+        {
             hash = Internal::hashValue( hash, appointmentIndex );
+        }
         return hash;
     }
 } // namespace sw
@@ -951,7 +971,9 @@ namespace sw
                     const int32 appointmentIndex = _pCatalog->findAppointmentIndex( block._appointment );
                     bool        bBroken          = false;
                     for ( const int32 brokenIndex : _listBrokenAppointment )
+                    {
                         bBroken = bBroken || brokenIndex == appointmentIndex;
+                    }
                     if ( appointmentIndex < 0 || bBroken )
                         continue;
                     const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )];
@@ -975,9 +997,13 @@ namespace sw
             const ScheduleEventDef& event     = listEvent[static_cast<size_t>( eventIndex )];
             bool                    bAttendee = event._listNpc.empty() && event._listArchetype.empty();
             for ( const hashed_string& npcId : event._listNpc )
+            {
                 bAttendee = bAttendee || npcId == def._id;
+            }
             for ( const hashed_string& archetypeId : event._listArchetype )
+            {
                 bAttendee = bAttendee || _pCatalog->isNpcOfArchetype( def, archetypeId );
+            }
             if ( bAttendee == false )
                 continue;
             // 행사의 확률도 참가자 모두에게 같다(축제는 모두에게 열리거나 아무에게도 열리지 않는다).
@@ -1132,7 +1158,9 @@ namespace sw
                 continue;
             bool bKept = false;
             for ( const ScheduleSegment& newSegment : listNew )
+            {
                 bKept = bKept || newSegment._reservationId == oldSegment._reservationId;
+            }
             if ( bKept == false )
                 _pLocator->release( oldSegment._reservationId );
         }
@@ -1145,9 +1173,13 @@ namespace sw
         const int32              dayStart = day * kScheduleMinutesPerDay;
         vector<ScheduleLocation> listLocation;
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        {
             listLocation.push_back( computeLogicLocation( npcIndex, dayStart ) );
+        }
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        {
             planNpc( npcIndex, dayStart, listLocation[static_cast<size_t>( npcIndex )] );
+        }
         rebuildAppointmentChecks( day );
     }
 
@@ -1163,7 +1195,9 @@ namespace sw
             for ( const NpcRuntime& npc : _listNpc )
             {
                 for ( const ScheduleSegment& segment : npc._listSegment )
+                {
                     bScheduled = bScheduled || ( segment._source == ScheduleSegmentSource::Appointment && segment._ownerIndex == appointmentIndex );
+                }
             }
             if ( bScheduled == false )
                 continue;
@@ -1274,12 +1308,16 @@ namespace sw
             const int32 day  = ScheduleSystemInternal::toDay( minute );
             bool        bNew = false;
             for ( const NpcRuntime& npc : _listNpc )
+            {
                 bNew = bNew || npc._planDay != day;
+            }
             if ( bNew )
                 startDay( day );
         }
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
+        {
             popExpiredInterruptions( npcIndex, minute );
+        }
         for ( AppointmentCheck& check : _listAppointmentCheck )
         {
             if ( check._bDone == SW_FALSE && check._minute <= minute )
@@ -1307,7 +1345,9 @@ namespace sw
                 continue;
             bool bPlanned = false;
             for ( const ScheduleSegment& segment : _listNpc[static_cast<size_t>( npcIndex )]._listSegment )
+            {
                 bPlanned = bPlanned || ( segment._source == ScheduleSegmentSource::Appointment && segment._ownerIndex == inoutCheck._appointmentIndex );
+            }
             if ( bPlanned == false )
                 continue;
             emitEvent( ScheduleEvent::Kind::AppointmentBroken, npcIndex, nullptr, appointment._id );
@@ -1348,7 +1388,9 @@ namespace sw
                 const bool bAppointment = segment._source == ScheduleSegmentSource::Appointment;
                 bool       bMetBefore   = false;
                 for ( const int32 metIndex : _listMetAppointment )
+                {
                     bMetBefore = bMetBefore || metIndex == segment._ownerIndex;
+                }
                 if ( bAppointment && bMetBefore == false && isAppointmentMet( segment._sourceId ) )
                 {
                     _listMetAppointment.push_back( segment._ownerIndex );

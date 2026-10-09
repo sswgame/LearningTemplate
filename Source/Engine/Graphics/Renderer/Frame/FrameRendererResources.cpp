@@ -129,7 +129,9 @@ namespace sw
         ComputeConstantBufferRow arrComputeCb[_s_kComputeConstantBufferCount]{};
         collectComputeConstantBuffers( arrComputeCb );
         for ( const ComputeConstantBufferRow& row : arrComputeCb )
+        {
             row._pSlot->release( _pDevice );
+        }
         // 추가 뷰의 컬링 · 정렬 상수버퍼도 이 디바이스의 것이다(다음 프레임의 prepareExtraViews 가 다시 만든다).
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
@@ -142,7 +144,9 @@ namespace sw
         _vertexAnimationPool.release( _pDevice );
         _lightBuffer.release( _pDevice );
         for ( auto& [fallbackStride, fallbackSlot] : _mapMaterialFallback )
+        {
             fallbackSlot.release( _pDevice );
+        }
         _mapMaterialFallback.clear();
         _bPassResourcesReady = SW_FALSE;
     }

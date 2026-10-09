@@ -65,7 +65,9 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( sw::shaderslot::kLightTypePoint2D ), listLight[0]._directionType._w, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( static_cast<float32>( sw::shaderslot::kLightTypeGlobal2D ), listLight[1]._directionType._w, 1e-6f );
     for ( size_t index = 2; index < listLight.size(); ++index )
+    {
         SW_EXPECT_NEAR_EQUAL( static_cast<float32>( sw::shaderslot::kLightTypeShadow2D ), listLight[index]._directionType._w, 1e-6f );
+    }
 
     const sw::GpuLight& point = listLight[0];
     SW_EXPECT_NEAR_EQUAL( -1.0f, point._positionRadius._x, 1e-5f );

@@ -73,13 +73,17 @@ SW_TEST_CASE( ThemeParkTest, RideCyclesCarryCapacityAndCollectTickets )
     SW_ASSERT_TRUE( rideIndex == 0 );
     SW_EXPECT_EQUAL( 400, cashOf( parkWallet ) );
     for ( int32 guestIndex = 0; guestIndex < 8; ++guestIndex )
+    {
         SW_EXPECT_TRUE( park.admitGuest( 100, 0.0f, 9.0f, 1.0f ) );
+    }
 
     park.update( 3.0f ); // 걸어가 줄 선다(10 m / 10 m/s)
     const ParkRide& ride = park.getRides()[0];
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), ride._listRider.size() );
     for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex )
+    {
         park.update( 1.0f );
+    }
 
     SW_EXPECT_TRUE( ride._totalRiders >= 8u );
     SW_EXPECT_EQUAL( static_cast<int32>( ride._totalRiders + ride._listRider.size() ) * 4, ride._totalIncome );
@@ -98,7 +102,9 @@ SW_TEST_CASE( ThemeParkTest, GuestsRefuseTooIntenseOrOverpricedRides )
     intensePark.initialize( makeClosedGateSettings(), lendWallet( intenseParkWallet ) );
     (void)intensePark.buildRide( makeThemeParkTestRide( 8.0f, 9.0f, 3, 8, 10.0f ), 0 );
     for ( int32 guestIndex = 0; guestIndex < 6; ++guestIndex )
+    {
         SW_EXPECT_TRUE( intensePark.admitGuest( 100, 0.0f, 6.0f, 1.0f ) );
+    }
     intensePark.update( 5.0f );
     SW_EXPECT_EQUAL( 0u, intensePark.getRides()[0]._totalRiders );
     SW_EXPECT_TRUE( intensePark.getRides()[0]._listRider.empty() );
@@ -110,7 +116,9 @@ SW_TEST_CASE( ThemeParkTest, GuestsRefuseTooIntenseOrOverpricedRides )
     pricedPark.initialize( makeClosedGateSettings(), lendWallet( pricedParkWallet ) );
     (void)pricedPark.buildRide( makeThemeParkTestRide( 5.0f, 3.0f, 25, 8, 10.0f ), 0 ); // 가치 10 → 21 넘으면 비싸다
     for ( int32 guestIndex = 0; guestIndex < 6; ++guestIndex )
+    {
         SW_EXPECT_TRUE( pricedPark.admitGuest( 100, 0.0f, 9.0f, 1.0f ) );
+    }
     pricedPark.update( 5.0f );
     SW_EXPECT_TRUE( pricedPark.getRides()[0]._listRider.empty() );
     SW_EXPECT_EQUAL( 6u, pricedPark.countGuestsThinking( ParkGuestThought::TooExpensive ) );
@@ -174,10 +182,14 @@ SW_TEST_CASE( ThemeParkTest, TiredGuestsLeaveAndRunningCostsAreCharged )
     ride._runningCostPerMinute = 60; // 초당 1
     (void)park.buildRide( ride, 0 );
     for ( int32 guestIndex = 0; guestIndex < 5; ++guestIndex )
+    {
         SW_EXPECT_TRUE( park.admitGuest( 100, 0.0f, 9.0f, 1.0f ) );
+    }
 
     for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
+    {
         park.update( 1.0f );
+    }
     SW_EXPECT_EQUAL( 0u, park.getGuestCount() );
     SW_EXPECT_EQUAL( 5u, park.getTotalVisitorCount() );
     SW_EXPECT_EQUAL( 940, cashOf( parkWallet ) );
@@ -221,7 +233,9 @@ SW_TEST_CASE( ThemeParkTest, StateRoundTripContinuesTheSamePark )
     SW_ASSERT_TRUE( park.buildRide( makeThemeParkTestRide( 7.0f, 6.0f, 6, 2, 14.0f ), 900 ) == 1 );
     park.setEntryFee( 3 );
     for ( int32 stepIndex = 0; stepIndex < 47; ++stepIndex )
+    {
         park.update( 0.7f );
+    }
     SW_ASSERT_TRUE( park.getGuestCount() > 0u );
 
     Archive written;

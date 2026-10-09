@@ -177,7 +177,9 @@ SW_TEST_CASE( InteractionTest, HoldCancelsOnReleaseMashAndSteps )
     InteractionSession   session;
     SW_ASSERT_TRUE( session.begin( &hold, 1 ) );
     for ( int32 frame = 0; frame < 30; ++frame )
+    {
         session.update( 1.0f / 60.0f, true, false );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.5f, session.getStepProgress(), 0.02f );
     session.update( 1.0f / 60.0f, false, false ); // 뗐다
     SW_EXPECT_TRUE( session.getState() == InteractionSessionState::Cancelled );
@@ -185,7 +187,9 @@ SW_TEST_CASE( InteractionTest, HoldCancelsOnReleaseMashAndSteps )
     SW_ASSERT_TRUE( session.begin( &hold, 1 ) );
     SW_EXPECT_EQUAL( 0.0f, session.getStepProgress() ); // 다시 시작하면 처음부터
     for ( int32 frame = 0; frame < 61; ++frame )
+    {
         session.update( 1.0f / 60.0f, true, false );
+    }
     SW_EXPECT_TRUE( session.getState() == InteractionSessionState::Completed );
 
     const InteractionDef mash = InteractionTestInternal::makeDef( "Mash", InteractionInputMode::Mash );
@@ -196,7 +200,9 @@ SW_TEST_CASE( InteractionTest, HoldCancelsOnReleaseMashAndSteps )
     session.update( 0.25f, false, false ); // 쉬면 줄어든다
     SW_EXPECT_NEAR_EQUAL( 0.25f, session.getStepProgress(), 1.0e-4f );
     for ( int32 press = 0; press < 3; ++press )
+    {
         session.update( 0.01f, true, true );
+    }
     SW_EXPECT_TRUE( session.getState() == InteractionSessionState::Completed );
 
     InteractionDef steps = InteractionTestInternal::makeDef( "Craft", InteractionInputMode::Press );
@@ -205,10 +211,14 @@ SW_TEST_CASE( InteractionTest, HoldCancelsOnReleaseMashAndSteps )
     SW_ASSERT_TRUE( session.begin( &steps, 1 ) ); // 첫 단계(누름)는 시작한 누름으로 끝난다
     SW_EXPECT_EQUAL( 1, session.getStepIndex() );
     for ( int32 frame = 0; frame < 61; ++frame )
+    {
         session.update( 1.0f / 60.0f, true, false );
+    }
     SW_EXPECT_EQUAL( 2, session.getStepIndex() );
     for ( int32 press = 0; press < 4; ++press )
+    {
         session.update( 0.01f, true, true );
+    }
     vector<InteractionSessionEvent> listEvent;
     session.drainEvents( listEvent );
     SW_EXPECT_TRUE( session.getState() == InteractionSessionState::Completed );

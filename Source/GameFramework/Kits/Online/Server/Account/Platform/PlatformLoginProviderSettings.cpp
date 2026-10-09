@@ -103,7 +103,9 @@ namespace sw
             settings._bRequireNonce   = entry.get( "requireNonce", false ).asBool( false ) ? SW_TRUE : SW_FALSE;
             const JsonValue clientIds = entry.get( "clientIds", false );
             for ( size_t clientIndex = 0; clientIds.isArray() && clientIndex < clientIds.size(); ++clientIndex )
+            {
                 settings._listClientId.push_back( clientIds.at( clientIndex ).asString() );
+            }
             if ( isValidSettings( settings ) == false )
             {
                 outError = "provider '" + settings._name + "' is missing a required setting or has an invalid name";

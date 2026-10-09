@@ -159,7 +159,9 @@ SW_TEST_CASE( AudioEventTest, ContainersPickClipsByData )
     // 스테레오 직류 클립 · 가운데 팬 = 클립 값 그대로.
     const float32 arrExpected[6] = { 0.1f, 0.2f, 0.3f, 0.1f, 0.2f, 0.3f };
     for ( const float32 expected : arrExpected )
+    {
         SW_EXPECT_NEAR_EQUAL( expected, AudioEventTestInternal::postAndMeasure( engine, "Seq" ), 1e-3f );
+    }
 
     float32 previous = -1.0f;
     for ( uint32 postIndex = 0; postIndex < 30; ++postIndex )
@@ -169,7 +171,9 @@ SW_TEST_CASE( AudioEventTest, ContainersPickClipsByData )
         previous = level;
     }
     for ( uint32 postIndex = 0; postIndex < 5; ++postIndex )
+    {
         SW_EXPECT_NEAR_EQUAL( 0.2f, AudioEventTestInternal::postAndMeasure( engine, "Weighted" ), 1e-3f );
+    }
     SW_EXPECT_NEAR_EQUAL( 0.3f, AudioEventTestInternal::postAndMeasure( engine, "Layer" ), 1e-3f );
 
     // 모르는 이벤트는 0 이다.

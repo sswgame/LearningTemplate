@@ -154,7 +154,9 @@ namespace sw
         {
             bind( listBinding, context );
             for ( ActiveBinding& binding : _listBinding )
+            {
                 (void)apply( binding, context ); // 칸이 바뀌었는지는 쓴 수(`_writeCount`)가 센다
+            }
             return;
         }
         const uint64 viewModelSerial = _pViewModel != nullptr ? _pViewModel->getChangeSerial() : 0;
@@ -215,7 +217,9 @@ namespace sw
         }
         bool bUsesSettings = false;
         for ( const ActiveBinding& binding : _listBinding )
+        {
             bUsesSettings = bUsesSettings || binding._expression._source == UiBindingSource::Setting;
+        }
         registerSettingsListener( bUsesSettings ? context._pSettings : nullptr );
         _bBound = true;
     }
@@ -426,7 +430,9 @@ namespace sw
                     vector<string>* pList = binding._optionList.getLeafProperty().getValuePtr<vector<string>>( binding._optionList.findLeafOwner( &widget ) );
                     vector<string>  listText;
                     for ( const UserSettingOption& option : listOption )
+                    {
                         listText.push_back( UiBindingSetInternal::getOptionText( option ) );
+                    }
                     if ( pList != nullptr && *pList != listText )
                     {
                         *pList = std::move( listText );

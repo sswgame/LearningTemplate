@@ -408,7 +408,9 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
 
     sw::unordered_set<sw::string> uniqueExtension;
     for ( const sw::ShaderTargetFormat format : arrFormat )
+    {
         uniqueExtension.insert( sw::string( sw::ShaderCooker::getExtensionForFormat( format ) ) );
+    }
 
     uint32 checkedCount{ 0 };
     uint32 orphanCount{ 0 };
@@ -472,7 +474,9 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryRuntimeStaticSwitchCombinationIsReques
         for ( uint32 combo = 0; combo < comboCount; ++combo )
         {
             for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
+            {
                 material->setStaticSwitch( sw::hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
+            }
             const sw::vector<sw::string> listMaterialDefine = material->getCachedShaderDefines();
             const sw::string             label              = materialPath + " switches " + sw::to_string( combo ) + ": ";
             ++runtimeComboCount;

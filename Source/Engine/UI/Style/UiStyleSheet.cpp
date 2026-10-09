@@ -69,7 +69,9 @@ namespace sw
             {
                 const size_t start = inoutPos;
                 while ( inoutPos < text.size() && isIdentifierChar( text[inoutPos] ) )
+                {
                     ++inoutPos;
+                }
                 return text.substr( start, inoutPos - start );
             }
 
@@ -134,10 +136,14 @@ namespace sw
                 while ( position < styleClass.size() )
                 {
                     while ( position < styleClass.size() && styleClass[position] == ' ' )
+                    {
                         ++position;
+                    }
                     const size_t start = position;
                     while ( position < styleClass.size() && styleClass[position] != ' ' )
+                    {
                         ++position;
+                    }
                     if ( position > start && string_view( styleClass ).substr( start, position - start ) == wanted )
                         return true;
                 }
@@ -276,10 +282,14 @@ namespace sw
         while ( position < text.size() )
         {
             while ( position < text.size() && text[position] == ' ' )
+            {
                 ++position;
+            }
             const size_t start = position;
             while ( position < text.size() && text[position] != ' ' )
+            {
                 ++position;
+            }
             if ( position == start )
                 break;
             UiStyleSelectorPart part{};
@@ -327,7 +337,9 @@ namespace sw
         {
             const UiStyleSelectorPart& part = _listPart[index - 1];
             while ( pAncestor != nullptr && matchesPart( part, *pAncestor, bNavigationMode ) == false )
+            {
                 pAncestor = pAncestor->getParent();
+            }
             if ( pAncestor == nullptr )
                 return false;
             pAncestor = pAncestor->getParent();

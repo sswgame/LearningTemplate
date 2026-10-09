@@ -111,6 +111,8 @@ namespace sw
         std::scoped_lock<mutex>           lock{ state._mutex };
         SqlDriverRegistryInternal::registerBuiltInDrivers( state );
         for ( const ISqlDriver* pDriver : state._listDriver )
+        {
             outListName.push_back( string( pDriver->getName() ) );
+        }
     }
 } // namespace sw

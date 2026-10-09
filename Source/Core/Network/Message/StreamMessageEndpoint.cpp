@@ -29,13 +29,17 @@ namespace sw
             static void writeInt64( uint8* pOut, int64 value )
             {
                 for ( int32 index = 0; index < 8; ++index )
+                {
                     pOut[index] = static_cast<uint8>( static_cast<uint64>( value ) >> ( index * 8 ) );
+                }
             }
             static int64 readInt64( const uint8* pData )
             {
                 uint64 value = 0;
                 for ( int32 index = 0; index < 8; ++index )
+                {
                     value |= static_cast<uint64>( pData[index] ) << ( index * 8 );
+                }
                 return static_cast<int64>( value );
             }
         };

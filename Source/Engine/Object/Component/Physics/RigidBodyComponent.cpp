@@ -186,7 +186,9 @@ namespace sw
         PhysicsBodyDesc3D desc;
         desc._listShape.reserve( _listShape.size() );
         for ( const PhysicsShapeDesc3D& shape : _listShape )
+        {
             desc._listShape.push_back( PhysicsComponentUtil::makeScaledShape( shape, scale ) );
+        }
         desc._position           = position;
         desc._rotation           = rotation;
         desc._userData           = getOwner()->getObjectId();

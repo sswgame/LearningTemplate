@@ -108,7 +108,9 @@ namespace sw
             for ( const string_view qualifier : { string_view{ "const " }, string_view{ "volatile " } } )
             {
                 while ( head.substr( 0, qualifier.size() ) == qualifier )
+                {
                     head = StringUtil::trim( head.substr( qualifier.size() ) );
+                }
             }
             return scopeLeaf( head );
         }

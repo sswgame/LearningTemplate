@@ -265,7 +265,9 @@ namespace sw
             return string_view( lhs._itemId.c_str() ) < string_view( rhs._itemId.c_str() );
         } );
         for ( size_t index = 0; index < _listSlot.size(); ++index )
+        {
             _listSlot[index] = index < listStack.size() ? listStack[index] : InventorySlot{};
+        }
         ++_revision;
     }
 
@@ -287,7 +289,9 @@ namespace sw
     void Inventory::clear()
     {
         for ( InventorySlot& slot : _listSlot )
+        {
             slot = InventorySlot{};
+        }
         ++_revision;
     }
 
@@ -295,7 +299,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const InventorySlot& slot : _listSlot )
+        {
             count += slot.isEmpty() == false && slot._itemId == itemId ? slot._count : 0;
+        }
         return count;
     }
 
@@ -341,7 +347,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const InventorySlot& slot : _listSlot )
+        {
             count += slot.isEmpty() ? 1 : 0;
+        }
         return count;
     }
 

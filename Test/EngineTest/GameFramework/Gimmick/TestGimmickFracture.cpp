@@ -70,7 +70,9 @@ namespace
         static void tickFrames( sw::GameObjectManager& manager, int32 frameCount )
         {
             for ( int32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( 1.0f / 60.0f );
+            }
         }
     };
 } // namespace
@@ -115,7 +117,9 @@ SW_TEST_CASE( GimmickFractureTest, BarrelChainBreaksNearbyFracturedWall )
             continue;
         bool bKnown = false;
         for ( const float32 x : listCenterX )
+        {
             bKnown = bKnown || sw::MathUtil::abs( x - event._position._x ) < 0.5f;
+        }
         if ( bKnown == false )
             listCenterX.push_back( event._position._x );
     }

@@ -46,7 +46,9 @@ namespace sw
         if ( _pHost != nullptr )
         {
             for ( const string& topic : _listSubscribedTopic )
+            {
                 _pHost->unsubscribeServerBus( topic, this );
+            }
         }
         _listSubscribedTopic.clear();
         _pendingTable.clear();
@@ -218,11 +220,15 @@ namespace sw
         _listLobbyStartScratch.clear();
         _pPartyLobby->drainLobbyStarts( _listLobbyStartScratch );
         for ( const LobbyStartRequest& start : _listLobbyStartScratch )
+        {
             _pQueue->placeLobby( start._lobby, nowMs );
+        }
         _listBrokenTicketScratch.clear();
         _pPartyLobby->drainBrokenTickets( _listBrokenTicketScratch );
         for ( const uint64 ticketId : _listBrokenTicketScratch )
+        {
             _pQueue->cancelTicket( ticketId );
+        }
 
         _listPartyCompletionScratch.clear();
         _pPartyLobby->drainCompletions( _listPartyCompletionScratch );

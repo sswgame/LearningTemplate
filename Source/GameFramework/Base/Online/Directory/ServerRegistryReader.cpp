@@ -40,7 +40,9 @@ namespace sw
             if ( _indexRequestId != 0 )
                 _pRouter->cancel( _indexRequestId );
             for ( const auto& [requestId, serverId] : _mapRequestToServer )
+            {
                 _pRouter->cancel( requestId );
+            }
         }
         _pRouter          = nullptr;
         _indexRequestId   = 0;

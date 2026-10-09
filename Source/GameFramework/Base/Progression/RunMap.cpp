@@ -148,7 +148,9 @@ namespace sw
         // 종류 — 층 순서로, 들어오는 칸 하나의 종류를 "바로 앞" 으로 본다.
         vector<int32> listOrder;
         for ( size_t index = 0; index < _listNode.size(); ++index )
+        {
             listOrder.push_back( static_cast<int32>( index ) );
+        }
         std::stable_sort( listOrder.begin(), listOrder.end(), [this]( int32 lhs, int32 rhs )
         {
             const RunNode& lhsNode = _listNode[static_cast<size_t>( lhs )];
@@ -161,13 +163,17 @@ namespace sw
             RunNode& node = _listNode[static_cast<size_t>( index )];
             node._kind    = pickKind( settings, node._floor, listPreviousKind[static_cast<size_t>( index )], random );
             for ( const int32 nextIndex : node._listNext )
+            {
                 listPreviousKind[static_cast<size_t>( nextIndex )] = node._kind;
+            }
         }
         for ( RunNode& node : _listNode )
+        {
             std::sort( node._listNext.begin(), node._listNext.end(), [this]( int32 lhs, int32 rhs )
             {
                 return _listNode[static_cast<size_t>( lhs )]._column < _listNode[static_cast<size_t>( rhs )]._column;
             } );
+        }
     }
 
     void RunMap::collectChoices( vector<int32>& outListNode ) const

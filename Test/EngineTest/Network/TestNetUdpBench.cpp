@@ -121,7 +121,9 @@ namespace
         }
         const NetAddress serverAddress = NetAddress::makeLoopback( serverSocket.getLocalAddress()._port );
         for ( unique_ptr<BenchClient>& client : listClient )
+        {
             (void)client->_host.connect( serverAddress );
+        }
 
         // 드라이버 스레드는 표를 원시 포인터로 본다 — sw::vector 를 여러 스레드가 만지면 Debug 레이스 탐지기가 잡는다.
         unique_ptr<BenchClient>* const pClientArray = listClient.data();
@@ -186,7 +188,9 @@ namespace
 
         const Deadline connectDeadline = Deadline::afterMilliseconds( Internal::kConnectTimeoutMilli );
         while ( server.getConnectedCount() < clientCount && connectDeadline.isExpired() == false )
+        {
             std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
         const int32 connectedCount = server.getConnectedCount();
         std::this_thread::sleep_for( std::chrono::milliseconds( Internal::kWarmupMilli ) );
 
@@ -214,7 +218,9 @@ namespace
         bStop.store( true, std::memory_order_release );
         serverThread.join();
         for ( std::thread& driver : listDriver )
+        {
             driver.join();
+        }
 
         const int64 busy                 = busyNanoseconds.load();
         outResult._receivedPerSecond     = static_cast<float64>( received ) / seconds;

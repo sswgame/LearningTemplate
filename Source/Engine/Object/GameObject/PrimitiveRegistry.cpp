@@ -40,7 +40,9 @@ namespace sw
         // 두 배씩 늘린다. 프리미티브가 하나씩 늘 때마다 배열을 다시 만들지 않는다. 용량은 워드 단위(64 칸)다.
         uint32 capacity = ( _dirtyFlagCapacity == 0 ) ? 64u : _dirtyFlagCapacity;
         while ( capacity < count )
+        {
             capacity *= 2u;
+        }
         const uint32                 oldWordCount    = _dirtyFlagCapacity / 64u;
         const uint32                 wordCount       = capacity / 64u;
         unique_ptr<atomic<uint64>[]> arrNew          = make_unique<atomic<uint64>[]>( wordCount );
@@ -170,7 +172,9 @@ namespace sw
         const uint32 count  = pBatch->getCount();
         _listInstanceEntry.reserve( _listInstanceEntry.size() + count );
         for ( uint32 index = 0; index < count; ++index )
+        {
             _listInstanceEntry.push_back( PrimitiveInstanceEntry{ pBatch, index } );
+        }
         _listInstanceBatch.push_back( pBatch );
         growDirtyFlags( getSlotCount() );
         _setGeneration.fetch_add( 1, std::memory_order_relaxed );

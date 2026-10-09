@@ -272,7 +272,9 @@ SW_TEST_CASE( GlobalVariableTest, MultithreadedStringReadWriteThreadSafety )
     // 읽는 쪽이 돌기 시작한 뒤에 쓴다(위 설명).
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( readCount.load() == 0 && waitDeadline.isExpired() == false )
+    {
         std::this_thread::yield();
+    }
     const uint32 readBeforeWrite = readCount.load();
 
     // 쓰는 동안 겹친 읽기가 충분해야 한다 — 1000 번을 쓰고도 모자라면 더 쓴다(상한이 있다).

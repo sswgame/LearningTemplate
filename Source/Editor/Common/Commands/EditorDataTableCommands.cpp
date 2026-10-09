@@ -104,7 +104,9 @@ namespace sw::editor
         outSheet._sourceCulture = project._sourceCulture;
         outSheet._listCulture   = project._listCulture;
         for ( const string& tableName : project._listStringTable )
+        {
             outSheet._listTablePath.push_back( LocalizationProject::makeSiblingPath( projectPath, tableName ) );
+        }
 
         vector<SourceStringTable> listTable;
         bool                      bAllRead = EditorDataTableCommandsInternal::readSourceTables( outSheet, listTable );
@@ -163,9 +165,13 @@ namespace sw::editor
         for ( const string& removedKey : inoutSheet._listRemovedKey )
         {
             for ( SourceStringTable& table : listTable )
+            {
                 (void)table.removeEntry( removedKey ); // 그 표에 없는 키면 false — 할 일이 없다
+            }
             for ( TranslationTable& translation : listTranslation )
+            {
                 (void)translation.removeEntry( removedKey ); // 번역이 없는 키면 false — 할 일이 없다
+            }
         }
 
         for ( const LocalizationRecord& record : inoutSheet._listRecord )
@@ -223,7 +229,9 @@ namespace sw::editor
             return false; // 고친 표시를 지우지 않는다 — 저장되지 않은 것이 남아 있다
 
         for ( LocalizationRecord& record : inoutSheet._listRecord )
+        {
             record._bModified = false;
+        }
         inoutSheet._listRemovedKey.clear();
 
         LocalizationManager* pLocalizationManager = editor::getService<LocalizationManager>();

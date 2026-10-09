@@ -192,11 +192,15 @@ namespace sw
         string                             out = "## " + string( info._fullyQualifiedName.c_str() ) + ( info._bIsBitFlag == SW_TRUE ? " (Flags)" : "" ) + "\n\n| 이름 | 값 |\n|---|---|\n";
         vector<pair<int64, hashed_string>> listEntry;
         for ( const auto& [value, name] : info._mapValueToName )
+        {
             listEntry.emplace_back( value, name );
+        }
         std::sort( listEntry.begin(), listEntry.end(), []( const pair<int64, hashed_string>& lhs, const pair<int64, hashed_string>& rhs )
         { return lhs.first < rhs.first || ( lhs.first == rhs.first && lhs.second.lexicalLess( rhs.second ) ); } );
         for ( const auto& [value, name] : listEntry )
+        {
             out += "| `" + string( name.c_str() ) + "` | " + to_string( value ) + " |\n";
+        }
         out += "\n";
         return out;
     }
@@ -235,9 +239,13 @@ namespace sw
             listModule.push_back( moduleName );
         };
         for ( const TypeInfo* pType : listType )
+        {
             addModule( pType->_moduleName );
+        }
         for ( const EnumInfo* pEnum : listEnum )
+        {
             addModule( pEnum->_moduleName );
+        }
         std::sort( listModule.begin(), listModule.end(), HashedStringLexicalLess{} );
 
         string index     = "# 리플렉션 API\n\n`App --write-reflection-docs` 가 등록된 타입에서 만든 문서입니다(손으로 고치지 않습니다).\n\n| 모듈 | 타입 | 열거형 |\n|---|---|---|\n";

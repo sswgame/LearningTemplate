@@ -36,7 +36,9 @@ namespace sw
     void NetPrioritizer::beginAccumulate()
     {
         for ( Entry& entry : _listEntry )
+        {
             entry._bTouched = SW_FALSE;
+        }
     }
 
     void NetPrioritizer::accumulate( uint32 entityId, float32 priority, float32 deltaTime )
@@ -67,7 +69,9 @@ namespace sw
         { return lhs._accumulated != rhs._accumulated ? lhs._accumulated > rhs._accumulated : lhs._entityId < rhs._entityId; } );
         outListEntity.resize( _listRankScratch.size() );
         for ( size_t index = 0; index < _listRankScratch.size(); ++index )
+        {
             outListEntity[index] = _listRankScratch[index]._entityId;
+        }
     }
 
     void NetPrioritizer::markSent( uint32 entityId )

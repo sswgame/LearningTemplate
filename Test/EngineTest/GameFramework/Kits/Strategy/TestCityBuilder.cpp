@@ -80,7 +80,9 @@ namespace
         void run( float32 seconds )
         {
             for ( float32 elapsed = 0.0f; elapsed < seconds; elapsed += 0.25f )
+            {
                 _city.update( 0.25f );
+            }
         }
     };
 } // namespace
@@ -192,7 +194,9 @@ SW_TEST_CASE( CityBuilderTest, ServiceWalkersRoamRoadsAndServeNearbyHouses )
     SW_EXPECT_TRUE( bSawNoWalker );
     bool bWalkersOnRoad = true;
     for ( const CityWalker& walker : city.getWalkers() )
+    {
         bWalkersOnRoad = bWalkersOnRoad && city.findTile( walker._tile._x, walker._tile._y )->_bRoad == SW_TRUE;
+    }
     SW_EXPECT_TRUE( bWalkersOnRoad );
 }
 
@@ -212,7 +216,9 @@ SW_TEST_CASE( CityBuilderTest, FoodChainFeedsHousesAndHousesEvolveAndDevolve )
     SW_ASSERT_TRUE( city.placeBuilding( "shrine", 9, 9 ) == CityPlaceResult::Ok );
     SW_ASSERT_TRUE( city.placeBuilding( "well", 6, 12 ) == CityPlaceResult::Ok );
     for ( int32 x = 3; x <= 7; ++x )
+    {
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    }
     SW_ASSERT_TRUE( city.placeBuilding( "house", 3, 12 ) == CityPlaceResult::Ok );
 
     bool              bDelivered = false;
@@ -223,7 +229,9 @@ SW_TEST_CASE( CityBuilderTest, FoodChainFeedsHousesAndHousesEvolveAndDevolve )
         listEvent.clear();
         city.drainEvents( listEvent );
         for ( const CityEvent& event : listEvent )
+        {
             bDelivered = bDelivered || event._kind == CityEvent::Kind::GoodsDelivered;
+        }
     }
     SW_EXPECT_TRUE( bDelivered );
     SW_EXPECT_TRUE( city.getWorkforce() > 0 );
@@ -252,7 +260,9 @@ SW_TEST_CASE( CityBuilderTest, MonthEndCollectsTaxesPaysWagesAndYearFloods )
     CitySimulation& city = scene._city;
     scene.buildRoadLoop();
     for ( int32 x = 5; x <= 9; ++x )
+    {
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    }
     SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
     const int32 moneyAfterBuilding = scene.getMoney();
 
@@ -307,12 +317,16 @@ SW_TEST_CASE( CityBuilderTest, FloodRollsOnlyOnANewYear )
         city.drainEvents( listEvent );
         int32 floodCount = 0;
         for ( const CityEvent& event : listEvent )
+        {
             floodCount += event._kind == CityEvent::Kind::Flood ? 1 : 0;
+        }
         return floodCount;
     };
     const float32 fertilityBefore = city.getFloodFertility();
     for ( int32 month = 0; month < 11; ++month )
+    {
         city.settleMonth( false );
+    }
     SW_EXPECT_EQUAL( 0, countFloods() );
     SW_EXPECT_NEAR_EQUAL( fertilityBefore, city.getFloodFertility(), 1e-6f );
     city.settleMonth( true );
@@ -329,11 +343,15 @@ SW_TEST_CASE( CityBuilderTest, MonthlyWagesCanRunTheBorrowedWalletIntoDebt )
     CitySimulation& city = scene._city;
     scene.buildRoadLoop();
     for ( int32 x = 5; x <= 9; ++x )
+    {
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    }
     SW_ASSERT_TRUE( city.placeBuilding( "tax", 4, 9 ) == CityPlaceResult::Ok );
     scene._wallet.setBalance( city.getCurrency(), 0 );
     for ( int32 month = 0; month < 3 && scene.getMoney() >= 0; ++month )
+    {
         scene.runMonth();
+    }
     SW_ASSERT_TRUE( city.getEmployed() > 0 );
     SW_EXPECT_TRUE( scene.getMoney() < 0 );
     SW_EXPECT_TRUE( city.placeRoad( 3, 3 ) == CityPlaceResult::NotEnoughMoney );
@@ -357,7 +375,9 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
     SW_ASSERT_TRUE( city.placeBuilding( "shrine", 9, 9 ) == CityPlaceResult::Ok );
     SW_ASSERT_TRUE( city.placeBuilding( "well", 6, 12 ) == CityPlaceResult::Ok );
     for ( int32 x = 3; x <= 7; ++x )
+    {
         SW_ASSERT_TRUE( city.placeBuilding( "house", x, 11 ) == CityPlaceResult::Ok );
+    }
     original.run( 37.3f );
     SW_ASSERT_TRUE( city.getWalkers().empty() == false );
 

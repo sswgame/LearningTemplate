@@ -52,7 +52,9 @@ namespace
     {
         vector<Card> listCard;
         for ( const utf8* pText : listText )
+        {
             listCard.push_back( makePlayingCard( pText ) );
+        }
         return PokerHandEvaluator::evaluateBest( listCard.data(), static_cast<int32>( listCard.size() ) );
     }
 
@@ -60,7 +62,9 @@ namespace
     {
         CardPile pile;
         for ( const utf8* pText : listText )
+        {
             pile.push( makePlayingCard( pText ) );
+        }
         return pile;
     }
 
@@ -73,7 +77,9 @@ namespace
     {
         CardPile pile;
         for ( const std::pair<int32, int32>& entry : listCard )
+        {
             pile.push( makeHwatu( entry.first, entry.second ) );
+        }
         return pile;
     }
 
@@ -92,7 +98,9 @@ namespace
     {
         int32 count = 0;
         for ( const TEvent& event : listEvent )
+        {
             count += event._kind == kind ? 1 : 0;
+        }
         return count;
     }
 
@@ -152,7 +160,9 @@ SW_TEST_CASE( CardGameTest, ShuffleIsSeededDealsRoundRobinAndActionsRoundTrip )
     SW_EXPECT_FALSE( bSameAsC ); // 다른 씨앗 → 다른 순서
     bool bAllSeen = true;
     for ( const bool bSeen : arrSeen )
+    {
         bAllSeen = bAllSeen && bSeen;
+    }
     SW_EXPECT_TRUE( bAllSeen ); // 섞어도 52 장 그대로
 
     // 나누기는 맨 위부터 한 장씩 돌아간다.
@@ -216,7 +226,9 @@ SW_TEST_CASE( CardGameTest, PokerRanksHandsComparesKickersAndPicksBestFiveOfSeve
 
     const PokerHandValue arrOrder[] = { highCard, onePair, twoPair, trips, wheel, straight, flush, fullHouse, quads, straightFlush, royal };
     for ( size_t index = 1; index < sizeof( arrOrder ) / sizeof( arrOrder[0] ); ++index )
+    {
         SW_EXPECT_TRUE( PokerHandEvaluator::compareHands( arrOrder[index], arrOrder[index - 1] ) > 0 );
+    }
     SW_EXPECT_EQUAL( wheel._arrTieBreak[0], 5 ); // 휠의 높은 카드는 에이스가 아니라 5
 
     // 키커 — 같은 원페어면 다음 카드로.
@@ -821,7 +833,9 @@ SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuff
     SW_ASSERT_TRUE( twinB.initialize( &catalog, DeckBattleSettings{}, listDeck, enemy, 2024 ) );
     bool bSame = twin.getHand().getCount() == twinB.getHand().getCount();
     for ( int32 index = 0; bSame && index < twin.getHand().getCount(); ++index )
+    {
         bSame = twin.getHand().getAt( index ) == twinB.getHand().getAt( index );
+    }
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_EQUAL( twin.getDrawPile().getCount(), 2 ); // 7 장 중 다섯을 뽑았다
 }
@@ -893,7 +907,9 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     KlondikeGame klondike;
     klondike.initialize( KlondikeSettings{}, 5 );
     for ( int32 draw = 0; draw < 3; ++draw )
+    {
         SW_EXPECT_TRUE( klondike.drawStock() );
+    }
     const vector<uint8> klondikeBytes = captureCardBytes( klondike );
     KlondikeGame        restoredKlondike;
     restoredKlondike.initialize( KlondikeSettings{}, 9 );
@@ -915,7 +931,9 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     UnoGame uno;
     uno.initialize( UnoSettings{}, 11 );
     for ( int32 turn = 0; turn < 3; ++turn )
+    {
         SW_EXPECT_TRUE( uno.drawCard( uno.getCurrentPlayer() ) );
+    }
     const vector<uint8> unoBytes = captureCardBytes( uno );
     UnoGame             restoredUno;
     restoredUno.initialize( UnoSettings{}, 99 );

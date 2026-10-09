@@ -71,7 +71,9 @@ namespace
             _field.drainEvents( _listEvent );
             int32 count = 0;
             for ( const SrpgEvent& event : _listEvent )
+            {
                 count += event._kind == kind ? 1 : 0;
+            }
             return count;
         }
 

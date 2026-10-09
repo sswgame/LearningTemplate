@@ -117,7 +117,9 @@ namespace sw
 
         outReport._listAsset.reserve( mapAsset.size() );
         for ( auto& [assetId, audit] : mapAsset )
+        {
             outReport._listAsset.push_back( std::move( audit ) );
+        }
         return ServiceStoreResult::Ok;
     }
 } // namespace sw

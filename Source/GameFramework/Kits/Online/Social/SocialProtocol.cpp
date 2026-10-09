@@ -47,7 +47,9 @@ namespace sw
         }
         outWriter.writeVarUint( reply._listPresence.size() );
         for ( const SocialPresence& presence : reply._listPresence )
+        {
             writePresence( outWriter, presence );
+        }
         writeGuild( outWriter, reply._guild );
     }
 

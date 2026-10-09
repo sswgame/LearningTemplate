@@ -69,7 +69,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const uint64 claimant : _listClaimant )
+        {
             count += claimant == 0 ? 1 : 0;
+        }
         return count;
     }
 

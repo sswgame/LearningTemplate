@@ -306,7 +306,9 @@ namespace sw
                     continue;
                 bool bListed = false;
                 for ( const hashed_string& neighbor : listNeighbor )
+                {
                     bListed = bListed || neighbor == other;
+                }
                 if ( bListed == false )
                     listNeighbor.push_back( other );
             }
@@ -321,7 +323,9 @@ namespace sw
                 continue;
             bool bTaken = false;
             for ( const GhostBooRuntime& other : _listBoo )
+            {
                 bTaken = bTaken || ( other._state == GhostBooState::Hiding && other._furniture == furniture._id );
+            }
             if ( bTaken == false )
                 listHideout.push_back( furniture._id );
         }

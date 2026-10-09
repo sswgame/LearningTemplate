@@ -23,7 +23,9 @@ namespace sw
         {
             bool bKnown = false;
             for ( size_t keyIndex = 0; keyIndex < keyCount && bKnown == false; ++keyIndex )
+            {
                 bKnown = memberName == pArrKeyDoc[keyIndex]._pKey;
+            }
             if ( bKnown )
                 continue;
             string known;

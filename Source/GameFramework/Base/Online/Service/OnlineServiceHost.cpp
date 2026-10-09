@@ -80,7 +80,9 @@ namespace sw
         for ( IOnlineService* pService : _listService )
         {
             for ( uint16 offset = 0; offset < OnlineMethodRange::kMethodCount; ++offset )
+            {
                 (void)_requestServer.registerMethod( static_cast<uint16>( pService->getMethodRange() + offset ), this ); // registerService 가 겹침을 이미 봤다
+            }
         }
         if ( pTransport->initialize( &_endpoint, settings._transportSettings ) == false || pTransport->listen( settings._listenAddress ) == false )
         {
@@ -101,9 +103,13 @@ namespace sw
         _ephemeralRouter.shutdown(); // 기다리던 캐시 요청은 Unavailable 로 한 번씩 — 서비스를 내리기 전
         // 서비스가 든 호스트 포인터 · 구독을 여기서 떼게 한다 — 서비스 객체는 호스트보다 늦게 내려가도 된다(사라진 호스트를 부르지 않는다).
         for ( size_t index = _listService.size(); index > 0; --index )
+        {
             _listService[index - 1]->onHostShutdown( *this );
+        }
         for ( const BusSubscription& subscription : _listBusSubscription )
+        {
             _settings._pServerBus->unsubscribe( subscription._topic );
+        }
         _listBusSubscription.clear();
         _pTransport->shutdown();
         _requestServer.shutdown();
@@ -137,7 +143,9 @@ namespace sw
                 if ( _requestServer.registerMethod( static_cast<uint16>( range + offset ), this ) )
                     continue;
                 for ( uint16 undo = 0; undo < offset; ++undo )
+                {
                     _requestServer.unregisterMethod( static_cast<uint16>( range + undo ) );
+                }
                 return false;
             }
         }
@@ -160,12 +168,16 @@ namespace sw
             _listBusScratch.clear();
             (void)_settings._pServerBus->pollMessages( _listBusScratch );
             for ( const ServerBusMessage& message : _listBusScratch )
+            {
                 dispatchServerBusMessage( message );
+            }
         }
         if ( _settings._pServiceStore != nullptr )
             (void)_settings._pServiceStore->pollCompletions(); // 끝난 저장 일의 complete 가 맡긴 서비스를 부른다 — 서비스 틱보다 먼저
         for ( IOnlineService* pService : _listService )
+        {
             pService->onServiceTick( *this, nowMs );
+        }
     }
 
     bool OnlineServiceHost::respondOk( const NetRequestToken& token, const BitWriter& body )
@@ -446,12 +458,16 @@ namespace sw
                 listTarget.push_back( subscription._pService );
         }
         for ( IOnlineService* pService : listTarget )
+        {
             pService->onServerBusMessage( *this, message );
+        }
     }
 
     void OnlineServiceHost::notifyAccountLeft( AccountId accountId )
     {
         for ( IOnlineService* pService : _listService )
+        {
             pService->onAccountLeft( *this, accountId );
+        }
     }
 } // namespace sw

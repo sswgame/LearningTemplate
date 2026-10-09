@@ -351,7 +351,9 @@ namespace sw
         if ( pScreen == nullptr || pRoot == nullptr )
             return;
         for ( const PendingEvent& event : listEvent )
+        {
             pScreen->dispatchCommand( event._command, *pRoot );
+        }
     }
 
     UiAnimatedValue UiAnimationPlayer::evaluateTrack( const ResolvedTrack& track, float32 time )

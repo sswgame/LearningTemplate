@@ -60,7 +60,9 @@ namespace sw
             if ( pSurface->getAgentTypes().empty() )
                 listAgentType.push_back( hashed_string{} );
             for ( const hashed_string& agentType : pSurface->getAgentTypes() )
+            {
                 listAgentType.push_back( agentType );
+            }
         } );
         bool bAll = true;
         for ( const hashed_string& agentType : listAgentType )

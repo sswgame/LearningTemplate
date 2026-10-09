@@ -97,7 +97,9 @@ namespace sw
     void MeshInstanceBatch::markAllEntriesDirty()
     {
         for ( uint32 index = 0; index < _listEntry.size(); ++index )
+        {
             markDirty( index );
+        }
     }
 
     void MeshInstanceBatch::markDirty( uint32 index )

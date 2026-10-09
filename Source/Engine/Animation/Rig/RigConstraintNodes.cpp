@@ -385,7 +385,9 @@ namespace sw
                         return false;
                     int32 current = context._pSkeleton->getBone( _source )._parentIndex;
                     while ( current >= 0 && static_cast<uint32>( current ) != entry._bone )
+                    {
                         current = context._pSkeleton->getBone( static_cast<uint32>( current ) )._parentIndex;
+                    }
                     entry._bAncestor = current >= 0 ? SW_TRUE : SW_FALSE;
                     if ( entry._bAncestor == SW_TRUE )
                         _ancestorWeight += entry._weight;
@@ -414,7 +416,9 @@ namespace sw
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override
             {
                 for ( const TwistBone& entry : _listTwist )
+                {
                     inoutListBone.push_back( entry._bone );
+                }
                 inoutListBone.push_back( _source );
             }
 

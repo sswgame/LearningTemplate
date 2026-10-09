@@ -502,7 +502,9 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
     manager.beginPlay();
     pNpc->possess( *pWalker->getComponent<PawnComponent>() );
     for ( uint32 frame = 0; frame < 10; ++frame )
+    {
         manager.tick( Internal::kDeltaTime );
+    }
     pNpc->moveTo( float3{ 6.0f, 0.0f, 0.0f } );
     SW_EXPECT_TRUE( pNpc->getMoveStatus() == NavMoveStatus::Moving );
 

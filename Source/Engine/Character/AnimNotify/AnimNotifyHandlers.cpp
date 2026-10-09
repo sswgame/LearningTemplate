@@ -190,7 +190,9 @@ namespace sw
                     const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples, 3.0f ), 2.0f, 16.0f ) );
                     outListPoint.resize( sampleCount );
                     for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+                    {
                         outListPoint[sampleIndex] = float3::lerp( pointA, pointB, static_cast<float32>( sampleIndex ) / static_cast<float32>( sampleCount - 1 ) );
+                    }
                 }
 
                 /** @brief 지난 자리 → 지금 자리를 쓸고 지금으로 넘깁니다. */
@@ -211,7 +213,9 @@ namespace sw
                     const float32              radius = MathUtil::max( context._entry.getFloatParam( s_radius, 0.0f ), 0.0f );
                     const bool                 bMoved = state._bHasPrevious == SW_TRUE && state._listPreviousPoint.size() == listCurrent.size();
                     for ( size_t pointIndex = 0; bMoved && pointIndex < listCurrent.size(); ++pointIndex )
+                    {
                         castAndHit( context, state, state._listPreviousPoint[pointIndex], listCurrent[pointIndex], radius );
+                    }
                     if ( listCurrent.size() >= 2 )
                         castAndHit( context, state, listCurrent.front(), listCurrent.back(), radius );
                 }

@@ -155,7 +155,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listReply.size() );
         for ( AccountClientReply& reply : _listReply )
+        {
             outListReply.push_back( std::move( reply ) );
+        }
         _listReply.clear();
         return count;
     }
@@ -164,7 +166,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listEvent.size() );
         for ( AccountClientEvent& event : _listEvent )
+        {
             outListEvent.push_back( std::move( event ) );
+        }
         _listEvent.clear();
         return count;
     }

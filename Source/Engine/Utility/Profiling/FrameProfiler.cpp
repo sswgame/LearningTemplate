@@ -34,7 +34,9 @@ namespace sw
                 return static_cast<uint32>( nanos );
             uint32 octave = 0;
             for ( uint64 value = nanos; value > 1u; value >>= 1 )
+            {
                 ++octave;
+            }
             const uint32 mantissa = static_cast<uint32>( nanos >> ( octave - FrameProfiler::kSubBucketBit ) ) & FrameProfiler::kSubBucketMask;
             return ( octave << FrameProfiler::kSubBucketBit ) + mantissa;
         }
@@ -64,7 +66,9 @@ namespace sw
             out.clear();
             out.append( pText != nullptr ? pText : "" );
             while ( out.size() < width && out.size() + 1 < out.capacity() )
+            {
                 out.append( " " );
+            }
         }
 #endif
     } // namespace

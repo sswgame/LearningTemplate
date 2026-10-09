@@ -277,7 +277,9 @@ namespace sw
 
         bool bAllViewsCulled = true;
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
+        {
             bAllViewsCulled = dispatchCullView( viewIndex, _arrView[viewIndex], instanceCount, nullptr ) && bAllViewsCulled;
+        }
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
             // 컬링 못 한 추가 뷰는 그리지 않는다 — 가시 목록을 거는 프레임에 갱신 안 된 목록을 읽게 된다.

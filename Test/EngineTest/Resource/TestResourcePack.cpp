@@ -1117,7 +1117,9 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     constexpr uint32                             kEntryCount = 32;
     sw::vector<sw::pair<sw::string, sw::string>> listFile;
     for ( uint32 index = 0; index < kEntryCount; ++index )
+    {
         listFile.push_back( { "async/entry_" + sw::to_string( index ) + ".bin", sw::string( 100 + index * 997, static_cast<utf8>( 'a' + ( index % 26 ) ) ) } );
+    }
     SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( packPath, 0, sw::PackCompressionType::LZ4, listFile ) );
 
     sw::ResourcePackManager manager;
@@ -1145,7 +1147,9 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     // 걸어 둔 채로 내린다 — 리더는 사라져도 읽기는 끝나야 한다.
     manager.unmountAll();
     for ( const sw::AsyncReadHandle& handle : listHandle )
+    {
         SW_ASSERT_TRUE( handle.waitFor( 10000 ) );
+    }
 
     SW_EXPECT_EQUAL( callbackCount.load(), kEntryCount );
     for ( uint32 index = 0; index < kEntryCount; ++index )

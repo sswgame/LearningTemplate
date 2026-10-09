@@ -173,7 +173,9 @@ namespace sw
             const size_t               elementCount = pSequence->getSize( pContainer );
             writer.beginSequence( elementCount );
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
+            {
                 ContainerVisitorInternal::writeElement( pSequence->getElementConst( pContainer, elementIndex ), nested, plan, ContainerSlot::SequenceElement, writer, ctx );
+            }
             writer.endSequence();
             return;
         }

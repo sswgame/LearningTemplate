@@ -53,7 +53,9 @@ namespace sw
         const uint32  secondSample = MathUtil::min( firstSample + 1, _sampleCount - 1 );
         const float32 alpha        = frame - static_cast<float32>( firstSample );
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
+        {
             outPose.setBoneTransform( trackIndex, BoneTransform::blend( getSample( firstSample, trackIndex ), getSample( secondSample, trackIndex ), alpha ) );
+        }
     }
 
     const IAnimCodec* AnimCodecRegistry::findCodec( AnimCodecId id )

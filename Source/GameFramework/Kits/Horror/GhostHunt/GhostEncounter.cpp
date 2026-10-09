@@ -456,7 +456,9 @@ namespace sw
         // 흡입 대상은 있는 유령이어야 한다.
         bool bTargetFound = suctionTarget == 0;
         for ( const GhostInstance& ghost : listGhost )
+        {
             bTargetFound = bTargetFound || ghost._id == suctionTarget;
+        }
         if ( bTargetFound == false )
             return false;
         _random        = random;

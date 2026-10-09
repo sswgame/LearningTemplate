@@ -40,7 +40,9 @@ namespace
         static void tickFor( GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+            {
                 manager.tick( kFrame );
+            }
         }
 
         /** @brief 육각 관(인덱스 없는 삼각형 목록) — 고리 y = 0 · 1 은 뼈 0, y = 2 는 뼈 1 을 따른다. 두 띠가 고리 y = 1 을 나눠 이어져 있다. */

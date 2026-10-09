@@ -83,14 +83,18 @@ namespace sw
             void skipSpace()
             {
                 while ( _position < _pattern.size() && isSpace( _pattern[_position] ) )
+                {
                     ++_position;
+                }
             }
 
             string_view readWord()
             {
                 const size_t start = _position;
                 while ( _position < _pattern.size() && isNameCharacter( _pattern[_position] ) )
+                {
                     ++_position;
+                }
                 return _pattern.substr( start, _position - start );
             }
 
@@ -322,13 +326,17 @@ namespace sw
                 }
                 bool bHasOther{ false };
                 for ( const string& selector : listSelector )
+                {
                     bHasOther = bHasOther || selector == "other";
+                }
                 if ( bHasOther == false )
                     return fail( "plural/select needs an 'other' branch" );
                 if ( bRebuild )
                 {
                     while ( outText.empty() == false && outText.back() == ' ' )
+                    {
                         outText.pop_back();
+                    }
                     outText.push_back( '}' );
                 }
                 if ( bFormat == false || pArgument == nullptr )

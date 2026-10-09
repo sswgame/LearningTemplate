@@ -51,7 +51,9 @@ namespace sw
         vector<const utf8*>  listArgPtr;
         listArgPtr.reserve( listArgString.size() );
         for ( const string& arg : listArgString )
+        {
             listArgPtr.push_back( arg.c_str() );
+        }
 
         vector<CXUnsavedFile> listCxUnsaved;
         listCxUnsaved.reserve( listUnsaved.size() );

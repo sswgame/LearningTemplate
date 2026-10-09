@@ -54,7 +54,9 @@ namespace test
         {
             float64 sum = 0.0;
             for ( uint32 frameIndex = firstFrame; frameIndex < firstFrame + frameCount; ++frameIndex )
+            {
                 sum += static_cast<float64>( listSample[static_cast<size_t>( frameIndex ) * 2 + channel] );
+            }
             return static_cast<float32>( sum / static_cast<float64>( frameCount ) );
         }
 
@@ -75,7 +77,9 @@ namespace test
         {
             float32 peak = 0.0f;
             for ( uint32 frameIndex = firstFrame; frameIndex < firstFrame + frameCount; ++frameIndex )
+            {
                 peak = sw::MathUtil::max( peak, sw::MathUtil::abs( listSample[static_cast<size_t>( frameIndex ) * 2 + channel] ) );
+            }
             return peak;
         }
 

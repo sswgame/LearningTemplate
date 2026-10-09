@@ -32,7 +32,9 @@ namespace sw
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
             for ( const MatchMember& member : match._listTeam[team] )
+            {
                 _mapAccountToExpected[member._accountId] = Expected{ match._matchId, nowMs + kExpectTtlMs, static_cast<int32>( team ) };
+            }
         }
         _newMatchBuffer.push( std::move( match ) );
         return true;

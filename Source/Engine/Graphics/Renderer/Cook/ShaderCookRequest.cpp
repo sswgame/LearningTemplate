@@ -139,7 +139,9 @@ namespace sw
                 for ( uint32 combo = 0; combo < comboCount; ++combo )
                 {
                     for ( size_t switchIndex = 0; switchIndex < listRuntimeSwitch.size(); ++switchIndex )
+                    {
                         material.setStaticSwitch( hashed_string( listRuntimeSwitch[switchIndex] ), ( combo & ( 1u << switchIndex ) ) != 0 );
+                    }
                     const vector<string>& listDefine = material.getCachedShaderDefines();
                     if ( std::find( outListDefine.begin(), outListDefine.end(), listDefine ) == outListDefine.end() )
                         outListDefine.push_back( listDefine );

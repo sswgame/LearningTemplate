@@ -228,7 +228,9 @@ namespace sw
     {
         float64 earliest = _clock;
         for ( const AnimationRewindTrack& track : _listTrack )
+        {
             earliest = MathUtil::min( earliest, track.getFrame( 0 )._time );
+        }
         return earliest;
     }
 
@@ -305,7 +307,9 @@ namespace sw
             const float32 sign           = rotation._w < 0.0f ? -1.0f : 1.0f;
             const float32 arrRotation[4] = { rotation._x * sign, rotation._y * sign, rotation._z * sign, rotation._w * sign };
             for ( const float32 component : arrRotation )
+            {
                 AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( component, 1.0f ) );
+            }
             const float3& translation = pose.getTranslations()[boneIndex];
             AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._x, translationRange ) );
             AnimationRewindInternal::appendInt16( outFrame._poseByte, AnimationRewindInternal::quantize( translation._y, translationRange ) );
@@ -356,7 +360,9 @@ namespace sw
         vector<float4x4> listModel;
         pose.computeModelSpace( track._listParentIndex, listModel );
         for ( const float4x4& model : listModel )
+        {
             outListPosition.push_back( float3::transform( model.getTranslation(), frame._worldMatrix ) );
+        }
     }
 } // namespace sw
 

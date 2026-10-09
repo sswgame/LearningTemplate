@@ -72,7 +72,9 @@ namespace sw
         if ( _bAdvancing != SW_FALSE )
         {
             for ( Timer& timer : _listTimer )
+            {
                 timer._bCancelled = SW_TRUE;
+            }
             return;
         }
         _listTimer.clear();

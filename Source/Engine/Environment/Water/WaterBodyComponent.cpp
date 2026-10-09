@@ -251,7 +251,9 @@ namespace sw
     void WaterBodyComponent::getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const
     {
         for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
+        {
             outArrWave[waveIndex] = waveIndex < _listWave.size() ? _listWave[waveIndex].toVector() : float4{ 0.0f, 1.0f, 0.0f, 0.0f };
+        }
     }
 
     void WaterBodyComponent::writeMaterialValues()
@@ -262,7 +264,9 @@ namespace sw
         float4 arrWave[shaderslot::kGerstnerWaveCount];
         getWaveVectors( arrWave );
         for ( uint32 waveIndex = 0; waveIndex < shaderslot::kGerstnerWaveCount; ++waveIndex )
+        {
             _material.setVector( Internal::getWaveName( waveIndex ), arrWave[waveIndex] );
+        }
         // x = 파도 시간, y = 깊은 물 깊이, z = 거품 폭, w = 잔물결 세기
         _material.setVector( hashed_string( "waterParams" ), float4{ _waveTime, _deepDepth, _foamWidth, _rippleStrength } );
         _material.setVector( hashed_string( "shallowColor" ), _shallowColor );
@@ -298,7 +302,9 @@ namespace sw
 
         // 파도가 메시를 위아래 · 옆으로 민다 — 바운드에 진폭 합만큼 더한다.
         for ( const GerstnerWave& wave : _listWave )
+        {
             boundsRadius += wave._amplitude * 2.0f;
+        }
 
         if ( _material.getInstance() == nullptr )
             (void)_material.acquire( _materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
@@ -331,7 +337,9 @@ namespace sw
         for ( uint32 gridZ = 0; gridZ < cellsZ; ++gridZ )
         {
             for ( uint32 gridX = 0; gridX < cellsX; ++gridX )
+            {
                 Internal::pushQuad( outListVertex, vertexAt( gridX, gridZ ), vertexAt( gridX + 1, gridZ ), vertexAt( gridX, gridZ + 1 ), vertexAt( gridX + 1, gridZ + 1 ) );
+            }
         }
         outBoundsRadius = 0.5f * MathUtil::sqrt( _size._x * _size._x + _size._y * _size._y );
     }
@@ -366,7 +374,9 @@ namespace sw
         }
         outBoundsRadius = 0.0f;
         for ( const Internal::RiverSample& sample : listSample )
+        {
             outBoundsRadius = MathUtil::max( outBoundsRadius, sample._center.getLength() + halfWidth );
+        }
     }
 
     bool WaterBodyComponent::findRiverBase( float32 worldX, float32 worldZ, float32& outBaseHeight ) const

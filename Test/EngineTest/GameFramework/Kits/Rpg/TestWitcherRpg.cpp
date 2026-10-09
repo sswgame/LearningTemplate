@@ -178,7 +178,9 @@ SW_TEST_CASE( WitcherRpgTest, BestiaryShowsOnlyUnlockedWeaknessesWhileMultiplier
     SW_EXPECT_FALSE( bestiary.recordKill( drowner ) );
     SW_EXPECT_TRUE( bestiary.recordKill( drowner ) ); // 4 / 2 = 2
     for ( int32 index = 0; index < 10; ++index )
+    {
         (void)bestiary.recordKill( drowner );
+    }
     SW_EXPECT_EQUAL( 2, bestiary.getKnowledge( drowner ) );
     SW_EXPECT_EQUAL( 14, bestiary.getKillCount( drowner ) );
     bestiary.collectKnownWeaknesses( drowner, listWeakness );
@@ -192,7 +194,9 @@ SW_TEST_CASE( WitcherRpgTest, BestiaryShowsOnlyUnlockedWeaknessesWhileMultiplier
     bestiary.drainEvents( listEvent );
     int32 revealed = 0;
     for ( const WitcherBestiaryEvent& event : listEvent )
+    {
         revealed += event._kind == WitcherBestiaryEvent::Kind::WeaknessRevealed ? 1 : 0;
+    }
     SW_EXPECT_EQUAL( 3, revealed );
 
     // 복합 속성은 곱 — 불은 망령(0.5 × 0.5)에게 약하다.
@@ -331,7 +335,9 @@ SW_TEST_CASE( WitcherRpgTest, ActionsCostStaminaAndAdrenalineBuildsOnHitsAndDrop
     SW_EXPECT_TRUE( combat.performAction( WitcherAction::FastAttack ) == WitcherCombatResult::Ok );
     SW_EXPECT_NEAR_EQUAL( 100.0f, combat.getStamina().getValue(), 1.0e-4f ); // 빠른 공격은 공짜
     for ( int32 index = 0; index < 6; ++index )
+    {
         SW_EXPECT_TRUE( combat.performAction( WitcherAction::StrongAttack ) == WitcherCombatResult::Ok );
+    }
     SW_EXPECT_NEAR_EQUAL( 10.0f, combat.getStamina().getValue(), 1.0e-4f );
     SW_EXPECT_TRUE( combat.performAction( WitcherAction::StrongAttack ) == WitcherCombatResult::NotEnoughStamina );
     SW_EXPECT_TRUE( combat.performAction( WitcherAction::Roll ) == WitcherCombatResult::Ok );
@@ -341,7 +347,9 @@ SW_TEST_CASE( WitcherRpgTest, ActionsCostStaminaAndAdrenalineBuildsOnHitsAndDrop
 
     // 아드레날린: 적중 4 번에 1 포인트, 피격하면 1 포인트 잃는다, 3 에서 멈춘다.
     for ( int32 index = 0; index < 3; ++index )
+    {
         combat.registerHitLanded();
+    }
     SW_EXPECT_EQUAL( 0, combat.getAdrenalinePoints() );
     combat.registerHitLanded();
     SW_EXPECT_EQUAL( 1, combat.getAdrenalinePoints() );
@@ -351,7 +359,9 @@ SW_TEST_CASE( WitcherRpgTest, ActionsCostStaminaAndAdrenalineBuildsOnHitsAndDrop
     combat.registerHitTaken();
     SW_EXPECT_NEAR_EQUAL( 0.0f, combat.getAdrenaline(), 1.0e-5f );
     for ( int32 index = 0; index < 40; ++index )
+    {
         combat.registerHitLanded();
+    }
     SW_EXPECT_EQUAL( 3, combat.getAdrenalinePoints() );
     SW_EXPECT_NEAR_EQUAL( 1.3f, combat.computeDamageScale(), 1.0e-5f );
     SW_EXPECT_EQUAL( 3, combat.consumeAdrenalinePoints() );
@@ -550,7 +560,9 @@ SW_TEST_CASE( WitcherRpgTest, StateRoundTripContinuesTheSameHunt )
     combat.initialize( &data._catalog, 11u );
     SW_ASSERT_TRUE( combat.performAction( WitcherAction::StrongAttack ) == WitcherCombatResult::Ok );
     for ( int32 hit = 0; hit < 3; ++hit )
+    {
         combat.registerHitLanded();
+    }
     combat.update( 0.5f );
 
     const vector<uint8> combatBytes = captureWitcherBytes( combat );

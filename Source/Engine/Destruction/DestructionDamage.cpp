@@ -30,7 +30,9 @@ namespace sw
             static void appendUint32( vector<uint8>& outBytes, uint32 value )
             {
                 for ( uint32 shift = 0; shift < 32; shift += 8 )
+                {
                     outBytes.push_back( static_cast<uint8>( ( value >> shift ) & 0xFFu ) );
+                }
             }
 
             static void appendFloat32( vector<uint8>& outBytes, float32 value )
@@ -59,7 +61,9 @@ namespace sw
             {
                 float32 maxStrain = 0.0f;
                 for ( uint32 leaf = node._firstLeaf; leaf < node._firstLeaf + node._leafCount; ++leaf )
+                {
                     maxStrain = MathUtil::max( maxStrain, listLeafStrain[leaf] );
+                }
                 return maxStrain;
             }
         };
@@ -137,7 +141,9 @@ namespace sw
         outBytes.clear();
         outBytes.reserve( 20 + _listEvent.size() * Internal::kEventSize );
         for ( const uint8 magic : Internal::kArrMagic )
+        {
             outBytes.push_back( magic );
+        }
         Internal::appendUint32( outBytes, kVersion );
         Internal::appendUint32( outBytes, static_cast<uint32>( _seed & 0xFFFFFFFFull ) );
         Internal::appendUint32( outBytes, static_cast<uint32>( _seed >> 32 ) );
@@ -150,7 +156,9 @@ namespace sw
             const float32 arrValue[9] = { event._position._x, event._position._y, event._position._z, event._direction._x, event._direction._y,
                                           event._direction._z, event._strain, event._radius, event._impulse };
             for ( const float32 value : arrValue )
+            {
                 Internal::appendFloat32( outBytes, value );
+            }
         }
     }
 
@@ -274,7 +282,9 @@ namespace sw
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {
             for ( const uint32 link : getLeafLinks( entry._leaf ) )
+            {
                 listTouchedLink.push_back( link );
+            }
         }
         std::sort( listTouchedLink.begin(), listTouchedLink.end() );
         listTouchedLink.erase( std::unique( listTouchedLink.begin(), listTouchedLink.end() ), listTouchedLink.end() );

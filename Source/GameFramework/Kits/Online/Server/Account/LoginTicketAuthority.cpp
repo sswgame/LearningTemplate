@@ -22,14 +22,18 @@ namespace sw
             static void writeUint64( uint8* pOut, uint64 value )
             {
                 for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+                {
                     pOut[byteIndex] = static_cast<uint8>( value >> ( byteIndex * 8 ) );
+                }
             }
 
             static uint64 readUint64( const uint8* pData )
             {
                 uint64 value = 0;
                 for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
+                {
                     value |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
+                }
                 return value;
             }
 
@@ -41,7 +45,9 @@ namespace sw
             {
                 uint8 difference = 0;
                 for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
+                {
                     difference = static_cast<uint8>( difference | ( pFirst[byteIndex] ^ pSecond[byteIndex] ) );
+                }
                 return difference == 0;
             }
 

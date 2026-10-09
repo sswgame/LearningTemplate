@@ -85,7 +85,9 @@ namespace sw
                 def._cap = 0;
             }
             for ( XmlNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
+            {
                 def._listFundingAsset.push_back( string( fundingNode.getAttributeText( "asset" ) ) );
+            }
             addCurrency( def );
         }
         // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다 — 모두 읽은 뒤에 본다(적힌 순서와 무관하게).

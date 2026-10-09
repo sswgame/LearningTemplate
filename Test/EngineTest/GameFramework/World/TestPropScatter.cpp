@@ -75,7 +75,9 @@ SW_TEST_CASE( PropScatterTest, SameSeedGivesTheSameLayout )
     PropScatterMath::computePlacements( params, listOther );
     bool bAllSame = listOther.size() == listFirst.size();
     for ( size_t placementIndex = 0; bAllSame && placementIndex < listFirst.size(); ++placementIndex )
+    {
         bAllSame = PropScatterTestUtil::isSamePlacement( listFirst[placementIndex], listOther[placementIndex] );
+    }
     SW_EXPECT_FALSE( bAllSame );
 }
 

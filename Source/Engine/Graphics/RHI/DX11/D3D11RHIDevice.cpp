@@ -114,7 +114,9 @@ namespace sw
             return;
         ID3D11SamplerState* arrSampler[shaderslot::kStaticSamplerArrayCount]{};
         for ( uint32 samplerIndex = 0; samplerIndex < shaderslot::kStaticSamplerArrayCount; ++samplerIndex )
+        {
             arrSampler[samplerIndex] = _arrStaticSampler[samplerIndex].Get();
+        }
         pContext->PSSetSamplers( shaderslot::dx11::kStaticSampler0, shaderslot::kStaticSamplerArrayCount, arrSampler );
     }
 

@@ -127,7 +127,9 @@ namespace
         void run( float32 seconds )
         {
             for ( float32 time = 0.0f; time < seconds - 1.0e-4f; time += BrMatch::kFixedStep )
+            {
                 _match.update( BrMatch::kFixedStep );
+            }
             _match.drainEvents( _listEvent );
         }
     };
@@ -323,7 +325,9 @@ SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
     const float3 predicted = diver.predictLanding( steer );
     SW_EXPECT_NEAR_EQUAL( middle._x + 360.0f, predicted._x, 0.01f );
     for ( int32 frame = 0; frame < 400 && diver.isLanded() == false; ++frame )
+    {
         diver.update( 0.13f, steer );
+    }
     SW_EXPECT_TRUE( diver.isLanded() );
     SW_EXPECT_NEAR_EQUAL( predicted._x, diver.getPosition()._x, 0.05f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, diver.getPosition()._y, 0.0001f );
@@ -364,7 +368,9 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
     // 확률 0 인 창고와 모르는 지점은 비고, 집마다 2..3 번 굴려 무엇인가 놓인다.
     vector<int32> listCountPerSpot( listSpot.size(), 0 );
     for ( const BrGroundItem& item : listFirst )
+    {
         ++listCountPerSpot[static_cast<size_t>( item._spotIndex )];
+    }
     SW_EXPECT_EQUAL( 0, listCountPerSpot[3] );
     SW_EXPECT_EQUAL( 0, listCountPerSpot[7] );
     SW_EXPECT_TRUE( listCountPerSpot[0] >= 1 && listCountPerSpot[11] >= 1 );
@@ -376,7 +382,9 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
     (void)BrLootPlacement::placeMapLoot( catalog, lootCatalog, listFewer, 2024u, listThird );
     size_t sameCount = 0;
     for ( const BrGroundItem& item : listFirst )
+    {
         sameCount += item._spotIndex != 11 ? 1 : 0;
+    }
     SW_ASSERT_TRUE( listThird.size() == sameCount );
     SW_EXPECT_TRUE( listThird.back()._itemId == listFirst[sameCount - 1]._itemId );
 
@@ -385,7 +393,9 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
     (void)BrLootPlacement::placeMapLoot( catalog, lootCatalog, listSpot, 7u, listOther );
     bool bDifferent = listOther.size() != listFirst.size();
     for ( size_t index = 0; bDifferent == false && index < listFirst.size(); ++index )
+    {
         bDifferent = listFirst[index]._itemId != listOther[index]._itemId || listFirst[index]._count != listOther[index]._count;
+    }
     SW_EXPECT_TRUE( bDifferent );
 }
 
@@ -519,7 +529,9 @@ SW_TEST_CASE( BattleRoyaleTest, DownedReviveTeamWipeAndPlacement )
     SW_EXPECT_EQUAL( 1, world._match.getMatchState().getWinningTeam() );
     bool bEnded = false;
     for ( const BrEvent& event : world._listEvent )
+    {
         bEnded = bEnded || ( event._kind == BrEvent::Kind::MatchEnded && event._team == 1 );
+    }
     SW_EXPECT_TRUE( bEnded );
     SW_EXPECT_TRUE( world._match.getMatchState().getPhase() == MatchPhase::Ended );
 }
@@ -561,7 +573,9 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneDamageBleedoutCreditAndSupplyDrop )
     SW_EXPECT_TRUE( pOutside->isDead() );
     bool bEnvironmentKill = false;
     for ( const BrEvent& event : world._listEvent )
+    {
         bEnvironmentKill = bEnvironmentKill || ( event._kind == BrEvent::Kind::PlayerKilled && event._player == 3 && event._other == -1 );
+    }
     SW_EXPECT_TRUE( bEnvironmentKill );
     SW_EXPECT_EQUAL( 0, world._match.getMatchState().getWinningTeam() );
 

@@ -163,7 +163,9 @@ SW_TEST_CASE( UiNavigationTest, TabOrderIsDocumentOrderAndWraps )
     SW_EXPECT_TRUE( fixture.navigateAndExpect( sw::UiNavigationDirection::Next, "b12" ) );
     SW_EXPECT_TRUE( fixture.navigateAndExpect( sw::UiNavigationDirection::Next, "b20" ) );
     for ( uint32 step = 0; step < 7; ++step )
+    {
         (void)fixture._focus.navigate( fixture._tree, sw::UiNavigationDirection::Next );
+    }
     SW_EXPECT_STREQ( "b11", fixture.getFocusedName().c_str() );
     SW_EXPECT_TRUE( fixture.navigateAndExpect( sw::UiNavigationDirection::Previous, "b10" ) );
 }

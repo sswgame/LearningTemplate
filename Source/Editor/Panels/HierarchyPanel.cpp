@@ -269,14 +269,18 @@ namespace sw::editor
                         if ( category == "General" )
                         {
                             for ( const auto& [typeName, pTypeInfo] : items )
+                            {
                                 drawItem( typeName, pTypeInfo );
+                            }
                         }
                         else
                         {
                             if ( ImGui::BeginMenu( category.c_str() ) )
                             {
                                 for ( const auto& [typeName, pTypeInfo] : items )
+                                {
                                     drawItem( typeName, pTypeInfo );
+                                }
                                 ImGui::EndMenu();
                             }
                         }
@@ -760,7 +764,9 @@ namespace sw::editor
                     {
                         editorSelection.clearObjectSelection();
                         for ( GameObject* pNewGo : listNewCreated )
+                        {
                             editorSelection.selectObject( pNewGo, SelectionMode::Add );
+                        }
                     }
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )

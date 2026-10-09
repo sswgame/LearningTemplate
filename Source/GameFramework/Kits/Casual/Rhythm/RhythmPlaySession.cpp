@@ -88,7 +88,9 @@ namespace sw
         _listLane.resize( static_cast<size_t>( _pChart->getLaneCount() ) );
         const vector<RhythmNote>& listNote = _pChart->getNotes();
         for ( size_t noteIndex = 0; noteIndex < listNote.size(); ++noteIndex )
+        {
             _listLane[static_cast<size_t>( listNote[noteIndex]._lane )]._listNoteIndex.push_back( static_cast<int32>( noteIndex ) );
+        }
         finishIfDone();
     }
 

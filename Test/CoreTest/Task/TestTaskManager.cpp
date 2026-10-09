@@ -275,7 +275,9 @@ SW_TEST_CASE( TaskManagerTest, ParallelBlockCoversTheWholeRangeExactlyOnce )
                                                           SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pHit]( uint32 start, uint32 end )
     {
         for ( uint32 index = start; index < end; ++index )
+        {
             pHit[index].fetch_add( 1, std::memory_order_relaxed );
+        }
     } ) );
     handle.submit();
 
@@ -419,7 +421,9 @@ SW_TEST_CASE( TaskManagerTest, WhenAllRunsOnceAfterEveryDependency )
     } ) );
 
     for ( sw::TaskHandle& task : listTask )
+    {
         task.submit();
+    }
     joined.submit();
 
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
@@ -502,7 +506,9 @@ SW_TEST_CASE( TaskManagerTest, ConcurrentSubmitLosesNothing )
         } );
     }
     for ( std::thread& producer : listProducer )
+    {
         producer.join();
+    }
 
     SW_EXPECT_TRUE( manager.waitAll( kWaitTimeoutMs ) );
     SW_EXPECT_EQUAL( kProducerCount * kPerProducer, ranCount.load() );
@@ -607,7 +613,9 @@ SW_TEST_CASE( TaskManagerTest, RunParallelInsideWorkerTaskCoversEveryIndex )
             manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [pHit]( uint32 start, uint32 end )
             {
                 for ( uint32 index = start; index < end; ++index )
+                {
                     pHit[index].fetch_add( 1, std::memory_order_relaxed );
+                }
             } ) );
             bReturned.store( true, std::memory_order_release );
         } ) );
@@ -974,7 +982,9 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
                 // 워커가 청크 하나를 실행할 때까지 호출 스레드를 붙든다 — 청크가 모두 호출 스레드에서 돌면 상속을 보지 못한다.
                 const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
                 while ( workerChunkCount.load( std::memory_order_acquire ) == 0 && deadline.isExpired() == false )
+                {
                     std::this_thread::yield();
+                }
             }
             else
             {

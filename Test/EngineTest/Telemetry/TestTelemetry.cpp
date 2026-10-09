@@ -188,7 +188,9 @@ SW_TEST_CASE( TelemetryTest, ConsentGatesCollectionWritingAndUpload )
 
         // 꺼짐(기본): 묶음 상한을 넘겨도 파일이 없고 업로더는 불리지 않는다. 빵부스러기는 기계 안에만 남는다.
         for ( int32 index = 0; index < 10; ++index )
+        {
             SW_EXPECT_TRUE( telemetry.record( Internal::makeKill( "rifle", 10.0f ) ) == TelemetryRecordResult::NoConsent );
+        }
         telemetry.recordFrame( "game/a.scene.xml", 0.016f );
         telemetry.update( 60.0f );
         telemetry.flush();
@@ -312,7 +314,9 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
 
     // 파일 1 KB: 사건을 계속 넣으면 여러 파일로 회전하고, 업로더가 두는(Kept) 동안 파일 수 상한(4)에서 오래된 것부터 버린다.
     for ( int32 index = 0; index < 200; ++index )
+    {
         (void)telemetry.record( Internal::makeKill( "minigun_with_a_long_weapon_name", static_cast<float32>( index ) ) );
+    }
     telemetry.flush();
     const TelemetryStats stats = telemetry.getStats();
     SW_EXPECT_TRUE_MSG( stats._rotatedFiles >= 10, std::to_string( stats._rotatedFiles ).c_str() );
@@ -321,7 +325,9 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     vector<string> listFile;
     telemetry.collectSpoolFiles( listFile );
     for ( const string& path : listFile )
+    {
         SW_EXPECT_TRUE_MSG( FileUtil::getFileSize( path ) <= 1024u, path.c_str() );
+    }
     SW_EXPECT_FALSE( uploader._listBatch.empty() );
     SW_EXPECT_EQUAL( 0u, stats._uploadedFiles );
 
@@ -389,7 +395,9 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     using Internal = TelemetryTestInternal;
     TelemetryFrameHistogram histogram;
     for ( int32 index = 1; index <= 100; ++index )
+    {
         histogram.add( static_cast<float32>( index ) ); // 1..100 ms
+    }
     SW_EXPECT_NEAR_EQUAL( 50.0f, histogram.computePercentileMs( 0.5f ), 0.06f );
     SW_EXPECT_NEAR_EQUAL( 99.0f, histogram.computePercentileMs( 0.99f ), 0.06f );
     SW_EXPECT_NEAR_EQUAL( 100.0f, histogram.getMaxMs(), 1.0e-5f );
@@ -403,10 +411,14 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     telemetry.setConsent( true );
     // 장면 A: 16 ms 99 프레임 + 100 ms 1 프레임(끊김). 장면 B: 8 ms 50 프레임.
     for ( int32 frame = 0; frame < 99; ++frame )
+    {
         telemetry.recordFrame( "game/a.scene.xml", 0.016f );
+    }
     telemetry.recordFrame( "game/a.scene.xml", 0.100f );
     for ( int32 frame = 0; frame < 50; ++frame )
+    {
         telemetry.recordFrame( "game/b.scene.xml", 0.008f );
+    }
     telemetry.shutdown();
     // 업로더가 없으니(기본 — 보내지 않는다) 닫힌 파일이 스풀에 남는다.
     vector<JsonDocument> listSummary;

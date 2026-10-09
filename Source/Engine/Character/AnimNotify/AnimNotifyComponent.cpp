@@ -218,7 +218,9 @@ namespace sw
     void AnimNotifyComponent::closeAllStates()
     {
         while ( _listActiveState.empty() == false )
+        {
             endState( _listActiveState.size() - 1, nullptr, 0.0f );
+        }
     }
 
     void AnimNotifyComponent::processFrame( const AnimNotifyFrame& frame )
@@ -237,7 +239,9 @@ namespace sw
             const ActiveState& state   = _listActiveState[stateIndex - 1];
             bool               bActive = false;
             for ( const IAnimPlayable* pPlayable : frame._listActivePlayable )
+            {
                 bActive = bActive || pPlayable == state._pSource;
+            }
             if ( bActive == false )
                 endState( stateIndex - 1, nullptr, frame._deltaSeconds );
         }

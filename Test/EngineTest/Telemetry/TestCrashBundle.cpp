@@ -114,7 +114,9 @@ SW_TEST_CASE( CrashBundleTest, BundlesPreviousCrashesOnce )
 
     const string bundle = Internal::bundleFolder( reportsFolder, "oldsession01" );
     for ( const utf8* pName : { "crash.dmp", "crash.txt", "crash.stack.txt", "crash.breadcrumbs.txt", "last.log", "manifest.json" } )
+    {
         SW_EXPECT_TRUE_MSG( FileUtil::exists( FileUtil::joinPath( bundle, pName ) ), pName );
+    }
     SW_EXPECT_FALSE( FileUtil::exists( FileUtil::joinPath( crashFolder, "crash_oldsession01.dmp" ) ) );
     SW_EXPECT_TRUE( FileUtil::exists( FileUtil::joinPath( crashFolder, "crash_currentsession00.dmp" ) ) );
     SW_EXPECT_FALSE( FileUtil::isDirectory( Internal::bundleFolder( reportsFolder, Internal::kCurrentSession ) ) );
@@ -209,7 +211,9 @@ SW_TEST_CASE( CrashBundleTest, ConsentDecidesWhatLeavesTheMachine )
     SW_EXPECT_EQUAL( 1u, service.collectNewCrashes() );
     uploader._result = CrashReportUploadResult::Failed;
     for ( uint32 attempt = 0; attempt < CrashReportService::kMaxAttempts + 2; ++attempt )
+    {
         (void)CrashReportService::runReporter( reportsFolder, uploader );
+    }
     SW_EXPECT_EQUAL( CrashReportService::kMaxAttempts, static_cast<uint32>( uploader._listBundle.size() ) );
     SW_EXPECT_EQUAL( 0u, service.countPendingUploads() );
 }

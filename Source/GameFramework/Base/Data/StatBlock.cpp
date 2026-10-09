@@ -81,7 +81,9 @@ namespace sw
     void StatBlock::merge( const StatBlock& other, float32 scale )
     {
         for ( const StatValue& value : other._listValue )
+        {
             addValue( value._name, value._value * scale );
+        }
     }
 
     uint32 StatBlock::loadFromAttributes( const XmlNode& node, const utf8* pSkipName )

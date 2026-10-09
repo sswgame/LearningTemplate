@@ -174,11 +174,15 @@ namespace sw
         // 캡처는 계약 포맷(RGBA8)이고 행 바이트가 너비 × 4 보다 클 수 있다 — 빈틈없이 옮긴다.
         outRgbaBytes.resize( static_cast<size_t>( layout._width ) * layout._height * 4u );
         for ( uint32 row = 0; row < layout._height; ++row )
+        {
             Memory::copy( outRgbaBytes.data() + static_cast<size_t>( row ) * layout._width * 4u, captureBytes.data() + static_cast<size_t>( row ) * layout._rowBytes,
                           static_cast<size_t>( layout._width ) * 4u );
+        }
         // 알파는 불투명으로 — 캡처의 알파는 셰이더마다 달라 썸네일에서 뜻이 없다.
         for ( size_t index = 3; index < outRgbaBytes.size(); index += 4 )
+        {
             outRgbaBytes[index] = 255;
+        }
         return true;
     }
 } // namespace sw

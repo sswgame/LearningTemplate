@@ -37,7 +37,9 @@ namespace sw
                 if ( XmlNameCheck::collectUnknownAttributes( node, kArrRequiresAttribute, listUnknown ) > 0 )
                 {
                     for ( const utf8* pName : listUnknown )
+                    {
                         SW_LOG_WARNING( "%#: item '%#' <Requires> has unknown attribute '%#'", sourceName, pItemId, pName );
+                    }
                     return false;
                 }
                 if ( pSet != nullptr )

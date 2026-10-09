@@ -63,10 +63,14 @@ namespace sw
         budget.reserveBits( BitMath::computeVarUintBits( listRemoved.size() ) );
         size_t removedCount = 0;
         while ( removedCount < listRemoved.size() && budget.tryReserveBits( BitMath::computeVarUintBits( listRemoved[removedCount] ) ) )
+        {
             ++removedCount;
+        }
         writer.writeVarUint( removedCount );
         for ( size_t index = 0; index < removedCount; ++index )
+        {
             writer.writeVarUint( listRemoved[index] );
+        }
 
         // 재구성의 시작 = 기준에서 지금도 있는 것 + 사라졌지만 이번에 못 실은 것(받는 쪽은 아직 가지고 있다).
         if ( pBaseline != nullptr )
@@ -142,7 +146,9 @@ namespace sw
         {
             vector<uint32> listRemoved( static_cast<size_t>( removedCount ) );
             for ( uint32& entityId : listRemoved )
+            {
                 entityId = static_cast<uint32>( reader.readVarUint() );
+            }
             if ( reader.hasOverflowed() )
                 return false;
             std::sort( listRemoved.begin(), listRemoved.end() );

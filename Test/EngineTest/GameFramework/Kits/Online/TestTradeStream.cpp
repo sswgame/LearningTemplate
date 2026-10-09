@@ -199,7 +199,9 @@ namespace
         bool loginBoth()
         {
             for ( int32 attempt = 0; attempt < 400 && ( _alice._client.isReady() == false || _bob._client.isReady() == false ); ++attempt )
+            {
                 step();
+            }
             const bool bRegistered = waitAccount( _alice, _alice._account.registerAccount( "alice", "password123" ) )._result == LoginResult::Ok &&
                                      waitAccount( _bob, _bob._account.registerAccount( "bob", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply aliceLogin = waitAccount( _alice, _alice._account.login( "alice", "password123" ) );
@@ -314,7 +316,9 @@ SW_TEST_CASE( TradeStreamTest, ConfirmRetriedWithTheSameKeyAfterADroppedStreamSe
     rig._bob._transport->close( rig._bob._client.getConnection(), StreamCloseMode::Abort ); // 응답 전에 끊겼다
     rig.step( 2 );
     for ( int32 attempt = 0; attempt < 400 && rig._bob._account.isLoggedIn() == false; ++attempt )
+    {
         rig.step(); // 다시 붙어 재접속
+    }
     SW_ASSERT_TRUE( rig._bob._account.isLoggedIn() );
     const TradeClientReply retried =
         rig.waitTrade( rig._bob, rig._bob._trade.confirmSeen( tradeId, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key ) );
@@ -337,7 +341,9 @@ SW_TEST_CASE( TradeStreamTest, ServerRestartBeforeSettleCancelsWithoutMovement )
     rig.restartServer(); // 정산 전에 서버가 죽었다 — 새 서버가 자기 열린 거래를 닫는다
     rig.step( 2 );       // 클라이언트가 끊김을 안다
     for ( int32 attempt = 0; attempt < 400 && ( rig._alice._account.isLoggedIn() == false || rig._bob._account.isLoggedIn() == false ); ++attempt )
+    {
         rig.step();
+    }
     SW_ASSERT_TRUE( rig._bob._account.isLoggedIn() );
     const TradeClientReply late = rig.waitTrade( rig._bob, rig._bob._trade.confirm( tradeId ) );
     SW_EXPECT_EQUAL( 0, int32( late._errorCode ) );

@@ -147,9 +147,13 @@ SW_TEST_CASE( MailboxTest, ConcurrentClaimsMoveTheLedgerOnce )
     MailboxResult arrResult[6]{};
     std::thread   arrThread[6];
     for ( int32 threadIndex = 0; threadIndex < 6; ++threadIndex )
+    {
         arrThread[threadIndex] = std::thread( &TestMailboxInternal::claimOnce, &fixture, &mailKey, &arrResult[threadIndex] );
+    }
     for ( std::thread& thread : arrThread )
+    {
         thread.join();
+    }
     int32 okCount = 0;
     for ( const MailboxResult result : arrResult )
     {

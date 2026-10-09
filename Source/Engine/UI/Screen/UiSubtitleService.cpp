@@ -68,7 +68,9 @@ namespace sw
     {
         // 1) 시간 — 설정이 꺼져 있어도 흐른다(켜면 지금 줄부터 보인다).
         for ( UiSubtitleLine& line : _listActive )
+        {
             line._remainingSeconds -= deltaSeconds;
+        }
         _listActive.erase( std::remove_if( _listActive.begin(), _listActive.end(), []( const UiSubtitleLine& line )
         { return line._remainingSeconds <= 0.0f; } ),
                            _listActive.end() );
@@ -97,7 +99,9 @@ namespace sw
         const float32 sizeScale         = computeSizeScale( gv_subtitleSize );
         const float32 backgroundOpacity = MathUtil::clamp( static_cast<float32>( gv_subtitleBackgroundOpacity ), 0.0f, 1.0f );
         for ( uint32 slot = 0; slot < kMaxVisibleLineCount; ++slot )
+        {
             applySlot( *pScreen, slot, slot < _listActive.size() ? &_listActive[slot] : nullptr, sizeScale, backgroundOpacity );
+        }
     }
 
     float32 UiSubtitleService::computeReadingSeconds( string_view text )

@@ -594,7 +594,9 @@ namespace sw
 
         // 계층 활성은 잠금 밖에서 맞춘다(컴포넌트 콜백이 돈다). 본 목록을 바꾸는 것은 게임 스레드의 병합 · 파괴뿐이라 자리로 읽어도 된다.
         for ( size_t objectIndex = firstNewIndex; objectIndex < _listGameObject.size(); ++objectIndex )
+        {
             _listGameObject[objectIndex]->refreshActiveInHierarchy();
+        }
         // 틱 항목은 addComponent 가 틱에 참여하는 컴포넌트를 붙일 때 이미 더럽혔다. 병합 자체는 멤버십을 바꾸지 않는다.
     }
 

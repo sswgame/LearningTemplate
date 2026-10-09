@@ -247,7 +247,9 @@ SW_TEST_CASE( UiAnimationTest, EventsFireOnce )
     SW_ASSERT_TRUE( pScreen->getAnimationPlayer().play( "Pulse" ) );
 
     for ( uint32 frame = 0; frame < 30; ++frame )
+    {
         fixture.runFrame( 0.05f ); // 1.5 초 — 0.5 · 1.0 에 프레임 경계가 닿는다
+    }
     SW_EXPECT_EQUAL( 1u, startCount );
     SW_EXPECT_EQUAL( 1u, middleCount );
     SW_EXPECT_EQUAL( 1u, endCount );

@@ -87,7 +87,9 @@ SW_TEST_CASE( AutosaveTest, SlotsRotateAndTheLatestSurvivesAFailedSave )
     harness.initialize( makeAutosaveTestSettings( directory ) );
 
     for ( int32 saveIndex = 0; saveIndex < 4; ++saveIndex )
+    {
         SW_ASSERT_TRUE( harness._manager.saveNow( AutosaveTrigger::Manual, hashed_string( "Save" ) ) );
+    }
     const AutosaveSlotInfo* pLatest = harness._manager.findLatestSlot();
     SW_ASSERT_NOT_NULL( pLatest );
     SW_EXPECT_EQUAL( 0, pLatest->_slot ); // 0 · 1 · 2 · 0

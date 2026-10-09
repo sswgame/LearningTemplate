@@ -32,7 +32,9 @@ namespace sw
                 {
                     bool bKnown = false;
                     for ( const utf8* pAllowed : arrAllowed )
+                    {
                         bKnown = bKnown || memberName == pAllowed;
+                    }
                     if ( bKnown == false )
                     {
                         outUnknown = memberName;
@@ -436,7 +438,9 @@ namespace sw
         {
             vector<uint32> listCompact;
             for ( const uint32 dependencyIndex : listDependency[index] )
+            {
                 listCompact.push_back( listCompactOf[dependencyIndex] );
+            }
             listActiveDependency.push_back( std::move( listCompact ) );
         }
 
@@ -449,13 +453,17 @@ namespace sw
             if ( TopologicalSortUtil::findCycle( listActiveDependency, listUnsorted, listCycle ) )
             {
                 for ( size_t step = 0; step < listCycle.size(); ++step )
+                {
                     outError += ( step == 0 ? " " : " -> " ) + string( listActiveName[listCycle[step]] );
+                }
             }
             return false;
         }
 
         for ( const uint32 compactIndex : listOrder )
+        {
             outResolution._listLoadOrder.push_back( string( listActiveName[compactIndex] ) );
+        }
         for ( size_t index = 0; index < manifestCount; ++index )
         {
             if ( listActive[index] == SW_FALSE )

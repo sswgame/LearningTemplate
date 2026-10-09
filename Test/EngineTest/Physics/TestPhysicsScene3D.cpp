@@ -93,7 +93,9 @@ namespace
     void stepFor( sw::IPhysicsScene3D& scene, uint32 stepCount )
     {
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             scene.step( kStep3D );
+        }
     }
 } // namespace
 
@@ -378,7 +380,9 @@ SW_TEST_CASE( PhysicsScene3DTest, StepIsDeterministic )
         }
         stepFor( *pScene, 180 );
         for ( const sw::PhysicsBodyHandle& body : listBody )
+        {
             arrListPosition[runIndex].push_back( getPosition( *pScene, body ) );
+        }
     }
     SW_ASSERT_EQUAL( arrListPosition[0].size(), arrListPosition[1].size() );
     for ( size_t bodyIndex = 0; bodyIndex < arrListPosition[0].size(); ++bodyIndex )

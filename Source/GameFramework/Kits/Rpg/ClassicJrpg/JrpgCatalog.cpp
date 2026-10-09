@@ -27,7 +27,9 @@ namespace sw
             static void parseStats( const XmlNode& node, const utf8* const ( &arrName )[kJrpgStatCount], int32 ( &inoutArrValue )[kJrpgStatCount] )
             {
                 for ( int32 index = 0; index < kJrpgStatCount; ++index )
+                {
                     inoutArrValue[index] = MathUtil::max( 0, node.getAttributeInt( arrName[index], inoutArrValue[index] ) );
+                }
             }
 
             static JrpgTargetKind parseTarget( string_view text )

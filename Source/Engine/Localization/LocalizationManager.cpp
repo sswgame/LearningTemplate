@@ -58,7 +58,9 @@ namespace sw
                     ++guard;
                     bool bPresent{ false };
                     for ( const string& existing : inoutListChain )
+                    {
                         bPresent = bPresent || existing == code;
+                    }
                     if ( bPresent == false )
                         inoutListChain.push_back( code );
                     const CultureInfo* pCulture   = cultures.findCulture( code );
@@ -289,7 +291,9 @@ namespace sw
         std::shared_lock<std::shared_mutex> lock( _mutex );
         vector<string>                      listName;
         for ( const MountedProject& project : _listProject )
+        {
             listName.push_back( project._project._name );
+        }
         return listName;
     }
 
@@ -299,11 +303,15 @@ namespace sw
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
             for ( const MountedProject& project : _listProject )
+            {
                 listPath.push_back( project._projectPath );
+            }
         }
         bool bAllReloaded{ true };
         for ( const string& path : listPath )
+        {
             bAllReloaded = reloadChangedFile( path ) && bAllReloaded;
+        }
         return bAllReloaded;
     }
 
@@ -384,7 +392,9 @@ namespace sw
             TranslationTable&                   loose = _mapLooseTable[code];
             loose.setCulture( code );
             for ( const auto& [key, entry] : table.getEntries() )
+            {
                 loose.getOrAddEntry( key ) = entry;
+            }
             oldLanguage = _currentLanguage;
             if ( _currentLanguage.empty() )
                 _currentLanguage = code;
@@ -474,14 +484,18 @@ namespace sw
     {
         // 표 객체는 지우지 않고 비운다 — `getLanguageTable` 이 돌려준 포인터를 든 쪽이 있다.
         for ( auto& [code, pTable] : _mapLanguageTable )
+        {
             pTable->clear();
+        }
         _mapCultureStatistic.clear();
 
         for ( const MountedProject& project : _listProject )
         {
             StringTable& sourceTable = getOrCreateTableLocked( project._project._sourceCulture );
             for ( const auto& [key, entry] : project._mapSource )
+            {
                 sourceTable.setStringByHash( hashed_string::computeHash( key ), entry._source );
+            }
 
             for ( const TranslationTable& translation : project._listTranslation )
             {
@@ -535,7 +549,9 @@ namespace sw
             for ( const MountedProject& project : _listProject )
             {
                 for ( const auto& [key, entry] : project._mapSource )
+                {
                     pseudoTable.setStringByHash( hashed_string::computeHash( key ), PseudoLocalizer::transform( entry._source, pCulture->_pseudoMode ) );
+                }
             }
         }
 
@@ -544,7 +560,9 @@ namespace sw
         {
             StringTable& table = getOrCreateTableLocked( code );
             for ( const auto& [key, entry] : loose.getEntries() )
+            {
                 table.setStringByHash( hashed_string::computeHash( key ), entry._text );
+            }
         }
     }
 
@@ -554,7 +572,9 @@ namespace sw
         LocalizationManagerInternal::appendWithParents( _cultureTable, _currentLanguage, _listLookupCulture );
         LocalizationManagerInternal::appendWithParents( _cultureTable, _fallbackLanguage, _listLookupCulture );
         for ( const MountedProject& project : _listProject )
+        {
             LocalizationManagerInternal::appendWithParents( _cultureTable, project._project._sourceCulture, _listLookupCulture );
+        }
 
         const CultureInfo* pCulture = _cultureTable.resolveCulture( _currentLanguage );
         if ( pCulture == nullptr )
@@ -848,6 +868,8 @@ namespace sw
             }
         }
         for ( size_t index = 0; index < listCallback.size(); ++index )
+        {
             listCallback[index]( oldLanguage, newLanguage );
+        }
     }
 } // namespace sw

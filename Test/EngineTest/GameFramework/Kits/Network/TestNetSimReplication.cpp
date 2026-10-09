@@ -48,7 +48,9 @@ namespace
                 if ( _pTable->_bStampTick == SW_TRUE && entity._buffer.size() >= 4 )
                 {
                     for ( size_t index = 0; index < 4; ++index )
+                    {
                         entity._buffer[index] = static_cast<uint8>( tick >> ( 8 * index ) );
+                    }
                 }
                 _server.setEntity( entity._entityId, entity._typeId, entity._buffer );
             }
@@ -93,7 +95,9 @@ namespace
                     continue;
                 uint32 stampTick = 0;
                 for ( size_t index = 0; index < 4; ++index )
+                {
                     stampTick |= static_cast<uint32>( entity._buffer[index] ) << ( 8 * index );
+                }
                 uint32& maxStaleness = _listMaxStaleness[entity._entityId];
                 maxStaleness         = MathUtil::max( maxStaleness, pLatest->_tick - stampTick );
             }
@@ -173,7 +177,9 @@ SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
     constexpr uint32 kFirstId     = 1000000; // 가변 정수 3 바이트
     TableGame        game;
     for ( uint32 index = 0; index < kEntityCount; ++index )
+    {
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 4, static_cast<uint8>( index ) ), kFirstId + index, 1 } );
+    }
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
@@ -210,7 +216,9 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
     game._table._pPolicy    = &policy;
     game._table._bStampTick = SW_TRUE;
     for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    {
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+    }
     game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
     NetSimSettings settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0; // 스냅숏마다 한 패킷 — 순서만 채널이 앞 스냅숏을 지우지 않게
@@ -226,7 +234,9 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
     SW_ASSERT_NOT_NULL( pLatest );
     uint32 maxHighStaleness = 0;
     for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    {
         maxHighStaleness = MathUtil::max( maxHighStaleness, session.getMaxStaleness( entityId ) );
+    }
     const bool bLowSeen = pLatest->findEntity( kLowId ) != nullptr;
     SW_LOG_INFO( "[NetSimReplication] saturated budget over 600 ticks: priority-10 entities at most %# ticks stale, priority-1 entity %# (seen %#)", maxHighStaleness,
                  session.getMaxStaleness( kLowId ), bLowSeen );
@@ -249,7 +259,9 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon
     game._table._pPolicy    = &policy;
     game._table._bStampTick = SW_TRUE;
     for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    {
         game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+    }
     game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
     NetSimSettings settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;

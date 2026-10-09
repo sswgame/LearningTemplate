@@ -31,7 +31,9 @@ namespace sw
             {
                 outListIndex.clear();
                 for ( const FacialTargetWeight& target : pose._listTarget )
+                {
                     outListIndex.push_back( unit.findMorphTargetIndex( target._target ) );
+                }
             }
 
             /** @brief 0 ~ 1 사이 [min, max] 의 값입니다. */
@@ -175,7 +177,9 @@ namespace sw
         // 말하는 중인 트랙의 비즘 번호를 새 리그로 다시 잇는다.
         _listTrackToRigViseme.clear();
         for ( const hashed_string& visemeName : _speechTrack._listViseme )
+        {
             _listTrackToRigViseme.push_back( _rig.findVisemeIndex( visemeName ) );
+        }
         bindToUnit();
     }
 
@@ -293,7 +297,9 @@ namespace sw
         // 트랙의 비즘 순서 → 리그 비즘 번호(리그에 없는 비즘은 버린다). 리그가 바뀌면 `setFacialRig` 가 다시 잇는다.
         _listTrackToRigViseme.clear();
         for ( const hashed_string& visemeName : _speechTrack._listViseme )
+        {
             _listTrackToRigViseme.push_back( _rig.findVisemeIndex( visemeName ) );
+        }
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
     }
@@ -398,22 +404,32 @@ namespace sw
         if ( pMesh != nullptr )
         {
             for ( const MeshMorphTarget& target : pMesh->getMorphTargets() )
+            {
                 listMorphTargetName.push_back( target._name );
+            }
         }
         (void)_rig.validate( listMorphTargetName, *pSkeleton, _facialRigPath.empty() ? string_view( "(runtime rig)" ) : string_view( _facialRigPath ) );
 
         _listExpressionTarget.resize( _rig.getExpressions().size() );
         for ( size_t poseIndex = 0; poseIndex < _rig.getExpressions().size(); ++poseIndex )
+        {
             FacialAnimationInternal::mapTargets( unit, _rig.getExpressions()[poseIndex], _listExpressionTarget[poseIndex] );
+        }
         _listVisemeTarget.resize( _rig.getVisemes().size() );
         for ( size_t poseIndex = 0; poseIndex < _rig.getVisemes().size(); ++poseIndex )
+        {
             FacialAnimationInternal::mapTargets( unit, _rig.getVisemes()[poseIndex], _listVisemeTarget[poseIndex] );
+        }
         _listBlinkTarget.clear();
         for ( const hashed_string& target : _rig.getBlink()._listTarget )
+        {
             _listBlinkTarget.push_back( unit.findMorphTargetIndex( target ) );
+        }
         _listEyeBone.clear();
         for ( const hashed_string& bone : _rig.getGaze()._listEyeBone )
+        {
             _listEyeBone.push_back( pSkeleton->findBoneIndex( bone ) );
+        }
     }
 
     void FacialAnimationComponent::addPose( SkeletalMeshComponent& unit, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const

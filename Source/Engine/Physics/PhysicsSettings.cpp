@@ -153,7 +153,9 @@ namespace sw
         for ( uint32 layerA = 0; layerA < CollisionLayers::kLayerCount; ++layerA )
         {
             for ( uint32 layerB = layerA; layerB < CollisionLayers::kLayerCount; ++layerB )
+            {
                 layers.setLayerCollision( static_cast<uint8>( layerA ), static_cast<uint8>( layerB ), false );
+            }
         }
         const size_t count = _listLayer.size() < kMaxLayerCount ? _listLayer.size() : kMaxLayerCount;
         for ( size_t layerIndex = 0; layerIndex < count; ++layerIndex )

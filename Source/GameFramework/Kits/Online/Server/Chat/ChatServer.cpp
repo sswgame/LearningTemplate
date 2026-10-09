@@ -30,7 +30,9 @@ namespace sw
         if ( _pHost != nullptr )
         {
             for ( const string& topic : _listSubscribedTopic )
+            {
                 _pHost->unsubscribeServerBus( topic, this );
+            }
         }
         _listSubscribedTopic.clear();
         _pendingTable.clear();

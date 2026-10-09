@@ -60,7 +60,9 @@ namespace sw
                 writer.writeBool( request._bAllowDebt == SW_TRUE );
                 writer.writeVarUint( request._listPosting.size() );
                 for ( const LedgerPosting& posting : request._listPosting )
+                {
                     LedgerUtil::writePosting( writer, posting );
+                }
                 const vector<uint8>& bytes = writer.getBytes();
                 return StringUtil::computeHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
             }
@@ -78,7 +80,9 @@ namespace sw
                 ServiceKeyUtil::writeString( writer, request._memo );
                 writer.writeVarUint( request._listPosting.size() );
                 for ( const LedgerPosting& posting : request._listPosting )
+                {
                     LedgerUtil::writePosting( writer, posting );
+                }
                 writer.writeVarUint( listHolderBalance.size() );
                 for ( const LedgerTransferOutcome::HolderBalance& holderBalance : listHolderBalance )
                 {
@@ -257,7 +261,9 @@ namespace sw
             static void applyCommitVersion( LedgerTransferOutcome& inoutOutcome, uint64 commitVersion )
             {
                 for ( LedgerTransferOutcome::HolderBalance& holderBalance : inoutOutcome._listHolderBalance )
+                {
                     holderBalance._balance._version = holderBalance._balance._amount == 0 ? 0 : commitVersion;
+                }
             }
         };
     } // namespace

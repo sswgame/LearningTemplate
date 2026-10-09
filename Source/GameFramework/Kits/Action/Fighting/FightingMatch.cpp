@@ -119,7 +119,9 @@ namespace sw
     void FightingMatch::startRound()
     {
         for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
             resetFighter( player );
+        }
     }
 
     void FightingMatch::resetFighter( int32 player )
@@ -189,9 +191,13 @@ namespace sw
         }
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
             updateFighter( player, arrPressed[player] );
+        }
         for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
             updateControl( player, arrInput[player] );
+        }
         resolveSpacing();
         resolveHits();
         updateRoundRules();
@@ -835,7 +841,9 @@ namespace sw
         // 두 쪽을 먼저 다 보고 함께 적용한다 — 같은 프레임에 닿으면 상쇄(둘 다 맞는다).
         bool arrContact[kPlayerCount] = { false, false };
         for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
             arrContact[player] = testHit( player );
+        }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
             if ( arrContact[player] )
@@ -1096,19 +1104,25 @@ namespace sw
                                          fighter._bufferedAge, fighter._stanceIndex, fighter._stanceFrames, fighter._comboHits, fighter._airHits,
                                          fighter._heatFrames, fighter._sidestepSign, fighter._side, fighter._breakButtons };
             for ( const int32 counter : arrCounter )
+            {
                 FightingMatchInternal::writeCounter( writer, counter );
+            }
             writer.writeVarUint( static_cast<uint64>( fighter._state ) );
             writer.writeVarUint( static_cast<uint64>( fighter._posture ) );
             writer.writeVarUint( static_cast<uint64>( fighter._guard ) );
             const uint8 arrFlag[] = { fighter._bAirborne, fighter._bScrewUsed, fighter._bBoundUsed, fighter._bWallSplatUsed,
                                       fighter._bRage, fighter._bRageUsed, fighter._bHeatUsed, fighter._bThrowAttempted };
             for ( const uint8 flag : arrFlag )
+            {
                 writer.writeBool( flag == SW_TRUE );
+            }
             FightingMatchInternal::writeTimeline( writer, fighter._timeline );
             // 입력 버퍼 — 오래된 것부터(되살릴 때 그 순서로 다시 쌓는다).
             FightingMatchInternal::writeCounter( writer, fighter._inputBuffer.getFrameCount() );
             for ( int32 framesAgo = fighter._inputBuffer.getFrameCount() - 1; framesAgo >= 0; --framesAgo )
+            {
                 writer.writeBits( encodeInput( fighter._inputBuffer.getFrame( framesAgo ) ), 8 );
+            }
         }
         // 라운드 묶음은 맨 뒤 — 되살릴 때 마지막에 읽어, 맞을 때만 바뀌는 묶음 덕에 loadState 가 통째로 원자적이다.
         _series.writeState( writer );
@@ -1141,7 +1155,9 @@ namespace sw
                                     &fighter._bufferedAge, &fighter._stanceIndex, &fighter._stanceFrames, &fighter._comboHits, &fighter._airHits,
                                     &fighter._heatFrames, &fighter._sidestepSign, &fighter._side };
             for ( int32* pCounter : arrCounter )
+            {
                 *pCounter = FightingMatchInternal::readCounter( reader );
+            }
             fighter._breakButtons    = static_cast<uint16>( FightingMatchInternal::readCounter( reader ) & 0xFFFF );
             const uint64 state       = reader.readVarUint();
             const uint64 posture     = reader.readVarUint();
@@ -1160,7 +1176,9 @@ namespace sw
             uint8* arrFlag[] = { &fighter._bAirborne, &fighter._bScrewUsed, &fighter._bBoundUsed, &fighter._bWallSplatUsed,
                                  &fighter._bRage, &fighter._bRageUsed, &fighter._bHeatUsed, &fighter._bThrowAttempted };
             for ( uint8* pFlag : arrFlag )
+            {
                 *pFlag = reader.readBool() ? SW_TRUE : SW_FALSE;
+            }
             if ( FightingMatchInternal::readTimeline( reader, fighter.findCurrentMove(), fighter._timeline ) == false )
                 return false;
             const int32 inputCount = FightingMatchInternal::readCounter( reader );
@@ -1168,7 +1186,9 @@ namespace sw
                 return false;
             fighter._inputBuffer.clear();
             for ( int32 index = 0; index < inputCount; ++index )
+            {
                 fighter._inputBuffer.push( decodeInput( static_cast<uint8>( reader.readBits( 8 ) ) ) );
+            }
         }
         if ( reader.hasOverflowed() )
             return false;

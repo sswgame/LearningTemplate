@@ -137,6 +137,8 @@ namespace sw
         uint8 arrRender[kMaxExtraRenderView]{};
         (void)scheduler.schedule( now, arrCandidate, candidateCount, budget, arrRender );
         for ( uint32 index = 0; index < candidateCount; ++index )
+        {
             outListView[index]._bRender = arrRender[index];
+        }
     }
 } // namespace sw

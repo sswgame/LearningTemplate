@@ -152,7 +152,9 @@ namespace sw
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
         for ( GameObjectHandle& handle : _listView )
+        {
             destroySpawned( manager, handle );
+        }
         _listView.clear();
         spawnTown( manager );
         _bViewsDirty = SW_FALSE;

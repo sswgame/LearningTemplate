@@ -43,7 +43,9 @@ SW_TEST_CASE( SplineTest, ArcLengthParameterization )
     SW_ASSERT_TRUE( listSample.size() > 4 );
     float32 maxError = 0.0f;
     for ( const SplineSample& sample : listSample )
+    {
         maxError = MathUtil::max( maxError, MathUtil::abs( reference.findClosest( sample._position )._distance - sample._distance ) );
+    }
     SW_EXPECT_TRUE_MSG( maxError < 0.01f, std::to_string( maxError ).c_str() );
     const float32 middleOfSegment = reference.findClosest( curve.evaluate( 0.5f ) )._distance; // 첫 구간의 t = 0.5
     SW_EXPECT_TRUE( MathUtil::abs( middleOfSegment - reference.findClosest( curve.evaluate( 1.0f ) )._distance * 0.5f ) > 0.05f );

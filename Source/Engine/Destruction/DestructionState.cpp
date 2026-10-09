@@ -27,14 +27,18 @@ namespace sw
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
             {
                 for ( const uint8 flag : listFlag )
+                {
                     writer.writeBits( flag != 0 ? 1u : 0u, 1 );
+                }
             }
 
             static void readFlagBits( BitReader& reader, vector<uint8>& outListFlag, size_t count )
             {
                 outListFlag.assign( count, SW_FALSE );
                 for ( size_t index = 0; index < count; ++index )
+                {
                     outListFlag[index] = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
+                }
             }
 
             /** @brief 0 이 아닌 값만 (앞 자리와의 차, 비트 그대로) 로 씁니다. */
@@ -42,7 +46,9 @@ namespace sw
             {
                 uint64 count = 0;
                 for ( const float32 value : listValue )
+                {
                     count += value != 0.0f ? 1u : 0u;
+                }
                 writer.writeVarUint( count );
                 size_t previous = 0;
                 for ( size_t index = 0; index < listValue.size(); ++index )
@@ -77,7 +83,9 @@ namespace sw
             {
                 uint32 root = item;
                 while ( inoutListParent[root] != root )
+                {
                     root = inoutListParent[root];
+                }
                 while ( inoutListParent[item] != root )
                 {
                     const uint32 next     = inoutListParent[item];
@@ -164,7 +172,9 @@ namespace sw
         _profile = profile;
         _listInitialAnchor.assign( graph._leafCount, SW_FALSE );
         for ( size_t leaf = 0; leaf < listAnchoredLeaf.size() && leaf < graph._leafCount; ++leaf )
+        {
             _listInitialAnchor[leaf] = listAnchoredLeaf[leaf] != 0 ? SW_TRUE : SW_FALSE;
+        }
 
         // 잎 → 연결 표(CSR).
         _listLeafLinkStart.assign( graph._leafCount + 1, 0 );
@@ -174,7 +184,9 @@ namespace sw
             ++_listLeafLinkStart[link._leafB + 1];
         }
         for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
+        {
             _listLeafLinkStart[leaf + 1] += _listLeafLinkStart[leaf];
+        }
         _listLeafLinkIndex.assign( graph._listLink.size() * 2, 0 );
         vector<uint32> listCursor( _listLeafLinkStart.begin(), _listLeafLinkStart.end() - 1 );
         for ( uint32 link = 0; link < static_cast<uint32>( graph._listLink.size() ); ++link )
@@ -206,7 +218,9 @@ namespace sw
         group._parentId  = 0;
         group._leafCount = graph._leafCount;
         for ( const uint8 bAnchored : _listLeafAnchored )
+        {
             group._bAnchored = ( group._bAnchored == SW_TRUE || bAnchored != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        }
         _listGroup.push_back( std::move( group ) );
         _nextGroupId = 2;
         _eventCount  = 0;
@@ -258,7 +272,9 @@ namespace sw
         {
             const FractureNode& childData = graph._listNode[child];
             for ( uint32 leaf = childData._firstLeaf; leaf < childData._firstLeaf + childData._leafCount; ++leaf )
+            {
                 _listLeafActive[leaf] = child;
+            }
         }
         // 그 그룹의 노드 목록에서 갈린 노드를 자식들로 바꾼다.
         const int32 groupIndex = findGroupIndex( _listLeafGroup[graph._listNode[node]._firstLeaf] );
@@ -269,7 +285,9 @@ namespace sw
         if ( iter != listNode.end() && *iter == node )
             listNode.erase( iter );
         for ( const uint32 child : graph.getChildren( node ) )
+        {
             listNode.insert( std::lower_bound( listNode.begin(), listNode.end(), child ), child );
+        }
     }
 
     void DestructionState::severLeaf( uint32 leaf, DestructionChange& outChange )
@@ -305,7 +323,9 @@ namespace sw
         vector<uint32> listDirty{ _listLeafGroup[leaf] };
         // 그 잎이 활성이 될 때까지 위에서부터 가른다.
         while ( _listLeafActive[leaf] != leaf )
+        {
             openNode( _listLeafActive[leaf], outChange );
+        }
         severLeaf( leaf, outChange );
         regroup( listDirty, outChange );
         return true;
@@ -332,7 +352,9 @@ namespace sw
         const FractureGraph& graph = *_pGraph;
         vector<uint32>       listParent( listNode.size() );
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
+        {
             listParent[index] = index;
+        }
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
         {
             const FractureNode& data = graph._listNode[listNode[index]];
@@ -414,7 +436,9 @@ namespace sw
         for ( vector<Neighbor>& list : listNeighbor )
         {
             for ( Neighbor& neighbor : list )
+            {
                 neighbor._capacity = listPairCapacity[neighbor._pairIndex];
+            }
             std::sort( list.begin(), list.end(), []( const Neighbor& lhs, const Neighbor& rhs )
             { return lhs._other < rhs._other; } );
         }
@@ -467,7 +491,9 @@ namespace sw
                 const float32 share = load * neighbor._capacity / totalCapacity;
                 listIncoming[neighbor._other] += share;
                 for ( const uint32 link : listPairLink[neighbor._pairIndex] )
+                {
                     _listLinkLoad[link] = share;
+                }
                 if ( share <= neighbor._capacity )
                     continue;
                 for ( const uint32 link : listPairLink[neighbor._pairIndex] )
@@ -504,7 +530,9 @@ namespace sw
                 {
                     bool bAnchored = false;
                     for ( const uint32 node : component )
+                    {
                         bAnchored = bAnchored || hasAnchoredLeaf( node );
+                    }
                     if ( bAnchored && relieveOverload( component, outChange ) )
                         bBroke = true;
                 }
@@ -536,7 +564,9 @@ namespace sw
             outChange._listRemovedGroup.push_back( old._id );
             _listGroup.erase( _listGroup.begin() + groupIndex );
             for ( DestructionGroup& part : listPart )
+            {
                 listNewGroup.push_back( std::move( part ) );
+            }
         }
         for ( DestructionGroup& group : listNewGroup )
         {
@@ -545,7 +575,9 @@ namespace sw
             {
                 const FractureNode& data = _pGraph->_listNode[node];
                 for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount; ++leaf )
+                {
                     _listLeafGroup[leaf] = group._id;
+                }
             }
             outChange._listCreatedGroup.push_back( group._id );
             _listGroup.push_back( std::move( group ) );
@@ -581,14 +613,18 @@ namespace sw
             hash = Internal::mixHash( hash, _listLinkBroken[link] );
         }
         for ( const uint8 bAnchored : _listLeafAnchored )
+        {
             hash = Internal::mixHash( hash, bAnchored );
+        }
         hash = Internal::mixHash( hash, _eventCount );
         for ( const DestructionGroup& group : _listGroup )
         {
             hash = Internal::mixHash( hash, group._id );
             hash = Internal::mixHash( hash, group._bAnchored );
             for ( const uint32 node : group._listNode )
+            {
                 hash = Internal::mixHash( hash, node );
+            }
         }
         return hash;
     }

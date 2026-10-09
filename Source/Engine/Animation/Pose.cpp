@@ -73,7 +73,9 @@ namespace sw
         const uint32 boneCount = skeleton.getBoneCount();
         resize( boneCount );
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+        {
             setBoneTransform( boneIndex, skeleton.getBone( boneIndex )._referencePose );
+        }
     }
 
     BoneTransform Pose::getBoneTransform( uint32 boneIndex ) const
@@ -162,6 +164,8 @@ namespace sw
         const uint32 boneCount = MathUtil::min( skeleton.getBoneCount(), static_cast<uint32>( listModel.size() ) );
         outListPalette.resize( boneCount );
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+        {
             outListPalette[boneIndex] = skeleton.getBone( boneIndex )._inverseBind * listModel[boneIndex];
+        }
     }
 } // namespace sw

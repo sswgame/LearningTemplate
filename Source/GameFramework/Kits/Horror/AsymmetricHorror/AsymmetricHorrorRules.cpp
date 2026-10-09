@@ -26,7 +26,9 @@ namespace sw
                 const uint32 count                    = GameDataXml::parseFloats( text, arrScale, kMaxScaleCount );
                 outListScale.clear();
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     outListScale.push_back( MathUtil::max( 0.0f, arrScale[index] ) );
+                }
             }
         };
     } // namespace

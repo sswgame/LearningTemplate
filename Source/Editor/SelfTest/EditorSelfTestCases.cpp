@@ -646,7 +646,9 @@ namespace sw::editor
                 if ( pTree != nullptr )
                     ImGui::SetScrollY( pTree, 0.0f );
                 for ( const uint64 objectId : probe._listObjectId )
+                {
                     destroyProbeObject( objectId );
+                }
                 probe = OffscreenRowProbe{};
                 return EditorSelfTestStep::Done;
             }

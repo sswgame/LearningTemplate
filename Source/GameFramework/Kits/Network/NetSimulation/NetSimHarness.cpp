@@ -123,7 +123,9 @@ namespace sw
         if ( _pSession != nullptr )
         {
             for ( const NetHostEvent& event : _listEvent )
+            {
                 _pSession->onHostEvent( *this, event );
+            }
             _pSession->onTickBegin( *this, deltaTime );
         }
         // 씬의 `tick` 이 아니라 매니저를 바로 — 씬은 오디오 리스너 · 에미터를 프로세스에 하나인 오디오 엔진에 넣는다(월드가 여럿이면 서로 덮는다).
@@ -307,7 +309,9 @@ namespace sw
     {
         outListWorld.clear();
         for ( const unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
             outListWorld.push_back( pWorld.get() );
+        }
     }
 
     bool NetSimHarness::areAllClientsConnected() const
@@ -324,7 +328,9 @@ namespace sw
     {
         uint64 droppedCount = _pNetwork != nullptr ? _pNetwork->getDroppedCount() : 0u;
         for ( const unique_ptr<Link>& pLink : _listLink )
+        {
             droppedCount += pLink->_pEmulation->getStats()._droppedCount;
+        }
         return droppedCount;
     }
 
@@ -338,7 +344,9 @@ namespace sw
         const float32 deltaTime = static_cast<float32>( _settings._tickInterval );
         _pServer->tick( deltaTime );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
             pWorld->tick( deltaTime );
+        }
         updateNetwork();
         _bStepping = false;
     }
@@ -348,21 +356,29 @@ namespace sw
         // 1) 보내기 — 이번 틱에 쌓인 메시지가 패킷이 되어 흉내 줄로 간다.
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
             pWorld->getHost().update( _time );
+        }
         // 2) 흉내 줄에서 때가 된 것을 망에 싣고 망이 배달한다(떠난 클라이언트의 끝점도 — 끊김 알림이 아직 줄에 있을 수 있다).
         for ( unique_ptr<Link>& pLink : _listLink )
+        {
             pLink->_pEmulation->update( _time );
+        }
         _pNetwork->deliverInFlight();
         // 3) 받기 — 같은 시각이라 보내기 간격이 막아 다시 보내지는 않는다.
         _pServer->getHost().update( _time );
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
+        {
             pWorld->getHost().update( _time );
+        }
     }
 
     void NetSimHarness::stepTicks( uint32 tickCount )
     {
         for ( uint32 index = 0; index < tickCount; ++index )
+        {
             step();
+        }
     }
 
     int32 NetSimHarness::stepUntil( bool ( *pPredicate )( const NetSimHarness&, void* ), void* pContext, uint32 maxTicks )

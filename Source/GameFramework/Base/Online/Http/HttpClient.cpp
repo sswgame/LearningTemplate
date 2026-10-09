@@ -142,7 +142,9 @@ namespace sw
             }
         }
         for ( const StreamConnectionHandle handle : listExpired )
+        {
             _transport->close( handle, StreamCloseMode::Abort );
+        }
     }
 
     int32 HttpClient::pollResponses( vector<HttpClientResponse>& outListResponse )
@@ -150,7 +152,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         const int32             count = static_cast<int32>( _listDone.size() );
         for ( HttpClientResponse& response : _listDone )
+        {
             outListResponse.push_back( std::move( response ) );
+        }
         _listDone.clear();
         return count;
     }

@@ -19,7 +19,9 @@ SW_TEST_CASE( TickRingBufferTest, OverwrittenTicksAreForgotten )
     SW_EXPECT_EQUAL( 0, buffer.getCapacity() );
     buffer.initialize( 4 );
     for ( uint32 tick = 0; tick < 6; ++tick )
+    {
         buffer.acquire( tick ) = static_cast<int32>( tick ) * 10;
+    }
     SW_EXPECT_NULL( buffer.find( 0 ) ); // 4 가 덮었다
     SW_EXPECT_NULL( buffer.find( 1 ) ); // 5 가 덮었다
     SW_ASSERT_NOT_NULL( buffer.find( 5 ) );

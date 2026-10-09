@@ -36,9 +36,13 @@ namespace sw
             static string_view trimSpaces( string_view text )
             {
                 while ( text.empty() == false && ( text.front() == ' ' || text.front() == '\t' ) )
+                {
                     text.remove_prefix( 1 );
+                }
                 while ( text.empty() == false && ( text.back() == ' ' || text.back() == '\t' ) )
+                {
                     text.remove_suffix( 1 );
+                }
                 return text;
             }
 
@@ -558,7 +562,9 @@ namespace sw
         else
             Internal::appendHeader( outBytes, "Content-Length", to_string( static_cast<int64>( response._bodyBytes.size() ) ) );
         for ( const HttpHeader& header : response._listHeader )
+        {
             Internal::appendHeader( outBytes, header._name, header._value );
+        }
         Internal::appendText( outBytes, "\r\n" );
         if ( response._bChunked == SW_FALSE )
         {

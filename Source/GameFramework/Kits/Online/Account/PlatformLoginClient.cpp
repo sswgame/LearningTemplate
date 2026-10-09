@@ -63,7 +63,9 @@ namespace sw
     {
         const int32 count = static_cast<int32>( _listDone.size() );
         for ( PlatformLoginClientResult& result : _listDone )
+        {
             outListResult.push_back( std::move( result ) );
+        }
         _listDone.clear();
         return count;
     }

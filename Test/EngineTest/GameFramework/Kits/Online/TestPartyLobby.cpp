@@ -42,7 +42,9 @@ namespace
         void step()
         {
             for ( int32 round = 0; round < 12; ++round )
+            {
                 (void)_router.pump();
+            }
             _service.drainCompletions( _listCompletion );
             _service.drainNotifications( _listNotification );
         }

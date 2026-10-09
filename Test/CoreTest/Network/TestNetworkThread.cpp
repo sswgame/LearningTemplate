@@ -51,7 +51,9 @@ namespace
     {
         int32 value = 0;
         for ( int32 index = 0; index < 4; ++index )
+        {
             value |= static_cast<int32>( buffer[static_cast<size_t>( offset + index )] ) << ( index * 8 );
+        }
         return value;
     }
 
@@ -158,7 +160,9 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
                 const vector<uint8> message = makeTaggedMessage( sender, sequence );
                 // 신뢰 창이 차면 거절된다 — 잠깐 쉬었다가 다시(보내는 속도를 줄이는 쪽은 게임이다).
                 while ( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) == false )
+                {
                     std::this_thread::sleep_for( std::chrono::microseconds( 200 ) );
+                }
             }
         } );
     }
@@ -204,18 +208,24 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
         } );
     }
     for ( std::thread& thread : listSender )
+    {
         thread.join();
+    }
     const bool bAllReceived = waitUntil( [&receivedTotal]()
     { return receivedTotal.load() >= kSenderCount * kMessagePerSender; }, 10.0 );
     std::this_thread::sleep_for( std::chrono::milliseconds( 20 ) ); // 겹쳐 나온 것이 있으면 세어지게
     bStop.store( true );
     for ( std::thread& thread : listReceiver )
+    {
         thread.join();
+    }
     SW_EXPECT_TRUE( bAllReceived );
     SW_EXPECT_EQUAL( kSenderCount * kMessagePerSender, receivedTotal.load() );
     SW_EXPECT_EQUAL( 0, orderErrorCount.load() );
     for ( int32 sender = 0; sender < kSenderCount; ++sender )
+    {
         SW_EXPECT_EQUAL( kMessagePerSender, arrCount[0][static_cast<size_t>( sender )] + arrCount[1][static_cast<size_t>( sender )] );
+    }
 }
 
 SW_TEST_CASE( NetworkThreadTest, ConnectAsyncReportsEveryFailure )
@@ -265,7 +275,9 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     // 멈추기 전에 보낸 순서 보장 메시지는 멈춘 동안 네트워크 스레드가 실어 나르고, 깨어난 게임 스레드가 순서대로 받는다.
     constexpr int32 kStallMessageCount = 10;
     for ( int32 index = 0; index < kStallMessageCount; ++index )
+    {
         SW_ASSERT_TRUE( cluster.getClient( 0 ).sendMessage( 0, NetChannelType::ReliableOrdered, makeTaggedMessage( 9, index ) ) );
+    }
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     SW_EXPECT_EQUAL( 1, cluster.getServer().getConnectedCount() );
     SW_EXPECT_TRUE( cluster.getClient( 0 ).getConnectionState( 0 ) == NetConnectionState::Connected );
@@ -285,7 +297,9 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     SW_EXPECT_TRUE( waitUntil( [&]()
     {
         while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        {
             received += readInt( buffer, 4 ) == received ? 1 : 0;
+        }
         return received == kStallMessageCount;
     } ) );
     SW_EXPECT_EQUAL( kStallMessageCount, received );
@@ -317,7 +331,9 @@ SW_TEST_CASE( NetworkThreadTest, UdpHostsRunOnThreadsOverLocalhost )
     SW_ASSERT_TRUE( future.waitFor( kFutureWaitMilli ) );
     SW_ASSERT_TRUE( future.get().isConnected() );
     for ( int32 index = 0; index < 20; ++index )
+    {
         SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, makeTaggedMessage( 7, index ) ) );
+    }
     int32          received     = 0;
     int32          connectionId = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
@@ -325,7 +341,9 @@ SW_TEST_CASE( NetworkThreadTest, UdpHostsRunOnThreadsOverLocalhost )
     SW_EXPECT_TRUE( waitUntil( [&]()
     {
         while ( server.receiveMessage( connectionId, channel, buffer ) )
+        {
             received += readInt( buffer, 4 ) == received ? 1 : 0;
+        }
         return received == 20;
     } ) );
     SW_EXPECT_EQUAL( 20, received );
@@ -358,7 +376,9 @@ SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
     {
         vector<uint8> message( static_cast<size_t>( size ), 0 );
         for ( size_t index = 0; index < message.size(); ++index )
+        {
             message[index] = static_cast<uint8>( index * 7u + static_cast<size_t>( size ) );
+        }
         SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
         listSent.push_back( std::move( message ) );
     }
@@ -369,13 +389,17 @@ SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
     const bool            bAllReceived = waitUntil( [&]()
     {
         while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        {
             listReceived.push_back( buffer );
+        }
         return listReceived.size() >= listSent.size();
     }, 10.0 );
     SW_EXPECT_TRUE( bAllReceived );
     SW_ASSERT_EQUAL( listSent.size(), listReceived.size() );
     for ( size_t index = 0; index < listSent.size(); ++index )
+    {
         SW_EXPECT_TRUE( listReceived[index] == listSent[index] );
+    }
 }
 
 /**

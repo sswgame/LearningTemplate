@@ -94,7 +94,9 @@ namespace sw
                 const size_t choiceCount = choicesVal.size();
                 node._listChoice.reserve( choiceCount );
                 for ( size_t choiceIndex = 0; choiceIndex < choiceCount; ++choiceIndex )
+                {
                     node._listChoice.push_back( choicesVal.at( choiceIndex ).asString() );
+                }
             }
 
             if ( node._id > 0 )
@@ -134,7 +136,9 @@ namespace sw
             const JsonValue choicesVal = nodeJson.set( "choices" );
             choicesVal.setArray();
             for ( const string& choice : node._listChoice )
+            {
                 choicesVal.pushBack().setString( choice );
+            }
 
             nodeJson.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
             nodeJson.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );

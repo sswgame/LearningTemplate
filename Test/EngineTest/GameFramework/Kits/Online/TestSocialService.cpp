@@ -185,7 +185,9 @@ namespace
             vector<unique_ptr<IServiceStoreWork>> listWork = std::move( _listCompleted );
             _listCompleted.clear();
             for ( unique_ptr<IServiceStoreWork>& work : listWork )
+            {
                 work->complete();
+            }
             return static_cast<int32>( listWork.size() );
         }
 

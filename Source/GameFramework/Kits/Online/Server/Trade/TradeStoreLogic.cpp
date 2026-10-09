@@ -67,7 +67,9 @@ namespace sw
                     text += sideIndex == 0 ? "a=" : ";b=";
                     text += ServiceKeyUtil::makeHex64( side._accountId );
                     for ( const TradeLeg& leg : side._listLeg )
+                    {
                         text += "," + leg._assetId + "x" + to_string( leg._amount );
+                    }
                 }
                 return text;
             }
@@ -428,7 +430,9 @@ namespace sw
         inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeId ), TradeRecordUtil::encodeSession( closed, session._ownerServerId ),
                               session._version );
         for ( const TradeSide& side : closed._arrSide )
+        {
             inoutTransaction.erase( getActiveTable(), ServiceKeyUtil::makeHex64( side._accountId ) );
+        }
         inoutTransaction.erase( getOwnerTable(), TradeStoreLogicInternal::makeOwnerKey( session._ownerServerId, closed._tradeId ) );
     }
 

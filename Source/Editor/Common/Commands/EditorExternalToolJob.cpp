@@ -59,7 +59,9 @@ namespace sw::editor
             while ( pProcess->readOutputLine( line ) )
             {
                 while ( line.empty() == false && ( line.back() == '\r' || line.back() == '\n' ) )
+                {
                     line.pop_back();
+                }
                 result._listLine.push_back( line );
             }
             result._exitCode = pProcess->waitForExit();

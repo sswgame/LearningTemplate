@@ -132,9 +132,13 @@ namespace sw
     {
         bool bAnySolo = false;
         for ( const Bus& bus : _listBusState )
+        {
             bAnySolo = bAnySolo || bus._bSolo == SW_TRUE;
+        }
         for ( Bus& bus : _listBusState )
+        {
             bus._bAudible = bAnySolo ? SW_FALSE : SW_TRUE;
+        }
         if ( bAnySolo == false )
             return;
 
@@ -144,7 +148,9 @@ namespace sw
             if ( _listBusState[busIndex]._bSolo == SW_FALSE )
                 continue;
             for ( int32 ancestor = static_cast<int32>( busIndex ); ancestor >= 0; ancestor = _listBusState[static_cast<size_t>( ancestor )]._parentIndex )
+            {
                 _listBusState[static_cast<size_t>( ancestor )]._bAudible = SW_TRUE;
+            }
             for ( size_t candidate = 0; candidate < _listBusState.size(); ++candidate )
             {
                 for ( int32 walk = _listBusState[candidate]._parentIndex; walk >= 0; walk = _listBusState[static_cast<size_t>( walk )]._parentIndex )
@@ -172,7 +178,9 @@ namespace sw
         _blockFrameCount         = MathUtil::min( frameCount, audio::kBlockFrameCount );
         const size_t sampleCount = static_cast<size_t>( _blockFrameCount ) * audio::kChannelCount;
         for ( Bus& bus : _listBusState )
+        {
             Memory::set( bus._listInput.data(), 0, sampleCount * sizeof( float32 ) );
+        }
     }
 
     void AudioMixer::process( float32* pOutput, uint32 frameCount )
@@ -186,7 +194,9 @@ namespace sw
 
             // 인서트 이펙트 — 센드 · 페이더 앞(채널 스트립과 같은 자리).
             for ( const unique_ptr<IAudioEffect>& pEffect : bus._listEffect )
+            {
                 pEffect->process( pInput, blockFrames );
+            }
 
             // 프리 페이더 센드는 페이더 전의 신호를 보낸다.
             for ( Send& send : bus._listSend )
@@ -244,7 +254,9 @@ namespace sw
             {
                 float32* pParent = _listBusState[static_cast<size_t>( bus._parentIndex )]._listInput.data();
                 for ( uint32 sampleIndex = 0; sampleIndex < blockFrames * 2; ++sampleIndex )
+                {
                     pParent[sampleIndex] += pInput[sampleIndex];
+                }
             }
         }
 

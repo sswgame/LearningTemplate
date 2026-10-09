@@ -336,8 +336,12 @@ namespace sw
             targetIndex = _listCommand.size();
 
         while ( _index > targetIndex && canUndo() )
+        {
             undo();
+        }
         while ( _index < targetIndex && canRedo() )
+        {
             redo();
+        }
     }
 } // namespace sw

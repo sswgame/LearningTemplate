@@ -78,7 +78,9 @@ namespace sw
     void FakeReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
     {
         for ( ReceiptValidationResult& result : _listPending )
+        {
             outListResult.push_back( std::move( result ) );
+        }
         _listPending.clear();
     }
 } // namespace sw

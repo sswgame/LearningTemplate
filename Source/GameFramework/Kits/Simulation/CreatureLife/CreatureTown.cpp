@@ -443,7 +443,9 @@ namespace sw
     void CreatureTown::advanceDay()
     {
         for ( TownCreature& creature : _listCreature )
+        {
             std::fill( creature._listAbilityUse.begin(), creature._listAbilityUse.end(), 0 );
+        }
         updateAppealTier(); // 공유 평판은 주인이 날 넘김에 식혔다 — 매력도만 다시 본다
     }
 
@@ -521,7 +523,9 @@ namespace sw
             return 0.0f;
         int64 total = 0;
         for ( const TownCreature& creature : _listCreature )
+        {
             total += getFriendship( creature._speciesId );
+        }
         return static_cast<float32>( total ) / static_cast<float32>( _listCreature.size() );
     }
 
@@ -566,7 +570,9 @@ namespace sw
                         if ( matchesAt( habitat, rotation, originX, originY, listClaimed, listTile ) == false )
                             continue;
                         for ( const int32 tileIndex : listTile )
+                        {
                             listClaimed[static_cast<size_t>( tileIndex )] = SW_TRUE;
+                        }
                         HabitatInstance instance;
                         instance._habitatId = habitat._id;
                         instance._listTile  = listTile;
@@ -682,7 +688,9 @@ namespace sw
             return;
         const hashed_string habitatKind = CreatureTownInternal::makeHabitatKind();
         for ( const HabitatDef& habitat : _pCatalog->getHabitats() )
+        {
             (void)_pQuestLog->notifyCount( habitatKind, habitat._id, countHabitats( habitat._id ) );
+        }
     }
 
     void CreatureTown::changeFriendship( const hashed_string& speciesId, int32 delta )

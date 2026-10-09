@@ -73,7 +73,9 @@ namespace sw
             const int16 zOrder = getChild( index )->getLayoutSlot()._zOrder;
             uint32      at     = static_cast<uint32>( outListIndex.size() );
             while ( at > 0 && getChild( outListIndex[at - 1] )->getLayoutSlot()._zOrder > zOrder )
+            {
                 --at;
+            }
             outListIndex.insert( outListIndex.begin() + at, index );
         }
     }

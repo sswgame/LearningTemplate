@@ -44,10 +44,14 @@ namespace sw
                 while ( cursor < text.size() )
                 {
                     while ( cursor < text.size() && ( text[cursor] == ' ' || text[cursor] == ',' || text[cursor] == '\t' ) )
+                    {
                         ++cursor;
+                    }
                     const size_t start = cursor;
                     while ( cursor < text.size() && text[cursor] != ' ' && text[cursor] != ',' && text[cursor] != '\t' )
+                    {
                         ++cursor;
+                    }
                     if ( cursor == start )
                         break;
                     if ( count >= 3 || StringUtil::parseFloat( text.substr( start, cursor - start ), arrValue[count] ) == false )

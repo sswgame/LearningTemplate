@@ -124,7 +124,9 @@ namespace sw
                 return resolved;
             };
             for ( const string& inputName : pass._listInput )
+            {
                 pass._listResolvedInput.push_back( resolveAttachment( inputName ) );
+            }
             for ( const string& outputName : pass._listOutput )
             {
                 pass._listResolvedOutput.emplace_back( outputName.c_str() );
@@ -237,7 +239,9 @@ namespace sw
                 ++issueCount;
             };
             for ( const string& outputName : pass._listOutput )
+            {
                 checkSameDivisor( outputName );
+            }
             if ( pass._depthAttachment.empty() == false )
                 checkSameDivisor( pass._depthAttachment );
         }

@@ -249,7 +249,9 @@ namespace sw
         vector<const EntryMap::value_type*> listEntry;
         listEntry.reserve( mapEntry.size() );
         for ( const auto& pair : mapEntry )
+        {
             listEntry.push_back( &pair );
+        }
         std::sort( listEntry.begin(), listEntry.end(),
                    []( const EntryMap::value_type* pLhs, const EntryMap::value_type* pRhs )
         { return pLhs->first < pRhs->first; } );

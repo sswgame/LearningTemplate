@@ -100,7 +100,9 @@ namespace sw
         {
             float32 length = 0.0f;
             for ( size_t pointIndex = 1; pointIndex < _listPoint.size(); ++pointIndex )
+            {
                 length += ( _listPoint[pointIndex] - _listPoint[pointIndex - 1] ).getLength();
+            }
             return length;
         }
     };

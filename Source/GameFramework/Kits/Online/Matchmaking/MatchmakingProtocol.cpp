@@ -19,7 +19,9 @@ namespace sw
             {
                 outWriter.writeVarUint( listAccount.size() );
                 for ( const AccountId accountId : listAccount )
+                {
                     outWriter.writeVarUint( accountId );
+                }
             }
 
             [[nodiscard]] static bool readAccounts( BitReader& reader, int32 maxCount, vector<AccountId>& outListAccount )
@@ -29,7 +31,9 @@ namespace sw
                     return false;
                 outListAccount.resize( static_cast<size_t>( count ) );
                 for ( AccountId& accountId : outListAccount )
+                {
                     accountId = reader.readVarUint();
+                }
                 return reader.hasOverflowed() == false;
             }
 
@@ -221,10 +225,14 @@ namespace sw
         outWriter.writeVarInt( match._averageRating );
         outWriter.writeVarUint( match._listTeam.size() );
         for ( const vector<MatchMember>& team : match._listTeam )
+        {
             MatchmakingProtocolInternal::writeMembers( outWriter, team );
+        }
         outWriter.writeVarUint( match._listTicket.size() );
         for ( const MatchTicket& ticket : match._listTicket )
+        {
             writeTicket( outWriter, ticket );
+        }
     }
 
     bool MatchmakingProtocol::readFormed( BitReader& reader, MatchFormed& outMatch )
@@ -297,7 +305,9 @@ namespace sw
         outWriter.writeVarUint( reply._ticketId );
         outWriter.writeVarUint( reply._listLobby.size() );
         for ( const LobbySnapshot& lobby : reply._listLobby )
+        {
             writeLobby( outWriter, lobby );
+        }
     }
 
     bool MatchmakingProtocol::readReply( BitReader& reader, MatchmakingReply& outReply )

@@ -30,11 +30,15 @@ SW_TEST_CASE( TileGridUtilTest, MergedRectanglesCoverEverySolidCellOnce )
         for ( int32 y = rect._y; y < rect._y + rect._height; ++y )
         {
             for ( int32 x = rect._x; x < rect._x + rect._width; ++x )
+            {
                 ++listCover[static_cast<size_t>( y * 3 + x )];
+            }
         }
     }
     for ( size_t cellIndex = 0; cellIndex < 9; ++cellIndex )
+    {
         SW_EXPECT_EQUAL( static_cast<uint32>( listSolid[cellIndex] ), listCover[cellIndex] );
+    }
 
     // 테두리 벽: 칸 60 개 → 사각형 4 개.
     constexpr int32   kSize = 16;
@@ -113,7 +117,9 @@ SW_TEST_CASE( TileGridUtilTest, NavCostsDriveTheGridPathfinder )
     for ( int32 y = 0; y < 3; ++y )
     {
         for ( int32 x = 0; x < 5; ++x )
+        {
             grid.setCost( x, y, listCost[static_cast<size_t>( y * 5 + x )] );
+        }
     }
     sw::GridPathfinder pathfinder;
     sw::GridPathQuery  query{};

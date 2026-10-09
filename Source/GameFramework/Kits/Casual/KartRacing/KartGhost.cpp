@@ -110,7 +110,9 @@ namespace sw
         writer.writeFloat( _finishTime );
         writer.writeVarUint( static_cast<uint64>( _listFrame.size() ) );
         for ( const KartGhostFrame& frame : _listFrame )
+        {
             writeFrame( writer, frame );
+        }
         outBuffer = writer.releaseBytes();
     }
 
@@ -136,7 +138,9 @@ namespace sw
         vector<KartGhostFrame> listFrame;
         listFrame.reserve( static_cast<size_t>( frameCount ) );
         for ( uint64 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
             listFrame.push_back( readFrame( reader ) );
+        }
         if ( reader.hasOverflowed() )
             return false;
         _listFrame.swap( listFrame );

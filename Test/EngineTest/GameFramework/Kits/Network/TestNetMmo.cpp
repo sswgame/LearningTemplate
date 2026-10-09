@@ -68,12 +68,16 @@ namespace
                 if ( _pTable->_bStampTick == SW_TRUE && entity._listState.size() >= 4 )
                 {
                     for ( size_t index = 0; index < 4; ++index )
+                    {
                         entity._listState[index] = static_cast<uint8>( tick >> ( 8 * index ) );
+                    }
                 }
                 _server.setEntity( entity );
             }
             for ( const uint32 entityId : _pTable->_listRemoved )
+            {
                 _server.removeEntity( entityId );
+            }
             _pTable->_listRemoved.clear();
             _server.update( deltaTime );
         }
@@ -131,7 +135,9 @@ namespace
                     continue;
                 uint32 stamp = 0;
                 for ( size_t index = 0; index < 4; ++index )
+                {
                     stamp |= static_cast<uint32>( pEntity->_listState[index] ) << ( 8 * index );
+                }
                 const auto stampIter = _mapLastStamp.find( event._entityId );
                 if ( stampIter != _mapLastStamp.end() && stamp < stampIter->second )
                     ++_regressionCount;
@@ -221,11 +227,13 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
 
     // 400 개를 400 × 400 에 고르게. 플레이어(1000)는 (100, 100). 파티원(1001)은 멀리.
     for ( uint32 index = 0; index < 400; ++index )
+    {
         server.setEntity( MmoEntity{
             vector<uint8>{ 0 },
             float3{ static_cast<float32>( index % 20 ) * 20.0f, 0.0f, static_cast<float32>( index / 20 ) * 20.0f },
             index, 1, 1.0f
         } );
+    }
     server.setEntity( MmoEntity{
         vector<uint8>{},
         float3{ 100.0f, 0.0f, 100.0f },
@@ -249,11 +257,13 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
             {
                 // 모두 상태가 매 틱 바뀐다(애니메이션 프레임).
                 for ( uint32 index = 0; index < 400; ++index )
+                {
                     server.setEntity( MmoEntity{
                         vector<uint8>{ static_cast<uint8>( time * 20.0 ) },
                         float3{ static_cast<float32>( index % 20 ) * 20.0f, 0.0f, static_cast<float32>( index / 20 ) * 20.0f },
                         index, 1, 1.0f
                     } );
+                }
             }
             server.update( 1.0f / 20.0f );
             // 흉내 줄을 먼저 모두 비운다 — 지연이 방향과 상관없이 같다.
@@ -264,11 +274,15 @@ SW_TEST_CASE( NetMmoTest, ObserversSeeNearbyEntitiesWithinBudgetAndHysteresis )
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+            {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == view.handleMessage( 0, buffer ) );
+            }
             // 클라이언트는 받은 갱신 틱을 틱마다 확인한다 — 서버는 그것으로 잃은 갱신을 가린다.
             view.sendAck( clientHost, 0 );
             while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+            {
                 SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
+            }
             vector<MmoClientEvent> listEvent;
             view.drainEvents( listEvent );
             for ( const MmoClientEvent& event : listEvent )
@@ -338,12 +352,14 @@ SW_TEST_CASE( NetMmoTest, TeleportLeavesWithoutGhosts )
         kMmoObserverId, 0, 1.0f
     } );
     for ( uint32 index = 0; index < kNeighborCount; ++index )
+    {
         game._table._listEntity.push_back(
             MmoEntity{
                 vector<uint8>{ 1 },
                 float3{ static_cast<float32>( index % 20 ) * 2.0f, 0.0f, static_cast<float32>( index / 20 ) * 2.0f },
                 kFirstId + index, 1, 1.0f
         } );
+    }
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
@@ -373,10 +389,12 @@ SW_TEST_CASE( NetMmoTest, ReorderedUpdateDoesNotOverwriteNewer )
         kMmoObserverId, 0, 1.0f
     } );
     for ( uint32 index = 0; index < 20; ++index )
+    {
         game._table._listEntity.push_back( MmoEntity{
             vector<uint8>( 4, 0 ), float3{ static_cast<float32>( index ), 0.0f, 3.0f },
             100 + index, 1, 1.0f
         } );
+    }
     NetSimSettings settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
@@ -448,12 +466,14 @@ SW_TEST_CASE( NetMmoTest, EntersShareOneReliableMessagePerTick )
         kMmoObserverId, 0, 1.0f
     } );
     for ( uint32 index = 0; index < kNeighborCount; ++index )
+    {
         game._table._listEntity.push_back(
             MmoEntity{
                 vector<uint8>( static_cast<size_t>( NetMmoMessage::kMaxStateBytes ), static_cast<uint8>( index + 1 ) ),
                 float3{ static_cast<float32>( index % 8 ) * 2.0f, 0.0f, static_cast<float32>( index / 8 ) * 2.0f },
                 kFirstId + index, 1, 1.0f
         } );
+    }
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
     const int32 client = harness.addClient( NetSimLinkConditions{} );
@@ -494,11 +514,13 @@ SW_TEST_CASE( NetMmoTest, UpdateBudgetFollowsTheConnectionCap )
             kMmoObserverId, 0, 1.0f
         } );
         for ( uint32 index = 0; index < 20; ++index )
+        {
             game._table._listEntity.push_back( MmoEntity{
                 vector<uint8>( 4, 0 ),
                 float3{ static_cast<float32>( index % 5 ) * 2.0f, 0.0f, static_cast<float32>( index / 5 ) * 2.0f },
                 200 + index, 1, 1.0f
             } );
+        }
         NetSimSettings settings;
         settings._hostSettings._maxBytesPerSecond = maxBytesPerSecond;
         NetSimHarness harness;
@@ -530,10 +552,12 @@ SW_TEST_CASE( NetMmoTest, LostUpdateIsResentSoonAfterTheAck )
         kMmoObserverId, 0, 1.0f
     } );
     for ( uint32 index = 0; index < 8; ++index )
+    {
         game._table._listEntity.push_back( MmoEntity{
             vector<uint8>( 16, 0 ), float3{ static_cast<float32>( index + 1 ), 0.0f, 1.0f },
             100 + index, 1, 1.0f
         } );
+    }
     game._table._listEntity.push_back( MmoEntity{
         vector<uint8>( 16, 0 ), float3{ 50.0f, 0.0f, 0.0f },
         kFarId, 1, 1.0f
@@ -546,7 +570,9 @@ SW_TEST_CASE( NetMmoTest, LostUpdateIsResentSoonAfterTheAck )
     for ( uint32 tick = 0; tick < 120; ++tick )
     {
         for ( size_t index = 1; index <= 8; ++index )
+        {
             ++game._table._listEntity[index]._listState[0];
+        }
         harness.step();
     }
     const MmoClientSession& session = getMmoClient( harness, client );
@@ -561,7 +587,9 @@ SW_TEST_CASE( NetMmoTest, LostUpdateIsResentSoonAfterTheAck )
     for ( uint32 tick = 0; tick < 30; ++tick )
     {
         for ( size_t index = 1; index <= 8; ++index )
+        {
             ++game._table._listEntity[index]._listState[0];
+        }
         harness.step();
     }
     harness.setLinkConditions( client, NetSimLinkConditions{} );
@@ -570,7 +598,9 @@ SW_TEST_CASE( NetMmoTest, LostUpdateIsResentSoonAfterTheAck )
     while ( ticksToSee < 300 && session.getView().findEntity( kFarId )->_listState[0] != 7 )
     {
         for ( size_t index = 1; index <= 8; ++index )
+        {
             ++game._table._listEntity[index]._listState[0];
+        }
         harness.step();
         ++ticksToSee;
     }

@@ -153,7 +153,9 @@ namespace sw
     void ActionStageRun::commitSecrets()
     {
         for ( const hashed_string& secretId : _listSecretPending )
+        {
             _listSecretCommitted.push_back( secretId );
+        }
         _listSecretPending.clear();
     }
 

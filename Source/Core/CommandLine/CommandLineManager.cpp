@@ -202,7 +202,9 @@ namespace sw
         vector<string> listName;
         listName.reserve( _mapPendingGlobal.size() );
         for ( auto iter = _mapPendingGlobal.begin(); iter != _mapPendingGlobal.end(); ++iter )
+        {
             listName.push_back( iter->first );
+        }
         return listName;
     }
 

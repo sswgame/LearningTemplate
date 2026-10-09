@@ -293,7 +293,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     // 배터리가 다 되면 꺼지고, 다시 켤 수 없으며, 어둠이 다시 깎는다.
     listEvent.clear();
     for ( int32 second = 0; second < 9; ++second )
+    {
         session.update( 1.0f, true );
+    }
     session.drainEvents( listEvent );
     SW_EXPECT_TRUE( hasEvent( listEvent, SurvivalHorrorEvent::Kind::FlashlightDied ) );
     SW_EXPECT_FALSE( session.isFlashlightOn() );
@@ -432,7 +434,9 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     HorrorEncounter sure;
     sure.initialize( *pZombie, listInvestigator, 5u, 1 );
     for ( int32 guard = 0; guard < 10 && sure.getState() == HorrorEncounterState::Ongoing; ++guard )
+    {
         (void)sure.playNextTurn();
+    }
     SW_EXPECT_TRUE( sure.getState() == HorrorEncounterState::Victory );
     SW_EXPECT_EQUAL( 0, sure.getMonsterToughness() );
 
@@ -442,7 +446,9 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     HorrorEncounter hopeless;
     hopeless.initialize( *pZombie, listInvestigator, 5u );
     for ( int32 guard = 0; guard < 200 && hopeless.getState() == HorrorEncounterState::Ongoing; ++guard )
+    {
         (void)hopeless.playNextTurn();
+    }
     SW_EXPECT_TRUE( hopeless.getState() == HorrorEncounterState::Defeat );
     SW_EXPECT_EQUAL( 4, hopeless.getMonsterToughness() );
 }
@@ -497,7 +503,9 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
         SW_EXPECT_TRUE( pSession->pressSequenceStep( "bells", "high" ) == HorrorPuzzleResult::Progress );
         SW_EXPECT_TRUE( pSession->enterDialCode( "locker", vector<int32>{ 1, 2 } ) == HorrorPuzzleResult::LockedOut );
         for ( int32 second = 0; second < 12; ++second )
+        {
             pSession->update( 1.0f, true );
+        }
     }
     SW_EXPECT_FALSE( restored.isFlashlightOn() ); // 배터리가 이어져 같은 때에 꺼졌다
     Archive afterOriginal;
@@ -538,7 +546,9 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     HorrorEncounter encounter;
     encounter.initialize( *pZombie, listInvestigator, 77u );
     for ( int32 turn = 0; turn < 3; ++turn )
+    {
         (void)encounter.playNextTurn();
+    }
 
     Archive written;
     encounter.writeState( written );

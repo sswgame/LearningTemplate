@@ -149,7 +149,9 @@ namespace sw
         , _sumBits{ MetricRegistryInternal::toBits( 0.0 ) }
     {
         for ( size_t bucketIndex = 0; bucketIndex <= _listUpperBound.size(); ++bucketIndex )
+        {
             _arrBucketValue[bucketIndex].store( 0, std::memory_order_relaxed );
+        }
     }
 
     void MetricHistogram::observe( float64 value )
@@ -206,7 +208,9 @@ namespace sw
     {
         bool bAscending = listUpperBound.empty() == false;
         for ( size_t boundIndex = 1; bAscending && boundIndex < listUpperBound.size(); ++boundIndex )
+        {
             bAscending = listUpperBound[boundIndex - 1] < listUpperBound[boundIndex];
+        }
         if ( bAscending == false )
         {
             SW_LOG_ERROR( "Metric histogram '%#' needs strictly ascending bucket bounds", name );
@@ -258,13 +262,17 @@ namespace sw
             pFamily->_help = string( help );
             pFamily->_kind = kind;
             for ( const MetricLabel& label : listLabel )
+            {
                 pFamily->_listLabelName.push_back( label._name );
+            }
             if ( pUpperBound != nullptr )
                 pFamily->_listUpperBound = *pUpperBound;
         }
         bool bSameShape = pFamily->_kind == kind && pFamily->_listLabelName.size() == listLabel.size();
         for ( size_t labelIndex = 0; bSameShape && labelIndex < listLabel.size(); ++labelIndex )
+        {
             bSameShape = pFamily->_listLabelName[labelIndex] == listLabel[labelIndex]._name;
+        }
         if ( bSameShape && pUpperBound != nullptr )
             bSameShape = pFamily->_listUpperBound == *pUpperBound;
         if ( bSameShape == false )
@@ -308,7 +316,9 @@ namespace sw
         vector<const Family*>   listFamily;
         listFamily.reserve( _listFamily.size() );
         for ( const unique_ptr<Family>& family : _listFamily )
+        {
             listFamily.push_back( family.get() );
+        }
         std::sort( listFamily.begin(), listFamily.end(), &MetricRegistry::isFamilyNameLess );
         for ( const Family* pFamily : listFamily )
         {
@@ -375,7 +385,9 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         int32                   seriesCount = 0;
         for ( const unique_ptr<Family>& family : _listFamily )
+        {
             seriesCount += static_cast<int32>( family->_listSeries.size() );
+        }
         return seriesCount;
     }
 

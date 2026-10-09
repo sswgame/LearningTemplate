@@ -424,7 +424,9 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedClearAndQueryStress )
 
     const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( 10000 );
     while ( clearsDone.load() == 0 && waitDeadline.isExpired() == false )
+    {
         std::this_thread::yield();
+    }
     SW_EXPECT_TRUE_MSG( clearsDone.load() > 0, "지우는 스레드가 10 초 안에 돌지 않았다" );
 
     sw::vector<std::thread> listWorker;

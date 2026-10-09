@@ -329,7 +329,9 @@ namespace sw
         } );
         // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다 — 그 자식들이 그 id 로 가리킨다.
         for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
+        {
             outDoc._listSceneObjectNode.push_back( unresolved );
+        }
         return true;
     }
 
@@ -348,7 +350,9 @@ namespace sw
             nextFileId = MathUtil::max( nextFileId, fileId + 1 );
         }
         for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
+        {
             nextFileId = MathUtil::max( nextFileId, unresolved._fileId + 1 );
+        }
 
         vector<GameObject*> listObject;
         _objectManager->getAllGameObjects( listObject );

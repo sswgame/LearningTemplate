@@ -205,7 +205,9 @@ namespace sw
         if ( pFactory == nullptr )
             return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
         for ( const RHIDeferredHandleQueue::Entry& entry : listHandle )
+        {
             IRHIDeviceInternal::releaseNow( *pFactory, entry._kind, entry._handle );
+        }
     }
 
     void IRHIDevice::notifyRenderFrameQueued()

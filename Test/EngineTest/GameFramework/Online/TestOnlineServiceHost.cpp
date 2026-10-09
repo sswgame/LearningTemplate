@@ -109,7 +109,9 @@ namespace
             if ( _bHoldLateAnswers )
                 return;
             for ( const NetRequestToken& token : _listLateToken )
+            {
                 _listLateAnswer.push_back( host.respondOk( token, BitWriter{} ) );
+            }
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
             {
@@ -273,7 +275,9 @@ namespace
             {
                 _nowMs += 10;
                 for ( ClientSide* pClient : _listClient )
+                {
                     pClient->_client.tick( _nowMs );
+                }
                 _host.tick( _nowMs );
             }
         }
@@ -286,7 +290,9 @@ namespace
             body.writeVarUint( value );
             (void)client._client.sendRequest( method, body, options, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &record ) );
             for ( int32 attempt = 0; attempt < 50 && record._bAnswered == false; ++attempt )
+            {
                 step( 1 );
+            }
             SW_EXPECT_TRUE( record._bAnswered );
             return record;
         }
@@ -397,7 +403,9 @@ namespace
         ~SharedEndpointBots() override
         {
             for ( OnlineServiceClient& client : _arrClient )
+            {
                 client.shutdown();
+            }
             _requestClient.shutdown();
             _transport->shutdown();
             _endpoint.shutdown();
@@ -547,7 +555,9 @@ SW_TEST_CASE( OnlineServiceHostTest, OversizedBodiesAndFloodsAreRefused )
     SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, oversized._errorCode );
 
     for ( int32 index = 0; index < 3; ++index )
+    {
         SW_EXPECT_TRUE( rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kEcho, 1 )._status == NetRequestStatus::Ok );
+    }
     const ResponseRecord limited = rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kEcho, 1 );
     SW_ASSERT_EQUAL( OnlineError::kRateLimited, limited._errorCode );
     BitReader retry( limited._bodyBytes.data(), static_cast<int32>( limited._bodyBytes.size() ) );

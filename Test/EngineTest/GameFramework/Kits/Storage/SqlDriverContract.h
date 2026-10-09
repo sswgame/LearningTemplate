@@ -30,7 +30,9 @@ namespace test
         {
             sw::vector<uint8> bytes;
             for ( int32 index = 0; index < 300; ++index )
+            {
                 bytes.push_back( static_cast<uint8>( index * 37 ) ); // 0x00 · 0xFF 모두 든다
+            }
             return bytes;
         }
 

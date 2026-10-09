@@ -124,7 +124,9 @@ namespace sw
             unordered_set<uint64> uniqueRemoved;
             uniqueRemoved.reserve( listBody.size() );
             for ( const PhysicsBodyHandle& body : listBody )
+            {
                 uniqueRemoved.insert( body.packed() );
+            }
             for ( auto& [key, state] : _mapPair )
             {
                 const bool bFirstGone  = uniqueRemoved.find( state._first._body.packed() ) != uniqueRemoved.end();

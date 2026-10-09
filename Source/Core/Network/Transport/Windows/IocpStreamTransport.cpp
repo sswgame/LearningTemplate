@@ -549,7 +549,9 @@ namespace sw
                 std::scoped_lock<mutex> lock{ _tableMutex };
                 listConnection.reserve( _listConnection.size() );
                 for ( const unique_ptr<IocpConnection>& connection : _listConnection )
+                {
                     listConnection.push_back( connection.get() );
+                }
             }
             const int64 idleNanoseconds = Internal::toNanoseconds( _settings._idleTimeoutSeconds );
             for ( IocpConnection* pConnection : listConnection )
@@ -641,7 +643,9 @@ namespace sw
             ThreadName::setCurrentThreadName( "StreamIo" );
             bool bStop = false;
             while ( bStop == false && _bExitThreads.load( std::memory_order_acquire ) == false )
+            {
                 (void)runOnce( Internal::kLoopWaitMilli, bStop );
+            }
         }
     };
 } // namespace sw
@@ -672,7 +676,9 @@ namespace sw
         _state->_bExitThreads.store( false, std::memory_order_release );
         _state->_bInitialized = SW_TRUE;
         for ( int32 index = 0; index < settings._ioThreadCount; ++index )
+        {
             _state->_listThread.emplace_back( &State::runThread, _state.get() );
+        }
         return true;
     }
 
@@ -713,9 +719,13 @@ namespace sw
             SW_LOG_ERROR( "IocpStreamTransport::shutdown timed out with %# connections and %# accepts outstanding", state._openCount.load(), state._pendingAcceptCount.load() );
         state._bExitThreads.store( true, std::memory_order_release );
         for ( size_t index = 0; index < state._listThread.size(); ++index )
+        {
             (void)PostQueuedCompletionStatus( state._completionPort, 0, IocpStreamTransportInternal::kStopKey, nullptr );
+        }
         for ( std::thread& thread : state._listThread )
+        {
             thread.join();
+        }
         state._listThread.clear();
         CloseHandle( state._completionPort );
         state._completionPort = nullptr;
@@ -751,7 +761,9 @@ namespace sw
         state._listenPort    = ntohs( local.sin_port );
         state._arrAcceptSlot = make_unique<IocpAcceptSlot[]>( IocpStreamTransportInternal::kAcceptPostCount );
         for ( uint32 index = 0; index < static_cast<uint32>( IocpStreamTransportInternal::kAcceptPostCount ); ++index )
+        {
             state.postAccept( index );
+        }
         return true;
     }
 

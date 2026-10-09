@@ -105,7 +105,9 @@ namespace sw
     {
         GameObject* pRoot = getOwner();
         while ( pRoot != nullptr && pRoot->getParent() != nullptr )
+        {
             pRoot = pRoot->getParent();
+        }
         return pRoot;
     }
 

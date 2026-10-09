@@ -47,7 +47,9 @@ namespace sw::editor
                     if ( bVisible == false )
                         continue;
                     for ( uint32 cornerIndex = 0; cornerIndex < 4; ++cornerIndex )
+                    {
                         args._pDrawList->AddLine( arrScreen[cornerIndex], arrScreen[( cornerIndex + 1 ) % 4], colorWire, 1.5f );
+                    }
                 }
             }
         };

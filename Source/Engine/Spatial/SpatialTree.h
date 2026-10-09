@@ -439,7 +439,9 @@ namespace sw
                             for ( size_t childIndex = 0; childIndex < Traits::kChildCount; ++childIndex )
                             {
                                 for ( auto& element : _arrChild[childIndex]->_listElement )
+                                {
                                     _listElement.push_back( std::move( element ) );
+                                }
                                 _arrChild[childIndex].reset();
                             }
                             _bIsDivided = false;

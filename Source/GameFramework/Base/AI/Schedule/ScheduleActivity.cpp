@@ -65,6 +65,8 @@ namespace sw
             {   hashed_string( "Wander" ),  hashed_string( "Walk" ),      ScheduleActivityTarget::Wander},
         };
         for ( const ScheduleActivityDef& def : arrBuiltin )
+        {
             (void)registerActivity( def );
+        }
     }
 } // namespace sw

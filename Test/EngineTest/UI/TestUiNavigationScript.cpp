@@ -160,7 +160,9 @@ namespace
             if ( pPanel == nullptr )
                 return;
             for ( uint32 index = 0; index < pPanel->getChildCount(); ++index )
+            {
                 collectFocusable( *pPanel->getChild( index ), outList );
+            }
         }
 
         static sw::string describe( const sw::Widget& widget ) { return widget.getName().empty() ? sw::string( "(unnamed)" ) : sw::string( widget.getName().c_str() ); }

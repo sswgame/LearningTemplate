@@ -49,7 +49,9 @@ namespace
         {
             vector<uint32> listBone;
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
+            {
                 listBone.push_back( boneIndex );
+            }
             return listBone;
         }
 
@@ -159,7 +161,9 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
     SW_EXPECT_TRUE( RigIkSolver::solveFabrik( fabrik, listBone, target, {}, settings, space ) );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( target, fabrik.getModelPosition( 4 ), 2e-3f ) );
     for ( uint32 boneIndex = 1; boneIndex < 5; ++boneIndex )
+    {
         SW_EXPECT_NEAR_EQUAL( 1.0f, ( fabrik.getModelPosition( boneIndex ) - fabrik.getModelPosition( boneIndex - 1 ) ).getLength(), 1e-3f );
+    }
 
     // CCD 는 곧게 편 사슬에서 선형으로 수렴한다 — 반복을 더 주고 허용 오차를 2 mm 로 둔다.
     RigChainSettings ccdSettings = settings;
@@ -262,7 +266,9 @@ SW_TEST_CASE( RigSolverTest, PlanarSolversStayInPlane )
         else
             (void)RigIkSolver::solveCcd( buffer, listBone, target, {}, settings, planar );
         for ( uint32 boneIndex = 0; boneIndex < 4; ++boneIndex )
+        {
             SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( boneIndex )._z, 1e-4f );
+        }
         if ( solver == 0 )
             SW_EXPECT_TRUE( TestRigSolverInternal::isNear( float3{ 1.0f, 1.0f, 0.0f }, buffer.getModelPosition( 2 ), 1e-3f ) );
         else
@@ -291,7 +297,9 @@ SW_TEST_CASE( RigSolverTest, PlanarSolversStayInPlane )
             SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( 2 )._z, 1e-4f );
     }
     for ( const float3& particle : chain.getParticles() )
+    {
         SW_EXPECT_NEAR_EQUAL( 0.0f, particle._z, 1e-4f );
+    }
 }
 
 /**

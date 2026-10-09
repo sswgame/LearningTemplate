@@ -55,7 +55,9 @@ namespace sw::editor
                 ImGui::TableSetupColumn( "Setting", ImGuiTableColumnFlags_WidthFixed, 240.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
                 for ( const UserSettingDef* pDef : listSetting )
+                {
                     drawSettingRow( settings, *pDef );
+                }
                 ImGui::EndTable();
             }
             ImGui::EndTabItem();

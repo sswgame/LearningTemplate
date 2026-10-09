@@ -48,7 +48,9 @@ namespace sw
                 vector<RHIVertex> listRhiVertex;
                 listRhiVertex.reserve( listVertex.size() );
                 for ( const VoxelMeshVertex& vertex : listVertex )
+                {
                     listRhiVertex.push_back( toRhiVertex( vertex ) );
+                }
                 shared_ptr<Mesh> mesh = Mesh::create();
                 if ( mesh == nullptr )
                     return;

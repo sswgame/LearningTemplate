@@ -280,11 +280,17 @@ namespace sw
     void SceneTransformHierarchy::clearQueuedWrites()
     {
         for ( vector<SceneTransformWrite>& listSlot : _listWriteScratch )
+        {
             listSlot.clear();
+        }
         for ( vector<TickWriteKey>& listKey : _listWriteKeyScratch )
+        {
             listKey.clear();
+        }
         for ( vector<uint32>& listSlot : _listPendingSlotScratch )
+        {
             listSlot.clear();
+        }
     }
 
     void SceneTransformHierarchy::notifyWorldUpdated( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry )
@@ -452,7 +458,9 @@ namespace sw
             const vector<SceneTransformWrite>& listWrite = std::as_const( _pWriteScratch[slot] );
             const vector<TickWriteKey>&        listKey   = std::as_const( _pWriteKeyScratch[slot] );
             for ( size_t index = 0; index < listWrite.size(); ++index )
+            {
                 _listOrderedWrite.push_back( OrderedTickWrite{ &listWrite[index], listWrite[index]._handle.componentId(), listKey[index] } );
+            }
         }
         const uint32 totalCount = static_cast<uint32>( _listOrderedWrite.size() );
         if ( totalCount == 0 )
@@ -487,7 +495,9 @@ namespace sw
             {
                 uint32 changedCount = 0;
                 for ( uint32 group = start; group < end; ++group )
+                {
                     changedCount += applyOrderedWrites( _pOrdered, _pGroupStart[group], _pGroupStart[group + 1] );
+                }
                 if ( changedCount > 0 )
                     _changedCount.fetch_add( changedCount, std::memory_order_relaxed );
             }
@@ -574,9 +584,13 @@ namespace sw
             if ( _listBatchBucket.size() < bucketCount )
                 _listBatchBucket.resize( bucketCount );
             for ( uint32 bucket = 0; bucket < bucketCount; ++bucket )
+            {
                 _listBatchBucket[bucket].clear();
+            }
             for ( uint32 index = 0; index < count; ++index )
+            {
                 _listBatchBucket[SceneTransformHierarchyInternal::batchBucketOf( pWrite[index], bucketCount )].push_back( index );
+            }
 
             // 워커는 컨테이너를 만지지 않는다. 포인터만 받는다. 핸들 해석은 슬롯 표라 락이 없고, 쓰기는 자기 버킷의 칸(과 부모 · 자식의
             // 더티 바이트)뿐이다.
@@ -673,7 +687,9 @@ namespace sw
     {
         releaseDirtyRoots();
         for ( vector<SceneComponent*>& listScratch : _listDirtyRootScratch )
+        {
             listScratch.clear();
+        }
     }
 
     void SceneTransformHierarchy::flushSubtree( SceneComponent* pRoot, bool bParentChanged, FlushStack& stack )

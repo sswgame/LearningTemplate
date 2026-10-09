@@ -121,19 +121,25 @@ SW_TEST_CASE( NavMeshBenchTest, ThousandQueriesOnTheShooterArena )
     sw::NavPath   path;
     sw::Stopwatch stopwatch;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
+    {
         completeCount += pNavMesh->findPath( listStart[index], listEnd[index], extent, filter, path ) == sw::NavPathStatus::Complete ? 1u : 0u;
+    }
     [[maybe_unused]] const int64 pathMicroseconds = stopwatch.getElapsedMicroseconds();
     stopwatch.restart();
     uint32            hitCount = 0;
     sw::NavRaycastHit hit;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
+    {
         hitCount += pNavMesh->raycast( listStart[index], listEnd[index], extent, filter, hit ) && hit._bHit ? 1u : 0u;
+    }
     [[maybe_unused]] const int64 raycastMicroseconds = stopwatch.getElapsedMicroseconds();
     stopwatch.restart();
     uint32          nearestCount = 0;
     sw::NavLocation location;
     for ( uint32 index = 0; index < Internal::kQueryCount; ++index )
+    {
         nearestCount += pNavMesh->findNearestPoint( listStart[index], extent, filter, location ) ? 1u : 0u;
+    }
     [[maybe_unused]] const int64 nearestMicroseconds = stopwatch.getElapsedMicroseconds();
     SW_LOG_INFO( "[Bench] NavMesh queries x%# on the Shooter3D arena: findPath %# us (%# complete), raycast %# us (%# hit), findNearestPoint %# us (%# found)",
                  Internal::kQueryCount, pathMicroseconds, completeCount, raycastMicroseconds, hitCount, nearestMicroseconds, nearestCount );
@@ -174,7 +180,9 @@ SW_TEST_CASE( NavMeshBenchTest, CrowdUpdateWithHundredAndFiveHundredAgents )
         }
         SW_EXPECT_EQUAL( agentCount, static_cast<uint32>( listAgent.size() ) );
         for ( uint32 frame = 0; frame < 30; ++frame )
+        {
             pCrowd->update( 1.0f / 60.0f );
+        }
         sw::vector<int64> listSample;
         for ( uint32 frame = 0; frame < 120; ++frame )
         {

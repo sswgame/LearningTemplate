@@ -91,7 +91,9 @@ namespace sw::editor
 #undef SW_REFLECT_BUILTIN_CONTAINER
                 };
                 for ( size_t index = 0; index < listRow.size(); ++index )
+                {
                     listRow[index]._index = static_cast<uint8>( index );
+                }
                 return listRow;
             }
 
@@ -162,7 +164,9 @@ namespace sw::editor
     {
         TaskArgs args;
         for ( const InspectorMethodArgSlot& slot : listSlot )
+        {
             args.add( slot._value );
+        }
         return args;
     }
 

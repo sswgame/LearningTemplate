@@ -90,7 +90,9 @@ namespace sw
         if ( _dependencies._pRouter != nullptr )
         {
             for ( const auto& [requestId, modeId] : _mapLeaseRequestToMode )
+            {
                 _dependencies._pRouter->cancel( requestId );
+            }
         }
         _mapLeaseRequestToMode.clear();
         for ( auto& [modeId, state] : _mapModeState )
@@ -211,7 +213,9 @@ namespace sw
         }
         bool bLookupPending = false;
         for ( const auto& [lookupTag, join] : _mapLookupToJoin )
+        {
             bLookupPending = bLookupPending || join._accountId == accountId;
+        }
         if ( _mapAccountToTicket.count( accountId ) != 0 || bLookupPending )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::AlreadyQueued } );
@@ -258,7 +262,9 @@ namespace sw
         }
         bool bMemberQueued = party._queuedTicketId != 0;
         for ( const AccountId memberId : party._listMemberId )
+        {
             bMemberQueued = bMemberQueued || _mapAccountToTicket.count( memberId ) != 0;
+        }
         if ( bMemberQueued )
         {
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::AlreadyQueued } );
@@ -277,7 +283,9 @@ namespace sw
         ticket._originServerId = _dependencies._serverId;
         ticket._enqueuedMs     = join._nowMs;
         for ( const AccountId accountId : listAccount )
+        {
             ticket._listMember.push_back( MatchMember{ accountId, findRating( accountId, join._modeId ) } );
+        }
         if ( static_cast<int32>( ticket._listMember.size() ) > mode._teamSize )
         {
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::PartyTooLarge } );
@@ -291,7 +299,9 @@ namespace sw
         local._partyId     = partyId;
         local._deadlineMs  = join._nowMs + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
         for ( const AccountId accountId : listAccount )
+        {
             _mapAccountToTicket[accountId] = ticket._ticketId;
+        }
         if ( partyId != 0 && _dependencies._pPartyLobby != nullptr )
             _dependencies._pPartyLobby->setPartyTicket( partyId, ticket._ticketId );
         _completionBuffer.push( MatchQueueCompletion{ join._requestTag, ticket._ticketId, MatchmakingResult::Ok } );
@@ -323,7 +333,9 @@ namespace sw
             deliverToTicket( ticket._originServerId, assignment );
         }
         for ( MatchFormed& match : listFormed )
+        {
             state._listUnplaced.push_back( UnplacedMatch{ std::move( match ), nowMs } );
+        }
         for ( size_t index = 0; index < state._listUnplaced.size(); )
         {
             const UnplacedMatch& unplaced = state._listUnplaced[index];
@@ -349,7 +361,9 @@ namespace sw
                 inoutAssignment._team = static_cast<int32>( team );
                 inoutAssignment._listTeammate.clear();
                 for ( const MatchMember& mate : match._listTeam[team] )
+                {
                     inoutAssignment._listTeammate.push_back( mate._accountId );
+                }
                 return;
             }
         }
@@ -364,7 +378,9 @@ namespace sw
         query._buildVersion = mode._buildVersion;
         query._seatCount    = 0;
         for ( const vector<MatchMember>& team : match._listTeam )
+        {
             query._seatCount += static_cast<int32>( team.size() );
+        }
         ServerStatus picked;
         const bool   bPlaced = state._reader->pickServer( query, nowMs, picked );
         if ( bPlaced == false && failOutcome == MatchQueueOutcome::Count )
@@ -549,7 +565,9 @@ namespace sw
         }
         // 다른 서버가 낸 파티 표 — 모드를 모르니 모든 모드의 권한에서 빼고, 낸 서버(표 id 의 위 32 비트)에 Cancelled 를 알린다
         for ( const auto& [modeId, mode] : _mapMode )
+        {
             removeFromQueue( modeId, ticketId );
+        }
         deliverToTicket( ticketId >> MatchQueueServiceInternal::kIdShift, cancelled );
     }
 

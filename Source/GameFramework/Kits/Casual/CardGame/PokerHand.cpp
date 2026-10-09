@@ -15,7 +15,9 @@ namespace sw
             {
                 uint8 arrCount[PokerHandEvaluator::kAceHigh + 1]{};
                 for ( int32 index = 0; index < kHandSize; ++index )
+                {
                     ++arrCount[pRank[index]];
+                }
                 int32 groupCount = 0;
                 for ( int32 count = 4; count >= 1; --count )
                 {
@@ -44,7 +46,9 @@ namespace sw
             {
                 uint32 score = static_cast<uint32>( rank ) << 20;
                 for ( int32 index = 0; index < kHandSize; ++index )
+                {
                     score |= static_cast<uint32>( pTieBreak[index] ) << ( 16 - index * 4 );
+                }
                 return score;
             }
         };
@@ -81,7 +85,9 @@ namespace sw
         else
         {
             for ( int32 index = 0; index < groupCount; ++index )
+            {
                 value._arrTieBreak[index] = arrGroupRank[index];
+            }
             if ( arrGroupCount[0] == 4 )
                 value._rank = PokerHandRank::FourOfAKind;
             else if ( arrGroupCount[0] == 3 && arrGroupCount[1] == 2 )
@@ -113,7 +119,9 @@ namespace sw
         {
             int32 bitCount = 0;
             for ( int32 bit = 0; bit < count; ++bit )
+            {
                 bitCount += static_cast<int32>( ( mask >> bit ) & 1u );
+            }
             if ( bitCount != PokerHandInternal::kHandSize )
                 continue;
             Card  arrPick[PokerHandInternal::kHandSize]{};

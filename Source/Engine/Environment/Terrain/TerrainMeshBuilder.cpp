@@ -157,7 +157,9 @@ namespace sw
         // 변마다 접는 간격(기본 칸 단위). 이웃이 더 고우면 그쪽이 이쪽에 맞춰 접으므로 이쪽은 자기 간격이다.
         uint32 arrSideStep[4]{};
         for ( uint32 side = 0; side < 4; ++side )
+        {
             arrSideStep[side] = 1u << MathUtil::max( lod, MathUtil::min( arrNeighborLod[side], layout._maxLod ) );
+        }
 
         const float3 translation = computeChunkTranslation( heightfield, layout, chunkX, chunkZ );
         const uint32 baseX       = chunkX * layout._chunkCells;
@@ -185,7 +187,9 @@ namespace sw
                     if ( triangle[0] == triangle[1] || triangle[1] == triangle[2] || triangle[0] == triangle[2] )
                         continue;
                     for ( const Internal::GridPoint& corner : triangle )
+                    {
                         outListVertex.push_back( Internal::makeVertex( heightfield, translation, baseX + cells / 2, baseZ + cells / 2, baseX + corner._x, baseZ + corner._z ) );
+                    }
                 }
             }
         }

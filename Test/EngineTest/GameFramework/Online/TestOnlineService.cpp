@@ -87,6 +87,8 @@ SW_TEST_CASE( OnlineServiceTest, MethodRangeTableIsDisjoint )
     {
         SW_EXPECT_EQUAL( OnlineMethodRange::getRangeBase( arrRange[index] ), arrRange[index] );
         for ( size_t other = index + 1; other < sizeof( arrRange ) / sizeof( arrRange[0] ); ++other )
+        {
             SW_EXPECT_FALSE( OnlineMethodRange::isInRange( arrRange[other], arrRange[index] ) );
+        }
     }
 }

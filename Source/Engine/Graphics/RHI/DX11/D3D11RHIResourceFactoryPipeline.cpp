@@ -27,7 +27,9 @@ namespace sw
         auto fillDefines = [&]( ShaderCompileDesc& compileDesc )
         {
             for ( const string& define : desc._listShaderDefine )
+            {
                 compileDesc._listDefine.push_back( ShaderMacroDefine::parse( define ) );
+            }
         };
 
         // 서술체 해석(진입점 기본값 · define · 뎁스 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.

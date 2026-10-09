@@ -589,7 +589,9 @@ namespace sw
                     SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
             }
             for ( const auto& [settingId, value] : gameConfig._mapUserSettingDefault )
+            {
                 (void)settings.setGameDefault( hashed_string( settingId ), value );
+            }
 
             // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
             const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );

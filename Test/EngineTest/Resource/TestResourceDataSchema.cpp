@@ -586,7 +586,9 @@ namespace
                     size_t nameStart = classPos + 6;
                     size_t nameEnd   = nameStart;
                     while ( nameEnd < text.size() && ( std::isalnum( static_cast<uint8>( text[nameEnd] ) ) != 0 || text[nameEnd] == '_' ) )
+                    {
                         ++nameEnd;
+                    }
                     if ( nameEnd > nameStart )
                         outListTypeName.push_back( text.substr( nameStart, nameEnd - nameStart ) );
                 }
@@ -606,7 +608,9 @@ namespace
                 const sw::string line        = joined.substr( lineStart, lineEnd - lineStart );
                 bool             bGameModule = false;
                 for ( const sw::string& typeName : listGameTypeName )
+                {
                     bGameModule = bGameModule || line.find( "of unknown type '" + typeName + "'" ) != sw::string::npos;
+                }
                 if ( bGameModule == false )
                     result += line;
                 lineStart = lineEnd;

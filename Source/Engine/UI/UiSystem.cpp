@@ -234,14 +234,18 @@ namespace sw
         _notifications.clear();
         // 위젯 컴포넌트가 이 시스템보다 오래 남을 수 있다 — 등록 · 마커를 잊게 한다(그 뒤 소멸자가 이 시스템을 부르지 않게).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
+        {
             pComponent->forgetUiSystem();
+        }
         _listWidgetComponent.clear();
         _markerScreen = kInvalidUiScreenHandle;
         _demoScreen   = kInvalidUiScreenHandle;
         _benchScreen  = kInvalidUiScreenHandle;
         _focus.clearFocus();
         while ( _listScreen.empty() == false )
+        {
             destroyScreenAt( static_cast<uint32>( _listScreen.size() ) - 1 );
+        }
         _listOffscreen.clear();
         _bPendingClose = SW_FALSE;
         _listReopenDocument.clear();
@@ -318,14 +322,18 @@ namespace sw
         }
         // 화면 마커 — 게임 틱 · 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(레이아웃 앞 — 같은 프레임에 놓인다).
         for ( WidgetComponent* pComponent : _listWidgetComponent )
+        {
             pComponent->updateScreenMarker( _viewport );
+        }
         // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.Ui.Layout" );
             const UiLayoutContext context       = makeLayoutContext();
             uint32                measuredCount = 0;
             for ( const unique_ptr<UiScreen>& screen : _listScreen )
+            {
                 measuredCount += UiLayoutPass::update( screen->getTree(), context );
+            }
             SW_PROFILE_COUNT( "Ui.LayoutWidgets", measuredCount );
         }
         // 그리기 — 더러운 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 걷기(5-2) 전까지 kStyle 도 그리기가 비운다).
@@ -336,7 +344,9 @@ namespace sw
             const UiLayoutContext layout = makeLayoutContext();
             const UiPaintContext  paint  = makePaintContext();
             for ( WidgetComponent* pComponent : _listWidgetComponent )
+            {
                 pComponent->updateWorldCanvas( layout, paint );
+            }
         }
         updateOffscreenScreens();
     }
@@ -356,7 +366,9 @@ namespace sw
         // 같은 층의 끝(그 층에서 맨 위)에 끼운다.
         uint32 at = static_cast<uint32>( _listScreen.size() );
         while ( at > 0 && UiSystemInternal::isDrawnBefore( *screen, *_listScreen[at - 1] ) )
+        {
             --at;
+        }
         const UiScreenHandle handle = screen->_handle;
         _listScreen.insert( _listScreen.begin() + at, std::move( screen ) );
         refreshActiveScreen();
@@ -479,7 +491,9 @@ namespace sw
                 continue;
             bool bUses = false;
             for ( const shared_ptr<const UiStyleSheetAsset>& sheet : screen->_styleSet->getSheets() )
+            {
                 bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
+            }
             if ( bUses )
                 rebuildStyleSet( *screen );
         }
@@ -489,7 +503,9 @@ namespace sw
                 continue;
             bool bUses = false;
             for ( const shared_ptr<const UiStyleSheetAsset>& sheet : offscreen._screen->_styleSet->getSheets() )
+            {
                 bUses = bUses || ( sheet != nullptr && sheet->_path == sheetPath );
+            }
             if ( bUses )
                 rebuildStyleSet( *offscreen._screen, offscreen._theme );
         }
@@ -704,9 +720,13 @@ namespace sw
         }
         _themeName = name;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
             rebuildStyleSet( *screen );
+        }
         for ( OffscreenScreen& offscreen : _listOffscreen )
+        {
             rebuildStyleSet( *offscreen._screen, offscreen._theme );
+        }
         return true;
     }
 
@@ -740,7 +760,9 @@ namespace sw
         vector<Widget*> listWidget;
         screen.getTree().collectWidgetsInDocumentOrder( listWidget );
         for ( Widget* pWidget : listWidget )
+        {
             pWidget->invalidate( WidgetDirty::kStyle );
+        }
     }
 
     UiScreen* UiSystem::findScreen( UiScreenHandle handle ) const
@@ -875,7 +897,9 @@ namespace sw
                 listWidget.clear();
                 screen->getTree().collectWidgetsInDocumentOrder( listWidget );
                 for ( Widget* pWidget : listWidget )
+                {
                     pWidget->onTextRevisionChanged();
+                }
             }
             context._bTextRevisionChanged = true;
         }
@@ -895,7 +919,9 @@ namespace sw
     {
         _pUserSettings = pSettings;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
             screen->getBindingSet().markRebind();
+        }
     }
 
     const LocalizationManager* UiSystem::findLocalization() const
@@ -916,7 +942,9 @@ namespace sw
                 listWidget.clear();
                 screen->getTree().collectWidgetsInDocumentOrder( listWidget );
                 for ( Widget* pWidget : listWidget )
+                {
                     pWidget->onInputGlyphsChanged();
+                }
             }
         }
         _glyphStyle       = style;
@@ -1104,7 +1132,9 @@ namespace sw
         // 게임 정지 — 정지 화면이 하나라도 있으면 요청을 걸어 둔다.
         bool bPause = false;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
+        {
             bPause = bPause || ( screen->isClosing() == false && screen->getDesc()._bPausesGame );
+        }
         if ( bPause && _bPauseRequested == SW_FALSE )
         {
             GameTimeScale::addPauseRequest();
@@ -1423,7 +1453,9 @@ namespace sw
     void UiSystem::collectWorldCanvases( vector<CanvasTargetDrawList>& inoutListTarget ) const
     {
         for ( const WidgetComponent* pComponent : _listWidgetComponent )
+        {
             pComponent->appendWorldCanvas( inoutListTarget );
+        }
         // 오프스크린 화면(에디터 미리보기) — 불투명 바탕으로 지운다(ImGui 이미지가 알파를 섞지 않게).
         for ( const OffscreenScreen& offscreen : _listOffscreen )
         {

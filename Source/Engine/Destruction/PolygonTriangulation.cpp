@@ -101,11 +101,17 @@ namespace sw
                 vector<uint32> merged;
                 merged.reserve( inoutListPolygon.size() + hole.size() + 2 );
                 for ( size_t index = 0; index <= bestPolygonIndex; ++index )
+                {
                     merged.push_back( inoutListPolygon[index] );
+                }
                 for ( size_t step = 0; step <= hole.size(); ++step )
+                {
                     merged.push_back( hole[( holeStart + step ) % hole.size()] );
+                }
                 for ( size_t index = bestPolygonIndex; index < inoutListPolygon.size(); ++index )
+                {
                     merged.push_back( inoutListPolygon[index] );
+                }
                 inoutListPolygon = std::move( merged );
                 return true;
             }
@@ -285,15 +291,21 @@ namespace sw
             // 오른쪽 구멍부터 잇는다 — 먼저 이은 다리가 뒤 구멍의 시야를 덜 막는다.
             vector<size_t> listOrder( listOwnHole.size() );
             for ( size_t index = 0; index < listOrder.size(); ++index )
+            {
                 listOrder[index] = index;
+            }
             std::sort( listOrder.begin(), listOrder.end(), [&listOwnHole, &listPoint]( size_t lhs, size_t rhs )
             {
                 float32 lhsMax = -MathUtil::kMaxFloat;
                 float32 rhsMax = -MathUtil::kMaxFloat;
                 for ( const uint32 pointIndex : listOwnHole[lhs] )
+                {
                     lhsMax = MathUtil::max( lhsMax, listPoint[pointIndex]._x );
+                }
                 for ( const uint32 pointIndex : listOwnHole[rhs] )
+                {
                     rhsMax = MathUtil::max( rhsMax, listPoint[pointIndex]._x );
+                }
                 return lhsMax > rhsMax || ( lhsMax == rhsMax && lhs < rhs );
             } );
             for ( const size_t holeOrder : listOrder )

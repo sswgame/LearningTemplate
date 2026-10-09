@@ -25,7 +25,9 @@ namespace
     uint64 mixBytes( uint64 hash, const vector<uint8>& buffer )
     {
         for ( const uint8 byte : buffer )
+        {
             hash = ( hash ^ byte ) * sw::HashUtil::kFnvPrime64;
+        }
         return ( hash ^ 0xFFu ) * sw::HashUtil::kFnvPrime64;
     }
 
@@ -96,7 +98,9 @@ namespace
             int32          connectionId = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+            {
                 (void)server.handleMessage( connectionId, buffer );
+            }
             for ( int32 index = 0; index < kClientCount; ++index )
             {
                 while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
@@ -134,16 +138,20 @@ namespace
         const auto placeEntities = [&server]( uint32 tick )
         {
             for ( uint32 index = 0; index < 600; ++index )
+            {
                 server.setEntity( MmoEntity{
                     vector<uint8>{ static_cast<uint8>( ( index + tick ) % 7u ) },
                     float3{ static_cast<float32>( index % 30 ) * 15.0f, 0.0f, static_cast<float32>( index / 30 ) * 15.0f },
                     index, 1, 1.0f + static_cast<float32>( index % 3 )
                 } );
+            }
         };
         placeEntities( 0 );
         // 관찰자마다 자기 엔티티(1000 + n)가 맵 위 다른 자리에서 천천히 움직인다.
         for ( int32 index = 0; index < kClientCount; ++index )
+        {
             server.setObserver( index, 1000u + static_cast<uint32>( index ) );
+        }
 
         vector<uint64> listHash( static_cast<size_t>( kClientCount + 1 ), sw::HashUtil::kFnvOffset64 );
         vector<uint8>  buffer;
@@ -152,11 +160,13 @@ namespace
             if ( tick % 4 == 0 )
                 placeEntities( tick );
             for ( int32 index = 0; index < kClientCount; ++index )
+            {
                 server.setEntity( MmoEntity{
                     vector<uint8>{},
                     float3{ static_cast<float32>( index % 6 ) * 70.0f + static_cast<float32>( tick ), 0.0f, static_cast<float32>( index / 6 ) * 70.0f },
                     1000u + static_cast<uint32>( index ), 0, 2.0f
                 } );
+            }
             server.update( 1.0f / 20.0f );
             cluster.step( 1.0 / 20.0 );
             int32          connectionId = -1;
@@ -164,7 +174,9 @@ namespace
             for ( int32 index = 0; index < kClientCount; ++index )
             {
                 while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
+                {
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
+                }
             }
         }
         listHash[kClientCount] = server.getSentUpdateCount();
@@ -196,6 +208,8 @@ SW_TEST_CASE( NetParallelTest, MmoReplicatorSendsTheSameViewsOnWorkerThreads )
     taskManager.shutdown();
     SW_ASSERT_EQUAL( listSerial.size(), listParallel.size() );
     for ( size_t index = 0; index < listSerial.size(); ++index )
+    {
         SW_EXPECT_TRUE( listSerial[index] == listParallel[index] );
+    }
     SW_EXPECT_TRUE( listSerial.back() > 100u ); // 갱신이 실제로 오갔다
 }

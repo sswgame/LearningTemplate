@@ -157,7 +157,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ResourceGaugeReplaysAfterRestore )
     SW_EXPECT_TRUE( replaysAfterRestore( gauge, restored, []( ResourceGauge& state )
     {
         for ( int32 stepIndex = 0; stepIndex < 120; ++stepIndex )
+        {
             state.update( kValueStateStep );
+        }
     } ) );
     SW_EXPECT_TRUE( restored.isExhausted() == gauge.isExhausted() );
     ResourceGauge untouched( settings );
@@ -180,7 +182,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, VitalityReplaysAfterRestore )
     SW_EXPECT_TRUE( replaysAfterRestore( vitality, restored, []( Vitality& state )
     {
         for ( int32 stepIndex = 0; stepIndex < 30; ++stepIndex )
+        {
             state.update( kValueStateStep );
+        }
         (void)state.applyDamage( 20.0f, 3.0f, 9 ); // 재생 단계 — 결과값은 보지 않고 두 상태의 체력을 비교한다
     } ) );
     SW_EXPECT_NEAR_EQUAL( vitality.getHealth(), restored.getHealth(), 1e-6f );
@@ -197,7 +201,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, TurnOrderReplaysAfterRestore )
     order.addActor( 2, 1.5f );
     order.addActor( 3, 0.7f );
     for ( int32 turn = 0; turn < 4; ++turn )
+    {
         (void)order.next();
+    }
     TurnOrder restored;
     restored.initialize( TurnOrderMode::Rounds, 1 );
     vector<int32> listOriginal;
@@ -205,7 +211,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, TurnOrderReplaysAfterRestore )
     SW_EXPECT_TRUE( replaysAfterRestore( order, restored, []( TurnOrder& state )
     {
         for ( int32 turn = 0; turn < 6; ++turn )
+        {
             (void)state.next();
+        }
     } ) );
     order.previewOrder( 5, listOriginal );
     restored.previewOrder( 5, listRestored );
@@ -328,14 +336,18 @@ SW_TEST_CASE( BaseValueStateArchiveTest, PlatformerMotorReplaysAfterRestore )
     motor.setSettings( PlatformerSettings{} );
     motor.setPosition( float2{ 3.5f, 1.45f } );
     for ( int32 frame = 0; frame < 8; ++frame )
+    {
         motor.update( map, frame < 3 ? PlatformerInput{} : input, kValueStateStep );
+    }
 
     PlatformerMotor2D restored;
     restored.setSettings( PlatformerSettings{} );
     SW_EXPECT_TRUE( replaysAfterRestore( motor, restored, [&map, &input]( PlatformerMotor2D& state )
     {
         for ( int32 frame = 0; frame < 40; ++frame )
+        {
             state.update( map, input, kValueStateStep );
+        }
     } ) );
     SW_EXPECT_NEAR_EQUAL( motor.getPosition()._y, restored.getPosition()._y, 1e-6f );
 }
@@ -497,7 +509,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
     for ( int32 y = 0; y < 3; ++y )
     {
         for ( int32 x = 0; x < 8; ++x )
+        {
             grid.setMaterial( int2{ x, y }, table.findMaterial( "Grass" ) );
+        }
     }
     grid.setWind( int2{ 1, 0 } );
     (void)grid.applyStimulus( int2{ 0, 1 }, table.findStimulus( "Fire" ) ); // 시험 준비 — 바뀐 칸 수는 보지 않고 되살린 격자를 비교한다
@@ -535,7 +549,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, SpawnDirectorReplaysAfterRestore )
     SW_EXPECT_TRUE( replaysAfterRestore( director, restored, []( SpawnDirector& state )
     {
         for ( int32 stepIndex = 0; stepIndex < 10; ++stepIndex )
+        {
             (void)state.update( 0.5f );
+        }
     } ) );
     SW_EXPECT_EQUAL( director.getTotalAliveCount(), restored.getTotalAliveCount() );
 }
@@ -621,7 +637,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, InteractionProgressReplaysAfterRestore 
     SW_EXPECT_TRUE( replaysAfterRestore( progress, restored, []( InteractionProgress& state )
     {
         for ( int32 tick = 0; tick < 24; ++tick )
+        {
             state.update( 0.25f ); // 응답 없는 체크가 실패하고 다음 체크가 난수로 예약된다
+        }
         (void)state.leave( 5u );
         state.update( 3.0f );
     } ) );

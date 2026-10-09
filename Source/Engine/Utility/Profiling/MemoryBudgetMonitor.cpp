@@ -124,7 +124,9 @@ namespace sw
         }
 
         for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
             profiler.setBudget( static_cast<MemoryTag>( tagIndex ), arrBudgetBytes[tagIndex] );
+        }
         return true;
     }
 

@@ -62,7 +62,9 @@ namespace sw
     {
         float32 total = 0.0f;
         for ( const ScavengerScrap& scrap : _listScrap )
+        {
             total += scrap._weight;
+        }
         return total;
     }
 
@@ -72,7 +74,9 @@ namespace sw
     {
         int32 total = 0;
         for ( const ScavengerScrap& scrap : _listScrap )
+        {
             total += scrap._value;
+        }
         return total;
     }
 

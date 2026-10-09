@@ -40,7 +40,9 @@ namespace
         static void tickFrames( GameObjectManager& manager, int32 frameCount )
         {
             for ( int32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( 1.0f / 60.0f );
+            }
         }
 
         static float32 getY( const GameObject* pObject ) { return pObject->getPrimarySceneComponent()->getWorldPosition()._y; }

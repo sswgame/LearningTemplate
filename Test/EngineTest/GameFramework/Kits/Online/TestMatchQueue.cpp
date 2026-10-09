@@ -101,14 +101,18 @@ namespace
                     vector<ServerBusMessage> listMessage;
                     (void)_bus->pollMessages( listMessage );
                     for ( const ServerBusMessage& message : listMessage )
+                    {
                         _service.handleBusMessage( message._topic, message._bytes, nowMs );
+                    }
                 }
                 _service.tick( nowMs );
                 (void)_router.pump();
                 vector<LobbyStartRequest> listStart;
                 _partyLobby.drainLobbyStarts( listStart );
                 for ( const LobbyStartRequest& start : listStart )
+                {
                     _service.placeLobby( start._lobby, nowMs );
+                }
             }
             _service.drainNotifications( _listNotification );
             _service.drainCompletions( _listCompletion );
@@ -138,7 +142,9 @@ namespace
             vector<ServerBusMessage> listMessage;
             (void)_bus.pollMessages( listMessage );
             for ( const ServerBusMessage& message : listMessage )
+            {
                 SW_EXPECT_TRUE( _agent.handleAssign( message._bytes, nowMs ) );
+            }
             _agent.tick( nowMs );
         }
     };
@@ -156,7 +162,9 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
     SW_EXPECT_TRUE( node._service.isAuthority( "duo" ) ); // 버스 없음 — 늘 권한
 
     for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+    {
         node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+    }
     node.step( 1000 );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
     for ( const MatchQueueNotification& notification : node._listNotification )
@@ -205,7 +213,9 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
     SW_EXPECT_FALSE( second._service.isAuthority( "duo" ) ); // 권한은 하나만
 
     for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+    {
         second._service.joinQueue( accountId, "duo", "kr", 1000, accountId );
+    }
     second.step( 1000 ); // 표를 mm.queue.duo 로
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 0 );
     first.step( 1000 ); // 매처 · 배정 → mm.assign.<50> · mm.result.<2>
@@ -279,7 +289,9 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         cacheDatabase.setManualTimeMs( 0 );
         QueueNode node( &cacheDatabase, nullptr, 1 );
         for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+        {
             node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+        }
         node.step( 1000 );
         SW_EXPECT_TRUE( node._listNotification.empty() ); // 경기는 만들었지만 자리가 없다 — 기다림
 
@@ -288,21 +300,27 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         node.step( 3500 ); // 목록 다시 읽기(2 초 주기) 뒤 배정
         SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
         for ( const MatchQueueNotification& notification : node._listNotification )
+        {
             SW_EXPECT_TRUE( notification._assignment._outcome == MatchQueueOutcome::Found );
+        }
     }
     {
         MemoryEphemeralDatabase cacheDatabase;
         cacheDatabase.setManualTimeMs( 0 );
         QueueNode node( &cacheDatabase, nullptr, 1 );
         for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+        {
             node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+        }
         node.step( 1000 );
         node.step( 1000 + MatchQueueLimit::kNoServerGiveUpMs - 1 );
         SW_EXPECT_TRUE( node._listNotification.empty() );
         node.step( 1000 + MatchQueueLimit::kNoServerGiveUpMs ); // 끝내 서버가 없다
         SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
         for ( const MatchQueueNotification& notification : node._listNotification )
+        {
             SW_EXPECT_TRUE( notification._assignment._outcome == MatchQueueOutcome::NoServer );
+        }
         SW_EXPECT_EQUAL( node._service.getLocalTicketCount(), 0 );
     }
 }
@@ -371,7 +389,9 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     node._partyLobby.listLobbies( "duo", 2 );
     vector<PartyLobbyCompletion> listCompletion;
     for ( int32 round = 0; round < 8; ++round )
+    {
         (void)node._router.pump();
+    }
     node._partyLobby.drainCompletions( listCompletion );
     SW_ASSERT_TRUE( listCompletion.size() == 1 && listCompletion[0]._listLobby.size() == 1 );
     const uint64 lobbyId = listCompletion[0]._listLobby[0]._lobbyId;

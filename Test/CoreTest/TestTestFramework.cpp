@@ -460,7 +460,9 @@ SW_TEST_CASE( TestFrameworkTest, TempPathsOfThePreviousCaseAreGone )
         SW_TEST_SKIP( "run together with TestFrameworkTest.TempPathsOfACaseAreCreated" );
 
     for ( const sw::string& path : s_listPathOfPreviousCase )
+    {
         SW_EXPECT_FALSE_MSG( sw::FileUtil::exists( path ) || sw::FileUtil::isDirectory( path ), path.c_str() );
+    }
     s_listPathOfPreviousCase.clear();
 }
 
@@ -542,15 +544,21 @@ SW_TEST_CASE( TestFrameworkTest, FailuresFromManyThreadsAreAllRecorded )
             listThread.emplace_back( []()
             {
                 for ( uint32 failureIndex = 0; failureIndex < kFailurePerThread; ++failureIndex )
+                {
                     SW_EXPECT_TRUE_MSG( failureIndex == kFailurePerThread, "from a worker thread" );
+                }
             } );
         }
         for ( std::thread& thread : listThread )
+        {
             thread.join();
+        }
 
         recordedCount = capture.getListFailure().size();
         for ( const test::TestFailure& failure : capture.getListFailure() )
+        {
             bEveryRecordIsWhole = bEveryRecordIsWhole && failure._message == "from a worker thread";
+        }
     }
 
     SW_EXPECT_EQUAL( size_t{ kThreadCount * kFailurePerThread }, recordedCount );
@@ -569,14 +577,18 @@ SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed 
         for ( const utf8* pSuite : { "AlphaProbeTest", "BetaProbeTest", "GammaProbeTest", "DeltaProbeTest" } )
         {
             for ( const utf8* pCase : { "One", "Two", "Three", "Four", "Five" } )
+            {
                 registry.registerTest( pSuite, pCase, {} );
+            }
         }
     };
     const auto toNames = []( const sw::vector<const test::TestCaseInfo*>& listRun )
     {
         sw::vector<sw::string> listName;
         for ( const test::TestCaseInfo* pTestInfo : listRun )
+        {
             listName.push_back( pTestInfo->fullName() );
+        }
         return listName;
     };
 

@@ -433,7 +433,9 @@ namespace sw
 
         string id = FileUtil::normalizePath( relative );
         while ( StringUtil::startsWith( id, "./" ) )
+        {
             id.erase( 0, 2 );
+        }
         if ( id.empty() || id == "." || id == ".." || StringUtil::startsWith( id, "../" ) || id.find( "/../" ) != string::npos ||
              StringUtil::endsWith( id, "/.." ) )
             return {};

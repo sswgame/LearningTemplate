@@ -53,7 +53,9 @@ namespace sw
     {
         vector<hashed_string> listName;
         for ( const auto& [name, factory] : _mapFactory )
+        {
             listName.push_back( name );
+        }
         return listName;
     }
 

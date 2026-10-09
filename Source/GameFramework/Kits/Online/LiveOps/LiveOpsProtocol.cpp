@@ -60,7 +60,9 @@ namespace sw
         LiveOpsProtocolInternal::writeParameters( outWriter, definition._listParameter );
         outWriter.writeVarUint( definition._listRegion.size() );
         for ( const string& region : definition._listRegion )
+        {
             ServiceKeyUtil::writeString( outWriter, region );
+        }
     }
 
     bool LiveOpsProtocol::readEvent( BitReader& reader, LiveEventDefinition& outDefinition )

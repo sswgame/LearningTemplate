@@ -88,7 +88,9 @@ namespace sw
         {
             const uint32 limit = static_cast<uint32>( MathUtil::min( _hoverPath._listWidget.size(), newPath._listWidget.size() ) );
             while ( common < limit && _hoverPath._listWidget[common] == newPath._listWidget[common] )
+            {
                 ++common;
+            }
         }
         // 빠진 쪽: 잎부터 Leave.
         if ( _pHoverTree != nullptr )

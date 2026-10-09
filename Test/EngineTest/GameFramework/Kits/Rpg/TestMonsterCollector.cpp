@@ -101,10 +101,14 @@ namespace
             GameRandom      random( 1 );
             MonsterInstance monster = MonsterRules::createMonster( _catalog, hashed_string( pSpecies ), level, random );
             for ( int32& iv : monster._arrIv )
+            {
                 iv = 0;
+            }
             monster._natureId = hashed_string( "Hardy" );
             for ( MonsterMoveSlot& slot : monster._arrMove )
+            {
                 slot = MonsterMoveSlot{};
+            }
             int32 slotIndex = 0;
             for ( const utf8* pMove : listMove )
             {
@@ -122,7 +126,9 @@ namespace
     {
         int32 count = 0;
         for ( const MonsterBattleEvent& event : listEvent )
+        {
             count += ( event._kind == kind && ( side < 0 || event._side == side ) ) ? 1 : 0;
+        }
         return count;
     }
 
@@ -234,7 +240,9 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     SW_ASSERT_NOT_NULL( pPikachu );
     MonsterInstance trainee = world.makeMonster( "squirtle", 50, { "tackle" } );
     for ( int32 battle = 0; battle < 200; ++battle )
+    {
         MonsterRules::addEffortValues( world._catalog, trainee, *pPikachu );
+    }
     SW_EXPECT_EQUAL( 252, trainee._arrEv[static_cast<size_t>( MonsterStat::Speed )] );
     trainee._arrEv[0]                 = 252;
     trainee._arrEv[1]                 = 0;
@@ -242,7 +250,9 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     const MonsterSpeciesDef* pGeodude = world._catalog.findSpecies( hashed_string( "geodude" ) );
     SW_ASSERT_NOT_NULL( pGeodude );
     for ( int32 battle = 0; battle < 20; ++battle )
+    {
         MonsterRules::addEffortValues( world._catalog, trainee, *pGeodude );
+    }
     SW_EXPECT_EQUAL( 6, trainee._arrEv[static_cast<size_t>( MonsterStat::Defense )] );
 }
 
@@ -459,7 +469,9 @@ SW_TEST_CASE( MonsterCollectorTest, StatusConditionsStatStagesAndWeather )
     battle.resolveRound();
     SW_EXPECT_TRUE( battle.getWeather() == hashed_string( "Rain" ) );
     for ( int32 round = 0; round < 3; ++round )
+    {
         battle.resolveRound();
+    }
     SW_EXPECT_EQUAL( 1, battle.getWeatherTurns() );
     battle.resolveRound();
     SW_EXPECT_TRUE( battle.getWeather().empty() );
@@ -525,13 +537,17 @@ SW_TEST_CASE( MonsterCollectorTest, CaptureShakesPartyBoxAndEscape )
     MonsterStorage storage;
     storage.initialize( 2 );
     for ( int32 index = 0; index < MonsterStorage::kPartySize; ++index )
+    {
         SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Party );
+    }
     SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Box );
     SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Box );
     SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Full );
     SW_EXPECT_FALSE( storage.withdrawFromBox( 0 ) ); // 파티가 가득
     for ( int32 index = 1; index < MonsterStorage::kPartySize; ++index )
+    {
         storage.getParty()[static_cast<size_t>( index )]._hp = 0;
+    }
     SW_EXPECT_FALSE( storage.depositToBox( 0 ) ); // 박스도 가득
     storage.initialize( 5 );
     SW_EXPECT_TRUE( storage.add( battle.getCaptured() ) == MonsterStoragePlace::Party );
@@ -611,7 +627,9 @@ SW_TEST_CASE( MonsterCollectorTest, LevelUpLearnsMovesAndEvolvesByLevelItemAndFr
     (void)MonsterRules::gainExp( world._catalog, pikachu, MonsterCollectorCatalog::computeTotalExp( MonsterExpGroup::Medium, 15 ) - pikachu._exp, listGrowth );
     bool bBlocked = false;
     for ( const MonsterGrowthEvent& event : listGrowth )
+    {
         bBlocked = bBlocked || ( event._kind == MonsterGrowthEvent::Kind::MoveLearnBlocked && event._id == hashed_string( "swordsdance" ) );
+    }
     SW_EXPECT_TRUE( bBlocked );
     SW_EXPECT_EQUAL( -1, pikachu.findMoveSlot( hashed_string( "swordsdance" ) ) );
     SW_EXPECT_FALSE( MonsterRules::learnMove( world._catalog, pikachu, hashed_string( "swordsdance" ) ) );
@@ -743,7 +761,9 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
                     (void)fullBattle.switchFainted( side, MonsterTrainerAi::chooseReplacement( fullBattle, side ) );
             }
             for ( int32 side = 0; side < MonsterBattle::kSideCount; ++side )
+            {
                 (void)fullBattle.setAction( side, MonsterTrainerAi::chooseAction( fullBattle, side ) );
+            }
             fullBattle.resolveRound();
             listRound.clear();
             fullBattle.drainEvents( listRound );
@@ -760,7 +780,9 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
     SW_ASSERT_TRUE( listA.size() == listB.size() );
     bool bSame = true;
     for ( size_t index = 0; index < listA.size(); ++index )
+    {
         bSame = bSame && listA[index]._kind == listB[index]._kind && listA[index]._side == listB[index]._side && listA[index]._value == listB[index]._value;
+    }
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( countKind( listA, MonsterBattleEvent::Kind::Switched ) > 0 );
 }
@@ -777,7 +799,9 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
     storage.initialize( 3 );
     GameRandom random( 21 );
     for ( const utf8* pSpecies : { "squirtle", "bulbasaur", "pikachu" } )
+    {
         SW_EXPECT_TRUE( storage.add( MonsterRules::createMonster( world._catalog, hashed_string( pSpecies ), 12, random ) ) == MonsterStoragePlace::Party );
+    }
     storage.getParty()[0]._nickname = "Shelly";
     SW_ASSERT_TRUE( storage.depositToBox( 2 ) );
 

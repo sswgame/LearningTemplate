@@ -129,7 +129,9 @@ namespace sw
         for ( int32 y = minY; y <= maxY; ++y )
         {
             for ( int32 x = minX; x <= maxX; ++x )
+            {
                 setTerrain( x, y, terrain );
+            }
         }
     }
 
@@ -247,11 +249,15 @@ namespace sw
         building._pDef         = pDef;
         building._origin       = int2{ x, y };
         for ( float32& serviceTime : building._arrServiceTime )
+        {
             serviceTime = -1.0e9f;
+        }
         for ( int32 dy = 0; dy < pDef->_size; ++dy )
         {
             for ( int32 dx = 0; dx < pDef->_size; ++dx )
+            {
                 _listTile[static_cast<size_t>( _topology.toIndex( x + dx, y + dy ) )]._buildingIndex = index;
+            }
         }
         refreshAccess( building );
         _bDesirabilityDirty = SW_TRUE;
@@ -278,7 +284,9 @@ namespace sw
         for ( int32 dy = 0; dy < building._pDef->_size; ++dy )
         {
             for ( int32 dx = 0; dx < building._pDef->_size; ++dx )
+            {
                 _listTile[static_cast<size_t>( _topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex = -1;
+            }
         }
         _land.releaseRect( building._origin._x, building._origin._y, building._origin._x + building._pDef->_size - 1, building._origin._y + building._pDef->_size - 1 );
         building._bAlive     = SW_FALSE;
@@ -322,7 +330,9 @@ namespace sw
     void CitySimulation::recomputeRoadComponents()
     {
         for ( CityTile& tile : _listTile )
+        {
             tile._roadComponent = -1;
+        }
         // 도로 조각마다 너비 우선 — 큐는 길 찾기와 같은 재사용 스크래치(조각 번호가 칸의 "봤다" 표시다).
         int32 component = 0;
         for ( int32 y = 0; y < _topology._height; ++y )
@@ -371,7 +381,9 @@ namespace sw
     void CitySimulation::recomputeDesirability()
     {
         for ( CityTile& tile : _listTile )
+        {
             tile._desirability = 0;
+        }
         for ( const CityBuilding& building : _listBuilding )
         {
             if ( building._bAlive == SW_FALSE || building._pDef->_desirability == 0 )
@@ -402,7 +414,9 @@ namespace sw
     {
         const int32 stepCount = _stepTimer.consume( deltaTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
+        {
             stepFixed( _stepTimer.getStep() );
+        }
     }
 
     void CitySimulation::drainEvents( vector<CityEvent>& outListEvent )
@@ -641,7 +655,9 @@ namespace sw
         if ( _roadSearch.isVisited( goal ) == false )
             return false;
         for ( int32 index = goal; index >= 0; index = _roadSearch.getParent( index ) )
+        {
             outListPath.push_back( _topology.toCell( index ) );
+        }
         std::reverse( outListPath.begin(), outListPath.end() );
         outListPath.erase( outListPath.begin() ); // 지금 칸은 빼고 다음 칸부터
         return true;
@@ -832,7 +848,9 @@ namespace sw
         {
             int32 total = 0;
             for ( const CityBuilding& building : _listBuilding )
+            {
                 total += building._bAlive != SW_FALSE && building.isHouse() == false ? building._pDef->_workers : 0;
+            }
             return total;
         }();
         const bool bAttractive = _workforce < jobs + 4 || ( _workforce > 0 && static_cast<float32>( _workforce - _employed ) / static_cast<float32>( _workforce ) < 0.25f );
@@ -889,8 +907,10 @@ namespace sw
             vector<hashed_string> listGood;
             house._stock.getItemIds( listGood );
             for ( const hashed_string& goodId : listGood )
+            {
                 // 재고가 0 이면 false — 먹을 것이 없을 뿐이다
                 (void)house._stock.removeItem( goodId, MathUtil::min( need, house._stock.getItemCount( goodId ) ) );
+            }
             // 세금 — 세리가 다녀간 집만.
             const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( house._level );
             if ( pLevel != nullptr && isHouseServed( house, CityService::Tax ) )
@@ -922,7 +942,9 @@ namespace sw
     {
         int32 population = 0;
         for ( const CityBuilding& building : _listBuilding )
+        {
             population += building._bAlive != SW_FALSE && building.isHouse() ? building._population : 0;
+        }
         return population;
     }
 
@@ -984,7 +1006,9 @@ namespace sw
             outArchive << building._walkerTimer;
             outArchive << building._productionProgress;
             for ( const float32 serviceTime : building._arrServiceTime )
+            {
                 outArchive << serviceTime;
+            }
             outArchive << building._evolveTimer;
             outArchive << building._devolveTimer;
             outArchive << building._immigrationTimer;
@@ -999,10 +1023,14 @@ namespace sw
         {
             outArchive << static_cast<uint32>( walker._listPath.size() );
             for ( const int2& tile : walker._listPath )
+            {
                 StateArchiveUtil::writeInt2( outArchive, tile );
+            }
             outArchive << static_cast<uint32>( walker._listVisited.size() );
             for ( const int2& tile : walker._listVisited )
+            {
                 StateArchiveUtil::writeInt2( outArchive, tile );
+            }
             StateArchiveUtil::writeName( outArchive, walker._cargoGood );
             StateArchiveUtil::writeInt2( outArchive, walker._tile );
             StateArchiveUtil::writeInt2( outArchive, walker._previousTile );
@@ -1073,7 +1101,9 @@ namespace sw
             archive >> building._walkerTimer;
             archive >> building._productionProgress;
             for ( float32& serviceTime : building._arrServiceTime )
+            {
                 archive >> serviceTime;
+            }
             archive >> building._evolveTimer;
             archive >> building._devolveTimer;
             archive >> building._immigrationTimer;
@@ -1097,13 +1127,17 @@ namespace sw
                 return false;
             walker._listPath.resize( pathCount );
             for ( int2& tile : walker._listPath )
+            {
                 StateArchiveUtil::readInt2( archive, tile );
+            }
             uint32 visitedCount = 0;
             if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, visitedCount ) == false )
                 return false;
             walker._listVisited.resize( visitedCount );
             for ( int2& tile : walker._listVisited )
+            {
                 StateArchiveUtil::readInt2( archive, tile );
+            }
             if ( StateArchiveUtil::readName( archive, walker._cargoGood ) == false )
                 return false;
             uint8 kind    = 0;

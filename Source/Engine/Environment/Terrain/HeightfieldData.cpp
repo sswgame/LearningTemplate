@@ -85,7 +85,9 @@ namespace sw
         _listHeight.resize( sampleCount );
         const uint8* pSample = bytes.data() + Internal::kHeaderBytes;
         for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
+        {
             _listHeight[sampleIndex] = static_cast<uint16>( pSample[sampleIndex * 2] | ( pSample[sampleIndex * 2 + 1] << 8 ) );
+        }
         if ( cellCount > 0 )
         {
             const uint8* pHole = pSample + sampleCount * 2;

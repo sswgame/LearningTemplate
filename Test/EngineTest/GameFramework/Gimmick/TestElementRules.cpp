@@ -26,7 +26,9 @@ namespace
             for ( int32 y = 0; y < 3; ++y )
             {
                 for ( int32 x = 0; x < 8; ++x )
+                {
                     grid.setMaterial( int2{ x, y }, table.findMaterial( "Grass" ) );
+                }
             }
             grid.setMaterial( int2{ 3, 2 }, table.findMaterial( "Wood" ) );
             grid.setMaterial( int2{ 5, 0 }, table.findMaterial( "Ice" ) );
@@ -39,7 +41,9 @@ namespace
             for ( int32 y = 0; y < 3; ++y )
             {
                 for ( int32 x = 0; x < 8; ++x )
+                {
                     grid.setMaterial( int2{ x, y }, AdventureMaterial::Grass );
+                }
             }
             grid.setMaterial( int2{ 3, 2 }, AdventureMaterial::Wood );
             grid.setMaterial( int2{ 5, 0 }, AdventureMaterial::Ice );
@@ -64,7 +68,9 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
     ElementGrid row;
     row.initialize( 6, 1, &table );
     for ( int32 x = 0; x < 6; ++x )
+    {
         row.setMaterial( int2{ x, 0 }, grass );
+    }
     SW_EXPECT_EQUAL( 1, row.applyStimulus( int2{ 0, 0 }, fire ) );
     for ( int32 stepIndex = 1; stepIndex <= 3; ++stepIndex )
     {
@@ -85,7 +91,9 @@ SW_TEST_CASE( ElementRuleTest, FireSpreadsToAdjacentGrassAfterSteps )
     ElementGrid windy;
     windy.initialize( 5, 1, &table );
     for ( int32 x = 0; x < 5; ++x )
+    {
         windy.setMaterial( int2{ x, 0 }, grass );
+    }
     windy.setWind( int2{ -1, 0 } );
     (void)windy.applyStimulus( int2{ 2, 0 }, fire ); // 시험 준비 — 결과는 아래 단언이 번진 칸으로 확인한다
     windy.step();

@@ -43,13 +43,17 @@ namespace sw
             static void giveItems( Inventory& inventory, const ItemStackList& items, int32 count )
             {
                 for ( const auto& item : items.getItems() )
+                {
                     (void)inventory.addItem( item._itemId, item._count * count );
+                }
             }
 
             static void takeItems( Inventory& inventory, const ItemStackList& items, int32 count )
             {
                 for ( const auto& item : items.getItems() )
+                {
                     (void)inventory.removeItem( item._itemId, item._count * count ); // 재료 수는 canCraft 가 미리 확인했다
+                }
             }
         };
     } // namespace
@@ -171,7 +175,9 @@ namespace sw
         const RecipeDef* pRecipe  = _pCatalog->findRecipe( recipeId );
         int32            maxCount = 9999;
         for ( const auto& item : pRecipe->_inputs.getItems() )
+        {
             maxCount = MathUtil::min( maxCount, inventory.getItemCount( item._itemId ) / MathUtil::max( 1, item._count ) );
+        }
         return maxCount;
     }
 

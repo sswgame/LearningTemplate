@@ -44,7 +44,9 @@ namespace sw
         action.sa_flags = SA_RESTART;
         bool bInstalled = true;
         for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
             bInstalled = sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &action, &PosixShutdownSignalInternal::s_arrPreviousAction[index] ) == 0 && bInstalled;
+        }
 
         struct sigaction ignore{};
         ignore.sa_handler = SIG_IGN;
@@ -59,7 +61,9 @@ namespace sw
         if ( PosixShutdownSignalInternal::s_bInstalled == false )
             return;
         for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
             (void)sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &PosixShutdownSignalInternal::s_arrPreviousAction[index], nullptr );
+        }
         (void)sigaction( SIGPIPE, &PosixShutdownSignalInternal::s_previousPipeAction, nullptr );
         PosixShutdownSignalInternal::s_bInstalled = false;
     }

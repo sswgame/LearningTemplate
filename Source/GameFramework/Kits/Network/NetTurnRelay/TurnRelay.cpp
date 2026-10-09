@@ -23,7 +23,9 @@ namespace sw
                 const Uuid uuid  = Uuid::generate();
                 uint64     value = 0;
                 for ( const uint8 byte : uuid._arrBytes )
+                {
                     value = HashUtil::mix64( value ^ byte );
+                }
                 return value != 0 ? value : HashUtil::kGoldenRatio64;
             }
         };
@@ -99,7 +101,9 @@ namespace sw
     {
         int32 count = 0;
         for ( const PendingMessage& pending : _listPending )
+        {
             count += pending._connectionId == connectionId ? 1 : 0;
+        }
         return count;
     }
 
@@ -129,7 +133,9 @@ namespace sw
             PendingMessage& pending  = _listPending[index];
             bool            bBlocked = false;
             for ( const int32 blocked : _listBlockedScratch )
+            {
                 bBlocked = bBlocked || blocked == pending._connectionId;
+            }
             if ( bBlocked == false && _pHost->sendMessage( pending._connectionId, NetChannelType::ReliableOrdered, pending._buffer ) )
                 continue;
             if ( bBlocked == false )
@@ -168,7 +174,9 @@ namespace sw
         for ( TurnRoom& room : _listRoom )
         {
             for ( TurnSeat& seat : room._listSeat )
+            {
                 flushSeat( room, seat );
+            }
         }
     }
 
@@ -269,7 +277,9 @@ namespace sw
         // 시작했으면 들어온 사람에게 시작 알림과 놓친 행동을, 이제 다 찼으면 모두에게 시작을.
         bool bFull = true;
         for ( const TurnSeat& other : pRoom->_listSeat )
+        {
             bFull = bFull && other._bTaken;
+        }
         if ( pRoom->_bStarted == SW_FALSE && bFull == false )
             return true;
         const bool bStartsNow = pRoom->_bStarted == SW_FALSE;
@@ -324,7 +334,9 @@ namespace sw
                 pRoom->_listAction.push_back( TurnAction{ actionBuffer, seat } );
                 _pPolicy->applyAction( *pRoom, seat, actionBuffer );
                 for ( TurnSeat& other : pRoom->_listSeat )
+                {
                     flushSeat( *pRoom, other );
+                }
                 TurnRelayEvent event;
                 event._kind   = TurnRelayEvent::Kind::ActionApplied;
                 event._roomId = roomId;

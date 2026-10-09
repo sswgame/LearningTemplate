@@ -71,7 +71,9 @@ namespace
         {
             int32 count = 0;
             for ( const SocialNotification& notification : listNotification )
+            {
                 count += notification._kind == kind ? 1 : 0;
+            }
             return count;
         }
     };

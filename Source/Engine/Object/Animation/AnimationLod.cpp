@@ -128,14 +128,18 @@ namespace sw
     {
         float32 expected = 0.0f;
         for ( uint32 itemIndex = 0; itemIndex < itemCount; ++itemIndex )
+        {
             expected += costPerEvaluationMicroseconds / static_cast<float32>( MathUtil::max( pItem[itemIndex]._updateRateDivisor, 1u ) );
+        }
         if ( budgetMicroseconds <= 0.0f || expected <= budgetMicroseconds || costPerEvaluationMicroseconds <= 0.0f )
             return expected;
 
         // 덜 중요한 것부터 — 같으면 앞의 것(등록 순서)이 먼저 늘어난다(결정적).
         vector<uint32> listOrder( itemCount );
         for ( uint32 itemIndex = 0; itemIndex < itemCount; ++itemIndex )
+        {
             listOrder[itemIndex] = itemIndex;
+        }
         std::stable_sort( listOrder.begin(), listOrder.end(),
                           [pItem]( uint32 left, uint32 right )
         { return pItem[left]._significance < pItem[right]._significance; } );

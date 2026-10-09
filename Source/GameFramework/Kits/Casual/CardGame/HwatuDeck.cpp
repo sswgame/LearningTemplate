@@ -91,7 +91,9 @@ namespace sw
         for ( int32 month = 1; month <= kMonthCount; ++month )
         {
             for ( int32 indexInMonth = 0; indexInMonth < HwatuDeckInternal::kCardsPerMonth; ++indexInMonth )
+            {
                 outPile.push( makeCard( month, indexInMonth ) );
+            }
         }
     }
 

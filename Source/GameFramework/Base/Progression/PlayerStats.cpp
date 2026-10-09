@@ -256,7 +256,9 @@ namespace sw
         if ( _pCatalog != nullptr )
         {
             for ( const StatDef& def : _pCatalog->getStats() )
+            {
                 count += hasValue( def._id ) ? 1u : 0u;
+            }
         }
         outArchive << count;
         if ( _pCatalog == nullptr )

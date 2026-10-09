@@ -64,13 +64,17 @@ namespace sw
         if ( state._pAssetManager != nullptr )
         {
             for ( const IAssetCache* pCache : state._listCache )
+            {
                 state._pAssetManager->unregisterAssetCache( pCache );
+            }
         }
         state._pAssetManager = pAssetManager;
         if ( pAssetManager != nullptr )
         {
             for ( IAssetCache* pCache : state._listCache )
+            {
                 pAssetManager->registerAssetCache( pCache );
+            }
         }
     }
 } // namespace sw

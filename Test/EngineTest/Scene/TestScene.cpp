@@ -511,7 +511,9 @@ SW_TEST_CASE( SceneTest, DirectionalLightLookupFollowsRegistry )
 
     // 빛과 무관한 오브젝트가 아무리 많아도 결과는 그대로다.
     for ( uint32 index = 0; index < 16; ++index )
+    {
         SW_ASSERT_NOT_NULL( scene.getObjectManager()->createGameObject( sw::hashed_string( "Filler" ) ) );
+    }
     SW_EXPECT_NULL( scene.findActiveDirectionalLight() );
 
     sw::GameObject* pSun = scene.getObjectManager()->createGameObject( sw::hashed_string( "Sun" ) );
@@ -1228,7 +1230,9 @@ SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
     SW_ASSERT_TRUE( pScene->serializeToDocument( first ) );
     // 다른 오브젝트를 몇 개 더 만들어 런타임 id 를 밀어 둔다 — 다시 읽은 씬의 오브젝트는 다른 런타임 id 를 받는다.
     for ( uint32 extraIndex = 0; extraIndex < 3; ++extraIndex )
+    {
         SW_ASSERT_NOT_NULL( pObjects->createGameObject( sw::hashed_string( "Spacer" ) ) );
+    }
 
     // 저작 파일(XML)을 건너 다시 연다 — 엔티티의 `id` 속성이 실려야 한다.
     const sw::string scenePath = test::makeTempPath( "stable_ids.scene.xml" );
@@ -1282,7 +1286,9 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
     sw::GameObject* pEnemyB = pObjects->createGameObject( sw::hashed_string( "Enemy" ) );
     sw::GameObject* pArmB   = pObjects->createGameObject( sw::hashed_string( "ArmB" ) );
     for ( sw::GameObject* pObj : { pEnemyA, pArmA, pEnemyB, pArmB } )
+    {
         SW_ASSERT_NOT_NULL( pObj->addComponent<sw::SceneComponent>() );
+    }
     SW_ASSERT_TRUE( pEnemyB->getName() != sw::hashed_string( "Enemy" ) ); // 매니저가 유일하게 바꿨다
     pEnemyA->getPrimarySceneComponent()->setLocalPosition( sw::float3{ 1.0f, 0.0f, 0.0f } );
     pEnemyB->getPrimarySceneComponent()->setLocalPosition( sw::float3{ 2.0f, 0.0f, 0.0f } );
@@ -1298,7 +1304,9 @@ SW_TEST_CASE( SceneTest, ChildrenOfSameNamedEntitiesFindTheirOwnParent )
         if ( entity._name == renamed )
             entity._name = "Enemy";
         for ( size_t found = entity._embeddedXml.find( renamed ); found != sw::string::npos; found = entity._embeddedXml.find( renamed ) )
+        {
             entity._embeddedXml.replace( found, renamed.size(), "Enemy" );
+        }
     }
 
     sw::Scene* pReloaded = manager.createScene( "TwinWorldReloaded" );

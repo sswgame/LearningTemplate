@@ -46,10 +46,14 @@ SW_TEST_CASE( Base64UtilTest, UrlAlphabetHasNoPaddingAndRoundTrips )
     SW_ASSERT_TRUE( Base64Util::decodeUrl( "-_-_ABA", decoded ) );
     SW_ASSERT_EQUAL( sizeof( arrByte ), decoded.size() );
     for ( size_t index = 0; index < decoded.size(); ++index )
+    {
         SW_EXPECT_EQUAL( arrByte[index], decoded[index] );
+    }
     vector<uint8> listByte;
     for ( int32 value = 0; value < 256; ++value )
+    {
         listByte.push_back( static_cast<uint8>( value ) );
+    }
     SW_ASSERT_TRUE( Base64Util::decodeUrl( Base64Util::encodeUrl( listByte.data(), listByte.size() ), decoded ) );
     SW_EXPECT_TRUE( decoded == listByte );
 }

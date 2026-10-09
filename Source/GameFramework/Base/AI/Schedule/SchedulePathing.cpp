@@ -39,7 +39,9 @@ namespace sw
     {
         float32 length = 0.0f;
         for ( size_t pointIndex = 1; pointIndex < listPoint.size(); ++pointIndex )
+        {
             length += float3::getDistance( listPoint[pointIndex - 1], listPoint[pointIndex] );
+        }
         return length;
     }
 
@@ -162,7 +164,9 @@ namespace sw
         {
             // 첫 · 끝 칸 가운데 대신 실제 출발 · 도착 자리를 쓴다 — 칸 안의 자리가 그대로 이어진다.
             for ( size_t cellIndex = 1; cellIndex + 1 < listCell.size(); ++cellIndex )
+            {
                 listPoint.push_back( fromGrid( _pGrid->computeCellCenter( listCell[cellIndex] ) ) );
+            }
         }
         listPoint.push_back( to._position );
         const float32 length = SchedulePathingUtil::computeLength( listPoint );

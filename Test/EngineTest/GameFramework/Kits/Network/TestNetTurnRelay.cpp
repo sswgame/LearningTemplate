@@ -133,7 +133,9 @@ namespace
         client.drainEvents( listEvent );
         bool bFound = false;
         for ( const TurnRelayEvent& event : listEvent )
+        {
             bFound = bFound || ( event._kind == TurnRelayEvent::Kind::Denied && event._reason == reason );
+        }
         return bFound;
     }
 
@@ -141,7 +143,9 @@ namespace
     {
         int32 count = 0;
         for ( const TurnSeat& seat : room._listSeat )
+        {
             count += seat._bTaken != SW_FALSE ? 1 : 0;
+        }
         return count;
     }
 
@@ -318,7 +322,9 @@ SW_TEST_CASE( NetTurnRelayTest, RejoinCatchesUpBeyondReliableWindow )
     SW_ASSERT_EQUAL( size_t{ kActionCount }, clientB.getActions().size() );
     int32 mismatchCount = 0;
     for ( size_t index = 0; index < clientB.getActions().size(); ++index )
+    {
         mismatchCount += clientB.getActions()[index]._buffer == clientA.getActions()[index]._buffer ? 0 : 1;
+    }
     SW_EXPECT_EQUAL( 0, mismatchCount );
 }
 
@@ -473,7 +479,9 @@ SW_TEST_CASE( NetTurnRelayTest, LargeActionsCatchUpThroughAFullWindow )
     SW_ASSERT_EQUAL( size_t{ kActionCount }, clientB.getActions().size() );
     int32 mismatchCount = 0;
     for ( size_t index = 0; index < clientB.getActions().size(); ++index )
+    {
         mismatchCount += clientB.getActions()[index]._buffer == clientA.getActions()[index]._buffer ? 0 : 1;
+    }
     SW_EXPECT_EQUAL( 0, mismatchCount );
     SW_EXPECT_EQUAL( kActionBytes, static_cast<int32>( clientB.getActions().back()._buffer.size() ) );
 }

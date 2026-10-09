@@ -36,7 +36,9 @@ namespace
             if ( sw::FileUtil::readTextFile( absolutePath, text ) == false || sw::ConfigManager::collectDefaultEchoKeys<T>( text, listEchoKey ) == false )
                 return false;
             for ( const sw::string& key : listEchoKey )
+            {
                 SW_EXPECT_TRUE_MSG( false, absolutePath + ": '" + key + "' restates the default - write only values that differ (docs/Config lists the defaults)" );
+            }
             return true;
         }
 
@@ -101,7 +103,9 @@ SW_TEST_CASE( ConfigFileSchemaTest, EveryConfigFileLoadsStrictly )
     {
         sw::string relative = sw::FileUtil::normalizeSeparators( sw::string_view( filePath ).substr( projectRoot.size() ) );
         while ( relative.empty() == false && relative.front() == '/' )
+        {
             relative.erase( 0, 1 );
+        }
         const ConfigFileSchemaInternal::ConfigKind* pKind = ConfigFileSchemaInternal::findKind( relative );
         SW_EXPECT_TRUE_MSG( pKind != nullptr, "종류 표에 없는 설정 파일입니다: " + relative );
         if ( pKind == nullptr || pKind->_pLoad == nullptr )

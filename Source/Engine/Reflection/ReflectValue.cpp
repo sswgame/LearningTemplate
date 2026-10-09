@@ -118,7 +118,9 @@ namespace sw
                     }
                     size_t end = position;
                     while ( end < text.size() && text[end] != ' ' && text[end] != ',' && text[end] != ')' && text[end] != '\t' )
+                    {
                         ++end;
+                    }
                     if ( end == position )
                         break;
                     if ( StringUtil::parseFloat( text.substr( position, end - position ), pOutValue[readCount] ) == false )

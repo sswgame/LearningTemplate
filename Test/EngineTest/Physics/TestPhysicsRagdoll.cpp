@@ -116,7 +116,9 @@ SW_TEST_CASE( PhysicsRagdollTest, BuildsBodiesAndJointsFromChain )
     sw::vector<sw::float4x4> listReadBack( skeleton._listModel.size() );
     sw::PhysicsRagdollBuilder::readBoneTransforms( *pScene, ragdoll, skeleton.makeView(), sw::float4x4{}, sw::span<sw::float4x4>{ listReadBack.data(), listReadBack.size() } );
     for ( size_t boneIndex = 0; boneIndex < listReadBack.size(); ++boneIndex )
+    {
         SW_EXPECT_TRUE( isNear( skeleton._listModel[boneIndex], listReadBack[boneIndex], 1e-4f ) );
+    }
 
     // 머리를 맞힌 레이 → 히트 존 Head, 배율 2.5.
     sw::PhysicsCastHit3D hit;
@@ -145,7 +147,9 @@ SW_TEST_CASE( PhysicsRagdollTest, DynamicRagdollFallsAndKeepsBoneSpacing )
     // 옆으로 밀어 쓰러뜨린다.
     pScene->addImpulse( ragdoll._listBody[2], sw::float3{ 20.0f, 0.0f, 0.0f } );
     for ( uint32 stepIndex = 0; stepIndex < 180; ++stepIndex )
+    {
         pScene->step( kRagdollStep );
+    }
 
     sw::vector<sw::float4x4> listReadBack( skeleton._listModel.size() );
     sw::PhysicsRagdollBuilder::readBoneTransforms( *pScene, ragdoll, skeleton.makeView(), sw::float4x4{}, sw::span<sw::float4x4>{ listReadBack.data(), listReadBack.size() } );
@@ -181,13 +185,17 @@ SW_TEST_CASE( PhysicsRagdollTest, KinematicHitboxesFollowPoseThenRagdoll )
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._y, 1e-3f );
     // 키네마틱은 중력을 받지 않는다.
     for ( uint32 stepIndex = 0; stepIndex < 30; ++stepIndex )
+    {
         pScene->step( kRagdollStep );
+    }
     SW_ASSERT_TRUE( pScene->getBodyTransform( ragdoll._listBody[0], position, rotation ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, position._y, 1e-3f );
 
     sw::PhysicsRagdollBuilder::setBodyType( *pScene, ragdoll, sw::PhysicsBodyType::Dynamic );
     for ( uint32 stepIndex = 0; stepIndex < 120; ++stepIndex )
+    {
         pScene->step( kRagdollStep );
+    }
     SW_ASSERT_TRUE( pScene->getBodyTransform( ragdoll._listBody[0], position, rotation ) );
     SW_EXPECT_TRUE_MSG( position._y < 1.0f, "switched to Dynamic - the pelvis drops to the floor" );
 }

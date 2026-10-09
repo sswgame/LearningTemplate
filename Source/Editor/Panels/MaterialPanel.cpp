@@ -32,7 +32,9 @@ namespace sw::editor
                 if ( pOut == nullptr || count == 0 )
                     return 0;
                 for ( uint32 index = 0; index < count; ++index )
+                {
                     pOut[index] = 0.0f;
+                }
                 if ( text.empty() )
                     return 0;
                 string_splitter splitter( text, { ",", " ", "\t" } );

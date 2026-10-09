@@ -65,7 +65,9 @@ SW_TEST_CASE( FontRasterizerTest, SdfIsBrightInsideTheGlyph )
     SW_ASSERT_EQUAL( static_cast<size_t>( bitmap._width ) * bitmap._height, bitmap._bytes.size() );
     uint8 maxValue = 0;
     for ( const uint8 value : bitmap._bytes )
+    {
         maxValue = value > maxValue ? value : maxValue;
+    }
     SW_EXPECT_TRUE( maxValue >= 200 );             // 획 한가운데
     SW_EXPECT_TRUE( bitmap._bytes.front() <= 40 ); // 왼쪽 위 모서리는 윤곽에서 spread 만큼 바깥
     SW_EXPECT_TRUE( bitmap._bytes.back() <= 40 );

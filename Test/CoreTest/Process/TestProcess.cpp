@@ -265,7 +265,9 @@ SW_TEST_CASE( ProcessTest, StandardInputPipeReachesTheChild )
     sw::string line;
     sw::string output;
     while ( process.readOutputLine( line ) )
+    {
         output += line + "\n";
+    }
     SW_EXPECT_EQUAL( 0, process.waitForExit() );
     SW_EXPECT_STREQ( "axb\n", output.c_str() );
 }

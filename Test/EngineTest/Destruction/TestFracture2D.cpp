@@ -25,7 +25,9 @@ namespace
         {
             float32 total = 0.0f;
             for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+            {
                 total += asset._graph._listNode[piece]._volume;
+            }
             return total;
         }
 
@@ -63,7 +65,9 @@ namespace
         static void tickFor( sw::GameObjectManager& manager, uint32 frameCount )
         {
             for ( uint32 frame = 0; frame < frameCount; ++frame )
+            {
                 manager.tick( 1.0f / 60.0f );
+            }
         }
     };
 } // namespace
@@ -90,14 +94,18 @@ SW_TEST_CASE( Fracture2DTest, PolygonFractureKeepsAreaAndLinksNeighbours )
     SW_EXPECT_NEAR_EQUAL( 12.0f, TestFracture2DInternal::sumArea( asset ), 1e-3f );
     SW_EXPECT_TRUE( asset._graph._listLink.size() >= 16 );
     for ( const sw::FractureLink& link : asset._graph._listLink )
+    {
         SW_EXPECT_TRUE( link._area > 0.0f && link._area < 4.0f );
+    }
     SW_EXPECT_EQUAL( 3u, asset._graph.getDepthCount() );
     // 조각 그림은 앞뒤 두 면이고, 껍질은 조각 다각형 꼭짓점(Z = 0)이다.
     for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
     {
         SW_EXPECT_TRUE( asset.getPieceHull( piece ).size() >= 3 );
         for ( const sw::float3& point : asset.getPieceHull( piece ) )
+        {
             SW_EXPECT_NEAR_EQUAL( 0.0f, point._z, 0.0f );
+        }
     }
     sw::FractureAsset again;
     SW_ASSERT_TRUE( sw::PolygonFractureUtil::fracture( listBox, settings, again, error ) );
@@ -162,7 +170,9 @@ SW_TEST_CASE( Fracture2DTest, WallBreaksIntoBox2DPiecesDeterministically )
     SW_EXPECT_TRUE( maxMove > 0.3f );
 
     for ( const sw::DestructionDamageEvent& event : pServer->getEventLog()._listEvent )
+    {
         pClient->applyDamage( event );
+    }
     Internal::tickFor( client, 2 );
     SW_EXPECT_EQUAL( pServer->getState().computeStateHash(), pClient->getState().computeStateHash() );
     server.endPlay();

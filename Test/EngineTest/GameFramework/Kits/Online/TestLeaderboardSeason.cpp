@@ -60,7 +60,9 @@ namespace
         void submitThirtyPlayers()
         {
             for ( AccountId accountId = 1; accountId <= 30; ++accountId )
+            {
                 _service.submitScore( "arena", accountId, "p", static_cast<int64>( 1000 - accountId ), 1500, accountId );
+            }
             step();
         }
     };

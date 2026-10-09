@@ -22,7 +22,9 @@ namespace sw
         if ( _pRouter != nullptr )
         {
             for ( const auto& [requestId, operation] : _mapRequestToOperation )
+            {
                 _pRouter->cancel( requestId );
+            }
         }
         _mapRequestToOperation.clear();
         _pRouter = nullptr;
