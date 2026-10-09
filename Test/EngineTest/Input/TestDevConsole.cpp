@@ -3,8 +3,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/DevTools/DevConsoleController.h"
 #include "Engine/EngineLoop.h"
+#include "Engine/Input/DevConsoleController.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"

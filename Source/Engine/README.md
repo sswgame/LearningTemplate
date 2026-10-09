@@ -180,7 +180,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTest`(AppTest)가 바이너리를 검사해 확인합니다.
 
 `Utility/Console/DevConsole` 은 한 줄을 해석하고(`help`, `get`, `set`, 명령, `gv_이름 [값]`), 자동 완성과 기록을 맡습니다. 에디터 Output Log의 입력 줄과 게임 창 콘솔이 함께 씁니다.
-게임 창 콘솔은 세 부분으로 나뉩니다. 판단은 `DevTools/DevConsoleController`, 그리기는 `Window/DevConsoleWindow.h` 의 `IDevConsoleWindow`, 입력은 `InputManager` 입니다.
+게임 창 콘솔은 세 부분으로 나뉩니다. 판단은 `Input/DevConsoleController`, 그리기는 `Window/DevConsoleWindow.h` 의 `IDevConsoleWindow`, 입력은 `InputManager` 입니다.
 
 콘솔을 여는 키와 편집 키는 셸 입력 맵(`Resource/engine/input/default.input.xml`)의 액션이라 데이터로 바꿀 수 있고 패드로도 쓸 수 있습니다.
 `DevConsoleToggle` 은 늘 켜진 `Debug` 레이어에 있고, 닫기와 실행, 완성, 기록 이동, 지우기는 콘솔이 열려 있는 동안만 켜지는 `DevConsole` 레이어에 있습니다.

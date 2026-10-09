@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DevTools/DevConsoleController.h"
+#include "Engine/Input/DevConsoleController.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

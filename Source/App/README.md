@@ -123,7 +123,7 @@ echo $LASTEXITCODE
 Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에디터, Ctrl+F7은 게임 모듈 리로드이고 `App::pollReloadHotkeys` 가 `EngineLoop::wasDebugActionTriggered` 로 확인합니다.
 이 단축키는 개발 빌드 전용입니다. Shipping에는 리로드할 모듈이 없어서 `App::pollReloadHotkeys` 가 비어 있습니다.
 
-에디터 없이 실행하면 `~` 키로 게임 창 위에 개발 콘솔(`Source/Engine/DevTools/DevConsoleController.h`)을 엽니다.
+에디터 없이 실행하면 `~` 키로 게임 창 위에 개발 콘솔(`Source/Engine/Input/DevConsoleController.h`)을 엽니다.
 명령이나 `gv_이름 [값]` 을 입력하고 Enter를 누릅니다. Tab은 자동 완성, ↑와 ↓는 입력 기록, Esc나 `~` 는 닫기입니다.
 콘솔이 열려 있는 동안은 콘솔이 `InputManager` 의 키보드 포커스를 가져가므로 게임은 키 입력을 받지 않습니다. 창 메시지를 가로채지는 않으므로 입력 재생과 테스트의 입력 주입도 콘솔에 도달합니다.
 에디터가 있으면 Output Log 창의 입력 줄이 같은 콘솔입니다.

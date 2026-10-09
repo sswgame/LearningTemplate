@@ -1,6 +1,6 @@
 /**
  * @file DevConsoleWindow.h
- * @brief 게임 창 개발 콘솔을 그리는 플랫폼 창의 인터페이스입니다. 입력은 모릅니다(판단은 `DevTools/DevConsoleController`). Shipping 에는 없습니다.
+ * @brief 게임 창 개발 콘솔을 그리는 플랫폼 창의 인터페이스입니다. 입력은 모릅니다(판단은 `Input/DevConsoleController`). Shipping 에는 없습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
