@@ -136,8 +136,8 @@ namespace sw
             {
                 uint32 width  = 0;
                 uint32 height = 0;
-                (void)parseSize( step, "width", width ); // 검사에서 봤다
-                (void)parseSize( step, "height", height );
+                (void)parseSize( step, "width", width );   // 검사에서 봤다
+                (void)parseSize( step, "height", height ); // 검사에서 봤다
                 IWindow* pWindow = IWindow::getActiveWindow();
                 if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, width, height ) == false )
                     runner.recordFailure( step, "this platform could not resize the window" );

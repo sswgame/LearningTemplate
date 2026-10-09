@@ -140,7 +140,7 @@ namespace
                         bKnown = bKnown || sw::FileUtil::pathsEqualNormalized( file._path, path );
                     }
                     if ( bKnown == false )
-                        (void)sw::FileUtil::tryRemoveFile( path );
+                        (void)sw::FileUtil::tryRemoveFile( path ); // 정리일 뿐이라 남아도 다음 실행이 다시 지운다
                 }
             }
             for ( const SavedFile& file : _listFile )

@@ -164,7 +164,7 @@ namespace sw::editor
                 }
                 EditorSelfTestInput::setMouseButton( button, true );
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveMouseToMark( mark );
+                (void)EditorSelfTestInput::moveMouseToMark( mark ); // 표식은 누르기 전에 같은 이름으로 찾았다
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {
@@ -257,7 +257,7 @@ namespace sw::editor
                 uint32 expectedCount = 1;
                 uint32 bSelected     = 0;
                 (void)readCount( step, "count", 1, expectedCount ); // 검사에서 봤다
-                (void)readCount( step, "selected", 0, bSelected );
+                (void)readCount( step, "selected", 0, bSelected );  // 검사에서 봤다
                 const hashed_string name( *step.findAttribute( "name" ) );
                 GameObjectManager*  pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
