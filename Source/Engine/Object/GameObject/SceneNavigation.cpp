@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 

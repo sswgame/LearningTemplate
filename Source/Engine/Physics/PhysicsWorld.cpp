@@ -4,7 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/ContinuousCollision.h"
 

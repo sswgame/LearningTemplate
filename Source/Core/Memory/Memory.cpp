@@ -5,7 +5,6 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include <cstdio>
 
@@ -32,9 +31,16 @@ namespace sw
 
     /** @brief 엔진이 할당한 블록인지 식별하는 64비트 매직 상수입니다. */
     static constexpr uint64 kAllocMagic = 0x5C09B10CDA7A0000;
+#endif
 
     namespace
     {
+        /** @brief 걸린 할당 기록기(`MemoryProfiler`)입니다. 할당마다 acquire 읽기 하나입니다. */
+        atomic<IAllocationTracker*> s_pAllocationTracker{ nullptr };
+        /** @brief 이 스레드의 현재 할당 태그입니다(`Memory::setCurrentMemoryTag`). */
+        thread_local MemoryTag t_currentMemoryTag{ MemoryTag::Unknown };
+
+#if !defined( SW_SHIPPING )
         /** @brief 걸린 할당 관찰자입니다. 할당마다 relaxed 읽기 하나입니다. */
         atomic<const MemoryAllocationObserver*> s_pAllocationObserver{ nullptr };
         /** @brief 이 스레드에서 실패로 돌릴 남은 할당 수입니다(`injectAllocationFailures`). */
@@ -65,9 +71,9 @@ namespace sw
                 pHeader->_pRawPtr    = pRawPtr;
                 pHeader->_bObserved  = SW_FALSE;
 
-                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-                if ( pProfiler != nullptr )
-                    pHeader->_hash = pProfiler->recordAllocation( pUserPtr, size, pHeader->_tag );
+                IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
+                if ( pTracker != nullptr )
+                    pHeader->_hash = pTracker->recordAllocation( pUserPtr, size, pHeader->_tag );
 
                 const MemoryAllocationObserver* pObserver = s_pAllocationObserver.load( std::memory_order_acquire );
                 if ( pObserver != nullptr )
@@ -98,9 +104,9 @@ namespace sw
                 if ( pHeader->_magic != kAllocMagic )
                     return nullptr;
 
-                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-                if ( pProfiler != nullptr )
-                    pProfiler->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
+                IAllocationTracker* pTracker = s_pAllocationTracker.load( std::memory_order_acquire );
+                if ( pTracker != nullptr )
+                    pTracker->recordFree( pUserPtr, pHeader->_size, pHeader->_tag, pHeader->_hash );
 
                 // 관찰 중에 할당된 블록만 알린다. 관찰자가 그 사이 떨어졌으면 알릴 곳이 없다.
                 if ( pHeader->_bObserved == SW_TRUE )
@@ -114,8 +120,8 @@ namespace sw
                 return pHeader->_pRawPtr;
             }
         };
-    } // namespace
 #endif
+    } // namespace
 
 #if !defined( SW_SHIPPING )
     void Memory::injectAllocationFailures( uint32 count ) { t_injectedFailureCount = count; }
@@ -129,7 +135,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         return allocateAligned( size, alignment, MemoryTag::Unknown );
 #else
-        return allocateAligned( size, alignment, MemoryProfiler::getCurrentMemoryTag() );
+        return allocateAligned( size, alignment, getCurrentMemoryTag() );
 #endif
     }
 
@@ -211,7 +217,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         return ::malloc( size );
 #else
-        return allocate( size, MemoryProfiler::getCurrentMemoryTag() );
+        return allocate( size, getCurrentMemoryTag() );
 #endif
     }
 
@@ -300,5 +306,30 @@ namespace sw
         if ( pRhs == nullptr )
             return 1;
         return std::memcmp( pLhs, pRhs, size );
+    }
+} // namespace sw
+
+namespace sw
+{
+    void Memory::registerAllocationTracker( IAllocationTracker* pTracker )
+    {
+        IAllocationTracker* pExpected{ nullptr };
+        s_pAllocationTracker.compare_exchange_strong( pExpected, pTracker, std::memory_order_acq_rel, std::memory_order_relaxed );
+    }
+
+    void Memory::unregisterAllocationTracker( IAllocationTracker* pTracker )
+    {
+        IAllocationTracker* pExpected = pTracker;
+        s_pAllocationTracker.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+    }
+
+    void Memory::setCurrentMemoryTag( MemoryTag tag )
+    {
+        t_currentMemoryTag = tag;
+    }
+
+    MemoryTag Memory::getCurrentMemoryTag()
+    {
+        return t_currentMemoryTag;
     }
 } // namespace sw

@@ -7,7 +7,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Time/MonotonicClock.h"
 

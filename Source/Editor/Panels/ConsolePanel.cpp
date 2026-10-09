@@ -3,7 +3,7 @@
 #include "Editor/Panels/ConsolePanel.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"

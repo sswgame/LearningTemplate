@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"

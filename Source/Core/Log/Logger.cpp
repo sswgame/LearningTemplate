@@ -12,7 +12,6 @@
 #include "Core/Log/LogContext.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringUtil.h"

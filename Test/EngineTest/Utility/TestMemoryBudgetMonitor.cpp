@@ -4,8 +4,8 @@
  */
 #include "pch.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"

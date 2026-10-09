@@ -3,7 +3,7 @@
 #include "Engine/Audio/IAudioSystem.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioMixerDesc.h"

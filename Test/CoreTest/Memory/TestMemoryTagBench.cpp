@@ -6,8 +6,8 @@
  */
 #include "pch.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"

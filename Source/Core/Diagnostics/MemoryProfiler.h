@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Process/CallStackCapture.h"
 
@@ -77,17 +78,13 @@ namespace sw
     // 1) MemoryProfiler — 할당 추적 · 콜 스택 집계(엔진 인스턴스)
     //    누수 검사(아래 2)와는 별개다. CRT/LSan 은 프로세스 전역이다
     // ------------------------------------------------------------------------------
-    class SW_API MemoryProfiler
+    class SW_API MemoryProfiler final : public IAllocationTracker
     {
     public:
         /** @brief 태그 표시 이름을 반환합니다. */
         static const utf8* getMemoryTagName( MemoryTag tag );
         /** @brief 표시 이름(대소문자 무시)으로 태그를 찾습니다. 데이터(예산 표)가 태그를 이름으로 적습니다. 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool findMemoryTagByName( string_view name, MemoryTag& outTag );
-        /** @brief 현재 스레드의 할당 태그를 설정합니다. */
-        static void setCurrentMemoryTag( MemoryTag tag );
-        /** @brief 현재 스레드의 할당 태그를 반환합니다. */
-        static MemoryTag getCurrentMemoryTag();
         /**
          * @brief 플랫폼 힙(CRT)이 지금 들고 있는 바이트입니다. sw 할당자를 거치지 않은 할당(외부 라이브러리 · `std::allocator`)까지 포함합니다.
          * @details 태그 합과 견주면 태그가 볼 수 없는 몫이 나옵니다. sw 블록도 CRT 에서 오므로 그 헤더(블록당 48 바이트)까지 이 값에 들어 있습니다.
@@ -117,7 +114,7 @@ namespace sw
         /** @brief 추적 플래그와 태그 통계를 0 으로 둡니다. */
         MemoryProfiler();
         /** @brief 추적 맵을 비웁니다. */
-        ~MemoryProfiler();
+        ~MemoryProfiler() override;
 
         /** @brief 복사를 금지합니다. */
         MemoryProfiler( const MemoryProfiler& ) = delete;
@@ -149,12 +146,12 @@ namespace sw
          * @brief 메모리 할당을 기록합니다.
          * @return 콜 스택 해시
          */
-        uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag );
+        uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag ) override;
 
         /**
          * @brief 메모리 해제를 기록합니다.
          */
-        void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 );
+        void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash = 0 ) override;
 
         /** @brief 태그별 할당 통계를 반환합니다. */
         const MemoryProfileStats& getStats( MemoryTag tag ) const;
@@ -225,43 +222,3 @@ namespace sw
         unordered_map<void*, uint64>              _mapPtrToCallStackHash;
     };
 } // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief 스코프 동안 현재 스레드의 할당 태그를 바꿨다가 되돌립니다.
-     * @details `kMemoryTagScopesEnabled` 가 아니면 아무 일도 하지 않습니다(TLS 를 읽지도 쓰지도 않습니다).
-     */
-    struct SW_API ScopedMemoryTag
-    {
-        /** @brief 현재 태그를 저장하고 @p tag 로 바꿉니다. */
-        explicit ScopedMemoryTag( MemoryTag tag )
-            : _prevTag{ kMemoryTagScopesEnabled ? MemoryProfiler::getCurrentMemoryTag() : MemoryTag::Unknown }
-        {
-            if constexpr ( kMemoryTagScopesEnabled )
-                MemoryProfiler::setCurrentMemoryTag( tag );
-        }
-
-        /** @brief 복사를 금지합니다. */
-        ScopedMemoryTag( const ScopedMemoryTag& ) = delete;
-        /** @brief 복사 대입을 금지합니다. */
-        ScopedMemoryTag& operator=( const ScopedMemoryTag& ) = delete;
-
-        /** @brief 들어오기 전의 태그로 되돌립니다. */
-        ~ScopedMemoryTag()
-        {
-            if constexpr ( kMemoryTagScopesEnabled )
-                MemoryProfiler::setCurrentMemoryTag( _prevTag );
-        }
-
-    private:
-        MemoryTag _prevTag;
-    };
-} // namespace sw
-
-/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성(배포본)에서는 아무 일도 하지 않습니다. */
-#if !defined( SW_SHIPPING )
-    #define SW_MEMORY_SCOPE( tag ) const sw::ScopedMemoryTag SW_CONCAT( _swMemoryScope_, __LINE__ )( sw::MemoryTag::tag )
-#else
-    #define SW_MEMORY_SCOPE( tag ) ( (void)0 )
-#endif

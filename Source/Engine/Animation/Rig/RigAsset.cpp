@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"

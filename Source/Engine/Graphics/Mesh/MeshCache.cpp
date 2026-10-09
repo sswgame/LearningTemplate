@@ -5,7 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

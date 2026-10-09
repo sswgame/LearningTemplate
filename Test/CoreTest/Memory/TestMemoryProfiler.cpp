@@ -2,8 +2,8 @@
 
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -135,7 +135,7 @@ SW_TEST_CASE( MemoryProfilerTest, TopCallStackQueryDoesNotDriftLiveCounters )
         listKeepAlive.emplace_back( 256 + index );
     }
 
-    const MemoryTag tag       = MemoryProfiler::getCurrentMemoryTag();
+    const MemoryTag tag       = Memory::getCurrentMemoryTag();
     const uint64    before    = pProfiler->getStats( tag )._currentAllocatedBytes.load();
     size_t          lastBytes = 0;
     for ( uint32 repeat = 0; repeat < 64; ++repeat )
@@ -172,7 +172,7 @@ SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
     pProfiler->setTrackingEnabled( true );
 
     constexpr size_t kBlockBytes = 64 * 1024;
-    const MemoryTag  outerTag    = MemoryProfiler::getCurrentMemoryTag();
+    const MemoryTag  outerTag    = Memory::getCurrentMemoryTag();
     const uint64     textureBase = pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load();
     const uint64     meshBase    = pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load();
 
@@ -180,17 +180,17 @@ SW_TEST_CASE( MemoryProfilerTest, ScopedTagAttributesAllocationsAndRestores )
     void* pMeshBlock{ nullptr };
     {
         SW_MEMORY_SCOPE( Texture );
-        SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Texture );
+        SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Texture );
         pTextureBlock = Memory::allocate( kBlockBytes );
         {
             SW_MEMORY_SCOPE( Mesh );
             SW_MEMORY_SCOPE( Mesh );
-            SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Mesh );
+            SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Mesh );
             pMeshBlock = Memory::allocate( kBlockBytes );
         }
-        SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Texture );
+        SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Texture );
     }
-    SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == outerTag );
+    SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == outerTag );
 
     SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Texture )._currentAllocatedBytes.load() >= textureBase + kBlockBytes );
     SW_EXPECT_TRUE( pProfiler->getStats( MemoryTag::Mesh )._currentAllocatedBytes.load() >= meshBase + kBlockBytes );

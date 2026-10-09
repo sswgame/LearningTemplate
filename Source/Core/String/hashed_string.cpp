@@ -2,7 +2,7 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 namespace sw
 {
@@ -49,14 +49,14 @@ namespace sw
     {
         if constexpr ( kMemoryTagScopesEnabled )
         {
-            _previousTag = MemoryProfiler::getCurrentMemoryTag();
-            MemoryProfiler::setCurrentMemoryTag( MemoryTag::EngineMisc );
+            _previousTag = Memory::getCurrentMemoryTag();
+            Memory::setCurrentMemoryTag( MemoryTag::EngineMisc );
         }
     }
 
     HashedStringPool::ScopedPoolMemoryTag::~ScopedPoolMemoryTag() noexcept
     {
         if constexpr ( kMemoryTagScopesEnabled )
-            MemoryProfiler::setCurrentMemoryTag( _previousTag );
+            Memory::setCurrentMemoryTag( _previousTag );
     }
 } // namespace sw

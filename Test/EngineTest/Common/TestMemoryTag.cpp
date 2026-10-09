@@ -6,8 +6,8 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
@@ -122,7 +122,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
 
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
-    const sw::MemoryTag outerTag = sw::MemoryProfiler::getCurrentMemoryTag();
+    const sw::MemoryTag outerTag = sw::Memory::getCurrentMemoryTag();
     SW_ASSERT_TRUE( outerTag == sw::MemoryTag::Unknown );
 
     const uint64               sceneBefore = getTotalBytes( *pProfiler, sw::MemoryTag::Scene );
@@ -141,7 +141,7 @@ SW_TEST_CASE( MemoryTagTest, AsyncSceneLoadOnWorkerIsTaggedScene )
 
     // GameObject 64 개 + 문서 · 이름표만으로도 수 KB 다. 진입점이 빠지면 워커 몫은 Unknown 으로 가고 Scene 은 그대로다.
     SW_EXPECT_TRUE_MSG( sceneAfterWorker > sceneBefore + 4096, ( sw::string( "Scene bytes grew by " ) + sw::to_string( sceneAfterWorker - sceneBefore ) ).c_str() );
-    SW_EXPECT_TRUE( sw::MemoryProfiler::getCurrentMemoryTag() == outerTag );
+    SW_EXPECT_TRUE( sw::Memory::getCurrentMemoryTag() == outerTag );
 
     manager.shutdown();
 }

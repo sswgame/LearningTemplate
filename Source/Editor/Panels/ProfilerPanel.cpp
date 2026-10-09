@@ -3,8 +3,8 @@
 #include "Editor/Panels/ProfilerPanel.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 

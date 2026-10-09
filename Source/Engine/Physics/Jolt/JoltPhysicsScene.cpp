@@ -3,7 +3,7 @@
 #include "Engine/Physics/Jolt/JoltPhysicsScene.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltUtil.h"

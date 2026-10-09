@@ -3,7 +3,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/array.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"

@@ -11,7 +11,7 @@
     #include "Core/Container/vector.h"
     #include "Core/File/FileUtil.h"
     #include "Core/Log/Logger.h"
-    #include "Core/Memory/MemoryProfiler.h"
+    #include "Core/Memory/Memory.h"
     #include "Core/String/StringUtil.h"
 
 SW_LOG_CALLER( "WindowsFileWatcher" );
@@ -66,7 +66,7 @@ namespace sw
         _bRecursive    = bRecursive;
         _bIsWatching   = true;
 
-        _workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this, MemoryProfiler::getCurrentMemoryTag() );
+        _workerThread = std::thread( &WindowsFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", directoryPath );
         return true;

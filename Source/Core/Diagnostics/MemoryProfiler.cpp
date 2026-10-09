@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
@@ -115,7 +115,6 @@ namespace sw
 
             static inline thread_local bool       t_bIsInsideProfiler = false;
             static inline atomic<MemoryProfiler*> s_activeProfiler{ nullptr };
-            static inline thread_local MemoryTag  t_currentMemoryTag = MemoryTag::Unknown;
         };
     } // namespace
 } // namespace sw
@@ -141,16 +140,6 @@ namespace sw
             }
         }
         return false;
-    }
-
-    void MemoryProfiler::setCurrentMemoryTag( MemoryTag tag )
-    {
-        MemoryProfilerInternal::t_currentMemoryTag = tag;
-    }
-
-    MemoryTag MemoryProfiler::getCurrentMemoryTag()
-    {
-        return MemoryProfilerInternal::t_currentMemoryTag;
     }
 
     uint64 MemoryProfiler::getPlatformHeapBytes()
@@ -295,6 +284,7 @@ namespace sw
 
         MemoryProfiler* pExpected{ nullptr };
         MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
+        Memory::registerAllocationTracker( this );
     }
 
     void MemoryProfiler::shutdown()
@@ -303,6 +293,7 @@ namespace sw
             return;
 
         // 훅이 더 이상 이 인스턴스를 보지 않도록 먼저 등록을 해제한다.
+        Memory::unregisterAllocationTracker( this );
         auto pExpected = this;
         MemoryProfilerInternal::s_activeProfiler.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
 

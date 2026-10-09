@@ -24,6 +24,34 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 할당마다 불리는 기록기입니다(`MemoryProfiler` 가 구현합니다). `Memory::registerAllocationTracker` 로 겁니다.
+     * @details 프로파일러는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있고, 할당기는 이 인터페이스만 압니다. 배포본에서는 불리지 않습니다(헤더가 없다).
+     */
+    class SW_API IAllocationTracker
+    {
+    public:
+        IAllocationTracker() = default;
+        /** @brief 가상 소멸자입니다. */
+        virtual ~IAllocationTracker() = default;
+
+        /** @brief 복사를 금지합니다. */
+        IAllocationTracker( const IAllocationTracker& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        IAllocationTracker& operator=( const IAllocationTracker& ) = delete;
+
+        /**
+         * @brief 할당 하나를 기록합니다. 할당한 스레드에서 바로 불립니다.
+         * @return 할당 헤더에 적어 둘 콜 스택 해시(해제 때 그대로 돌려받는다)
+         */
+        virtual uint64 recordAllocation( void* pPtr, size_t size, MemoryTag tag ) = 0;
+        /** @brief 해제 하나를 기록합니다. @p callStackHash 는 할당 때 돌려준 값입니다. */
+        virtual void recordFree( void* pPtr, size_t size, MemoryTag tag, uint64 callStackHash ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 1) Memory — allocateAligned / freeAligned 와 바이트 유틸리티(모두 static)
     // ------------------------------------------------------------------------------
@@ -81,6 +109,19 @@ namespace sw
          *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. @p pObserver 는 뗄 때까지 살아 있어야 합니다.
          */
         static void setAllocationObserver( const MemoryAllocationObserver* pObserver );
+
+        /**
+         * @brief 할당 기록기를 겁니다. 이미 다른 기록기가 걸려 있으면 아무것도 하지 않습니다.
+         * @param pTracker 뗄 때까지 살아 있어야 합니다.
+         */
+        static void registerAllocationTracker( IAllocationTracker* pTracker );
+        /** @brief @p pTracker 가 걸린 기록기이면 뗍니다. */
+        static void unregisterAllocationTracker( IAllocationTracker* pTracker );
+
+        /** @brief 현재 스레드의 할당 태그를 설정합니다. 보통은 `ScopedMemoryTag` · `SW_MEMORY_SCOPE` 로 겁니다. */
+        static void setCurrentMemoryTag( MemoryTag tag );
+        /** @brief 현재 스레드의 할당 태그를 반환합니다. 태그를 주지 않은 할당이 이 태그로 분류됩니다. */
+        static MemoryTag getCurrentMemoryTag();
     };
 } // namespace sw
 
@@ -321,3 +362,43 @@ namespace sw
     shared_ptr<T> make_shared( Args&&... args ) { return std::allocate_shared<T>( sw::Allocator<T>{}, std::forward<Args>( args )... ); }
 #endif
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 스코프 동안 현재 스레드의 할당 태그를 바꿨다가 되돌립니다.
+     * @details `kMemoryTagScopesEnabled` 가 아니면 아무 일도 하지 않습니다(TLS 를 읽지도 쓰지도 않습니다).
+     */
+    struct SW_API ScopedMemoryTag
+    {
+        /** @brief 현재 태그를 저장하고 @p tag 로 바꿉니다. */
+        explicit ScopedMemoryTag( MemoryTag tag )
+            : _prevTag{ kMemoryTagScopesEnabled ? Memory::getCurrentMemoryTag() : MemoryTag::Unknown }
+        {
+            if constexpr ( kMemoryTagScopesEnabled )
+                Memory::setCurrentMemoryTag( tag );
+        }
+
+        /** @brief 복사를 금지합니다. */
+        ScopedMemoryTag( const ScopedMemoryTag& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        ScopedMemoryTag& operator=( const ScopedMemoryTag& ) = delete;
+
+        /** @brief 들어오기 전의 태그로 되돌립니다. */
+        ~ScopedMemoryTag()
+        {
+            if constexpr ( kMemoryTagScopesEnabled )
+                Memory::setCurrentMemoryTag( _prevTag );
+        }
+
+    private:
+        MemoryTag _prevTag;
+    };
+} // namespace sw
+
+/** @brief 스코프 동안 할당을 `MemoryTag::tag` 로 분류합니다. `kMemoryTagScopesEnabled` 가 아닌 구성(배포본)에서는 아무 일도 하지 않습니다. */
+#if !defined( SW_SHIPPING )
+    #define SW_MEMORY_SCOPE( tag ) const sw::ScopedMemoryTag SW_CONCAT( _swMemoryScope_, __LINE__ )( sw::MemoryTag::tag )
+#else
+    #define SW_MEMORY_SCOPE( tag ) ( (void)0 )
+#endif

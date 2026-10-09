@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/EngineInitSequence.h"
@@ -23,7 +23,7 @@ namespace
             static EngineInitResult initialize( StartupStepRecorder& recorder )
             {
                 recorder._listInitialized.push_back( Step );
-                recorder._listInitializeMemoryTag.push_back( MemoryProfiler::getCurrentMemoryTag() );
+                recorder._listInitializeMemoryTag.push_back( Memory::getCurrentMemoryTag() );
                 recorder._listEvent.push_back( string( "I:" ) + EngineInitSequence::getStepName( Step ) );
                 return ( Step == recorder._resultStep ) ? recorder._result : EngineInitResult::Succeeded;
             }
@@ -400,7 +400,7 @@ SW_TEST_CASE( EngineInitSequenceTest, InitializeRunsUnderTheStepMemoryTag )
             ++wrongCount;
     }
     SW_EXPECT_EQUAL( 0u, wrongCount );
-    SW_EXPECT_TRUE( MemoryProfiler::getCurrentMemoryTag() == MemoryTag::Unknown );
+    SW_EXPECT_TRUE( Memory::getCurrentMemoryTag() == MemoryTag::Unknown );
     sequence.destroyAll();
 }
 

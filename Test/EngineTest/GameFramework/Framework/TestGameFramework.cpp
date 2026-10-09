@@ -2,10 +2,10 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/map.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"

@@ -7,7 +7,7 @@
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Concurrency/ThreadName.h"
     #include "Core/Log/Logger.h"
-    #include "Core/Memory/MemoryProfiler.h"
+    #include "Core/Memory/Memory.h"
     #include "Core/Process/CrashHandler.h"
 
     #include <cerrno>
@@ -192,7 +192,7 @@ namespace sw
                 return false;
             }
 
-            _thread = std::thread( &IoUringAsyncFileIoBackend::run, this, MemoryProfiler::getCurrentMemoryTag() );
+            _thread = std::thread( &IoUringAsyncFileIoBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 

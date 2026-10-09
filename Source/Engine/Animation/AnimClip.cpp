@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Resource/ResourceUtil.h"

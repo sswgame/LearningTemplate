@@ -7,7 +7,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Concurrency/ThreadName.h"
     #include "Core/Log/Logger.h"
-    #include "Core/Memory/MemoryProfiler.h"
+    #include "Core/Memory/Memory.h"
     #include "Core/Process/CrashHandler.h"
 
     #include <thread>
@@ -70,7 +70,7 @@ namespace sw
                 SW_LOG_ERROR( "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
                 return false;
             }
-            _thread = std::thread( &IocpAsyncFileIoBackend::run, this, MemoryProfiler::getCurrentMemoryTag() );
+            _thread = std::thread( &IocpAsyncFileIoBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 

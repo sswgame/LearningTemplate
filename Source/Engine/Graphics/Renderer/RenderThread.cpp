@@ -5,7 +5,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"

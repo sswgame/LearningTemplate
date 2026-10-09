@@ -7,7 +7,7 @@
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"

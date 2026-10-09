@@ -13,7 +13,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -946,13 +946,13 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
         SW_MEMORY_SCOPE( Texture );
         task  = manager.emplaceTask( "TagTask", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&taskRunCount, &taskWrongTagCount]()
          {
-            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Texture )
+            if ( sw::Memory::getCurrentMemoryTag() != sw::MemoryTag::Texture )
                 taskWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
             taskRunCount.fetch_add( 1, std::memory_order_relaxed );
         } ) );
         group = manager.emplaceParallel( "TagGroup", kCount, SW_DELEGATE_LAMBDA( sw::ParallelTaskDelegate, [&groupRunCount, &groupWrongTagCount]( uint32 )
         {
-            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Texture )
+            if ( sw::Memory::getCurrentMemoryTag() != sw::MemoryTag::Texture )
                 groupWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
             groupRunCount.fetch_add( 1, std::memory_order_relaxed );
         } ) );
@@ -990,7 +990,7 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
             {
                 workerChunkCount.fetch_add( 1, std::memory_order_acq_rel );
             }
-            if ( sw::MemoryProfiler::getCurrentMemoryTag() != sw::MemoryTag::Material )
+            if ( sw::Memory::getCurrentMemoryTag() != sw::MemoryTag::Material )
                 stackWrongTagCount.fetch_add( 1, std::memory_order_relaxed );
             stackRunCount.fetch_add( static_cast<int32>( end - start ), std::memory_order_relaxed );
         } ) );

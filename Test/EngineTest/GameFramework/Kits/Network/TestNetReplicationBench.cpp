@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"

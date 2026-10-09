@@ -2,7 +2,7 @@
 
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/vector.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 
 #include "TestFramework/TestFramework.h"
 

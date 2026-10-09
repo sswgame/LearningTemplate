@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"

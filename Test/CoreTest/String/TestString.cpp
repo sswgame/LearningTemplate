@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"

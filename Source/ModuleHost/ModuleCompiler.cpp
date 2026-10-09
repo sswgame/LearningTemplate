@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/Process.h"
 
@@ -70,7 +70,7 @@ namespace sw
             _pLiveReloadManager->notifyBuildStarted();
 #endif
 
-        _workerThread = std::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), MemoryProfiler::getCurrentMemoryTag() );
+        _workerThread = std::thread( &ModuleCompiler::runBuildThread, this, string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
     }
 

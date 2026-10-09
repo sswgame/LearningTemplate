@@ -2,7 +2,7 @@
 
 #include "Engine/Character/CharacterDataCache.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"

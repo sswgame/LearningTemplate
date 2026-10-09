@@ -4,7 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Resource/WeakInternCache.h"

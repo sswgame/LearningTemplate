@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/GameTimer.h"
 

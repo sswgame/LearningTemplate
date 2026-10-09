@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/ScenePhysics.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineConfig.h"

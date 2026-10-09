@@ -2,7 +2,7 @@
 
 #include "Engine/Resource/SpriteClipCache.h"
 
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
 #include "Engine/Resource/SharedAssetTable.h"

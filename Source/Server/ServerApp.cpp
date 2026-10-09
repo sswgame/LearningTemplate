@@ -14,7 +14,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/ShutdownSignal.h"

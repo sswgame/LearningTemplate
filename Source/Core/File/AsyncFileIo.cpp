@@ -6,7 +6,7 @@
 #include "Core/File/AsyncFileIoBackend.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Task/TaskManager.h"
 
@@ -498,7 +498,7 @@ namespace sw
 
         bool start() override
         {
-            const MemoryTag memoryTag = MemoryProfiler::getCurrentMemoryTag();
+            const MemoryTag memoryTag = Memory::getCurrentMemoryTag();
             _listThread.reserve( _threadCount );
             for ( uint32 index = 0; index < _threadCount; ++index )
             {
@@ -655,7 +655,7 @@ namespace sw
         pRequest->_offset                     = offset;
         pRequest->_size                       = size;
         pRequest->_priority                   = priority;
-        pRequest->_memoryTag                  = MemoryProfiler::getCurrentMemoryTag();
+        pRequest->_memoryTag                  = Memory::getCurrentMemoryTag();
         pRequest->_onComplete                 = onComplete;
         if ( filePath.empty() )
         {
@@ -673,7 +673,7 @@ namespace sw
         pRequest->_offset                     = offset;
         pRequest->_size                       = size;
         pRequest->_priority                   = priority;
-        pRequest->_memoryTag                  = MemoryProfiler::getCurrentMemoryTag();
+        pRequest->_memoryTag                  = Memory::getCurrentMemoryTag();
         pRequest->_onComplete                 = onComplete;
         if ( pRequest->_pFile == nullptr )
         {

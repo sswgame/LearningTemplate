@@ -4,7 +4,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Container/TopologicalSortUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 namespace sw

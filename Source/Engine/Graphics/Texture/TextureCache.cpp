@@ -6,7 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"

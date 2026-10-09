@@ -3,7 +3,7 @@
 #include "Engine/Physics/Box2D/Box2DPhysicsScene.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Physics/Box2D/Box2DUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"

@@ -8,8 +8,8 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestBench.h"

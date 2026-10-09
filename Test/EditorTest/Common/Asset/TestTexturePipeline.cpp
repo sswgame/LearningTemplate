@@ -1,8 +1,8 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"

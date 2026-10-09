@@ -3,7 +3,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
 #include "Core/Common/FourCcUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"

@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Process/CrashHandler.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -97,7 +97,7 @@ namespace sw
         }
 
         _bIsWatching  = true;
-        _workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this, MemoryProfiler::getCurrentMemoryTag() );
+        _workerThread = std::thread( &LinuxFileWatcher::workerThreadMain, this, Memory::getCurrentMemoryTag() );
 
         SW_LOG_INFO( "Started watching directory: %#", _directoryPath.c_str() );
         return true;
