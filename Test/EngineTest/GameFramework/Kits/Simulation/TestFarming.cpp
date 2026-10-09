@@ -5,7 +5,7 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"

@@ -11,11 +11,11 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 

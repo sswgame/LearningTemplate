@@ -5,7 +5,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/GameSound.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 
 #include "Games/StarSkirmish/SkirmishDirectorComponent.h"
 

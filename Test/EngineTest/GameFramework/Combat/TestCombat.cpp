@@ -6,11 +6,11 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Physics/PhysicsSystem.h"
 
-#include "GameFramework/Base/Actor/Combat/Ballistics.h"
-#include "GameFramework/Base/Actor/Combat/DamageMath.h"
+#include "GameFramework/Base/Actor/Combat/Damage/DamageMath.h"
 #include "GameFramework/Base/Actor/Combat/LockOnSelector.h"
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Ballistics.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
 
 #include "TestFramework/TestFramework.h"

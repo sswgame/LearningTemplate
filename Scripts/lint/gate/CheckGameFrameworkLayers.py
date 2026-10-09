@@ -65,6 +65,7 @@ _kSingleFolderLayers: frozenset[str] = frozenset({"Online"})
 # ------------------------------------------------------------------------------
 # 층 안 폴더의 순서 — 큰 쪽이 위다. 같은 층의 **자기보다 작은 순서**만 include 한다(같은 순서끼리도 금지).
 #   Foundation: 계산 도구 < 데이터 틀 < 게임 모듈 배선(Framework — 데이터를 읽는다).
+#   World     : 환경 · 질의(플래그) · 수명 · 곡선 < 땅(지역 그래프의 잠금이 플래그 조건식을 읽는다).
 #   Actor     : 잎 시스템 < AI(길 찾기 위) · 조종(빙의 — 카메라 뷰 타깃 · 1인칭 시점 입력 위).
 #   Gameplay  : 잎 시스템 < 퀘스트(인벤토리 위) · 외형(인벤토리 위) · 기믹(상호작용 위) < 공유 게임 상태(인벤토리 · 성장 · 퀘스트 위) ·
 #               탈것(좌석 · 타기 — 외형 위). 기믹 센서는 상호작용의 완료 수를 끌어 읽는다(Interaction 은 Gimmick 을 모른다).
@@ -73,8 +74,11 @@ _kBaseFolderOrder: dict[str, int] = {
     "Foundation/Utility": 0,
     "Foundation/Data": 1,
     "Foundation/Framework": 2,
-    "World/World": 0,
+    "World/Environment": 0,
+    "World/Query": 0,
+    "World/Lifetime": 0,
     "World/Spline": 0,
+    "World/Land": 1,
     "Actor/Input": 0,
     "Actor/Movement": 0,
     "Actor/Navigation": 0,
@@ -82,7 +86,9 @@ _kBaseFolderOrder: dict[str, int] = {
     "Actor/Camera": 0,
     "Actor/AI": 1,
     "Actor/Control": 1,
-    "UI/UI": 0,
+    "UI/Hud": 0,
+    "UI/Marker": 0,
+    "UI/Dialogue": 0,
     "Gameplay/Inventory": 0,
     "Gameplay/Progression": 0,
     "Gameplay/Match": 0,
@@ -224,7 +230,7 @@ class CheckGameFrameworkLayersGate(LintGate):
             # 모델이 뷰를 아는 방향 — 체력 시스템이 HP 바를 민다.
             "name": "Combat 이 UI 를 include",
             "files": {
-                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/UI/UI/HealthBarComponent.h"\n',
+                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/UI/Marker/HealthBarComponent.h"\n',
             },
         },
         {
@@ -242,27 +248,27 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "층 표에 없는 층",
             "files": {
-                "Source/GameFramework/Base/Stage/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Base/Stage/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "폴더 순서 표에 없는 기반 폴더",
             "files": {
-                "Source/GameFramework/Base/Actor/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Base/Actor/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             # 층으로 묶기 전 자리(Base/<폴더>/)에 파일을 다시 만든다.
             "name": "층 바로 아래 파일",
             "files": {
-                "Source/GameFramework/Base/Actor/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Base/Actor/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             # 기반 폴더를 Base/ 밖(최상위)에 다시 만든다.
             "name": "최상위에 Base · Kits 아닌 폴더",
             "files": {
-                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/GameRandom.h"\n',
+                "Source/GameFramework/Stage/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {

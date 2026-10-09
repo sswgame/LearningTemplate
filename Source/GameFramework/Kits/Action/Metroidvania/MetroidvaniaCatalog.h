@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Actor/Combat/ResourceGauge.h"
-#include "GameFramework/Base/Actor/Combat/Vitality.h"
+#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
+#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"

@@ -1,0 +1,162 @@
+#include "pch.h"
+
+#include "GameFramework/Base/Foundation/Framework/Flow/ScreenTransitionManager.h"
+
+#include "Core/Math/MathUtil.h"
+
+namespace sw
+{
+    SW_LOG_CALLER( "ScreenTransition" );
+
+    // ------------------------------------------------------------------------------
+    // 1) ScreenFade
+    // ------------------------------------------------------------------------------
+
+    ScreenFade::ScreenFade()
+        : _duration{ 0.35f }
+        , _elapsed{ 0.0f }
+        , _alpha{ 0.0f }
+        , _phase{ FadePhase::Idle }
+        , _bFinished{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    void ScreenFade::beginFadeOut( float32 duration )
+    {
+        _phase     = FadePhase::FadingOut;
+        _duration  = MathUtil::max( duration, 0.001f );
+        _elapsed   = 0.0f;
+        _alpha     = 0.0f;
+        _bFinished = SW_FALSE;
+    }
+
+    void ScreenFade::beginFadeIn( float32 duration )
+    {
+        _phase     = FadePhase::FadingIn;
+        _duration  = MathUtil::max( duration, 0.001f );
+        _elapsed   = 0.0f;
+        _alpha     = 1.0f;
+        _bFinished = SW_FALSE;
+    }
+
+    void ScreenFade::update( float32 deltaTime )
+    {
+        if ( _phase == FadePhase::Idle )
+            return;
+
+        _elapsed += deltaTime;
+        const float32 t = MathUtil::saturate( _elapsed / _duration );
+
+        if ( _phase == FadePhase::FadingOut )
+        {
+            _alpha = t;
+            if ( t >= 1.0f )
+            {
+                _phase     = FadePhase::HoldBlack;
+                _alpha     = 1.0f;
+                _bFinished = SW_TRUE;
+            }
+        }
+        else if ( _phase == FadePhase::FadingIn )
+        {
+            _alpha = 1.0f - t;
+            if ( t >= 1.0f )
+            {
+                _phase     = FadePhase::Idle;
+                _alpha     = 0.0f;
+                _bFinished = SW_TRUE;
+            }
+        }
+        else if ( _phase == FadePhase::HoldBlack )
+            _alpha = 1.0f;
+    }
+
+    bool ScreenFade::isFinished() const
+    {
+        return _bFinished == SW_TRUE;
+    }
+
+    // ------------------------------------------------------------------------------
+    // 2) ScreenTransitionManager
+    // ------------------------------------------------------------------------------
+
+    ScreenTransitionManager::ScreenTransitionManager()
+        : _fade{}
+        , _callbacks{}
+        , _pendingAction{}
+        , _pendingFadeInDuration{ 0.35f }
+        , _phase{ Phase::None }
+        , _arrReserved{ 0 }
+    {
+    }
+
+    void ScreenTransitionManager::beginTransition( Delegate<void()> onExecute, float32 fadeOutDuration, float32 fadeInDuration )
+    {
+        _pendingAction         = std::move( onExecute );
+        _pendingFadeInDuration = fadeInDuration;
+        _phase                 = Phase::FadeOut;
+
+        if ( _callbacks.onTransitionStarted.isBound() == true )
+            _callbacks.onTransitionStarted();
+
+        if ( _callbacks.setPlayerInputEnabled.isBound() == true )
+            _callbacks.setPlayerInputEnabled( false );
+
+        _fade.beginFadeOut( fadeOutDuration );
+        SW_LOG_INFO( "Begin ScreenTransition (FadeOut duration=%#s)", fadeOutDuration );
+    }
+
+    void ScreenTransitionManager::update( float32 deltaTime )
+    {
+        _fade.update( deltaTime );
+
+        if ( _phase == Phase::FadeOut )
+        {
+            if ( _fade.getPhase() == FadePhase::HoldBlack )
+            {
+                _phase = Phase::Loading;
+                SW_LOG_TRACE( "ScreenTransition: FadeOut complete, executing transition action." );
+
+                if ( _pendingAction.isBound() == true )
+                {
+                    // **사본으로 부른다.** 액션이 그 안에서 `beginTransition()` 을 부르면
+                    // `_pendingAction` 이 **실행 중에 갈린다.** 지금 돌고 있는 델리게이트를
+                    // 밟는 것이다. "다음 맵을 읽고, 그 맵이 또 전환을 건다" 는 흔한 흐름이다.
+                    const Delegate<void()> action = _pendingAction;
+                    action();
+                }
+
+                // 액션이 그 안에서 **새 전환을 시작했을 수 있다.** 그러면 이 아래 두 줄이
+                // 그 전환을 통째로 덮어써서, 새로 건 페이드 아웃이 곧바로 페이드 인으로
+                // 바뀌고 그쪽 액션은 영영 안 불린다. 내가 두고 간 상태 그대로일 때만 잇는다.
+                if ( _phase != Phase::Loading )
+                    return;
+
+                _phase = Phase::FadeIn;
+                _fade.beginFadeIn( _pendingFadeInDuration );
+            }
+        }
+        else if ( _phase == Phase::FadeIn )
+        {
+            if ( _fade.getPhase() == FadePhase::Idle )
+            {
+                _phase = Phase::None;
+                SW_LOG_INFO( "ScreenTransition: Transition complete, restoring player input." );
+
+                if ( _callbacks.setPlayerInputEnabled.isBound() == true )
+                    _callbacks.setPlayerInputEnabled( true );
+
+                if ( _callbacks.onTransitionFinished.isBound() == true )
+                    _callbacks.onTransitionFinished();
+            }
+        }
+    }
+
+    void ScreenTransitionManager::reset()
+    {
+        _phase         = Phase::None;
+        _pendingAction = nullptr;
+        _fade          = ScreenFade{};
+    }
+} // namespace sw

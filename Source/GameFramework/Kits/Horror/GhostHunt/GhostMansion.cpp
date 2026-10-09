@@ -11,8 +11,8 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/World/AreaGraph.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Land/AreaGraph.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 
 namespace sw

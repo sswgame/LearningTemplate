@@ -13,10 +13,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Actor/Control/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/ControllerComponent.h"
-#include "GameFramework/Base/Actor/Control/IntentTrackControllerComponent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/IntentTrackControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 
 namespace sw
 {

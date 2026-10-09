@@ -7,7 +7,7 @@
 #include "Engine/Object/Component/2D/BoxCollider2DComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Foundation/Utility/LifeSpanUtil.h"
+#include "GameFramework/Base/Foundation/Utility/Time/LifeSpanUtil.h"
 #include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
 
 namespace sw

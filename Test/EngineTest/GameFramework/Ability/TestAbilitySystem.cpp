@@ -17,7 +17,7 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilityTask.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
-#include "GameFramework/Base/UI/UI/HealthBarComponent.h"
+#include "GameFramework/Base/UI/Marker/HealthBarComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

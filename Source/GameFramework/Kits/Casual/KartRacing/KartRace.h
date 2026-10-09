@@ -21,10 +21,10 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartAi.h"
 #include "GameFramework/Kits/Casual/KartRacing/KartItems.h"

@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"

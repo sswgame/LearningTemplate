@@ -158,7 +158,7 @@ Recast와 Detour의 메모리 할당은 `rcAllocSetCustom` 과 `dtAllocSetCustom
 | `CharacterController` | 같은 오브젝트의 캐릭터 컨트롤러에 원하는 속도를 넘깁니다(`setMoveVelocity`). 벽과 경사는 물리가 처리합니다 |
 | `SteerOnly` | 아무것도 옮기지 않고 속도만 계산합니다 |
 
-`SteerOnly` 는 플레이어와 NPC가 같은 이동 컴포넌트로 걷게 할 때 씁니다. AI 컨트롤러(`GameFramework/Base/Actor/Control/AiControllerComponent`)가 그 속도를 이동 의도로 바꾸고, 폰의 이동 컴포넌트가 실제로 옮깁니다.
+`SteerOnly` 는 플레이어와 NPC가 같은 이동 컴포넌트로 걷게 할 때 씁니다. AI 컨트롤러(`GameFramework/Base/Actor/Control/Controller/AiControllerComponent`)가 그 속도를 이동 의도로 바꾸고, 폰의 이동 컴포넌트가 실제로 옮깁니다.
 다음 갱신은 옮겨진 위치를 받아 군중에 넣습니다.
 
 ### 베이크 기하 모으기

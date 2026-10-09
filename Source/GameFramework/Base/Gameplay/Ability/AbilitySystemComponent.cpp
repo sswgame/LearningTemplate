@@ -14,7 +14,7 @@
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemEvents.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
-#include "GameFramework/Base/UI/UI/DamageNumberComponent.h"
+#include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
 
 namespace sw
 {

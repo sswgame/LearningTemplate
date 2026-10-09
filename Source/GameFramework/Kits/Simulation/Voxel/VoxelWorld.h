@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
 

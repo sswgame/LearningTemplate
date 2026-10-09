@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/Kits/Rpg/OpenWorldWestern/WesternCatalog.h"
 
 namespace sw

@@ -14,8 +14,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
-#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 

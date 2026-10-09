@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameSound.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

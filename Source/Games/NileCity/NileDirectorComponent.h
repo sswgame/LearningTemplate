@@ -21,9 +21,9 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
-#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 

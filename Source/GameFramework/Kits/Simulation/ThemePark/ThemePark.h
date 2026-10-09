@@ -15,10 +15,10 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

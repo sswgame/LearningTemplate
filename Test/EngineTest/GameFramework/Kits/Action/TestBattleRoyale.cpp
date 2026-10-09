@@ -5,7 +5,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"

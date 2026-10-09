@@ -15,10 +15,10 @@
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
-#include "GameFramework/Base/World/World/WeatherSystem.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WeatherSystem.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

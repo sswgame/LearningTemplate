@@ -10,8 +10,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/HealthSourceComponent.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Actor/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 
 namespace sw
 {

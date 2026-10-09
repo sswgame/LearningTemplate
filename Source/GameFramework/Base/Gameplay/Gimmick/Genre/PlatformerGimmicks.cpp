@@ -13,7 +13,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Base/World/World/GravityComponent.h"
+#include "GameFramework/Base/World/Environment/GravityComponent.h"
 
 namespace sw
 {

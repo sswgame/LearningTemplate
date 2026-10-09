@@ -8,8 +8,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Base/Actor/Control/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 

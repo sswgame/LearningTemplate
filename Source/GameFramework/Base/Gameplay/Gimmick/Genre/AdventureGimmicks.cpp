@@ -12,7 +12,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
-#include "GameFramework/Base/World/World/WorldQuery.h"
+#include "GameFramework/Base/World/Query/WorldQuery.h"
 
 namespace sw
 {

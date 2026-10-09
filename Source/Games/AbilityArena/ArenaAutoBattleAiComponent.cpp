@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 

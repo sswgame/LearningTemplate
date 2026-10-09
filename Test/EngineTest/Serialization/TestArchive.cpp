@@ -18,7 +18,7 @@
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
-#include "GameFramework/Base/Foundation/Framework/SaveGame.h"
+#include "GameFramework/Base/Foundation/Framework/Save/SaveGame.h"
 
 #include "TestFramework/TestFramework.h"
 

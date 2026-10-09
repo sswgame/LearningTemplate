@@ -25,7 +25,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleLocator.h"
 #include "GameFramework/Base/Actor/AI/Schedule/SchedulePathing.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

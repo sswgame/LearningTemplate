@@ -14,7 +14,7 @@
 #include "EngineTest/LocalizationTestUtil.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/GameStrings.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameStrings.h"
 
 #include "TestFramework/TestFramework.h"
 

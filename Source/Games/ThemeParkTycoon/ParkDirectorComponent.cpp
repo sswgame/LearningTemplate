@@ -19,8 +19,8 @@
 
 #include "GameFramework/Base/Actor/Camera/OrthoCameraRigComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
-#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"

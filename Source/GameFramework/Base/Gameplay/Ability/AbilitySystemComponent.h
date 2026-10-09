@@ -17,7 +17,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/HealthSourceComponent.h"
+#include "GameFramework/Base/Actor/Combat/Health/HealthSourceComponent.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilitySystemTypes.h"
 #include "GameFramework/Base/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"

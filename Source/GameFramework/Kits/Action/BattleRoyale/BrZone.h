@@ -10,7 +10,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"
 

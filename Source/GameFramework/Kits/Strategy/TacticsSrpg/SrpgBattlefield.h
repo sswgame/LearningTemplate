@@ -13,10 +13,10 @@
 
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"
 

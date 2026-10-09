@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/World/World/GravityComponent.h"
+#include "GameFramework/Base/World/Environment/GravityComponent.h"
 
 namespace sw
 {

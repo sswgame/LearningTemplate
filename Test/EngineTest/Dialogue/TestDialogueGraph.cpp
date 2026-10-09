@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 
-#include "GameFramework/Base/UI/UI/DialogueRunnerComponent.h"
+#include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

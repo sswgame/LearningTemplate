@@ -19,8 +19,8 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameEvents.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/UI/UI/DamageNumberComponent.h"
-#include "GameFramework/Base/UI/UI/HealthBarComponent.h"
+#include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
+#include "GameFramework/Base/UI/Marker/HealthBarComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
 #include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"

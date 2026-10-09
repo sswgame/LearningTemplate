@@ -6,7 +6,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"

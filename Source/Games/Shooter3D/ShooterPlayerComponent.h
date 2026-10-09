@@ -13,10 +13,10 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Combat/Vitality.h"
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
-#include "GameFramework/Base/Actor/Combat/WeaponMath.h"
-#include "GameFramework/Base/Foundation/Framework/GameSound.h"
+#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/WeaponMath.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSocketRig.h"
 
 namespace sw

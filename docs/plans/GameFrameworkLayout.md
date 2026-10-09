@@ -31,11 +31,11 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
   AI · 기믹 · 상호작용은 월드를, 어빌리티는 데미지 숫자(UI)를, 외형은 인벤토리를, 탈것은 전투를 본다. 그래서 World 를 아래로, UI 를 Gameplay 아래로 내렸다.
 - 층 방향과 층 안 폴더 순서는 `CheckGameFrameworkLayers` 의 `_kBaseLayer` · `_kBaseFolderOrder` 가 지킨다. 이동은 `Scripts/dev/MoveGameFrameworkLayout.py --step 1`.
 
-### 2. 큰 평평한 폴더를 안쪽으로 나눈다 (낮은 위험)
-- `Framework`: `Save`(SaveGame · Autosave · ComponentStateStore) · `Flow`(GameInstanceBase · LoadingScreenController · ScreenTransitionManager) · `Presentation`(GameSound · GameStrings · MaterialTintCache).
-- `World`: `Environment`(WeatherSystem · WorldClock · GravityComponent) · `Land`(LandRegistry · AreaGraph · PropScatter) · 나머지.
-- `Utility`: 타이머 · 난수 · 격자는 중복 정리 단계에서 Core 로 내린 뒤 남은 것만.
-- `Control`(루트 25) · `Combat`(24): 하위 폴더 후보는 파일 이름을 보고 정한다.
+### 2. 큰 평평한 폴더를 안쪽으로 나눈다 — 끝남(2026-10-10)
+- `Foundation/Framework`: `Save` · `Flow` · `Presentation`, 루트에는 서비스 창구 · 이벤트 · 디렉터 베이스 · `GameStateRefs`.
+- `Foundation/Utility`: `Time` · `Random` · `Grid` · `Math`, 루트에는 `EventBuffer` · `StateArchiveUtil`. `Time` · `Random` · `Grid` 는 중복 정리 단계에서 Core 로 내릴 후보라 코드는 그대로 두었다.
+- `World` 층은 `Environment` · `Land` · `Query` · `Lifetime` · `Spline`, `UI` 층은 `Hud` · `Marker` · `Dialogue` 로 풀어 `World/World` · `UI/UI` 두 겹을 없앴다.
+- `Actor/Control`: `Pawn` · `Controller` · `Intent`, `Actor/Combat`: `Health` · `Weapon` · `Damage`.
 
 ### 3. 키트 안을 나눈다 (낮은 위험, 키트별)
 - 루트 10 파일 이상인 키트 14 개에 `Catalog/` · `State/` · `Component/` 같은 공통 하위 폴더 규칙을 정한다(전부 같은 이름). 파일이 6 개 이하인 키트는 평평하게 둔다.

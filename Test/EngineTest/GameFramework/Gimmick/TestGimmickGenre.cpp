@@ -24,7 +24,7 @@
 #include "GameFramework/Base/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
 #include "GameFramework/Base/Gameplay/Interaction/SmartObjectComponent.h"
-#include "GameFramework/Base/World/World/GravityComponent.h"
+#include "GameFramework/Base/World/Environment/GravityComponent.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"

@@ -13,7 +13,7 @@
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
-#include "GameFramework/Base/Foundation/Utility/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

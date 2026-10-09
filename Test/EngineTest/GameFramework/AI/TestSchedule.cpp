@@ -9,7 +9,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

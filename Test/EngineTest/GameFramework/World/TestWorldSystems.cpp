@@ -7,8 +7,8 @@
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Gameplay/Interaction/InteractionProgress.h"
-#include "GameFramework/Base/World/World/AreaGraph.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Land/AreaGraph.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

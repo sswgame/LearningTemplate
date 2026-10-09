@@ -3,7 +3,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Navigation/GridReachability.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgAiCommander.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgBattlefield.h"
 #include "GameFramework/Kits/Strategy/TacticsSrpg/SrpgCatalog.h"

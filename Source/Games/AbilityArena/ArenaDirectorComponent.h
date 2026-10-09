@@ -22,7 +22,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"

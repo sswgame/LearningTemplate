@@ -10,7 +10,7 @@
 
 #include "Engine/Object/GameObject/ISceneFrameSystem.h"
 
-#include "GameFramework/Base/Actor/Control/ControlIntentHistory.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntentHistory.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

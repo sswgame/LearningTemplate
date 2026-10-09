@@ -8,9 +8,9 @@
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
-#include "GameFramework/Base/World/World/WeatherSystem.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WeatherSystem.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
 

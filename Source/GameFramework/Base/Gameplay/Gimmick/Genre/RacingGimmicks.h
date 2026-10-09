@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

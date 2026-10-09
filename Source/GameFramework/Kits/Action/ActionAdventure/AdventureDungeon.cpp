@@ -11,8 +11,8 @@
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
-#include "GameFramework/Base/World/World/AreaGraph.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Land/AreaGraph.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 namespace sw
 {

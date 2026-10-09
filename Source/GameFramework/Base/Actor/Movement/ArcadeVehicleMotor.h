@@ -11,9 +11,9 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

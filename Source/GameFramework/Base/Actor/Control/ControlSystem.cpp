@@ -12,13 +12,13 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/UiSystem.h"
 
-#include "GameFramework/Base/Actor/Control/AiControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlAutomationSteps.h"
-#include "GameFramework/Base/Actor/Control/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
-#include "GameFramework/Base/Actor/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

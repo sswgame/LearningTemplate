@@ -114,9 +114,9 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 |----|------------------|------|
 | 0 `Online` | `Online`(한 폴더로 본다) | 온라인 기반 계약. Core 만 봅니다 |
 | 1 `Foundation` | `Utility`(0) · `Data`(1) · `Framework`(2) | 계산 도구, 데이터 틀, 게임 모듈의 수명 · 서비스 창구 · 저장 |
-| 2 `World` | `World` · `Spline`(0) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
+| 2 `World` | `Environment` · `Query` · `Lifetime` · `Spline`(0), `Land`(1) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
 | 3 `Actor` | `Input` · `Movement` · `Navigation` · `Combat` · `Camera`(0), `AI` · `Control`(1) | 액터 하나: 입력, 조종, 이동, 길 찾기, AI, 카메라, 전투 수치 |
-| 4 `UI` | `UI` | HUD, HP 바, 대화, 데미지 숫자 |
+| 4 `UI` | `Hud` · `Marker` · `Dialogue` | HUD, HP 바 · 데미지 숫자 · 목표 마커, 대화 |
 | 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `GameState` · `Vehicle`(2) | 그 위의 규칙 |
 
 표의 원본은 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의 `_kBaseLayer` 와 `_kBaseFolderOrder` 입니다.

@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
 

@@ -7,8 +7,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
-#include "GameFramework/Base/Foundation/Utility/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Match/TeamAttitude.h"
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"

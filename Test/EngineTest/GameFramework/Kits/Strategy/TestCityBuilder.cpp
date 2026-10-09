@@ -7,7 +7,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
 

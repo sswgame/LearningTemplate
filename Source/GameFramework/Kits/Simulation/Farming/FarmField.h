@@ -9,8 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
-#include "GameFramework/Base/World/World/LandRegistry.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

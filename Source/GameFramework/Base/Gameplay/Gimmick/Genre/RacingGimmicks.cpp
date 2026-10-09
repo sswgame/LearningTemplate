@@ -5,7 +5,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 
 namespace sw

@@ -11,9 +11,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
-#include "GameFramework/Base/Actor/Combat/Vitality.h"
+#include "GameFramework/Base/Actor/Combat/Health/Vitality.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/GameFrameworkExports.h"

@@ -10,9 +10,9 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraMode.h"
 #include "GameFramework/Base/Actor/Camera/CameraPoseUtil.h"
-#include "GameFramework/Base/Actor/Control/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
-#include "GameFramework/Base/Foundation/Utility/OrientationUtil.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Base/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

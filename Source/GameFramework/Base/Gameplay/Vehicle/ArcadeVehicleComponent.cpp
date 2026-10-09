@@ -11,8 +11,8 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsQuery.h"
 
-#include "GameFramework/Base/Actor/Control/ControlIntent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 
 namespace sw
 {

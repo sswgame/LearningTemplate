@@ -16,7 +16,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

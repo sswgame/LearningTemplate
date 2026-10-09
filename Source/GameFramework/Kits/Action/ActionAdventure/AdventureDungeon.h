@@ -16,8 +16,8 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

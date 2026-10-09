@@ -8,8 +8,8 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Base/World/World/WeatherSystem.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WeatherSystem.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
 
 #include <algorithm>
 

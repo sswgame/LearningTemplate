@@ -16,7 +16,7 @@
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/PlatformerGimmicks.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Base/Gameplay/Interaction/GrabberComponent.h"
-#include "GameFramework/Base/World/World/WorldQuery.h"
+#include "GameFramework/Base/World/Query/WorldQuery.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestTick.h"

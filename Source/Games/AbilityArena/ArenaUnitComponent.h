@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Control/CharacterPawnMovementComponent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"
 
 namespace sw
 {

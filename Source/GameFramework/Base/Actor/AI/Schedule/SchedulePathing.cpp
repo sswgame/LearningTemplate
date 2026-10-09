@@ -6,8 +6,8 @@
 
 #include "GameFramework/Base/Actor/Navigation/GridPathfinder.h"
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
-#include "GameFramework/Base/World/World/AreaGraph.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
+#include "GameFramework/Base/World/Land/AreaGraph.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 namespace sw
 {

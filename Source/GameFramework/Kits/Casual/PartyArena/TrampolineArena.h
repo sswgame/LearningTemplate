@@ -19,9 +19,9 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/FixedStepTimer.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
+#include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/Base/Gameplay/Match/MatchState.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"

@@ -13,7 +13,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Actor/Combat/ResourceGauge.h"
+#include "GameFramework/Base/Actor/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"

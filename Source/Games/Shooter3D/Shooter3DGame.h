@@ -7,8 +7,8 @@
  *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그 · 장비 아이템 · 외형 데이터(`AppearanceDatabase`)를 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #pragma once
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
-#include "GameFramework/Base/Foundation/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 

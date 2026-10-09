@@ -30,7 +30,7 @@
 #include "Engine/UI/World/WidgetComponent.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/Empty/BenchCombatComponent.h"
 #include "Games/Empty/BenchMoverComponent.h"

@@ -13,7 +13,7 @@
 
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"
 

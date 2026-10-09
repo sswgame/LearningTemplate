@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
-#include "GameFramework/Base/Foundation/Utility/FacingDir.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkMinimal.h"
 
 namespace sw

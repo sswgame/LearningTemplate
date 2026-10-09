@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
 

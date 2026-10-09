@@ -8,7 +8,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/UI/UI/TutorialHintComponent.h"
+#include "GameFramework/Base/UI/Hud/TutorialHintComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

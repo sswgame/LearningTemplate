@@ -9,7 +9,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
 
 namespace sw

@@ -8,7 +8,7 @@
  *          `-gv_parkAutoBuild=1` 이면 돈이 모이는 대로 다음 놀이기구를 짓는다(입력 없이 공원이 크는 확인).
  */
 #pragma once
-#include "GameFramework/Base/Foundation/Framework/GameInstanceBase.h"
+#include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
 
 namespace sw
 {

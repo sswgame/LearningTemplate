@@ -70,7 +70,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 #include "GameFramework/Base/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"

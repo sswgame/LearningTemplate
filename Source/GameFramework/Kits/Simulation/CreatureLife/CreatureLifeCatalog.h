@@ -12,7 +12,7 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

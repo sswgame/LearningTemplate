@@ -24,7 +24,7 @@
 #include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
-#include "GameFramework/Base/Foundation/Framework/MaterialTintCache.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
 

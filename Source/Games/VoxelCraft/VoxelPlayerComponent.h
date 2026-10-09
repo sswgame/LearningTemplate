@@ -12,8 +12,8 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Framework/GameSound.h"
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
 #include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"

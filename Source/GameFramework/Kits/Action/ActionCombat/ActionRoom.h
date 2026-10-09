@@ -13,8 +13,8 @@
 #include "Engine/Physics/AABB.h"
 #include "Engine/Physics/CollisionLayers.h"
 
-#include "GameFramework/Base/Foundation/Utility/Countdown.h"
-#include "GameFramework/Base/Foundation/Utility/FacingDir.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/GameFrameworkMinimal.h"
 #include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"

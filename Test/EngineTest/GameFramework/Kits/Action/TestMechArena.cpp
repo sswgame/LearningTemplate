@@ -7,7 +7,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
-#include "GameFramework/Base/Actor/Combat/Weapon.h"
+#include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Kits/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Kits/Action/MechArena/MechArenaWorld.h"
 #include "GameFramework/Kits/Action/MechArena/MechCatalog.h"

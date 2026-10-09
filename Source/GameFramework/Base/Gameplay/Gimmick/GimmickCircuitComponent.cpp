@@ -13,11 +13,11 @@
 #include "Engine/Resource/AssetManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
-#include "GameFramework/Base/Foundation/Framework/GameSound.h"
+#include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickSensorComponent.h"
+#include "GameFramework/Base/World/Query/WorldQuery.h"
 #include "GameFramework/Base/World/Spline/SplineComponent.h"
-#include "GameFramework/Base/World/World/WorldQuery.h"
 
 namespace sw
 {

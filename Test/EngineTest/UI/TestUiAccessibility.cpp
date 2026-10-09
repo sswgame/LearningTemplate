@@ -20,7 +20,7 @@
 
 #include "EngineTest/Text/FakeFontRasterizer.h"
 
-#include "GameFramework/Base/UI/UI/DialogueRunnerComponent.h"
+#include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
 
 #include "TestFramework/TestFramework.h"
 

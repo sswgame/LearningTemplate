@@ -11,8 +11,8 @@
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

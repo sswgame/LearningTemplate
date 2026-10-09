@@ -24,8 +24,8 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
-#include "GameFramework/Base/Actor/Control/PlayerControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"

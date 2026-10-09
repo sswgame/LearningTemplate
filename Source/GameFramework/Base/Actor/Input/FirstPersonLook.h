@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/Math.h"
 
-#include "GameFramework/Base/Foundation/Utility/RayMath.h"
+#include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw

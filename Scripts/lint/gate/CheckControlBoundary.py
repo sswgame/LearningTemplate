@@ -111,10 +111,10 @@ class CheckControlBoundaryGate(LintGate):
 
     #: 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
     mapExemption = {
-        "Source/GameFramework/Base/Actor/Control/PlayerControllerComponent.*": "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자",
+        "Source/GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.*": "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자",
         "Source/GameFramework/Base/Actor/Control/ControlSystem.*": "조종 시스템 — 플레이어 조종자에게 입력 관리자를 건넨다(스스로 액션을 읽지 않는다)",
         "Source/GameFramework/Base/Actor/Camera/*": "플레이어 뷰 카메라(시점 고르기 · 팬 · 줌) — 폰이 아니다",
-        "Source/GameFramework/Base/Foundation/Framework/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
+        "Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
         "Source/GameFramework/Base/Foundation/Data/GameSettings.h": "입력 맵 경로 설정",
         "Source/Games/NileCity/NileDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)",
         "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RtsWorld 명령)",

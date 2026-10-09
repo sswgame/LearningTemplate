@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Action/BattleRoyale/BrLoot.h"
 
-#include "GameFramework/Base/Foundation/Utility/GameRandom.h"
+#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Kits/Action/BattleRoyale/BrCatalog.h"

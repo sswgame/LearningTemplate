@@ -9,8 +9,8 @@
 #include "GameFramework/Base/Actor/AI/Director/AiDirector.h"
 #include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
-#include "GameFramework/Base/World/World/GameFlags.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Base/World/Query/GameFlags.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -2,9 +2,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/World/World/LandRegistry.h"
-#include "GameFramework/Base/World/World/WeatherSystem.h"
-#include "GameFramework/Base/World/World/WorldClock.h"
+#include "GameFramework/Base/World/Environment/WeatherSystem.h"
+#include "GameFramework/Base/World/Environment/WorldClock.h"
+#include "GameFramework/Base/World/Land/LandRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 

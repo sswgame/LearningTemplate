@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Combat/ElementChart.h"
+#include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Progression/SkillTree.h"

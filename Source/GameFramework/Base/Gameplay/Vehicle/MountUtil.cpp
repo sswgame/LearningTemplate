@@ -16,9 +16,9 @@
 #include "Engine/Physics/PhysicsQuery.h"
 #include "Engine/Physics/PhysicsShape.h"
 
-#include "GameFramework/Base/Actor/Control/CharacterPawnMovementComponent.h"
-#include "GameFramework/Base/Actor/Control/ControllerComponent.h"
-#include "GameFramework/Base/Actor/Control/PawnComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/ControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"
+#include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/RiderDownWatcherComponent.h"
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"

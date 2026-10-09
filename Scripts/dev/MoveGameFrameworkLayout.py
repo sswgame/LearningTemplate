@@ -68,8 +68,38 @@ _kListLayer: dict[str, tuple[str, ...]] = {
 }
 _kStep1: list[Dir | Files] = [Dir(f"Base/{folder}", f"Base/{layer}/{folder}") for layer, listFolder in _kListLayer.items() for folder in listFolder]
 
+# ------------------------------------------------------------------------------
+# 2 단계 — 큰 평평한 폴더를 안쪽으로 나눈다. Utility 의 Time · Random · Grid 는 Core 로 내려갈 후보라 이동만 한다(코드는 그대로).
+# World/World · UI/UI 는 층 안의 폴더로 풀어 두 겹 이름을 없앤다.
+# ------------------------------------------------------------------------------
+_kStep2: list[Dir | Files] = [
+    filesInternal("Base/Foundation/Framework", "Base/Foundation/Framework/Save", "SaveGame Autosave AutosaveTriggerComponent ComponentStateStore"),
+    filesInternal("Base/Foundation/Framework", "Base/Foundation/Framework/Flow", "GameInstanceBase IGame LoadingScreenController ScreenTransitionManager"),
+    filesInternal("Base/Foundation/Framework", "Base/Foundation/Framework/Presentation", "GameSound GameStrings MaterialTintCache"),
+    filesInternal("Base/Foundation/Utility", "Base/Foundation/Utility/Time", "Countdown FixedStepTimer TimerQueue LifeSpanUtil"),
+    filesInternal("Base/Foundation/Utility", "Base/Foundation/Utility/Random", "GameRandom ValueNoise"),
+    filesInternal("Base/Foundation/Utility", "Base/Foundation/Utility/Grid", "GridTopology FacingDir"),
+    filesInternal("Base/Foundation/Utility", "Base/Foundation/Utility/Math", "RayMath OrientationUtil"),
+    filesInternal("Base/World/World", "Base/World/Environment", "WeatherSystem WorldClock GravityComponent"),
+    filesInternal("Base/World/World", "Base/World/Land", "LandRegistry AreaGraph PropScatterComponent"),
+    filesInternal("Base/World/World", "Base/World/Query", "WorldQuery GameFlags"),
+    filesInternal("Base/World/World", "Base/World/Lifetime", "DontDestroyOnLoadComponent FadeOutComponent"),
+    filesInternal("Base/Actor/Control", "Base/Actor/Control/Pawn", "PawnComponent CharacterPawnMovementComponent"),
+    filesInternal("Base/Actor/Control", "Base/Actor/Control/Controller",
+                  "ControllerComponent PlayerControllerComponent AiControllerComponent RemoteControllerComponent IntentTrackControllerComponent"),
+    filesInternal("Base/Actor/Control", "Base/Actor/Control/Intent", "ControlIntent ControlIntentHistory"),
+    filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Health", "HealthSourceComponent HealthListenerComponent Vitality ResourceGauge"),
+    filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Weapon", "Weapon WeaponMath Ballistics"),
+    filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Damage", "DamageMath ElementChart"),
+    filesInternal("Base/UI/UI", "Base/UI/Hud", "HudControllerComponent HudViewModel TutorialHintComponent"),
+    filesInternal("Base/UI/UI", "Base/UI/Marker", "HealthBarComponent DamageNumberComponent ObjectiveMarkerComponent"),
+    filesInternal("Base/UI/UI", "Base/UI/Dialogue", "DialogueRunnerComponent"),
+]
+
+# 단계는 차례로 다시 돌린다 — 1 단계의 폴더 표(Base/World → Base/World/World)는 2 단계가 푼 뒤의 경로를 모른다.
 _kSteps: dict[int, list[Dir | Files]] = {
     1: _kStep1,
+    2: _kStep2,
 }
 
 

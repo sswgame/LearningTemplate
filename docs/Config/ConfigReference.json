@@ -2441,7 +2441,7 @@
    "default": "",
    "kind": "시험 · 배포본에도",
    "description": "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)",
-   "source": "Source/GameFramework/Base/Foundation/Framework/GameInstanceBase.cpp"
+   "source": "Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.cpp"
   },
   {
    "name": "gv_fixedFrameDelta",

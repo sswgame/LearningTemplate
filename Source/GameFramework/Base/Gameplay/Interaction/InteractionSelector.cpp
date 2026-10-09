@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/World/World/WorldQuery.h"
+#include "GameFramework/Base/World/Query/WorldQuery.h"
 
 namespace sw
 {

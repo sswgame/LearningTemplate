@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
-#include "GameFramework/Base/Foundation/Utility/GridTopology.h"
+#include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 
 namespace sw
 {
