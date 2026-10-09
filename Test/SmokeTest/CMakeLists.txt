@@ -39,6 +39,8 @@ sw_addTestExecutable(SmokeTest
 		TestSmoke.cpp
 		TestModuleHost.cpp
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleHost.cpp
+		# App 전용 층(에디터 인스턴스 · RHI 교체 뒤 재초기화)도 같은 시험이 본다 — App 은 실행 파일이라 소스로 가져온다.
+		${CMAKE_SOURCE_DIR}/Source/App/EditorModuleHost.cpp
 		# `ModuleCompiler` 는 배포 구성에도 들어간다 — `ModuleHost` 의 소스 규칙과 같다(ModuleHost 는 배포에서
 		# 핫 리로드 파일만 뺀다). `ModuleHost::shutdown` 이 구성과 무관하게 이 심볼을 부른다.
 		${CMAKE_SOURCE_DIR}/Source/ModuleHost/ModuleCompiler.cpp

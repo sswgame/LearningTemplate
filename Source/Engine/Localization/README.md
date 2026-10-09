@@ -8,7 +8,7 @@ String Table, 문화권 폴백, ICU 메시지 포맷, 의사 로컬라이제이�
 
 번역 작업에 필요한 도구도 함께 있습니다. 코드와 데이터에서 번역할 글을 모으고(수집), 번역가에게 gettext PO 파일로 넘기고 돌려받습니다(교환).
 수집과 교환 명령의 본문은 소스 트리 · 대화 에셋 · 게임 설정까지 읽는 개발 도구라 이 폴더가 아니라 에디터 모듈(`Source/Editor/Common/Localization/LocalizationTools.h`)에 있습니다.
-App 이 헤드리스로 에디터 모듈을 올려 부르므로(`ModuleHost::runLocalizationWithEditorModule`) Dev 빌드에서만 됩니다.
+App 이 헤드리스로 에디터 모듈을 올려 부르므로(`EditorModuleHost::runLocalizationWithEditorModule`) Dev 빌드에서만 됩니다.
 
 ## 머릿속 그림
 

@@ -15,7 +15,8 @@ App은 이번 빌드에 포함된 모든 타깃의 모듈을 로드하고(`Modul
 엔진이 시작될 때 `ModuleTypes` 단계에서 이미지를 먼저 로드해 리플렉션 타입만 등록하고, 인스턴스는 엔진 시작이 끝난 뒤에 만듭니다.
 씬은 `ModuleTypes` 단계 뒤에만 읽으므로, 씬 파일에 적힌 게임 컴포넌트 타입을 항상 찾을 수 있습니다.
 
-**ModuleHost** 는 게임과 에디터 인스턴스를 만들고, 정리하고, 그 API 테이블을 받습니다. 게임과 에디터는 같은 템플릿 코드로 다룹니다.
+**ModuleHost** 는 게임 인스턴스를 만들고, 정리하고, 그 API 테이블을 받습니다. 전용 서버는 이 클래스를 그대로 씁니다.
+App 은 그 위에 `EditorModuleHost`(`Source/App`)를 얹어 에디터 인스턴스를 같은 절차로 다룹니다. 게임과 에디터가 같이 쓰는 절차(ABI 대조 · API 표 받기 · 인스턴스 만들기 · 내리기)는 `ModuleInstanceUtil` 하나입니다.
 상태를 직렬화해 보존하는 일과, 모듈을 언로드하기 전에 태스크와 렌더 워커를 비우는 일(`drainRenderWorkers`)도 ModuleHost가 합니다.
 
 **LiveReloadManager** 는 개발 빌드의 핫 리로드를 맡습니다. Shipping 빌드에서는 파일째 빠집니다.
@@ -50,6 +51,8 @@ cd build/Ninja-Debug/Bin
 **고정 스텝 시간 정책은 여기 없습니다.** `FixedTimestep` 은 모듈 호스팅이 아니라 프레임 시간 정책이라, 값을 가진 `EngineConfig` 옆(`Source/Engine/Config`, 티어 3)에 있습니다. 시간 정책은 [App](../App/README.md) "시간 정책" 에 있습니다.
 
 **ModuleHost 는 실행 파일을 모릅니다.** `App/` · `Server/` 를 include 하지 않고, 실행 파일 쪽 정책은 콜백이나 인자로 받습니다(`CheckEngineLayers`).
+에디터가 끼어드는 자리는 `ModuleHost` 의 보호 가상 함수 다섯(`queryGameplayActive` · `controlsWorldPlay` · `onBeforeSuspendModules` · `suspendHostModule` · `onRenderWorkersDrained`)뿐이고, 의존은 `EditorModuleHost` → `ModuleHost` 한 방향입니다.
+파생 호스트는 소멸자에서 `shutdown()` 을 먼저 부릅니다 — 기반 소멸자 안에서는 가상 함수가 파생 쪽으로 가지 않아 에디터가 내려가지 않습니다.
 
 **프레임 중간에 에디터 상태를 다시 묻지 않습니다.** 이번 프레임의 답은 `ModuleHost::getFrameState()` 입니다. 중간에 다시 물으면 고정 스텝마다 다른 답을 볼 수 있습니다.
 
@@ -79,7 +82,8 @@ Linux에서는 SONAME을 같은 길이의 이름으로 바꿔 씁니다(`ModuleI
 
 | 파일 | 내용 |
 |---|---|
-| `ModuleHost.cpp` | 모듈 인스턴스 관리 |
+| `ModuleHost.cpp` | 게임 모듈 인스턴스 관리(App · Server 공통) |
+| `ModuleInstanceUtil.h` | 모듈 이미지 → API 표 → 인스턴스 절차(게임 · 에디터 공통) |
 | `ModuleCatalogLoader.cpp` | 모듈 매니페스트 읽기와 해석 |
 | `LiveReloadManager.cpp` | 핫 리로드 |
 | `ModuleImagePatch.cpp` | 섀도 복사본의 ABI 도장 · SONAME 바이트 |

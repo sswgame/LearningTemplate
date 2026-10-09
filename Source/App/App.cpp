@@ -2,6 +2,8 @@
 
 #include "App/App.h"
 
+#include "App/EditorModuleHost.h"
+
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -34,7 +36,6 @@
 
 #include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleCatalogLoader.h"
-#include "ModuleHost/ModuleHost.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 
@@ -98,7 +99,7 @@ namespace sw
                 commandLine.getArgument( kCheckArgument, bCheck );
                 if ( bImport == false && bCheck == false )
                     return TaskResult::NotRequested;
-                return ModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+                return EditorModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
             }
 
             /**
@@ -124,12 +125,12 @@ namespace sw
                 if ( bGatherText || bCheckText )
                 {
                     const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
-                    bSucceeded                              = ModuleHost::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                    bSucceeded                              = EditorModuleHost::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
                 }
                 if ( importPoPath.empty() == false )
-                    bSucceeded = ModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
                 if ( bExportPo )
-                    bSucceeded = ModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                    bSucceeded = EditorModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
                 return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
             }
 
@@ -362,14 +363,14 @@ namespace sw
         } ) );
 #endif
 
-        _moduleHost = make_unique<ModuleHost>();
+        _moduleHost = make_unique<EditorModuleHost>();
         return _moduleHost->loadModuleImages( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool App::startModules()
     {
         if ( _moduleHost == nullptr )
-            _moduleHost = make_unique<ModuleHost>();
+            _moduleHost = make_unique<EditorModuleHost>();
         if ( _moduleHost->initialize( getLiveReloadManager(),
                                       _engineLoop.getRhi(),
                                       _window.get(),

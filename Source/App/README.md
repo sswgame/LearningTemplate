@@ -12,6 +12,7 @@ App이 직접 하는 일은 네 가지입니다. 모듈 로더를 엔진에 연�
 새로운 시스템이 필요하면 App이 아니라 `Engine` 에 둡니다.
 
 모듈 호스트와 핫 리로드는 정적 라이브러리 [ModuleHost](../ModuleHost/README.md)(`Source/ModuleHost`)에 있습니다. 전용 서버 실행 파일(`Source/Server`)도 이 라이브러리를 같이 씁니다.
+App 은 그 위에 App 전용 층 `EditorModuleHost`(이 폴더)를 얹습니다. 에디터 인스턴스 · 에디터 리로드 · 에디터 UI · RHI 교체 뒤 재초기화 · 원본 임포트가 여기 있고, 서버는 이 파일을 링크하지 않습니다.
 언리얼에 비유하면 App은 `GuardedMain` 과 `FEngineLoop` 를 부르는 런처입니다.
 
 ## 머릿속 그림
@@ -68,8 +69,8 @@ echo $LASTEXITCODE
 - 셰이더 쿠킹은 `ShaderCookDriver::cookAllShaders` 가 합니다.
 - 씬 쿠킹은 씬과 프리팹 외에 GUID 레지스트리, VAT, 내비 표면이 있는 씬의 `.navmesh` 도 씁니다. 입력은 팩을 마운트하지 않은 소스 트리(`ContentSource::SourceTree`)입니다.
   모든 타입이 등록된 `ModuleTypes` 단계 뒤에만 쿠킹하고, 모르는 타입의 컴포넌트(`MissingComponent`)가 있는 씬은 실패로 셉니다.
-- 임포트는 App이 `ModuleHost::importAssetsWithEditorModule` 로 에디터 모듈을 인스턴스 없이 로드해서 부릅니다. 에디터가 없는 Shipping 빌드에서는 실패합니다.
-- 로컬라이제이션 도구(`--gather-text` · `--check-text` · `--import-po` · `--export-po`)도 같은 길입니다(`ModuleHost::runLocalizationWithEditorModule`, 진입점 `runEditorLocalizationTask`).
+- 임포트는 App이 `EditorModuleHost::importAssetsWithEditorModule` 로 에디터 모듈을 인스턴스 없이 로드해서 부릅니다. 에디터가 없는 Shipping 빌드에서는 실패합니다.
+- 로컬라이제이션 도구(`--gather-text` · `--check-text` · `--import-po` · `--export-po`)도 같은 길입니다(`EditorModuleHost::runLocalizationWithEditorModule`, 진입점 `runEditorLocalizationTask`).
 
 ## 작동 원리
 
@@ -81,7 +82,7 @@ echo $LASTEXITCODE
    개발 빌드에서는 `Bin/Modules/` 폴더의 모듈 매니페스트를 읽어 해석합니다(`ModuleCatalog`). 모듈 DLL 도 그 폴더에 있습니다(`ModuleImageUtil::findModuleLibraryPath`). 꺼진 모듈은 이유를 로그에 한 줄 남기고 건너뜁니다.
    그다음 `LiveReloadManager` 를 만들고, `ModuleHost::loadModuleImages` 가 GameFramework, 키트, `SWGame` 순서로 이미지를 로드해 타입만 등록합니다.
    Shipping은 모두 정적 링크라 로드할 이미지가 없습니다.
-3. 엔진 시작이 끝나면 `ModuleHost::initialize` 가 게임 인스턴스를 만들고, 그다음 에디터 인스턴스를 만듭니다. 에디터는 `-EnableEditor` 일 때만 로드합니다.
+3. 엔진 시작이 끝나면 `EditorModuleHost::initialize` 가 게임 인스턴스를 만들고, 그다음 에디터 인스턴스를 만듭니다. 에디터는 `-EnableEditor` 일 때만 로드합니다.
    씬 매니저는 마지막 요청을 따르므로, 에디터의 시작 씬(`-gv_editorStartupScene`)이 게임의 첫 씬 요청보다 우선합니다.
 4. `App::run` 이 게임 루프를 돕니다. `main.cpp` 는 초기화가 실패해도 `shutdown` 을 불러, 일부만 초기화된 서브시스템을 정해진 순서로 정리합니다.
 

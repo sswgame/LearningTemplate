@@ -2,10 +2,10 @@
  * @file App.h
  * @brief 런타임 클라이언트 앱(얇은 런처)입니다.
  *
- * 소유권: App 은 최상위 창 콜백 · ModuleHost · EngineLoop 만 들고, 나머지 엔진 핵심 로직은 모두 EngineLoop 에 맡깁니다.
+ * 소유권: App 은 최상위 창 콜백 · EditorModuleHost · EngineLoop 만 들고, 나머지 엔진 핵심 로직은 모두 EngineLoop 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
- *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 ModuleHost 가 각자 맡습니다.
+ *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleHost(공통 ModuleHost 위의 App 전용 층)가 각자 맡습니다.
  */
 #pragma once
 #include "App/RHIBackendSwitcher.h"
@@ -25,9 +25,9 @@ namespace sw
 
     class CommandLineManager;
     class DevConsoleController;
+    class EditorModuleHost;
     class IWindow;
     class LiveReloadManager;
-    class ModuleHost;
 } // namespace sw
 
 namespace sw
@@ -61,7 +61,7 @@ namespace sw
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임 · 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
         [[nodiscard]] bool loadModuleImages();
-        /** @brief ModuleHost 를 세워 게임 · 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 올렸다). */
+        /** @brief EditorModuleHost 를 세워 게임 · 에디터 인스턴스를 만듭니다(모듈 이미지는 `loadModuleImages` 가 이미 올렸다). */
         bool startModules();
         /**
          * @brief 모듈이 모두 올라온 뒤에도 가져간 곳이 없는 `-gv_*` 인자를 한 번 경고합니다.
@@ -114,7 +114,7 @@ namespace sw
          */
         unique_ptr<DevConsoleController> _devConsoleController;
 #endif
-        unique_ptr<ModuleHost> _moduleHost;
+        unique_ptr<EditorModuleHost> _moduleHost;
         /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석 — 무엇을 어떤 순서로 올릴지(Dev). */
         ModuleCatalog       _moduleCatalog;
         ModuleResolution    _moduleResolution;

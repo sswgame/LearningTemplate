@@ -3,7 +3,7 @@
 #if !defined( SW_SHIPPING )
     #include "ModuleHost/LiveReloadManager.h"
 #endif
-#include "ModuleHost/ModuleHost.h"
+#include "App/EditorModuleHost.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -43,7 +43,7 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
     RHI rhi; // 디바이스 없음 — initialize() 를 부르지 않는다.
     SW_ASSERT_FALSE( rhi.hasDevice() );
 
-    ModuleHost host;
+    EditorModuleHost host;
     // 리로드 매니저·창·렌더 스레드 없이. 개발 구성은 등록할 모듈이 없어 그대로 성공하고,
     // 배포 구성은 정적 게임 API 를 묶다가 **디바이스가 없다는 것을 알고 멈춘다.**
     SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
@@ -87,7 +87,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendStopsTheEditorSimulationBeforeTearingDown )
     const ModuleScope arrScope[] = { ModuleScope::Editor, ModuleScope::Game, ModuleScope::Both };
     for ( const ModuleScope scope : arrScope )
     {
-        ModuleHost host;
+        EditorModuleHost host;
         SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
         int32 editorToken = 0;
         host.attachEditorInstance( makeRecordingEditorApi(), &editorToken );
@@ -114,8 +114,8 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
     if ( engine::areEngineServicesBound() == false )
         SW_TEST_SKIP( "engine services are not bound in this executable" );
 
-    RHI        rhi;
-    ModuleHost host;
+    RHI              rhi;
+    EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
     EditorAPI api      = makeRecordingEditorApi();
     api.stopSimulation = nullptr;
@@ -246,8 +246,8 @@ namespace
  */
 SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCaptured )
 {
-    RHI        rhi;
-    ModuleHost host;
+    RHI              rhi;
+    EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
     int32 gameToken = 0;
     host.attachGameInstance( makeRecordingGameApi(), &gameToken );
@@ -286,8 +286,8 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
     SW_ASSERT_TRUE( variableManager.registerVariable( kGameTeardownProbe, GlobalVariableType::Int32, &s_teardownProbeValue, int32{ 0 },
                                                       "ModuleHostTest teardown probe", "", "SWGame" ) );
 
-    RHI        rhi;
-    ModuleHost host;
+    RHI              rhi;
+    EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
     EditorAPI editorApi   = makeRecordingEditorApi();
     editorApi.bindService = &recordEditorBindService;
@@ -330,8 +330,8 @@ SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
     SW_TEST_DEFENSIVE_SCOPE( "a module with another API table is rejected and says why" );
     engine::registerModuleTypes( "EditorModule" ); // 정적 등록자를 전역 헤드에서 떼어 둔다(내릴 때 걷는다)
 
-    RHI        rhi;
-    ModuleHost host;
+    RHI              rhi;
+    EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
     SW_EXPECT_TRUE( host.isEditorImageUsable( pEditorModule ) );
     SW_EXPECT_FALSE( host.isGameImageUsable( pEditorModule ) );
@@ -373,10 +373,10 @@ namespace
 SW_TEST_CASE( ModuleHostTest, AttachSeamsAreCompiledOutOfShipping )
 {
 #if defined( SW_SHIPPING )
-    SW_EXPECT_FALSE( HasAttachGameInstance<ModuleHost>::value );
-    SW_EXPECT_FALSE( HasAttachEditorInstance<ModuleHost>::value );
+    SW_EXPECT_FALSE( HasAttachGameInstance<EditorModuleHost>::value );
+    SW_EXPECT_FALSE( HasAttachEditorInstance<EditorModuleHost>::value );
 #else
-    SW_EXPECT_TRUE( HasAttachGameInstance<ModuleHost>::value );
-    SW_EXPECT_TRUE( HasAttachEditorInstance<ModuleHost>::value );
+    SW_EXPECT_TRUE( HasAttachGameInstance<EditorModuleHost>::value );
+    SW_EXPECT_TRUE( HasAttachEditorInstance<EditorModuleHost>::value );
 #endif
 }

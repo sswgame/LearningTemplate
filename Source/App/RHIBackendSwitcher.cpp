@@ -2,13 +2,13 @@
 
 #include "App/RHIBackendSwitcher.h"
 
+#include "App/EditorModuleHost.h"
+
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
-
-#include "ModuleHost/ModuleHost.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -43,7 +43,7 @@ namespace sw
     {
     }
 
-    void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, ModuleHost* pModuleHost, bool bEnableEditor )
+    void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, EditorModuleHost* pModuleHost, bool bEnableEditor )
     {
         _pEngineLoop   = pEngineLoop;
         _pModuleHost   = pModuleHost;
