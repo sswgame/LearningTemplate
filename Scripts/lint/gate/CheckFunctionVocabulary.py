@@ -13,7 +13,11 @@
                    대문자가 연달아 셋 이상이거나, 이름 **끝**이 대문자 둘 이상이면 잡는다.
                    (타입 이름 `IRHIDevice` · `AABB` 는 대상이 아니다 — 여기는 camelCase 식별자만 본다.)
   2) BannedVerb  — 한 개념에 동사 하나. `setup`/`startup`/`cleanup` → `initialize`/`shutdown`,
-                   `alloc` → `allocate`, `fetch`/`retrieve`/`lookup`/`obtain` → `get`/`find`.
+                   `alloc` → `allocate`, `fetch`/`retrieve`/`lookup`/`obtain` → `get`/`find`,
+                   `build`/`generate`/`construct` → `make`/`create`/`compute` (다시 채우면 `rebuild`/`populate`).
+     Abbreviation — 함수 이름에 줄임말을 쓰지 않는다. `appendBoolAttr` → `appendBoolAttribute`.
+                   BannedVerb · Abbreviation 은 `mapExemption` 에 오른 기존 선언을 건너뛴다(새 위반만 막는다).
+                   맨이름 `out` 매개변수는 `CheckOutParameterNames.py` 가 본다.
   3) CheckVerb   — `check*` 는 술어가 아니다. bool 이면 `is*`/`has*`, void 면 `assert*` 다.
   4) NamePair    — 같은 이름에 `string_view` 판과 `const hashed_string&` 판을 둘 다 두지 않는다.
                    `hashed_string` 은 리터럴에서 암묵 변환되므로 `f( "Jump" )` 가 **모호**해진다. 이름은
@@ -72,8 +76,17 @@ _kBannedVerb: dict[str, str] = {
     "obtain": "get / acquire",
     "calculate": "compute",
     "calc": "compute",
+    "build": "make (값) / create (소유) / compute (계산) — 변경 이력·단계면 rebuild / populate",
+    "generate": "make / create / compute",
+    "construct": "make / create",
 }
 _kBannedVerbRe = re.compile(r"^(" + "|".join(sorted(_kBannedVerb, key=len, reverse=True)) + r")(?=[A-Z0-9]|$)")
+
+# 함수 이름 안의 줄임말 → 풀어 쓴 낱말. 낱말 경계(뒤가 소문자가 아님)일 때만 본다(`Attribute` 는 걸리지 않는다).
+_kAbbreviation: dict[str, str] = {
+    "Attr": "Attribute",
+}
+_kAbbreviationRe = re.compile(r"(" + "|".join(_kAbbreviation) + r")(?![a-z])")
 
 _kCheckVerbRe = re.compile(r"^check(?=[A-Z])")
 
@@ -83,14 +96,25 @@ _kFirstParamRe = re.compile(r"\(\s*(?:const\s+)?(string_view|hashed_string)\b")
 # 5) BareGetter 가 건너뛰는 것 — 술어 접두사는 규칙이 허용하는 게터 모양이다.
 _kPredicatePrefixRe = re.compile(r"^(is|has|was|can|should)[A-Z]")
 
+def isExemptInternal(rule: str, stem: str, name: str) -> bool:
+    """`규칙:파일 이름::함수 이름` 에 맞는 예외 줄(fnmatch)이 있으면 쓴 것으로 적고 True 를 돌려줍니다."""
+    key = CheckFunctionVocabularyGate.findExemptionKey(f"{rule}:{stem}::{name}")
+    if key is None:
+        return False
+    CheckFunctionVocabularyGate.useExemption(key)
+    return True
+
+
 def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
     relativePath = filePath.relative_to(repositoryRoot).as_posix()
     try:
         text = filePath.read_text(encoding="utf-8", errors="replace")
     except OSError as exception:
         return [f"{relativePath}: 읽기 실패: {exception}"]
+    stem = filePath.stem
 
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    # 주석의 줄바꿈은 남긴다 — 지우면 보고하는 줄 번호가 주석 줄 수만큼 앞당겨진다.
+    text = re.sub(r"/\*.*?\*/", lambda comment: "\n" * comment.group(0).count("\n"), text, flags=re.S)
     violations: list[str] = []
     seenName: set[str] = set()
     mapNameToFirstParam: dict[str, set[str]] = {}
@@ -124,10 +148,17 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
             )
 
         verbMatch = _kBannedVerbRe.match(name)
-        if verbMatch is not None:
+        if verbMatch is not None and not isExemptInternal("BannedVerb", stem, name):
             verb = verbMatch.group(1)
             violations.append(
                 f"{relativePath}:{lineIndex}: [BannedVerb] '{name}' — '{verb}' 대신 '{_kBannedVerb[verb]}' 를 씁니다."
+            )
+
+        abbreviationMatch = _kAbbreviationRe.search(name)
+        if abbreviationMatch is not None and not isExemptInternal("Abbreviation", stem, name):
+            word = abbreviationMatch.group(1)
+            violations.append(
+                f"{relativePath}:{lineIndex}: [Abbreviation] '{name}' — '{word}' 대신 '{_kAbbreviation[word]}' 로 풀어 씁니다."
             )
 
         if _kCheckVerbRe.match(name):
@@ -170,6 +201,60 @@ class CheckFunctionVocabularyGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
+    # 예외 표 — **새 위반만 막는다.** 규칙 전부터 있던 선언만 올리고, 고치면 지운다(전체 훑기가 낡은 줄을 잡는다).
+    # 키는 `규칙:헤더 파일 이름(확장자 없음)::함수 이름` — 폴더를 옮겨도 그대로다. 이유가 "개명 예정 X" 이면 기계적 치환에서 X 로 바꾸고,
+    # "도메인 용어" 면 그 분야에서 그 동사가 곧 용어라 그대로 둔다.
+    mapExemption = {
+        # BannedVerb
+        "BannedVerb:FrameArenaAllocator::construct": "도메인 용어 — STL 할당자 계약(allocator_traits::construct)과 같은 이름",
+        "BannedVerb:ReflectionContainers::constructEmpty": "도메인 용어 — 주어진 메모리에 빈 컨테이너를 배치 생성(C++ 객체 수명 시작)",
+        "BannedVerb:Uuid::generate": "도메인 용어 — UUID 생성(RFC 9562)",
+        "BannedVerb:RunMap::generate": "도메인 용어 — 절차적 생성(PCG)",
+        "BannedVerb:SurfaceBvh::build": "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)",
+        "BannedVerb:ThemePark::buildRide": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
+        "BannedVerb:ParkDirectorComponent::build*": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
+        "BannedVerb:CrashContext::buildCrashReportPath": "개명 예정 makeCrashReportPath — 경로 문자열을 만든다",
+        "BannedVerb:SkeletonBoneLod::buildMasks": "개명 예정 computeMasks — 마스크를 계산한다",
+        "BannedVerb:SpriteMeshBuilder::buildSlicedVertices": "개명 예정 makeSlicedVertices — 정점 값을 만든다",
+        "BannedVerb:TerrainMeshBuilder::buildChunkVertices": "개명 예정 makeChunkVertices — 정점 값을 만든다",
+        "BannedVerb:WaterBodyComponent::build*Vertices": "개명 예정 make*Vertices — 정점 값을 만든다",
+        "BannedVerb:FrameRenderer::buildLightViewProj": "개명 예정 computeLightViewProj — 행렬을 계산한다",
+        "BannedVerb:FrameRenderer::buildViewProj": "개명 예정 computeViewProj — 행렬을 계산한다",
+        "BannedVerb:RenderGraph::buildResourceLifetimes": "개명 예정 computeResourceLifetimes — 수명 구간을 계산한다",
+        "BannedVerb:GpuSceneBuilder::buildViewTransparentOrders": "개명 예정 computeViewTransparentOrders — 정렬 순서를 계산한다",
+        "BannedVerb:ShaderBindingLayout::build": "개명 예정 make — 레이아웃 값을 돌려준다",
+        "BannedVerb:ShaderBindingLayout::buildBindPlan": "개명 예정 computeBindPlan — 바인딩 계획을 계산한다",
+        "BannedVerb:DirectionalLightComponent::buildShadow*": "개명 예정 computeShadow* — 행렬 · 투영을 계산한다",
+        "BannedVerb:ReflectionTypes::buildAncestorDisplay": "개명 예정 computeAncestorDisplay — 표시 문자열을 계산한다",
+        "BannedVerb:OpsHttpEndpoint::buildResponse": "개명 예정 makeResponse — 응답 문자열을 만든다",
+        "BannedVerb:ScheduleSystem::buildPlan": "개명 예정 makePlan — 일정 구간을 out 으로 만든다",
+        "BannedVerb:ChatWordFilter::buildFailLinks": "개명 예정 computeFailLinks — 실패 링크를 계산한다(Aho-Corasick)",
+        "BannedVerb:TestFramework::buildRunOrder": "개명 예정 makeRunOrder — 실행 순서 값을 돌려준다",
+        "BannedVerb:ParserConfig::buildArgs": "개명 예정 makeArgs — 인자 목록 값을 돌려준다",
+        "BannedVerb:DevConsoleController::buildVisibleLines": "개명 예정 collectVisibleLines — 보이는 줄을 out 으로 모은다",
+        "BannedVerb:GameObjectStore::generateNewId": "개명 예정 allocateId — 다음 id 를 내준다",
+        "BannedVerb:FrameRenderer::buildOutputPsoVariants": "개명 예정 createOutputPsoVariants — PSO 를 만들어 소유한다",
+        "BannedVerb:JoltPhysicsScene::buildShape": "개명 예정 createShape — Jolt 셰이프를 만든다(참조 소유)",
+        "BannedVerb:JoltPhysicsScene::buildSingleShape": "개명 예정 createSingleShape — Jolt 셰이프를 만든다(참조 소유)",
+        "BannedVerb:OptionsMenuScreen::buildRow": "개명 예정 createRow — 행 위젯을 만든다",
+        "BannedVerb:X11SplashWindow::buildScaledImage": "개명 예정 createScaledImage — X11 이미지를 만든다",
+        "BannedVerb:ObjectiveMarkerComponent::buildContent": "개명 예정 createContent — 위젯을 만들어 돌려준다",
+        "BannedVerb:Gpu*Pool::build": "개명 예정 rebuild — 메시 목록으로 풀을 다시 채운다(GpuMeshVertexPool · GpuMeshMorphPool · GpuVertexAnimationPool)",
+        "BannedVerb:TickRegistry::buildStages": "개명 예정 rebuildStages — 단계 표를 다시 채운다",
+        "BannedVerb:NavMeshGeometry::buildSpatialIndex": "개명 예정 rebuildSpatialIndex — 공간 색인을 다시 채운다",
+        "BannedVerb:GpuSceneBuilder::buildFromScene": "개명 예정 populateFromScene — 씬에서 프레임 데이터를 채운다",
+        "BannedVerb:GpuSceneBuilder::buildBatches": "개명 예정 populateBatches — 배치 표를 채운다",
+        "BannedVerb:FractureGraph::buildHierarchy": "개명 예정 populateHierarchy — 그래프 계층을 채운다",
+        "BannedVerb:PoseRetargetComponent::buildBasePose": "개명 예정 populateBasePose — 기준 포즈를 채운다",
+        "BannedVerb:SkeletalAnimatorComponent::buildBasePose": "개명 예정 populateBasePose — 기준 포즈를 채운다",
+        "BannedVerb:TypeRegistry::buildLookupCaches": "개명 예정 populateLookupCaches — 조회 캐시를 채운다",
+        "BannedVerb:ReflectionTypes::buildLookupCache": "개명 예정 populateLookupCache — 조회 캐시를 채운다",
+        "BannedVerb:OptionsMenuScreen::buildRows": "개명 예정 populateRows — 행 목록을 채운다",
+        "BannedVerb:AdventureElementGrid::buildRuleTable": "개명 예정 populateRuleTable — 규칙 표를 채운다",
+        "BannedVerb:GimmickCircuit::build": "개명 예정 populate — 정의로 회로를 채운다",
+        # Abbreviation
+        "Abbreviation:MaterialUtil::appendBoolAttr": "개명 예정 appendBoolAttribute — XML 특성을 붙인다",
+    }
     selfTestCases = [
         {
             "name": "두문자어가 대문자로 달린다",
@@ -194,6 +279,22 @@ class CheckFunctionVocabularyGate(LintGate):
         {
             "name": "setName 과 짝인 게터가 맨이름 name()",
             "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        const utf8* name() const;\n        void setName( const utf8* pName );\n    };\n}\n"},
+        },
+        {
+            "name": "make / create 대신 build (예외 표의 같은 함수 이름도 다른 파일에서는 잡는다)",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void build( int32 a );\n    };\n}\n"},
+        },
+        {
+            "name": "make / create 대신 generate",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static uint64 generateNewId();\n    };\n}\n"},
+        },
+        {
+            "name": "make / create 대신 construct",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void constructEmpty( void* pMemory ) const;\n    };\n}\n"},
+        },
+        {
+            "name": "함수 이름에 줄임말 Attr",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static void appendIntAttr( int32 value );\n    };\n}\n"},
         },
     ]
 

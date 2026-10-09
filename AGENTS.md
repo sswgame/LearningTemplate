@@ -70,7 +70,8 @@ cmake --build --preset Ninja-Debug
 - Raw pointers use a `p` prefix (`pObject`, `_pObject`); double pointers use
   `pp` (`_ppMember`, `ppMember`). Triple pointers or higher (`ppp`, `_ppp`, `***`) are strictly forbidden as architectural flaws.
 - Associative containers use a `map` prefix (`map`, `_map`); fixed arrays use `arr` (`_arr`); variable arrays/lists use a `list` prefix (`list`, `_list`); sets use a `unique` prefix (`unique`, `_unique`, e.g. `_uniqueIds`). Do not use a `List` suffix for variable arrays/lists. Except for the `unique` prefix (`_uniqueIds`, `outUniqueIds`) and raw byte buffers (`_bytes`, `outBytes`), all container and parameter names MUST use singular form (e.g. `_listActor`, `_listItem`, `_mapIdToName`, `outListItem`, `outListHandle`; plural forms like `_listActors` are strictly forbidden). Byte vectors (`vector<uint8>`, `vector<int8>`, `vector<utf8>`) whose names contain the word `byte`/`bytes` (e.g. `_bytes`, `_rawBytes`, `bytes`, `outBytes`, `pOutBytes`) omit the `list` prefix.
-- Function parameters use `camelCase`. Output parameters (Out-parameters) must start with an `out` prefix (`out` + PascalCase, e.g. `outValue`, `outConfig`, `outX`) with containers following `out` in singular form (`outListItem`, `outMapData`, `outArrBuffer`; `outUniqueIds` allows plural). Exceptionally, raw pointer output parameters place the `p`/`pp` prefix before `out`: `pOut...` (pointer, e.g. `pOutBuffer`, `pOutApi`, `pOutResult`), `ppOut...` (double pointer), `pInOut...` (inout pointer, e.g. `pInOutSize`). In/Out parameters use `inout` / `pInOut` (e.g. `inoutSkeleton`, `pInOutSize`).
+- Function parameters use `camelCase`. Output parameters (Out-parameters) must start with an `out` prefix (`out` + PascalCase, e.g. `outValue`, `outConfig`, `outX`) with containers following `out` in singular form (`outListItem`, `outMapData`, `outArrBuffer`; `outUniqueIds` allows plural). Exceptionally, raw pointer output parameters place the `p`/`pp` prefix before `out`: `pOut...` (pointer, e.g. `pOutBuffer`, `pOutApi`, `pOutResult`), `ppOut...` (double pointer), `pInOut...` (inout pointer, e.g. `pInOutSize`). In/Out parameters use `inout` / `pInOut` (e.g. `inoutSkeleton`, `pInOutSize`). A bare `out` names nothing and is blocked
+  in header declarations (`CheckOutParameterNames.py`).
 - Use descriptive names; do not use opaque abbreviations or loop counters such
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
@@ -93,9 +94,13 @@ cmake --build --preset Ninja-Debug
 ### Function names
 
 A reader who knows one of these names must be able to guess the rest; that is the whole point.
-`CheckFunctionVocabulary.py` enforces five checks on header declarations — acronym runs (`AcronymRun`), the banned
-verbs below (`BannedVerb`), `check*` predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`)
-and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by review.
+`CheckFunctionVocabulary.py` enforces six checks on header declarations — acronym runs (`AcronymRun`), the banned
+verbs below (`BannedVerb`), abbreviations in function names (`Abbreviation`: `Attr` → `Attribute`), `check*`
+predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`) and bare getters (`BareGetter`).
+Declarations that predate a check sit in the gate's `mapExemption` (key `<Rule>:<HeaderStem>::<function>`, the reason
+"개명 예정 <new name>" or "도메인 용어"; `CheckOutParameterNames.py` does the same for bare `out`); a new declaration is never added there unless the verb is
+the domain's own term (`Uuid::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
+reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym inside a function name is one camelCase word**, not a run of capitals: `initRhi`,
   `queryAabb`, `bindComputeUav`, `exportGameApi`, `updateUi`, `isValidUtf8`, `parseUint64`.
@@ -109,8 +114,22 @@ and bare getters (`BareGetter`). The `on*` and spell-it-out rules are kept by re
   | bring an object to life / take it down | `initialize` / `shutdown` | `setup`, `startup`, `cleanup`, `teardown` |
   | hand out and take back memory or a slot | `allocate` / `free` | `alloc`, `dealloc`, `dispose` |
   | build and return a new value | `create` (owning) · `make` (plain value) | `build`, `construct`, `generate` |
-  | look something up | `get` (always there) · `find` (may miss) | `fetch`, `retrieve`, `lookup`, `obtain` |
+  | refill state that already exists | `rebuild` (from scratch) · `populate` (fill from a source) | `build` |
+  | look something up | `get` (always there) · `find` (may miss, returns the value or a pointer) · `tryGet` (may miss, `bool` + out parameter — only when the value cannot be returned as "none") | `fetch`, `retrieve`, `lookup`, `obtain` |
+  | get, loading on a miss, shared ownership | `acquire( path )` (the caches) | `getOrLoad` |
+  | get, creating on a miss | `getOrCreate` | `findOrAdd`, `ensure` that returns something |
+  | make sure something exists, return nothing | `ensure*` | — |
   | work out a value from inputs | `compute` | `calculate`, `calc` |
+  | advance one frame / one fixed step / gather input | `update` · `step` · `poll` | — |
+
+  Other spellings of get-or-create (`findOrAdd*`, an `ensure*` that returns) are aligned when their function is touched;
+  the ~120 frame-advance declarations are not renamed in bulk — a new one follows the row.
+- **Type suffixes say what the data is for.** `Def` — authored data definition (read from a file, shared, immutable);
+  `Desc` — creation description handed to a `create*` call; `Spec` — a granted runtime instance in the Unreal GAS sense
+  (`AbilitySpec` ↔ `FGameplayAbilitySpec`; the authored data is the `Def`); `Config` — preset or deployment configuration
+  (project, server, build); `Settings` — user or game settings someone changes at run time; `Params` — call arguments
+  bundled into one value.
+- **`RT` means render thread** (profile tags `RT.Frame`, `RT.BeginFrame`). A render target is spelled `RenderTarget`.
 
 - **A name is a `hashed_string`, and only that.** Take names as `const hashed_string&`; a string literal converts
   implicitly (`isActionDown( "Jump" )`), while pointers, `string_view` and `string` stay explicit so that interning

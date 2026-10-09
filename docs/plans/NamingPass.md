@@ -21,17 +21,14 @@
 | 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) 하나만 이름을 바꾼다 |
 | 통지 동사(`notify` · `broadcast` · `publish` …) 규칙화 | 추정에 그친다 |
 
-### 문서로 해결 (이름은 두고 규칙·어휘표에 올린다)
-- `acquire`(캐시 18 곳의 `acquire( path )` — 공유 소유로 가져오며 없으면 읽는다): AGENTS 어휘표에 "get-or-load, 공유 소유"로 한 줄. 일관성이 강점이라 `getOrLoad` 로 안 바꾼다.
-- `tryGet*`(bool + out)와 `find*`: 표에 한 줄(`find` = 없을 수 있음, 값 반환 / `tryGet` = bool + out 이 필요할 때). `getOrCreate*` · `findOrAdd*` · `ensure*`: 표에 "get-or-create = `getOrCreate`, `ensure` = 존재 보장(반환 없음)"을 쓰고, 다른 철자는 건드릴 때 맞춘다.
-- 프레임 진행 동사: `update` = 프레임 진행, `step` = 고정 스텝, `poll` = 입력 수집. 선언 약 120 곳을 일괄 개명하지 않는다.
-- 접미사 표: `Def`(데이터 정의) · `Desc`(생성 서술) · `Spec`(언리얼 GAS 와 같은 뜻 — 부여된 인스턴스, 데이터 정의는 `Def`) · `Config`(프리셋·배포 설정) · `Settings`(사용자·게임 설정) · `Params` — `AbilitySpec` 은 언리얼 `FGameplayAbilitySpec` 이므로 그대로 두고, 뜻이 반대인 `BlendCurveSpec` 만 `BlendCurveDef` 로 바꾼다.
-- `RT`: 프로파일 태그에서는 render thread 만, render target 은 풀어 쓴다(`RenderTarget`).
+### 문서로 해결 — 남은 것
+어휘표(`acquire` · `tryGet` · `getOrCreate` · `ensure` · 프레임 진행 동사)와 접미사 표 · `RT` 는 AGENTS.md "Function names" 와 [코딩 규칙 예시](../04_CodingGuidelines.md) 2 절에 올렸다.
+- `BlendCurveSpec` 은 접미사 표와 뜻이 반대라 `BlendCurveDef` 로 바꾼다(`AbilitySpec` 은 언리얼 `FGameplayAbilitySpec` 이라 그대로).
 - 폴더·파일: `Serialization/Core` · `UI/Core` 는 최상위 `Source/Core` 와 이름이 겹친다 — 엔진 폴더 재배치(분할 계획 0-3)에서 같이 다룬다.
 
-### 채택 — 린트로 먼저 (효과 큰 쪽부터, 위험 낮음)
-1. `CheckFunctionVocabulary` 의 `_kBannedVerb` 에 `build` · `generate` · `construct` 를 넣고 예외 목록을 둔다(AGENTS 표는 이미 "Never"). `build*` 38 종은 헤더 선언에서 `make`/`create`/`compute` 로 바꾸고, 변경 이력·단계를 뜻하는 곳은 `rebuild`/`populate`.
-2. bare `out` 매개변수(42 곳)는 `outXxx` 로(규칙 있음), 함수 이름의 `Attr` → `Attribute`(`appendBoolAttr`).
+### 린트 예외 표 비우기
+`CheckFunctionVocabulary` 가 `build` · `generate` · `construct` 와 함수 이름의 `Attr` 를, `CheckOutParameterNames` 가 맨이름 `out` 매개변수를 새 선언에서 막는다.
+기존 선언은 두 게이트의 `mapExemption` 에 "개명 예정 <새 이름>" 으로 올라 있다 — 기계적 치환 묶음에서 바꾸고 표에서 지운다.
 
 ### 채택 — 기계적 치환 (한 묶음씩, 약어 코드모드 틀에)
 - `MatrixMath::create*` 21 개(참조 81) → `make*`: 값을 반환하므로 AGENTS 표(`create` 소유 · `make` 값)대로.
@@ -51,9 +48,8 @@
 - 사용자 결정(2026-10-10): `PhysicsWorld` 는 그대로 둔다. 나머지는 상용 엔진과 견주어 정했다 — `GameConfig` · `GameSettings` 는 그대로(언리얼도 프로젝트 설정과 게임 설정이 따로), `GameplayAbilityConfig` · `GameplayAbilityDef` 는 그대로(정의가 설정을 품는 층), `ResourceUtil` 은 `ResourcePaths` · `ResourceIO` 로 나누기(언리얼 `FPaths` / `FFileHelper`), `EditorUtil` 은 경로를 `EditorPaths` 로 빼기, `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils`). 결정은 [결정 기록](../09_Decisions.md) 5-4.
 
 ## 순서
-1. 린트와 어휘표 문서(위 "린트로 먼저", "문서로 해결") — 코드 변경이 가장 작다.
-2. 엔진 · GameFramework 폴더 재배치와 약어 철자 통일 뒤에 기계적 치환을 약어 코드모드 틀에 얹어 한 묶음씩.
-3. 구조와 얽힌 큰 이름은 건별로 사용자 결정을 받는다.
+1. 엔진 · GameFramework 폴더 재배치와 약어 철자 통일 뒤에 기계적 치환(린트 예외 표 비우기 포함)을 약어 코드모드 틀에 얹어 한 묶음씩.
+2. 구조와 얽힌 큰 이름은 건별로 사용자 결정을 받는다.
 
 ## 점검이 보지 못한 곳
 `.cpp` 지역 변수 · 람다, `Games/` · `Server/` · `Test/` · `Tools/` · HLSL · Python 스크립트는 거의 보지 않았다. 코드모드 사전 실행 때 같은 기준으로 이 범위의 식별자를 한 번 더 훑는다.

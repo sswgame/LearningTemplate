@@ -50,12 +50,31 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 | `setupDevice` · `cleanup` | `initialize` · `shutdown` | 한 개념에 동사 하나 |
 | `fetchAsset` · `lookupAsset` | `getAsset`(반드시 있다) · `findAsset`(없을 수 있다) | |
 | `calcBounds` · `calculateBounds` | `computeBounds` | |
-| `buildMesh`(새 값) | `createMesh`(소유) · `makeKey`(값) | |
+| `buildMesh`(새 값) · `generateId` · `constructShape` | `createMesh`(소유) · `makeKey`(값) | |
+| `buildStages()`(있는 표를 다시 채움) | `rebuildStages()` · `populateRows()` | 이미 있는 상태를 다시 채우면 `rebuild` · `populate` |
+| `bool findBody( handle, PhysicsBody& out )` | `PhysicsBody* findBody( handle )` · `bool tryGetBody( handle, PhysicsBody& outBody )` | `find` 는 값이나 포인터를 돌려준다. 돌려줄 "없음"이 없을 때만 `tryGet` + out |
+| `getOrLoadTexture( path )` | `acquire( path )` | 캐시에서 가져오고 없으면 읽는다(공유 소유) |
+| `findOrAddSlot( name )` | `getOrCreateSlot( name )` | get-or-create 는 `getOrCreate` |
+| `Folder* ensureFolder( path )` | `getOrCreateFolder( path )` · `void ensureFolder( path )` | `ensure` 는 존재만 보장하고 돌려주지 않는다 |
+| `tickInput()` · `fixedUpdate()` | `update( deltaTime )`(프레임 진행) · `step( fixedDelta )`(고정 스텝) · `poll()`(입력 수집) | 기존 선언은 일괄 개명하지 않는다 |
+| `appendBoolAttr( ... )` | `appendBoolAttribute( ... )` | 함수 이름에 줄임말을 쓰지 않는다 |
+| `void parse( XmlNode node, Desc& out )` | `void parse( XmlNode node, Desc& outDesc )` | out 매개변수는 채우는 것을 이름에 담는다 |
 | `bool checkValid()` | `bool isValid()` · `void assertValid()` | 술어는 질문형, `check*` 는 술어가 아니다 |
 | `name()`(짝 `setName`) | `getName()` | 맨이름 게터 금지 |
 | `Handle onLanguageChanged( callback )` | `registerLanguageChanged( callback )` | `on*` 은 "일어났다" 알림이지 등록이 아니다 |
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나 · 키가 아닌 글은 `findStringByText( string_view )` | 리터럴 호출이 모호해진다 |
 | `attr()` | `attribute()` | 줄임말은 저장소의 타입 이름이 줄일 때만 |
+
+| 접미사 | 뜻 | 예 |
+| :--- | :--- | :--- |
+| `Def` | 파일에서 읽는 데이터 정의(공유 · 불변) | `UserSettingDef` · `GameplayAbilityDef` |
+| `Desc` | `create*` 에 넘기는 생성 서술 | `PhysicsShapeDesc3D` · `SlicedSpriteDesc` |
+| `Spec` | 부여된 실행 인스턴스(언리얼 GAS `FGameplayAbilitySpec` 과 같은 뜻) | `AbilitySpec` |
+| `Config` | 프리셋 · 배포 설정(프로젝트 · 서버 · 빌드) | `GameConfig` |
+| `Settings` | 실행 중에 바꾸는 사용자 · 게임 설정 | `GameSettings` · `RunMapSettings` |
+| `Params` | 호출 인자를 한 값으로 묶은 것 | |
+
+`RT` 는 render thread 다(`RT.Frame`). render target 은 `RenderTarget` 으로 풀어 쓴다.
 
 ## 3. 헤더 · include — [AGENTS.md › C++ structure and includes](../AGENTS.md#c-structure-and-includes)
 
