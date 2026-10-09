@@ -1,6 +1,6 @@
 /**
  * @file EditorCamera.h
- * @brief 에디터 뷰포트 카메라를 찾거나 만듭니다. Scene 은 게임 카메라만 관리합니다.
+ * @brief 에디터 씬 뷰 카메라를 찾거나 만듭니다. Scene 은 게임 카메라만 관리합니다(게임 뷰는 그 게임 카메라를 그린다).
  */
 #pragma once
 
@@ -26,10 +26,5 @@ namespace sw::editor
          * @details 이미 있으면 트랜스폼을 덮어쓰지 않습니다.
          */
         static CameraComponent* ensure( Scene* pScene );
-        /**
-         * @brief Game View에 쓸 카메라를 고릅니다.
-         * @param bPlaying PIE 중이면 게임 카메라, 아니면 에디터 카메라.
-         */
-        static CameraComponent* getViewportCamera( Scene* pScene, bool bPlaying );
     };
 } // namespace sw::editor

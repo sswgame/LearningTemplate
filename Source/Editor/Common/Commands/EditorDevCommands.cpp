@@ -16,6 +16,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -196,14 +198,14 @@ namespace sw::editor
             }
 
             /**
-             * @brief 그리는 카메라 앞 6 m 에 디버그 도형 넷(상자 · 화살표 · 구 · 글자)과 오버레이 값 하나를 둡니다 — 시각화 · HUD 가 도는지 눈으로 보는 용도.
+             * @brief 씬 뷰 카메라 앞 6 m 에 디버그 도형 넷(상자 · 화살표 · 구 · 글자)과 오버레이 값 하나를 둡니다 — 씬 뷰 시각화 · 게임 뷰 HUD 가 도는지 눈으로 보는 용도.
              */
             static bool runDebugDrawDemo( const vector<string>& listArgument, string& outReply )
             {
                 uint32 seconds = 10;
                 if ( listArgument.size() > 1 || ( listArgument.size() == 1 && parseCount( listArgument[0], seconds ) == false ) )
                     return false;
-                const CameraComponent* pCamera = EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
+                const CameraComponent* pCamera = EditorCamera::ensure( editor::getActiveScene() );
                 DebugDrawQueue*        pQueue  = editor::getService<DebugDrawQueue>();
                 if ( pCamera == nullptr || pQueue == nullptr )
                     return false;
@@ -242,6 +244,27 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 패널을 열고 그 창을 앞으로 가져옵니다(같은 도크 영역의 탭이면 그 탭이 선택된다). 다음 프레임 시작에 적용됩니다. */
+            static bool runPanelFocus( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*      pContext = EditorContext::get();
+                const IEditorPanel* pPanel   = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getPanelManager().findPanel( listArgument[0] ) : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                pContext->getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
+                outReply = string{ "focusing " } + pPanel->getPanelTitle();
+                return true;
+            }
+
+            static bool runPanelClose( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( listArgument.size() != 1 || pContext == nullptr || pContext->getPanelManager().setPanelOpen( listArgument[0], false ) == false )
+                    return false;
+                outReply = "closed " + listArgument[0];
+                return true;
+            }
+
             static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
@@ -272,11 +295,14 @@ namespace sw::editor
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );
     SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
-    SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the viewport camera",
+    SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the scene view camera",
                     &EditorDevCommandsInternal::runDebugDrawDemo );
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorDevCommandsInternal::runLayoutSave );
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );
+    SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelId>", "Open a panel and bring its window (its tab) to the front on the next frame",
+                    &EditorDevCommandsInternal::runPanelFocus );
+    SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelId>", "Close a panel", &EditorDevCommandsInternal::runPanelClose );
     SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
                     &EditorDevCommandsInternal::runLayoutReset );
 } // namespace sw::editor

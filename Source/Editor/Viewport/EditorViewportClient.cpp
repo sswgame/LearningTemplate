@@ -16,7 +16,6 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -98,19 +97,13 @@ namespace sw::editor
                     pSc->setWorldTransform( world );
             }
 
-            static CameraComponent* getGameViewCamera()
+            /**
+             * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다 — 호스트가 씬 뷰를 그리는 카메라와 같다(`ImGuiEditor::getSceneViewCamera`).
+             * @details 오버레이(격자 · 시각화 · 디버그 드로우 · 피킹 · 기즈모)는 이 카메라로 투영해야 그림과 겹칩니다. Play 중에도 씬 뷰는 이 카메라다.
+             */
+            static CameraComponent* getSceneViewCamera()
             {
                 return EditorCamera::ensure( editor::getActiveScene() );
-            }
-
-            /**
-             * @brief 이번 프레임 Game View 이미지를 그린 카메라입니다 — 호스트가 그리는 카메라와 같은 규칙(`ImGuiEditor::getViewportCamera`)입니다.
-             * @details 오버레이(시각화 · 디버그 드로우 · 피킹)는 이 카메라로 투영해야 그림과 겹칩니다. Play 중에 에디터 카메라로 투영하면 게임 카메라가
-             *          그린 이미지 위에 엉뚱한 자리의 선이 그려진다.
-             */
-            static CameraComponent* getRenderedCamera()
-            {
-                return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
             }
         };
     } // namespace
@@ -174,6 +167,8 @@ namespace sw::editor
         , _listGizmoUndo{}
         , _listGizmoRelativeWorld{}
         , _arrGizmoGroupMatrix{}
+        , _lastGizmoFrame{ -1 }
+        , _lastGizmoObjectCount{ 0 }
         , _bRulerActive{ SW_FALSE }
         , _bGizmoTracking{ SW_FALSE }
         , _reservedGizmo{ 0 }
@@ -272,7 +267,7 @@ namespace sw::editor
                 processFlyInput( deltaTime );
         }
 
-        CameraComponent* pCam = EditorViewportClientInternal::getGameViewCamera();
+        CameraComponent* pCam = EditorViewportClientInternal::getSceneViewCamera();
         if ( pCam != nullptr )
         {
             pCam->setLocalPosition( _cameraPos );
@@ -370,9 +365,9 @@ namespace sw::editor
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
-        EditorSelfTestMarks::note( "gameView.canvas" ); // 시나리오가 게임 뷰 가운데를 누른다(뷰포트 피킹)
+        EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다(뷰포트 피킹 · 카메라 비행)
 
-        CameraComponent* pCamera = EditorViewportClientInternal::getRenderedCamera();
+        CameraComponent* pCamera = EditorViewportClientInternal::getSceneViewCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
 
         if ( pCamera != nullptr )
@@ -505,6 +500,8 @@ namespace sw::editor
             return;
         }
 
+        _lastGizmoFrame       = ImGui::GetFrameCount();
+        _lastGizmoObjectCount = static_cast<uint32>( listGizmo.size() );
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
         // beginFrame 이 프레임마다 끈다 — 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 끈 채면 그리기만 하고 조작을 받지 않는다.

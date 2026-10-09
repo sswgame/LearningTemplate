@@ -1027,9 +1027,8 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        // 씬의 **모든** 카메라를 맞춘다. 에디터 GameView 는 게임 카메라가 아니라 자기 뷰포트
-        // 카메라로 그리므로(App::getEditorViewCamera), 게임 카메라만 옮기면 에디터에서는
-        // 아무것도 안 보인다.
+        // 씬의 **모든** 카메라를 맞춘다. 에디터 씬 뷰는 게임 카메라가 아니라 에디터 카메라로
+        // 그리므로(App::getSceneViewCamera), 게임 카메라만 옮기면 씬 뷰에서는 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
         {
             frameOneCamera( pCam, side, spacing );

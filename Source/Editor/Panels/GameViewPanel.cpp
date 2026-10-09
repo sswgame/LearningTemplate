@@ -3,45 +3,32 @@
 #include "Editor/Panels/GameViewPanel.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorCamera.h"
 
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/GameAutoplay.h"
-#include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
-    SW_EDITOR_PANEL( GameViewPanel, "game_view", EditorPanelCategory::Core, 300 );
+    SW_EDITOR_PANEL( GameViewPanel, "game_view", EditorPanelCategory::Core, 350 );
 
     GameViewPanel::GameViewPanel()
-        : _viewportClient{}
-        , _listOverlayRow{}
-        , _listDebugCategory{}
+        : _listOverlayRow{}
         , _lastOverlayRowCount{ 0 }
-        , _stepFrameCount{ 10 }
-        , _pendingSession{ PendingSession::Play }
-        , _bConfirmUnsavedPlay{ false }
-        , _bStartAtCamera{ false }
+        , _aspect{ EditorGameViewAspect::Free }
         , _bShowOverlay{ true }
-        , _bAutoplayButtonDrawn{ false }
+        , _bNoCameraHintShown{ false }
     {
     }
 
@@ -61,243 +48,84 @@ namespace sw::editor
         if ( pEditorContext == nullptr )
             return;
 
-        const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-        const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
-        // 엔진 프레임의 실제 경과(시간 배율 · 정지와 무관) — 고정 프레임 시간(`-gv_fixedFrameDelta`)으로 도는 시나리오에서 카메라 비행이 결정적이다.
-        const float32 dt = GameTimeScale::getUnscaledDeltaTime( ImGui::GetIO().DeltaTime );
+        // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 몫이다.
+        pEditorContext->setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+        pEditorContext->setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
 
-        pEditorContext->setGameViewFocused( bFocused );
-        pEditorContext->setGameViewHovered( bHovered );
+        drawToolbar();
 
-        _viewportClient.update( dt, bFocused, bHovered );
-
-        if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
+        const ImVec2         available = ImGui::GetContentRegionAvail();
+        const EditorViewRect rect      = EditorViewTargetUtil::fitViewImage( float2{ available.x, available.y }, _aspect );
+        const uint32         width     = static_cast<uint32>( rect._size._x );
+        const uint32         height    = static_cast<uint32>( rect._size._y );
+        if ( width > 1 && height > 1 )
         {
-            drawTransportControls();
-            EditorWidgets::drawToolbarSeparator();
-            drawSessionOptions();
-            EditorWidgets::drawToolbarSeparator();
-            _viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
+            const EditorViewTarget& view = pEditorContext->getViewTarget( EditorViewKind::Game );
+            if ( EditorViewTargetUtil::needsResize( view._width, view._height, width, height ) )
+                pEditorContext->ensureViewTargetSize( EditorViewKind::Game, width, height );
         }
-        EditorChrome::endToolbar();
+        // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
+        pEditorContext->markViewDrawn( EditorViewKind::Game );
 
-        if ( _bConfirmUnsavedPlay )
+        // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
+        const ImVec2 imageSize{ rect._size._x, rect._size._y };
+        ImGui::SetCursorScreenPos( imagePos );
+        const void* pTextureId = pEditorContext->getViewTarget( EditorViewKind::Game )._pTextureId;
+        if ( pTextureId != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f )
+            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), imageSize );
+        else
+            ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
+        EditorSelfTestMarks::note( "gameView.canvas" );
+
+        // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 그림 위에 안내를 띄운다(유니티 "No cameras rendering").
+        Scene*                 pScene      = editor::getActiveScene();
+        const CameraComponent* pGameCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
+        _bNoCameraHintShown                = CameraRegistry::isUsableCamera( pGameCamera ) == false;
+        ImDrawList* pDrawList              = ImGui::GetWindowDrawList();
+        if ( _bNoCameraHintShown && imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            ImGui::OpenPopup( "##UnsavedScenePlay" );
-            _bConfirmUnsavedPlay = false;
+            constexpr const utf8* kHint    = "No camera rendering";
+            const ImVec2          hintSize = ImGui::CalcTextSize( kHint );
+            pDrawList->AddRectFilled( imagePos, ImVec2{ imagePos.x + imageSize.x, imagePos.y + imageSize.y }, IM_COL32( 0, 0, 0, 255 ) );
+            pDrawList->AddText( ImVec2{ imagePos.x + ( imageSize.x - hintSize.x ) * 0.5f, imagePos.y + ( imageSize.y - hintSize.y ) * 0.5f },
+                                IM_COL32( 220, 220, 220, 255 ), kHint );
         }
-        if ( ImGui::BeginPopupModal( "##UnsavedScenePlay", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+
+        if ( imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
-            if ( ImGui::Button( "Play" ) )
-            {
-                startSession( _pendingSession );
-                ImGui::CloseCurrentPopup();
-            }
-            EditorSelfTestMarks::note( "gameView.playAnyway" );
-            ImGui::SameLine();
-            if ( ImGui::Button( "Cancel" ) )
-                ImGui::CloseCurrentPopup();
-            ImGui::EndPopup();
-        }
-
-        const ImVec2 size = ImGui::GetContentRegionAvail();
-        if ( size.x > 1.0f && size.y > 1.0f )
-        {
-            const uint32            targetWidth  = static_cast<uint32>( MathUtil::round( size.x ) );
-            const uint32            targetHeight = static_cast<uint32>( MathUtil::round( size.y ) );
-            const EditorViewTarget& view         = pEditorContext->getViewTarget( EditorViewKind::Scene );
-            if ( EditorViewTargetUtil::needsResize( view._width, view._height, targetWidth, targetHeight ) )
-                pEditorContext->ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
-        }
-        pEditorContext->markViewDrawn( EditorViewKind::Scene );
-
-        const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        _viewportClient.draw( pEditorContext->getViewTarget( EditorViewKind::Scene )._pTextureId, float2{ size.x, size.y } );
-
-        if ( size.x > 1.0f && size.y > 1.0f )
-        {
-            const float2  barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
-            const float32 barMaxWidth = size.x - 16.0f; // 게임 뷰 양쪽에 8 px 씩 남긴다
-            _viewportClient.drawTransformBar( barAnchor, barMaxWidth );
-            drawDebugOverlay( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
-
+            drawDebugOverlay( float2{ imagePos.x, imagePos.y }, float2{ imageSize.x, imageSize.y } );
             InputManager* pInput = getService<InputManager>();
             if ( pInput != nullptr && ViewportInputOverlay::getConfig()._bEnabled == SW_TRUE )
-            {
-                InputMap* pInputMap = &pInput->getInputMap();
-                ViewportInputOverlay::draw( ImGui::GetWindowDrawList(), imagePos, size, pInput, pInputMap );
-            }
+                ViewportInputOverlay::draw( pDrawList, imagePos, imageSize, pInput, &pInput->getInputMap() );
         }
     }
 
-    void GameViewPanel::drawTransportControls()
+    void GameViewPanel::drawToolbar()
     {
-        const PlaySessionState currentState = EditorPlaySession::getState();
-        EditorContext*         pContext     = EditorContext::get();
-        const bool             bSceneDirty  = ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() );
-        const bool             bSimulating  = EditorPlaySession::isSimulating();
-
-        if ( EditorPlaySession::isPlayQueued() )
+        if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
         {
-            EditorWidgets::drawChip( "Starting", editor::style::kWarn );
-            EditorWidgets::drawTooltip( "씬을 여는 중 — 로드가 끝나면 플레이를 시작합니다 (Stop 으로 취소)" );
+            const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _aspect );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
+            if ( ImGui::BeginCombo( "##GameViewAspect", pCurrentLabel ) )
+            {
+                for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )
+                {
+                    const EditorGameViewAspect aspect = static_cast<EditorGameViewAspect>( aspectIndex );
+                    if ( ImGui::Selectable( EditorViewTargetUtil::getAspectLabel( aspect ), aspect == _aspect ) )
+                        _aspect = aspect;
+                }
+                ImGui::EndCombo();
+            }
+            EditorSelfTestMarks::note( "gameView.aspect" );
+            EditorWidgets::drawTooltip( "게임 뷰 화면 비율 — 자유(패널 전체) · 16:9(남는 쪽은 레터박스)" );
+
             ImGui::SameLine();
+            ImGui::Checkbox( "HUD", &_bShowOverlay );
+            EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 게임 화면 왼쪽 아래에 표시합니다" );
         }
-        if ( currentState == PlaySessionState::Playing && bSimulating == false )
-        {
-            EditorWidgets::drawChip( "Playing", editor::style::kOk );
-            EditorWidgets::drawTooltip( "현재 게임 실행 중" );
-        }
-        else
-        {
-            if ( ImGui::Button( "Play" ) )
-            {
-                _pendingSession = PendingSession::Play;
-                if ( bSceneDirty && EditorPlaySession::isStopped() )
-                    _bConfirmUnsavedPlay = true;
-                else
-                    startSession( PendingSession::Play );
-            }
-            EditorSelfTestMarks::note( "gameView.play" );
-        }
-        if ( currentState != PlaySessionState::Playing || bSimulating )
-            EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
-
-        ImGui::SameLine();
-        if ( currentState == PlaySessionState::Playing && bSimulating )
-        {
-            EditorWidgets::drawChip( "Simulating", editor::style::kOk );
-            EditorWidgets::drawTooltip( "월드만 도는 중 — 게임 모듈 업데이트 · 게임 입력 없이 에디터 카메라로 봅니다" );
-        }
-        else if ( ImGui::Button( "Simulate" ) )
-        {
-            _pendingSession = PendingSession::Simulate;
-            if ( bSceneDirty && EditorPlaySession::isStopped() )
-                _bConfirmUnsavedPlay = true;
-            else
-                startSession( PendingSession::Simulate );
-        }
-        if ( currentState != PlaySessionState::Playing || bSimulating == false )
-            EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음, 에디터 카메라 유지)" );
-
-        ImGui::SameLine();
-        if ( currentState == PlaySessionState::Paused )
-        {
-            EditorWidgets::drawChip( "Paused", editor::style::kWarn );
-            EditorWidgets::drawTooltip( "게임 일시 정지됨" );
-        }
-        else if ( ImGui::Button( "Pause" ) )
-            EditorPlaySession::pause();
-        if ( currentState != PlaySessionState::Paused )
-            EditorWidgets::drawTooltip( "게임 실행을 일시 정지합니다" );
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Step" ) )
-            EditorPlaySession::stepOnce();
-        EditorWidgets::drawTooltip( "게임을 정확히 1프레임 전진시킵니다" );
-
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 3.0f );
-        ImGui::InputInt( "##StepFrameCount", &_stepFrameCount, 0, 0 );
-        _stepFrameCount = MathUtil::clamp( _stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
-        EditorWidgets::drawTooltip( "'Step N' 이 진행할 프레임 수" );
-        ImGui::SameLine();
-        if ( ImGui::Button( "Step N" ) )
-            EditorPlaySession::stepFrames( static_cast<uint32>( _stepFrameCount ) );
-        EditorWidgets::drawTooltip( "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다" );
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Stop" ) )
-        {
-            EditorPlaySession::stop();
-            GameObjectManager* pObjectManager = editor::getActiveObjectManager();
-            if ( pObjectManager != nullptr && pContext != nullptr )
-                pContext->getWorkspace().remapSelectionByObjectName( pObjectManager );
-        }
-        EditorSelfTestMarks::note( "gameView.stop" );
-        EditorWidgets::drawTooltip( "게임을 중지하고 초기 씬 상태로 복원합니다" );
-    }
-
-    void GameViewPanel::drawSessionOptions()
-    {
-        ImGui::Checkbox( "Cam", &_bStartAtCamera );
-        EditorWidgets::drawTooltip( "Play 를 에디터 카메라 위치에서 시작합니다 ('Player' 태그 오브젝트, 없으면 게임 카메라를 든 오브젝트를 옮깁니다)" );
-
-        ImGui::SameLine();
-        float32 timeScale = GameTimeScale::get();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 5.0f );
-        if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
-            GameTimeScale::set( timeScale );
-        if ( ImGui::IsItemClicked( ImGuiMouseButton_Right ) )
-            GameTimeScale::set( 1.0f );
-        EditorWidgets::drawTooltip( "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다" );
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Dbg Cat" ) )
-            ImGui::OpenPopup( "##DebugDrawCategories" );
-        EditorWidgets::drawTooltip( "DebugDrawQueue 카테고리를 켜고 끕니다" );
-        drawDebugCategoryPopup();
-
-        ImGui::SameLine();
-        ImGui::Checkbox( "HUD", &_bShowOverlay );
-        EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 캔버스 왼쪽 아래에 표시합니다" );
-
-        drawAutoplayButton();
-    }
-
-    void GameViewPanel::drawAutoplayButton()
-    {
-        _bAutoplayButtonDrawn                   = false;
-        const GameAutoplayRegistration* pActive = GameAutoplay::findActive();
-        if ( pActive == nullptr )
-            return;
-        ImGui::SameLine();
-        const bool bOn = GameAutoplay::isOn();
-        if ( EditorWidgets::drawToggleButton( "Auto", bOn, editor::style::kOk ) )
-            (void)GameAutoplay::setOn( bOn == false ); // 등록은 위에서 확인했다
-        fixed_string<constant::kMaxBuffer256> tooltip;
-        formatstring( tooltip.data(), tooltip.capacity(), "%s autoplay: %s (%s, console: autoplay on|off)", pActive->_pGameName, pActive->_pDescription,
-                      pActive->_pVariableName );
-        EditorWidgets::drawTooltip( tooltip.c_str() );
-        _bAutoplayButtonDrawn = true;
-    }
-
-    void GameViewPanel::drawDebugCategoryPopup()
-    {
-        if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
-            return;
-        DebugDrawQueue* pQueue = getService<DebugDrawQueue>();
-        _listDebugCategory.clear();
-        if ( pQueue != nullptr )
-            pQueue->collectCategories( _listDebugCategory );
-        if ( _listDebugCategory.empty() )
-            ImGui::TextDisabled( "No debug draw yet." );
-        for ( const hashed_string& category : _listDebugCategory )
-        {
-            bool bEnabled = pQueue->isCategoryEnabled( category );
-            if ( ImGui::Checkbox( category.c_str(), &bEnabled ) )
-                pQueue->setCategoryEnabled( category, bEnabled );
-        }
-        ImGui::EndPopup();
-    }
-
-    void GameViewPanel::startSession( PendingSession session )
-    {
-        // 카메라에서 시작은 플레이어가 조종하는 세션만 쓴다(Simulate 는 옮길 플레이어가 없다). 멈춤에서 시작할 때만 정한다.
-        PlaySessionData* pData = EditorPlaySession::findData();
-        if ( pData != nullptr && EditorPlaySession::isStopped() )
-        {
-            const CameraComponent* pEditorCamera = EditorCamera::find( editor::getActiveScene() );
-            if ( _bStartAtCamera && pEditorCamera != nullptr )
-                EditorPlaySession::setStartPosition( *pData, pEditorCamera->getWorldPosition() );
-            else
-                EditorPlaySession::clearStartPosition( *pData );
-        }
-        if ( session == PendingSession::Simulate )
-            EditorPlaySession::simulate();
-        else
-            EditorPlaySession::play();
+        EditorChrome::endToolbar();
     }
 
     void GameViewPanel::drawDebugOverlay( const float2& canvasPos, const float2& canvasSize )
@@ -319,7 +147,7 @@ namespace sw::editor
             valueWidth = MathUtil::max( valueWidth, ImGui::CalcTextSize( row._value.c_str() ).x );
         }
 
-        // 왼쪽 아래 — 위쪽은 트랜스폼 바 · 통계 오버레이 자리다.
+        // 왼쪽 아래 — 게임 UI 가 주로 쓰는 위쪽 가장자리를 비운다.
         constexpr float32 kPadding   = 6.0f;
         constexpr float32 kColumnGap = 12.0f;
         constexpr float32 kMargin    = 8.0f;

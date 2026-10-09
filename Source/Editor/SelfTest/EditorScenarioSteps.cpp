@@ -20,6 +20,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
@@ -29,6 +30,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
@@ -595,22 +597,85 @@ namespace sw::editor
                 return true;
             }
 
-            [[nodiscard]] static bool readViewportCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
+            /** @brief 씬 뷰 카메라(에디터 카메라)의 월드 위치입니다. Play 중에도 에디터 카메라다. */
+            [[nodiscard]] static bool findSceneViewCameraPosition( float3& outPosition )
             {
-                const EditorGridStats* pStats = findRecentGridStats();
-                if ( pStats == nullptr )
+                const CameraComponent* pCamera = EditorCamera::find( editor::getActiveScene() );
+                if ( pCamera == nullptr )
                     return false;
-                outValue = static_cast<float64>( pStats->_cameraPos._x );
+                outPosition = pCamera->getWorldPosition();
                 return true;
             }
 
-            [[nodiscard]] static bool readViewportCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
+            /** @brief 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 위치입니다. */
+            [[nodiscard]] static bool findGameViewCameraPosition( float3& outPosition )
             {
-                const EditorGridStats* pStats = findRecentGridStats();
-                if ( pStats == nullptr )
+                const Scene*           pScene  = editor::getActiveScene();
+                const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;
+                if ( pCamera == nullptr )
                     return false;
-                outValue = static_cast<float64>( pStats->_cameraPos._y );
+                outPosition = pCamera->getWorldPosition();
                 return true;
+            }
+
+            [[nodiscard]] static bool readSceneViewCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                float3 position{};
+                if ( findSceneViewCameraPosition( position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._x );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSceneViewCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                float3 position{};
+                if ( findSceneViewCameraPosition( position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._y );
+                return true;
+            }
+
+            [[nodiscard]] static bool readGameViewCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                float3 position{};
+                if ( findGameViewCameraPosition( position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._x );
+                return true;
+            }
+
+            [[nodiscard]] static bool readGameViewCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                float3 position{};
+                if ( findGameViewCameraPosition( position ) == false )
+                    return false;
+                outValue = static_cast<float64>( position._y );
+                return true;
+            }
+
+            /** @brief 이번 UI 프레임에 셸이 호스트에 그 뷰 RT 를 알렸는지(`ImGuiEditor::getSceneViewport` · `getGameViewport` 와 같은 판정)입니다. */
+            [[nodiscard]] static bool readViewRequested( EditorViewKind kind, float64& outValue )
+            {
+                const EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const bool bSceneDrawn = pContext->wasViewDrawn( EditorViewKind::Scene );
+                const bool bGameDrawn  = pContext->wasViewDrawn( EditorViewKind::Game );
+                const bool bRequested  = kind == EditorViewKind::Scene ? EditorViewTargetUtil::shouldRequestSceneView( bSceneDrawn, bGameDrawn )
+                                                                       : EditorViewTargetUtil::shouldRequestGameView( bGameDrawn );
+                outValue               = ( bRequested && pContext->getViewTarget( kind )._renderTarget != 0 ) ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readSceneViewRequested( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readViewRequested( EditorViewKind::Scene, outValue );
+            }
+
+            [[nodiscard]] static bool readGameViewRequested( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readViewRequested( EditorViewKind::Game, outValue );
             }
 
             [[nodiscard]] static bool readUiScale( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -653,7 +718,15 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorGridMisplacedMajorLines, "Editor.GridMisplacedMajorLines",
                          "Major grid lines drawn off a world multiple of 5 x spacing (0 unless major lines slide with the camera)",
                          &EditorScenarioStepsInternal::readGridMisplacedMajorLines );
-    SW_AUTOMATION_PROBE( editorViewportCameraX, "Editor.ViewportCameraX", "Viewport camera world X (as the grid saw it)", &EditorScenarioStepsInternal::readViewportCameraX );
-    SW_AUTOMATION_PROBE( editorViewportCameraY, "Editor.ViewportCameraY", "Viewport camera world Y (as the grid saw it)", &EditorScenarioStepsInternal::readViewportCameraY );
+    SW_AUTOMATION_PROBE( editorSceneViewCameraX, "Editor.SceneViewCameraX", "Scene view (editor) camera world X", &EditorScenarioStepsInternal::readSceneViewCameraX );
+    SW_AUTOMATION_PROBE( editorSceneViewCameraY, "Editor.SceneViewCameraY", "Scene view (editor) camera world Y", &EditorScenarioStepsInternal::readSceneViewCameraY );
+    SW_AUTOMATION_PROBE( editorGameViewCameraX, "Editor.GameViewCameraX", "Game view camera (the active scene's game camera) world X",
+                         &EditorScenarioStepsInternal::readGameViewCameraX );
+    SW_AUTOMATION_PROBE( editorGameViewCameraY, "Editor.GameViewCameraY", "Game view camera (the active scene's game camera) world Y",
+                         &EditorScenarioStepsInternal::readGameViewCameraY );
+    SW_AUTOMATION_PROBE( editorSceneViewRequested, "Editor.SceneViewRequested", "1 when the editor asked the host to render the scene view this frame",
+                         &EditorScenarioStepsInternal::readSceneViewRequested );
+    SW_AUTOMATION_PROBE( editorGameViewRequested, "Editor.GameViewRequested", "1 when the editor asked the host to render the game view this frame (0 while its panel is hidden)",
+                         &EditorScenarioStepsInternal::readGameViewRequested );
     SW_AUTOMATION_PROBE( editorUiScale, "Editor.UiScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUiScale );
 } // namespace sw::editor

@@ -42,25 +42,25 @@ SW_TEST_CASE( EditorViewTargetUtilTest, ResizeIgnoresOnePixelJitter )
  */
 SW_TEST_CASE( EditorViewTargetUtilTest, GameViewImageFitsTheAspect )
 {
-    const EditorViewRect freeRect = EditorViewTargetUtil::fitGameViewImage( float2{ 801.6f, 400.2f }, EditorGameViewAspect::Free );
+    const EditorViewRect freeRect = EditorViewTargetUtil::fitViewImage( float2{ 801.6f, 400.2f }, EditorGameViewAspect::Free );
     SW_EXPECT_NEAR_EQUAL( 801.0f, freeRect._size._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 400.0f, freeRect._size._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, freeRect._offset._x, 1e-4f );
 
     // 넓은 영역 — 높이에 맞추고 좌우가 남는다.
-    const EditorViewRect wide = EditorViewTargetUtil::fitGameViewImage( float2{ 1000.0f, 360.0f }, EditorGameViewAspect::Ratio16x9 );
+    const EditorViewRect wide = EditorViewTargetUtil::fitViewImage( float2{ 1000.0f, 360.0f }, EditorGameViewAspect::Ratio16x9 );
     SW_EXPECT_NEAR_EQUAL( 640.0f, wide._size._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 360.0f, wide._size._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 180.0f, wide._offset._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, wide._offset._y, 1e-4f );
 
     // 좁은 영역 — 폭에 맞추고 위아래가 남는다.
-    const EditorViewRect tall = EditorViewTargetUtil::fitGameViewImage( float2{ 320.0f, 600.0f }, EditorGameViewAspect::Ratio16x9 );
+    const EditorViewRect tall = EditorViewTargetUtil::fitViewImage( float2{ 320.0f, 600.0f }, EditorGameViewAspect::Ratio16x9 );
     SW_EXPECT_NEAR_EQUAL( 320.0f, tall._size._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 180.0f, tall._size._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 210.0f, tall._offset._y, 1e-4f );
 
     // 빈 영역은 빈 사각형이다.
-    const EditorViewRect empty = EditorViewTargetUtil::fitGameViewImage( float2{ 0.0f, 0.0f }, EditorGameViewAspect::Ratio16x9 );
+    const EditorViewRect empty = EditorViewTargetUtil::fitViewImage( float2{ 0.0f, 0.0f }, EditorGameViewAspect::Ratio16x9 );
     SW_EXPECT_NEAR_EQUAL( 0.0f, empty._size._x, 1e-4f );
 }

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 ② 화면 — 게임 뷰 스크린샷이 실제 그림인지, 창을 단계별로 줄여도 도크 칸이 화면 안 · 최소 변을 지키고 창이 에디터 최소 크기(960x540)에서
+  에디터 시나리오 ② 화면 — 뷰 스크린샷이 실제 그림인지, 창을 단계별로 줄여도 도크 칸이 화면 안 · 최소 변을 지키고 창이 에디터 최소 크기(960x540)에서
   멈추는지, UI 배율 1.5 에서도 같은지, 테마를 바꾸고 Classic Dark 의 테마 대화상자에서 스와치를 누르면 액센트가 바뀌는지.
-  스크린샷은 에디터 UI 가 아니라 게임 뷰 그림이다(Present 캡처가 게임 뷰 렌더 타깃을 복사한다).
+  스크린샷은 에디터 UI 가 아니라 주 출력 그림이다(Present 캡처가 주 출력 렌더 타깃을 복사한다). 기본 배치는 Scene 탭이 앞이라 씬 뷰 그림이다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/screen.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOnEveryBackend 가 백엔드마다 돈다)
 -->
 <Scenario name="editor.screen" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
-	<!-- 1) 게임 뷰 스크린샷 — 까만 빈 그림이 아니다 -->
+	<!-- 1) 뷰 스크린샷 — 까만 빈 그림이 아니다 -->
 	<At frame="90"><Screenshot file="gameview.ppm"/></At>
 	<At frame="91"><ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02"/></At>
 
@@ -20,7 +20,7 @@
 	<At frame="175"><ResizeWindow width="640" height="360"/></At>
 	<At frame="185"><EditorExpectDockLayout/></At>
 
-	<!-- 3) UI 배율 1.5 — 큰 창에서 칸이 그대로 화면 안에 들고, 게임 뷰가 그대로 그려진다 -->
+	<!-- 3) UI 배율 1.5 — 큰 창에서 칸이 그대로 화면 안에 들고, 뷰가 그대로 그려진다 -->
 	<At frame="190"><ResizeWindow width="1600" height="900"/><Variable name="gv_editorUiScale" value="1.5"/></At>
 	<At frame="200">
 		<Expect probe="Editor.UiScale" near="1.5" tolerance="0.01"/>

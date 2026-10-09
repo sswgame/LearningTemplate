@@ -22,7 +22,7 @@ namespace sw::editor
     /** @brief 에디터 패널 카테고리 */
     enum class EditorPanelCategory : uint8
     {
-        Core = 0, // Hierarchy, Inspector, GameView, Console, Profiler, ContentBrowser
+        Core = 0, // Hierarchy, Inspector, Scene, Game, Console, Profiler, ContentBrowser
         Tool,     // Sequencer, AnimGraph, DialogueGraph, Prefab, TileMap, SpriteClip
         Custom    // 게임/플러그인 커스텀 패널
     };

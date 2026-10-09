@@ -50,6 +50,10 @@ namespace sw::editor
         void frameSelected();
 
         const float3& getCameraPosition() const { return _cameraPos; }
+        /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다(-1 = 아직 없음). 에디터 자체 시험(`sceneView.gridAndGizmoDraw`)이 읽습니다. */
+        int32 getLastGizmoFrame() const { return _lastGizmoFrame; }
+        /** @brief 그 프레임에 기즈모를 단 오브젝트 수입니다. */
+        uint32 getLastGizmoObjectCount() const { return _lastGizmoObjectCount; }
 
     private:
         void processFlyInput( float32 deltaTime );
@@ -99,6 +103,8 @@ namespace sw::editor
         vector<ObjectSnapshot>   _listGizmoUndo;
         vector<float4x4>         _listGizmoRelativeWorld;
         float32                  _arrGizmoGroupMatrix[16];
+        int32                    _lastGizmoFrame;
+        uint32                   _lastGizmoObjectCount;
         uint8                    _bRulerActive   : 1;
         uint8                    _bGizmoTracking : 1;
         [[maybe_unused]] uint8   _reservedGizmo  : 6;

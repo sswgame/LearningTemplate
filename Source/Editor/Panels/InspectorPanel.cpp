@@ -145,7 +145,7 @@ namespace sw::editor
         EditorWorkspace& ws = pContext->getWorkspace();
         if ( ws.getSelectedObjectId() == 0 )
         {
-            EditorWidgets::drawEmptyHint( "Nothing selected. Pick in Game View or use Hierarchy." );
+            EditorWidgets::drawEmptyHint( "Nothing selected. Pick in the Scene view or use Hierarchy." );
             return;
         }
 

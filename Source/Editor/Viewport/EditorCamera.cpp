@@ -70,15 +70,4 @@ namespace sw::editor
         return pCreated;
     }
 
-    CameraComponent* EditorCamera::getViewportCamera( Scene* pScene, bool bPlaying )
-    {
-        if ( pScene == nullptr )
-            return nullptr;
-        if ( bPlaying )
-        {
-            pScene->ensureDefaultCameras();
-            return pScene->getActiveGameCamera();
-        }
-        return ensure( pScene );
-    }
 } // namespace sw::editor

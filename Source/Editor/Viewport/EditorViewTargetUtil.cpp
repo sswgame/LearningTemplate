@@ -17,7 +17,7 @@ namespace sw::editor
         return MathUtil::abs( deltaWidth ) > 1 || MathUtil::abs( deltaHeight ) > 1;
     }
 
-    EditorViewRect EditorViewTargetUtil::fitGameViewImage( const float2& available, EditorGameViewAspect aspect )
+    EditorViewRect EditorViewTargetUtil::fitViewImage( const float2& available, EditorGameViewAspect aspect )
     {
         EditorViewRect rect{};
         const float32  width  = MathUtil::floor( MathUtil::max( available._x, 0.0f ) );

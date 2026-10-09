@@ -33,6 +33,10 @@ namespace sw::editor
             /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
+            /** @brief 씬 뷰 / 게임 뷰 분리 전의 배치가 든 창 줄입니다. 이 줄만 있고 새 창(Scene)이 없으면 옛 배치입니다. */
+            static constexpr const utf8* kLegacyGameViewWindow = "[Window][Game View]";
+            static constexpr const utf8* kSceneViewWindow      = "[Window][Scene]";
+
             /** @brief @p pNode 아래 모든 노드의 기준 크기(SizeRef)에 @p scale 을 곱합니다. */
             static void scaleSizeRef( ImGuiDockNode* pNode, const ImVec2& scale )
             {
@@ -171,8 +175,14 @@ namespace sw::editor
         // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 든다. 다음 프레임이 그 크기를 기준으로 지금 창에 비율을 맞춘다.
         _lastDockspaceWidth  = 0.0f;
         _lastDockspaceHeight = 0.0f;
-        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다).
-        _bApplied = SW_TRUE;
+        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 단, 씬 뷰 / 게임 뷰 분리 전에 저장한 배치는
+        // 새 창(Scene · Game)과 지금 도크스페이스를 모른다 — 기본 배치로 다시 짓는다.
+        const bool bLegacyLayout = _pendingLayoutIni.find( EditorDockLayoutInternal::kLegacyGameViewWindow ) != string::npos &&
+                                   _pendingLayoutIni.find( EditorDockLayoutInternal::kSceneViewWindow ) == string::npos;
+        if ( bLegacyLayout )
+            SW_LOG_WARNING( "The layout predates the Scene / Game view split - applying the default dock layout" );
+        _bApplied      = bLegacyLayout ? SW_FALSE : SW_TRUE;
+        _bResetDefault = bLegacyLayout ? SW_TRUE : SW_FALSE;
         _pendingLayoutIni.clear();
         _pendingLayoutVisibility.clear();
     }
@@ -315,8 +325,9 @@ namespace sw::editor
         if ( ( io.ConfigFlags & ImGuiConfigFlags_DockingEnable ) == 0 )
             return;
 
-        const ImGuiViewport* pViewport   = ImGui::GetMainViewport();
-        const ImGuiID        dockspaceId = ImGui::GetID( "EditorMainDockSpace_v6" );
+        const ImGuiViewport* pViewport = ImGui::GetMainViewport();
+        // 이름의 판 번호는 기본 배치의 창이 바뀔 때 올린다 — 저장된 imgui.ini 의 옛 도크 트리를 버리고 기본 배치를 다시 짓는다(v7: Game View → Scene · Game).
+        const ImGuiID dockspaceId = ImGui::GetID( "EditorMainDockSpace_v7" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
         scaleDockSizeToViewport( dockspaceId );
         (void)ImGui::DockSpaceOverViewport( dockspaceId, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
@@ -398,7 +409,9 @@ namespace sw::editor
         EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
         EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 
-        EditorDockLayoutInternal::dockCheckedWindow( "Game View", dockMain );
+        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 먼저 붙인 Scene 이 선택된 탭이다.
+        EditorDockLayoutInternal::dockCheckedWindow( "Scene", dockMain );
+        EditorDockLayoutInternal::dockCheckedWindow( "Game", dockMain );
         EditorDockLayoutInternal::dockCheckedWindow( "Profiler", dockMain );
         EditorAssetTypeRegistry::forEachToolPanelTitle( [dockMain]( const utf8* pTitle )
         {

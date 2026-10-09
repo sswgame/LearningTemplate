@@ -53,7 +53,7 @@ namespace sw
         void clear();
         /**
          * @brief 그릴 줄을 키 사전순으로 채웁니다. float 은 소수 둘째 자리까지, 빈 문자열 값은 뺍니다.
-         * @details 에디터 Game View 가 이 줄을 캔버스 왼쪽 위에 그립니다. 판정이 여기 있어 ImGui 없이 시험합니다.
+         * @details 에디터 게임 뷰가 이 줄을 게임 화면 왼쪽 아래에 그립니다. 판정이 여기 있어 ImGui 없이 시험합니다.
          */
         void collectRows( vector<DebugOverlayRow>& outListRow ) const;
     };

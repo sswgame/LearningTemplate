@@ -65,7 +65,7 @@ namespace sw::editor
         virtual std::unique_lock<mutex> lockSubmissionQueue() { return std::unique_lock<mutex>{}; }
 
         // ------------------------------------------------------------------------------
-        // 2) ImGui 텍스처 (Game View RT 등)
+        // 2) ImGui 텍스처 (씬 뷰 · 게임 뷰 RT 등)
         // ------------------------------------------------------------------------------
         /** @brief RHI 텍스처를 ImGui 텍스처 ID로 등록하고 핸들을 반환합니다. */
         virtual void* registerTexture( RHITextureHandle texture ) = 0;

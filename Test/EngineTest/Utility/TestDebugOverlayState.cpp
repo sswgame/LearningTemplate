@@ -8,7 +8,7 @@ using namespace sw;
 
 /**
  * @brief [DebugOverlayStateTest] 그릴 줄은 키 사전순이고 float 은 소수 둘째 자리, 빈 문자열은 빠진다
- * @details 에디터 Game View 가 이 줄을 그대로 그린다. 순서가 맵 순서를 따르면 프레임마다 줄이 뒤섞여 읽을 수 없다.
+ * @details 에디터 게임 뷰가 이 줄을 그대로 그린다. 순서가 맵 순서를 따르면 프레임마다 줄이 뒤섞여 읽을 수 없다.
  */
 SW_TEST_CASE( DebugOverlayStateTest, RowsAreSortedAndFormatted )
 {

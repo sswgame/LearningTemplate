@@ -15,30 +15,30 @@
 
 	<!-- 옆으로 3 m 남짓 — 정수 · 5 의 배수가 아닌 자리에 선다 -->
 	<At frame="70">
-		<EditorClick mark="gameView.canvas" button="1" state="down"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 		<EditorKey key="D" state="down"/>
 	</At>
 	<At frame="112">
 		<EditorKey key="D" state="up"/>
-		<EditorClick mark="gameView.canvas" button="1" state="up"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	</At>
 	<At frame="120">
-		<Expect probe="Editor.ViewportCameraX" atLeast="3"/>
+		<Expect probe="Editor.SceneViewCameraX" atLeast="3"/>
 		<Expect probe="Editor.GridStep" near="1" tolerance="0.001"/>
 		<Expect probe="Editor.GridMisplacedMajorLines" equals="0"/>
 	</At>
 
 	<!-- 높이 올라가면 간격이 10 m 가 된다 -->
 	<At frame="130">
-		<EditorClick mark="gameView.canvas" button="1" state="down"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="down"/>
 		<EditorKey key="Shift+E" state="down"/>
 	</At>
 	<At frame="590">
 		<EditorKey key="Shift+E" state="up"/>
-		<EditorClick mark="gameView.canvas" button="1" state="up"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="up"/>
 	</At>
 	<At frame="600">
-		<Expect probe="Editor.ViewportCameraY" atLeast="100"/>
+		<Expect probe="Editor.SceneViewCameraY" atLeast="100"/>
 		<Expect probe="Editor.GridStep" near="10" tolerance="0.001"/>
 		<Expect probe="Editor.GridMisplacedMajorLines" equals="0"/>
 	</At>

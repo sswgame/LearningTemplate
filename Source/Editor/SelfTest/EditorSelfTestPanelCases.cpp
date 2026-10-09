@@ -492,7 +492,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // gameView.overlaysStayInsideTheCanvas — 게임 뷰의 격자 · 시각화 선은 캔버스(게임 뷰 이미지) 사각형으로 잘린다(D22)
+            // sceneView.overlaysStayInsideTheCanvas — 씬 뷰의 격자 · 시각화 선은 캔버스(씬 뷰 이미지) 사각형으로 잘린다(D22)
             // 창 그리기 목록에 자르지 않고 그려 카메라 절두체 선이 탭 · 툴바 위까지 뻗었다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
             // 한다(격자는 기본으로 켜져 있다).
             // ------------------------------------------------------------------------------
@@ -523,7 +523,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runOverlaysStayInsideTheCanvas( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kGameViewTitle   = "Game View";
+                constexpr const utf8* kSceneViewTitle  = "Scene";
                 constexpr uint32      kMaxStepCount    = 30;
                 constexpr float32     kRectTolerancePx = 1.0f;
 
@@ -533,7 +533,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    ImGui::SetWindowFocus( kGameViewTitle ); // 가운데 탭이 다른 도구로 가려져 있으면 게임 뷰가 그려지지 않는다
+                    ImGui::SetWindowFocus( kSceneViewTitle ); // 가운데 탭이 게임 뷰 · 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -545,9 +545,9 @@ namespace sw::editor
                 const ImDrawList*       pCanvasDrawList{ nullptr };
                 for ( const ImGuiWindow* pWindow : imguiContext.Windows )
                 {
-                    const bool bInGameView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
-                                             StringUtil::startsWith( pWindow->RootWindow->Name, kGameViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
-                    if ( bInGameView && view._pTextureId != nullptr && findImageCommand( pWindow->DrawList, textureId, imageCommandIndex, canvasRect ) )
+                    const bool bInSceneView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
+                                              StringUtil::equals( pWindow->RootWindow->Name, kSceneViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
+                    if ( bInSceneView && view._pTextureId != nullptr && findImageCommand( pWindow->DrawList, textureId, imageCommandIndex, canvasRect ) )
                     {
                         pCanvasDrawList = pWindow->DrawList;
                         break;
@@ -557,7 +557,7 @@ namespace sw::editor
                 {
                     if ( stepIndex < kMaxStepCount )
                         return EditorSelfTestStep::Continue;
-                    (void)context.expect( false, "the game view image was not drawn" );
+                    (void)context.expect( false, "the scene view image was not drawn" );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -570,7 +570,7 @@ namespace sw::editor
                                        MathUtil::abs( clip.z - canvasRect.z ) <= kRectTolerancePx && MathUtil::abs( clip.w - canvasRect.w ) <= kRectTolerancePx;
                     bFoundCanvasClip = bFoundCanvasClip || bSame;
                 }
-                (void)context.expect( bFoundCanvasClip, "the viewport overlays are not clipped to the game view canvas" );
+                (void)context.expect( bFoundCanvasClip, "the viewport overlays are not clipped to the scene view canvas" );
                 return EditorSelfTestStep::Done;
             }
         };
@@ -585,5 +585,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
     SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::runToolWindowsOpenAtAUsableSize );
-    SW_EDITOR_SELF_TEST( GameViewOverlayClip, "gameView.overlaysStayInsideTheCanvas", 1500, &EditorSelfTestPanelCasesInternal::runOverlaysStayInsideTheCanvas );
+    SW_EDITOR_SELF_TEST( SceneViewOverlayClip, "sceneView.overlaysStayInsideTheCanvas", 1500, &EditorSelfTestPanelCasesInternal::runOverlaysStayInsideTheCanvas );
 } // namespace sw::editor

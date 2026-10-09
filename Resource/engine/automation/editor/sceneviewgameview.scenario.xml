@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 씬 뷰(에디터 카메라)와 게임 뷰(게임 카메라)는 다른 패널 · 다른 그림이다(V1).
+  ① 기본 배치는 Scene 탭이 앞이라 게임 뷰를 그리지 않는다(RT 요청 0). ② 씬 뷰 캔버스로 에디터 카메라를 옮긴 뒤 두 뷰를 찍으면 그림이 다르다.
+  ③ Play 중에도 씬 뷰는 에디터 카메라 그대로이고 그 카메라로 둘러볼 수 있다 — 게임 뷰만 게임 카메라를 따른다. ④ Stop 뒤 정지로 돌아온다.
+  ⑤ 게임 뷰 패널을 닫으면 게임 뷰 RT 요청이 0 이다.
+  스크린샷은 주 출력이다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰(격자 · 기즈모는 ImGui 오버레이라 어느 쪽 그림에도 없다).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/sceneviewgameview.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOnEveryBackend 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.sceneviewgameview" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<!-- 두 뷰 RT 를 같은 배치에서 새로 짓게 창 크기를 크게 두 번 바꾼다 — RT 는 1 픽셀 떨림을 무시하므로(EditorViewTargetUtil::needsResize) 앞 배치의 RT 가
+	     1 픽셀 다른 채 남으면 두 스크린샷 크기가 달라 differentFrom 이 비교하지 못한다 -->
+	<At frame="10"><ResizeWindow width="1440" height="810"/></At>
+	<At frame="20"><ResizeWindow width="1600" height="900"/></At>
+
+	<!-- ① 기본은 씬 뷰만 보인다 -->
+	<At frame="60">
+		<Expect probe="Editor.SceneViewRequested" equals="1"/>
+		<Expect probe="Editor.GameViewRequested" equals="0"/>
+	</At>
+
+	<!-- ② 에디터 카메라를 옆으로 3 m 남짓 옮긴다(오른쪽 단추 + D) -->
+	<At frame="70">
+		<EditorClick mark="sceneView.canvas" button="1" state="down"/>
+		<EditorKey key="D" state="down"/>
+	</At>
+	<At frame="112">
+		<EditorKey key="D" state="up"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="up"/>
+	</At>
+	<At frame="120">
+		<Expect probe="Editor.SceneViewCameraX" atLeast="3"/>
+		<Screenshot file="sceneview.ppm"/>
+	</At>
+	<At frame="125"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="140">
+		<Expect probe="Editor.GameViewRequested" equals="1"/>
+		<Expect probe="Editor.SceneViewRequested" equals="0"/>
+		<Screenshot file="gameview.ppm"/>
+	</At>
+	<At frame="145">
+		<ExpectImage file="gameview.ppm" metric="meanLuma" atLeast="0.02"/>
+		<ExpectImage file="gameview.ppm" metric="differentFrom" reference="sceneview.ppm" atLeast="0.01"/>
+	</At>
+
+	<!-- ③ Play — 게임 뷰는 게임 카메라, 씬 뷰는 에디터 카메라 그대로 -->
+	<At frame="150"><EditorClick mark="toolbar.play"/></At>
+	<At frame="190">
+		<Expect probe="Editor.PlayState" equals="1"/>
+		<Expect probe="Editor.GameViewRequested" equals="1"/>
+		<Expect probe="Editor.SceneViewCameraX" atLeast="3"/>
+	</At>
+	<At frame="195"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="210">
+		<Expect probe="Editor.SceneViewRequested" equals="1"/>
+		<Expect probe="Editor.GameViewRequested" equals="0"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="down"/>
+		<EditorKey key="D" state="down"/>
+	</At>
+	<At frame="252">
+		<EditorKey key="D" state="up"/>
+		<EditorClick mark="sceneView.canvas" button="1" state="up"/>
+	</At>
+	<At frame="260">
+		<Expect probe="Editor.PlayState" equals="1"/>
+		<Expect probe="Editor.SceneViewCameraX" atLeast="6"/>
+	</At>
+
+	<!-- ④ Stop — 정지로 돌아오고 씬 뷰는 계속 씬 뷰다 -->
+	<At frame="270"><EditorClick mark="toolbar.stop"/></At>
+	<At frame="300">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<Expect probe="Editor.SceneViewRequested" equals="1"/>
+	</At>
+
+	<!-- ⑤ 게임 뷰를 닫아도 요청은 0, 다시 열면 1 -->
+	<At frame="305"><DevCommand line="panel.close game_view"/></At>
+	<At frame="320"><Expect probe="Editor.GameViewRequested" equals="0"/></At>
+	<At frame="325"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="345"><Expect probe="Editor.GameViewRequested" equals="1"/></At>
+	<At frame="350"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="360"><Pass/></At>
+</Scenario>

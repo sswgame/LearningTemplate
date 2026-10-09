@@ -144,7 +144,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
                 {
-                    pContext->getNotificationManager().push( "Play", "Scene has unsaved changes. Use Game View Play to confirm.",
+                    pContext->getNotificationManager().push( "Play", "Scene has unsaved changes. Use the toolbar Play to confirm.",
                                                              NotificationType::Warning );
                     return;
                 }

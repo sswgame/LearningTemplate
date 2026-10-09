@@ -396,7 +396,7 @@ namespace sw
         _userSettingsHost.shutdown();
 
         // 헤드리스 부팅은 창도 ModuleHost 도 만들지 않는다. 아래 경로가 그대로 아무 일도 하지 않으므로 모드 분기를 따로 두지 않는다.
-        // 주의: ModuleHost 를 EngineLoop 보다 먼저 종료해야 한다. 에디터 shutdown 이 Game View RT 를 해제할 때 RenderThread 와
+        // 주의: ModuleHost 를 EngineLoop 보다 먼저 종료해야 한다. 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 해제할 때 RenderThread 와
         // RHI 디바이스를 쓴다.
         BLOCK( "Game / Editor 인스턴스 정리" )
         {

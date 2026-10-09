@@ -8,10 +8,10 @@
 	<At frame="60"><DevCommand line="editor scene.new"/></At>
 	<At frame="75"><EditorClick mark="hierarchy.create"/></At>
 	<At frame="90"><Expect probe="Editor.UndoCount" equals="1"/></At>
-	<At frame="95"><EditorClick mark="gameView.play"/></At>
-	<At frame="110"><EditorClick mark="gameView.playAnyway"/></At>
+	<At frame="95"><EditorClick mark="toolbar.play"/></At>
+	<At frame="110"><EditorClick mark="toolbar.playAnyway"/></At>
 	<At frame="140"><Expect probe="Editor.PlayState" equals="1"/></At>
-	<At frame="145"><EditorClick mark="gameView.stop"/></At>
+	<At frame="145"><EditorClick mark="toolbar.stop"/></At>
 	<At frame="170">
 		<Expect probe="Editor.PlayState" equals="0"/>
 		<Expect probe="Editor.UndoCount" equals="1"/>

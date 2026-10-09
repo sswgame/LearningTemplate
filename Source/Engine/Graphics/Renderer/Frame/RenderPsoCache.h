@@ -132,7 +132,7 @@ namespace sw
         mutable mutex                                                     _layoutMutex;
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
         unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
-        /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPsoKey). 백버퍼와 GameView RT 는 포맷이 다를 수 있습니다.
+        /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPsoKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
         unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPso;
         unordered_map<uint64, MaterialPsoEntry>       _mapMaterialPso;
         mutable mutex                                 _materialPsoMutex;

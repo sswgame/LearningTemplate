@@ -1122,7 +1122,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "Game View 렌더 타깃 클리어 색"
+       "description": "씬 뷰 · 게임 뷰 렌더 타깃 클리어 색"
       },
       {
        "name": "_listBaseFont",

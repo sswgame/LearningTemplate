@@ -665,7 +665,7 @@ namespace sw
         /**
          * @brief 주 출력에 그리는 패스(Present · Canvas)의 PSO 를 **대상 포맷별로** 찾습니다.
          * @details 주 출력의 대상은 둘입니다. 백버퍼(포맷은 디바이스가 실제로 채택한 값, Vulkan 은 서피스가
-         *          B8G8R8A8 만 줄 수 있습니다)와 에디터 GameView RT(R8G8B8A8)입니다. PSO 의 렌더 타깃 포맷이 대상과
+         *          B8G8R8A8 만 줄 수 있습니다)와 에디터 씬 뷰 · 게임 뷰 RT(R8G8B8A8)입니다. PSO 의 렌더 타깃 포맷이 대상과
          *          다르면 Vulkan 은 렌더 패스 비호환으로 검증 레이어가 매 프레임 웁니다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 타깃에서 뽑아 PSO 캐시 키로 삼는 것과 같은 방식입니다.
          *          주 출력에 그리는 패스(Present · Canvas)만 그 키가 포맷이라 (패스, 포맷) 맵 하나로 충분합니다.

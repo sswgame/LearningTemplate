@@ -325,17 +325,17 @@ namespace sw::editor
                 }
             }
 
-            static void expectTransformBarStaysInGameView( EditorSelfTestContext& context )
+            static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )
             {
                 constexpr float32  kPixelTolerance = 1.0f;
-                const ImGuiWindow* pGameView       = ImGui::FindWindowByName( "Game View" );
+                const ImGuiWindow* pSceneView      = ImGui::FindWindowByName( "Scene" );
                 const ImGuiWindow* pBar            = ImGui::FindWindowByName( "##EditorTransformBar" );
-                if ( pGameView == nullptr || pBar == nullptr || pBar->Active == false )
-                    return; // 이번 프레임에 바를 그리지 않았다(게임 뷰가 가려졌다)
-                (void)context.expect( pBar->Viewport == pGameView->Viewport, "the transform bar left the game view's viewport (it became its own OS window)" );
-                (void)context.expect( pBar->Pos.x >= pGameView->Pos.x - kPixelTolerance &&
-                                          pBar->Pos.x + pBar->Size.x <= pGameView->Pos.x + pGameView->Size.x + kPixelTolerance,
-                                      "the transform bar is wider than the game view" );
+                if ( pSceneView == nullptr || pBar == nullptr || pBar->Active == false )
+                    return; // 이번 프레임에 바를 그리지 않았다(씬 뷰가 가려졌다)
+                (void)context.expect( pBar->Viewport == pSceneView->Viewport, "the transform bar left the scene view's viewport (it became its own OS window)" );
+                (void)context.expect( pBar->Pos.x >= pSceneView->Pos.x - kPixelTolerance &&
+                                          pBar->Pos.x + pBar->Size.x <= pSceneView->Pos.x + pSceneView->Size.x + kPixelTolerance,
+                                      "the transform bar is wider than the scene view" );
             }
 
             static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
@@ -369,7 +369,7 @@ namespace sw::editor
                 if ( stepIndex == kSettleFrameCount * 2 )
                 {
                     expectDockFitsViewport( context, *pWindow, true );
-                    expectTransformBarStaysInGameView( context );
+                    expectTransformBarStaysInSceneView( context );
                     const uint32 minWidth  = pWindow->getMinimumClientWidth();
                     const uint32 minHeight = pWindow->getMinimumClientHeight();
                     (void)context.expect( minWidth > 0 && minHeight > 0, "the editor window has no minimum size" );
@@ -654,30 +654,30 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // gameView.resizeEveryFrame — 게임 뷰를 프레임마다 다른 크기로 다시 만든다
+            // sceneView.resizeEveryFrame — 씬 뷰 RT 를 프레임마다 다른 크기로 다시 만든다(패널을 닫아도 두 뷰가 다 안 보이면 씬 뷰 RT 에 그린다)
             // 놓은 ImGui 텍스처 · 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 놓여야 한다. 어기면 Vulkan 검증 레이어가
             // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, AppSmokeTest 가 그 줄을 센다.
             // ------------------------------------------------------------------------------
-            static EditorSelfTestStep runGameViewResizeEveryFrame( EditorSelfTestContext& context )
+            static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kGameViewPanelId  = "game_view";
+                constexpr const utf8* kSceneViewPanelId = "scene_view";
                 constexpr uint32      kResizeFrameCount = 90;
 
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
 
-                // 게임 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 시험이 바꾼 크기를 되돌리며 이미 그린 텍스처를
+                // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 시험이 바꾼 크기를 되돌리며 이미 그린 텍스처를
                 // 같은 프레임에 놓는다. 패널이 닫히는 것은 다음 프레임이라 첫 단계는 닫기만 한다.
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kGameViewPanelId, false );
+                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelId, false );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex > kResizeFrameCount )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kGameViewPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelId, true );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -687,7 +687,7 @@ namespace sw::editor
                 pContext->ensureViewTargetSize( EditorViewKind::Scene, width, height );
                 const EditorViewTarget& view = pContext->getViewTarget( EditorViewKind::Scene );
                 (void)context.expect( view._width == width && view._height == height && view._pTextureId != nullptr,
-                                      "the game view was not recreated at the requested size" );
+                                      "the scene view target was not recreated at the requested size" );
 
                 beginProbeWindow();
                 if ( view._pTextureId != nullptr )
@@ -924,7 +924,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
     SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::runHierarchyOffscreenRootsKeepTheirPlace );
-    SW_EDITOR_SELF_TEST( GameViewResize, "gameView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runGameViewResizeEveryFrame );
+    SW_EDITOR_SELF_TEST( SceneViewResize, "sceneView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runSceneViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
     SW_EDITOR_SELF_TEST( DpiMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDpiMonitorScaleFollows );

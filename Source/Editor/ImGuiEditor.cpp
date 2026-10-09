@@ -23,6 +23,7 @@
 #include "Editor/Common/Gui/EditorMenuBar.h"
 #include "Editor/Common/Gui/EditorNotificationManager.h"
 #include "Editor/Common/Gui/EditorPanelDump.h"
+#include "Editor/Common/Gui/EditorPlayToolbar.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
@@ -433,6 +434,7 @@ namespace sw::editor
             beginFrame();
             EditorMenuBar::drawThemeDialog();
             EditorMenuBar::draw( _dockLayout );
+            EditorPlayToolbar::draw(); // 메뉴 막대 아래 — 도크스페이스보다 먼저 서야 도크 영역이 그만큼 줄어든다
             _dockLayout.beginDockspace();
         }
 
@@ -586,7 +588,7 @@ namespace sw::editor
         if ( _platformBackend != nullptr )
             _platformBackend->processEvent( event );
 
-        // ImGui 가 차지한 입력은 게임으로 넘기지 않는다. Game View 위에서는 예외다.
+        // ImGui 가 차지한 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다(씬 뷰 위의 입력은 에디터 카메라 몫이다).
         const ImGuiIO& io               = ImGui::GetIO();
         const bool     bGameViewHovered = _editorContext != nullptr && _editorContext->isGameViewHovered();
         const bool     bGameViewFocused = _editorContext != nullptr && _editorContext->isGameViewFocused();
@@ -639,8 +641,8 @@ namespace sw::editor
 
     CameraComponent* ImGuiEditor::getSceneViewCamera() const
     {
-        // Simulate 는 에디터 카메라를 그대로 쓴다. 게임 카메라는 플레이어가 조종하는 세션에서만.
-        return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );
+        // 씬 뷰는 Play · Simulate 중에도 에디터 카메라다 — 게임 카메라 출력은 게임 뷰가 그린다.
+        return EditorCamera::ensure( editor::getActiveScene() );
     }
 
     bool ImGuiEditor::isPlaying() const

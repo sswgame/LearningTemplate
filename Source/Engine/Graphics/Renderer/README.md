@@ -248,7 +248,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 ### Debug/ 는 Renderer 밖에 있다
 
 디버그 그리기 큐(`DebugDrawQueue`)와 렌더 타깃 목록(`RenderTargetRegistry`)은 `Source/Engine/Graphics/Debug/` 에 있습니다. Renderer보다 아래 층(티어 5)이라 게임 코드와 개발 명령이 렌더러를 몰라도 넣을 수 있습니다.
-`DebugDrawQueue` 는 GPU에 바로 그리는 API가 아니라 CPU 큐입니다. 그 프레임에 넣은 선, 구, 상자, 화살표, 글자는 `endFrame` 에 확정되어 다음 에디터 프레임에 보이고, 에디터 Game View가 그립니다.
+`DebugDrawQueue` 는 GPU에 바로 그리는 API가 아니라 CPU 큐입니다. 그 프레임에 넣은 선, 구, 상자, 화살표, 글자는 `endFrame` 에 확정되어 다음 에디터 프레임에 보이고, 에디터 씬 뷰가 그립니다.
 씬이 멈춘 프레임에는 표시 시간이 흐르지 않습니다.
 
 ### 소유와 수명 — 누가 만들고, 누가 놓고, 누가 빌리나

@@ -61,7 +61,7 @@ namespace sw::editor
          * @brief 게임 뷰 이미지 사각형을 정합니다. @p available 은 패널 내용 영역 크기입니다.
          * @details `Free` 는 영역 전체, `Ratio16x9` 는 영역 안에 16:9 로 가장 크게 넣고 가운데에 둡니다. 크기는 정수 픽셀로 내립니다(RT 크기와 같게).
          */
-        static EditorViewRect fitGameViewImage( const float2& available, EditorGameViewAspect aspect );
+        static EditorViewRect fitViewImage( const float2& available, EditorGameViewAspect aspect );
         /** @brief 화면 비율 고르기에 보이는 이름입니다. */
         static const utf8* getAspectLabel( EditorGameViewAspect aspect );
     };

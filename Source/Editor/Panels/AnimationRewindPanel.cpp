@@ -118,7 +118,7 @@ namespace sw::editor
         ImGui::Separator();
         if ( pSelected == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "Select a character (Hierarchy or Game View) to see its recorded state." );
+            EditorWidgets::drawEmptyHint( "Select a character (Hierarchy or Scene view) to see its recorded state." );
             return;
         }
         const AnimationRewindFrame* pFrame = pSelected->findFrame( viewTime );

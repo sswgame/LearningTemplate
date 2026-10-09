@@ -241,7 +241,7 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 주 출력에 그리는 패스(Present · Canvas)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 GameView 등,
+        // 주 출력에 그리는 패스(Present · Canvas)의 대상은 백버퍼(디바이스가 실제 채택한 포맷), 오프스크린 렌더 타깃(에디터 씬 뷰 · 게임 뷰 등,
         // 계약값 kOffscreenColorFormat), 스크린샷 캡처 텍스처(계약값 kBackBufferFormat)다. 모두 **셋업에서** 만들어 둔다.
         const RenderPassType arrPassType[]     = { RenderPassType::Present, RenderPassType::Canvas };
         const RHIFormat      arrTargetFormat[] = { _pDevice->getBackBufferFormat(), constant::kOffscreenColorFormat, constant::kBackBufferFormat };

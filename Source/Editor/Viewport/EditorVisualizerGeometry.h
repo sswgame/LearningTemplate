@@ -29,7 +29,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @brief `debug_draw` 시각화가 마지막으로 그린 양입니다. 에디터 자체 시험(`gameView.debugDraw`)이 "그려졌다" 를 확인할 때 읽습니다.
+     * @brief `debug_draw` 시각화가 마지막으로 그린 양입니다. 에디터 자체 시험(`sceneView.debugDraw`)이 "그려졌다" 를 확인할 때 읽습니다.
      * @details 시각화는 그리기 함수 하나라 자기 상태를 둘 곳이 없어 이 값 하나만 둡니다. 그린 프레임 번호(ImGui 프레임)를 같이 적습니다.
      */
     struct EditorDebugDrawStats
