@@ -55,7 +55,7 @@ namespace sw
     };
 
     /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */
-    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly );
+    using PFN_ImportEditorAssets = int32 ( * )( uint32 kind, uint32 checkOnly, const ModuleService* pService );
 
     /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
     inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";
@@ -77,7 +77,8 @@ extern "C"
     /**
      * @brief 리소스 트리의 @p kind(`sw::EditorImportKind`) 원본을 그 폴더의 `import.stamp` 와 대조하고, @p checkOnly 가 0 이면 어긋난 것을 임포트합니다.
      * @details 에디터 인스턴스 · 창 · RHI 없이 부릅니다. 리소스 루트와 로거는 호스트(Engine)가 이미 세워 두었어야 합니다.
+     *          @p pService 가 있으면 임포트하는 동안 에디터 서비스로 묶습니다 — 텍스처 압축이 작업 시스템(`TaskManager`)으로 나뉩니다. 없으면 한 스레드로 돕니다.
      * @return 남은 문제 수입니다(0 이면 원본과 임포트 결과가 맞습니다). 설정을 읽지 못하거나 모르는 종류면 음수입니다.
      */
-    SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly );
+    SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ModuleService* pService );
 }

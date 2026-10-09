@@ -419,7 +419,12 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **텍스처는 들일 때 임포트한다(사용자 결정 2026-10-03 — UE 임포트 방식).** 런타임은 DDS 만 읽고, 원본은 `<domain>/textures_raw/` 에만 둔다(`CheckTextureFolders`).
   원본 ↔ DDS 대조는 원본 폴더마다 `import.stamp`(원본 바이트 + 해석한 규칙 + 임포터 버전의 해시, DDS 해시) — `App --import-textures` · `--check-textures`(헤드리스로
   에디터 모듈을 올린다, Shipping 은 이유를 남기고 실패), CI 대조는 `TextureImportStampTest`. 함정: 임포트 동작을 바꾸면 `TextureImporterInternal::kImporterVersion` 을 올려야
-  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 임포트한다. 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
+  모든 스탬프가 어긋남이 된다. Debug 의 DirectXTex BC7 은 블록당 수백 ms 라 큰 원본은 Release App 으로 임포트한다(Debug 로 돌리면 시작할 때 경고 한 줄). 밉 · 변환은 `TEX_FILTER_FORCE_NON_WIC`(결정적).
+- **BC 압축은 높이가 4 의 배수인 가로 띠로 나눠 작업 시스템이 병렬로 한다**(`BandCompressJobInternal`, 띠 64 줄, 모든 밉의 띠를 한 목록으로). BC 블록이 4×4 독립이라 결과는
+  통째 압축과 같은 바이트다 — `TEX_COMPRESS_DEFAULT` 일 때만이다(디더링 · 오차 확산 플래그를 켜면 블록 사이가 이어져 깨진다). DirectXTex 의 `TEX_COMPRESS_PARALLEL` 은
+  OpenMP 로만 돌고 vcpkg 빌드는 OpenMP 없이 지어져 효과가 없다. 헤드리스 `--import-textures` 는 에디터 인스턴스가 없어 `importEditorAssets` 가 호스트의 서비스 표를 받아
+  그 호출 동안 묶는다 — 표가 없으면 한 스레드로 돌고 로그의 `on 0 workers` 가 그것이다. 파일 단위 병렬은 하지 않는다: 한 장의 띠가 이미 워커를 다 쓰고, 2048² 여러 장을
+  동시에 들면 장마다 수십 MB 밉 체인이 겹친다(측정은 [검증과 측정](../../docs/08_Verification.md) 2 절).
 - **모델도 같은 스탬프 절차다** — `models_raw/` 의 glTF → `models/*.mesh`(`App --import-models` · `--check-models`, `AssetImportStampUtil` + 종류마다
   `IRawAssetImporter`). glTF → 엔진은 X 반전 + 삼각형 감김 뒤집기(노드 행렬식 < 0 이면 한 번 더). `.mesh` 는 지금 형식만 읽는다 — `RHIVertex` 를 바꾸면
   `MeshAssetFormat::kVersion` 을 올리고 다시 임포트. 메시 캐시는 약한 참조라 쓰는 쪽이 없으면 리로드할 것도 없다(다음 `acquire` 가 새로 읽는다).

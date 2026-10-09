@@ -14,6 +14,7 @@
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImportConfig.h"
 #include "Editor/Common/Asset/TextureImporter.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -37,6 +38,10 @@ namespace sw::editor
                 {
                     case EditorImportKind::Texture:
                     {
+#if defined( SW_DEBUG )
+                        if ( bCheckOnly == false )
+                            SW_LOG_WARNING( "Texture import in a Debug build is slow (unoptimized BC7/BC6H compressor, minutes per large texture) - run --import-textures with the Release App" );
+#endif
                         const string        configPath = TextureImporter::makeDefaultImportConfigPath();
                         TextureImportConfig config;
                         if ( config.loadFromFile( configPath ) == false )
@@ -86,7 +91,13 @@ namespace sw::editor
     } // namespace
 } // namespace sw::editor
 
-extern "C" SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly )
+extern "C" SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ModuleService* pService )
 {
-    return sw::editor::AssetImportEntryInternal::importAssets( static_cast<sw::EditorImportKind>( kind ), checkOnly != 0 );
+    // 인스턴스가 없는 헤드리스 호출이라 서비스 표를 이 호출 동안만 묶는다(작업 시스템 · 로거 같은 엔진 서비스).
+    if ( pService != nullptr )
+        sw::editor::bindEditorService( *pService );
+    const int32 result = sw::editor::AssetImportEntryInternal::importAssets( static_cast<sw::EditorImportKind>( kind ), checkOnly != 0 );
+    if ( pService != nullptr )
+        sw::editor::unbindEditorService();
+    return result;
 }

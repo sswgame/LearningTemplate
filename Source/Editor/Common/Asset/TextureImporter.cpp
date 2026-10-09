@@ -5,8 +5,11 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/ImageUtil.h"
@@ -60,6 +63,118 @@ namespace sw::editor
 
             return bSrgb ? DXGI_FORMAT_BC7_UNORM_SRGB : DXGI_FORMAT_BC7_UNORM;
         }
+
+        /**
+         * @struct BandCompressJobInternal
+         * @brief 밉 체인을 BC 형식으로 압축하는 일을 가로 띠로 나눠 작업 시스템에 넘깁니다.
+         * @details BC 블록은 4×4 화소마다 독립이라, 높이가 4 의 배수인 띠로 잘라 따로 압축해 이어 붙이면 통째로 압축한 것과 같은 바이트입니다
+         *          (`TEX_COMPRESS_DEFAULT` — 디더링 · 오차 확산을 켜면 블록 사이가 이어져 이 성질이 깨진다). DirectXTex 의 `TEX_COMPRESS_PARALLEL` 은
+         *          OpenMP 로만 돌고 vcpkg 빌드는 OpenMP 없이(`BC_USE_OPENMP` 꺼짐) 지어져 효과가 없어서 엔진 작업 시스템으로 나눕니다.
+         *          띠 높이(`kBandRows`)보다 낮은 밉은 띠 하나라 나누지 않고, 모든 밉의 띠를 한 목록으로 펼쳐 한 번에 나눕니다.
+         */
+        struct BandCompressJobInternal
+        {
+            /** @brief 띠 하나의 화소 줄 수입니다. 4 의 배수여야 합니다(BC 블록 높이). */
+            static constexpr uint32 kBandRows = 64;
+            static_assert( kBandRows % 4 == 0, "BC bands must cover whole 4x4 block rows" );
+
+            struct Band
+            {
+                const DirectX::Image* _pSource{ nullptr };
+                const DirectX::Image* _pDest{ nullptr };
+                uint32                _firstRow{ 0 };
+                uint32                _rowCount{ 0 };
+                HRESULT               _result{ S_OK };
+            };
+
+            Band*       _pBand{ nullptr };
+            DXGI_FORMAT _format{ DXGI_FORMAT_UNKNOWN };
+
+            void run( uint32 start, uint32 end )
+            {
+                for ( uint32 bandIndex = start; bandIndex < end; ++bandIndex )
+                {
+                    Band&                 band   = _pBand[bandIndex];
+                    const DirectX::Image& source = *band._pSource;
+                    DirectX::Image        slice  = source;
+                    slice.height                 = band._rowCount;
+                    slice.slicePitch             = source.rowPitch * band._rowCount;
+                    slice.pixels                 = source.pixels + source.rowPitch * band._firstRow;
+
+                    DirectX::ScratchImage compressed;
+                    band._result = DirectX::Compress( slice, _format, DirectX::TEX_COMPRESS_DEFAULT, DirectX::TEX_THRESHOLD_DEFAULT, compressed );
+                    if ( FAILED( band._result ) )
+                        continue;
+
+                    // 같은 폭이라 블록 줄의 바이트 수(rowPitch)가 같다 — 띠의 블록 줄을 결과의 제자리(firstRow / 4)에 그대로 놓는다.
+                    const DirectX::Image& packed = *compressed.GetImage( 0, 0, 0 );
+                    if ( packed.rowPitch != band._pDest->rowPitch )
+                    {
+                        band._result = E_UNEXPECTED;
+                        continue;
+                    }
+                    const size_t blockRowCount = ( static_cast<size_t>( band._rowCount ) + 3 ) / 4;
+                    std::memcpy( band._pDest->pixels + band._pDest->rowPitch * ( band._firstRow / 4 ), packed.pixels, packed.rowPitch * blockRowCount );
+                }
+            }
+
+            /** @brief @p mipChain(2D 한 장의 밉들)을 @p format 으로 압축해 @p outImage 에 담습니다. 결과는 `DirectX::Compress` 를 통째로 부른 것과 같은 바이트입니다. */
+            [[nodiscard]] static HRESULT compress( const DirectX::ScratchImage& mipChain, DXGI_FORMAT format, DirectX::ScratchImage& outImage )
+            {
+                const DirectX::TexMetadata& metadata = mipChain.GetMetadata();
+                if ( metadata.dimension != DirectX::TEX_DIMENSION_TEXTURE2D || metadata.arraySize != 1 || metadata.depth != 1 )
+                {
+                    return DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), metadata, format, DirectX::TEX_COMPRESS_DEFAULT,
+                                              DirectX::TEX_THRESHOLD_DEFAULT, outImage );
+                }
+                HRESULT hr = outImage.Initialize2D( format, metadata.width, metadata.height, 1, metadata.mipLevels );
+                if ( FAILED( hr ) )
+                    return hr;
+
+                vector<Band> listBand;
+                for ( size_t mipLevel = 0; mipLevel < metadata.mipLevels; ++mipLevel )
+                {
+                    const DirectX::Image* pSource = mipChain.GetImage( mipLevel, 0, 0 );
+                    const DirectX::Image* pDest   = outImage.GetImage( mipLevel, 0, 0 );
+                    if ( pSource == nullptr || pDest == nullptr )
+                        return E_POINTER;
+                    const uint32 height = static_cast<uint32>( pSource->height );
+                    for ( uint32 firstRow = 0; firstRow < height; firstRow += kBandRows )
+                    {
+                        Band band;
+                        band._pSource  = pSource;
+                        band._pDest    = pDest;
+                        band._firstRow = firstRow;
+                        band._rowCount = MathUtil::min( kBandRows, height - firstRow );
+                        listBand.push_back( band );
+                    }
+                }
+
+                const Stopwatch         stopwatch;
+                BandCompressJobInternal job;
+                job._pBand  = listBand.data();
+                job._format = format;
+                // 작업 시스템이 없으면(시험 하니스 · 서비스 연결 전) 현재 스레드가 띠를 차례로 압축한다 — 결과 바이트는 같다.
+                const uint32                bandCount    = static_cast<uint32>( listBand.size() );
+                TaskManager*                pTaskManager = editor::getService<TaskManager>();
+                const ParallelBlockDelegate body         = SW_DELEGATE_METHOD( ParallelBlockDelegate, &BandCompressJobInternal::run, &job );
+                if ( pTaskManager != nullptr )
+                    pTaskManager->runParallel( bandCount, 2, body );
+                else
+                    job.run( 0, bandCount );
+                SW_LOG_INFO( "Compressed %#x%# (%# mips, format %#) in %# bands on %# workers: %# ms", static_cast<uint32>( metadata.width ), static_cast<uint32>( metadata.height ),
+                             static_cast<uint32>( metadata.mipLevels ), static_cast<uint32>( format ), bandCount,
+                             pTaskManager != nullptr ? pTaskManager->getWorkerCount() : 0u,
+                             stopwatch.getElapsedMilliseconds() );
+
+                for ( const Band& band : listBand )
+                {
+                    if ( FAILED( band._result ) )
+                        return band._result;
+                }
+                return S_OK;
+            }
+        };
 
         /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8 비트 · HDR 두 갈래가 같이 씁니다. */
         [[nodiscard]] bool saveImportedDdsInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
@@ -125,8 +240,7 @@ namespace sw::editor
             if ( SUCCEEDED( hr ) )
             {
                 hr = ( targetFormat == DXGI_FORMAT_BC6H_UF16 )
-                       ? DirectX::Compress( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, DirectX::TEX_COMPRESS_DEFAULT,
-                                            DirectX::TEX_THRESHOLD_DEFAULT, finalImage )
+                       ? BandCompressJobInternal::compress( mipChain, targetFormat, finalImage )
                        : DirectX::Convert( mipChain.GetImages(), mipChain.GetImageCount(), mipChain.GetMetadata(), targetFormat, kFilterFlags,
                                            DirectX::TEX_THRESHOLD_DEFAULT, finalImage );
             }
@@ -331,14 +445,7 @@ namespace sw::editor
 
         if ( DirectX::IsCompressed( targetFormat ) )
         {
-            const HRESULT hr = DirectX::Compress(
-                mipChain.GetImages(),
-                mipChain.GetImageCount(),
-                mipChain.GetMetadata(),
-                targetFormat,
-                DirectX::TEX_COMPRESS_DEFAULT,
-                DirectX::TEX_THRESHOLD_DEFAULT,
-                finalImage );
+            const HRESULT hr = BandCompressJobInternal::compress( mipChain, targetFormat, finalImage );
             if ( FAILED( hr ) )
             {
                 SW_LOG_ERROR(

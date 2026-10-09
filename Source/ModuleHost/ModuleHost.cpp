@@ -424,7 +424,12 @@ namespace sw
             if ( pfnImport == nullptr )
                 SW_LOG_ERROR( "The editor module does not export %#", kImportEditorAssetsSymbol );
             else
-                bSucceeded = pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u ) == 0;
+            {
+                // 인스턴스 없이 부르므로 엔진 서비스 표를 직접 넘긴다 — 임포터가 작업 시스템으로 압축을 나눈다.
+                ModuleService service{};
+                engine::fillModuleServices( service );
+                bSucceeded = pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
+            }
         }
 
         engine::unregisterModuleTypes( sw::config::kTargetEditorModule );

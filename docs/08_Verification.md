@@ -111,6 +111,11 @@ cd build/Ninja-Debug/Bin
   `GT.Ui.Layout` 0.11 ms(30 위젯), `RT.Canvas` Upload 0.05 + Draw 0.013 ms. 바뀜 없음(대조군): `GT.Ui.Paint` 2.1 → 0.12 ms(바뀌지 않은 트리 출력 재사용), 업로드 p50 0.
   마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 2026-10-10(보이는 자식 이분 탐색 · 그리기 목록 통째 복사 뒤, 세 번): 글 10 칸/프레임 `GT.Ui.Paint` p50 0.29~0.36 · p99 0.66~0.79 ms,
   `GT.Ui.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 구간 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Ui.CanvasQuads`(값은 per_frame 열).
+- **텍스처 임포트 압축**(2026-10-10, Release App `--import-textures`, 워커 14 개 PC, 세 번): 띠 병렬 압축(`BandCompressJobInternal`) 전 → 후로
+  BC7 512² 밉 10 단(`engine/textures_raw/random/grass.jpg`) 61.7~62.6 → 8.1~8.3 s, BC3 1024² 밉 11 단(`f00_000_face_00`) 17 → 2 ms,
+  BC3 2048² 밉 12 단(`f00_001_body_00`) 70~72 → 9~10 ms, 원본 39 장 전체 3 분 35 초 → 40 초. 결과 DDS 는 스탬프 해시까지 바이트가 같다(스탬프를 비우고 전부 다시 임포트해
+  `git status` 와 `import.stamp` 대조). 재는 법: 그 원본의 스탬프 줄만 지우고 `App --import-textures` — 로그 `Compressed WxH (… bands on N workers): T ms`.
+  띠를 64 → 16 줄로 잘게 나눠도 그대로였다(BC7 512² 8.2~8.4 s). BC7 은 BC1 · BC3 보다 수천 배 느리다 — 무거운 것은 BC7 원본 수다.
 - **벤치 스위치**(`Source/Games/Empty/BenchScene.cpp`): `-gv_benchMeshes=N` · `-gv_benchLights=N` · `-gv_benchGround=1` · `-gv_benchMovePercent=%` · `-gv_benchInstanced=1` ·
   `-gv_benchTickMovers=N`(틱 **안** 세터 — 실제 게임플레이 경로) · `-gv_benchSpawnChurn=N` · `-gv_benchMeshVariants` · `-gv_benchMeshShapes=N` ·
   `-gv_benchMaterialChurn*` · `-gv_benchAnimate=0`(컴퓨트 회전과 `update` 사인파를 **둘 다** 멈춘다), `-gv_deferred=1`, `-gv_useRenderThread=0`.

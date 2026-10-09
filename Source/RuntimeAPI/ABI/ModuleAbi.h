@@ -24,13 +24,14 @@
 namespace sw
 {
     /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleAbiVersion = 1;
+    inline constexpr uint32 kModuleAbiVersion = 2;
 
     /**
      * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
      *        v1: 모듈 경계에 버전 · 스탬프를 처음 붙임 (GameAPI 9항목 · EditorAPI 19항목).
+     *        v2: `importEditorAssets` 가 호스트 서비스 표를 받음(헤드리스 임포트가 작업 시스템을 쓴다).
      */
-    inline constexpr auto kModuleAbiStamp = "module-abi-v1-2026-09";
+    inline constexpr auto kModuleAbiStamp = "module-abi-v2-2026-10";
 
     using PFN_GetModuleAbiVersion = uint32 ( * )();
     using PFN_GetModuleAbiStamp   = const utf8* (*)();
