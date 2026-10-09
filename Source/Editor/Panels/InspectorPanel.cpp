@@ -100,11 +100,13 @@ namespace sw::editor
         : _propertyFilter{}
         , _mapMethodArgSlot{}
         , _lastInvokeResult{}
+        , _nameEditBuffer{}
         , _componentPresetJob{}
         , _listComponentPresetFile{}
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
         , _mapContainerAddText{}
+        , _nameEditObjectId{ 0 }
         , _propertyDrawDepth{ 0 }
         , _bComponentPresetDirty{ SW_TRUE }
         , _reserved{ 0 }
@@ -373,17 +375,26 @@ namespace sw::editor
     {
         ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectId() ) );
 
-        fixed_string<constant::kMaxBuffer256> nameBuf{ pObj->getName().c_str() };
-        if ( ImGui::InputText( "Name", nameBuf.data(), nameBuf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) )
-            InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, &nameBuf]()
-            { pObj->setName( hashed_string( nameBuf.c_str() ) ); } );
+        // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 글을 멤버로 들어야 칸을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다 —
+        // Enter 로도, 다른 곳을 눌러 떠나도 적용한다(유니티 · 언리얼). Esc 는 ImGui 가 글을 되돌려 편집 없음으로 끝난다.
+        const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "Name" ) && _nameEditObjectId == pObj->getObjectId();
+        if ( bEditingName == false )
+        {
+            _nameEditBuffer   = pObj->getName().c_str();
+            _nameEditObjectId = pObj->getObjectId();
+        }
+        const bool bEnter         = ImGui::InputText( "Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
+        const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
+        const bool bNameChanged   = _nameEditBuffer.empty() == false && pObj->getName().isEqual( hashed_string( _nameEditBuffer.c_str() ), NameCase::CaseSensitive ) == false;
+        if ( ( bEnter || bLeftAfterEdit ) && bNameChanged )
+            InspectorPanelInternal::applyObjectEdit( pObj, "Rename GameObject", [pObj, this]()
+            { pObj->setName( hashed_string( _nameEditBuffer.c_str() ) ); } );
         EditorSelfTestMarks::note( "inspector.name" );
         EditorWidgets::drawTooltip( "게임오브젝트의 고유 이름 (Enter 키로 적용)" );
 
         bool bActive = pObj->isActive();
         if ( ImGui::Checkbox( "Active", &bActive ) )
-            InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Active", [pObj, bActive]()
-            { pObj->setActive( bActive ); } );
+            EditorSceneCommands::setActive( pObj, bActive );
         EditorWidgets::drawTooltip( "게임오브젝트의 활성화 상태를 토글합니다" );
 
         GameObject* pParent = pObj->getParent();
@@ -642,11 +653,11 @@ namespace sw::editor
             return;
         const int64 currentValue = enumInfo.readValueFromMemory( pEnumMemory );
         int64       editedValue  = currentValue;
-        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, pLabel]()
+        const auto  commitEdit   = [&enumInfo, pEnumMemory, currentValue, &editedValue, &prop]()
         {
             if ( editedValue != currentValue )
                 enumInfo.writeValueToMemory( pEnumMemory, editedValue );
-            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, pLabel );
+            InspectorPropertyUndo::trackPod( pEnumMemory, enumInfo._size, prop );
         };
 
         if ( enumInfo._bIsBitFlag )

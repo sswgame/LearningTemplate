@@ -24,9 +24,12 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/UI/UiSystem.h"
+#include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 
 #include <imgui.h>
@@ -87,10 +90,45 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             // EditorClick · EditorText · EditorKey — ImGui 입력
             // ------------------------------------------------------------------------------
+            /** @brief `mods` 속성("ctrl" · "shift" · "ctrl+shift" …)을 수정자 키 목록으로 풉니다. 없으면 빈 목록, 모르는 이름이면 false 입니다. */
+            [[nodiscard]] static bool parseModifiers( const AutomationStep& step, vector<int32>& outListKey )
+            {
+                outListKey.clear();
+                const string* pMods = step.findAttribute( "mods" );
+                if ( pMods == nullptr )
+                    return true;
+                const string_view mods{ *pMods };
+                size_t            begin = 0;
+                while ( begin <= mods.size() )
+                {
+                    const size_t      plus  = mods.find( '+', begin );
+                    const size_t      end   = plus == string_view::npos ? mods.size() : plus;
+                    const string_view token = mods.substr( begin, end - begin );
+                    if ( StringUtil::equals( token, "ctrl", true ) )
+                        outListKey.push_back( ImGuiMod_Ctrl );
+                    else if ( StringUtil::equals( token, "shift", true ) )
+                        outListKey.push_back( ImGuiMod_Shift );
+                    else if ( StringUtil::equals( token, "alt", true ) )
+                        outListKey.push_back( ImGuiMod_Alt );
+                    else
+                        return false;
+                    if ( plus == string_view::npos )
+                        break;
+                    begin = plus + 1;
+                }
+                return true;
+            }
+
             static bool validateClick( const AutomationStep& step, string& outError )
             {
-                if ( validate( step, { "mark", "button" }, "mark", outError ) == false )
+                if ( validate( step, { "mark", "button", "mods" }, "mark", outError ) == false )
                     return false;
+                vector<int32> listModifier;
+                if ( parseModifiers( step, listModifier ) == false )
+                {
+                    outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + *step.findAttribute( "mods" ) + "'";
+                    return false;
+                }
                 const string* pButton = step.findAttribute( "button" );
                 int32         button  = 0;
                 if ( pButton != nullptr && ( StringUtil::parseInt( string_view{ *pButton }, button ) == false || button < 0 || button > 4 ) )
@@ -117,10 +155,21 @@ namespace sw::editor
                     return true;
                 }
                 // 누름과 뗌을 두 프레임으로 — 뗌 앞에서 다시 이름표 위로 옮긴다(플랫폼이 그 사이 실제 커서를 넣는다).
+                // 수정자(Ctrl+클릭 다중 선택 …)는 누르기 전에 눌러 뗀 뒤에 놓는다.
+                vector<int32> listModifier;
+                (void)parseModifiers( step, listModifier ); // 검사에서 봤다
+                for ( const int32 modifier : listModifier )
+                {
+                    EditorSelfTestInput::setKey( modifier, true );
+                }
                 EditorSelfTestInput::setMouseButton( button, true );
                 EditorSelfTestInput::waitNextFrame();
                 (void)EditorSelfTestInput::moveMouseToMark( mark );
                 EditorSelfTestInput::setMouseButton( button, false );
+                for ( const int32 modifier : listModifier )
+                {
+                    EditorSelfTestInput::setKey( modifier, false );
+                }
                 return true;
             }
 
@@ -414,6 +463,44 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readSelectedIsEditorCamera( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const GameObject*      pPrimary = pContext->getEditorSelection().getPrimaryObject();
+                const CameraComponent* pCamera  = pPrimary != nullptr ? pPrimary->getComponent<CameraComponent>() : nullptr;
+                outValue                        = ( pCamera != nullptr && pCamera->getRole() == CameraRole::Editor ) ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readUndoCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const CommandStack* pStack = editor::getService<CommandStack>();
+                if ( pStack == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStack->getCommandCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readUndoIndex( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const CommandStack* pStack = editor::getService<CommandStack>();
+                if ( pStack == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStack->getCurrentIndex() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readLoadingScreenShown( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UiSystem* pUi = editor::getService<UiSystem>();
+                if ( pUi == nullptr )
+                    return false;
+                outValue = pUi->isLoadingScreenShown() ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readUiScale( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
@@ -441,5 +528,11 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorThemePreset, "Editor.ThemePreset", "Active theme preset: 0 ModernDark, 1 DeepCharcoal, 2 MidnightBlue, 3 ClassicDark",
                          &EditorScenarioStepsInternal::readThemePreset );
     SW_AUTOMATION_PROBE( editorAccentColor, "Editor.AccentColor", "Accent color as 0xRRGGBB", &EditorScenarioStepsInternal::readAccentColor );
+    SW_AUTOMATION_PROBE( editorSelectedIsEditorCamera, "Editor.SelectedIsEditorCamera", "1 when the primary selection is the viewport's editor camera",
+                         &EditorScenarioStepsInternal::readSelectedIsEditorCamera );
+    SW_AUTOMATION_PROBE( editorUndoCount, "Editor.UndoCount", "Commands on the undo stack", &EditorScenarioStepsInternal::readUndoCount );
+    SW_AUTOMATION_PROBE( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &EditorScenarioStepsInternal::readUndoIndex );
+    SW_AUTOMATION_PROBE( editorLoadingScreenShown, "Editor.LoadingScreenShown", "1 while the runtime UI shows its loading screen",
+                         &EditorScenarioStepsInternal::readLoadingScreenShown );
     SW_AUTOMATION_PROBE( editorUiScale, "Editor.UiScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUiScale );
 } // namespace sw::editor

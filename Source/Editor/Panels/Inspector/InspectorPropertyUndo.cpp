@@ -6,6 +6,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -56,29 +57,29 @@ namespace sw::editor
 
             GameObject*          pTarget       = editor::findGameObject( iter->second._target );
             const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pTarget );
-            const string         label         = string( "Edit " ) + iter->second._label;
+            const string         label         = InspectorPropertyLayout::makeUndoLabel( iter->second._label.c_str() );
             EditorTransaction::recordModify( pTarget, iter->second._before, afterSnapshot, label );
             s_mapPending.erase( iter );
         }
     } // namespace
 
-    void InspectorPropertyUndo::trackPod( void* pData, size_t size, const utf8* pLabel )
+    void InspectorPropertyUndo::trackPod( void* pData, size_t size, const PropertyInfo& prop )
     {
         // pData 는 유효성 가드로만 쓴다. 스냅샷은 값이 아니라 오브젝트 XML 로 뜬다.
         if ( pData == nullptr || size == 0 || size > 512 )
             return;
-        trackActiveItemEdit( pLabel );
+        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ) );
     }
 
-    void InspectorPropertyUndo::trackString( string* pPtr, const utf8* pLabel )
+    void InspectorPropertyUndo::trackString( string* pPtr, const PropertyInfo& prop )
     {
         if ( pPtr == nullptr )
             return;
-        trackActiveItemEdit( pLabel );
+        trackActiveItemEdit( InspectorPropertyLayout::getPropertyLabel( prop ) );
     }
 
-    void InspectorPropertyUndo::trackLastItem( const utf8* pLabel )
+    void InspectorPropertyUndo::trackLastItem( const utf8* pPropertyLabel )
     {
-        trackActiveItemEdit( pLabel );
+        trackActiveItemEdit( pPropertyLabel );
     }
 } // namespace sw::editor

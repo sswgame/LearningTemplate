@@ -188,7 +188,7 @@ namespace sw
         , _bMousePixelKnown{ SW_FALSE }
         , _bTextRevisionKnown{ SW_FALSE }
         , _bGlyphStyleKnown{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bOnScreenSuppressed{ SW_FALSE }
     {
     }
 
@@ -272,7 +272,8 @@ namespace sw
         if ( _uiInputMap != nullptr )
             _uiInputMap->update( deltaSeconds );
         updateInputMode();
-        processPointer();
+        if ( _bOnScreenSuppressed == SW_FALSE )
+            processPointer();
         processActions( deltaSeconds );
         applyPendingCloses();
         updateKeyboardFocus();
@@ -1543,6 +1544,8 @@ namespace sw
         uint32        paintedCount = 0;
         for ( const unique_ptr<UiScreen>& screen : _listScreen )
         {
+            if ( _bOnScreenSuppressed == SW_TRUE )
+                break; // 그리기 목록을 비운다 — 아래 같은 내용 확인이 바뀐 것으로 보고 번호를 올린다
             WidgetTree& tree = screen->getTree();
             paintedCount += UiPaintPass::paint( tree, context, painter, _canvasScratch );
             // 포커스 테두리 — 패드 · 키보드로 다룰 때만(언리얼 CommonUI · 콘솔 게임과 같다), 그 화면 위 · 위 화면 아래.

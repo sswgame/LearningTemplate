@@ -19,11 +19,14 @@
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/GameViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
+#include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"
@@ -34,6 +37,7 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <ImGuizmo.h>
 
 namespace sw::editor
 {
@@ -297,6 +301,126 @@ namespace sw::editor
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더 — 남아도 다음 실행이 덮어쓴다
                 return EditorSelfTestStep::Done;
             }
+
+            // ------------------------------------------------------------------------------
+            // gameView.gizmoMovesTheSelection — 고른 오브젝트의 이동 기즈모 가운데(화면 평면 이동)를 끌면 오브젝트가 움직인다
+            // ------------------------------------------------------------------------------
+            struct GizmoProbe
+            {
+                uint64 _objectId{ 0 };
+                float2 _pressAt{};
+                uint32 _viewportId{ 0 }; ///< 게임 뷰 캔버스의 뷰포트 — 움직일 때마다 함께 알린다(플랫폼이 실제 커서의 뷰포트를 넣는다)
+                float3 _startPosition{};
+                bool   _bWasOver{ false };
+                bool   _bWasUsing{ false };
+            };
+
+            static GizmoProbe& getGizmoProbe()
+            {
+                static GizmoProbe s_probe;
+                return s_probe;
+            }
+
+            static void finishGizmo( GameObjectManager* pManager )
+            {
+                GizmoProbe& probe = getGizmoProbe();
+                EditorSelfTestInput::moveMouse( float2{ -10000.0f, -10000.0f } );
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext != nullptr )
+                    pContext->getWorkspace().clearSelection();
+                GameObject* pObj = pManager != nullptr ? pManager->findGameObjectById( probe._objectId ) : nullptr;
+                if ( pObj != nullptr )
+                    pManager->destroyObject( pObj );
+                probe = GizmoProbe{};
+            }
+
+            static EditorSelfTestStep runGizmoMovesTheSelection( EditorSelfTestContext& context )
+            {
+                constexpr float32  kDragPixel     = 60.0f;
+                constexpr uint32   kDragStepCount = 4;
+                GameObjectManager* pManager       = editor::getActiveObjectManager();
+                Scene*             pScene         = editor::getActiveScene();
+                if ( openGameView( context ) == nullptr || context.expect( pManager != nullptr && pScene != nullptr, "no active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                GizmoProbe&      probe     = getGizmoProbe();
+                const uint32     stepIndex = context.getStepIndex();
+                CameraComponent* pCamera   = EditorCamera::find( pScene );
+                if ( context.expect( pCamera != nullptr, "no editor camera" ) == false )
+                    return EditorSelfTestStep::Done;
+                if ( stepIndex == 0 )
+                {
+                    // 카메라 앞 6 m 에 놓는다 — 만들면 골라진다.
+                    GameObject* pObj = EditorSceneCommands::create( pManager, nullptr );
+                    if ( context.expect( pObj != nullptr && pObj->getPrimarySceneComponent() != nullptr, "could not create the probe object" ) == false )
+                        return EditorSelfTestStep::Done;
+                    probe._objectId = pObj->getObjectId();
+                    static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )
+                        ->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );
+                    pManager->flushSceneTransforms();
+                    probe._startPosition = static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->getWorldPosition();
+                    return EditorSelfTestStep::Continue;
+                }
+                GameObject* pObj = pManager->findGameObjectById( probe._objectId );
+                if ( context.expect( pObj != nullptr, "the probe object vanished" ) == false )
+                {
+                    finishGizmo( pManager );
+                    return EditorSelfTestStep::Done;
+                }
+                if ( stepIndex < 3 )
+                    return EditorSelfTestStep::Continue; // 선택 · 기즈모가 한 번 그려지게
+                if ( stepIndex == 3 )
+                {
+                    // 오브젝트 원점을 화면 좌표로 — 기즈모 가운데 사각형(화면 평면 이동)이 거기 있다.
+                    EditorSelfTestMark canvas{};
+                    if ( context.expect( EditorSelfTestMarks::find( "gameView.canvas", canvas ), "the game view canvas left no mark" ) == false )
+                    {
+                        finishGizmo( pManager );
+                        return EditorSelfTestStep::Done;
+                    }
+                    const float2   canvasPos{ canvas._min._x, canvas._min._y };
+                    const float2   canvasSize{ canvas._max._x - canvas._min._x, canvas._max._y - canvas._min._y };
+                    const float4x4 viewProj = pCamera->getViewProjectionMatrix( canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f ) );
+                    ImVec2         screen{};
+                    if ( context.expect( EditorViewportProjectionUtil::projectPoint( viewProj, probe._startPosition, canvasPos, canvasSize, screen ),
+                                         "the probe object is behind the camera" ) == false )
+                    {
+                        finishGizmo( pManager );
+                        return EditorSelfTestStep::Done;
+                    }
+                    probe._pressAt    = float2{ screen.x, screen.y };
+                    probe._viewportId = canvas._viewportId;
+                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportId );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex == 4 )
+                {
+                    probe._bWasOver = ImGuizmo::IsOver();
+                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportId );
+                    EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, true );
+                    return EditorSelfTestStep::Continue;
+                }
+                probe._bWasUsing = probe._bWasUsing || ImGuizmo::IsUsing();
+                if ( stepIndex < 5 + kDragStepCount )
+                {
+                    const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 4 ) / static_cast<float32>( kDragStepCount );
+                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + offset, probe._pressAt._y }, probe._viewportId );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex == 5 + kDragStepCount )
+                {
+                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + kDragPixel, probe._pressAt._y }, probe._viewportId );
+                    EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, false );
+                    return EditorSelfTestStep::Continue;
+                }
+                pManager->flushSceneTransforms();
+                const float3 moved = static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->getWorldPosition() - probe._startPosition;
+                string       what{ "the gizmo did not move the selection (gizmo hovered before the press: " };
+                what += probe._bWasOver ? "yes" : "no";
+                what += probe._bWasUsing ? ", dragging: yes)" : ", dragging: no)";
+                (void)context.expect( moved.getLength() > 0.01f, what.c_str() );
+                finishGizmo( pManager );
+                return EditorSelfTestStep::Done;
+            }
         };
     } // namespace
 
@@ -307,4 +431,5 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
     SW_EDITOR_SELF_TEST( NamedLayout, "layout.namedRoundTrip", 750, &EditorSelfTestDevToolsInternal::runNamedLayoutRoundTrip );
+    SW_EDITOR_SELF_TEST( GameViewGizmo, "gameView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::runGizmoMovesTheSelection );
 } // namespace sw::editor

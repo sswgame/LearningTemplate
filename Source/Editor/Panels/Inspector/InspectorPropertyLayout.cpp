@@ -79,6 +79,12 @@ namespace sw::editor
         return prop._name.c_str();
     }
 
+    string InspectorPropertyLayout::makeUndoLabel( const utf8* pPropertyLabel )
+    {
+        const bool bUsable = pPropertyLabel != nullptr && pPropertyLabel[0] != '\0' && pPropertyLabel[0] != '#';
+        return bUsable ? string( "Edit " ) + pPropertyLabel : string( "Edit Property" );
+    }
+
     InspectorDisplayUnit InspectorPropertyLayout::getDisplayUnit( const PropertyInfo& prop )
     {
         InspectorDisplayUnit unit{};

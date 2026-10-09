@@ -696,8 +696,10 @@ namespace sw::editor
             }
         }
         ImGuizmo::BeginFrame();
-        // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다.
-        ImGuizmo::Enable( false );
+        // 기즈모를 띄우는 패널이, 캔버스가 입력을 받을 수 있을 때 다시 켠다. 끌고 있는 동안은 끄지 않는다 — Enable( false ) 는 끌기 상태(mbUsing)까지
+        // 지워서, 프레임마다 끄면 누른 프레임 다음에 끌기가 끊겨 기즈모가 아무것도 움직이지 못한다.
+        if ( ImGuizmo::IsUsing() == false )
+            ImGuizmo::Enable( false );
     }
 
     void ImGuiEditor::endFrame()

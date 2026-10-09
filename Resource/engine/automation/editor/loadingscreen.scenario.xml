@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터가 멈춰 있는 동안(첫 Play 전) 게임이 연 로딩 화면이 게임 뷰를 덮지 않는다(panel-audit D3).
+  로딩 화면은 게임 update 가 닫는데, 멈춘 에디터는 그 update 를 부르지 않는다 — 그 동안은 화면 UI 를 그리지 않는다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/loadingscreen.scenario.xml -dx12
+-->
+<Scenario name="editor.loadingscreen" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="90"><Screenshot file="stopped.ppm"/></At>
+	<At frame="91"><ExpectImage file="stopped.ppm" metric="meanLuma" region="0.3,0.3,0.9,0.9" atLeast="0.08"/></At>
+	<At frame="95"><Pass/></At>
+</Scenario>

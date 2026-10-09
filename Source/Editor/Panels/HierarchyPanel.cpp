@@ -18,7 +18,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorCamera.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -451,8 +453,10 @@ namespace sw::editor
                 const bool bActive = pObj->isActiveInHierarchy();
                 if ( EditorWidgets::drawToggleIconButton( "##active", bActive, ICON_FA_EYE, ICON_FA_EYE_SLASH, "Visible - click to deactivate",
                                                           "Inactive - click to activate" ) )
-                    pObj->setActive( bActive == false );
+                    EditorSceneCommands::setActive( pObj, bActive == false ); // 되돌리기 · 씬 dirty 에 남는다
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
 
                 // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
@@ -478,12 +482,15 @@ namespace sw::editor
                 const bool bHasComponents = pObj->getComponentCount() > 0;
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
+                // SpanAvailWidth — 선택 배경 · 클릭 영역이 앞의 가시성 토글 오른쪽부터다(SpanFullWidth 면 창 왼쪽부터 칠해 토글을 덮는다).
                 const bool bOpen = ImGui::TreeNodeEx(
                     arrLabel.c_str(),
-                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth |
+                    ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
                 if ( bSelected )
                     EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.row." ) + pObj->getName().c_str() ).c_str() );
 
                 if ( ImGui::IsItemClicked() )
                 {
@@ -606,7 +613,7 @@ namespace sw::editor
         }
 
         GameObjectManager* pManager = pScene->getObjectManager();
-        pManager->getAllGameObjects( _listSceneObject );
+        EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만, id 순 — 지우고 되돌려도 자리가 그대로다
 
         // 상단 툴바: 생성 버튼 + 검색창
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
@@ -664,9 +671,12 @@ namespace sw::editor
                 ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
                 pendingSkipRow = 0;
             };
+            // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다(저장에서도 빠진다) — 목록에 내지 않는다.
+            const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
+            const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             for ( GameObject* pObj : _listSceneObject )
             {
-                if ( pObj == nullptr || pObj->getParent() != nullptr )
+                if ( pObj == pEditorCameraObject )
                     continue;
                 const bool bMatches = bFilterActive == false || HierarchyPanelInternal::subtreeMatchesFilter( pObj, _filterBuffer.c_str() );
                 if ( bMatches == false )
@@ -744,12 +754,7 @@ namespace sw::editor
                 if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
                 {
                     vector<GameObject*> listNewCreated;
-                    for ( GameObject* pSrc : listSel )
-                    {
-                        GameObject* pNewGo = EditorSceneCommands::duplicate( pManager, pSrc );
-                        if ( pNewGo != nullptr )
-                            listNewCreated.push_back( pNewGo );
-                    }
+                    EditorSceneCommands::duplicateObjects( pManager, listSel, listNewCreated ); // 되돌리기 한 단계
                     if ( listNewCreated.empty() == false )
                     {
                         editorSelection.clearObjectSelection();
@@ -769,10 +774,7 @@ namespace sw::editor
                 }
                 else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
                 {
-                    for ( GameObject* pGo : listSel )
-                    {
-                        EditorSceneCommands::destroy( pManager, pGo );
-                    }
+                    (void)EditorSceneCommands::destroyObjects( pManager, listSel ); // 되돌리기 한 단계
                     editorSelection.clearObjectSelection();
                 }
             }

@@ -118,6 +118,8 @@ namespace sw::editor
         /** @brief FUNCTION() 인자 칸입니다. 키는 (타입 · 메서드) 이름 해시라, 메서드마다 인자 타입 그대로의 값을 따로 듭니다. */
         unordered_map<uint64, vector<InspectorMethodArgSlot>> _mapMethodArgSlot;
         fixed_string<constant::kMaxBuffer256>                 _lastInvokeResult;
+        /** @brief 이름 칸이 편집 중인 글입니다(편집 중이 아니면 프레임마다 오브젝트 이름으로 채운다 — 칸을 떠날 때 적용할 글을 잡아 둔다). */
+        fixed_string<constant::kMaxBuffer256> _nameEditBuffer;
         EditorFileCollectJob                                  _componentPresetJob;
         vector<string>                                        _listComponentPresetFile;
         /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트입니다. 편집 통지를 받습니다. */
@@ -126,6 +128,8 @@ namespace sw::editor
         GameObject* _pEditTargetObject;
         /** @brief 컨테이너 "더하기" 칸의 글입니다. 키는 그 칸의 ImGui id 라 컨테이너마다 따로 듭니다. */
         unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;
+        /** @brief `_nameEditBuffer` 가 가리키는 오브젝트입니다(선택이 바뀌면 버린다). */
+        uint64 _nameEditObjectId;
         /** @brief 중첩 · 컨테이너 재귀 깊이입니다. 통지는 가장 바깥에서 한 번만 합니다. */
         uint32                 _propertyDrawDepth;
         uint8                  _bComponentPresetDirty : 1;

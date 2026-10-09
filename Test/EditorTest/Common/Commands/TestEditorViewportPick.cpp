@@ -6,6 +6,7 @@
 #include "Editor/Common/Commands/EditorViewportPick.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -62,6 +63,29 @@ SW_TEST_CASE( EditorViewportPickTest, RaySphereIntersection )
     // 원점이 구 안에 있으면 뒷면까지의 거리를 낸다 (음수가 아니어야 한다)
     SW_EXPECT_TRUE( EditorViewportPick::rayHitsSphere( origin, dir, origin, 2.0f, hitT ) );
     SW_EXPECT_TRUE( 0.0f <= hitT );
+}
+
+/**
+ * @brief [EditorViewportPickTest] 화면을 그리는 에디터 카메라는 레이가 출발하는 자리(기본 반지름 구 안)에 있어도 집히지 않는다
+ * @details 에디터 카메라는 씬 오브젝트라 기본 반지름 구가 레이 시작점을 감싸 늘 가장 가까웠다 — 뷰포트 어디를 눌러도 EditorCamera 가 골라졌다.
+ */
+SW_TEST_CASE( EditorViewportPickTest, EditorCameraIsNeverPicked )
+{
+    GameObjectManager manager;
+    CameraComponent*  pEditorCamera = CameraComponent::findOrCreateNamed( &manager, hashed_string( "EditorCamera" ), CameraRole::Editor,
+                                                                          float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pEditorCamera );
+    GameObject* pTarget = makeSceneObject( manager, "Target", float3{ 0.0f, 0.0f, 0.0f } );
+    SW_ASSERT_NOT_NULL( pTarget );
+    manager.flushSceneTransforms();
+
+    EditorPickResult result{};
+    SW_EXPECT_TRUE( EditorViewportPick::pick( &manager, makeForwardRay( 0.0f, 0.0f ), false, result ) );
+    SW_EXPECT_TRUE( result._pObject == pTarget );
+
+    // 다른 것이 없으면 아무것도 집지 않는다(에디터 카메라로 떨어지지 않는다)
+    EditorPickResult missResult{};
+    SW_EXPECT_FALSE( EditorViewportPick::pick( &manager, makeForwardRay( 50.0f, 0.0f ), false, missResult ) );
 }
 
 /**

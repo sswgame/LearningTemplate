@@ -7,13 +7,16 @@ namespace sw
     CommandStack::CommandStack()
         : _listCommand{}
         , _listPendingTransactionCommand{}
+        , _listParkedCommand{}
         , _objectEditListener{}
         , _transactionLabel{}
         , _lastCoalesceKey{}
         , _empty{}
         , _index{ 0 }
+        , _parkedIndex{ 0 }
         , _transactionDepth{ 0 }
         , _bIsExecuting{ false }
+        , _bHistoryParked{ false }
     {
     }
 
@@ -177,24 +180,8 @@ namespace sw
         if ( _objectEditListener.isCodeWithin( pBegin, pEnd ) )
             _objectEditListener = {};
 
-        uint32 droppedCount{ 0 };
-        size_t keptCount{ 0 };
-        size_t keptBeforeIndex{ 0 };
-        for ( size_t commandIndex = 0; commandIndex < _listCommand.size(); ++commandIndex )
-        {
-            if ( holdsCodeWithin( _listCommand[commandIndex], pBegin, pEnd ) )
-            {
-                ++droppedCount;
-                continue;
-            }
-            if ( commandIndex < _index )
-                ++keptBeforeIndex;
-            if ( keptCount != commandIndex )
-                _listCommand[keptCount] = std::move( _listCommand[commandIndex] );
-            ++keptCount;
-        }
-        _listCommand.resize( keptCount );
-        _index = keptBeforeIndex;
+        uint32 droppedCount = dropCommandsWithin( _listCommand, _index, pBegin, pEnd );
+        droppedCount += dropCommandsWithin( _listParkedCommand, _parkedIndex, pBegin, pEnd );
 
         size_t keptPendingCount{ 0 };
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingTransactionCommand.size(); ++pendingIndex )
@@ -213,6 +200,29 @@ namespace sw
         // 병합 대상이 바뀌었을 수 있다 — 다음 병합 push 가 엉뚱한 명령을 고치지 않게 끊는다.
         if ( droppedCount > 0 )
             _lastCoalesceKey.clear();
+        return droppedCount;
+    }
+
+    uint32 CommandStack::dropCommandsWithin( vector<Command>& inoutListCommand, size_t& inoutIndex, const void* pBegin, const void* pEnd )
+    {
+        uint32 droppedCount{ 0 };
+        size_t keptCount{ 0 };
+        size_t keptBeforeIndex{ 0 };
+        for ( size_t commandIndex = 0; commandIndex < inoutListCommand.size(); ++commandIndex )
+        {
+            if ( holdsCodeWithin( inoutListCommand[commandIndex], pBegin, pEnd ) )
+            {
+                ++droppedCount;
+                continue;
+            }
+            if ( commandIndex < inoutIndex )
+                ++keptBeforeIndex;
+            if ( keptCount != commandIndex )
+                inoutListCommand[keptCount] = std::move( inoutListCommand[commandIndex] );
+            ++keptCount;
+        }
+        inoutListCommand.resize( keptCount );
+        inoutIndex = keptBeforeIndex;
         return droppedCount;
     }
 
@@ -278,6 +288,26 @@ namespace sw
         _lastCoalesceKey.clear();
         _index            = 0;
         _transactionDepth = 0;
+    }
+
+    void CommandStack::parkHistory()
+    {
+        _listParkedCommand = std::move( _listCommand );
+        _parkedIndex       = _index;
+        _bHistoryParked    = true;
+        clear();
+    }
+
+    void CommandStack::unparkHistory()
+    {
+        clear();
+        if ( _bHistoryParked == false )
+            return;
+        _listCommand = std::move( _listParkedCommand );
+        _index       = _parkedIndex;
+        _listParkedCommand.clear();
+        _parkedIndex    = 0;
+        _bHistoryParked = false;
     }
 
     const string& CommandStack::peekUndoLabel() const

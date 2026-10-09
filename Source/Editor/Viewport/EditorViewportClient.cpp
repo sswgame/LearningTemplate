@@ -21,6 +21,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
@@ -51,26 +52,23 @@ namespace sw::editor
             static constexpr ImU32 _s_kColorAxisY = IM_COL32( 65, 220, 95, 255 );
             static constexpr ImU32 _s_kColorAxisZ = IM_COL32( 65, 130, 245, 255 );
 
-            static void storeColumnMajor( float32* pOut, const float4x4& matrix )
-            {
-                const float4x4 columnMajor = matrix.transpose();
-                Memory::copy( pOut, &columnMajor, sizeof( float32 ) * 16 );
-            }
+            /**
+             * @brief 엔진 행렬을 ImGuizmo 배열(float[16])로 옮깁니다. **그대로 복사한다.**
+             * @details 엔진 float4x4 는 행 벡터 규약(이동이 _41 · _42 · _43)의 행 우선 저장이라 메모리가 곧 ImGuizmo 가 받는 배열
+             *          (이동이 [12] · [13] · [14])이다. 전치하면 이동이 [3] · [7] · [11] 로 가서 ImGuizmo 는 물체를 원점 · 카메라 눈 자리로 보고
+             *          (클립 w = 0) 기즈모를 엉뚱한 곳에 그리며 손잡이를 잡지 못한다.
+             */
+            static void storeGizmoMatrix( float32* pOut, const float4x4& matrix ) { Memory::copy( pOut, &matrix, sizeof( float32 ) * 16 ); }
 
-            static void loadColumnMajor( float4x4& outMatrix, const float32* pIn )
-            {
-                float4x4 columnMajor{};
-                Memory::copy( &columnMajor, pIn, sizeof( float32 ) * 16 );
-                outMatrix = columnMajor.transpose();
-            }
+            static void loadGizmoMatrix( float4x4& outMatrix, const float32* pIn ) { Memory::copy( &outMatrix, pIn, sizeof( float32 ) * 16 ); }
 
-            /** @brief 열 우선 view · proj 배열(ImGuizmo 형식)에서 뷰-투영 행렬을 만듭니다. */
+            /** @brief view · proj 배열(ImGuizmo 형식)에서 뷰-투영 행렬을 만듭니다. */
             static void loadViewProj( const float32* pView, const float32* pProj, float4x4& outViewProj )
             {
                 float4x4 viewMat{};
                 float4x4 projMat{};
-                loadColumnMajor( viewMat, pView );
-                loadColumnMajor( projMat, pProj );
+                loadGizmoMatrix( viewMat, pView );
+                loadGizmoMatrix( projMat, pProj );
                 outViewProj = viewMat * projMat;
             }
 
@@ -191,14 +189,14 @@ namespace sw::editor
         const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
                               MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
         const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
-        EditorViewportClientInternal::storeColumnMajor( pOutMatrix, viewMat );
+        EditorViewportClientInternal::storeGizmoMatrix( pOutMatrix, viewMat );
     }
 
     void EditorViewportClient::getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const
     {
         const float32  effectiveAspect = aspect > 0.001f ? aspect : 1.0f;
         const float4x4 projMat         = float4x4::createPerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
-        EditorViewportClientInternal::storeColumnMajor( pOutMatrix, projMat );
+        EditorViewportClientInternal::storeGizmoMatrix( pOutMatrix, projMat );
     }
 
     void EditorViewportClient::update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered )
@@ -371,6 +369,7 @@ namespace sw::editor
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
+        EditorSelfTestMarks::note( "gameView.canvas" ); // 시나리오가 게임 뷰 가운데를 누른다(뷰포트 피킹)
 
         CameraComponent* pCamera = EditorViewportClientInternal::getRenderedCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
@@ -382,8 +381,8 @@ namespace sw::editor
 
             float32 arrView[16];
             float32 arrProj[16];
-            EditorViewportClientInternal::storeColumnMajor( arrView, pCamera->getViewMatrix() );
-            EditorViewportClientInternal::storeColumnMajor( arrProj, pCamera->getProjectionMatrix( aspect ) );
+            EditorViewportClientInternal::storeGizmoMatrix( arrView, pCamera->getViewMatrix() );
+            EditorViewportClientInternal::storeGizmoMatrix( arrProj, pCamera->getProjectionMatrix( aspect ) );
 
             // 격자 · 시각화 · 자 · 통계 · 방향 큐브는 창 그리기 목록에 그린다 — 캔버스로 자르지 않으면 화면 밖으로 뻗은 선(카메라 절두체 등)이
             // 탭 · 툴바 위까지 그려진다. 기즈모는 ImGuizmo 가 같은 사각형(SetRect)으로 자른다.
@@ -507,6 +506,8 @@ namespace sw::editor
 
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
+        // beginFrame 이 프레임마다 끈다 — 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 끈 채면 그리기만 하고 조작을 받지 않는다.
+        ImGuizmo::Enable( true );
 
         EditorWorkspace&    ws    = pContext->getWorkspace();
         const int32         opInt = ws.getGizmoOperation();
@@ -543,7 +544,7 @@ namespace sw::editor
             endGizmoDrag();
 
         float32 arrMatrix[16];
-        EditorViewportClientInternal::storeColumnMajor( arrMatrix, pSceneComp->getWorldMatrix() );
+        EditorViewportClientInternal::storeGizmoMatrix( arrMatrix, pSceneComp->getWorldMatrix() );
 
         if ( _bGizmoTracking == SW_FALSE && ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
         {
@@ -554,7 +555,7 @@ namespace sw::editor
         if ( ImGuizmo::Manipulate( pView, pProj, op, mode, arrMatrix, nullptr, bUseSnap ? arrSnap : nullptr ) )
         {
             float4x4 newWorldMat{};
-            EditorViewportClientInternal::loadColumnMajor( newWorldMat, arrMatrix );
+            EditorViewportClientInternal::loadGizmoMatrix( newWorldMat, arrMatrix );
 
             // 표면 붙이기는 **월드** 위치 · 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
             // 로컬 높이를 견준다.
@@ -627,7 +628,7 @@ namespace sw::editor
             groupWorld._41 = centroid._x;
             groupWorld._42 = centroid._y;
             groupWorld._43 = centroid._z;
-            EditorViewportClientInternal::storeColumnMajor( _arrGizmoGroupMatrix, groupWorld );
+            EditorViewportClientInternal::storeGizmoMatrix( _arrGizmoGroupMatrix, groupWorld );
 
             if ( ImGuizmo::IsOver() && ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
             {
@@ -647,7 +648,7 @@ namespace sw::editor
         if ( ImGuizmo::Manipulate( pView, pProj, op, mode, _arrGizmoGroupMatrix, nullptr, bUseSnap ? pSnap : nullptr ) )
         {
             float4x4 dummyWorld{};
-            EditorViewportClientInternal::loadColumnMajor( dummyWorld, _arrGizmoGroupMatrix );
+            EditorViewportClientInternal::loadGizmoMatrix( dummyWorld, _arrGizmoGroupMatrix );
             const uint32 count = static_cast<uint32>( _listGizmoObject.size() );
             for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
             {

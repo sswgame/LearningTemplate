@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Hierarchy 눈 단추(가시성 토글)는 되돌리기와 씬 dirty 에 남는다(panel-audit D6).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/hierarchytoggle.scenario.xml -dx12
+-->
+<Scenario name="editor.hierarchytoggle" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="75"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="90"><DevCommand line="scene.saveAs Saved/Automation/editor.hierarchytoggle/toggle.scene.xml"/></At>
+	<At frame="100">
+		<Expect probe="Editor.SceneDirty" equals="0"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+	</At>
+	<At frame="105"><EditorClick mark="hierarchy.toggle.GameObject"/></At>
+	<At frame="120">
+		<Expect probe="Editor.UndoCount" equals="2"/>
+		<Expect probe="Editor.SceneDirty" equals="1"/>
+	</At>
+	<At frame="125"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="140">
+		<Expect probe="Editor.UndoIndex" equals="1"/>
+		<Pass/>
+	</At>
+</Scenario>

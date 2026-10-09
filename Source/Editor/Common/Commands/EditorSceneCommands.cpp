@@ -183,6 +183,69 @@ namespace sw::editor
         return true;
     }
 
+    uint32 EditorSceneCommands::destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject )
+    {
+        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr )
+            return 0;
+        // 고른 조상이 있으면 건너뛴다 — 조상을 지우면 자식도 지워지고, 먼저 지운 자식을 다시 지우지 않는다.
+        vector<GameObject*> listRoot;
+        for ( GameObject* pObj : listObject )
+        {
+            if ( pObj == nullptr )
+                continue;
+            bool bAncestorPicked = false;
+            for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr && bAncestorPicked == false; pParent = pParent->getParent() )
+            {
+                for ( const GameObject* pOther : listObject )
+                {
+                    bAncestorPicked = bAncestorPicked || pOther == pParent;
+                }
+            }
+            if ( bAncestorPicked == false )
+                listRoot.push_back( pObj );
+        }
+        if ( listRoot.empty() )
+            return 0;
+
+        uint32 destroyedCount = 0;
+        EditorTransaction::beginTransaction( listRoot.size() == 1 ? string( "Destroy GameObject" ) : "Destroy " + to_string( listRoot.size() ) + " GameObjects" );
+        for ( GameObject* pObj : listRoot )
+        {
+            if ( destroy( pManager, pObj ) )
+                ++destroyedCount;
+        }
+        EditorTransaction::endTransaction();
+        return destroyedCount;
+    }
+
+    void EditorSceneCommands::collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot )
+    {
+        outListRoot.clear();
+        manager.forEachGameObject( [&outListRoot]( GameObject* pObj )
+        {
+            if ( pObj != nullptr && pObj->getParent() == nullptr && pObj->isPendingDestroy() == false )
+                outListRoot.push_back( pObj );
+        } );
+        std::sort( outListRoot.begin(), outListRoot.end(),
+                   []( const GameObject* pLeft, const GameObject* pRight )
+        { return pLeft->getObjectId() < pRight->getObjectId(); } );
+    }
+
+    void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
+    {
+        outListCreated.clear();
+        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listObject.empty() )
+            return;
+        EditorTransaction::beginTransaction( listObject.size() == 1 ? string( "Duplicate GameObject" ) : "Duplicate " + to_string( listObject.size() ) + " GameObjects" );
+        for ( GameObject* pSource : listObject )
+        {
+            GameObject* pCopy = duplicate( pManager, pSource );
+            if ( pCopy != nullptr )
+                outListCreated.push_back( pCopy );
+        }
+        EditorTransaction::endTransaction();
+    }
+
     bool EditorSceneCommands::destroy( GameObjectManager* pManager, GameObject* pObj )
     {
         if ( EditorSceneCommandsInternal::canMutateScene() == false )
@@ -227,6 +290,20 @@ namespace sw::editor
         const ObjectSnapshot afterSnapshot = EditorTransaction::captureSnapshot( pObj );
         EditorTransaction::recordModify( pObj, beforeSnapshot, afterSnapshot, "Rename GameObject" );
         return true;
+    }
+
+    void EditorSceneCommands::setActive( GameObject* pObj, bool bActive )
+    {
+        if ( pObj == nullptr || pObj->isActive() == bActive )
+            return;
+        if ( EditorSceneCommandsInternal::canMutateScene() == false )
+        {
+            pObj->setActive( bActive );
+            return;
+        }
+        const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pObj );
+        pObj->setActive( bActive );
+        commitModify( pObj, beforeSnapshot, bActive ? "Activate GameObject" : "Deactivate GameObject" );
     }
 
     Component* EditorSceneCommands::addComponent( GameObject* pObj, const hashed_string& typeName )

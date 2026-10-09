@@ -91,6 +91,11 @@ namespace sw::editor
 
         /** @brief 프로퍼티의 표시 이름입니다(DisplayName → 첫 별칭 → 이름). */
         static const utf8* getPropertyLabel( const PropertyInfo& prop );
+        /**
+         * @brief 프로퍼티 편집의 되돌리기 이름("Edit <표시 이름>")을 만듭니다. 이름이 비었거나 ImGui 라벨 조각("##…")이면 "Edit Property" 입니다.
+         * @details 위젯 라벨("##value")을 되돌리기 이름으로 쓰면 History 의 목록 글에서 "##" 뒤가 숨겨져 모든 항목이 "Edit" 로 보였다.
+         */
+        static string makeUndoLabel( const utf8* pPropertyLabel );
 
         /** @brief 각도를 도로 고칠 때 픽셀당 도입니다. 트랜스폼 섹션 · 시퀀서도 같은 값을 씁니다. */
         static constexpr float32 kAngleDragSpeed = 0.5f;

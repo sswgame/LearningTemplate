@@ -41,8 +41,25 @@ namespace sw::editor
         static bool unparent( GameObject* pObj, string_view undoLabel = "Unparent GameObject" );
         /** @brief Undo에 삭제를 기록하고 매니저에서 제거합니다. */
         static bool destroy( GameObjectManager* pManager, GameObject* pObj );
+        /**
+         * @brief 고른 오브젝트들을 되돌리기 한 단계로 지웁니다. 고른 조상이 있는 오브젝트는 그 조상과 함께 지워지므로 건너뜁니다. 지운 수를 돌려줍니다.
+         */
+        static uint32 destroyObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject );
+        /**
+         * @brief 계층 창이 그릴 루트 오브젝트를 정해진 순서(오브젝트 id 오름차순)로 모읍니다(먼저 비운다). 지우는 중인 것은 뺀다.
+         * @details 저장소 순서는 지우기에 따라 바뀌므로(swap-remove) 쓰지 않는다. 씬은 파일 순서로 id 를 매기므로 처음 연 순서와 같고, 되돌린
+         *          오브젝트는 원래 id 로 돌아와 제자리에 선다. 형제 순서를 저장하게 되면 그 순서로 바꾼다.
+         */
+        static void collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot );
+        /** @brief 고른 오브젝트들을 되돌리기 한 단계로 복제하고 새 오브젝트를 @p outListCreated 에 담습니다(먼저 비운다). */
+        static void duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated );
         /** @brief 이름을 바꾸고 Undo에 기록합니다. */
         [[nodiscard]] static bool rename( GameObject* pObj, const utf8* pNewName );
+        /**
+         * @brief 오브젝트 활성 비트를 바꿉니다. 멈춰 있으면 되돌리기와 씬 dirty 에 남기고, 플레이 중이면 바로 바꿉니다(Stop 이 되돌린다).
+         * @details 계층 창의 눈 단추와 인스펙터의 Active 칸이 같이 쓴다. 같은 값이면 아무것도 하지 않는다.
+         */
+        static void setActive( GameObject* pObj, bool bActive );
         /**
          * @brief 타입 이름으로 컴포넌트를 붙이고 Undo에 기록합니다. 붙이지 못하면 nullptr 입니다.
          * @details 새 컴포넌트에 `onPostLoad` 를 부릅니다 — 기본값이 그 상태이고, 값을 자원으로 바꾸는 자리가 거기다(메시 · 머티리얼).
