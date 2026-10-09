@@ -289,6 +289,7 @@
 - **App · Server 가 같이 쓰는 모듈 호스트는 최상위 폴더 `Source/ModuleHost` 입니다**(2026-10-10, 사용자 결정 — 옛 이름 `AppHost`, 같은 날 안의 클래스 `ModuleHost` 와 이름을 맞췄다). 실행 파일 폴더(`Source/App`) 안에 두고 정규식으로 골라 내던 것을 폴더째 나눴고,
   `CheckEngineLayers` 가 방향(App · Server → ModuleHost → Engine · RuntimeAPI)을 지킵니다. 언리얼이 실행 파일 진입점(`Launch`)과 모듈 관리자(`Core` 의 `FModuleManager`)를 다른 모듈에 두는 것과 같습니다.
   고정 스텝 시간 정책 `FixedTimestep` 은 모듈 호스트가 아니라 `Engine/Config`(티어 3, 값을 가진 `EngineConfig` 옆)에 둡니다 — 언리얼도 고정 시간 값(`FApp::FixedDeltaTime`)과 프레임 시간 계산(`UEngine::UpdateTimeAndHandleMaxTickRate`)을 모듈 관리자 밖에 둡니다.
+- **에디터 뷰포트 격자는 카메라 높이로 1 · 10 · 100 m 간격을 고르고 경계에서 섞습니다**(2026-10-10). 언리얼 · 유니티의 에디터 격자와 같은 방식이며, 굵은 선(5 칸마다)은 월드 좌표로 정하고 가장자리는 흐립니다. 화면 공간 셰이더 격자(Unity 2019+ · Godot 4)는 렌더 패스를 하나 더 들여야 해 ImGui 선 그리기를 유지합니다.
 - **`UserSettingsHost` 는 엔진으로 옮기지 않고 App 에 둡니다**(2026-10-10). 설정 정책(보류 · 적용 · 확인)은 이미 엔진의 `UserSettingsManager` 이고, 이 파일은 App 이 소유한 창과 `App::onResize` 의 스왑체인 경로에 화면 요청을 적용하는 창 소유자의 단계입니다.
   옮기면 창 접근과 리사이즈 순서가 두 곳으로 갈리고, 창이 없는 `Server` 는 쓸 일이 없습니다. 언리얼도 정책(`UGameUserSettings`)과 창 적용(창을 소유한 `UGameEngine` 의 해상도 변경)을 나눕니다.
 

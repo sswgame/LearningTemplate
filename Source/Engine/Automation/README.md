@@ -138,9 +138,9 @@ echo $LASTEXITCODE
 | `Possess` | `controller`, `pawn` | GameFramework `ControlAutomationSteps` | 컨트롤러가 빙의할 폰을 바꿉니다 |
 | `ExpectUi` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UiAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
 | `UiLayoutDump` | `file` | `Engine/UI/Automation/UiAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
-| `EditorClick` | `mark`, `button`(0..4) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데를 클릭합니다 |
+| `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
 | `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
-| `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정) |
+| `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
 | `EditorExpectObject` | `name`, `count`(기본 1), `component`, `selected` | 에디터 `EditorScenarioSteps` | 활성 씬에서 그 이름의 오브젝트 수를 확인합니다. `component` 는 그 컴포넌트를 가진 것만, `selected=1` 은 선택된 것만 셉니다 |
 | `EditorExpectDockLayout` | `minNodeSize`(px, 기본 24) | 에디터 `EditorScenarioSteps` | 창이 에디터 최소 크기 이상이고, 메인 뷰포트가 창과 같고, 보이는 도크 칸이 모두 화면 안에서 최소 변 이상인지 확인합니다 |
 | `DevCommand` | `line` | `AutomationEnvironmentSteps` | 개발 명령(`SW_DEV_COMMAND`) 한 줄을 부릅니다(`play`, `stop`, `editor <커맨드 id>`, `scene.saveAs <경로>`). 모르는 명령은 읽기 오류, 명령이 false 면 실패입니다. Shipping 에는 없습니다 |
@@ -212,6 +212,8 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
 | `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 또는 지난 프레임에 그렸으면 1 |
 | `Editor.ThemePreset`, `Editor.AccentColor`, `Editor.UiScale` | 테마 프리셋(0 ModernDark … 3 ClassicDark), 액센트 색(0xRRGGBB), UI 배율 |
+| `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
+| `Editor.ViewportCameraX`, `Editor.ViewportCameraY` | 격자가 본 뷰포트 카메라의 월드 X · Y |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
 `hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, `theme.swatch.violet` 이 있습니다.

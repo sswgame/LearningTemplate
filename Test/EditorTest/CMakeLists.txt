@@ -53,6 +53,7 @@ sw_addTestExecutable(EditorTest
 		Panels/TestInspectorPropertyLayout.cpp
 		Common/Commands/TestEditorViewportPick.cpp
 		Common/Commands/TestEditorViewportPreview.cpp
+		Viewport/TestEditorGridUtil.cpp
 		Viewport/TestEditorVisualizerGeometry.cpp
 		Common/Workspace/TestFileWatchDispatcher.cpp
 		Common/Asset/TestHeightfieldImporter.cpp
@@ -117,6 +118,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmMaterialImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/EditorSourceControl.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/SourceControlProvider.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorGridUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
 	LIBS
 		Engine

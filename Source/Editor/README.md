@@ -400,6 +400,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 
 ## 함정 · 계약
 
+- **뷰포트 격자 선의 모양은 월드 인덱스로만 정한다(`EditorGridUtil`).** 굵은 선은 월드 좌표가 `5 × 간격` 의 배수인 선이다. 카메라 기준 인덱스로 고르면 카메라가 1 m 지날 때마다 굵은 선이 다른 월드 선으로 미끄러진다. 간격은 카메라 높이(직교 뷰는 보이는 반 높이)로 1 · 10 · 100 m 를 고르고 단계 뒤 절반에서 가는 선을 흐리며 굵은 선 판정도 섞는다 — 경계 양쪽 모양이 같다(`EditorGridUtilTest`). 반지름은 높이에 연속이고 가장자리는 조각마다 알파로 흐린다. 시나리오 `editor/viewportgrid` 가 카메라를 날려 `Editor.GridMisplacedMajorLines` 0 을 본다.
+- **Game View 카메라 비행은 엔진 프레임의 실제 경과(`GameTimeScale::getUnscaledDeltaTime`)로 움직인다** — ImGui `DeltaTime` 은 벽시계라, 그것을 쓰면 고정 프레임 시간 시나리오의 이동 거리가 실행마다 달라진다.
 - **에디터 실행의 스크린샷은 게임 뷰 그림이다.** `-EnableEditor` 에서 `-gv_screenshot` 과 시나리오 `<Screenshot>` 은 Present 캡처가 게임 뷰 렌더 타깃을 복사한 것이라 에디터 UI 는 들어가지 않는다.
 - **에디터 ImGui 의 픽셀 리터럴은 UI 단위이며 `EditorThemeUtil::getDpiScale()` 을 곱한다**(창 · 열 · 항목 폭, 단추 · 차트 크기). ImGui 스타일 값은 테마 적용이 이미 곱하므로 거듭 곱하지 않는다.
 - **위젯 크기에 픽셀 상수를 쓰지 않는다.** `GetFrameHeight` 와 글자 폭에서 잰다. 24 px 고정 단추가 150 % 배율에서 잘렸다(자체 시험 `hierarchy.visibilityToggleFits`).

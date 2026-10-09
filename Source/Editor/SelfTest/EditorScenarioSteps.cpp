@@ -20,6 +20,7 @@
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorGridUtil.h"
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
@@ -119,10 +120,39 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `state` 속성("down" · "up")을 읽습니다. 없으면 누르고 떼는 한 번(`PressState::Tap`), 모르는 값이면 false 입니다. */
+            enum class PressState : uint8
+            {
+                Tap,
+                Down,
+                Up,
+            };
+
+            [[nodiscard]] static bool readPressState( const AutomationStep& step, PressState& outState )
+            {
+                const string* pState = step.findAttribute( "state" );
+                outState             = PressState::Tap;
+                if ( pState == nullptr )
+                    return true;
+                if ( StringUtil::equals( string_view{ *pState }, "down", true ) )
+                    outState = PressState::Down;
+                else if ( StringUtil::equals( string_view{ *pState }, "up", true ) )
+                    outState = PressState::Up;
+                else
+                    return false;
+                return true;
+            }
+
             static bool validateClick( const AutomationStep& step, string& outError )
             {
-                if ( validate( step, { "mark", "button", "mods" }, "mark", outError ) == false )
+                if ( validate( step, { "mark", "button", "mods", "state" }, "mark", outError ) == false )
                     return false;
+                PressState state = PressState::Tap;
+                if ( readPressState( step, state ) == false )
+                {
+                    outError = step.describe() + ": state must be down or up, got '" + *step.findAttribute( "state" ) + "'";
+                    return false;
+                }
                 vector<int32> listModifier;
                 if ( parseModifiers( step, listModifier ) == false )
                 {
@@ -158,11 +188,28 @@ namespace sw::editor
                 // 수정자(Ctrl+클릭 다중 선택 …)는 누르기 전에 눌러 뗀 뒤에 놓는다.
                 vector<int32> listModifier;
                 (void)parseModifiers( step, listModifier ); // 검사에서 봤다
+                PressState state = PressState::Tap;
+                (void)readPressState( step, state ); // 검사에서 봤다
+                // state="down" 은 누른 채로 두고(끌기 · 뷰포트 비행), state="up" 은 그 단추를 뗀다 — 사이 프레임에 다른 단계(키를 누른 채)를 넣는다.
+                if ( state == PressState::Up )
+                {
+                    EditorSelfTestInput::setMouseButton( button, false );
+                    EditorSelfTestInput::releaseMouseHold();
+                    return true;
+                }
+                if ( state == PressState::Down )
+                {
+                    // 커서를 먼저 이름표에 붙잡아 한 프레임 둔 뒤 누른다 — 누른 프레임의 마우스 이동량이 0 이라 뷰포트 비행이 시점을 돌리지 않는다.
+                    (void)EditorSelfTestInput::holdMouseAtMark( mark ); // 위에서 같은 이름으로 찾았다
+                    EditorSelfTestInput::waitNextFrame();
+                }
                 for ( const int32 modifier : listModifier )
                 {
                     EditorSelfTestInput::setKey( modifier, true );
                 }
                 EditorSelfTestInput::setMouseButton( button, true );
+                if ( state == PressState::Down )
+                    return true;
                 EditorSelfTestInput::waitNextFrame();
                 (void)EditorSelfTestInput::moveMouseToMark( mark ); // 표식은 누르기 전에 같은 이름으로 찾았다
                 EditorSelfTestInput::setMouseButton( button, false );
@@ -202,8 +249,14 @@ namespace sw::editor
 
             static bool validateKey( const AutomationStep& step, string& outError )
             {
-                if ( validate( step, { "key" }, "key", outError ) == false )
+                if ( validate( step, { "key", "state" }, "key", outError ) == false )
                     return false;
+                PressState state = PressState::Tap;
+                if ( readPressState( step, state ) == false )
+                {
+                    outError = step.describe() + ": state must be down or up, got '" + *step.findAttribute( "state" ) + "'";
+                    return false;
+                }
                 vector<int32> listKey;
                 if ( parseKeyChord( *step.findAttribute( "key" ), listKey ) == false )
                 {
@@ -218,10 +271,17 @@ namespace sw::editor
             {
                 vector<int32> listKey;
                 (void)parseKeyChord( *step.findAttribute( "key" ), listKey ); // 검사에서 봤다
-                for ( const int32 key : listKey )
+                PressState state = PressState::Tap;
+                (void)readPressState( step, state ); // 검사에서 봤다
+                if ( state != PressState::Up )
                 {
-                    EditorSelfTestInput::setKey( key, true );
+                    for ( const int32 key : listKey )
+                    {
+                        EditorSelfTestInput::setKey( key, true );
+                    }
                 }
+                if ( state == PressState::Down )
+                    return true;
                 for ( size_t index = listKey.size(); index > 0; --index )
                 {
                     EditorSelfTestInput::setKey( listKey[index - 1], false );
@@ -501,6 +561,58 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 뷰포트 격자가 이번이나 지난 프레임에 그려졌는가입니다. 아니면 격자 탐침은 값을 내지 않습니다(격자를 끈 뷰 · 다른 탭). */
+            [[nodiscard]] static const EditorGridStats* findRecentGridStats()
+            {
+                const EditorGridStats& stats = EditorGridStats::get();
+                return stats._frame >= 0 && ImGui::GetFrameCount() - stats._frame <= 1 ? &stats : nullptr;
+            }
+
+            [[nodiscard]] static bool readGridStep( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorGridStats* pStats = findRecentGridStats();
+                if ( pStats == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStats->_step );
+                return true;
+            }
+
+            [[nodiscard]] static bool readGridMajorLines( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorGridStats* pStats = findRecentGridStats();
+                if ( pStats == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStats->_majorLineCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readGridMisplacedMajorLines( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorGridStats* pStats = findRecentGridStats();
+                if ( pStats == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStats->_misplacedMajorCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readViewportCameraX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorGridStats* pStats = findRecentGridStats();
+                if ( pStats == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStats->_cameraPos._x );
+                return true;
+            }
+
+            [[nodiscard]] static bool readViewportCameraY( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorGridStats* pStats = findRecentGridStats();
+                if ( pStats == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pStats->_cameraPos._y );
+                return true;
+            }
+
             [[nodiscard]] static bool readUiScale( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
@@ -534,5 +646,14 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorUndoIndex, "Editor.UndoIndex", "Position on the undo stack (commands not undone)", &EditorScenarioStepsInternal::readUndoIndex );
     SW_AUTOMATION_PROBE( editorLoadingScreenShown, "Editor.LoadingScreenShown", "1 while the runtime UI shows its loading screen",
                          &EditorScenarioStepsInternal::readLoadingScreenShown );
+    SW_AUTOMATION_PROBE( editorGridStep, "Editor.GridStep", "Fine line spacing of the viewport grid in meters (1, 10 or 100)",
+                         &EditorScenarioStepsInternal::readGridStep );
+    SW_AUTOMATION_PROBE( editorGridMajorLines, "Editor.GridMajorLines", "Major lines the viewport grid drew in the last frame",
+                         &EditorScenarioStepsInternal::readGridMajorLines );
+    SW_AUTOMATION_PROBE( editorGridMisplacedMajorLines, "Editor.GridMisplacedMajorLines",
+                         "Major grid lines drawn off a world multiple of 5 x spacing (0 unless major lines slide with the camera)",
+                         &EditorScenarioStepsInternal::readGridMisplacedMajorLines );
+    SW_AUTOMATION_PROBE( editorViewportCameraX, "Editor.ViewportCameraX", "Viewport camera world X (as the grid saw it)", &EditorScenarioStepsInternal::readViewportCameraX );
+    SW_AUTOMATION_PROBE( editorViewportCameraY, "Editor.ViewportCameraY", "Viewport camera world Y (as the grid saw it)", &EditorScenarioStepsInternal::readViewportCameraY );
     SW_AUTOMATION_PROBE( editorUiScale, "Editor.UiScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUiScale );
 } // namespace sw::editor

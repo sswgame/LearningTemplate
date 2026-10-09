@@ -23,6 +23,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
+#include "Editor/Viewport/EditorGridUtil.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -815,78 +816,107 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        constexpr int32   kGridExtent = 20;
-        constexpr float32 kGridStep   = 1.0f;
+        // 선 하나를 가장자리 흐림이 보이도록 이만큼 조각으로 나눠 그린다(ImGui 선은 한 색이다).
+        constexpr uint32  kSegmentCount    = 8;
+        constexpr float32 kMinVisibleAlpha = 0.01f;
+        constexpr float32 kMinorWidth      = 1.0f;
+        constexpr float32 kMajorWidth      = 1.5f;
+        constexpr float32 kMinorColor[4]   = { 60.0f, 65.0f, 80.0f, 55.0f };
+        constexpr float32 kMajorColor[4]   = { 90.0f, 100.0f, 120.0f, 100.0f };
 
-        if ( _toolbarSettings._bIs2DMode )
+        // 격자 평면의 두 축(u, v)과 평면까지의 거리. 2D 는 XY 평면(직교 뷰 — 보이는 반 높이로 단계를 고른다), 3D 는 XZ 바닥.
+        const bool    b2D        = _toolbarSettings._bIs2DMode;
+        const bool    bOrtho     = MathUtil::abs( pProj[15] - 1.0f ) < 0.001f;
+        const float32 centerU    = _cameraPos._x;
+        const float32 centerV    = b2D ? _cameraPos._y : _cameraPos._z;
+        const float32 viewHeight = bOrtho && MathUtil::abs( pProj[5] ) > 1e-6f ? 2.0f / MathUtil::abs( pProj[5] ) : ( b2D ? _cameraPos._z : _cameraPos._y );
+
+        const EditorGridLevel level   = EditorGridUtil::selectLevel( viewHeight );
+        const float32         radius  = level._radius;
+        const auto            toWorld = [b2D]( float32 u, float32 v )
+        { return b2D ? float3{ u, v, 0.0f } : float3{ u, 0.0f, v }; };
+
+        EditorGridStats& stats     = EditorGridStats::get();
+        stats._step                = level._step;
+        stats._cameraPos           = _cameraPos;
+        stats._majorLineCount      = 0;
+        stats._misplacedMajorCount = 0;
+        stats._frame               = ImGui::GetFrameCount();
+
+        // bAlongV: 선이 v 방향으로 뻗는다(좌표는 u). 원점 선의 색 — 3D 는 x == 0 선이 Z 축, z == 0 선이 X 축이다. 2D 는 x == 0 선이 Y 축.
+        // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달라진다.
+        const auto drawFamily = [&]( bool bAlongV )
         {
-            // 2D 모드: XY 평면 격자
-            const float32 centerX = MathUtil::floor( _cameraPos._x );
-            const float32 centerY = MathUtil::floor( _cameraPos._y );
+            const float32 center    = bAlongV ? centerU : centerV;
+            const float32 across    = bAlongV ? centerV : centerU;
+            const int64   firstIdx  = static_cast<int64>( MathUtil::ceil( ( center - radius ) / level._step ) );
+            const int64   lastIdx   = static_cast<int64>( MathUtil::floor( ( center + radius ) / level._step ) );
+            const ImU32   axisColor = bAlongV ? ( b2D ? EditorViewportClientInternal::_s_kColorAxisY : EditorViewportClientInternal::_s_kColorAxisZ )
+                                              : EditorViewportClientInternal::_s_kColorAxisX;
 
-            for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
+            for ( int64 worldIndex = firstIdx; worldIndex <= lastIdx; ++worldIndex )
             {
-                const float32 current  = static_cast<float32>( index ) * kGridStep;
-                const bool    bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
-                const bool    bOriginY = ( MathUtil::abs( centerY + current ) < 0.01f );
-                const bool    bMajor   = ( index % 5 == 0 );
+                const float32 coordinate = static_cast<float32>( worldIndex ) * level._step;
+                const float32 offset     = coordinate - center;
+                const float32 halfChord  = MathUtil::sqrt( MathUtil::max( radius * radius - offset * offset, 0.0f ) );
+                if ( halfChord <= 0.0f )
+                    continue;
 
-                // x == 0 인 선은 Y 방향으로 뻗는다. 그것이 Y 축이고, y == 0 인 선이 X 축이다.
-                const ImU32 colorAlongY = bOriginX ? EditorViewportClientInternal::_s_kColorAxisY
-                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colorAlongX = bOriginY ? EditorViewportClientInternal::_s_kColorAxisX
-                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
+                const bool                bOrigin = ( worldIndex == 0 );
+                const EditorGridLineStyle style   = EditorGridUtil::evaluateLine( worldIndex, level );
+                if ( bOrigin == false && style._visibility < kMinVisibleAlpha )
+                    continue;
 
-                // Y 에 나란한 세로선
-                const float3 pY0{ centerX + current, centerY - static_cast<float32>( kGridExtent ), 0.0f };
-                const float3 pY1{ centerX + current, centerY + static_cast<float32>( kGridExtent ), 0.0f };
-                ImVec2       sY0, sY1;
-                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pY0, pY1, canvasPos, canvasSize, sY0, sY1 ) )
-                    pDrawList->AddLine( sY0, sY1, colorAlongY, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
+                float32 arrColor[4];
+                for ( uint32 channel = 0; channel < 4; ++channel )
+                {
+                    arrColor[channel] = MathUtil::lerp( kMinorColor[channel], kMajorColor[channel], style._majorWeight );
+                }
+                const float32 lineAlpha = bOrigin ? 1.0f : style._visibility;
+                const float32 width     = bOrigin ? kMajorWidth : MathUtil::lerp( kMinorWidth, kMajorWidth, style._majorWeight );
 
-                // X 에 나란한 가로선
-                const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
-                const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), centerY + current, 0.0f };
-                ImVec2       sX0, sX1;
-                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colorAlongX, ( bOriginY || bMajor ) ? 1.5f : 1.0f );
+                if ( bOrigin == false && style._majorWeight >= 0.5f )
+                {
+                    ++stats._majorLineCount;
+                    const float32 majorPeriod = level._step * static_cast<float32>( EditorGridUtil::kMajorEvery );
+                    const float32 phase       = MathUtil::abs( coordinate - MathUtil::round( coordinate / majorPeriod ) * majorPeriod );
+                    if ( phase > 0.001f * level._step )
+                        ++stats._misplacedMajorCount;
+                }
+
+                for ( uint32 segment = 0; segment < kSegmentCount; ++segment )
+                {
+                    const float32 from     = -halfChord + 2.0f * halfChord * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
+                    const float32 to       = -halfChord + 2.0f * halfChord * static_cast<float32>( segment + 1 ) / static_cast<float32>( kSegmentCount );
+                    const float32 middle   = 0.5f * ( from + to );
+                    const float32 edgeFade = EditorGridUtil::computeEdgeFade( MathUtil::sqrt( offset * offset + middle * middle ), radius );
+                    const float32 alpha    = lineAlpha * edgeFade;
+                    if ( alpha < kMinVisibleAlpha )
+                        continue;
+
+                    ImU32 color = 0;
+                    if ( bOrigin )
+                    {
+                        const uint32 axisAlpha = static_cast<uint32>( static_cast<float32>( ( axisColor >> IM_COL32_A_SHIFT ) & 0xFFu ) * alpha + 0.5f );
+                        color                  = ( axisColor & ~IM_COL32_A_MASK ) | ( axisAlpha << IM_COL32_A_SHIFT );
+                    }
+                    else
+                    {
+                        color = IM_COL32( static_cast<int32>( arrColor[0] ), static_cast<int32>( arrColor[1] ), static_cast<int32>( arrColor[2] ),
+                                          static_cast<int32>( arrColor[3] * alpha + 0.5f ) );
+                    }
+
+                    const float3 worldA = bAlongV ? toWorld( coordinate, across + from ) : toWorld( across + from, coordinate );
+                    const float3 worldB = bAlongV ? toWorld( coordinate, across + to ) : toWorld( across + to, coordinate );
+                    ImVec2       screenA, screenB;
+                    if ( EditorViewportProjectionUtil::projectSegment( viewProj, worldA, worldB, canvasPos, canvasSize, screenA, screenB ) )
+                        pDrawList->AddLine( screenA, screenB, color, width );
+                }
             }
-        }
-        else
-        {
-            // 3D 모드: XZ 평면 바닥 격자
-            const float32 centerX = MathUtil::floor( _cameraPos._x );
-            const float32 centerZ = MathUtil::floor( _cameraPos._z );
+        };
 
-            for ( int32 index = -kGridExtent; index <= kGridExtent; ++index )
-            {
-                const float32 current  = static_cast<float32>( index ) * kGridStep;
-                const bool    bOriginX = ( MathUtil::abs( centerX + current ) < 0.01f );
-                const bool    bOriginZ = ( MathUtil::abs( centerZ + current ) < 0.01f );
-                const bool    bMajor   = ( index % 5 == 0 );
-
-                // x == 0 인 선은 Z 방향으로 뻗는다. 그것이 **Z 축**이고, z == 0 인 선이 X 축이다.
-                // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달라진다.
-                const ImU32 colorAlongZ = bOriginX ? EditorViewportClientInternal::_s_kColorAxisZ
-                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-                const ImU32 colorAlongX = bOriginZ ? EditorViewportClientInternal::_s_kColorAxisX
-                                                   : ( bMajor ? IM_COL32( 90, 100, 120, 100 ) : IM_COL32( 60, 65, 80, 55 ) );
-
-                // Z 에 나란한 선
-                const float3 pZ0{ centerX + current, 0.0f, centerZ - static_cast<float32>( kGridExtent ) };
-                const float3 pZ1{ centerX + current, 0.0f, centerZ + static_cast<float32>( kGridExtent ) };
-                ImVec2       sZ0, sZ1;
-                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pZ0, pZ1, canvasPos, canvasSize, sZ0, sZ1 ) )
-                    pDrawList->AddLine( sZ0, sZ1, colorAlongZ, ( bOriginX || bMajor ) ? 1.5f : 1.0f );
-
-                // X 에 나란한 선
-                const float3 pX0{ centerX - static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
-                const float3 pX1{ centerX + static_cast<float32>( kGridExtent ), 0.0f, centerZ + current };
-                ImVec2       sX0, sX1;
-                if ( EditorViewportProjectionUtil::projectSegment( viewProj, pX0, pX1, canvasPos, canvasSize, sX0, sX1 ) )
-                    pDrawList->AddLine( sX0, sX1, colorAlongX, ( bOriginZ || bMajor ) ? 1.5f : 1.0f );
-            }
-        }
+        drawFamily( true );
+        drawFamily( false );
     }
 
     void EditorViewportClient::processRulerTool( ImDrawList* pDrawList, const float2& canvasPos,

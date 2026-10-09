@@ -41,6 +41,9 @@ namespace sw::editor
             {
                 vector<PendingEvent> _listEvent;
                 vector<NamedMark>    _listMark;
+                float2               _heldMousePosition{};
+                uint32               _heldMouseViewportId{ 0 };
+                bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 자리로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
                 bool                 _bEnabled{ false };
             };
 
@@ -101,6 +104,7 @@ namespace sw::editor
         {
             state._listMark.clear();
             state._listEvent.clear();
+            state._bHoldMouse = false;
         }
     }
 
@@ -188,9 +192,31 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorSelfTestInput::holdMouseAtMark( string_view key )
+    {
+        EditorSelfTestMark mark;
+        if ( EditorSelfTestMarks::find( key, mark ) == false )
+            return false;
+        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
+        state._heldMousePosition                  = float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
+        state._heldMouseViewportId                = mark._viewportId;
+        state._bHoldMouse                         = true;
+        return true;
+    }
+
+    void EditorSelfTestInput::releaseMouseHold() { EditorSelfTestInputInternal::getState()._bHoldMouse = false; }
+
     void EditorSelfTestInput::flushIntoImGui()
     {
-        vector<EditorSelfTestInputInternal::PendingEvent>& listEvent = EditorSelfTestInputInternal::getState()._listEvent;
+        EditorSelfTestInputInternal::State&                state     = EditorSelfTestInputInternal::getState();
+        vector<EditorSelfTestInputInternal::PendingEvent>& listEvent = state._listEvent;
+        if ( state._bHoldMouse )
+        {
+            ImGuiIO& io = ImGui::GetIO();
+            io.AddMousePosEvent( state._heldMousePosition._x, state._heldMousePosition._y );
+            if ( state._heldMouseViewportId != 0 )
+                io.AddMouseViewportEvent( static_cast<ImGuiID>( state._heldMouseViewportId ) );
+        }
         if ( listEvent.empty() )
             return;
         ImGuiIO& io            = ImGui::GetIO();
