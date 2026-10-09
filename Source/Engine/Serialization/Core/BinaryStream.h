@@ -1,6 +1,6 @@
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Common/VarIntUtil.h"
+#include "Core/Container/VarIntUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"

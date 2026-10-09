@@ -3,7 +3,7 @@
 #include "Engine/EngineInitSequence.h"
 
 #include "Core/Common/Defines.h"
-#include "Core/Common/TopologicalSortUtil.h"
+#include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/String/StringBuilder.h"
 

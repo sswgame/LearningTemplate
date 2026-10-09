@@ -2,8 +2,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "Core/Common/VarIntUtil.h"
 #include "Core/Compression/CompressionStream.h"
+#include "Core/Container/VarIntUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"

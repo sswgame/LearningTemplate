@@ -1,6 +1,7 @@
 #include "pch.h"
 
-#include "Core/CoreMinimal.h"
+#include "Core/String/hashed_string.h"
+
 #include "Core/Memory/MemoryProfiler.h"
 
 namespace sw

@@ -8,7 +8,6 @@
     #include "Core/Common/PlatformOsHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
     #include "Core/Common/PlatformOsHeaders.h"
-    #include "Core/Memory/Memory.h"
 #endif
 
 namespace sw
@@ -31,9 +30,9 @@ namespace sw
         size_t length = 0;
         while ( length < kMaxPosixLength && pName[length] != '\0' )
         {
+            arrShort[length] = pName[length];
             ++length;
         }
-        Memory::copy( arrShort, pName, length );
         pthread_setname_np( pthread_self(), arrShort );
 #endif
     }

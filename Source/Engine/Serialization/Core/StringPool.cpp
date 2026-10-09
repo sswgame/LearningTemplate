@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/Core/StringPool.h"
 
-#include "Core/Common/VarIntUtil.h"
+#include "Core/Container/VarIntUtil.h"
 
 #include "Engine/Serialization/Core/BinaryStream.h"
 #include "Engine/Serialization/Format/Archive.h"

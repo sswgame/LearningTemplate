@@ -2,8 +2,6 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Core/CoreMinimal.h"
-
 namespace sw
 {
     namespace
