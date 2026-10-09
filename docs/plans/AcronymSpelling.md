@@ -31,7 +31,7 @@
 - FixPass 마다 badSample · goodSample (`CheckFixersAreAlive`) · 게이트 `selfTestCases`.
 
 ### 2. 약어마다 한 커밋 (작은 것부터)
-순서: Hud · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → Gpu → Ui → Cpu. `Id` 는 맨 끝(별도 판단 — 규모가 다른 약어의 열 배다. `TagID` 는 이미 대문자).
+순서: Hud · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → Gpu → Ui → Cpu. `ID` 도 같은 규칙으로 바꾼다(사용자 결정 2026-10-10: `Id` 보다 `ID` 가 명확하다). 규모가 다른 약어의 열 배라 맨 끝에 둔다. `TagID` 는 이미 대문자. 이름 맨 앞이나 접두 `_` 뒤의 `id` 는 소문자 그대로(`_id`, `id`), 가운데·끝은 `ID`(`entityID`, `getOwnerID`).
 한 커밋의 일: 코드모드 --all → 파일 `git mv`(대소문자만 바뀌는 이름은 Windows 에서 두 단계로) → include 경로 치환 → 데이터 다시 쓰기 → reconfigure(코드젠) → Debug 컴파일 → 커밋.
 - **데이터**: 리플렉션 타입 이름이 씬 · 프리팹 · 설정 XML/JSON 에 문자열로 들어 있다(`UiCanvas…`, `UiDocument` 등 리소스 17 파일에서 확인). 옛 이름 별칭은 두지 않는다 — 데이터를 같은 커밋에서 다시 쓴다(`ResourceDataSchemaTest`).
 - **RHI ABI 도장 · 모듈**: 타입 이름이 모듈 ABI 에 걸리면 도장을 다시 만들고 모든 모듈을 같이 다시 짓는다(CLAUDE.md "RHI ABI stamps").
