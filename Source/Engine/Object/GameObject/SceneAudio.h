@@ -11,9 +11,9 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/RegistrationList.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
+#include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/IPhysicsScene.h"

@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Module/ModuleTypeRegistry.h"

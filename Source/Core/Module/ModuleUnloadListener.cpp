@@ -4,7 +4,7 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/RegistrationList.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {

@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
-#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw::editor
 {

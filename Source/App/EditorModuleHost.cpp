@@ -3,7 +3,7 @@
 #include "App/EditorModuleHost.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/MemoryProfiler.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleImageUtil.h"
 
 #include "Engine/Common/EngineServices.h"

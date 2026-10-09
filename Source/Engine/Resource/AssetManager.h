@@ -15,10 +15,10 @@
  */
 #pragma once
 #include "Core/Common/Macros.h"
-#include "Core/Container/RegistrationList.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetFormat.h"

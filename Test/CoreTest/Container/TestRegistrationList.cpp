@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/RegistrationList.h"
+#include "Core/String/RegistrationList.h"
 
 #include "TestFramework/TestFramework.h"
 

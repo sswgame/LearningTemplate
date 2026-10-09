@@ -18,8 +18,8 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | 폴더 | 하는 일 |
 |---|---|
 | `Common/` | 기본 타입, 매크로, 타깃 매크로, 빌드 정보 |
-| `Container/` | 표준 컨테이너 별칭, 핸들, 레지스트리 목록, 문자열 타입과 `StringUtil` · `formatString`, 동시 큐 |
-| `String/` | `hashed_string`, `fixed_string`, `TagID`, `StringBuilder` |
+| `Container/` | 표준 컨테이너 별칭, 핸들, 문자열 타입과 `StringUtil` · `formatString`, 동시 큐 |
+| `String/` | `hashed_string`, `fixed_string`, `TagID`, `StringBuilder`, 이름 등록부(`RegistrationList` · `NameRegistry`) |
 | `Memory/` | `sw_new`, 할당기, 메모리 태그(`ScopedMemoryTag`), 할당 기록기 인터페이스 |
 | `Log/` | 로그 매크로와 전역 창구(`Logger`) |
 | `LogSink/` | 기본 로그 싱크(`AsyncLogSink`)와 출력 장치 |

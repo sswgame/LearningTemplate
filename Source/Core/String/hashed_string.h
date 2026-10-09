@@ -24,6 +24,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 

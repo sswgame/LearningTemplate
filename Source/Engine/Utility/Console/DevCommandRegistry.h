@@ -5,9 +5,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/RegistrationList.h"
 
 /** @brief 개발 명령이 컴파일되는 구성이면 1 입니다(Dev). Shipping 은 0 이고 등록부 · 콘솔 · 명령 본문이 모두 빠집니다. */
 #if defined( SW_SHIPPING )

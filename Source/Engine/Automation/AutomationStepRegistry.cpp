@@ -2,8 +2,8 @@
 
 #include "Engine/Automation/AutomationStepRegistry.h"
 
-#include "Core/Container/RegistrationList.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
