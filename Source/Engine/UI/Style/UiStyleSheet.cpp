@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
 #include "Engine/UI/Animation/UiStyleTransition.h"
@@ -19,13 +20,12 @@ namespace sw
     {
         struct UiStyleSheetInternal
         {
-            static constexpr utf8 kSchemaVersionKey[] = "_schemaVersion";
-            static constexpr utf8 kVariableElement[]  = "Variable";
-            static constexpr utf8 kRuleElement[]      = "Rule";
-            static constexpr utf8 kNameAttribute[]    = "_name";
-            static constexpr utf8 kValueAttribute[]   = "_value";
-            static constexpr utf8 kSelectorKey[]      = "_selector";
-            static constexpr utf8 kVariablePrefix     = '$';
+            static constexpr utf8 kVariableElement[] = "Variable";
+            static constexpr utf8 kRuleElement[]     = "Rule";
+            static constexpr utf8 kNameAttribute[]   = "_name";
+            static constexpr utf8 kValueAttribute[]  = "_value";
+            static constexpr utf8 kSelectorKey[]     = "_selector";
+            static constexpr utf8 kVariablePrefix    = '$';
 
             /** @brief 특정도 자리(이름 · 클래스와 상태 · 타입)의 비트 이동입니다. */
             static constexpr uint32 kNameShift  = 16;
@@ -368,7 +368,7 @@ namespace sw
         bool bVersioned{ false };
         for ( XmlAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            if ( StringUtil::equals( attribute.getName(), Internal::kSchemaVersionKey, true ) == false )
+            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
                 return Internal::fail( context, root, string( "UiStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UiStyleSheetAsset::kVersion ) )

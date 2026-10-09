@@ -7,6 +7,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 #include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Core/PanelWidget.h"
@@ -153,7 +154,7 @@ namespace sw
         using Internal = UiDocumentWriterInternal;
         XmlDocument   document;
         const XmlNode documentRoot = document.appendRoot( UiDocumentAsset::kRootElementName );
-        documentRoot.appendAttribute( "_schemaVersion", UiDocumentAsset::kVersion );
+        documentRoot.appendAttribute( kSchemaVersionKey, UiDocumentAsset::kVersion );
 
         // 화면 서술 — 기본값과 다른 칸이 있을 때만.
         XmlDocument        currentDesc;

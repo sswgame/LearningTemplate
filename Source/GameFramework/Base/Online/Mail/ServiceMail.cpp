@@ -17,7 +17,6 @@ namespace sw
         struct ServiceMailInternal
         {
             static constexpr uint64 kRecordFormat = 1;
-            static constexpr int32  kHexWidth     = 16;
 
             static string makeMailKey( uint64 recipientAccountId, int64 createdMs, string_view idempotencyKey )
             {
@@ -182,7 +181,7 @@ namespace sw
 
     bool ServiceMail::parseRecipient( string_view mailKey, uint64& outAccountId )
     {
-        const size_t width = static_cast<size_t>( ServiceMailInternal::kHexWidth );
+        const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         if ( mailKey.size() <= width || mailKey[width] != '/' )
             return false;
         return ServiceKeyUtil::parseHex64( mailKey.substr( 0, width ), outAccountId );

@@ -28,7 +28,6 @@ namespace sw
             static constexpr utf8   kStyleSheetListElement[] = "_listStyleSheet";
             static constexpr utf8   kAnimationListElement[]  = "_listAnimation";
             static constexpr utf8   kItemElement[]           = "item";
-            static constexpr utf8   kSchemaVersionKey[]      = "_schemaVersion";
             static constexpr utf8   kFragmentProperty[]      = "_document";
             static constexpr uint32 kMaxFragmentDepth        = 16; ///< 조각 안의 조각 깊이 상한(자기를 다시 부르는 사슬은 그 전에 잡는다 — 이것은 안전망)
 
@@ -370,7 +369,7 @@ namespace sw
         bool bVersioned{ false };
         for ( XmlAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            if ( StringUtil::equals( attribute.getName(), Internal::kSchemaVersionKey, true ) == false )
+            if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
                 return Internal::fail( context, root, string( "UiDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UiDocumentAsset::kVersion ) )

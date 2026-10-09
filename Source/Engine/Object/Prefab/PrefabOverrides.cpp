@@ -11,6 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
@@ -24,7 +25,6 @@ namespace sw
             static constexpr const utf8* kComponentList = "_listComponent";
             static constexpr const utf8* kComponentName = "_componentName";
             static constexpr const utf8* kObjectName    = "_name";
-            static constexpr const utf8* kSchemaVersion = "_schemaVersion";
             static constexpr const utf8* kObject        = "Object";
             static constexpr const utf8* kRemove        = "Remove";
             static constexpr const utf8* kOverride      = "Override";
@@ -113,7 +113,7 @@ namespace sw
             /** @brief 오브젝트 루트에서 덮어쓴 것으로 적지 않는 칸입니다 — 이름은 엔티티가, 판은 직렬화기가, 컴포넌트는 따로 견준다. */
             static bool isRootOnlyField( const utf8* pName )
             {
-                return isSameText( pName, kSchemaVersion ) || isSameText( pName, kObjectName ) || isSameText( pName, kComponentList );
+                return isSameText( pName, sw::kSchemaVersionKey ) || isSameText( pName, kObjectName ) || isSameText( pName, kComponentList );
             }
 
             /** @brief 인스턴스 원소에서 기준 원소와 다른 속성 · 자식 원소를 모읍니다. */

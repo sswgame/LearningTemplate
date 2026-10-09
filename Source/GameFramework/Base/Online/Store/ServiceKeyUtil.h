@@ -16,6 +16,9 @@ namespace sw
     /** @brief 서비스 저장소 키 · 레코드 도우미입니다. */
     struct SW_GF_API ServiceKeyUtil
     {
+        /** @brief `appendHex64` 이 쓰는 자리 수입니다(uint64 = 16 진수 16 자리). 키에서 수 부분을 잘라 낼 때 씁니다. */
+        static constexpr int32 kHexWidth = 16;
+
         /** @brief @p value 를 소문자 16 진수 16 자리로 붙입니다 — 키 사전순이 수 순서와 같다. */
         static void appendHex64( string& outKey, uint64 value );
         /** @brief `appendHex64` 의 16 자리를 읽습니다. 형식이 틀리면 false 입니다. */

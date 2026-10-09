@@ -20,7 +20,6 @@ namespace sw
         {
             static constexpr int64       kShutdownWaitMs = 5000;
             static constexpr int32       kTrimBatchCount = 64; ///< 정리 한 번에 지우는 지난 기록
-            static constexpr int32       kHexWidth       = 16;
             static constexpr const utf8* kWhisperPrefix  = "whisper.";
 
             static const hashed_string& getHistoryTable()
@@ -121,7 +120,7 @@ namespace sw
                 for ( const ServiceRecord& record : listOld )
                 {
                     uint64 sentMs = 0;
-                    if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size(), ChatServiceInternal::kHexWidth ), sentMs ) == false ||
+                    if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size(), ServiceKeyUtil::kHexWidth ), sentMs ) == false ||
                          static_cast<int64>( sentMs ) >= _trimBeforeMs )
                         break; // 키 순서 = 시간 순 — 첫 새 기록에서 멈춘다
                     trim.erase( ChatServiceInternal::getHistoryTable(), record._key, record._version );
@@ -669,7 +668,7 @@ namespace sw
     {
         // 기록 키 `whisper.<작은 계정 16 진>.<큰 계정 16 진>` — 두 id 중 하나가 나여야 한다
         const size_t prefixSize = string_view( ChatServiceInternal::kWhisperPrefix ).size();
-        const size_t hexWidth   = static_cast<size_t>( ChatServiceInternal::kHexWidth );
+        const size_t hexWidth   = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         if ( channelId.size() != prefixSize + hexWidth + 1 + hexWidth || channelId[prefixSize + hexWidth] != '.' )
             return false;
         uint64 low  = 0;

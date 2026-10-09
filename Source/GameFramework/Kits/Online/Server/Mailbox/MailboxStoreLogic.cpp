@@ -16,7 +16,6 @@ namespace sw
     {
         struct MailboxStoreLogicInternal
         {
-            static constexpr int32 kHexWidth = 16;
 
             static MailboxResult finish( MailboxReply& outReply, MailboxResult result )
             {
@@ -408,7 +407,7 @@ namespace sw
             ++outStats._failedCount;
             return;
         }
-        const size_t width = static_cast<size_t>( MailboxStoreLogicInternal::kHexWidth );
+        const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         for ( const ServiceRecord& index : listIndex )
         {
             uint64 expiresMs = 0;

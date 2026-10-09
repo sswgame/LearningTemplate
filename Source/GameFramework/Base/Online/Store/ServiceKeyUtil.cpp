@@ -11,8 +11,7 @@ namespace sw
     {
         struct ServiceKeyUtilInternal
         {
-            static constexpr utf8  kHexDigit[] = "0123456789abcdef";
-            static constexpr int32 kHexWidth   = 16;
+            static constexpr utf8 kHexDigit[] = "0123456789abcdef";
         };
     } // namespace
 } // namespace sw
@@ -21,7 +20,7 @@ namespace sw
 {
     void ServiceKeyUtil::appendHex64( string& outKey, uint64 value )
     {
-        for ( int32 digitIndex = ServiceKeyUtilInternal::kHexWidth - 1; digitIndex >= 0; --digitIndex )
+        for ( int32 digitIndex = kHexWidth - 1; digitIndex >= 0; --digitIndex )
         {
             outKey.push_back( ServiceKeyUtilInternal::kHexDigit[( value >> ( digitIndex * 4 ) ) & 0xFu] );
         }
@@ -29,7 +28,7 @@ namespace sw
 
     bool ServiceKeyUtil::parseHex64( string_view text, uint64& outValue )
     {
-        if ( text.size() != static_cast<size_t>( ServiceKeyUtilInternal::kHexWidth ) )
+        if ( text.size() != static_cast<size_t>( kHexWidth ) )
             return false;
         uint64 value = 0;
         for ( const utf8 ch : text )
@@ -50,7 +49,7 @@ namespace sw
     string ServiceKeyUtil::makeHex64( uint64 value )
     {
         string key;
-        key.reserve( ServiceKeyUtilInternal::kHexWidth );
+        key.reserve( kHexWidth );
         appendHex64( key, value );
         return key;
     }

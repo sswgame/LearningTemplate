@@ -6,6 +6,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 
+#include "Engine/Reflection/ReflectionConstants.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
@@ -38,7 +39,7 @@ namespace sw
 
 #undef REGISTER_CONTAINER_KIND
         }
-        return "None";
+        return constant::reflection::kNone;
     }
 
     /** @brief .gen.cpp 에 넣을 `sw::ContainerKind::X` 표현식 */
