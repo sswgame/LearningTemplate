@@ -77,37 +77,27 @@
 
 ### 1-4. 에디터
 
+- **에디터 보강 — 계획은 [docs/plans/EditorPlus.md](plans/EditorPlus.md).** 다음 세션이 할 일이다(사용자 결정, 2026-10-07). 확장 지점(EditorModule SHARED · 확장 모듈),
+  환경설정 · 단축키 · 모듈 창, 인스펙터 다중 편집 · 콘텐츠 브라우저 역색인, 보기 모드 · 스크린샷 · RenderDoc · 타임라인 · assert 대화상자 · bugit · Test Runner,
+  커브 · 맵 검사 · 노드 그래프 틀 · 패키징, 아이콘(R3 · R4 · R5 · R9), 패널 점검의 부족한 점(N1 ~ N12)을 단위마다 "확인 = 에디터 시나리오" 와 함께 적었다.
+  옛 1-4 의 "에디터 · 개발 편의 기능" 가운데 C 확장 지점 · F 카탈로그 편집기 · G 프로파일링 · 캡처의 남은 것 · H 품질 · 작업 흐름, 그리고 설정 브라우저 패널은 그 문서로 옮겼다.
+  단위를 끝내면 계획 문서에서 지우고, 다 끝나면 이 항목과 계획 문서를 지운다(남은 로드맵 줄은 여기로).
+- **에디터 문서(`Source/Editor/README.md` 등)는 에디터 보강 뒤 새 문체로 다시 쓴다** — 5 차 문서 다시 쓰기에서 일부러 뺐다(보강하면서 패널 · 확장 지점이 바뀐다). 틀은 [문서 쓰기 지침](10_WritingDocs.md).
 - **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UiPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UiDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
   에셋 종류 `UiDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
-- **설정 브라우저 패널**(기능 로드맵) — `docs/Config/ConfigReference.json`(생성 메타데이터: 파일 · 칸 · 타입 · 기본값 · 범위 · 설명)을 읽어 `Config/` · 팩 설정 파일을
-  찾아 열고 칸을 인스펙터처럼 고치는 창(언리얼 Project Settings · `UDeveloperSettings` 자리). 고친 파일은 `ConfigManager::reloadConfigFile` 로 다시 읽고,
-  기본값과 같은 값은 파일에서 지운다(설정 파일에는 다른 값만).
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
   `AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline` 이 지킨다. 프로세스 정적 저장소가 기동 뒤 자란 몫일 것 — 기준선 직후 `setDetailedTrackingEnabled( true )` ·
   종료 보고 직전 `getTopCallStacks( LiveBytes )` 임시 진단으로 자리를 찾아 종료 끝에서 놓는다.
 
-- **에디터 · 개발 편의 기능(2026-10-04 사용자 승인, 순서대로).** 이미 있는 것(gv 표 · 커맨드 팔레트 · 핫 리로드 · Undo · PIE 재생/한 프레임 ·
-  InputReplay · 기즈모 · 미니덤프 · RenderTargetPanel)은 다시 만들지 않는다.
-  - **C 확장 지점** — 등록부(`EditorRegistry<T>` · `IEditorPanel` · `IInspectorComponent` · 시각화 · `EditorCommandRegistry`)를
-    EditorFramework SHARED 로 떼어 내보내고, 키트 · 게임이 Dev 전용 `<Module>Editor` 모듈로 패널 · 인스펙터 · 시각화를 등록한다.
-    지금은 EditorModule DLL 안의 함수 정적이라 다른 모듈이 못 쓴다. 첫 사용자는 ThemePark 배치 시각화. GM 도구 패널(GF_Admin 의 `AdminClient` — 조회 · 지급 · 제재 · 감사 열람)도 이것을 기다린다.
-  - **D 콘솔 · 치트(남은 것)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
-    엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.
-    게임 창 콘솔은 셸 InputMap 액션 + `InputManager` 키보드 포커스로 받는다(`DevTools/DevConsoleController`). 남은 것: 패드는 포커스 밖이라 콘솔이 열린 동안
-    패드 A · B · 십자키가 게임에도 간다(shooter3d 는 패드 `Back` 이 `CycleCamera` 와 겹친다), 플레이어별 재배치(`InputMap::loadUserBindings`)가 셸 맵에 걸려
-    있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
-  - **F 카탈로그 편집기** — 카탈로그 계약 하나(ResourceDataSchemaTest 의 종류 표를 대체) · enum 이름 표(`CityCatalog.cpp` 의 하드코딩 개수 포함
-    25 곳) · DataTablePanel 확장 편집기 · 저장 시 검증 · "어디서 쓰이나" 역색인 → 이름 바꾸기 시 참조 고침.
-  - **G 프로파일링 · 캡처** — 구조는 섰다: 자체 패널(`ProfilerPanel` — CPU 구간 · GPU 패스 · 카운터 표(최근 N 프레임 p50 · p99 · 최대, 정렬 · 검색) +
-    GT · RT · GPU 프레임 그래프, 집계는 ImGui 없는 `ProfilerScopeHistory`) + 시간축 분석은 외부 Tracy 뷰어(패널의 "Open Tracy" 가 같은 판 0.13.1 을 띄워
-    localhost 에 붙인다 — 언리얼 에디터 → Insights 방식. 뷰어를 도킹 창으로 넣지 않은 이유는 `Source/Engine/Utility/Profiling/README.md`). GPU 타임스탬프는 네
-    백엔드 모두 엔진이 모은다. 남은 것: RenderDoc 캡처 버튼 · 스크린샷 버튼 · 오버드로 · 노멀 · 깊이 보기, 패널에 스레드별 미니 타임라인(지금은 표 · 그래프뿐 —
-    타임라인은 Tracy).
-  - **H 품질 · 작업 흐름** — assert 무시 대화상자(이번만 / 계속) · 버그 리포트 한 방(스크린샷 + 로그 + InputReplay + 씬) · 시험 패널.
+- **콘솔 · 치트의 남은 것(옛 "에디터 · 개발 편의 기능" 의 D)** — 게임 · 키트의 치트 명령(무적 · 아이템 주기 · 돈 …)을 각 게임 · 킷에 `SW_DEV_COMMAND` 로 단다(등록부 · 콘솔 ·
+  엔진 명령은 들어갔다 — `Source/Engine/README.md` "개발 콘솔"). 리눅스 오버레이(`X11DevConsoleWindow`)는 실기로 띄워 보지 않았다.
+  게임 창 콘솔은 셸 InputMap 액션 + `InputManager` 키보드 포커스로 받는다(`DevTools/DevConsoleController`). 남은 것: 패드는 포커스 밖이라 콘솔이 열린 동안
+  패드 A · B · 십자키가 게임에도 간다(shooter3d 는 패드 `Back` 이 `CycleCamera` 와 겹친다), 플레이어별 재배치(`InputMap::loadUserBindings`)가 셸 맵에 걸려
+  있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
 
