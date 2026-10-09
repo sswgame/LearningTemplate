@@ -60,8 +60,10 @@ namespace sw
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::unregisterTexture, pTextureId ); };                                                                                            \
         pOutApi->getGameViewport = []( sw::EditorHandle editorHandle, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )                                                                                     \
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::getGameViewport, pRenderTarget, pWidth, pHeight ); };                                                                          \
-        pOutApi->getViewportCamera = []( sw::EditorHandle editorHandle ) -> void*                                                                                                                                  \
-        { return sw::ModuleForwardUtil::callOr<EditorClass, void*>( editorHandle, nullptr, &EditorClass::getViewportCamera ); };                                                                                   \
+        pOutApi->getSceneViewport = []( sw::EditorHandle editorHandle, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )                                                                                    \
+        { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::getSceneViewport, pRenderTarget, pWidth, pHeight ); };                                                                         \
+        pOutApi->getSceneViewCamera = []( sw::EditorHandle editorHandle ) -> void*                                                                                                                                 \
+        { return sw::ModuleForwardUtil::callOr<EditorClass, void*>( editorHandle, nullptr, &EditorClass::getSceneViewCamera ); };                                                                                  \
         pOutApi->bindService = []( const sw::ModuleService* pService )                                                                                                                                             \
         {                                                                                                                                                                                                          \
             if ( pService != nullptr )                                                                                                                                                                             \

@@ -15,6 +15,7 @@
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/Renderer/Frame/PresentHookDelegate.h"
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
 #include "Engine/Object/Animation/AnimationLod.h"
 #include "Engine/Utility/Profiling/FrameProfileSession.h"
 #include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
@@ -107,15 +108,11 @@ namespace sw
         /**
          * @brief 씬 업데이트, RHI 제출 등을 수행합니다.
          * @param deltaTime 델타 타임
-         * @param gameRenderTarget 오프스크린 Game View RT 식별자 (없으면 0 = 백버퍼)
-         * @param vpWidth 뷰포트 너비
-         * @param vpHeight 뷰포트 높이
-         * @param viewCameraProvider 호스트가 지정한 렌더 카메라를 돌려주는 델리게이트.
-         *                           바인딩되지 않았거나 nullptr을 돌려주면 씬의 게임 카메라를 씁니다.
+         * @param views 호스트가 요청한 오프스크린 출력(에디터 게임 뷰 · 씬 뷰). 둘 다 비면 백버퍼에 게임 카메라로 그립니다.
+         * @param sceneViewCameraProvider 씬 뷰를 그리는 호스트 카메라(에디터 카메라)를 돌려주는 델리게이트. 씬 뷰가 없으면 부르지 않습니다.
          * @param bTickScene false이면 씬 GameObject tick을 건너뜁니다 (에디터 Pause).
          */
-        void tick( float32 deltaTime, uint64 gameRenderTarget, uint32 vpWidth, uint32 vpHeight,
-                   const ViewCameraProviderDelegate& viewCameraProvider, bool bTickScene );
+        void tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene );
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 

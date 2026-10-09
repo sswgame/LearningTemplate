@@ -1174,13 +1174,13 @@ namespace sw
         }
     }
 
-    void EngineLoop::tick( float32                           deltaTime,
-                           uint64                            gameRenderTarget,
-                           uint32                            vpWidth,
-                           uint32                            vpHeight,
-                           const ViewCameraProviderDelegate& viewCameraProvider,
-                           bool                              bTickScene )
+    void EngineLoop::tick( float32 deltaTime, const HostViewTargets& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bTickScene )
     {
+        // 주 출력 — 게임 뷰가 있으면 그것(게임 카메라 · 화면 UI · 화면 사각형 뷰), 씬 뷰만 있으면 씬 뷰, 둘 다 없으면 백버퍼다.
+        const HostViewTarget& mainOutput = views.getMainOutput();
+        const uint32          vpWidth    = mainOutput._width;
+        const uint32          vpHeight   = mainOutput._height;
+        const bool            bSceneMain = views.isSceneViewMain();
         // 진단: 지정한 프레임에 백엔드 교체를 요청한다(에디터 패널과 같은 경로. setValueAsInt 가 변경 콜백을 부른다).
         // 테스트용 스위치라 Shipping 에는 없다(그 빌드에서 gv_rhiSwapAtFrame 은 등록되지 않아 늘 0 이다).
 #if !defined( SW_SHIPPING )
@@ -1325,10 +1325,10 @@ namespace sw
             if ( _pAutomationRunner != nullptr )
                 (void)_pAutomationRunner->takePendingScreenshotPath( packet._screenshotPath ); // 없으면 빈 채로 둔다
 
-            packet._gameRenderTarget = gameRenderTarget;
-            packet._viewportWidth    = vpWidth;
-            packet._viewportHeight   = vpHeight;
-            packet._cameraPos        = float3{ 0.0f, 1.2f, 3.2f };
+            packet._outputRenderTarget = mainOutput._renderTarget;
+            packet._viewportWidth      = vpWidth;
+            packet._viewportHeight     = vpHeight;
+            packet._cameraPos          = float3{ 0.0f, 1.2f, 3.2f };
 
             if ( pActiveScene != nullptr )
             {
@@ -1351,8 +1351,11 @@ namespace sw
                 collectSceneLights( pActiveScene, packet._listLight );
 
                 pActiveScene->ensureDefaultCameras();
-                // 위의 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다.
-                CameraComponent* pCam = viewCameraProvider.isBound() ? viewCameraProvider() : nullptr;
+                // 위의 핫 리로드 · 씬 전환 · 씬 틱이 GameObject 를 파괴했을 수 있으므로 여기서 조회한다. 씬 뷰 카메라는 씬 뷰가 있을 때만 묻는다.
+                CameraComponent* pSceneViewCamera = ( views._scene.isValid() && sceneViewCameraProvider.isBound() ) ? sceneViewCameraProvider() : nullptr;
+                if ( pSceneViewCamera != nullptr && pSceneViewCamera->isActive() == false )
+                    pSceneViewCamera = nullptr;
+                CameraComponent* pCam = bSceneMain ? pSceneViewCamera : nullptr;
                 if ( pCam == nullptr || pCam->isActive() == false )
                     pCam = pActiveScene->getActiveGameCamera();
                 // 주 출력의 크기 — 게임 뷰 RT 면 그 크기, 백버퍼 경로면 스왑체인 크기다(화면 사각형 뷰 · 주 시점 사각형의 비율이 이것을 본다).
@@ -1387,6 +1390,11 @@ namespace sw
                     RenderViewCollector::collectExtraViews( *pActiveScene->getObjectManager(), pCam, packet._viewProj, outputWidth, outputHeight,
                                                             _renderViewClock, RenderViewCollector::getDefaultBudget(), *_renderViewScheduler, packet._listView );
                 }
+                // 씬 뷰 — 주 출력이면 게임 화면의 일부(화면 사각형 뷰)를 빼고, 게임 뷰와 함께면 자기 RT 에 그리는 추가 뷰로 싣는다.
+                if ( bSceneMain )
+                    RenderViewCollector::removeScreenRectViews( packet._listView );
+                else if ( pSceneViewCamera != nullptr && pSceneViewCamera != pCam )
+                    RenderViewCollector::appendHostView( *pSceneViewCamera, views._scene, packet._listView );
                 // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
                 // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
                 if ( pActiveScene->getObjectManager() != nullptr )
@@ -1421,14 +1429,15 @@ namespace sw
 
             // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 시험 그림은 그 위에.
             // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
-            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() && _owned._pUiSystem->getCanvas().isEmpty() == false )
+            // 씬 뷰가 주 출력인 프레임은 화면 UI 를 싣지 않는다 — UI 는 게임 화면(게임 뷰 · 백버퍼)에만 있다.
+            if ( bSceneMain == false && _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() && _owned._pUiSystem->getCanvas().isEmpty() == false )
             {
                 packet._canvas._mainOutput      = _owned._pUiSystem->getCanvas();
                 packet._canvas._contentRevision = _owned._pUiSystem->getCanvasRevision();
             }
             if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
                 _owned._pUiSystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
-            if ( gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
+            if ( bSceneMain == false && gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
             {
                 packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다
                 const uint32 canvasWidth        = packet._viewportWidth > 0 ? packet._viewportWidth : _rhi->getDevice().getBackBufferWidth();

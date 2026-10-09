@@ -462,18 +462,18 @@ namespace sw
         return true;
     }
 
-    void ModuleHost::sampleGameViewport()
+    void ModuleHost::sampleViewTargets()
     {
-        _frameState._gameViewportTarget = 0;
-        _frameState._gameViewportWidth  = 0;
-        _frameState._gameViewportHeight = 0;
-        if ( hasEditor() == false || _editorApi.getGameViewport == nullptr )
+        _frameState._views = HostViewTargets{};
+        if ( hasEditor() == false )
             return;
 
-        _editorApi.getGameViewport( _editor,
-                                    &_frameState._gameViewportTarget,
-                                    &_frameState._gameViewportWidth,
-                                    &_frameState._gameViewportHeight );
+        HostViewTarget& game = _frameState._views._game;
+        if ( _editorApi.getGameViewport != nullptr )
+            _editorApi.getGameViewport( _editor, &game._renderTarget, &game._width, &game._height );
+        HostViewTarget& scene = _frameState._views._scene;
+        if ( _editorApi.getSceneViewport != nullptr )
+            _editorApi.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
     }
 
     void ModuleHost::beginFrame()
@@ -516,7 +516,7 @@ namespace sw
         // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         _frameState._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
-        sampleGameViewport();
+        sampleViewTargets();
     }
 
     void ModuleHost::endEditorFrame()
@@ -536,11 +536,11 @@ namespace sw
         return _editorApi.processEvent( _editor, &event );
     }
 
-    CameraComponent* ModuleHost::getViewportCamera() const
+    CameraComponent* ModuleHost::getSceneViewCamera() const
     {
-        if ( hasEditor() == false || _editorApi.getViewportCamera == nullptr )
+        if ( hasEditor() == false || _editorApi.getSceneViewCamera == nullptr )
             return nullptr;
-        return static_cast<CameraComponent*>( _editorApi.getViewportCamera( _editor ) );
+        return static_cast<CameraComponent*>( _editorApi.getSceneViewCamera( _editor ) );
     }
 
     // ======================================================================

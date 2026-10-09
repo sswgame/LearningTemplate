@@ -337,6 +337,7 @@ namespace sw
             RenderViewSettings          _settings;
             hashed_string               _outputPath;                ///< 렌더 텍스처 경로
             Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 든 렌더 텍스처(`TextureCache`)
+            RHITextureHandle            _hostTarget{ 0 };           ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
             uint64                      _viewId{ 0 };
             RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
@@ -363,7 +364,7 @@ namespace sw
             uint32           _width{ 0 };
             uint32           _height{ 0 };
             RHIFormat        _format{ RHIFormat::Unknown };   ///< 대상의 실제 포맷(PSO 를 고른다)
-            uint8            _bRenderTexture{ SW_FALSE };     ///< 렌더 텍스처 뷰의 자기 텍스처
+            uint8            _bOwnOutput{ SW_FALSE };         ///< 추가 뷰의 자기 출력 전체(렌더 텍스처 · 호스트 타깃)
             uint8            _bCapture{ SW_FALSE };           ///< 백버퍼 대신 스크린샷 캡처 텍스처에 그린다
             uint8            _bCaptureToBack{ SW_FALSE };     ///< 캡처를 Swapchain 을 쓰는 마지막 패스 뒤에 백버퍼로 복사한다(출력이 곧 백버퍼일 때)
             uint8            _bCaptureFromOutput{ SW_FALSE }; ///< Swapchain 을 쓰는 마지막 패스 뒤에 출력 RT(에디터 게임 뷰)를 캡처로 복사한다

@@ -65,6 +65,17 @@ namespace sw::editor
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
 
+            /** @brief 뷰 RT 핸들과 크기를 C ABI 출력 인자에 씁니다. @p pView 가 없으면 0 입니다(이번 프레임에 그 뷰를 그리지 않는다). */
+            static void writeViewport( const EditorViewTarget* pView, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )
+            {
+                if ( pRenderTarget != nullptr )
+                    *pRenderTarget = ( pView != nullptr ) ? pView->_renderTarget : 0;
+                if ( pWidth != nullptr )
+                    *pWidth = ( pView != nullptr ) ? pView->_width : 0;
+                if ( pHeight != nullptr )
+                    *pHeight = ( pView != nullptr ) ? pView->_height : 0;
+            }
+
             /** @brief ImGui 할당을 sw 할당자로 보낸다 — 할당 헤더에 태그가 적혀 메모리 프로파일러의 Editor 줄로 세인다. */
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             /** @brief `allocateForImGui` 의 짝입니다. */
@@ -332,7 +343,7 @@ namespace sw::editor
         ImGuiEditorInternal::releaseModuleUndoCommands();
         if ( _editorContext != nullptr )
         {
-            _editorContext->destroyGameView();
+            _editorContext->destroyViewTargets();
             _editorContext->getPanelManager().shutdownAllPanels( nullptr );
             _editorContext->getPanelManager().clear();
             _editorContext->shutdown();
@@ -414,6 +425,7 @@ namespace sw::editor
         {
             _editorContext->setGameViewFocused( false );
             _editorContext->setGameViewHovered( false );
+            _editorContext->clearViewDrawnMarks();
         }
 
         {
@@ -614,16 +626,18 @@ namespace sw::editor
 
     void ImGuiEditor::getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
     {
-        const EditorGameView* pGameView = ( _editorContext != nullptr ) ? &_editorContext->getGameView() : nullptr;
-        if ( pRenderTarget != nullptr )
-            *pRenderTarget = ( pGameView != nullptr ) ? pGameView->_renderTarget : 0;
-        if ( pWidth != nullptr )
-            *pWidth = ( pGameView != nullptr ) ? pGameView->_width : 0;
-        if ( pHeight != nullptr )
-            *pHeight = ( pGameView != nullptr ) ? pGameView->_height : 0;
+        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestGameView( _editorContext->wasViewDrawn( EditorViewKind::Game ) );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getViewTarget( EditorViewKind::Game ) : nullptr, pRenderTarget, pWidth, pHeight );
     }
 
-    CameraComponent* ImGuiEditor::getViewportCamera() const
+    void ImGuiEditor::getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const
+    {
+        const bool bRequest = _editorContext != nullptr && EditorViewTargetUtil::shouldRequestSceneView( _editorContext->wasViewDrawn( EditorViewKind::Scene ),
+                                                                                                         _editorContext->wasViewDrawn( EditorViewKind::Game ) );
+        ImGuiEditorInternal::writeViewport( bRequest ? &_editorContext->getViewTarget( EditorViewKind::Scene ) : nullptr, pRenderTarget, pWidth, pHeight );
+    }
+
+    CameraComponent* ImGuiEditor::getSceneViewCamera() const
     {
         // Simulate 는 에디터 카메라를 그대로 쓴다. 게임 카메라는 플레이어가 조종하는 세션에서만.
         return EditorCamera::getViewportCamera( editor::getActiveScene(), EditorPlaySession::isPlayerActive() );

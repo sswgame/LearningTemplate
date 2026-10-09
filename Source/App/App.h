@@ -90,8 +90,8 @@ namespace sw
         void onConfigReloaded( const hashed_string& configTypeName );
         /** @brief 네이티브 창 이벤트를 전달합니다. */
         bool onWindowMessage( const NativeWindowEvent& event );
-        /** @brief tick 안에서 필요할 때 조회하는 에디터 뷰 카메라입니다. */
-        CameraComponent* getEditorViewCamera();
+        /** @brief tick 안에서 필요할 때 조회하는 에디터 씬 뷰 카메라입니다. */
+        CameraComponent* getSceneViewCamera();
         /** @brief 강제 핫 리로드 단축키 콜백입니다. */
         void onForceReload( const utf8* pModuleName );
         /** @brief 에디터 렌더 훅 콜백입니다. */
@@ -126,7 +126,7 @@ namespace sw
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 EngineLoop 가 씬 카메라를 씁니다. */
-        ViewCameraProviderDelegate _viewCameraProvider;
+        ViewCameraProviderDelegate _sceneViewCameraProvider;
         /// @brief `initialize` 가 시작된 시각(마이크로초, steady_clock)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64 _initializeStartMicro;
 

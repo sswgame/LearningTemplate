@@ -56,6 +56,9 @@ namespace sw
             view._bRenderThisFrame = request._bRender;
             view._outputWidth      = request._outputWidth;
             view._outputHeight     = request._outputHeight;
+            view._hostTarget       = request._outputKind == RenderViewOutputKind::HostTarget ? request._hostTarget : RHITextureHandle{ 0 };
+            if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget == 0 )
+                view._bRenderThisFrame = SW_FALSE;
 
             // 렌더 텍스처는 캐시에서 빌린다 — 머티리얼이 같은 경로로 읽는다. 크기는 텍스처의 실제 크기다(먼저 만든 쪽이 정했다).
             const bool bRenderTexture = view._outputKind == RenderViewOutputKind::RenderTexture;
@@ -211,9 +214,11 @@ namespace sw
 
         pCmd->beginCommandList();
         (void)_graph.execute( _graphContext, pCmd );
-        // 렌더 텍스처는 이어서 주 시점의 머티리얼이 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
+        // 렌더 텍스처는 이어서 주 시점의 머티리얼이, 호스트 타깃은 에디터 UI 가 읽는다 — 읽기 상태로 돌려 둔다(DX11 은 RTV 슬롯에서 뗀다).
         if ( view._outputKind == RenderViewOutputKind::RenderTexture && view._pOutputTexture != nullptr )
             pCmd->prepareTextureForShaderRead( view._pOutputTexture->getHandle() );
+        else if ( view._outputKind == RenderViewOutputKind::HostTarget && view._hostTarget != 0 )
+            pCmd->prepareTextureForShaderRead( view._hostTarget );
         pCmd->endCommandList();
         pDevice->executeCommandList( pCmd );
 

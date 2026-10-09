@@ -24,14 +24,15 @@
 namespace sw
 {
     /** @brief `GameAPI`/`EditorAPI` 표의 모양이 바뀔 때마다 올립니다. */
-    inline constexpr uint32 kModuleAbiVersion = 2;
+    inline constexpr uint32 kModuleAbiVersion = 3;
 
     /**
      * @brief 표의 지문입니다. 버전과 함께 바꿉니다.
      *        v1: 모듈 경계에 버전 · 스탬프를 처음 붙임 (GameAPI 9항목 · EditorAPI 19항목).
      *        v2: `importEditorAssets` 가 호스트 서비스 표를 받음(헤드리스 임포트가 작업 시스템을 쓴다).
+     *        v3: 씬 뷰 / 게임 뷰 분리 — `EditorAPI` 에 `getSceneViewport` 를 더하고 `getViewportCamera` 를 `getSceneViewCamera` 로(EditorAPI 20항목).
      */
-    inline constexpr auto kModuleAbiStamp = "module-abi-v2-2026-10";
+    inline constexpr auto kModuleAbiStamp = "module-abi-v3-2026-10";
 
     using PFN_GetModuleAbiVersion = uint32 ( * )();
     using PFN_GetModuleAbiStamp   = const utf8* (*)();

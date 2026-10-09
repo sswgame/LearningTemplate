@@ -5823,7 +5823,7 @@ SW_TEST_CASE( RenderPassGpuTest, UnlitViewModeChangesThePicture )
 
 /**
  * @brief [RenderPassGpuTest] 출력이 렌더 타깃(에디터 게임 뷰)이어도 Present 캡처가 그 그림을 담는다 — 4 백엔드
- * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_gameRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 견준다.
+ * @details 에디터 실행의 `-gv_screenshot` · 시나리오 스크린샷이 읽는 길이다. 패킷의 `_outputRenderTarget` 으로 그리고, 캡처를 출력 RT 를 읽은 것과 픽셀로 견준다.
  */
 SW_TEST_CASE( RenderPassGpuTest, PresentCaptureFollowsOffscreenOutput )
 {
@@ -5853,10 +5853,10 @@ SW_TEST_CASE( RenderPassGpuTest, PresentCaptureFollowsOffscreenOutput )
         for ( uint32 frameIndex = 0; frameIndex < 3 && bOk; ++frameIndex )
         {
             sw::RenderFramePacket packet{};
-            packet._bValid           = 1;
-            packet._gameRenderTarget = outputTarget;
-            packet._viewportWidth    = kOutputWidth;
-            packet._viewportHeight   = kOutputHeight;
+            packet._bValid             = 1;
+            packet._outputRenderTarget = outputTarget;
+            packet._viewportWidth      = kOutputWidth;
+            packet._viewportHeight     = kOutputHeight;
             builder.buildFromScene( &stage._scene, packet._cameraPos );
             builder.exportCpuSnapshot( packet._gpuScene );
             device->beginFrame( clear );

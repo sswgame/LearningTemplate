@@ -63,7 +63,7 @@ namespace sw::editor
         : _pRhiDevice{ nullptr }
         , _pDockLayout{ nullptr }
         , _pRendererBackend{ nullptr }
-        , _gameView{}
+        , _arrViewTarget{}
         , _bGameViewHovered{ SW_FALSE }
         , _bGameViewFocused{ SW_FALSE }
         , _reserved{ 0 }
@@ -108,7 +108,7 @@ namespace sw::editor
 
     void EditorContext::shutdown()
     {
-        destroyGameView();
+        destroyViewTargets();
 
         if ( s_pActiveContext == this )
             setActive( nullptr );
@@ -130,20 +130,37 @@ namespace sw::editor
         unbindLocalService<EditorContext>();
     }
 
-    void EditorContext::destroyGameView()
+    void EditorContext::clearViewDrawnMarks()
     {
-        if ( _gameView._pTextureId != nullptr && _pRendererBackend != nullptr )
+        for ( EditorViewTarget& view : _arrViewTarget )
         {
-            _pRendererBackend->unregisterTexture( _gameView._pTextureId );
-            _gameView._pTextureId = nullptr;
+            view._bDrawn = SW_FALSE;
+        }
+    }
+
+    void EditorContext::destroyViewTargets()
+    {
+        for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( EditorViewKind::Count ); ++kindIndex )
+        {
+            destroyViewTarget( static_cast<EditorViewKind>( kindIndex ) );
+        }
+    }
+
+    void EditorContext::destroyViewTarget( EditorViewKind kind )
+    {
+        EditorViewTarget& view = _arrViewTarget[static_cast<uint32>( kind )];
+        if ( view._pTextureId != nullptr && _pRendererBackend != nullptr )
+        {
+            _pRendererBackend->unregisterTexture( view._pTextureId );
+            view._pTextureId = nullptr;
         }
 
-        if ( _gameView._renderTarget != 0 && _pRhiDevice != nullptr && _pRhiDevice->getResourceFactory() != nullptr )
+        if ( view._renderTarget != 0 && _pRhiDevice != nullptr && _pRhiDevice->getResourceFactory() != nullptr )
         {
             // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의
             // GPU 완료 뒤에 부순다. 렌더러 백엔드가 없으면(그릴 쪽이 없다) 곧바로 부순다.
             IRHIResourceFactory*   pResource    = _pRhiDevice->getResourceFactory();
-            const RHITextureHandle renderTarget = _gameView._renderTarget;
+            const RHITextureHandle renderTarget = view._renderTarget;
             if ( _pRendererBackend != nullptr )
             {
                 _pRendererBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pResource, renderTarget]()
@@ -153,26 +170,27 @@ namespace sw::editor
             {
                 pResource->destroyTexture( renderTarget );
             }
-            _gameView._renderTarget = 0;
+            view._renderTarget = 0;
         }
 
-        _gameView._width  = 0;
-        _gameView._height = 0;
+        view._width  = 0;
+        view._height = 0;
     }
 
-    void EditorContext::ensureGameViewSize( uint32 width, uint32 height )
+    void EditorContext::ensureViewTargetSize( EditorViewKind kind, uint32 width, uint32 height )
     {
+        EditorViewTarget& view = _arrViewTarget[static_cast<uint32>( kind )];
         if ( width == 0 || height == 0 )
             return;
-        if ( width == _gameView._width && height == _gameView._height && _gameView._renderTarget != 0 )
+        if ( width == view._width && height == view._height && view._renderTarget != 0 )
             return;
         if ( _pRhiDevice == nullptr || _pRhiDevice->getResourceFactory() == nullptr )
             return;
 
-        destroyGameView();
+        destroyViewTarget( kind );
 
         // editortooldefaults.json 의 _clearColor 를 쓴다(값을 여기 박아 두면 설정 파일이 조용히 무시된다).
-        const float4 gameViewClearColor = editor::getEditorToolDefaults()._clearColor;
+        const float4 viewClearColor = editor::getEditorToolDefaults()._clearColor;
 
         RHITextureDesc rtDesc{};
         rtDesc._width             = width;
@@ -181,20 +199,21 @@ namespace sw::editor
         rtDesc._bIsRenderTarget   = SW_TRUE;
         rtDesc._bIsShaderResource = SW_TRUE;
         rtDesc._mipLevels         = 1;
-        rtDesc._clearColor        = gameViewClearColor;
+        rtDesc._clearColor        = viewClearColor;
 
-        _gameView._renderTarget = _pRhiDevice->getResourceFactory()->createTexture2D( rtDesc );
-        if ( _gameView._renderTarget == 0 )
+        view._renderTarget = _pRhiDevice->getResourceFactory()->createTexture2D( rtDesc );
+        if ( view._renderTarget == 0 )
             return;
 
         // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
         // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
-        if ( EditorContextLifecycleInternal::fillTextureWithColor( *_pRhiDevice->getResourceFactory(), _gameView._renderTarget, width, height, gameViewClearColor ) == false )
-            SW_LOG_WARNING( "Game view target %#x%# could not be cleared before its first frame", width, height );
+        // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
+        if ( EditorContextLifecycleInternal::fillTextureWithColor( *_pRhiDevice->getResourceFactory(), view._renderTarget, width, height, viewClearColor ) == false )
+            SW_LOG_WARNING( "View target %#x%# could not be cleared before its first frame", width, height );
 
-        _gameView._width  = width;
-        _gameView._height = height;
+        view._width  = width;
+        view._height = height;
         if ( _pRendererBackend != nullptr )
-            _gameView._pTextureId = _pRendererBackend->registerTexture( _gameView._renderTarget );
+            view._pTextureId = _pRendererBackend->registerTexture( view._renderTarget );
     }
 } // namespace sw::editor

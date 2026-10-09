@@ -59,10 +59,12 @@ namespace sw
         virtual void* registerTexture( uint64 texture ) = 0;
         /** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
         virtual void unregisterTexture( void* pTextureID ) = 0;
-        /** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
+        /** @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다. 게임 뷰 패널이 보이지 않으면 0 입니다. */
         virtual void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
-        /** @brief 이번 프레임 Game View 에 쓸 카메라를 반환합니다. 편집 모드면 에디터 카메라, PIE 면 게임 카메라입니다. */
-        virtual CameraComponent* getViewportCamera() const = 0;
+        /** @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다. 씬 뷰가 보이지 않으면 0 입니다(두 뷰가 모두 안 보이면 씬 뷰 RT 를 냅니다). */
+        virtual void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const = 0;
+        /** @brief 이번 프레임 씬 뷰를 그리는 카메라(에디터 카메라)를 반환합니다. */
+        virtual CameraComponent* getSceneViewCamera() const = 0;
         /**
          * @brief 플레이어가 조종하는 세션(PIE Play)이 도는지 반환합니다. Step 대기 중이면 true입니다.
          * @details 호스트는 이 답으로 게임 모듈 업데이트 · 게임 입력을 켭니다. Simulate(월드만)는 false 이고, 씬 틱은 `isPaused` 가 정합니다.

@@ -684,8 +684,8 @@ namespace sw::editor
                 // 패널과 같은 순서다: 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임이 놓은 텍스처는 앞 프레임의 스냅샷만 그린다.
                 const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
-                pContext->ensureGameViewSize( width, height );
-                const EditorGameView& view = pContext->getGameView();
+                pContext->ensureViewTargetSize( EditorViewKind::Scene, width, height );
+                const EditorViewTarget& view = pContext->getViewTarget( EditorViewKind::Scene );
                 (void)context.expect( view._width == width && view._height == height && view._pTextureId != nullptr,
                                       "the game view was not recreated at the requested size" );
 

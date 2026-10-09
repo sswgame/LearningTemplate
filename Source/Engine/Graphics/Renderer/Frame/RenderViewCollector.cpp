@@ -141,4 +141,35 @@ namespace sw
             outListView[index]._bRender = arrRender[index];
         }
     }
+
+    void RenderViewCollector::appendHostView( CameraComponent& camera, const HostViewTarget& target, vector<RenderViewRequest>& inoutListView )
+    {
+        if ( target.isValid() == false )
+            return;
+        RenderViewRequest request;
+        request._settings             = RenderViewCollectorInternal::makeSettings( camera.getRenderOutput() );
+        request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
+        request._settings._bCut       = camera.consumeCut() ? SW_TRUE : SW_FALSE;
+        request._viewId               = camera.getComponentId();
+        request._outputKind           = RenderViewOutputKind::HostTarget;
+        request._hostTarget           = target._renderTarget;
+        request._outputWidth          = target._width;
+        request._outputHeight         = target._height;
+        request._viewProj             = camera.getViewProjectionMatrix( static_cast<float32>( target._width ) / static_cast<float32>( target._height ) );
+        request._position             = camera.getCameraPosition();
+        request._transparentSortAxis  = Render2DSettings::getActive().computeTransparentSortAxis( camera.isOrthographic(), camera.getCameraForward() );
+        request._bRender              = SW_TRUE;
+        if ( inoutListView.size() >= kMaxExtraRenderView )
+            inoutListView.back() = request;
+        else
+            inoutListView.push_back( request );
+    }
+
+    void RenderViewCollector::removeScreenRectViews( vector<RenderViewRequest>& inoutListView )
+    {
+        inoutListView.erase( std::remove_if( inoutListView.begin(), inoutListView.end(),
+                                             []( const RenderViewRequest& request )
+        { return request._outputKind == RenderViewOutputKind::ScreenRect; } ),
+                             inoutListView.end() );
+    }
 } // namespace sw

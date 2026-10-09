@@ -36,6 +36,7 @@ namespace sw
     {
         ScreenRect    = 0, ///< 주 출력(백버퍼 · 게임 뷰)의 사각형 — 주 시점 위에 겹친다(분할 화면 · PiP)
         RenderTexture = 1, ///< 렌더 텍스처(`rendertarget/<이름>`) — 머티리얼이 읽는다(CCTV 모니터 · 백미러)
+        HostTarget    = 2, ///< 호스트가 만든 렌더 타깃(에디터 씬 뷰) — 핸들(`RenderViewRequest::_hostTarget`)로 받고, 그린 뒤 셰이더 읽기 상태로 둔다
     };
 
     /**
@@ -69,11 +70,46 @@ namespace sw
         float3               _transparentSortAxis{}; ///< 이 뷰의 투명 정렬 축(직교 카메라의 시선). 0 이면 눈까지의 거리로 정렬한다(주 뷰와 같은 규칙)
         RenderViewSettings   _settings{};
         hashed_string        _renderTexture{};  ///< `RenderTexture` 의 경로(`rendertarget/<이름>`)
+        RHITextureHandle     _hostTarget{ 0 };  ///< `HostTarget` 의 렌더 타깃 핸들
         uint64               _viewId{ 0 };      ///< 카메라 컴포넌트 id — 렌더러가 뷰마다의 상태를 이것으로 찾는다
         uint32               _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 크기, 화면 사각형이면 그 픽셀 크기)
         uint32               _outputHeight{ 0 };
         RenderViewOutputKind _outputKind{ RenderViewOutputKind::RenderTexture };
         uint8                _bRender{ SW_TRUE }; ///< 이번 프레임에 그린다(갱신 주기 · 보이는가 · 예산이 정한다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 호스트(에디터)가 만든 오프스크린 출력 하나입니다. 렌더 타깃이 0 이면 이번 프레임에 그 뷰를 그리지 않습니다. */
+    struct HostViewTarget
+    {
+        RHITextureHandle _renderTarget{ 0 };
+        uint32           _width{ 0 };
+        uint32           _height{ 0 };
+
+        /** @brief 그릴 수 있는 출력인지입니다. */
+        bool isValid() const { return _renderTarget != 0 && _width > 0 && _height > 0; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct HostViewTargets
+     * @brief 호스트가 이번 프레임에 그려 달라는 뷰 둘입니다(`EngineLoop::tick`).
+     * @details 게임 뷰는 게임 카메라 · 화면 UI · 화면 사각형 뷰가 드는 주 출력이고, 씬 뷰는 호스트 카메라의 추가 뷰(`RenderViewOutputKind::HostTarget`)입니다.
+     *          게임 뷰가 없고 씬 뷰만 있으면 씬 뷰가 주 출력이 됩니다(화면 UI · 화면 사각형 뷰 없이). 둘 다 없으면 백버퍼에 게임 카메라로 그립니다(에디터 없는 실행).
+     */
+    struct HostViewTargets
+    {
+        HostViewTarget _game;
+        HostViewTarget _scene;
+
+        /** @brief 씬 뷰가 주 출력인지(게임 뷰가 없다)입니다. */
+        bool isSceneViewMain() const { return _game.isValid() == false && _scene.isValid(); }
+        /** @brief 이번 프레임의 주 출력입니다(둘 다 없으면 빈 값 — 백버퍼). */
+        const HostViewTarget& getMainOutput() const { return isSceneViewMain() ? _scene : _game; }
     };
 } // namespace sw
 

@@ -10,6 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Renderer/Frame/RenderView.h"
+
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"
 
@@ -39,17 +41,13 @@ namespace sw
      * @brief 한 프레임 동안 고정되는 호스트 ↔ 모듈 상태입니다.
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있습니다. 고정 스텝마다 다시 묻던 것을 한 번 고정해,
      *          프레임 안의 모든 단계가 같은 답을 보게 합니다. 필드는 값이 만들어지는 곳에서 채웁니다. 게임플레이 활성 여부는
-     *          beginFrame(게임 업데이트 전)에서, 게임 뷰포트와 씬 틱 여부는 updateEditorUi(에디터가 이번 프레임 입력을 처리한 뒤)에서
+     *          beginFrame(게임 업데이트 전)에서, 게임 뷰 · 씬 뷰 RT 와 씬 틱 여부는 updateEditorUi(에디터가 이번 프레임 입력을 처리한 뒤)에서
      *          채웁니다. 순서를 바꾸면 에디터의 Step 한 칸이 틱 없이 소비됩니다.
      */
     struct ModuleFrameState
     {
-        /** @brief 오프스크린 Game View RT 식별자입니다. 0 이면 백버퍼에 바로 그립니다. */
-        uint64 _gameViewportTarget;
-        /** @brief Game View RT 의 가로 픽셀 수입니다. RT 가 0 이면 의미가 없습니다. */
-        uint32 _gameViewportWidth;
-        /** @brief Game View RT 의 세로 픽셀 수입니다. RT 가 0 이면 의미가 없습니다. */
-        uint32 _gameViewportHeight;
+        /** @brief 에디터가 이번 프레임에 그려 달라는 게임 뷰 · 씬 뷰 RT 입니다. 보이지 않는 패널의 뷰는 비어 있고, 둘 다 비면 백버퍼에 바로 그립니다. */
+        HostViewTargets _views;
         /** @brief 이번 프레임에 게임 모듈의 update/fixedUpdate 를 돌려야 하면 1 입니다. */
         uint8 _bGameplayActive : 1;
         /** @brief 이번 프레임에 씬 GameObject 를 틱해야 하면 1 입니다. */
@@ -58,9 +56,7 @@ namespace sw
 
         /** @brief 에디터가 없을 때의 답(둘 다 돈다)으로 시작합니다. */
         ModuleFrameState()
-            : _gameViewportTarget{ 0 }
-            , _gameViewportWidth{ 0 }
-            , _gameViewportHeight{ 0 }
+            : _views{}
             , _bGameplayActive{ SW_TRUE }
             , _bTickScene{ SW_TRUE }
             , _reserved{ 0 }
@@ -163,8 +159,8 @@ namespace sw
 
         /** @brief 이번 프레임의 모듈 상태입니다. beginFrame 뒤에만 유효합니다. */
         const ModuleFrameState& getFrameState() const { return _frameState; }
-        /** @brief 이번 프레임 Game View 에 쓸 카메라를 에디터에서 조회합니다. */
-        CameraComponent* getViewportCamera() const;
+        /** @brief 이번 프레임 씬 뷰를 그리는 에디터 카메라를 에디터에서 조회합니다. */
+        CameraComponent* getSceneViewCamera() const;
 
         /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 Present 훅이 씁니다. */
         EditorHandle getEditor() const { return _editor; }
@@ -261,8 +257,8 @@ namespace sw
         bool queryGameplayActive() const;
         /** @brief 에디터가 월드를 틱해야 하는지 묻습니다. Pause 이면서 Step 이 아니면 false 입니다. */
         bool queryTickScene() const;
-        /** @brief 이번 프레임 Game View RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다. */
-        void sampleGameViewport();
+        /** @brief 이번 프레임 게임 뷰 · 씬 뷰 RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다(보이지 않는 패널의 뷰는 비어 온다). */
+        void sampleViewTargets();
 
         /** @brief ModuleService 를 다시 만들어 에디터 모듈에 넘깁니다. */
         void rebindEditorService();

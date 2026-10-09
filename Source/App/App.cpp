@@ -160,7 +160,7 @@ namespace sw
         , _fixedTimestep{}
         , _backendSwap{}
         , _userSettingsHost{}
-        , _viewCameraProvider{}
+        , _sceneViewCameraProvider{}
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bDevConsoleExecPending{ SW_FALSE }
@@ -376,7 +376,7 @@ namespace sw
         // 나눌 필요가 없다.
         if ( _bEnableEditor == SW_TRUE )
         {
-            _viewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getEditorViewCamera, this );
+            _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
             // 에디터 창은 패널 배치가 겹치는 크기 밑으로 줄이지 않는다(언리얼 메인 프레임 · 유니티 에디터 창도 최소 크기를 둔다).
             _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
         }
@@ -481,7 +481,7 @@ namespace sw
             }
 
             {
-                // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰포트 RT 와 씬 틱 여부를 확정한다.
+                // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰 · 씬 뷰 RT 와 씬 틱 여부를 확정한다.
                 SW_PROFILE_SCOPE( "GT.Editor.updateUi" );
                 _moduleHost->updateEditorUi( frameTime._deltaTime );
             }
@@ -496,12 +496,7 @@ namespace sw
 #endif
 
             const ModuleFrameState& frameState = _moduleHost->getFrameState();
-            _engineLoop.tick( frameTime._deltaTime,
-                              frameState._gameViewportTarget,
-                              frameState._gameViewportWidth,
-                              frameState._gameViewportHeight,
-                              _viewCameraProvider,
-                              frameState._bTickScene == SW_TRUE );
+            _engineLoop.tick( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
             _moduleHost->endEditorFrame();
 
             _backendSwap.applyIfPending();
@@ -628,9 +623,9 @@ namespace sw
         return false;
     }
 
-    CameraComponent* App::getEditorViewCamera()
+    CameraComponent* App::getSceneViewCamera()
     {
-        return _moduleHost != nullptr ? _moduleHost->getViewportCamera() : nullptr;
+        return _moduleHost != nullptr ? _moduleHost->getSceneViewCamera() : nullptr;
     }
 
     void App::onForceReload( const utf8* pModuleName )

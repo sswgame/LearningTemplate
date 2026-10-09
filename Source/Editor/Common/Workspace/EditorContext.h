@@ -4,6 +4,7 @@
 
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Viewport/EditorViewTargetUtil.h"
 
 namespace sw
 {
@@ -27,13 +28,14 @@ namespace sw::editor
     class InspectorComponentManager;
     class InspectorPropertyManager;
 
-    /** @brief 에디터가 소유하는 Game View RT 입니다. App 은 프레임마다 핸들만 조회합니다. */
-    struct EditorGameView
+    /** @brief 에디터가 소유하는 뷰 RT 하나(씬 뷰 · 게임 뷰)입니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport` · `getGameViewport`). */
+    struct EditorViewTarget
     {
         uint64 _renderTarget{ 0 };
         void*  _pTextureId{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
+        uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다) — 프레임 시작에 지운다
     };
 } // namespace sw::editor
 
@@ -89,9 +91,20 @@ namespace sw::editor
         bool                   isGameViewHovered() const { return _bGameViewHovered == SW_TRUE; }
         bool                   isGameViewFocused() const { return _bGameViewFocused == SW_TRUE; }
 
-        const EditorGameView& getGameView() const { return _gameView; }
-        void                  ensureGameViewSize( uint32 width, uint32 height );
-        void                  destroyGameView();
+        /** @brief 뷰 RT 하나입니다. */
+        const EditorViewTarget& getViewTarget( EditorViewKind kind ) const { return _arrViewTarget[static_cast<uint32>( kind )]; }
+        /** @brief 뷰 RT 를 그 크기로 (다시) 만듭니다. 같은 크기면 아무 일도 없습니다. */
+        void ensureViewTargetSize( EditorViewKind kind, uint32 width, uint32 height );
+        /** @brief 뷰 RT 하나를 놓습니다(그 RT 를 그렸을 프레임의 GPU 작업 뒤에 부서진다). */
+        void destroyViewTarget( EditorViewKind kind );
+        /** @brief 뷰 RT 를 모두 놓습니다. */
+        void destroyViewTargets();
+        /** @brief 패널이 이번 프레임에 그 뷰를 그렸다고 알립니다. 셸은 그린 뷰만 호스트에 요청합니다. */
+        void markViewDrawn( EditorViewKind kind ) { _arrViewTarget[static_cast<uint32>( kind )]._bDrawn = SW_TRUE; }
+        /** @brief 이번 프레임에 그 뷰를 그렸는지입니다. */
+        bool wasViewDrawn( EditorViewKind kind ) const { return getViewTarget( kind )._bDrawn == SW_TRUE; }
+        /** @brief UI 프레임 시작 — 그린 뷰 표시를 지웁니다. */
+        void clearViewDrawnMarks();
 
         /** @brief 플레이(PIE) 세션 상태입니다. 조작은 `EditorPlaySession` 을 통합니다. */
         PlaySessionData& getPlaySessionData() { return _playSessionData; }
@@ -115,7 +128,7 @@ namespace sw::editor
         IRHIDevice*                           _pRhiDevice;
         EditorDockLayout*                     _pDockLayout;
         IImGuiRendererBackend*                _pRendererBackend;
-        EditorGameView                        _gameView;
+        EditorViewTarget                      _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];
         PlaySessionData                       _playSessionData;
         EditorThemeConfig                     _themeConfig;
 

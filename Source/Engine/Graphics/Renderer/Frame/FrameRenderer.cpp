@@ -617,6 +617,14 @@ namespace sw
             renderExtraView( pDevice, *pView );
             ++renderedExtraCount;
         }
+        // 호스트 타깃 뷰(에디터 씬 뷰)는 자기 RT 에 그린다 — 이번 프레임에 그린 렌더 텍스처(CCTV)를 읽을 수 있게 마지막이다.
+        for ( unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_FALSE || pView->_outputKind != RenderViewOutputKind::HostTarget )
+                continue;
+            renderExtraView( pDevice, *pView );
+            ++renderedExtraCount;
+        }
         _frameCtx                   = _mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         return bOk;
@@ -724,7 +732,7 @@ namespace sw
 
         _pDevice            = pDevice;
         _pScene             = nullptr;
-        _outputRenderTarget = packet._gameRenderTarget;
+        _outputRenderTarget = packet._outputRenderTarget;
         _mainView._settings = packet._mainView;
         // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · 머티리얼 데이터 버퍼 보존).
         // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한

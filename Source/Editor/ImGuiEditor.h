@@ -53,10 +53,12 @@ namespace sw::editor
         void* registerTexture( uint64 texture ) override;
         /** @brief 등록된 ImGui 텍스처 ID를 해제합니다. */
         void unregisterTexture( void* pTextureID ) override;
-        /** @brief 이번 프레임 Game View RT 핸들과 크기를 조회합니다. */
+        /** @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다. */
         void getGameViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
-        /** @brief 이번 프레임 Game View 에 쓸 카메라를 반환합니다. */
-        CameraComponent* getViewportCamera() const override;
+        /** @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다. */
+        void getSceneViewport( uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ) const override;
+        /** @brief 이번 프레임 씬 뷰를 그리는 카메라를 반환합니다. */
+        CameraComponent* getSceneViewCamera() const override;
         /** @brief 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */
         bool isPlaying() const override;
         /** @brief 에디터 시뮬레이션이 일시정지인지 반환합니다. */

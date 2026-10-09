@@ -339,7 +339,7 @@ namespace sw
             _liveReloadManager->update();
 #endif
         const ModuleFrameState& frameState = _moduleHost->getFrameState();
-        _engineLoop.tick( deltaSeconds, 0, 0, 0, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _engineLoop.tick( deltaSeconds, HostViewTargets{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
         _engineLoop.endFrame();
     }
 

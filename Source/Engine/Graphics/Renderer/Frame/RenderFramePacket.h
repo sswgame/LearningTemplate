@@ -45,7 +45,7 @@ namespace sw
         RenderViewSettings _mainView;
         /** @brief 비지 않으면 이 패킷을 그린 뒤 화면에 나간 그림을 이 경로에 PPM 으로 씁니다(자동화 시나리오의 `<Screenshot>`). */
         string           _screenshotPath;
-        RHITextureHandle _gameRenderTarget; ///< 0 = 백버퍼 경로
+        RHITextureHandle _outputRenderTarget; ///< 주 출력의 오프스크린 RT(에디터 게임 뷰 · 씬 뷰만 보일 때는 씬 뷰). 0 = 백버퍼 경로
         uint32           _viewportWidth;
         uint32           _viewportHeight;
         uint64           _frameIndex;
@@ -68,7 +68,7 @@ namespace sw
             , _canvas{}
             , _mainView{}
             , _screenshotPath{}
-            , _gameRenderTarget{ 0 }
+            , _outputRenderTarget{ 0 }
             , _viewportWidth{ 0 }
             , _viewportHeight{ 0 }
             , _frameIndex{ 0 }
@@ -99,13 +99,13 @@ namespace sw
             _canvas.clear();
             _mainView = RenderViewSettings{};
             _screenshotPath.clear();
-            _gameRenderTarget = 0;
-            _viewportWidth    = 0;
-            _viewportHeight   = 0;
-            _frameIndex       = 0;
-            _bHasViewProj     = SW_FALSE;
-            _bValid           = SW_FALSE;
-            _bHasLight        = SW_FALSE;
+            _outputRenderTarget = 0;
+            _viewportWidth      = 0;
+            _viewportHeight     = 0;
+            _frameIndex         = 0;
+            _bHasViewProj       = SW_FALSE;
+            _bValid             = SW_FALSE;
+            _bHasLight          = SW_FALSE;
         }
     };
 } // namespace sw

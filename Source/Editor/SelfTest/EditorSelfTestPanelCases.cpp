@@ -537,12 +537,12 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                const EditorGameView& view         = pContext->getGameView();
-                const ImTextureID     textureId    = reinterpret_cast<ImTextureID>( view._pTextureId );
-                const ImGuiContext&   imguiContext = *ImGui::GetCurrentContext();
-                int32                 imageCommandIndex{ -1 };
-                ImVec4                canvasRect{};
-                const ImDrawList*     pCanvasDrawList{ nullptr };
+                const EditorViewTarget& view         = pContext->getViewTarget( EditorViewKind::Scene );
+                const ImTextureID       textureId    = reinterpret_cast<ImTextureID>( view._pTextureId );
+                const ImGuiContext&     imguiContext = *ImGui::GetCurrentContext();
+                int32                   imageCommandIndex{ -1 };
+                ImVec4                  canvasRect{};
+                const ImDrawList*       pCanvasDrawList{ nullptr };
                 for ( const ImGuiWindow* pWindow : imguiContext.Windows )
                 {
                     const bool bInGameView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&

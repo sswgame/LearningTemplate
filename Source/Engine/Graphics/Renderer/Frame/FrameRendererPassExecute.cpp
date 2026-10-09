@@ -553,16 +553,16 @@ namespace sw
                     // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다 — 여기서 복사하면 뒤의 UI 가 캡처에 없다.
                     const ViewTarget&      activeView     = *_pActiveView;
                     const PresentTarget    target         = resolvePresentTarget();
-                    const bool             bRenderTexture = target._bRenderTexture == SW_TRUE;
+                    const bool             bOwnOutput     = target._bOwnOutput == SW_TRUE;
                     const bool             bCaptureToBack = target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc );
                     const RHITextureHandle dstTarget      = target._texture;
                     const uint32           outputWidth    = target._width;
                     const uint32           outputHeight   = target._height;
-                    const bool             bFullRect      = bRenderTexture || activeView._settings.isFullRect();
+                    const bool             bFullRect      = bOwnOutput || activeView._settings.isFullRect();
                     // 주 시점이 사각형 하나만 쓰면 바깥은 지운다. 화면 사각형 뷰는 주 시점 위에 겹치므로 남긴다.
-                    const RHIRenderPassLoadOp outputLoad = ( isRenderingExtraView() && bRenderTexture == false ) ? RHIRenderPassLoadOp::Load
-                                                         : bFullRect                                             ? RHIRenderPassLoadOp::DontCare
-                                                                                                                 : RHIRenderPassLoadOp::Clear;
+                    const RHIRenderPassLoadOp outputLoad = ( isRenderingExtraView() && bOwnOutput == false ) ? RHIRenderPassLoadOp::Load
+                                                         : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
+                                                                                                             : RHIRenderPassLoadOp::Clear;
                     // PSO 는 대상의 실제 포맷으로 고른다 — 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
                     const RHIPipelineStateHandle psoBlit = findOutputPso( RenderPassType::Present, target._format );
                     if ( src != 0 && psoBlit != 0 )
@@ -799,26 +799,30 @@ namespace sw
 
     FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const
     {
-        // 렌더 텍스처 뷰는 자기 텍스처 전체, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에
-        // 그린다 — 백버퍼는 핸들이 없어 읽을 수 없고, 후처리 · UI 가 끝난 최종 화면을 볼 길이 그것뿐이다.
-        const ViewTarget& activeView     = *_pActiveView;
-        const bool        bRenderTexture = activeView._outputKind == RenderViewOutputKind::RenderTexture && isRenderingExtraView() &&
-                                    activeView._pOutputTexture != nullptr;
-        const bool bCapture = bRenderTexture == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
+        // 렌더 텍스처 · 호스트 타깃 뷰는 자기 출력 전체, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT)이다. 스크린샷 실행이면 백버퍼 대신 캡처
+        // 텍스처에 그린다 — 백버퍼는 핸들이 없어 읽을 수 없고, 후처리 · UI 가 끝난 최종 화면을 볼 길이 그것뿐이다. 캡처는 주 출력만 받는다.
+        const ViewTarget& activeView = *_pActiveView;
+        RHITextureHandle  ownOutput{ 0 };
+        if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::RenderTexture && activeView._pOutputTexture != nullptr )
+            ownOutput = activeView._pOutputTexture->getHandle();
+        else if ( isRenderingExtraView() && activeView._outputKind == RenderViewOutputKind::HostTarget )
+            ownOutput = activeView._hostTarget;
+        const bool bOwnOutput = ownOutput != 0;
+        const bool bCapture   = bOwnOutput == false && ( _outputRenderTarget == 0 ) && isPresentCaptureEnabled();
         // 캡처를 백버퍼로 옮기는 것은 출력이 곧 백버퍼일 때만이다 — 크기를 덮어쓴 출력(초상화 굽기)은 화면에 나가지 않는다(크기가 다르면 복사도 안 된다).
         const bool bCaptureToBack = bCapture && _outputWidth == _pDevice->getBackBufferWidth() && _outputHeight == _pDevice->getBackBufferHeight();
         // 출력이 RT(에디터 게임 뷰)면 그 RT 에 그대로 그리고 끝에 캡처로 복사한다. 화면 사각형 뷰도 같은 RT 에 겹쳐 그리므로 뷰마다 복사하면
         // 마지막 복사가 화면과 같다.
-        const bool bCaptureFromOutput = bRenderTexture == false && _outputRenderTarget != 0 && isPresentCaptureEnabled();
+        const bool bCaptureFromOutput = bOwnOutput == false && _outputRenderTarget != 0 && isPresentCaptureEnabled();
 
         PresentTarget target{};
-        target._texture = bRenderTexture ? activeView._pOutputTexture->getHandle() : bCapture ? _presentCapture
-                                                                                              : _outputRenderTarget;
-        target._width   = bRenderTexture ? activeView._outputWidth : _outputWidth;
-        target._height  = bRenderTexture ? activeView._outputHeight : _outputHeight;
+        target._texture = bOwnOutput ? ownOutput : bCapture ? _presentCapture
+                                                            : _outputRenderTarget;
+        target._width   = bOwnOutput ? activeView._outputWidth : _outputWidth;
+        target._height  = bOwnOutput ? activeView._outputHeight : _outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과), 텍스처는 그 텍스처가 기록한 포맷이다.
         target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
-        target._bRenderTexture     = bRenderTexture ? SW_TRUE : SW_FALSE;
+        target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;
         target._bCapture           = bCapture ? SW_TRUE : SW_FALSE;
         target._bCaptureToBack     = bCaptureToBack ? SW_TRUE : SW_FALSE;
         target._bCaptureFromOutput = bCaptureFromOutput ? SW_TRUE : SW_FALSE;

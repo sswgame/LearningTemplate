@@ -352,7 +352,7 @@ namespace sw
         if ( ensureContextOnCurrentThread() == false )
             return false;
 
-        const bool          bOffscreen   = packet._gameRenderTarget != 0;
+        const bool          bOffscreen   = packet._outputRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();
         if ( bOffscreen && pFrameStream == nullptr )
         {
@@ -386,7 +386,7 @@ namespace sw
             RHIRenderPassBeginInfo gameViewPass{};
             gameViewPass._bBindColor        = SW_TRUE;
             gameViewPass._colorTargetCount  = 1;
-            gameViewPass._arrColorTarget[0] = packet._gameRenderTarget;
+            gameViewPass._arrColorTarget[0] = packet._outputRenderTarget;
             gameViewPass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
             gameViewPass._arrClearColor[0]  = packet._clearColor;
             pFrameStream->beginRenderPass( gameViewPass );
@@ -402,7 +402,7 @@ namespace sw
 
         // 에디터가 게임뷰 텍스처를 샘플링한다. 읽기 상태로 바꾼다(열려 있는 렌더 패스도 여기서 닫힌다).
         if ( bOffscreen )
-            pFrameStream->prepareTextureForShaderRead( packet._gameRenderTarget );
+            pFrameStream->prepareTextureForShaderRead( packet._outputRenderTarget );
 
         // UI(presentHook)는 백버퍼에 그린다. 그래프가 오프스크린/백버퍼 어디에 그렸든, 여기서 타깃을
         // 명시적으로 백버퍼로 되돌린다. 그래프가 백버퍼에 그린 경우도 있으므로 Load 여야 한다.
