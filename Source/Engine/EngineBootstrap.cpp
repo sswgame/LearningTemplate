@@ -8,6 +8,7 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/ModuleBuildId.h"
@@ -67,7 +68,7 @@ namespace sw
         }
         HashedStringPool::initialize();
 
-        _logger = make_unique<Logger>();
+        _logger = make_unique<AsyncLogSink>();
         _logger->initialize();
 
         // OS 로더가 실행 파일과 함께 올린 모듈(시험 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면

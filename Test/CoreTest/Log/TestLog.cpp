@@ -2,9 +2,10 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Log/ConsoleLogOutput.h"
-#include "Core/Log/FileLogOutput.h"
-#include "Core/Log/ILogOutput.h"
+#include "Core/LogSink/AsyncLogSink.h"
+#include "Core/LogSink/ConsoleLogOutput.h"
+#include "Core/LogSink/FileLogOutput.h"
+#include "Core/LogSink/ILogOutput.h"
 #include "Core/Process/CrashContext.h"
 
 #include "TestFramework/TestChildProcess.h"
@@ -503,7 +504,7 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
  */
 SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
 {
-    sw::Logger logger;
+    sw::AsyncLogSink logger;
     logger.initialize();
 
     // 기본으로 콘솔·파일이 달려 있다. 남은 자리를 시험용 장치로 채우고, 한 개 더 시도한다.
@@ -545,7 +546,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
  */
 SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
 {
-    sw::Logger logger;
+    sw::AsyncLogSink logger;
     logger.initialize();
 
     int32                        releasedValue{ 0 };
@@ -575,7 +576,7 @@ SW_TEST_CASE( LogTest, ReleaseListenerCodeWithinDropsOnlyThatRange )
  */
 SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
 {
-    sw::Logger logger;
+    sw::AsyncLogSink logger;
     logger.initialize();
     sw::unique_ptr<CapturingLogOutput> output   = sw::make_unique<CapturingLogOutput>();
     CapturingLogOutput*                pCapture = output.get();

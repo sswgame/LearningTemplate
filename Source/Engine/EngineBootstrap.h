@@ -16,8 +16,8 @@ namespace sw
     struct EngineServiceCollection;
     struct EngineServices;
 
+    class AsyncLogSink;
     class DeadlockDetector;
-    class Logger;
     class MemoryProfiler;
 
     /**
@@ -57,7 +57,7 @@ namespace sw
 
     private:
         EngineServiceCollection*     _pOwned;            ///< `initialize` 가 받은 저장소(명령줄 · 전역 변수 · 표 밖 서비스)
-        unique_ptr<Logger>           _logger;            ///< 처음 서고 마지막에 사라진다
+        unique_ptr<AsyncLogSink>     _logger;            ///< 처음 서고 마지막에 사라진다
         unique_ptr<DeadlockDetector> _deadlockDetector;  ///< 진단 구성에서만 있다
         unique_ptr<MemoryProfiler>   _memoryProfiler;    ///< 배포본이 아니면 있다(추적은 진단 구성에서만 켜 둔다)
         bool                         _bStarted;          ///< 이름 풀을 세웠다(= `shutdown` 이 내릴 것이 있다)

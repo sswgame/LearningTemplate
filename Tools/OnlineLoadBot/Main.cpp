@@ -11,6 +11,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Process/CrashHandler.h"
@@ -36,7 +37,7 @@ namespace sw
         {
         public:
             ToolProcessScope()
-                : _logger{ make_unique<Logger>() }
+                : _logger{ make_unique<AsyncLogSink>() }
             {
                 HashedStringPool::initialize();
                 _logger->initialize();
@@ -55,7 +56,7 @@ namespace sw
             ToolProcessScope& operator=( const ToolProcessScope& ) = delete;
 
         private:
-            unique_ptr<Logger> _logger;
+            unique_ptr<AsyncLogSink> _logger;
         };
 
         /** @brief 명령줄 인자입니다. */

@@ -3,6 +3,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Diagnostics/DataRaceReporter.h"
 #include "Core/Log/Logger.h"
+#include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Time/GameTimer.h"
 
 #include "ReflectionParser/AnnotationFields.h"
@@ -26,7 +27,7 @@ namespace sw
         {
         public:
             LoggerScope()
-                : _logger{ sw::make_unique<sw::Logger>() }
+                : _logger{ sw::make_unique<sw::AsyncLogSink>() }
             {
                 _logger->initialize();
             }
@@ -36,7 +37,7 @@ namespace sw
             LoggerScope& operator=( const LoggerScope& ) = delete;
 
         private:
-            sw::unique_ptr<sw::Logger> _logger;
+            sw::unique_ptr<sw::AsyncLogSink> _logger;
         };
 
         struct ReflectionParserInternal
