@@ -48,6 +48,21 @@ Engine 에는 티어 게이트가 있는데 Core 에는 `Network` 내부 방향�
 - 끝에 `CheckCoreLayers` 게이트(티어 표 + 거꾸로 가는 include 실패)를 둔다. Engine 의 `_kEngineTier` 와 같은 구조.
 - `Core/Network`(59 파일, Core 의 21%)는 순환에 끼지 않는다. 다른 Core 폴더는 Network 를 include 하지 않는다. 순환을 푼 뒤 별도 정적 라이브러리로 빼서 `ReflectionParser` 가 링크하지 않게 할 수 있다(파서가 Network 를 쓰지 않는지 먼저 확인).
 
+### 0-3. Engine 폴더 재배치 (분할 전, 의존 정리의 일부)
+폴더 구조를 다시 본 결과(2026-10-10) 같은 개념이 여러 폴더에 흩어진 곳이 있다. 이동은 `git mv` + include 일괄 치환이고, 헤더가 옮겨지면 reconfigure 로 코드젠을 다시 만든다.
+
+| 순서 | 일 | 근거 |
+|---|---|---|
+| 1 | 기능 캐시를 자기 폴더로: `AnimationAssetCache` · `SpriteClipCache` → `Animation`, `LocalizationReloadCache` → `Localization` | `Resource → Animation` 5 건이 사라진다 |
+| 2 | `Graphics/Renderer` → `Engine/Renderer` | 한 폴더 이름이 티어 5 와 8 에 걸친다(티어 표에 `Graphics(Renderer 제외)` 를 따로 적어야 한다) |
+| 3 | 애니메이션 정리: 알림이 `Animation/AnimNotifyPhase` · `Character/AnimNotify` · `Object/Animation/AnimNotifyListener` 세 곳, 포즈가 `Animation/Pose.h` · `Character/Pose` 두 곳 | 데이터는 `Animation`, 컴포넌트·시스템은 `Object/Animation` 에 둔다. 먼저 이름 충돌부터 |
+| 4 | `Common/IRenderSurface.h` → `Window`(또는 `Renderer`), `EngineServices` 는 위층으로. `Config/RHIBackendType.h` → `Graphics/RHI`, `ServerConfig` · `ServerSecret` → 서버 쪽 | 티어 0 · 3 폴더에 위층 개념이 들어 있다 |
+| 5 | `Utility` 해체: `Xml` · `Json` → `Serialization`, `TileMap` → `Spatial`(`Environment/Placement` 와 겹침 확인), `Profiling` · `Console` → `DevTools` 후보, 루트 10 개는 이름을 보고 | 기능 모음 통 |
+| 6 | 이름 정리: `Engine/Network`(보안·OpenSSL 뿐, `Core/Network` 와 이름이 같다) → `Security` 후보, HTTP(`Telemetry/HttpClient` · `Observability/OpsHttpEndpoint`)는 한 곳, `UI/Screen` + `UI/Screens` 병합 | |
+| 7 | 큰 평평한 폴더를 하위로: `Physics` 루트 27, `Resource` 34, `Animation` 루트 29, `Input` 루트 23 | 마지막 |
+
+각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.
+
 ### 1. 작은 고리 풀기 (낮은 위험)
 - 게이트 티어 표를 실제에 맞춘다(`Text` · `DevTools`). `RunEngineLayerGraph.py` 출력이 기준.
 - `Automation ↔ UI`: 공유 타입(단계 레지스트리 · 시나리오 인터페이스)을 `Automation` 쪽 인터페이스로 두고 `UI` 가 단계를 등록하게 한다 — `Automation` 은 `UI` 를 include 하지 않는다.
