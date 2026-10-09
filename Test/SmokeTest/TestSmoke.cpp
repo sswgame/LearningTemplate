@@ -1,7 +1,9 @@
 #include "pch.h"
 
-#include "App/Module/LiveReloadManager.h"
-#include "App/Module/ModuleCompiler.h"
+#include "AppHost/LiveReloadManager.h"
+#include "AppHost/ModuleCompiler.h"
+#include "AppHost/ModuleImagePatch.h"
+#include "AppHost/ShadowCopyName.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Event/EventDispatcher.h"

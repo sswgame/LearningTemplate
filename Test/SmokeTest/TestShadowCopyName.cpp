@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "App/Module/LiveReloadManager.h"
+#include "AppHost/ShadowCopyName.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"

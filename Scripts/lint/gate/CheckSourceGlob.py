@@ -35,6 +35,7 @@ from common import (  # noqa: E402
     kUnbuiltSourceListRelPath,
     kCppSourceExtensions,
     kDirSourceApp,
+    kDirSourceAppHost,
     kDirSourceCore,
     kDirSourceEditor,
     kDirSourceEngine,
@@ -47,6 +48,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 _kScanRoots = (
     kDirSourceEngine,
     kDirSourceApp,
+    kDirSourceAppHost,
     kDirSourceEditor,
     kDirSourceGameFramework,
     kDirSourceGames,

@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "App/Module/ModuleCompiler.h"
+#include "AppHost/ModuleCompiler.h"
 
-#include "App/Module/LiveReloadManager.h"
+#include "AppHost/LiveReloadManager.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"

@@ -16,7 +16,10 @@ endif()
 set(swSmokeDevSources "")
 if(NOT SW_SHIPPING_BUILD)
 	set(swSmokeDevSources
-		${CMAKE_SOURCE_DIR}/Source/App/Module/LiveReloadManager.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/LiveReloadManager.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/ModuleCallGuard.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/ModuleImagePatch.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/ShadowCopyName.cpp
 		# 패처는 파일 바이트만 다루므로 Windows 에서도 합성 ELF 로 잰다(리눅스 핫 리로드의 SONAME 고유화).
 		TestModuleImagePatch.cpp
 		TestModuleCallGuard.cpp
@@ -35,10 +38,10 @@ sw_addTestExecutable(SmokeTest
 	SOURCES
 		TestSmoke.cpp
 		TestModuleHost.cpp
-		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleHost.cpp
-		# `ModuleCompiler` 는 배포 구성에도 들어간다 — `App` 의 소스 규칙과 같다(App 은 배포에서
-		# `LiveReloadManager` 만 뺀다). `ModuleHost::shutdown` 이 구성과 무관하게 이 심볼을 부른다.
-		${CMAKE_SOURCE_DIR}/Source/App/Module/ModuleCompiler.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/ModuleHost.cpp
+		# `ModuleCompiler` 는 배포 구성에도 들어간다 — `AppHost` 의 소스 규칙과 같다(AppHost 는 배포에서
+		# 핫 리로드 파일만 뺀다). `ModuleHost::shutdown` 이 구성과 무관하게 이 심볼을 부른다.
+		${CMAKE_SOURCE_DIR}/Source/AppHost/ModuleCompiler.cpp
 		${swSmokeDevSources}
 	LIBS
 		${smokeLibs}
@@ -62,8 +65,6 @@ sw_addTestExecutable(SmokeTest
 	ASAN_OPTIONS
 		report_globals=0
 )
-
-target_include_directories(SmokeTest PRIVATE "${CMAKE_SOURCE_DIR}/Source/App")
 
 if(NOT SW_SHIPPING_BUILD)
 	target_compile_definitions(SmokeTest PRIVATE

@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #if !defined( SW_SHIPPING )
-    #include "App/Module/LiveReloadManager.h"
+    #include "AppHost/LiveReloadManager.h"
 #endif
-#include "App/Module/ModuleHost.h"
+#include "AppHost/ModuleHost.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"

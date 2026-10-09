@@ -2,9 +2,9 @@
 
 #include "App/App.h"
 
-#include "App/Module/LiveReloadManager.h"
-#include "App/Module/ModuleCatalogLoader.h"
-#include "App/Module/ModuleHost.h"
+#include "AppHost/LiveReloadManager.h"
+#include "AppHost/ModuleCatalogLoader.h"
+#include "AppHost/ModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -44,24 +44,86 @@ namespace sw
 {
     namespace
     {
-        /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
-        struct RHIBackendSwitcherInternal
-        {
-            /** @brief gv_rhiBackend 의 변수 정보를 찾습니다. 없거나 엔진 서비스가 묶이지 않았으면(크래시 보고 프로세스) nullptr 입니다. */
-            static GlobalVariableInfo* findBackendVariable()
-            {
-                if ( engine::areEngineServicesBound() == false )
-                    return nullptr;
-                return engine::getGlobalVariableManager().findVariable( "gv_rhiBackend" );
-            }
-        };
-
         /** @brief 이 TU 의 창 크기 상수입니다. */
         struct AppWindowInternal
         {
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바 · 도크 다섯 칸 · 게임 뷰 툴바가 겹치지 않는 바닥입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
+        };
+
+        /**
+         * @brief App 이 맡는 헤드리스 작업 표입니다. 엔진의 `Headless` 단계가 못 하는 일(에디터 모듈 · 크래시 보고)만 여기 둡니다.
+         * @details 작업 하나가 `kArrHeadlessTask` 의 한 줄입니다. 위에서부터 차례로 돌고, 인자가 없는 작업은 건너뜁니다.
+         *          종료 코드 규칙: 실패한 작업이 하나라도 있으면 `App::initialize` 가 false(종료 코드 ≠ 0)이고, `Finished` 를 돌려준 작업은
+         *          뒤 줄을 보지 않고 성공으로 끝냅니다.
+         */
+        struct AppHeadlessInternal
+        {
+            /** @brief 작업 한 줄의 결과입니다. */
+            enum class TaskResult : uint8
+            {
+                NotRequested, ///< 인자가 없어 돌지 않았다
+                Succeeded,    ///< 돌았고 성공했다 — 다음 줄로
+                Failed,       ///< 돌았고 실패했다 — 다음 줄도 돌리고, 끝에 실패로 반환한다
+                Finished,     ///< 이 작업만 하고 끝낸다(성공) — 뒤 줄을 보지 않는다
+            };
+            using TaskFunction = TaskResult ( * )( const CommandLineManager& commandLine );
+
+            /**
+             * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄까지만 섰다(서비스 · 게임 모듈 없음). 묶음만 보내고 끝냅니다.
+             * @note 이 저장소는 네트워크 창구를 싣지 않습니다 — 게임이 IHttpClient 를 구현하면 여기서 HttpCrashReportUploader 를 씁니다.
+             */
+            static TaskResult runCrashReporter( const CommandLineManager& commandLine )
+            {
+                string reporterFolder;
+                if ( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) == false || reporterFolder.empty() )
+                    return TaskResult::NotRequested;
+                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
+                SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
+                return TaskResult::Finished;
+            }
+
+            /**
+             * @brief 원본 임포트(`--import-<종류>`) 또는 대조만(`--check-<종류>`)입니다. 에디터 모듈의 일이라 App 이 모듈을 올려 부릅니다.
+             * @tparam kKind 임포트 종류 · @tparam kImportArgument 임포트 인자 · @tparam kCheckArgument 대조만 하는 인자
+             */
+            template <EditorImportKind kKind, CommandLineArgument kImportArgument, CommandLineArgument kCheckArgument>
+            static TaskResult runEditorImport( const CommandLineManager& commandLine )
+            {
+                bool bImport = false;
+                bool bCheck  = false;
+                commandLine.getArgument( kImportArgument, bImport );
+                commandLine.getArgument( kCheckArgument, bCheck );
+                if ( bImport == false && bCheck == false )
+                    return TaskResult::NotRequested;
+                return ModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
+            }
+
+            /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 더하고 여기에 한 줄 더합니다. */
+            static constexpr TaskFunction kArrHeadlessTask[] = {
+                &runCrashReporter,
+                &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
+                &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
+                &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,
+            };
+
+            /** @brief 표를 차례로 돌립니다. 실패한 작업이 하나라도 있으면 false 입니다(명령줄이 없으면 아무것도 돌지 않고 true). */
+            static bool runHeadlessTasks( const CommandLineManager* pCommandLine )
+            {
+                if ( pCommandLine == nullptr )
+                    return true;
+                bool bSucceeded = true;
+                for ( const TaskFunction pfnTask : kArrHeadlessTask )
+                {
+                    const TaskResult result = pfnTask( *pCommandLine );
+                    if ( result == TaskResult::Finished )
+                        break;
+                    if ( result == TaskResult::Failed )
+                        bSucceeded = false;
+                }
+                return bSucceeded;
+            }
         };
     } // namespace
 
@@ -130,44 +192,8 @@ namespace sw
         {
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
-
-            // 크래시 보고 프로세스(`-crash-reporter=<폴더>`) — 엔진은 명령줄까지만 섰다(서비스 · 게임 모듈 없음). 묶음만 보내고 끝낸다.
-            // 이 저장소는 네트워크 창구를 싣지 않는다 — 게임이 IHttpClient 를 구현하면 여기서 HttpCrashReportUploader 를 쓴다.
-            const CommandLineManager* pReporterCommandLine = _engineLoop.getCommandLineManager();
-            string                    reporterFolder;
-            if ( pReporterCommandLine != nullptr && pReporterCommandLine->getArgument( CommandLineArgument::CRASH_REPORTER, reporterFolder ) &&
-                 reporterFolder.empty() == false )
-            {
-                [[maybe_unused]] const uint32 sentCount = CrashReportService::runReporter( reporterFolder, NullCrashReportUploader::get() );
-                SW_LOG_INFO( "[CrashReporter] %# report(s) sent from '%#'", sentCount, reporterFolder.c_str() );
-                return true;
-            }
-
-            // 원본 임포트(텍스처 · 모델)는 에디터 모듈의 일이다. 엔진은 헤드리스로 세우기만 했고, 모듈을 올리는 것은 App 이다.
-            const CommandLineManager* pHeadlessCommandLine = _engineLoop.getCommandLineManager();
-            bool                      bImportTextures      = false;
-            bool                      bCheckTextures       = false;
-            bool                      bImportModels        = false;
-            bool                      bCheckModels         = false;
-            bool                      bImportHeightfields  = false;
-            bool                      bCheckHeightfields   = false;
-            if ( pHeadlessCommandLine != nullptr )
-            {
-                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_TEXTURES, bImportTextures );
-                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_TEXTURES, bCheckTextures );
-                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_MODELS, bImportModels );
-                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_MODELS, bCheckModels );
-                pHeadlessCommandLine->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
-                pHeadlessCommandLine->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
-            }
-            bool bSucceeded = true;
-            if ( bImportTextures || bCheckTextures )
-                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Texture, bCheckTextures ) && bSucceeded;
-            if ( bImportModels || bCheckModels )
-                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Model, bCheckModels ) && bSucceeded;
-            if ( bImportHeightfields || bCheckHeightfields )
-                bSucceeded = ModuleHost::importAssetsWithEditorModule( EditorImportKind::Heightfield, bCheckHeightfields ) && bSucceeded;
-            return bSucceeded;
+            // App 이 맡는 헤드리스 작업(크래시 보고 · 원본 임포트)은 `AppHeadlessInternal::kArrHeadlessTask` 표가 정한다.
+            return AppHeadlessInternal::runHeadlessTasks( _engineLoop.getCommandLineManager() );
         }
 
         SplashWindow splash;
@@ -651,113 +677,5 @@ namespace sw
         const EditorAPI& editorAPI = _moduleHost->getEditorApi();
         if ( editorAPI.postPresent != nullptr )
             editorAPI.postPresent( pEditor, &renderDevice );
-    }
-
-    // ------------------------------------------------------------------------------
-    // RHIBackendSwitcher
-    // ------------------------------------------------------------------------------
-    RHIBackendSwitcher::RHIBackendSwitcher()
-        : _pEngineLoop{ nullptr }
-        , _pModuleHost{ nullptr }
-        , _bEnableEditor{ SW_FALSE }
-        , _bHandlingChange{ SW_FALSE }
-        , _reserved{ 0 }
-    {
-    }
-
-    void RHIBackendSwitcher::initialize( EngineLoop* pEngineLoop, ModuleHost* pModuleHost, bool bEnableEditor )
-    {
-        _pEngineLoop   = pEngineLoop;
-        _pModuleHost   = pModuleHost;
-        _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
-
-        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
-        if ( pBackendVariable != nullptr )
-            pBackendVariable->_onValueChanged = SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &RHIBackendSwitcher::onBackendVariableChanged, this );
-    }
-
-    void RHIBackendSwitcher::shutdown()
-    {
-        // **훅부터, 조건 없이 뗀다.** 훅은 `_pEngineLoop` 와 상관없이 `initialize` 가 걸어 두므로, 루프를 받지 못한 채 초기화된
-        // 경우(도구 · 부분 초기화)에도 떼지 않으면 사라진 `this` 를 가리키는 콜백이 전역 변수에 남는다.
-        GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
-        if ( pBackendVariable != nullptr )
-            pBackendVariable->_onValueChanged = {};
-
-        _pEngineLoop = nullptr;
-        _pModuleHost = nullptr;
-    }
-
-    void RHIBackendSwitcher::applyIfPending()
-    {
-        if ( _pEngineLoop == nullptr )
-            return;
-
-        const RHI* pRHI = _pEngineLoop->getRhi();
-        if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
-            return;
-
-        if ( applyPendingChange() == false )
-        {
-            SW_LOG_ERROR( "Backend soft-recreate failed." );
-            // 값만 되돌린다. 변경 콜백(onBackendVariableChanged)은 GlobalVariableInfo 의 setValueAsInt/setValueFromString
-            // (콘솔 · 에디터 패널) 경로에서만 불린다. 그래서 되돌림이 재시도 루프가 될 일은 없다. 심볼이 아니라 매니저가 든 주소로
-            // 쓰므로 App 이 Engine.dll 의 변수를 import 할 필요가 없다.
-            GlobalVariableInfo* pBackendVariable = RHIBackendSwitcherInternal::findBackendVariable();
-            if ( pBackendVariable != nullptr )
-                *static_cast<RHIBackend*>( pBackendVariable->_pData ) = pRHI->getCommittedBackend();
-        }
-    }
-
-    void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
-    {
-        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRhi() : nullptr;
-        if ( pInfo == nullptr || pRHI == nullptr )
-            return;
-
-        // 아래의 되돌림은 C++ 대입이라 이 콜백을 다시 부르지 않는다(콜백은 GlobalVariableInfo 의 set* 경로만 부른다). 재진입
-        // 가드는 되돌림을 언젠가 set* 로 바꾸더라도 무한 재귀가 되지 않도록 남겨 둔다.
-        if ( _bHandlingChange == SW_TRUE )
-            return;
-        _bHandlingChange = SW_TRUE;
-
-        const RHIBackend requestedBackend = static_cast<RHIBackend>( pInfo->getValueAsInt() );
-        pRHI->schedulePendingBackendChange( requestedBackend );
-
-        _bHandlingChange = SW_FALSE;
-    }
-
-    bool RHIBackendSwitcher::applyPendingChange()
-    {
-        if ( _pEngineLoop == nullptr || _pModuleHost == nullptr )
-            return false;
-
-        // 모듈 핸들은 교체 **전에** 받아 둔다. 디바이스를 다시 만드는 동안 LiveReload 가 돌지는 않지만, 재생성 경로가 "테이블이
-        // 비었으면 모듈에서 다시 바인딩" 을 하려면 핸들이 필요하다.
-        void* pEditorModule{ nullptr };
-        void* pGameModule{ nullptr };
-#if !defined( SW_SHIPPING )
-        // 모듈 수명은 ModuleHost 가 안다. 여기서 리로드 내부를 직접 뒤지지 않는다.
-        pEditorModule = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetEditorModule );
-        pGameModule   = _pModuleHost->getLoadedModuleHandle( sw::config::kTargetGameModule );
-#endif
-
-        // API 테이블은 놓지 않는다. 모듈을 언로드하지 않고 같은 테이블로 다시 만든다.
-        _pModuleHost->suspendModules( ModuleScope::Both, false );
-
-        const bool bSwapOk = _pEngineLoop->applyPendingBackendChange();
-        RHI*       pRHI    = _pEngineLoop->getRhi();
-        if ( pRHI == nullptr || pRHI->hasDevice() == false )
-        {
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );
-            return false;
-        }
-
-        const bool bReinitOk = _pModuleHost->reinitializeAfterRhiSwap( pEditorModule, pGameModule );
-        if ( bReinitOk == false )
-            SW_LOG_ERROR( "reinitializeAfterRhiSwap 실패." );
-        if ( bSwapOk == false )
-            SW_LOG_ERROR( "applyPendingBackendChange 실패 — 이전 백엔드로 복구한 뒤 모듈을 재생성했습니다." );
-        return bSwapOk && bReinitOk;
     }
 } // namespace sw

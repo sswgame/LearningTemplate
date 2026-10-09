@@ -34,6 +34,8 @@ LLVM(컴파일러), Ninja(빌드 도구), vcpkg(패키지 매니저) 등 엔진�
 - **LLVM 을 다시 깔면 PCH 가 전부 낡는다**(`… has been modified since the precompiled header was built`). `.pch` 와 짝 `cmake_pch.cxx.obj` 를 같이 지운다(`SetupLlvm.py` 가 한다).
 - **오랜만에 쓰는 WSL 클론은 많이 뒤처져 있을 수 있습니다.** 실패가 이번 변경 탓인지 보려면 패치 없는 HEAD 로 기준선을 먼저 잽니다. 클론은 `git fetch … main` 뒤 `git reset --hard FETCH_HEAD` 로 맞추고 stash 를 쌓지 않습니다.
   리눅스 전용 파일은 Windows 빌드가 컴파일하지 않으므로 고쳤으면 반드시 WSL 에서 빌드합니다.
+- **vcpkg 기준선을 올리면 WSL 클론의 `Tools/vcpkg` 도 그 커밋으로 옮기고 다시 부트스트랩합니다**(`git -C Tools/vcpkg fetch origin` → `checkout <기준선>` → `./bootstrap-vcpkg.sh`).
+  안 하면 configure 가 `no version database entry` 로 죽습니다. 포트가 빠지는 기준선이면 `-DSW_VCPKG_FORCE_INSTALL=ON` 이 한 번 필요합니다(WSL 클론은 워크트리를 나누지 않는다).
 - **워크트리 사이 sccache 적중은 basedirs 와 PCH OFF 가 둘 다 있어야 난다**(2026-10-07, 같은 커밋 · Ninja-Debug · 둘째 워크트리). 0.8.1 + PCH ON 은 적중 0 / 2442(2355 가 `/Fp` 로 캐시 불가),
   0.18 + basedirs 없음 + PCH OFF 는 181 / 2358(첫 워크트리 안의 자기 적중과 같은 수 — 워크트리 사이 0), 0.18 + basedirs + PCH OFF 는 2282 / 2358 = 96.8 %(1354 s → 294 s).
   PCH OFF 첫 빌드는 PCH ON 보다 몇 배 느려(289 s 대 1281 ~ 1388 s, 같은 조건은 아님) 기본은 PCH ON 그대로다.

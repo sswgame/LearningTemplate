@@ -7,7 +7,7 @@
  *          심볼을 링크할 수 없습니다. 그래서 훅이 링크하는 이 작은 인터페이스만 Engine.dll 에 둡니다.
  *
  *          Engine 이 모듈 리로드에 대해 아는 것은 여기까지입니다. 감시 · 섀도 복사 · 의존 그래프 · 다시 로드 같은
- *          장치는 모두 App 에 있고(`Source/App/Module/LiveReloadManager.*`), Shipping 에서는 그 파일이 빌드에서 빠집니다.
+ *          장치는 모두 호스트 라이브러리 AppHost 에 있고(`Source/AppHost/LiveReloadManager.*`), Shipping 에서는 그 파일이 빌드에서 빠집니다.
  *          이 인터페이스는 Shipping 에도 남지만 **아무도 등록하지 않으므로** 조회는 항상 nullptr 이고, 훅은 곧장
  *          폴백(Bin 에서 직접 로드)으로 갑니다.
  */

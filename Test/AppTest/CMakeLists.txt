@@ -28,7 +28,7 @@ sw_addTestExecutable(AppTest
 		TestAppUi.cpp
 		TestDevCommandShipping.cpp
 		TestFixedTimestep.cpp
-		${CMAKE_SOURCE_DIR}/Source/App/FixedTimestep.cpp
+		${CMAKE_SOURCE_DIR}/Source/AppHost/FixedTimestep.cpp
 	LIBS
 		Engine
 	LABELS

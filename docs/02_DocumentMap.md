@@ -51,6 +51,7 @@
 - [Source/Core/Task](../Source/Core/Task/README.md) — 워커 풀, 태스크 그래프, `TaskFuture`
 - [Source/RuntimeAPI](../Source/RuntimeAPI/README.md) — App과 모듈 사이의 C-ABI 계약, 서비스 테이블
 - [Source/App](../Source/App/README.md) — 실행 파일, 프레임 순서, 헤드리스 실행, 진단 방법
+- [Source/AppHost](../Source/AppHost/README.md) — App · Server 가 같이 쓰는 모듈 호스트, 핫 리로드, 고정 시간 단계
 - [Source/Server](../Source/Server/README.md) — 전용 서버 실행 파일의 시작과 설정
 
 ### 엔진
