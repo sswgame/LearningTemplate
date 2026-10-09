@@ -34,11 +34,11 @@
 | `-portrait-dir` | 글 값(`-이름=값`) | 프리팹 초상화(썸네일)를 격리된 스튜디오에서 그려 DDS · PNG 로 쓰고 끝낸다 — 값은 쉼표로 나눈 프리팹 경로, 크기는 정사각 한 변(px), 폴더는 쓸 곳(기본 Saved/Portraits). | `PORTRAIT_DIR` |
 | `-import-heightfields` | 플래그(`-이름`) | 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `IMPORT_HEIGHTFIELDS` |
 | `-check-heightfields` | 플래그(`-이름`) | 높이장 원본(`heightfields_raw/` 의 16 비트 PNG · `.r16`)을 `.heightfield` 로 임포트한다 · 맞는지 보기만 한다. 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `CHECK_HEIGHTFIELDS` |
-| `-gather-text` | 플래그(`-이름`) | 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `GATHER_TEXT` |
-| `-check-text` | 플래그(`-이름`) | 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `CHECK_TEXT` |
-| `-loc-project` | 글 값(`-이름=값`) | 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `LOC_PROJECT` |
-| `-export-po` | 플래그(`-이름`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `EXPORT_PO` |
-| `-import-po` | 글 값(`-이름=값`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). | `IMPORT_PO` |
+| `-gather-text` | 플래그(`-이름`) | 로컬라이제이션 글 수집(에디터 모듈의 `LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다. 소스 트리가 있어야 하고 Dev 빌드에서만 된다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `GATHER_TEXT` |
+| `-check-text` | 플래그(`-이름`) | 로컬라이제이션 글 수집(에디터 모듈의 `LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다. 소스 트리가 있어야 하고 Dev 빌드에서만 된다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `CHECK_TEXT` |
+| `-loc-project` | 글 값(`-이름=값`) | 로컬라이제이션 글 수집(에디터 모듈의 `LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다. 소스 트리가 있어야 하고 Dev 빌드에서만 된다. `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다. | `LOC_PROJECT` |
+| `-export-po` | 플래그(`-이름`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `EXPORT_PO` |
+| `-import-po` | 글 값(`-이름=값`) | 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). 에디터 모듈의 일이라 Dev 빌드에서만 된다. | `IMPORT_PO` |
 | `-crash-reporter` | 글 값(`-이름=값`) | 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportService::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 · 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스). | `CRASH_REPORTER` |
 | `-scenario` | 글 값(`-이름=값`) | 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다 (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/README.md`. | `SCENARIO` |
 | `-scenario-report` | 글 값(`-이름=값`) | 시나리오 결과 JSON 을 쓸 경로(비면 쓰지 않는다). | `SCENARIO_REPORT` |

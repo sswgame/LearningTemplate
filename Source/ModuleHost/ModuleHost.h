@@ -136,6 +136,13 @@ namespace sw
          * @return 원본과 임포트 결과가 맞으면(임포트는 모두 성공하면) true
          */
         [[nodiscard]] static bool importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly );
+        /**
+         * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 로컬라이제이션 작업 @p task 를 돌립니다(`App --gather-text` · `--check-text` · `--import-po` · `--export-po`).
+         * @details 임포트와 같은 길입니다(`importAssetsWithEditorModule`). 타입 공급자 모듈이 모두 올라온 헤드리스 부팅에서 부릅니다. Shipping 에서는 실패합니다.
+         * @param poPath `ImportPo` 가 읽을 PO 파일 · @param projectArgument `-loc-project` 값(비면 기본 대상 전부)
+         * @return 작업이 성공하면(확인 모드는 표가 최신이면) true
+         */
+        [[nodiscard]] static bool runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument );
 
         // 2) 프레임 단위 처리
         /**

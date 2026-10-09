@@ -54,6 +54,7 @@ namespace sw
 
         /**
          * @brief App 이 맡는 헤드리스 작업 표입니다. 엔진의 `Headless` 단계가 못 하는 일(에디터 모듈 · 크래시 보고)만 여기 둡니다.
+         * @note 에디터 모듈 작업(로컬라이제이션 · 임포트)의 인자는 엔진의 `Headless` 단계도 알아야 합니다 — 창 · RHI 없이 세우고 여기로 넘깁니다.
          * @details 작업 하나가 `kArrHeadlessTask` 의 한 줄입니다. 위에서부터 차례로 돌고, 인자가 없는 작업은 건너뜁니다.
          *          종료 코드 규칙: 실패한 작업이 하나라도 있으면 `App::initialize` 가 false(종료 코드 ≠ 0)이고, `Finished` 를 돌려준 작업은
          *          뒤 줄을 보지 않고 성공으로 끝냅니다.
@@ -100,9 +101,42 @@ namespace sw
                 return ModuleHost::importAssetsWithEditorModule( kKind, bCheck ) ? TaskResult::Succeeded : TaskResult::Failed;
             }
 
+            /**
+             * @brief 로컬라이제이션 도구(`--gather-text` · `--check-text` · `--import-po=<파일>` · `--export-po`, 프로젝트는 `-loc-project`)입니다.
+             * @details 에디터 모듈의 일이라 임포트와 같은 길로 부릅니다. 번역 교환을 수집 뒤에 할 수 있도록 한 실행에서 수집 → 가져오기 → 내보내기 순으로 돕니다.
+             */
+            static TaskResult runLocalizationTools( const CommandLineManager& commandLine )
+            {
+                bool   bGatherText = false;
+                bool   bCheckText  = false;
+                bool   bExportPo   = false;
+                string importPoPath;
+                string projectPath;
+                commandLine.getArgument( CommandLineArgument::GATHER_TEXT, bGatherText );
+                commandLine.getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
+                commandLine.getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
+                commandLine.getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
+                commandLine.getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
+                if ( bGatherText == false && bCheckText == false && bExportPo == false && importPoPath.empty() )
+                    return TaskResult::NotRequested;
+
+                bool bSucceeded = true;
+                if ( bGatherText || bCheckText )
+                {
+                    const EditorLocalizationTask gatherTask = bCheckText ? EditorLocalizationTask::CheckText : EditorLocalizationTask::GatherText;
+                    bSucceeded                              = ModuleHost::runLocalizationWithEditorModule( gatherTask, {}, projectPath ) && bSucceeded;
+                }
+                if ( importPoPath.empty() == false )
+                    bSucceeded = ModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ImportPo, importPoPath, projectPath ) && bSucceeded;
+                if ( bExportPo )
+                    bSucceeded = ModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask::ExportPo, {}, projectPath ) && bSucceeded;
+                return bSucceeded ? TaskResult::Succeeded : TaskResult::Failed;
+            }
+
             /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 더하고 여기에 한 줄 더합니다. */
             static constexpr TaskFunction kArrHeadlessTask[] = {
                 &runCrashReporter,
+                &runLocalizationTools,
                 &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
                 &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
                 &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,
@@ -192,7 +226,7 @@ namespace sw
         {
             if ( _engineLoop.didHeadlessTaskFail() )
                 return false;
-            // App 이 맡는 헤드리스 작업(크래시 보고 · 원본 임포트)은 `AppHeadlessInternal::kArrHeadlessTask` 표가 정한다.
+            // App 이 맡는 헤드리스 작업(크래시 보고 · 로컬라이제이션 도구 · 원본 임포트)은 `AppHeadlessInternal::kArrHeadlessTask` 표가 정한다.
             return AppHeadlessInternal::runHeadlessTasks( _engineLoop.getCommandLineManager() );
         }
 

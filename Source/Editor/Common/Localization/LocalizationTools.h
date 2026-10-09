@@ -1,6 +1,6 @@
 /**
  * @file LocalizationTools.h
- * @brief 로컬라이제이션 도구 명령 — 글 수집(`App --gather-text` · `--check-text`) · 번역 교환(`--export-po` · `--import-po=<파일>`)입니다. 소스 트리 · 리소스 · 다른 서브시스템(대화)을 함께 보므로 엔진 루트에 둡니다.
+ * @brief 로컬라이제이션 도구 명령 — 글 수집(`App --gather-text` · `--check-text`) · 번역 교환(`--export-po` · `--import-po=<파일>`)입니다. 소스 트리를 읽는 개발 도구라 에디터 모듈이 맡습니다.
  * @details 언리얼 Localization Dashboard 의 Gather Text 와 같은 자리입니다. 프로젝트마다:
  *          1) `codeRoots`(저장소 상대)의 `.h` · `.cpp` · `.inl` 에서 `SW_LOCTEXT` · `SW_LOCFORMAT`
  *          2) `assetRoots`(리소스 경로)의 리플렉션 XML(`Meta = "Localizable"` 프로퍼티) · `.dialogue.json` · 프로젝트의 `assetRules` 에 맞는 XML 속성
@@ -69,9 +69,9 @@ namespace sw
 {
     /**
      * @struct LocalizationTools
-     * @brief 상태 없는 도구 함수입니다. 헤드리스 단계(`EngineLoop`)와 시험이 부릅니다.
+     * @brief 상태 없는 도구 함수입니다. 헤드리스 진입점(`runEditorLocalizationTask`, App 이 에디터 모듈을 올려 부른다)과 시험이 부릅니다.
      */
-    struct SW_API LocalizationTools
+    struct LocalizationTools
     {
         /** @brief 저장소 루트(리소스 루트의 부모)입니다. */
         static string findRepositoryRoot();

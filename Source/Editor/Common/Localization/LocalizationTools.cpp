@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/DevTools/LocalizationTools.h"
+#include "Editor/Common/Localization/LocalizationTools.h"
 
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
@@ -8,8 +8,9 @@
 #include "Core/String/MarkupTagScanner.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
@@ -334,7 +335,9 @@ namespace sw
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
     {
         outListProjectPath.clear();
-        const string engineProject = engine::areEngineServicesBound() ? engine::getEngineDefaultAssets()._localizationProject : EngineDefaultAssets{}._localizationProject;
+        // 에디터 모듈은 엔진 서비스를 서비스 표로만 본다(EngineServices.h 는 Engine · App · 시험 전용). 표가 없으면(시험) 기본값이다.
+        const EngineDefaultAssets* pDefaultAssets = editor::getService<const EngineDefaultAssets>();
+        const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
         if ( engineProject.empty() == false )
             outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( engineProject ) );
 

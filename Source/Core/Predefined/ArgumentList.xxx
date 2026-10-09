@@ -84,13 +84,13 @@ SW_REGISTER_ARGUMENT( PORTRAIT_DIR, "", false, "portrait-dir" )
 SW_REGISTER_ARGUMENT( IMPORT_HEIGHTFIELDS, false, false, "import-heightfields" )
 SW_REGISTER_ARGUMENT( CHECK_HEIGHTFIELDS, false, false, "check-heightfields" )
 
-// 로컬라이제이션 글 수집(`LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다(CI). 소스 트리가 있어야 한다.
+// 로컬라이제이션 글 수집(에디터 모듈의 `LocalizationTools`) — 코드 · 데이터에서 모아 원문 표를 고친다 · 고치지 않고 최신인지만 본다. 소스 트리가 있어야 하고 Dev 빌드에서만 된다.
 // `-loc-project=<프로젝트 파일>` 이 없으면 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부다.
 SW_REGISTER_ARGUMENT( GATHER_TEXT, false, false, "gather-text" )
 SW_REGISTER_ARGUMENT( CHECK_TEXT, false, false, "check-text" )
 SW_REGISTER_ARGUMENT( LOC_PROJECT, "", false, "loc-project" )
 
-// 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`).
+// 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, "", false, "import-po" )
 

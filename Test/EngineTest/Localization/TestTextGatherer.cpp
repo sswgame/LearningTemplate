@@ -3,18 +3,12 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/DevTools/LocalizationTools.h"
-#include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "EngineTest/LocalizationTestUtil.h"
-
 #include "TestFramework/TestFramework.h"
-
-using sw::test::LocalizationTestUtil;
 
 namespace
 {
@@ -216,116 +210,4 @@ SW_TEST_CASE( TextGathererTest, ReflectedXmlGathersLocalizablePropertiesAndFlags
     SW_EXPECT_FALSE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "north gate", false ) );
     SW_EXPECT_FALSE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "sign_icon", false ) );
 #endif
-}
-
-/**
- * @brief [TextGathererTest] 대화 에셋과 프로젝트 규칙(손으로 읽는 XML 카탈로그 · 키 참조)도 같은 수집기로 들어간다
- */
-SW_TEST_CASE( TextGathererTest, DialogueAndAssetRulesAreGathered )
-{
-    sw::LocalizationProject project;
-    sw::string              error;
-    SW_ASSERT_TRUE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ], "assetRules": [
-        { "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" },
-        { "files": ".settings.xml", "elements": [ "Setting" ], "attribute": "text", "kind": "key" } ] })",
-                                              "p", &error ) );
-    SW_EXPECT_FALSE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a" ], "assetRules": [ { "files": "x.xml", "elements": [ "A" ], "attribute": "b", "kind": "maybe" } ] })",
-                                               "p", &error ) );
-
-    sw::TextGatherer gatherer;
-    sw::LocalizationTools::gatherAssetFile( project, gatherer, R"(<ItemCatalog><Item id="a" name="Combat Helmet"/><Item id="b" name="Recon Vest"/></ItemCatalog>)",
-                                            "game/x/data/items.xml" );
-    sw::LocalizationTools::gatherAssetFile( project, gatherer, R"(<UserSettingsSchema><Setting id="a" text="settings.a"/></UserSettingsSchema>)",
-                                            "game/x/data/x.settings.xml" );
-    sw::LocalizationTools::gatherAssetFile(
-        project, gatherer, R"({ "nodes": [ { "id": 1, "type": "Dialogue", "speaker": "npc.elder", "text": "Welcome back.", "choices": [ "Yes", "No" ] } ], "links": [] })",
-        "game/x/dialogue/intro.dialogue.json" );
-
-    const sw::GatheredText* pHelmet = TextGathererTestInternal::findText( gatherer, "Combat Helmet" );
-    SW_ASSERT_NOT_NULL( pHelmet );
-    SW_EXPECT_STREQ( "Item name", pHelmet->_context.c_str() );
-    const sw::GatheredText* pSettingKey = TextGathererTestInternal::findText( gatherer, "settings.a" );
-    SW_ASSERT_NOT_NULL( pSettingKey );
-    SW_EXPECT_TRUE( pSettingKey->_kind == sw::GatheredTextKind::KeyReference );
-    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "Welcome back." ) );
-    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "npc.elder" ) );
-    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "No" ) );
-}
-
-/**
- * @brief [TextGathererTest] 프로젝트 수집 — 코드 폴더 · 데이터 폴더를 훑어 원문 표를 쓰고, 해시 없는 번역에 해시를 찍으며, 확인 모드는 쓰지 않고 낡았다고만 한다
- * @details 수집기가 원문을 바꾸면 그 번역은 낡은 것이 된다(해시가 그대로이므로). 확인 모드(`--check-text`)는 CI 가 "표를 갱신하지 않은 커밋" 을 잡는 자리다.
- */
-SW_TEST_CASE( TextGathererTest, GatherProjectWritesTableStampsHashesAndCheckModeDetectsDrift )
-{
-    const sw::string repositoryRoot = test::makeTempDirectory( "loc_gather_repo" );
-    const sw::string codeFolder     = sw::FileUtil::joinPath( repositoryRoot, "Code" );
-    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( codeFolder ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ), R"(auto a = SW_LOCTEXT( "Menu", "Start", "Start" );)" ) );
-
-    const sw::string locFolder   = sw::FileUtil::joinPath( repositoryRoot, "Loc" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko" ])", R"("codeRoots": [ "Code" ])" );
-    LocalizationTestUtil::writeSourceTable( locFolder, "en", R"("Menu.Start": { "source": "Start" })" );
-    LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" })" );
-
-    sw::LocalizationGatherResult result;
-    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, true, result ) );
-    SW_EXPECT_EQUAL( uint32( 1 ), result._fileCount );
-    SW_EXPECT_FALSE( result._report.hasTextChanges() );
-    SW_ASSERT_EQUAL( size_t( 1 ), result._listCulture.size() );
-    SW_EXPECT_TRUE( result._listCulture[0]._bChanged ); // 해시를 찍었다
-    SW_EXPECT_EQUAL( uint32( 1 ), result._listCulture[0]._currentCount );
-
-    // 원문을 고친다 → 확인 모드는 쓰지 않고 낡았다고만 한다 → 수집하면 번역은 낡은 것이 된다.
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ), R"(auto a = SW_LOCTEXT( "Menu", "Start", "Start Game" );)" ) );
-    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-    SW_EXPECT_TRUE( result._bOutOfDate );
-    SW_EXPECT_FALSE( result._bWritten );
-    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, true, result ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), result._report._listChanged.size() );
-    SW_EXPECT_EQUAL( uint32( 1 ), result._listCulture[0]._staleCount );
-    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-    SW_EXPECT_FALSE( result._bOutOfDate ); // 다시 확인하면 최신
-}
-
-/**
- * @brief [TextGathererTest] 저장소의 로컬라이제이션 프로젝트는 최신이다 — 코드 · 데이터를 고치고 `App --gather-text` 를 돌리지 않은 커밋을 잡는다
- */
-SW_TEST_CASE( TextGathererTest, RepositoryProjectsAreUpToDate )
-{
-#if defined( SW_SHIPPING )
-    SW_TEST_SKIP( "the shipping build carries no property metadata (Localizable) - gathering runs in development builds" );
-#endif
-    sw::vector<sw::string> listProjectPath;
-    sw::LocalizationTools::collectProjectPaths( listProjectPath, true );
-    SW_ASSERT_TRUE( listProjectPath.size() >= 2u ); // 엔진 + Shooter3D
-    const sw::string repositoryRoot = sw::LocalizationTools::findRepositoryRoot();
-    for ( const sw::string& projectPath : listProjectPath )
-    {
-        sw::LocalizationGatherResult result;
-        SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-        SW_EXPECT_TRUE_MSG( result._bOutOfDate == false, ( projectPath + " is out of date - run App --gather-text" ).c_str() );
-        SW_EXPECT_TRUE_MSG( result._report.hasErrors() == false, ( projectPath + " has gather errors" ).c_str() );
-    }
-}
-
-/**
- * @brief [TextGathererTest] 번역의 리치 텍스트 태그 열이 원문과 다르면 보고한다 — "[b]Start[/b]" 의 번역 "시작" 은 굵게를 잃었다
- */
-SW_TEST_CASE( TextGathererTest, TranslationTagMismatchIsReported )
-{
-    const sw::string repositoryRoot = test::makeTempDirectory( "loc_gather_tags" );
-    const sw::string codeFolder     = sw::FileUtil::joinPath( repositoryRoot, "Code" );
-    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( codeFolder ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( codeFolder, "Menu.cpp" ),
-                                                 R"(auto a = SW_LOCTEXT( "Menu", "Start", "[b]Start[/b]" ); auto b = SW_LOCTEXT( "Menu", "Quit", "[b]Quit[/b]" );)" ) );
-    const sw::string locFolder   = sw::FileUtil::joinPath( repositoryRoot, "Loc" );
-    const sw::string projectPath = LocalizationTestUtil::writeProject( locFolder, "en", R"([ "ko" ])", R"("codeRoots": [ "Code" ])" );
-    LocalizationTestUtil::writeSourceTable( locFolder, "en", R"("Menu.Start": { "source": "[b]Start[/b]" }, "Menu.Quit": { "source": "[b]Quit[/b]" })" );
-    LocalizationTestUtil::writeTranslation( locFolder, "ko", R"("Menu.Start": { "text": "시작" }, "Menu.Quit": { "text": "[b]종료[/b]" })" );
-
-    sw::LocalizationGatherResult result;
-    SW_ASSERT_TRUE( sw::LocalizationTools::gatherProject( projectPath, repositoryRoot, false, result ) );
-    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( result._report._listIssue, "ko:Menu.Start", false ) );
-    SW_EXPECT_FALSE( TextGathererTestInternal::hasIssueContaining( result._report._listIssue, "ko:Menu.Quit", false ) );
 }

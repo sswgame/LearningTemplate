@@ -53,7 +53,7 @@ echo $LASTEXITCODE
 엔진 시작 단계 중 `Headless` 단계가 명령줄을 보고 창, RHI, 렌더러 단계를 건너뜁니다. 작업이 실패하면 `App::initialize` 가 false를 반환하고 종료 코드가 0이 아니게 됩니다.
 `Scripts/generate/CookAssets.py` 는 이 종료 코드로 실패를 알아냅니다.
 
-자주 쓰는 헤드리스 인자는 다음과 같습니다. 높이장 임포트, 립싱크 분석, 로컬라이제이션 텍스트 수집, 프리팹 초상화 렌더링, 자동화 시나리오 같은 나머지 인자는 생성 문서 [명령줄 인자](../../docs/Config/CommandLine.md)에 있습니다.
+자주 쓰는 헤드리스 인자는 다음과 같습니다. 높이장 임포트, 립싱크 분석, PO 교환, 프리팹 초상화 렌더링, 자동화 시나리오 같은 나머지 인자는 생성 문서 [명령줄 인자](../../docs/Config/CommandLine.md)에 있습니다.
 
 | 인자 | 하는 일 | 처리하는 곳 |
 |---|---|---|
@@ -61,6 +61,7 @@ echo $LASTEXITCODE
 | `--cook-scenes --cooked-dir=<폴더>` | 씬, 프리팹, 내비메시 쿠킹 | 엔진의 `Headless` 단계 |
 | `--import-textures`, `--check-textures` | 텍스처 임포트, 또는 원본과 DDS 대조만 | 에디터 모듈 |
 | `--import-models`, `--check-models` | glTF 모델 임포트, 또는 원본과 `.mesh` 대조만 | 에디터 모듈 |
+| `--gather-text`, `--check-text` | 로컬라이제이션 텍스트 수집, 또는 표가 최신인지만 확인 | 에디터 모듈 |
 
 몇 가지는 더 알아 둘 것이 있습니다.
 
@@ -68,6 +69,7 @@ echo $LASTEXITCODE
 - 씬 쿠킹은 씬과 프리팹 외에 GUID 레지스트리, VAT, 내비 표면이 있는 씬의 `.navmesh` 도 씁니다. 입력은 팩을 마운트하지 않은 소스 트리(`ContentSource::SourceTree`)입니다.
   모든 타입이 등록된 `ModuleTypes` 단계 뒤에만 쿠킹하고, 모르는 타입의 컴포넌트(`MissingComponent`)가 있는 씬은 실패로 셉니다.
 - 임포트는 App이 `ModuleHost::importAssetsWithEditorModule` 로 에디터 모듈을 인스턴스 없이 로드해서 부릅니다. 에디터가 없는 Shipping 빌드에서는 실패합니다.
+- 로컬라이제이션 도구(`--gather-text` · `--check-text` · `--import-po` · `--export-po`)도 같은 길입니다(`ModuleHost::runLocalizationWithEditorModule`, 진입점 `runEditorLocalizationTask`).
 
 ## 작동 원리
 

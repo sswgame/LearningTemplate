@@ -105,6 +105,48 @@ namespace sw
                 return true;
             }
 
+#if !defined( SW_SHIPPING )
+            /**
+             * @brief 에디터 인스턴스 없이 에디터 모듈만 올려 진입점 @p pSymbol 하나를 부르고 내립니다(헤드리스 임포트 · 로컬라이제이션 공통).
+             * @details 모듈 ABI 를 대조하고, 모듈 타입을 등록했다가 걷습니다. @p call 은 `( TEntryFn, const ModuleService& ) -> bool` 이고 엔진 서비스 표를 받습니다.
+             * @param pPurpose 로그에 쓰는 작업 이름입니다(`"Asset importing"`).
+             */
+            template <typename TEntryFn, typename TCall>
+            [[nodiscard]] static bool callEditorModuleEntry( const utf8* pSymbol, const utf8* pPurpose, TCall&& call )
+            {
+                const string modulePath     = ModuleImageUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
+                void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
+                if ( pLibraryModule == nullptr )
+                {
+                    SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
+                    return false;
+                }
+                (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다
+
+                // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
+                engine::registerModuleTypes( sw::config::kTargetEditorModule );
+
+                bool bSucceeded = false;
+                if ( matchesModuleAbi( pLibraryModule, kEditorSymbols._pVersionSymbol, kEditorSymbols._pStampSymbol, kEditorSymbols._pModuleLabel ) )
+                {
+                    const TEntryFn pfnEntry = reinterpret_cast<TEntryFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, pSymbol ) );
+                    if ( pfnEntry == nullptr )
+                        SW_LOG_ERROR( "The editor module does not export %#", pSymbol );
+                    else
+                    {
+                        ModuleService service{};
+                        engine::fillModuleServices( service );
+                        bSucceeded = call( pfnEntry, static_cast<const ModuleService&>( service ) );
+                    }
+                }
+
+                engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
+                // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
+                (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
+                return bSucceeded;
+            }
+#endif
+
             /**
              * @brief 바인딩한 API 표로 인스턴스를 만들고 초기화합니다(에디터 · 게임 공통). 실패하면 만든 것을 부수고 핸들을 비웁니다.
              * @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
@@ -403,39 +445,31 @@ namespace sw
         SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
-        const string modulePath     = ModuleImageUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
-        void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
-        if ( pLibraryModule == nullptr )
+        // 인스턴스 없이 부르므로 엔진 서비스 표를 직접 넘긴다 — 임포터가 작업 시스템으로 압축을 나눈다.
+        return ModuleHostInternal::callEditorModuleEntry<PFN_ImportEditorAssets>( kImportEditorAssetsSymbol, "Asset importing",
+                                                                                  [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ModuleService& service )
         {
-            SW_LOG_ERROR( "Asset importing needs the editor module in Bin/Modules: %#", modulePath.c_str() );
-            return false;
-        }
-        (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다
+            return pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
+        } );
+#endif
+    }
 
-        // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
-        engine::registerModuleTypes( sw::config::kTargetEditorModule );
-
-        bool bSucceeded = false;
-        if ( ModuleHostInternal::matchesModuleAbi( pLibraryModule, ModuleHostInternal::kEditorSymbols._pVersionSymbol,
-                                                   ModuleHostInternal::kEditorSymbols._pStampSymbol, ModuleHostInternal::kEditorSymbols._pModuleLabel ) )
+    bool ModuleHost::runLocalizationWithEditorModule( EditorLocalizationTask task, string_view poPath, string_view projectArgument )
+    {
+#if defined( SW_SHIPPING )
+        (void)task;
+        (void)poPath;
+        (void)projectArgument;
+        SW_LOG_ERROR( "Localization tools need the editor module, which a Shipping build does not have - run them from a Dev build." );
+        return false;
+#else
+        const string poPathText( poPath );
+        const string projectText( projectArgument );
+        return ModuleHostInternal::callEditorModuleEntry<PFN_RunEditorLocalizationTask>(
+            kRunEditorLocalizationTaskSymbol, "Localization tools", [task, &poPathText, &projectText]( PFN_RunEditorLocalizationTask pfnRun, const ModuleService& service )
         {
-            const PFN_ImportEditorAssets pfnImport =
-                reinterpret_cast<PFN_ImportEditorAssets>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, kImportEditorAssetsSymbol ) );
-            if ( pfnImport == nullptr )
-                SW_LOG_ERROR( "The editor module does not export %#", kImportEditorAssetsSymbol );
-            else
-            {
-                // 인스턴스 없이 부르므로 엔진 서비스 표를 직접 넘긴다 — 임포터가 작업 시스템으로 압축을 나눈다.
-                ModuleService service{};
-                engine::fillModuleServices( service );
-                bSucceeded = pfnImport( static_cast<uint32>( kind ), bCheckOnly ? 1u : 0u, &service ) == 0;
-            }
-        }
-
-        engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-        // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
-        (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
-        return bSucceeded;
+            return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
+        } );
 #endif
     }
 

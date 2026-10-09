@@ -33,6 +33,7 @@
   패널은 UI 만, 실제 동작은 여기입니다 (그래서 테스트가 붙습니다)
 - **Asset/**: 원본 임포트 — 텍스처(`TextureImporter`, `TextureImportConfig`, `ImageUtil`) · 모델(`ModelImporter`, `ModelImportConfig`)과 둘이 쓰는
   스탬프 절차(`AssetImportStamp`) · 규칙의 경로 조건(`AssetImportPathFilter`), 헤드리스 임포트 진입점(`AssetImportEntry.cpp` — 아래 "텍스처는 들일 때 임포트한다" · "모델도 들일 때 임포트한다"), 저장 · 임포트 직후 검증(`EditorAssetValidation` — 아래 "저장 · 임포트 직후 에셋 검증"). 감시는 `Common/Workspace/AssetHotReload` 하나뿐이다
+- **Localization/**: 로컬라이제이션 도구 — 글 수집 · PO 교환의 본문(`LocalizationTools`)과 헤드리스 진입점(`LocalizationToolEntry.cpp`). 아래 "로컬라이제이션 도구"
 - **SourceControl/**: 버전 관리 잠금(체크아웃) — 공급자 추상(`ISourceControlProvider`: git LFS · 없음)과 창구(`EditorSourceControl`). 아래 "버전 관리 잠금"
 - **Config/**: Host JSON(`EditorConfig`)과 XML 시드(`EditorToolDefaults`)
 
@@ -285,6 +286,15 @@ VRM(`.vrm` — glTF 바이너리 + `extensions.VRM`(0.x) 또는 `VRMC_*`(1.0))�
 (`HeightfieldImporter`, 형식은 Engine `Environment/Terrain/HeightfieldData.h`). 원본 옆 `<이름>_holes.png`(128 미만 = 구멍 칸)는 곁 파일이라 원본으로 세지 않고
 그 원본의 구멍 마스크가 되며 원본 해시에 섞입니다. 헤드리스: `App --import-heightfields` · `--check-heightfields`(같은 `import.stamp` 절차). 임포트 동작을 바꾸면
 `HeightfieldImporterInternal::kImporterVersion` 을 올립니다. 시험: `HeightfieldImporterTest`(16 비트 PNG · `.r16` 값, 구멍, 스탬프, 저장소 원본 ↔ 에셋 대조).
+
+## 로컬라이제이션 도구
+
+글 수집(`App --gather-text` · `--check-text`)과 PO 교환(`--export-po` · `-import-po=<파일>`)은 소스 트리를 읽는 개발 도구라 에디터 모듈에 있습니다
+(`Common/Localization/LocalizationTools`, 규칙과 파일 형식은 [Localization README](../Engine/Localization/README.md)). App 이 헤드리스로 에디터 모듈을 인스턴스 없이
+올려 `runEditorLocalizationTask`(`LocalizationToolEntry.cpp`, 작업 `EditorLocalizationTask`)를 부릅니다 — 임포트와 같은 길이고 Dev 빌드에서만 됩니다.
+엔진의 `Headless` 단계가 타입 공급자 모듈 뒤에 서므로 글 수집이 게임 · 키트 타입의 `Meta = "Localizable"` 프로퍼티를 봅니다.
+CI 는 App 을 띄우지 않고 `EditorTest` 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate` 로 같은 확인을 합니다. 그 시험은 `Engine` 만 링크하므로 엔진 타입의
+`Localizable` 프로퍼티만 봅니다 — 게임 · 키트 타입에 그 메타를 더하고 저장소 데이터가 쓰면 `App --check-text` 와 결과가 갈라집니다(지금 저장소 데이터는 엔진 타입뿐).
 
 ## UI 스레드가 놓은 GPU 자원
 

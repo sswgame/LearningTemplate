@@ -57,6 +57,7 @@ sw_addTestExecutable(EditorTest
 		Viewport/TestEditorViewTargetUtil.cpp
 		Viewport/TestEditorVisualizerGeometry.cpp
 		Common/Workspace/TestFileWatchDispatcher.cpp
+		Common/Localization/TestLocalizationTools.cpp
 		Common/Asset/TestHeightfieldImporter.cpp
 		Common/Workspace/TestEditorSelection.cpp
 		Common/Asset/TestModelImporter.cpp
@@ -117,6 +118,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImportConfig.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/TextureImporter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Asset/VrmMaterialImporter.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Localization/LocalizationTools.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/EditorSourceControl.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/SourceControl/SourceControlProvider.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorGridUtil.cpp"

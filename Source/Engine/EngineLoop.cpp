@@ -32,7 +32,6 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/DevTools/LocalizationTools.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -512,8 +511,9 @@ namespace sw
                 return EngineInitResult::SkipDependents;
             }
 
-            // 로컬라이제이션 글 수집도 같은 자리다 — 리플렉션 프로퍼티(`Meta = "Localizable"`)를 보려면 모든 타입이 올라와 있어야 한다.
-            // 번역 교환(PO)은 수집 뒤에 할 수 있도록 같은 실행에서 수집 → 가져오기 → 내보내기 순으로 돈다.
+            // 로컬라이제이션 도구(글 수집 · PO 교환)와 원본 임포트 · 대조(텍스처 · 모델 · 높이장)는 에디터 모듈이 한다(엔진은 에디터를 모른다).
+            // 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려 부르는 것은 App 이다(`ModuleHost::runLocalizationWithEditorModule` ·
+            // `importAssetsWithEditorModule`). 이 단계는 타입 공급자 모듈 뒤라 글 수집이 리플렉션 프로퍼티(`Meta = "Localizable"`)를 본다.
             bool   bGatherText = false;
             bool   bCheckText  = false;
             bool   bExportPo   = false;
@@ -522,26 +522,8 @@ namespace sw
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_TEXT, bCheckText );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::EXPORT_PO, bExportPo );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_PO, importPoPath );
-            if ( bGatherText || bCheckText || bExportPo || importPoPath.empty() == false )
-            {
-                MemoryProfiler::captureMemoryLeakBaseline();
-                loop._bHeadless = true;
-                string projectPath;
-                loop._owned._pCommandLineManager->getArgument( CommandLineArgument::LOC_PROJECT, projectPath );
-                SW_LOG_INFO( "Starting Headless (localization tools)..." );
-                bool bSucceeded = true;
-                if ( bGatherText || bCheckText )
-                    bSucceeded = LocalizationTools::runGatherCommand( bCheckText, projectPath ) && bSucceeded;
-                if ( importPoPath.empty() == false )
-                    bSucceeded = LocalizationTools::runImportCommand( importPoPath, projectPath ) && bSucceeded;
-                if ( bExportPo )
-                    bSucceeded = LocalizationTools::runExportCommand( projectPath ) && bSucceeded;
-                loop._bHeadlessTaskFailed = bSucceeded == false;
-                return EngineInitResult::SkipDependents;
-            }
+            const bool bAnyLocalization = bGatherText || bCheckText || bExportPo || importPoPath.empty() == false;
 
-            // 원본 임포트 · 대조(텍스처 · 모델)는 에디터 모듈이 한다(엔진은 에디터를 모른다). 여기서는 창 · RHI 없이 세우기만 하고, 모듈을 올려
-            // 부르는 것은 App 이다(`ModuleHost::importAssetsWithEditorModule`).
             bool bImportTextures     = false;
             bool bCheckTextures      = false;
             bool bImportModels       = false;
@@ -555,11 +537,11 @@ namespace sw
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::IMPORT_HEIGHTFIELDS, bImportHeightfields );
             loop._owned._pCommandLineManager->getArgument( CommandLineArgument::CHECK_HEIGHTFIELDS, bCheckHeightfields );
             const bool bAnyImport = bImportTextures || bCheckTextures || bImportModels || bCheckModels || bImportHeightfields || bCheckHeightfields;
-            if ( bAnyImport )
+            if ( bAnyLocalization || bAnyImport )
             {
                 MemoryProfiler::captureMemoryLeakBaseline();
                 loop._bHeadless = true;
-                SW_LOG_INFO( "Starting Headless (asset import/check)..." );
+                SW_LOG_INFO( "Starting Headless (%#)...", bAnyLocalization ? "localization tools" : "asset import/check" );
                 return EngineInitResult::SkipDependents;
             }
             return EngineInitResult::Succeeded;

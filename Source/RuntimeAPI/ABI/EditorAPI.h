@@ -60,6 +60,21 @@ namespace sw
 
     /** @brief `importEditorAssets` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --import-textures` · `--import-models`). */
     inline constexpr const utf8* kImportEditorAssetsSymbol = "importEditorAssets";
+
+    /** @brief 헤드리스 로컬라이제이션 작업입니다. C ABI 로는 uint32 로 건넵니다. */
+    enum class EditorLocalizationTask : uint32
+    {
+        GatherText = 0, ///< 코드 · 데이터에서 글을 모아 원문 · 번역 표를 고친다(`App --gather-text`)
+        CheckText  = 1, ///< 고치지 않고 표가 최신인지만 본다(`App --check-text`)
+        ImportPo   = 2, ///< PO 하나를 번역 표로 가져온다(`App --import-po=<파일>`)
+        ExportPo   = 3, ///< 문화권마다 `po/<culture>.po` 를 쓴다(`App --export-po`)
+    };
+
+    /** @brief 헤드리스 로컬라이제이션 진입점의 형입니다(심볼 이름: `kRunEditorLocalizationTaskSymbol`). */
+    using PFN_RunEditorLocalizationTask = int32 ( * )( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const ModuleService* pService );
+
+    /** @brief `runEditorLocalizationTask` 의 심볼 이름입니다. 에디터 인스턴스 없이 모듈만 올려 부릅니다(`App --gather-text` · `--check-text`). */
+    inline constexpr const utf8* kRunEditorLocalizationTaskSymbol = "runEditorLocalizationTask";
 } // namespace sw
 
 extern "C"
@@ -82,4 +97,12 @@ extern "C"
      * @return 남은 문제 수입니다(0 이면 원본과 임포트 결과가 맞습니다). 설정을 읽지 못하거나 모르는 종류면 음수입니다.
      */
     SW_MODULE_API int32 importEditorAssets( uint32 kind, uint32 checkOnly, const sw::ModuleService* pService );
+
+    /**
+     * @brief 로컬라이제이션 작업 @p task(`sw::EditorLocalizationTask`) 하나를 돌립니다. 소스 트리 · 리소스 트리가 있어야 합니다.
+     * @details 에디터 인스턴스 · 창 · RHI 없이 부릅니다. 모든 타입 공급자 모듈이 올라온 뒤여야 리플렉션 프로퍼티(`Meta = "Localizable"`)를 봅니다.
+     *          @p pPoPath 는 `ImportPo` 에서만 읽고, @p pProjectArgument 가 비면(nullptr 포함) 엔진 프로젝트와 활성 게임 팩의 프로젝트 전부입니다.
+     * @return 0 이면 성공(확인 모드는 표가 최신), 아니면 실패입니다.
+     */
+    SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf8* pPoPath, const utf8* pProjectArgument, const sw::ModuleService* pService );
 }

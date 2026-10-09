@@ -7,7 +7,8 @@
 String Table, 문화권 폴백, ICU 메시지 포맷, 의사 로컬라이제이션(Pseudo-Locale)처럼 두 엔진에 있는 기능을 같은 이름으로 제공합니다.
 
 번역 작업에 필요한 도구도 함께 있습니다. 코드와 데이터에서 번역할 글을 모으고(수집), 번역가에게 gettext PO 파일로 넘기고 돌려받습니다(교환).
-수집과 교환 명령의 본문은 대화 에셋과 게임 설정까지 읽어야 해서 이 폴더가 아니라 개발 도구 모듈 `DevTools/LocalizationTools` 에 있습니다.
+수집과 교환 명령의 본문은 소스 트리 · 대화 에셋 · 게임 설정까지 읽는 개발 도구라 이 폴더가 아니라 에디터 모듈(`Source/Editor/Common/Localization/LocalizationTools.h`)에 있습니다.
+App 이 헤드리스로 에디터 모듈을 올려 부르므로(`ModuleHost::runLocalizationWithEditorModule`) Dev 빌드에서만 됩니다.
 
 ## 머릿속 그림
 
@@ -122,6 +123,7 @@ cd build/Ninja-Debug/Bin
 5. 자리표시자 이름 차이, 최대 길이 초과, 포맷 구문 오류, 리치 텍스트 태그 차이를 보고합니다.
 
 `--check-text` 는 파일을 쓰지 않고 테이블이 최신인지만 종료 코드로 알립니다. `-loc-project=<경로>` 로 프로젝트 하나를, `-loc-project=all` 로 엔진과 모든 게임 팩을 고릅니다.
+CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate` 가 합니다(에디터 모듈이 지어지는 구성의 `nogpu` 시험).
 
 **PO 교환.** `--export-po` 는 문화권마다 `<프로젝트 폴더>/po/<문화권>.po` 를 씁니다. 키는 `msgctxt` 에 들어갑니다.
 `-import-po=<파일>` 은 파일 머리의 `X-Localization-Project` 로 프로젝트를 고릅니다. 가져온 번역의 해시는 번역가가 본 원문(`msgid`)의 해시이므로, 그 사이 원문이 바뀌었으면 낡은 번역으로 남습니다.
@@ -172,7 +174,7 @@ cd build/Ninja-Debug/Bin
 - **번역 테이블의 `culture` 는 프로젝트 `cultures` 의 철자와 같아야 합니다.** 정규화한 뒤에도 다르면 그 테이블은 로드되지 않습니다.
 - **게임 데이터를 낱개 테이블(`setString`, `loadLanguageJson`)로 넣지 마세요.** 낱개 테이블은 원문 해시 확인 없이 프로젝트 위에 덮입니다. 테스트와 도구용입니다.
 - **UI에는 미리 찾은 글이 아니라 키를 넣으세요.** `SW_LOCTEXT` 로 찾은 글을 위젯에 넣으면 언어를 바꿔도 그 글이 그대로 남습니다.
-- **코드나 데이터의 글을 고치면 수집 결과를 같은 커밋에 넣으세요.** 원문이 바뀌면 기존 번역은 낡은 번역이 되어 화면에서 사라지고, `TextGathererTest.RepositoryProjectsAreUpToDate` 가 실패합니다.
+- **코드나 데이터의 글을 고치면 수집 결과를 같은 커밋에 넣으세요.** 원문이 바뀌면 기존 번역은 낡은 번역이 되어 화면에서 사라지고, `LocalizationGatherTest.RepositoryProjectsAreUpToDate`(EditorTest)가 실패합니다.
 - **`selectordinal`, 화폐, 시간대, 서수는 지원하지 않습니다.** 날짜는 받은 값을 그대로 쓰고 시간대 변환을 하지 않습니다.
 
 ## 더 볼 곳
@@ -185,7 +187,7 @@ cd build/Ninja-Debug/Bin
 | `TextFormatter.h` | 메시지 포맷 문법 |
 | `LocText.h` | `SW_LOCTEXT`, `SW_LOCFORMAT` |
 | `TextGatherer.h`, `TranslationMemory.h`, `PortableObjectFile.h` | 수집, 번역 메모리, PO |
-| `DevTools/LocalizationTools.h` | `--gather-text` 같은 명령의 본문 |
+| `Source/Editor/Common/Localization/LocalizationTools.h` | `--gather-text` 같은 명령의 본문(에디터 모듈) |
 
-- 테스트: `Test/EngineTest/Localization/`
+- 테스트: `Test/EngineTest/Localization/`, 도구 명령은 `Test/EditorTest/Common/Localization/`
 - 명령줄 인자 전체: [CommandLine 문서](../../../docs/Config/CommandLine.md)
