@@ -10,9 +10,9 @@
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Kits/Online/Server/Account/LoginService.h"
 #include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/FakePlatformLoginProvider.h"
+#include "GameFramework/Kits/Online/Server/Account/Service/LoginService.h"
 
 #include "TestFramework/TestFramework.h"
 

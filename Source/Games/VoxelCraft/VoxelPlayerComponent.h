@@ -14,9 +14,9 @@
 
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelBody.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelHotbar.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelRaycast.h"
+#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelBody.h"
+#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelHotbar.h"
+#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelRaycast.h"
 
 namespace sw
 {

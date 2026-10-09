@@ -83,7 +83,7 @@
 #include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
+#include "GameFramework/Kits/Simulation/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
 

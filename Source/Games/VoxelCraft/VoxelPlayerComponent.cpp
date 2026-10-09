@@ -17,7 +17,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelBlock.h"
+#include "GameFramework/Kits/Simulation/Voxel/Catalog/VoxelBlock.h"
 
 #include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"

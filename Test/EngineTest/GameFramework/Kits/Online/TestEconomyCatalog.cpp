@@ -1,8 +1,8 @@
 // 경제 카탈로그 — 화폐(재원 순서 · 상한 · 잘못된 재원 버림) · 상품(가격 xor 상품 · 지급 필수 · 스토어 상품 찾기 · 판매 기간 반열림).
 #include "pch.h"
 
-#include "GameFramework/Kits/Online/Economy/CurrencyCatalog.h"
-#include "GameFramework/Kits/Online/Economy/OfferCatalog.h"
+#include "GameFramework/Kits/Online/Economy/Catalog/CurrencyCatalog.h"
+#include "GameFramework/Kits/Online/Economy/Catalog/OfferCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -8,9 +8,9 @@
 
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
 #include "GameFramework/Kits/Online/Matchmaking/MatchmakingClient.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/MatchQueueService.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/MatchmakingServer.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/PartyLobbyService.h"
+#include "GameFramework/Kits/Online/Server/Matchmaking/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Online/Server/Matchmaking/Service/MatchmakingServer.h"
+#include "GameFramework/Kits/Online/Server/Matchmaking/Service/PartyLobbyService.h"
 
 #include "TestFramework/TestFramework.h"
 

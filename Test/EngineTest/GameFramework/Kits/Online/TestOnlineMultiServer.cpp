@@ -16,10 +16,10 @@
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
-#include "GameFramework/Kits/Online/Account/AccountClient.h"
-#include "GameFramework/Kits/Online/Server/Account/AccountServer.h"
-#include "GameFramework/Kits/Online/Server/Account/LoginService.h"
+#include "GameFramework/Kits/Online/Account/Api/AccountClient.h"
 #include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
+#include "GameFramework/Kits/Online/Server/Account/Service/AccountServer.h"
+#include "GameFramework/Kits/Online/Server/Account/Service/LoginService.h"
 #include "GameFramework/Kits/Online/Server/Trade/TradeServer.h"
 #include "GameFramework/Kits/Online/Trade/TradeClient.h"
 

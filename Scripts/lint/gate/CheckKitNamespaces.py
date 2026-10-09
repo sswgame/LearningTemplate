@@ -70,7 +70,7 @@ class CheckKitNamespacesGate(LintGate):
 
     #: `<키트 파일>:<멤버>` → 키트가 공유 상태를 값으로 들어도 되는 까닭.
     mapExemption = {
-        "Source/GameFramework/Kits/Action/BattleRoyale/BrMatch.h:_inventory": "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
+        "Source/GameFramework/Kits/Action/BattleRoyale/Rule/BrMatch.h:_inventory": "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
         "Source/GameFramework/Kits/Simulation/Farming/FarmShippingBin.h:_bin": "팔릴 목록(값 목록 — 가방이 아니다)",
         "Source/GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h:_stock": "도시 건물의 물자(시뮬레이션 수치 — 플레이어가 드는 것이 아니다)",
     }

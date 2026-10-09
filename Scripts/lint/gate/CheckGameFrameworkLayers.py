@@ -274,7 +274,7 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "기반이 키트를 include",
             "files": {
-                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"\n',
+                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/Component/UnitStatsComponent.h"\n',
             },
         },
         {

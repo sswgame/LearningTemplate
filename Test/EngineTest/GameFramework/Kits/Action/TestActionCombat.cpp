@@ -22,11 +22,11 @@
 #include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
 #include "GameFramework/Base/UI/Marker/HealthBarComponent.h"
 #include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/Action/ActionCombat/ActionRoom.h"
-#include "GameFramework/Kits/Action/ActionCombat/MeleeHitboxComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/MonsterCatalog.h"
-#include "GameFramework/Kits/Action/ActionCombat/ProjectileComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/UnitStatsComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Kits/Action/ActionCombat/Component/MeleeHitboxComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/Component/ProjectileComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/Component/UnitStatsComponent.h"
+#include "GameFramework/Kits/Action/ActionCombat/Rule/ActionRoom.h"
 
 #include "TestFramework/TestFramework.h"
 

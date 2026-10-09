@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Simulation/Voxel/VoxelMesher.h"
+#include "GameFramework/Kits/Simulation/Voxel/View/VoxelMesher.h"
 
 namespace sw
 {

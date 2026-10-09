@@ -16,7 +16,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Online/Economy/EconomyProtocol.h"
+#include "GameFramework/Kits/Online/Economy/Protocol/EconomyProtocol.h"
 #include "GameFramework/Kits/Online/Server/Economy/Receipt/ReceiptValidator.h"
 
 namespace sw

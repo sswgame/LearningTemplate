@@ -37,9 +37,9 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
 - `World` 층은 `Environment` · `Land` · `Query` · `Lifetime` · `Spline`, `UI` 층은 `Hud` · `Marker` · `Dialogue` 로 풀어 `World/World` · `UI/UI` 두 겹을 없앴다.
 - `Actor/Control`: `Pawn` · `Controller` · `Intent`, `Actor/Combat`: `Health` · `Weapon` · `Damage`.
 
-### 3. 키트 안을 나눈다 (낮은 위험, 키트별)
-- 루트 10 파일 이상인 키트 14 개에 `Catalog/` · `State/` · `Component/` 같은 공통 하위 폴더 규칙을 정한다(전부 같은 이름). 파일이 6 개 이하인 키트는 평평하게 둔다.
-- `CardGame` 은 게임별 하위 폴더(`Klondike` · `Matgo` · `Poker` · `Uno`)로. 키트를 쪼갤지는 별도 판단(키트마다 DLL 이 하나라 쪼개면 DLL 이 늘어난다 — Bin 정리와 충돌) — 폴더만 나눈다.
+### 3. 키트 안을 나눈다 — 끝남(2026-10-10)
+- 루트 소스 10 개 이상인 키트 15 개(`Online/Server/Account` 포함)를 공통 하위 폴더(`Catalog` · `Rule` · `Component` · `View` · `Protocol` · `Api` · `Service`)로 나눴다.
+  규칙은 `Kits/README.md` "키트 안의 폴더". `CardGame` 은 게임별 폴더, DLL 은 그대로 하나.
 
 ### 4. 키트 그룹을 성격으로 다시 나눈다 (결정 필요)
 - 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)와 기능 키트(`Online` · `Network` · `Storage` · `Rpg/Overworld` · `Simulation/Voxel`)를 같은 `Kits/` 아래에 두되 그룹 이름으로 구분되게: `Kits/Genre/<그룹>/` · `Kits/Service/<그룹>/` 후보.

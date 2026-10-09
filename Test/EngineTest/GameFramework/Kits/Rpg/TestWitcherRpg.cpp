@@ -10,12 +10,12 @@
 #include "GameFramework/Base/Gameplay/Progression/SkillTree.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherAlchemy.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherBestiary.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCatalog.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherCombat.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherContract.h"
-#include "GameFramework/Kits/Rpg/WitcherRpg/WitcherMutagens.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Catalog/WitcherCatalog.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Rule/WitcherAlchemy.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Rule/WitcherBestiary.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Rule/WitcherCombat.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Rule/WitcherContract.h"
+#include "GameFramework/Kits/Rpg/WitcherRpg/Rule/WitcherMutagens.h"
 
 #include "TestFramework/TestFramework.h"
 

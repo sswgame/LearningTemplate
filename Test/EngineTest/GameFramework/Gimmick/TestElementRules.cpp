@@ -5,7 +5,7 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/ElementGrid.h"
 #include "GameFramework/Base/Gameplay/Gimmick/ElementRuleTable.h"
-#include "GameFramework/Kits/Action/ActionAdventure/AdventureElementGrid.h"
+#include "GameFramework/Kits/Action/ActionAdventure/Rule/AdventureElementGrid.h"
 
 #include "TestFramework/TestFramework.h"
 

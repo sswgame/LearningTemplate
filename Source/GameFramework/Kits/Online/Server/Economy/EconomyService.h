@@ -19,7 +19,7 @@
 #include "GameFramework/Base/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Online/Economy/EconomyProtocol.h"
+#include "GameFramework/Kits/Online/Economy/Protocol/EconomyProtocol.h"
 
 namespace sw
 {

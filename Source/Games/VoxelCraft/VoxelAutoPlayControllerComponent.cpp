@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Kits/Simulation/Voxel/VoxelWorld.h"
+#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelWorld.h"
 
 #include "Games/VoxelCraft/VoxelDirectorComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"

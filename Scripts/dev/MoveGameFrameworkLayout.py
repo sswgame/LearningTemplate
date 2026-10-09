@@ -96,10 +96,58 @@ _kStep2: list[Dir | Files] = [
     filesInternal("Base/UI/UI", "Base/UI/Dialogue", "DialogueRunnerComponent"),
 ]
 
+# ------------------------------------------------------------------------------
+# 3 단계 — 루트 파일이 10 개 이상인 키트 안을 공통 하위 폴더로 나눈다(규칙은 Source/GameFramework/Kits/README.md "키트 안의 폴더").
+# CardGame 은 게임별 하위 폴더 — DLL 은 그대로 하나다.
+# ------------------------------------------------------------------------------
+_kStep3: list[Dir | Files] = [
+    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Catalog", "WesternCatalog"),
+    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Component", "HorseFollowAiController WesternHorseMountComponent"),
+    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Rule", "WesternHonor WesternHorse WesternHunting WesternLaw WesternSurvival"),
+    filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Klondike", "KlondikeGame"),
+    filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Matgo", "MatgoGame HwatuDeck"),
+    filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Poker", "PokerHand PokerTable"),
+    filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Uno", "UnoGame"),
+    filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/DeckBattle", "DeckBattle"),
+    filesInternal("Kits/Simulation/Voxel", "Kits/Simulation/Voxel/Catalog", "VoxelBlock"),
+    filesInternal("Kits/Simulation/Voxel", "Kits/Simulation/Voxel/Rule", "VoxelWorld VoxelTerrain VoxelBody VoxelHotbar VoxelRaycast"),
+    filesInternal("Kits/Simulation/Voxel", "Kits/Simulation/Voxel/View", "VoxelMesher"),
+    filesInternal("Kits/Action/ActionAdventure", "Kits/Action/ActionAdventure/Rule",
+                  "AdventureCooking AdventureDungeon AdventureElementGrid AdventureTargeting AdventureVitals AdventureWeaponWear AdventureWorldMap"),
+    filesInternal("Kits/Rpg/WitcherRpg", "Kits/Rpg/WitcherRpg/Catalog", "WitcherCatalog"),
+    filesInternal("Kits/Rpg/WitcherRpg", "Kits/Rpg/WitcherRpg/Rule", "WitcherAlchemy WitcherBestiary WitcherCombat WitcherContract WitcherMutagens"),
+    filesInternal("Kits/Online/Server/Matchmaking", "Kits/Online/Server/Matchmaking/Service",
+                  "MatchQueueService PartyLobbyService MatchmakingServer MatchServerAgent"),
+    filesInternal("Kits/Online/Server/Matchmaking", "Kits/Online/Server/Matchmaking/Rule", "MatchMaker CacheRecordUpdater"),
+    filesInternal("Kits/Online/Account", "Kits/Online/Account/Protocol", "AccountProtocol AccountTypes"),
+    filesInternal("Kits/Online/Account", "Kits/Online/Account/Api", "AccountClient AccountDeviceSecret LoopbackPkceLoginClient PlatformLoginClient"),
+    filesInternal("Kits/Action/Metroidvania", "Kits/Action/Metroidvania/Catalog", "MetroidvaniaCatalog"),
+    filesInternal("Kits/Action/Metroidvania", "Kits/Action/Metroidvania/Rule", "MetroAbilitySet MetroCharmLoadout MetroDuelist MetroMapState MetroSoulsState"),
+    filesInternal("Kits/Action/BattleRoyale", "Kits/Action/BattleRoyale/Catalog", "BrCatalog"),
+    filesInternal("Kits/Action/BattleRoyale", "Kits/Action/BattleRoyale/Rule", "BrDrop BrGear BrLoot BrMatch BrZone"),
+    filesInternal("Kits/Action/ActionCombat", "Kits/Action/ActionCombat/Catalog", "MonsterCatalog"),
+    filesInternal("Kits/Action/ActionCombat", "Kits/Action/ActionCombat/Component", "MeleeHitboxComponent ProjectileComponent UnitStatsComponent"),
+    filesInternal("Kits/Action/ActionCombat", "Kits/Action/ActionCombat/Rule", "ActionRoom"),
+    filesInternal("Kits/Strategy/TacticsSrpg", "Kits/Strategy/TacticsSrpg/Catalog", "SrpgCatalog"),
+    filesInternal("Kits/Strategy/TacticsSrpg", "Kits/Strategy/TacticsSrpg/Rule", "SrpgAiCommander SrpgBattlefield SrpgCombat SrpgProgress"),
+    filesInternal("Kits/Online/Economy", "Kits/Online/Economy/Catalog", "CurrencyCatalog OfferCatalog"),
+    filesInternal("Kits/Online/Economy", "Kits/Online/Economy/Protocol", "EconomyProtocol"),
+    filesInternal("Kits/Online/Economy", "Kits/Online/Economy/Api", "EconomyClient EconomyMirror"),
+    filesInternal("Kits/Horror/CoopScavenger", "Kits/Horror/CoopScavenger/Catalog", "ScavengerCatalog"),
+    filesInternal("Kits/Horror/CoopScavenger", "Kits/Horror/CoopScavenger/Rule", "ScavengerCarry ScavengerExpedition ScavengerFacility ScavengerQuota"),
+    filesInternal("Kits/Casual/KartRacing", "Kits/Casual/KartRacing/Rule", "KartAi KartGhost KartItems KartRace KartTrack"),
+    filesInternal("Kits/Action/ActionPlatformer", "Kits/Action/ActionPlatformer/Catalog", "ActionPlatformerCatalog"),
+    filesInternal("Kits/Action/ActionPlatformer", "Kits/Action/ActionPlatformer/Rule", "ActionCombatRig ActionEnemyBrain ActionPlatformerBody ActionStageRun"),
+    filesInternal("Kits/Online/Server/Account", "Kits/Online/Server/Account/Service",
+                  "AccountServer LoginService AccountConnectAuthenticator LoginTicketAuthority OnlinePresence"),
+    filesInternal("Kits/Online/Server/Account", "Kits/Online/Server/Account/Rule", "AccountNameIndex LoginStoreLogic"),
+]
+
 # 단계는 차례로 다시 돌린다 — 1 단계의 폴더 표(Base/World → Base/World/World)는 2 단계가 푼 뒤의 경로를 모른다.
 _kSteps: dict[int, list[Dir | Files]] = {
     1: _kStep1,
     2: _kStep2,
+    3: _kStep3,
 }
 
 

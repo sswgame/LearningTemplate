@@ -4,7 +4,7 @@
 
 #include "Engine/Utility/Json/JsonDocument.h"
 
-#include "GameFramework/Kits/Online/Account/AccountTypes.h"
+#include "GameFramework/Kits/Online/Account/Protocol/AccountTypes.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/ProfileApiLoginProvider.h"
 

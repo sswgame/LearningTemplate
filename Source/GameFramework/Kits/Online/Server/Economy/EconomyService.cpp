@@ -9,8 +9,8 @@
 
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"
-#include "GameFramework/Kits/Online/Economy/CurrencyCatalog.h"
-#include "GameFramework/Kits/Online/Economy/OfferCatalog.h"
+#include "GameFramework/Kits/Online/Economy/Catalog/CurrencyCatalog.h"
+#include "GameFramework/Kits/Online/Economy/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Online/Server/Economy/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Online/Server/Economy/Receipt/ReceiptValidator.h"
 

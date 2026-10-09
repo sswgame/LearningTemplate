@@ -14,13 +14,13 @@
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 #include "GameFramework/Base/Online/Http/HttpServer.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Account/LoopbackPkceLoginClient.h"
-#include "GameFramework/Kits/Online/Server/Account/LoginService.h"
+#include "GameFramework/Kits/Online/Account/Api/LoopbackPkceLoginClient.h"
 #include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/JsonWebToken.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/PlatformLoginProviderSettings.h"
 #include "GameFramework/Kits/Online/Server/Account/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Online/Server/Account/Service/LoginService.h"
 
 #include "TestFramework/TestFramework.h"
 

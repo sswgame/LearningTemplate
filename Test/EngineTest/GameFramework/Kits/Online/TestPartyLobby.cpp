@@ -4,7 +4,7 @@
 
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/PartyLobbyService.h"
+#include "GameFramework/Kits/Online/Server/Matchmaking/Service/PartyLobbyService.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -10,7 +10,7 @@
 
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Online/Account/AccountTypes.h"
+#include "GameFramework/Kits/Online/Account/Protocol/AccountTypes.h"
 
 namespace sw
 {
