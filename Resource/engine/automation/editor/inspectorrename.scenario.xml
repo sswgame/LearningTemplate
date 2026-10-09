@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터 이름 칸은 Enter 없이 떠나도(다른 곳을 누름) 친 이름을 적용한다(panel-audit D10, 유니티 · 언리얼과 같다).
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/inspectorrename.scenario.xml -dx12
+-->
+<Scenario name="editor.inspectorrename" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="60"><DevCommand line="editor scene.new"/></At>
+	<At frame="75"><EditorClick mark="hierarchy.create"/></At>
+	<At frame="90"><EditorClick mark="inspector.name"/></At>
+	<At frame="100"><EditorKey key="Ctrl+A"/></At>
+	<At frame="105"><EditorText value="Blurred"/></At>
+	<!-- Enter 없이 다른 칸(Hierarchy 검색)을 눌러 떠난다 -->
+	<At frame="115"><EditorClick mark="hierarchy.filter"/></At>
+	<At frame="130">
+		<EditorExpectObject name="Blurred"/>
+		<Expect probe="Editor.UndoCount" equals="2"/>
+		<Pass/>
+	</At>
+</Scenario>
