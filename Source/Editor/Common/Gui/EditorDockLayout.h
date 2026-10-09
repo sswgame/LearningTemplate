@@ -67,6 +67,7 @@ namespace sw::editor
         float32                _lastDockspaceHeight; ///< 위와 같다(세로)
         uint8                  _bLayoutPending : 1;
         uint8                  _bApplied       : 1;
-        [[maybe_unused]] uint8 _reserved       : 6;
+        uint8                  _bResetDefault  : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 짓는다(Reset Default Layout)
+        [[maybe_unused]] uint8 _reserved       : 5;
     };
 } // namespace sw::editor

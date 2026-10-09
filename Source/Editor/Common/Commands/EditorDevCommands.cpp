@@ -241,6 +241,17 @@ namespace sw::editor
                 outReply = "loading layout " + listArgument[0];
                 return true;
             }
+
+            static bool runLayoutReset( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*    pContext = EditorContext::get();
+                EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+                if ( listArgument.empty() == false || pDock == nullptr )
+                    return false;
+                pDock->requestResetDefault();
+                outReply = "resetting to the default layout";
+                return true;
+            }
         };
     } // namespace
 
@@ -266,4 +277,6 @@ namespace sw::editor
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorDevCommandsInternal::runLayoutSave );
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );
+    SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
+                    &EditorDevCommandsInternal::runLayoutReset );
 } // namespace sw::editor

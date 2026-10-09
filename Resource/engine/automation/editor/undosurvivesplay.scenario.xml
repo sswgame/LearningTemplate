@@ -4,6 +4,7 @@
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/undosurvivesplay.scenario.xml -dx12
 -->
 <Scenario name="editor.undosurvivesplay" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="30"><DevCommand line="layout.reset"/></At>
 	<At frame="60"><DevCommand line="editor scene.new"/></At>
 	<At frame="75"><EditorClick mark="hierarchy.create"/></At>
 	<At frame="90"><Expect probe="Editor.UndoCount" equals="1"/></At>

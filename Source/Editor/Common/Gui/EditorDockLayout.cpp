@@ -105,6 +105,7 @@ namespace sw::editor
         , _lastDockspaceHeight{ 0.0f }
         , _bLayoutPending{ SW_FALSE }
         , _bApplied{ SW_FALSE }
+        , _bResetDefault{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -330,15 +331,18 @@ namespace sw::editor
             const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceId );
             const bool                 bEmpty =
                 ( pNode == nullptr ) || ( pNode->IsSplitNode() == false && pNode->Windows.Size == 0 );
-            if ( bEmpty )
+            if ( bEmpty || _bResetDefault == SW_TRUE )
                 applyDefaultDockLayout( dockspaceId );
-            _bApplied = SW_TRUE;
+            _bApplied      = SW_TRUE;
+            _bResetDefault = SW_FALSE;
         }
     }
 
     void EditorDockLayout::requestResetDefault()
     {
-        _bApplied = SW_FALSE;
+        // 저장된 배치가 있으면 도크 트리가 비어 있지 않다 — 빈 트리일 때만 짓는 첫 적용과 달리 덮어쓰라고 따로 적는다.
+        _bApplied      = SW_FALSE;
+        _bResetDefault = SW_TRUE;
     }
 
     void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceId )
