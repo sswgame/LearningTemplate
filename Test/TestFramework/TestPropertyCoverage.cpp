@@ -5,8 +5,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 namespace test
 {

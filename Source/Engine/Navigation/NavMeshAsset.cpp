@@ -13,7 +13,7 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Core/BinaryStream.h"
+#include "Engine/Serialization/Base/BinaryStream.h"
 
 namespace sw
 {

@@ -7,8 +7,8 @@
 #include "Core/Container/string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Binding/UiViewModel.h"
-#include "Engine/UI/Core/WidgetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

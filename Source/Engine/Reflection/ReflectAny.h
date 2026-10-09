@@ -3,7 +3,7 @@
  * @brief 다형 REFLECT 값을 담는 타입 태그 바이너리 블롭입니다(SerializeReference 스타일).
  *
  * @note `makeFrom` / `tryGetFrom` 의 **정의는 여기 없습니다.**
- *       `Engine/Serialization/Core/SerializeReflectAny.cpp` 에 있습니다. 바이트를 어떻게 채우는지는
+ *       `Engine/Serialization/Base/SerializeReflectAny.cpp` 에 있습니다. 바이트를 어떻게 채우는지는
  *       BinarySerializer 의 규약이고, Reflection 이 Serialization 을 참조하면 둘이 서로를
  *       참조하는 순환이 됩니다(이유는 그 파일의 머리말 참고).
  */

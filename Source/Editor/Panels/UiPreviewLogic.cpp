@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/UiScale.h"
 
 namespace sw::editor

@@ -6,11 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/UI/Animation/UiAnimatedProperty.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Style/UiStylePass.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 

@@ -6,7 +6,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "ReflectionTest/TestSampleActor.h"

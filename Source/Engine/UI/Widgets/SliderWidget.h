@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 
 namespace sw
 {

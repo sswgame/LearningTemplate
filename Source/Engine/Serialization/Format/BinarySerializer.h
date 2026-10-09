@@ -6,8 +6,8 @@
 #include "Core/Compression/ICompressionCodec.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
 
 namespace sw
 {

@@ -4,7 +4,7 @@
 
 #include "Core/Common/HashUtil.h"
 
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Style/UiStyleSheet.h"
 
 namespace sw

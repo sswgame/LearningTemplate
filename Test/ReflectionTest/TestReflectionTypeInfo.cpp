@@ -4,7 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/Serializer.h"
+#include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
 #include "ReflectionParser/AnnotationMeta.h"

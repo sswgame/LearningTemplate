@@ -248,7 +248,7 @@
 ## 더 볼 곳
 
 - [UI](../README.md): 위젯 트리, 무효화, 화면 스택, 따라 해 보기
-- [엔진 기본 화면과 접근성](../Screens/README.md): 이 문서의 기능으로 만든 엔진 기본 화면
+- [엔진 기본 화면과 접근성](../Screen/README.md): 이 문서의 기능으로 만든 엔진 기본 화면
 - [Localization](../../Localization/README.md): 현지화 키와 문화권
 - [결정 기록 5-7](../../../../docs/09_Decisions.md#5-7-런타임-ui-와-글자): 뷰모델과 엔진 XML을 고른 이유
 

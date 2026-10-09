@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"

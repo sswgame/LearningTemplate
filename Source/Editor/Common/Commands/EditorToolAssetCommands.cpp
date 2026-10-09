@@ -32,7 +32,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/TileMap/TileMapXml.h"
 
 namespace sw::editor

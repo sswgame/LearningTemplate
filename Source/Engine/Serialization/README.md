@@ -3,7 +3,7 @@
 리플렉션(`TypeInfo` · `PropertyInfo`)이 설명하는 값을 파일과 바이트로 옮기는 계층입니다. 형식은 셋입니다. 사람이 고치는 저작 파일은 XML 과 JSON 으로 쓰고,
 쿠커와 세이브 같은 빌드 · 실행 산출물은 바이너리로 씁니다. 언리얼의 `FArchive` · `FPropertyTag` 와 유니티의 YAML 직렬화에 해당합니다.
 
-- `Core/` 에는 형식이 함께 쓰는 부품이 있습니다. 컨테이너 순회(`ContainerVisitor`), 버전 이관(`SchemaMigrate`), 값 하나 다루기(`SerializerUtil`)가 여기 있습니다.
+- `Base/` 에는 형식이 함께 쓰는 부품이 있습니다. 컨테이너 순회(`ContainerVisitor`), 버전 이관(`SchemaMigrate`), 값 하나 다루기(`SerializerUtil`)가 여기 있습니다.
 - `Format/` 에는 형식마다의 직렬화기(`XmlSerializer` · `JsonSerializer` · `BinarySerializer`)와 바이트 스트림 `Archive` 가 있습니다.
 - `Object/` 에는 오브젝트 상태의 차이를 쓰는 직렬화기가 있습니다. 오브젝트 상태를 언제 · 어떤 순서로 읽는지는 [Object README](../Object/README.md) 가 다룹니다.
 
@@ -46,7 +46,7 @@
 - **JSON** — `JsonValue` 는 빌린 포인터다: 같은 부모에 `set( 새 키 )` · `pushBack()` 을 하면 앞서 꺼낸 형제 핸들이 죽는다("하나 받아 다 채우고 다음"). nlohmann
   `is_number_integer()` 는 부호 없는 수에도 참 — unsigned 를 먼저 본다. `JsonSerializer::loadFile` 은 실패해도 그 앞까지 읽힌 값이 남는다. `SerializeContext` 는 `deriveFromDefault()`.
 - **컨테이너를 어떻게 채울지는 컨테이너가 정한다** — 역직렬화는 `appendElement`, 인스펙터는 `allowsInPlaceElementWrite()`. 왕복 시험은 세 형식 모두, 값은 정렬되지 않은 순서로.
-- **컨테이너 순회는 `ContainerVisitor` 하나다**(`Serialization/Core/ContainerVisitor.h`). 원소 모양(중첩 · 소유 포인터 · 값 구조체 · 스칼라)은 컨테이너마다 한 번
+- **컨테이너 순회는 `ContainerVisitor` 하나다**(`Serialization/Base/ContainerVisitor.h`). 원소 모양(중첩 · 소유 포인터 · 값 구조체 · 스칼라)은 컨테이너마다 한 번
   `ContainerElementPlan` 이 정하고, 형식은 `IContainerWriter` · `IContainerReader` 만 구현한다(형식 TU 의 `…Internal::ContainerWriter` · `ContainerReader`). 실패는 세 형식이
   `ContainerReadResult` 로 같다 — 자리를 알면 그 원소 · 항목만 빼고 칸 실패(`FieldFailed`), 모르면 멈춘다(`StreamBroken`: 바이너리의 enum 아닌 값 실패 · 넣을 칸 없는 원소).
 - **직렬화 출력이 그대로인지는 덤프로 본다** — `SW_SERIALIZATION_DUMP_DIR=<폴더>` 로 `SerializationRoundTripTest.DumpEveryResourceObjectState` **하나만** 돌리면 씬 · 프리팹의

@@ -8,7 +8,7 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
 
 namespace sw
 {

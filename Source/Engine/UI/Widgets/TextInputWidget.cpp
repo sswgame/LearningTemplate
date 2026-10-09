@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/UiEvents.h"
+#include "Engine/UI/Base/UiEvents.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw

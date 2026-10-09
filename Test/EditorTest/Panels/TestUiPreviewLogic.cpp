@@ -4,7 +4,7 @@
 
 #include "Editor/Panels/UiPreviewLogic.h"
 
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/UiScale.h"
 #include "Engine/UI/Widgets/BorderPanel.h"

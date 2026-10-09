@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/TextLayout.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 
 namespace sw
 {

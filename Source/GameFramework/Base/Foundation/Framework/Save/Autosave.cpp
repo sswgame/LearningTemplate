@@ -9,7 +9,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/UI/Screens/UiNotificationService.h"
+#include "Engine/UI/Screen/UiNotificationService.h"
 #include "Engine/UI/UiSystem.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"

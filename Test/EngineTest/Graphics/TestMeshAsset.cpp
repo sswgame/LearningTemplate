@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

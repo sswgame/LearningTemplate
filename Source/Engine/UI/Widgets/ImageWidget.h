@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Widgets/UiBrush.h"
 
 namespace sw

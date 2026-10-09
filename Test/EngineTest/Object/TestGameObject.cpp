@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 #include "EngineTest/TestGameObjectMocks.h"
 

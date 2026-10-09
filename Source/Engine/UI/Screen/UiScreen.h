@@ -14,8 +14,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Animation/UiAnimationPlayer.h"
-#include "Engine/UI/Core/WidgetTree.h"
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Document/UiBindingDesc.h"
 
 namespace sw

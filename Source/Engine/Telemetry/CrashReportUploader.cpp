@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Telemetry/HttpClient.h"
+#include "Engine/Observability/HttpClient.h"
 
 namespace sw
 {

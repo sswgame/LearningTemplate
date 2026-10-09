@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 

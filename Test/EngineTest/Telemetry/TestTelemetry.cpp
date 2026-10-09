@@ -3,8 +3,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Observability/HttpClient.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Telemetry/HttpClient.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Telemetry/TelemetryUploader.h"

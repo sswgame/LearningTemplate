@@ -8,7 +8,7 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/UiSystem.h"

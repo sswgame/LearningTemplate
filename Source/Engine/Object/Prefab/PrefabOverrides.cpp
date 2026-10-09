@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw

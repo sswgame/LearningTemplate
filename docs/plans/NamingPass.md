@@ -24,7 +24,6 @@
 ### 문서로 해결 — 남은 것
 어휘표(`acquire` · `tryGet` · `getOrCreate` · `ensure` · 프레임 진행 동사)와 접미사 표 · `RT` 는 AGENTS.md "Function names" 와 [코딩 규칙 예시](../04_CodingGuidelines.md) 2 절에 올렸다.
 - `BlendCurveSpec` 은 접미사 표와 뜻이 반대라 `BlendCurveDef` 로 바꾼다(`AbilitySpec` 은 언리얼 `FGameplayAbilitySpec` 이라 그대로).
-- 폴더·파일: `Serialization/Core` · `UI/Core` 는 최상위 `Source/Core` 와 이름이 겹친다 — 엔진 폴더 재배치(분할 계획 0-3)에서 같이 다룬다.
 
 ### 린트 예외 표 비우기
 `CheckFunctionVocabulary` 가 `build` · `generate` · `construct` 와 함수 이름의 `Attr` 를, `CheckOutParameterNames` 가 맨이름 `out` 매개변수를 새 선언에서 막는다.

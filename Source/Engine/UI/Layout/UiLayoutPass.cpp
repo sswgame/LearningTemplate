@@ -7,10 +7,10 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
 {

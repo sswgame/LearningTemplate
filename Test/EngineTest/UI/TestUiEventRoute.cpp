@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/UiEventRouter.h"
-#include "Engine/UI/Core/UiPointerState.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/UiEventRouter.h"
+#include "Engine/UI/Base/UiPointerState.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"

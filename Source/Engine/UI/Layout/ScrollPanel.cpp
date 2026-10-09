@@ -6,7 +6,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/UI/Core/UiEvents.h"
+#include "Engine/UI/Base/UiEvents.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 
 namespace sw

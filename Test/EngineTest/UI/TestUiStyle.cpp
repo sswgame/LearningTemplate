@@ -7,7 +7,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/UiFocusManager.h"
+#include "Engine/UI/Base/UiFocusManager.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/Style/UiStylePass.h"
 #include "Engine/UI/Style/UiStyleSet.h"

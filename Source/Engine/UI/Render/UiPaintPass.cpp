@@ -5,10 +5,10 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw

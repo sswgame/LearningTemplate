@@ -4,7 +4,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 

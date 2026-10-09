@@ -54,7 +54,7 @@
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/TileMap/TileMapXml.h"
 #include "Engine/TileMap/TileSetAsset.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
 #include "Engine/UI/Document/UiDocumentLoader.h"

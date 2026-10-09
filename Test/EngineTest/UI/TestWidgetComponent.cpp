@@ -7,7 +7,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/ImageWidget.h"

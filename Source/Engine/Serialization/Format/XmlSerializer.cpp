@@ -8,9 +8,9 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Core/ContainerVisitor.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/ContainerVisitor.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw

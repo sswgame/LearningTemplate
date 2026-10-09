@@ -5,8 +5,8 @@
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw

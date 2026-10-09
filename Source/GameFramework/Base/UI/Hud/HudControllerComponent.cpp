@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/UI/Hud/HudControllerComponent.h"
 
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UiSystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"

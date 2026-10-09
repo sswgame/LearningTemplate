@@ -18,9 +18,9 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Core/BinaryStream.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/Serializer.h"
+#include "Engine/Serialization/Base/BinaryStream.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 

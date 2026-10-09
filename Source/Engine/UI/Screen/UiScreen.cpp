@@ -4,8 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UiBindingSet.h"
-#include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/UiSystem.h"
 

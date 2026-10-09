@@ -6,9 +6,9 @@
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Animation/UiStyleTransition.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Style/UiStyleSet.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 

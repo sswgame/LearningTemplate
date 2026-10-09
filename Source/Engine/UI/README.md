@@ -434,7 +434,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 ### 데이터로 만드는 화면과 엔진 기본 화면
 
 문서, 스타일 시트, 핫 리로드, 데이터 바인딩, 애니메이션, 오프스크린 화면은 [UI 문서와 데이터 바인딩](Document/README.md)에 있습니다.
-옵션 메뉴, 일시정지 메뉴, 알림, 자막, HUD와 로딩 화면, 접근성 기능은 [엔진 기본 화면과 접근성](Screens/README.md)에 있습니다.
+옵션 메뉴, 일시정지 메뉴, 알림, 자막, HUD와 로딩 화면, 접근성 기능은 [엔진 기본 화면과 접근성](Screen/README.md)에 있습니다.
 
 ### 월드에 붙는 UI
 
@@ -557,7 +557,7 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 ## 더 볼 곳
 
 - [UI 문서와 데이터 바인딩](Document/README.md): 문서, 스타일, 바인딩, 애니메이션, 핫 리로드
-- [엔진 기본 화면과 접근성](Screens/README.md): 옵션, 일시정지, 알림, 자막, 접근성
+- [엔진 기본 화면과 접근성](Screen/README.md): 옵션, 일시정지, 알림, 자막, 접근성
 - [Text](../Text/README.md): 글꼴 대체 사슬, 줄 바꿈, 양방향, 리치 텍스트
 - [Input](../Input/README.md): 입력 맵과 행동, 플레이어 조종자
 - [UserSettings](../UserSettings/README.md): 설정 스키마, 보류 값, 확인 대기
@@ -568,7 +568,7 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 | 파일 | 여는 때 |
 |---|---|
 | `UiSystem.h` | 서비스 API, 화면 열기와 닫기 |
-| `Core/Widget.h` | 위젯 가상 함수와 무효화 |
+| `Base/Widget.h` | 위젯 가상 함수와 무효화 |
 | `Screen/UiScreen.h` | 화면 성질, 명령, 뷰모델 연결 |
 | `Binding/UiViewModel.h` | 뷰모델 필드와 알림 |
 | `Resource/engine/ui/` | 엔진 기본 문서와 스타일 |

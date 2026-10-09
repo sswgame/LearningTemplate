@@ -9,8 +9,8 @@
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 namespace sw
 {

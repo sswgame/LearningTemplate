@@ -7,10 +7,10 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Observability/HttpClient.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
-#include "Engine/Telemetry/HttpClient.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "TestFramework/TestChildProcess.h"

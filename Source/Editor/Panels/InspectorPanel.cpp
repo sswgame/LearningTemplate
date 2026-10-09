@@ -39,7 +39,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include <imgui.h>

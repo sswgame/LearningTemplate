@@ -4,8 +4,8 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Core/UiEvents.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/UiEvents.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw

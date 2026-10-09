@@ -7,9 +7,9 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 
 namespace sw
 {

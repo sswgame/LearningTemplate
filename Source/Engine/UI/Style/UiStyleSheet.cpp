@@ -6,13 +6,13 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Serialization/Core/SchemaMigrate.h"
-#include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SchemaMigrate.h"
+#include "Engine/Serialization/Base/SerializeContext.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
 #include "Engine/UI/Animation/UiStyleTransition.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
 
 namespace sw
 {

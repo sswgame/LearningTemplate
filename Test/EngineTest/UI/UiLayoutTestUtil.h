@@ -8,9 +8,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Core/Widget.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Base/Widget.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/UiLayoutDump.h"
 #include "Engine/UI/Layout/UiLayoutPass.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"

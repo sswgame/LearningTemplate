@@ -43,7 +43,7 @@
 
 - **토대.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
-  `Observability` 는 Core만 보는 서버 운영 관측입니다.
+  `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 끝점 `OpsHttpEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHttpClient`)도 여기 한 곳에 있습니다.
 - **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
 - **에셋과 공간.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다. 공간 분할(`Spatial`)은 물리의 `AABB` 를 씁니다.
   내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.

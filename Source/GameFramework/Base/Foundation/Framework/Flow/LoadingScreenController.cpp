@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/UI/Core/WidgetTree.h"
+#include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/BorderPanel.h"
 #include "Engine/UI/Widgets/TextWidget.h"

@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 
 namespace sw
 {

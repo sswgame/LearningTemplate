@@ -3,7 +3,7 @@
 #include "Engine/Serialization/Object/ObjectDiffSerializer.h"
 
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Core/SerializerUtil.h"
+#include "Engine/Serialization/Base/SerializerUtil.h"
 
 namespace sw
 {

@@ -138,7 +138,7 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 ### 메뉴가 쓰는 API
 
 런타임 UI 문서는 이 API를 직접 부르지 않고 설정 바인딩 `{setting:id}` 로 연결합니다([UI README](../UI/README.md)의 "사용자 설정" 절).
-엔진 기본 옵션 메뉴(`Engine/UI/Screens/OptionsMenuScreen`)가 스키마에서 탭과 줄을 만들고, 확인 카운트다운과 키 바인딩 창을 연결합니다.
+엔진 기본 옵션 메뉴(`Engine/UI/Screen/OptionsMenuScreen`)가 스키마에서 탭과 줄을 만들고, 확인 카운트다운과 키 바인딩 창을 연결합니다.
 코드로 직접 메뉴를 만든다면 다음 함수를 씁니다. 게임에서는 `game::getService<UserSettingsManager>()`, 엔진과 에디터에서는 `engine::getUserSettingsManager()` 로 얻습니다.
 
 | 함수 | 하는 일 |

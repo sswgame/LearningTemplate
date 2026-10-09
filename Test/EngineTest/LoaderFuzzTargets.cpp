@@ -25,7 +25,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/Serialization/Core/StringPool.h"
+#include "Engine/Serialization/Base/StringPool.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
 #include "Engine/TileMap/TileMapXml.h"

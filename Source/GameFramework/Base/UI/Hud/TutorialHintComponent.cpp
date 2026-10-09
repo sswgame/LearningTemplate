@@ -3,7 +3,7 @@
 #include "GameFramework/Base/UI/Hud/TutorialHintComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/UI/Screens/UiNotificationService.h"
+#include "Engine/UI/Screen/UiNotificationService.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 

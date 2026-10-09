@@ -200,7 +200,7 @@ Linux `.debug` 는 `.build-id/<앞 2자리>/<나머지>.debug` 배치로 복사�
 |---|---|
 | `TelemetrySchema.h` | 스키마 형식과 파이프라인 설정 |
 | `TelemetryService.h` | 엔진 서비스. 동의, 배치, 스풀, 장면 요약 |
-| `TelemetryUploader.h`, `HttpClient.h` | 업로더와 HTTP 인터페이스 |
+| `TelemetryUploader.h`, `Observability/HttpClient.h` | 업로더와 HTTP 인터페이스(HTTP 는 운영 끝점과 같이 `Observability` 에 있다) |
 | `CrashReportService.h` | 크래시 번들 만들기, 동의, 보고 프로세스 |
 | `CrashReportUploader.h` | 크래시 업로더 |
 | `Core/Diagnostics/CrashHandler.h` | 크래시 순간에 파일을 쓰는 쪽 |

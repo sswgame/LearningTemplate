@@ -2,8 +2,8 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"
-#include "Engine/UI/Core/PanelWidget.h"
-#include "Engine/UI/Screens/UiNotificationService.h"
+#include "Engine/UI/Base/PanelWidget.h"
+#include "Engine/UI/Screen/UiNotificationService.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 

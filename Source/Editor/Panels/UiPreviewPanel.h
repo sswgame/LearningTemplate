@@ -11,7 +11,7 @@
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Panels/UiPreviewLogic.h"
 
-#include "Engine/UI/Core/WidgetTypes.h"
+#include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Screen/UiScreen.h"
 
 namespace sw

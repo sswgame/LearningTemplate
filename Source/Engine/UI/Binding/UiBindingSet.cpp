@@ -9,8 +9,8 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Binding/UiViewModel.h"
-#include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
