@@ -5,8 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashHandler.h"
 #include "Core/Process/Process.h"
+#include "Core/Process/ThreadCrashStack.h"
 
 #include "ModuleHost/LiveReloadManager.h"
 
@@ -121,8 +121,8 @@ namespace sw
     {
         // 이 스레드의 할당은 빌드를 요청한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         const string buildDir = findBuildDirectory();
         if ( buildDir.empty() || FileUtil::isDirectory( buildDir ) == false )
         {

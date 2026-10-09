@@ -119,7 +119,7 @@ if ( pTelemetry != nullptr )
 
 ### 크래시 보고
 
-**크래시 순간에는 아무것도 보내지 않습니다.** 죽어 가는 프로세스는 메모리 할당 없이 파일만 씁니다(`Core/Process/CrashHandler`).
+**크래시 순간에는 아무것도 보내지 않습니다.** 죽어 가는 프로세스는 메모리 할당 없이 파일만 씁니다(`Core/Diagnostics/CrashHandler`).
 로그 폴더 `Saved/Logs` 에 `crash_<세션>.dmp`, `.txt`(문맥), `.stack.txt`, `.breadcrumbs.txt` 가 생깁니다.
 
 **다음 실행이 번들을 만듭니다.** 엔진 초기화의 `Telemetry` 단계가 `CrashReportService::collectNewCrashes` 로 지금 세션이 아닌 크래시 파일을 `Saved/CrashReports/crash_<세션>/` 로 모읍니다.
@@ -203,7 +203,7 @@ Linux `.debug` 는 `.build-id/<앞 2자리>/<나머지>.debug` 배치로 복사�
 | `TelemetryUploader.h`, `HttpClient.h` | 업로더와 HTTP 인터페이스 |
 | `CrashReportService.h` | 크래시 번들 만들기, 동의, 보고 프로세스 |
 | `CrashReportUploader.h` | 크래시 업로더 |
-| `Core/Process/CrashHandler.h` | 크래시 순간에 파일을 쓰는 쪽 |
+| `Core/Diagnostics/CrashHandler.h` | 크래시 순간에 파일을 쓰는 쪽 |
 
 - 테스트: `Test/EngineTest/Telemetry/TestTelemetry.cpp`, `TestCrashBundle.cpp`
 - 상위 문서: [Engine/README.md](../README.md)

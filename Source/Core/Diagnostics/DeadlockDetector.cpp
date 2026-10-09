@@ -2,7 +2,7 @@
 
 #include "Core/Diagnostics/DeadlockDetector.h"
 
-#include "Core/Process/CallStackCapture.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
 SW_LOG_CALLER( "DeadlockDetector" );

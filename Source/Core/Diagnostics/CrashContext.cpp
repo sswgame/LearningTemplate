@@ -1,13 +1,14 @@
 #include "pch.h"
 
-#include "Core/Process/CrashContext.h"
+#include "Core/Diagnostics/CrashContext.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/CallStackCapture.h"
+#include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
@@ -76,7 +77,7 @@ namespace sw
         /** @brief 새 스레드의 본체입니다. 스레드별 준비를 거친 뒤 넘친다. */
         void overflowStackOnWorkerInternal()
         {
-            CrashHandler::initializeCurrentThread();
+            ThreadCrashStack::initializeCurrentThread();
             overflowStackInternal( 0 );
         }
 

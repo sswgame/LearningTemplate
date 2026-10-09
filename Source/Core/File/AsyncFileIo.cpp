@@ -7,7 +7,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 #include "Core/Task/TaskManager.h"
 
 #include <thread>
@@ -526,7 +526,7 @@ namespace sw
         void runWorker( MemoryTag memoryTag )
         {
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
-            CrashHandler::initializeCurrentThread();
+            ThreadCrashStack::initializeCurrentThread();
             ThreadName::setCurrentThreadName( "IO" );
             while ( true )
             {

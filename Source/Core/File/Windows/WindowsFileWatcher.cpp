@@ -4,7 +4,7 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Container/string.h"
@@ -105,8 +105,8 @@ namespace sw
     {
         // 이 스레드의 할당은 감시를 시작한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         constexpr DWORD bufferSize = 64 * 1024;
         vector<uint8>   buffer( bufferSize );
         OVERLAPPED      overlapped{};

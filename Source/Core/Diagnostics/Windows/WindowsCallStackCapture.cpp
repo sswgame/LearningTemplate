@@ -4,9 +4,9 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

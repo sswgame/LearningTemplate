@@ -8,7 +8,7 @@
     #include "Core/Concurrency/ThreadName.h"
     #include "Core/Log/Logger.h"
     #include "Core/Memory/Memory.h"
-    #include "Core/Process/CrashHandler.h"
+    #include "Core/Process/ThreadCrashStack.h"
 
     #include <cerrno>
     #include <sys/syscall.h>
@@ -221,7 +221,7 @@ namespace sw
         void run( MemoryTag memoryTag )
         {
             const ScopedMemoryTag threadMemoryTag{ memoryTag };
-            CrashHandler::initializeCurrentThread();
+            ThreadCrashStack::initializeCurrentThread();
             ThreadName::setCurrentThreadName( "IO.Uring" );
             armWakeRead();
             while ( true )

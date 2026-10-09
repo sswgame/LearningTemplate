@@ -2,7 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Process/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildId.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 

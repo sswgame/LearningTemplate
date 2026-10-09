@@ -1,11 +1,11 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
-#include "Core/Memory/Memory.h"
-#include "Core/Process/CallStackCapture.h"
-#include "Core/Process/CrashContext.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 
 #include <csignal>
 #include <ctime>
@@ -40,41 +40,7 @@ namespace sw
         /** @brief 지금 보고 중인 시그널 — 시한이 지나 끝낼 때 종료 코드(128 + 시그널)로 쓴다. */
         atomic<int32> s_reportSignalNumber{ 0 };
 
-        /**
-         * @brief 대체 시그널 스택입니다.
-         *
-         * 스택 오버플로로 생긴 SIGSEGV 는 스택이 이미 바닥난 상태라 그 스택 위에서 핸들러를 실행할 수 없습니다. 핸들러에
-         * 들어가는 순간 다시 폴트가 나고, 프로세스는 **아무 기록도 없이** 죽습니다. 정작 가장 알고 싶은 크래시가 그렇게
-         * 사라집니다. 그래서 별도 스택을 깔고 SA_ONSTACK 으로 그 위에서 핸들러를 돌립니다.
-         */
-        // 최신 glibc 의 SIGSTKSZ 는 sysconf() 를 부르도록 바뀌어 상수가 아니다. 넉넉한 고정 크기를 쓴다. 리포트 경로가 스택에 올리는 것은
-        // StringBuilder<8192> 와 DeepCallStack(64 프레임) 정도이고, 나머지는 힙이다.
-        constexpr size_t kSignalStackSize  = 128 * 1024;
-        constexpr int32  kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
-
-        /**
-         * @brief 이 스레드의 대체 시그널 스택입니다. **`sigaltstack` 은 스레드마다다** — 한 스레드에만 깔면 작업 스레드 · 렌더 스레드의
-         *        스택 오버플로는 기록 없이 죽는다. 스레드가 끝날 때 스택을 끄고 돌려준다.
-         */
-        struct ThreadSignalStackInternal
-        {
-            uint8* _pStack{ nullptr };
-
-            ~ThreadSignalStackInternal() { release(); }
-
-            void release()
-            {
-                if ( _pStack == nullptr )
-                    return;
-                stack_t disableStack{};
-                disableStack.ss_flags = SS_DISABLE;
-                sigaltstack( &disableStack, nullptr );
-                Memory::free( _pStack );
-                _pStack = nullptr;
-            }
-        };
-
-        thread_local ThreadSignalStackInternal t_signalStack{};
+        constexpr int32 kArrFatalSignal[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
 
         /**
          * @brief 보고가 시한을 넘겼다(`alarm`) — 보고를 버리고 곧장 끝냅니다.
@@ -182,8 +148,8 @@ namespace sw
 
         CallStackCapture::initialize();
 
-        // 스택 오버플로에서도 핸들러가 돌 수 있도록 이 스레드에 먼저 대체 스택을 깐다. 다른 스레드는 시작할 때 `initializeCurrentThread` 로 깐다.
-        initializeCurrentThread();
+        // 스택 오버플로에서도 핸들러가 돌 수 있도록 이 스레드에 먼저 대체 스택을 깐다. 다른 스레드는 시작할 때 `ThreadCrashStack::initializeCurrentThread` 로 깐다.
+        ThreadCrashStack::initializeCurrentThread();
 
         // SA_ONSTACK 은 대체 스택을 깐 스레드에서만 효과가 있다. 깔지 않은 스레드는 평소 스택에서 핸들러를 돈다.
         struct sigaction action{};
@@ -198,28 +164,6 @@ namespace sw
         }
 
         SW_LOG_TRACE( "Crash handler installed." );
-    }
-
-    void CrashHandler::initializeCurrentThread()
-    {
-        if ( t_signalStack._pStack != nullptr )
-            return;
-
-        uint8* pStack = static_cast<uint8*>( Memory::allocate( kSignalStackSize ) );
-        if ( pStack == nullptr )
-            return;
-
-        stack_t signalStack{};
-        signalStack.ss_sp    = pStack;
-        signalStack.ss_size  = kSignalStackSize;
-        signalStack.ss_flags = 0;
-        if ( sigaltstack( &signalStack, nullptr ) != 0 )
-        {
-            Memory::free( pStack );
-            SW_LOG_WARNING( "sigaltstack failed — a stack overflow on this thread will not be reported" );
-            return;
-        }
-        t_signalStack._pStack = pStack;
     }
 
     void CrashHandler::shutdown()
@@ -237,7 +181,7 @@ namespace sw
 
         // 이 스레드의 대체 스택도 걷어 낸다. 커널이 들고 있는 등록을 지워 두는 편이 뒤에 오는 핸들러(테스트 · 도구)와 엉키지 않는다.
         // 다른 스레드의 것은 그 스레드가 끝날 때 돌려준다.
-        t_signalStack.release();
+        ThreadCrashStack::releaseCurrentThread();
 
         CallStackCapture::shutdown();
     }

@@ -3,10 +3,10 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Telemetry/TelemetryEvent.h"

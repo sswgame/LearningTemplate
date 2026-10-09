@@ -11,7 +11,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_LINUX )
 
@@ -144,8 +144,8 @@ namespace sw
     {
         // 이 스레드의 할당은 감시를 시작한 쪽의 용도로 센다.
         const ScopedMemoryTag threadMemoryTag{ memoryTag };
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         alignas( inotify_event ) uint8 buffer[LinuxFileWatcherInternal::kInotifyEventBufferSize];
 
         while ( _bIsWatching )

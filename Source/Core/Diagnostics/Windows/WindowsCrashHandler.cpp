@@ -1,10 +1,11 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Diagnostics/CallStackCapture.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/CallStackCapture.h"
-#include "Core/Process/CrashContext.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -41,13 +42,6 @@ namespace sw
         constexpr DWORD kExceptionCodeAbort            = 0xE0535701;
         constexpr DWORD kExceptionCodePureCall         = 0xE0535702;
         constexpr DWORD kExceptionCodeInvalidParameter = 0xE0535703;
-
-        /**
-         * @brief 넘친 뒤 핸들러가 쓸 스택 자리입니다(`SetThreadStackGuarantee`).
-         * @details 스택 오버플로는 스택이 바닥난 채로 필터에 들어옵니다. 자리가 없으면 필터의 첫 호출에서 다시 넘쳐 **아무것도 남지 않습니다**
-         *          (실측: 덤프 0 바이트). 미니덤프 · 심볼 변환 · 8 KB 문자열 버퍼가 차례로 들어가는 크기입니다 — 실측으로 64 KB 에서 덤프가 온전합니다.
-         */
-        constexpr ULONG kStackGuaranteeBytes = 64 * 1024;
 
         /**
          * @brief 크래시 보고를 맡는 스레드 — 설치할 때 미리 띄워 두고 신호를 기다린다.
@@ -332,7 +326,7 @@ namespace sw
             return;
 
         CallStackCapture::initialize();
-        initializeCurrentThread();
+        ThreadCrashStack::initializeCurrentThread();
 
         // 덤프 구현을 지금 싣는다(s_pfnMiniDumpWriteDump 설명). dbgcore 가 없는 옛 Windows 는 dbghelp 의 것을 쓴다.
         s_hDumpModule = LoadLibraryW( L"dbgcore.dll" );
@@ -355,12 +349,6 @@ namespace sw
         s_pPreviousInvalidParameterHandler = _set_invalid_parameter_handler( &onInvalidParameterInternal );
         s_previousAbortBehavior            = _set_abort_behavior( 0, _WRITE_ABORT_MSG );
         SW_LOG_TRACE( "Crash handler installed." );
-    }
-
-    void CrashHandler::initializeCurrentThread()
-    {
-        ULONG guaranteeBytes = kStackGuaranteeBytes;
-        SetThreadStackGuarantee( &guaranteeBytes );
     }
 
     void CrashHandler::shutdown()

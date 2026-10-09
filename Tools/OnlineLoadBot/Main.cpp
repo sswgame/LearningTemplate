@@ -9,12 +9,12 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/AsyncLogSink.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/Process/CrashHandler.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"

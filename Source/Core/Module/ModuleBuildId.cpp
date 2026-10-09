@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Process/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildId.h"
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"

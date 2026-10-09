@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Process/CallStackCapture.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/String/StringBuilder.h"

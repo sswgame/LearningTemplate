@@ -1,8 +1,8 @@
 #include "pch.h"
 
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Process/CrashContext.h"
-#include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
 
 #include "TestFramework/TestChildProcess.h"

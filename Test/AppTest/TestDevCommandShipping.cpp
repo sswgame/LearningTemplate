@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Process/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildId.h"
 
 #include "Engine/Utility/Console/DevCommandRegistry.h"
 

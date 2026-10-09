@@ -4,14 +4,14 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/BuildInfo.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/DeadlockDetector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/AsyncLogSink.h"
+#include "Core/Module/ModuleBuildId.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/Process/CrashHandler.h"
-#include "Core/Process/ModuleBuildId.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Common/EngineServices.h"

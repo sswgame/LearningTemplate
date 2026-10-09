@@ -6,7 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
@@ -259,8 +259,8 @@ namespace sw
     void RenderThread::threadMain()
     {
         SW_MEMORY_SCOPE( RenderCpu );
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "RenderThread" );
         _bContextBound = false;
 

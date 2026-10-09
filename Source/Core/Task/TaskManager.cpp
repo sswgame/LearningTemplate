@@ -9,7 +9,7 @@
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskNode.h"
 #include "Core/Task/TaskNodePool.h"
@@ -1255,8 +1255,8 @@ namespace sw
 
     void TaskManager::workerLoop( uint32 workerId )
     {
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         t_currentWorkerIndex = static_cast<int32>( workerId );
         {
             // 디버거 · 프로파일러(Tracy)가 같은 이름을 본다. 번호는 워커 슬롯 번호다.

@@ -7,7 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw

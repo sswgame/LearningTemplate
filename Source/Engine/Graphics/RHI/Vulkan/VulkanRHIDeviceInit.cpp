@@ -6,7 +6,7 @@
  */
 #include "pch.h"
 
-#include "Core/Process/CrashHandler.h"
+#include "Core/Diagnostics/CrashHandler.h"
 
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"

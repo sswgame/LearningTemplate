@@ -3,9 +3,9 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Process/CrashContext.h"
-#include "Core/Process/CrashHandler.h"
 
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"

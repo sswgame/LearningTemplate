@@ -19,7 +19,7 @@ namespace sw
         None = 0,
         AccessViolation,     ///< 널 포인터 쓰기
         StackOverflow,       ///< 이 스레드에서 끝없는 재귀
-        WorkerStackOverflow, ///< 새 스레드에서 끝없는 재귀(스레드별 준비 `initializeCurrentThread` 를 태운다)
+        WorkerStackOverflow, ///< 새 스레드에서 끝없는 재귀(스레드별 준비 `ThreadCrashStack::initializeCurrentThread` 를 태운다)
         Abort,               ///< std::abort() — 엔진의 "로그 + abort" 치명 경로
         PureVirtualCall,     ///< 생성 중인 객체의 순수 가상 함수 호출
         StderrHeld,          ///< 다른 스레드가 stderr 를 쥔 채 놓지 않는 동안 접근 위반 — 보고가 끝날 수 없다(시한이 끝내야 한다)
@@ -45,22 +45,13 @@ namespace sw
         static constexpr uint32 kMaxContextEntry = 24;
 
         /**
-         * @brief 핸들러를 설치합니다. 두 번 불러도 한 번만 설치됩니다. 부른 스레드는 `initializeCurrentThread` 도 거칩니다.
+         * @brief 핸들러를 설치합니다. 두 번 불러도 한 번만 설치됩니다. 부른 스레드는 `ThreadCrashStack::initializeCurrentThread` 도 거칩니다.
          * @details Windows 는 처리되지 않은 SEH 예외 필터와 함께 SIGABRT · 순수 가상 호출 · 잘못된 CRT 인자 훅을 겁니다. 셋은 CRT 가
          *          `__fastfail` 로 **예외 필터를 건너뛰고** 프로세스를 끝내는 길이라, 훅이 없으면 abort 로 끝날 때 덤프도 스택도 남지 않습니다.
          */
         static void initialize();
         /** @brief 핸들러를 제거하고 이전 핸들러를 되돌립니다. */
         static void shutdown();
-
-        /**
-         * @brief **이 스레드**에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
-         * @details 스택 오버플로는 스택이 바닥난 채로 핸들러에 들어옵니다. 준비가 없으면 핸들러가 첫 호출에서 다시 넘쳐 **아무것도 남기지
-         *          못합니다**(실측: 덤프 파일 0 바이트). Windows 는 `SetThreadStackGuarantee` 로 넘친 뒤에 쓸 자리를 남겨 두고, POSIX 는
-         *          이 스레드 전용 대체 시그널 스택을 깝니다 — `sigaltstack` 은 스레드마다라, `initialize` 를 부른 스레드만으로는 덮이지 않습니다.
-         *          핸들러 설치 전에 불러도 됩니다(로거 작업 스레드가 그렇다). 두 번 불러도 됩니다.
-         */
-        static void initializeCurrentThread();
 
         /**
          * @brief 일부러 죽습니다(`CrashTestKind` 설명). 돌아오지 않습니다. `None` · 모르는 값이면 아무것도 하지 않습니다.

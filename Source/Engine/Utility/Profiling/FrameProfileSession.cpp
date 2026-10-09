@@ -6,11 +6,11 @@
 
 #include "Engine/Utility/Profiling/FrameProfileSession.h"
 
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/CallStackCapture.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"

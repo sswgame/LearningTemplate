@@ -11,9 +11,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
-#include "Core/Process/CallStackCapture.h"
 
 namespace sw
 {

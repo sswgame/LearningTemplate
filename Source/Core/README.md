@@ -306,7 +306,7 @@ W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목�
 **`SW_ASSERT` 는 Release와 Shipping에서 사라지고, `SW_LOG_ASSERT` 는 Debug에서 `SW_DEBUG_BREAK` 까지 합니다.** 디버거가 없는 CI에서는 프로세스가 죽으므로, 방어 경로 테스트는 Release와 Shipping에서 합니다.
 배포 구성의 `SW_LOG_ASSERT` 는 진행하므로, 뒤 코드가 그 전제에 의존한다면 하드 단언을 씁니다.
 
-**엔진이 만드는 스레드는 시작할 때 `CrashHandler::initializeCurrentThread()` 를 부릅니다.** 빠뜨리면 스택 오버플로 덤프가 0바이트가 됩니다.
+**엔진이 만드는 스레드는 시작할 때 `ThreadCrashStack::initializeCurrentThread()` 를 부릅니다.** 빠뜨리면 스택 오버플로 덤프가 0바이트가 됩니다.
 Windows 덤프는 보고 스레드가 `PssCaptureSnapshot` 으로 씁니다. 살아 있는 자기 프로세스를 `MiniDumpWriteDump` 하면 로더 잠금에서 멈춥니다.
 보고 시한은 `setReportDeadline`(20초)이고, POSIX는 `alarm` 과 SIGALRM을 씁니다. 실물 확인은 `-gv_crashTest=1..5` 로 합니다.
 보고 프로세스는 `setReporterExecutable` 을 정한 호스트(App)만 띄웁니다. 경로를 `getExecutablePath` 로 잡으면 테스트 실행 파일이 자기를 끝없이 다시 띄웁니다.

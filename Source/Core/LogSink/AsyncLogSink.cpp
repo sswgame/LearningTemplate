@@ -11,7 +11,7 @@
 #include "Core/LogSink/ILogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
-#include "Core/Process/CrashHandler.h"
+#include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -259,8 +259,8 @@ namespace sw
     void AsyncLogSink::workerLoop()
     {
         SW_MEMORY_SCOPE( EngineMisc );
-        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(CrashHandler::initializeCurrentThread 설명).
-        CrashHandler::initializeCurrentThread();
+        // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
+        ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "Logger" );
         while ( _bIsRunning.load( std::memory_order_acquire ) || _queue.empty() == false )
         {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Process/CrashHandler.h"
+#include "Core/Diagnostics/CrashHandler.h"
 
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandContext.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
