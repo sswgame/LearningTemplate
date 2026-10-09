@@ -31,12 +31,13 @@ option(SW_SHIPPING_BUILD "배포용 단일 실행 파일 정적 링크 빌드 (E
 
 # 빌드 타깃 종류 — 언리얼 TargetType(Game · Client · Server)과 같은 자리. 모듈 매니페스트의 `_listTarget` 과 코드 매크로
 # (`SW_WITH_CLIENT_CODE` · `SW_WITH_SERVER_CODE`, `cmake/Engine/BuildLayout.cmake`)가 이 값을 따른다.
-#   Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 시험 · 리슨 서버). App 과 Server 를 짓는다.
-#   Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
-#   Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
+# Game   — 클라이언트 + 서버 코드 전부(개발 · 에디터 · 한 프로세스 서버/클라 시험 · 리슨 서버). App 과 Server 를 짓는다.
+# Client — 서버 전용 모듈이 없는 플레이어 배포본. App 만 짓는다.
+# Server — 클라이언트 전용 모듈(에디터 · RHI 백엔드)과 창 · GPU · 오디오 장치 코드가 없는 전용 서버. Server 만 짓는다.
 # 비우면 Shipping 은 Client, 그 밖은 Game 이다. 캐시 값은 그대로 두고 같은 이름의 보통 변수로 가린다 — 아래 모든 곳이 해석된 값을 본다.
 set(SW_TARGET_TYPE "" CACHE STRING "빌드 타깃 종류: Game | Client | Server (비우면 Shipping=Client, 그 밖=Game)")
 set_property(CACHE SW_TARGET_TYPE PROPERTY STRINGS "" Game Client Server)
+
 if(SW_TARGET_TYPE STREQUAL "")
 	if(SW_SHIPPING_BUILD)
 		set(SW_TARGET_TYPE Client)
@@ -44,9 +45,11 @@ if(SW_TARGET_TYPE STREQUAL "")
 		set(SW_TARGET_TYPE Game)
 	endif()
 endif()
+
 if(NOT SW_TARGET_TYPE MATCHES "^(Game|Client|Server)$")
 	message(FATAL_ERROR "SW_TARGET_TYPE='${SW_TARGET_TYPE}' — one of Game, Client, Server")
 endif()
+
 if(SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_BUILD_GAME)
 	message(FATAL_ERROR "SW_TARGET_TYPE=Server needs SW_BUILD_GAME=ON — the dedicated server runs the game module")
 endif()
@@ -56,21 +59,29 @@ endif()
 # Dev 는 백엔드 넷을 모두 모듈로 짓고 이 값을 읽지 않는다. 이 플랫폼에 없는 백엔드면 구성이 선다(cmake/Engine/RhiBackends.cmake).
 file(READ "${CMAKE_CURRENT_LIST_DIR}/../../Config/Engine/CookContract.json" swCookContractText)
 string(JSON swContractDefaultRhi GET "${swCookContractText}" default_rhi_backend)
+
 if(CMAKE_HOST_WIN32)
 	set(SW_SHIPPING_RHI_BACKEND "${swContractDefaultRhi}" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 else()
 	set(SW_SHIPPING_RHI_BACKEND "Vulkan" CACHE STRING "Shipping 이 Engine 에 정적 링크할 RHI 백엔드(쿠킹 표 이름)")
 endif()
+
 set_property(CACHE SW_SHIPPING_RHI_BACKEND PROPERTY STRINGS DirectX11 DirectX12 Vulkan OpenGL)
 
 option(SW_BUILD_GAMEFRAMEWORK "Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드" ON)
+
+# 끄면 활성 게임(과 그 밖의 켜진 비키트 모듈)이 의존으로 닿지 않는 키트를 짓지 않는다. 게임별 · Shipping 프리셋이 끈다(언리얼 패키징이 프로젝트가 켠 플러그인만 담는 것과 같다).
+# 켜 두는 Ninja-Debug · CI 프리셋이 모든 키트와 키트 시험을 짓는다.
+option(SW_BUILD_UNUSED_KITS "활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만)" ON)
 option(SW_ENABLE_PCH "빌드 속도 단축을 위한 프리컴파일드 헤더(PCH) 사용" ON)
 
 option(SW_ENABLE_SANITIZER "Address/UB Sanitizer 컴파일러 플래그 모듈 활성화" OFF)
+
 # 어떤 새니타이저인가. address(ASan+UBSan, 기본) 와 thread(TSan)는 함께 켤 수 없다 — 런타임이 서로 다른 섀도 메모리를 쓴다.
 # TSan 은 GNU/Clang(리눅스)만 된다(clang-cl 은 지원하지 않는다).
 set(SW_SANITIZER_KIND "address" CACHE STRING "SW_ENABLE_SANITIZER 가 켤 새니타이저: address | thread")
 set_property(CACHE SW_SANITIZER_KIND PROPERTY STRINGS address thread)
+
 # 커버리지 안내 퍼징(libFuzzer) — 엔진에 커버리지 계측(`-fsanitize=fuzzer-no-link`)을 걸고 `Test/FuzzTest/LoaderFuzzer` 를 짓는다. 리눅스 clang + ASan 만
 # (Windows 의 clang_rt.fuzzer 는 정적 CRT 뿐이라 엔진과 링크되지 않는다). 프리셋 `CI-Fuzz`, 밤마다 `.github/workflows/fuzz.yml`.
 option(SW_ENABLE_FUZZING "리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측" OFF)
@@ -97,10 +108,12 @@ option(SW_ENABLE_DEADLOCK_DETECTION "sw::Mutex 잠금 순서를 실시간 추적
 option(SW_ENABLE_LTO "Shipping 배포 빌드 시 ThinLTO(링크 타임 최적화) 활성화" ON)
 option(SW_ENABLE_STL_CONTAINER "엔진 커스텀 할당자 대신 std::allocator를 사용하도록 설정" OFF)
 option(SW_ENABLE_TIME_TRACE "Clang 컴파일 시간 프로파일링(-ftime-trace JSON 출력)" OFF)
+
 # Release · Shipping 의 디버그 정보 — lines(함수 · 줄 표만: 크래시 스택이 이름 · 줄을 낸다) | full(지역 변수까지, 오브젝트 · 캐시 · 링크가 크게 는다) | none.
 # 링크는 어느 값이든 서명(Windows RSDS · 리눅스 build-id)을 적는다 — 덤프를 그 빌드의 심볼과 짝짓는 열쇠다.
 set(SW_RELEASE_DEBUG_INFO "lines" CACHE STRING "Release/Shipping debug info: lines | full | none")
 set_property(CACHE SW_RELEASE_DEBUG_INFO PROPERTY STRINGS lines full none)
+
 if(NOT SW_RELEASE_DEBUG_INFO MATCHES "^(lines|full|none)$")
 	message(FATAL_ERROR "SW_RELEASE_DEBUG_INFO must be lines, full or none (got '${SW_RELEASE_DEBUG_INFO}')")
 endif()
@@ -113,6 +126,7 @@ if(WIN32 AND NOT SW_SHIPPING_BUILD)
 else()
 	set(swTracyDefault OFF)
 endif()
+
 option(SW_ENABLE_TRACY "Tracy 프로파일러 클라이언트 링크(개발 빌드, Shipping 은 무시)" ${swTracyDefault})
 
 # 활성화할 대상 게임 팩 선택 (Source/Games/ 하위 디렉터리 이름)
