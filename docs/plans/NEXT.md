@@ -7,6 +7,14 @@
 - main 에 들어간 것: 3 차(가상 입력 · 자동화 시나리오 · 빙의 · 탑승), 4 차(런타임 UI 전부 + 원시 장치 조회 → 입력 맵 액션), 5 차 a(문서 분리 · 다시 쓰기 · 작업 방식),
   5 차 b 전부와 그 뒤 추가분(의존성 기준선 · 옵션 창 · 에디터 고정 픽셀 배율 · Dev 산출물 자리 `Bin/Modules` · `Bin/Symbols` · `TestBin` · 크래시 보고 인자 · 반복문 중괄호 · 중복 정리).
 - 6 차(주석을 새 문체로)는 시작하지 않았습니다.
+- 에디터 보강 V1(씬 뷰 / 게임 뷰 분리, 2026-10-10): 엔진 다중 뷰에 호스트 타깃 뷰 · EditorAPI `getSceneViewport` · 모듈 ABI v3(`6651ef893`),
+  Scene · Game 패널 분리 · 상단 툴바 `EditorPlayToolbar` · 이름표 `sceneView.*` / `gameView.*` / `toolbar.*` · 시나리오 `sceneviewgameview`(`8fb82d7ee`), 문서(이 커밋).
+  검증: Debug 경고 0, `ctest --preset Ninja-Debug-lint` 59/59, Debug `-L nogpu` 41/42(SmokeTest 는 아래), 에디터 자체 시험 37/37,
+  `AppScenarioTest.EditorScenariosPassOnEveryBackend`(10 시나리오 × 네 백엔드, 건너뜀 0) · `AppSmokeTest.Editor*` · Vulkan 씬 뷰 리사이즈 통과,
+  Shipping · Debug-Server 빌드 경고 0, 창 캡처로 Scene 탭 격자 · 기즈모 · Game 탭 보조선 없음 확인.
+  **남은 것**: 보기 모드가 렌더러 전역이라 두 뷰가 함께 보이면 게임 뷰에도 걸린다(EditorPlus G1 에 적었다), 두 뷰가 함께 보일 때 그림자 볼륨은 게임 카메라 기준.
+  **검증 대기**: SmokeTest(`ArchitectureTest.ModuleCompilerAndLiveReloadE2E`)는 같은 시각 빌드 속도 작업(`d649e08f4`)이 공유 vcpkg 를 다시 설치하는 동안
+  Debug 재구성이 vcpkg 잠금 · 없는 zstd 패키지로 실패해 확인하지 못했다(V1 코드와 무관한 환경 문제) — vcpkg 설치가 끝난 뒤 `ctest -R ^SmokeTest$` 로 다시 본다.
 - 그 뒤 묶음(2026-10-10): AppHost → ModuleHost 개명 · FixedTimestep 을 `Engine/Config` 로(`6863b1f95`), 에디터 격자 월드 고정 · 적응 간격 · 가장자리 흐림(`0c3f1fd37`),
   텍스처 BC 띠 병렬 압축(`e71f3b8ae`, 모듈 ABI v2 — `importEditorAssets` 가 서비스 표를 받는다), 런타임 UI 그리기 목록 맞바꾸기(`53898be30`), 서드파티 DLL 은 `Bin` 한 벌(`13b41e74a`).
   검증(묶음 끝에 한 번): Debug 경고 0, `ctest --preset Ninja-Debug-lint` 59/59, Debug `-L nogpu` 42/42 · `-L hostgpu`(에디터 시나리오 4 백엔드 — `viewportgrid` 포함),

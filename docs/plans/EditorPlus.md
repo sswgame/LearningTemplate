@@ -61,7 +61,7 @@
 | D7 | 모듈 켜고 끄기 | **프로젝트 매니페스트(`SWGame.module.json` 의 `_listModuleOverride`)를 고치고** "구성 · 빌드 · 다시 시작" 을 묻는다(CMake 가 같은 매니페스트로 짓기 때문에 실행 중 켜기는 없다) | 언리얼 Plugins 창 — 켜면 "Restart Now". 의존 때문에 함께 꺼지는 모듈을 미리 보인다(`ModuleCatalog::resolve` 를 그대로 돌린다) |
 | D8 | assert 무시 대화상자 | **대화형 에디터 실행에서만** Windows `MessageBoxW`(계속 · 다시 시도 · 취소 = 이번만 무시 · 디버거로 멈춤 · 이 자리 늘 무시). 디버거가 붙었거나, 자동 실행(`-gv_profileFrames` · `-scenario` · 자체 시험 · 새 `-unattended`)이거나, 시험이 가로채면 지금처럼 | 언리얼 `ensure`/`check` 대화상자(Windows 메시지 상자, 무인 실행에선 안 뜸), 유니티는 대화상자가 없다(로그만) — 학습용으로 "그 자리에서 계속" 이 쓸모 있다 |
 | D9 | GPU 캡처 도구 | **RenderDoc in-app API**(헤더 `ThirdParty/renderdoc/renderdoc_app.h` — MIT), `-renderdoc` 로 시작 때 올림, 에디터 버튼 · 개발 명령 `renderdoc.capture`. PIX 는 하지 않는다 | 네 백엔드(DX11 · DX12 · Vulkan · GL)를 모두 잡는 것은 RenderDoc 뿐. 언리얼 RenderDoc 플러그인 · 유니티 Frame Capture 버튼과 같은 자리 |
-| D10 | 스크린샷 버튼 형식 | **PNG**(`Saved/Screenshots/<시각>.png`, 게임 뷰 그림). 시험용 `-gv_screenshot` 은 PPM 계약 그대로 | 언리얼 HighResShot · 유니티 Game view 스크린샷 모두 PNG. PPM 은 시험 도구용 |
+| D10 | 스크린샷 버튼 형식 | **PNG**(`Saved/Screenshots/<시각>.png`, 게임 뷰 그림 — 씬 뷰 툴바의 단추는 씬 뷰 그림). 시험용 `-gv_screenshot` 은 PPM 계약 그대로 | 언리얼 HighResShot · 유니티 Game view 스크린샷 모두 PNG. PPM 은 시험 도구용 |
 | D11 | 보기 모드 추가 | **Normals · Depth(선형) · Overdraw** 셋. Shader Complexity 는 하지 않는다(머티리얼 그래프가 없어 의미가 약하다) | 유니티 Scene view Draw Mode(Shaded · Wireframe · Overdraw · Normals …), 언리얼 View Mode(Lit · Unlit · Wireframe · World Normal · Scene Depth · Quad Overdraw) |
 | D12 | 스레드 미니 타임라인 | **패널 안에 넣는다**(켤 때만 사건을 링 버퍼에 기록). 긴 분석은 계속 Tracy | 유니티 Profiler Timeline 이 에디터 안이다. 언리얼은 Insights 따로 — 우리는 둘 다(빠른 확인은 패널, 깊은 분석은 Tracy) |
 | D13 | 버그 리포트 한 방 | 언리얼 **`BugIt` 모양**: 엔진 개발 명령 `bugit [메모]`(게임 창에서도 된다) + 에디터 버튼 → `Saved/BugIt/<시각>/`(스크린샷 · 로그 사본 · 씬 경로 · 카메라 자리 · 재현 명령 · 입력 녹화 · 시스템 정보), 재현은 `bugitgo <폴더>` | 언리얼 `BugIt` / `BugItGo` 그대로. zip 은 만들지 않는다(폴더가 첨부하기 쉽고 의존이 늘지 않는다) |
@@ -93,8 +93,7 @@ O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **0 띄워 보며 찾은 결함** | V1 | 씬 뷰 / 게임 뷰 분리 — 에디터 카메라 뷰와 게임 카메라 출력을 따로(14절) + 재생 단추를 툴바로 | L | E2 · E5 | ★ |
-| | E5 | 창 제목 = `<게임> — <씬>[*] — SW Editor` + `IWindow::setTitle` | S | | ★ |
+| **0 띄워 보며 찾은 결함** | E5 | 창 제목 = `<게임> — <씬>[*] — SW Editor` + `IWindow::setTitle` | S | | ★ |
 | **1 확장 지점(C)** | C1 | EditorModule SHARED + `SW_EDITOR_API` + 등록 목록을 모듈 하나에 + 등록 세대 | M | | ★ |
 | | C2 | 매니저가 등록 변화를 따라간다 + 모듈을 내릴 때 그 모듈의 인스턴스를 뗀다 + 시각화 켬/끔을 id 로 | M | C1 | |
 | | C3 | ImGui 컨텍스트 결속기 + 커맨드 등록 줄 `SW_EDITOR_COMMAND` | M | C1 · C2 | |
@@ -109,7 +108,7 @@ O1 ~ O5(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **4 캡처 · 디버그 · 품질** | G1 | 보기 모드 Normals · Depth · Overdraw | M | E3 | ★ |
-| | G2 | 스크린샷 버튼(게임 뷰 PNG) + 렌더 스레드 요청 창구 | S | E2 | ★ |
+| | G2 | 스크린샷 버튼(게임 뷰 PNG, 씬 뷰 툴바에는 씬 뷰 스크린샷 따로) + 렌더 스레드 요청 창구 | S | E2 | ★ |
 | | G3 | RenderDoc 캡처 버튼 · `-renderdoc` | S | | |
 | | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
 | | H1 | assert 무시 대화상자 + `-unattended` | S | | ★ |
@@ -2188,7 +2187,8 @@ Overdraw 는 G버퍼 패스가 가산(알베도 칸에 단색)이고 Lighting �
 Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 = 1.0), Overdraw 는 겹친 큐브 둘의 겹친 자리가 하나뿐인 자리보다 밝다(모서리 기준 배경을 빼고 평균으로 비교한다. 특정 색 픽셀 수는 톤매핑에 무너진다).
 
 **확인 = 에디터 시나리오.** `viewmodes.scenario.xml`: 뷰포트 툴바의 보기 모드 콤보(이름표 `viewport.viewMode`)로 모드를 하나씩 고르고 그때마다 `Screenshot` 을 찍습니다.
-`ExpectImage metric="differentFrom"` 으로 각 장이 Lit 장과 다른지 보고, Normals 장은 위를 보는 면 영역의 지표로 봅니다. 에디터 실행의 스크린샷은 E2 뒤로 게임 뷰 이미지입니다.
+`ExpectImage metric="differentFrom"` 으로 각 장이 Lit 장과 다른지 보고, Normals 장은 위를 보는 면 영역의 지표로 봅니다. 에디터 실행의 스크린샷은 주 출력 그림입니다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰(V1). 보기 모드는 씬 뷰 툴바에 있으므로 Scene 탭을 앞에 둔 채 찍습니다.
+지금 보기 모드는 `FrameRenderer` 전역이라 씬 뷰와 게임 뷰가 같이 보일 때 게임 뷰에도 걸린다(V1 에서 남긴 것) — G1 에서 `RenderViewSettings` 로 뷰마다 갖게 해 게임 뷰는 늘 Lit 으로 둔다(유니티 Scene 뷰 Draw Mode 와 같다).
 
 **커밋 메시지:**
 ```
@@ -2211,13 +2211,13 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 **적용 뒤 확인:** 쿠킹 → host 시험 네 백엔드, `-gv_viewMode=3/4/5` 스크린샷 넷 × 셋을 눈으로. **겹침:** E3(앞), gfx-editor-rest 3 · shadow-fix(셰이더 다른 줄), 4 차 runtime-ui(UI 패스는 보기 모드를 받지 않는다 — 표 플래그 확인).
 
-### G2 스크린샷 단추 — 게임 뷰를 PNG 로 + 렌더 스레드 요청 창구 ★
+### G2 스크린샷 단추 — 게임 뷰 · 씬 뷰를 PNG 로 + 렌더 스레드 요청 창구 ★
 
 **바꿀 것.**
 1) `RenderThread` 에 실행 중 요청(지금은 `-gv_screenshot` 기동 인자뿐):
 ```cpp
         /**
-         * @brief 다음 프레임의 화면(Present 결과 — 에디터면 게임 뷰)을 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM.
+         * @brief 다음 프레임의 화면(Present 결과 — 에디터면 주 출력: 게임 뷰가 보이면 게임 뷰, 아니면 씬 뷰)을 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM.
          * @details 캡처 텍스처를 켜고 한 프레임 그린 뒤 endFrame 다음에 읽는다(켠 프레임은 아직 비어 있다). 게임 스레드에서 부른다. 앞 요청이 남아 있으면 바꾼다.
          */
         void requestScreenshot( string_view filePath );
@@ -2225,10 +2225,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 구현은 `_pendingScreenshotPath`(mutex 하나)와 상태 둘(`Requested` → 캡처 켬 → 한 프레임 → 덤프 → 끔). 기존 `gv_screenshot` 경로와 같은 덤프 함수를 쓴다.
 `FrameRenderer::dumpPresentCaptureToPng( path )` — `dumpPresentCaptureToPpm` 의 바이트 풀이(BGRA → RGBA)를 함수로 빼서 `ImageFileWriter::writePngRgba8` 로 쓴다.
 2) 개발 명령(엔진 — 게임 창에서도): `SW_DEV_COMMAND( Screenshot, "screenshot", "screenshot [file]", "Save the next frame as PNG (default Saved/Screenshots/<time>.png)", &runScreenshot );`
-3) 에디터: 게임 뷰 툴바 오른쪽 끝 `ICON_FA_CAMERA` 단추 + 커맨드 `viewport.screenshot`(F9, 메뉴 `MainMenu/Edit`… 대신 툴바 · 팔레트) → `Saved/Screenshots/<yyyyMMdd-HHmmss>.png`, 끝나면 토스트
+3) 에디터: 게임 뷰 툴바 오른쪽 끝 `ICON_FA_CAMERA` 단추(게임 뷰 그림) + 씬 뷰 툴바의 같은 단추(씬 뷰 그림 — 씬 뷰 RT 를 읽는다. 주 출력 캡처가 아니므로 렌더 스레드 요청에 대상 RT 를 함께 넘긴다)
+   + 커맨드 `viewport.screenshot`(F9, 포커스가 있는 뷰, 메뉴 `MainMenu/Edit`… 대신 툴바 · 팔레트) → `Saved/Screenshots/<yyyyMMdd-HHmmss>.png`, 끝나면 토스트
    "Screenshot saved" + "Show in Explorer"(기존 콘텐츠 브라우저의 같은 동작 함수).
 **시험.** `RenderThreadTest`(EngineTest — 없으면 `RenderPassGpuTest` 안)에서 `requestScreenshot( temp/x.png )` → 프레임 셋 → 파일이 있고 크기가 출력 크기(PNG 머리 읽기 — `ImageUtil` 디코더). 경로 이름 만들기는 `ScreenshotPathUtil::makeDefaultPath( nowLocal )` 로 빼서 EngineTest 단위 시험(형식 `yyyyMMdd-HHmmss`).
-**확인 = 에디터 시나리오.** `screenshotbutton.scenario.xml`: 게임 뷰 툴바의 카메라 단추(이름표 `gameView.screenshot`)를 누르고 몇 프레임 기다린 뒤, `ExpectLog` 로 "Screenshot saved" 줄과 경로를 봅니다.
+**확인 = 에디터 시나리오.** `screenshotbutton.scenario.xml`: `DevCommand line="panel.focus game_view"` 로 게임 뷰를 앞에 둔 뒤 그 툴바의 카메라 단추(이름표 `gameView.screenshot`)를, 다음에 씬 뷰 단추(`sceneView.screenshot`)를 누르고 몇 프레임 기다린 뒤, `ExpectLog` 로 "Screenshot saved" 줄과 경로를 봅니다.
 파일 크기와 PNG 머리는 렌더 스레드 테스트가 보고, 시나리오는 단추부터 파일까지의 경로를 봅니다.
 
 **남길 교훈.** 없음. **커밋 메시지:**
@@ -2240,7 +2241,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 해결방안:
 - RenderThread::requestScreenshot(경로 — .png 면 PNG): 캡처를 켜고 한 프레임 뒤 endFrame 다음에 덤프. FrameRenderer::dumpPresentCaptureToPng.
-- 개발 명령 screenshot [file](게임 창 포함), 게임 뷰 툴바 카메라 단추 · 커맨드 viewport.screenshot(F9) → Saved/Screenshots/<시각>.png + 토스트.
+- 개발 명령 screenshot [file](게임 창 포함), 게임 뷰 · 씬 뷰 툴바 카메라 단추 · 커맨드 viewport.screenshot(F9) → Saved/Screenshots/<시각>.png + 토스트.
 
 결과:
 - 요청 → 파일 · 크기 시험, 기본 경로 형식 시험.
@@ -2279,11 +2280,11 @@ namespace sw
 Linux `dlopen( "librenderdoc.so", RTLD_NOW | RTLD_NOLOAD )` → 없고 `-renderdoc` 면 `RTLD_NOW`. `RENDERDOC_GetAPI( eRENDERDOC_API_Version_1_6_0, … )`, `SetCaptureFilePathTemplate( "Saved/RenderDoc/capture" )`,
 `MaskOverlayBits( eRENDERDOC_Overlay_None, 0 )`(화면 글자 끔 — 스크린샷 시험이 흔들리지 않게).
 3) `ArgumentList.xxx`: `SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )`. `EngineInitStepList.xxx`: RHI 디바이스 단계 **앞**에 `RenderDoc` 단계(대기 없음 · `initialize` 만).
-4) 개발 명령 `renderdoc.capture` · `renderdoc.ui`. 에디터: 게임 뷰 툴바 `ICON_FA_BUG` 단추(쓸 수 없으면 회색 + 툴팁 "Start with -renderdoc or from RenderDoc"), 커맨드 `viewport.renderDocCapture`(Ctrl+F12),
+4) 개발 명령 `renderdoc.capture` · `renderdoc.ui`. 에디터: 상단 툴바(`EditorPlayToolbar`) `ICON_FA_BUG` 단추 — 한 프레임 전체(씬 뷰 · 게임 뷰)를 캡처한다(쓸 수 없으면 회색 + 툴팁 "Start with -renderdoc or from RenderDoc"), 커맨드 `viewport.renderDocCapture`(Ctrl+F12),
    프로파일러 패널 "Open Tracy" 옆에 "RenderDoc" 묶음(Capture · Open UI).
 **시험.** 단위 시험은 RenderDoc 설치에 매인다 — `RenderDocCaptureTest.IsUnavailableWithoutRenderDoc`(EngineTest nogpu: 인자 없이 `initialize` → `isAvailable()` false, `triggerCapture` 가 아무것도 안 하고 죽지 않음) 하나.
 실제 캡처는 손 확인(적용 뒤: RenderDoc 이 깔린 PC 에서 `App.exe -dx12 -renderdoc -EnableEditor` → 단추 → `Saved/RenderDoc/*.rdc`, 네 백엔드).
-**확인 = 에디터 시나리오.** `renderdocbutton.scenario.xml`: `-renderdoc` 없이 띄워 탐침 `Editor.RenderDocAvailable` 이 0 인지, RenderDoc 단추(이름표 `gameView.renderDoc`)를 눌러도 `[Error]` 가 없는지 봅니다.
+**확인 = 에디터 시나리오.** `renderdocbutton.scenario.xml`: `-renderdoc` 없이 띄워 탐침 `Editor.RenderDocAvailable` 이 0 인지, RenderDoc 단추(이름표 `toolbar.renderDoc`)를 눌러도 `[Error]` 가 없는지 봅니다.
 실제 캡처는 RenderDoc 이 설치된 기계에서만 되므로 시나리오에 넣지 않습니다.
 
 **남길 교훈.** [결정 기록](../09_Decisions.md) 2절(안 하기로 한 것)에 한 줄: `- **PIX 캡처(DX12 전용 — WinPixGpuCapturer.dll)는 하지 않았다** — RenderDoc 이 네 백엔드를 덮는다. DX12 타이밍 분석이 필요해지면.`
@@ -2297,7 +2298,7 @@ Linux `dlopen( "librenderdoc.so", RTLD_NOW | RTLD_NOLOAD )` → 없고 `-renderd
 해결방안:
 - ThirdParty/renderdoc/renderdoc_app.h(MIT) 를 넣고 RenderDocCapture(Dev 만): 이미 붙은 RenderDoc 을 찾고, -renderdoc 면 RHI 디바이스
   전에 설치 경로에서 올린다(EngineInitStepList 의 RenderDoc 단계). 캡처 파일은 Saved/RenderDoc/, 화면 글자 끔.
-- 개발 명령 renderdoc.capture · renderdoc.ui, 게임 뷰 툴바 단추 · 커맨드 viewport.renderDocCapture(Ctrl+F12), 프로파일러 패널 묶음.
+- 개발 명령 renderdoc.capture · renderdoc.ui, 상단 툴바 단추 · 커맨드 viewport.renderDocCapture(Ctrl+F12), 프로파일러 패널 묶음.
 
 결과:
 - RenderDocCaptureTest.IsUnavailableWithoutRenderDoc. 실제 캡처는 RenderDoc 이 깔린 PC 에서 네 백엔드 손 확인.
@@ -2855,7 +2856,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 25 커밋):** V1 → E5 → C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 24 커밋):** E5 → C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
@@ -2954,7 +2955,7 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 ### R5 재생, 기즈모, 뷰포트 툴바, 커맨드 아이콘
 
-**무엇.** 글자 버튼에 아이콘을 붙입니다. 게임 뷰의 Play, Simulate, Pause, Step, Stop 과 도구 패널(Animation Graph, Sequencer)의 재생 버튼은 아이콘과 글자(`EditorThemeUtil::makeIconLabel`)로 바꿉니다.
+**무엇.** 글자 버튼에 아이콘을 붙입니다. 상단 툴바(`EditorPlayToolbar`)의 Play, Simulate, Pause, Step, Stop 과 도구 패널(Animation Graph, Sequencer)의 재생 버튼은 아이콘과 글자(`EditorThemeUtil::makeIconLabel`)로 바꿉니다.
 기즈모 모드(Translate, Rotate, Scale 라디오)와 뷰포트 툴바 토글(2D/3D, Stats, Grid, Cube, Surf, Bookmarks, Align)은 아이콘 토글 버튼과 툴팁으로 바꿉니다. 토글 버튼은 5b E4 가 둔 공용 위젯을 씁니다.
 시각화 등록 줄에 아이콘 필드를 하나 더하고, 커맨드 표에서 아이콘이 빈 13 개를 채웁니다(맞는 것이 없으면 비워 둡니다). 아이콘 버튼이 되면 툴바 폭이 줄므로 숨김 임계값(320, 420, 520 px)을 스크린샷을 보고 낮춥니다.
 
@@ -2962,8 +2963,8 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 **상용 비교.** 세 엔진 모두 재생, 일시정지, 정지, 한 프레임, 이동, 회전, 크기, 로컬/월드, 스냅을 아이콘 버튼으로 둡니다.
 
-**확인 = 에디터 시나리오.** `toolbaricons.scenario.xml`: 게임 뷰 패널 폭을 400 px 로 줄인 상태(시나리오 시작 인자로 레이아웃 지정)에서 Play 버튼 이름표 `gameView.play` 를 눌러 Play 상태 탐침이 1 이 되는지,
-기즈모 토글(이름표 `gizmo.rotate`)을 눌러 기즈모 모드 탐침이 Rotate 인지 봅니다. 버튼이 잘려 숨겨지면 이름표가 없어 시나리오가 집니다.
+**확인 = 에디터 시나리오.** `toolbaricons.scenario.xml`: 창을 960 px 로 줄인 상태(`ResizeWindow`)에서 상단 툴바의 Play 버튼 이름표 `toolbar.play` 를 눌러 Play 상태 탐침이 1 이 되는지,
+씬 뷰를 400 px 로 좁혀 기즈모 토글(이름표 `gizmo.rotate`)을 눌러 기즈모 모드 탐침이 Rotate 인지 봅니다. 버튼이 잘려 숨겨지면 이름표가 없어 시나리오가 집니다.
 
 ### R9 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일
 
@@ -2996,7 +2997,7 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 **상용 비교.** 유니티, 언리얼, Godot 모두 W/E/R 와 선택 외곽선(언리얼 노란색, 유니티 주황색), 우클릭 중 휠 속도 조절, 직교 보기를 기본으로 둡니다.
 
-**확인 = 에디터 시나리오.** `viewportbasics.scenario.xml`: 오브젝트를 고르고 뷰포트(이름표 `gameView.canvas`)를 눌러 포커스를 준 뒤 `EditorKey key="E"` 로 기즈모 모드 탐침이 Rotate 인지, 선택 외곽선이 켜졌는지(`Screenshot` 과 `ExpectImage` 로 선택 테두리 영역의 색 지표)를 봅니다.
+**확인 = 에디터 시나리오.** `viewportbasics.scenario.xml`: 오브젝트를 고르고 씬 뷰(이름표 `sceneView.canvas`)를 눌러 포커스를 준 뒤 `EditorKey key="E"` 로 기즈모 모드 탐침이 Rotate 인지, 선택 외곽선이 켜졌는지(`Screenshot` 과 `ExpectImage` 로 선택 테두리 영역의 색 지표)를 봅니다.
 
 ### N2 Hierarchy 편집 기본기 ★(M, 선행 5b D7 · D8)
 
@@ -3047,7 +3048,7 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 **무엇.** 새 창에서 플레이, 플레이 중 에디터 카메라로 빠져나오기(언리얼 F8 Eject), 플레이 때 뷰포트 최대화, 플레이 중 인스펙터 편집을 더합니다.
 플레이 중 값을 바꾸면 Stop 이 되돌리는 것이 기본이고, 고른 값을 편집 씬에 남기는 명령(언리얼 "Keep Simulation Changes")을 둡니다.
 
-**왜.** 플레이는 게임 뷰 안에서만 되고, 플레이 중에는 인스펙터가 통째로 비활성입니다.
+**왜.** 플레이는 에디터 안의 게임 뷰에서만 되고(새 창 · 최대화 없음), 플레이 중에는 인스펙터가 통째로 비활성입니다. 플레이 중 에디터 카메라로 둘러보기는 V1 의 씬 뷰가 이미 한다 — Eject 는 게임 뷰의 플레이어 조종을 씬 뷰로 옮기는 것만 남았다.
 
 **상용 비교.** 언리얼의 New Editor Window(PIE), Standalone, Eject, 유니티의 Maximize On Play 와 플레이 모드 편집 되돌리기와 같습니다.
 
@@ -3121,39 +3122,3 @@ T3 의 공용 노드 그래프 틀(찾아 넣기, 핀 타입 색, 오류 노드 
 - **데이터 편집기 정리**: Data Table 의 게임 데이터 탭은 XML 글 상자라 이름과 달리 표가 아닙니다. 리플렉션 구조체 행을 표로 편집하는 일은 9절 로드맵 7(카탈로그 편집기)과 같이 합니다.
   Input Map Editor 의 시연용 단추와 9 개 탭을 정리하고, 언리얼 Enhanced Input 처럼 액션, 매핑, 트리거를 한 화면에 둡니다.
 - **에디터 프레임당 할당 측정**: 메모리 탭의 `Editor` 태그 누적 할당이 6 분에 20 GB 였습니다. `-gv_profileAllocSites`(Debug App)로 프레임당 할당 위치를 세고, 새 로그가 올 때마다 최대 2048 줄을 복사하는 콘솔 스냅숏부터 봅니다.
-
-## 14. 추가 단위 — 씬 뷰 / 게임 뷰 분리 (V1)
-
-사용자 지적(2026-10-10): "Game View" 라는 이름이지만 편집 중에는 에디터 카메라 화면이다. 상용 엔진과 견줘 둘로 가른다.
-
-**지금.** `GameViewPanel`(제목 "Game View") 하나가 두 역할을 번갈아 한다. 편집 중에는 에디터 카메라(`EditorCamera`)로 그리고 격자 · 기즈모 · 피킹 · 선택 외곽선 · 눈금자 · 시각화 선이 모두 여기 있다.
-Play 중에는 `EditorCamera::getViewportCamera( 씬, isPlayerActive )` 가 게임 카메라를 골라 같은 패널이 게임 화면이 된다. 그래서 (1) 게임 카메라를 보면서 씬 카메라로 편집할 수 없고
-(2) Play 중에 에디터 카메라로 둘러볼 수 없고(Simulate 로 바꿔야 한다) (3) 보조선이 섞이지 않은 순수 게임 화면을 에디터 안에서 볼 수 없다.
-
-**상용 엔진.** 유니티: Scene 뷰(에디터 카메라 · 기즈모 · 격자 · 보기 모드)와 Game 뷰(메인 카메라 출력, 보조선 없음)가 별도 패널이고 동시에 열 수 있다. Play 단추는 패널이 아니라 에디터 상단 툴바에 있다.
-언리얼: 레벨 뷰포트(에디터 카메라) 하나 + 플레이는 PIE 뷰포트 · 새 창(게임 카메라), 뷰포트에서 카메라 조종(pilot)으로 게임 카메라 시점을 본다. 고도: 에디터 뷰포트 + 별도 Game 탭(4.4 이후 임베드).
-공통: **에디터 카메라 뷰와 게임 카메라 출력은 이름도 패널도 다르다.** 이름에 `Game` 은 게임 카메라 출력에만 쓴다.
-
-**무엇.**
-1. `SceneViewPanel`(제목 "Scene") — 지금 `GameViewPanel` 의 에디터 뷰포트 몫 전부: 에디터 카메라 비행 · 궤도, 격자, 기즈모, 피킹, 선택 외곽선, 눈금자, 시각화 · 디버그 선, 보기 모드, 통계 오버레이, 방향 큐브. 2D/3D 모드 전환.
-2. `GameViewPanel`(제목 "Game") — 활성 씬의 게임 카메라 출력만: 기즈모 · 격자 · 선택 외곽선 없음, 게임 UI(런타임 UI 캔버스) 포함. 해상도 · 화면 비율 고르기(자유 · 16:9 · 1080p 고정 …)는 이 단위에서 자유 + 16:9 둘만. 게임 카메라가 없으면 "No camera rendering" 안내(유니티와 같다).
-3. **재생 단추(Play · Simulate · Pause · Step · Stop · Cam · 시간 배율 · 자동 플레이)는 패널에서 에디터 상단 툴바로.** 어느 뷰를 열어 두든 같은 자리. `drawTransportControls` · `drawSessionOptions` · `startSession` 이 `EditorPlayToolbar` 로 간다. 디버그 카테고리 팝업은 Scene 뷰 툴바에.
-4. 렌더: 엔진에는 다중 뷰 렌더(`RenderViewSettings` 뷰 목록 — Renderer README "다중 뷰")가 있다. 에디터 모듈이 뷰를 둘 요청한다: 씬 뷰 RT(에디터 카메라) · 게임 뷰 RT(게임 카메라). **패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 그 뷰는 그리지 않는다** — 게임 뷰를 닫으면 추가 비용 0.
-   `RuntimeAPI/ABI/EditorAPI.h` 의 `getGameViewport`(RT 하나)를 `getSceneViewport` · `getGameViewport` 둘로 늘린다(에디터 ABI — RHI 모듈 ABI 와는 별개이지만 에디터 모듈과 App 을 같이 다시 짓는다). `EditorContext` 의 게임 뷰 상태도 둘로.
-5. Play 중에도 씬 뷰는 에디터 카메라로 계속 둘러볼 수 있다(편집 도구는 Play 중 읽기 전용 — 기즈모로 고치면 Stop 때 사라진다는 표시는 지금 규칙 그대로). 게임 뷰는 게임 카메라만 그린다.
-6. 이름 정리: `gameView.*` 이름표(자동화 · 에디터 시나리오 · 자체 시험)는 기능별로 갈린다 — 뷰포트 캔버스 · 기즈모 · 피킹 · 보기 모드 → `sceneView.*`, 게임 출력 · 해상도 → `gameView.*`, 재생 단추 → `toolbar.play` 등. 코드 이름 `getGameViewCamera` · `Internal::getRenderedCamera` 도 의미대로 이름을 가른다.
-   이 문서의 "게임 뷰" 표기(G2 스크린샷 · G3 RenderDoc · R5 아이콘 · 검증 절차)를 단위마다 맞는 쪽으로 고친다: 스크린샷 단추는 **게임 뷰 그림** + 씬 뷰 툴바에는 "씬 뷰 스크린샷" 따로.
-7. 도크 기본 배치: 씬 뷰와 게임 뷰를 같은 도크 영역의 탭으로 둔다(유니티 기본). 저장된 배치가 옛 "Game View" 창 이름을 가리키면 새 창으로 대체한다(`layout.reset` 이 이미 있다).
-
-**건드리는 곳(예상).** `Editor/Panels/GameViewPanel.*`(분할) · `Editor/Viewport/EditorViewportClient.*`(씬 뷰로) · `Editor/Common/Workspace/EditorContext.*` · `Editor/ImGuiEditor.*`(뷰 요청 · 표시) · `Editor/SelfTest/*`(이름표) ·
-`Source/Editor/Common/Gui/` 툴바 · `RuntimeAPI/ABI/EditorAPI.h` · `RuntimeAPI/Export/EditorModuleExports.h` · `Engine/Graphics/Renderer/Frame/FrameRenderer*`(뷰 둘 요청 · RT 둘) · `Test/AppTest` 시나리오 이름표 · docs/plans/EditorPlus.md 표기.
-
-**확인 = 에디터 시나리오.**
-- `sceneviewgameview.scenario.xml`: 빈 씬 + 게임 카메라 오브젝트를 두고, 씬 뷰 캔버스(이름표 `sceneView.canvas`)로 에디터 카메라를 옮긴 뒤 두 뷰를 `Screenshot` 해서 **두 그림이 다르다**(`ExpectImage metric="differentFrom"`)와, 게임 뷰 그림에는 격자 색(지표)이 없고 씬 뷰 그림에는 있음을 본다.
-- Play 를 눌러(`toolbar.play`) 씬 뷰가 에디터 카메라를 유지하고 게임 뷰만 게임 카메라를 따르는지(카메라 위치 탐침 둘이 다르다), Stop 뒤 원래 상태로 돌아오는지.
-- 게임 뷰 패널을 접었을 때 게임 뷰 RT 요청이 0 이 되는지(프로파일 카운터 또는 탐침).
-- 기존 에디터 시나리오(되돌리기 · 기즈모 · Hierarchy · 타일맵 …)가 이름표 치환 뒤에도 전부 통과.
-- 자체 시험 기대 목록에 `sceneView.gridAndGizmoDraw` · `gameView.hidesEditorOverlays` 를 더한다.
-
-**위험.** 렌더 타깃 둘(에디터 메모리 +1 RT) · 다중 뷰 예산(`gv_renderViewBudget`) · 게임 뷰가 닫혀 있다가 열릴 때 첫 프레임 이전 이미지가 없을 때의 빈 화면 처리.
-이름표 일괄 치환이 커서(자체 시험 · 시나리오 전부) 한 커밋으로 하되 Debug 컴파일과 `-L nogpu` 와 에디터 시나리오 전부를 돌린 뒤 올린다.

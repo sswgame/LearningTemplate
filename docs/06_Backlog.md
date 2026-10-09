@@ -39,7 +39,7 @@
   따라감, 순환은 로드 오류, 쿠킹은 펼치거나 참조 유지(로드 시간으로 고름), `collectReferencedPrefabPaths` 가 프리로드 수집에 그대로 쓰임.
 
 - **강체 물리의 다음 조각.** (1) 볼록 껍질 · 삼각 메시 셰이프를 `.mesh` 에서 채우는 길이 없다 — 지금은 셰이프 서술자에 점 · 인덱스를 직접 적는다
-  (`MeshCache` 의 CPU 정점이 필요하다) (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 게임 뷰의 디버그 선으로만 그린다)
+  (`MeshCache` 의 CPU 정점이 필요하다) (3) 에디터에 물리 컴포넌트의 셰이프 시각화 · 기즈모가 없다(`gv_physicsDebugDraw` 가 씬 뷰의 디버그 선으로만 그린다)
   (4) Box2D 는 한 스레드로 돈다 — 2D 바디가 수천이 되면 전용 워커를 붙인다 (5) 3D 질의는 가장 가까운 것 하나 · 겹침 목록뿐이다(레이의 모든 닿음 ·
   스윕 다중 닿음이 필요해지면 더한다) (6) 겹침 월드(`PhysicsWorld` · `BoxCollider2DComponent`)는 강체 씬과 따로 돈다 — 키트의 투사체 · 근접 판정이
   Box2D 센서로 옮겨 가면 겹침 월드를 걷어낸다.
@@ -238,7 +238,7 @@
   (4) 그림 캐시는 조상의 `kTransform` 이면 자손까지 다시 칠한다 — 변환을 캐시 밖에서 곱하는 쪽은 10-4 의 위젯 1 만 개 측정으로 판단.
 - **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
   (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
-  (2) 에디터 GameView 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
+  (2) 에디터 게임 뷰(Game 패널) 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
   키 리바인딩 — 키 바인딩 창(`KeyRebindScreen`)은 있다, UI 맵을 설정 대상으로 두는 길(`UserSettingsTargets` 의 입력 맵이 게임 맵 하나)이 남았다. (4) 글 입력 칸(`TextInputWidget`)은 끝에 붙이기 · Backspace(`UI.TextBackspace`) · Enter 확정만 — 커서 이동(좌우 · Home/End) · 선택 · 붙여넣기 · 조합 글 밑줄이 남았다.
 - **런타임 UI 접근성의 남은 것(runtime-ui 9-1 뒤, `Engine/UI/README.md`).** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
   `UiSubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다). (2) "글자 배율 2 에서 옵션 메뉴가 넘치지 않는다" 시험은 옵션 메뉴(8-2)가 없어

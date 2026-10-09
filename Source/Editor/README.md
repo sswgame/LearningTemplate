@@ -38,14 +38,14 @@
 
 ### 기능
 
-- **Panels/**: Hierarchy, Inspector, Game View, Content Browser, Console, Profiler(CPU 구간 · GPU 패스 · 카운터 실시간 표 + 프레임 그래프 — 집계는 ImGui 없는
+- **Panels/**: Hierarchy, Inspector, Scene(에디터 카메라 · 편집 보조선), Game(게임 카메라 출력), Content Browser, Console, Profiler(CPU 구간 · GPU 패스 · 카운터 실시간 표 + 프레임 그래프 — 집계는 ImGui 없는
   `ProfilerScopeHistory`, "Open Tracy" 는 `Common/Commands/EditorTracyLauncher` 가 같은 판 Tracy 뷰어를 띄워 localhost 에 붙인다),
   Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
   Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`), UI Preview(런타임 UI 문서를 게임 UI 와 따로 오프스크린 화면으로 지어 보는 창 — 해상도 견본 · UI/글자 배율 ·
   안전 영역 · 테마 · 레이아웃 사각형 · 위젯 트리 선택, 판단은 ImGui 없는 `UiPreviewLogic` — EditorTest `UiPreviewLogicTest`)
   - `Panels/Inspector/`: 프로퍼티·컴포넌트 인스펙터 확장 — 컴포넌트 확장은 `<Component>Inspector.cpp` 하나씩
-- **Viewport/**: 뷰포트 클라이언트, 툴바, 에디터 카메라(`EditorCamera`),
+- **Viewport/**: 뷰포트 클라이언트(씬 뷰), 툴바, 에디터 카메라(`EditorCamera`), 뷰 RT 판정(`EditorViewTargetUtil` — 요청 규칙 · 크기 · 화면 비율, ImGui 없이 EditorTest 가 시험),
   화면 투영(`EditorViewportProjection`), 컴포넌트 시각화 등록부(`EditorViewportVisualizer`),
   시각화가 그릴 월드 도형(`EditorVisualizerGeometry` — ImGui 없이 만들어 EditorTest 가 검증한다)
   - `Viewport/Visualizers/`: 시각화 하나에 파일 하나
@@ -321,24 +321,30 @@ SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &runHierarchyTagF
 쓰지도 않고 기본 가시성 · 기본 도킹 배치로 뜹니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(hostgpu)가 이렇게 띄워 알려진 시험이 모두
 PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니다.
 
-## Game View 의 개발 편의 기능
+## 씬 뷰 · 게임 뷰 · 상단 툴바
 
-- **Play / Simulate**: Play 는 플레이어가 조종하는 세션(게임 모듈 업데이트 · 게임 입력 · 게임 카메라), Simulate 는 **월드만** 돈다 — 씬은 틱하지만
-  게임 모듈 업데이트와 게임 입력이 꺼지고 에디터 카메라로 본다(언리얼 Simulate). 도는 중에 서로 바꿀 수 있다. 호스트는 `IEditor::isPlaying`
-  (= `EditorPlaySession::isPlayerActive`)으로 게임 모듈을 켜고, 씬 틱은 `isPaused` 가 정한다.
-- **Step · Step N**: 한 프레임 / 칸에 적은 프레임 수만큼 진행하고 일시정지한다(`EditorPlaySession::stepFrames`).
-- **Cam**(카메라에서 시작): Play 를 에디터 카메라 위치에서 시작한다 — `Player` 태그를 단 오브젝트, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상을
-  순간이동한다. 월드 시작 직후와 첫 프레임 뒤 두 번 옮긴다(첫 틱에 스폰 자리로 되돌리는 게임이 있다).
-- **시간 배율**(`x1.00` 칸): `gv_timeScale`(`Engine/Utility/GameTimeScale`). 끌어서 바꾸고 오른쪽 클릭으로 1 로 되돌린다. 호스트의 프레임 시간이
-  곱해 게임 업데이트 · 씬 틱 · 고정 스텝이 같이 느려지거나 빨라진다. 에디터 UI · 에디터 카메라는 자기 시간으로 돈다.
-- **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
-  지속 시간(초)과 카테고리를 받는다. `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
-  오버레이(시각화 · 피킹 · 기즈모)는 호스트가 그리는 것과 같은 카메라로 투영한다 — Play 중에는 게임 카메라다.
-- **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 툴바에 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
-  (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `gameView.autoplayButton`.
-- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 캔버스 왼쪽 아래에 키 순서로 그린다.
-- 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
-  에디터 자체 시험 `gameView.debugDraw` · `gameView.debugOverlay`.
+유니티의 Scene · Game 뷰와 같습니다. 이름에 `Game` 은 게임 카메라 출력에만 씁니다.
+
+- **씬 뷰**(`SceneViewPanel`, 제목 "Scene"): 에디터 카메라(`EditorCamera::ensure`)로 그린 씬 위에 격자 · 기즈모 · 피킹 · 눈금자 · 시각화 · 디버그 선 ·
+  통계 · 방향 큐브를 ImGui 로 얹는다(`EditorViewportClient`). Play · Simulate 중에도 에디터 카메라라 둘러보며 볼 수 있다.
+- **게임 뷰**(`GameViewPanel`, 제목 "Game"): 활성 씬의 게임 카메라 출력만 — 화면 UI · 화면 사각형 뷰(분할 화면)까지 든 게임 화면이고 편집 보조선이 없다.
+  화면 비율은 자유 · 16:9(레터박스). 게임 카메라가 없거나 꺼져 있으면 "No camera rendering". Play 중 게임 입력은 이 패널이 포커스 · 호버일 때만 게임으로 간다.
+- **상단 툴바**(`EditorPlayToolbar`, 메뉴 막대 아래): 어느 뷰를 열어 두든 같은 자리의 재생 단추.
+  - **Play / Simulate**: Play 는 플레이어가 조종하는 세션(게임 모듈 업데이트 · 게임 입력), Simulate 는 **월드만** 돈다 — 씬은 틱하지만
+    게임 모듈 업데이트와 게임 입력이 꺼진다(언리얼 Simulate). 도는 중에 서로 바꿀 수 있다. 호스트는 `IEditor::isPlaying`
+    (= `EditorPlaySession::isPlayerActive`)으로 게임 모듈을 켜고, 씬 틱은 `isPaused` 가 정한다. 미저장 씬이면 확인 모달(`toolbar.playAnyway`)이 뜬다.
+  - **Step · Step N**: 한 프레임 / 칸에 적은 프레임 수만큼 진행하고 일시정지한다(`EditorPlaySession::stepFrames`).
+  - **Cam**(카메라에서 시작): Play 를 에디터 카메라 위치에서 시작한다 — `Player` 태그를 단 오브젝트, 없으면 게임 카메라를 든 오브젝트의 맨 위 조상을
+    순간이동한다. 월드 시작 직후와 첫 프레임 뒤 두 번 옮긴다(첫 틱에 스폰 자리로 되돌리는 게임이 있다).
+  - **시간 배율**(`x1.00` 칸): `gv_timeScale`(`Engine/Utility/GameTimeScale`). 끌어서 바꾸고 오른쪽 클릭으로 1 로 되돌린다. 호스트의 프레임 시간이
+    곱해 게임 업데이트 · 씬 틱 · 고정 스텝이 같이 느려지거나 빨라진다. 에디터 UI · 에디터 카메라는 자기 시간으로 돈다.
+  - **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
+    (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `toolbar.autoplayButton`.
+- **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 씬 뷰의 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
+  지속 시간(초)과 카테고리를 받는다. 씬 뷰 툴바의 `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
+- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 게임 뷰 왼쪽 아래에 키 순서로 그린다.
+- 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `EditorViewTargetUtilTest`, `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
+  에디터 자체 시험 `sceneView.*` · `gameView.*` · `toolbar.*`, 에디터 시나리오 `sceneviewgameview`.
 
 ## Output Log · 설정 · 선택 · 레이아웃
 
@@ -400,8 +406,22 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 
 ## 함정 · 계약
 
+- **씬 뷰 · 게임 뷰는 보이는 패널만 그린다.** 패널이 `drawContent` 에서 `EditorContext::markViewDrawn` 을 부른 뷰만 셸이 호스트에 알린다
+  (`EditorViewTargetUtil::shouldRequestSceneView` · `shouldRequestGameView`) — 같은 영역의 다른 탭 · 접힘 · 닫힘이면 그 RT 요청이 0 이다.
+  둘 다 안 보이면 씬 뷰 RT 를 알린다(알릴 RT 가 없으면 호스트가 백버퍼에 그려 에디터 UI 밑에 깐다). 탭 뒤의 패널은 이름표도 남기지 않으므로,
+  자체 시험 · 시나리오는 먼저 그 탭을 앞으로 가져온다(`ImGui::SetWindowFocus` · `panel.focus <id>`).
+- **주 출력은 게임 뷰다.** 게임 뷰가 보이면 그것이 엔진의 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 타깃 추가 뷰다.
+  씬 뷰만 보이면 씬 뷰가 주 출력이 된다(화면 UI · 화면 사각형 뷰를 빼고). 그래서 `<Screenshot>` · `-gv_screenshot` 은 게임 뷰가 보일 때 게임 뷰를,
+  아니면 씬 뷰를 찍고, 격자 · 기즈모는 ImGui 오버레이라 어느 쪽 그림에도 없다 — 격자는 창 캡처나 `Editor.Grid*` 탐침으로 본다.
+- **두 뷰가 함께 보일 때 그림자 볼륨과 보기 모드는 주 출력(게임 카메라)의 것이다.** 그림자 행렬이 프레임 공통이라 씬 뷰가 게임 카메라에서 먼 곳을 보면
+  그림자가 빠지고, 보기 모드(`FrameRenderer::setViewMode`)는 렌더러 전역이라 게임 뷰에도 걸린다(뷰마다 갖게 하는 일은 EditorPlus G1).
+- **뷰 RT 는 1 픽셀 떨림을 무시한다**(`EditorViewTargetUtil::needsResize`). 그래서 같은 영역의 두 탭이 앞 배치의 RT 를 1 픽셀 다르게 들고 있을 수 있다 —
+  두 뷰 스크린샷을 `differentFrom` 으로 비교하는 시나리오는 먼저 창 크기를 크게 바꿔 두 RT 를 새로 짓게 한다.
+- **기본 배치의 창 이름을 바꾸면 도크스페이스 id 의 판 번호(`EditorMainDockSpace_v7`)를 올린다** — 저장된 `imgui.ini` 의 옛 도크 트리가 새 창을 모른 채
+  남으면 새 창이 떠 있는 창으로 뜬다. 이름 붙인 레이아웃에 옛 창(`[Window][Game View]`)만 있으면 기본 배치로 다시 짓는다.
+
 - **뷰포트 격자 선의 모양은 월드 인덱스로만 정한다(`EditorGridUtil`).** 굵은 선은 월드 좌표가 `5 × 간격` 의 배수인 선이다. 카메라 기준 인덱스로 고르면 카메라가 1 m 지날 때마다 굵은 선이 다른 월드 선으로 미끄러진다. 간격은 카메라 높이(직교 뷰는 보이는 반 높이)로 1 · 10 · 100 m 를 고르고 단계 뒤 절반에서 가는 선을 흐리며 굵은 선 판정도 섞는다 — 경계 양쪽 모양이 같다(`EditorGridUtilTest`). 반지름은 높이에 연속이고 가장자리는 조각마다 알파로 흐린다. 시나리오 `editor/viewportgrid` 가 카메라를 날려 `Editor.GridMisplacedMajorLines` 0 을 본다.
-- **Game View 카메라 비행은 엔진 프레임의 실제 경과(`GameTimeScale::getUnscaledDeltaTime`)로 움직인다** — ImGui `DeltaTime` 은 벽시계라, 그것을 쓰면 고정 프레임 시간 시나리오의 이동 거리가 실행마다 달라진다.
+- **씬 뷰 카메라 비행은 엔진 프레임의 실제 경과(`GameTimeScale::getUnscaledDeltaTime`)로 움직인다** — ImGui `DeltaTime` 은 벽시계라, 그것을 쓰면 고정 프레임 시간 시나리오의 이동 거리가 실행마다 달라진다.
 - **에디터 실행의 스크린샷은 게임 뷰 그림이다.** `-EnableEditor` 에서 `-gv_screenshot` 과 시나리오 `<Screenshot>` 은 Present 캡처가 게임 뷰 렌더 타깃을 복사한 것이라 에디터 UI 는 들어가지 않는다.
 - **에디터 ImGui 의 픽셀 리터럴은 UI 단위이며 `EditorThemeUtil::getDpiScale()` 을 곱한다**(창 · 열 · 항목 폭, 단추 · 차트 크기). ImGui 스타일 값은 테마 적용이 이미 곱하므로 거듭 곱하지 않는다.
 - **위젯 크기에 픽셀 상수를 쓰지 않는다.** `GetFrameHeight` 와 글자 폭에서 잰다. 24 px 고정 단추가 150 % 배율에서 잘렸다(자체 시험 `hierarchy.visibilityToggleFits`).
@@ -476,14 +496,14 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   목록을 지운다).
 - **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
-- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorConfig.json` 테마 · 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. Game View 클리어 색은
+- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorConfig.json` 테마 · 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. 씬 뷰 · 게임 뷰 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
   되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.
   WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.
 - **기계 훑기의 알려진 오탐** — 델리게이트로 묶인 `&Class::method` 는 "죽은 함수" 로 잡힌다. `EditorThemeUtil` 팔레트 · 킷의 소비자 없는 세터 · 게터는 정상이다. 쓰이는지는 `= delete` 로
   바꾸고 빌드해 센다.
 - **떠 있는 도구 창의 첫 크기 · 자리는 `IEditorPanel::getInitialPanelSize`(기본 640×420, 96 DPI 기준)를 `EditorChrome::setNextPanelSize` 가 UI 배율로 곱하고 주 뷰포트 작업 영역의 90 % 로 잘라 가운데에 엽니다.** `-gv_editorOpenPanel=all` 은 모든 창에 900×620 을 주므로 첫 크기 결함을 가립니다 — 첫 크기는 깨끗한 `imgui.ini` 로 패널을 하나씩 열어 봅니다. 도구 창은 생성자에서 `IEditorPanel( false )` 로 닫힌 채 시작합니다(Prefab Editor 만 기본 도킹 탭이라 열림). 시험 `panels.toolWindowsOpenAtAUsableSize`.
-- **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 `Game View` 정점 수로 전후를 비교한다.
+- **패널 시각 검증 사각** — 피킹 클릭 · 기즈모 우선순위는 사람이 눌러야 보인다. 그리기 회귀는 씬 뷰(`Scene`) 정점 수로 전후를 비교한다.
 - **에셋 핫 리로드의 경계: 임포트 · 감시 · 씬 알림은 에디터, 런타임 파일의 제자리 다시 읽기는 엔진 캐시.** `AssetHotReload` 에 종류별 코드를 넣지
   말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).
   컴포넌트 알림은 `AssetHotReload::notifyAssetUsers` 가 `PROPERTY( AssetPath )` 값으로 찾아 `onPropertyChanged` 를 부른다 — 에셋에서 계산한 상태는

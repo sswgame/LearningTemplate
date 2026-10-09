@@ -6,11 +6,12 @@
 
 ## 1. 계약
 
-에디터가 있을 때와 없을 때, 두 경로가 같은 순서를 지납니다. 에디터가 있으면 렌더 그래프는 게임 뷰용 렌더 타깃(오프스크린)에 그리고, 에디터가 없으면 백버퍼에 직접 그립니다.
+에디터가 있을 때와 없을 때, 두 경로가 같은 순서를 지납니다. 에디터가 있으면 렌더 그래프는 주 출력 렌더 타깃(오프스크린 — 게임 뷰, 게임 뷰가 안 보이면 씬 뷰)에 그리고, 에디터가 없으면 백버퍼에 직접 그립니다.
+두 뷰가 함께 보이면 씬 뷰는 같은 프레임 안의 호스트 타깃 추가 뷰로 자기 RT 에 그리고 셰이더 읽기 상태로 둡니다([렌더러 README](../Source/Engine/Graphics/Renderer/README.md) "다중 뷰").
 
 ```
 pDevice->beginFrame( clearColor )                      # 수명 주기만: 펜스 대기, 스왑체인 이미지 획득, 기록 시작
-if (offscreen) cmd->beginRenderPass( gameRT, Clear )   # 에디터 게임 뷰: 그래프가 게임 RT에 그린다
+if (offscreen) cmd->beginRenderPass( gameRT, Clear )   # 에디터 주 출력: 그래프가 그 RT에 그린다
 FrameRenderer::executePacket()                         # 그래프가 자기 커맨드 리스트에 기록
 if (offscreen) cmd->prepareTextureForShaderRead( gameRT )  # 열린 렌더 패스도 여기서 닫힌다
 cmd->beginRenderPass( 백버퍼(핸들 0), offscreen ? Clear : Load )  # 백버퍼 경로는 그래프가 그린 것을 보존
