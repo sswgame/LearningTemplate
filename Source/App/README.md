@@ -84,7 +84,7 @@ echo $LASTEXITCODE
 1. `App::initialize` 가 `EngineLoop::initialize` 를 부릅니다. 엔진은 단계 목록 순서로 시작하고, 창과 RHI 디바이스도 그 목록의 `RHI` 단계가 만듭니다.
    App은 그 뒤 활성 창의 소유권을 넘겨받습니다(`acquireMainWindow`).
 2. `ModuleTypes` 단계에서 App이 `EngineLoop::setModuleTypeLoader` 로 등록해 둔 `App::loadModuleImages` 가 불립니다.
-   개발 빌드에서는 실행 파일 옆 `Modules/` 폴더의 모듈 매니페스트를 읽어 해석합니다(`ModuleCatalog`). 꺼진 모듈은 이유를 로그에 한 줄 남기고 건너뜁니다.
+   개발 빌드에서는 `Bin/Modules/` 폴더의 모듈 매니페스트를 읽어 해석합니다(`ModuleCatalog`). 모듈 DLL 도 그 폴더에 있습니다(`ModuleImageUtil::findModuleLibraryPath`). 꺼진 모듈은 이유를 로그에 한 줄 남기고 건너뜁니다.
    그다음 `LiveReloadManager` 를 만들고, `ModuleHost::loadModuleImages` 가 GameFramework, 키트, `SWGame` 순서로 이미지를 로드해 타입만 등록합니다.
    Shipping은 모두 정적 링크라 로드할 이미지가 없습니다.
 3. 엔진 시작이 끝나면 `ModuleHost::initialize` 가 게임 인스턴스를 만들고, 그다음 에디터 인스턴스를 만듭니다. 에디터는 `-EnableEditor` 일 때만 로드합니다.

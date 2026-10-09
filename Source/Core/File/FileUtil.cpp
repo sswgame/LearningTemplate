@@ -540,6 +540,19 @@ namespace sw
         return ensureDirectoryExists( getDirectoryPart( filePath ) );
     }
 
+    string FileUtil::getBinaryDirectory()
+    {
+        static constexpr string_view kTestBinaryFolder = "TestBin";
+        static constexpr string_view kBinaryFolder     = "Bin";
+        const string                 executableDir     = getDirectoryPart( getExecutablePath() );
+        string_view                  folderName;
+        getFileNamePart( executableDir, folderName );
+        if ( folderName != kTestBinaryFolder )
+            return executableDir;
+        const string siblingBinary = joinPath( getDirectoryPart( executableDir ), kBinaryFolder );
+        return isDirectory( siblingBinary ) ? siblingBinary : executableDir;
+    }
+
     string FileUtil::getExecutablePath()
     {
 #if defined( SW_PLATFORM_WINDOWS )

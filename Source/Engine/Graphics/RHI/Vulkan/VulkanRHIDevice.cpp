@@ -142,7 +142,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
             if ( _bEnableValidationLayers == SW_TRUE )
             {
-                string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+                string execDir = FileUtil::getBinaryDirectory();
                 if ( FileUtil::exists( FileUtil::joinPath( execDir, "VkLayer_khronos_validation.json" ) ) )
                 {
                     const wstring wideExecDir = StringUtil::utf8ToUtf16( execDir.c_str() );

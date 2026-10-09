@@ -107,7 +107,7 @@ namespace sw
 
     string ModuleCompiler::findBuildDirectory() const
     {
-        string       resultDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+        string       resultDir = FileUtil::getBinaryDirectory();
         const string parentDir = FileUtil::getDirectoryPart( resultDir ); // Bin 의 상위 폴더
 
         if ( FileUtil::exists( FileUtil::joinPath( parentDir, "build.ninja" ) ) ||

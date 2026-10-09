@@ -182,6 +182,12 @@ namespace sw
         static string getCurrentPath();
         /** @brief 실행 파일의 경로를 반환합니다. */
         static string getExecutablePath();
+        /**
+         * @brief 빌드 산출물 폴더(`Bin`)를 반환합니다 — 실행 파일 폴더이고, 실행 파일이 시험 폴더(`TestBin`)에 있으면 그 옆의 `Bin` 입니다.
+         * @details 모듈(`Bin/Modules`) · 서드파티 DLL · 셰이더 컴파일러 · 설정처럼 "실행 파일 옆" 에 놓이는 것은 이 폴더 기준으로 찾습니다.
+         *          시험 실행 파일은 `TestBin` 에 있지만 그것들은 `Bin` 에 있습니다(`cmake/Engine/TestTargets.cmake`).
+         */
+        static string getBinaryDirectory();
 
         /** @brief 파일의 수정 시각을 초 단위로 반환합니다. */
         static uint64 getFileTimestamp( string_view fileName );

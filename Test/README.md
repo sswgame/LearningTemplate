@@ -116,11 +116,12 @@ ctest --preset Ninja-Debug-lint                              # 린트만
 
 Ninja는 구성이 하나뿐인 생성기라서 `ctest -C Debug` 의 `-C` 는 아무 일도 하지 않습니다. 구성은 프리셋, 곧 빌드 폴더가 정합니다.
 
-**Shipping의 테스트 실행 파일은 `TestBin` 에 있지만, 작업 폴더는 여전히 `Bin` 입니다.** 배포용 `Bin` 에 테스트 바이너리와 DXC가 섞이지 않게 출력 폴더만 나눈 것입니다.
-`TestBin` 에서 그대로 돌리면 리소스 루트를 찾지 못합니다.
+**테스트 실행 파일은 모든 구성에서 `TestBin` 에 있지만, 작업 폴더는 여전히 `Bin` 입니다.** `Bin` 에 테스트 바이너리와 DXC가 섞이지 않게 출력 폴더만 나눈 것입니다.
+`TestBin` 에서 그대로 돌리면 리소스 루트를 찾지 못하고, Dev 는 `Engine.dll` 도 찾지 못합니다(Windows 로더가 작업 폴더 `Bin` 에서 찾는다).
+모듈 DLL 은 `Bin/Modules` 에 있고, 시험은 그것을 `FileUtil::getBinaryDirectory`(TestBin → Bin) 기준으로 찾습니다.
 
 ```powershell
-cd build/Ninja-Shipping/Bin
+cd build/Ninja-Debug/Bin
 ../TestBin/EngineTest.exe --test_filter=MaterialTest.*
 ```
 
@@ -283,7 +284,7 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 **로더 퍼징.** `EngineTest` 의 `LoaderFuzzTest`(nogpu)는 씨앗을 고정한 변이로 로더를 퍼징합니다. 오래 돌리려면 반복 수를 늘립니다.
 
 ```powershell
-$env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; build/Ninja-Debug/Bin/EngineTest.exe --test_filter=LoaderFuzzTest.*
+$env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; ../TestBin/EngineTest.exe --test_filter=LoaderFuzzTest.*
 ```
 
 퍼징 대상 목록은 `EngineTest/LoaderFuzzTargets.cpp` 에 있습니다. XML, JSON, DDS, `.mesh`, 팩, 씬 같은 로더 스물몇 개가 들어 있고, 씨앗은 저장소의 실제 파일입니다.

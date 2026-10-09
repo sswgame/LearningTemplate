@@ -105,10 +105,9 @@ SW_TEST_CASE( ModuleUnloadListenerTest, RhiModuleUnloadReleasesItsCode )
         {   sw::RHIBackend::OpenGL,     "RHI_GL"},
     };
 
-    const sw::string executableDir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
     for ( const RhiModule& rhiModule : kArrRhiModule )
     {
-        const sw::string path = sw::FileUtil::joinPath( executableDir, sw::ModuleImageUtil::formatSharedLibraryName( rhiModule._pBaseName ) );
+        const sw::string path = sw::ModuleImageUtil::findModuleLibraryPath( rhiModule._pBaseName );
         if ( sw::FileUtil::exists( path ) == false )
             continue;
         void* pKeepMapped = sw::ModuleImageUtil::loadDynamicLibrary( path );

@@ -55,12 +55,11 @@ namespace sw
 #else
             [[nodiscard]] static bool tryLoadBackendModule( RHIBackend backend, const utf8* pModuleBaseName )
             {
-                RHIBackendRegistry& reg           = engine::getRHIBackendRegistry();
-                const string        dllName       = ModuleImageUtil::formatSharedLibraryName( pModuleBaseName );
-                const string        execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-                const string        exeDirDllPath = execDir.empty() ? dllName.c_str() : FileUtil::joinPath( execDir, dllName );
+                RHIBackendRegistry& reg        = engine::getRHIBackendRegistry();
+                const string        dllName    = ModuleImageUtil::formatSharedLibraryName( pModuleBaseName );
+                const string        modulePath = ModuleImageUtil::findModuleLibraryPath( pModuleBaseName ); // Bin/Modules
 
-                if ( reg.tryLoadModule( backend, exeDirDllPath ) )
+                if ( reg.tryLoadModule( backend, modulePath ) )
                     return true;
                 return reg.tryLoadModule( backend, dllName );
             }

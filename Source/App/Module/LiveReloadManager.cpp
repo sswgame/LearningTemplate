@@ -67,9 +67,10 @@ namespace sw
 
             static void copyDebugSymbolsIfPresent( string_view originalModulePath, string_view shadowModulePath )
             {
-                const string originalDebugPath = ModuleImageUtil::getDebugSymbolPath( originalModulePath );
+                // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
+                const string originalDebugPath = ModuleImageUtil::findBuiltDebugSymbolPath( originalModulePath );
                 const string shadowDebugPath   = ModuleImageUtil::getDebugSymbolPath( shadowModulePath );
-                if ( FileUtil::exists( originalDebugPath ) == false )
+                if ( originalDebugPath.empty() )
                     return;
 
                 if ( FileUtil::copyFile( originalDebugPath, shadowDebugPath ) == false )
@@ -389,7 +390,7 @@ namespace sw
         , _reserved{ 0 }
     {
         // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
-        (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+        (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
 
         // 지연 로드 훅은 모듈 DLL 안에 있어 App 의 심볼을 볼 수 없다. 그래서 이 매니저를 Engine.dll 의 창구에 등록해 둔다.
         if ( engine::getModuleHandleProvider() == nullptr )
@@ -408,7 +409,7 @@ namespace sw
         clearReloadCallbacks();
 
         // 지운 수일 뿐이다 — 아직 매핑된 사본은 다음 시작 · 종료의 정리가 지운다
-        (void)ShadowCopyName::removeStaleCopies( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ) );
+        (void)ShadowCopyName::removeStaleCopies( ModuleImageUtil::getModuleDirectory() );
         if ( engine::getModuleHandleProvider() == this )
             engine::setModuleHandleProvider( nullptr );
 
@@ -472,11 +473,10 @@ namespace sw
                 return true;
         }
 
-        const string execDir    = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        const string modulePath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( moduleName ) );
+        const string modulePath = ModuleImageUtil::findModuleLibraryPath( moduleName );
         if ( FileUtil::exists( modulePath ) == false )
         {
-            SW_LOG_INFO( "Shared module %# is not built next to the executable — nothing links it", moduleName );
+            SW_LOG_INFO( "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
             return true;
         }
 
@@ -511,10 +511,10 @@ namespace sw
 
     bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
     {
-        string execDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
-        if ( FileUtil::isDirectory( execDir ) == false )
+        const string moduleDir = ModuleImageUtil::getModuleDirectory();
+        if ( FileUtil::isDirectory( moduleDir ) == false )
         {
-            SW_LOG_ERROR( "Executable directory does not exist: %#", execDir );
+            SW_LOG_ERROR( "Module directory does not exist: %#", moduleDir );
             return false;
         }
 
@@ -522,7 +522,7 @@ namespace sw
         moduleContext._moduleName         = moduleName;
         moduleContext._listDependsOn      = listDependsOn;
         moduleContext._tempModulePath     = "";
-        moduleContext._originalModulePath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( moduleName ) );
+        moduleContext._originalModulePath = ModuleImageUtil::findModuleLibraryPath( moduleName );
         if ( loadShadowCopyModule( moduleContext ) )
         {
             if ( verifyModuleBindings() == false )

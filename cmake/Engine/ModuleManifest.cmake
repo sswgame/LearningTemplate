@@ -328,11 +328,66 @@ function(sw_resolveModuleManifests)
 
 		list(JOIN swOrder "\n" swOrderText)
 		file(CONFIGURE OUTPUT "${swCatalogDirectory}/ResolvedModules.txt" CONTENT "${swOrderText}\n")
+
+		sw_removeStaleBinaryOutputs("${swOrder}")
 	endif()
 
 	list(LENGTH swNames swManifestCount)
 	list(LENGTH swActive swActiveCount)
 	message(STATUS "[Module] ${swActiveCount} of ${swManifestCount} modules active (${sw_platform_name} ${sw_configuration_name} ${SW_TARGET_TYPE})")
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
+#   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
+#      서드파티 DLL(vcpkg 가 모듈 옆에 복사한 것)은 이름 꼴이 달라 남는다.
+#   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 시험 실행 파일(지금은 `TestBin`),
+#      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
+#   실행 중인 App · 시험이 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
+# ------------------------------------------------------------------------------
+function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
+	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")
+	set(swModulePattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
+	set(swImageSuffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")
+	set(swStale "")
+
+	file(GLOB swModuleFolderFiles LIST_DIRECTORIES false "${swBinDir}/Modules/*")
+	foreach(swPath IN LISTS swModuleFolderFiles)
+		get_filename_component(swStem "${swPath}" NAME_WE)
+		get_filename_component(swSuffix "${swPath}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
+		if(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
+			list(APPEND swStale "${swPath}")
+		endif()
+	endforeach()
+
+	file(GLOB swBinFiles LIST_DIRECTORIES false "${swBinDir}/*")
+	foreach(swPath IN LISTS swBinFiles)
+		get_filename_component(swFileName "${swPath}" NAME)
+		get_filename_component(swStem "${swPath}" NAME_WE)
+		get_filename_component(swSuffix "${swPath}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
+		if(swStemNoPrefix MATCHES "${swModulePattern}" AND (swSuffix IN_LIST swImageSuffixes OR swFileName MATCHES "\\.module\\.json$"))
+			list(APPEND swStale "${swPath}")
+		elseif(swStem MATCHES "Test$" AND (swSuffix STREQUAL ".exe" OR swSuffix STREQUAL ".pdb" OR swSuffix STREQUAL ""))
+			list(APPEND swStale "${swPath}")
+		elseif(swSuffix STREQUAL ".pdb" AND EXISTS "${swBinDir}/Symbols/${swFileName}")
+			list(APPEND swStale "${swPath}")
+		endif()
+	endforeach()
+
+	set(swRemovedCount 0)
+	foreach(swPath IN LISTS swStale)
+		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${swPath}" RESULT_VARIABLE swResult OUTPUT_QUIET ERROR_QUIET)
+		if(swResult EQUAL 0 AND NOT EXISTS "${swPath}")
+			math(EXPR swRemovedCount "${swRemovedCount} + 1")
+		else()
+			message(WARNING "[Module] Could not remove a stale output (in use?): ${swPath}")
+		endif()
+	endforeach()
+	if(swRemovedCount GREATER 0)
+		message(STATUS "[Module] Removed ${swRemovedCount} stale output(s) from Bin (old layout or modules this configuration turns off)")
+	endif()
 endfunction()
 
 # 모듈 NAME 이 이 구성에서 켜져 있으면 OUT_VAR 를 ON 으로 둔다. 매니페스트가 없는 모듈은 구성을 세운다(모든 동적 모듈은 매니페스트를 갖는다).

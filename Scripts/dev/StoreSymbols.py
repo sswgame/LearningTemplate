@@ -7,7 +7,7 @@
     py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore
     py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore --dry-run
 
-Windows: `Symbols/*.pdb`(없으면 `Bin/*.pdb`)를 `<저장소>/<pdb 이름>/<GUID 32 자리><age 16진>/<pdb 이름>`(symstore · 심볼 서버 배치)로.
+Windows: `Symbols/*.pdb`(없으면 Dev 의 `Bin/Symbols/*.pdb`)를 `<저장소>/<pdb 이름>/<GUID 32 자리><age 16진>/<pdb 이름>`(symstore · 심볼 서버 배치)로.
 PDB 의 GUID · age 는 PDB 자신의 정보 스트림(스트림 1)에서 읽는다 — 실행 파일의 RSDS 와 같은 값이다(`ModuleBuildId` 가 만드는 열쇠).
 리눅스: `Symbols/*.debug` 를 `<저장소>/.build-id/<앞 2 자리>/<나머지>.debug`(gdb · Sentry 배치)로 — build-id 는 `.note.gnu.build-id` 에서 읽는다.
 배포물(`Bin`)에는 심볼을 싣지 않는다.
@@ -96,7 +96,9 @@ def collectSymbolFilesInternal(buildDir: Path) -> list[Path]:
     symbolsDir = buildDir / "Symbols"
     listFile = sorted(symbolsDir.glob("*.pdb")) + sorted(symbolsDir.glob("*.debug")) if symbolsDir.is_dir() else []
     if not listFile:
-        listFile = sorted((buildDir / "Bin").glob("*.pdb"))
+        # Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(cmake/Engine/BuildLayout.cmake). 그보다 옛 빌드 폴더는 `Bin` 옆이다.
+        devSymbolsDir = buildDir / "Bin" / "Symbols"
+        listFile = sorted(devSymbolsDir.glob("*.pdb")) if devSymbolsDir.is_dir() else sorted((buildDir / "Bin").glob("*.pdb"))
     return listFile
 
 

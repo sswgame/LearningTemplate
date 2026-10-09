@@ -111,12 +111,12 @@ class BuildTree:
 
     @property
     def binDir(self) -> Path:
-        """실행 파일 · 시험의 작업 폴더(Shipping 도 `Bin` — 시험 실행 파일만 `TestBin`)."""
+        """실행 파일 · 시험의 작업 폴더(시험 실행 파일은 모든 구성에서 `TestBin` 에 있다)."""
         return self.path / "Bin"
 
     @property
     def testBinDir(self) -> Path:
-        """시험 실행 파일이 있는 폴더 — Shipping 은 `TestBin`, 그 밖은 `Bin`."""
+        """시험 실행 파일이 있는 폴더 — `TestBin`(없으면 `Bin` — 시험을 `Bin` 에 내던 옛 빌드 폴더)."""
         testBin = self.path / "TestBin"
         return testBin if testBin.is_dir() else self.binDir
 

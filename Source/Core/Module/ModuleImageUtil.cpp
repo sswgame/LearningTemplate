@@ -77,6 +77,23 @@ namespace sw
                 return GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_PIN, wideName.c_str(), &hModule ) != FALSE;
             }
 
+            /** @brief `Bin` 과 `Bin/Modules` 를 DLL 사용자 검색 폴더로 한 번 더합니다(`LOAD_LIBRARY_SEARCH_USER_DIRS` — 프로세스 전체에 남는다). */
+            static void addBinarySearchDirectories()
+            {
+                static const bool s_bAdded = []()
+                {
+                    const string binaryDir = FileUtil::toNativeSeparators( FileUtil::getBinaryDirectory() );
+                    const string moduleDir = FileUtil::toNativeSeparators( ModuleImageUtil::getModuleDirectory() );
+                    for ( const string& directory : { binaryDir, moduleDir } )
+                    {
+                        if ( FileUtil::isDirectory( directory ) )
+                            (void)AddDllDirectory( StringUtil::utf8ToUtf16( directory.c_str() ).c_str() ); // 실패하면 아래 옛 검색 순서가 찾는다
+                    }
+                    return true;
+                }();
+                (void)s_bAdded;
+            }
+
             /** @brief `EnumerateLoadedModulesW64` 가 이미지마다 부르는 곳 — 기준 주소(= 모듈 핸들)를 @p pContext 의 목록에 모읍니다. */
             static BOOL CALLBACK collectLoadedModule( PCWSTR, DWORD64 moduleBase, ULONG, PVOID pContext )
             {
@@ -121,6 +138,32 @@ namespace sw
 #endif
     }
 
+    string ModuleImageUtil::findBuiltDebugSymbolPath( string_view libraryPath )
+    {
+        const string besideLibrary = getDebugSymbolPath( libraryPath );
+        string_view  fileName;
+        FileUtil::getFileNamePart( besideLibrary, fileName );
+        const string inSymbolFolder = FileUtil::joinPath( FileUtil::joinPath( FileUtil::getBinaryDirectory(), kSymbolFolder ), fileName );
+        if ( FileUtil::exists( inSymbolFolder ) )
+            return inSymbolFolder;
+        return FileUtil::exists( besideLibrary ) ? besideLibrary : string{};
+    }
+
+    string ModuleImageUtil::getModuleDirectory()
+    {
+        return FileUtil::joinPath( FileUtil::getBinaryDirectory(), kModuleFolder );
+    }
+
+    string ModuleImageUtil::findModuleLibraryPath( string_view baseName )
+    {
+        const string fileName   = formatSharedLibraryName( baseName );
+        const string modulePath = FileUtil::joinPath( getModuleDirectory(), fileName );
+        if ( FileUtil::exists( modulePath ) )
+            return modulePath;
+        const string binaryPath = FileUtil::joinPath( FileUtil::getBinaryDirectory(), fileName );
+        return FileUtil::exists( binaryPath ) ? binaryPath : modulePath;
+    }
+
     void* ModuleImageUtil::loadDynamicLibrary( string_view libraryName )
     {
         if ( libraryName.empty() )
@@ -143,8 +186,13 @@ namespace sw
             if ( wideDir.empty() == false )
                 SetDllDirectoryW( wideDir.c_str() );
 
+            // 0) 모듈은 `Bin/Modules` 에 있고 그 의존(서드파티 · GameFramework DLL)은 `Bin` 에 있다. 실행 파일이 `TestBin` 이면 `Bin` 은 응용 프로그램
+            //    폴더도 아니다 — 두 폴더를 사용자 검색 폴더로 한 번 더해 두고, DLL 폴더 + 기본 폴더(응용 프로그램 · System32 · 사용자 폴더)로 찾는다.
+            ModuleImageUtilInternal::addBinarySearchDirectories();
+            HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
             // 1) LOAD_WITH_ALTERED_SEARCH_PATH 로 대상 DLL 의 위치를 가장 먼저 검색해 로드한다
-            HMODULE hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
+            if ( hModule == nullptr )
+                hModule = LoadLibraryExW( widePath.c_str(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH );
             // 2) LOAD_WITH_ALTERED_SEARCH_PATH 를 쓰면 SetDllDirectory 가 무시되는 Win32 제약이 있어, 실패하면 LoadLibraryW 로 다시 시도한다
             if ( hModule == nullptr )
                 hModule = LoadLibraryW( widePath.c_str() );

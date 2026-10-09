@@ -70,8 +70,8 @@ cd build/Ninja-Debug/Bin
 - 백엔드는 `-dx11 / -dx12 / -vk / -gl` 로 고른다. 명시한 백엔드를 쓸 수 없으면 폴백하지 않고 에러로 선다(`RHIBackendUtil::findCommandLineBackend`
   한 자리 — `-gv_rhiBackend=Vulkan`(열거자 이름 또는 숫자, 모르는 이름이면 기동이 멈춘다)도 같은 판정을 지난다). 실제로 뜬 백엔드는 로그 `Initializing RHI with backend:` 로 확인한다.
 - 에디터는 `-EnableEditor` 를 줘야 뜬다. 없이 돌린 검증은 에디터 OFF 검증이다 — 로그로 실제로 로드됐는지 본다.
-- Shipping 테스트 바이너리는 `build/Ninja-Shipping/TestBin/` 에 있고 작업 디렉터리는 `Bin/` 이다. `Bin/` 에 남은 낡은 테스트 exe 사본을
-  실행하지 말 것.
+- 테스트 바이너리는 모든 구성에서 `build/<프리셋>/TestBin/` 에 있고 작업 디렉터리는 `Bin/` 이다. 모듈 DLL 은 `Bin/Modules/`, Dev PDB 는 `Bin/Symbols/` 에 있다.
+  `Bin/` 에 남은 옛 자리 산출물(테스트 exe · 모듈 DLL · PDB)과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`) — 실행 중이라 못 지운 것은 경고로 남는다.
 - 셰이더 소스(.hlsl/.hlsli)를 고쳤으면 다시 쿠킹한다. 빌드는 HLSL 을 다시 쿠킹하지 않는다 — `App.exe --cook-shaders` 뒤에 재고 비교한다.
   Shipping 쿠킹은 `cook.stamp` 의 내용 해시로 검증하고 어긋나면 빌드를 세운다(`Scripts/generate/CookAssets.py --verify-shaders`).
 - 비결정적 실패는 한 번 재현으로 "확정" 이라 부르지 않는다. 3~5 회 다시 돌려 재현율을 본다. 간헐 실패를 보면

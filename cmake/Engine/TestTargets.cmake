@@ -50,9 +50,9 @@ endfunction()
 # ------------------------------------------------------------------------------
 # sw_registerTestRun — 테스트 실행 파일 하나를 ctest 항목 하나로 등록한다
 #
-# 작업 폴더는 **구성과 무관하게 `Bin`** 이다. 테스트는 거기서 위로 올라가며 `Resource/` 를 찾고, 배포 구성은
-# 실행 파일만 `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 주의: 실행 파일이 나가는 폴더를 작업 폴더로
-# 쓰면 Shipping 에서 `TestBin` 에서 돌게 되고, `AppTest` 는 거기서 `App.exe` 를 못 찾아 진다.
+# 작업 폴더는 **구성과 무관하게 `Bin`** 이다. 테스트는 거기서 위로 올라가며 `Resource/` 를 찾고, 실행 파일만
+# `TestBin` 으로 뺀다(`Bin` 에 테스트와 DXC 가 섞이지 않게). 주의: 실행 파일이 나가는 폴더를 작업 폴더로 쓰면
+# `TestBin` 에서 돌게 되고, `AppTest` 는 거기서 `App.exe` 를, Dev 시험은 `Engine.dll` 을 못 찾는다.
 # ------------------------------------------------------------------------------
 function(sw_registerTestRun TEST_NAME TARGET_NAME)
 	cmake_parse_arguments(ARG "RUN_SERIAL" "TIMEOUT" "ARGS;LABELS;ASAN_OPTIONS" ${ARGN})
@@ -114,18 +114,18 @@ function(sw_addTestExecutable TARGET_NAME)
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")
 
-	# 배포 빌드의 Bin 은 App.exe 와 Packs/ 만 담아야 한다. 테스트는 계속 빌드하되 옆 디렉터리로
-	# 뺀다 — CI 가 Shipping 을 CoreTest 로 스모크할 수 있으면서 배포 산출물은 깨끗하다.
-	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`).
-	if(SW_SHIPPING_BUILD)
-		set(testOutputDir "${CMAKE_BINARY_DIR}/TestBin")
-		# PDB 도 실행 파일 옆 — 시험은 배포물이 아니고, 크래시 핸들러의 스택(DbgHelp)이 실행 파일 폴더에서 PDB 를 찾는다.
-		set_target_properties(${TARGET_NAME} PROPERTIES
-			RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}$<0:>"
-			PDB_OUTPUT_DIRECTORY "${testOutputDir}"
-			PDB_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
-		)
-	endif()
+	# 시험 실행 파일은 모든 구성에서 `Bin` 옆 `TestBin` 으로 뺀다 — Bin 에는 App · 모듈 · 런타임 DLL 만 둔다(Dev 도 Shipping 과 같은 모양).
+	# 작업 폴더는 그래도 `Bin` 이다(`sw_registerTestRun`). Dev 시험이 링크한 Engine.dll · 서드파티 DLL 은 Bin 에 있다 — Windows 로더는 작업 폴더를
+	# 검색하므로 Bin 에서 띄우면 찾고, 모듈은 `FileUtil::getBinaryDirectory`(TestBin → Bin) 기준으로 `Bin/Modules` 에서 올린다.
+	# 리눅스는 링크한 공유 라이브러리 폴더가 빌드 RPATH 에 절대 경로로 들어간다(CMake 기본).
+	set(testOutputDir "${CMAKE_BINARY_DIR}/TestBin")
+	# PDB 도 실행 파일 옆 — 시험은 배포물이 아니고, 크래시 핸들러의 스택(DbgHelp)이 실행 파일 폴더에서 PDB 를 찾는다.
+	set_target_properties(${TARGET_NAME} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY "${testOutputDir}$<0:>"
+		PDB_OUTPUT_DIRECTORY "${testOutputDir}"
+		PDB_OUTPUT_DIRECTORY_DEBUG "${testOutputDir}"
+		PDB_OUTPUT_DIRECTORY_RELEASE "${testOutputDir}"
+	)
 
 	target_include_directories(${TARGET_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 	target_link_libraries(${TARGET_NAME}
@@ -134,6 +134,25 @@ function(sw_addTestExecutable TARGET_NAME)
 		${ARG_LIBS}
 		sw_global_options
 	)
+
+	# Dev(Windows): 시험이 링크한 모듈 DLL(키트 — `Bin/Modules`)은 OS 로더가 시작 때 찾지 못한다(실행 파일 폴더 TestBin · 작업 폴더 Bin 만 본다).
+	# 지연 로드는 못 쓴다 — 키트는 자료(정적 상수 · 사건 종류)를 내보내고 lld 는 자료 import 를 지연 로드하지 않는다. 그래서 링크한 모듈 DLL 을
+	# 실행 파일 옆(TestBin)에 복사한다. 키트끼리의 지연 import 는 이미 올라온 같은 이름 이미지를 먼저 쓴다(`DelayLoadNotifyHook`).
+	# GameFramework 는 `Bin` 에 있어 작업 폴더에서 찾는다. 리눅스는 링크한 라이브러리 폴더가 빌드 RPATH 에 들어간다.
+	if(WIN32 AND NOT SW_SHIPPING_BUILD)
+		get_property(swModuleList GLOBAL PROPERTY SW_DYNAMIC_MODULES)
+		get_property(swBinModuleList GLOBAL PROPERTY SW_DYNAMIC_MODULES_gameframework)
+		set(swCopyCommands "")
+		foreach(lib IN LISTS ARG_LIBS)
+			if(lib IN_LIST swModuleList AND NOT lib IN_LIST swBinModuleList)
+				list(APPEND swCopyCommands COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${lib}>" "${testOutputDir}/")
+			endif()
+		endforeach()
+		if(swCopyCommands)
+			add_custom_command(TARGET ${TARGET_NAME} POST_BUILD ${swCopyCommands}
+				COMMENT "[${TARGET_NAME}] Copying linked module DLLs next to the test executable" VERBATIM)
+		endif()
+	endif()
 
 	# App 과 같은 이유로 테스트 실행 파일도 리플렉션 정적 라이브러리를 통째로 링크한다 —
 	# 왜 그래야 하는지, 플랫폼마다 무슨 플래그인지는 `sw_linkWholeArchive` 머리말에 있다.

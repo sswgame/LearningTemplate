@@ -30,11 +30,17 @@ function(sw_configurePch targetName headerPath)
 	endif()
 endfunction()
 
-# 모듈 · 핫 리로드 타깃의 런타임 출력을 Bin/ 으로 — SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로 갈 수 있다. `$<0:>` 는 BuildLayout 과 같다.
-function(sw_setModuleBinOutput TARGET_NAME)
+# 모듈 · 핫 리로드 타깃의 런타임 출력 — 모듈 DLL(rhi · kit · game · editor)은 `Bin/Modules/`, 모두가 링크하는 GameFramework 는 `Bin/` 이다.
+# 런타임은 `ModuleImageUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
+# 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
+function(sw_setModuleBinOutput TARGET_NAME KIND)
+	set(outputDir "${CMAKE_BINARY_DIR}/Bin/Modules")
+	if(KIND STREQUAL "gameframework")
+		set(outputDir "${CMAKE_BINARY_DIR}/Bin")
+	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES
-		RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
-		LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>"
+		RUNTIME_OUTPUT_DIRECTORY "${outputDir}$<0:>"
+		LIBRARY_OUTPUT_DIRECTORY "${outputDir}$<0:>"
 	)
 endfunction()
 
@@ -393,7 +399,7 @@ function(sw_addModuleLibrary TARGET_NAME)
 	sw_configureDllExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 
 	if(NOT libType STREQUAL "STATIC")
-		sw_setModuleBinOutput(${TARGET_NAME})
+		sw_setModuleBinOutput(${TARGET_NAME} ${ARG_KIND})
 		if(ARG_DELAYLOAD)
 			sw_addDelayloadHook(${TARGET_NAME} DLLS ${ARG_DELAYLOAD})
 		endif()

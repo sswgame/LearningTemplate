@@ -1307,7 +1307,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ParkLayoutPreview, "themepark.layoutPreviewLoads", 9010, &runLayoutPreviewLoads );
 ```
 `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 기대 목록에 두 줄(`themepark.extensionPanelDraws` · `themepark.layoutPreviewLoads`). **AppSmokeTest 는 Empty 게임으로 돈다** — 키트가 기본 켜짐이라
-GF_ThemePark · 확장이 Empty 빌드에도 지어지고 올라온다(확인: 적용 때 `Bin/GF_Editor_ThemePark.dll` 이 있는지). Empty 팩에서 `game/themepark/...` 경로가 읽히지 않으면(팩 마운트가 활성 게임만이면)
+GF_ThemePark · 확장이 Empty 빌드에도 지어지고 올라온다(확인: 적용 때 `Bin/Modules/GF_Editor_ThemePark.dll` 이 있는지). Empty 팩에서 `game/themepark/...` 경로가 읽히지 않으면(팩 마운트가 활성 게임만이면)
 둘째 시험은 `getRides().empty()` 대신 "파일이 없다는 경고 한 줄 · 크래시 없음" 으로 바꾸고, 내용 시험은 ThemePark 프리셋 손 확인으로 넘긴다.
 
 **확인 = 에디터 시나리오.** `extensionpanel.scenario.xml`: 메뉴의 확장 커맨드(`themepark.openLayoutPanel`)를 커맨드 팔레트로 실행해 Park Layout 패널을 열고,

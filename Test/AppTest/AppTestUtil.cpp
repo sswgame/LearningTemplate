@@ -51,8 +51,7 @@ namespace test
         if ( sw::FileUtil::exists( candidate ) )
             return candidate;
 
-        const sw::string executableFolder = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
-        candidate                         = sw::FileUtil::joinPath( executableFolder, AppTestUtilInternal::getAppExecutableName() );
+        candidate = sw::FileUtil::joinPath( sw::FileUtil::getBinaryDirectory(), AppTestUtilInternal::getAppExecutableName() );
         if ( sw::FileUtil::exists( candidate ) == false )
             candidate.clear();
         return candidate;

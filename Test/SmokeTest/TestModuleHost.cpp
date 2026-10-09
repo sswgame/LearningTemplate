@@ -324,10 +324,9 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
  */
 SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
 {
-    void* const pEditorModule = ModuleImageUtil::loadDynamicLibrary( FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
-                                                                                         ModuleImageUtil::formatSharedLibraryName( "EditorModule" ) ) );
+    void* const pEditorModule = ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( "EditorModule" ) );
     if ( pEditorModule == nullptr )
-        SW_TEST_SKIP( "EditorModule is not built next to this executable" );
+        SW_TEST_SKIP( "EditorModule is not built in Bin/Modules" );
     SW_TEST_DEFENSIVE_SCOPE( "a module with another API table is rejected and says why" );
     engine::registerModuleTypes( "EditorModule" ); // 정적 등록자를 전역 헤드에서 떼어 둔다(내릴 때 걷는다)
 

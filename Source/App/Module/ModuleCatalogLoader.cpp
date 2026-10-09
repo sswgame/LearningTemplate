@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Module/ModuleImageUtil.h"
 
 namespace sw
 {
@@ -12,7 +13,7 @@ namespace sw
     bool ModuleCatalogLoader::loadAndResolve( uint8 targetMask, ModuleCatalog& outCatalog, ModuleResolution& outResolution )
     {
         // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
-        const string catalogDirectory = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleCatalog::kCatalogFolder );
+        const string catalogDirectory = ModuleImageUtil::getModuleDirectory();
         string       moduleError;
         if ( outCatalog.loadDirectory( catalogDirectory, moduleError ) == false )
         {

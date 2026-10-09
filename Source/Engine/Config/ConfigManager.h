@@ -304,7 +304,7 @@ namespace sw
                 }
             }
 
-            const string exeDir = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
+            const string exeDir = FileUtil::getBinaryDirectory();
             if ( exeDir.empty() == false )
             {
                 string candidate = FileUtil::joinPath( exeDir, filePath );

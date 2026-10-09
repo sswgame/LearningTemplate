@@ -33,10 +33,30 @@ namespace sw
         /** @brief baseName 에 접두어와 확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
         static string formatSharedLibraryName( string_view baseName );
         /**
-         * @brief 라이브러리에 대응하는 별도 디버그 심볼 파일의 경로를 반환합니다.
+         * @brief 라이브러리 **옆** 의 디버그 심볼 파일 경로를 반환합니다(섀도 복사본의 심볼 자리).
          * @note Windows: `.pdb` / Linux: `.debug`(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다)
          */
         static string getDebugSymbolPath( string_view libraryPath );
+        /**
+         * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다 — `Bin/Symbols/<이름>` 을 먼저, 없으면 라이브러리 옆입니다. 둘 다 없으면 빈 문자열입니다.
+         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 냅니다(`cmake/Engine/BuildLayout.cmake`).
+         */
+        static string findBuiltDebugSymbolPath( string_view libraryPath );
+
+        // ------------------------------------------------------------------------------
+        // 1-1) 자리 — 모듈 DLL 은 `Bin/Modules`, 엔진 · GameFramework · 서드파티 DLL 은 `Bin`
+        // ------------------------------------------------------------------------------
+        /** @brief 모듈 DLL · 매니페스트 폴더 이름입니다(`Bin/Modules`). */
+        static constexpr const utf8* kModuleFolder = "Modules";
+        /** @brief 디버그 심볼 폴더 이름입니다(`Bin/Symbols`). */
+        static constexpr const utf8* kSymbolFolder = "Symbols";
+        /** @brief 모듈 폴더(`<Bin>/Modules`)입니다. */
+        static string getModuleDirectory();
+        /**
+         * @brief 모듈 이름 @p baseName 의 라이브러리 경로를 찾습니다 — `Bin/Modules` 에 있으면 그것, 없으면 `Bin` 의 것(GameFramework 처럼 Bin 에 남는 공유 라이브러리).
+         * @details 둘 다 없으면 `Bin/Modules` 의 경로를 돌려준다(부르는 쪽이 "없다" 를 그 경로로 알린다).
+         */
+        static string findModuleLibraryPath( string_view baseName );
 
         // ------------------------------------------------------------------------------
         // 2) 올리기 · 심볼 · 내리기(OS 로더) — 등록을 떼지 않는다. 엔진 코드를 쥘 수 있는 모듈은 4) 로 내린다

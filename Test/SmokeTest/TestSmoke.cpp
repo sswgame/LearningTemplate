@@ -44,15 +44,18 @@ namespace sw
 {
     namespace
     {
-        /** @brief 테스트 모듈 DLL 경로를 만듭니다. */
+        /** @brief 테스트 모듈 DLL 경로를 만듭니다 — `Bin/Modules`, 없으면 `Bin`(GameFramework). */
         sw::string modulePath( const utf8* pBaseName )
         {
     #if defined( SW_TEST_MODULE_DIR )
             const sw::string dir = SW_TEST_MODULE_DIR;
     #else
-            const sw::string dir = sw::FileUtil::getDirectoryPart( sw::FileUtil::getExecutablePath() );
+            const sw::string dir = sw::ModuleImageUtil::getModuleDirectory();
     #endif
-            return dir + "/" + sw::ModuleImageUtil::formatSharedLibraryName( pBaseName );
+            const sw::string fileName  = sw::ModuleImageUtil::formatSharedLibraryName( pBaseName );
+            const sw::string inModules = dir + "/" + fileName;
+            const sw::string inBinary  = sw::FileUtil::getDirectoryPart( dir ) + "/" + fileName;
+            return sw::FileUtil::exists( inModules ) || sw::FileUtil::exists( inBinary ) == false ? inModules : inBinary;
         }
 
         /**

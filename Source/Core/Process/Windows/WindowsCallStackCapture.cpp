@@ -3,8 +3,11 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"
@@ -20,7 +23,7 @@ namespace sw
         mutex         s_symbolMutex{};
 
         /**
-         * @brief 실행 파일 폴더를 심볼 검색 경로에 더합니다.
+         * @brief 실행 파일 폴더와 `<Bin>/Symbols` 를 심볼 검색 경로에 더합니다.
          * @details Release · Shipping 은 PDB 이름만 적어 링크한다(`/PDBALTPATH:%_PDB%` — 빌드 기계 경로가 배포물에 새지 않게). 그러면 DbgHelp 는 기본 검색 경로
          *          (작업 폴더 · `_NT_SYMBOL_PATH`)에서만 찾는데, 시험 실행 파일은 `TestBin` 에 있고 작업 폴더는 `Bin` 이라 스택이 주소로만 남는다.
          */
@@ -43,6 +46,14 @@ namespace sw
             if ( used > 0 )
                 wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
             wcscat_s( arrSearchPath, constant::kMaxBuffer4096, arrModulePath );
+            // Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(모듈 DLL 은 `Bin/Modules`) — 그 폴더도 더한다.
+            const wstring symbolFolder = StringUtil::utf8ToUtf16(
+                FileUtil::toNativeSeparators( FileUtil::joinPath( FileUtil::getBinaryDirectory(), ModuleImageUtil::kSymbolFolder ) ).c_str() );
+            if ( wcslen( arrSearchPath ) + 1 + symbolFolder.size() + 1 <= constant::kMaxBuffer4096 )
+            {
+                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, L";" );
+                wcscat_s( arrSearchPath, constant::kMaxBuffer4096, symbolFolder.c_str() );
+            }
             (void)SymSetSearchPathW( process, arrSearchPath );
         }
 

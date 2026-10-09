@@ -392,10 +392,12 @@ namespace sw
         {
             static auto s_getDxCompilerHandle = []() -> void*
             {
-                string         libName       = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
+                string libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
+                // 실행 파일 옆(배포 구성의 시험은 TestBin 에 DXC 를 둔다) → Bin → 이름만.
                 const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 vector<string> listCandidate = {
                     execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),
+                    FileUtil::joinPath( FileUtil::getBinaryDirectory(), libName ),
                     libName };
                 for ( const string& candidatePath : listCandidate )
                 {

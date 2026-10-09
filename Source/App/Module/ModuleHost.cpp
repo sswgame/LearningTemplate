@@ -401,12 +401,11 @@ namespace sw
         SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
-        const string modulePath     = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ),
-                                                          ModuleImageUtil::formatSharedLibraryName( sw::config::kTargetEditorModule ) );
+        const string modulePath     = ModuleImageUtil::findModuleLibraryPath( sw::config::kTargetEditorModule );
         void* const  pLibraryModule = FileUtil::exists( modulePath ) ? ModuleImageUtil::loadDynamicLibrary( modulePath ) : nullptr;
         if ( pLibraryModule == nullptr )
         {
-            SW_LOG_ERROR( "Asset importing needs the editor module next to the executable: %#", modulePath.c_str() );
+            SW_LOG_ERROR( "Asset importing needs the editor module in Bin/Modules: %#", modulePath.c_str() );
             return false;
         }
         (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다

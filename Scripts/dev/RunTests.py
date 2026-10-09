@@ -4,7 +4,7 @@
 @brief 스위트 · 케이스 이름만으로 테스트를 돌린다 — 그 케이스가 사는 실행 파일을 찾아 올바른 폴더에서.
 
 테스트 하나를 돌리려면 세 가지를 알아야 했다: 그 스위트가 **어느 실행 파일**에 있는지(CoreTest? EngineTest?),
-작업 폴더가 **`Bin`** 이어야 한다는 것(아니면 `Resource/` 를 못 찾는다), 그리고 Shipping 은 실행 파일이 **`TestBin`** 에
+작업 폴더가 **`Bin`** 이어야 한다는 것(아니면 `Resource/` 를 못 찾는다), 그리고 실행 파일은 **`TestBin`** 에
 있다는 것. 셋 다 CLAUDE.md 의 함정 목록에 있다. 이 스크립트가 셋을 대신 안다.
 
 사용법 (빌드 후):
@@ -34,7 +34,7 @@ _kListedCaseRe = re.compile(r"^  ([A-Z]\w*Test)\.(\w+)\s*$")
 
 
 def findTestExecutables(tree: BuildTree) -> tuple[Path, list[Path]]:
-    """(작업 폴더 Bin, 테스트 실행 파일들). Shipping 은 실행 파일이 TestBin 에 있다."""
+    """(작업 폴더 Bin, 테스트 실행 파일들). 실행 파일은 TestBin 에 있다."""
     for candidateDir in (tree.testBinDir, tree.binDir):
         listExecutable = sorted(path for path in candidateDir.glob("*Test*") if path.is_file() and path.suffix in ("", ".exe"))
         if listExecutable:
