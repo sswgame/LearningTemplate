@@ -44,8 +44,10 @@ sequenceDiagram
 
 **FixedTimestep** 은 실제 경과 시간을 가변 델타와 고정 스텝 수로 나눕니다. `AppTest` 가 이 파일만 따로 컴파일해서 테스트합니다.
 
-**RHIBackendSwitcher** 는 `gv_rhiBackend` 가 바뀌면 프레임 경계에서 그래픽 API를 교체합니다. App만 쓰기 때문에 `App.cpp` 에 함께 있습니다.
-사용하는 곳이 하나뿐인 도우미는 이렇게 그 사용처와 같은 파일에 둡니다.
+**RHIBackendSwitcher** 는 `gv_rhiBackend` 가 바뀌면 프레임 경계에서 그래픽 API를 교체합니다. App만 쓰지만 교체 순서를 아는 유일한 곳이라 `RHIBackendSwitcher.cpp` 로 따로 둡니다.
+
+**UserSettingsHost** 는 엔진의 `UserSettingsManager` 가 쌓은 화면 요청(창 방식 · 해상도 · VSync)을 App이 소유한 창과 스왑체인에 적용합니다.
+설정 정책(보류 · 적용 · 확인 카운트다운)은 엔진에 있고, 이 파일은 창 소유자의 적용 단계라 App 에 둡니다. 창 크기 통보는 `App::onResize` 로 돌아와 스왑체인을 바꾸므로, 스왑체인을 바꾸는 길은 OS 리사이즈와 하나입니다.
 
 ## 따라 해 보기 — 창 없이 실행하기
 
@@ -218,7 +220,9 @@ Linux에서는 SONAME을 같은 길이의 이름으로 바꿔 씁니다(`ModuleI
 
 | 파일 | 내용 |
 |---|---|
-| `App.cpp` | 앱 수명, 프레임 순서, `RHIBackendSwitcher` |
+| `App.cpp` | 앱 수명, 프레임 순서, 헤드리스 작업 표 |
+| `RHIBackendSwitcher.cpp` | 프레임 경계의 그래픽 API 교체 |
+| `UserSettingsHost.cpp` | 사용자 설정의 화면 요청 적용 |
 | `FixedTimestep.cpp` | 고정 스텝 계산 |
 | `Module/ModuleHost.cpp` | 모듈 인스턴스 관리 |
 | `Module/LiveReloadManager.cpp` | 핫 리로드 |
