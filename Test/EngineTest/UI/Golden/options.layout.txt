@@ -35,37 +35,37 @@ SafeZonePanel 0.00 0.00 1280.00 720.00
 == 1280x720 scale 150%
 SafeZonePanel 0.00 0.00 1280.00 720.00
   CanvasPanel 0.00 0.00 1280.00 720.00
-    Window -80.00 -120.00 1440.00 960.00
-      BoxPanel -80.00 -120.00 1440.00 960.00
-        Title -80.00 -120.00 1440.00 27.00
-        Tabs -80.00 -75.00 1440.00 51.00
-          Tab.audio -80.00 -75.00 116.00 51.00
-            TextWidget -56.00 -63.00 68.00 27.00
-          Tab.video 45.00 -75.00 115.00 51.00
-            TextWidget 69.00 -63.00 67.00 27.00
-        Scroll -80.00 -6.00 1440.00 777.00
-          Rows -80.00 -6.00 1440.00 777.00
-            BoxPanel -80.00 -6.00 1440.00 36.00
-              audio.master.Label -80.00 -2.00 480.00 28.00
-              audio.master.Value 418.00 -6.00 816.00 36.00
-              audio.master.ValueText 1252.00 -2.00 108.00 28.00
-            BoxPanel -80.00 39.00 1440.00 36.00
-              audio.voices.Label -80.00 44.00 480.00 27.00
-              audio.voices.Value 418.00 39.00 816.00 36.00
-              audio.voices.ValueText 1252.00 44.00 108.00 27.00
-            BoxPanel -80.00 84.00 1440.00 30.00
-              audio.mute.Label -80.00 86.00 480.00 27.00
-              audio.mute.Value 418.00 84.00 942.00 30.00
+    Window 0.00 0.00 1280.00 720.00
+      BoxPanel 0.00 0.00 1280.00 720.00
+        Title 0.00 0.00 1280.00 27.00
+        Tabs 0.00 45.00 1280.00 51.00
+          Tab.audio 0.00 45.00 116.00 51.00
+            TextWidget 24.00 57.00 68.00 27.00
+          Tab.video 125.00 45.00 115.00 51.00
+            TextWidget 149.00 57.00 67.00 27.00
+        Scroll 0.00 114.00 1280.00 537.00
+          Rows 0.00 114.00 1280.00 537.00
+            BoxPanel 0.00 114.00 1280.00 36.00
+              audio.master.Label 0.00 119.00 480.00 27.00
+              audio.master.Value 498.00 114.00 656.00 36.00
+              audio.master.ValueText 1172.00 119.00 108.00 27.00
+            BoxPanel 0.00 159.00 1280.00 36.00
+              audio.voices.Label 0.00 164.00 480.00 27.00
+              audio.voices.Value 498.00 159.00 656.00 36.00
+              audio.voices.ValueText 1172.00 164.00 108.00 27.00
+            BoxPanel 0.00 204.00 1280.00 30.00
+              audio.mute.Label 0.00 206.00 480.00 27.00
+              audio.mute.Value 498.00 204.00 782.00 30.00
         RestartNotice collapsed
-        Buttons -80.00 789.00 1440.00 51.00
-          Apply -80.00 789.00 116.00 51.00
-            TextWidget -56.00 801.00 68.00 27.00
-          Revert 48.00 789.00 129.00 51.00
-            TextWidget 72.00 801.00 81.00 27.00
-          Defaults 189.00 789.00 156.00 51.00
-            TextWidget 213.00 801.00 108.00 27.00
-          Close 357.00 789.00 115.00 51.00
-            TextWidget 381.00 801.00 67.00 27.00
+        Buttons 0.00 669.00 1280.00 51.00
+          Apply 0.00 669.00 116.00 51.00
+            TextWidget 24.00 681.00 68.00 27.00
+          Revert 128.00 669.00 129.00 51.00
+            TextWidget 152.00 681.00 81.00 27.00
+          Defaults 269.00 669.00 156.00 51.00
+            TextWidget 293.00 681.00 108.00 27.00
+          Close 437.00 669.00 115.00 51.00
+            TextWidget 461.00 681.00 67.00 27.00
 == 1920x1080 scale 100%
 SafeZonePanel 0.00 0.00 1920.00 1080.00
   CanvasPanel 0.00 0.00 1920.00 1080.00
