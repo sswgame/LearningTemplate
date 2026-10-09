@@ -582,7 +582,7 @@ namespace sw::editor
         if ( pOpen != nullptr && *pOpen == false )
             return;
 
-        ImGui::SetNextWindowSize( ImVec2( 460.0f, 380.0f ), ImGuiCond_FirstUseEver );
+        ImGui::SetNextWindowSize( ImVec2( 460.0f * EditorThemeUtil::getDpiScale(), 380.0f * EditorThemeUtil::getDpiScale() ), ImGuiCond_FirstUseEver );
         if ( ImGui::Begin( makeIconLabel( editoricon::kPalette, "Theme & Look and Feel" ), pOpen, ImGuiWindowFlags_NoCollapse ) )
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
@@ -641,7 +641,7 @@ namespace sw::editor
                 if ( index > 0 )
                     ImGui::SameLine();
                 ImGui::PushID( index );
-                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( arrSwatches[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( 22.0f, 22.0f ) ) )
+                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( arrSwatches[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( 22.0f * EditorThemeUtil::getDpiScale(), 22.0f * EditorThemeUtil::getDpiScale() ) ) )
                 {
                     setAccentColor( arrSwatches[index] );
                     editorConfig = getActiveTheme();

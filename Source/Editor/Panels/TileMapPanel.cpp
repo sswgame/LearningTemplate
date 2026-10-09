@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -255,13 +256,13 @@ namespace sw::editor
         for ( int32 edgeIndex = 0; edgeIndex < 4; ++edgeIndex )
         {
             ImGui::PushID( edgeIndex );
-            ImGui::SetNextItemWidth( 180.0f );
+            ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputText( edges[edgeIndex], bufs[edgeIndex]->data(), bufs[edgeIndex]->capacity() );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f );
+            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputInt( "##tx", &_arrEdgeTx[edgeIndex] );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 50.0f );
+            ImGui::SetNextItemWidth( 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputInt( "##ty", &_arrEdgeTy[edgeIndex] );
             ImGui::SameLine();
             if ( ImGui::Button( "Apply" ) )

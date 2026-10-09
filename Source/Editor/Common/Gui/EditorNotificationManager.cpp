@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 
 #include <imgui.h>
 
@@ -133,7 +134,7 @@ namespace sw::editor
 
                 if ( item._progress >= 0.0f )
                 {
-                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, 4.0f }, "" );
+                    ImGui::ProgressBar( item._progress, ImVec2{ -1.0f, 4.0f * EditorThemeUtil::getDpiScale() }, "" );
                 }
             }
             EditorChrome::endOverlay();

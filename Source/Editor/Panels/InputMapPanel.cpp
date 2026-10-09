@@ -508,7 +508,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             const utf8* arrTypes[] = { "Boolean", "Axis 1D", "Vector 2D" };
-            ImGui::SetNextItemWidth( 120.0f );
+            ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
             ImGui::Combo( "Type", &_newActionValueType, arrTypes, 3 );
 
             ImGui::SameLine();
@@ -545,14 +545,14 @@ namespace sw::editor
             }
 
             // 버튼 리스트 폴백
-            ImGui::BeginChild( "KeyGrid", ImVec2( 450, 200 ), true );
+            ImGui::BeginChild( "KeyGrid", ImVec2( 450.0f * EditorThemeUtil::getDpiScale(), 200.0f * EditorThemeUtil::getDpiScale() ), true );
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {
                 const Key   key      = static_cast<Key>( keyIndex );
                 const utf8* pKeyName = KeyCodeUtil::toName( key );
                 if ( StringUtil::isNullOrEmpty( pKeyName ) == false )
                 {
-                    if ( ImGui::Button( pKeyName, ImVec2( 80, 24 ) ) )
+                    if ( ImGui::Button( pKeyName, ImVec2( 80.0f * EditorThemeUtil::getDpiScale(), 24.0f * EditorThemeUtil::getDpiScale() ) ) )
 
                     {
                         rebindSelectedAction( key );
@@ -566,7 +566,7 @@ namespace sw::editor
             }
             ImGui::EndChild();
 
-            if ( ImGui::Button( "Cancel", ImVec2( 120, 0 ) ) )
+            if ( ImGui::Button( "Cancel", ImVec2( 120.0f * EditorThemeUtil::getDpiScale(), 0 ) ) )
             {
                 _bCapturingKey = SW_FALSE;
                 ImGui::CloseCurrentPopup();
@@ -722,17 +722,17 @@ namespace sw::editor
                 ImGui::SameLine( 360.0f );
                 ImGui::BeginGroup();
                 ImGui::Text( "Left Trigger:  %.2f", static_cast<float64>( pGamepad->getLeftTrigger() ) );
-                ImGui::ProgressBar( pGamepad->getLeftTrigger(), ImVec2( 150, 14 ) );
+                ImGui::ProgressBar( pGamepad->getLeftTrigger(), ImVec2( 150.0f * EditorThemeUtil::getDpiScale(), 14.0f * EditorThemeUtil::getDpiScale() ) );
                 ImGui::Text( "Right Trigger: %.2f", static_cast<float64>( pGamepad->getRightTrigger() ) );
-                ImGui::ProgressBar( pGamepad->getRightTrigger(), ImVec2( 150, 14 ) );
+                ImGui::ProgressBar( pGamepad->getRightTrigger(), ImVec2( 150.0f * EditorThemeUtil::getDpiScale(), 14.0f * EditorThemeUtil::getDpiScale() ) );
                 ImGui::EndGroup();
 
                 ImGui::Separator();
                 ImGui::Text( "Haptic Vibration Test:" );
-                ImGui::SetNextItemWidth( 120.0f );
+                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "Left Motor", &_testVibLeft, 0.0f, 1.0f );
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( 120.0f );
+                ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "Right Motor", &_testVibRight, 0.0f, 1.0f );
                 ImGui::SameLine();
                 if ( ImGui::Button( "Test Pulse (0.3s)" ) )
@@ -753,7 +753,7 @@ namespace sw::editor
         ImGui::BeginGroup();
         ImGui::Text( "%s", pLabel );
         const ImVec2  pos    = ImGui::GetCursorScreenPos();
-        const float32 radius = 50.0f;
+        const float32 radius = 50.0f * EditorThemeUtil::getDpiScale();
         const ImVec2  center = ImVec2( pos.x + radius, pos.y + radius );
 
         ImDrawList* pDraw = ImGui::GetWindowDrawList();
@@ -762,7 +762,7 @@ namespace sw::editor
         pDraw->AddCircle( center, radius * deadzone, IM_COL32( 80, 40, 40, 255 ) );
 
         const ImVec2 dotPos = ImVec2( center.x + stickX * radius, center.y - stickY * radius );
-        pDraw->AddCircleFilled( dotPos, 6.0f, IM_COL32( 50, 200, 50, 255 ) );
+        pDraw->AddCircleFilled( dotPos, 6.0f * EditorThemeUtil::getDpiScale(), IM_COL32( 50, 200, 50, 255 ) );
 
         ImGui::Dummy( ImVec2( radius * 2.0f, radius * 2.0f ) );
         ImGui::Text( "X: %+.2f  Y: %+.2f", static_cast<float64>( stickX ), static_cast<float64>( stickY ) );
@@ -855,18 +855,18 @@ namespace sw::editor
         ImGui::Separator();
 
         ImGui::Text( "Gamepad Left Stick (X/Y):" );
-        ImGui::PlotLines( "Stick X", _arrPlotLeftStickX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "X [-1.0 ~ +1.0]", -1.0f, 1.0f, ImVec2( 0, 70 ) );
-        ImGui::PlotLines( "Stick Y", _arrPlotLeftStickY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Y [-1.0 ~ +1.0]", -1.0f, 1.0f, ImVec2( 0, 70 ) );
+        ImGui::PlotLines( "Stick X", _arrPlotLeftStickX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "X [-1.0 ~ +1.0]", -1.0f, 1.0f, ImVec2( 0, 70.0f * EditorThemeUtil::getDpiScale() ) );
+        ImGui::PlotLines( "Stick Y", _arrPlotLeftStickY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Y [-1.0 ~ +1.0]", -1.0f, 1.0f, ImVec2( 0, 70.0f * EditorThemeUtil::getDpiScale() ) );
 
         ImGui::Separator();
         ImGui::Text( "Analog Triggers (LT/RT):" );
-        ImGui::PlotLines( "LT", _arrPlotTriggerL, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Left [0.0 ~ 1.0]", 0.0f, 1.0f, ImVec2( 0, 60 ) );
-        ImGui::PlotLines( "RT", _arrPlotTriggerR, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Right [0.0 ~ 1.0]", 0.0f, 1.0f, ImVec2( 0, 60 ) );
+        ImGui::PlotLines( "LT", _arrPlotTriggerL, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Left [0.0 ~ 1.0]", 0.0f, 1.0f, ImVec2( 0, 60.0f * EditorThemeUtil::getDpiScale() ) );
+        ImGui::PlotLines( "RT", _arrPlotTriggerR, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Right [0.0 ~ 1.0]", 0.0f, 1.0f, ImVec2( 0, 60.0f * EditorThemeUtil::getDpiScale() ) );
 
         ImGui::Separator();
         ImGui::Text( "Mouse Delta Speed (dX/dY):" );
-        ImGui::PlotLines( "dX", _arrPlotMouseDeltaX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta X", -100.0f, 100.0f, ImVec2( 0, 60 ) );
-        ImGui::PlotLines( "dY", _arrPlotMouseDeltaY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta Y", -100.0f, 100.0f, ImVec2( 0, 60 ) );
+        ImGui::PlotLines( "dX", _arrPlotMouseDeltaX, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta X", -100.0f, 100.0f, ImVec2( 0, 60.0f * EditorThemeUtil::getDpiScale() ) );
+        ImGui::PlotLines( "dY", _arrPlotMouseDeltaY, static_cast<int32>( kPlotSampleCount ), static_cast<int32>( _plotOffset ), "Delta Y", -100.0f, 100.0f, ImVec2( 0, 60.0f * EditorThemeUtil::getDpiScale() ) );
     }
 
     void InputMapPanel::drawInputSimulatorTab()
@@ -886,7 +886,7 @@ namespace sw::editor
         const utf8* arrCommonKeys[] = { "Space", "Enter", "Escape", "W", "A", "S", "D", "E", "F", "Shift", "Control" };
         const Key   arrKeyValues[]  = { Key::Space, Key::Enter, Key::Escape, Key::W, Key::A, Key::S, Key::D, Key::E, Key::F, Key::LeftShift, Key::LeftControl };
 
-        ImGui::SetNextItemWidth( 150.0f );
+        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
         ImGui::Combo( "Key", &_simKeyToInject, arrCommonKeys, 11 );
         ImGui::SameLine();
         if ( ImGui::Button( "Inject KeyDown" ) )
