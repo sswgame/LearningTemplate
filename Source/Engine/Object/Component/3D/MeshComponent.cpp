@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/AABB.h"
 #include "Engine/Resource/AssetManager.h"
+#include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
 {
@@ -74,7 +75,8 @@ namespace sw
         hashed_string  borrowedPath{};
         if ( path.empty() == false )
         {
-            pMaterial    = cache.acquire( path.c_str(), nullptr );
+            // 디바이스 없이 잡는 acquire 는 파일을 읽지 않아 늘 성공한다 — 없는 파일은 여기서 가린다.
+            pMaterial    = ResourceUtil::hasResource( path.c_str() ) ? cache.acquire( path.c_str(), nullptr ) : nullptr;
             borrowedPath = path;
             if ( pMaterial == nullptr )
             {

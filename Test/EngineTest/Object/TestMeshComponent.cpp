@@ -17,6 +17,7 @@
 /**
  * @brief [MeshComponentTest] 못 읽은 머티리얼은 누락 머티리얼(마젠타 체커)로 그린다 — 씬 기본(흰색)이면 화면에서 빠진 것을 알 수 없다
  * @details 같은 요청을 다시 풀어도 누락 머티리얼 그대로이고 다시 시도하지 않는다(요청 경로를 기억한다). 경로를 고치면 그 머티리얼로 옮겨 간다.
+ *          디바이스가 없어 머티리얼 파일을 읽지 않으므로(이름이 비어 있다) 어느 머티리얼을 잡았는지는 캐시 항목으로 본다.
  */
 SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
 {
@@ -35,7 +36,7 @@ SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
         pMesh->setMaterialPath( "engine/materials/doesnotexist.material" );
     }
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
-    SW_EXPECT_STREQ( "MissingMaterial", pMesh->getMaterial()->getName().c_str() );
+    SW_EXPECT_FALSE( sw::engine::getAssetManager().getMaterialManager().isCached( "engine/materials/doesnotexist.material" ) );
     SW_EXPECT_TRUE( sw::engine::getAssetManager().getMaterialManager().isCached( missingMaterial ) );
 
     // 같은 요청을 다시 풀면 그대로다(누락 머티리얼을 다시 빌리지 않는다).
@@ -46,5 +47,6 @@ SW_TEST_CASE( MeshComponentTest, MissingMaterialUsesTheChecker )
     // 경로를 고치면 그 머티리얼로 옮겨 간다.
     pMesh->setMaterialPath( "engine/materials/defaultmaterial.material" );
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
-    SW_EXPECT_STREQ( "DefaultMaterial", pMesh->getMaterial()->getName().c_str() );
+    SW_EXPECT_TRUE( pMesh->getMaterial() != pFirst );
+    SW_EXPECT_TRUE( sw::engine::getAssetManager().getMaterialManager().isCached( "engine/materials/defaultmaterial.material" ) );
 }
