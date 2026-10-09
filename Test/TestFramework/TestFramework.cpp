@@ -2,6 +2,7 @@
 
 #include "TestFramework/TestFramework.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>
@@ -97,7 +98,7 @@ namespace test
                     if ( entry._level != sw::LogLevel::Error || s_bReportingFailure )
                         return;
                     const sw::string_view message{ entry._message.c_str(), entry._message.size() };
-                    if ( message.substr( 0, kDefensiveLogPrefix.size() ) == kDefensiveLogPrefix )
+                    if ( sw::StringUtil::startsWith( message, kDefensiveLogPrefix ) )
                         return;
                     const std::lock_guard<std::mutex> lock( _mutex );
                     for ( KnownErrorLog* pKnown : *_pListKnownErrorLog )
@@ -395,12 +396,12 @@ namespace test
 
             constexpr std::string_view kFilterPrefixA = "--test_filter=";
             constexpr std::string_view kFilterPrefixB = "--gtest_filter=";
-            if ( arg.substr( 0, kFilterPrefixA.size() ) == kFilterPrefixA )
+            if ( sw::StringUtil::startsWith( arg, kFilterPrefixA ) )
             {
                 setFilter( sw::string( trimArgValue( arg.substr( kFilterPrefixA.size() ) ) ) );
                 continue;
             }
-            if ( arg.substr( 0, kFilterPrefixB.size() ) == kFilterPrefixB )
+            if ( sw::StringUtil::startsWith( arg, kFilterPrefixB ) )
             {
                 setFilter( sw::string( trimArgValue( arg.substr( kFilterPrefixB.size() ) ) ) );
                 continue;
@@ -422,7 +423,7 @@ namespace test
             // 되풀이 · 섞기 — gtest 의 이름(`--gtest_repeat` · `--gtest_shuffle` · `--gtest_random_seed`)도 받는다.
             constexpr std::string_view kRepeatPrefixA = "--test_repeat=";
             constexpr std::string_view kRepeatPrefixB = "--gtest_repeat=";
-            if ( arg.substr( 0, kRepeatPrefixA.size() ) == kRepeatPrefixA || arg.substr( 0, kRepeatPrefixB.size() ) == kRepeatPrefixB )
+            if ( sw::StringUtil::startsWith( arg, kRepeatPrefixA ) || sw::StringUtil::startsWith( arg, kRepeatPrefixB ) )
             {
                 const std::string_view value = arg.substr( arg.find( '=' ) + 1 );
                 const int32            count = std::atoi( sw::string( value ).c_str() );
@@ -445,15 +446,15 @@ namespace test
                     _shuffleSeed = static_cast<uint32>( sw::MonotonicClock::nowNanoseconds() % 100000 ) + 1;
                 continue;
             }
-            if ( arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || arg.substr( 0, kSeedPrefix.size() ) == kSeedPrefix )
+            if ( sw::StringUtil::startsWith( arg, kShufflePrefix ) || sw::StringUtil::startsWith( arg, kSeedPrefix ) )
             {
-                _bShuffle    = arg.substr( 0, kShufflePrefix.size() ) == kShufflePrefix || _bShuffle;
+                _bShuffle    = sw::StringUtil::startsWith( arg, kShufflePrefix ) || _bShuffle;
                 _shuffleSeed = static_cast<uint32>( std::strtoul( sw::string( arg.substr( arg.find( '=' ) + 1 ) ).c_str(), nullptr, 10 ) );
                 continue;
             }
 
             constexpr std::string_view kShardPrefix = "--test_shard=";
-            if ( arg.substr( 0, kShardPrefix.size() ) == kShardPrefix )
+            if ( sw::StringUtil::startsWith( arg, kShardPrefix ) )
             {
                 const std::string_view value = arg.substr( kShardPrefix.size() );
                 const size_t           slash = value.find( '/' );
@@ -465,7 +466,7 @@ namespace test
             }
 
             constexpr std::string_view kHostSuitesPrefix = "--host_suites=";
-            if ( arg.substr( 0, kHostSuitesPrefix.size() ) == kHostSuitesPrefix )
+            if ( sw::StringUtil::startsWith( arg, kHostSuitesPrefix ) )
             {
                 const std::string_view mode = arg.substr( kHostSuitesPrefix.size() );
                 if ( mode == "exclude" )

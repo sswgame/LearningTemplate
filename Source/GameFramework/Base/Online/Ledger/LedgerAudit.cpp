@@ -3,6 +3,7 @@
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
 
 #include "Core/Container/map.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
@@ -102,7 +103,7 @@ namespace sw
                 }
                 if ( amount < 0 )
                 {
-                    const bool bAccount = record._key.rfind( "acct/", 0 ) == 0;
+                    const bool bAccount = StringUtil::startsWith( record._key, "acct/" );
                     if ( bAccount )
                         ++outReport._debtBalanceCount;
                     else

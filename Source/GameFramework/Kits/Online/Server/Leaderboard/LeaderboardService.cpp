@@ -1147,7 +1147,7 @@ namespace sw
         const string_view prefix( LeaderboardServiceInternal::kSettlementJobPrefix );
         const size_t      lastDot  = jobId.rfind( '.' );
         uint64            seasonId = 0;
-        const bool        bParsed  = jobId.substr( 0, prefix.size() ) == prefix && lastDot != string_view::npos && lastDot > prefix.size() &&
+        const bool        bParsed  = StringUtil::startsWith( jobId, prefix ) && lastDot != string_view::npos && lastDot > prefix.size() &&
                              StringUtil::parseUint64( jobId.substr( lastDot + 1 ), seasonId, 16 );
         const LeaderboardDefinition* pBoard  = bParsed ? findBoard( jobId.substr( prefix.size(), lastDot - prefix.size() ) ) : nullptr;
         const LeaderboardSeason*     pSeason = nullptr;

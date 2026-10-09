@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/unordered_set.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionUtil.h"
 #include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
@@ -508,7 +509,7 @@ namespace sw
                 if ( nameIt != mapName.end() )
                     name = nameIt->second;
                 constexpr string_view kPrefix = "in.var.";
-                if ( name.size() >= kPrefix.size() && string_view( name ).substr( 0, kPrefix.size() ) == kPrefix )
+                if ( StringUtil::startsWith( name, kPrefix ) )
                     name = name.substr( kPrefix.size() );
 
                 ShaderVertexInputInfo input{};

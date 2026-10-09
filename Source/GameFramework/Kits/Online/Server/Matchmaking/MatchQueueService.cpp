@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Online/Server/Matchmaking/MatchQueueService.h"
 
 #include "Core/Network/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
@@ -21,7 +22,7 @@ namespace sw
             static constexpr const utf8* kCancelPrefix = "mm.cancel.";
             static constexpr int32       kIdShift      = 32;
 
-            static bool hasPrefix( string_view text, string_view prefix ) { return text.size() > prefix.size() && text.substr( 0, prefix.size() ) == prefix; }
+            static bool hasPrefix( string_view text, string_view prefix ) { return text.size() > prefix.size() && StringUtil::startsWith( text, prefix ); }
 
             static void publish( IServerBus* pBus, const string& topic, const BitWriter& body )
             {

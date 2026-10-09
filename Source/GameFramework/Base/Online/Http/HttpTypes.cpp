@@ -33,19 +33,6 @@ namespace sw
                 return -1;
             }
 
-            static string_view trimSpaces( string_view text )
-            {
-                while ( text.empty() == false && ( text.front() == ' ' || text.front() == '\t' ) )
-                {
-                    text.remove_prefix( 1 );
-                }
-                while ( text.empty() == false && ( text.back() == ' ' || text.back() == '\t' ) )
-                {
-                    text.remove_suffix( 1 );
-                }
-                return text;
-            }
-
             /** @brief @p bytes 에서 "\r\n" 의 자리입니다(없으면 npos). */
             static size_t findLineEnd( const vector<uint8>& bytes, size_t from )
             {
@@ -378,8 +365,8 @@ namespace sw
             if ( colon == string_view::npos || colon == 0 )
                 return false;
             HttpHeader& header = _listHeader.emplace_back();
-            header._name       = string( HttpTypesInternal::trimSpaces( line.substr( 0, colon ) ) );
-            header._value      = string( HttpTypesInternal::trimSpaces( line.substr( colon + 1 ) ) );
+            header._name       = string( StringUtil::trim( line.substr( 0, colon ) ) );
+            header._value      = string( StringUtil::trim( line.substr( colon + 1 ) ) );
         }
         return true;
     }
@@ -459,7 +446,7 @@ namespace sw
                     }
                     string_view sizeText( reinterpret_cast<const utf8*>( _buffer.data() ), lineEnd );
                     sizeText = sizeText.substr( 0, sizeText.find( ';' ) ); // 확장 무시
-                    if ( Internal::parseUnsigned( Internal::trimSpaces( sizeText ), 16, _remainingBytes ) == false || _remainingBytes > Internal::kMaxChunkSize )
+                    if ( Internal::parseUnsigned( StringUtil::trim( sizeText ), 16, _remainingBytes ) == false || _remainingBytes > Internal::kMaxChunkSize )
                         return fail( "malformed chunk size" );
                     _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( lineEnd + 2 ) );
                     if ( static_cast<int64>( _bodyBytes.size() ) + _remainingBytes > _maxBodyBytes )

@@ -290,7 +290,7 @@ namespace sw
             // 출력은 `<cookedDir>/<Resource 기준 상대 경로>` 에 같은 이름으로, 확장자만 .bin 이다.
             const string normalizedScene = FileUtil::normalizeSeparators( scenePath );
             string       relativePath    = normalizedScene;
-            if ( normalizedScene.size() > normalizedRoot.size() && normalizedScene.compare( 0, normalizedRoot.size(), normalizedRoot ) == 0 )
+            if ( normalizedScene.size() > normalizedRoot.size() && StringUtil::startsWith( normalizedScene, normalizedRoot ) )
             {
                 relativePath = normalizedScene.substr( normalizedRoot.size() );
                 while ( relativePath.empty() == false && relativePath.front() == '/' )

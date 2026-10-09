@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Network/EngineNetSecurity.h"
 
@@ -726,7 +727,7 @@ SW_TEST_CASE( LoginServiceTest, GuestLoginIsStablePerDevice )
     SW_ASSERT_TRUE( fixture->guestLogin( 1, 0, first ) == LoginResult::Ok );
     SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
     SW_EXPECT_TRUE( first._identity._bGuest == SW_TRUE );
-    SW_EXPECT_TRUE( first._identity._displayName.rfind( "Guest-", 0 ) == 0 );
+    SW_EXPECT_TRUE( StringUtil::startsWith( first._identity._displayName, "Guest-" ) );
     LoginGrant again;
     SW_ASSERT_TRUE( fixture->guestLogin( 1, 100, again ) == LoginResult::Ok ); // 같은 장치 → 같은 계정
     SW_EXPECT_TRUE( again._bCreated == SW_FALSE );
@@ -799,7 +800,7 @@ SW_TEST_CASE( LoginServiceTest, PlatformLoginCreatesThenReuses )
     SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77:Hero Name!", 0, first ) == LoginResult::Ok );
     SW_EXPECT_TRUE( first._bCreated == SW_TRUE );
     SW_EXPECT_TRUE( first._identity._bGuest == SW_FALSE );
-    SW_EXPECT_TRUE( first._identity._displayName.rfind( "HeroName-", 0 ) == 0 ); // 제공자 이름의 ASCII 영숫자 + id 꼬리
+    SW_EXPECT_TRUE( StringUtil::startsWith( first._identity._displayName, "HeroName-" ) ); // 제공자 이름의 ASCII 영숫자 + id 꼬리
     LoginGrant again;
     SW_ASSERT_TRUE( fixture->platformLogin( "fake", "subject:u-77", 100, again ) == LoginResult::Ok );
     SW_EXPECT_TRUE( again._bCreated == SW_FALSE );

@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {
@@ -106,15 +107,7 @@ namespace sw
                 if ( line.empty() == false && line.back() == '\r' )
                     line.remove_suffix( 1 );
 
-                // 줄마다 할당하지 않도록 직접 trim 한다
-                while ( line.empty() == false && ( line.front() == ' ' || line.front() == '\t' ) )
-                {
-                    line.remove_prefix( 1 );
-                }
-                while ( line.empty() == false && ( line.back() == ' ' || line.back() == '\t' ) )
-                {
-                    line.remove_suffix( 1 );
-                }
+                line = StringUtil::trim( line ); // 뷰라 할당이 없다
 
                 if ( line.empty() == false && line.front() != commentChar )
                     callback( line );

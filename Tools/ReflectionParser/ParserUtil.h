@@ -107,7 +107,7 @@ namespace sw
             string_view head = StringUtil::trim( typeSpelling.substr( 0, open ) );
             for ( const string_view qualifier : { string_view{ "const " }, string_view{ "volatile " } } )
             {
-                while ( head.substr( 0, qualifier.size() ) == qualifier )
+                while ( StringUtil::startsWith( head, qualifier ) )
                 {
                     head = StringUtil::trim( head.substr( qualifier.size() ) );
                 }

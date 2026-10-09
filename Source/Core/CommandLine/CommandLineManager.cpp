@@ -121,7 +121,7 @@ namespace sw
             // 표는 비우지 않는다. 핫 리로드로 모듈이 다시 올라와도 커맨드라인 값은 프로세스가 끝날 때까지 유효해야 한다.
             // 대신 오타를 놓치지 않도록, 모듈 로드가 끝난 뒤 아무도 가져가지 않은 키를 App 이 한 번 경고한다
             // (collectPendingGlobalNames).
-            if ( cleanKey.rfind( kGlobalVariablePrefix, 0 ) == 0 )
+            if ( StringUtil::startsWith( cleanKey, kGlobalVariablePrefix ) )
             {
                 // 값 없이 적은 `-gv_flag` 는 플래그다. setValue 와 같은 뜻으로 "true" 를 남긴다.
                 _mapPendingGlobal[string{ cleanKey }] = bHasValue ? string{ valueStr } : string{ "true" };

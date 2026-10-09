@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -1442,7 +1443,7 @@ SW_TEST_CASE( ReflectionParserTest, FlagTraitHeaderIncludesOnlyTheTrait )
             // 체크아웃이 CRLF 일 수 있다(core.autocrlf) — 줄 끝의 \r 은 뺀다.
             const size_t     lineEnd = ( end > begin && text[end - 1] == '\r' ) ? end - 1 : end;
             const sw::string line    = text.substr( begin, lineEnd - begin );
-            if ( line.rfind( "#include", 0 ) == 0 )
+            if ( sw::StringUtil::startsWith( line, "#include" ) )
                 listInclude.push_back( line );
             begin = end + 1;
         }

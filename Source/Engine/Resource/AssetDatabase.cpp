@@ -98,7 +98,7 @@ namespace sw
         if ( FileUtil::isAbsolutePath( relativePath ) )
         {
             string rootRelative = toRelativePath( relativePath );
-            if ( rootRelative.empty() || rootRelative.rfind( "..", 0 ) == 0 )
+            if ( rootRelative.empty() || StringUtil::startsWith( rootRelative, ".." ) )
                 return result;
             // 루트 안이면 키는 그 전역 id 다. 절대 경로를 키로 쓰면 같은 에셋이 id 키와 절대 경로 키를 따로 갖고 GUID → 경로가
             // 기계마다 다른 절대 경로를 돌려준다(유니티 `AssetDatabase` 의 키도 프로젝트 상대 경로다).
@@ -373,10 +373,7 @@ namespace sw
             string_view line = text.substr( lineStart, lineEnd - lineStart );
             lineStart        = lineEnd + 1;
 
-            while ( line.empty() == false && ( line.back() == '\r' || line.back() == ' ' || line.back() == '\t' ) )
-            {
-                line.remove_suffix( 1 );
-            }
+            line = StringUtil::trimEnd( line );
             if ( line.empty() || line.front() == '#' )
                 continue;
 

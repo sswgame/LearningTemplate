@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
 #include "TestFramework/TestFramework.h"
@@ -50,7 +52,7 @@ SW_TEST_CASE( ServiceHealthRegistryTest, ReportListsEveryCheck )
     health.markTick( 10 );
     string text;
     health.writeReport( text, 10 );
-    SW_EXPECT_TRUE( text.find( "live 1\nready 1\ndraining 0\n" ) == 0 );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( text, "live 1\nready 1\ndraining 0\n" ) );
     SW_EXPECT_TRUE( text.find( "check service_store degraded pending=12000\n" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "check ephemeral_store failing\n" ) != string::npos );
 }

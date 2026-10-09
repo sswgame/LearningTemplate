@@ -336,7 +336,7 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 
     // 실수 자릿수는 기본 정밀도에 달려 있으므로 앞부분만 확인합니다.
     const sw::string& traceMessage = capture.getEntries()[3]._message;
-    SW_EXPECT_TRUE( traceMessage.rfind( "[TestLog] SW_LOG_TRACE 3.14", 0 ) == 0 );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( traceMessage, "[TestLog] SW_LOG_TRACE 3.14" ) );
 #else
     SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif
@@ -356,7 +356,7 @@ SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
     SW_LOG_INFO( "%#", invalidUtf8Bytes );
 
     SW_ASSERT_EQUAL( 1u, capture.getCount() );
-    SW_EXPECT_TRUE( capture.getEntries()[0]._message.rfind( "[TestLog] Bad:", 0 ) == 0 );
+    SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
 #else
     SW_TEST_SKIP( "SW_LOG_* is compiled out when SW_DEBUG is undefined" );
 #endif

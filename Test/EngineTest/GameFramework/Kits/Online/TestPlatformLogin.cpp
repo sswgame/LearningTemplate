@@ -397,7 +397,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     const string state       = Internal::findQuery( browser._lastUrl, "state" );
     const string nonce       = Internal::findQuery( browser._lastUrl, "nonce" );
     const string redirectUri = Internal::findQuery( browser._lastUrl, "redirect_uri" );
-    SW_EXPECT_TRUE( redirectUri.rfind( "http://127.0.0.1:", 0 ) == 0 );
+    SW_EXPECT_TRUE( StringUtil::startsWith( redirectUri, "http://127.0.0.1:" ) );
     fixture._handler._expectedChallenge = Internal::findQuery( browser._lastUrl, "code_challenge" );
     fixture._handler._idToken           = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "pc-user", nonce.c_str() );
 
@@ -495,7 +495,7 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIdToke
     SW_EXPECT_EQUAL( uint64( 42 ), listCompletion[0]._requestTag );
     SW_ASSERT_TRUE( listCompletion[0]._result == LoginResult::Ok );
     SW_EXPECT_TRUE( listCompletion[0]._grant._bCreated == SW_TRUE );
-    SW_EXPECT_TRUE( listCompletion[0]._grant._identity._displayName.rfind( "Hero-", 0 ) == 0 );
+    SW_EXPECT_TRUE( StringUtil::startsWith( listCompletion[0]._grant._identity._displayName, "Hero-" ) );
 
     store.shutdown();
     (void)store.pollCompletions();

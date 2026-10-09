@@ -159,10 +159,7 @@ namespace sw
             if ( lineEnd == string::npos )
                 lineEnd = content.size();
             string_view line( content.data() + lineStart, lineEnd - lineStart );
-            while ( line.empty() == false && ( line.back() == '\r' || line.back() == ' ' || line.back() == '\t' ) )
-            {
-                line.remove_suffix( 1 );
-            }
+            line = StringUtil::trimEnd( line );
             if ( line.empty() == false && line.front() != '#' )
                 listWord.emplace_back( line );
             lineStart = lineEnd + 1;

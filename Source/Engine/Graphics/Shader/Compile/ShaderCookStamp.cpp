@@ -196,7 +196,7 @@ namespace sw
                 StampInfo    info{};
                 const string stampPath = FileUtil::joinPath( binDirectory, "cook.stamp" );
                 string       text;
-                if ( FileUtil::readTextFile( stampPath, text ) && text.compare( 0, kCookStampHeader.size(), kCookStampHeader ) == 0 )
+                if ( FileUtil::readTextFile( stampPath, text ) && StringUtil::startsWith( text, kCookStampHeader ) )
                 {
                     size_t pos = text.find( '\n' );
                     while ( pos != string::npos )

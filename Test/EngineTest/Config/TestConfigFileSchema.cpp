@@ -2,6 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryProfiler.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -76,7 +77,7 @@ namespace
             for ( const ConfigKind& kind : kArrKind )
             {
                 const sw::string_view prefix( kind._pPathPrefix );
-                if ( relativePath.substr( 0, prefix.size() ) == prefix )
+                if ( sw::StringUtil::startsWith( relativePath, prefix ) )
                     return &kind;
             }
             return nullptr;

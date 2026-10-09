@@ -10,6 +10,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"
@@ -764,7 +765,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         }
         SW_EXPECT_TRUE_MSG( bFound, pExpected );
     }
-    const bool bDoneWithoutFailure = result._listMarkedLine.empty() == false && result._listMarkedLine.back().find( "EditorSelfTest|DONE|" ) == 0 &&
+    const bool bDoneWithoutFailure = result._listMarkedLine.empty() == false && sw::StringUtil::startsWith( result._listMarkedLine.back(), "EditorSelfTest|DONE|" ) &&
                                      result._listMarkedLine.back().size() >= 2 && result._listMarkedLine.back().substr( result._listMarkedLine.back().size() - 2 ) == "|0";
     SW_EXPECT_TRUE_MSG( bDoneWithoutFailure, result._listMarkedLine.empty() ? "no EditorSelfTest lines" : result._listMarkedLine.back().c_str() );
 
