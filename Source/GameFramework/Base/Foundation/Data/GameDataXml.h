@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

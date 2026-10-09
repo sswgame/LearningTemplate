@@ -14,6 +14,7 @@
 #include "Engine/Input/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocalizationManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
@@ -39,7 +40,6 @@
 #include "Engine/UI/World/WidgetComponent.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Utility/GameTimeScale.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

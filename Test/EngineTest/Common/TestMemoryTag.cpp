@@ -22,8 +22,8 @@
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

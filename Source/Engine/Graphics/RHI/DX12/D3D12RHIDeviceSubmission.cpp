@@ -14,7 +14,7 @@
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-    #include "Engine/Utility/Profiling/FrameProfiler.h"
+    #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {

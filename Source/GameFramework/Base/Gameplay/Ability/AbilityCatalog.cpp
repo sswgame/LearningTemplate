@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"

@@ -12,8 +12,8 @@
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
-#include "Engine/Utility/Console/DevCommandRegistry.h"
-#include "Engine/Utility/Console/DevConsole.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Console/DevConsole.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw

@@ -8,10 +8,10 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 
 #include <algorithm>
 #include <cstdio>

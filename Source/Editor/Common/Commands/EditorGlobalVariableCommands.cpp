@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw::editor
 {

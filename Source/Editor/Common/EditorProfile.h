@@ -8,7 +8,7 @@
 #pragma once
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw::editor
 {

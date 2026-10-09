@@ -27,7 +27,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>

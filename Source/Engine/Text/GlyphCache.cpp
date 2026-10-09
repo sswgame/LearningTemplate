@@ -5,8 +5,8 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Text/IFontRasterizer.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

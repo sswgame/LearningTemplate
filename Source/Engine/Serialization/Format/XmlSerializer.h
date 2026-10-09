@@ -1,7 +1,7 @@
 /**
  * @file XmlSerializer.h
  * @brief XML 백엔드 인터페이스와 TypeInfo 기반 XML 직렬화 · 역직렬화입니다.
- * @note 리플렉션이 아닌 콘텐츠(테이블, 타일맵, 툴)는 Utility/Xml/XmlDocument 를 씁니다.
+ * @note 리플렉션이 아닌 콘텐츠(테이블, 타일맵, 툴)는 Serialization/Xml/XmlDocument 를 씁니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"

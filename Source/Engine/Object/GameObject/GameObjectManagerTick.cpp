@@ -13,7 +13,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {

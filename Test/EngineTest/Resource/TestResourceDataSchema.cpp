@@ -49,8 +49,11 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
+#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileSetAsset.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
@@ -60,9 +63,6 @@
 #include "Engine/UI/Style/UiStyleSheetCache.h"
 #include "Engine/UI/Style/UiTheme.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/TileMap/TileSetAsset.h"
-#include "Engine/Utility/Xml/TileMapXml.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
 

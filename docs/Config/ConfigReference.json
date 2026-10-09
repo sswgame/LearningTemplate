@@ -129,7 +129,7 @@
    "types": [
     {
      "name": "kArrMemoryBudgetRootKeyDoc",
-     "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp",
+     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp",
      "fields": [
       {
        "name": "_listBudget",
@@ -144,7 +144,7 @@
     },
     {
      "name": "kArrMemoryBudgetEntryKeyDoc",
-     "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp",
+     "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp",
      "fields": [
       {
        "name": "_tag",
@@ -2489,7 +2489,7 @@
    "default": "0",
    "kind": "시험",
    "description": "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)",
-   "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp"
+   "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp"
   },
   {
    "name": "gv_memoryTracking",
@@ -2497,7 +2497,7 @@
    "default": "-1",
    "kind": "시험",
    "description": "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)",
-   "source": "Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp"
+   "source": "Source/Engine/Profiling/MemoryBudgetMonitor.cpp"
   },
   {
    "name": "gv_morphDiag",
@@ -2609,7 +2609,7 @@
    "default": "0",
    "kind": "시험",
    "description": "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)",
-   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+   "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
   {
    "name": "gv_profileFrames",
@@ -2617,7 +2617,7 @@
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "프레임 프로파일 측정 프레임 수 (0=사용 안 함)",
-   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+   "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
   {
    "name": "gv_profileSeconds",
@@ -2625,7 +2625,7 @@
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "프레임 프로파일 측정 시간(초, 0=사용 안 함)",
-   "source": "Source/Engine/Utility/Profiling/FrameProfileSession.cpp"
+   "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
   {
    "name": "gv_reduceFlashing",
@@ -2857,7 +2857,7 @@
    "default": "false",
    "kind": "시험",
    "description": "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)",
-   "source": "Source/Engine/Utility/Profiling/ProfilerBackend.cpp"
+   "source": "Source/Engine/Profiling/ProfilerBackend.cpp"
   },
   {
    "name": "gv_tracyMemory",
@@ -2865,7 +2865,7 @@
    "default": "false",
    "kind": "시험",
    "description": "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)",
-   "source": "Source/Engine/Utility/Profiling/ProfilerBackend.cpp"
+   "source": "Source/Engine/Profiling/ProfilerBackend.cpp"
   },
   {
    "name": "gv_tracyViewerPath",

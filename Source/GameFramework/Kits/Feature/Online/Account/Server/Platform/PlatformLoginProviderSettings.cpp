@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
 
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"

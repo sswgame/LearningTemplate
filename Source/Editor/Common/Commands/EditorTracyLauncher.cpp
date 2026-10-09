@@ -9,7 +9,7 @@
 
 #include "Editor/Common/EditorUtil.h"
 
-#include "Engine/Utility/Profiling/ProfilerBackend.h"
+#include "Engine/Profiling/ProfilerBackend.h"
 
 namespace sw::editor
 {
@@ -17,7 +17,7 @@ namespace sw::editor
 
     /**
      * @brief `-gv_tracyViewerPath=<경로>`: "Tracy 열기" 가 띄울 Tracy 뷰어(tracy-profiler, 같은 판 0.14.1). 파일이나 그 파일이 든 폴더.
-     * @details 비우면 `<프로젝트>/Tools/Tracy/` 를 본다. 뷰어는 저장소에 넣지 않는다(`Source/Engine/Utility/Profiling/README.md`).
+     * @details 비우면 `<프로젝트>/Tools/Tracy/` 를 본다. 뷰어는 저장소에 넣지 않는다(`Source/Engine/Profiling/README.md`).
      */
     SW_GLOBAL_VARIABLE( sw::string, gv_tracyViewerPath, "", "Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy)" );
 

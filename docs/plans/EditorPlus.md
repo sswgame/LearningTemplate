@@ -29,7 +29,7 @@
 | 원문 | 지금 |
 |---|---|
 | `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/Gui/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
-| "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Renderer/README.md`, 프로파일링은 `Source/Engine/Utility/Profiling/README.md` |
+| "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Renderer/README.md`, 프로파일링은 `Source/Engine/Profiling/README.md` |
 | "백로그 1-4 의 C, G, H 줄", "대기열 S, M 의 항목" | 이 문서. 백로그 1-4 에는 이 문서를 가리키는 항목 하나만 있습니다 |
 | `cmake/Engine/TargetRules.cmake` | `cmake/Engine/ModuleTargets.cmake`(`sw_addGameFrameworkKit`, `sw_addGameModule` 이 있는 파일) |
 | `EditorViewportToolbarSettings` | `ViewportToolbarSettings`(`Source/Editor/Viewport/EditorViewportToolbar.h`) |
@@ -2310,7 +2310,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ### G4 프로파일러 스레드 미니 타임라인
 
 **바꿀 것.**
-1) 새 `Engine/Utility/Profiling/ProfilerTimeline.h` · `.cpp` — 켤 때만 사건을 스레드별 링 버퍼에 남긴다:
+1) 새 `Engine/Profiling/ProfilerTimeline.h` · `.cpp` — 켤 때만 사건을 스레드별 링 버퍼에 남긴다:
 ```cpp
 namespace sw
 {
@@ -2358,7 +2358,7 @@ namespace sw
 측정: `-gv_profileFrames=600` 의 `GT.Frame` p50 을 녹화 끔 · 켬으로 잰다(Release — Debug 는 레이스 검출기 때문에 컨테이너 비용이 과장된다) — 켬이 +2 % 를 넘으면 커밋 메시지에 숫자와 함께.
 **확인 = 에디터 시나리오.** `profilertimeline.scenario.xml`: 프로파일러 패널의 Timeline 탭과 녹화 단추(이름표 `profiler.timeline.record`)를 누르고 몇 프레임 뒤 탐침 `Editor.ProfilerTimelineThreadCount` 가 2 이상(게임 스레드와 렌더 스레드)인지 봅니다.
 
-**남길 교훈.** `Source/Engine/Utility/Profiling/README.md` 함정과 주의 절에 "빠른 확인은 패널 타임라인, 깊은 분석은 Tracy" 한 줄.
+**남길 교훈.** `Source/Engine/Profiling/README.md` 함정과 주의 절에 "빠른 확인은 패널 타임라인, 깊은 분석은 Tracy" 한 줄.
 **커밋 메시지:**
 ```
 프로파일러 - 패널의 스레드 미니 타임라인(켤 때만 스레드별 링 버퍼)

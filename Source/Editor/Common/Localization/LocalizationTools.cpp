@@ -20,7 +20,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw
 {

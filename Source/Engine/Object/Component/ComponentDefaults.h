@@ -15,7 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include <shared_mutex>
 

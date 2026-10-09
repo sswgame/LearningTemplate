@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Core/ContainerVisitor.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializerUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

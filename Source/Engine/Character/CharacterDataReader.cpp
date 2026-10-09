@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/Xml/XmlNameCheck.h"
 
 namespace sw
 {

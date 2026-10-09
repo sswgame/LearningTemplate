@@ -9,7 +9,7 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
 {

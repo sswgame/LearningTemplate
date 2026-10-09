@@ -12,9 +12,9 @@
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

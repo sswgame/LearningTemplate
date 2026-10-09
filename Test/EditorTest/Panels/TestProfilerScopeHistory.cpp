@@ -6,7 +6,7 @@
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
 #include "Editor/Panels/ProfilerScopeHistory.h"
 
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 #include "TestFramework/TestFramework.h"
 

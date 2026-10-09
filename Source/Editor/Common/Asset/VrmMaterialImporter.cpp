@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw::editor
 {

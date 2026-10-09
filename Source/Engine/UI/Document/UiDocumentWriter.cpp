@@ -9,6 +9,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 #include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
@@ -16,7 +17,6 @@
 #include "Engine/UI/Document/UiDocumentLoader.h"
 #include "Engine/UI/Screen/UiScreen.h"
 #include "Engine/UI/Widgets/UserWidget.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {

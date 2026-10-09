@@ -9,7 +9,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Utility/Xml/TileMapXml.h"
+#include "Engine/TileMap/TileMapXml.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

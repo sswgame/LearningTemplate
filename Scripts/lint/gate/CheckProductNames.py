@@ -66,7 +66,7 @@ class CheckProductNamesGate(LintGate):
         "Source/Engine/Audio/IAudioSystem.cpp": "오디오 백엔드 팩토리 — XAudio2 를 고른다",
         "Source/Editor/Common/Commands/EditorTracyLauncher.*": "외부 프로파일러 GUI 를 띄우는 실행기 — 이름이 곧 대상 도구",
         "Source/Editor/Panels/ProfilerPanel.*": "프로파일러 패널의 'Open Tracy' 버튼 — 외부 뷰어를 띄우는 자리(이름이 곧 대상 도구)",
-        "Source/Engine/Utility/Profiling/ProfilerBackend.*": "프로파일러 백엔드 선택점 — Tracy 를 켜고 포트를 묻는 창구(외부 뷰어와 맞물린다)",
+        "Source/Engine/Profiling/ProfilerBackend.*": "프로파일러 백엔드 선택점 — Tracy 를 켜고 포트를 묻는 창구(외부 뷰어와 맞물린다)",
         "Source/Engine/Physics/PhysicsSystem.cpp": "물리 백엔드 팩토리 — Jolt · Box2D 백엔드를 고른다",
         "Source/GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.*": "서버 캐시 키트의 조립점 — RESP(Valkey · Garnet) 드라이버를 올린다",
     }

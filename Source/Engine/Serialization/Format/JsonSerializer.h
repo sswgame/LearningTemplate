@@ -1,13 +1,13 @@
 /**
  * @file JsonSerializer.h
  * @brief TypeInfo 리플렉션 기반 JSON 직렬화 · 역직렬화입니다.
- * @note 리플렉션이 아닌 콘텐츠(테이블, 툴)는 Utility/Json/JsonDocument 를 씁니다.
+ * @note 리플렉션이 아닌 콘텐츠(테이블, 툴)는 Serialization/Json/JsonDocument 를 씁니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Core/SerializeContext.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

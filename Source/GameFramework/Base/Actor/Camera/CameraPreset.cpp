@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-#include "Engine/Utility/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 

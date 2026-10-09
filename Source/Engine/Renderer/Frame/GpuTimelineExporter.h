@@ -16,7 +16,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Utility/Profiling/IProfilerBackend.h"
+#include "Engine/Profiling/IProfilerBackend.h"
 
 namespace sw
 {

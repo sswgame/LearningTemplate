@@ -9,10 +9,10 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

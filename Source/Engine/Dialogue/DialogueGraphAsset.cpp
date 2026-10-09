@@ -10,7 +10,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

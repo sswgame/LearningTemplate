@@ -13,7 +13,7 @@
 #include "Editor/Common/Commands/EditorLogCommands.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 
-#include "Engine/Utility/Console/DevConsole.h"
+#include "Engine/Console/DevConsole.h"
 
 namespace sw::editor
 {

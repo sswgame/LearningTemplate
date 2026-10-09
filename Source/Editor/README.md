@@ -377,7 +377,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 
 ## 개발 콘솔(Output Log 입력 줄)
 
-Output Log 아래 입력 줄이 개발 콘솔(`Engine/Utility/Console/DevConsole`)입니다 — `help`, `gv_이름 [값]` · `get` · `set`, 개발 명령(`SW_DEV_COMMAND`),
+Output Log 아래 입력 줄이 개발 콘솔(`Engine/Console/DevConsole`)입니다 — `help`, `gv_이름 [값]` · `get` · `set`, 개발 명령(`SW_DEV_COMMAND`),
 Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기록. 답은 로그(`DevConsole`)로 남아 같은 패널에 보입니다. 에디터가 등록하는 명령은
 `Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
 `select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·

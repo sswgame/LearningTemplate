@@ -19,7 +19,7 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 
 예산 파일의 뿌리입니다.
 
-원본: [`Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp)
+원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|
@@ -29,7 +29,7 @@ JSON 키는 아래 테이블의 키 그대로입니다. 모르는 키는 로드 
 
 `_listBudget` 한 줄입니다. 같은 태그 두 번 · 0 이하 크기는 오류입니다.
 
-원본: [`Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp)
+원본: [`Source/Engine/Profiling/MemoryBudgetMonitor.cpp`](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp)
 
 | 필드 | 타입 | 기본값 | 범위 | 단위 | 설명 |
 |---|---|---|---|---|---|

@@ -20,11 +20,11 @@
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Viewport/EditorCamera.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Utility/Console/DevCommandRegistry.h"
 #include "Engine/Utility/DebugOverlayState.h"
 
 namespace sw::editor

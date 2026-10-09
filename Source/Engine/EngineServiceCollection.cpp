@@ -19,6 +19,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -29,7 +30,6 @@
 #include "Engine/UI/UiSystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/DebugOverlayState.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 // **완전한 타입이 필요한 자리는 여기 하나다.** `unique_ptr` 의 생성과 소멸이 타입 크기를 알아야 해서,
 // 이 정의들을 헤더에 두면 `EngineLoop.h` 를 include 하는 모든 TU 가 서비스 스무 개의 헤더를 끌고 들어온다

@@ -7,9 +7,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlNameCheck.h"
 #include "Engine/UserSettings/UserSettingsRegistry.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-#include "Engine/Utility/Xml/XmlNameCheck.h"
 
 namespace sw
 {

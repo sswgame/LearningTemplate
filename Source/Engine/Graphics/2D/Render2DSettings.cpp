@@ -9,8 +9,8 @@
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
-#include "Engine/Utility/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlNameCheck.h"
 
 namespace sw
 {

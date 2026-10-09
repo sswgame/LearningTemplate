@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
-#include "Engine/Utility/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlNameCheck.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"

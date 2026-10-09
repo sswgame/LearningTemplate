@@ -29,6 +29,7 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
@@ -36,7 +37,6 @@
 #include "Engine/Serialization/Format/JsonSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 

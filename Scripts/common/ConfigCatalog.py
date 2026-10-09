@@ -80,7 +80,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         page="MemoryBudget", pathPattern="Config/Engine/MemoryBudget.json", layer=kLayerEngineDefault, fileFormat="json",
         reader="`MemoryBudgetMonitor::loadBudgetFile` (`EngineLoop` Config 단계)", readWhen="기동",
         shipping="읽지 않음(배포본에는 메모리 프로파일러가 없다)", bCommitted=True, keyStyle=kKeyStyleKeyTable,
-        keyTableSource="Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp",
+        keyTableSource="Source/Engine/Profiling/MemoryBudgetMonitor.cpp",
         listKeyTable=("kArrMemoryBudgetRootKeyDoc", "kArrMemoryBudgetEntryKeyDoc")),
     ConfigFileEntry(
         page="EngineDefaultAssets", pathPattern="Resource/engine/data/enginedefaultassets.xml", layer=kLayerEngineDefault, fileFormat="xml",

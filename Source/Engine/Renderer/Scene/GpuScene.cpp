@@ -10,9 +10,9 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Scene/GpuMeshMorphPool.h"
 #include "Engine/Renderer/Scene/GpuVertexAnimationPool.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

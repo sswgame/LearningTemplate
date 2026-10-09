@@ -6,7 +6,7 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw
 {

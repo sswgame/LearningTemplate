@@ -13,10 +13,10 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
-#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 namespace sw
 {

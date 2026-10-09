@@ -7,7 +7,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/FrameProfiler.h"
 
 #include <algorithm>
 

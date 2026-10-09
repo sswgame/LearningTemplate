@@ -13,8 +13,8 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

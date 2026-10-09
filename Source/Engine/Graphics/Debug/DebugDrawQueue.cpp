@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Utility/Console/DevCommandRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw
 {

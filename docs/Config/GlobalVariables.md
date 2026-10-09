@@ -101,6 +101,18 @@
 | `gv_animationRewind` | `int32` | `0` | 시험 | Record animation rewind history (poses, graph state, notifies, curves, root motion) | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
 | `gv_animationRewindSeconds` | `float32` | `10.0` | 시험 | Seconds of animation rewind history kept per unit | [AnimationRewind.cpp](../../Source/Engine/Object/Animation/AnimationRewind.cpp) |
 
+## `Source/Engine/Profiling`
+
+| 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
+|---|---|---|---|---|---|
+| `gv_memoryReport` | `int32` | `0` | 시험 | 다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기) | [MemoryBudgetMonitor.cpp](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp) |
+| `gv_memoryTracking` | `int32` | `-1` | 시험 | 메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기) | [MemoryBudgetMonitor.cpp](../../Source/Engine/Profiling/MemoryBudgetMonitor.cpp) |
+| `gv_profileAllocSites` | `int32` | `0` | 시험 | 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_profileFrames` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 프레임 수 (0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_profileSeconds` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_tracy` | `bool` | `false` | 시험 | Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
+| `gv_tracyMemory` | `bool` | `false` | 시험 | Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
+
 ## `Source/Engine/Renderer`
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
@@ -176,14 +188,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
-| `gv_memoryReport` | `int32` | `0` | 시험 | 다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기) | [MemoryBudgetMonitor.cpp](../../Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp) |
-| `gv_memoryTracking` | `int32` | `-1` | 시험 | 메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기) | [MemoryBudgetMonitor.cpp](../../Source/Engine/Utility/Profiling/MemoryBudgetMonitor.cpp) |
-| `gv_profileAllocSites` | `int32` | `0` | 시험 | 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기) | [FrameProfileSession.cpp](../../Source/Engine/Utility/Profiling/FrameProfileSession.cpp) |
-| `gv_profileFrames` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 프레임 수 (0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Utility/Profiling/FrameProfileSession.cpp) |
-| `gv_profileSeconds` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Utility/Profiling/FrameProfileSession.cpp) |
 | `gv_timeScale` | `float32` | `1.0` | 일반 | 게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤) | [GameTimeScale.cpp](../../Source/Engine/Utility/GameTimeScale.cpp) |
-| `gv_tracy` | `bool` | `false` | 시험 | Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다) | [ProfilerBackend.cpp](../../Source/Engine/Utility/Profiling/ProfilerBackend.cpp) |
-| `gv_tracyMemory` | `bool` | `false` | 시험 | Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이) | [ProfilerBackend.cpp](../../Source/Engine/Utility/Profiling/ProfilerBackend.cpp) |
 
 ## `Source/GameFramework/Base`
 

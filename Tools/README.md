@@ -25,7 +25,7 @@
 | `Sccache/` | 컴파일 캐시 |
 | `vcpkg/` | 패키지 매니저 |
 | `_cache/`, `_deps/` | 다운로드 캐시 |
-| `Tracy/` | Tracy 뷰어. 직접 받아 둡니다([Profiling README](../Source/Engine/Utility/Profiling/README.md)) |
+| `Tracy/` | Tracy 뷰어. 직접 받아 둡니다([Profiling README](../Source/Engine/Profiling/README.md)) |
 
 clang-format은 PATH에 있는 다른 버전이 아니라 `LLVM/bin` 의 고정 버전을 씁니다. 버전마다 포맷 결과가 달라서, 다른 버전으로 포맷하면 바뀌지 않은 파일까지 바뀝니다.
 

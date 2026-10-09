@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleBuildId.h"
 
-#include "Engine/Utility/Console/DevCommandRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 
 #include "TestFramework/TestFramework.h"
 

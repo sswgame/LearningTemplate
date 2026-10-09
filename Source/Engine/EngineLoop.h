@@ -15,10 +15,10 @@
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Profiling/FrameProfileSession.h"
+#include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/RenderView.h"
-#include "Engine/Utility/Profiling/FrameProfileSession.h"
-#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 namespace sw
 {

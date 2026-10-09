@@ -14,7 +14,7 @@
 
 #include "Engine/Animation/Pose.h"
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

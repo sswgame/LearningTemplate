@@ -166,7 +166,7 @@ set_source_files_properties(${swJoltBackendSources} PROPERTIES
 )
 
 # ------------------------------------------------------------------------------
-# 2-2) Tracy — 엔진 프로파일러의 두 번째 출력(Utility/Profiling). 헤더는 Utility/Profiling/Tracy 에서만 include 한다(CheckThirdPartyIsolation.py).
+# 2-2) Tracy — 엔진 프로파일러의 두 번째 출력(Profiling). 헤더는 Profiling/Tracy 에서만 include 한다(CheckThirdPartyIsolation.py).
 # Shipping 은 링크하지 않는다(SW_ENABLE_TRACY 를 무시). 클라이언트는 프로세스에 하나 — Engine 만 링크하고, RHI 백엔드 · 모듈은 엔진
 # 인터페이스(IProfilerBackend)만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘기므로 백엔드 DLL 이 Tracy 를 알 필요가 없다.
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
@@ -175,7 +175,7 @@ set_source_files_properties(${swJoltBackendSources} PROPERTIES
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 	target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
 	target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
-	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Utility/Profiling/Tracy/*.cpp")
+	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
 	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
 	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
 	if(MSVC)

@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw
 {

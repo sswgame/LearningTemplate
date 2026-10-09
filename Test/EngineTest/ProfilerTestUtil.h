@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Utility/Profiling/IProfilerBackend.h"
+#include "Engine/Profiling/IProfilerBackend.h"
 
 namespace test
 {

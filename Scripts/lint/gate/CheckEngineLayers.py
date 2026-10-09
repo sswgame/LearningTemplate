@@ -139,10 +139,16 @@ _kEngineTier: dict[str, int] = {
     "Observability": 0,
     # 리플렉션 — 토대 위의 타입 레지스트리.
     "Reflection": 1,
-    # 토대 위의 잎 헬퍼.
-    "Utility": 1,
+    # 개발 명령 레지스트리(`SW_DEV_COMMAND`)와 콘솔 한 줄 해석기 — 언리얼 `IConsoleManager` 처럼 어디서나 명령을 등록하므로 바닥 가까이 둔다.
+    "Console": 1,
+    # 토대 위의 잎 헬퍼(편집 명령 스택 · 디버그 값 · 게임 시간 배율 · 자동 플레이 계약 · 키-값 파일).
+    "Utility": 2,
     # 직렬화 — 리플렉션 위에 올라간다.
     "Serialization": 2,
+    # 엔진 프로파일러(FrameProfiler · Tracy 출력 · 메모리 예산). 렌더러 · 오브젝트 · 리소스가 구간을 남기므로 바닥 가까이 둔다.
+    "Profiling": 3,
+    # 2D 타일맵 데이터(타일셋 에셋 · 맵 문서 XML · 격자 도우미). 배치(Environment/Placement)는 이것을 표면으로 감싸 쓴다.
+    "TileMap": 3,
     # 설정 — 리플렉션 · 직렬화로 읽힌다.
     "Config": 3,
     # 물리 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.

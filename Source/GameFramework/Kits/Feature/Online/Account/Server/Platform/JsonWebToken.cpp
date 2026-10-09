@@ -5,7 +5,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

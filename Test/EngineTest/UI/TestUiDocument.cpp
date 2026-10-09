@@ -7,6 +7,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Resource/ResourceUtil.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 #include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
@@ -21,7 +22,6 @@
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UI/Widgets/UserWidget.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

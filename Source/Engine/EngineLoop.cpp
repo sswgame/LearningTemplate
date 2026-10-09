@@ -63,6 +63,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Renderer/Capture/PortraitRenderer.h"
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
@@ -93,8 +95,6 @@
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/GameTimeScale.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
-#include "Engine/Utility/Profiling/ProfilerBackend.h"
 #include "Engine/Window/IWindow.h"
 
 #include "sw/config/ConfigConstants.h"

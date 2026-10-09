@@ -7,7 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/Console/DevCommandRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw
 {

@@ -12,8 +12,8 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Engine/Utility/TileMap/TileSetAsset.h"
-#include "Engine/Utility/Xml/TileMapXml.h"
+#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileSetAsset.h"
 
 struct ImDrawList;
 struct ImVec2;

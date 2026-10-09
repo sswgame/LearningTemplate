@@ -1,7 +1,7 @@
 /**
  * @file EditorTracyLauncher.h
  * @brief 에디터의 "Tracy 열기" — Tracy 출력을 켜고 같은 판(0.14.1) 외부 뷰어를 띄워 localhost 에 붙입니다(ImGui 없음).
- * @details 언리얼 에디터 → Unreal Insights 와 같은 방식입니다. Tracy 뷰어를 에디터 도킹 창으로 넣지 않는 이유는 `Source/Engine/Utility/Profiling/README.md`
+ * @details 언리얼 에디터 → Unreal Insights 와 같은 방식입니다. Tracy 뷰어를 에디터 도킹 창으로 넣지 않는 이유는 `Source/Engine/Profiling/README.md`
  *          ("에디터 안의 뷰어") 에 있습니다 — 뷰어는 자기 ImGui(판 고정) · capstone · freetype · zstd · nfd · curl … 를 끌고 와 한 프로세스에
  *          ImGui 두 벌을 만들거나 에디터의 ImGui 판을 묶습니다.
  */

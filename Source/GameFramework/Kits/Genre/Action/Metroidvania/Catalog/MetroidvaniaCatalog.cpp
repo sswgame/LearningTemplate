@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"

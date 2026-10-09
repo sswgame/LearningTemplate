@@ -101,7 +101,7 @@ HP 바와 데미지 숫자 같은 월드 공간 UI는 `WorldUI` 레이어에 둡
 
 ### 타일맵
 
-타일맵은 맵 XML의 `<tileLayer>` 와 타일셋 파일(`.tileset.xml`, `Utility/TileMap/TileSetAsset`)로 이루어집니다.
+타일맵은 맵 XML의 `<tileLayer>` 와 타일셋 파일(`.tileset.xml`, `TileMap/TileSetAsset`)로 이루어집니다.
 
 | 기능 | 유니티 | Godot | 이 엔진 |
 |---|---|---|---|

@@ -44,7 +44,7 @@ Pascal 형태로 남은 약어 폴더는 열네 곳이다(`Tools/vcpkg` 등 서�
 | 지금 | 바뀐 이름 | 따라 바뀌는 것 |
 |---|---|---|
 | `Online/Http` (GameFramework Base) | `HTTP` | include 경로 |
-| `Utility/Json` · `Utility/Xml` (Engine) | `JSON` · `XML` | include 경로(0-3 에서 `Serialization` 으로 옮기면 그 뒤 이름) |
+| `Serialization/Json` · `Serialization/Xml` (Engine) | `JSON` · `XML` | include 경로(0-3 에서 `Serialization` 으로 옮기면 그 뒤 이름) |
 | `Kits/Rpg` · `Rpg/WitcherRpg` · `Test/.../Kits/Rpg` | `RPG` · `WitcherRPG` | 키트 모듈 `GF_WitcherRpg` → `GF_WitcherRPG`, 매니페스트 · DLL · 게임의 모듈 표(`SWGame.module.json`) |
 | `Rpg/ClassicJrpg` | `ClassicJRPG` | 모듈 `GF_ClassicJRPG` |
 | `Strategy/TacticsSrpg` | `TacticsSRPG` | 모듈 `GF_TacticsSRPG` |

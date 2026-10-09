@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw
 {

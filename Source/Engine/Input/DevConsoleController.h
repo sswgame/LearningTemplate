@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Utility/Console/DevConsole.h"
+#include "Engine/Console/DevConsole.h"
 
 #if SW_DEV_COMMANDS_ENABLED
 

@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 namespace sw
 {

@@ -126,7 +126,7 @@ LOD나 이웃 LOD가 바뀐 청크만 메시를 다시 만들어 `MeshInstanceBa
 
 쇼케이스를 Release, 1280×720에서 측정한 값입니다. 식생 인스턴스 19,640개와 셀 배치 283개를 로드할 때 46 ms에 계산하고, 씬 인스턴스화는 71~87 ms 걸립니다.
 DX12 프레임은 p50 2.6 ms, p99 3.4~8.4 ms이고 Vulkan은 p50 3.7 ms입니다. GPU가 병목이며, 가장 큰 패스는 그림자 패스(p50 1.4 ms)입니다.
-그림자를 끈 풀도 정점 셰이더는 실행되기 때문입니다. 측정 방법은 [Profiling/README.md](../Utility/Profiling/README.md)에 있습니다.
+그림자를 끈 풀도 정점 셰이더는 실행되기 때문입니다. 측정 방법은 [Profiling/README.md](../Profiling/README.md)에 있습니다.
 
 ## 확장하는 법 — 물리 엔진에 연결하기
 

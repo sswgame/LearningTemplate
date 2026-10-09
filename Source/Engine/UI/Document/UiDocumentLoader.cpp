@@ -11,12 +11,12 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 #include "Engine/UI/Core/PanelWidget.h"
 #include "Engine/UI/Core/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
 #include "Engine/UI/Widgets/UserWidget.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 namespace sw
 {

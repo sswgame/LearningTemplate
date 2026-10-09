@@ -50,6 +50,8 @@ class MoveStep:
     listMove: tuple[tuple[str, str], ...]
     listTextReplace: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     listTestMove: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    #: 참이면 `Engine/` 접두 없는 짧은 경로(모듈 문서의 `Physics/AABB`)도 이동 표대로 고친다.
+    bLoosePath: bool = False
 
 
 #: 옛 이름을 기록으로 남기는 파일 — 치환하지 않는다(이 스크립트의 표도).
@@ -101,6 +103,7 @@ _kMapStep: dict[int, MoveStep] = {
             (r"(?<![\w/])Utility/Xml/TileMapXml", "TileMap/TileMapXml"),
             (r"(?<![\w/])Utility/(TileMap|Console|Profiling)(?![\w])", r"\1"),
             (r"(?<![\w/])Utility/(Xml|Json)(?![\w])", r"Serialization/\1"),
+            (r"(?<=\{CMAKE_CURRENT_SOURCE_DIR\}/)Utility/Profiling/", "Profiling/"),
         ),
         (
             ("Test/EngineTest/Utility/TestJsonDocument.cpp", "Test/EngineTest/Serialization/TestJsonDocument.cpp"),
@@ -113,6 +116,63 @@ _kMapStep: dict[int, MoveStep] = {
             ("Test/EngineTest/Utility/TestMemoryBudgetMonitor.cpp", "Test/EngineTest/Profiling/TestMemoryBudgetMonitor.cpp"),
             ("Test/EngineTest/Utility/TestProfilerBackend.cpp", "Test/EngineTest/Profiling/TestProfilerBackend.cpp"),
         ),
+    ),
+    6: MoveStep(
+        "이름 정리 — HTTP 는 Observability 한 곳, UI/Screens 를 UI/Screen 에, Core 와 겹치는 하위 폴더 이름은 Base",
+        (
+            ("Telemetry/HttpClient", "Observability/HttpClient"),
+            ("UI/Screens", "UI/Screen"),
+            ("Serialization/Core", "Serialization/Base"),
+            ("UI/Core", "UI/Base"),
+        ),
+        bLoosePath=True,
+    ),
+    7: MoveStep(
+        "큰 평평한 폴더를 하위 폴더로 — Physics · Resource · Animation · Input",
+        (
+            ("Physics/AABB", "Physics/Collision/AABB"),
+            ("Physics/CollisionLayers", "Physics/Collision/CollisionLayers"),
+            ("Physics/ContinuousCollision", "Physics/Collision/ContinuousCollision"),
+            ("Physics/PhysicsContact", "Physics/Collision/PhysicsContact"),
+            ("Physics/PhysicsPairFilter", "Physics/Collision/PhysicsPairFilter"),
+            ("Physics/PhysicsQuery", "Physics/Collision/PhysicsQuery"),
+            ("Physics/PhysicsShape", "Physics/Collision/PhysicsShape"),
+            ("Physics/PhysicsAsset", "Physics/Asset/PhysicsAsset"),
+            ("Physics/PhysicsRagdoll", "Physics/Asset/PhysicsRagdoll"),
+            ("Resource/PackCompressionUtil", "Resource/Pack/PackCompressionUtil"),
+            ("Resource/ResourcePackManager", "Resource/Pack/ResourcePackManager"),
+            ("Resource/ResourcePackReader", "Resource/Pack/ResourcePackReader"),
+            ("Resource/ResourcePackTypes", "Resource/Pack/ResourcePackTypes"),
+            ("Resource/DdsFormat", "Resource/Image/DdsFormat"),
+            ("Resource/DdsLoader", "Resource/Image/DdsLoader"),
+            ("Resource/ImageFileWriter", "Resource/Image/ImageFileWriter"),
+            ("Resource/IAssetCache", "Resource/Cache/IAssetCache"),
+            ("Resource/SharedAssetTable", "Resource/Cache/SharedAssetTable"),
+            ("Resource/WeakInternCache", "Resource/Cache/WeakInternCache"),
+            ("Resource/WeakInternTable", "Resource/Cache/WeakInternTable"),
+            ("Animation/SpriteClipAsset", "Animation/Sprite/SpriteClipAsset"),
+            ("Animation/SpriteClipCache", "Animation/Sprite/SpriteClipCache"),
+            ("Animation/SpriteClipPlayable", "Animation/Sprite/SpriteClipPlayable"),
+            ("Animation/AnimGraphAsset", "Animation/Graph/AnimGraphAsset"),
+            ("Animation/AnimGraphPlayer", "Animation/Graph/AnimGraphPlayer"),
+            ("Animation/BlendSpace", "Animation/Graph/BlendSpace"),
+            ("Animation/BlendCurve", "Animation/Graph/BlendCurve"),
+            ("Animation/Skeleton", "Animation/Skeletal/Skeleton"),
+            ("Animation/SkeletonBoneLod", "Animation/Skeletal/SkeletonBoneLod"),
+            ("Animation/Pose", "Animation/Skeletal/Pose"),
+            ("Animation/DualQuaternion", "Animation/Skeletal/DualQuaternion"),
+            ("Input/InputMap", "Input/Map/InputMap"),
+            ("Input/InputMapCombo", "Input/Map/InputMapCombo"),
+            ("Input/InputMapEvaluate", "Input/Map/InputMapEvaluate"),
+            ("Input/InputMapGlyph", "Input/Map/InputMapGlyph"),
+            ("Input/InputMapSerialization", "Input/Map/InputMapSerialization"),
+            ("Input/InputKeyMap", "Input/Map/InputKeyMap"),
+            ("Input/IVirtualInputSource", "Input/Virtual/IVirtualInputSource"),
+            ("Input/VirtualInputScript", "Input/Virtual/VirtualInputScript"),
+            ("Input/VirtualJoystick", "Input/Virtual/VirtualJoystick"),
+            ("Input/InputReplay", "Input/Virtual/InputReplay"),
+        ),
+        bLoosePath=True,
     ),
 }
 
@@ -203,6 +263,9 @@ def runStepInternal(root: Path, stepNumber: int, bDryRun: bool) -> list[Path]:
         for source, target in listPhysicalMoveInternal(engineRoot, oldPath, newPath):
             moveInternal(root, source, target, bDryRun)
         listPattern.append((buildPatternInternal(oldPath, bStem), "Engine/" + newPath))
+        if step.bLoosePath:
+            listPattern.append((re.compile(r"(?<![\w/])" + re.escape(oldPath) + r"(?![\w])"), newPath))
+            listPattern.append((re.compile(r"(?<![\w])Engine/" + re.escape(oldPath) + r"(?![\w])"), "Engine/" + newPath))
     for oldPath, newPath in step.listTestMove:
         if (root / oldPath).is_file():
             moveInternal(root, root / oldPath, root / newPath, bDryRun)

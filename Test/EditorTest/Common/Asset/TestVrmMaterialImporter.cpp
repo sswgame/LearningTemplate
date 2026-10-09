@@ -5,7 +5,7 @@
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

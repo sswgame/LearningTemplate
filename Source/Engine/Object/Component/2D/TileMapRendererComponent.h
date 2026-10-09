@@ -15,9 +15,9 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Utility/TileMap/TileGridUtil.h"
-#include "Engine/Utility/TileMap/TileSetAsset.h"
-#include "Engine/Utility/Xml/TileMapXml.h"
+#include "Engine/TileMap/TileGridUtil.h"
+#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
 {

@@ -9,7 +9,7 @@
 #include "Engine/Animation/Rig/RigIkSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {

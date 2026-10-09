@@ -23,10 +23,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {

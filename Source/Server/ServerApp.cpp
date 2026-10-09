@@ -27,10 +27,10 @@
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Observability/OpsHttpEndpoint.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
-#include "Engine/Utility/Console/DevCommandRegistry.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #if SW_DEV_COMMANDS_ENABLED
-    #include "Engine/Utility/Console/DevConsole.h"
+    #include "Engine/Console/DevConsole.h"
 #endif
 
 #include "sw/config/ConfigConstants.h"

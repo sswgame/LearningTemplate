@@ -14,12 +14,12 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
-#include "Engine/Utility/Profiling/ProfilerBackend.h"
 
 namespace sw
 {

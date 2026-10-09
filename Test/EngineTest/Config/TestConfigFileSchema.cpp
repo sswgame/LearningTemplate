@@ -8,8 +8,8 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
 #include "TestFramework/TestFramework.h"
 

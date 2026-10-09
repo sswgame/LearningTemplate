@@ -19,9 +19,9 @@
 | 티어 | 폴더 |
 |---|---|
 | 0 | `Common`, `Compression`, `Observability` |
-| 1 | `Reflection`, `Utility` |
-| 2 | `Serialization` |
-| 3 | `Config`, `Physics` |
+| 1 | `Reflection`, `Console` |
+| 2 | `Utility`, `Serialization` |
+| 3 | `Profiling`, `TileMap`, `Config`, `Physics` |
 | 4 | `Resource`, `Spatial`, `Navigation` |
 | 5 | `Animation`, `Localization` |
 | 6 | `Audio`, `Dialogue`, `Text` |
@@ -79,8 +79,8 @@ py -3 Scripts/lint/report/RunEngineLayerGraph.py
 보고서는 폴더마다 계산한 티어와 그 폴더가 include하는 폴더를 보여 줍니다. 몇 줄만 옮기면 다음과 같습니다.
 
 ```text
-   5  Animation            -> Common, Reflection, Resource, Utility
-   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Spatial, Utility
+   5  Animation            -> Common, Reflection, Resource, Serialization
+   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Serialization, Spatial
 ```
 
 계산한 티어가 게이트의 테이블과 다르면 그 줄 끝에 `<- 게이트 표는 N` 이 붙습니다. 같은 티어끼리의 include는 허용되므로 계산 값이 테이블보다 높게 나올 수 있습니다.
@@ -154,7 +154,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 태스크와 엔진이 띄우는 스레드는 띄운 쪽의 태그를 이어받습니다. 태그를 읽는 것은 Debug의 `MemoryProfiler` 뿐이라 다른 구성에서는 비용이 없습니다.
 결과는 `-gv_profileFrames` 프로파일 보고와 에디터 프로파일러 패널에서 봅니다.
 
-`Utility/Profiling/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`)을 프레임 끝에 검사합니다. 모르는 태그나 키는 오류입니다.
+`Profiling/MemoryBudgetMonitor` 는 메모리 태그 예산(`Config/Engine/MemoryBudget.json`)을 프레임 끝에 검사합니다. 모르는 태그나 키는 오류입니다.
 `-gv_memoryReport` 표와 FrameProfiler 카운터도 이 클래스가 만듭니다(`EngineLoop::endFrame`).
 
 ### 에셋과 리소스
@@ -182,12 +182,12 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 ### 개발 콘솔과 개발 명령
 
-개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Utility/Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
+개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
 명령은 자기 `.cpp` 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록하고, 본문은 `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다.
 게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령도 소유 코드 옆에 있습니다 — `timescale` 은 `Utility/GameTimeScale.cpp`, `autoplay` 는 `Utility/GameAutoplay.cpp`, `debugdraw.category` 는 `Graphics/Debug/DebugDrawQueue.cpp`, 활성 씬을 찾는 `teleport` · `tag.add` · `anim.rewind*` 는 `Scene/SceneDevCommands.cpp`(컴포넌트 모델은 씬을 모른다).
 Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTest`(AppTest)가 바이너리를 검사해 확인합니다.
 
-`Utility/Console/DevConsole` 은 한 줄을 해석하고(`help`, `get`, `set`, 명령, `gv_이름 [값]`), 자동 완성과 기록을 맡습니다. 에디터 Output Log의 입력 줄과 게임 창 콘솔이 함께 씁니다.
+`Console/DevConsole` 은 한 줄을 해석하고(`help`, `get`, `set`, 명령, `gv_이름 [값]`), 자동 완성과 기록을 맡습니다. 에디터 Output Log의 입력 줄과 게임 창 콘솔이 함께 씁니다.
 게임 창 콘솔은 세 부분으로 나뉩니다. 판단은 `Input/DevConsoleController`, 그리기는 `Window/DevConsoleWindow.h` 의 `IDevConsoleWindow`, 입력은 `InputManager` 입니다.
 
 콘솔을 여는 키와 편집 키는 셸 입력 맵(`Resource/engine/input/default.input.xml`)의 액션이라 데이터로 바꿀 수 있고 패드로도 쓸 수 있습니다.
@@ -201,12 +201,14 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 상태 확인(`ServiceHealthRegistry`)은 틱 박동, 검사, 드레인 상태를 봅니다. 운영 HTTP 엔드포인트(`OpsHttpEndpoint`)는 GET `/metrics`, `/healthz`, `/readyz` 를 내고, 기본 바인드 주소는 127.0.0.1입니다.
 늘 켜져 있는 서버 누계라는 점에서, 개발용 프레임 구간인 `FrameProfiler` 나 동의를 받은 클라이언트 사건인 `Telemetry` 와 다릅니다.
 
-### Utility와 Module
+### Utility, Console, Profiling, TileMap, Module
 
-`Utility/` 에는 진짜 최하위 헬퍼만 둡니다. 키-값 파일, JSON, XML, `CommandStack`, 게임이 쓰고 에디터 HUD가 읽는 디버그 값(`DebugOverlayState`), 타일맵 해석이 여기 있습니다.
-데이터 XML의 "모르는 이름" 검사는 `XmlNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
+`Utility/` 에는 진짜 최하위 헬퍼만 둡니다. 키-값 파일, `CommandStack`, 게임이 쓰고 에디터 HUD가 읽는 디버그 값(`DebugOverlayState`)이 여기 있습니다.
+XML · JSON 문서(`XmlDocument`, `JsonDocument`, `ConfigKeyDoc`)는 `Serialization/Xml` · `Serialization/Json` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XmlNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
 게임 시간 배율(`GameTimeScale`, `gv_timeScale`)은 호스트가 프레임 시간에 곱합니다. 게임의 자동 플레이 스위치 계약(`GameAutoplay`, `SW_GAME_AUTOPLAY`)도 여기 있습니다.
-`Utility/Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Utility/Profiling/README.md)).
+`Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Profiling/README.md)).
+`Console/` 은 개발 명령 레지스트리와 콘솔 해석기, `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.
+배치 규칙의 타일 표면(`Environment/Placement/PlacementTileSurface`)은 타일 값을 받아 쓰는 어댑터라 `TileMap` 과 겹치지 않습니다.
 
 `Module/` 에는 모듈 DLL 쪽 계약만 둡니다.
 
@@ -315,7 +317,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 ## 함정과 주의
 
 **폴더를 옮기기 전에 옮길 파일의 include를 티어 표와 비교하세요.** 계획한 위치가 위 티어를 include하는 파일을 받을 수 없는 경우가 많습니다.
-2026년 10월의 폴더 정리에서 `Animation/`, `Utility/Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/PoseModifier/`, `Character/AnimNotify/` 와 한때의 `DevTools/` 로 갔습니다(`DevTools/` 는 뒤에 소유 코드 옆으로 나눠 없앴다).
+2026년 10월의 폴더 정리에서 `Animation/`, `Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/PoseModifier/`, `Character/AnimNotify/` 와 한때의 `DevTools/` 로 갔습니다(`DevTools/` 는 뒤에 소유 코드 옆으로 나눠 없앴다).
 
 **`destroy` 본문은 null을 안전하게 다뤄야 합니다.** `destroyAll` 은 초기화에 실패했거나 건너뛴 단계까지 모든 단계를 역순으로 돕니다.
 
@@ -377,4 +379,4 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 | [Automation](Automation/README.md) | 자동화 시나리오 |
 | [Telemetry](Telemetry/README.md) | 텔레메트리와 크래시 보고 |
 | [Module](Module/README.md) | 모듈 DLL 계약 |
-| [Utility/Profiling](Utility/Profiling/README.md) | 프로파일러 |
+| [Profiling](Profiling/README.md) | 프로파일러 |

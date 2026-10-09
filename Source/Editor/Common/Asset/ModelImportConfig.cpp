@@ -11,8 +11,8 @@
 #include "Engine/Animation/AnimJsonUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
 #include "Engine/Destruction/MeshFracture.h"
-#include "Engine/Utility/Json/ConfigKeyDoc.h"
-#include "Engine/Utility/Json/JsonDocument.h"
+#include "Engine/Serialization/Json/ConfigKeyDoc.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
 
 #include "sw/config/ConfigConstants.h"
 

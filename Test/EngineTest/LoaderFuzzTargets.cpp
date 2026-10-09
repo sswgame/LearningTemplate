@@ -26,11 +26,11 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Core/StringPool.h"
+#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/TileMap/TileMapXml.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 #include "Engine/Utility/KeyValueFile.h"
-#include "Engine/Utility/Xml/TileMapXml.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
 
 #include "EngineTest/ResourcePackTestUtil.h"
 

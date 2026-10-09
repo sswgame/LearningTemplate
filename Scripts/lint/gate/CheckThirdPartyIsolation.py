@@ -8,7 +8,7 @@
 모두 따라 바뀐다. 이 게이트가 그 경계를 지킨다.
 
   1) `#include <Jolt/...>` 는 `Source/Engine/Physics/Jolt/` 안에서만, `<box2d/...>` 는 `Source/Engine/Physics/Box2D/` 안에서만,
-     `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Utility/Profiling/Tracy/`
+     `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
      `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSsl/` 안에서만,
      `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/`
@@ -58,7 +58,7 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("Jolt", ("Jolt/",), ("Source/Engine/Physics/Jolt/",), ("joltphysics", "Jolt::Jolt")),
     LibraryRule("Box2D", ("box2d/",), ("Source/Engine/Physics/Box2D/",), ("box2d", "box2d::box2d")),
     LibraryRule("ACL", ("acl/", "rtm/"), ("Source/Engine/Animation/Codec/Acl/",), ("acl",)),
-    LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), ("Source/Engine/Utility/Profiling/Tracy/",), ("tracy", "Tracy::TracyClient")),
+    LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), ("Source/Engine/Profiling/Tracy/",), ("tracy", "Tracy::TracyClient")),
     LibraryRule(
         "Recast",
         ("recastnavigation/", "Recast", "Detour", "DebugDraw.h"),
@@ -75,8 +75,8 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
                 ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/CMakeLists.txt"),
 
     # 엔진 안의 형식 · 압축 · 셰이더 · 그래픽 API — 감싼 클래스 한 자리(XmlDocument · JsonDocument · 코덱 · ShaderCompiler · RHI 백엔드)에서만.
-    LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Utility/Xml/",), ()),
-    LibraryRule("nlohmann-json", ("nlohmann/",), ("Source/Engine/Utility/Json/", "Tools/ReflectionParser/"), ()),   # 파서는 Core 만 링크한다(Engine 순환 방지)
+    LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Serialization/Xml/",), ()),
+    LibraryRule("nlohmann-json", ("nlohmann/",), ("Source/Engine/Serialization/Json/", "Tools/ReflectionParser/"), ()),   # 파서는 Core 만 링크한다(Engine 순환 방지)
     LibraryRule("lz4", ("lz4.h", "lz4hc.h", "lz4frame.h"), ("Source/Engine/Compression/",), ()),
     LibraryRule("zstd", ("zstd.h", "zdict.h", "zstd_errors.h"), ("Source/Engine/Compression/",), ()),
     LibraryRule("zlib", ("zlib.h", "zconf.h"), ("Source/Engine/Compression/",), ()),
@@ -177,12 +177,12 @@ class CheckThirdPartyIsolationGate(LintGate):
     violationHeader = "서드파티 경계 위반"
     hint = (
         "  감싼 라이브러리는 엔진 인터페이스로만 씁니다 — 물리는 Engine/Physics/IPhysicsScene.h, 애니메이션 압축은 코덱 인터페이스,\n"
-        "  프로파일러는 SW_PROFILE_SCOPE · Engine/Utility/Profiling/IProfilerBackend.h.\n"
+        "  프로파일러는 SW_PROFILE_SCOPE · Engine/Profiling/IProfilerBackend.h.\n"
         "  내비메시는 Engine/Navigation/INavMesh.h.\n"
         "  암호 · TLS 는 Core/Network/Security/INetSecurityProvider.h(구현 GameFramework/Base/Online/Security/NetSecurity.h).\n"
         "  글리프 래스터화는 Engine/Text/IFontRasterizer.h(구현 Engine/Text/FreeType/).\n"
         "  SQL 은 GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h(드라이버는 Kits/Storage/SqlStore/Driver/<제품>/).\n"
-        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Utility/Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
+        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
         "  링크는 규칙마다의 CMakeLists(엔진 백엔드는 Source/Engine/CMakeLists.txt, 키트 드라이버는 그 키트의 CMakeLists)에만 둡니다."
     )
     selfTestCases = [

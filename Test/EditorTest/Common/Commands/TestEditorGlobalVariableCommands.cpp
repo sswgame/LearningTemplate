@@ -7,7 +7,7 @@
 
 #include "EditorTest/EditorTestServices.h"
 
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 #include "TestFramework/TestFramework.h"
 

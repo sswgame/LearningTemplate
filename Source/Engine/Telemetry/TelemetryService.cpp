@@ -9,10 +9,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
-#include "Engine/Utility/Json/JsonDocument.h"
 
 #include <algorithm>
 #include <cstdio>

@@ -73,7 +73,7 @@
 - [Physics](../Source/Engine/Physics/README.md) — [Jolt](../Source/Engine/Physics/Jolt/README.md)와 [Box2D](../Source/Engine/Physics/Box2D/README.md) 백엔드
 - [Spatial](../Source/Engine/Spatial/README.md), [Navigation](../Source/Engine/Navigation/README.md), [Environment](../Source/Engine/Environment/README.md)
 - [Character](../Source/Engine/Character/README.md), [Destruction](../Source/Engine/Destruction/README.md)
-- [UserSettings](../Source/Engine/UserSettings/README.md), [Telemetry](../Source/Engine/Telemetry/README.md), [Automation](../Source/Engine/Automation/README.md), [Utility/Profiling](../Source/Engine/Utility/Profiling/README.md)
+- [UserSettings](../Source/Engine/UserSettings/README.md), [Telemetry](../Source/Engine/Telemetry/README.md), [Automation](../Source/Engine/Automation/README.md), [Profiling](../Source/Engine/Profiling/README.md)
 
 ### 에디터 · 게임 쪽
 - [Source/Editor](../Source/Editor/README.md) — 에디터 모듈, 임포트, 패널을 더하는 법

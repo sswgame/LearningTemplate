@@ -7,7 +7,7 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Xml/XmlDocument.h"
+#include "Engine/Serialization/Xml/XmlDocument.h"
 
 /**
  * @file InputMapSerialization.cpp

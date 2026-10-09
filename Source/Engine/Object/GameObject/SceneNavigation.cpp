@@ -29,8 +29,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Utility/Profiling/FrameProfiler.h"
 
 namespace sw
 {
