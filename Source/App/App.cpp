@@ -5,12 +5,16 @@
 #include "App/EditorModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -51,6 +55,66 @@ namespace sw
             /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바 · 도크 다섯 칸 · 게임 뷰 툴바가 겹치지 않는 바닥입니다. */
             static constexpr uint32 kEditorMinClientWidth  = 960;
             static constexpr uint32 kEditorMinClientHeight = 540;
+        };
+
+        /** @brief 대화형 에디터 실행의 단언 대화상자입니다(Windows Debug — 언리얼 ensure 대화상자 자리). */
+        struct AppAssertDialogInternal
+        {
+#if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
+            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행이다(프로파일 · 에디터 자체 시험 — 이름으로 읽는다, App 은 모듈을 모른다). */
+            static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
+
+            /** @brief 사람이 지켜보지 않는 실행이면 true 입니다(-unattended · 시나리오 · 프로파일 · 자체 시험). */
+            static bool isAutomatedRun( const CommandLineManager& commandLine )
+            {
+                if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) || commandLine.isArgumentProvided( CommandLineArgument::SCENARIO ) )
+                    return true;
+                for ( const utf8* pName : kArrAutomationVariable )
+                {
+                    const GlobalVariableInfo* pVariable = engine::getGlobalVariableManager().findVariable( pName );
+                    if ( pVariable == nullptr )
+                        continue;
+                    const bool bSet = pVariable->_type == GlobalVariableType::String ? pVariable->getValueAsString().empty() == false
+                                                                                     : pVariable->getValueAsFloat() != 0.0f;
+                    if ( bSet )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 단언을 묻습니다. 디버거가 붙어 있으면 묻지 않고 멈춘다 — 개발자가 그 자리를 보려는 것이다. */
+            static internal::AssertAction showAssertDialog( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line )
+            {
+                if ( IsDebuggerPresent() != FALSE )
+                    return internal::AssertAction::Break;
+                StringBuilder<constant::kMaxBuffer8192> text;
+                text.appendFormat( "Assertion failed: %s\n%s\n\n%s(%d)\n\n"
+                                   "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
+                                   pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
+                const wstring wideText = StringUtil::utf8ToUtf16( text.c_str() );
+                const int32   result   = MessageBoxW( nullptr, wideText.c_str(), L"SW Engine - Assertion", MB_CANCELTRYCONTINUE | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND );
+                switch ( result )
+                {
+                    case IDCONTINUE:
+                        return internal::AssertAction::IgnoreOnce;
+                    case IDCANCEL:
+                        return internal::AssertAction::IgnoreAlways;
+                    default:
+                        return internal::AssertAction::Break;
+                }
+            }
+#endif
+
+            /** @brief 탐침 `App.AssertDialogInstalled` — 대화상자가 걸려 있으면 1 입니다. */
+            [[nodiscard]] static bool readAssertDialogInstalled( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+#if defined( SW_DEBUG )
+                outValue = internal::hasAssertDialog() ? 1.0 : 0.0;
+#else
+                outValue = 0.0;
+#endif
+                return true;
+            }
         };
 
         /**
@@ -175,6 +239,9 @@ namespace sw
      *          `fixedDelta` 로 둡니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_fixedFrameDelta, 0.0f, "프레임마다 흘릴 고정 시간(초, 0=실시간) — 결정적 실행" );
+
+    SW_AUTOMATION_PROBE( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when App installed the interactive assert dialog (never in automated runs)",
+                         &AppAssertDialogInternal::readAssertDialogInstalled );
 } // namespace sw
 
 namespace sw
@@ -414,6 +481,12 @@ namespace sw
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &App::getSceneViewCamera, this );
             // 에디터 창은 패널 배치가 겹치는 크기 밑으로 줄이지 않는다(언리얼 메인 프레임 · 유니티 에디터 창도 최소 크기를 둔다).
             _window->setMinimumClientSize( AppWindowInternal::kEditorMinClientWidth, AppWindowInternal::kEditorMinClientHeight );
+#if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
+            // 대화형 에디터 실행에서만 단언을 묻는다 — 단언 한 번에 미저장 편집을 잃지 않게. 자동 실행 · 시험은 지금처럼 멈춘다.
+            const CommandLineManager* pCommandLine = _engineLoop.getCommandLineManager();
+            if ( pCommandLine != nullptr && AppAssertDialogInternal::isAutomatedRun( *pCommandLine ) == false )
+                internal::setAssertDialog( &AppAssertDialogInternal::showAssertDialog );
+#endif
         }
 
         _backendSwap.initialize( &_engineLoop, _moduleHost.get(), _bEnableEditor == SW_TRUE );

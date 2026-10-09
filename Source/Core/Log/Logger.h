@@ -224,24 +224,25 @@ static_assert( static_cast<int32>( sw::LogLevel::Trace ) == SW_LOG_VERBOSITY_TRA
      * @note Debug 에서만 멈춥니다. 그 밖의 빌드는 아래에서 **로그만** 남깁니다. 배포본에서 단언이 통째로 사라지면 무엇이
      *       어긋났는지 알 길이 없기 때문입니다.
      */
-    #define SW_LOG_ASSERT( expr, ... )                                                           \
-        do                                                                                       \
-        {                                                                                        \
-            if ( !( expr ) )                                                                     \
-            {                                                                                    \
-                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                   \
-                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );       \
-                SW_LOG_INTERNAL( sw::LogLevel::Error,                                            \
-                                 "ASSERT failed\n"                                               \
-                                 "Expression : %#\n"                                             \
-                                 "Message    : %#\n"                                             \
-                                 "FileName   : %#\n"                                             \
-                                 "Function   : %#\n"                                             \
-                                 "Line       : %#",                                              \
-                                 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ ); \
-                if ( ::sw::internal::tryCaptureAssert() == false )                               \
-                    SW_DEBUG_BREAK();                                                            \
-            }                                                                                    \
+    #define SW_LOG_ASSERT( expr, ... )                                                              \
+        do                                                                                          \
+        {                                                                                           \
+            if ( !( expr ) )                                                                        \
+            {                                                                                       \
+                utf8 _assertMsg[sw::constant::kMaxBuffer8192];                                      \
+                sw::formatstring( _assertMsg, sw::constant::kMaxBuffer8192, __VA_ARGS__ );          \
+                SW_LOG_INTERNAL( sw::LogLevel::Error,                                               \
+                                 "ASSERT failed\n"                                                  \
+                                 "Expression : %#\n"                                                \
+                                 "Message    : %#\n"                                                \
+                                 "FileName   : %#\n"                                                \
+                                 "Function   : %#\n"                                                \
+                                 "Line       : %#",                                                 \
+                                 #expr, _assertMsg, __FILE__, SW_FUNCTION_SIGNATURE, __LINE__ );    \
+                if ( ::sw::internal::tryCaptureAssert() == false &&                                 \
+                     ::sw::internal::shouldBreakOnAssert( #expr, _assertMsg, __FILE__, __LINE__ ) ) \
+                    SW_DEBUG_BREAK();                                                               \
+            }                                                                                       \
         } while ( false )
 #else
     /**

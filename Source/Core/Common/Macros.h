@@ -93,6 +93,7 @@ namespace sw::internal
     /**
      * @brief 식이 거짓이면 그 식 · 자리를 stderr 에 남기고 디버거에서 멈춥니다. Debug 가 아니면 식째 사라집니다.
      * @note 시험이 단언 가로채기(`test::ScopedAssertCapture`)를 걸어 두었으면 멈추지 않고 세기만 합니다(`tryCaptureAssert`).
+     *       대화형 에디터 실행이면 App 이 건 대화상자가 멈출지 묻습니다(`shouldBreakOnAssert` — 이번만 · 디버거 · 이 자리 늘 무시).
      */
     #define SW_ASSERT( expr )                                                                                                 \
         do                                                                                                                    \
@@ -100,7 +101,8 @@ namespace sw::internal
             if ( !( expr ) )                                                                                                  \
             {                                                                                                                 \
                 ::sw::internal::printAssertFailure( #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
-                if ( ::sw::internal::tryCaptureAssert() == false )                                                            \
+                if ( ::sw::internal::tryCaptureAssert() == false &&                                                           \
+                     ::sw::internal::shouldBreakOnAssert( #expr, nullptr, __FILE__, static_cast<int32>( __LINE__ ) ) )        \
                     SW_DEBUG_BREAK();                                                                                         \
             }                                                                                                                 \
         } while ( false )
@@ -160,6 +162,34 @@ namespace sw::internal
     SW_API void endAssertCapture() noexcept;
     /** @brief 프로세스가 지금까지 가로챈 단언 수입니다(구간의 수는 시작과 끝의 차로 잰다). */
     [[nodiscard]] SW_API uint32 getCapturedAssertCount() noexcept;
+} // namespace sw::internal
+
+// ------------------------------------------------------------------------------
+// 9) 단언 대화상자 — 대화형 에디터 실행에서만 App 이 건다(언리얼 ensure 대화상자). 정의는 `Core/Common/Macros.cpp`.
+//    걸리지 않았으면(자동 실행 · 시험 · 에디터 없는 실행) 단언은 지금처럼 멈춘다.
+// ------------------------------------------------------------------------------
+namespace sw::internal
+{
+    /** @brief 대화상자가 고른 것입니다. */
+    enum class AssertAction : uint8
+    {
+        Break,        ///< 디버거로 멈춘다(디버거가 없으면 크래시 리포트)
+        IgnoreOnce,   ///< 이번만 넘긴다
+        IgnoreAlways, ///< 이 자리(파일 · 줄)는 이 실행 동안 넘긴다
+    };
+
+    /** @brief 대화상자 함수입니다. @p pMessage 는 `SW_LOG_ASSERT` 의 메시지(없으면 nullptr)입니다. */
+    using AssertDialogFunc = AssertAction ( * )( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line );
+
+    /** @brief 대화상자를 겁니다. nullptr 이면 뗍니다(늘 멈춘다). "늘 무시" 로 고른 자리도 함께 잊습니다. */
+    SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
+    /** @brief 대화상자가 걸려 있으면 true 입니다. */
+    [[nodiscard]] SW_API bool hasAssertDialog() noexcept;
+    /**
+     * @brief 단언이 멈춰야 하면 true 입니다. 이 자리가 "늘 무시" 면 false, 대화상자가 없으면 true(지금 동작), 있으면 묻는다.
+     * @details 대화상자는 한 번에 하나다 — 떠 있는 동안 다른 스레드의 단언은 잠금에서 기다린다.
+     */
+    [[nodiscard]] SW_API bool shouldBreakOnAssert( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line ) noexcept;
 } // namespace sw::internal
 #endif
 

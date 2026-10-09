@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 단언 대화상자(EditorPlus H1): 자동 실행(-scenario · -unattended)에는 대화상자를 걸지 않는다. 대화상자는 모달 창이라 시나리오가 누를 수 없으므로,
+  세 단추(이번만 · 디버거 · 이 자리 늘 무시)는 CoreTest 의 AssertDialogTest 가 시험 함수로 본다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/assertdialog.scenario.xml -dx12
+-->
+<Scenario name="editor.assertdialog" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="30"><DevCommand line="layout.reset"/></At>
+	<At frame="60">
+		<Expect probe="App.AssertDialogInstalled" equals="0"/>
+		<Pass/>
+	</At>
+</Scenario>

@@ -106,3 +106,6 @@ SW_REGISTER_ARGUMENT( SCENARIO_REPORT, "", false, "scenario-report" )
 
 // RenderDoc 을 RHI 디바이스보다 먼저 설치 경로에서 올린다(Dev 만 — `RenderDocCapture`). 없어도 RenderDoc UI 로 띄운 실행이면 캡처할 수 있다.
 SW_REGISTER_ARGUMENT( RENDERDOC, false, false, "renderdoc" )
+
+// 사람이 지켜보지 않는 실행이다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 지금처럼 멈춘다). App 을 띄우는 시험 · 스크립트가 준다.
+SW_REGISTER_ARGUMENT( UNATTENDED, false, false, "unattended" )

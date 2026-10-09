@@ -320,6 +320,10 @@ W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목�
 **`SW_ASSERT` 는 Release와 Shipping에서 사라지고, `SW_LOG_ASSERT` 는 Debug에서 `SW_DEBUG_BREAK` 까지 합니다.** 디버거가 없는 CI에서는 프로세스가 죽으므로, 방어 경로 테스트는 Release와 Shipping에서 합니다.
 배포 구성의 `SW_LOG_ASSERT` 는 진행하므로, 뒤 코드가 그 전제에 의존한다면 하드 단언을 씁니다.
 
+**대화형 에디터 실행의 단언은 묻습니다**(Windows Debug — 계속 · 디버거 · 이 자리 늘 무시, `internal::setAssertDialog` · `shouldBreakOnAssert`). App 이 에디터를 켠 실행에서만 대화상자를 걸고,
+`-unattended` · `-scenario` · 프로파일(`-gv_profileFrames` · `-gv_profileSeconds`) · 자체 시험(`-gv_editorSelfTest`)이면 걸지 않아 지금처럼 멈춥니다. App 을 띄우는 시험은 `-unattended` 를 줍니다(`AppTestUtil::launchApp`).
+시험의 가로채기(`ScopedAssertCapture`)가 대화상자보다 먼저이고, 대화상자는 한 번에 하나라 다른 스레드의 단언은 잠금에서 기다립니다. 시험 `AssertDialogTest`, 탐침 `App.AssertDialogInstalled`.
+
 **엔진이 만드는 스레드는 시작할 때 `ThreadCrashStack::initializeCurrentThread()` 를 부릅니다.** 빠뜨리면 스택 오버플로 덤프가 0바이트가 됩니다.
 Windows 덤프는 보고 스레드가 `PssCaptureSnapshot` 으로 씁니다. 살아 있는 자기 프로세스를 `MiniDumpWriteDump` 하면 로더 잠금에서 멈춥니다.
 보고 시한은 `setReportDeadline`(20초)이고, POSIX는 `alarm` 과 SIGALRM을 씁니다. 실물 확인은 `-gv_crashTest=1..5` 로 합니다.

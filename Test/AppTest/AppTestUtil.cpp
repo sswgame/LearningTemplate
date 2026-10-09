@@ -63,9 +63,10 @@ namespace test
         if ( executablePath.empty() )
             return false;
 
+        // 시험이 띄우는 App 은 사람이 지켜보지 않는다 — 에디터를 켜도 단언 대화상자를 걸지 않는다(Debug 단언은 멈춘다).
         sw::string command{ "\"" };
         command += executablePath;
-        command += "\" ";
+        command += "\" -unattended ";
         command += arguments;
         return outProcess.launch( command );
     }

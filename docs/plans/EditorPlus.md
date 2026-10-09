@@ -107,7 +107,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **4 캡처 · 디버그 · 품질** | G1 | 보기 모드 Normals · Depth · Overdraw | M | E3 | ★ |
 | | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
-| | H1 | assert 무시 대화상자 + `-unattended` | S | | ★ |
 | | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
 | | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
@@ -121,7 +120,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
-원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 22 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 5, 5 단계 4)입니다.
+원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 21 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 4, 5 단계 4)입니다.
 여기에 아이콘 단위 넷과 패널 점검의 단위 열둘(N5 처럼 작은 것은 다른 단위와 합쳐도 됩니다)이 더해집니다.
 
 ---
@@ -2201,123 +2200,6 @@ namespace sw
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 
-### H1 assert 무시 대화상자 + `-unattended` ★
-
-**목적.** Debug 에서 `SW_ASSERT` · `SW_LOG_ASSERT` 는 디버거가 없으면 `SW_DEBUG_BREAK` 로 프로세스가 죽는다 — 에디터에서 편집하다 한 번의 assert 로 미저장 편집을 잃는다(D8).
-
-**바꿀 것.**
-1) Core — `Core/Common/Macros.h` 의 Debug `SW_ASSERT`:
-```cpp
-    #define SW_ASSERT( expr )                                                                                                 \
-        do                                                                                                                    \
-        {                                                                                                                     \
-            if ( !( expr ) )                                                                                                  \
-            {                                                                                                                 \
-                static ::sw::internal::AssertSite s_swAssertSite{};                                                           \
-                ::sw::internal::printAssertFailure( #expr, __FILE__, static_cast<int32>( __LINE__ ), SW_FUNCTION_SIGNATURE ); \
-                if ( ::sw::internal::tryCaptureAssert() == false &&                                                           \
-                     ::sw::internal::shouldBreakOnAssert( s_swAssertSite, #expr, __FILE__, static_cast<int32>( __LINE__ ) ) )  \
-                    SW_DEBUG_BREAK();                                                                                         \
-            }                                                                                                                 \
-        } while ( false )
-```
-`Logger.h` 의 Debug `SW_LOG_ASSERT` 도 같은 두 줄(메시지 글을 대화상자에 넘긴다 — `shouldBreakOnAssert` 의 끝 인자 `_assertMsg`).
-2) `Core/Common/AssertSite.h`(새, Debug 만 쓰인다):
-```cpp
-namespace sw::internal
-{
-    /** @brief assert 한 자리의 상태입니다 — "이 자리는 늘 무시" 를 고르면 켜진다. 자리마다 함수 정적 하나(매크로가 둔다). */
-    struct AssertSite
-    {
-        std::atomic<uint8> _bIgnored{ 0 };
-    };
-
-    /** @brief 대화상자가 고른 것입니다. */
-    enum class AssertAction : uint8
-    {
-        Break,        ///< 디버거로 멈춘다(디버거가 없으면 크래시 리포트)
-        IgnoreOnce,   ///< 이번만 넘긴다
-        IgnoreAlways, ///< 이 자리는 이 실행 동안 넘긴다
-    };
-
-    /** @brief 대화상자 함수입니다. App 이 대화형 에디터 실행에서만 건다. */
-    using AssertDialogFunc = AssertAction ( * )( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line );
-
-    /** @brief 대화상자를 겁니다(nullptr 이면 뗀다 — 지금처럼 늘 멈춘다). */
-    SW_API void setAssertDialog( AssertDialogFunc pfnDialog ) noexcept;
-    /**
-     * @brief 멈춰야 하면 true 입니다. 이 자리가 늘 무시면 false, 대화상자가 없으면 true(지금 동작), 있으면 묻는다.
-     * @details 대화상자가 떠 있는 동안 다른 스레드의 assert 는 줄을 서서 기다린다(대화상자 하나만 — 잠금).
-     */
-    [[nodiscard]] SW_API bool shouldBreakOnAssert( AssertSite& site, const utf8* pExpression, const utf8* pFile, int32 line, const utf8* pMessage = nullptr ) noexcept;
-} // namespace sw::internal
-```
-`Macros.cpp` 에 구현(Debug 블록 안 — `s_pfnAssertDialog` 원자 포인터, 잠금 하나).
-3) App — `-unattended` 인자(`ArgumentList.xxx`: `SW_REGISTER_ARGUMENT( UNATTENDED, false, false, "unattended" )`). App 이 대화상자를 거는 조건:
-```cpp
-#if defined( SW_DEBUG ) && defined( SW_PLATFORM_WINDOWS )
-        // 대화형 에디터 실행에서만 assert 를 묻는다(언리얼 ensure 대화상자). 자동 실행(프로파일 · 시나리오 · 자체 시험 · -unattended) · 시험 실행 파일은 지금처럼 멈춘다.
-        const bool bAutomated = commandLineManager.isArgumentProvided( CommandLineArgument::UNATTENDED ) || FrameProfileSession::isRequested() ||
-                                AutomationRunner::isRequested() || EditorSelfTestRunner::isRequestedFromCommandLine();
-        if ( _bEnableEditor == SW_TRUE && bAutomated == false )
-            internal::setAssertDialog( &AppInternal::showAssertDialog );
-#endif
-```
-(`isRequested` 류 이름은 각 자리의 것 — `gv_profileFrames > 0` · 3 차 B2 의 `-scenario` · `gv_editorSelfTest`. 에디터 자체 시험 판정은 App 이 EditorModule 을 모르므로 `gv_editorSelfTest` 전역 변수를 이름으로 읽는다 — `GlobalVariableManager::findVariable( "gv_editorSelfTest" )`.)
-`AppInternal::showAssertDialog`:
-```cpp
-            static internal::AssertAction showAssertDialog( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line )
-            {
-                // 디버거가 붙어 있으면 묻지 않고 멈춘다 — 개발자가 그 자리를 보려는 것이다.
-                if ( IsDebuggerPresent() != FALSE )
-                    return internal::AssertAction::Break;
-                StringBuilder<constant::kMaxBuffer2048> text;
-                text.appendFormat( "Assertion failed: %s\n%s\n\n%s(%d)\n\n"
-                                   "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
-                                   pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
-                const wstring wideText = StringUtil::utf8ToUtf16( text.c_str() );
-                const int32 result = MessageBoxW( nullptr, wideText.c_str(), L"SW Engine - Assertion", MB_CANCELTRYCONTINUE | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND );
-                switch ( result )
-                {
-                    case IDCONTINUE:
-                        return internal::AssertAction::IgnoreOnce;
-                    case IDCANCEL:
-                        return internal::AssertAction::IgnoreAlways;
-                    default:
-                        return internal::AssertAction::Break;
-                }
-            }
-```
-`AppSmokeTest` · `SmokeTest` · 시나리오 실행(CTest)이 App 을 띄우는 자리에 `-unattended` 를 더한다(에디터를 켜는 것만 — 그래도 판정이 겹으로 막는다).
-**시험.** `AssertSiteTest`(CoreTest — Debug 에서만 의미가 있어 `#if defined( SW_DEBUG )` 안): 대화상자를 시험 함수로 걸고(IgnoreAlways 를 돌려주는) 같은 자리의 assert 를 두 번 → 대화상자 한 번만 불림 · 멈추지 않음;
-IgnoreOnce 면 두 번 불림; 대화상자가 없으면 `shouldBreakOnAssert` true; `ScopedAssertCapture` 가 걸려 있으면 대화상자를 부르지 않음(가로채기가 먼저).
-`CheckTestSuites`(CoreTest 에 Engine include 금지) — Core 만 쓴다.
-**확인 = 에디터 시나리오.** 대화상자는 모달 창이라 시나리오가 누를 수 없습니다. 시나리오는 반대쪽을 봅니다. `-unattended` 와 시나리오 실행에서 대화상자가 걸리지 않는지 탐침 `App.AssertDialogInstalled` 가 0 인지 봅니다.
-대화상자 자체의 세 단추는 `AssertSiteTest` 가 시험 함수로 봅니다.
-
-**남길 교훈.** `Source/Core/README.md` 함정과 주의 절에 한 줄: `- **대화형 에디터 실행의 assert 는 묻는다**(계속 · 디버거 · 늘 무시 — Windows Debug). 자동 실행은 -unattended(또는 프로파일 · 시나리오 · 자체 시험)로 지금처럼 멈춘다 — App 을 띄우는 시험은 -unattended 를 준다.`
-**커밋 메시지:**
-```
-코어 - 대화형 에디터 실행의 assert 를 묻는 대화상자(이번만 · 디버거 · 이 자리 늘 무시)와 -unattended
-
-문제점:
-- Debug 의 SW_ASSERT · SW_LOG_ASSERT 는 디버거가 없으면 SW_DEBUG_BREAK 로 프로세스가 죽었다. 에디터에서 assert 한 번에
-  미저장 편집을 잃었다.
-
-해결방안:
-- 자리마다 AssertSite(함수 정적 — "늘 무시" 원자 비트), shouldBreakOnAssert: 늘 무시면 넘김 · 대화상자가 없으면 멈춤(지금 동작) ·
-  있으면 묻는다(한 번에 하나, 다른 스레드는 기다림).
-- App 은 에디터를 켠 대화형 실행에서만 Windows MessageBoxW(Continue · Try Again · Cancel)를 건다. 디버거가 붙었으면 묻지 않고 멈춤.
-  -unattended · 프로파일 · 시나리오 · 자체 시험 실행은 걸지 않는다. App 을 띄우는 시험에 -unattended.
-
-결과:
-- AssertSiteTest 넷(CoreTest, Debug).
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** Core 헤더 → 전체 빌드(엔진 ABI 도장). `CoreTest --test_filter=AssertSiteTest.*`, 손으로: 개발 명령 하나(`gv_crashTest` 류 — 있으면 assert 를 일으키는 것)로 대화상자 셋 단추.
-**겹침:** 3 차 possess-auto B1 · B2(`-scenario` 판정 이름), tsan-jolt(TSan — `AssertSite` 는 원자라 깨끗).
-
 ### H2 `bugit` / `bugitgo` — 버그 리포트 한 방 ★
 
 **목적.** 버그를 남길 때 스크린샷 · 로그 · 씬 · 카메라 자리 · 입력을 손으로 모은다. 언리얼 `BugIt` 처럼 명령 하나로 폴더에 모으고 `BugItGo` 로 그 자리에 돌아간다(D13).
@@ -2419,7 +2301,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
-**겹침:** 3 차 B2(시나리오 자리 · `-scenario`), H1(`-unattended`), 2 차 단위 8(자체 시험 입력).
+**겹침:** 3 차 B2(시나리오 자리 · `-scenario`), 2 차 단위 8(자체 시험 입력). 시험 실행은 `-unattended` 를 준다(단언 대화상자를 걸지 않는다).
 ---
 
 ## 8. 단계 5 — 공용 편집 틀(커브 · 맵 검사 · 노드 그래프 · 패키징)
@@ -2680,11 +2562,11 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 21 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 20 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G4 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
-- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · G1(`FrameRendererUtil.h`) · G4(`FrameProfiler`) · H1(`Macros.h` · `Logger.h`) · T1 · T2(`ReflectionValidation.h`).
+- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · G1(`FrameRendererUtil.h`) · G4(`FrameProfiler`) · T1 · T2(`ReflectionValidation.h`).
 - **셰이더 쿠킹:** G1 뒤(`App.exe --cook-shaders` — 매니페스트 · 바이너리 커밋, 충돌 나면 고르지 말고 다시 쿠킹한다).
 - **re-configure:** C1 · C4 · C5 · P2(새 `REFLECT` 헤더) · T1.
 - **자체 시험 기대 목록**(`AppSmokeTest.EditorSelfTestsPassInsideTheEditor`)에 더하는 id: `themepark.extensionPanelDraws` · `themepark.layoutPreviewLoads` · `preferences.searchFiltersSections` ·
@@ -2713,7 +2595,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
     (b) 결속기: `themepark.extensionPanelDraws` 가 PASS(정점 > 0)면 맞다. 실패하면 확장 DLL 의 `GImGui` 가 null 이거나 다른 컨텍스트 — 결속 소스가 생성 · 링크됐는지(`<모듈>UiBinder.cpp`).
     (c) EditorModule SHARED 의 리눅스 링크(CI).
   - G1 Overdraw — RHI 에 가산 블렌드 상태가 있는지(없으면 ABI +1).
-  - H1 — 대화상자 중 다른 스레드의 assert 가 기다리는 동안 렌더 스레드가 멈추면(UI 프레임 대기) 대화상자가 그려지지 않을 수 있다 — MessageBox 는 자기 메시지 루프라 괜찮아야 한다.
   - R4 — 오브젝트가 수천 개인 씬(`-gv_benchMeshes=8000 -EnableEditor`)에서 빌보드 수집이 1 ms 를 넘는지.
 - O10(ThemePark 로 띄워도 editortest 씬)은 그 PC 의 로컬 상태일 수 있다 — 깨끗한 `Saved/` 로 다시 볼 것.
 
@@ -2729,7 +2610,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |
 | A1 | 에디터 README | 활성 팩 기본, 참조 찾기는 `EditorReferenceIndex` |
 | G4 | 프로파일링 README | 패널 타임라인과 Tracy 의 역할 |
-| H1 | `Source/Core/README.md` 함정과 주의 | assert 대화상자와 `-unattended` |
 | T1 | [백로그](../06_Backlog.md) 1-6 | `GameCurve` 는 `FloatCurve` 로 옮기지 않음(남은 일) |
 | R3 · R4 | 에디터 README | 컴포넌트 아이콘 테이블, 빌보드 클릭이 레이 피킹보다 먼저 |
 | 9절 로드맵 | [백로그](../06_Backlog.md) 1-4 | 이 문서를 지울 때 남은 로드맵 줄을 옮긴다 |
