@@ -113,7 +113,7 @@ namespace sw::editor
             ImGui::BeginDisabled();
         }
 
-        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f, 0.0f ) ) )
+        if ( ImGui::Button( "Apply All Overrides to Template", ImVec2( 220.0f * EditorThemeUtil::getDpiScale(), 0.0f ) ) )
         {
             if ( EditorToolAssetCommands::applyPrefabOverridesToTemplate( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Applied all instance overrides back to template %s", _selectedPrefabPath.c_str() );
@@ -123,7 +123,7 @@ namespace sw::editor
         }
 
         ImGui::SameLine();
-        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f, 0.0f ) ) )
+        if ( ImGui::Button( "Revert All Overrides", ImVec2( 160.0f * EditorThemeUtil::getDpiScale(), 0.0f ) ) )
         {
             if ( EditorToolAssetCommands::revertAllPrefabOverrides( PrefabPanelInternal::getPrefabTargetInstance(), _selectedPrefabPath ) )
                 SW_LOG_TRACE( "Reverted all overrides on %s", _selectedInstanceName.c_str() );
@@ -163,11 +163,11 @@ namespace sw::editor
     {
         if ( ImGui::BeginTable( "PrefabOverridesTable", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
         {
-            ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f );
-            ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f );
+            ImGui::TableSetupColumn( "Component", ImGuiTableColumnFlags_WidthFixed, 140.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthFixed, 120.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableSetupColumn( "Template Default", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableSetupColumn( "Instance Value", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f );
+            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 80.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableHeadersRow();
 
             for ( size_t overrideIndex = 0; overrideIndex < _listOverride.size(); ++overrideIndex )

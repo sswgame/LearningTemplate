@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -204,7 +205,7 @@ namespace sw::editor
                 }
 
                 static fixed_string<constant::kMaxBuffer64> s_searchBuf;
-                ImGui::SetNextItemWidth( 180.0f );
+                ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf.data(),
                                           s_searchBuf.capacity() );
                 EditorSelfTestMarks::note( "hierarchy.addComponent.search" );
@@ -508,7 +509,7 @@ namespace sw::editor
                 if ( renamingObjectId == objectId && EditorUtil::areSceneEditsAllowed() )
                 {
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth( 160.0f );
+                    ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
                     if ( bFocusRenameInput )
                     {
                         ImGui::SetKeyboardFocusHere();

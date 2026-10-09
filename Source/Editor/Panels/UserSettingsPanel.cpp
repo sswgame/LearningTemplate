@@ -6,6 +6,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -51,7 +52,7 @@ namespace sw::editor
             settings.collectSettings( category._id, listSetting );
             if ( ImGui::BeginTable( "##UserSettingsTable", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY ) )
             {
-                ImGui::TableSetupColumn( "Setting", ImGuiTableColumnFlags_WidthFixed, 240.0f );
+                ImGui::TableSetupColumn( "Setting", ImGuiTableColumnFlags_WidthFixed, 240.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::TableSetupColumn( "Value", ImGuiTableColumnFlags_WidthStretch );
                 for ( const UserSettingDef* pDef : listSetting )
                     drawSettingRow( settings, *pDef );

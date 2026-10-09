@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Gui/EditorCommandGui.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -83,7 +84,7 @@ namespace sw::editor
             FrameRenderer* pRenderer = EditorViewportToolbarInternal::findFrameRenderer();
 
             ImGui::BeginDisabled( pRenderer == nullptr );
-            ImGui::SetNextItemWidth( 85.0f );
+            ImGui::SetNextItemWidth( 85.0f * EditorThemeUtil::getDpiScale() );
             const utf8* arrModeLabel[] = { "Lit", "Unlit", "Wireframe" };
             int32       modeIndex =
                 ( pRenderer != nullptr ) ? static_cast<int32>( pRenderer->getViewMode() ) : static_cast<int32>( RenderViewMode::Lit );
@@ -110,7 +111,7 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "Cam:" );
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 70.0f );
+            ImGui::SetNextItemWidth( 70.0f * EditorThemeUtil::getDpiScale() );
             ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
         }
 

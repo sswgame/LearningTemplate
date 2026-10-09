@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -125,7 +126,7 @@ namespace sw::editor
     void UiPreviewPanel::drawToolbar( UiSystem& ui )
     {
         string path = _documentPath;
-        ImGui::SetNextItemWidth( 320.0f );
+        ImGui::SetNextItemWidth( 320.0f * EditorThemeUtil::getDpiScale() );
         if ( EditorWidgets::drawTextField( "##uipreviewdoc", path ) )
         {
             _documentPath = path;
@@ -138,7 +139,7 @@ namespace sw::editor
             _error.clear();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 190.0f );
+        ImGui::SetNextItemWidth( 190.0f * EditorThemeUtil::getDpiScale() );
         if ( ImGui::BeginCombo( "##uipreviewres", UiPreviewLogic::getResolution( _resolutionIndex )._pName ) )
         {
             for ( uint32 index = 0; index < UiPreviewLogic::getResolutionCount(); ++index )
@@ -149,7 +150,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 150.0f );
+        ImGui::SetNextItemWidth( 150.0f * EditorThemeUtil::getDpiScale() );
         if ( ImGui::BeginCombo( "##uipreviewtheme", _theme.empty() ? "(game theme)" : _theme.c_str() ) )
         {
             if ( ImGui::Selectable( "(game theme)", _theme.empty() ) )
@@ -161,13 +162,13 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        ImGui::SetNextItemWidth( 140.0f );
+        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "UI scale", &_uiScale, 0.5f, 2.0f, "%.2f" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f );
+        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "Text scale", &_textScale, 0.75f, 2.0f, "%.2f" );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 140.0f );
+        ImGui::SetNextItemWidth( 140.0f * EditorThemeUtil::getDpiScale() );
         ImGui::SliderFloat( "Safe zone", &_safeZone, 0.0f, 0.1f, "%.3f" );
         ImGui::SameLine();
         ImGui::Checkbox( "Layout rects", &_bShowLayout );

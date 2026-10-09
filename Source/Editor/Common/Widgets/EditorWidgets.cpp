@@ -75,7 +75,7 @@ namespace sw::editor
         ImGui::PushID( pLabel );
 
         ImGui::Columns( 2 );
-        ImGui::SetColumnWidth( 0, columnWidth );
+        ImGui::SetColumnWidth( 0, columnWidth * EditorThemeUtil::getDpiScale() );
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( pLabel );
         ImGui::NextColumn();
@@ -345,7 +345,7 @@ namespace sw::editor
         if ( bShowClear )
         {
             ImGui::SameLine();
-            if ( ImGui::Button( "X", ImVec2{ 22.0f, 0.0f } ) && pBuffer[0] != '\0' )
+            if ( ImGui::Button( "X", ImVec2{ 22.0f * EditorThemeUtil::getDpiScale(), 0.0f } ) && pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';
                 bChanged   = true;

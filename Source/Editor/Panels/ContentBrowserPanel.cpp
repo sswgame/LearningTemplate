@@ -455,7 +455,7 @@ namespace sw::editor
             const utf8*                     pPreview = "All";
             if ( _filterIndex < filterCount )
                 pPreview = pFilter[_filterIndex]._pLabel;
-            ImGui::SetNextItemWidth( 110.0f );
+            ImGui::SetNextItemWidth( 110.0f * EditorThemeUtil::getDpiScale() );
             if ( ImGui::BeginCombo( "##cb_type", pPreview ) )
             {
                 for ( uint32 filterIdx = 0; filterIdx < filterCount; ++filterIdx )
@@ -483,7 +483,7 @@ namespace sw::editor
             if ( _viewMode == ViewMode::Tiles )
             {
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( 80.0f );
+                ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
                 EditorWidgets::drawTooltip( "타일 썸네일의 크기를 조절합니다 (64px ~ 160px)" );
             }
@@ -783,7 +783,7 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##cb_list", 3, flags, ImGui::GetContentRegionAvail() ) )
         {
             ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthStretch );
-            ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 90.0f );
+            ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthFixed, 90.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableSetupColumn( "Path", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableHeadersRow();
 

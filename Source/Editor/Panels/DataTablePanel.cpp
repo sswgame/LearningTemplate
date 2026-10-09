@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -171,7 +172,7 @@ namespace sw::editor
         {
             const bool   bHasProject  = _selectedProjectIndex >= 0 && static_cast<size_t>( _selectedProjectIndex ) < _listLocalizationProject.size();
             const string projectLabel = bHasProject ? FileUtil::getFileNamePart( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] ) : string( "(no project)" );
-            ImGui::SetNextItemWidth( 220.0f );
+            ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
             if ( ImGui::BeginCombo( "##locProject", projectLabel.c_str() ) )
             {
                 for ( size_t projectIndex = 0; projectIndex < _listLocalizationProject.size(); ++projectIndex )
@@ -198,7 +199,7 @@ namespace sw::editor
                 reloadLocalization();
 
             ImGui::SameLine();
-            ImGui::SetNextItemWidth( 160.0f );
+            ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
             ImGui::InputTextWithHint( "##newKey", "New string key...", _newKeyBuffer.data(), _newKeyBuffer.capacity() );
             ImGui::SameLine();
             if ( ImGui::Button( "Add Key" ) && _newKeyBuffer.empty() == false && _localizationSheet._listTablePath.empty() == false )
@@ -312,7 +313,7 @@ namespace sw::editor
             ImGui::TableSetupColumn( sourceHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.28f );
             for ( const string& culture : _localizationSheet._listCulture )
                 ImGui::TableSetupColumn( culture.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
-            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f );
+            ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableHeadersRow();
 
             int32 deleteIndex = -1;

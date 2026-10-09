@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -72,8 +73,8 @@ namespace sw::editor
         // 명령 히스토리 리스트 테이블
         if ( ImGui::BeginTable( "HistoryTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY ) )
         {
-            ImGui::TableSetupColumn( "Step", ImGuiTableColumnFlags_WidthFixed, 50.0f );
-            ImGui::TableSetupColumn( "Status", ImGuiTableColumnFlags_WidthFixed, 30.0f );
+            ImGui::TableSetupColumn( "Step", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDpiScale() );
+            ImGui::TableSetupColumn( "Status", ImGuiTableColumnFlags_WidthFixed, 30.0f * EditorThemeUtil::getDpiScale() );
             ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthStretch );
             ImGui::TableHeadersRow();
 

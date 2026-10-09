@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -132,7 +133,7 @@ namespace sw::editor
             AnimationRewindRecorder::setRecordingRequested( bRecord );
         ImGui::SameLine();
         float32 seconds = AnimationRewindRecorder::getRequestedWindowSeconds();
-        ImGui::SetNextItemWidth( 120.0f );
+        ImGui::SetNextItemWidth( 120.0f * EditorThemeUtil::getDpiScale() );
         if ( ImGui::SliderFloat( "Window (s)", &seconds, 1.0f, 60.0f, "%.0f" ) )
             AnimationRewindRecorder::setRequestedWindowSeconds( seconds );
         ImGui::SameLine();

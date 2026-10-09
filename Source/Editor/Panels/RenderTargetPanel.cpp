@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -112,7 +113,7 @@ namespace sw::editor
         ImGui::TextDisabled( "%d targets", static_cast<int32>( _listTarget.size() ) );
 
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( 160.0f );
+        ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
         // 0 = 창에 맞춤. 원본 해상도로 보고 싶을 때만 배율을 준다(1:1 픽셀 검사).
         ImGui::SliderFloat( "Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
     }

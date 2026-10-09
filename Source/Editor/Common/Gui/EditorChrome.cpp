@@ -98,7 +98,7 @@ namespace sw::editor
         // 내용에 비해 작아 내부 Child 가 한 줄 높이로 눌리고, 그러면 덤프가 "내용 없음" 으로 읽는다.
         // 재는 것이 목적이므로 첫 사용에 넉넉한 크기를 준다(사용자가 줄이면 그대로 따른다).
         if ( EditorDockLayout::isOpeningAllPanels() )
-            ImGui::SetNextWindowSize( ImVec2{ 900.0f, 620.0f }, ImGuiCond_FirstUseEver );
+            ImGui::SetNextWindowSize( ImVec2{ 900.0f * EditorThemeUtil::getDpiScale(), 620.0f * EditorThemeUtil::getDpiScale() }, ImGuiCond_FirstUseEver );
 
         const bool bNoPadding = ( flags & EditorPanelFlags::NoPadding ) != EditorPanelFlags::None;
         if ( bNoPadding )

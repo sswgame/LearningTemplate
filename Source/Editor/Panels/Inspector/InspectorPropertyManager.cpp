@@ -10,6 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -91,8 +92,8 @@ namespace sw::editor
             template <typename DrawInputFn>
             AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, string& outDroppedPath )
             {
-                constexpr float32 kButtonWidth = 24.0f;
-                AssetFieldAction  action       = AssetFieldAction::None;
+                const float32    kButtonWidth = 24.0f * EditorThemeUtil::getDpiScale();
+                AssetFieldAction action       = AssetFieldAction::None;
 
                 ImGui::PushID( _pLabel );
                 const float32 itemWidth = ImGui::CalcItemWidth();
