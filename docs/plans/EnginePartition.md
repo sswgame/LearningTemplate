@@ -63,6 +63,17 @@ Engine 에는 티어 게이트가 있는데 Core 에는 `Network` 내부 방향�
 
 각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.
 
+### 0-4. ModuleHost 를 공통 부분과 App 전용 부분으로 (폴더 재배치 뒤)
+`Server` 가 `ModuleHost` 를 쓰는 이유는 정당하다 — 서버 대상 모듈 올리기(`ModuleCatalogLoader`), 게임 API 표를 바인딩해 게임 인스턴스 만들기, Dev 핫 리로드를 App 과 같은 코드로 하지 않으면 게임 쪽을 두 벌 짜야 한다.
+어색한 것은 한 클래스에 서버가 쓰지 않는 몫이 같이 있다는 점이다: `ModuleHost.h` 에 "editor" 가 35 번, `ModuleHost.cpp` 에 115 번이고, 에디터 인스턴스 바인딩 · 에디터 리로드 · `updateEditorUi` · `onWindowMessage` · RHI 교체(`reinitializeAfterRhiSwap`)가 서버 실행 파일에도 링크된다.
+서버 모드는 `_bDedicatedServer` 플래그와 `initializeDedicatedServer` 로 갈라 두었다.
+
+- 공통 `ModuleHost`: 카탈로그 해석, 이미지 올리기 · 내리기, 게임 API 바인딩 · 게임 업데이트 · 고정 업데이트, 게임 쪽 핫 리로드(`onBeforeGameReload` · `onAfterGameReload` · `onBeforeGameplayDllReload` …), 서버 시작(`initializeDedicatedServer`).
+- App 전용(`ModuleHost` 위에 얹는 클래스 — 이름 후보 `EditorModuleHost`): 에디터 인스턴스 · API 바인딩, 에디터 리로드와 오류 처리, `updateEditorUi` · `endEditorFrame` · `onWindowMessage`, RHI 교체 후 재초기화, 원본 임포트(`importAssetsWithEditorModule`).
+- 갈라진 뒤 `Server` 는 공통 부분만 링크하고, `_bDedicatedServer` 모드 플래그는 사라진다. 동작은 바뀌지 않는다.
+- 확인: 서버 · App 의 모듈 올리기 · 핫 리로드 · 임포트 시나리오(`ModuleHost` 시험, `SmokeTest`), 서버 Shipping 에 에디터 심볼이 없음(링크 맵).
+- 위험: 핫 리로드의 모듈 범위(`ModuleScope`)와 에디터 · 게임 이미지 쌍을 함께 다루는 `onBeforeCommitBatch` · `suspendModules` 가 두 클래스에 걸친다. 의존 방향은 App 전용 → 공통 하나뿐이어야 한다.
+
 ### 1. 작은 고리 풀기 (낮은 위험)
 - 게이트 티어 표를 실제에 맞춘다(`Text` · `DevTools`). `RunEngineLayerGraph.py` 출력이 기준.
 - `Automation ↔ UI`: 공유 타입(단계 레지스트리 · 시나리오 인터페이스)을 `Automation` 쪽 인터페이스로 두고 `UI` 가 단계를 등록하게 한다 — `Automation` 은 `UI` 를 include 하지 않는다.
