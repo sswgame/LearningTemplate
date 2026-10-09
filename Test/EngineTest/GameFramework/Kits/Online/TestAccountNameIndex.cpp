@@ -4,9 +4,9 @@
 #include "Engine/Network/EngineNetSecurity.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/Account/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Online/Server/Account/Rule/AccountNameIndex.h"
-#include "GameFramework/Kits/Online/Server/Account/Service/LoginService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Account/NetSecurityLoginCrypto.h"
+#include "GameFramework/Kits/Feature/Online/Server/Account/Rule/AccountNameIndex.h"
+#include "GameFramework/Kits/Feature/Online/Server/Account/Service/LoginService.h"
 
 #include "TestFramework/TestFramework.h"
 

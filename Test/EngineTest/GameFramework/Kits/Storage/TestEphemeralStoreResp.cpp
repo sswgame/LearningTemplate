@@ -6,7 +6,7 @@
 #include "EngineTest/GameFramework/Online/EphemeralStoreContract.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
-#include "GameFramework/Kits/Storage/Server/CacheStore/CacheStoreFactory.h"
+#include "GameFramework/Kits/Feature/Storage/Server/CacheStore/CacheStoreFactory.h"
 
 #include <thread>
 

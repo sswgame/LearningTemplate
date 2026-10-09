@@ -63,7 +63,7 @@
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
 | `Config/Server/*.json` | `ConfigManager::getConfig<ServerConfig>` (전용 서버 기동, `-server-config=<경로>` 로 바꾼다) — 전용 서버 기동. 비밀(DB 비밀번호 · 캐시 AUTH · 키 암호)은 파일에 쓰지 않는다 — `_secretEnvironment` 필드가 환경 변수 이름을 가리킨다 | **디스크에서 읽는다**(운영자가 고친다) — 없으면 Shipping 서버는 기동 실패 | 한다 | [ServerConfig](ServerConfig.md) |
-| `Config/Server/chat_banned_words.txt` | `ChatWordFilter::loadFile` (`GF_Server_Chat`) — 채팅 서비스 기동 | 디스크에서 읽는다(운영자가 고친다) — 저장소에는 시험 낱말만 | 한다 | [형식 설명](../../Source/GameFramework/Kits/Online/Server/Chat/ChatWordFilter.h) |
+| `Config/Server/chat_banned_words.txt` | `ChatWordFilter::loadFile` (`GF_Server_Chat`) — 채팅 서비스 기동 | 디스크에서 읽는다(운영자가 고친다) — 저장소에는 시험 낱말만 | 한다 | [형식 설명](../../Source/GameFramework/Kits/Feature/Online/Server/Chat/ChatWordFilter.h) |
 
 ## 빌드 · 쿠킹 계약
 

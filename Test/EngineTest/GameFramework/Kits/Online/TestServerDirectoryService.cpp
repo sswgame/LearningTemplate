@@ -7,7 +7,7 @@
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/ServerDirectory/ServerDirectoryService.h"
+#include "GameFramework/Kits/Feature/Online/Server/ServerDirectory/ServerDirectoryService.h"
 
 #include "TestFramework/TestFramework.h"
 

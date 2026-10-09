@@ -103,6 +103,8 @@ _kBaseFolderOrder: dict[str, int] = {
 
 # 키트 묶음 안에서 서버 · 클라이언트 전용 키트를 담는 폴더 이름(모듈 `GF_Server_<키트>` · `GF_Client_<키트>`).
 _kSideFolderNames: tuple[str, ...] = ("Server", "Client")
+# `Kits/` 바로 아래 성격 폴더 — 장르 키트(`Genre`)와 기능 키트(`Feature` — 네트워크 · 온라인 · 저장 · 월드 라이브러리).
+_kKitKinds: tuple[str, ...] = ("Genre", "Feature")
 # GameFramework 아래 어디서 include 해도 금지인 경로 앞부분.
 _kForbiddenPrefixes: tuple[str, ...] = ("Games/", "Editor/")
 
@@ -124,16 +126,20 @@ def classifyInternal(relativePath: str) -> tuple[str, str]:
         return "base", f"{parts[1]}/{parts[2]}" if len(parts) >= 4 else f"{parts[1]}/"
     if parts[0] != _kKitsFolderName:
         return "stray", parts[0]
-    # 서버 · 클라이언트 전용 키트는 한 단 더 깊다 — `Kits/<묶음>/Server/<키트>/…` 가 키트 `<묶음>/Server/<키트>` 하나다.
-    if len(parts) >= 5 and parts[2] in _kSideFolderNames:
-        return "kit", f"{parts[1]}/{parts[2]}/{parts[3]}"
-    if len(parts) == 4 and parts[2] in _kSideFolderNames:
-        return "kitGroup", parts[1]
-    if len(parts) >= 4:
-        return "kit", f"{parts[1]}/{parts[2]}"
-    if len(parts) == 3:
-        return "kitGroup", parts[1]
-    return "root", ""
+    if len(parts) <= 3:
+        return "root", ""
+    # 키트는 성격(`Genre` 장르 키트 · `Feature` 기능 키트) 아래 그룹 아래에 있다 — `Kits/<성격>/<그룹>/<키트>/…`.
+    if parts[1] not in _kKitKinds:
+        return "strayKit", parts[1]
+    kitParts = parts[2:]
+    # 서버 · 클라이언트 전용 키트는 한 단 더 깊다 — `<그룹>/Server/<키트>/…` 가 키트 `<그룹>/Server/<키트>` 하나다.
+    if len(kitParts) >= 4 and kitParts[1] in _kSideFolderNames:
+        return "kit", f"{kitParts[0]}/{kitParts[1]}/{kitParts[2]}"
+    if len(kitParts) == 3 and kitParts[1] in _kSideFolderNames:
+        return "kitGroup", kitParts[0]
+    if len(kitParts) >= 3:
+        return "kit", f"{kitParts[0]}/{kitParts[1]}"
+    return "kitGroup", kitParts[0]
 
 
 def isSameFeatureSharedKitInternal(sourceKit: str, destKit: str) -> bool:
@@ -171,6 +177,9 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
     gameFrameworkRelative = relativeFilePath[len(prefix):]
     sourceKind, sourceName = classifyInternal(gameFrameworkRelative)
     listViolation: list[str] = []
+    if sourceKind == "strayKit":
+        listViolation.append(f"{relativeFilePath}: 키트 성격 폴더 '{sourceName}' — 키트는 Kits/Genre/<그룹>/ 또는 Kits/Feature/<그룹>/ 아래에 둔다")
+        return listViolation
     if sourceKind == "stray":
         listViolation.append(f"{relativeFilePath}: GameFramework 최상위 폴더 '{sourceName}' — 기반은 Base/ 아래, 키트는 Kits/ 아래에 둔다")
         return listViolation
@@ -186,7 +195,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         if include.startswith("GameFramework/") is False:
             continue
         destKind, destName = classifyInternal(include[len("GameFramework/"):])
-        if destKind in ("root", "stray"):
+        if destKind in ("root", "stray", "strayKit"):
             continue
         if sourceKind == "base":
             if destKind in ("kit", "kitGroup"):
@@ -274,31 +283,38 @@ class CheckGameFrameworkLayersGate(LintGate):
         {
             "name": "기반이 키트를 include",
             "files": {
-                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Action/ActionCombat/Component/UnitStatsComponent.h"\n',
+                "Source/GameFramework/Base/Actor/Combat/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"\n',
+            },
+        },
+        {
+            # 성격 폴더(Genre · Feature) 없이 그룹을 Kits/ 바로 아래에 다시 만든다.
+            "name": "키트가 성격 폴더 밖에 있다",
+            "files": {
+                "Source/GameFramework/Kits/Action/Probe/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"\n',
             },
         },
         {
             "name": "키트가 다른 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Rpg/ClassicJrpg/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"\n',
+                "Source/GameFramework/Kits/Genre/Rpg/ClassicJrpg/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterBattle.h"\n',
             },
         },
         {
             "name": "서버 키트가 다른 서버 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Server/Account/AccountService.h"\n',
+                "Source/GameFramework/Kits/Feature/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Server/Account/AccountService.h"\n',
             },
         },
         {
             "name": "서버 키트가 다른 기능의 공유 키트를 include",
             "files": {
-                "Source/GameFramework/Kits/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Online/Account/AccountMessages.h"\n',
+                "Source/GameFramework/Kits/Feature/Online/Server/Trade/Probe.cpp": '#include "pch.h"\n\n#include "GameFramework/Kits/Feature/Online/Account/AccountMessages.h"\n',
             },
         },
         {
             "name": "키트가 게임을 include",
             "files": {
-                "Source/GameFramework/Kits/Action/ActionCombat/Probe.cpp": '#include "pch.h"\n\n#include "Games/Shooter3D/ShooterEnemyComponent.h"\n',
+                "Source/GameFramework/Kits/Genre/Action/ActionCombat/Probe.cpp": '#include "pch.h"\n\n#include "Games/Shooter3D/ShooterEnemyComponent.h"\n',
             },
         },
     ]

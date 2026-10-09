@@ -13,8 +13,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
 
 namespace sw
 {

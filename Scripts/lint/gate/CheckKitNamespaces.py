@@ -54,11 +54,11 @@ _kGlobalVariableRe = re.compile(r"\bSW_(?:TEST_)?GLOBAL_VARIABLE\w*\s*\(")
 
 
 def findKitNameInternal(relativePath: str) -> str:
-    """`Source/GameFramework/Kits/<묶음>/<키트>/...` 의 키트 이름입니다. 키트 밖이거나 묶음 공용 파일이면 빈 글자입니다."""
+    """`Source/GameFramework/Kits/<성격>/<묶음>/<키트>/...` 의 키트 이름입니다. 키트 밖이거나 묶음 공용 파일이면 빈 글자입니다."""
     if not relativePath.startswith(_kKitPrefix):
         return ""
     listPart = relativePath[len(_kKitPrefix):].split("/")
-    return listPart[1] if len(listPart) >= 3 else ""
+    return listPart[2] if len(listPart) >= 4 else ""
 
 
 def lineOfInternal(text: str, offset: int) -> int:
@@ -70,9 +70,9 @@ class CheckKitNamespacesGate(LintGate):
 
     #: `<키트 파일>:<멤버>` → 키트가 공유 상태를 값으로 들어도 되는 까닭.
     mapExemption = {
-        "Source/GameFramework/Kits/Action/BattleRoyale/Rule/BrMatch.h:_inventory": "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
-        "Source/GameFramework/Kits/Simulation/Farming/FarmShippingBin.h:_bin": "팔릴 목록(값 목록 — 가방이 아니다)",
-        "Source/GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h:_stock": "도시 건물의 물자(시뮬레이션 수치 — 플레이어가 드는 것이 아니다)",
+        "Source/GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrMatch.h:_inventory": "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
+        "Source/GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h:_bin": "팔릴 목록(값 목록 — 가방이 아니다)",
+        "Source/GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h:_stock": "도시 건물의 물자(시뮬레이션 수치 — 플레이어가 드는 것이 아니다)",
     }
 
     description = "키트를 섞을 때 부딪히는 이름 공간 · 소유 검사(상태 표 · 입력 · 설정 칸 · 세력 · 공유 상태 소유 · 빌린 알림 · 로그 범주 · 전역 변수)"
@@ -100,50 +100,50 @@ class CheckKitNamespacesGate(LintGate):
         {
             "name": "키트가 키를 직접 읽는다",
             "files": {
-                "Source/GameFramework/Kits/Simulation/Probe/ProbeSimulation.cpp": "void f( const InputManager& input ) { if ( input.isKeyDown( Key::W ) ) {} }\n",
+                "Source/GameFramework/Kits/Genre/Simulation/Probe/ProbeSimulation.cpp": "void f( const InputManager& input ) { if ( input.isKeyDown( Key::W ) ) {} }\n",
             },
         },
         {
             "name": "키트가 입력 맵 액션 이름을 박는다",
             "files": {
-                "Source/GameFramework/Kits/Action/Probe/ProbeController.cpp": "bool f( const InputMap& map ) { return map.wasActionTriggered( hashed_string( \"Jump\" ) ); }\n",
+                "Source/GameFramework/Kits/Genre/Action/Probe/ProbeController.cpp": "bool f( const InputMap& map ) { return map.wasActionTriggered( hashed_string( \"Jump\" ) ); }\n",
             },
         },
         {
             "name": "키트 설정 칸에 키트 접두가 없다",
             "files": {
-                "Source/GameFramework/Kits/Rpg/Probe/ProbeSave.cpp": "int32 f( const GameSettings& settings ) { return settings.getCustomPropertyInt( \"maxPartySize\", 6 ); }\n",
+                "Source/GameFramework/Kits/Genre/Rpg/Probe/ProbeSave.cpp": "int32 f( const GameSettings& settings ) { return settings.getCustomPropertyInt( \"maxPartySize\", 6 ); }\n",
             },
         },
         {
             "name": "키트 평판 세력에 키트 접두가 없다",
             "files": {
-                "Source/GameFramework/Kits/Simulation/ProbeSim/ProbeSimulation.h": "struct ProbeSettings { hashed_string _reputationFaction{ \"guests\" }; };\n",
+                "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeSimulation.h": "struct ProbeSettings { hashed_string _reputationFaction{ \"guests\" }; };\n",
             },
         },
         {
             "name": "키트 클래스가 공유 지갑을 값으로 든다",
             "files": {
-                "Source/GameFramework/Kits/Simulation/ProbeSim/ProbeShop.h": "class ProbeShop\n{\nprivate:\n    Wallet _wallet;\n};\n",
+                "Source/GameFramework/Kits/Genre/Simulation/ProbeSim/ProbeShop.h": "class ProbeShop\n{\nprivate:\n    Wallet _wallet;\n};\n",
             },
         },
         {
             "name": "키트가 빌린 일지의 알림을 꺼낸다",
             "files": {
-                "Source/GameFramework/Kits/Rpg/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
+                "Source/GameFramework/Kits/Genre/Rpg/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
             },
         },
         {
             "name": "두 파일이 같은 로그 범주를 쓴다",
             "files": {
-                "Source/GameFramework/Kits/Action/ProbeA/ProbeA.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
+                "Source/GameFramework/Kits/Genre/Action/ProbeA/ProbeA.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
                 "Source/Games/ProbeGame/ProbeGame.cpp": "SW_LOG_CALLER( \"Probe\" );\n",
             },
         },
         {
             "name": "키트가 전역 변수를 정의한다",
             "files": {
-                "Source/GameFramework/Kits/Casual/Probe/ProbeRace.cpp": "SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_probeLaps, 3, \"laps\" );\n",
+                "Source/GameFramework/Kits/Genre/Casual/Probe/ProbeRace.cpp": "SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_probeLaps, 3, \"laps\" );\n",
             },
         },
         {

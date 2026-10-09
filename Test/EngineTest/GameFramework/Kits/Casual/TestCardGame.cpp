@@ -2,14 +2,14 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Casual/CardGame/CardDeck.h"
-#include "GameFramework/Kits/Casual/CardGame/DeckBattle/DeckBattle.h"
-#include "GameFramework/Kits/Casual/CardGame/Klondike/KlondikeGame.h"
-#include "GameFramework/Kits/Casual/CardGame/Matgo/HwatuDeck.h"
-#include "GameFramework/Kits/Casual/CardGame/Matgo/MatgoGame.h"
-#include "GameFramework/Kits/Casual/CardGame/Poker/PokerHand.h"
-#include "GameFramework/Kits/Casual/CardGame/Poker/PokerTable.h"
-#include "GameFramework/Kits/Casual/CardGame/Uno/UnoGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/DeckBattle/DeckBattle.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/HwatuDeck.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerHand.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
 
 #include "TestFramework/TestFramework.h"
 

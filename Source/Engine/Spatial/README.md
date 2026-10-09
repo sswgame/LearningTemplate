@@ -71,5 +71,5 @@ grid.queryCircle( center._x, center._z, 30.0f, listNear ); // listNear 는 먼�
 ## 더 볼 곳
 
 - 테스트: `Test/EngineTest/Spatial/TestSpatial.cpp`
-- 쓰는 곳: `GameFramework/Kits/Network/NetMmo/MmoReplicator`(해시 그리드), `Engine/Character/Fit/SurfaceBvh`(BVH)
+- 쓰는 곳: `GameFramework/Kits/Feature/Network/NetMmo/MmoReplicator`(해시 그리드), `Engine/Character/Fit/SurfaceBvh`(BVH)
 - 상위 문서: [Engine/README.md](../README.md)

@@ -5,7 +5,7 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/Leaderboard/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Leaderboard/LeaderboardService.h"
 
 #include "TestFramework/TestFramework.h"
 

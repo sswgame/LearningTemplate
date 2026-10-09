@@ -6,9 +6,9 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Task/TaskManager.h"
 
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
-#include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Feature/Network/NetMmo/MmoReplicator.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestLoopbackCluster.h"

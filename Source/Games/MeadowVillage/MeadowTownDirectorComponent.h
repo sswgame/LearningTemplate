@@ -13,7 +13,7 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
 namespace sw
 {

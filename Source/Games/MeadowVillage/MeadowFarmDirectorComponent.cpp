@@ -15,7 +15,7 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/GameState/GameStateComponent.h"
-#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
 

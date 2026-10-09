@@ -7,7 +7,7 @@
 #include "GameFramework/Base/Online/Mail/ServiceMail.h"
 #include "GameFramework/Base/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/Leaderboard/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Leaderboard/LeaderboardService.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -7,10 +7,10 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsAiCommander.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
 
 #include "TestFramework/TestFramework.h"
 

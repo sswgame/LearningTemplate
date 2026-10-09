@@ -5,9 +5,9 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
-#include "GameFramework/Kits/Network/NetLockstep/RollbackSession.h"
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
+#include "GameFramework/Kits/Feature/Network/NetLockstep/RollbackSession.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestLoopbackCluster.h"

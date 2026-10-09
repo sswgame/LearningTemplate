@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/Social/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Social/GuildService.h"
 
 #include "TestFramework/TestFramework.h"
 

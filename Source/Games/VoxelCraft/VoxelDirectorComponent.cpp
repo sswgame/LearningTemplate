@@ -17,8 +17,8 @@
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Kits/Simulation/Voxel/Catalog/VoxelBlock.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelTerrain.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 
 #include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelChunkComponent.h"

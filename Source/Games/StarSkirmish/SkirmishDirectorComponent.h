@@ -21,8 +21,8 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsCatalog.h"
-#include "GameFramework/Kits/Strategy/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsSelection.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
 

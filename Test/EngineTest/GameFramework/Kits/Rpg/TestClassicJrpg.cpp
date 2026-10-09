@@ -9,10 +9,10 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgBattle.h"
-#include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgCatalog.h"
-#include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgEncounter.h"
-#include "GameFramework/Kits/Rpg/ClassicJrpg/JrpgParty.h"
+#include "GameFramework/Kits/Genre/Rpg/ClassicJrpg/JrpgBattle.h"
+#include "GameFramework/Kits/Genre/Rpg/ClassicJrpg/JrpgCatalog.h"
+#include "GameFramework/Kits/Genre/Rpg/ClassicJrpg/JrpgEncounter.h"
+#include "GameFramework/Kits/Genre/Rpg/ClassicJrpg/JrpgParty.h"
 
 #include "TestFramework/TestFramework.h"
 

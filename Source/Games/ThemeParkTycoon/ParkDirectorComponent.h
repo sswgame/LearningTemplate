@@ -23,10 +23,10 @@
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
-#include "GameFramework/Kits/Simulation/ThemePark/ParkLayout.h"
-#include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 
 namespace sw
 {

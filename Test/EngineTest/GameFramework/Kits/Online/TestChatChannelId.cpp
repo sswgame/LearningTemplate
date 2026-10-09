@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Online/Chat/ChatTypes.h"
+#include "GameFramework/Kits/Feature/Online/Chat/ChatTypes.h"
 
 #include "TestFramework/TestFramework.h"
 

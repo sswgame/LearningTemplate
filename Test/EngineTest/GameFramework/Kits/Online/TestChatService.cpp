@@ -13,8 +13,8 @@
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Chat/ChatProtocol.h"
-#include "GameFramework/Kits/Online/Server/Chat/ChatService.h"
+#include "GameFramework/Kits/Feature/Online/Chat/ChatProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Server/Chat/ChatService.h"
 
 #include "TestFramework/TestFramework.h"
 

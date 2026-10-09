@@ -9,8 +9,8 @@
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/Gameplay/Quest/QuestCatalog.h"
-#include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
 namespace sw
 {

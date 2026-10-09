@@ -2,8 +2,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrack.h"
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 
 #include "TestFramework/TestFramework.h"
 

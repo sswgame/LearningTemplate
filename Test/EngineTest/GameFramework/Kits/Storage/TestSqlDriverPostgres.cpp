@@ -3,7 +3,7 @@
 #include "EngineTest/GameFramework/Kits/Storage/PostgresTestSchema.h"
 #include "EngineTest/GameFramework/Kits/Storage/SqlDriverContract.h"
 
-#include "GameFramework/Kits/Storage/Server/SqlStore/Driver/Postgres/PostgresDriver.h"
+#include "GameFramework/Kits/Feature/Storage/Server/SqlStore/Driver/Postgres/PostgresDriver.h"
 
 // SQL 드라이버(PostgreSQL) — SQLite 와 같은 드라이버 계약 다섯 + 직렬화 실패(SERIALIZABLE 두 연결). 서버가 있어야 돈다(SW_TEST_POSTGRES_URL).
 

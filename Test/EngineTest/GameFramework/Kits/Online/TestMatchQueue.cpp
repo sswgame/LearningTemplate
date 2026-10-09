@@ -7,8 +7,8 @@
 #include "GameFramework/Base/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/Service/MatchQueueService.h"
-#include "GameFramework/Kits/Online/Server/Matchmaking/Service/MatchServerAgent.h"
+#include "GameFramework/Kits/Feature/Online/Server/Matchmaking/Service/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Matchmaking/Service/MatchServerAgent.h"
 
 #include "TestFramework/TestFramework.h"
 

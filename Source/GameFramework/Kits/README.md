@@ -12,16 +12,20 @@
 ## 머릿속 그림
 
 ```text
-Kits/<장르 그룹>/<키트>/            →  모듈 GF_<키트>          (클라이언트와 서버가 같이 쓴다)
-Kits/<장르 그룹>/Server/<키트>/     →  모듈 GF_Server_<키트>   (서버 전용)
-Kits/<장르 그룹>/Client/<키트>/     →  모듈 GF_Client_<키트>   (클라이언트 전용, 필요할 때만)
+Kits/<성격>/<그룹>/<키트>/            →  모듈 GF_<키트>          (클라이언트와 서버가 같이 쓴다)
+Kits/<성격>/<그룹>/Server/<키트>/     →  모듈 GF_Server_<키트>   (서버 전용)
+Kits/<성격>/<그룹>/Client/<키트>/     →  모듈 GF_Client_<키트>   (클라이언트 전용, 필요할 때만)
 ```
+
+**성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)이고,
+`Feature/` 는 장르를 가리지 않고 쓰는 기능 키트(`Network` · `Online` · `Storage`, 타일 월드와 복셀 월드의 `World`)입니다.
+경로만 다르고 모듈 이름은 `GF_<키트>` 그대로입니다. 성격 폴더 밖에 키트를 두면 `CheckGameFrameworkLayers` 가 실패시킵니다.
 
 **키트 하나는 폴더 하나입니다.** 폴더에는 매니페스트 `GF_<키트>.module.json` 과, `sw_addGameFrameworkKit(GF_<키트>)` 한 줄짜리 `CMakeLists.txt` 가 있습니다.
 키트 목록을 따로 적은 곳은 없습니다. `Kits/CMakeLists.txt` 가 매니페스트를 찾아 의존 순서대로 들어갑니다.
 
 **키트끼리는 서로 모릅니다.** 키트는 다른 키트를 include 하지 않고 링크하지도 않습니다. 둘 이상의 키트가 같은 것을 필요로 하면 기반으로 내립니다.
-같은 장르 그룹의 키트끼리 나눠 쓰는 헤더는 그룹 폴더(`Kits/<그룹>/x.h`)에 둘 수 있습니다. 예를 들어 `Kits/Network/NetKitMessageRange.h` 가 그렇습니다.
+같은 그룹의 키트끼리 나눠 쓰는 헤더는 그룹 폴더(`Kits/<성격>/<그룹>/x.h`)에 둘 수 있습니다. 예를 들어 `Kits/Feature/Network/NetKitMessageRange.h` 가 그렇습니다.
 
 **규칙은 보통 클래스입니다.** `FarmField`, `RtsWorld`, `CitySimulation` 은 컴포넌트가 아닙니다. 테스트는 씬 없이 이 클래스를 만들고 돌립니다.
 게임 쪽에서는 디렉터 컴포넌트가 이 클래스를 가지고 매 틱 돌립니다.
@@ -32,43 +36,43 @@ Kits/<장르 그룹>/Client/<키트>/     →  모듈 GF_Client_<키트>   (클�
 
 | 그룹 | 키트 | 장르 | 쓰는 게임 |
 |------|------|------|----------|
-| `Action` | `ActionCombat` | 근접 히트박스, 투사체, 유닛 스탯, 액션 룸 | |
+| `Genre/Action` | `ActionCombat` | 근접 히트박스, 투사체, 유닛 스탯, 액션 룸 | |
 | | `ActionAdventure` | 젤다 류 액션 어드벤처 | |
 | | `ActionPlatformer` | 스테이지형 액션 플랫포머 | |
 | | `Metroidvania` | 메트로배니아와 2D 소울라이크 | |
 | | `Fighting` | 철권 류 3D 격투 | |
 | | `MechArena` | 3인칭 팀 기체 대전 | |
 | | `BattleRoyale` | 배틀로얄 | |
-| `Horror` | `SurvivalHorror` | 생존 공포와 조사 | |
+| `Genre/Horror` | `SurvivalHorror` | 생존 공포와 조사 | |
 | | `AsymmetricHorror` | 1 대 4 비대칭 공포 | |
 | | `CoopScavenger` | 협동 수집 공포 | |
 | | `GhostHunt` | 루이지 맨션 류 유령 사냥 | |
-| `Rpg` | `Overworld` | 타일 걷기 필드와 존 | |
-| | `ClassicJrpg` | 클래식 JRPG | |
+| `Genre/Rpg` | `ClassicJrpg` | 클래식 JRPG | |
 | | `MonsterCollector` | 포켓몬 류 몬스터 수집 | |
 | | `OpenWorldWestern` | 오픈월드 서부극 | |
 | | `WitcherRpg` | 위쳐 류 RPG | |
-| `Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
+| `Genre/Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
 | | `CityBuilder` | 파라오 류 도시 건설 | NileCity |
 | | `TacticsSrpg` | 택틱스 SRPG | |
 | | `SideScrollConquest` | 횡스크롤 정복 | |
-| `Simulation` | `Farming` | 농장 생활 | HarvestValley, MeadowVillage |
+| `Genre/Simulation` | `Farming` | 농장 생활 | HarvestValley, MeadowVillage |
 | | `CreatureLife` | 생물 생활과 마을 | MeadowVillage |
 | | `RestaurantSim` | 식당 경영 | |
 | | `ThemePark` | 롤러코스터 타이쿤 | ThemeParkTycoon |
-| | `Voxel` | 마인크래프트 류 복셀 샌드박스 | VoxelCraft |
-| `Casual` | `CardGame` | 포커, 맞고, 솔리테어, 우노, 덱 빌딩 | |
+| `Genre/Casual` | `CardGame` | 포커, 맞고, 솔리테어, 우노, 덱 빌딩 | |
 | | `Rhythm` | 건반 리듬 | |
 | | `PartyArena` | 파티 아레나 | |
 | | `KartRacing` | 카트 레이싱 | |
-| `Network` | `NetClientServer` | 권위 서버 복제와 예측 | |
+| `Feature/Network` | `NetClientServer` | 권위 서버 복제와 예측 | |
 | | `NetLockstep` | 락스텝과 롤백 | |
 | | `NetTurnRelay` | 턴제 중계 | |
 | | `NetMmo` | 관심 영역 복제 | |
 | | `NetDestruction` | 파괴 상태 복제 | |
 | | `NetSimulation` | 한 프로세스 가상 서버 하니스 | |
-| `Online` | `Account` 외 10개 | 온라인 서비스 | [Online](../Base/Online/README.md) |
-| `Storage` | `SqlStore`, 서버 `CacheStore` | 서비스 저장 드라이버 | [Online](../Base/Online/README.md) |
+| `Feature/World` | `Overworld` | 타일 걷기 필드와 존 | |
+| | `Voxel` | 마인크래프트 류 복셀 샌드박스 | VoxelCraft |
+| `Feature/Online` | `Account` 외 10개 | 온라인 서비스 | [Online](../Base/Online/README.md) |
+| `Feature/Storage` | `SqlStore`, 서버 `CacheStore` | 서비스 저장 드라이버 | [Online](../Base/Online/README.md) |
 
 쓰는 게임이 비어 있는 키트는 테스트(`Test/EngineTest/GameFramework/Kits/`)만 씁니다. 그런 키트도 기반을 쓰는 방식은 같으므로, 새 게임을 만들 때 그대로 링크할 수 있습니다.
 
@@ -121,7 +125,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 
 ### 네트워크 키트
 
-네트워크 키트(`Kits/Network/`)는 장르별 동기화 방식입니다. 공통 전송 계층은 `Core/Network` 에 있고, 싱글 게임은 네트워크 키트를 링크하지 않습니다.
+네트워크 키트(`Kits/Feature/Network/`)는 장르별 동기화 방식입니다. 공통 전송 계층은 `Core/Network` 에 있고, 싱글 게임은 네트워크 키트를 링크하지 않습니다.
 슈터와 액션은 `NetClientServer`, RTS 와 격투는 `NetLockstep`, 카드와 보드는 `NetTurnRelay`, MMO 는 `NetMmo` 를 씁니다.
 
 메시지 첫 바이트의 범위는 키트마다 나뉘어 있습니다(`NetMessageRange`, `NetKitMessageRange.h`). 그래서 한 게임이 키트 둘을 같이 써도 메시지가 섞이지 않습니다.
@@ -139,7 +143,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 
 ### 새 키트를 만들 때
 
-1. 장르 그룹 아래 폴더를 만듭니다(`Kits/<그룹>/<키트>/`). 서버 전용이면 `Kits/<그룹>/Server/<키트>/` 입니다.
+1. 성격과 그룹 아래 폴더를 만듭니다(`Kits/Genre/<그룹>/<키트>/` · `Kits/Feature/<그룹>/<키트>/`). 서버 전용이면 `Kits/<성격>/<그룹>/Server/<키트>/` 입니다.
 2. 매니페스트 `GF_<키트>.module.json` 을 둡니다. `_kind` 는 `Kit`, `_listDependency` 에는 `GameFramework` 와 필요하면 같은 기능의 공유 키트, `_listTarget` 은 위 규칙대로 적습니다.
 3. `CMakeLists.txt` 에 `sw_addGameFrameworkKit(GF_<키트>)` 한 줄을 씁니다. 서버 키트는 `sw_linkSharedKit` 으로 공유 키트를 링크합니다.
 4. 규칙은 보통 클래스로 짜고, 테스트를 `Test/EngineTest/GameFramework/Kits/<그룹>/` 에 씬 없이 둡니다. 테스트 실행 파일은 켜진 키트를 레지스트리로 링크합니다.

@@ -10,9 +10,9 @@
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
-#include "GameFramework/Kits/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Kits/Horror/GhostHunt/GhostEncounter.h"
-#include "GameFramework/Kits/Horror/GhostHunt/GhostMansion.h"
+#include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
+#include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 
 #include "TestFramework/TestFramework.h"
 

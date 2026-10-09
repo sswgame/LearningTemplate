@@ -5,8 +5,8 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
-#include "GameFramework/Kits/Casual/Rhythm/RhythmChart.h"
-#include "GameFramework/Kits/Casual/Rhythm/RhythmPlaySession.h"
+#include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmChart.h"
+#include "GameFramework/Kits/Genre/Casual/Rhythm/RhythmPlaySession.h"
 
 #include "TestFramework/TestFramework.h"
 

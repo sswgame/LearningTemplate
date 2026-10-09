@@ -9,8 +9,8 @@
 #include "EngineTest/GameFramework/Online/EphemeralStoreContract.h"
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
-#include "GameFramework/Kits/Storage/Server/CacheStore/CacheStoreFactory.h"
-#include "GameFramework/Kits/Storage/Server/CacheStore/Driver/Resp/RespEphemeralStore.h"
+#include "GameFramework/Kits/Feature/Storage/Server/CacheStore/CacheStoreFactory.h"
+#include "GameFramework/Kits/Feature/Storage/Server/CacheStore/Driver/Resp/RespEphemeralStore.h"
 
 // RESP 휘발성 저장 — 시험 안 가짜 RESP 서버(루프백 스트림)에 계약 여덟을 돌린다(답이 1..3 바이트 조각으로 온다). 그리고 한 바이트 조각 ·
 // 끊김(기다리던 요청은 정확히 한 번 Unavailable) · 다시 연결 · 시한 · AUTH · TLS · 구독 연결이 끊긴 뒤 다시 구독 · 공장의 끝점 읽기. 결정적이고 CI 에서 돈다.

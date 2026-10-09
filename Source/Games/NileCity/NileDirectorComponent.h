@@ -24,8 +24,8 @@
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
-#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
 #include "Games/NileCity/NileCityPlanner.h"
 

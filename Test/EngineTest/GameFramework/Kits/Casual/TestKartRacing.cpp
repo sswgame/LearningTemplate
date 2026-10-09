@@ -5,11 +5,11 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Kits/Casual/KartRacing/Rule/KartAi.h"
-#include "GameFramework/Kits/Casual/KartRacing/Rule/KartGhost.h"
-#include "GameFramework/Kits/Casual/KartRacing/Rule/KartItems.h"
-#include "GameFramework/Kits/Casual/KartRacing/Rule/KartRace.h"
-#include "GameFramework/Kits/Casual/KartRacing/Rule/KartTrack.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAi.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -3,8 +3,8 @@
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Transport/NetEmulation.h"
 
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
-#include "GameFramework/Kits/Network/NetTurnRelay/TurnRelay.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 
 #include "TestFramework/TestFramework.h"
 

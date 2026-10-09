@@ -6,11 +6,11 @@
 
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Economy/Catalog/CurrencyCatalog.h"
-#include "GameFramework/Kits/Online/Economy/Catalog/OfferCatalog.h"
-#include "GameFramework/Kits/Online/Server/Economy/EconomyService.h"
-#include "GameFramework/Kits/Online/Server/Economy/Receipt/Provider/Fake/FakeReceiptValidator.h"
-#include "GameFramework/Kits/Online/Server/Economy/Receipt/ReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Catalog/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Server/Economy/EconomyService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Economy/Receipt/Provider/Fake/FakeReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/Server/Economy/Receipt/ReceiptValidator.h"
 
 #include "TestFramework/TestFramework.h"
 

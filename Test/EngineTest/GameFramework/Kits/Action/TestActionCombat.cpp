@@ -21,12 +21,12 @@
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/UI/Marker/DamageNumberComponent.h"
 #include "GameFramework/Base/UI/Marker/HealthBarComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/ActionCombatEvents.h"
-#include "GameFramework/Kits/Action/ActionCombat/Catalog/MonsterCatalog.h"
-#include "GameFramework/Kits/Action/ActionCombat/Component/MeleeHitboxComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/Component/ProjectileComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/Component/UnitStatsComponent.h"
-#include "GameFramework/Kits/Action/ActionCombat/Rule/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ProjectileComponent.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Component/UnitStatsComponent.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 
 #include "TestFramework/TestFramework.h"
 

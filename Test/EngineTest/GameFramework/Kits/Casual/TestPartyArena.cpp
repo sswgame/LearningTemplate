@@ -7,9 +7,9 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Casual/PartyArena/PartyItemSpawner.h"
-#include "GameFramework/Kits/Casual/PartyArena/PartyRoundSeries.h"
-#include "GameFramework/Kits/Casual/PartyArena/TrampolineArena.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
+#include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 
 #include "TestFramework/TestFramework.h"
 

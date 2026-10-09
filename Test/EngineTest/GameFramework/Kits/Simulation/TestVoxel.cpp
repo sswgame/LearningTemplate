@@ -5,13 +5,13 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Simulation/Voxel/Catalog/VoxelBlock.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelBody.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelHotbar.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelRaycast.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelTerrain.h"
-#include "GameFramework/Kits/Simulation/Voxel/Rule/VoxelWorld.h"
-#include "GameFramework/Kits/Simulation/Voxel/View/VoxelMesher.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
+#include "GameFramework/Kits/Feature/World/Voxel/View/VoxelMesher.h"
 
 #include "TestFramework/TestFramework.h"
 

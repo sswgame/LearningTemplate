@@ -31,7 +31,8 @@ from common import getProjectRoot, runGit, runProcess  # noqa: E402
 _kGameFrameworkRoot = "Source/GameFramework"
 _kTextSuffixes = {".h", ".hpp", ".inl", ".c", ".cpp", ".py", ".cmake", ".txt", ".md", ".json", ".xml", ".xxx", ".yml", ".yaml", ".ps1",
                   ".hlsl", ".hlsli", ".ini", ".toml"}
-_kTokenRe = re.compile(r"GameFramework/(?:Base|Kits)/[A-Za-z0-9_./-]*")
+# 시험 폴더(`Test/EngineTest/GameFramework/Kits/…`)는 소스 폴더를 따라 하지 않으므로 건드리지 않는다.
+_kTokenRe = re.compile(r"(?<!Test/)GameFramework/(?:Base|Kits)/[A-Za-z0-9_./-]*")
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp", ".c")
 
 
@@ -143,11 +144,23 @@ _kStep3: list[Dir | Files] = [
     filesInternal("Kits/Online/Server/Account", "Kits/Online/Server/Account/Rule", "AccountNameIndex LoginStoreLogic"),
 ]
 
+# ------------------------------------------------------------------------------
+# 4 단계 — 키트 그룹을 장르 키트(Kits/Genre/<그룹>/)와 기능 키트(Kits/Feature/<그룹>/)로 나눈다. 모듈 이름(GF_<키트>)은 그대로다.
+# 장르 그룹에 있던 기능 키트(타일 월드 Overworld · 복셀 Voxel)는 Feature/World 로 — 하위 폴더 줄을 그룹 줄보다 먼저 적는다.
+# ------------------------------------------------------------------------------
+_kStep4: list[Dir | Files] = [
+    Dir("Kits/Rpg/Overworld", "Kits/Feature/World/Overworld"),
+    Dir("Kits/Simulation/Voxel", "Kits/Feature/World/Voxel"),
+    *[Dir(f"Kits/{group}", f"Kits/Genre/{group}") for group in ("Action", "Casual", "Horror", "Rpg", "Simulation", "Strategy")],
+    *[Dir(f"Kits/{group}", f"Kits/Feature/{group}") for group in ("Network", "Online", "Storage")],
+]
+
 # 단계는 차례로 다시 돌린다 — 1 단계의 폴더 표(Base/World → Base/World/World)는 2 단계가 푼 뒤의 경로를 모른다.
 _kSteps: dict[int, list[Dir | Files]] = {
     1: _kStep1,
     2: _kStep2,
     3: _kStep3,
+    4: _kStep4,
 }
 
 
@@ -174,6 +187,9 @@ def buildMapInternal(listEntry: list[Dir | Files], setTracked: set[str]) -> tupl
                     continue
                 # 이 단계의 다른(또는 같은) 줄이 옮겨 둔 새 자리 안이면 옛 파일이 아니다(World → World/World 처럼 새 자리가 옛 자리 안).
                 if any(path.startswith(newDir + "/") for newDir in listNewDir):
+                    continue
+                # 앞 줄이 이미 옮긴 하위 폴더(Rpg/Overworld 를 Rpg 보다 먼저 적는다).
+                if path in mapFile:
                     continue
                 newPath = entry.new + path[len(entry.old):]
                 mapFile[path] = newPath

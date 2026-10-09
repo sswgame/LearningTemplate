@@ -73,8 +73,8 @@ def moduleOf(relative: str) -> str:
     parts = relative.split("/")
     if parts[0] != "Source":
         return parts[0]
-    if len(parts) > 4 and parts[1] == "GameFramework" and parts[2] == "Kits":
-        return "/".join(parts[1:5])
+    if len(parts) > 5 and parts[1] == "GameFramework" and parts[2] == "Kits":
+        return "/".join(parts[1:6])
     return "/".join(parts[1:3]) if len(parts) > 3 else parts[1]
 
 

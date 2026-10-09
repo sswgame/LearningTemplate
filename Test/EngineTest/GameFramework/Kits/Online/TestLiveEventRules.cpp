@@ -2,7 +2,7 @@
 // 빌드 · 지역 · 출시 비율(같은 계정은 늘 같은 쪽, 1 만 계정 중 비율만큼, 이벤트마다 다른 계정 집합), 규칙 밖 정의는 거절.
 #include "pch.h"
 
-#include "GameFramework/Kits/Online/Server/LiveOps/LiveEventRules.h"
+#include "GameFramework/Kits/Feature/Online/Server/LiveOps/LiveEventRules.h"
 
 #include "TestFramework/TestFramework.h"
 

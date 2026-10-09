@@ -12,12 +12,12 @@
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
-#include "GameFramework/Kits/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Kits/Action/Metroidvania/Rule/MetroAbilitySet.h"
-#include "GameFramework/Kits/Action/Metroidvania/Rule/MetroCharmLoadout.h"
-#include "GameFramework/Kits/Action/Metroidvania/Rule/MetroDuelist.h"
-#include "GameFramework/Kits/Action/Metroidvania/Rule/MetroMapState.h"
-#include "GameFramework/Kits/Action/Metroidvania/Rule/MetroSoulsState.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroCharmLoadout.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroDuelist.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroMapState.h"
+#include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroSoulsState.h"
 
 #include "TestFramework/TestFramework.h"
 

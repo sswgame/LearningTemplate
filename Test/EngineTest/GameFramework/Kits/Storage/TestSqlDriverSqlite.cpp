@@ -4,9 +4,9 @@
 
 #include "EngineTest/GameFramework/Kits/Storage/SqlDriverContract.h"
 
-#include "GameFramework/Kits/Storage/SqlStore/Driver/Sqlite/SqliteDriver.h"
-#include "GameFramework/Kits/Storage/SqlStore/Sql/SqlConnectionPool.h"
-#include "GameFramework/Kits/Storage/SqlStore/Sql/SqlDriverRegistry.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Driver/Sqlite/SqliteDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Sql/SqlConnectionPool.h"
+#include "GameFramework/Kits/Feature/Storage/SqlStore/Sql/SqlDriverRegistry.h"
 
 #include <thread>
 

@@ -9,7 +9,7 @@
  */
 #pragma once
 #include "GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.h"
-#include "GameFramework/Kits/Simulation/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 
 namespace sw
 {

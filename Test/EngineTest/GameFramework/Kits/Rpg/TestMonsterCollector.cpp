@@ -6,10 +6,10 @@
 
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterBattle.h"
-#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
-#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterInstance.h"
-#include "GameFramework/Kits/Rpg/MonsterCollector/MonsterTrainerAi.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterBattle.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterInstance.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterTrainerAi.h"
 
 #include "TestFramework/TestFramework.h"
 

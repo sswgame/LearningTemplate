@@ -1,7 +1,7 @@
 // 관계 규칙 — 신청 · 서로 신청 · 수락 · 거절 · 지우기 · 막기(상대 줄 지움, 서로 막음은 둠) · 나를 막은 사람에게 신청은 조용히 Ok, 상한(친구 · 받은 신청 · 보낸 신청 · 막음).
 #include "pch.h"
 
-#include "GameFramework/Kits/Online/Server/Social/SocialLinkRules.h"
+#include "GameFramework/Kits/Feature/Online/Server/Social/SocialLinkRules.h"
 
 #include "TestFramework/TestFramework.h"
 

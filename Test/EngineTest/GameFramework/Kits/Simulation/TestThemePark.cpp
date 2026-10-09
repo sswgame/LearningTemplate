@@ -7,8 +7,8 @@
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
-#include "GameFramework/Kits/Simulation/ThemePark/ThemePark.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 
 #include "TestFramework/TestFramework.h"
 

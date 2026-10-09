@@ -7,8 +7,8 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
-#include "GameFramework/Kits/Network/NetMmo/MmoReplicator.h"
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetMmo/MmoReplicator.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 

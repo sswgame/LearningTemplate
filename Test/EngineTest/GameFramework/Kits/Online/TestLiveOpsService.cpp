@@ -6,7 +6,7 @@
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/LiveOps/LiveOpsService.h"
+#include "GameFramework/Kits/Feature/Online/Server/LiveOps/LiveOpsService.h"
 
 #include "TestFramework/TestFramework.h"
 

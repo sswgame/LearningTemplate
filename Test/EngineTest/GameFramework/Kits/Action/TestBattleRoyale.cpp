@@ -9,12 +9,12 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Catalog/BrCatalog.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Rule/BrDrop.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Rule/BrGear.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Rule/BrLoot.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Rule/BrMatch.h"
-#include "GameFramework/Kits/Action/BattleRoyale/Rule/BrZone.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BrCatalog.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrDrop.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrGear.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrLoot.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrMatch.h"
+#include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrZone.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -11,11 +11,11 @@
 #include "GameFramework/Base/World/Environment/WeatherSystem.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
-#include "GameFramework/Kits/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
-#include "GameFramework/Kits/Horror/CoopScavenger/Rule/ScavengerCarry.h"
-#include "GameFramework/Kits/Horror/CoopScavenger/Rule/ScavengerExpedition.h"
-#include "GameFramework/Kits/Horror/CoopScavenger/Rule/ScavengerFacility.h"
-#include "GameFramework/Kits/Horror/CoopScavenger/Rule/ScavengerQuota.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerExpedition.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
+#include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 
 #include "TestFramework/TestFramework.h"
 

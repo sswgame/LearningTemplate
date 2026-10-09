@@ -11,11 +11,11 @@
 
 #include "Engine/Common/EngineServices.h"
 
-#include "GameFramework/Kits/Network/NetClientServer/ClientPrediction.h"
-#include "GameFramework/Kits/Network/NetClientServer/LagCompensation.h"
-#include "GameFramework/Kits/Network/NetClientServer/NetSnapshot.h"
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ClientPrediction.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/LagCompensation.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 
 #include "TestFramework/TestFramework.h"
 

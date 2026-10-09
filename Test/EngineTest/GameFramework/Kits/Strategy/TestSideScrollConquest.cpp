@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestCatalog.h"
-#include "GameFramework/Kits/Strategy/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
 
 #include "TestFramework/TestFramework.h"
 

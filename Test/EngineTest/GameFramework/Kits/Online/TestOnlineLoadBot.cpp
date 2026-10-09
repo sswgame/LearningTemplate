@@ -4,8 +4,8 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "GameFramework/Kits/Online/Chat/ChatProtocol.h"
-#include "GameFramework/Kits/Online/Matchmaking/MatchmakingProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Chat/ChatProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/MatchmakingProtocol.h"
 
 #include "OnlineLoadBot/LoadBotLocalServer.h"
 #include "OnlineLoadBot/LoadBotMetrics.h"

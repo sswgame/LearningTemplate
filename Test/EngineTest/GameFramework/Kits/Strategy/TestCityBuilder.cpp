@@ -8,8 +8,8 @@
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Strategy/CityBuilder/CitySimulation.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 
 #include "TestFramework/TestFramework.h"
 

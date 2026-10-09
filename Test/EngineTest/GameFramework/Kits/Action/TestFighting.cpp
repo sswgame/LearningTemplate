@@ -9,8 +9,8 @@
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
-#include "GameFramework/Kits/Action/Fighting/FighterCatalog.h"
-#include "GameFramework/Kits/Action/Fighting/FightingMatch.h"
+#include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
+#include "GameFramework/Kits/Genre/Action/Fighting/FightingMatch.h"
 
 #include "TestFramework/TestFramework.h"
 

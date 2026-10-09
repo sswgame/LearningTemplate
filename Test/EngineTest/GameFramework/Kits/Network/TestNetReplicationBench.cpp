@@ -5,9 +5,9 @@
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestBench.h"
 #include "TestFramework/TestFramework.h"

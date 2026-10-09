@@ -7,10 +7,10 @@
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
-#include "GameFramework/Kits/Online/Server/ServerDirectory/ServerDirectoryServer.h"
-#include "GameFramework/Kits/Online/Server/ServerDirectory/ServerDirectoryService.h"
-#include "GameFramework/Kits/Online/ServerDirectory/ServerDirectoryClient.h"
-#include "GameFramework/Kits/Online/ServerDirectory/ServerDirectoryProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Server/ServerDirectory/ServerDirectoryServer.h"
+#include "GameFramework/Kits/Feature/Online/Server/ServerDirectory/ServerDirectoryService.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/ServerDirectoryClient.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/ServerDirectoryProtocol.h"
 
 #include "TestFramework/TestFramework.h"
 

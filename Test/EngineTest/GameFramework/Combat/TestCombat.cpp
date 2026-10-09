@@ -11,7 +11,7 @@
 #include "GameFramework/Base/Actor/Combat/TurnOrder.h"
 #include "GameFramework/Base/Actor/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
-#include "GameFramework/Kits/Simulation/ThemePark/CoasterTrain.h"
+#include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 
 #include "TestFramework/TestFramework.h"
 

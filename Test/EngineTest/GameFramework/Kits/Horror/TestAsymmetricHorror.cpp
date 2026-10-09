@@ -8,9 +8,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Actor/AI/AiPerception.h"
-#include "GameFramework/Kits/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
-#include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorMatch.h"
-#include "GameFramework/Kits/Horror/AsymmetricHorror/HorrorSnapshot.h"
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"
+#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
 
 #include "TestFramework/TestFramework.h"
 

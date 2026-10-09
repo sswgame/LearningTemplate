@@ -41,9 +41,10 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
 - 루트 소스 10 개 이상인 키트 15 개(`Online/Server/Account` 포함)를 공통 하위 폴더(`Catalog` · `Rule` · `Component` · `View` · `Protocol` · `Api` · `Service`)로 나눴다.
   규칙은 `Kits/README.md` "키트 안의 폴더". `CardGame` 은 게임별 폴더, DLL 은 그대로 하나.
 
-### 4. 키트 그룹을 성격으로 다시 나눈다 (결정 필요)
-- 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)와 기능 키트(`Online` · `Network` · `Storage` · `Rpg/Overworld` · `Simulation/Voxel`)를 같은 `Kits/` 아래에 두되 그룹 이름으로 구분되게: `Kits/Genre/<그룹>/` · `Kits/Service/<그룹>/` 후보.
-- 모듈 이름(`GF_<키트>`)은 바뀌지 않는다. 바뀌는 것은 경로뿐이라 매니페스트 탐색(`Kits/CMakeLists.txt` 글롭)이 그대로 동작하는지만 확인.
+### 4. 키트 그룹을 성격으로 다시 나눈다 — 끝남(2026-10-10)
+- `Kits/Genre/<그룹>/`(Action · Casual · Horror · Rpg · Simulation · Strategy)와 `Kits/Feature/<그룹>/`(Network · Online · Storage · World)로 나눴다.
+  `Rpg/Overworld` · `Simulation/Voxel` 은 `Feature/World/` 로. 모듈 이름은 그대로이고, 매니페스트 탐색(`Source/*.module.json` 재귀 글롭)은 깊이를 보지 않는다.
+- 성격 폴더 밖의 키트는 `CheckGameFrameworkLayers` 가 막는다. `CheckKitNamespaces` 는 키트 이름을 한 단 깊이에서 읽는다.
 
 ### 5. 온라인 짝 맞추기
 - `Kits/Online/<서비스>/`(클라이언트)와 `Kits/Online/Server/<서비스>/`(서버)를 서비스마다 한 폴더 아래 `Client/` · `Server/` 로 묶는 안 — `Kits/README.md` 가 이미 `Kits/<그룹>/Client/<키트>/` · `Server/<키트>/` 꼴을 허용하므로 규칙 변경 없이 옮길 수 있다. `Base/Online` 의 `Service` · `Store` · `Config` 등은 그대로.

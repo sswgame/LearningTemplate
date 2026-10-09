@@ -6,9 +6,9 @@
 
 #include "EngineTest/GameFramework/Online/OnlineHostTestUtil.h"
 
-#include "GameFramework/Kits/Online/Leaderboard/LeaderboardClient.h"
-#include "GameFramework/Kits/Online/Server/Leaderboard/LeaderboardServer.h"
-#include "GameFramework/Kits/Online/Server/Leaderboard/LeaderboardService.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/LeaderboardClient.h"
+#include "GameFramework/Kits/Feature/Online/Server/Leaderboard/LeaderboardServer.h"
+#include "GameFramework/Kits/Feature/Online/Server/Leaderboard/LeaderboardService.h"
 
 #include "TestFramework/TestFramework.h"
 

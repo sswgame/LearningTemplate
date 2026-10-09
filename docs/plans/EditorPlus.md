@@ -1126,11 +1126,11 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 패널에서 놀이기구 목록(비용 · 정원 · 탑승 시간)을 보이며 고르면 그 자리로 에디터 카메라를 옮긴다. 파일이 바뀌면(핫 리로드) 다시 읽는다.
 키트 데이터를 읽기만 하므로 **게임 모듈 없이**(어느 게임으로 띄워도) 돈다 — 자체 시험이 Empty 게임 에디터에서 그것을 본다.
 
-**새 파일 (`Source/GameFramework/Kits/Simulation/ThemePark/Editor/`).**
+**새 파일 (`Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/`).**
 - `CMakeLists.txt`:
 ```cmake
 # ==============================================================================
-# @file Source/GameFramework/Kits/Simulation/ThemePark/Editor/CMakeLists.txt
+# @file Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/CMakeLists.txt
 # @brief ThemePark 키트의 에디터 확장 — 배치 시각화 · Park Layout 패널 (Dev 전용)
 # ==============================================================================
 

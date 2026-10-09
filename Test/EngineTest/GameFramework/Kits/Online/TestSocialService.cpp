@@ -7,7 +7,7 @@
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Identity/AccountNameIndex.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/Social/SocialService.h"
+#include "GameFramework/Kits/Feature/Online/Server/Social/SocialService.h"
 
 #include "TestFramework/TestFramework.h"
 

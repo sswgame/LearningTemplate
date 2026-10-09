@@ -11,8 +11,8 @@
 #include "GameFramework/Base/World/Environment/WeatherSystem.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Simulation/CreatureLife/CreatureLifeCatalog.h"
-#include "GameFramework/Kits/Simulation/CreatureLife/CreatureTown.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 
 #include "TestFramework/TestFramework.h"
 

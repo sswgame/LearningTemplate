@@ -3,8 +3,8 @@
 #include "pch.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Online/Server/LiveOps/Push/Provider/Fake/FakePushProvider.h"
-#include "GameFramework/Kits/Online/Server/LiveOps/Push/PushNotificationDispatcher.h"
+#include "GameFramework/Kits/Feature/Online/Server/LiveOps/Push/Provider/Fake/FakePushProvider.h"
+#include "GameFramework/Kits/Feature/Online/Server/LiveOps/Push/PushNotificationDispatcher.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -8,11 +8,11 @@
 #include "GameFramework/Base/Actor/Combat/FrameData.h"
 #include "GameFramework/Base/Actor/Combat/Weapon/Weapon.h"
 #include "GameFramework/Base/Actor/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Kits/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Kits/Action/ActionPlatformer/Rule/ActionCombatRig.h"
-#include "GameFramework/Kits/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
-#include "GameFramework/Kits/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
-#include "GameFramework/Kits/Action/ActionPlatformer/Rule/ActionStageRun.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionCombatRig.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
+#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
 
 #include "TestFramework/TestFramework.h"
 

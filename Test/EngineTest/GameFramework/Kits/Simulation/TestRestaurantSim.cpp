@@ -11,9 +11,9 @@
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
-#include "GameFramework/Kits/Simulation/RestaurantSim/IngredientStock.h"
-#include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantCatalog.h"
-#include "GameFramework/Kits/Simulation/RestaurantSim/RestaurantSimulation.h"
+#include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
+#include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 
 #include "TestFramework/TestFramework.h"
 

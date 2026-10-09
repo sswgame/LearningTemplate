@@ -20,8 +20,8 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/ShooterGimmicks.h"
-#include "GameFramework/Kits/Network/NetDestruction/DestructionReplication.h"
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 

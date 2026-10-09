@@ -53,7 +53,7 @@ Pascal 형태로 남은 약어 폴더는 열네 곳이다(`Tools/vcpkg` 등 서�
 | `Core/Uuid` · `Test/CoreTest/Uuid` | `UUID` | include 경로 |
 | `Test/Qa` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/Qa` 서른 곳 안팎 |
 | `Engine/Audio/Dsp` | `DSP` | include 경로 |
-| `Kits/Network/NetMmo` | `NetMMO` | 모듈 `GF_NetMMO` |
+| `Kits/Feature/Network/NetMmo` | `NetMMO` | 모듈 `GF_NetMMO` |
 | `Engine/Animation/Codec/Acl` | `ACL` | include 경로 · `AclAnimCodec` → `ACLAnimCodec` (ACL 라이브러리 이름과 맞춤) |
 | `Editor/Common/Gui` | `GUI` | include 경로 |
 | `Test/EditorUiTest` | `EditorUITest` | 실행 파일 · CTest 이름 · `CheckTestSuites` 의 `XxxTest` 규칙 · `.vscode/launch.json` · CLAUDE.md 의 시험 목록 |

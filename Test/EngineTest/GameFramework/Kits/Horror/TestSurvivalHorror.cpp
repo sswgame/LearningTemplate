@@ -9,9 +9,9 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
-#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorCatalog.h"
-#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorEncounter.h"
-#include "GameFramework/Kits/Horror/SurvivalHorror/HorrorSession.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorEncounter.h"
+#include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorSession.h"
 
 #include "TestFramework/TestFramework.h"
 

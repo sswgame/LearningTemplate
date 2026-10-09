@@ -4,11 +4,11 @@
 
 #include "GameFramework/Base/Actor/Navigation/GridReachability.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/Rule/SrpgAiCommander.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/Rule/SrpgBattlefield.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/Rule/SrpgCombat.h"
-#include "GameFramework/Kits/Strategy/TacticsSrpg/Rule/SrpgProgress.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgBattlefield.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgCombat.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgProgress.h"
 
 #include "TestFramework/TestFramework.h"
 

@@ -8,10 +8,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/ScenePhysics.h"
 
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationClient.h"
-#include "GameFramework/Kits/Network/NetClientServer/ReplicationServer.h"
-#include "GameFramework/Kits/Network/NetLockstep/LockstepSession.h"
-#include "GameFramework/Kits/Network/NetSimulation/NetSimHarness.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
+#include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "TestFramework/TestFramework.h"
 

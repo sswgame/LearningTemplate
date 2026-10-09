@@ -6,9 +6,9 @@
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmField.h"
-#include "GameFramework/Kits/Simulation/Farming/FarmShippingBin.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
+#include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
 
 #include "TestFramework/TestFramework.h"
 
