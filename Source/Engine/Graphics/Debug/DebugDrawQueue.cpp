@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Console/DevCommandRegistry.h"

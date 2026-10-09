@@ -3,9 +3,9 @@
 #include "Engine/Utility/GameTimeScale.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Console/DevCommandRegistry.h"
 

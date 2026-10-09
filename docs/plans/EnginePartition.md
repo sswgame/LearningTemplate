@@ -21,7 +21,7 @@
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 10 · Navigation 5 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
 - `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
-- 게이트 티어 표가 실제와 다르다: `Text`(표 5, 실제 3), `DevTools`(표 7, 실제 8).
+- 게이트 티어 표가 실제와 다르다: `Text`(표 5, 실제 3).
 
 ## 단계
 
@@ -61,12 +61,10 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 | 2 | `Graphics/Renderer` → `Engine/Renderer` | 한 폴더 이름이 티어 5 와 8 에 걸친다(티어 표에 `Graphics(Renderer 제외)` 를 따로 적어야 한다) |
 | 3 | 애니메이션 정리: 알림이 `Animation/AnimNotifyPhase` · `Character/AnimNotify` · `Object/Animation/AnimNotifyListener` 세 곳, 포즈가 `Animation/Pose.h` · `Character/Pose` 두 곳 | 데이터는 `Animation`, 컴포넌트·시스템은 `Object/Animation` 에 둔다. 먼저 이름 충돌부터 |
 | 4 | `Common/IRenderSurface.h` → `Window`(또는 `Renderer`), `EngineServices` 는 위층으로. `Config/RHIBackendType.h` → `Graphics/RHI`, `ServerConfig` · `ServerSecret` → 서버 쪽 | 티어 0 · 3 폴더에 위층 개념이 들어 있다 |
-| 5 | `Utility` 해체: `Xml` · `Json` → `Serialization`, `TileMap` → `Spatial`(`Environment/Placement` 와 겹침 확인), `Profiling` · `Console` → `DevTools` 후보, 루트 10 개는 이름을 보고 | 기능 모음 통 |
-| 6 | 이름 정리: `Engine/Network`(보안·OpenSSL 뿐, `Core/Network` 와 이름이 같다) → `Security` 후보, HTTP(`Telemetry/HttpClient` · `Observability/OpsHttpEndpoint`)는 한 곳, `UI/Screen` + `UI/Screens` 병합 | |
+| 5 | `Utility` 해체: `Xml` · `Json` → `Serialization`, `TileMap` → `Spatial`(`Environment/Placement` 와 겹침 확인), `Profiling` · `Console` 은 쓰는 쪽 옆으로, 루트 10 개는 이름을 보고 | 기능 모음 통 |
+| 6 | 이름 정리: HTTP(`Telemetry/HttpClient` · `Observability/OpsHttpEndpoint`)는 한 곳, `UI/Screen` + `UI/Screens` 병합 | |
 | 7 | 큰 평평한 폴더를 하위로: `Physics` 루트 27, `Resource` 34, `Animation` 루트 29, `Input` 루트 23 | 마지막 |
 
-| 8 | **`DevTools` 해체**(사용자 요청 2026-10-10): `LocalizationTools`(796 줄, `--gather-text` · `--check-text` · `--export-po` · `--import-po`) → 에디터 모듈이 맡고 App 의 헤드리스 작업 표(`AppHeadlessInternal::kArrHeadlessTask`)에서 임포트와 같은 길로 부른다(`EngineLoop` 의 도구 호출 삭제), `DevConsoleController` → `Engine/Input/`(입력과 창 인터페이스만 받는다, 티어 6), `EngineDevCommands` 의 명령 8 개(`timescale` · `teleport` · `tag.add` · `autoplay` · `anim.rewind*` · `debugdraw.category`)는 각 소유 코드 옆의 `SW_DEV_COMMAND` 로(언리얼 `FAutoConsoleCommand` 처럼) | 티어 8 폴더가 `Config` · `Dialogue` · `Graphics` · `Input` · `Localization` · `Object` · `Scene` · `Utility` · `Window` 를 한꺼번에 끌어 쓴다 |
-| 9 | **`Engine/Network`(OpenSSL 공급자 `EngineNetSecurity`) → `GameFramework/Base/Online/Security`**: 쓰는 곳이 GameFramework 키트 하나(`CacheStoreFactory`)와 시험뿐이다(Engine 폴더 · App · Server · 에디터 0). OpenSSL 링크 주인(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`)을 `Source/Engine/CMakeLists.txt` 에서 GameFramework 로 옮겨 `Engine.dll` 이 `libssl` · `libcrypto` 에 매이지 않게 한다. 시험 13 파일도 같이 | 온라인을 안 쓰는 게임도 엔진 DLL 이 OpenSSL 을 끌고 다닌다 |
 
 **Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHttpEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
@@ -74,7 +72,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.
 
 ### 1. 작은 고리 풀기 (낮은 위험)
-- 게이트 티어 표를 실제에 맞춘다(`Text` · `DevTools`). `RunEngineLayerGraph.py` 출력이 기준.
+- 게이트 티어 표를 실제에 맞춘다(`Text`). `RunEngineLayerGraph.py` 출력이 기준.
 - `Automation ↔ UI`: 공유 타입(단계 레지스트리 · 시나리오 인터페이스)을 `Automation` 쪽 인터페이스로 두고 `UI` 가 단계를 등록하게 한다 — `Automation` 은 `UI` 를 include 하지 않는다.
 - `Graphics → Animation` 3 건: 스키닝 입력(`Skeleton` · `Pose` · `AnimClip`)을 GPU 쪽 중립 타입으로 받게 한다. `Graphics → Physics` 1 건(`PhysicsDebugDraw`): 디버그 선 입력을 `Common` 의 선 목록 타입으로.
 - `Resource → Animation` 5 건: 에셋 종류 등록을 `Animation` 이 `Resource` 에 하게 뒤집는다(레지스트리 방향 반전).
@@ -87,7 +85,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - 확인: `RunEngineLayerGraph.py` 에서 코어 폴더가 기능 폴더를 가리키는 화살표가 0.
 
 ### 3. 링크 단위로 승격
-- 먼저 `OBJECT` 라이브러리로 나눈다(DLL 은 하나, 위험 낮음). 층: Foundation(티어 0~2) · Data(3~4) · Render(5, Renderer, Environment) · World(6~7 코어) · Features(기능 컴포넌트) · Tools(UI · Telemetry · DevTools · Automation · Module) · 루트(EngineLoop).
+- 먼저 `OBJECT` 라이브러리로 나눈다(DLL 은 하나, 위험 낮음). 층: Foundation(티어 0~2) · Data(3~4) · Render(5, Renderer, Environment) · World(6~7 코어) · Features(기능 컴포넌트) · Tools(UI · Telemetry · Automation · Module) · 루트(EngineLoop).
 - 0 단계 측정으로 이득이 확인되면 Dev 만 층마다 DLL 로 올린다. 내보내기 매크로는 층별로 늘리지 말고 `SW_API` 하나를 유지하되 각 DLL 의 `SW_EXPORTS` 를 층 전체에 건다.
 - 리플렉션 등록기 보존: `sw_linkWholeArchive` 를 층 라이브러리마다 건다(Shipping 정적 링크는 지금과 같다). 서버 타깃은 Render 층을 링크하지 않는다.
 
