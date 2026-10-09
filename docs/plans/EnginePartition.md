@@ -29,6 +29,25 @@
 - Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 잰다. 표는 [검증과 측정](../08_Verification.md) 형식.
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
+### 0-2. Core 층 정리 (분할의 선행 조건)
+Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `File` · `Log` · `Math` · `Memory` · `Module` · `Process` · `String` · `Task` · `Time`)가 하나의 순환 묶음이다(폴더 간 `#include "Core/…"` 분석, 2026-10-10).
+Engine 에는 티어 게이트가 있는데 Core 에는 `Network` 내부 방향을 보는 `CheckCoreNetworkLayers` 뿐이다.
+밑에서 위로 `Common` → `Math` · `Time` · `Memory` → `Container` · `String` → `Concurrency` · `Delegate` · `Log` · `Event` → `File` · `Process` · `Module` · `Task` → `Compression` · `CommandLine` · `GlobalVariable` · `Uuid` → `Network` 순으로 놓으면(제안, 확정 아님) 거꾸로 가는 include 가 48 건 남는다.
+
+| 거꾸로 가는 방향 | 건수 | 예 | 풀이 |
+|---|---|---|---|
+| Container → Concurrency | 12 (전부 헤더) | `array.h` · `deque.h` · `map.h` 의 `DataRaceDetector.h`, `PagedArray.h` 의 `atomic.h` | 경합 검출 훅을 컨테이너가 의존하지 않는 가벼운 헤더(`DataRaceHook.h`)로 가르고, `atomic.h` · `mutex.h` 같은 원시 래퍼는 한 층 아래(Concurrency/Primitives)로 |
+| Memory → Concurrency / Container | 9 / 6 | `LinearAllocator.h` 의 `atomic.h` · `mutex.h`, `MemoryProfiler.h` 의 `vector.h` · `string.h` | 원시 래퍼를 아래로 내리면 앞의 것이 풀린다. `MemoryProfiler` 는 컨테이너를 쓰므로 `Memory` 를 둘로(할당기 / 프로파일러) |
+| Common → Container | 3 | `TopologicalSortUtil.h` · `VarIntUtil.h` 의 `vector.h` · `string.h` | 두 도우미를 `Container` 쪽(또는 `Utility`)으로 옮긴다 |
+| Concurrency → Process | 3 | 검출기의 `CallStackCapture.h` | 호출 스택 수집을 `Process` 에서 `Common/Diagnostics` 로 내리거나 콜백으로 주입 |
+| Log → File / Process / Module | 5 (전부 .cpp) | `FileLogOutput.cpp` 의 `FileUtil.h`, `Logger.cpp` 의 `CrashHandler.h` | 출력 장치(`FileLogOutput`)를 로거 코어와 분리해 `File` 위층에 두고 등록받기 |
+| String → Log / Concurrency | 4 (헤더) | `hashed_string.h` · `fixed_string.h` 의 `Logger.h` · `atomic.h` · `mutex.h` | 로그 매크로의 최소 헤더(`LogMacros.h`)를 `Common` 으로 내린다 |
+| Event → Module, Time → Log, Memory → String/Log/Process | 1~3씩 | `GameTimer.h` 의 `Logger.h` | 같은 방법 |
+
+- 대부분 헤더의 가벼운 래퍼 몇 개를 아래층으로 내리는 일이다 — 설계 변경이 필요한 곳은 `Memory`(할당기 / 프로파일러 분리)와 `Log`(코어 / 출력 장치 분리) 둘이다.
+- 끝에 `CheckCoreLayers` 게이트(티어 표 + 거꾸로 가는 include 실패)를 둔다. Engine 의 `_kEngineTier` 와 같은 구조.
+- `Core/Network`(59 파일, Core 의 21%)는 순환에 끼지 않는다. 다른 Core 폴더는 Network 를 include 하지 않는다. 순환을 푼 뒤 별도 정적 라이브러리로 빼서 `ReflectionParser` 가 링크하지 않게 할 수 있다(파서가 Network 를 쓰지 않는지 먼저 확인).
+
 ### 1. 작은 고리 풀기 (낮은 위험)
 - 게이트 티어 표를 실제에 맞춘다(`Text` · `DevTools`). `RunEngineLayerGraph.py` 출력이 기준.
 - `Automation ↔ UI`: 공유 타입(단계 레지스트리 · 시나리오 인터페이스)을 `Automation` 쪽 인터페이스로 두고 `UI` 가 단계를 등록하게 한다 — `Automation` 은 `UI` 를 include 하지 않는다.
