@@ -61,6 +61,12 @@ Engine 에는 티어 게이트가 있는데 Core 에는 `Network` 내부 방향�
 | 6 | 이름 정리: `Engine/Network`(보안·OpenSSL 뿐, `Core/Network` 와 이름이 같다) → `Security` 후보, HTTP(`Telemetry/HttpClient` · `Observability/OpsHttpEndpoint`)는 한 곳, `UI/Screen` + `UI/Screens` 병합 | |
 | 7 | 큰 평평한 폴더를 하위로: `Physics` 루트 27, `Resource` 34, `Animation` 루트 29, `Input` 루트 23 | 마지막 |
 
+| 8 | **`DevTools` 해체**(사용자 요청 2026-10-10): `LocalizationTools`(796 줄, `--gather-text` · `--check-text` · `--export-po` · `--import-po`) → 에디터 모듈이 맡고 App 의 헤드리스 작업 표(`AppHeadlessInternal::kArrHeadlessTask`)에서 임포트와 같은 길로 부른다(`EngineLoop` 의 도구 호출 삭제), `DevConsoleController` → `Engine/Input/`(입력과 창 인터페이스만 받는다, 티어 6), `EngineDevCommands` 의 명령 8 개(`timescale` · `teleport` · `tag.add` · `autoplay` · `anim.rewind*` · `debugdraw.category`)는 각 소유 코드 옆의 `SW_DEV_COMMAND` 로(언리얼 `FAutoConsoleCommand` 처럼) | 티어 8 폴더가 `Config` · `Dialogue` · `Graphics` · `Input` · `Localization` · `Object` · `Scene` · `Utility` · `Window` 를 한꺼번에 끌어 쓴다 |
+| 9 | **`Engine/Network`(OpenSSL 공급자 `EngineNetSecurity`) → `GameFramework/Base/Online/Security`**: 쓰는 곳이 GameFramework 키트 하나(`CacheStoreFactory`)와 시험뿐이다(Engine 폴더 · App · Server · 에디터 0). OpenSSL 링크 주인(`CheckThirdPartyIsolation` 의 `cmakeLinkOwner`)을 `Source/Engine/CMakeLists.txt` 에서 GameFramework 로 옮겨 `Engine.dll` 이 `libssl` · `libcrypto` 에 매이지 않게 한다. 시험 13 파일도 같이 | 온라인을 안 쓰는 게임도 엔진 DLL 이 OpenSSL 을 끌고 다닌다 |
+
+**Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHttpEndpoint` 를 쓴다)도 남는다.
+`Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
+
 각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.
 
 ### 0-4. ModuleHost 를 공통 부분과 App 전용 부분으로 (폴더 재배치 뒤)
