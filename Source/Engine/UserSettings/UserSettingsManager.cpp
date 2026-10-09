@@ -3,10 +3,10 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputMap.h"

@@ -2,7 +2,7 @@
 
 #include "Engine/Resource/AssetFormat.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Resource/AssetManager.h"

@@ -9,8 +9,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

@@ -2,9 +2,9 @@
 
 #include "Engine/Localization/TranslationMemory.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Utility/Json/JsonDocument.h"

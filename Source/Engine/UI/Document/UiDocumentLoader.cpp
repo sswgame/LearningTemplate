@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Document/UiDocumentLoader.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Reflection/ReflectionCast.h"

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
 

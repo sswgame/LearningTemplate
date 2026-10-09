@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

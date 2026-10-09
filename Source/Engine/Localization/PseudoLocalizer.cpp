@@ -2,8 +2,8 @@
 
 #include "Engine/Localization/PseudoLocalizer.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/String/MarkupTagScanner.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/TextFormatter.h"
 

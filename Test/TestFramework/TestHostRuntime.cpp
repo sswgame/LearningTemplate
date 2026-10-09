@@ -4,10 +4,10 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/AsyncFileIo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Audio/IAudioSystem.h"

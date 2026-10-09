@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 #include "Engine/Utility/Xml/XmlNameCheck.h"

@@ -3,7 +3,7 @@
 #include "ReflectionParser/AnnotationApply.h"
 
 #include "Core/Common/Types.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "ReflectionParser/AnnotationFields.h"
 #include "ReflectionParser/AnnotationMeta.h"

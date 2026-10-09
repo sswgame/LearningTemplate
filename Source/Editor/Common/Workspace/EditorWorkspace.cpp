@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

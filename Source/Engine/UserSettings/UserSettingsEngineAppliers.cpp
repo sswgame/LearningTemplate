@@ -2,7 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsEngineAppliers.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Input/InputMap.h"

@@ -3,10 +3,10 @@
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSystem.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"

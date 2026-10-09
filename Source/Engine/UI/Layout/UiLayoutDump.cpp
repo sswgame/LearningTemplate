@@ -3,8 +3,8 @@
 #include "Engine/UI/Layout/UiLayoutDump.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/formatString.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Core/PanelWidget.h"

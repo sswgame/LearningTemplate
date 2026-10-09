@@ -3,8 +3,8 @@
 #include "Core/File/Windows/WindowsFileDialog.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 

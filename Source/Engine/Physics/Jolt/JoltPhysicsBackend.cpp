@@ -2,8 +2,8 @@
 
 #include "Engine/Physics/Jolt/JoltPhysicsBackend.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Physics/Jolt/JoltJobSystem.h"
 #include "Engine/Physics/Jolt/JoltPhysicsScene.h"

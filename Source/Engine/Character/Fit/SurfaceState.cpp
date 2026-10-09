@@ -2,8 +2,8 @@
 
 #include "Engine/Character/Fit/SurfaceState.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"

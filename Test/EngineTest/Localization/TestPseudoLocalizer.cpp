@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/String/MarkupTagScanner.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/PseudoLocalizer.h"

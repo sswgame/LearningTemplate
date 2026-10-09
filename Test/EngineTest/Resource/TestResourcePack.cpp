@@ -3,12 +3,12 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIo.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"

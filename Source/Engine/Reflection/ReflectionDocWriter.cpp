@@ -2,9 +2,9 @@
 
 #include "Engine/Reflection/ReflectionDocWriter.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Reflection/ReflectionTypes.h"

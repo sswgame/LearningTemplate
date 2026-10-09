@@ -2,7 +2,7 @@
 
 #include "Editor/Popups/CommandPalettePopup.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Gui/EditorChrome.h"

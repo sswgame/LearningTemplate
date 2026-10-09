@@ -2,10 +2,10 @@
 
 #include "AppTest/AppTestUtil.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 

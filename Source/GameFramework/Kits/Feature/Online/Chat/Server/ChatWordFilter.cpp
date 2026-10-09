@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include <algorithm>
 

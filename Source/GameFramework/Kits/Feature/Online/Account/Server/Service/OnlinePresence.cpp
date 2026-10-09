@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Bus/ServerBus.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"

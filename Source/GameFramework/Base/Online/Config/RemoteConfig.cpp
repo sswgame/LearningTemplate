@@ -3,8 +3,8 @@
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/ServerBus.h"

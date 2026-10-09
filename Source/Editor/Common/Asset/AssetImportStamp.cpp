@@ -3,10 +3,10 @@
 #include "Editor/Common/Asset/AssetImportStamp.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

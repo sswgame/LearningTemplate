@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Gui/EditorFontSetup.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"

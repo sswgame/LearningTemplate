@@ -2,10 +2,10 @@
 
 #include "Engine/Resource/AssetDatabase.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineDefines.h"

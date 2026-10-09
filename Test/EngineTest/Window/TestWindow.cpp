@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"

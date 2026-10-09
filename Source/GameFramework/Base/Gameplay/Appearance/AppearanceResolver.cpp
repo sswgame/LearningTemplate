@@ -3,8 +3,8 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/formatString.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "EngineTest/GameFramework/Kits/Storage/PostgresTestSchema.h"
 #include "EngineTest/GameFramework/Online/ServiceStoreContract.h"

@@ -4,8 +4,8 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/String/StringUtil.h"
 
 #include <cstring>
 

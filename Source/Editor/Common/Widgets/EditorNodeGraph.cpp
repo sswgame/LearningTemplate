@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/EditorUtil.h"
 

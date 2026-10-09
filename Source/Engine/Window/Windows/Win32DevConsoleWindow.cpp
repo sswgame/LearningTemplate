@@ -9,7 +9,7 @@
 #if SW_DEV_COMMANDS_ENABLED && defined( SW_PLATFORM_WINDOWS )
 
     #include "Core/Log/Logger.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
     #include "Engine/Window/IWindow.h"
 

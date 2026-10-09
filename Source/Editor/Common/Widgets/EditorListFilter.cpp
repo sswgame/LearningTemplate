@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Widgets/EditorListFilter.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw::editor
 {

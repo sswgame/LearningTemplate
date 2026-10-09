@@ -4,11 +4,11 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 

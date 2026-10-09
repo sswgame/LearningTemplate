@@ -2,8 +2,8 @@
 
 #include "Engine/Animation/Codec/AnimCodec.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Codec/Acl/AclAnimCodec.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"

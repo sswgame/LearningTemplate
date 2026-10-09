@@ -3,8 +3,8 @@
 #include "Engine/Utility/DebugOverlayState.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/formatString.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 
 namespace sw
 {

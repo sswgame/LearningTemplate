@@ -2,7 +2,7 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"

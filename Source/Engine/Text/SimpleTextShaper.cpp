@@ -2,7 +2,7 @@
 
 #include "Engine/Text/SimpleTextShaper.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/TextItemizer.h"

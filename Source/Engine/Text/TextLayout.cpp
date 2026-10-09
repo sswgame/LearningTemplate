@@ -3,9 +3,9 @@
 #include "Engine/Text/TextLayout.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Text/IFontRasterizer.h"

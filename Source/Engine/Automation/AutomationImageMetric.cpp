@@ -3,9 +3,9 @@
 #include "Engine/Automation/AutomationImageMetric.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 namespace sw

@@ -5,7 +5,7 @@
 #if SW_DEV_COMMANDS_ENABLED
 
     #include "Core/Log/Logger.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
 namespace sw
 {

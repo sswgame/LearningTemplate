@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceSelection.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/String/Base64Util.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"

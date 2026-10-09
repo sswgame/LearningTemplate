@@ -6,7 +6,7 @@
     #include "Core/Common/PlatformOsHeaders.h"
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleImageUtil.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
     #include "Engine/Module/ModuleHandleProvider.h"
 

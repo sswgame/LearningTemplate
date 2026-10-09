@@ -5,10 +5,10 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
-#include "Core/String/formatString.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/CustomizationValueSet.h"

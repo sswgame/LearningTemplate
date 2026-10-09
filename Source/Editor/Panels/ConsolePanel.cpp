@@ -3,8 +3,8 @@
 #include "Editor/Panels/ConsolePanel.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"

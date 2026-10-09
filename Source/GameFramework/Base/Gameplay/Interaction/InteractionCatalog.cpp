@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Interaction/InteractionCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/Xml/XmlDocument.h"

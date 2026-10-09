@@ -3,7 +3,7 @@
 #include "Engine/Localization/StringTable.h"
 
 #include "Core/Common/StdHeaders.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw
 {

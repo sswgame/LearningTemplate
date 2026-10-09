@@ -3,9 +3,9 @@
 #include "Engine/UI/Binding/UiBindingConverterRegistry.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

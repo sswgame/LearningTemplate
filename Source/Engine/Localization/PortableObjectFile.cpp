@@ -2,7 +2,7 @@
 
 #include "Engine/Localization/PortableObjectFile.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw
 {

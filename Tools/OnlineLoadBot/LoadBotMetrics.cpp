@@ -3,7 +3,7 @@
 #include "OnlineLoadBot/LoadBotMetrics.h"
 
 #include "Core/Common/Defines.h"
-#include "Core/String/formatString.h"
+#include "Core/Container/formatString.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
 

@@ -2,8 +2,8 @@
 
 #include "Engine/Localization/TextGatherer.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/set.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"

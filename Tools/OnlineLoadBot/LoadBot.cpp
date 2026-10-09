@@ -4,8 +4,8 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/formatString.h"
 
 #include "OnlineLoadBot/LoadBotRunner.h"
 

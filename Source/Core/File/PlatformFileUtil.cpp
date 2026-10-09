@@ -3,7 +3,7 @@
 #include "Core/File/PlatformFileUtil.h"
 
 #include "Core/Common/Defines.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"

@@ -6,7 +6,7 @@
 
     #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Log/Logger.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
     #include "Engine/Common/EngineServices.h"
 

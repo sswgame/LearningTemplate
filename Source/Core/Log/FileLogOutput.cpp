@@ -3,11 +3,11 @@
 #include "Core/Log/FileLogOutput.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Process/CrashContext.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 
 namespace sw
 {

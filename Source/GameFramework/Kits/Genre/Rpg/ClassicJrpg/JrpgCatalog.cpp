@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Rpg/ClassicJrpg/JrpgCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

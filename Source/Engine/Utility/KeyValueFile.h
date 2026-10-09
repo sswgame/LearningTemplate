@@ -5,9 +5,9 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

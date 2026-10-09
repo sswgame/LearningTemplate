@@ -2,7 +2,7 @@
 
 #include "Engine/Text/TextItemizer.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Text/FontSystem.h"
 

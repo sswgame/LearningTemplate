@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Pose/ReferencePoseOverride.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"

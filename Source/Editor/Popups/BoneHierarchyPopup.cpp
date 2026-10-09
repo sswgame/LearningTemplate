@@ -2,7 +2,7 @@
 
 #include "Editor/Popups/BoneHierarchyPopup.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"

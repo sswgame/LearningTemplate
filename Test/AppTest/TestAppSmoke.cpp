@@ -5,12 +5,12 @@
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Compression/EngineCompressionCodecUtil.h"

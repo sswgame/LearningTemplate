@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"

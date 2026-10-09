@@ -16,9 +16,9 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/formatString.h"
 #include "Core/Container/pair.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Common/EngineParallel.h"

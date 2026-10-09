@@ -3,10 +3,10 @@
 #include "EngineTest/ResourcePackTestUtil.h"
 
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/PackCompressionUtil.h"
 

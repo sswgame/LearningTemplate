@@ -13,10 +13,10 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Log/LogTypes.h"
-#include "Core/String/formatString.h"
 
 #if !defined( SW_LOG_TAG )
     /** @brief 호출하는 모듈의 태그입니다. 모듈 헤드에서 재정의합니다. */

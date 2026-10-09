@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Online/Bus/EphemeralServerBus.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Cache/EphemeralStore.h"
 

@@ -12,7 +12,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw
 {

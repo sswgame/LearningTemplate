@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"

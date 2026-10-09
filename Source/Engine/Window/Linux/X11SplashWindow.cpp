@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Linux/X11SplashWindow.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Common/PlatformOsHeaders.h"

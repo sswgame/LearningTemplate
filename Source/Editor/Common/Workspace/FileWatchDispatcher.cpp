@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/FileWatchDispatcher.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
 

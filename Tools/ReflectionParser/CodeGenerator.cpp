@@ -3,8 +3,8 @@
 #include "ReflectionParser/CodeGenerator.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"

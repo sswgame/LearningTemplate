@@ -4,9 +4,9 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Common/EngineServices.h"

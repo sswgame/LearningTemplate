@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Base/Online/Store/ServiceStore.h"

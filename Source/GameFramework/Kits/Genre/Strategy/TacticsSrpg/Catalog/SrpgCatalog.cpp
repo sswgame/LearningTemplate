@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

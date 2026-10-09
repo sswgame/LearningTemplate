@@ -21,11 +21,11 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/SlotHandleTable.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "TestFramework/TestBench.h"

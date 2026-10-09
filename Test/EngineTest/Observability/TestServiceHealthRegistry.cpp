@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Observability/ServiceHealthRegistry.h"
 

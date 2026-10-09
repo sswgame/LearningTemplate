@@ -3,8 +3,8 @@
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/LogContext.h"
-#include "Core/String/StringUtil.h"
 
 #include <algorithm>
 

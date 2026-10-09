@@ -3,9 +3,9 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"

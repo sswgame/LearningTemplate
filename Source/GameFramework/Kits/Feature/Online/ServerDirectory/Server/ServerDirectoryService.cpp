@@ -3,9 +3,9 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Message/NetRequest.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Bus/ServerBus.h"

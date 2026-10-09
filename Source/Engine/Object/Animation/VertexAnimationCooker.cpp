@@ -2,9 +2,9 @@
 
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimJsonUtil.h"

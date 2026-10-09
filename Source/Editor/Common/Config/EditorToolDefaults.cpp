@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Editor/Common/EditorUtil.h"

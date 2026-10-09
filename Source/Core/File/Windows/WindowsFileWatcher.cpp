@@ -12,7 +12,7 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Log/Logger.h"
     #include "Core/Memory/Memory.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
 SW_LOG_CALLER( "WindowsFileWatcher" );
 namespace sw

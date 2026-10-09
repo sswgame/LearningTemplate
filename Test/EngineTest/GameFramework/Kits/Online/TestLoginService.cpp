@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"

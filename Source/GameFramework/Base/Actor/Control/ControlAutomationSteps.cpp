@@ -2,9 +2,9 @@
 
 #include "GameFramework/Base/Actor/Control/ControlAutomationSteps.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Automation/AutomationRunner.h"

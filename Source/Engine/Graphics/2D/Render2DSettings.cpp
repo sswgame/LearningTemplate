@@ -3,9 +3,9 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"

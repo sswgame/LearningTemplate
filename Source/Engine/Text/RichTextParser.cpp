@@ -2,8 +2,8 @@
 
 #include "Engine/Text/RichTextParser.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/String/MarkupTagScanner.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

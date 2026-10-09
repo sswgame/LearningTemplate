@@ -2,9 +2,9 @@
 
 #include "Engine/UI/Binding/UiBindingSet.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"

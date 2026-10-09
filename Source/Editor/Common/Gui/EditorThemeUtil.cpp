@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Gui/EditorIconGlyphs.h"

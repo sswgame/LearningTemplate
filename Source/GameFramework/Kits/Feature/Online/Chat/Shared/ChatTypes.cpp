@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatTypes.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 

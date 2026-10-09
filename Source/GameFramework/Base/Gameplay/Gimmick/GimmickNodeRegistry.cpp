@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/GimmickNodeRegistry.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/BlendCurve.h"
 #include "Engine/Reflection/TypeRegistry.h"

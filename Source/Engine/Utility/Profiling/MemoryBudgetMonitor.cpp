@@ -6,12 +6,12 @@
 
 #include "Engine/Utility/Profiling/MemoryBudgetMonitor.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Utility/Json/ConfigKeyDoc.h"

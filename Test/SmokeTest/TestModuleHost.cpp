@@ -8,7 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"

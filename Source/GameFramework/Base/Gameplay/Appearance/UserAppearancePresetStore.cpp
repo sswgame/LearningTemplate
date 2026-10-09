@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/UserAppearancePresetStore.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Utility/KeyValueFile.h"
 

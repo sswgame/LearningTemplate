@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/DeckBattle/DeckBattle.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/Xml/XmlDocument.h"

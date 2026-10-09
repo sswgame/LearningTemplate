@@ -2,7 +2,7 @@
 
 #include "Engine/Reflection/PropertyEditCondition.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"

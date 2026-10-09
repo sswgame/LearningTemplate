@@ -3,8 +3,8 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "Core/Common/FourCcUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Uuid/Uuid.h"
 
 #include "Engine/Common/EngineServices.h"

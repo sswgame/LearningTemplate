@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/UI/Dialogue/DialogueRunnerComponent.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/UI/UiSystem.h"

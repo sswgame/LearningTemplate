@@ -3,10 +3,10 @@
 #include "Editor/Panels/MaterialPanel.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"

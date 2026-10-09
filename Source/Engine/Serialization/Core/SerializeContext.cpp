@@ -6,9 +6,9 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 
 #include "Engine/Reflection/ReflectAny.h"

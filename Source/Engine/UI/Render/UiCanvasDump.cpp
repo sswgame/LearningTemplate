@@ -3,8 +3,8 @@
 #include "Engine/UI/Render/UiCanvasDump.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/formatString.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 

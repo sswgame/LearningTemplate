@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Utility/Xml/XmlDocument.h"

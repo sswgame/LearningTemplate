@@ -2,8 +2,8 @@
 
 #include "Engine/Navigation/NavMeshSettings.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/XmlSerializer.h"
 

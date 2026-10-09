@@ -2,8 +2,8 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"

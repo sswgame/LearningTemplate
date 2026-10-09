@@ -7,7 +7,7 @@
     #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 
     #include "Core/Math/MathUtil.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
 
     #include "Editor/Common/Widgets/EditorListFilter.h"
 

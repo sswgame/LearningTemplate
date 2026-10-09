@@ -3,9 +3,9 @@
 #include "ReflectionParser/AnnotationMeta.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 SW_LOG_CALLER( "AnnotationMeta" );

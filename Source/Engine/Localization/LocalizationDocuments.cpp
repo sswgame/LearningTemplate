@@ -2,8 +2,8 @@
 
 #include "Engine/Localization/LocalizationDocuments.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Utility/Json/JsonDocument.h"

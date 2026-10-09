@@ -4,7 +4,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/Defines.h"
-    #include "Core/String/StringUtil.h"
+    #include "Core/Container/StringUtil.h"
     #include "Core/String/fixed_string.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"

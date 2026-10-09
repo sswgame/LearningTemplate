@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyMirror.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"

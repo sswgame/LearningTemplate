@@ -1,8 +1,8 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/Uuid/Uuid.h"
 

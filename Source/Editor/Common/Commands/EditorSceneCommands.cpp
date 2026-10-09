@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 

@@ -2,8 +2,8 @@
 
 #include "Engine/Localization/TextFormatter.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/set.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

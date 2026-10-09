@@ -1,11 +1,11 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/FileLogOutput.h"
 #include "Core/Log/ILogOutput.h"
 #include "Core/Process/CrashContext.h"
-#include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestChildProcess.h"
 #include "TestFramework/TestFramework.h"

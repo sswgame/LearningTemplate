@@ -4,8 +4,8 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Common/Defines.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

@@ -5,10 +5,10 @@
  *          `bool isReady()` · `ISqlConnection& getConnection()` · `string makeTableName( const utf8* )` 를 준다. 케이스마다 새 DB(또는 새 스키마)다.
  */
 #pragma once
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SqlStore/Shared/SqlMigrationRunner.h"

@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Commands/EditorLogCommands.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"

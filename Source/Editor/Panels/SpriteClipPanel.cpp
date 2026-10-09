@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/SpriteClipPanel.h"
 
-#include "Core/String/StringUtil.h"
-#include "Core/String/formatString.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"

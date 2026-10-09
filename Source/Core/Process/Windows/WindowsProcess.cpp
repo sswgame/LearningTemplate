@@ -1,8 +1,8 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Common/PlatformOsHeaders.h"

@@ -2,8 +2,8 @@
 
 #include "Engine/Character/Fit/BodyShape.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Pose.h"
 #include "Engine/Animation/Skeleton.h"

@@ -2,9 +2,9 @@
 
 #include "Engine/Module/ModuleCatalog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Json/JsonDocument.h"
 

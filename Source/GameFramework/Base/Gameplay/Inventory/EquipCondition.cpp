@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"

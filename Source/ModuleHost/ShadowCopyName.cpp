@@ -2,9 +2,9 @@
 
 #include "ModuleHost/ShadowCopyName.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 
 namespace sw
 {

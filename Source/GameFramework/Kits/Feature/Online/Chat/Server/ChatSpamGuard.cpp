@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
 

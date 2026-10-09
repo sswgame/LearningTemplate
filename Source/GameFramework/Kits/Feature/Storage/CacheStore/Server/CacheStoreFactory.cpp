@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"

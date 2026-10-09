@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/ModuleBuildId.h"
-#include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

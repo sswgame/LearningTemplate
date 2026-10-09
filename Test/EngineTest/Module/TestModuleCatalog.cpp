@@ -4,9 +4,9 @@
  */
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Resource/ResourceUtil.h"

@@ -10,6 +10,7 @@
  *          스위트 파일이 아니다 — 키트 끝단 시험(`<Kit>StreamTest`)이 include 한다. 쓰는 법은 `ServerDirectoryStreamTest` 를 본다.
  */
 #pragma once
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
@@ -17,7 +18,6 @@
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"

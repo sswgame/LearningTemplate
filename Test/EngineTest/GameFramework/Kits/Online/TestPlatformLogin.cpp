@@ -3,11 +3,11 @@
 // PC 루프백 + PKCE 흐름(state · S256 · 취소), 로그인 서비스까지 이어서 계정 만들기.
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/String/Base64Util.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 #include "GameFramework/Base/Online/Http/HttpServer.h"

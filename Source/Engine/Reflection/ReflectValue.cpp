@@ -6,12 +6,12 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
 

@@ -3,9 +3,9 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"

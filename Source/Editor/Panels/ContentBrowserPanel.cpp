@@ -4,8 +4,8 @@
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"

@@ -3,8 +3,8 @@
 #include "Engine/UI/Binding/UiBindingValue.h"
 
 #include "Core/Common/Defines.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"

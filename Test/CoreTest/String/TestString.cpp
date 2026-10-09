@@ -1,13 +1,13 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/formatString.h"
 #include "Core/String/hashed_string.h"
 
 #include "TestFramework/TestFramework.h"

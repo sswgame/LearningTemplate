@@ -2,8 +2,8 @@
 
 #include "ReflectionParser/AnnotationFields.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Engine/Reflection/ReflectionEnumNames.h"

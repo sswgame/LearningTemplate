@@ -3,7 +3,7 @@
  * @brief GameFramework 가 제공하고 게임 모듈이 쓰는 서비스 로케이터입니다.
  */
 #pragma once
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "RuntimeAPI/Service/ModuleService.h"
 

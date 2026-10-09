@@ -2,11 +2,11 @@
 
 #include "Editor/Common/Localization/LocalizationTools.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/MarkupTagScanner.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 

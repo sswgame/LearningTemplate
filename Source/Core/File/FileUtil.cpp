@@ -4,12 +4,12 @@
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

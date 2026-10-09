@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Renderer/Pipeline/RenderPipelineAsset.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"

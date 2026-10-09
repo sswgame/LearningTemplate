@@ -2,10 +2,10 @@
 
 #include "Engine/Audio/LipSyncImport.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Audio/AudioClip.h"

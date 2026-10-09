@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Text/TextBidi.h"

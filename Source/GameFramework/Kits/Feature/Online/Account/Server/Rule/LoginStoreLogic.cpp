@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/BitStream.h"
-#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"

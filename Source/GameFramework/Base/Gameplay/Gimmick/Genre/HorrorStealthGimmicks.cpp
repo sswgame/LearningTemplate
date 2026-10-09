@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Gameplay/Gimmick/Genre/HorrorStealthGimmicks.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"

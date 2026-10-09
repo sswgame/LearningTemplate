@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

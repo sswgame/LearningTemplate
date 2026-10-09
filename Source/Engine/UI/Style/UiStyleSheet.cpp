@@ -2,8 +2,8 @@
 
 #include "Engine/UI/Style/UiStyleSheet.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Core/SchemaMigrate.h"

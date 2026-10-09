@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw
 {

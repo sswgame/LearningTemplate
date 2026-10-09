@@ -7,7 +7,7 @@
  */
 #include "pch.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Gui/EditorThemeUtil.h"

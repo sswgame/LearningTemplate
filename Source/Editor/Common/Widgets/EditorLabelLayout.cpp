@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 namespace sw::editor
 {

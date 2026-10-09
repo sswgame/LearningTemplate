@@ -3,11 +3,11 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Asset/EditorAssetValidation.h"

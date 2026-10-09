@@ -2,10 +2,10 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/FrameArenaAllocator.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"

@@ -2,9 +2,9 @@
 
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/UserSettings/UserSettingsRegistry.h"

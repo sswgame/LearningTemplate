@@ -2,8 +2,8 @@
 
 #include "GameFramework/Base/Foundation/Data/GameSettings.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Utility/Xml/XmlDocument.h"

@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"

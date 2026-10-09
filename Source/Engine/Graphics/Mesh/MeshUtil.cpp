@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Resource/WeakInternCache.h"

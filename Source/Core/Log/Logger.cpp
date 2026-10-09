@@ -6,6 +6,7 @@
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/ConsoleLogOutput.h"
 #include "Core/Log/FileLogOutput.h"
 #include "Core/Log/ILogOutput.h"
@@ -14,7 +15,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/Process/CrashHandler.h"
-#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw

@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Widgets/TextInputWidget.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"

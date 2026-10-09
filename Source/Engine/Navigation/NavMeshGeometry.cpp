@@ -3,8 +3,8 @@
 #include "Engine/Navigation/NavMeshGeometry.h"
 
 #include "Core/Common/HashUtil.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Physics/PhysicsShape.h"
 

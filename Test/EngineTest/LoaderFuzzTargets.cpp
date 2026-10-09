@@ -3,9 +3,9 @@
 #include "EngineTest/LoaderFuzzTargets.h"
 
 #include "Core/Compression/CompressionStream.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/AnimGraphAsset.h"
 #include "Engine/Animation/SpriteClipAsset.h"

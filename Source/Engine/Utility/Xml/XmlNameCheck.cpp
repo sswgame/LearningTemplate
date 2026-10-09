@@ -2,8 +2,8 @@
 
 #include "Engine/Utility/Xml/XmlNameCheck.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Utility/Xml/XmlDocument.h"
 

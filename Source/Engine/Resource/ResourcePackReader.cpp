@@ -6,11 +6,11 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"

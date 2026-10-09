@@ -5,10 +5,10 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
-#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 

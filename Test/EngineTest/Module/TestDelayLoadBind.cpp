@@ -8,9 +8,9 @@
 #include "pch.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Module/ModuleImageUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "TestFramework/TestFramework.h"
 

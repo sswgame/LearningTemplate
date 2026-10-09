@@ -8,7 +8,7 @@
 
 #include "Engine/Automation/AutomationEnvironmentSteps.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"

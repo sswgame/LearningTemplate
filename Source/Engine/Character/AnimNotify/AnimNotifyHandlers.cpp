@@ -2,8 +2,8 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/StringUtil.h"
 
 #include "Engine/Audio/IAudioSystem.h"
 #include "Engine/Character/AnimNotify/AnimNotifyComponent.h"

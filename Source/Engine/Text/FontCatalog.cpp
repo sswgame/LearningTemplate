@@ -2,7 +2,7 @@
 
 #include "Engine/Text/FontCatalog.h"
 
-#include "Core/String/StringUtil.h"
+#include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
