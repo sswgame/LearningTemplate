@@ -30,21 +30,25 @@
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
 ### 0-2. Core 층 정리 (분할의 선행 조건)
-Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `File` · `Log` · `Math` · `Memory` · `Module` · `Process` · `String` · `Task` · `Time`)가 하나의 순환 묶음이다(폴더 간 `#include "Core/…"` 분석, 2026-10-10).
-Engine 에는 티어 게이트가 있는데 Core 에는 `Network` 내부 방향을 보는 `CheckCoreNetworkLayers` 뿐이다.
-밑에서 위로 `Common` → `Math` · `Time` · `Memory` → `Container` · `String` → `Concurrency` · `Delegate` · `Log` · `Event` → `File` · `Process` · `Module` · `Task` → `Compression` · `CommandLine` · `GlobalVariable` · `Uuid` → `Network` 순으로 놓으면(제안, 확정 아님) 거꾸로 가는 include 가 48 건 남는다.
+Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `File` · `Log` · `Math` · `Memory` · `Module` · `Process` · `String` · `Task` · `Time`)가 하나의 순환 묶음이다.
+`Scripts/lint/report/RunCoreLayerGraph.py` 가 `.cpp` 를 포함한 파일 단위 간선을 전수로 뽑는다(2026-10-10). 거꾸로 가는 include 가 가장 적은 순서를 찾아도 38 건이 남는다.
+건수만 줄이는 순서(`Concurrency` 를 `Memory` · `Container` 아래에 두는 쪽)를 그대로 쓰지 않고, 아래 순서로 확정한다. 남는 간선이 설계 문제 몇 개로 모이기 때문이다.
+
+**확정한 층(밑에서 위로, 같은 줄은 서로 include 하지 않는다):**
+`Common` · `Predefined` → `Math` · `Concurrency`(원시 동기화: `atomic` · `mutex` · `SpinLock` · `Futex` · 경합 검출 훅) → `Memory`(할당기와 메모리 태그) → `Container`(+ `StringUtil` · `formatString` · 동시 큐) · `Uuid` → `Delegate` → `Log`(로그 파사드와 매크로) → `Time` · `String`(이름 · 고정 문자열) · `Process`(프로세스 · 스레드 크래시 스택) · `Compression` · `CommandLine` → `Task` · `GlobalVariable` → `File` → `Module` → `Diagnostics`(호출 스택 · 크래시 · 메모리 프로파일러 · 교착 · 경합 보고) · `Event` → `LogSink`(기본 싱크와 출력 장치) → `Network`.
 
 | 거꾸로 가는 방향 | 건수 | 예 | 풀이 |
 |---|---|---|---|
-| Container → Concurrency | 12 (전부 헤더) | `array.h` · `deque.h` · `map.h` 의 `DataRaceDetector.h`, `PagedArray.h` 의 `atomic.h` | 경합 검출 훅을 컨테이너가 의존하지 않는 가벼운 헤더(`DataRaceHook.h`)로 가르고, `atomic.h` · `mutex.h` 같은 원시 래퍼는 한 층 아래(Concurrency/Primitives)로 |
-| Memory → Concurrency / Container | 9 / 6 | `LinearAllocator.h` 의 `atomic.h` · `mutex.h`, `MemoryProfiler.h` 의 `vector.h` · `string.h` | 원시 래퍼를 아래로 내리면 앞의 것이 풀린다. `MemoryProfiler` 는 컨테이너를 쓰므로 `Memory` 를 둘로(할당기 / 프로파일러) |
-| Common → Container | 3 | `TopologicalSortUtil.h` · `VarIntUtil.h` 의 `vector.h` · `string.h` | 두 도우미를 `Container` 쪽(또는 `Utility`)으로 옮긴다 |
-| Concurrency → Process | 3 | 검출기의 `CallStackCapture.h` | 호출 스택 수집을 `Process` 에서 `Common/Diagnostics` 로 내리거나 콜백으로 주입 |
-| Log → File / Process / Module | 5 (전부 .cpp) | `FileLogOutput.cpp` 의 `FileUtil.h`, `Logger.cpp` 의 `CrashHandler.h` | 출력 장치(`FileLogOutput`)를 로거 코어와 분리해 `File` 위층에 두고 등록받기 |
-| String → Log / Concurrency | 4 (헤더) | `hashed_string.h` · `fixed_string.h` 의 `Logger.h` · `atomic.h` · `mutex.h` | 로그 매크로의 최소 헤더(`LogMacros.h`)를 `Common` 으로 내린다 |
-| Event → Module, Time → Log, Memory → String/Log/Process | 1~3씩 | `GameTimer.h` 의 `Logger.h` | 같은 방법 |
+| Common → Container | 3 | `TopologicalSortUtil.h` · `VarIntUtil.h` 의 `vector.h` | 두 도우미를 `Container` 로 옮긴다 |
+| Concurrency → Container · Memory · String · Log · Process | 14 | `mutex.h` → `DeadlockDetector.h`, `DataRaceDetector.cpp` → `CallStackCapture.h`, `ConcurrentQueue.h` → `vector.h` | `mutex` 는 관찰자 인터페이스(`ILockObserver`)만 알고 `DeadlockDetector` 는 `Diagnostics` 로. 경합 보고는 함수 포인터로 받는다(`DataRaceReporter`). `ConcurrentQueue` · `WorkStealingDeque` 는 `Container`, `LockFreeObjectPool` 은 `Task` 로 |
+| Memory → Container · String · Log · Process | 10 | `Memory.cpp` → `MemoryProfiler.h`, `FrameArenaAllocator.h` → `vector.h` | 스레드의 현재 태그와 `ScopedMemoryTag` 는 `Memory` 가 갖고, 프로파일러는 할당 기록기 인터페이스(`IAllocationTracker`)로 걸린다. `MemoryProfiler` 는 `Diagnostics`, `FrameArenaAllocator` 는 `Container` 로 |
+| String → Log | 2 | `hashed_string.h` · `fixed_string.h` → `Logger.h` | `Log` 가 쓰는 `StringUtil` · `formatString` 을 `Container`(문자열 타입 옆)로 옮겨 `String` 을 `Log` 위에 둔다 |
+| Log → File · Process · Module | 5 | `FileLogOutput.cpp` → `FileUtil.h`, `Logger.cpp` → `CrashHandler.h` | `Logger` 는 정적 파사드(전역 싱크 · 상세도 · 호출자 표)만 남고, 기본 싱크(`AsyncLogSink`)와 출력 장치는 `LogSink` 로 |
+| Process → File · Module | 3 | `WindowsCallStackCapture.cpp` → `FileUtil.h` · `ModuleImageUtil.h`, `ModuleBuildId.cpp` → `FileUtil.h` | 작업 스레드가 부르는 크래시 스택 준비(`ThreadCrashStack`)만 `Process` 에 남기고 호출 스택 · 크래시 보고는 `Diagnostics` 로, `ModuleBuildId` 는 `Module` 로 |
+| Time → Log | 1 | `GameTimer.h` → `Logger.h` | `Time` 을 `Log` 위에 둔다(`Log` 파사드는 시계를 쓰지 않는다) |
+| 폴더 → 루트 모음 헤더(38 건 밖) | 3 | `LinearAllocator.cpp` 등의 `CoreMinimal.h` | 쓰는 헤더를 직접 include 한다 |
 
-- 대부분 헤더의 가벼운 래퍼 몇 개를 아래층으로 내리는 일이다 — 설계 변경이 필요한 곳은 `Memory`(할당기 / 프로파일러 분리)와 `Log`(코어 / 출력 장치 분리) 둘이다.
+- 경합 보고기는 `Diagnostics/DataRaceReporter.cpp` 의 정적 등록으로 걸린다. `Core` STATIC 을 링크하는 `ReflectionParser` 는 그 목적 파일이 빠질 수 있어 진입점에서 `DataRaceReporter::install()` 을 부른다.
 - 끝에 `CheckCoreLayers` 게이트(티어 표 + 거꾸로 가는 include 실패)를 둔다. Engine 의 `_kEngineTier` 와 같은 구조.
 - `Core/Network`(59 파일, Core 의 21%)는 순환에 끼지 않는다. 다른 Core 폴더는 Network 를 include 하지 않는다. 순환을 푼 뒤 별도 정적 라이브러리로 빼서 `ReflectionParser` 가 링크하지 않게 할 수 있다(파서가 Network 를 쓰지 않는지 먼저 확인).
 
