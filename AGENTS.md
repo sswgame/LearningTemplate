@@ -400,8 +400,10 @@ namespace sw
 - Omit braces for a single-line `if` body. If an `else`/`else if` is present,
   use braces for any multi-line blocks — when one branch of the chain needs
   braces, every branch keeps them. Loops (`for`/`while`/`do`) always keep their
-  braces, even for a single-statement body. Enforced by `FormatBranchBraces.py`
-  (clang-format's `RemoveBracesLLVM` is not used: it strips loop braces too).
+  braces, even for a single-statement body (an empty body is `{}`, not `;`). Enforced by `FormatBranchBraces.py`
+  (clang-format's `RemoveBracesLLVM` is not used: it strips loop braces too); the gate `CheckLoopBraces` and
+  the fixer's loop pass keep the loop rule — a loop whose head and body have a comment or preprocessor line
+  between them is reported for a manual fix.
 - A `switch` over an enum that handles **every** enumerator has **no** `default:` (LLVM coding standard): adding an
   enumerator and forgetting a `case` then stops the build (`-Werror=switch`), and a `default:` in a fully covered
   switch is itself an error (`-Werror=covered-switch-default`) because it would silence that check. A switch that

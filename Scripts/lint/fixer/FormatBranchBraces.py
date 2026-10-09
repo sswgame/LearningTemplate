@@ -27,6 +27,13 @@ Scripts/lint/fixer/FormatBranchBraces.py
     본문이 있으면 라벨과 본문을 나눠 씌운다. 모든 case 가 한 문장인 표 모양 switch 는 그대로 둔다.
   - 본문이 없는 폴스루 라벨 · 전처리기 · 매크로 줄바꿈 · `[[fallthrough]]` 가 낀 본문은 2) 와 같이 건드리지 않는다.
 
+**4) 본문에 중괄호가 없는 for · 범위 for · while 에 중괄호를 씌운다.**
+
+  - 판정은 게이트 `Scripts/lint/gate/CheckLoopBraces.py` 한 자리다(`insertLoopBraces`). 여러 줄에 걸친 한 문장 · if/else 사슬 · 중첩 반복
+    본문은 그 전체를 한 문장으로 감싸고, 같은 줄 본문(`for ( … ) f();`)은 줄을 끊어 감싸며, 빈 본문(`while ( x );`)은 `{}` 로 쓴다.
+  - `do { … } while ( … )` 의 꼬리는 반복문 머리가 아니다. 머리 다음 줄부터 본문 끝까지 주석 · 전처리기 · 매크로 줄바꿈이 끼면
+    건드리지 않는다(게이트가 "손으로" 로 알린다).
+
 clang-format 은 둘 다 표현하지 못한다. RemoveBracesLLVM 은 for/while 까지 같이 벗겨내고,
 InsertBraces 는 if/for/while 만 보고 case 라벨은 건드리지 않는다. 그래서 clang-format
 앞단에서 이 스크립트가 돌고, 뒤이어 도는 clang-format 이 들여쓰기를 맞춘다.
@@ -47,6 +54,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintFixer
 
+from gate.CheckLoopBraces import insertLoopBraces  # noqa: E402
 from LintFixer import FixPass, LintFixer  # noqa: E402
 # 중괄호를 벗기면 안 되는 본문: 스스로 분기/반복을 여는 문장(달랑거리는 else 위험) 및 레이블.
 _kNestedControlRe = re.compile(r"^(if|else|for|while|do|switch|case|default)\b")
@@ -498,7 +506,7 @@ class FormatBranchBracesFixer(LintFixer):
     """
 
     tag = "BranchBraces"
-    description = "한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가 · 한 switch 안의 case 중괄호 일관성"
+    description = "한 줄짜리 if 본문의 중괄호 제거 · 여러 문장인 case 본문에 중괄호 추가 · 한 switch 안의 case 중괄호 일관성 · 반복문 본문 중괄호"
     listPass = (
         FixPass(
             transform=formatBranchBraces,
@@ -548,6 +556,25 @@ class FormatBranchBracesFixer(LintFixer):
                 "    case 0:\n    case 1:\n        return \"low\";\n"
                 "    case 2: return \"mid\";\n"
                 "    default:\n        return \"high\";\n    }\n}\n"
+            ),
+        ),
+        FixPass(
+            transform=insertLoopBraces,
+            problem="본문에 중괄호가 없는 반복문(for · while)이 있습니다.",
+            done="반복문 본문에 중괄호 추가 완료",
+            # 다음 줄 본문 · 같은 줄 본문 · 빈 본문을 모두 감싼다.
+            badSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    for ( int32 index = 0; index < count; ++index )\n        doThing( index );\n"
+                "    for ( int32 value : listValue ) doThing( value );\n"
+                "    while ( poll() );\n}\n"
+            ),
+            # 중괄호가 있는 반복문 · do-while 꼬리 · 머리와 본문 사이에 주석이 낀 반복문(손으로 고친다)은 그대로 둔다.
+            goodSample=(
+                '#include "pch.h"\n\nvoid probe( int32 count )\n{\n'
+                "    for ( int32 index = 0; index < count; ++index )\n    {\n        doThing( index );\n    }\n"
+                "    do\n    {\n        doThing( 0 );\n    } while ( poll() );\n"
+                "    while ( poll() )\n        // 손으로 고칠 자리\n        doThing( 1 );\n}\n"
             ),
         ),
     )

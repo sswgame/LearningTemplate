@@ -178,10 +178,20 @@ else
     _count = 0;                                 // 한 분기가 여러 줄이면 모든 분기에 중괄호
 }
 
-for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도 중괄호
+for ( const Task* pTask : _listTask )           // 반복문은 한 줄이어도 중괄호(게이트 CheckLoopBraces)
 {
     pTask->run();
 }
+
+while ( pollEvent( event ) )                    // 본문이 if/else 사슬이어도 그 전체를 중괄호로 감싼다
+{
+    if ( event.isQuit() )
+        return;
+    else
+        dispatch( event );
+}
+
+while ( tryAdvance() ) {}                       // 빈 본문은 `;` 가 아니라 `{}` — do-while 꼬리(`} while ( … );`)는 반복문 머리가 아니다
 
 switch ( kind )                                 // 모든 열거자를 다루면 default: 없음
 {
