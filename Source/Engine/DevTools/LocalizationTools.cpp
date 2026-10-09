@@ -557,6 +557,17 @@ namespace sw
 
     bool LocalizationTools::runGatherCommand( bool bCheckOnly, string_view projectArgument )
     {
+        // 배포본은 속성 메타(Localizable)를 싣지 않아 UI 문서의 글을 못 알아본다 — 그대로 쓰면 원문 표에서 그 글을 모두 지운다.
+#if defined( SW_SHIPPING )
+        constexpr bool kHasPropertyMeta = false;
+#else
+        constexpr bool kHasPropertyMeta = true;
+#endif
+        if constexpr ( kHasPropertyMeta == false )
+        {
+            SW_LOG_ERROR( "[GatherText] the shipping build carries no property metadata - gather text from a development build" );
+            return false;
+        }
         vector<string> listProjectPath;
         if ( projectArgument.empty() || projectArgument == kAllProjects )
             collectProjectPaths( listProjectPath, projectArgument == kAllProjects );

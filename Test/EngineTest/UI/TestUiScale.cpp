@@ -135,6 +135,9 @@ SW_TEST_CASE( UiScaleTest, TextScaleGrowsTextOnly )
 /** @brief [UiScaleTest] gv_uiDebugSafeZone 0.05 → 안전 영역 패널의 자식이 각 변 5 % 안쪽 */
 SW_TEST_CASE( UiScaleTest, SafeZoneInsetsChild )
 {
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "gv_uiDebugSafeZone is a test variable - shipping bakes it to a constant and does not register it" );
+#endif
     sw::UiViewport viewport{};
     {
         const ScopedFloatVariable safeZone( "gv_uiDebugSafeZone", 0.05f );

@@ -293,6 +293,9 @@ SW_TEST_CASE( TextGathererTest, GatherProjectWritesTableStampsHashesAndCheckMode
  */
 SW_TEST_CASE( TextGathererTest, RepositoryProjectsAreUpToDate )
 {
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the shipping build carries no property metadata (Localizable) - gathering runs in development builds" );
+#endif
     sw::vector<sw::string> listProjectPath;
     sw::LocalizationTools::collectProjectPaths( listProjectPath, true );
     SW_ASSERT_TRUE( listProjectPath.size() >= 2u ); // 엔진 + Shooter3D
