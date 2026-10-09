@@ -150,6 +150,13 @@
 | `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
 | `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |
 | `Base/Camera/FirstPersonCameraComponent` | `Base/Control/FirstPersonCameraComponent`(시점 = 폰의 조종 회전) |
+| `Engine/Graphics/Renderer/` | `Engine/Renderer/`(2026-10-10, 티어 표의 하위 폴더 예외도 삭제) |
+| `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
+| `Character/Pose/` · `Animation/AnimNotifyPhase` · `Object/Animation/AnimNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
+| `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
+| `Utility/{Xml,Json,TileMap,Console,Profiling}` | `Serialization/{Xml,Json}` · `TileMap/` · `Console/` · `Profiling/` |
+| `Telemetry/HttpClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HttpClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
+| `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(표는 `Scripts/dev/MoveEngineFolders.py`) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.
 

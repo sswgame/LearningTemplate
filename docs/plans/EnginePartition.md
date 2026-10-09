@@ -53,18 +53,14 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - `Core/Network`(59 파일, Core 의 21%)는 순환에 끼지 않는다. 다른 Core 폴더는 Network 를 include 하지 않는다. 순환을 푼 뒤 별도 정적 라이브러리로 빼서 `ReflectionParser` 가 링크하지 않게 할 수 있다(파서가 Network 를 쓰지 않는지 먼저 확인).
 
 ### 0-3. Engine 폴더 재배치 (분할 전, 의존 정리의 일부)
-폴더 구조를 다시 본 결과(2026-10-10) 같은 개념이 여러 폴더에 흩어진 곳이 있다. 이동은 `git mv` + include 일괄 치환이고, 헤더가 옮겨지면 reconfigure 로 코드젠을 다시 만든다.
+1 ~ 7 은 끝났다(2026-10-10). 이동 표와 include · 문서 치환은 `Scripts/dev/MoveEngineFolders.py`(단계별, 다시 돌릴 수 있다)이고,
+`--sync-tier` 가 게이트 표와 `Source/Engine/README.md` 티어 표를 include 그래프 계산값으로 맞춘다. 옛 경로는 [결정 기록](../09_Decisions.md) 4 절,
+옮기지 않기로 한 것(`EngineServices` · `RHIBackendType`)은 같은 문서 2 절에 있다. 남은 판단:
 
-| 순서 | 일 | 근거 |
-|---|---|---|
-| 1 | 기능 캐시를 자기 폴더로: `AnimationAssetCache` · `SpriteClipCache` → `Animation`, `LocalizationReloadCache` → `Localization` | `Resource → Animation` 5 건이 사라진다 |
-| 2 | `Graphics/Renderer` → `Engine/Renderer` | 한 폴더 이름이 티어 5 와 8 에 걸친다(티어 표에 `Graphics(Renderer 제외)` 를 따로 적어야 한다) |
-| 3 | 애니메이션 정리: 알림이 `Animation/AnimNotifyPhase` · `Character/AnimNotify` · `Object/Animation/AnimNotifyListener` 세 곳, 포즈가 `Animation/Pose.h` · `Character/Pose` 두 곳 | 데이터는 `Animation`, 컴포넌트·시스템은 `Object/Animation` 에 둔다. 먼저 이름 충돌부터 |
-| 4 | `Common/IRenderSurface.h` → `Window`(또는 `Renderer`), `EngineServices` 는 위층으로. `Config/RHIBackendType.h` → `Graphics/RHI`, `ServerConfig` · `ServerSecret` → 서버 쪽 | 티어 0 · 3 폴더에 위층 개념이 들어 있다 |
-| 5 | `Utility` 해체: `Xml` · `Json` → `Serialization`, `TileMap` → `Spatial`(`Environment/Placement` 와 겹침 확인), `Profiling` · `Console` 은 쓰는 쪽 옆으로, 루트 10 개는 이름을 보고 | 기능 모음 통 |
-| 6 | 이름 정리: HTTP(`Telemetry/HttpClient` · `Observability/OpsHttpEndpoint`)는 한 곳, `UI/Screen` + `UI/Screens` 병합 | |
-| 7 | 큰 평평한 폴더를 하위로: `Physics` 루트 27, `Resource` 34, `Animation` 루트 29, `Input` 루트 23 | 마지막 |
-
+- `Utility` 루트 10 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale` · `KeyValueFile`)은 이름만 보고 두었다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
+  `KeyValueFile` → `Serialization/Format`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 이다.
+- `Character/AnimNotify`(처리기 · 표 · 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/Animation` 으로 내릴 수 없다 — 알림 계약만 `Animation/Notify` 로 모았다.
+- `Test/EngineTest/Graphics` 의 렌더러 시험(`TestGpuScene` · `TestRenderGraph` …)은 아직 `Graphics` 폴더에 있다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
 **Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHttpEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
