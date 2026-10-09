@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
@@ -21,6 +22,32 @@
 namespace sw
 {
     SW_LOG_CALLER( "RenderThread" );
+
+    namespace
+    {
+        struct RenderThreadInternal
+        {
+            /** @brief Present 캡처를 켠 뒤 쓰기 전에 더 그릴 프레임 수입니다 — 켠 프레임의 캡처 텍스처는 아직 비어 있을 수 있다. */
+            static constexpr uint32 kPresentCaptureWaitFrames = 1;
+
+            /** @brief `requestScreenshot` 의 엔진 전역 우편함입니다. 게임 스레드 · 개발 명령 · 에디터가 넣고 렌더 스레드가 꺼낸다. */
+            struct ScreenshotMailbox
+            {
+                mutex            _mutex;
+                string           _pendingPath;
+                string           _lastPath;
+                RHITextureHandle _pendingTexture{ 0 };
+                RHIFormat        _pendingFormat{ RHIFormat::R8G8B8A8_UNORM };
+                atomic<uint32>   _completedSerial{ 0 };
+            };
+
+            static ScreenshotMailbox& getMailbox()
+            {
+                static ScreenshotMailbox s_mailbox;
+                return s_mailbox;
+            }
+        };
+    } // namespace
 
     /**
      * @brief `-gv_screenshot=<파일경로>` 입니다. 화면에 나간 그림(Present 결과)을 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
@@ -74,6 +101,10 @@ namespace sw
         , _budgetFrameCounter{ 0 }
         , _completedScenarioScreenshotCount{ 0 }
         , _bScenarioCaptureEnabled{ false }
+        , _requestedScreenshotPath{}
+        , _requestedScreenshotTexture{ 0 }
+        , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
+        , _requestedScreenshotWaitFrames{ 0 }
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
@@ -335,8 +366,12 @@ namespace sw
 
         // 스크린샷 실행에서만 Present 결과를 텍스처로 받아 둔다. 전체 화면 복사가 한 번 더 붙는다.
         // **프레임마다 맞춘다**: bind() 시점에는 커맨드라인이 아직 전역 변수에 붙기 전일 수 있다.
+        takeScreenshotRequest();
         if ( _pFrameRenderer != nullptr )
-            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) );
+        {
+            const bool bRequestedPresent = _requestedScreenshotPath.empty() == false && _requestedScreenshotTexture == 0;
+            _pFrameRenderer->setPresentCaptureEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
+        }
 
         // 렌더 스레드 전체. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
         //
@@ -482,7 +517,7 @@ namespace sw
                 // 중간 단계를 보고 싶다고 첨부 이름을 찍어 주었으면 그 첨부를, 아니면 화면에 나간 그림을 덤프한다.
                 // 실패는 경로와 함께 알린다(시나리오 경로와 같다) — 읽기 · 쓰기 실패 줄만으로는 어느 촬영이 빠졌는지 모른다.
                 const string_view attachment{ gv_screenshotAttachment };
-                const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->dumpTransientToPpm( attachment, path ) : writePresentedImage( path );
+                const bool        bWritten = attachment.empty() == false ? _pFrameRenderer->dumpTransientToFile( attachment, path ) : writePresentedImage( path );
                 if ( bWritten == false )
                     SW_LOG_WARNING( "Screenshot was not written: %#", path.c_str() );
             }
@@ -496,6 +531,9 @@ namespace sw
             _completedScenarioScreenshotCount.fetch_add( 1, std::memory_order_acq_rel );
         }
 
+        // 실행 중 요청(`requestScreenshot` — 개발 명령 screenshot · 에디터 단추).
+        writeRequestedScreenshot();
+
         return true;
     }
 
@@ -503,13 +541,79 @@ namespace sw
     {
         // 기본은 **Present 결과 캡처**, 곧 화면에 나간 그림이다. 캡처가 없으면 Present 가 읽는 첨부로 물러난다.
         // 첨부 이름을 리터럴로 박지 말 것 — 그 이름이 없는 파이프라인(디퍼드)에서는 한 장도 안 찍힌다.
-        if ( _pFrameRenderer->dumpPresentCaptureToPpm( path ) )
+        if ( _pFrameRenderer->dumpPresentCaptureToFile( path ) )
             return true;
         // 캡처가 없으면(오프스크린 출력 등) Present 가 **읽는** 첨부를 찍는다. 그 그림에는 Present 패스가 한 일(톤맵 등)이 들어 있지 않다.
         string_view fallback = _pFrameRenderer->getPresentedAttachmentName();
         if ( fallback.empty() )
             fallback = string_view{ FrameRendererUtil::Attachment::kSceneColor };
-        return _pFrameRenderer->dumpTransientToPpm( fallback, path );
+        return _pFrameRenderer->dumpTransientToFile( fallback, path );
+    }
+
+    void RenderThread::requestScreenshot( string_view filePath, RHITextureHandle sourceTexture, RHIFormat sourceFormat )
+    {
+        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
+        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
+        mailbox._pendingPath    = string{ filePath };
+        mailbox._pendingTexture = sourceTexture;
+        mailbox._pendingFormat  = sourceFormat;
+    }
+
+    uint32 RenderThread::getCompletedScreenshotSerial()
+    {
+        return RenderThreadInternal::getMailbox()._completedSerial.load( std::memory_order_acquire );
+    }
+
+    string RenderThread::getLastScreenshotPath()
+    {
+        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
+        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
+        return mailbox._lastPath;
+    }
+
+    void RenderThread::takeScreenshotRequest()
+    {
+        if ( _requestedScreenshotPath.empty() == false )
+            return;
+        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
+        const std::scoped_lock<mutex>            lock{ mailbox._mutex };
+        if ( mailbox._pendingPath.empty() )
+            return;
+        _requestedScreenshotPath.swap( mailbox._pendingPath );
+        mailbox._pendingPath.clear();
+        _requestedScreenshotTexture = mailbox._pendingTexture;
+        _requestedScreenshotFormat  = mailbox._pendingFormat;
+        // 렌더 타깃은 이번 프레임에 그려지므로 기다리지 않는다. Present 캡처는 켠 뒤 한 프레임을 더 그린다.
+        _requestedScreenshotWaitFrames = _requestedScreenshotTexture == 0 ? RenderThreadInternal::kPresentCaptureWaitFrames : 0;
+    }
+
+    void RenderThread::writeRequestedScreenshot()
+    {
+        if ( _requestedScreenshotPath.empty() || _pFrameRenderer == nullptr )
+            return;
+        if ( _requestedScreenshotWaitFrames > 0 )
+        {
+            --_requestedScreenshotWaitFrames;
+            return;
+        }
+
+        (void)FileUtil::ensureParentDirectoryExists( _requestedScreenshotPath ); // 실패하면 아래 쓰기가 경로와 함께 알린다
+        const bool bWritten = _requestedScreenshotTexture == 0
+                                ? writePresentedImage( _requestedScreenshotPath )
+                                : _pFrameRenderer->dumpTextureToFile( _requestedScreenshotTexture, _requestedScreenshotFormat, _requestedScreenshotPath );
+        if ( bWritten )
+            SW_LOG_INFO( "Screenshot saved: %#", _requestedScreenshotPath.c_str() );
+        else
+            SW_LOG_WARNING( "Screenshot was not written: %#", _requestedScreenshotPath.c_str() );
+
+        RenderThreadInternal::ScreenshotMailbox& mailbox = RenderThreadInternal::getMailbox();
+        {
+            const std::scoped_lock<mutex> lock{ mailbox._mutex };
+            mailbox._lastPath = bWritten ? _requestedScreenshotPath : string{};
+        }
+        mailbox._completedSerial.fetch_add( 1, std::memory_order_acq_rel );
+        _requestedScreenshotPath.clear();
+        _requestedScreenshotTexture = 0;
     }
 
     bool RenderThread::ensureContextOnCurrentThread()

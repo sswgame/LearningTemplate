@@ -5906,6 +5906,90 @@ SW_TEST_CASE( RenderPassGpuTest, PresentCaptureFollowsOffscreenOutput )
 }
 
 /**
+ * @brief [RenderPassGpuTest] 실행 중 스크린샷의 파일 쓰기 — 출력 RT(씬 뷰 단추)와 Present 캡처(게임 뷰 단추)를 `.png` 면 PNG, 아니면 PPM 으로 쓴다
+ * @details `RenderThread::requestScreenshot` 이 렌더 스레드에서 부르는 두 함수다(`dumpTextureToFile` · `dumpPresentCaptureToFile`). PNG 머리(IHDR)의
+ *          너비 · 높이가 출력 크기인지 본다. 단추부터 파일까지의 경로는 에디터 시나리오 `editor/screenshotbutton` 이 본다.
+ */
+SW_TEST_CASE( RenderPassGpuTest, ScreenshotDumpWritesPngAndPpm )
+{
+    constexpr uint32 kOutputWidth  = 160;
+    constexpr uint32 kOutputHeight = 96;
+    // PNG: 서명 8 바이트 + IHDR 길이 4 + 종류 4 뒤에 너비 · 높이(빅 엔디언 4 바이트씩).
+    constexpr size_t kPngWidthOffset = 16;
+
+    test::RHITestDevice device( { sw::RHIBackend::DirectX12, sw::RHIBackend::DirectX11, sw::RHIBackend::Vulkan, sw::RHIBackend::OpenGL } );
+    if ( device.isReady() == false )
+        SW_TEST_SKIP( "No RHI backend for the screenshot dump test" );
+
+    sw::IRHIResourceFactory* pFactory = device->getResourceFactory();
+    sw::FrameRenderer        renderer;
+    LitCubeScene             stage;
+    SW_ASSERT_TRUE( renderer.initialize( device.get() ) && renderer.isReady() && stage.populate() );
+
+    sw::RHITextureDesc outputDesc{};
+    outputDesc._width                       = kOutputWidth;
+    outputDesc._height                      = kOutputHeight;
+    outputDesc._format                      = sw::constant::kBackBufferFormat;
+    outputDesc._bIsRenderTarget             = SW_TRUE;
+    outputDesc._bIsShaderResource           = SW_TRUE;
+    const sw::RHITextureHandle outputTarget = pFactory->createTexture2D( outputDesc );
+    SW_ASSERT_TRUE( outputTarget != 0 );
+    renderer.setPresentCaptureEnabled( true );
+
+    sw::GpuSceneBuilder builder;
+    const sw::float4    clear{ 0.0f, 0.0f, 0.0f, 1.0f };
+    bool                bOk = true;
+    for ( uint32 frameIndex = 0; frameIndex < 2 && bOk; ++frameIndex )
+    {
+        sw::RenderFramePacket packet{};
+        packet._bValid             = 1;
+        packet._outputRenderTarget = outputTarget;
+        packet._viewportWidth      = kOutputWidth;
+        packet._viewportHeight     = kOutputHeight;
+        builder.buildFromScene( &stage._scene, packet._cameraPos );
+        builder.exportCpuSnapshot( packet._gpuScene );
+        device->beginFrame( clear );
+        bOk = renderer.executePacket( device.get(), packet );
+        device->endFrame( false, false );
+        device->waitIdle();
+    }
+    SW_EXPECT_TRUE( bOk );
+
+    const sw::string folder     = sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), "sw_screenshot_dump_test" );
+    const sw::string texturePng = sw::FileUtil::joinPath( folder, "texture.png" );
+    const sw::string capturePng = sw::FileUtil::joinPath( folder, "capture.png" );
+    const sw::string capturePpm = sw::FileUtil::joinPath( folder, "capture.ppm" );
+    SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( folder ) );
+    SW_EXPECT_TRUE( renderer.dumpTextureToFile( outputTarget, sw::constant::kBackBufferFormat, texturePng ) );
+    SW_EXPECT_TRUE( renderer.dumpPresentCaptureToFile( capturePng ) );
+    SW_EXPECT_TRUE( renderer.dumpPresentCaptureToFile( capturePpm ) );
+
+    for ( const sw::string& pngPath : { texturePng, capturePng } )
+    {
+        sw::vector<uint8> bytes;
+        SW_ASSERT_TRUE_MSG( sw::FileUtil::readFile( pngPath, bytes ) && bytes.size() > kPngWidthOffset + 8, pngPath.c_str() );
+        const uint8 kPngSignature[4] = { 0x89, 'P', 'N', 'G' };
+        SW_EXPECT_TRUE_MSG( std::memcmp( bytes.data(), kPngSignature, sizeof( kPngSignature ) ) == 0, pngPath.c_str() );
+        uint32 arrSize[2] = {};
+        for ( uint32 fieldIndex = 0; fieldIndex < 2; ++fieldIndex )
+        {
+            for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+            {
+                arrSize[fieldIndex] = ( arrSize[fieldIndex] << 8 ) | uint32{ bytes[kPngWidthOffset + fieldIndex * 4 + byteIndex] };
+            }
+        }
+        SW_EXPECT_EQUAL( arrSize[0], kOutputWidth );
+        SW_EXPECT_EQUAL( arrSize[1], kOutputHeight );
+    }
+    sw::vector<uint8> ppmBytes;
+    SW_EXPECT_TRUE( sw::FileUtil::readFile( capturePpm, ppmBytes ) && ppmBytes.size() > 2 && ppmBytes[0] == 'P' && ppmBytes[1] == '6' );
+
+    (void)sw::FileUtil::removeDirectory( folder ); // 임시 폴더 — 남아도 다음 실행이 덮어쓴다
+    renderer.shutdown();
+    pFactory->destroyTexture( outputTarget );
+}
+
+/**
  * @brief [RenderPassGpuTest] Present 가 백버퍼에 직접 그릴 때(캡처 끔) 화면 사각형 뷰가 백버퍼의 오른쪽 아래에 앉는다 — 4 백엔드
  * @details GL 기본 프레임버퍼는 아래 원점이라 `setViewport` 가 y 를 뒤집는다. 캡처를 켜면 Present 가 오프스크린 FBO 에 그려 이 갈래를 안 지난다
  *          (`ScreenRectViewDrawsOnlyInsideItsRectangle` 은 캡처를 본다). 뒤집기가 빠지면 PiP 가 오른쪽 **위**에 그려진다.

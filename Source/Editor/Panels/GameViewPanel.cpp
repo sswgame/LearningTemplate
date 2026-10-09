@@ -4,7 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -50,6 +53,8 @@ namespace sw::editor
 
         // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 몫이다.
         pEditorContext->setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
+        if ( pEditorContext->isGameViewFocused() )
+            EditorScreenshotCommands::noteFocusedView( EditorViewKind::Game );
         pEditorContext->setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
 
         drawToolbar();
@@ -124,6 +129,12 @@ namespace sw::editor
             ImGui::SameLine();
             ImGui::Checkbox( "HUD", &_bShowOverlay );
             EditorWidgets::drawTooltip( "게임이 DebugOverlayState 에 쓴 값을 게임 화면 왼쪽 아래에 표시합니다" );
+
+            ImGui::SameLine();
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##GameViewScreenshot" ) ) )
+                EditorScreenshotCommands::captureGameView();
+            EditorSelfTestMarks::note( "gameView.screenshot" );
+            EditorWidgets::drawTooltip( "게임 뷰 그림을 Saved/Screenshots/<시각>.png 로 저장합니다 (F9 — 포커스가 있는 뷰)" );
         }
         EditorChrome::endToolbar();
     }

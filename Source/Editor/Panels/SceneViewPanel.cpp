@@ -4,11 +4,15 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/Gui/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Utility/GameTimeScale.h"
@@ -37,8 +41,17 @@ namespace sw::editor
         const float32 dt = GameTimeScale::getUnscaledDeltaTime( ImGui::GetIO().DeltaTime );
         _viewportClient.update( dt, bFocused, bHovered );
 
+        if ( bFocused )
+            EditorScreenshotCommands::noteFocusedView( EditorViewKind::Scene );
+
         if ( EditorChrome::beginToolbar( "##SceneViewToolbar" ) )
         {
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##SceneViewScreenshot" ) ) )
+                EditorScreenshotCommands::captureSceneView();
+            EditorSelfTestMarks::note( "sceneView.screenshot" );
+            EditorWidgets::drawTooltip( "씬 뷰 그림(에디터 카메라)을 Saved/Screenshots/<시각>.png 로 저장합니다 — 격자 · 기즈모는 ImGui 오버레이라 들지 않습니다" );
+            EditorWidgets::drawToolbarSeparator();
+
             if ( ImGui::Button( "Dbg Cat" ) )
                 ImGui::OpenPopup( "##DebugDrawCategories" );
             EditorWidgets::drawTooltip( "DebugDrawQueue 카테고리를 켜고 끕니다" );

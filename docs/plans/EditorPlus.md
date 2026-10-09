@@ -106,11 +106,10 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **4 캡처 · 디버그 · 품질** | G1 | 보기 모드 Normals · Depth · Overdraw | M | E3 | ★ |
-| | G2 | 스크린샷 버튼(게임 뷰 PNG, 씬 뷰 툴바에는 씬 뷰 스크린샷 따로) + 렌더 스레드 요청 창구 | S | E2 | ★ |
 | | G3 | RenderDoc 캡처 버튼 · `-renderdoc` | S | | |
 | | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
 | | H1 | assert 무시 대화상자 + `-unattended` | S | | ★ |
-| | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | G2 | ★ |
+| | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
 | | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
@@ -123,7 +122,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
-원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 24 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 7, 5 단계 4)입니다.
+원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 23 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 6, 5 단계 4)입니다.
 여기에 아이콘 단위 넷과 패널 점검의 단위 열둘(N5 처럼 작은 것은 다른 단위와 합쳐도 됩니다)이 더해집니다.
 
 ---
@@ -2133,44 +2132,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 **적용 뒤 확인:** 쿠킹 → host 시험 네 백엔드, `-gv_viewMode=3/4/5` 스크린샷 넷 × 셋을 눈으로. **겹침:** E3(앞), gfx-editor-rest 3 · shadow-fix(셰이더 다른 줄), 4 차 runtime-ui(UI 패스는 보기 모드를 받지 않는다 — 표 플래그 확인).
 
-### G2 스크린샷 단추 — 게임 뷰 · 씬 뷰를 PNG 로 + 렌더 스레드 요청 창구 ★
-
-**바꿀 것.**
-1) `RenderThread` 에 실행 중 요청(지금은 `-gv_screenshot` 기동 인자뿐):
-```cpp
-        /**
-         * @brief 다음 프레임의 화면(Present 결과 — 에디터면 주 출력: 게임 뷰가 보이면 게임 뷰, 아니면 씬 뷰)을 @p filePath 에 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM.
-         * @details 캡처 텍스처를 켜고 한 프레임 그린 뒤 endFrame 다음에 읽는다(켠 프레임은 아직 비어 있다). 게임 스레드에서 부른다. 앞 요청이 남아 있으면 바꾼다.
-         */
-        void requestScreenshot( string_view filePath );
-```
-구현은 `_pendingScreenshotPath`(mutex 하나)와 상태 둘(`Requested` → 캡처 켬 → 한 프레임 → 덤프 → 끔). 기존 `gv_screenshot` 경로와 같은 덤프 함수를 쓴다.
-`FrameRenderer::dumpPresentCaptureToPng( path )` — `dumpPresentCaptureToPpm` 의 바이트 풀이(BGRA → RGBA)를 함수로 빼서 `ImageFileWriter::writePngRgba8` 로 쓴다.
-2) 개발 명령(엔진 — 게임 창에서도): `SW_DEV_COMMAND( Screenshot, "screenshot", "screenshot [file]", "Save the next frame as PNG (default Saved/Screenshots/<time>.png)", &runScreenshot );`
-3) 에디터: 게임 뷰 툴바 오른쪽 끝 `ICON_FA_CAMERA` 단추(게임 뷰 그림) + 씬 뷰 툴바의 같은 단추(씬 뷰 그림 — 씬 뷰 RT 를 읽는다. 주 출력 캡처가 아니므로 렌더 스레드 요청에 대상 RT 를 함께 넘긴다)
-   + 커맨드 `viewport.screenshot`(F9, 포커스가 있는 뷰, 메뉴 `MainMenu/Edit`… 대신 툴바 · 팔레트) → `Saved/Screenshots/<yyyyMMdd-HHmmss>.png`, 끝나면 토스트
-   "Screenshot saved" + "Show in Explorer"(기존 콘텐츠 브라우저의 같은 동작 함수).
-**시험.** `RenderThreadTest`(EngineTest — 없으면 `RenderPassGpuTest` 안)에서 `requestScreenshot( temp/x.png )` → 프레임 셋 → 파일이 있고 크기가 출력 크기(PNG 머리 읽기 — `ImageUtil` 디코더). 경로 이름 만들기는 `ScreenshotPathUtil::makeDefaultPath( nowLocal )` 로 빼서 EngineTest 단위 시험(형식 `yyyyMMdd-HHmmss`).
-**확인 = 에디터 시나리오.** `screenshotbutton.scenario.xml`: `DevCommand line="panel.focus game_view"` 로 게임 뷰를 앞에 둔 뒤 그 툴바의 카메라 단추(이름표 `gameView.screenshot`)를, 다음에 씬 뷰 단추(`sceneView.screenshot`)를 누르고 몇 프레임 기다린 뒤, `ExpectLog` 로 "Screenshot saved" 줄과 경로를 봅니다.
-파일 크기와 PNG 머리는 렌더 스레드 테스트가 보고, 시나리오는 단추부터 파일까지의 경로를 봅니다.
-
-**남길 교훈.** 없음. **커밋 메시지:**
-```
-에디터 - 스크린샷 단추 · 개발 명령 screenshot(다음 프레임을 PNG 로) + 렌더 스레드 요청 창구
-
-문제점:
-- 스크린샷은 기동 인자(-gv_screenshot, PPM, 정한 프레임)뿐이라 실행 중에 찍을 수 없었다.
-
-해결방안:
-- RenderThread::requestScreenshot(경로 — .png 면 PNG): 캡처를 켜고 한 프레임 뒤 endFrame 다음에 덤프. FrameRenderer::dumpPresentCaptureToPng.
-- 개발 명령 screenshot [file](게임 창 포함), 게임 뷰 · 씬 뷰 툴바 카메라 단추 · 커맨드 viewport.screenshot(F9) → Saved/Screenshots/<시각>.png + 토스트.
-
-결과:
-- 요청 → 파일 · 크기 시험, 기본 경로 형식 시험.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-
 ### G3 RenderDoc 캡처 단추 · `-renderdoc`
 
 **바꿀 것.**
@@ -2446,7 +2407,7 @@ namespace sw
     };
 } // namespace sw
 ```
-`bugit [메모…]` 가 하는 일(순서대로): 폴더 만들기 → `info.txt`(위 칸 — 카메라는 활성 카메라(에디터면 에디터 카메라)) → `RenderThread::requestScreenshot( dir/screenshot.png )`(G2) →
+`bugit [메모…]` 가 하는 일(순서대로): 폴더 만들기 → `info.txt`(위 칸 — 카메라는 활성 카메라(에디터면 에디터 카메라)) → `RenderThread::requestScreenshot( dir/screenshot.png )` →
 로그를 비우고(`Logger::flush` — 로거가 비동기라 비우지 않으면 마지막 줄이 빠진다) 지금 로그 파일을 `log.txt` 로 복사(`FileLogOutput::getFilePath()` 를 더한다) →
 입력 녹화가 돌고 있으면(3 차 A2 `InputReplay` — 녹화 중) 지금까지를 `input.swreplay` 로 → 에디터면 씬이 더러우면 사본을 `scene.scene.xml` 로(`SceneManager` 의 다른 이름 저장 — 활성 씬 경로는 바꾸지 않는 판 —
 없으면 `saveSceneCopy( path )` 를 더한다) → `repro.txt`:
@@ -2478,7 +2439,7 @@ App.exe -<backend> [-EnableEditor] -gv_devConsoleExec="bugitgo <폴더>"
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
-**겹침:** 3 차 A2(`InputReplay` 판 4), G2(스크린샷 요청).
+**겹침:** 3 차 A2(`InputReplay` 판 4). 스크린샷 요청 창구(`RenderThread::requestScreenshot` · `ScreenshotPathUtil`)는 이미 있다.
 
 ### H3 시험 패널 — 자체 시험 · 시나리오 · 시험 실행 파일을 에디터에서
 
@@ -2778,11 +2739,11 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 ## 10. 적용 순서 · 겹치는 파일 · 확신 수준
 
-**순서(editor-plus 23 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G2 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
+**순서(editor-plus 22 커밋):** C1 → C2 → C3 → C4 → C5 → P1 → P2 → P3 → P4 → I1 → I2 → I3 → A1 → G1 → G3 → G4 → H1 → H2 → H3 → T1 → T2 → T3 → T4.
 12절과 13절의 단위는 선행 칸을 지키며 사이에 끼웁니다. 아이콘 R3 은 C 단계보다 먼저 넣어도 되고, R4 는 C2(시각화 켬/끔을 id 로) 뒤가 깔끔합니다.
 
 - **기계적 · 빌드 한 번 묶음:** C1(MODULE → SHARED · 내보내기 표) · P1(이동 표)은 커밋만 나누고 빌드는 각 단계 끝.
-- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · G1(`FrameRendererUtil.h`) · G2(`RenderThread.h`) · G4(`FrameProfiler`) · H1(`Macros.h` · `Logger.h`) · T1 · T2(`ReflectionValidation.h`).
+- **전체 빌드가 필요한 단위(Core · Engine 헤더 — 엔진 ABI 스탬프):** C2(`ModuleUnloadListener.h`) · C4(`ModuleCatalog.h`) · G1(`FrameRendererUtil.h`) · G4(`FrameProfiler`) · H1(`Macros.h` · `Logger.h`) · T1 · T2(`ReflectionValidation.h`).
 - **셰이더 쿠킹:** G1 뒤(`App.exe --cook-shaders` — 매니페스트 · 바이너리 커밋, 충돌 나면 고르지 말고 다시 쿠킹한다).
 - **re-configure:** C1 · C4 · C5 · P2(새 `REFLECT` 헤더) · T1.
 - **자체 시험 기대 목록**(`AppSmokeTest.EditorSelfTestsPassInsideTheEditor`)에 더하는 id: `themepark.extensionPanelDraws` · `themepark.layoutPreviewLoads` · `preferences.searchFiltersSections` ·

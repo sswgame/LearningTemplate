@@ -150,11 +150,16 @@ namespace sw
         /** @brief 셰이더 핫 리로드 알림입니다. 그 셰이더의 바인딩 레이아웃을 무효화하고 패스 PSO 를 모두 다시 만듭니다. */
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
         /**
-         * @brief 트랜지언트 첨부를 CPU 로 읽어 PPM(P6)으로 저장합니다. 백엔드별 시각 검증용입니다.
+         * @brief 트랜지언트 첨부를 CPU 로 읽어 파일로 저장합니다. 확장자가 `.png` 면 PNG, 아니면 PPM(P6)입니다. 백엔드별 시각 검증용입니다.
          * @details 프레임 경로가 아닙니다(GPU 를 기다립니다). 창 캡처가 백엔드마다 되고 안 되고가 갈려서,
          *          네 백엔드를 같은 기준으로 비교하려면 이쪽을 씁니다.
          */
-        bool dumpTransientToPpm( string_view attachmentName, string_view outFilePath );
+        bool dumpTransientToFile( string_view attachmentName, string_view outFilePath );
+        /**
+         * @brief 아무 2D 텍스처(첫 밉)를 CPU 로 읽어 파일로 저장합니다. 확장자 규칙은 `dumpTransientToFile` 과 같습니다.
+         * @details 에디터 씬 뷰 RT 처럼 주 출력이 아닌 렌더 타깃을 찍을 때 씁니다. 프레임 경로가 아닙니다(GPU 를 기다립니다).
+         */
+        bool dumpTextureToFile( RHITextureHandle texture, RHIFormat format, string_view outFilePath );
 
         /**
          * @brief Present 결과를 텍스처로도 받아 둘지 정합니다(`-gv_screenshot` 실행 전용).
@@ -170,8 +175,8 @@ namespace sw
          *          비교하는 유일한 길입니다. 트랜지언트만 읽을 수 있고 백버퍼는 핸들이 없습니다.
          */
         bool readbackPresentCapture( vector<uint8>& outByte, RHITextureMipSpan& outLayout );
-        /** @brief 받아 둔 Present 결과(= 화면에 나간 그림)를 PPM 으로 씁니다. */
-        bool dumpPresentCaptureToPpm( string_view outFilePath );
+        /** @brief 받아 둔 Present 결과(= 화면에 나간 그림)를 파일로 씁니다. 확장자가 `.png` 면 PNG, 아니면 PPM 입니다. */
+        bool dumpPresentCaptureToFile( string_view outFilePath );
         /**
          * @brief 다음 프레임부터 그릴 캔버스(화면 2D)를 받습니다 — 렌더러가 든 것과 **바꿔치기**합니다(용량이 돈다).
          * @details 패킷 경로는 `executePacket` 이 패킷의 `_canvas` 로 같은 일을 합니다. 씬 직접 경로(에디터 · 시험)는 이것으로 넣고, 바꿀 때까지 매 프레임
@@ -182,8 +187,8 @@ namespace sw
         uint32 getLastDrawnCanvasTargetCount() const { return _lastDrawnCanvasTargetCount; }
 
     private:
-        /** @brief 읽어 온 바이트를 PPM(P6) 파일로 씁니다. 트랜지언트 덤프와 Present 캡처 덤프가 같이 씁니다. */
-        [[nodiscard]] static bool writePpm( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
+        /** @brief 읽어 온 바이트를 파일로 씁니다 — 확장자가 `.png` 면 PNG, 아니면 PPM(P6). 트랜지언트 · 텍스처 · Present 캡처 덤프가 같이 씁니다. */
+        [[nodiscard]] static bool writeImageFile( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, string_view outFilePath );
 
     public:
         /**

@@ -12,6 +12,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
+#include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/Gui/EditorIconGlyphs.h"
@@ -399,6 +400,7 @@ namespace sw::editor
                 {                  "build.cancel",                  "Cancel Build",     editoricon::kCancel,     "Build",                       "현재 진행 중인 컴파일 작업을 취소합니다",                           "Cancel the running compile",                                                                              {},                                                                        {},                            &commandCancelBuild,               &isCompilerBusy,  true,            "MainMenu/Build", 3200},
 
                 {                    "play.start",                          "Play",                      "",      "Play",                                                              "",                                 "Start play-in-editor",                                                                              {},                                                                        {},                                   &commandPlay,                       nullptr,  true,                     nullptr,    0},
+                {           "viewport.screenshot",                    "Screenshot",     editoricon::kCamera,  "Viewport",         "포커스가 있는 뷰(게임 뷰 · 씬 뷰)를 PNG 로 저장합니다", "Save the focused view as PNG under Saved/Screenshots",                                { EditorCommandKey::F9, commandmodifier::kNone },                                                                        {},  &EditorScreenshotCommands::captureFocusedView,                       nullptr,  true,                     nullptr,    0},
 
                 {"clipboard.pasteComponentValues",        "Paste Component Values",                      "", "Clipboard",                                                              "",  "Overwrite the selected component from the clipboard",                                                                              {},                                                                        {},                   &commandPasteComponentValues,                       nullptr,  true,                     nullptr,    0},
                 { "clipboard.pasteComponentAsNew",        "Paste Component As New",                      "", "Clipboard",                                                              "",      "Add the copied component to the selected object",                                                                              {},                                                                        {},                    &commandPasteComponentAsNew,                       nullptr,  true,                     nullptr,    0},

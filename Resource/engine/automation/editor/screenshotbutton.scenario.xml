@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 스크린샷 단추(EditorPlus G2): 게임 뷰 툴바의 카메라 단추 → 씬 뷰 툴바의 카메라 단추 → 개발 명령 screenshot <파일>.
+  단추마다 렌더 스레드가 "Screenshot saved: <경로>" 를 남긴다. 파일 크기와 PNG 머리는 RenderPassGpuTest.ScreenshotDumpWritesPngAndPpm 이 본다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/screenshotbutton.scenario.xml -dx12
+-->
+<Scenario name="editor.screenshotbutton" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="30"><DevCommand line="layout.reset"/></At>
+	<At frame="60"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="80"><EditorClick mark="gameView.screenshot"/></At>
+	<At frame="120"><ExpectLog contains="Screenshot saved: " count="1"/></At>
+	<At frame="125"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="145"><EditorClick mark="sceneView.screenshot"/></At>
+	<At frame="185"><ExpectLog contains="Screenshot saved: " count="2"/></At>
+	<At frame="190"><DevCommand line="screenshot Saved/Automation/editor.screenshotbutton/devcommand.png"/></At>
+	<At frame="230">
+		<ExpectLog contains="Screenshot saved: Saved/Automation/editor.screenshotbutton/devcommand.png" count="1"/>
+		<ExpectLog contains="Screenshot was not written" count="0"/>
+		<Pass/>
+	</At>
+</Scenario>

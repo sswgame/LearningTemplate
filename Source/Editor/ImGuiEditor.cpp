@@ -14,6 +14,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
@@ -489,6 +490,7 @@ namespace sw::editor
             // -gv_editorSelfTest=<패턴> 이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();
             ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
+            EditorScreenshotCommands::update();
         }
 
         {
