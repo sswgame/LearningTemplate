@@ -333,6 +333,14 @@ if(NOT DEFINED VCPKG_INSTALLED_DIR OR VCPKG_INSTALLED_DIR STREQUAL "")
     set(VCPKG_INSTALLED_DIR "${swSrcDir}/build/vcpkg_installed" CACHE PATH "vcpkg 설치 디렉터리" FORCE)
 endif()
 
+# 바이너리 캐시는 환경 변수로만 전달된다. CMakePresets.json 의 `environment` 는 `cmake --preset` 으로 구성할 때만 걸리고,
+# ninja 가 부르는 재구성(`cmake --regenerate-during-build`)과 `cmake -S -B` 에는 없다 — 그러면 vcpkg 가 기본 캐시(%LOCALAPPDATA%)를 보고
+# 포트 전체를 소스에서 다시 짓는다(35 개 포트 · 20 분, 새 결과는 저장소 캐시에 안 쌓인다). 프리셋과 같은 값을 여기서도 정한다.
+if(NOT DEFINED ENV{VCPKG_BINARY_SOURCES} OR "$ENV{VCPKG_BINARY_SOURCES}" STREQUAL "")
+    set(ENV{VCPKG_BINARY_SOURCES} "clear;files,${swSrcDir}/build/vcpkg_cache,readwrite")
+    message(STATUS "[vcpkg] VCPKG_BINARY_SOURCES not set in the environment — using ${swSrcDir}/build/vcpkg_cache")
+endif()
+
 file(GLOB swVcpkgOverlayPorts "${swSrcDir}/ThirdParty/*/vcpkg-port")
 
 if(swVcpkgOverlayPorts)
