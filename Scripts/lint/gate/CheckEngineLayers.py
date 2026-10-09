@@ -135,7 +135,7 @@ _kGraphicsRendererLayerName = "Graphics/Renderer"
 # 실패한다(`engineLayerOfInternal` 참고).
 # ------------------------------------------------------------------------------
 _kEngineTier: dict[str, int] = {
-    # 0: 토대 — Engine 의 어느 것도 참조하지 않는다.
+    # 토대 — Engine 의 어느 것도 참조하지 않는다.
     "Common": 0,
     # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
@@ -143,56 +143,66 @@ _kEngineTier: dict[str, int] = {
     # 서버 운영 관측(지표 등록부 · 상태 확인 · 운영 HTTP 끝점). Core(로그 · 스트림 전송)만 보고 Engine 의 다른 폴더는 안 본다 — 전용 서버 실행 파일이
     # GameFramework DLL 없이 들고, 기반 Online 의 서비스 지표 묶음이 그 위에 선다.
     "Observability": 0,
-    # 1: 리플렉션과, 토대 위의 잎 서브시스템·헬퍼.
+    # 리플렉션 — 토대 위의 타입 레지스트리.
     "Reflection": 1,
+    # 토대 위의 잎 헬퍼.
     "Utility": 1,
-    # 2: 리플렉션 위에 올라가는 직렬화와 에셋형 잎.
-    "Animation": 2,
-    "Localization": 2,
+    # 직렬화 — 리플렉션 위에 올라간다.
     "Serialization": 2,
-    # 3: 설정 — 리플렉션·직렬화로 읽힌다. 물리도 같은 자리다 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
-    # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽는다(설정과 같은 자리).
-    "Audio": 3,
+    # 설정 — 리플렉션 · 직렬화로 읽힌다.
     "Config": 3,
-    "Dialogue": 3,
+    # 물리 — 설정 표 · 물리 에셋 · 셰이프 서술자가 리플렉션 데이터다.
     "Physics": 3,
-    # 4: 에셋 데이터베이스·팩·캐시 등록부. 위의 모두가 읽는다. 공간 분할은 물리의 AABB 위에 선다.
+    # 에셋 데이터베이스 · 팩 · 캐시 등록부(IAssetCache). 기능 캐시는 각 기능 폴더가 이것을 구현한다.
     "Resource": 4,
+    # 공간 분할 — 물리의 AABB 위에 선다.
     "Spatial": 4,
-    # 내비메시(인터페이스 · 베이크 입력 · 설정 표 · Recast 백엔드). 물리의 셰이프 서술자 · AABB(3)를 읽어 베이크하고, 씬의 내비게이션(Object, 6)과
+    # 내비메시(인터페이스 · 베이크 입력 · 설정 표 · Recast 백엔드). 물리의 셰이프 서술자 · AABB 를 읽어 베이크하고, 씬의 내비게이션(Object)과
     # 컴포넌트가 쓴다 — 공간 분할과 같은 자리.
     "Navigation": 4,
-    # 5: 디바이스와 GPU 에셋(RHI·Shader·Material·Mesh·Texture·Upload) · 창. 창은 IRenderSurface 로만 RHI 에 보인다.
-    "Graphics": 5,
+    # 애니메이션 데이터와 그 에셋 캐시(AnimationAssetCache · SpriteClipCache 가 Resource 의 IAssetCache 를 구현한다).
+    "Animation": 5,
+    # 문자열 테이블 · 문화권과 로컬라이제이션 파일 핫 리로드 캐시(LocalizationReloadCache).
+    "Localization": 5,
+    # 창. 창은 IRenderSurface 로만 RHI 에 보인다.
     "Window": 5,
-    # 글자 — 글꼴 파일(Resource, 4)을 읽어 글리프 · SDF 아틀라스(CPU 바이트) · 줄 바꿈을 만든다. GPU 를 모른다 — 아틀라스 업로드는 렌더러(8)의 캔버스가 한다.
-    "Text": 5,
-    # 6: 컴포넌트 모델 · 입력. 컴포넌트가 머티리얼·메시(5)를 든다.
+    # 오디오 — 믹서 그래프 · 이벤트 · 음악 데이터를 리플렉션 · 직렬화로 읽고, 립싱크 가져오기가 애니메이션 표정 트랙을 쓴다.
+    "Audio": 6,
+    # 대화 그래프 — 로컬라이즈된 글을 든다.
+    "Dialogue": 6,
+    # 입력 장치와 액션 맵 — 창의 메시지를 읽는다.
     "Input": 6,
-    "Object": 6,
-    # 7: 월드와, 오브젝트 위에서 도는 기능 모듈. 월드는 액터를 알고 액터는 월드를 모른다.
-    "Scene": 7,
-    "Sequencer": 7,
+    # 글자 — 글꼴 파일(Resource)을 읽어 글리프 · SDF 아틀라스(CPU 바이트) · 줄 바꿈을 만든다. GPU 를 모른다 — 아틀라스 업로드는 렌더러의 캔버스가 한다.
+    "Text": 6,
+    # 디바이스와 GPU 에셋(RHI · Shader · Material · Mesh · Texture · Upload).
+    "Graphics": 7,
     # 플레이어 옵션 — 입력 · 오디오 · 언어 · 창 방식 값을 그 서브시스템에 넣는다(위층은 렌더러를 모른다 — 화면 변경은 호스트가 한다).
     "UserSettings": 7,
-    # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델(6) 위의 기능 모듈이라 Sequencer 와 같은 자리다.
-    "Character": 7,
-    # 지형 · 식생 · 물 — 컴포넌트(6)가 메시 · 머티리얼(5)로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
-    "Environment": 7,
-    # 8: 그리는 쪽 · 핫리로드. 씬과 컴포넌트를 읽는다.
-    _kGraphicsRendererLayerName: 8,
-    "Module": 8,
-    # 텔레메트리 — 동의를 사용자 설정(7)에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
+    # 컴포넌트 모델. 컴포넌트가 머티리얼 · 메시(Graphics)를 든다.
+    "Object": 8,
+    # 텔레메트리 — 동의를 사용자 설정에서 읽는다. 엔진의 다른 곳은 이것을 모른다(EngineLoop 가 프레임 시간을 넘긴다).
     "Telemetry": 8,
-    # 자동화 시나리오(실행기 · 탐침 · 단계 등록표). 입력(6) · 씬(7) · 창(5)을 내려다보고, 스크린샷 · 종료는 EngineLoop 가 넘긴 창구로 한다.
-    "Automation": 8,
-    # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구(7)와 컴포넌트 모델(6) 위에 선다 — 렌더러는 모른다.
-    "Destruction": 8,
-    # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력(6) · 글자(5) · 캔버스 그리기 목록(Graphics, 5) · 사용자 설정(7)을 쓴다.
-    # 렌더러(8)와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
-    "UI": 8,
-    # 9: 전부를 엮는 자리.
-    _kRootLayerName: 9,
+    # 월드 — 월드는 액터를 알고 액터는 월드를 모른다.
+    "Scene": 9,
+    # 오브젝트 위에서 도는 기능 모듈.
+    "Sequencer": 9,
+    # 캐릭터 외형 형상(소켓 · 피팅 · 병합 · 절단 · 체형)과 소켓 부착 컴포넌트. 컴포넌트 모델 위의 기능 모듈이라 Sequencer 와 같은 자리다.
+    "Character": 9,
+    # 지형 · 식생 · 물 — 컴포넌트가 메시 · 머티리얼로 그리는 월드 기능. 씬을 모르고 오브젝트 매니저만 본다.
+    "Environment": 9,
+    # 그리는 쪽 — 씬과 컴포넌트를 읽는다.
+    _kGraphicsRendererLayerName: 10,
+    # 핫 리로드 — 씬과 컴포넌트를 읽는다.
+    "Module": 10,
+    # 파괴(파쇄 · 연결 그래프 · 피해 · 조각 컴포넌트). 캐릭터 형상의 자르기 도구와 컴포넌트 모델 위에 선다 — 렌더러는 모른다.
+    "Destruction": 10,
+    # 런타임(게임) UI — 위젯 트리 · 레이아웃 · 사건 · 포커스 · 스타일 · 문서 · 바인딩. 입력 · 글자 · 캔버스 그리기 목록(Graphics) · 사용자 설정을 쓴다.
+    # 렌더러와는 서로 include 하지 않는다 — 사이의 값은 Graphics/Canvas 의 그리기 목록뿐이다(언리얼 Slate ↔ SlateRHIRenderer 의 선).
+    "UI": 10,
+    # 자동화 시나리오(실행기 · 탐침 · 단계 등록표). 입력 · 씬 · 창을 내려다보고, 스크린샷 · 종료는 EngineLoop 가 넘긴 창구로 한다.
+    "Automation": 10,
+    # 전부를 엮는 자리.
+    _kRootLayerName: 11,
 }
 
 #: 티어 예외 — `prelude:<include 경로>` 는 어느 티어에서 include 해도 되는 헤더, `wiring:<파일>` 은 모든 서브시스템을 알아야 해

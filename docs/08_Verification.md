@@ -179,7 +179,7 @@ cd build/Ninja-Debug/Bin
   (`NetSimDestructionMatrixTest` 는 회선 둘을 두 케이스로 나눠 호스트 스위트에서 nogpu 로 왔다 — WSL Debug 케이스마다 17 초).
 - **CoreTest 는 엔진을 쓰지 않는다** — include 경로로는 막을 수 없다(`TestFramework` 가 Engine 을 PUBLIC 링크, `TestFramework.h` → `EngineMinimal.h`).
   `CheckTestSuites` 규칙 6 이 CoreTest 파일의 직접 Engine · GameFramework · Editor include 와 `engine::` 호출을 막는다. 엔진 타입이 필요하면 지역 대역을 쓰거나 EngineTest 에.
-- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 넷**(`SpriteClipCache` · `PackCompressionUtil` · `ObjectUndoUtil` · `GpuLight.h`)은 README 에
+- **레이어 때문에 지금 자리가 가장 낮은 합법 자리인 파일 셋**(`PackCompressionUtil` · `ObjectUndoUtil` · `GpuLight.h`)은 README 에
   이유가 있다 — 다시 "잘못 놓였다" 로 옮기지 말 것.
 - **호스트 스위트 케이스는 예상 밖 `[Error]` 로그 하나로 진다** — 아직 못 고친 엔진 Error 는 `SW_TEST_KNOWN_ERROR_LOG( 스위트, 문구, 이유 )` 로만 허용하고, 고치면 그 줄을
   지운다(실행 끝에 남은 선언이 출력된다). 골든 이미지는 `AppSmokeTest.BenchFrameMatchesGoldenImage`(`Test/AppTest/Golden`, `SW_UPDATE_GOLDEN=1` 로 다시 뜬다).

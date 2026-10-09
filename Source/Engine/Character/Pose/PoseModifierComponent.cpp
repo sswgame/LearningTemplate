@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
@@ -17,7 +18,6 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsAsset.h"
 #include "Engine/Physics/PhysicsSystem.h"
-#include "Engine/Resource/AnimationAssetCache.h"
 
 namespace sw
 {

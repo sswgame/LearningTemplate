@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
+#include "Engine/Animation/SpriteClipCache.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
@@ -14,15 +16,13 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Localization/LocalizationReloadCache.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/LocalizationReloadCache.h"
 #include "Engine/Resource/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
 {

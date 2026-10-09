@@ -187,6 +187,7 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
+  │     ├── MoveEngineFolders.py      # Engine 폴더 재배치의 이동 표(git mv + 경로 치환)와 티어 표 맞추기(--sync-tier) — 다시 돌릴 수 있다
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳

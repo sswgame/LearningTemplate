@@ -4,6 +4,7 @@
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
+#include "Engine/Animation/SpriteClipCache.h"
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -13,7 +14,6 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/IAssetCache.h"
-#include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 

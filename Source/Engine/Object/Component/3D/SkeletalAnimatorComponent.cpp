@@ -8,12 +8,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Physics/CharacterControllerComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Resource/AnimationAssetCache.h"
 
 namespace sw
 {

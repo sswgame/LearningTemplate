@@ -4,7 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Resource/SpriteClipCache.h"
+#include "Engine/Animation/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 

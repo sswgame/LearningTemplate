@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/LocalizationReloadCache.h"
+#include "Engine/Localization/LocalizationReloadCache.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Localization/LocalizationManager.h"

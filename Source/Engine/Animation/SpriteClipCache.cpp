@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/SpriteClipCache.h"
+#include "Engine/Animation/SpriteClipCache.h"
 
 #include "Core/Memory/Memory.h"
 

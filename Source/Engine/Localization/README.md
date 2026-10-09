@@ -146,7 +146,7 @@ CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `Locali
 자세한 내용은 [UI README](../UI/README.md)의 "현지화 글" 절에 있습니다.
 
 **다시 읽기.** `reloadChangedFile( path )` 는 그 파일이 속한 프로젝트를 다시 읽습니다. 실패하면 이전 글을 유지합니다. 성공하면 글 버전을 올리고 언어 변경 콜백을 같은 언어로 부릅니다.
-에디터 핫 리로드는 `.strings.json`, `.translation.json`, `.locproject.json` 변경을 에셋 캐시 "StringTable"(`Resource/LocalizationReloadCache`)로 보내 이 함수를 부릅니다.
+에디터 핫 리로드는 `.strings.json`, `.translation.json`, `.locproject.json` 변경을 에셋 캐시 "StringTable"(`LocalizationReloadCache`)로 보내 이 함수를 부릅니다.
 에디터 Data Table 패널의 Localization 탭은 원문과 문화권 번역을 한 테이블로 고치고, 저장하면 같은 경로로 다시 읽습니다.
 
 **글꼴.** `getFontFallback( culture )` 는 문화권(없으면 부모와 폴백)의 글꼴 패밀리 목록을 돌려줍니다. 이 목록으로 글꼴 대체 순서를 만드는 것은 `Engine/Text/FontSystem` 입니다.

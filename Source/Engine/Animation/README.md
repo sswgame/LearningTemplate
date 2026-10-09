@@ -15,7 +15,7 @@
 
 - 누가 언제 포즈를 만드는지(평가)는 `Object/Animation/AnimationSystem` 입니다.
 - 컴포넌트는 `Object/Component/3D/` 의 `SkeletalMeshComponent` 와 `SkeletalAnimatorComponent`, 그리고 `Object/Component/2D/SpriteAnimatorComponent` 입니다.
-- 경로로 스켈레톤과 클립을 나눠 주는 캐시(`SkeletonCache`, `AnimClipCache`)는 `Resource/AnimationAssetCache` 에 있습니다. 에셋 캐시 계층이 이 폴더보다 위에 있기 때문입니다.
+- 경로로 스켈레톤과 클립을 나눠 주는 캐시(`SkeletonCache`, `AnimClipCache`)는 `AnimationAssetCache`, 스프라이트 클립 캐시는 `SpriteClipCache` 입니다. 둘 다 `Resource` 의 `IAssetCache` 를 구현하므로 이 폴더는 `Resource` 위 티어입니다.
 - 후처리 리그를 유닛에 붙이는 컴포넌트, 알림 처리기, 래그돌은 [Character](../Character/README.md)에 있습니다.
 
 ## 머릿속 그림

@@ -6,12 +6,12 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Animation/SkeletonBoneLod.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw

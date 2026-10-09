@@ -6,6 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/SpriteClipCache.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -13,7 +14,6 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Object/Component/2D/SpriteRenderUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Resource/SpriteClipCache.h"
 
 namespace sw
 {

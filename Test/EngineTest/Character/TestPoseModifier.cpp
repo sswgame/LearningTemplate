@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Character/Pose/PoseModifierComponent.h"
@@ -15,7 +16,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Resource/AnimationAssetCache.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/AnimationTestUtil.h"

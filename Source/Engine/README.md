@@ -20,38 +20,44 @@
 |---|---|---|
 | 0 | `Common`, `Compression`, `Observability` | 토대 |
 | 1 | `Reflection`, `Utility` | 리플렉션과 잎 헬퍼 |
-| 2 | `Animation`, `Localization`, `Serialization` | 리플렉션 위의 데이터 |
-| 3 | `Audio`, `Config`, `Dialogue`, `Physics` | 리플렉션으로 읽는 설정과 데이터 |
+| 2 | `Serialization` | 리플렉션 위의 직렬화 |
+| 3 | `Config`, `Physics` | 리플렉션으로 읽는 설정과 데이터 |
 | 4 | `Resource`, `Spatial`, `Navigation` | 에셋 데이터베이스와 공간 구조 |
-| 5 | `Graphics`(Renderer 제외), `Window`, `Text` | 디바이스와 GPU 에셋 |
-| 6 | `Input`, `Object` | 컴포넌트 모델 |
-| 7 | `Scene`, `Sequencer`, `Character`, `UserSettings`, `Environment` | 월드와 기능 모듈 |
-| 8 | `Graphics/Renderer`, `Module`, `Telemetry`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
-| 9 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
+| 5 | `Animation`, `Localization`, `Window` | 에셋 캐시를 가진 기능 데이터와 창 |
+| 6 | `Audio`, `Dialogue`, `Input`, `Text` | 기능 데이터 위의 서브시스템 |
+| 7 | `Graphics`(Renderer 제외), `UserSettings` | 디바이스와 GPU 에셋, 플레이어 옵션 |
+| 8 | `Object`, `Telemetry` | 컴포넌트 모델 |
+| 9 | `Scene`, `Sequencer`, `Character`, `Environment` | 월드와 기능 모듈 |
+| 10 | `Graphics/Renderer`, `Module`, `Destruction`, `Automation`, `UI` | 그리는 쪽과 상위 기능 |
+| 11 | `EngineLoop` 등 루트 파일 | 전부를 엮는 곳 |
+
+표의 숫자는 include 그래프에서 계산한 값입니다(`py -3 Scripts/dev/MoveEngineFolders.py --sync-tier` 가 게이트 표를 맞추고 이 표의 줄을 찍습니다).
 
 **아래 티어는 위 티어를 include하지 않습니다.** 같은 티어끼리는 include할 수 있습니다. `CheckEngineLayers.py` 게이트가 이 규칙을 확인하고, 위반은 경고가 아니라 실패입니다.
 
 같은 게이트는 최상위 폴더 방향도 봅니다. Core 는 아무것도 모르고, App 은 Engine 과 RuntimeAPI 만 압니다. Editor 는 게임, 키트, 호스트를 모르고, Server 는 Editor, GameFramework, Games 를 모릅니다. Engine, GameFramework, Games 는 호스트(App, Server)를 모르고, 게임은 다른 게임을 include 하지 않습니다.
 표에 없는 새 최상위 폴더도 실패합니다. 같은 게이트가 Engine에서 `Editor/`, `GameFramework/`, `Games/` 를 include하는 것도 막습니다.
 
-티어마다 알아 둘 점은 다음과 같습니다.
+폴더마다 알아 둘 점은 다음과 같습니다. 티어 숫자는 의존이 바뀌면 함께 바뀌므로 여기서는 폴더 이름으로 적습니다.
 
-- **티어 0.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
+- **토대.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
   `Observability` 는 Core만 보는 서버 운영 관측입니다.
-- **티어 3.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 여기 있습니다. 오디오의 믹서 그래프, 이벤트, 음악 데이터도 같은 이유입니다.
-- **티어 4.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리입니다. 공간 분할(`Spatial`)은 물리의 `AABB` 를 씁니다.
-  내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트(티어 6)가 그것을 씁니다.
-- **티어 5.** RHI, 셰이더, 머티리얼, 메시, 텍스처가 있는 디바이스 계층입니다. 창은 `Common/IRenderSurface` 인터페이스로만 RHI에 보입니다.
+- **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
+- **에셋과 공간.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다. 공간 분할(`Spatial`)은 물리의 `AABB` 를 씁니다.
+  내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.
+- **기능 데이터.** `Animation` 과 `Localization` 은 자기 에셋 캐시(`AnimationAssetCache`, `SpriteClipCache`, `LocalizationReloadCache`)가 `IAssetCache` 를 구현하므로 `Resource` 위에 있습니다.
+  오디오는 립싱크 가져오기가 애니메이션 표정 트랙을 쓰므로, 대화와 글자는 로컬라이즈된 글을 쓰므로 그 위에 있습니다.
+- **디바이스.** RHI, 셰이더, 머티리얼, 메시, 텍스처가 있는 계층입니다. 창은 `Common/IRenderSurface` 인터페이스로만 RHI에 보입니다.
   글자(`Text`)는 글꼴 파일을 읽어 CPU 메모리에 SDF 아틀라스를 만들 뿐 GPU를 모릅니다. 아틀라스 업로드는 렌더러가 합니다.
-- **티어 6.** 컴포넌트가 머티리얼과 메시(티어 5)를 보관합니다. 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 보관하는 것과 같습니다.
-- **티어 7.** 월드(씬, 씬 매니저)와 오브젝트 위에서 도는 기능 모듈입니다. **월드는 액터를 알고 액터는 월드를 모릅니다.**
+- **컴포넌트 모델.** 컴포넌트가 머티리얼과 메시를 보관합니다. 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 보관하는 것과 같습니다.
+- **월드와 기능 모듈.** 월드(씬, 씬 매니저)와 오브젝트 위에서 도는 기능 모듈입니다. **월드는 액터를 알고 액터는 월드를 모릅니다.**
   플레이어 옵션(`UserSettings`)은 입력, 오디오, 언어, 창에 값을 넣으므로 그 위에 있습니다.
-- **티어 8.** 그리는 쪽(FrameRenderer, RenderGraph, GpuScene, RenderThread, 셰이더 쿠킹)과 핫 리로드입니다. 언리얼의 Renderer가 Engine을 보는 방향과 같습니다.
-  텔레메트리와 크래시 보고는 사용자 설정(티어 7)에서 동의를 읽습니다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구(티어 7)를 씁니다.
+- **그리는 쪽과 상위 기능.** 그리는 쪽(FrameRenderer, RenderGraph, GpuScene, RenderThread, 셰이더 쿠킹)과 핫 리로드입니다. 언리얼의 Renderer가 Engine을 보는 방향과 같습니다.
+  텔레메트리와 크래시 보고는 사용자 설정에서 동의를 읽습니다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구를 씁니다.
   런타임 UI는 입력, 글자, 사용자 설정을 쓰지만 렌더러와는 서로 include하지 않습니다. 둘 사이에 오가는 값은 그리기 목록뿐입니다(언리얼의 Slate와 SlateRHIRenderer 관계).
 
-`Graphics` 만 폴더보다 잘게 봅니다. `Graphics/Renderer` 는 티어 8이고 나머지 `Graphics` 는 티어 5입니다. 상용 엔진의 RHI, RenderCore와 Renderer 사이의 경계와 같습니다.
+`Graphics` 만 폴더보다 잘게 봅니다. `Graphics/Renderer` 는 그리는 쪽 티어이고 나머지 `Graphics` 는 디바이스 티어입니다. 상용 엔진의 RHI, RenderCore와 Renderer 사이의 경계와 같습니다.
 
 티어가 아닌 파일이 두 종류 있고, 게이트도 이 둘을 예외로 둡니다.
 
@@ -72,17 +78,17 @@ py -3 Scripts/lint/report/RunEngineLayerGraph.py
 보고서는 폴더마다 계산한 티어와 그 폴더가 include하는 폴더를 보여 줍니다. 몇 줄만 옮기면 다음과 같습니다.
 
 ```text
-   2  Animation            -> Common, Reflection, Utility
-   7  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Spatial, Utility
+   5  Animation            -> Common, Reflection, Resource, Utility
+   9  Character            -> Animation, Audio, Common, Graphics, Object, Physics, Reflection, Resource, Spatial, Utility
 ```
 
 계산한 티어가 게이트의 테이블과 다르면 그 줄 끝에 `<- 게이트 표는 N` 이 붙습니다. 같은 티어끼리의 include는 허용되므로 계산 값이 테이블보다 높게 나올 수 있습니다.
-폴더끼리 서로 include하는 순환이 있으면 보고서 맨 앞에 따로 나옵니다. 지금은 `Automation` 과 `UI` 가 서로 include하는 순환 하나가 보고됩니다. 둘 다 티어 8이라 게이트는 통과합니다.
+폴더끼리 서로 include하는 순환이 있으면 보고서 맨 앞에 따로 나옵니다. 지금은 `Automation` 과 `UI` 가 서로 include하는 순환 하나가 보고됩니다. 둘이 같은 티어라 게이트는 통과합니다.
 
 ### 2단계 — 티어 정하기
 
-새 클래스가 include할 가장 높은 폴더가 `Character`(티어 7)이므로, 이 클래스는 티어 7 이상의 폴더에 있어야 합니다.
-`Animation`(티어 2)에 두면 위 티어를 include하게 되어 게이트가 실패합니다. 실제로 애니메이션 알림 디스패치는 그래서 `Character/AnimNotify/` 에 있습니다.
+새 클래스가 include할 가장 높은 폴더가 `Character`(티어 9)이므로, 이 클래스는 티어 9 이상의 폴더에 있어야 합니다.
+`Animation`(티어 5)에 두면 위 티어를 include하게 되어 게이트가 실패합니다. 실제로 애니메이션 알림 디스패치는 그래서 `Character/AnimNotify/` 에 있습니다.
 
 ### 3단계 — 게이트로 확인하기
 
@@ -169,9 +175,9 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 코드로 만드는 값은 `WeakInternCache` 로 보관합니다. 내장 도형, 9-슬라이스 메시, 스프라이트 텍스처 인스턴스가 여기에 속합니다. 둘 다 `WeakInternTable` 위에 있습니다.
 `WeakInternCache` 는 `IAssetCache` 이므로 `AssetManager` 가 생성자에서 내장 캐시(`_listBuiltInAssetCache`)로 등록하고, 종료할 때 약한 참조 항목까지 지웁니다.
 
-티어 때문에 `Resource/` 에 있는 클래스가 셋 있습니다. `SpriteClipCache` 와 `AnimationAssetCache` 는 `IAssetCache` 를 구현하므로 Animation(티어 2)이 아니라 여기 있습니다.
-`LocalizationReloadCache` 는 로컬라이제이션 파일의 핫 리로드 진입점이라 같은 이유로 여기 있습니다. 글 자체는 `LocalizationManager` 가 가지고, 이 캐시의 `clear()` 는 아무것도 지우지 않습니다.
-`PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
+기능 에셋 캐시는 자기 기능 폴더에 있고 `Resource` 의 `IAssetCache` 를 구현합니다. 스켈레톤 · 클립 · 리그는 `Animation/AnimationAssetCache`, 스프라이트 클립은 `Animation/SpriteClipCache` 입니다.
+`Localization/LocalizationReloadCache` 는 로컬라이제이션 파일의 핫 리로드 진입점입니다. 글 자체는 `LocalizationManager` 가 가지고, 이 캐시의 `clear()` 는 아무것도 지우지 않습니다.
+`AssetManager.cpp` 는 이 캐시들을 소유하는 배선 파일이라 티어 예외입니다. `PackCompressionUtil` 은 팩 타입(`ResourcePackTypes.h`)을 쓰므로 Compression(티어 0)이 아니라 여기 있습니다.
 
 ### 개발 콘솔과 개발 명령
 

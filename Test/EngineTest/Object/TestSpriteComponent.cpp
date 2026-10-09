@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/SpriteClipAsset.h"
+#include "Engine/Animation/SpriteClipCache.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -15,7 +16,6 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Resource/SpriteClipCache.h"
 
 #include "TestFramework/TestFramework.h"
 
