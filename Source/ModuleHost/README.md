@@ -1,10 +1,10 @@
-# AppHost (모듈 호스트)
+# ModuleHost (모듈 호스트)
 
 ## 이것은 무엇이고 왜 있나
 
-`AppHost` 는 플레이어 실행 파일 `App` 과 전용 서버 실행 파일 `Server` 가 같이 링크하는 정적 라이브러리입니다.
-모듈 매니페스트를 해석하고, 게임 · 키트 · 에디터 모듈을 올리고 내리고, 개발 빌드에서 모듈을 핫 리로드하고, 프레임 시간을 고정 스텝으로 나눕니다.
-두 실행 파일이 같은 코드로 모듈을 다뤄야 하므로 실행 파일 폴더 밖에 따로 둡니다. AppHost 는 `Engine` 과 `RuntimeAPI` 만 알고, `App` 과 `Server` 를 모릅니다.
+`ModuleHost` 는 플레이어 실행 파일 `App` 과 전용 서버 실행 파일 `Server` 가 같이 링크하는 정적 라이브러리입니다.
+모듈 매니페스트를 해석하고, 게임 · 키트 · 에디터 모듈을 올리고 내리고, 개발 빌드에서 모듈을 핫 리로드합니다.
+두 실행 파일이 같은 코드로 모듈을 다뤄야 하므로 실행 파일 폴더 밖에 따로 둡니다. ModuleHost 는 `Engine` 과 `RuntimeAPI` 만 알고, `App` 과 `Server` 를 모릅니다.
 
 App은 이번 빌드에 포함된 모든 타깃의 모듈을 로드하고(`ModuleCatalog::getBuildTargetMask`), Server는 `Server` 타깃의 모듈만 로드합니다.
 언리얼에 비유하면 `ModuleHost` 는 `FModuleManager`, `LiveReloadManager` 는 Live Coding 에 해당합니다.
@@ -21,8 +21,6 @@ App은 이번 빌드에 포함된 모든 타깃의 모듈을 로드하고(`Modul
 **LiveReloadManager** 는 개발 빌드의 핫 리로드를 맡습니다. Shipping 빌드에서는 파일째 빠집니다.
 섀도 복사본의 바이트를 고치는 `ModuleImagePatch`, 새 모듈 코드 호출을 감싸는 `ModuleCallGuard`, 복사본 이름을 짓는 `ShadowCopyName` 은 각자 파일에 있고 함께 빠집니다.
 
-**FixedTimestep** 은 실제 경과 시간을 가변 델타와 고정 스텝 수로 나눕니다. `AppTest` 가 이 파일만 따로 컴파일해서 테스트합니다.
-
 ## 따라 해 보기 — 게임 모듈을 핫 리로드하기
 
 ```powershell
@@ -34,15 +32,6 @@ cd build/Ninja-Debug/Bin
 로그의 `[ReloadProbe]` 줄 앞뒤로 리로드 전후의 상태가 남습니다. 리로드 단축키(Ctrl+F7)와 같은 경로를 탑니다.
 
 ## 작동 원리
-
-### 시간 정책
-
-고정 스텝 길이와 프레임당 상한은 `EngineConfig` 의 `_fixedDeltaTime`, `_maxFixedStepPerFrame`, `_maxFrameDeltaTime` 이 정합니다.
-상한은 꼭 필요합니다. 상한이 없으면 느린 프레임이 고정 스텝을 더 많이 부르고, 그래서 다음 프레임이 더 느려지는 악순환에 빠집니다.
-상한을 넘은 시간은 버립니다. 실시간을 따라잡는 대신 시뮬레이션이 실시간보다 느려지는 쪽을 택한 것입니다.
-
-게임 시간 배율(`gv_timeScale`)은 최대 델타로 자른 뒤에 곱합니다(`FixedTimestep::advance`). 그래서 고정 스텝 수도 배율을 따라 늘고 줄며, 상한은 그대로입니다. 배율이 0이면 게임 시간이 멈춥니다.
-App이 넘기는 `-gv_fixedFrameDelta=<초>` 를 주면 벽시계 대신 매 프레임 그 시간만큼 흐릅니다. 자동화 시나리오나 픽셀 비교처럼 결과가 매번 같아야 하는 실행에 씁니다.
 
 ### 모듈을 언로드하는 경로는 하나입니다
 
@@ -58,7 +47,9 @@ App이 넘기는 `-gv_fixedFrameDelta=<초>` 를 주면 벽시계 대신 매 프
 
 ## 함정과 주의
 
-**AppHost 는 실행 파일을 모릅니다.** `App/` · `Server/` 를 include 하지 않고, 실행 파일 쪽 정책은 콜백이나 인자로 받습니다(`CheckEngineLayers`).
+**고정 스텝 시간 정책은 여기 없습니다.** `FixedTimestep` 은 모듈 호스팅이 아니라 프레임 시간 정책이라, 값을 가진 `EngineConfig` 옆(`Source/Engine/Config`, 티어 3)에 있습니다. 시간 정책은 [App](../App/README.md) "시간 정책" 에 있습니다.
+
+**ModuleHost 는 실행 파일을 모릅니다.** `App/` · `Server/` 를 include 하지 않고, 실행 파일 쪽 정책은 콜백이나 인자로 받습니다(`CheckEngineLayers`).
 
 **프레임 중간에 에디터 상태를 다시 묻지 않습니다.** 이번 프레임의 답은 `ModuleHost::getFrameState()` 입니다. 중간에 다시 물으면 고정 스텝마다 다른 답을 볼 수 있습니다.
 
@@ -67,7 +58,7 @@ App이 넘기는 `-gv_fixedFrameDelta=<초>` 를 주면 벽시계 대신 매 프
 이렇게 적용 전에 실패하면 옛 모듈이 계속 돕니다. 적용한 뒤의 결함만 `markGraphBroken` 으로 처리합니다. 언리얼의 Live Coding도 같은 방식입니다.
 
 **모듈 리로드는 호스트가 맡습니다.** Engine에는 `IModuleHandleProvider` 인터페이스만 두고, 공개 헤더에 리로드 콜백을 두지 않습니다.
-`LiveReloadManager` 와 그 도우미 셋은 Shipping 빌드에서 빠집니다(`Source/AppHost/CMakeLists.txt` 의 제외 목록). Shipping은 모듈을 언로드하지 않습니다. 이 동작은 SmokeTest가 검증합니다.
+`LiveReloadManager` 와 그 도우미 셋은 Shipping 빌드에서 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록). Shipping은 모듈을 언로드하지 않습니다. 이 동작은 SmokeTest가 검증합니다.
 
 **핫 리로드는 원본 DLL이 아니라 섀도 복사본을 로드합니다.** 원본 파일을 잠그지 않아야 빌드가 그 파일을 덮어쓸 수 있기 때문입니다.
 Windows에서는 지연 로드 훅(`DelayLoadNotifyHook.cpp`)이 `GameFramework.dll` 의 import를 현재 복사본으로 돌립니다. 이 훅을 빼면 원본이 한 번 더 로드되어 정적 상태가 두 벌이 됩니다.
@@ -95,4 +86,3 @@ Linux에서는 SONAME을 같은 길이의 이름으로 바꿔 씁니다(`ModuleI
 | `ModuleCallGuard.cpp` | 새 모듈 코드 호출의 하드웨어 예외 가드 |
 | `ShadowCopyName.cpp` | 섀도 복사본 이름과 남은 복사본 정리 |
 | `ModuleCompiler.cpp` | 에디터가 부르는 백그라운드 CMake 빌드 |
-| `FixedTimestep.cpp` | 고정 스텝 계산 |

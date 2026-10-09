@@ -1,10 +1,5 @@
 #include "pch.h"
 
-#include "AppHost/LiveReloadManager.h"
-#include "AppHost/ModuleCompiler.h"
-#include "AppHost/ModuleImagePatch.h"
-#include "AppHost/ShadowCopyName.h"
-
 #include "Core/Common/StdHeaders.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -32,6 +27,11 @@
 
 #include "GameFramework/Base/Framework/GameService.h"
 #include "GameFramework/GameFrameworkExports.h"
+
+#include "ModuleHost/LiveReloadManager.h"
+#include "ModuleHost/ModuleCompiler.h"
+#include "ModuleHost/ModuleImagePatch.h"
+#include "ModuleHost/ShadowCopyName.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 #include "RuntimeAPI/ABI/GameAPI.h"

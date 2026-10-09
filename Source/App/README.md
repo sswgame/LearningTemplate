@@ -3,7 +3,7 @@
 ## 이것은 무엇이고 왜 있나
 
 `App` 은 엔진을 실행하는 실행 파일입니다. 일부러 얇게 만들었습니다.
-App이 컴파일할 때 링크하는 것은 `Engine`, `RuntimeAPI`, `AppHost` 셋뿐이고, 게임과 에디터의 클래스는 전혀 모릅니다.
+App이 컴파일할 때 링크하는 것은 `Engine`, `RuntimeAPI`, `ModuleHost` 셋뿐이고, 게임과 에디터의 클래스는 전혀 모릅니다.
 게임과 에디터는 실행 중에 모듈로 로드하고, `Source/RuntimeAPI` 의 C 함수 테이블로만 부릅니다.
 이렇게 해야 개발 빌드에서 App을 끄지 않고 게임이나 에디터 DLL을 바꿔 끼울 수 있습니다(핫 리로드).
 
@@ -11,7 +11,7 @@ App이 직접 하는 일은 네 가지입니다. 모듈 로더를 엔진에 연�
 엔진을 시작하고 종료하는 순서는 App이 아니라 엔진의 단계 목록(`Source/Engine/EngineInitStepList.xxx`)이 정합니다.
 새로운 시스템이 필요하면 App이 아니라 `Engine` 에 둡니다.
 
-모듈 호스트, 핫 리로드, 고정 시간 단계 계산은 정적 라이브러리 [AppHost](../AppHost/README.md)(`Source/AppHost`)에 있습니다. 전용 서버 실행 파일(`Source/Server`)도 이 라이브러리를 같이 씁니다.
+모듈 호스트와 핫 리로드는 정적 라이브러리 [ModuleHost](../ModuleHost/README.md)(`Source/ModuleHost`)에 있습니다. 전용 서버 실행 파일(`Source/Server`)도 이 라이브러리를 같이 씁니다.
 언리얼에 비유하면 App은 `GuardedMain` 과 `FEngineLoop` 를 부르는 런처입니다.
 
 ## 머릿속 그림
@@ -31,7 +31,8 @@ sequenceDiagram
     end
 ```
 
-모듈 이미지와 인스턴스, `ModuleHost`, `LiveReloadManager`, `FixedTimestep` 은 [AppHost](../AppHost/README.md) 에 설명이 있습니다.
+모듈 이미지와 인스턴스, `ModuleHost`, `LiveReloadManager` 는 [ModuleHost](../ModuleHost/README.md) 에 설명이 있습니다.
+프레임 시간을 가변 델타와 고정 스텝 수로 나누는 `FixedTimestep` 은 Engine(`Source/Engine/Config/FixedTimestep.h`)에 있고, 그 정책은 아래 "시간 정책" 에 있습니다.
 
 **RHIBackendSwitcher** 는 `gv_rhiBackend` 가 바뀌면 프레임 경계에서 그래픽 API를 교체합니다. App만 쓰지만 교체 순서를 아는 유일한 곳이라 `RHIBackendSwitcher.cpp` 로 따로 둡니다.
 
@@ -105,7 +106,14 @@ echo $LASTEXITCODE
 - 뷰 카메라는 `EngineLoop::tick` 안에서 늦게 찾습니다. 미리 찾아 두면 씬 전환이나 핫 리로드가 파괴한 객체를 참조하게 됩니다.
 - 창 크기 변경 통보는 `App::onResize` 로 따로 받습니다.
 
-고정 스텝의 상한과 시간 배율은 [AppHost](../AppHost/README.md) "시간 정책" 에 있습니다. `-gv_fixedFrameDelta=<초>` 는 App 이 선언해 `FixedTimestep::advance` 에 넘깁니다.
+### 시간 정책
+
+고정 스텝 길이와 프레임당 상한은 `EngineConfig` 의 `_fixedDeltaTime`, `_maxFixedStepPerFrame`, `_maxFrameDeltaTime` 이 정하고, `FixedTimestep` 이 적용합니다.
+상한은 꼭 필요합니다. 상한이 없으면 느린 프레임이 고정 스텝을 더 많이 부르고, 그래서 다음 프레임이 더 느려지는 악순환에 빠집니다.
+상한을 넘은 시간은 버립니다. 실시간을 따라잡는 대신 시뮬레이션이 실시간보다 느려지는 쪽을 택한 것입니다.
+
+게임 시간 배율(`gv_timeScale`)은 최대 델타로 자른 뒤에 곱합니다(`FixedTimestep::advance`). 그래서 고정 스텝 수도 배율을 따라 늘고 줄며, 상한은 그대로입니다. 배율이 0이면 게임 시간이 멈춥니다.
+`-gv_fixedFrameDelta=<초>` 를 주면 벽시계 대신 매 프레임 그 시간만큼 흐릅니다. App 이 선언해 `FixedTimestep::advance` 에 넘기며, 자동화 시나리오나 픽셀 비교처럼 결과가 매번 같아야 하는 실행에 씁니다.
 
 ### 리로드 단축키와 개발 콘솔
 
@@ -158,11 +166,11 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 3. 작업이 `Failed` 를 돌려주면 `App::initialize` 가 false를 반환해 종료 코드로 알립니다. `Finished` 는 그 작업만 하고 성공으로 끝냅니다(크래시 보고).
 4. `py -3 Scripts/generate/GenerateConfigReference.py` 로 인자 문서를 다시 생성합니다.
 
-모듈을 다시 만들어야 하는 새 이유(디바이스 상실, 어댑터 변경 등)를 더하는 법은 [AppHost](../AppHost/README.md) "확장하는 법" 에 있습니다.
+모듈을 다시 만들어야 하는 새 이유(디바이스 상실, 어댑터 변경 등)를 더하는 법은 [ModuleHost](../ModuleHost/README.md) "확장하는 법" 에 있습니다.
 
 ## 함정과 주의
 
-모듈 호스트와 핫 리로드의 함정(프레임 상태 고정, 리로드 거절 시점, 섀도 복사본, 지연 언로드, `ModuleCallGuard`)은 [AppHost](../AppHost/README.md) "함정과 주의" 에 있습니다.
+모듈 호스트와 핫 리로드의 함정(프레임 상태 고정, 리로드 거절 시점, 섀도 복사본, 지연 언로드, `ModuleCallGuard`)은 [ModuleHost](../ModuleHost/README.md) "함정과 주의" 에 있습니다.
 
 **Linux 스플래시 창은 서버가 정상이라고 해도 화면에 없을 수 있습니다.** `XPutImage` 는 확대 축소를 하지 않아서 이미지를 직접 줄여서 그립니다.
 `Expose` 이벤트마다 창 내용이 지워지므로 배경 픽스맵을 씁니다. `override_redirect` 창은 XWayland에서 보이지 않아서 EWMH의 `_NET_WM_WINDOW_TYPE_SPLASH` 를 씁니다.
@@ -170,11 +178,11 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 
 ## 더 볼 곳
 
-- [AppHost](../AppHost/README.md): App · Server 가 같이 쓰는 모듈 호스트와 핫 리로드
+- [ModuleHost](../ModuleHost/README.md): App · Server 가 같이 쓰는 모듈 호스트와 핫 리로드
 - [핫 리로드와 C-ABI](../../docs/03_LiveReload_and_ABI.md): 리로드가 도는 순서와 지켜야 할 규칙
 - [RuntimeAPI](../RuntimeAPI/README.md): App과 모듈 사이의 C 인터페이스
 - [Module](../Engine/Module/README.md): 모듈 매니페스트와 타입 등록
-- [Server](../Server/README.md): 같은 `AppHost` 를 쓰는 전용 서버
+- [Server](../Server/README.md): 같은 `ModuleHost` 를 쓰는 전용 서버
 
 | 파일 | 내용 |
 |---|---|

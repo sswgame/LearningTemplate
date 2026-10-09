@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "AppHost/ModuleCallGuard.h"
+#include "ModuleHost/ModuleCallGuard.h"
 
 #include "TestFramework/TestFramework.h"
 

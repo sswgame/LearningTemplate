@@ -26,7 +26,7 @@ flowchart TD
 ```
 
 1. 개발자가 코드를 고치고 빌드합니다. IDE에서 빌드해도 되고, 에디터의 빌드 버튼이나 단축키(게임은 Ctrl+F7, 에디터는 Ctrl+F6)를 써도 됩니다.
-2. 호스트 라이브러리(`AppHost`)의 `LiveReloadManager` 가 파일 감시로 DLL이 바뀐 것을 알아챕니다. 빌드가 파일을 쓰는 도중에 읽지 않도록, 파일이 더 바뀌지 않을 때까지 기다립니다.
+2. 호스트 라이브러리(`ModuleHost`)의 `LiveReloadManager` 가 파일 감시로 DLL이 바뀐 것을 알아챕니다. 빌드가 파일을 쓰는 도중에 읽지 않도록, 파일이 더 바뀌지 않을 때까지 기다립니다.
    이 프로세스가 시킨 빌드가 도는 동안에는 변경을 모으기만 합니다.
 3. 바뀐 모듈과 그 모듈에 의존하는 모듈을 한 그룹으로 만들고, 의존 순서대로 정렬합니다. 이것을 연쇄 리로드라고 합니다.
 4. prepare 단계입니다. 그룹의 새 DLL을 모두 섀도 복사본으로 로드하고, 엔진 ABI 스탬프(`swEngineAbiStamp:`)를 대조합니다.
@@ -50,7 +50,7 @@ flowchart TD
 
 ### 리로드 코드는 App에 있습니다
 
-`LiveReloadManager` 는 `Source/AppHost/` 에 있고 Shipping 빌드에서는 파일째 빠집니다. Engine이 아는 것은 지연 로드 훅이 쓰는 `IModuleHandleProvider` 인터페이스 하나뿐입니다.
+`LiveReloadManager` 는 `Source/ModuleHost/` 에 있고 Shipping 빌드에서는 파일째 빠집니다. Engine이 아는 것은 지연 로드 훅이 쓰는 `IModuleHandleProvider` 인터페이스 하나뿐입니다.
 Linux에서는 섀도 복사본의 SONAME을 세대마다 다른 이름으로 바꿉니다(`ModuleImagePatch`). 그래야 의존 모듈이 옛 이미지에 연결되지 않습니다.
 App 쪽의 세부 규칙은 [App 문서](../Source/App/README.md)의 "함정과 주의" 절에 있습니다.
 

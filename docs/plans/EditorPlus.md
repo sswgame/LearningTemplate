@@ -1048,7 +1048,7 @@ endfunction()
 자동 훑기 직후 `if(ARG_EXCLUDE_REGEX) list(FILTER _all_headers EXCLUDE REGEX "${ARG_EXCLUDE_REGEX}") endif()`.
 키트 · 게임의 `Editor/` 하위 폴더가 Shipping 에서 안 지어지는 것은 `sw_addEditorExtension` 의 `sw_declareUnbuiltSources` 가 `CheckSourceGlob` 에 알린다.
 
-4) `Source/AppHost/ModuleHost.cpp` — `loadModuleImages` 에서 확장 목록을 모아 두고(카탈로그는 `initialize` 에 없다), 에디터 블록에서 EditorModule 다음에 등록한다:
+4) `Source/ModuleHost/ModuleHost.cpp` — `loadModuleImages` 에서 확장 목록을 모아 두고(카탈로그는 `initialize` 에 없다), 에디터 블록에서 EditorModule 다음에 등록한다:
 ```cpp
             if ( pManifest->_kind == ModuleKind::EditorExtension )
             {

@@ -48,7 +48,7 @@ _kRootFolderName: frozenset[str] = frozenset(
 )
 
 #: `#include "X/…"` 에서 Source 아래로 푸는 첫 조각.
-_kSourceFolderName: frozenset[str] = frozenset({"Core", "Engine", "Editor", "GameFramework", "Games", "RuntimeAPI", "App", "AppHost", "Server"})
+_kSourceFolderName: frozenset[str] = frozenset({"Core", "Engine", "Editor", "GameFramework", "Games", "RuntimeAPI", "App", "ModuleHost", "Server"})
 
 #: 줄기만 적은 경로(`Common/IRenderSurface`)를 풀 때 붙여 보는 확장자.
 _kStemExtension: tuple[str, ...] = (".h", ".cpp", ".xxx", ".inl", ".py", ".md", ".cmake", ".json", ".xml", ".hlsl", ".hlsli")

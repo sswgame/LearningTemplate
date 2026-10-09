@@ -27,7 +27,7 @@
   공용 `TestFramework` 가 Engine을 링크하므로 include 경로로는 막을 수 없어서, `CheckTestSuites.py` 가 이 규칙을 검사합니다. 엔진 타입이 필요하면 `EngineTest` 에 둡니다.
 - `EngineTest` 가 GameFramework와 장르 키트를 링크하는 유일한 실행 파일이라, 키트 테스트도 여기에 있습니다. 게임 서비스 바인딩 도우미는 `EngineTest/GameTestUtil.h` 입니다.
 - `EditorTest` 는 일부러 ImGui를 링크하지 않습니다. 그래서 ImGui 컨텍스트만 있으면 되는 테스트는 `EditorUiTest` 에 둡니다.
-- `App` 은 실행 파일이라 링크할 라이브러리가 없습니다. 그래서 `AppTest` 는 App 소스를 파일 단위로 가져와 정책 코드(`FixedTimestep` 등)를 테스트하고, 실제 App을 띄우는 테스트도 함께 둡니다.
+- `App` 은 실행 파일이라 링크할 라이브러리가 없습니다. 그래서 `AppTest` 는 App 소스를 파일 단위로 가져와 정책 코드를 테스트하고, 실제 App을 띄우는 테스트도 함께 둡니다.
 - `PythonTest` 는 `Test*.py` 하나가 CTest 항목 하나(`PythonTest_<이름>`, `nogpu`)입니다.
 
 ## 머릿속 그림

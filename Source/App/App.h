@@ -11,11 +11,10 @@
 #include "App/RHIBackendSwitcher.h"
 #include "App/UserSettingsHost.h"
 
-#include "AppHost/FixedTimestep.h"
-
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "Engine/Config/FixedTimestep.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Module/ModuleCatalog.h"
 

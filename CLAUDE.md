@@ -298,7 +298,7 @@ re-exports. In **Dev**, `Engine` is a DLL and `EditorModule` / `SWGame` / `GF_*`
 are dynamically loaded MODULEs supporting hot reload; in **Shipping** the editor is dropped and everything
 links statically into one exe.
 `Server` is the dedicated-server launcher (Game · Server targets, `Source/Server`): the same `EngineLoop` in the `DedicatedServer` role
-(no window · RHI · user-settings steps, a null audio device) + `ModuleHost` through the shared `AppHost` static library, ticking the game
+(no window · RHI · user-settings steps, a null audio device) + `ModuleHost` through the shared `ModuleHost` static library (`Source/ModuleHost`), ticking the game
 at a fixed rate; its operator config is `Config/Server/<game>.json` (read from disk even in Shipping).
 
 **The C-ABI boundary.** `Source/RuntimeAPI` is header-only `INTERFACE` — a pure `extern "C"` contract, never

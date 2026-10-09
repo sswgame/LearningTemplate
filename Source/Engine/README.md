@@ -207,7 +207,7 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 - `EngineAbiStamp` 는 핫 리로드의 엔진 ABI 스탬프입니다.
 - `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 로드 순서를 정합니다. CMake와 같은 규칙으로 켜짐, 플랫폼, 구성, 의존, 버전, 순환을 봅니다.
 
-파일 감시와 섀도 복사, 다시 로드는 호스트 라이브러리 `AppHost` 가 하고, 에셋 파일 감시는 에디터가 합니다([Module](Module/README.md)).
+파일 감시와 섀도 복사, 다시 로드는 호스트 라이브러리 `ModuleHost` 가 하고, 에셋 파일 감시는 에디터가 합니다([Module](Module/README.md)).
 
 ## 확장하는 법
 

@@ -11,7 +11,7 @@
   4) include 방향 — 파일이 들어가는 타깃(소속 모듈의 `_listTarget`)마다 그 파일이 include 한 헤더의 소속 모듈도 들어가야 한다.
      헤더 전용(인라인 · 템플릿) 서버 코드는 링크 오류 없이 클라이언트에 들어간다 — CMake 의 켜짐 검사가 못 보는 유일한 길이다.
      매니페스트 밖 폴더: `Source/Core` · `Source/Engine` · `Source/RuntimeAPI` 는 둘 다(에디터 진입점 접착제만 Client), `Source/App` 은 Client,
-     App · Server 가 같이 쓰는 `Source/AppHost` 는 둘 다, `Source/Server` 는 Server.
+     App · Server 가 같이 쓰는 `Source/ModuleHost` 는 둘 다, `Source/Server` 는 Server.
      소속은 그 파일을 품은 가장 깊은 매니페스트 폴더다(`Source/Engine/Graphics/RHI/Modules/DX12/` 은 RHI_DX12).
      `Test/` · `Tools/` 는 보지 않는다 — 시험 소스는 CMake 가 꺼진 모듈의 것을 뺀다(`sw_excludeSourcesOfInactiveKits`).
 
@@ -46,8 +46,8 @@ _kClientOnlyKinds = ("Editor", "Rhi")
 #: 매니페스트가 없는 폴더의 대상입니다.
 _kListFolderTarget = (
     ("Source/App/", frozenset({"Client"})),
-    # AppHost(모듈 호스트 · 매니페스트 해석 · 프레임 시간) — App · Server 가 같이 링크한다(Source/AppHost/CMakeLists.txt).
-    ("Source/AppHost/", _kBoth),
+    # ModuleHost(모듈 호스트 · 매니페스트 해석 · 핫 리로드) — App · Server 가 같이 링크한다(Source/ModuleHost/CMakeLists.txt).
+    ("Source/ModuleHost/", _kBoth),
     ("Source/Server/", frozenset({"Server"})),
     ("Source/Core/", _kBoth),
     ("Source/Engine/", _kBoth),

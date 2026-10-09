@@ -7,9 +7,9 @@
  */
 #include "pch.h"
 
-#include "AppHost/ModuleImagePatch.h"
-
 #include "Core/Memory/Memory.h"
+
+#include "ModuleHost/ModuleImagePatch.h"
 
 #include "TestFramework/TestFramework.h"
 

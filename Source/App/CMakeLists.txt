@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/App/CMakeLists.txt
-# @brief 메인 애플리케이션(App) 빌드 스크립트. App · Server 가 같이 쓰는 모듈 호스트는 Source/AppHost 다.
+# @brief 메인 애플리케이션(App) 빌드 스크립트. App · Server 가 같이 쓰는 모듈 호스트는 Source/ModuleHost 다.
 # ==============================================================================
 
 file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
@@ -25,7 +25,7 @@ set_target_properties(App PROPERTIES FOLDER "Source/App")
 target_include_directories(App PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(App
 	PRIVATE
-		AppHost
+		ModuleHost
 		Engine
 		RuntimeAPI
 		sw_global_options

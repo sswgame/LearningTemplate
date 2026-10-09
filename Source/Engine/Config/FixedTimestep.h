@@ -8,6 +8,7 @@
  *          스파이럴)에 빠져 영원히 따라잡지 못합니다.
  */
 #pragma once
+#include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
 #include "Core/Time/GameTimer.h"
 
@@ -41,7 +42,7 @@ namespace sw
      * @class FixedTimestep
      * @brief 실시간 경과를 가변 델타와 고정 스텝 수로 나눕니다.
      */
-    class FixedTimestep
+    class SW_API FixedTimestep
     {
     public:
         FixedTimestep();

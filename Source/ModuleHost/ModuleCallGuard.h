@@ -2,7 +2,7 @@
  * @file ModuleCallGuard.h
  * @brief 새 모듈 코드를 처음 부르는 자리를 하드웨어 예외로부터 지킵니다.
  *
- * @note 핫 리로드(`LiveReloadManager`)와 그 시험만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/AppHost/CMakeLists.txt` 의 제외 목록).
+ * @note 핫 리로드(`LiveReloadManager`)와 그 시험만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Common/Types.h"

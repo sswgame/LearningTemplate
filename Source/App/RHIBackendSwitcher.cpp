@@ -2,13 +2,13 @@
 
 #include "App/RHIBackendSwitcher.h"
 
-#include "AppHost/ModuleHost.h"
-
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/EngineLoop.h"
 #include "Engine/Graphics/RHI/RHI.h"
+
+#include "ModuleHost/ModuleHost.h"
 
 #include "sw/config/ConfigConstants.h"
 

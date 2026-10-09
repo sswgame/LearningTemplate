@@ -1,10 +1,6 @@
 #include "pch.h"
 
-#include "AppHost/LiveReloadManager.h"
-
-#include "AppHost/ModuleCallGuard.h"
-#include "AppHost/ModuleImagePatch.h"
-#include "AppHost/ShadowCopyName.h"
+#include "ModuleHost/LiveReloadManager.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
@@ -20,6 +16,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
+
+#include "ModuleHost/ModuleCallGuard.h"
+#include "ModuleHost/ModuleImagePatch.h"
+#include "ModuleHost/ShadowCopyName.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/File/Windows/WindowsFileWatcher.h"

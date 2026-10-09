@@ -2,7 +2,7 @@
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다 — 창 · GPU 없이 엔진을 서버 역할로 세우고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청에 정상 종료합니다.
  * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼 `<Game>Server` · 유니티 Dedicated Server 빌드와 같은 모양). 같이 쓰는 것은 모듈 호스트와
- *          매니페스트 해석(`AppHost`)뿐입니다.
+ *          매니페스트 해석(`ModuleHost`)뿐입니다.
  *          기동: 엔진(`EngineHostRole::DedicatedServer` — 기동 표의 Client 단계를 건너뛴다) → 서버 설정 → 게임 인스턴스(창 · 디바이스 nullptr)
  *          → 종료 신호 처리기 → 콘솔 입력 → "Dedicated server ready" → 고정 틱 루프 → 종료 요청 → 역순 종료 → "Dedicated server shutdown complete".
  *          한 틱 = 게임 고정 스텝 하나(델타는 늘 `1 / _tickRateHz` — 서버 시뮬레이션이 벽시계 흔들림을 받지 않는다). 다음 틱 마감까지 잠자고,

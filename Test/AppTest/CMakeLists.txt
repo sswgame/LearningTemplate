@@ -10,8 +10,7 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 endif()
 
 # `App` 은 실행 파일이라 링크할 라이브러리가 없다. 그래서 테스트가 볼 수 있는 것은 **파일 단위로
-# 가져온 소스**뿐이고, 여기 담는 것은 엔진 상태 없이 혼자 도는 정책 코드로 한정한다(프레임 시간
-# 정책 등). 그 경계를 지켜야 이 타깃이 "App 을 통째로 세우는 두 번째 자리" 가 되지 않는다.
+# 가져온 소스**뿐이고, 여기 담는 것은 엔진 상태 없이 혼자 도는 정책 코드로 한정한다. 그 경계를 지켜야 이 타깃이 "App 을 통째로 세우는 두 번째 자리" 가 되지 않는다.
 #
 # **기동 전체는 프로세스를 띄워서 본다**(`TestAppSmoke.cpp`) — `EngineLoop` 은 어떤 단위 테스트도
 # 돌리지 않으므로, 그 그물은 실제 `App.exe` 를 돌려 보는 것뿐이다. 그 집합은 GPU·창이 필요하니
@@ -27,8 +26,6 @@ sw_addTestExecutable(AppTest
 		TestAppSmoke.cpp
 		TestAppUi.cpp
 		TestDevCommandShipping.cpp
-		TestFixedTimestep.cpp
-		${CMAKE_SOURCE_DIR}/Source/AppHost/FixedTimestep.cpp
 	LIBS
 		Engine
 	LABELS

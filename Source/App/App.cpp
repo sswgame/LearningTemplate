@@ -2,10 +2,6 @@
 
 #include "App/App.h"
 
-#include "AppHost/LiveReloadManager.h"
-#include "AppHost/ModuleCatalogLoader.h"
-#include "AppHost/ModuleHost.h"
-
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -35,6 +31,10 @@
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/SplashWindow.h"
+
+#include "ModuleHost/LiveReloadManager.h"
+#include "ModuleHost/ModuleCatalogLoader.h"
+#include "ModuleHost/ModuleHost.h"
 
 #include "RuntimeAPI/ABI/EditorAPI.h"
 

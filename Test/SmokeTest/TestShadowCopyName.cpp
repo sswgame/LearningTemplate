@@ -6,11 +6,11 @@
  */
 #include "pch.h"
 
-#include "AppHost/ShadowCopyName.h"
-
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
+
+#include "ModuleHost/ShadowCopyName.h"
 
 #include "TestFramework/TestFramework.h"
 

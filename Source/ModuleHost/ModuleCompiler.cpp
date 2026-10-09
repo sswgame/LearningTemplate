@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "AppHost/ModuleCompiler.h"
-
-#include "AppHost/LiveReloadManager.h"
+#include "ModuleHost/ModuleCompiler.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/MemoryProfiler.h"
 #include "Core/Process/CrashHandler.h"
 #include "Core/Process/Process.h"
+
+#include "ModuleHost/LiveReloadManager.h"
 
 namespace sw
 {

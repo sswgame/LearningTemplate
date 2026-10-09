@@ -10,11 +10,11 @@
 
 ```mermaid
 graph TD
-    App["App (exe)"] --> AppHost
+    App["App (exe)"] --> ModuleHost
     App --> Engine
     App --> RuntimeAPI
-    Server["Server (exe)"] --> AppHost
-    AppHost --> Engine
+    Server["Server (exe)"] --> ModuleHost
+    ModuleHost --> Engine
     Engine -->|OBJECT 라이브러리로 포함| Core
     App -.->|실행 중 로드| EditorModule
     App -.->|실행 중 로드| GameFramework["GameFramework와 GF_* 키트"]
@@ -25,9 +25,9 @@ graph TD
 
 그림의 실선은 컴파일할 때의 링크이고, 점선은 개발 빌드에서 실행 중에 로드하는 모듈입니다.
 
-**App** 은 엔진 루프와 모듈 호스트만 가진 실행 파일입니다. 링크하는 것은 `Engine`, `RuntimeAPI`, `AppHost` 셋입니다.
+**App** 은 엔진 루프와 모듈 호스트만 가진 실행 파일입니다. 링크하는 것은 `Engine`, `RuntimeAPI`, `ModuleHost` 셋입니다.
 
-**AppHost**(`Source/AppHost`)는 모듈 호스트, 핫 리로드, 프레임 시간 계산을 묶은 정적 라이브러리입니다. App과 전용 서버 실행 파일이 같이 씁니다.
+**ModuleHost**(`Source/ModuleHost`)는 모듈 호스트와 핫 리로드를 묶은 정적 라이브러리입니다. 고정 스텝 시간 정책(`FixedTimestep`)은 Engine(`Engine/Config`)에 있습니다. App과 전용 서버 실행 파일이 같이 씁니다.
 
 **Server** 는 전용 서버 실행 파일입니다. 창, RHI, 플레이어 설정 단계 없이 게임 모듈을 고정 틱으로 돌립니다. 자세한 내용은 [Source/Server/README.md](Source/Server/README.md)에 있습니다.
 

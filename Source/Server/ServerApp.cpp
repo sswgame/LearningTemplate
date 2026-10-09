@@ -2,11 +2,11 @@
 
 #include "Server/ServerApp.h"
 
-#include "AppHost/ModuleCatalogLoader.h"
-#include "AppHost/ModuleHost.h"
+#include "ModuleHost/ModuleCatalogLoader.h"
+#include "ModuleHost/ModuleHost.h"
 
 #if !defined( SW_SHIPPING )
-    #include "AppHost/LiveReloadManager.h"
+    #include "ModuleHost/LiveReloadManager.h"
 #endif
 
 #include "Core/CommandLine/CommandLineManager.h"

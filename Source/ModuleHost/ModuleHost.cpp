@@ -1,9 +1,6 @@
 #include "pch.h"
 
-#include "AppHost/ModuleHost.h"
-
-#include "AppHost/LiveReloadManager.h"
-#include "AppHost/ModuleCompiler.h"
+#include "ModuleHost/ModuleHost.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -22,6 +19,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/UI/UiSystem.h"
 #include "Engine/Window/IWindow.h"
+
+#include "ModuleHost/LiveReloadManager.h"
+#include "ModuleHost/ModuleCompiler.h"
 
 #include "RuntimeAPI/ABI/ModuleAbi.h"
 #include "RuntimeAPI/Service/ModuleService.h"

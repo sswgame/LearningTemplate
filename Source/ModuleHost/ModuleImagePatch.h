@@ -2,7 +2,7 @@
  * @file ModuleImagePatch.h
  * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 도장 · 리눅스 SONAME).
  *
- * @note 핫 리로드(`LiveReloadManager`)와 그 시험만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/AppHost/CMakeLists.txt` 의 제외 목록).
+ * @note 핫 리로드(`LiveReloadManager`)와 그 시험만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Common/Types.h"

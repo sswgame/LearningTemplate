@@ -1,8 +1,7 @@
 #include "pch.h"
 
-#include "AppHost/FixedTimestep.h"
-
 #include "Engine/Config/EngineConfig.h"
+#include "Engine/Config/FixedTimestep.h"
 
 #include "TestFramework/TestFramework.h"
 
