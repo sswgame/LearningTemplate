@@ -242,7 +242,7 @@ namespace sw
             return false;
         if ( isEncrypted() && _settings._security._pProvider == nullptr )
         {
-            SW_LOG_ERROR( "NetHost: encrypted mode needs a security provider (EngineNetSecurity::getProvider())" );
+            SW_LOG_ERROR( "NetHost: encrypted mode needs a security provider (NetSecurity::getProvider())" );
             return false;
         }
 #if defined( SW_SHIPPING )

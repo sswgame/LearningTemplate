@@ -6,9 +6,8 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
 namespace sw
@@ -83,7 +82,7 @@ namespace sw
         unique_ptr<ITlsContext> tlsContext;
         if ( parsed._bTls == SW_TRUE )
         {
-            tlsContext = EngineNetSecurity::createClientTlsContext( parsed._trustFile, parsed._host, outError );
+            tlsContext = NetSecurity::createClientTlsContext( parsed._trustFile, parsed._host, outError );
             if ( tlsContext == nullptr )
                 return nullptr;
         }

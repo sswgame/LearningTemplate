@@ -6,12 +6,11 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
 #include "GameFramework/Base/Online/Ledger/LedgerAudit.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
@@ -49,7 +48,7 @@ namespace
             : _store{ &database }
             , _cache{ &cacheDatabase }
             , _bus{ &hub, serverId }
-            , _crypto{ &EngineNetSecurity::getProvider() }
+            , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
             , _tradePolicy{}

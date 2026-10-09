@@ -6,10 +6,9 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 #include "GameFramework/Base/Online/Http/HttpServer.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -179,7 +178,7 @@ SW_TEST_CASE( HttpTest, ParserHandlesLengthChunkedCloseAndLimits )
 
 SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTls )
 {
-    INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+    INetSecurityProvider& provider = NetSecurity::getProvider();
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ) );

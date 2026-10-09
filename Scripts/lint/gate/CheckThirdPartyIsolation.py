@@ -10,7 +10,7 @@
   1) `#include <Jolt/...>` 는 `Source/Engine/Physics/Jolt/` 안에서만, `<box2d/...>` 는 `Source/Engine/Physics/Box2D/` 안에서만,
      `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Utility/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
-     `<openssl/...>` 는 `Source/Engine/Network/OpenSsl/` 안에서만,
+     `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSsl/` 안에서만,
      `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/`
      안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/` 안에서만 쓴다
      (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
@@ -66,7 +66,8 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
         ("recastnavigation", "RecastNavigation::Recast", "RecastNavigation::Detour", "RecastNavigation::DetourCrowd",
          "RecastNavigation::DetourTileCache", "RecastNavigation::DebugUtils"),
     ),
-    LibraryRule("OpenSSL", ("openssl/",), ("Source/Engine/Network/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto")),
+    LibraryRule("OpenSSL", ("openssl/",), ("Source/GameFramework/Base/Online/Security/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto"),
+                "Source/GameFramework/CMakeLists.txt"),
     LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
     LibraryRule("SQLite", ("sqlite3.h", "sqlite3ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/",),
                 ("unofficial::sqlite3::sqlite3", "SQLite::SQLite3"), "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/CMakeLists.txt"),
@@ -178,7 +179,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         "  감싼 라이브러리는 엔진 인터페이스로만 씁니다 — 물리는 Engine/Physics/IPhysicsScene.h, 애니메이션 압축은 코덱 인터페이스,\n"
         "  프로파일러는 SW_PROFILE_SCOPE · Engine/Utility/Profiling/IProfilerBackend.h.\n"
         "  내비메시는 Engine/Navigation/INavMesh.h.\n"
-        "  암호 · TLS 는 Core/Network/Security/INetSecurityProvider.h(구현 Engine/Network/EngineNetSecurity.h).\n"
+        "  암호 · TLS 는 Core/Network/Security/INetSecurityProvider.h(구현 GameFramework/Base/Online/Security/NetSecurity.h).\n"
         "  글리프 래스터화는 Engine/Text/IFontRasterizer.h(구현 Engine/Text/FreeType/).\n"
         "  SQL 은 GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h(드라이버는 Kits/Storage/SqlStore/Driver/<제품>/).\n"
         "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Utility/Profiling/Tracy · Navigation/Recast)로 옮기고,\n"

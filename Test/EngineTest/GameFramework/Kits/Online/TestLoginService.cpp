@@ -3,11 +3,10 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Sanction/ServiceSanction.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Base/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
@@ -681,7 +680,7 @@ SW_TEST_CASE( LoginServiceTest, ChangedHashParamsRehashOnNextLogin )
 SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
 {
     using Internal = TestLoginServiceInternal;
-    NetSecurityLoginCrypto crypto{ &EngineNetSecurity::getProvider() };
+    NetSecurityLoginCrypto crypto{ &NetSecurity::getProvider() };
     LoginSettings          settings; // 기본 Argon2id 매개변수(OWASP 19 MiB · 2 회 · 1 레인)
     SW_ASSERT_TRUE( crypto.isPasswordHashSupported( settings._passwordHashParams ) );
 
@@ -708,7 +707,7 @@ SW_TEST_CASE( LoginServiceTest, RealCryptoHashesWithArgon2idAndSignsTickets )
     service.drainCompletions( listCompletion );
     SW_ASSERT_EQUAL( size_t( 1 ), listCompletion.size() );
     SW_ASSERT_TRUE( listCompletion[0]._result == LoginResult::Ok );
-    NetSecurityLoginCrypto gameCrypto{ &EngineNetSecurity::getProvider() };
+    NetSecurityLoginCrypto gameCrypto{ &NetSecurity::getProvider() };
     LoginTicketAuthority   gameAuthority;
     gameAuthority.initialize( &gameCrypto, Internal::kMasterKey );
     NetGameTicketClaim claim;

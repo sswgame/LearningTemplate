@@ -1,6 +1,7 @@
 /**
- * @file EngineNetSecurity.h
- * @brief Engine 이 OpenSSL 로 구현한 `INetSecurityProvider` 와 TLS 컨텍스트 도우미입니다. 제공자는 프로세스에 하나 — Engine 안이라 핫 리로드에 살아남는다.
+ * @file NetSecurity.h
+ * @brief OpenSSL 로 구현한 `INetSecurityProvider` 와 TLS 컨텍스트 도우미입니다. 제공자는 프로세스에 하나 — GameFramework 안이라 게임 · 키트 모듈 리로드에 살아남는다.
+ * @note OpenSSL 은 GameFramework 만 링크합니다 — 온라인을 쓰지 않는 게임의 Engine.dll 은 libssl · libcrypto 에 매이지 않는다.
  * @details 인증서 · 키는 PEM 파일 경로로 받는다(두 플랫폼 같은 길 — 전용 서버는 서버 설정 `Config/Server/<게임>.json` 의 `_tlsCertificateFile` ·
  *          `_tlsPrivateKeyFile` 이 경로를 준다). 상대 경로는 프로젝트 루트 기준이다. 경로를 비우면 **Dev 에서만** `Saved/Certificates/devserver.cert.pem` ·
  *          `devserver.key.pem`(없으면 만든다)을 쓰고, Shipping 은 오류다.
@@ -10,6 +11,8 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+
 namespace sw
 {
     class INetSecurityProvider;
@@ -18,7 +21,7 @@ namespace sw
 
 namespace sw
 {
-    struct SW_API EngineNetSecurity
+    struct SW_GF_API NetSecurity
     {
         static constexpr const utf8* kDevCertificateFolder = "Certificates"; ///< 프로젝트 루트의 `Saved/` 아래
         static constexpr const utf8* kDevCertificateFile   = "devserver.cert.pem";

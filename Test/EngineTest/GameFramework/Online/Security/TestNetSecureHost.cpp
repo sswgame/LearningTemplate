@@ -5,7 +5,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -14,7 +14,7 @@
 
 // UDP 보안 — 암호화된 연결로 메시지가 흐르고 선 위에 평문이 없다, 변조 · 재전송 패킷은 버리고 센다(연결은 산다), 모르는 토큰 · 틀린 비밀은
 // AuthenticationFailed(서버는 자리를 잡지 않는다), 한쪽만 암호화면 SecurityMismatch, 인증기 없는 일회 키 모드는 개발 빌드에서만 연결된다.
-// 암호 제공자가 Engine 의 OpenSSL 이라 EngineTest.
+// 암호 제공자가 GameFramework 의 OpenSSL 이라 GameFramework 를 링크하는 EngineTest.
 
 using namespace sw;
 
@@ -110,12 +110,12 @@ namespace
             NetHostSettings serverSettings;
             serverSettings._saltSeed                 = 11u;
             serverSettings._security._mode           = serverMode;
-            serverSettings._security._pProvider      = &EngineNetSecurity::getProvider();
+            serverSettings._security._pProvider      = &NetSecurity::getProvider();
             serverSettings._security._pAuthenticator = bAuthenticator ? &_authenticator : nullptr;
             NetHostSettings clientSettings;
             clientSettings._saltSeed            = 12u;
             clientSettings._security._mode      = clientMode;
-            clientSettings._security._pProvider = &EngineNetSecurity::getProvider();
+            clientSettings._security._pProvider = &NetSecurity::getProvider();
             _server.initialize( _network.createEndpoint( 4000 ), serverSettings );
             _client.initialize( &_clientTap, clientSettings );
             _bListening = _server.listen();

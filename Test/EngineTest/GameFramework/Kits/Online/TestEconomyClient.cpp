@@ -4,12 +4,11 @@
 
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Ledger/Ledger.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
@@ -45,7 +44,7 @@ namespace
 
         EconomyServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, RemoteConfig* pRemoteConfig )
             : _store{ &database }
-            , _crypto{ &EngineNetSecurity::getProvider() }
+            , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
             , _currencies{}

@@ -4,11 +4,10 @@
 
 #include "Core/Network/Transport/IStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Base/Online/Directory/ServerRegistration.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
@@ -93,7 +92,7 @@ namespace sw
             , _store{ &_database }
             , _cache{ &_cacheDatabase }
             , _bus{ &_busHub, serverId }
-            , _crypto{ &EngineNetSecurity::getProvider() }
+            , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
             , _directoryService{}

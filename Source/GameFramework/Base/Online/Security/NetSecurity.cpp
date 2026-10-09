@@ -1,21 +1,22 @@
 #include "pch.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Network/OpenSsl/OpenSslNetSecurityProvider.h"
 #include "Engine/Resource/ResourceUtil.h"
+
+#include "GameFramework/Base/Online/Security/OpenSsl/OpenSslNetSecurityProvider.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "EngineNetSecurity" );
+    SW_LOG_CALLER( "NetSecurity" );
 
     namespace
     {
-        struct EngineNetSecurityInternal
+        struct NetSecurityInternal
         {
 #if !defined( SW_SHIPPING )
             static constexpr int32 kDevCertificateValidDays = 825; ///< 브라우저 상한과 같은 값 — 개발 PC 에서 2 년 남짓 쓰고 지워 다시 만든다
@@ -43,13 +44,13 @@ namespace sw
 
 namespace sw
 {
-    INetSecurityProvider& EngineNetSecurity::getProvider()
+    INetSecurityProvider& NetSecurity::getProvider()
     {
-        static OpenSslNetSecurityProvider s_provider; // Engine 안 — 모듈 리로드에 살아남는다
+        static OpenSslNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
         return s_provider;
     }
 
-    bool EngineNetSecurity::ensureDevCertificate( string& outCertificateFile, string& outPrivateKeyFile, string& outError )
+    bool NetSecurity::ensureDevCertificate( string& outCertificateFile, string& outPrivateKeyFile, string& outError )
     {
 #if defined( SW_SHIPPING )
         (void)outCertificateFile;
@@ -67,7 +68,7 @@ namespace sw
         string     certificatePem;
         string     privateKeyPem;
         const bool bCreated = FileUtil::ensureDirectoryExists( folder ) &&
-                              getProvider().createSelfSignedCertificate( "localhost", EngineNetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
+                              getProvider().createSelfSignedCertificate( "localhost", NetSecurityInternal::kDevCertificateValidDays, certificatePem, privateKeyPem ) &&
                               FileUtil::writeTextFile( outCertificateFile, certificatePem ) && FileUtil::writeTextFile( outPrivateKeyFile, privateKeyPem );
         if ( bCreated == false )
         {
@@ -79,10 +80,10 @@ namespace sw
 #endif
     }
 
-    unique_ptr<ITlsContext> EngineNetSecurity::createServerTlsContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
-                                                                       string& outError )
+    unique_ptr<ITlsContext> NetSecurity::createServerTlsContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
+                                                                 string& outError )
     {
-        using Internal         = EngineNetSecurityInternal;
+        using Internal         = NetSecurityInternal;
         string certificatePath = Internal::makeProjectPath( certificateFile );
         string privateKeyPath  = Internal::makeProjectPath( privateKeyFile );
         if ( certificatePath.empty() != privateKeyPath.empty() )
@@ -103,9 +104,9 @@ namespace sw
         return context;
     }
 
-    unique_ptr<ITlsContext> EngineNetSecurity::createClientTlsContext( string_view trustFile, string_view serverName, string& outError )
+    unique_ptr<ITlsContext> NetSecurity::createClientTlsContext( string_view trustFile, string_view serverName, string& outError )
     {
-        using Internal = EngineNetSecurityInternal;
+        using Internal = NetSecurityInternal;
         TlsContextSettings settings;
         settings._role       = TlsRole::Client;
         settings._serverName = string( serverName );

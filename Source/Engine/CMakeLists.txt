@@ -199,13 +199,6 @@ endif()
 target_link_libraries(Engine PRIVATE recastnavigation)
 
 # ------------------------------------------------------------------------------
-# 2-4) 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Network/OpenSsl 에서만 include 한다(CheckThirdPartyIsolation.py)
-# — Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와 Engine/Network/EngineNetSecurity.h 만 본다.
-# x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
-# ------------------------------------------------------------------------------
-target_link_libraries(Engine PRIVATE openssl)
-
-# ------------------------------------------------------------------------------
 # 2-5) 글자 래스터화 — FreeType(x64-windows 는 freetype.dll, 리눅스는 정적). 헤더는 Text/FreeType 에서만 include 한다(CheckThirdPartyIsolation.py)
 # — 다른 코드는 엔진 인터페이스(Engine/Text/IFontRasterizer.h)만 본다.
 # ------------------------------------------------------------------------------

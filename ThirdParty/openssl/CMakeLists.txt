@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file ThirdParty/openssl/CMakeLists.txt
 # @brief OpenSSL 3(Apache-2.0 — 배포물 고지는 THIRD_PARTY_NOTICES). TLS 1.3 · X25519 · AEAD · HKDF 를 Engine 의 네트워크 보안 백엔드
-#        (`Source/Engine/Network/OpenSsl`)만 쓴다 — 경계는 `CheckThirdPartyIsolation` 이 지킨다.
+#        (`Source/GameFramework/Base/Online/Security/OpenSsl`)만 쓴다 — 경계는 `CheckThirdPartyIsolation` 이 지킨다.
 #        vcpkg 의 FindOpenSSL 래퍼가 OpenSSL::SSL · OpenSSL::Crypto 를 만든다. x64-windows 는 DLL(libssl-3-x64 · libcrypto-3-x64), x64-linux 는 정적.
 # ==============================================================================
 

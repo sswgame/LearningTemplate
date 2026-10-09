@@ -140,9 +140,6 @@ _kEngineTier: dict[str, int] = {
     # 외부 압축 라이브러리(lz4·zstd) 코덱. Core 의 ICompressionCodec 만 구현하고 Engine 것은 안 본다
     # — Core 를 압축 라이브러리에 종속시키지 않으려고 여기 둔다(Source/Engine/CMakeLists.txt 주석 참고).
     "Compression": 0,
-    # 네트워크 보안 구현(OpenSSL). Core 의 INetSecurityProvider 만 구현하고 Engine 의 다른 폴더는 안 본다(ResourceUtil 은 어디서나 되는 경로 도우미)
-    # — Core 를 암호 라이브러리에 종속시키지 않으려고 여기 둔다(압축 코덱과 같은 이유).
-    "Network": 0,
     # 서버 운영 관측(지표 등록부 · 상태 확인 · 운영 HTTP 끝점). Core(로그 · 스트림 전송)만 보고 Engine 의 다른 폴더는 안 본다 — 전용 서버 실행 파일이
     # GameFramework DLL 없이 들고, 기반 Online 의 서비스 지표 묶음이 그 위에 선다.
     "Observability": 0,

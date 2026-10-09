@@ -12,11 +12,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Local/LocalSlotEnvelope.h"
 #include "GameFramework/Base/Online/Local/LocalSlotStorage.h"
 #include "GameFramework/Base/Online/Local/LocalStore.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -48,7 +47,7 @@ namespace test
         static sw::LocalSealContext makeSealContext( LocalStoreTestKey& key )
         {
             sw::LocalSealContext context;
-            context._pSecurityProvider = &sw::EngineNetSecurity::getProvider();
+            context._pSecurityProvider = &sw::NetSecurity::getProvider();
             context._pKeyProvider      = &key;
             return context;
         }

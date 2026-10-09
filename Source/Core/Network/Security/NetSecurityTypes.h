@@ -120,7 +120,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief TLS 컨텍스트 설정입니다. 인증서 · 키 · 신뢰는 PEM 문자열(파일 경로는 `EngineNetSecurity` 가 읽어 채운다). */
+    /** @brief TLS 컨텍스트 설정입니다. 인증서 · 키 · 신뢰는 PEM 문자열(파일 경로는 `NetSecurity` 가 읽어 채운다). */
     struct TlsContextSettings
     {
         string     _certificatePem{};             ///< 서버 — 끝 인증서 + 중간 인증서(체인)

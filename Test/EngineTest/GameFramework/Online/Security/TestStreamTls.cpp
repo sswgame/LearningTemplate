@@ -5,7 +5,7 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestStreamEndpointPair.h"
@@ -14,7 +14,7 @@
 #include <cstring>
 
 // 스트림 TLS — 핸드셰이크 뒤에 열리고 선 위에는 평문이 없다, 변조된 레코드 · 믿지 않는 서버 · TLS 1.2 클라이언트 · 평문 클라이언트는 열림 없이 SecurityFailure 로 끊긴다.
-// 끝점 짝은 루프백(전송 무관 — 두 플랫폼 같은 시험), 암호 제공자는 Engine 의 OpenSSL 이라 EngineTest.
+// 끝점 짝은 루프백(전송 무관 — 두 플랫폼 같은 시험), 암호 제공자는 GameFramework 의 OpenSSL 이라 GameFramework 를 링크하는 EngineTest.
 
 using namespace sw;
 
@@ -95,7 +95,7 @@ namespace
 
     bool makeTlsContexts( TlsVersion clientMaxVersion, bool bTrustStranger, TlsContexts& outContexts )
     {
-        INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+        INetSecurityProvider& provider = NetSecurity::getProvider();
         string                certificatePem;
         string                privateKeyPem;
         if ( provider.createSelfSignedCertificate( "localhost", 30, certificatePem, privateKeyPem ) == false )

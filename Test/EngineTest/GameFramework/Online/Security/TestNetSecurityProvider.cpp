@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -55,7 +55,7 @@ namespace
 
     bool makeTlsPair( TlsPair& outPair, TlsVersion clientMaxVersion, const string& pinnedOverride )
     {
-        INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+        INetSecurityProvider& provider = NetSecurity::getProvider();
         string                privateKeyPem;
         if ( provider.createSelfSignedCertificate( "localhost", 30, outPair._certificatePem, privateKeyPem ) == false )
             return false;
@@ -92,7 +92,7 @@ namespace
 
 SW_TEST_CASE( NetSecurityProviderTest, X25519MatchesRfc7748Vector )
 {
-    INetSecurityProvider& provider     = EngineNetSecurity::getProvider();
+    INetSecurityProvider& provider     = NetSecurity::getProvider();
     const vector<uint8>   alicePrivate = fromHex( "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a" );
     const vector<uint8>   bobPublic    = fromHex( "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f" );
     const vector<uint8>   expected     = fromHex( "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742" );
@@ -123,14 +123,14 @@ SW_TEST_CASE( NetSecurityProviderTest, HkdfMatchesRfc5869Case1 )
     const vector<uint8> info     = fromHex( "f0f1f2f3f4f5f6f7f8f9" );
     const vector<uint8> expected = fromHex( "3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865" );
     vector<uint8>       output( 42 );
-    SW_ASSERT_TRUE( EngineNetSecurity::getProvider().computeHkdfSha256( secret.data(), 22, salt.data(), 13, info.data(), 10, output.data(), 42 ) );
+    SW_ASSERT_TRUE( NetSecurity::getProvider().computeHkdfSha256( secret.data(), 22, salt.data(), 13, info.data(), 10, output.data(), 42 ) );
     SW_EXPECT_TRUE( output == expected );
 }
 
 SW_TEST_CASE( NetSecurityProviderTest, PasswordHashMatchesArgon2idVectors )
 {
     // 기대값은 RFC 9106 의 Argon2id 를 따로 짠 참조 구현(RFC 9106 5.3 벡터로 먼저 맞춘 것)이 낸 값이다 — 제공자는 비밀 · 연관 자료를 받지 않으므로 그 둘 없는 변형.
-    INetSecurityProvider& provider      = EngineNetSecurity::getProvider();
+    INetSecurityProvider& provider      = NetSecurity::getProvider();
     const utf8            arrPassword[] = "password";
     const utf8            arrSalt[]     = "somesalt12345678";
     NetPasswordHashParams params;
@@ -167,7 +167,7 @@ SW_TEST_CASE( NetSecurityProviderTest, PasswordHashMatchesArgon2idVectors )
 
 SW_TEST_CASE( NetSecurityProviderTest, AeadRoundTripsAndRejectsTampering )
 {
-    INetSecurityProvider&  provider       = EngineNetSecurity::getProvider();
+    INetSecurityProvider&  provider       = NetSecurity::getProvider();
     const NetAeadAlgorithm arrAlgorithm[] = { NetAeadAlgorithm::Aes256Gcm, NetAeadAlgorithm::ChaCha20Poly1305 };
     for ( const NetAeadAlgorithm algorithm : arrAlgorithm )
     {
@@ -226,7 +226,7 @@ SW_TEST_CASE( NetSecurityProviderTest, TlsHandshakeCarriesDataAndRefusesDowngrad
 
     // 맞는 고정 값이면 선다.
     string hex;
-    SW_ASSERT_TRUE( EngineNetSecurity::getProvider().computeCertificateSha256( pair._certificatePem, hex ) );
+    SW_ASSERT_TRUE( NetSecurity::getProvider().computeCertificateSha256( pair._certificatePem, hex ) );
     SW_EXPECT_EQUAL( 64, static_cast<int32>( hex.size() ) );
     TlsContextSettings matching;
     matching._role                       = TlsRole::Client;
@@ -234,7 +234,7 @@ SW_TEST_CASE( NetSecurityProviderTest, TlsHandshakeCarriesDataAndRefusesDowngrad
     matching._serverName                 = "localhost";
     matching._pinnedCertificateSha256Hex = hex;
     string                  error;
-    unique_ptr<ITlsContext> matchingClient = EngineNetSecurity::getProvider().createTlsContext( matching, error );
+    unique_ptr<ITlsContext> matchingClient = NetSecurity::getProvider().createTlsContext( matching, error );
     SW_ASSERT_NOT_NULL( matchingClient.get() );
     SW_EXPECT_TRUE( isHandshakeCarryingData( *pair._serverContext, *matchingClient ) );
 
@@ -252,26 +252,26 @@ SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsA
     string error;
 #if defined( SW_SHIPPING )
     // 배포 구성은 개발용 인증서를 만들지 않는다(사용자 결정) — 경로가 비면 서버 TLS 문맥을 만들지 못하고 까닭을 돌려준다.
-    SW_EXPECT_TRUE( EngineNetSecurity::createServerTlsContext( "", "", "", error ) == nullptr );
+    SW_EXPECT_TRUE( NetSecurity::createServerTlsContext( "", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
 #else
-    unique_ptr<ITlsContext> server = EngineNetSecurity::createServerTlsContext( "", "", "", error );
+    unique_ptr<ITlsContext> server = NetSecurity::createServerTlsContext( "", "", "", error );
     SW_ASSERT_TRUE_MSG( server != nullptr, error.c_str() );
-    unique_ptr<ITlsContext> client = EngineNetSecurity::createClientTlsContext( "", "localhost", error );
+    unique_ptr<ITlsContext> client = NetSecurity::createClientTlsContext( "", "localhost", error );
     SW_ASSERT_TRUE_MSG( client != nullptr, error.c_str() );
     SW_EXPECT_TRUE( server->getRole() == TlsRole::Server && client->getRole() == TlsRole::Client );
     SW_EXPECT_TRUE( isHandshakeCarryingData( *server, *client ) );
 
     // 인증서 · 키 중 하나만 있으면 설정 오류다(개발용으로 메우지 않는다).
     error.clear();
-    SW_EXPECT_TRUE( EngineNetSecurity::createServerTlsContext( "server.cert.pem", "", "", error ) == nullptr );
+    SW_EXPECT_TRUE( NetSecurity::createServerTlsContext( "server.cert.pem", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
 #endif
 }
 
 SW_TEST_CASE( NetSecurityProviderTest, Sha256MatchesFips180Vector )
 {
-    INetSecurityProvider& provider  = EngineNetSecurity::getProvider();
+    INetSecurityProvider& provider  = NetSecurity::getProvider();
     const utf8            arrText[] = "abc";
     uint8                 arrDigest[NetSecurityConstant::kSha256Size];
     SW_ASSERT_TRUE( provider.computeSha256( reinterpret_cast<const uint8*>( arrText ), 3, arrDigest ) );
@@ -281,7 +281,7 @@ SW_TEST_CASE( NetSecurityProviderTest, Sha256MatchesFips180Vector )
 
 SW_TEST_CASE( NetSecurityProviderTest, SignaturesVerifyAndRejectTamperingAndOtherKeys )
 {
-    INetSecurityProvider&       provider       = EngineNetSecurity::getProvider();
+    INetSecurityProvider&       provider       = NetSecurity::getProvider();
     const NetSignatureAlgorithm arrAlgorithm[] = { NetSignatureAlgorithm::RsaPkcs1Sha256, NetSignatureAlgorithm::EcdsaP256Sha256 };
     const utf8                  arrMessage[]   = "header.payload";
     const uint8*                pMessage       = reinterpret_cast<const uint8*>( arrMessage );

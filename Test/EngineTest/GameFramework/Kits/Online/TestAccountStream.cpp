@@ -10,11 +10,10 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/NetTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Base/Online/Config/RemoteConfig.h"
 #include "GameFramework/Base/Online/Local/MemoryLocalStore.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
@@ -54,7 +53,7 @@ namespace
             : _serverContext{}
             , _clientContext{}
         {
-            INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+            INetSecurityProvider& provider = NetSecurity::getProvider();
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
@@ -84,7 +83,7 @@ namespace
 
         ServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, ITlsContext* pTlsContext, const RemoteConfig* pRemoteConfig )
             : _store{ &database }
-            , _crypto{ &EngineNetSecurity::getProvider() }
+            , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
             , _transport{ network.createTransport() }
@@ -239,12 +238,12 @@ namespace
             NetHostSettings serverSettings;
             serverSettings._saltSeed                 = 31u;
             serverSettings._security._mode           = NetSecurityMode::Encrypted;
-            serverSettings._security._pProvider      = &EngineNetSecurity::getProvider();
+            serverSettings._security._pProvider      = &NetSecurity::getProvider();
             serverSettings._security._pAuthenticator = &_authenticator;
             NetHostSettings clientSettings;
             clientSettings._saltSeed            = 32u;
             clientSettings._security._mode      = NetSecurityMode::Encrypted;
-            clientSettings._security._pProvider = &EngineNetSecurity::getProvider();
+            clientSettings._security._pProvider = &NetSecurity::getProvider();
             _server.initialize( _network.createEndpoint( 4100 ), serverSettings );
             _client.initialize( _network.createEndpoint( 5100 ), clientSettings );
             (void)_server.listen();
@@ -461,11 +460,11 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     MemoryLocalDatabase localDatabase;
     FixedSealKey        sealKey;
     LocalSealContext    sealContext;
-    sealContext._pSecurityProvider = &EngineNetSecurity::getProvider();
+    sealContext._pSecurityProvider = &NetSecurity::getProvider();
     sealContext._pKeyProvider      = &sealKey;
     MemoryLocalStore    localStore{ &localDatabase, sealContext };
     AccountDeviceSecret firstSecret;
-    firstSecret.begin( &localStore, &EngineNetSecurity::getProvider() );
+    firstSecret.begin( &localStore, &NetSecurity::getProvider() );
     for ( int32 attempt = 0; attempt < 4 && firstSecret.getState() != AccountDeviceSecretState::Ready; ++attempt )
     {
         vector<LocalStoreCompletion> listCompletion;
@@ -477,7 +476,7 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     }
     SW_ASSERT_TRUE( firstSecret.getState() == AccountDeviceSecretState::Ready );
     AccountDeviceSecret again; // 다음 실행 — 같은 비밀을 읽는다
-    again.begin( &localStore, &EngineNetSecurity::getProvider() );
+    again.begin( &localStore, &NetSecurity::getProvider() );
     vector<LocalStoreCompletion> listCompletion;
     (void)localStore.pollCompletions( listCompletion );
     for ( const LocalStoreCompletion& completion : listCompletion )

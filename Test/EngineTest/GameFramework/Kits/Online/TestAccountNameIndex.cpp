@@ -1,8 +1,7 @@
 // 계정 이름 색인 — 다른 키트의 저장소 일 안에서 오프라인 계정을 이름(대소문자 무시) · id 로 찾는다. 게스트의 만든 이름은 색인에 없다(id 로는 찾는다).
 #include "pch.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/AccountNameIndex.h"
@@ -60,7 +59,7 @@ namespace
         NameIndexRig()
             : _database{}
             , _store{ &_database }
-            , _crypto{ &EngineNetSecurity::getProvider() }
+            , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _index{}
             , _nextTag{ 1 }

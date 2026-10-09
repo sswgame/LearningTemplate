@@ -3,12 +3,11 @@
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "EngineTest/GameFramework/Kits/Storage/FakeRespServer.h"
 #include "EngineTest/GameFramework/Online/EphemeralStoreContract.h"
 
 #include "GameFramework/Base/Online/Cache/MemoryEphemeralStore.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheStoreFactory.h"
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
 
@@ -204,7 +203,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, AuthIsSentFirstAndAWrongPassword
 
 SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TlsCarriesTheCommands )
 {
-    INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+    INetSecurityProvider& provider = NetSecurity::getProvider();
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 30, certificatePem, privateKeyPem ) );

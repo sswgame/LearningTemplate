@@ -18,7 +18,7 @@
 
 | 티어 | 폴더 | 뜻 |
 |---|---|---|
-| 0 | `Common`, `Compression`, `Network`, `Observability` | 토대 |
+| 0 | `Common`, `Compression`, `Observability` | 토대 |
 | 1 | `Reflection`, `Utility` | 리플렉션과 잎 헬퍼 |
 | 2 | `Animation`, `Localization`, `Serialization` | 리플렉션 위의 데이터 |
 | 3 | `Audio`, `Config`, `Dialogue`, `Physics` | 리플렉션으로 읽는 설정과 데이터 |
@@ -36,7 +36,8 @@
 
 티어마다 알아 둘 점은 다음과 같습니다.
 
-- **티어 0.** Engine의 어느 것도 참조하지 않습니다. `Compression` 과 `Network` 는 외부 라이브러리(lz4, zstd, OpenSSL)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
+- **티어 0.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
+  네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
   `Observability` 는 Core만 보는 서버 운영 관측입니다.
 - **티어 3.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 여기 있습니다. 오디오의 믹서 그래프, 이벤트, 음악 데이터도 같은 이유입니다.
 - **티어 4.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리입니다. 공간 분할(`Spatial`)은 물리의 `AABB` 를 씁니다.

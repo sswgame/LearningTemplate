@@ -7,7 +7,7 @@
 그래서 싱글 플레이 게임은 키트를 링크하지 않고, 이 계층만으로는 네트워크 코드가 실행되지 않습니다.
 
 언리얼의 NetDriver와 NetConnection, 채널 계층, 유니티 Netcode for Entities의 전송 계층에 해당합니다.
-Core에 있으므로 Engine 없이 이 계층만 링크하는 도구와 테스트도 쓸 수 있습니다. 암호 구현(OpenSSL)과 외부 압축 코덱만 Engine에 있습니다.
+Core에 있으므로 Engine 없이 이 계층만 링크하는 도구와 테스트도 쓸 수 있습니다. 외부 압축 코덱은 Engine에, 암호 구현(OpenSSL)은 GameFramework(`Base/Online/Security`)에 있습니다.
 
 ## 머릿속 그림
 

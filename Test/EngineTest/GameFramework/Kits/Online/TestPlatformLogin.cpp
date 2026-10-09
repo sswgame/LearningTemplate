@@ -9,10 +9,9 @@
 #include "Core/String/Base64Util.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Network/EngineNetSecurity.h"
-
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 #include "GameFramework/Base/Online/Http/HttpServer.h"
+#include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
@@ -83,8 +82,8 @@ namespace
                         verifier = pair._value;
                 }
                 uint8      arrDigest[NetSecurityConstant::kSha256Size];
-                const bool bHashed = EngineNetSecurity::getProvider().computeSha256( reinterpret_cast<const uint8*>( verifier.data() ),
-                                                                                     static_cast<int32>( verifier.size() ), arrDigest );
+                const bool bHashed = NetSecurity::getProvider().computeSha256( reinterpret_cast<const uint8*>( verifier.data() ),
+                                                                               static_cast<int32>( verifier.size() ), arrDigest );
                 const bool bPkceOk = bForm && bHashed && code == _expectedCode && Base64Util::encodeUrl( arrDigest, sizeof( arrDigest ) ) == _expectedChallenge;
                 if ( bPkceOk == false )
                 {
@@ -128,7 +127,7 @@ namespace
             SigningKey key;
             key._keyId     = pKeyId;
             key._algorithm = algorithm;
-            (void)EngineNetSecurity::getProvider().createSigningKeyPair( algorithm, key._privateKeyPem, key._publicKey );
+            (void)NetSecurity::getProvider().createSigningKeyPair( algorithm, key._privateKeyPem, key._publicKey );
             return key;
         }
 
@@ -152,7 +151,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JsonWebTokenUtil::makeSigned( EngineNetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
+            (void)JsonWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
             return compact;
         }
 
@@ -193,7 +192,7 @@ namespace
             , _client{}
             , _nowMs{ kNowMs }
         {
-            INetSecurityProvider& provider = EngineNetSecurity::getProvider();
+            INetSecurityProvider& provider = NetSecurity::getProvider();
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
@@ -262,7 +261,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
     const SigningKey key   = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 );
     const SigningKey other = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 ); // 같은 kid, 다른 키(위조)
     fixture._handler._jwks = Internal::makeJwks( { &key } );
-    OidcLoginProvider provider{ fixture.makeOidcSettings(), &EngineNetSecurity::getProvider(), &fixture._client };
+    OidcLoginProvider provider{ fixture.makeOidcSettings(), &NetSecurity::getProvider(), &fixture._client };
 
     const PlatformLoginVerification good = fixture.verify( provider, Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "user-1", nullptr ) );
     SW_ASSERT_TRUE( good.isVerified() );
@@ -282,7 +281,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
 
     PlatformLoginProviderSettings nonceSettings = fixture.makeOidcSettings();
     nonceSettings._bRequireNonce                = SW_TRUE;
-    OidcLoginProvider nonceProvider{ nonceSettings, &EngineNetSecurity::getProvider(), &fixture._client };
+    OidcLoginProvider nonceProvider{ nonceSettings, &NetSecurity::getProvider(), &fixture._client };
     const string      withNonce = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "user-2", "n-abc" );
     SW_EXPECT_TRUE( fixture.verify( nonceProvider, withNonce )._bRejected == SW_TRUE );            // 클라이언트가 nonce 를 싣지 않았다
     SW_EXPECT_TRUE( fixture.verify( nonceProvider, withNonce + "|n-zzz" )._bRejected == SW_TRUE ); // 다른 nonce
@@ -296,7 +295,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCa
     const SigningKey first  = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 );
     const SigningKey second = Internal::makeKey( "k2", NetSignatureAlgorithm::EcdsaP256Sha256 );
     fixture._handler._jwks  = Internal::makeJwks( { &first } );
-    OidcLoginProvider provider{ fixture.makeOidcSettings(), &EngineNetSecurity::getProvider(), &fixture._client };
+    OidcLoginProvider provider{ fixture.makeOidcSettings(), &NetSecurity::getProvider(), &fixture._client };
     SW_ASSERT_TRUE( fixture.verify( provider, Internal::makeToken( first, "https://issuer.test", "client-a", 5000, "u", nullptr ) ).isVerified() );
     SW_EXPECT_EQUAL( 1, provider.getJwksFetchCount() );
 
@@ -385,7 +384,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     settings._clientId         = "client-a";
     StreamTransportSettings transportSettings;
     transportSettings._ioThreadCount = 0;
-    SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &EngineNetSecurity::getProvider(),
+    SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &NetSecurity::getProvider(),
                                        &browser, { settings } ) );
     client.getHttpClient().registerTlsContext( "localhost", fixture._clientContext.get() );
 
@@ -468,12 +467,12 @@ SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIdToke
     IssuerFixture    fixture;
     const SigningKey key                        = Internal::makeKey( "k1", NetSignatureAlgorithm::RsaPkcs1Sha256 );
     fixture._handler._jwks                      = Internal::makeJwks( { &key } );
-    unique_ptr<IPlatformLoginProvider> provider = PlatformLoginProviderFactory::create( fixture.makeOidcSettings(), &EngineNetSecurity::getProvider(), &fixture._client );
+    unique_ptr<IPlatformLoginProvider> provider = PlatformLoginProviderFactory::create( fixture.makeOidcSettings(), &NetSecurity::getProvider(), &fixture._client );
     SW_ASSERT_TRUE( provider != nullptr );
 
     MemoryServiceDatabase  database;
     MemoryServiceStore     store{ &database };
-    NetSecurityLoginCrypto crypto{ &EngineNetSecurity::getProvider() };
+    NetSecurityLoginCrypto crypto{ &NetSecurity::getProvider() };
     LoginSettings          settings;
     settings._passwordHashParams._memoryKiB = 64; // 이 시험은 비밀번호를 쓰지 않는다 — 없는 계정 해시를 가볍게
     const uint8  arrMasterKey[LoginTicketAuthority::kMasterKeySize]{};

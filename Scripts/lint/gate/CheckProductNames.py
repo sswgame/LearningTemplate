@@ -62,7 +62,7 @@ class CheckProductNamesGate(LintGate):
     mapExemption = {
         "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriverRegistry.cpp": "등록부 — 키트가 든 드라이버(SQLite)를 올리는 자리",
         "Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/ServiceStoreFactory.cpp": "서버 키트의 조립점 — PostgreSQL 드라이버를 올린다",
-        "Source/Engine/Network/EngineNetSecurity.cpp": "보안 제공자 조립점 — OpenSSL 제공자를 고른다",
+        "Source/GameFramework/Base/Online/Security/NetSecurity.cpp": "보안 제공자 조립점 — OpenSSL 제공자를 고른다",
         "Source/Engine/Audio/IAudioSystem.cpp": "오디오 백엔드 팩토리 — XAudio2 를 고른다",
         "Source/Editor/Common/Commands/EditorTracyLauncher.*": "외부 프로파일러 GUI 를 띄우는 실행기 — 이름이 곧 대상 도구",
         "Source/Editor/Panels/ProfilerPanel.*": "프로파일러 패널의 'Open Tracy' 버튼 — 외부 뷰어를 띄우는 자리(이름이 곧 대상 도구)",
