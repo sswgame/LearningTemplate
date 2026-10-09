@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Concurrency/DeadlockDetector.h"
+#include "Core/Diagnostics/DeadlockDetector.h"
 
 #include "Core/Process/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
@@ -8,13 +8,6 @@
 SW_LOG_CALLER( "DeadlockDetector" );
 namespace sw
 {
-    namespace
-    {
-        /** @brief 프로세스 전역 활성 데드락 탐지기를 가리키는 포인터입니다. */
-        atomic<DeadlockDetector*> s_activeDetector{ nullptr };
-
-    } // namespace
-
     DeadlockDetector::DeadlockDetector()
         : _bInitialized{ false }
         , _mutex{}
@@ -38,8 +31,7 @@ namespace sw
 
         CallStackCapture::initialize();
 
-        DeadlockDetector* pExpected{ nullptr };
-        s_activeDetector.compare_exchange_strong( pExpected, this, std::memory_order_acq_rel, std::memory_order_relaxed );
+        mutex::registerLockObserver( this );
     }
 
     /**
@@ -50,15 +42,9 @@ namespace sw
         if ( _bInitialized.exchange( false ) == false )
             return;
 
-        auto pExpected = this;
-        s_activeDetector.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+        mutex::unregisterLockObserver( this );
 
         CallStackCapture::shutdown();
-    }
-
-    DeadlockDetector* DeadlockDetector::getActive()
-    {
-        return s_activeDetector.load( std::memory_order_acquire );
     }
 
     /**

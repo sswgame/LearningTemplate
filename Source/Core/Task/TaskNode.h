@@ -9,12 +9,12 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Task/LockFreeObjectPool.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw

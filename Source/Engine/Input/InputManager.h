@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/ConcurrentQueue.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Module/ModuleUnloadListener.h"

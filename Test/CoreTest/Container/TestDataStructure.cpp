@@ -1,14 +1,13 @@
 #include "pch.h"
 
 #include "Core/Common/HashUtil.h"
-#include "Core/Concurrency/ConcurrentQueue.h"
-#include "Core/Concurrency/LockFreeObjectPool.h"
 #include "Core/Concurrency/LockFreeQueue.h"
 #include "Core/Concurrency/SpinLock.h"
-#include "Core/Concurrency/WorkStealingDeque.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/SlotHandleTable.h"
+#include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/list.h"
@@ -19,6 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Task/LockFreeObjectPool.h"
 
 #include "TestFramework/TestFramework.h"
 

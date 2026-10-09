@@ -8,8 +8,8 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/ConcurrentQueue.h"
-#include "Core/Concurrency/WorkStealingDeque.h"
+#include "Core/Container/ConcurrentQueue.h"
+#include "Core/Container/WorkStealingDeque.h"
 #include "Core/Container/span.h"
 #include "Core/Task/TaskTypes.h"
 

@@ -3,19 +3,18 @@
 #include "Core/Concurrency/DataRaceDetector.h"
 
 #if defined( SW_DEBUG )
-    #include "Core/Container/string.h"
-    #include "Core/Log/Logger.h"
-    #include "Core/Process/CallStackCapture.h"
-
     #include <functional>
     #include <thread>
+#endif
 
 namespace sw
 {
-    SW_LOG_CALLER( "DataRaceDetector" );
-
     namespace
     {
+        /** @brief 걸린 경합 보고 함수입니다. 경합을 찾았을 때만 읽습니다. */
+        atomic<DataRaceReportFunction> s_pReportFunction{ nullptr };
+
+#if defined( SW_DEBUG )
         static constexpr uint32 kWriterBitShift = 16;
         static constexpr uint32 kCountMask      = 0xFFFF;
         static constexpr uint32 kWriterUnit     = 1u << kWriterBitShift;
@@ -33,8 +32,18 @@ namespace sw
                 return ( id != 0 ) ? id : 1;
             }
         };
+#endif
     } // namespace
+} // namespace sw
 
+namespace sw
+{
+    void RaceDetectContext::setReportFunction( DataRaceReportFunction pFunction )
+    {
+        s_pReportFunction.store( pFunction, std::memory_order_release );
+    }
+
+#if defined( SW_DEBUG )
     bool RaceDetectContext::isOwnedByCurrentThread() const
     {
         const uint64 ownerId = _ownerThreadId.load( std::memory_order_relaxed );
@@ -115,33 +124,18 @@ namespace sw
     }
 
     /**
-     * @brief 레이스를 찾았을 때 콜 스택을 캡처하고 디버거에서 멈춥니다.
+     * @brief 레이스를 찾았을 때 보고 함수(로그 · 콜 스택)를 부르고 디버거에서 멈춥니다.
      */
     void RaceDetectContext::triggerDataRace( const utf8* pMessage )
     {
-        uint32    state   = _state.load( std::memory_order_relaxed );
-        uint32    readers = state & kCountMask;
-        uint32    writers = ( state >> kWriterBitShift ) & kCountMask;
-        CallStack callStack;
-        CallStackCapture::capture( callStack, 1 );
-        string stackTrace = CallStackCapture::symbolize( callStack );
-
-        SW_LOG_ERROR( "%s (ctx: %p, readers: %u, writers: %u)", pMessage, this, readers, writers );
-
-        size_t start{ 0 };
-        while ( start < stackTrace.size() )
-        {
-            size_t end = stackTrace.find( '\n', start );
-            if ( end == string::npos )
-                end = stackTrace.size();
-            string line = stackTrace.substr( start, end - start );
-            if ( line.empty() == false )
-                SW_LOG_ERROR( "  %s", line.c_str() );
-            start = end + 1;
-        }
+        const uint32                 state   = _state.load( std::memory_order_relaxed );
+        const uint32                 readers = state & kCountMask;
+        const uint32                 writers = ( state >> kWriterBitShift ) & kCountMask;
+        const DataRaceReportFunction pReport = s_pReportFunction.load( std::memory_order_acquire );
+        if ( pReport != nullptr )
+            pReport( pMessage, this, readers, writers );
 
         SW_DEBUG_BREAK();
     }
-} // namespace sw
-
 #endif
+} // namespace sw

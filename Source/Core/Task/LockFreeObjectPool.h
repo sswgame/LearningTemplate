@@ -16,7 +16,7 @@
 #include "Core/Common/Macros.h"
 #include "Core/Common/StdHeaders.h"
 #include "Core/Common/Types.h"
-#include "Core/Concurrency/ConcurrentQueue.h"
+#include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/array.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"

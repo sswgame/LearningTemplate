@@ -8,13 +8,26 @@
 
 namespace sw
 {
+    /**
+     * @brief 경합을 찾았을 때 디버거에서 멈추기 전에 부르는 보고 함수입니다(`RaceDetectContext::setReportFunction`).
+     * @details 로그 · 호출 스택은 컨테이너보다 위층이라 여기서 직접 부르지 않고 함수로 받습니다. 보고기는 `DataRaceReporter`(Diagnostics)가 겁니다.
+     * @param pMessage    충돌 종류를 적은 문장
+     * @param pContext    충돌한 `RaceDetectContext` 의 주소
+     * @param readerCount 그 순간 들어와 있던 읽기 수
+     * @param writerCount 그 순간 들어와 있던 쓰기 수
+     */
+    using DataRaceReportFunction = void ( * )( const utf8* pMessage, const void* pContext, uint32 readerCount, uint32 writerCount );
+} // namespace sw
+
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 1) RaceDetectContext — 읽기 · 쓰기 수를 센다. 쓰기끼리 겹치거나 읽기와 쓰기가 겹치면 Fatal
     //    컨테이너 멤버(_raceCtx)는 Debug 전용이라 Release 에서는 공간을 차지하지 않는다
     // ------------------------------------------------------------------------------
     /**
      * @class RaceDetectContext
-     * @brief STL 래퍼 안에 두어 동시 읽기 · 쓰기를 추적합니다. 레이스를 찾으면 Fatal 로그를 남깁니다.
+     * @brief STL 래퍼 안에 두어 동시 읽기 · 쓰기를 추적합니다. 레이스를 찾으면 보고 함수를 부르고 디버거에서 멈춥니다.
      */
     class SW_API RaceDetectContext
     {
@@ -23,6 +36,11 @@ namespace sw
         constexpr RaceDetectContext() noexcept = default;
         /** @brief 따로 정리할 것이 없습니다. */
         ~RaceDetectContext() = default;
+
+        /**
+         * @brief 경합을 찾았을 때 부를 보고 함수를 겁니다. nullptr 이면 멈추기만 합니다. 모든 구성에 있지만 Debug 에서만 불립니다.
+         */
+        static void setReportFunction( DataRaceReportFunction pFunction );
 
 #if defined( SW_DEBUG )
         // 복사 · 이동은 허용한다. 컨테이너를 복사해도 컨텍스트는 0 인 초기 상태로 복사된다.

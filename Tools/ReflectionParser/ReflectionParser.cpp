@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Common/Types.h"
+#include "Core/Diagnostics/DataRaceReporter.h"
 #include "Core/Log/Logger.h"
 #include "Core/Time/GameTimer.h"
 
@@ -94,6 +95,8 @@ namespace sw
  */
 int32 main( int32 argc, utf8* argv[] )
 {
+    // Core STATIC 을 링크하므로 보고기의 정적 등록 목적 파일이 빠질 수 있다 — 직접 건다.
+    sw::DataRaceReporter::install();
     const sw::LoggerScope loggerScope;
 
     sw::ParserOptions options;

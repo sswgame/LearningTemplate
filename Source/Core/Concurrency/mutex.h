@@ -9,10 +9,40 @@
 
 namespace sw
 {
-    class DeadlockDetector;
-
     // ------------------------------------------------------------------------------
-    // 1) mutex — std::mutex 래퍼. 디버그 빌드에서 데드락 사이클을 탐지한다
+    // 1) ILockObserver — 잠금 시도 · 획득 · 해제를 듣는 쪽(교착 검출기 `DeadlockDetector`)
+    //    mutex 는 이 인터페이스만 안다. 검출기는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있다
+    // ------------------------------------------------------------------------------
+    /**
+     * @brief `mutex` 의 잠금 사건을 받는 인터페이스입니다. `mutex::registerLockObserver` 로 겁니다.
+     * @details `SW_ENABLE_DEADLOCK_DETECTION` 빌드에서만 불립니다. 부르는 쪽은 재진입 가드(`MutexReentryGuard`) 안이라,
+     *          구현이 자기 `mutex` 를 잡아도 다시 불리지 않습니다.
+     */
+    class SW_API ILockObserver
+    {
+    public:
+        ILockObserver() = default;
+        /** @brief 가상 소멸자입니다. */
+        virtual ~ILockObserver() = default;
+
+        /** @brief 복사를 금지합니다. */
+        ILockObserver( const ILockObserver& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        ILockObserver& operator=( const ILockObserver& ) = delete;
+
+        /** @brief 락 획득을 시도하기 직전에 불립니다. */
+        virtual void recordLockAttempt( void* pLock ) = 0;
+        /** @brief 락을 얻은 뒤 불립니다. */
+        virtual void recordLockAcquired( void* pLock ) = 0;
+        /** @brief 락을 풀기 직전에 불립니다. */
+        virtual void recordLockReleased( void* pLock ) = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 2) mutex — std::mutex 래퍼. 디버그 빌드에서 데드락 사이클을 탐지한다
     // ------------------------------------------------------------------------------
     /**
      * @brief std::mutex 를 감싸 디버그 빌드에서 데드락 사이클을 탐지합니다.
@@ -39,6 +69,16 @@ namespace sw
         /** @brief 잡고 있는 락을 풉니다. */
         void unlock();
 
+        /**
+         * @brief 잠금 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 아무것도 하지 않습니다.
+         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         */
+        static void registerLockObserver( ILockObserver* pObserver );
+        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
+        static void unregisterLockObserver( ILockObserver* pObserver );
+        /** @brief 걸린 잠금 관찰자입니다. 없으면 nullptr 입니다. */
+        static ILockObserver* getLockObserver();
+
     private:
         void notifyLockAttempt();
         void notifyAcquired();
@@ -48,8 +88,6 @@ namespace sw
     };
 
 } // namespace sw
-
-#include "Core/Concurrency/DeadlockDetector.h"
 
 namespace sw
 {
@@ -87,9 +125,9 @@ namespace sw
         MutexReentryGuard guard;
         if ( guard )
         {
-            DeadlockDetector* pDetector = DeadlockDetector::getActive();
-            if ( pDetector != nullptr )
-                pDetector->recordLockAttempt( this );
+            ILockObserver* pObserver = getLockObserver();
+            if ( pObserver != nullptr )
+                pObserver->recordLockAttempt( this );
         }
     }
 
@@ -98,9 +136,9 @@ namespace sw
         MutexReentryGuard guard;
         if ( guard )
         {
-            DeadlockDetector* pDetector = DeadlockDetector::getActive();
-            if ( pDetector != nullptr )
-                pDetector->recordLockAcquired( this );
+            ILockObserver* pObserver = getLockObserver();
+            if ( pObserver != nullptr )
+                pObserver->recordLockAcquired( this );
         }
     }
 
@@ -109,9 +147,9 @@ namespace sw
         MutexReentryGuard guard;
         if ( guard )
         {
-            DeadlockDetector* pDetector = DeadlockDetector::getActive();
-            if ( pDetector != nullptr )
-                pDetector->recordLockReleased( this );
+            ILockObserver* pObserver = getLockObserver();
+            if ( pObserver != nullptr )
+                pObserver->recordLockReleased( this );
         }
     }
 #else
