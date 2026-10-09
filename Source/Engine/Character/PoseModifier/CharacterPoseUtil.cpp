@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Pose/CharacterPoseUtil.h"
+#include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 
 #include "Engine/Animation/Skeleton.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"

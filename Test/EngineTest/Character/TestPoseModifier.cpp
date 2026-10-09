@@ -6,7 +6,7 @@
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeleton.h"
-#include "Engine/Character/Pose/PoseModifierComponent.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"

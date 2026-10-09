@@ -67,6 +67,24 @@ _kMapStep: dict[int, MoveStep] = {
         (("Graphics/Renderer", "Renderer"),),
         ((r"(?<![\w])Graphics/Renderer(?![\w])", "Renderer"),),
     ),
+    3: MoveStep(
+        "애니메이션 알림 계약은 Animation/Notify, 캐릭터 포즈 수정은 Character/PoseModifier",
+        (
+            ("Animation/AnimNotifyPhase", "Animation/Notify/AnimNotifyPhase"),
+            ("Object/Animation/AnimNotifyListener", "Animation/Notify/AnimNotifyListener"),
+            ("Character/Pose", "Character/PoseModifier"),
+        ),
+        ((r"(?<![\w/])Character/Pose/", "Character/PoseModifier/"), (r"(?<![\w/])Object/Animation/AnimNotifyListener", "Animation/Notify/AnimNotifyListener")),
+    ),
+    4: MoveStep(
+        "창 표면 계약은 RHI 로, 서버 설정은 Config/Server 로",
+        (
+            ("Common/IRenderSurface", "Graphics/RHI/IRenderSurface"),
+            ("Config/ServerConfig", "Config/Server/ServerConfig"),
+            ("Config/ServerSecret", "Config/Server/ServerSecret"),
+        ),
+        ((r"(?<![\w/])Common/IRenderSurface", "Graphics/RHI/IRenderSurface"),),
+    ),
 }
 
 

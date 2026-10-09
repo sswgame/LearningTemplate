@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Pose/PoseModifierComponent.h"
+#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

@@ -314,7 +314,7 @@ Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석
 ## 함정과 주의
 
 **폴더를 옮기기 전에 옮길 파일의 include를 티어 표와 비교하세요.** 계획한 위치가 위 티어를 include하는 파일을 받을 수 없는 경우가 많습니다.
-2026년 10월의 폴더 정리에서 `Animation/`, `Utility/Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/Pose/`, `Character/AnimNotify/` 와 한때의 `DevTools/` 로 갔습니다(`DevTools/` 는 뒤에 소유 코드 옆으로 나눠 없앴다).
+2026년 10월의 폴더 정리에서 `Animation/`, `Utility/Console/`, `Localization/` 으로 옮기려던 파일이 그래서 `Character/PoseModifier/`, `Character/AnimNotify/` 와 한때의 `DevTools/` 로 갔습니다(`DevTools/` 는 뒤에 소유 코드 옆으로 나눠 없앴다).
 
 **`destroy` 본문은 null을 안전하게 다뤄야 합니다.** `destroyAll` 은 초기화에 실패했거나 건너뛴 단계까지 모든 단계를 역순으로 돕니다.
 

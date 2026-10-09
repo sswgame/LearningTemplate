@@ -342,7 +342,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 | `AnimNotify/AnimNotifyComponent.h` | 알림 디스패치 |
 | `Socket/ResolvedSocketTable.h` | 소켓 해석과 변환 |
 | `Socket/SocketBindingComponent.h` | 소켓 부착 상태 |
-| `Pose/PoseModifierComponent.h` | 후처리 리그 연결 |
+| `PoseModifier/PoseModifierComponent.h` | 후처리 리그 연결 |
 | `Hit/RagdollComponent.h` | 래그돌 상태와 설정 |
 | `Hit/CharacterHit.h` | 광선 맞힘과 히트 존 |
 | `Fit/FitSolver.h` | 장비 피팅 |

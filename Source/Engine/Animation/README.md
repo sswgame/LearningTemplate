@@ -135,6 +135,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 - `AnimFiredNotify::_pSource` 와 `_eventIndex` 로 같은 이름의 구간들을 서로 구별합니다.
 
 애니메이터는 울린 알림을 프레임마다 한 번 받는 쪽(`IAnimNotifyListener`)에 넘깁니다. 이름을 처리기에 연결하는 쪽은 `Engine/Character/AnimNotify/AnimNotifyComponent` 입니다.
+알림 계약(`AnimNotifyPhase`, `IAnimNotifyListener`)은 이 폴더의 `Notify/` 에 있고, 처리기는 소켓과 피격을 쓰므로 `Character` 에 있습니다. 알림을 거두어 넘기는 시스템은 `Object/Animation/AnimationSystem` 입니다.
 
 ### 2D 와 3D 가 함께 쓰는 것
 

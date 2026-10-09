@@ -5,8 +5,8 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/Notify/AnimNotifyListener.h"
 #include "Engine/Animation/SpriteClipAsset.h"
-#include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/2D/SpriteComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

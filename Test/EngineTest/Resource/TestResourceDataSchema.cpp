@@ -23,7 +23,7 @@
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/Fit/SurfaceState.h"
-#include "Engine/Character/Pose/ReferencePoseOverride.h"
+#include "Engine/Character/PoseModifier/ReferencePoseOverride.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/EngineDefaultAssets.h"

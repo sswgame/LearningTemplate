@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/Notify/AnimNotifyListener.h"
 #include "Engine/Character/AnimNotify/AnimNotifyTable.h"
-#include "Engine/Object/Animation/AnimNotifyListener.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
