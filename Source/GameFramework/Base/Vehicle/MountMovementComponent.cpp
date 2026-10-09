@@ -25,13 +25,6 @@ namespace sw
             static constexpr float32 kTrotThreshold = 0.5f;
             /** @brief 이동 크기가 이 위면 구보입니다. */
             static constexpr float32 kCanterThreshold = 0.95f;
-
-            static float32 moveTowards( float32 current, float32 target, float32 maxDelta )
-            {
-                if ( MathUtil::abs( target - current ) <= maxDelta )
-                    return target;
-                return current + ( target > current ? maxDelta : -maxDelta );
-            }
         };
     } // namespace
 } // namespace sw
@@ -151,12 +144,12 @@ namespace sw
         {
             const float32 wantYaw = MathUtil::atan2( worldMove._x, worldMove._z );
             const float32 newYaw  = OrientationUtil::turnTowardAngle( _facingYaw, wantYaw, computeGaitTurnRate( gait ) * deltaTime );
-            turn                  = MathUtil::clamp( OrientationUtil::wrapAngle( wantYaw - _facingYaw ), -1.0f, 1.0f );
-            _facingYaw            = OrientationUtil::wrapAngle( newYaw );
+            turn                  = MathUtil::clamp( MathUtil::wrapAngle( wantYaw - _facingYaw ), -1.0f, 1.0f );
+            _facingYaw            = MathUtil::wrapAngle( newYaw );
         }
         const float32 targetSpeed = computeGaitSpeed( gait );
         const float32 rate        = targetSpeed > _forwardSpeed ? _acceleration : _deceleration;
-        _forwardSpeed             = Internal::moveTowards( _forwardSpeed, targetSpeed, rate * deltaTime );
+        _forwardSpeed             = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
 
         // 자기 요 방향으로 간다(+Z 에서 +X 쪽). 루트 모션이면 애니메이션이 옮긴다.
         const float3                  velocity{ MathUtil::sin( _facingYaw ) * _forwardSpeed, 0.0f, MathUtil::cos( _facingYaw ) * _forwardSpeed };

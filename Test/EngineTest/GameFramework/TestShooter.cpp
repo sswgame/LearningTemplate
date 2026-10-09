@@ -396,7 +396,7 @@ SW_TEST_CASE( ShooterTest, TurnTowardAngleTakesTheShortWayAndCapsTheStep )
     const float32 wrapped = OrientationUtil::turnTowardAngle( 3.1f, -3.1f, 0.2f );
     SW_EXPECT_NEAR_EQUAL( -3.1f, wrapped, 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, OrientationUtil::turnTowardAngle( 1.0f, -2.0f, 0.0f ), 1.0e-6f );
-    SW_EXPECT_NEAR_EQUAL( -MathUtil::kHalfPi, OrientationUtil::wrapAngle( 3.0f * MathUtil::kHalfPi ), 1.0e-5f );
+    SW_EXPECT_NEAR_EQUAL( -MathUtil::kHalfPi, MathUtil::wrapAngle( 3.0f * MathUtil::kHalfPi ), 1.0e-5f );
 }
 
 /**

@@ -104,7 +104,7 @@ namespace sw
         else if ( movingSpeed > Internal::kMinFacingSpeed )
             targetYaw = MathUtil::atan2( _velocity._x, _velocity._z );
         const float32 newYaw = OrientationUtil::turnTowardAngle( _facingYaw, targetYaw, _turnRate * deltaTime );
-        if ( MathUtil::abs( OrientationUtil::wrapAngle( newYaw - _facingYaw ) ) <= Internal::kMinYawChange )
+        if ( MathUtil::abs( MathUtil::wrapAngle( newYaw - _facingYaw ) ) <= Internal::kMinYawChange )
             return;
         _facingYaw             = newYaw;
         SceneComponent* pScene = pOwner->getPrimarySceneComponent();

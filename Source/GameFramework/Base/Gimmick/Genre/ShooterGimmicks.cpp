@@ -42,15 +42,6 @@ namespace sw
                 const float32        radius = pAsset != nullptr ? float3::getDistance( pAsset->_boundsMin, pAsset->_boundsMax ) : 2.0f;
                 fracture.applyRadialDamageAtWorld( center, radius, strain, impulse );
             }
-
-            /** @brief 각을 (−π, π] 로 감습니다. */
-            static float32 wrapAngle( float32 radians )
-            {
-                float32 wrapped = MathUtil::fmod( radians + MathUtil::kPi, MathUtil::kPi * 2.0f );
-                if ( wrapped < 0.0f )
-                    wrapped += MathUtil::kPi * 2.0f;
-                return wrapped - MathUtil::kPi;
-            }
         };
     } // namespace
 } // namespace sw
@@ -207,7 +198,7 @@ namespace sw
         const float3  toTarget   = listCandidate[static_cast<size_t>( pick )]._position - origin;
         const float32 desiredYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         float3        rotation   = pScene->getLocalRotation();
-        const float32 delta      = ShooterGimmicksInternal::wrapAngle( desiredYaw - rotation._y );
+        const float32 delta      = MathUtil::wrapAngle( desiredYaw - rotation._y );
         const float32 maxTurn    = _turnSpeed * GenreGimmickUtil::kStepTime;
         rotation._y += MathUtil::clamp( delta, -maxTurn, maxTurn );
         pScene->setLocalRotation( rotation );

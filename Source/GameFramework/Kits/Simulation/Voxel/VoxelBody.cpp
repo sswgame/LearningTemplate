@@ -26,14 +26,6 @@ namespace sw
                 else
                     value._z = component;
             }
-
-            /** @brief @p current 를 @p target 으로 @p maxDelta 만큼 다가가게 합니다. */
-            static float32 approach( float32 current, float32 target, float32 maxDelta )
-            {
-                if ( current < target )
-                    return MathUtil::min( current + maxDelta, target );
-                return MathUtil::max( current - maxDelta, target );
-            }
         };
     } // namespace
 } // namespace sw
@@ -118,15 +110,15 @@ namespace sw
         if ( _bInWater != SW_FALSE )
             speed = _settings._swimSpeed;
         const float32 acceleration = ( _bOnGround != SW_FALSE || _bInWater != SW_FALSE ) ? _settings._groundAcceleration : _settings._airAcceleration;
-        _velocity._x               = VoxelBodyInternal::approach( _velocity._x, wish._x * speed, acceleration * deltaTime );
-        _velocity._z               = VoxelBodyInternal::approach( _velocity._z, wish._z * speed, acceleration * deltaTime );
+        _velocity._x               = MathUtil::moveToward( _velocity._x, wish._x * speed, acceleration * deltaTime );
+        _velocity._z               = MathUtil::moveToward( _velocity._z, wish._z * speed, acceleration * deltaTime );
 
         // 수직 — 중력 · 점프 · 헤엄.
         if ( _bInWater != SW_FALSE )
         {
             _velocity._y -= _settings._gravity * 0.2f * deltaTime;
             if ( bJump )
-                _velocity._y = VoxelBodyInternal::approach( _velocity._y, _settings._swimSpeed, _settings._gravity * deltaTime );
+                _velocity._y = MathUtil::moveToward( _velocity._y, _settings._swimSpeed, _settings._gravity * deltaTime );
             _velocity._y = MathUtil::max( _velocity._y, -_settings._swimSpeed );
         }
         else

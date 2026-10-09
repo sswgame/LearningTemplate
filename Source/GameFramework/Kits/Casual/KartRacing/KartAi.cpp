@@ -8,28 +8,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct KartAiInternal
-        {
-            static float32 wrapAngle( float32 angle )
-            {
-                while ( angle > MathUtil::kPi )
-                {
-                    angle -= 2.0f * MathUtil::kPi;
-                }
-                while ( angle < -MathUtil::kPi )
-                {
-                    angle += 2.0f * MathUtil::kPi;
-                }
-                return angle;
-            }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     KartAiDriver::KartAiDriver()
         : _settings{}
         , _driftSide{ 0 }
@@ -54,7 +32,7 @@ namespace sw
         const float32        aimZ   = target._position._z + target._right._z * lineOffset;
         const float3&        here   = motor.getPosition();
         const float32        aimYaw = MathUtil::atan2( aimX - here._x, aimZ - here._z );
-        const float32        error  = KartAiInternal::wrapAngle( aimYaw - motor.getYaw() );
+        const float32        error  = MathUtil::wrapAngle( aimYaw - motor.getYaw() );
         input._steer                = MathUtil::clamp( error * _settings._steerGain, -1.0f, 1.0f );
 
         // 2) 페달 — 아주 급한 곡선만 늦춘다.

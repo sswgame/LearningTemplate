@@ -92,7 +92,7 @@ namespace sw
         // 폰이 있으면 실제로 돈 양(피치 한계에서 잘린 뒤)을 조종 회전에도 쌓는다 — 다음 틱의 시점이 조종자의 값으로 돌아와도 반동이 남는다.
         PawnComponent* pPawn = findPawn();
         if ( pPawn != nullptr )
-            pPawn->addControlRotationOffset( OrientationUtil::wrapAngle( _look.getYaw() - yawBefore ), _look.getPitch() - pitchBefore );
+            pPawn->addControlRotationOffset( MathUtil::wrapAngle( _look.getYaw() - yawBefore ), _look.getPitch() - pitchBefore );
         applyToCamera();
     }
 

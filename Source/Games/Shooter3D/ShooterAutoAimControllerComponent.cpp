@@ -85,7 +85,7 @@ namespace sw
         setFocus( aimPoint );
         const float3  toTarget  = aimPoint - eye;
         const float32 targetYaw = MathUtil::atan2( toTarget._x, toTarget._z );
-        const float32 yawError  = OrientationUtil::wrapAngle( targetYaw - getControlYaw() );
+        const float32 yawError  = MathUtil::wrapAngle( targetYaw - getControlYaw() );
         if ( MathUtil::abs( yawError ) < Internal::kAimTolerance && bestDistance < _engageDistance )
             pressButton( hashed_string( Internal::kFire ) );
         // 가까우면 산탄총, 멀면 소총 — 탄이 남은 쪽만.

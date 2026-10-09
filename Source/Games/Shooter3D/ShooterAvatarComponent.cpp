@@ -21,11 +21,6 @@ namespace sw
         struct ShooterAvatarComponentInternal
         {
 
-            static float32 approach( float32 current, float32 target, float32 maxStep )
-            {
-                return current + MathUtil::clamp( target - current, -maxStep, maxStep );
-            }
-
             /** @brief 이동 방향 · 앞 속도를 그래프의 `Move` 코드로 바꿉니다(앞은 빠르면 달리기). */
             static float32 computeMoveCode( LocomotionDirection direction, float32 forwardSpeed, float32 runThreshold )
             {
@@ -152,8 +147,8 @@ namespace sw
         const bool    bUpperBodyFree = bAlive && _hitTimer <= 0.0f;
         const float32 aimTarget      = bUpperBodyFree ? 1.0f : 0.0f;
         const float32 shootTarget    = bUpperBodyFree && pPlayer->getTimeSinceShot() < 0.2f ? 1.0f : 0.0f;
-        _aimWeight                   = Internal::approach( _aimWeight, aimTarget, _layerBlendRate * step );
-        _shootWeight                 = Internal::approach( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
+        _aimWeight                   = MathUtil::moveToward( _aimWeight, aimTarget, _layerBlendRate * step );
+        _shootWeight                 = MathUtil::moveToward( _shootWeight, shootTarget, _layerBlendRate * 2.0f * step );
         if ( _aimLayer >= 0 )
             pAnimator->setLayerWeight( static_cast<uint32>( _aimLayer ), _aimWeight );
         if ( _shootLayer >= 0 )

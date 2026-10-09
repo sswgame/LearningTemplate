@@ -40,7 +40,6 @@ namespace sw
                 {  CoasterPieceType::Booster,   "Booster"},
             };
 
-            static float32 smoothStep( float32 t ) { return t * t * ( 3.0f - 2.0f * t ); }
             static float32 smoothStepSlope( float32 t ) { return 6.0f * t * ( 1.0f - t ); }
 
             /** @brief 길이가 거의 0 이면 @p fallback 을 돌려주는 정규화입니다. */
@@ -359,7 +358,7 @@ namespace sw
             }
             else
             {
-                y     = rise * CoasterTrackInternal::smoothStep( t );
+                y     = rise * MathUtil::smoothstep( 0.0f, 1.0f, t );
                 slope = rise * CoasterTrackInternal::smoothStepSlope( t ) / horizontalLength;
             }
             const float3 position = start + forward * ( t * horizontalLength ) + float3{ 0.0f, y, 0.0f };
@@ -384,13 +383,13 @@ namespace sw
             const float32 u       = static_cast<float32>( stepIndex ) / static_cast<float32>( stepCount );
             const float32 heading = startHeading + directionSign * totalAngle * u;
             const float3  flat    = center - CoasterTrackInternal::rightOf( heading ) * ( radius * directionSign );
-            const float32 y       = rise * CoasterTrackInternal::smoothStep( u );
+            const float32 y       = rise * MathUtil::smoothstep( 0.0f, 1.0f, u );
             // 접선(각도에 대한 미분) — 수평은 반지름 × 앞, 수직은 높이 곡선의 기울기.
             const float3 tangent = CoasterTrackInternal::forwardOf( heading ) * radius +
                                    float3{ 0.0f, rise * CoasterTrackInternal::smoothStepSlope( u ) / totalAngle, 0.0f };
             // 뱅크는 들어가며 기울고 나오며 바로 선다(앞뒤 20% 에서 부드럽게) — 조각 경계에서 위 벡터가 튀지 않는다.
             const float32 edge       = MathUtil::min( u, 1.0f - u ) / 0.2f;
-            const float32 bankFactor = CoasterTrackInternal::smoothStep( MathUtil::clamp( edge, 0.0f, 1.0f ) );
+            const float32 bankFactor = MathUtil::smoothstep( 0.0f, 1.0f, MathUtil::clamp( edge, 0.0f, 1.0f ) );
             pushPoint( flat + float3{ 0.0f, y, 0.0f }, tangent, bank * bankFactor, CoasterSegmentFlag::kNone );
         }
         _heading  = startHeading + directionSign * totalAngle;
@@ -427,7 +426,7 @@ namespace sw
 
             const float32 angle    = static_cast<float32>( stepIndex ) * stepAngle;
             const float32 progress = angle / fullTurn;
-            const float3  position = start + forward * along + worldUp * height + right * ( width * CoasterTrackInternal::smoothStep( progress ) );
+            const float3  position = start + forward * along + worldUp * height + right * ( width * MathUtil::smoothstep( 0.0f, 1.0f, progress ) );
             // 탑승자의 위는 곡률 중심 쪽 — 꼭대기에서 아래를 향한다(뒤집힘).
             CoasterTrack::Point point;
             point._position = position;

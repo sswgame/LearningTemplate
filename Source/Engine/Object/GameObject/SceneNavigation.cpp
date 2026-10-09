@@ -69,19 +69,6 @@ namespace sw
                 return agent.getOwner()->getComponent<CharacterControllerComponent>();
             }
 
-            static float32 wrapAngle( float32 angle )
-            {
-                while ( angle > MathUtil::kPi )
-                {
-                    angle -= 2.0f * MathUtil::kPi;
-                }
-                while ( angle < -MathUtil::kPi )
-                {
-                    angle += 2.0f * MathUtil::kPi;
-                }
-                return angle;
-            }
-
             /**
              * @brief 오브젝트와 그 조상을 거슬러 올라가며 빼는 규칙 · 영역 수정자를 봅니다(가장 가까운 수정자가 이긴다).
              * @details 움직이는 것(에이전트 · 캐릭터 컨트롤러 · 스킨드 메시 · Static 이 아닌 강체)이 든 계층은 통째로 뺀다 — 베이크하는 순간 그 자리에 있던
@@ -785,7 +772,7 @@ namespace sw
             const float3& second   = volume._listPoint[1];
             const float32 yaw      = MathUtil::atan2( second._x - first._x, second._z - first._z );
             const bool    bMoved   = ( center - pObstacle->_carvedPosition ).getLength() > moveThreshold;
-            const bool    bTurned  = MathUtil::abs( Internal::wrapAngle( yaw - pObstacle->_carvedYaw ) ) > Internal::kObstacleTurnThreshold;
+            const bool    bTurned  = MathUtil::abs( MathUtil::wrapAngle( yaw - pObstacle->_carvedYaw ) ) > Internal::kObstacleTurnThreshold;
             const bool    bChanged = pObstacle->_bCarved == SW_FALSE || pObstacle->_bShapeDirty == SW_TRUE || bMoved || bTurned;
             if ( bChanged == false )
                 continue;
@@ -1115,9 +1102,9 @@ namespace sw
         {
             float3        rotation = pScene->getLocalRotation();
             const float32 wantYaw  = MathUtil::atan2( state._velocity._x, state._velocity._z );
-            const float32 delta    = Internal::wrapAngle( wantYaw - rotation._y );
+            const float32 delta    = MathUtil::wrapAngle( wantYaw - rotation._y );
             const float32 maxTurn  = agent._turnRate * deltaTime;
-            rotation._y            = Internal::wrapAngle( rotation._y + MathUtil::clamp( delta, -maxTurn, maxTurn ) );
+            rotation._y            = MathUtil::wrapAngle( rotation._y + MathUtil::clamp( delta, -maxTurn, maxTurn ) );
             pScene->setLocalRotation( rotation );
         }
     }

@@ -33,22 +33,9 @@ namespace sw
         return float3{ pitch, yaw, roll };
     }
 
-    float32 OrientationUtil::wrapAngle( float32 angle )
-    {
-        while ( angle > MathUtil::kPi )
-        {
-            angle -= 2.0f * MathUtil::kPi;
-        }
-        while ( angle < -MathUtil::kPi )
-        {
-            angle += 2.0f * MathUtil::kPi;
-        }
-        return angle;
-    }
-
     float32 OrientationUtil::turnTowardAngle( float32 current, float32 target, float32 maxStep )
     {
         const float32 limit = MathUtil::max( maxStep, 0.0f );
-        return wrapAngle( current + MathUtil::clamp( wrapAngle( target - current ), -limit, limit ) );
+        return MathUtil::wrapAngle( current + MathUtil::clamp( MathUtil::wrapAngle( target - current ), -limit, limit ) );
     }
 } // namespace sw

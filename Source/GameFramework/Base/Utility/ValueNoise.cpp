@@ -8,17 +8,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ValueNoiseInternal
-        {
-            static constexpr float32 smoothstep( float32 t ) { return t * t * ( 3.0f - 2.0f * t ); }
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     float32 ValueNoise::hashLattice( int32 x, int32 z, uint32 seed )
     {
         return GameHash::toUnitFloat( GameHash::hashCoord( x, z, seed ) );
@@ -30,8 +19,8 @@ namespace sw
         const float32 floorZ  = MathUtil::floor( z );
         const int32   cellX   = static_cast<int32>( floorX );
         const int32   cellZ   = static_cast<int32>( floorZ );
-        const float32 tx      = ValueNoiseInternal::smoothstep( x - floorX );
-        const float32 tz      = ValueNoiseInternal::smoothstep( z - floorZ );
+        const float32 tx      = MathUtil::smoothstep( 0.0f, 1.0f, x - floorX );
+        const float32 tz      = MathUtil::smoothstep( 0.0f, 1.0f, z - floorZ );
         const float32 v00     = hashLattice( cellX, cellZ, seed );
         const float32 v10     = hashLattice( cellX + 1, cellZ, seed );
         const float32 v01     = hashLattice( cellX, cellZ + 1, seed );

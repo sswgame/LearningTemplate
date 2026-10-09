@@ -172,7 +172,7 @@ namespace sw
                 pController->setControlRotation( requested._x, requested._y );
             const float2  offset = pPawn->consumeControlRotationOffset();
             const float32 pitch  = MathUtil::clamp( pController->getControlPitch() + offset._y, -pPawn->getMaxPitch(), pPawn->getMaxPitch() );
-            pController->setControlRotation( OrientationUtil::wrapAngle( pController->getControlYaw() + offset._x ), pitch );
+            pController->setControlRotation( MathUtil::wrapAngle( pController->getControlYaw() + offset._x ), pitch );
             ControlIntent intent{};
             pController->produceIntent( context, *pPawn, intent );
             intent._controlYaw   = pController->getControlYaw();

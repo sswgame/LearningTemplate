@@ -16,11 +16,6 @@ namespace sw
         {
             static constexpr float32 kStopEpsilon = 0.05f; ///< 이보다 느리면 멈춘 것으로 본다(브레이크 → 후진 전환)
 
-            static float32 approach( float32 value, float32 target, float32 step )
-            {
-                return value < target ? MathUtil::min( target, value + step ) : MathUtil::max( target, value - step );
-            }
-
             static int32 signOf( float32 value ) { return value > 0.0f ? 1 : ( value < 0.0f ? -1 : 0 ); }
         };
     } // namespace
@@ -260,7 +255,7 @@ namespace sw
             else if ( speed < cap * throttle )
                 speed = MathUtil::min( cap * throttle, speed + _settings._acceleration * throttle * deltaTime );
             else if ( speed <= cap )
-                speed = ArcadeVehicleMotorInternal::approach( speed, cap * throttle, _settings._coastDrag * deltaTime );
+                speed = MathUtil::moveToward( speed, cap * throttle, _settings._coastDrag * deltaTime );
         }
         else if ( throttle < 0.0f )
         {
@@ -269,12 +264,12 @@ namespace sw
             else
             {
                 const float32 reverseCap = -_settings._reverseMaxSpeed * MathUtil::min( 1.0f, cap / MathUtil::max( _settings._maxSpeed, 1.0e-3f ) );
-                speed                    = ArcadeVehicleMotorInternal::approach( speed, reverseCap * -throttle, _settings._acceleration * -throttle * deltaTime );
+                speed                    = MathUtil::moveToward( speed, reverseCap * -throttle, _settings._acceleration * -throttle * deltaTime );
             }
         }
         else
         {
-            speed = ArcadeVehicleMotorInternal::approach( speed, 0.0f, _settings._coastDrag * deltaTime );
+            speed = MathUtil::moveToward( speed, 0.0f, _settings._coastDrag * deltaTime );
         }
         // 상한을 넘었으면(부스트 끝 · 오프로드에 들어섬) 천천히 줄인다.
         if ( speed > cap )

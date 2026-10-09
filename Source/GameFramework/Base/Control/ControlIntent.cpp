@@ -80,7 +80,7 @@ namespace sw
         Internal::writeValue( writer, _move._x, kAxisSteps, Internal::kAxisMaxStep );
         Internal::writeValue( writer, _move._y, kAxisSteps, Internal::kAxisMaxStep );
         Internal::writeValue( writer, _moveUp, kAxisSteps, Internal::kAxisMaxStep );
-        Internal::writeValue( writer, OrientationUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
+        Internal::writeValue( writer, MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
         Internal::writeValue( writer, _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( const float32 analog : _arrAnalog )
         {
@@ -118,7 +118,7 @@ namespace sw
         _move._x       = Internal::quantizeValue( _move._x, kAxisSteps, Internal::kAxisMaxStep );
         _move._y       = Internal::quantizeValue( _move._y, kAxisSteps, Internal::kAxisMaxStep );
         _moveUp        = Internal::quantizeValue( _moveUp, kAxisSteps, Internal::kAxisMaxStep );
-        _controlYaw    = Internal::quantizeValue( OrientationUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
+        _controlYaw    = Internal::quantizeValue( MathUtil::wrapAngle( _controlYaw ), kAngleStepsPerRadian, Internal::kYawMaxStep );
         _controlPitch  = Internal::quantizeValue( _controlPitch, kAngleStepsPerRadian, Internal::kPitchMaxStep );
         for ( float32& analog : _arrAnalog )
         {

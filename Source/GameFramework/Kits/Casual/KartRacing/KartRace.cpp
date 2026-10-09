@@ -31,16 +31,8 @@ namespace sw
             {
                 const float32 currentYaw = MathUtil::atan2( direction._x, direction._z );
                 const float32 targetYaw  = MathUtil::atan2( target._x - from._x, target._z - from._z );
-                float32       delta      = targetYaw - currentYaw;
-                while ( delta > MathUtil::kPi )
-                {
-                    delta -= 2.0f * MathUtil::kPi;
-                }
-                while ( delta < -MathUtil::kPi )
-                {
-                    delta += 2.0f * MathUtil::kPi;
-                }
-                const float32 newYaw = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
+                const float32 delta      = MathUtil::wrapAngle( targetYaw - currentYaw );
+                const float32 newYaw     = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
                 return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
             }
 

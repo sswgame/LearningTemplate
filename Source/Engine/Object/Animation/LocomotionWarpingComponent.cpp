@@ -20,19 +20,6 @@ namespace sw
         {
             static constexpr float32 kMinMovingSpeed   = 0.1f;  ///< 이보다 느리면 서 있는 것으로 본다(m/s)
             static constexpr float32 kMinAuthoredSpeed = 0.05f; ///< 클립 속도가 이보다 작으면 보폭을 맞추지 않는다
-
-            static float32 wrapAngle( float32 angle )
-            {
-                while ( angle > MathUtil::kPi )
-                {
-                    angle -= MathUtil::kPi * 2.0f;
-                }
-                while ( angle <= -MathUtil::kPi )
-                {
-                    angle += MathUtil::kPi * 2.0f;
-                }
-                return angle;
-            }
         };
     } // namespace
 } // namespace sw
@@ -157,7 +144,7 @@ namespace sw
             const float3  forward    = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pRoot->getWorldMatrix() );
             const float32 facingYaw  = MathUtil::atan2( forward._x, forward._z );
             const float32 movingYaw  = MathUtil::atan2( _measuredVelocity._x, _measuredVelocity._z );
-            float32       difference = LocomotionWarpingComponentInternal::wrapAngle( movingYaw - facingYaw );
+            float32       difference = MathUtil::wrapAngle( movingYaw - facingYaw );
             // 뒤로 가는 이동은 뒷걸음 클립이 맡는다 — 하체를 반 바퀴 돌리지 않고 반대쪽으로 접는다.
             if ( difference > MathUtil::kHalfPi )
                 difference -= MathUtil::kPi;

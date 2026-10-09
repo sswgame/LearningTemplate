@@ -17,20 +17,6 @@ namespace sw
         struct MotionWarpingComponentInternal
         {
 
-            /** @brief 각을 (-π, π] 로 감습니다. */
-            static float32 wrapAngle( float32 angle )
-            {
-                while ( angle > MathUtil::kPi )
-                {
-                    angle -= MathUtil::kTwoPi;
-                }
-                while ( angle <= -MathUtil::kPi )
-                {
-                    angle += MathUtil::kTwoPi;
-                }
-                return angle;
-            }
-
             /** @brief 회전이 +Z 를 돌린 방향의 요(라디안)입니다. */
             static float32 computeYaw( const quaternion& rotation )
             {
@@ -216,7 +202,7 @@ namespace sw
                 const float32    currentYaw   = MotionWarpingComponentInternal::computeYaw( world );
                 const float32    frameYaw     = MotionWarpingComponentInternal::computeYaw( inoutFrame._rotation );
                 const float32    remainingYaw = MotionWarpingComponentInternal::computeYaw( remaining._rotation );
-                const float32    needed       = MotionWarpingComponentInternal::wrapAngle( pTarget->_yaw - currentYaw - frameYaw - remainingYaw );
+                const float32    needed       = MathUtil::wrapAngle( pTarget->_yaw - currentYaw - frameYaw - remainingYaw );
                 const quaternion turn         = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, needed * fraction );
                 inoutFrame._rotation          = ( inoutFrame._rotation * turn ).normalize();
             }

@@ -107,7 +107,7 @@ namespace sw
     void PawnComponent::requestControlRotation( float32 yaw, float32 pitch )
     {
         const float32 scale = PawnComponentInternal::kRotationOffsetUnitsPerRadian;
-        _requestedYawUnits.store( static_cast<int32>( OrientationUtil::wrapAngle( yaw ) * scale ), std::memory_order_relaxed );
+        _requestedYawUnits.store( static_cast<int32>( MathUtil::wrapAngle( yaw ) * scale ), std::memory_order_relaxed );
         _requestedPitchUnits.store( static_cast<int32>( pitch * scale ), std::memory_order_relaxed );
         _yawOffsetUnits.store( 0, std::memory_order_relaxed );
         _pitchOffsetUnits.store( 0, std::memory_order_relaxed );
@@ -150,7 +150,7 @@ namespace sw
             _intent._controlPitch = requested._y;
         }
         const float2 offset   = consumeControlRotationOffset();
-        _intent._controlYaw   = OrientationUtil::wrapAngle( _intent._controlYaw + offset._x );
+        _intent._controlYaw   = MathUtil::wrapAngle( _intent._controlYaw + offset._x );
         _intent._controlPitch = MathUtil::clamp( _intent._controlPitch + offset._y, -_maxPitch, _maxPitch );
     }
 } // namespace sw

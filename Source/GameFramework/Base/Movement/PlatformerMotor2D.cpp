@@ -15,11 +15,6 @@ namespace sw
         struct PlatformerMotor2DInternal
         {
             static constexpr float32 kSkin = 1.0e-3f; ///< 벽에 붙일 때 남기는 틈
-
-            static float32 approach( float32 value, float32 target, float32 step )
-            {
-                return value < target ? MathUtil::min( target, value + step ) : MathUtil::max( target, value - step );
-            }
         };
     } // namespace
 } // namespace sw
@@ -345,7 +340,7 @@ namespace sw
             // 좌우 — 벽 점프 직후에는 입력을 약하게.
             const float32 control      = _wallLock.isActive() ? 0.2f : 1.0f;
             const float32 acceleration = ( bWasGrounded ? _settings._groundAcceleration : _settings._airAcceleration ) * control;
-            _velocity._x               = PlatformerMotor2DInternal::approach( _velocity._x, moveX * _settings._runSpeed, acceleration * deltaTime );
+            _velocity._x               = MathUtil::moveToward( _velocity._x, moveX * _settings._runSpeed, acceleration * deltaTime );
 
             // 벽 — 공중에서 벽 쪽을 누르고 내려오면 미끄러진다.
             _wallSide = 0;

@@ -18,8 +18,7 @@ namespace sw
             {
                 if ( edge1 <= edge0 )
                     return value >= edge1 ? 1.0f : 0.0f;
-                const float32 ratio = MathUtil::saturate( ( value - edge0 ) / ( edge1 - edge0 ) );
-                return ratio * ratio * ( 3.0f - 2.0f * ratio );
+                return MathUtil::smoothstep( edge0, edge1, value );
             }
         };
     } // namespace

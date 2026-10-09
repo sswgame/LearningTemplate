@@ -25,15 +25,6 @@ namespace sw
 
             static bool isOrthographic( const CameraPresetDef& def ) { return def._view._mode == CameraPresetMode::OrthoTopDown || def._lens._bOrthographic; }
 
-            /** @brief 각을 [−π, π) 로 감습니다. */
-            static float32 wrapAngle( float32 angle )
-            {
-                float32 wrapped = ::fmodf( angle + MathUtil::kPi, MathUtil::kTwoPi );
-                if ( wrapped < 0.0f )
-                    wrapped += MathUtil::kTwoPi;
-                return wrapped - MathUtil::kPi;
-            }
-
             static float32 computeAtan( float32 value ) { return MathUtil::atan2( value, 1.0f ); }
 
             static float32 clampPitch( const CameraConfinerDef& confiner, float32 pitch ) { return MathUtil::clamp( pitch, confiner._pitchMin, confiner._pitchMax ); }
@@ -58,14 +49,14 @@ namespace sw
             /** @brief 축 하나의 조준을 데드존 · 소프트존으로 원하는 각 쪽으로 옮깁니다. */
             static float32 composeAxis( float32 aim, float32 desired, float32 deadHalf, float32 softHalf, float32 alpha )
             {
-                float32 error = wrapAngle( desired - aim );
+                float32 error = MathUtil::wrapAngle( desired - aim );
                 if ( MathUtil::abs( error ) > deadHalf )
                 {
                     const float32 excess = error > 0.0f ? error - deadHalf : error + deadHalf;
                     aim += excess * alpha;
                 }
                 // 소프트존 밖으로는 한 프레임도 나가지 않는다 — 감쇠가 늦어도 대상이 화면 밖으로 빠지지 않게.
-                error = wrapAngle( desired - aim );
+                error = MathUtil::wrapAngle( desired - aim );
                 if ( error > softHalf )
                     aim = desired - softHalf;
                 else if ( error < -softHalf )
@@ -137,7 +128,7 @@ namespace sw
         const bool bLook = inputDef._lookSensitivity > 0.0f && ( inputDef._bLookWhileHeld == false || input._bLookHeld == SW_TRUE );
         if ( bLook )
         {
-            inoutState._yawOffset = CameraModeInternal::wrapAngle( inoutState._yawOffset + input._lookDelta._x * inputDef._lookSensitivity );
+            inoutState._yawOffset = MathUtil::wrapAngle( inoutState._yawOffset + input._lookDelta._x * inputDef._lookSensitivity );
             // 1인칭 · 3인칭은 대상의 피치에 더하므로 여기서는 오프셋만 자르고, 합은 평가가 다시 자른다.
             const float32 pitch     = CameraModeInternal::clampPitch( confiner, def._view._pitch + inoutState._pitchOffset + input._lookDelta._y * inputDef._lookSensitivity );
             inoutState._pitchOffset = pitch - def._view._pitch;

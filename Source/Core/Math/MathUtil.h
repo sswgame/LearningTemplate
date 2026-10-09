@@ -215,6 +215,33 @@ namespace sw
         [[nodiscard]] static SW_INLINE float32 ceil( const float32 x ) noexcept { return ::ceilf( x ); }
         [[nodiscard]] static SW_INLINE float64 ceil( const float64 x ) noexcept { return ::ceil( x ); }
 
+        /**
+         * @brief 각(라디안)을 [−π, π] 로 감습니다. 범위 안의 값(경계 π · −π 포함)은 그대로입니다 — 언리얼 `FMath::UnwindRadians` 와 같은 꼴.
+         * @details 2π 를 빼고 더하는 반복이라 큰 값(수천 바퀴)에는 쓰지 않습니다. 각 차이 · 한 프레임 회전처럼 한두 바퀴 안의 값에 씁니다.
+         */
+        [[nodiscard]] static SW_INLINE float32 wrapAngle( float32 radians ) noexcept
+        {
+            while ( radians > kPi )
+            {
+                radians -= kTwoPi;
+            }
+            while ( radians < -kPi )
+            {
+                radians += kTwoPi;
+            }
+            return radians;
+        }
+
+        /** @brief @p current 를 @p target 쪽으로 최대 @p maxDelta 만큼 옮깁니다. 넘치지 않고, 남은 거리가 @p maxDelta 이하면 @p target 입니다(유니티 `MoveTowards`). */
+        template <typename T>
+        [[nodiscard]] static SW_INLINE constexpr T moveToward( T current, T target, T maxDelta ) noexcept
+        {
+            static_assert( std::is_arithmetic_v<T>, "T should be arithmetic" );
+            if ( abs( target - current ) <= maxDelta )
+                return target;
+            return current + ( target > current ? maxDelta : -maxDelta );
+        }
+
         // ------------------------------------------------------------------------------
         // 2) 보간 · 정렬 · 난수 · 분수
         // ------------------------------------------------------------------------------
