@@ -174,8 +174,9 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 **헤드리스 작업을 하나 더할 때**
 
 1. 인자를 `Source/Core/Predefined/ArgumentList.xxx` 에 한 줄 추가합니다.
-2. 엔진이 할 수 있는 작업이면 엔진의 `Headless` 단계에서 처리합니다. 에디터 코드가 필요하면 `EditorImportKind` 에 종류를 더하고 `ModuleHost::importAssetsWithEditorModule` 경로를 씁니다.
-3. 실패하면 `App::initialize` 가 false를 반환하게 해서 종료 코드로 알립니다.
+2. 엔진이 할 수 있는 작업이면 엔진의 `Headless` 단계에서 처리합니다. 에디터 코드가 필요하거나 엔진 서비스 없이 도는 작업이면 `App.cpp` 의 헤드리스 작업 표(`kArrHeadlessTask`)에 한 줄 더합니다.
+   에디터 임포트는 `EditorImportKind` 에 종류를 더하고 `runEditorImport<종류, 임포트 인자, 대조 인자>` 줄을 씁니다.
+3. 작업이 `Failed` 를 돌려주면 `App::initialize` 가 false를 반환해 종료 코드로 알립니다. `Finished` 는 그 작업만 하고 성공으로 끝냅니다(크래시 보고).
 4. `py -3 Scripts/generate/GenerateConfigReference.py` 로 인자 문서를 다시 생성합니다.
 
 **모듈을 다시 만들어야 하는 새 이유가 생길 때**(디바이스 상실, 어댑터 변경 등)
