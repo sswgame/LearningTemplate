@@ -12,6 +12,7 @@ configure 때 정한다(`cmake --preset <프리셋>` 또는 `-D<이름>=<값>`).
 | `SW_BUILD_DOCS` | BOOL | `OFF` |  | Doxygen 코드 문서화 생성 타겟 추가 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_BUILD_GAME` | BOOL | `ON` |  | GameFramework 및 게임 모듈(SWGame DLL/정적 링크) 빌드 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_BUILD_GAMEFRAMEWORK` | BOOL | `ON` |  | Source/GameFramework 및 게임 장르별 키트 라이브러리 빌드 |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
+| `SW_BUILD_UNUSED_KITS` | BOOL | `ON` |  | 활성 게임이 쓰지 않는 장르 키트도 빌드(끄면 게임 의존으로 닿는 키트만) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_CPP_STANDARD` | STRING | `17` |  | C++ 표준(17 이상 — 20 · 23) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_DEADLOCK_DETECTION` | BOOL | `OFF` |  | sw::Mutex 잠금 순서를 실시간 추적하여 데드락 사이클 탐지 (성능 저하 주의) |  | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
 | `SW_ENABLE_FUZZING` | BOOL | `OFF` |  | 리눅스 clang + ASan 에서 libFuzzer 대상(LoaderFuzzer)과 엔진 커버리지 계측 | CI-Fuzz | [cmake/Config/BuildOptions.cmake](../../cmake/Config/BuildOptions.cmake) |
