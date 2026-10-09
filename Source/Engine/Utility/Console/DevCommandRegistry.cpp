@@ -17,6 +17,11 @@ namespace sw
         return s_registry;
     }
 
+    DevCommandRegistry::DevCommandRegistry()
+        : _registration{ RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
+    {
+    }
+
     const utf8* DevCommandRegistry::getImageMarker()
     {
         return "sw-dev-command-registry-image-marker";
@@ -26,40 +31,29 @@ namespace sw
     {
         if ( pRegistration == nullptr || StringUtil::isNullOrEmpty( pRegistration->_pName ) || pRegistration->_pFunc == nullptr )
             return false;
-        if ( findCommand( pRegistration->_pName ) != nullptr )
+        const RegistrationResult result = _registration.add( pRegistration, pRegistration->_pName );
+        if ( result == RegistrationResult::DuplicateName || result == RegistrationResult::AlreadyPresent )
         {
             SW_LOG_WARNING( "Dev command '%#' is already registered - the second registration is ignored", pRegistration->_pName );
             return false;
         }
-        _listRegistration.push_back( pRegistration );
-        return true;
+        return result == RegistrationResult::Added;
     }
 
     void DevCommandRegistry::unregisterCommand( const DevCommandRegistration* pRegistration )
     {
-        for ( size_t index = 0; index < _listRegistration.size(); ++index )
-        {
-            if ( _listRegistration[index] != pRegistration )
-                continue;
-            _listRegistration.erase( _listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        (void)_registration.remove( pRegistration ); // 올라 있지 않은 명령을 빼는 것은 할 일이 없는 것이다
     }
 
     const DevCommandRegistration* DevCommandRegistry::findCommand( string_view name ) const
     {
-        for ( const DevCommandRegistration* pRegistration : _listRegistration )
-        {
-            if ( StringUtil::equals( pRegistration->_pName, name, true ) )
-                return pRegistration;
-        }
-        return nullptr;
+        return _registration.findByName( name );
     }
 
     void DevCommandRegistry::collectNames( string_view prefix, vector<string>& outListName ) const
     {
         outListName.clear();
-        for ( const DevCommandRegistration* pRegistration : _listRegistration )
+        for ( const DevCommandRegistration* pRegistration : _registration.getItems() )
         {
             if ( StringUtil::startsWith( pRegistration->_pName, prefix, true ) )
                 outListName.push_back( pRegistration->_pName );

@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Binding/UiBindingValue.h"
@@ -40,7 +40,7 @@ namespace sw
 
         /** @brief 엔진 기본 변환기를 올립니다(생성자가 부른다). */
         void registerEngineConverters();
-        /** @brief 변환기를 올립니다. 같은 이름이 있으면 바꿉니다. */
+        /** @brief 변환기를 올립니다. 같은 이름이 있으면 바꿉니다(게임 · 키트가 엔진 기본 변환기를 같은 이름으로 덮을 수 있습니다). */
         void registerConverter( const UiBindingConverter& converter );
         /** @brief 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const UiBindingConverter* findConverter( const hashed_string& name ) const;
@@ -48,6 +48,6 @@ namespace sw
         uint32 removeCodeWithin( const void* pBegin, const void* pEnd );
 
     private:
-        vector<UiBindingConverter> _listConverter;
+        NameRegistry<UiBindingConverter> _registry;
     };
 } // namespace sw

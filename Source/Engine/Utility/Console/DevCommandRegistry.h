@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
@@ -48,6 +49,8 @@ namespace sw
     public:
         /** @brief 프로세스에 하나인 등록부입니다(Engine 이미지의 함수 정적). */
         static DevCommandRegistry& get();
+
+        DevCommandRegistry();
         /**
          * @brief 이 등록부가 이미지에 들어 있다는 표식 글입니다. Shipping 실행 파일에는 이 글이 없어야 합니다
          *        (`DevCommandShippingTest` 가 바이너리를 훑어 확인합니다).
@@ -63,10 +66,10 @@ namespace sw
         /** @brief @p prefix 로 시작하는(대소문자 무시) 명령 이름을 사전순으로 채웁니다. */
         void collectNames( string_view prefix, vector<string>& outListName ) const;
         /** @brief 등록된 명령 수입니다. */
-        uint32 getCount() const { return static_cast<uint32>( _listRegistration.size() ); }
+        uint32 getCount() const { return _registration.getCount(); }
 
     private:
-        vector<const DevCommandRegistration*> _listRegistration;
+        RegistrationList<const DevCommandRegistration> _registration; ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
     };
 } // namespace sw
 

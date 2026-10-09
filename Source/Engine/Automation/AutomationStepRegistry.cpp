@@ -2,7 +2,7 @@
 
 #include "Engine/Automation/AutomationStepRegistry.h"
 
-#include "Core/Container/vector.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
@@ -14,10 +14,10 @@ namespace sw
         struct AutomationStepRegistryInternal
         {
             /** @brief 등록된 단계 종류(등록 순서). Engine 이미지의 함수 정적이라 모듈이 바뀌어도 남는다. */
-            static vector<const AutomationStepRegistration*>& getRegistrations()
+            static RegistrationList<const AutomationStepRegistration>& getRegistrations()
             {
-                static vector<const AutomationStepRegistration*> s_listRegistration;
-                return s_listRegistration;
+                static RegistrationList<const AutomationStepRegistration> s_registration{ RegistrationOrder::Insertion, true };
+                return s_registration;
             }
         };
     } // namespace
@@ -29,35 +29,23 @@ namespace sw
     {
         if ( pRegistration == nullptr || pRegistration->_pKind == nullptr || pRegistration->_pRun == nullptr )
             return false;
-        if ( isEngineStepKind( pRegistration->_pKind ) || find( pRegistration->_pKind ) != nullptr )
+        const bool bEngineKind = isEngineStepKind( pRegistration->_pKind );
+        if ( bEngineKind || AutomationStepRegistryInternal::getRegistrations().add( pRegistration, pRegistration->_pKind ) != RegistrationResult::Added )
         {
             SW_LOG_ERROR( "Automation step <%#> is already defined - the second one is ignored", pRegistration->_pKind );
             return false;
         }
-        AutomationStepRegistryInternal::getRegistrations().push_back( pRegistration );
         return true;
     }
 
     void AutomationStepRegistry::unregisterStep( const AutomationStepRegistration* pRegistration )
     {
-        vector<const AutomationStepRegistration*>& listRegistration = AutomationStepRegistryInternal::getRegistrations();
-        for ( size_t index = 0; index < listRegistration.size(); ++index )
-        {
-            if ( listRegistration[index] != pRegistration )
-                continue;
-            listRegistration.erase( listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
-            return;
-        }
+        (void)AutomationStepRegistryInternal::getRegistrations().remove( pRegistration ); // 올라 있지 않은 단계를 빼는 것은 할 일이 없는 것이다
     }
 
     const AutomationStepRegistration* AutomationStepRegistry::find( string_view kind )
     {
-        for ( const AutomationStepRegistration* pRegistration : AutomationStepRegistryInternal::getRegistrations() )
-        {
-            if ( string_view{ pRegistration->_pKind } == kind )
-                return pRegistration;
-        }
-        return nullptr;
+        return AutomationStepRegistryInternal::getRegistrations().findByName( kind );
     }
 
     bool AutomationStepRegistry::isEngineStepKind( string_view kind )

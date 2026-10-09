@@ -7,7 +7,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -57,11 +57,11 @@ namespace sw
         /** @brief 종류를 더합니다. 이름이 비었거나 이미 있으면 false 입니다. */
         [[nodiscard]] bool                 registerActivity( const ScheduleActivityDef& def );
         const ScheduleActivityDef*         findActivity( const hashed_string& name ) const;
-        const vector<ScheduleActivityDef>& getActivities() const { return _listActivity; }
+        const vector<ScheduleActivityDef>& getActivities() const { return _registry.getItems(); }
 
     private:
         void registerBuiltinActivities();
 
-        vector<ScheduleActivityDef> _listActivity;
+        NameRegistry<ScheduleActivityDef> _registry;
     };
 } // namespace sw

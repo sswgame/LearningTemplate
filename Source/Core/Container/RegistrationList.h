@@ -1,11 +1,14 @@
 /**
  * @file RegistrationList.h
- * @brief 등록부의 공통 모양 — 소유하지 않는 포인터 목록에 중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본을 둡니다.
+ * @brief 등록부의 공통 모양 둘입니다. `RegistrationList` 는 소유하지 않는 포인터 목록(중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본),
+ *        `NameRegistry` 는 이름 → 값을 소유하는 표(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 빼기)입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/hashed_string.h"
 
 namespace sw
 {
@@ -55,10 +58,21 @@ namespace sw
          * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
          */
         RegistrationList( RegistrationOrder order, bool bRequireName )
+            : RegistrationList( order, bRequireName, NameCase::CaseSensitive )
+        {
+        }
+
+        /**
+         * @param order 늘어놓는 순서입니다.
+         * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
+         * @param nameCase 이름 찾기 · 중복 판정이 대소문자를 보는지입니다(콘솔 명령처럼 사람이 치는 이름은 `IgnoreCase`).
+         */
+        RegistrationList( RegistrationOrder order, bool bRequireName, NameCase nameCase )
             : _listItem{}
             , _listName{}
             , _listOrder{}
             , _order{ order }
+            , _nameCase{ nameCase }
             , _bRequireName{ bRequireName }
         {
         }
@@ -129,7 +143,7 @@ namespace sw
                 return nullptr;
             for ( size_t index = 0; index < _listName.size(); ++index )
             {
-                if ( string_view{ _listName[index] } == name )
+                if ( StringUtil::equals( string_view{ _listName[index] }, name, _nameCase == NameCase::IgnoreCase ) )
                     return _listItem[index];
             }
             return nullptr;
@@ -170,6 +184,117 @@ namespace sw
         vector<string>    _listName;     ///< 항목마다 올릴 때 복사한 이름(같은 자리)
         vector<int32>     _listOrder;    ///< 항목마다 정렬 값(같은 자리)
         RegistrationOrder _order;        ///< 늘어놓는 순서
+        NameCase          _nameCase;     ///< 이름 비교가 대소문자를 보는지
         bool              _bRequireName; ///< 이름 없는 등록을 거절하는지
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class NameRegistry
+     * @brief 이름(`hashed_string`, 대소문자 무시) → 값을 **소유하는** 등록부입니다. 값은 등록 순서로 연속 배열에 둡니다.
+     * @details 값을 들고 있어야 하는 표(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 모양으로 씁니다. 빈 이름은 받지 않습니다.
+     *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `removeIf` · `clear` 까지만 유효합니다.
+     *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다.
+     */
+    template <typename T>
+    class NameRegistry
+    {
+    public:
+        NameRegistry()
+            : _listName{}
+            , _listValue{}
+        {
+        }
+
+        /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
+        bool add( const hashed_string& name, T value )
+        {
+            if ( name.empty() || findIndex( name ) != kNotFound )
+                return false;
+            _listName.push_back( name );
+            _listValue.push_back( std::move( value ) );
+            return true;
+        }
+
+        /** @brief 값을 올립니다. 같은 이름이 있으면 그 자리(순서)에서 값을 바꿉니다. 빈 이름은 무시합니다. */
+        void addOrReplace( const hashed_string& name, T value )
+        {
+            if ( name.empty() )
+                return;
+            const size_t index = findIndex( name );
+            if ( index != kNotFound )
+            {
+                _listName[index]  = name;
+                _listValue[index] = std::move( value );
+                return;
+            }
+            _listName.push_back( name );
+            _listValue.push_back( std::move( value ) );
+        }
+
+        /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
+        T* find( const hashed_string& name )
+        {
+            const size_t index = findIndex( name );
+            return index == kNotFound ? nullptr : &_listValue[index];
+        }
+
+        /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
+        const T* find( const hashed_string& name ) const
+        {
+            const size_t index = findIndex( name );
+            return index == kNotFound ? nullptr : &_listValue[index];
+        }
+
+        /** @brief @p predicate( const T& ) 가 true 인 값을 모두 뺍니다(남은 것의 순서는 그대로). 뺀 수입니다. */
+        template <typename Predicate>
+        uint32 removeIf( Predicate predicate )
+        {
+            uint32 removedCount = 0;
+            for ( size_t index = _listValue.size(); index > 0; --index )
+            {
+                if ( predicate( static_cast<const T&>( _listValue[index - 1] ) ) == false )
+                    continue;
+                _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                ++removedCount;
+            }
+            return removedCount;
+        }
+
+        /** @brief 모두 뺍니다. */
+        void clear()
+        {
+            _listName.clear();
+            _listValue.clear();
+        }
+
+        /** @brief 올라 있는 값 수입니다. */
+        uint32 getCount() const { return static_cast<uint32>( _listValue.size() ); }
+        /** @brief index 번째 값을 올린 이름입니다. */
+        const hashed_string& getNameAt( uint32 index ) const { return _listName[index]; }
+        /** @brief 값 전부(등록 순서)입니다. */
+        const vector<T>& getItems() const { return _listValue; }
+
+    private:
+        static constexpr size_t kNotFound = static_cast<size_t>( -1 );
+
+        size_t findIndex( const hashed_string& name ) const
+        {
+            if ( name.empty() )
+                return kNotFound;
+            for ( size_t index = 0; index < _listName.size(); ++index )
+            {
+                if ( _listName[index] == name )
+                    return index;
+            }
+            return kNotFound;
+        }
+
+    private:
+        vector<hashed_string> _listName;  ///< 값마다 올린 이름(같은 자리)
+        vector<T>             _listValue; ///< 값(등록 순서)
     };
 } // namespace sw

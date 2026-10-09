@@ -332,7 +332,7 @@ namespace sw
 namespace sw
 {
     FitOperatorRegistry::FitOperatorRegistry()
-        : _listOperator{}
+        : _registry{}
     {
     }
 
@@ -340,20 +340,16 @@ namespace sw
 
     bool FitOperatorRegistry::registerOperator( unique_ptr<IFitOperator> fitOperator )
     {
-        if ( fitOperator == nullptr || findOperator( fitOperator->getName() ) != nullptr )
+        if ( fitOperator == nullptr )
             return false;
-        _listOperator.push_back( std::move( fitOperator ) );
-        return true;
+        const hashed_string name = fitOperator->getName();
+        return _registry.add( name, std::move( fitOperator ) );
     }
 
     const IFitOperator* FitOperatorRegistry::findOperator( const hashed_string& name ) const
     {
-        for ( const unique_ptr<IFitOperator>& fitOperator : _listOperator )
-        {
-            if ( fitOperator->getName() == name )
-                return fitOperator.get();
-        }
-        return nullptr;
+        const unique_ptr<IFitOperator>* pFitOperator = _registry.find( name );
+        return pFitOperator != nullptr ? pFitOperator->get() : nullptr;
     }
 
     void FitOperatorRegistry::registerDefaultOperators()

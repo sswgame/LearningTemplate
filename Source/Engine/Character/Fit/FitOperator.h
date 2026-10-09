@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
-#include "Core/Container/vector.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -74,9 +74,9 @@ namespace sw
         /** @brief 기본 연산 넷(`Shrink` · `Push` · `Cut` · `Report`)을 올립니다. */
         void registerDefaultOperators();
         /** @brief 올린 연산 수입니다. */
-        uint32 getOperatorCount() const { return static_cast<uint32>( _listOperator.size() ); }
+        uint32 getOperatorCount() const { return _registry.getCount(); }
 
     private:
-        vector<unique_ptr<IFitOperator>> _listOperator;
+        NameRegistry<unique_ptr<IFitOperator>> _registry;
     };
 } // namespace sw

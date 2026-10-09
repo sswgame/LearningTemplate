@@ -13,6 +13,18 @@ namespace sw
     {
         struct UiBindingConverterRegistryInternal
         {
+            /** @brief 함수가 [_pBegin, _pEnd) 안인 변환기를 고릅니다(`removeCodeWithin`). */
+            struct IsCodeWithin
+            {
+                const void* _pBegin;
+                const void* _pEnd;
+
+                bool operator()( const UiBindingConverter& converter ) const
+                {
+                    return IModuleUnloadListener::isAddressWithin( reinterpret_cast<const void*>( converter._pConvert ), _pBegin, _pEnd );
+                }
+            };
+
             /** @brief 1 분의 초입니다(Seconds 변환기 — m:ss). */
             static constexpr int64 kSecondsPerMinute = 60;
             /** @brief 비율 → 백분율 배수입니다(Percent 변환기). */
@@ -65,7 +77,7 @@ namespace sw
 namespace sw
 {
     UiBindingConverterRegistry::UiBindingConverterRegistry()
-        : _listConverter{}
+        : _registry{}
     {
         registerEngineConverters();
     }
@@ -82,39 +94,16 @@ namespace sw
 
     void UiBindingConverterRegistry::registerConverter( const UiBindingConverter& converter )
     {
-        for ( UiBindingConverter& existing : _listConverter )
-        {
-            if ( existing._name == converter._name )
-            {
-                existing = converter;
-                return;
-            }
-        }
-        _listConverter.push_back( converter );
+        _registry.addOrReplace( converter._name, converter );
     }
 
     const UiBindingConverter* UiBindingConverterRegistry::findConverter( const hashed_string& name ) const
     {
-        for ( const UiBindingConverter& converter : _listConverter )
-        {
-            if ( converter._name == name )
-                return &converter;
-        }
-        return nullptr;
+        return _registry.find( name );
     }
 
     uint32 UiBindingConverterRegistry::removeCodeWithin( const void* pBegin, const void* pEnd )
     {
-        uint32 removedCount = 0;
-        for ( uint32 index = static_cast<uint32>( _listConverter.size() ); index > 0; --index )
-        {
-            const void* pFunction = reinterpret_cast<const void*>( _listConverter[index - 1]._pConvert );
-            if ( IModuleUnloadListener::isAddressWithin( pFunction, pBegin, pEnd ) )
-            {
-                _listConverter.erase( _listConverter.begin() + ( index - 1 ) );
-                ++removedCount;
-            }
-        }
-        return removedCount;
+        return _registry.removeIf( UiBindingConverterRegistryInternal::IsCodeWithin{ pBegin, pEnd } );
     }
 } // namespace sw

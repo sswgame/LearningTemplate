@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Common/Macros.h"
 #include "Core/Common/Types.h"
+#include "Core/Container/RegistrationList.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Math.h"
@@ -138,12 +139,12 @@ namespace sw
         [[nodiscard]] bool registerKind( const GimmickNodeKind& kind );
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         const GimmickNodeKind*         findKind( const hashed_string& name ) const;
-        const vector<GimmickNodeKind>& getKinds() const { return _listKind; }
+        const vector<GimmickNodeKind>& getKinds() const { return _registry.getItems(); }
 
         /** @brief 내장 종류를 @p inoutRegistry 에 더합니다(`getDefault` 가 쓴다). */
         static void registerBuiltinKinds( GimmickNodeRegistry& inoutRegistry );
 
     private:
-        vector<GimmickNodeKind> _listKind{};
+        NameRegistry<GimmickNodeKind> _registry{};
     };
 } // namespace sw

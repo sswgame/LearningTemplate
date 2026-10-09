@@ -23,7 +23,7 @@ namespace sw
     }
 
     ScheduleActivityRegistry::ScheduleActivityRegistry()
-        : _listActivity{}
+        : _registry{}
     {
         registerBuiltinActivities();
     }
@@ -36,20 +36,12 @@ namespace sw
 
     bool ScheduleActivityRegistry::registerActivity( const ScheduleActivityDef& def )
     {
-        if ( def._name.empty() || findActivity( def._name ) != nullptr )
-            return false;
-        _listActivity.push_back( def );
-        return true;
+        return _registry.add( def._name, def );
     }
 
     const ScheduleActivityDef* ScheduleActivityRegistry::findActivity( const hashed_string& name ) const
     {
-        for ( const ScheduleActivityDef& def : _listActivity )
-        {
-            if ( def._name == name )
-                return &def;
-        }
-        return nullptr;
+        return _registry.find( name );
     }
 
     void ScheduleActivityRegistry::registerBuiltinActivities()

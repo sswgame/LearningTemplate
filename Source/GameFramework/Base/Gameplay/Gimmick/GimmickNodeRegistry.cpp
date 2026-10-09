@@ -702,20 +702,14 @@ namespace sw
     {
         const bool bTooManyPorts = kind._listInput.size() > GimmickNodeRegistryInternal::kMaxPortCount ||
                                    kind._listOutput.size() > GimmickNodeRegistryInternal::kMaxPortCount;
-        if ( kind._name.empty() || bTooManyPorts || kind._pStep == nullptr || findKind( kind._name ) != nullptr )
+        if ( bTooManyPorts || kind._pStep == nullptr )
             return false;
-        _listKind.push_back( kind );
-        return true;
+        return _registry.add( kind._name, kind );
     }
 
     const GimmickNodeKind* GimmickNodeRegistry::findKind( const hashed_string& name ) const
     {
-        for ( const GimmickNodeKind& kind : _listKind )
-        {
-            if ( kind._name == name )
-                return &kind;
-        }
-        return nullptr;
+        return _registry.find( name );
     }
 
     void GimmickNodeRegistry::registerBuiltinKinds( GimmickNodeRegistry& inoutRegistry )
