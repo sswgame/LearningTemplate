@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "App/Module/LiveReloadManager.h"
+#include "AppHost/LiveReloadManager.h"
 
-#include "App/Module/ModuleCallGuard.h"
-#include "App/Module/ModuleImagePatch.h"
-#include "App/Module/ShadowCopyName.h"
+#include "AppHost/ModuleCallGuard.h"
+#include "AppHost/ModuleImagePatch.h"
+#include "AppHost/ShadowCopyName.h"
 
 #include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"

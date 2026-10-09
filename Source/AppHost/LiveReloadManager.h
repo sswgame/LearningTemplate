@@ -2,9 +2,9 @@
  * @file LiveReloadManager.h
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
- * @note **여기는 Engine 이 아니라 App 입니다.** 모듈을 로드하고 교체하는 것은 런처(App)의 일이고, Engine 은 모듈이라는 개념
- *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor · GameFramework · Games 를 모릅니다). 쓰는 쪽은 App(ModuleHost ·
- *       ModuleCompiler · 단축키)뿐이고, Shipping 빌드에서는 **파일째 빠집니다**(`Source/App/CMakeLists.txt` 의 제외 목록).
+ * @note **여기는 Engine 이 아니라 AppHost 입니다.** 모듈을 로드하고 교체하는 것은 런처(App · Server)의 일이고, Engine 은 모듈이라는 개념
+ *       자체를 몰라야 합니다(Engine 레이어 규칙: Engine 은 Editor · GameFramework · Games 를 모릅니다). 쓰는 쪽은 AppHost(ModuleHost ·
+ *       ModuleCompiler)와 App 의 단축키뿐이고, Shipping 빌드에서는 **파일째 빠집니다**(`Source/AppHost/CMakeLists.txt` 의 제외 목록).
  *
  *       핫 리로드만 쓰는 도우미 셋은 각자 파일에 있습니다 — 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleImagePatch`, 새 모듈 코드를
  *       처음 부르는 자리를 지키는 `ModuleCallGuard`, 복사본 파일 이름을 짓고 남은 것을 치우는 `ShadowCopyName`. Shipping 에서 함께 빠집니다.

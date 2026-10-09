@@ -8,9 +8,10 @@
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 ModuleHost 가 각자 맡습니다.
  */
 #pragma once
-#include "App/FixedTimestep.h"
 #include "App/RHIBackendSwitcher.h"
 #include "App/UserSettingsHost.h"
+
+#include "AppHost/FixedTimestep.h"
 
 #include "Core/Common/Types.h"
 #include "Core/Delegate/Delegate.h"

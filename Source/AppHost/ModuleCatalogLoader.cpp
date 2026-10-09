@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App/Module/ModuleCatalogLoader.h"
+#include "AppHost/ModuleCatalogLoader.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"

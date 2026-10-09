@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "App/Module/ModuleHost.h"
+#include "AppHost/ModuleHost.h"
 
-#include "App/Module/LiveReloadManager.h"
-#include "App/Module/ModuleCompiler.h"
+#include "AppHost/LiveReloadManager.h"
+#include "AppHost/ModuleCompiler.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"

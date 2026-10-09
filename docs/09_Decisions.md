@@ -280,6 +280,8 @@
 - **서버 설정은 Shipping 에서도 디스크에서 읽고, 없으면 기동이 실패합니다**(2026-10-06). Windows 서비스 모드도 있습니다.
 - **서버 전용 쿠킹은 하지 않고, 패키징할 때 타깃별로 에셋 종류를 뺍니다**(2026-10-06). 처음 빼는 종류는 텍스처, 셰이더 바이너리, 오디오입니다. 메시와 애니메이션은 충돌, 소켓, 히트박스, 루트 모션 때문에 남깁니다.
   패키징과 런타임이 같은 테이블(`Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds`)을 읽습니다. 언리얼이 전용 서버에서 텍스처와 사운드 로드를 건너뛰는 것과 같은 목적입니다.
+- **App · Server 가 같이 쓰는 모듈 호스트는 최상위 폴더 `Source/AppHost` 입니다**(2026-10-10, 사용자 결정). 실행 파일 폴더(`Source/App`) 안에 두고 정규식으로 골라 내던 것을 폴더째 나눴고,
+  `CheckEngineLayers` 가 방향(App · Server → AppHost → Engine · RuntimeAPI)을 지킵니다. 언리얼이 실행 파일 진입점(`Launch`)과 모듈 관리자(`Core` 의 `FModuleManager`)를 다른 모듈에 두는 것과 같습니다.
 - **`UserSettingsHost` 는 엔진으로 옮기지 않고 App 에 둡니다**(2026-10-10). 설정 정책(보류 · 적용 · 확인)은 이미 엔진의 `UserSettingsManager` 이고, 이 파일은 App 이 소유한 창과 `App::onResize` 의 스왑체인 경로에 화면 요청을 적용하는 창 소유자의 단계입니다.
   옮기면 창 접근과 리사이즈 순서가 두 곳으로 갈리고, 창이 없는 `Server` 는 쓸 일이 없습니다. 언리얼도 정책(`UGameUserSettings`)과 창 적용(창을 소유한 `UGameEngine` 의 해상도 변경)을 나눕니다.
 

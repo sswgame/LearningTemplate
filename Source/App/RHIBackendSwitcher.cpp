@@ -2,7 +2,7 @@
 
 #include "App/RHIBackendSwitcher.h"
 
-#include "App/Module/ModuleHost.h"
+#include "AppHost/ModuleHost.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 

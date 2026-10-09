@@ -295,7 +295,7 @@ W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목�
 `Process::terminate` 는 다른 스레드가 `readOutputLine` 이나 `waitForExit` 을 도는 중에 불러도 됩니다. 기다리지 않을 실행은 `Process::launchDetached` 를 씁니다. `execute` 는 부른 스레드를 멈춥니다.
 
 **모듈 이미지를 언로드하기 전에 그 코드를 가리키는 등록을 떼야 합니다.** `IModuleUnloadListener`(`Module/ModuleUnloadListener.h`)가 델리게이트 스텁이나 vtable을 보관하는 레지스트리의 공통 계약입니다.
-같은 수명 계약의 Engine 쪽은 `Engine/Module`, App 쪽은 `App/Module` 입니다. 완료 콜백이 핫 리로드되는 모듈 코드를 가리키는 비동기 파일 IO도, 모듈을 언로드하기 전에 취소하고 기다립니다.
+같은 수명 계약의 Engine 쪽은 `Engine/Module`, 호스트 쪽은 `AppHost` 입니다. 완료 콜백이 핫 리로드되는 모듈 코드를 가리키는 비동기 파일 IO도, 모듈을 언로드하기 전에 취소하고 기다립니다.
 
 ### 비동기와 크래시
 

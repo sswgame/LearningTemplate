@@ -2,9 +2,9 @@
 
 #include "App/App.h"
 
-#include "App/Module/LiveReloadManager.h"
-#include "App/Module/ModuleCatalogLoader.h"
-#include "App/Module/ModuleHost.h"
+#include "AppHost/LiveReloadManager.h"
+#include "AppHost/ModuleCatalogLoader.h"
+#include "AppHost/ModuleHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
