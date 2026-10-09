@@ -949,15 +949,15 @@ SW_TEST_CASE( ResourceTest, SourcePathsComeFromTheSameRule )
 
 /**
  * @brief [ResourceTest] 시작 시점의 AssetDatabase 는 **로드된 적 없는** 에셋의 GUID 도 안다.
- * @details `readme.md` 는 어떤 테스트도 로드하지 않는다. ensureMeta 를 거친 에셋만 표에 있으면 이름을 바꾼
+ * @details `materials/toonshowcase_ground.material` 은 어떤 테스트도 로드하지 않는다. ensureMeta 를 거친 에셋만 표에 있으면 이름을 바꾼
  *          프리팹의 GUID 복구가 우연히만 동작한다. 기대값은 .meta 파일의 guid 줄에서 직접 읽는다.
  */
 SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const utf8*      pAsset  = "game/empty/readme.md";
-    const sw::string metaAbs = sw::ResourceUtil::getResourcePath( "game/empty/readme.md.meta" );
-    SW_EXPECT_TRUE_MSG( metaAbs.empty() == false, "readme.md.meta 를 찾지 못했다 — 검증이 비었다" );
+    const utf8*      pAsset  = "game/empty/materials/toonshowcase_ground.material";
+    const sw::string metaAbs = sw::ResourceUtil::getResourcePath( "game/empty/materials/toonshowcase_ground.material.meta" );
+    SW_EXPECT_TRUE_MSG( metaAbs.empty() == false, "toonshowcase_ground.material.meta 를 찾지 못했다 — 검증이 비었다" );
     if ( metaAbs.empty() )
         return;
 
@@ -976,7 +976,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
 
     sw::Uuid   guid{};
     const bool bFound = sw::engine::getAssetManager().getAssetDatabase().tryGetGuid( pAsset, guid );
-    SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 readme.md 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
+    SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 toonshowcase_ground.material 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
     if ( bFound )
         SW_EXPECT_STREQ( expected.c_str(), guid.toString().c_str() );
 }
