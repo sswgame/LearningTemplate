@@ -92,11 +92,13 @@ Scripts/
   ├── lint/                           # [정적 검사 및 코드 스타일] — 폴더가 곧 성격이다
   │     ├── LintGate.py · LintFixer.py · LintReport.py # 게이트 · 픽서 · 보고서 하나 = 클래스 하나 (껍데기는 기반이 든다)
   │     ├── LintCatalog.py            # gate/ · selftest/ 를 훑어 "무엇이 있고 어떻게 돌리는가" (CMake · 훅이 읽는다)
+  │     ├── AcronymRegistry.py        # 약어 등록부 — 약어 · 줄임말 · 제품 이름 · 남의 이름 표와 철자 판정 (게이트 · 코드모드가 같이 읽는다)
   │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 (줄 단위 규칙 하나 = 클래스 하나)
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 약어는 단어)
+  │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (등록부 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
   │     │     ├── CheckCoreLayers.py          # Core 폴더 티어(Common → … → LogSink), 아래 층의 pch 로그 사용
@@ -145,6 +147,7 @@ Scripts/
   │     │     └── CheckExecutableBits.py      # `#!` 스크립트(오버레이 포트의 configure 포함)는 git 모드 100755 — Windows 에서 만든 파일은 실행 비트가 없다
   │     ├── fixer/                    # 파일을 실제로 고쳐 쓴다 (게이트가 아니다)
   │     │     ├── FormatBranchBraces.py       # if 계열 중괄호 (`--check` 면 검사만)
+  │     │     ├── FormatAcronymSpelling.py    # 약어 철자 코드모드 (`--report` 사전 실행 · `--apply-files` 파일 · 데이터 · `--rename-folders` 표)
   │     │     ├── FormatCmakeIndent.py        # CMake 줄머리 공백 들여쓰기 → 탭 (문자열 안 · vcpkg 툴체인 영역은 그대로)
   │     │     ├── FormatForwardDeclarations.py
   │     │     ├── FormatIncludeOrder.py       # include 순서 · 중복 (규칙은 gate/CheckIncludeOrder.py)
