@@ -241,6 +241,18 @@
     여러 칸짜리 레코드(`CheckThirdPartyIsolation._kListLibraryRule` — 두 게이트가 읽고 부분 집합에 표 배열이 없다, `CheckModuleTargets._kListFolderTarget` 7 줄),
     `Constants.py` 의 경로로 짓는 표(`CheckEngineLayers` 의 금지 규칙), 언어가 정한 낱말(HLSL 키워드 · 한정자, C++ 내장 타입), 명명 판정 표(`conventions/NamingVocabulary` —
     주체 × 컨테이너 칸이 판정 코드의 일부), 확장자 목록(파일 고르기 설정이지 규칙이 아니다).
+- **Python 모양 규칙은 이미 80 % 넘게 쓰던 관습만 올렸습니다**(2026-10-11, [AGENTS.md › Python](../AGENTS.md#python)). 새 취향은 만들지 않고 소수를 고친 뒤 `CheckPythonConventions` 에 걸었습니다.
+  Ruff 의 같은 규칙(`D100` · `FA102` · `ANN` · `UP007` · `PLW1514` · `PTH`)과 같은 내용이지만, 외부 도구를 CI · 커밋 훅에 깔지 않고 규칙 데이터 · 예외 표가 있는 AST 게이트 하나로 둡니다.
+  - 올린 것(추적 파일 218 개 기준): 모듈 docstring 217, `from __future__ import annotations` 207(빠진 열하나는 코드 없는 `__init__` 여섯 · 스크립트 넷 · 세션 훅),
+    반환 타입 표기 1,590/1,754 함수 · 매개변수 2,185/2,419(빠진 것의 3/4 이 `EditorIconFont` 한 파일), `X | None` 314 대 `Optional` 2,
+    글 입출력의 `encoding=` 243 호출 대 0, `pathlib` 198 파일 대 `os.path` 17 파일(그중 `join` · `dirname` · `isfile` 을 쓰던 아홉 개만 고쳤다 — `normpath` · `relpath` 같은 글자 연산은 pathlib 에 없다),
+    `sys.exit` 134 파일 대 `raise SystemExit` 9 파일, `__main__` 가드 `sys.exit(main())` 132 대 `raise SystemExit(main())` 4, `ArgumentParser(description=…)` 50/51.
+  - 종료는 `sys.exit` 하나입니다. `raise SystemExit` 와 동작이 같아(같은 예외를 던진다) 고르는 기준은 수뿐이고, 쿠커의 `raise SystemExit(…) from exc` 는 `SystemExit` 이 트레이스백을 찍지 않아 `from` 이 보이지 않습니다.
+  - 출력은 `print` 그대로입니다(72 파일). 공용 콘솔 도우미는 없고(`common` 은 import 때 콘솔을 UTF-8 로 맞출 뿐이다), 로깅 래퍼를 새로 들이면 새 취향입니다. 게이트 · 픽서 · 보고서는 기반 클래스가 찍습니다.
+  - 걸지 않은 것: 지역 컨테이너 접두어(`list` · `map` · `unique`) 368/533 = 69 %(맵은 46 %), 셔뱅 78 % · `coding` 줄 76 %(라이브러리 모듈에는 없는 것이 맞다), 광범위 `except Exception`
+    13/169 처리기(모두 설정 단계 · 세션 훅처럼 계속 가야 하는 경계라 산문 규칙만 둔다), `subprocess` 직접 호출(`Scripts/` 는 `CheckScriptCommonHelpers` 가 이미 막고, 밖은 스크립트를 자식 프로세스로 띄워
+    보는 시험 · Blender 안에서 도는 애드온 · VS Code 확장 도구라 `common` 을 쓸 수 없다), 모듈 상수 위치(이미 159 파일이 모듈 수준 — 함수 안 `kSize` 는 C++ 의 지역 `const` 와 같다).
+  - 예외 하나: `.claude/hooks/SessionGuard.py` 는 Claude Code 세션 설정이라 에이전트가 고치지 않고, 어떤 예외에도 세션을 막지 않게 0 으로 끝나는 모양을 따로 둡니다.
 
 ### 5-3. Core 와 플랫폼
 

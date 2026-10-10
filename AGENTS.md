@@ -182,6 +182,22 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 - Module/file names use `PascalCase.py`.
 - JSON keys of Python-owned contracts (`Config/Engine/CookContract.json` · `PackConfig.json` · `PackFormat.json`, hand-read import configs) use `snake_case`. Configs read through reflection use the C++ member name as the key (`_width`).
 
+Shape. `CheckPythonConventions.py` checks every tracked `.py` against the rules below; the bracketed word is the rule name in its
+violations and in `Scripts/lint/rules/CheckPythonConventions.toml` exemption keys (`<rule>:<path>`). The code must still run on Python 3.10,
+the CI lint job's interpreter (`CheckPythonMinimumVersion.py`).
+
+- A module opens with a docstring `[docstring]`; a module with any code also has `from __future__ import annotations` `[future]`.
+- Every function annotates its parameters (except `self` / `cls`, including `*args` / `**kwargs`) and its return type, `__init__` included (`-> None`) `[annotation]`.
+- Types are written `X | None` and with built-in generics (`list[str]`, `dict[str, int]`), never `typing.Optional` · `Union` · `List` · `Dict` · `Tuple` · `Set` `[typing]`.
+- Text file I/O names its encoding — `open(…, encoding="utf-8")`, `read_text(encoding="utf-8")`, `write_text(…, encoding="utf-8")`; binary I/O (`"rb"`, `read_bytes`) needs none `[encoding]`.
+- Paths are `pathlib.Path`. `os.path` is used only for the string operations pathlib lacks: `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext` `[osPath]`.
+- A script exits with `sys.exit(…)`, never `raise SystemExit(…)` `[exit]`. Its `__main__` guard is the single line `sys.exit(main())` — a test file's is `unittest.main()` `[mainGuard]`;
+  `main` takes `argv` and returns the exit code (`CheckScriptEntryPoints.py`).
+- `argparse.ArgumentParser` gets a `description=` `[argparse]`.
+- Not checked by a gate: child processes go through `common.runProcess` under `Scripts/` (`CheckScriptCommonHelpers.py`); console output is plain `print` (there is no logging wrapper —
+  gates, fixers and reports print through their base class); catch the exceptions you expect, and `except Exception` only at a boundary that must keep going and reports what it swallowed
+  (a setup step, a session hook).
+
 ### HLSL
 
 Shaders follow the C++ rules wherever HLSL can express them. `CheckShaderConventions.py` enforces this

@@ -262,5 +262,19 @@ Foo::Foo()
 | 리소스 이름 | `Resource/game/<게임 소문자>/maps/0.title.scene.xml`(대문자는 `README.md` 만) |
 | 텍스처 · 모델 원본 | `textures_raw/hero.png` → `App --import-textures` → `textures/hero.dds` + `textures_raw/import.stamp` |
 
+Python 파일의 모양입니다. 괄호 안 낱말은 `CheckPythonConventions` 가 위반 줄에 붙이는 규칙 이름입니다.
+
+| 쓰지 않는 것 | 쓰는 것 |
+| :--- | :--- |
+| 첫 줄부터 `import argparse` | `"""무엇을 하는 모듈인지."""` 다음 `from __future__ import annotations` (`docstring` · `future`) |
+| `def collect(root, triplet):` | `def collect(root: Path, triplet: str) -> list[str]:` — `__init__` 도 `-> None` (`annotation`) |
+| `from typing import Optional, Dict` · `Optional[Dict[str, str]]` | `dict[str, str] \| None` (`typing`) |
+| `open(path)` · `path.read_text()` | `open(path, encoding="utf-8")` · `path.read_text(encoding="utf-8")` — 바이트는 `"rb"` · `read_bytes()` (`encoding`) |
+| `os.path.join(root, "Resource")` · `os.path.isfile(p)` · `os.makedirs(os.path.dirname(p))` | `root / "Resource"` · `p.is_file()` · `p.parent.mkdir(parents=True, exist_ok=True)` (`osPath`) |
+| `os.path.dirname(os.path.abspath(__file__))` | `Path(__file__).resolve().parent` — `..` 를 글자로 접어야 하면 `os.path.normpath` 는 쓴다 |
+| `raise SystemExit("git mv 실패")` | `sys.exit("git mv 실패")` (`exit`) |
+| `raise SystemExit(main())` · `main()` · `sys.exit(unittest.main())` | `sys.exit(main())` · 시험은 `unittest.main()` (`mainGuard`) |
+| `argparse.ArgumentParser()` | `argparse.ArgumentParser(description="서드파티 고지 파일을 씁니다.")` (`argparse`) |
+
 ---
 [◀ 이전: 핫리로드 및 ABI 가이드](03_LiveReload_and_ABI.md) | [🏠 위키 홈으로 돌아가기](../README.md)
