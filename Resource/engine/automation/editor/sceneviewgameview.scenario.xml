@@ -17,6 +17,7 @@
 
 	<!-- ① 기본은 씬 뷰만 보인다 -->
 	<At frame="60">
+		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
 		<Expect probe="Editor.SceneViewRequested" equals="1"/>
 		<Expect probe="Editor.GameViewRequested" equals="0"/>
 	</At>

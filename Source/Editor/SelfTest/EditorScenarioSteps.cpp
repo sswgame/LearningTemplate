@@ -697,6 +697,16 @@ namespace sw::editor
                 return readViewRequested( EditorViewKind::Game, outValue );
             }
 
+            /** @brief 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸는지(앞 탭으로 보이는지)입니다. 두 뷰가 다 가려져도 `Editor.SceneViewRequested` 는 1 이다. */
+            [[nodiscard]] static bool readSceneViewDrawn( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = pContext->wasViewDrawn( EditorViewKind::Scene ) ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readUIScale( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
@@ -751,5 +761,7 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewRequested );
     SW_AUTOMATION_PROBE( editorGameViewRequested, "Editor.GameViewRequested", "1 when the editor asked the host to render the game view this frame (0 while its panel is hidden)",
                          &EditorScenarioStepsInternal::readGameViewRequested );
+    SW_AUTOMATION_PROBE( editorSceneViewDrawn, "Editor.SceneViewDrawn", "1 when the Scene panel drew the scene view this UI frame (its tab is in front)",
+                         &EditorScenarioStepsInternal::readSceneViewDrawn );
     SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
 } // namespace sw::editor

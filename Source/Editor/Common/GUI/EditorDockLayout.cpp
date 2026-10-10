@@ -37,6 +37,11 @@ namespace sw::editor
             static constexpr const utf8* kLegacyGameViewWindow = "[Window][Game View]";
             static constexpr const utf8* kSceneViewWindow      = "[Window][Scene]";
 
+            /** @brief 기본 배치에서 가운데 영역의 앞 탭이 될 창(씬 뷰 패널 제목)입니다. */
+            static constexpr const utf8* kFrontTabWindowTitle = "Scene";
+            /** @brief 기본 배치 뒤 앞 탭을 고르려 포커스를 주는 최대 프레임 수입니다 — 창이 도킹되고 탭 막대가 서는 데 한두 프레임이 든다. */
+            static constexpr uint8 kMaxFrontTabFrames = 8;
+
             /** @brief @p pNode 아래 모든 노드의 기준 크기(SizeRef)에 @p scale 을 곱합니다. */
             static void scaleSizeRef( ImGuiDockNode* pNode, const ImVec2& scale )
             {
@@ -107,9 +112,11 @@ namespace sw::editor
         , _pendingLayoutVisibility{}
         , _lastDockspaceWidth{ 0.0f }
         , _lastDockspaceHeight{ 0.0f }
+        , _frontTabFrameCount{ 0 }
         , _bLayoutPending{ SW_FALSE }
         , _bApplied{ SW_FALSE }
         , _bResetDefault{ SW_FALSE }
+        , _bFrontTabPending{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -356,6 +363,29 @@ namespace sw::editor
         _bResetDefault = SW_TRUE;
     }
 
+    void EditorDockLayout::updateDefaultTabSelection()
+    {
+        if ( _bFrontTabPending == SW_FALSE )
+            return;
+
+        // 숨은 탭의 창도 Active 다(Begin 은 불렸고 내용만 건너뛴다). 닫힌 패널의 창은 Active 가 아니라 고를 탭이 없다.
+        ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorDockLayoutInternal::kFrontTabWindowTitle );
+        if ( pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames )
+        {
+            _bFrontTabPending = SW_FALSE;
+            return;
+        }
+
+        // DockTabIsVisible 는 이번 프레임 Begin 이 정한 값이다 — 도킹된 창이 탭 막대에서 골라져 보이면 참이다.
+        if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible )
+        {
+            _bFrontTabPending = SW_FALSE;
+            return;
+        }
+        ++_frontTabFrameCount;
+        ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 고른다
+    }
+
     void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceID )
     {
         const ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
@@ -409,8 +439,9 @@ namespace sw::editor
         EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
         EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 
-        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 먼저 붙인 Scene 이 선택된 탭이다.
-        EditorDockLayoutInternal::dockCheckedWindow( "Scene", dockMain );
+        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene 이다 — 붙인 순서로는 정해지지 않으므로(ImGui 는 새 탭 가운데
+        // 마지막 것을 고른다) 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.
+        EditorDockLayoutInternal::dockCheckedWindow( EditorDockLayoutInternal::kFrontTabWindowTitle, dockMain );
         EditorDockLayoutInternal::dockCheckedWindow( "Game", dockMain );
         EditorDockLayoutInternal::dockCheckedWindow( "Profiler", dockMain );
         EditorAssetTypeRegistry::forEachToolPanelTitle( [dockMain]( const utf8* pTitle )
@@ -422,5 +453,7 @@ namespace sw::editor
         EditorDockLayoutInternal::dockCheckedWindow( "Output Log", dockBottom );
 
         ImGui::DockBuilderFinish( id );
+        _bFrontTabPending   = SW_TRUE;
+        _frontTabFrameCount = 0;
     }
 } // namespace sw::editor

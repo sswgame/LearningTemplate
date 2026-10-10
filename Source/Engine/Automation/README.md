@@ -218,7 +218,8 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
 | `Editor.SceneViewCameraX`, `Editor.SceneViewCameraY` | 씬 뷰 카메라(에디터 카메라)의 월드 X · Y — Play 중에도 에디터 카메라다 |
 | `Editor.GameViewCameraX`, `Editor.GameViewCameraY` | 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 X · Y |
-| `Editor.SceneViewRequested`, `Editor.GameViewRequested` | 이번 프레임에 에디터가 호스트에 그 뷰 RT 를 그려 달라고 했으면 1. 패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 0 |
+| `Editor.SceneViewRequested`, `Editor.GameViewRequested` | 이번 프레임에 에디터가 호스트에 그 뷰 RT 를 그려 달라고 했으면 1. 게임 뷰는 패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 0 이고, 씬 뷰는 두 뷰가 다 가려져도 1 이다 |
+| `Editor.SceneViewDrawn` | 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸으면(앞 탭으로 보이면) 1 — 씬 뷰가 보이는지는 이것으로 본다 |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
 `hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot`, 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,

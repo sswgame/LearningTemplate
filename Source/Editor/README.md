@@ -420,6 +420,12 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   (`EditorViewTargetUtil::shouldRequestSceneView` · `shouldRequestGameView`) — 같은 영역의 다른 탭 · 접힘 · 닫힘이면 그 RT 요청이 0 이다.
   둘 다 안 보이면 씬 뷰 RT 를 알린다(알릴 RT 가 없으면 호스트가 백버퍼에 그려 에디터 UI 밑에 깐다). 탭 뒤의 패널은 이름표도 남기지 않으므로,
   자체 시험 · 시나리오는 먼저 그 탭을 앞으로 가져온다(`ImGui::SetWindowFocus` · `panel.focus <id>`).
+  씬 뷰가 보이는지는 `Editor.SceneViewDrawn` 으로 본다 — `Editor.SceneViewRequested` 는 두 뷰가 다 가려져도 1 이라 가려진 씬 뷰를 놓친다.
+- **기본 배치의 앞 탭은 붙인 순서로 정해지지 않는다.** ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고 처음 나타난 창에 포커스를 준다. 열린 채 시작하는
+  도구 패널(Prefab Editor)이 가운데 영역에 붙으면 그 탭이 앞에 서서 씬 뷰가 그려지지 않는다. 그래서 `EditorDockLayout::updateDefaultTabSelection` 이
+  패널을 다 그린 뒤 Scene 탭이 골라질 때까지 포커스를 준다(첫 실행 · `layout.reset` · Reset Default Layout).
+  저장된 레이아웃(`Saved/Editor/imgui.ini` · `windows.ini`)이 있는 체크아웃에서는 이 결함이 드러나지 않는다. 새 워크트리 · 새 기계에서만 진다.
+  `AppScenarioTest` 는 사용자의 `Saved/Editor` 를 그대로 쓰므로, 기본 배치에 기대는 시나리오는 저장된 상태를 지운 채로도 한 번 돌린다(`defaultlayout` 시나리오가 이 경우를 지킨다).
 - **주 출력은 게임 뷰다.** 게임 뷰가 보이면 그것이 엔진의 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 타깃 추가 뷰다.
   씬 뷰만 보이면 씬 뷰가 주 출력이 된다(화면 UI · 화면 사각형 뷰를 빼고). 그래서 `<Screenshot>` · `-gv_screenshot` 은 게임 뷰가 보일 때 게임 뷰를,
   아니면 씬 뷰를 찍고, 격자 · 기즈모는 ImGui 오버레이라 어느 쪽 그림에도 없다 — 격자는 창 캡처나 `Editor.Grid*` 탐침으로 본다.

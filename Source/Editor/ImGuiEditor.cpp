@@ -484,6 +484,7 @@ namespace sw::editor
             if ( _editorContext != nullptr )
             {
                 _editorContext->getPanelManager().drawOpenPanels();
+                _dockLayout.updateDefaultTabSelection(); // 패널이 처음 나타나며 가져간 포커스보다 뒤여야 한다
                 _editorContext->getPopupManager().drawOpenPopups();
                 _editorContext->getNotificationManager().updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
             }

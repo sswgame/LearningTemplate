@@ -28,6 +28,12 @@ namespace sw::editor
         void beginDockspace();
         /** @brief 다음 프레임에 기본 도크 레이아웃을 다시 적용합니다. */
         void requestResetDefault();
+        /**
+         * @brief 기본 배치를 막 지었으면 가운데 영역의 Scene 탭을 앞으로 가져옵니다. 패널을 모두 그린 뒤 프레임마다 부릅니다.
+         * @details ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고, 처음 나타난 창에 포커스를 줍니다. 그래서 열린 채 시작하는 도구 패널(Prefab Editor)이
+         *          같은 영역에 붙으면 그 탭이 앞에 서고 씬 뷰는 그려지지 않습니다. Scene 탭이 실제로 골라질 때까지(최대 몇 프레임) 포커스를 줍니다.
+         */
+        void updateDefaultTabSelection();
 
         /**
          * @brief 지금 도킹 배치와 패널 가시성을 이름 붙인 레이아웃으로 저장합니다(`EditorLayoutStore`).
@@ -65,9 +71,11 @@ namespace sw::editor
         KeyValueMap            _pendingLayoutVisibility;
         float32                _lastDockspaceWidth;  ///< 마지막으로 비율을 맞춘 도크스페이스 크기. 0 이면 다음 프레임이 저장된 크기에서 시작한다
         float32                _lastDockspaceHeight; ///< 위와 같다(세로)
-        uint8                  _bLayoutPending : 1;
-        uint8                  _bApplied       : 1;
-        uint8                  _bResetDefault  : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 짓는다(Reset Default Layout)
-        [[maybe_unused]] uint8 _reserved       : 5;
+        uint8                  _frontTabFrameCount;  ///< 기본 배치 뒤 Scene 탭을 앞으로 가져오려 포커스를 준 프레임 수
+        uint8                  _bLayoutPending   : 1;
+        uint8                  _bApplied         : 1;
+        uint8                  _bResetDefault    : 1; ///< 다음 적용이 저장된 배치가 있어도 기본 배치로 다시 짓는다(Reset Default Layout)
+        uint8                  _bFrontTabPending : 1; ///< 기본 배치를 지었고 Scene 탭이 아직 골라지지 않았다(`updateDefaultTabSelection`)
+        [[maybe_unused]] uint8 _reserved         : 4;
     };
 } // namespace sw::editor

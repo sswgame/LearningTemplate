@@ -82,8 +82,6 @@
 
 ### 1-4. 에디터
 
-- **씬 뷰 시나리오 셋이 진다(2026-10-10 확인, main 기준선 `10b5009ea` 에서도).** `sceneviewgameview` · `viewportgrid` · `viewportpick` 이 네 백엔드 모두 exit 10 —
-  `sceneView.canvas` 표지가 없고 `Editor.GridStep` 값이 없다(씬 뷰 캔버스 `EditorViewportClient::draw` 가 불리지 않는다). Debug `-L hostgpu` 의 `AppTest_HostOnly` 가 이것으로 진다.
 - **에디터 보강 — 계획은 [docs/plans/EditorPlus.md](plans/EditorPlus.md).** 다음 세션이 할 일이다(사용자 결정, 2026-10-07). 확장 지점(EditorModule SHARED · 확장 모듈),
   환경설정 · 단축키 · 모듈 창, 인스펙터 다중 편집 · 콘텐츠 브라우저 역색인, 보기 모드 · 스크린샷 · RenderDoc · 타임라인 · assert 대화상자 · bugit · Test Runner,
   커브 · 맵 검사 · 노드 그래프 틀 · 패키징, 아이콘(R3 · R4 · R5 · R9), 패널 점검의 부족한 점(N1 ~ N12)을 단위마다 "확인 = 에디터 시나리오" 와 함께 적었다.

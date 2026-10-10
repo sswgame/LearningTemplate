@@ -15,8 +15,8 @@
   약어 통일이 남긴 문자열 `UiDocument` · `ExpectUi` 도 `UIDocument` · `ExpectUI` 로 고쳤다(UI 시험 셋이 지고 있었다).
   검증: Debug 경고 0, `ctest --preset Ninja-Debug-lint` 62/62, Debug `-L nogpu` 44/44, Shipping 빌드 · `-L hostgpu` 5/5, `Ninja-Debug-Shooter3D` · `Ninja-Debug-NileCity` 빌드,
   네 백엔드 × Empty · 에디터 · Shooter3D · NileCity(종료 코드 0, `[Error]` 0), `App --cook-shaders` [Error] 0.
-  **지는 것(main 기준선에서도 같다 — 이 묶음과 무관)**: Debug `-L hostgpu` 의 `AppScenarioTest.EditorScenariosPassOnEveryBackend` — `sceneviewgameview` · `viewportgrid` · `viewportpick` 이
-  네 백엔드 모두 exit 10(`no editor widget is marked 'sceneView.canvas'`, `Editor.GridStep has no value`). 씬 뷰 캔버스가 안 그려진다 — 에디터 소단위 병합 뒤 회귀로 보인다. 다음 세션 맨 먼저.
+  씬 뷰 시나리오 셋(`sceneviewgameview` · `viewportgrid` · `viewportpick`)이 지던 것은 커밋 회귀가 아니었다 — 저장된 레이아웃이 없는 워크트리에서 기본 배치의 앞 탭이
+  Prefab Editor 였다(V1 부터 같다). `EditorDockLayout::updateDefaultTabSelection` 과 시나리오 `defaultlayout` 으로 고쳤다(Editor README 함정 절).
   Shipping 빌드 경고 하나도 기준선부터 있다: `ScreenshotPathUtil.cpp(20)` unused member function `runScreenshot`.
 
 - Scripts 정리(2026-10-10, 파이썬만 — 빌드 없음): 게이트 공용 글 읽기를 `Scripts/common/CodeText.py` 로(include 줄 · 층 폴더 · `IncludeResolver` ·
@@ -59,8 +59,7 @@
 작업 방식은 [작업 흐름](../11_Workflow.md). 이 세션에서 쓴 규칙: 도우미 여럿은 워크트리(`py -3 -m Scripts worktree-make <이름>`)에서만 일하고 push 하지 않으며, 적용 담당 하나가 `git merge --ff-only wt/<이름>` 으로 `main` 에 넣고 push 한다.
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`.slot1~3`)을 쓴다. 사용 한도에 두 번 걸렸으니 도우미는 셋 안팎으로 둔다. **검증은 마지막에 한 번**(사용자 결정), 큰 이동 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
-1. **에디터 씬 뷰 회귀(맨 먼저).** 위 "지는 것" — `AppScenarioTest.EditorScenariosPassOnEveryBackend` 의 씬 뷰 시나리오 셋. main 기준선에서도 진다.
-   약어 통일 뒤 남은 검증 대기: 서버 프리셋 `-L nogpu`, 리눅스(CI — `IOUring` · `Epoll` · `LinuxAsyncFileIOBackend` 등 리눅스 전용 파일은 이름이 바뀐 뒤 한 번도 컴파일되지 않았다), 핫 리로드.
+1. **약어 통일 뒤 남은 검증 대기.** 서버 프리셋 `-L nogpu`, 리눅스(CI — `IOUring` · `Epoll` · `LinuxAsyncFileIOBackend` 등 리눅스 전용 파일은 이름이 바뀐 뒤 한 번도 컴파일되지 않았다), 핫 리로드.
    (Debug `-L nogpu`, Shipping `-L hostgpu`, Shooter3D · NileCity 프리셋, 네 백엔드 × 대표 셋은 이름 정리 묶음에서 통과했다.)
 2. **이름 정리 — 남은 것.** 계획 [이름 정리](NamingPass.md) "채택 — 남은 치환"(바이트 · 시간 단위 접미사 건별 판단, 파일 이름과 타입이 어긋난 곳, `Misc = 0`)과
    큰 이름 `ResourceUtil` → `ResourcePaths` + `ResourceIO`(313), `EditorUtil` 경로 → `EditorPaths`(사용자 결정 5-4 로 정해졌다).
