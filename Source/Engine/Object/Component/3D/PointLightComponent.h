@@ -44,11 +44,10 @@ namespace sw
         void writeGPULightKindFields( GPULight& outLight ) const override;
 
     private:
-        /** @brief 반경이 0 이면 빛이 아무것도 비추지 않는다는 경고를 적습니다(맵 검사). */
-        void validateRadius( ValidationContext& context ) const;
-
-    private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius )
         float32 _radius;
+
+        /** @brief 반경이 0 이면 빛이 아무것도 비추지 않는다는 경고를 적습니다(맵 검사). */
+        void validateRadius( ValidationContext& context ) const;
     };
 } // namespace sw
