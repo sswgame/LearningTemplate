@@ -91,8 +91,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **3 인스펙터 · 콘텐츠** | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
-| | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
+| **3 인스펙터 · 콘텐츠** | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T3 | 공용 노드 그래프 틀을 확장에 공개(`EditorGraphDocumentPanel` 내보내기 + 노드 찾아 넣기 · 핀 타입 색 · 검증 표시) | S | C1 | |
@@ -144,61 +143,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 "Revert", `PropertyDrawer`(`[CustomPropertyDrawer(typeof(T))]`). Godot 인스펙터도 다중 편집 · 되돌리기 아이콘 · `EditorInspectorPlugin`.
 콘텐츠 쪽: 언리얼 Content Browser 는 프로젝트 콘텐츠가 기본(엔진 · 플러그인 콘텐츠는 보기 옵션), **Reference Viewer**(참조하는 것 · 참조되는 것), 이름 바꾸면 리디렉터 + "Fix Up".
 유니티 Project 창 "Find References In Scene" · 의존 검색(`AssetDatabase.GetDependencies`). 우리 인스펙터는 다중 선택에서 첫 오브젝트만 고치고(O8), 되돌리기는 오른쪽 클릭 메뉴에만 숨어 있다.
-
-### I3 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER` — 유니티 PropertyDrawer
-
-**목적.** 타입별 위젯(`IInspectorProperty`)은 이미 있다 — 그러나 `InspectorPropertyManager::registerDefaults` 가 내장 타입 표(`ReflectBuiltins.xxx`)만 등록하고 확장 · 게임이 더할 줄이 없다.
-확장 모듈이 자기 값 타입(예: 키트의 `ParkRidePlacement`, T1 의 `FloatCurve`)에 위젯을 다는 길을 만든다.
-
-**바꿀 것.**
-- `Panels/Inspector/IInspectorProperty.h` 끝:
-```cpp
-namespace sw::editor
-{
-    /**
-     * @struct EditorPropertyDrawerRegistration
-     * @brief 프로퍼티 타입 하나의 그리기 확장 등록 줄입니다. id 는 타입 이름(리플렉션 `_typeName` 과 같은 글 — 내장은 `float32` · 구조체는 `sw::FloatCurve`).
-     * @details 같은 타입에 둘째 등록은 거절됩니다. 내장 타입 표(`ReflectBuiltins.xxx`)의 위젯도 이 줄로 오른다(EditorModule 이 표를 펼쳐 등록 줄을 둔다).
-     */
-    struct EditorPropertyDrawerRegistration : EditorRegistration
-    {
-        static constexpr const utf8* kKindName = "propertydrawer";
-
-        unique_ptr<IInspectorProperty> ( *_pCreate )();
-    };
-} // namespace sw::editor
-
-/** @brief 프로퍼티 타입 그리기를 등록합니다. 예: `SW_EDITOR_PROPERTY_DRAWER( FloatCurve, "sw::FloatCurve", FloatCurvePropertyDrawer );` */
-#define SW_EDITOR_PROPERTY_DRAWER( name, pTypeName, TDrawer )                                                       \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorPropertyDrawerRegistration, PropertyDrawer_##name, { pTypeName, 0 }, \
-                        &::sw::editor::createInspectorProperty<TDrawer> )
-```
-- `InspectorPropertyManager` 를 C2 의 다른 매니저와 같은 모양으로: `registerDefaults` → `syncWithRegistry()` + `releaseDrawersWithin(…)`; 내장 표는 `InspectorPropertyManager.cpp` 에서
-  `SW_REFLECT_BUILTIN_TYPE` 매크로로 **등록 줄을 펼친다**(지금 `registerType` 호출을 펼치는 것과 같은 표 한 번).
-- README 의 "패널 · 팝업 · 인스펙터 · 시각화를 하나 더하려면" 표에 한 줄: `| 프로퍼티 타입 그리기 | SW_EDITOR_PROPERTY_DRAWER( Name, "sw::Type", Drawer ); | (타입 이름이 정함) |`.
-
-**시험.** `InspectorBuiltinValueTest` 그대로 통과 + `AppSmokeTest.EditorRegistriesKeepTheirOrder` 의 기대 목록이 `propertydrawer` 줄을 받는다(덤프에 새 종류 — `EditorRegistryDump` 가 종류 목록을 돈다면 한 줄 더).
-`InspectorComponentSyncTest`(C2)에 그리기 확장 하나(지역 등록자 → 찾음 → 소멸 → 못 찾음).
-
-**확인 = 에디터 시나리오.** 이 단위만으로는 새 그리기 확장이 없습니다. I2 와 P1 의 시나리오가 그대로 통과하는지(내장 위젯이 등록 줄로 바뀌어도 같은 동작) 보고, 첫 사용자인 T1 이 커브 시나리오를 더합니다.
-
-**남길 교훈.** `Source/Editor/README.md` 함정 · 계약 절의 "인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나" 줄에 덧붙임: `확장 · 게임 타입은 SW_EDITOR_PROPERTY_DRAWER(내장 표도 같은 등록 줄로 펼친다).`
-**커밋 메시지:**
-```
-에디터 - 프로퍼티 타입 그리기 확장 SW_EDITOR_PROPERTY_DRAWER(유니티 PropertyDrawer 자리)
-
-문제점:
-- 타입별 위젯(IInspectorProperty)은 내장 타입 표로만 등록돼 확장 모듈 · 게임이 자기 값 타입에 위젯을 달 수 없었다.
-
-해결방안:
-- EditorPropertyDrawerRegistration + SW_EDITOR_PROPERTY_DRAWER(id = 리플렉션 타입 이름). 내장 표도 같은 등록 줄로 펼친다.
-- InspectorPropertyManager 를 다른 매니저와 같은 모양으로(syncWithRegistry · releaseDrawersWithin).
-
-결과:
-- 내장 위젯 동작 그대로(InspectorBuiltinValueTest), InspectorComponentSyncTest 에 그리기 확장 줄 추가. 인스펙터 개선(I1 ~ I3) 끝.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
 
 ### A1 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 ★
 

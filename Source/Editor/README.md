@@ -91,7 +91,8 @@
 | 패널 | `SW_EDITOR_PANEL( MyPanel, "my_panel", EditorPanelCategory::Tool, 1900 );` | Panel 메뉴 · 그리기 순서 |
 | 팝업 | `SW_EDITOR_POPUP( MyPopup, 400 );` (클래스에 `kPopupID`) | 그리기 순서 |
 | 컴포넌트 인스펙터 | `SW_EDITOR_INSPECTOR( MyComponent, MyComponentInspector );` | (타입 계층이 정함) |
-| 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, "Lbl", "툴팁", true, &draw );` | 툴바 체크박스 · 마스크 비트 |
+| 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, "Lbl", "툴팁", true, &draw );` | 툴바 체크박스 순서 |
+| 프로퍼티 타입 그리기 | `SW_EDITOR_PROPERTY_DRAWER( Name, "TypeName", Drawer );` | (타입 이름이 정함, 내장 위젯보다 이김) |
 
 - **순서는 등록 순서가 아니라 순서 키**입니다(같으면 id 사전순). 번역 단위 사이의 정적 초기화 순서는 정해지지 않습니다.
   지금 값은 100 간격이니 사이에 끼우려면 그 사이 값을 씁니다.

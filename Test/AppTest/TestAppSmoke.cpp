@@ -725,6 +725,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|console.devCommands",
         "EditorSelfTest|PASS|hierarchy.selectAllWith",
         "EditorSelfTest|PASS|layout.namedRoundTrip",
+        "EditorSelfTest|PASS|inspector.propertyDrawerRegistered",
         "EditorSelfTest|PASS|themepark.extensionPanelDraws",
         "EditorSelfTest|PASS|themepark.layoutPreviewLoads",
         "EditorSelfTest|PASS|sceneView.gizmoMovesTheSelection",

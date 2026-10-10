@@ -8,6 +8,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -591,6 +592,15 @@ namespace sw::editor
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
     } // namespace
 
+    InspectorPropertyManager::InspectorPropertyManager()
+        : _registry{}
+        , _listRegistration{}
+        , _syncedGeneration{ invalid_index::kUint32 }
+    {
+    }
+
+    InspectorPropertyManager::~InspectorPropertyManager() = default;
+
     void InspectorPropertyManager::registerType( string_view typeName, unique_ptr<IInspectorProperty> pProperty )
     {
         _registry.addOrReplace( hashed_string( typeName ), std::move( pProperty ) );
@@ -603,6 +613,64 @@ namespace sw::editor
     }
 
     void InspectorPropertyManager::registerDefaults()
+    {
+        registerBuiltins();
+        _listRegistration.clear();
+        _syncedGeneration = invalid_index::kUint32;
+        syncWithRegistry();
+    }
+
+    void InspectorPropertyManager::syncWithRegistry()
+    {
+        using DrawerRegistry               = EditorRegistry<EditorPropertyDrawerRegistration>;
+        const EditorRegistrationList& list = DrawerRegistry::getList();
+        if ( list.getGeneration() == _syncedGeneration )
+            return;
+        _syncedGeneration = list.getGeneration();
+        // 줄이 빠졌으면 내장 위젯부터 다시 건다(등록 줄이 가렸던 것이 돌아온다). 그다음 지금 줄을 모두 건다.
+        bool bRemoved = false;
+        for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
+        {
+            bRemoved = bRemoved || DrawerRegistry::find( pRegistration->_pID ) != pRegistration;
+        }
+        if ( bRemoved )
+        {
+            _registry.clear();
+            registerBuiltins();
+        }
+        _listRegistration.clear();
+        for ( uint32 index = 0; index < DrawerRegistry::getCount(); ++index )
+        {
+            const EditorPropertyDrawerRegistration& registration = DrawerRegistry::getAt( index );
+            registerType( registration._pID, registration._pCreate() );
+            _listRegistration.push_back( &registration );
+        }
+    }
+
+    uint32 InspectorPropertyManager::releaseDrawersWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32 releasedCount{ 0 };
+        for ( size_t index = _listRegistration.size(); index-- > 0; )
+        {
+            const EditorPropertyDrawerRegistration* pRegistration = _listRegistration[index];
+            if ( IModuleUnloadListener::isAddressWithin( pRegistration, pBegin, pEnd ) == false )
+                continue;
+            _listRegistration.erase( _listRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+            ++releasedCount;
+        }
+        if ( releasedCount > 0 )
+        {
+            _registry.clear();  // 언로드되는 이미지의 위젯(그 vtable)을 남기지 않는다
+            registerBuiltins(); // 가렸던 내장 위젯을 되살린다
+            for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
+            {
+                registerType( pRegistration->_pID, pRegistration->_pCreate() );
+            }
+        }
+        return releasedCount;
+    }
+
+    void InspectorPropertyManager::registerBuiltins()
     {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) registerType( #Canon, createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>() );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )

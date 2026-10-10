@@ -4,8 +4,10 @@
  */
 #pragma once
 #include "Core/Common/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Workspace/EditorRegistry.h"
 
 namespace sw
 {
@@ -33,3 +35,30 @@ namespace sw::editor
         virtual bool draw( void* pInstance, const PropertyInfo& prop ) = 0;
     };
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorPropertyDrawerRegistration
+     * @brief 프로퍼티 타입 하나의 그리기 확장 등록 줄입니다(유니티 PropertyDrawer 에 해당). id 는 리플렉션 `_typeName` 과 같은 타입 이름입니다.
+     * @details 확장 모듈과 게임이 자기 값 타입에 위젯을 다는 길입니다. 내장 타입(`ReflectBuiltins.xxx`)과 이름이 같으면 등록 줄이 이깁니다.
+     */
+    struct EditorPropertyDrawerRegistration : EditorRegistration
+    {
+        static constexpr const utf8* kKindName = "propertydrawer";
+
+        unique_ptr<IInspectorProperty> ( *_pCreate )();
+    };
+
+    /** @brief 등록 줄이 가리키는 그리기 생성 함수입니다. */
+    template <typename TDrawer>
+    unique_ptr<IInspectorProperty> createInspectorProperty()
+    {
+        return make_unique<TDrawer>();
+    }
+} // namespace sw::editor
+
+/** @brief 프로퍼티 타입 그리기를 등록합니다. 예: `SW_EDITOR_PROPERTY_DRAWER( FloatCurve, "FloatCurve", FloatCurvePropertyDrawer );` */
+#define SW_EDITOR_PROPERTY_DRAWER( name, pTypeName, TDrawer )                                                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorPropertyDrawerRegistration, PropertyDrawer_##name, { pTypeName, 0 }, \
+                        &::sw::editor::createInspectorProperty<TDrawer> )

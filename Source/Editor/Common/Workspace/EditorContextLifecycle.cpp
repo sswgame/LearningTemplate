@@ -143,6 +143,7 @@ namespace sw::editor
         _pPanelManager->syncWithRegistry( _pRHIDevice );
         _pPopupManager->syncWithRegistry();
         _pInspectorComponentManager->syncWithRegistry();
+        _pInspectorPropertyManager->syncWithRegistry();
         EditorCommandGUI::syncWithRegistry();
     }
 

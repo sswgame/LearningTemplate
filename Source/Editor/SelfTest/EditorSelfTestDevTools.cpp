@@ -21,6 +21,8 @@
 #include "Editor/Panels/ConsolePanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/GameViewPanel.h"
+#include "Editor/Panels/Inspector/IInspectorProperty.h"
+#include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -52,6 +54,25 @@ namespace sw::editor
     {
         struct EditorSelfTestDevToolsInternal
         {
+            /** @brief 그리기 확장 등록 줄의 본보기 — 시험 전용 타입 이름에 걸린다(그 타입의 프로퍼티는 없다). */
+            class SelfTestPropertyDrawer final : public IInspectorProperty
+            {
+            public:
+                bool draw( void* /*pInstance*/, const PropertyInfo& /*prop*/ ) override { return true; }
+            };
+
+            /** @brief 그리기 확장 등록 줄이 프로퍼티 매니저에 걸리고 내장 위젯은 그대로다. */
+            static EditorSelfTestStep runPropertyDrawerRegistered( EditorSelfTestContext& context )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( context.expect( pContext != nullptr, "no editor context" ) == false )
+                    return EditorSelfTestStep::Done;
+                pContext->getInspectorPropertyManager().syncWithRegistry();
+                context.expect( pContext->getInspectorPropertyManager().find( "SelfTestDrawerProbe" ) != nullptr, "the registered property drawer is not in the manager" );
+                context.expect( pContext->getInspectorPropertyManager().find( "float32" ) != nullptr, "the built-in float32 widget is gone" );
+                return EditorSelfTestStep::Done;
+            }
+
             /** @brief 등록 줄 커맨드(`selftest.ping`)의 동작 — 로그 한 줄을 남긴다(시나리오 `commandpalette` 가 본다). */
             static void runPingCommand() { SW_LOG_INFO( "Self-test registration command ran" ); }
 
@@ -580,6 +601,8 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
     SW_EDITOR_SELF_TEST( NamedLayout, "layout.namedRoundTrip", 750, &EditorSelfTestDevToolsInternal::runNamedLayoutRoundTrip );
+    SW_EDITOR_PROPERTY_DRAWER( SelfTestDrawerProbe, "SelfTestDrawerProbe", EditorSelfTestDevToolsInternal::SelfTestPropertyDrawer );
+    SW_EDITOR_SELF_TEST( PropertyDrawer, "inspector.propertyDrawerRegistered", 760, &EditorSelfTestDevToolsInternal::runPropertyDrawerRegistered );
     // 등록 줄 커맨드의 본보기 — 표가 아닌 파일에서 한 줄로 더한 커맨드가 팔레트에 나온다(메뉴 경로가 없으면 팔레트 · 단축키만).
     SW_EDITOR_COMMAND( SelfTestPing, "selftest.ping", 0, "Self Test Ping", editoricon::kBug, "SelfTest", "자체 시험과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다",
                        "Write one log line (self-test)", {}, &EditorSelfTestDevToolsInternal::runPingCommand, nullptr, nullptr );
