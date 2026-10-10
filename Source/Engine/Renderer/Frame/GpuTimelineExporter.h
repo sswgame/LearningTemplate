@@ -40,7 +40,7 @@ namespace sw
          * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역)입니다.
          * @return 출력이 컨텍스트를 만들었으면 true 입니다.
          */
-        [[nodiscard]] bool openContext( IProfilerBackend& backend, ProfilerGpuApi api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
+        [[nodiscard]] bool openContext( IProfilerBackend& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
         /** @brief 디바이스가 사라졌을 때 잊습니다(출력 쪽 컨텍스트는 Tracy 가 닫지 않는다 — 다음 디바이스는 새 번호를 쓴다). */
         void forgetContext();
 

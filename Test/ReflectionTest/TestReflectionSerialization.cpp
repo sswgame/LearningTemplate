@@ -3155,7 +3155,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
  * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null` · 바이너리 0 바이트로 쓰고, 읽으면 그 칸은 기본값이 된다 — 저장한 줄 알았던 값이 사라진다.
  *          새 PROPERTY 가 그런 타입이면 여기서 이름으로 진다. 저장할 수 없는
  *          런타임 값(창 핸들 같은 포인터)은 `Transient` 로 적는다. 이 실행 파일은 엔진과 자기 시험 타입만 등록한다 — 모듈(GameFramework · 킷 ·
- *          게임 · 에디터)의 타입은 `ModuleApiTest.EveryModulePropertyHasATypeTheSerializersCanCarry`(SmokeTest)가 같은 판정으로 본다.
+ *          게임 · 에디터)의 타입은 `ModuleAPITest.EveryModulePropertyHasATypeTheSerializersCanCarry`(SmokeTest)가 같은 판정으로 본다.
  */
 SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
 {

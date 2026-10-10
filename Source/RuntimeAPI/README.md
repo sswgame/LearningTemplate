@@ -17,7 +17,7 @@ graph LR
     Module -->|서비스 테이블로 엔진 서비스 사용| Engine
 ```
 
-**API 테이블.** 모듈은 `exportGameApi` 나 `exportEditorApi` 를 내보내고, App은 이 함수를 불러 함수 포인터 테이블(`GameAPI`, `EditorAPI`)을 받습니다.
+**API 테이블.** 모듈은 `exportGameAPI` 나 `exportEditorAPI` 를 내보내고, App은 이 함수를 불러 함수 포인터 테이블(`GameAPI`, `EditorAPI`)을 받습니다.
 App은 그 뒤로 모듈 객체를 이 테이블로만 부릅니다. 만들기, 초기화, 업데이트, 상태 직렬화가 모두 이 테이블의 항목입니다.
 
 **불투명 핸들.** 경계를 넘는 객체는 `ABI/RuntimeHandles.h` 의 핸들입니다. `WindowHandle`, `RHIDeviceHandle`, `EditorHandle`, `GameHandle`, `TextureHandle` 이 있습니다.
@@ -38,10 +38,10 @@ SW_IMPLEMENT_GAME_MODULE( sw::EmptyGame );
 이 매크로는 `Export/GameModuleExports.h` 에 있습니다. 매크로가 만드는 것은 세 가지입니다.
 
 1. `getGameModuleAbiVersion` 과 `getGameModuleAbiStamp` 는 이 모듈이 빌드된 ABI 버전과 스탬프를 돌려줍니다.
-2. `exportGameApi` 는 `GameAPI` 테이블의 함수 포인터를 `EmptyGame` 의 메서드로 채웁니다.
+2. `exportGameAPI` 는 `GameAPI` 테이블의 함수 포인터를 `EmptyGame` 의 메서드로 채웁니다.
 3. 서비스 테이블을 받으면 게임 쪽 서비스 로케이터에 연결합니다.
 
-App은 모듈을 로드하면 먼저 버전과 스탬프를 자기 값과 비교하고, 다르면 그 모듈을 쓰지 않습니다. 같으면 `exportGameApi` 로 테이블을 받아 게임 인스턴스를 만듭니다.
+App은 모듈을 로드하면 먼저 버전과 스탬프를 자기 값과 비교하고, 다르면 그 모듈을 쓰지 않습니다. 같으면 `exportGameAPI` 로 테이블을 받아 게임 인스턴스를 만듭니다.
 에디터 모듈은 같은 방식으로 `SW_IMPLEMENT_EDITOR_MODULE` 을 씁니다(`Source/Editor/ImGuiEditor.cpp`).
 
 ## 작동 원리

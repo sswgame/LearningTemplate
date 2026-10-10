@@ -18,10 +18,10 @@ namespace sw
     class IWindow;
 
     /**
-     * @struct ModuleApiSymbols
+     * @struct ModuleAPISymbols
      * @brief 모듈 이미지에서 API 표를 받는 데 쓰는 심볼 이름입니다. 에디터 · 게임이 같은 절차를 이 이름만 바꿔 씁니다.
      */
-    struct ModuleApiSymbols
+    struct ModuleAPISymbols
     {
         const utf8* _pVersionSymbol;
         const utf8* _pStampSymbol;
@@ -45,7 +45,7 @@ namespace sw
          *          만으로는 막지 못합니다 — 그 둘은 **맨 앞**에 있어서 가운데에 끼워 넣어도 채워집니다. 핫 리로드는 모듈만 다시 빌드하는 기능이라 이런
          *          어긋남이 생기는 바로 그 상황입니다. RHI 경계의 `RHIModuleAbi.h` 와 같은 대조입니다.
          */
-        static bool matchesModuleAbi( void* pLibraryModule, const ModuleApiSymbols& symbols )
+        static bool matchesModuleAbi( void* pLibraryModule, const ModuleAPISymbols& symbols )
         {
             const PFN_GetModuleAbiVersion pfnVersion =
                 reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
@@ -65,19 +65,19 @@ namespace sw
         }
 
         /**
-         * @brief 모듈 이미지의 ABI 를 대조하고 API 표를 받습니다(에디터 · 게임 공통). 받지 못하면 @p outApi 는 빈 표입니다.
-         * @details 리로드 전 검사(`is*ImageUsable`)와 바인딩(`bind*Api`)이 같은 절차를 씁니다.
+         * @brief 모듈 이미지의 ABI 를 대조하고 API 표를 받습니다(에디터 · 게임 공통). 받지 못하면 @p outAPI 는 빈 표입니다.
+         * @details 리로드 전 검사(`is*ImageUsable`)와 바인딩(`bind*API`)이 같은 절차를 씁니다.
          */
-        template <typename TApi, typename TExportFn>
-        [[nodiscard]] static bool exportApiFromImage( void* pLibraryModule, const ModuleApiSymbols& symbols, TApi& outApi )
+        template <typename TAPI, typename TExportFn>
+        [[nodiscard]] static bool exportAPIFromImage( void* pLibraryModule, const ModuleAPISymbols& symbols, TAPI& outAPI )
         {
-            outApi = {};
+            outAPI = {};
             if ( pLibraryModule == nullptr || matchesModuleAbi( pLibraryModule, symbols ) == false )
                 return false;
             const TExportFn pfnExport = reinterpret_cast<TExportFn>( ModuleImageUtil::getDynamicSymbol( pLibraryModule, symbols._pExportSymbol ) );
-            if ( pfnExport == nullptr || pfnExport( &outApi ) == false )
+            if ( pfnExport == nullptr || pfnExport( &outAPI ) == false )
             {
-                outApi = {};
+                outAPI = {};
                 SW_LOG_ERROR( "The %# module does not export its API table (%#)", symbols._pModuleLabel, symbols._pExportSymbol );
                 return false;
             }
@@ -89,8 +89,8 @@ namespace sw
          * @note @p bRequireDevice 면 **디바이스가 없을 때 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로 묻는 것 자체가 죽는
          *       길이고, 만들어 봐야 초기화가 실패할 것이 정해져 있습니다. 전용 서버의 게임은 디바이스 없이(nullptr) 만듭니다.
          */
-        template <typename TApi>
-        [[nodiscard]] static bool createInstance( const TApi& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
+        template <typename TAPI>
+        [[nodiscard]] static bool createInstance( const TAPI& api, void*& pOutHandle, IWindow* pWindow, RHI* pRHI, bool bRequireDevice, const utf8* pModuleLabel )
         {
             pOutHandle            = nullptr;
             const bool bHasDevice = pRHI != nullptr && pRHI->hasDevice();
@@ -124,23 +124,23 @@ namespace sw
          *        → (표를 놓으면) API 표 비우기.
          * @details 타입 등록 해제가 그 모듈의 살아 있는 컴포넌트를 지웁니다. 그 소멸자는 모듈 코드라 서비스가 아직 붙어 있는 동안이어야 합니다.
          */
-        template <typename TApi>
-        static void destroyInstance( TApi& inoutApi, void*& pInOutHandle, bool bReleaseApiTable, [[maybe_unused]] const utf8* pModuleName )
+        template <typename TAPI>
+        static void destroyInstance( TAPI& inoutAPI, void*& pInOutHandle, bool bReleaseAPITable, [[maybe_unused]] const utf8* pModuleName )
         {
-            if ( pInOutHandle != nullptr && inoutApi.shutdown != nullptr )
-                inoutApi.shutdown( pInOutHandle );
-            if ( pInOutHandle != nullptr && inoutApi.destroy != nullptr )
-                inoutApi.destroy( pInOutHandle );
+            if ( pInOutHandle != nullptr && inoutAPI.shutdown != nullptr )
+                inoutAPI.shutdown( pInOutHandle );
+            if ( pInOutHandle != nullptr && inoutAPI.destroy != nullptr )
+                inoutAPI.destroy( pInOutHandle );
             // Shipping 은 모듈을 내리지 않으므로 등록 해제 자체가 없다(Engine 에도 그 코드가 없다).
 #if !defined( SW_SHIPPING )
-            if ( bReleaseApiTable )
+            if ( bReleaseAPITable )
                 engine::unregisterModuleTypes( pModuleName );
 #endif
-            if ( inoutApi.bindService != nullptr )
-                inoutApi.bindService( nullptr );
+            if ( inoutAPI.bindService != nullptr )
+                inoutAPI.bindService( nullptr );
             pInOutHandle = nullptr;
-            if ( bReleaseApiTable )
-                inoutApi = {};
+            if ( bReleaseAPITable )
+                inoutAPI = {};
         }
     };
 } // namespace sw

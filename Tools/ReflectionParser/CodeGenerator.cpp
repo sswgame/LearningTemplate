@@ -207,7 +207,7 @@ namespace sw
         for ( const ParsedTypeInfo& typeInfo : _header._listType )
         {
             emitReflectTypeTraits( buffer, typeInfo );
-            if ( typeInfo.requiresTypeApi() )
+            if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
         return string( buffer.view() );

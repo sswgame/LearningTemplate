@@ -34,27 +34,27 @@ namespace sw
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                                \
     extern "C" SW_MODULE_API uint32      getGameModuleAbiVersion() { return sw::kModuleAbiVersion; }                                                                                                         \
     extern "C" SW_MODULE_API const utf8* getGameModuleAbiStamp() { return sw::kModuleAbiStamp; }                                                                                                             \
-    extern "C" SW_MODULE_API bool        exportGameApi( sw::GameAPI* pOutApi )                                                                                                                               \
+    extern "C" SW_MODULE_API bool        exportGameAPI( sw::GameAPI* pOutAPI )                                                                                                                               \
     {                                                                                                                                                                                                        \
-        if ( pOutApi == nullptr )                                                                                                                                                                            \
+        if ( pOutAPI == nullptr )                                                                                                                                                                            \
             return false;                                                                                                                                                                                    \
-        pOutApi->create     = []() -> sw::GameHandle { return sw_new GameClass(); };                                                                                                                         \
-        pOutApi->destroy    = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                                                                                       \
-        pOutApi->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                    \
+        pOutAPI->create     = []() -> sw::GameHandle { return sw_new GameClass(); };                                                                                                                         \
+        pOutAPI->destroy    = []( sw::GameHandle gameHandle ) { sw_delete( static_cast<GameClass*>( gameHandle ) ); };                                                                                       \
+        pOutAPI->initialize = []( sw::GameHandle gameHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                    \
         { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::initialize, static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); }; \
-        pOutApi->shutdown    = []( sw::GameHandle gameHandle ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                                          \
-        pOutApi->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                              \
-        pOutApi->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); };               \
-        pOutApi->bindService = []( const sw::ModuleService* pService )                                                                                                                                       \
+        pOutAPI->shutdown    = []( sw::GameHandle gameHandle ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::shutdown ); };                                                          \
+        pOutAPI->update      = []( sw::GameHandle gameHandle, float32 deltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::update, deltaTime ); };                              \
+        pOutAPI->fixedUpdate = []( sw::GameHandle gameHandle, float32 fixedDeltaTime ) { sw::ModuleForwardUtil::callVoid<GameClass>( gameHandle, &GameClass::fixedUpdate, fixedDeltaTime ); };               \
+        pOutAPI->bindService = []( const sw::ModuleService* pService )                                                                                                                                       \
         {                                                                                                                                                                                                    \
             if ( pService != nullptr )                                                                                                                                                                       \
                 sw::game::bindGameService( *pService );                                                                                                                                                      \
             else                                                                                                                                                                                             \
                 sw::game::unbindGameService();                                                                                                                                                               \
         };                                                                                                                                                                                                   \
-        pOutApi->serializeState = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool                                                                                              \
+        pOutAPI->serializeState = []( sw::GameHandle gameHandle, void* pOutBuffer, uint32* pInOutSize ) -> bool                                                                                              \
         { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::serializeState, pOutBuffer, pInOutSize ); };                                                                 \
-        pOutApi->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool                                                                                        \
+        pOutAPI->deserializeState = []( sw::GameHandle gameHandle, const void* pInBuffer, uint32 bufferSize ) -> bool                                                                                        \
         { return sw::ModuleForwardUtil::callOr<GameClass, bool>( gameHandle, false, &GameClass::deserializeState, pInBuffer, bufferSize ); };                                                                \
         return true;                                                                                                                                                                                         \
     }

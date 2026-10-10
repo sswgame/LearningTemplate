@@ -18,7 +18,7 @@ namespace sw
     // 1) GameAPI — C ABI 함수 테이블
     //    IGame 구현은 SWGame 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
-    /** @brief SWGame 이 exportGameApi 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
+    /** @brief SWGame 이 exportGameAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct GameAPI
     {
         GameHandle ( *create )(){ nullptr };                                                                /**< @brief 게임 인스턴스를 생성합니다. */
@@ -32,8 +32,8 @@ namespace sw
         bool ( *deserializeState )( GameHandle game, const void* pInBuffer, uint32 size ){ nullptr };       /**< @brief 버퍼에서 게임 상태를 복원합니다. */
     };
 
-    /** @brief SWGame 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportGameApi). */
-    using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutApi );
+    /** @brief SWGame 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportGameAPI). */
+    using PFN_ExportGameAPI = bool ( * )( GameAPI* pOutAPI );
 } // namespace sw
 
 extern "C"
@@ -47,5 +47,5 @@ extern "C"
     SW_MODULE_API const utf8* getGameModuleAbiStamp();
 
     /** @brief SWGame API 테이블을 내보냅니다. */
-    SW_MODULE_API bool exportGameApi( sw::GameAPI* pOutApi );
+    SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI );
 }

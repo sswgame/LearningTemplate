@@ -65,7 +65,7 @@ namespace
     void recordDestroy( EditorHandle ) { s_listEditorCall.push_back( "destroy" ); }
 
     /** @brief 멈춤 · 종료 · 파괴만 채운 가짜 에디터 API 표. */
-    EditorAPI makeRecordingEditorApi()
+    EditorAPI makeRecordingEditorAPI()
     {
         EditorAPI api{};
         api.stopSimulation = &recordStopSimulation;
@@ -90,7 +90,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendStopsTheEditorSimulationBeforeTearingDown )
         EditorModuleHost host;
         SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
         int32 editorToken = 0;
-        host.attachEditorInstance( makeRecordingEditorApi(), &editorToken );
+        host.attachEditorInstance( makeRecordingEditorAPI(), &editorToken );
 
         s_listEditorCall.clear();
         host.suspendModules( scope, false );
@@ -117,7 +117,7 @@ SW_TEST_CASE( ModuleHostTest, SuspendingAnEditorWithoutStopLeavesTheWorldStopped
     RHI              rhi;
     EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
-    EditorAPI api      = makeRecordingEditorApi();
+    EditorAPI api      = makeRecordingEditorAPI();
     api.stopSimulation = nullptr;
     int32 editorToken  = 0;
     host.attachEditorInstance( api, &editorToken );
@@ -193,7 +193,7 @@ namespace
     void recordGameDestroy( GameHandle ) { s_listGameCall.push_back( "destroy" ); }
 
     /** @brief 상태 직렬화 · 종료 · 파괴만 채운 가짜 게임 API 표. */
-    GameAPI makeRecordingGameApi()
+    GameAPI makeRecordingGameAPI()
     {
         GameAPI api{};
         api.serializeState = &recordGameSerialize;
@@ -250,7 +250,7 @@ SW_TEST_CASE( ModuleHostTest, ReloadBatchKeepsTheGameWhenItsStateCannotBeCapture
     EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
     int32 gameToken = 0;
-    host.attachGameInstance( makeRecordingGameApi(), &gameToken );
+    host.attachGameInstance( makeRecordingGameAPI(), &gameToken );
     const vector<string> listBatch{ string{ "SWGame" } };
 
     s_listGameCall.clear();
@@ -289,14 +289,14 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
     RHI              rhi;
     EditorModuleHost host;
     SW_ASSERT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, true ) );
-    EditorAPI editorApi   = makeRecordingEditorApi();
-    editorApi.bindService = &recordEditorBindService;
-    GameAPI gameApi       = makeRecordingGameApi();
-    gameApi.bindService   = &recordGameBindService;
+    EditorAPI editorAPI   = makeRecordingEditorAPI();
+    editorAPI.bindService = &recordEditorBindService;
+    GameAPI gameAPI       = makeRecordingGameAPI();
+    gameAPI.bindService   = &recordGameBindService;
     int32 editorToken     = 0;
     int32 gameToken       = 0;
-    host.attachEditorInstance( editorApi, &editorToken );
-    host.attachGameInstance( gameApi, &gameToken );
+    host.attachEditorInstance( editorAPI, &editorToken );
+    host.attachGameInstance( gameAPI, &gameToken );
 
     s_bGameSerializeSucceeds   = true;
     s_editorUnbindCount        = 0;
@@ -319,10 +319,10 @@ SW_TEST_CASE( ModuleHostTest, EditorAndGameTearDownInTheSameOrder )
 
 /**
  * @brief [ModuleHostTest] 새 이미지가 호스트의 API 표와 맞는지 옛 이미지를 내리기 전에 가린다
- * @details 같은 검사(`bindEditorApi` · `bindGameApi`)가 onAfterReload 에만 있으면 거절이 곧 에디터 · 게임을 잃는 일이다. 진짜 모듈은 받아들이고,
+ * @details 같은 검사(`bindEditorAPI` · `bindGameAPI`)가 onAfterReload 에만 있으면 거절이 곧 에디터 · 게임을 잃는 일이다. 진짜 모듈은 받아들이고,
  *          표가 다른 모듈(에디터 자리에 게임 모듈)은 거절한다.
  */
-SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsApiTable )
+SW_TEST_CASE( ModuleHostTest, ImageCheckAcceptsOnlyAModuleWithTheHostsAPITable )
 {
     void* const pEditorModule = ModuleImageUtil::loadDynamicLibrary( ModuleImageUtil::findModuleLibraryPath( "EditorModule" ) );
     if ( pEditorModule == nullptr )

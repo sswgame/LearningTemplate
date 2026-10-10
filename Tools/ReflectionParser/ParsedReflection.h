@@ -288,7 +288,7 @@ namespace sw
         {
         }
 
-        bool requiresTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
+        bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
     };
 } // namespace sw

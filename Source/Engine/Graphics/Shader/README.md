@@ -64,7 +64,7 @@ HLSL과 C++가 이 파일을 같이 include하므로 슬롯 번호를 두 곳에
 ### Compile/ — 소스에서 바이트코드로
 
 - `ShaderCompiler` 는 DXC와 D3DCompiler로 HLSL을 DXIL, SPIR-V, DXBC로 컴파일합니다.
-  Vulkan용 SPIR-V 타깃은 `RHI/Vulkan/VulkanRHIApiVersion.h` 가 정합니다(1.3, SPIR-V 1.6). 디바이스 최소 버전과 같은 값입니다. OpenGL용 SPIR-V는 `vulkan1.1` 타깃입니다.
+  Vulkan용 SPIR-V 타깃은 `RHI/Vulkan/VulkanRHIRequiredVersion.h` 가 정합니다(1.3, SPIR-V 1.6). 디바이스 최소 버전과 같은 값입니다. OpenGL용 SPIR-V는 `vulkan1.1` 타깃입니다.
 - OpenGL용 SPIR-V는 쿠킹할 때 `InstanceIndex` 와 `VertexIndex` 를 `InstanceId` 와 `VertexId` 로 바꿉니다. ARB_gl_spirv는 앞의 둘을 지원하지 않아, 바꾸지 않으면 인스턴스 번호가 0으로 읽힙니다.
 - `ShaderCache` 는 "경로, define, 타깃"을 키로 컴파일 결과를 찾습니다. 결과를 얻는 경로는 쿠킹된 바이너리, 로컬 캐시(`Saved/ShaderCache/`), 실시간 컴파일 세 가지이고 모두 같은 항목을 만듭니다.
   `AssetManager` 의 에셋 캐시와 다릅니다. 셰이더 바이트코드는 RHI와 컴파일러의 수명을 따릅니다. `shutdown` 은 리플렉션 매니페스트 캐시도 비웁니다.

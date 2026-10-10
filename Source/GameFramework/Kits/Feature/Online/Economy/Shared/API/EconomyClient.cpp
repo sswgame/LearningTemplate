@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyClient.h"
 
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyMirror.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyMirror.h"
 
 namespace sw
 {

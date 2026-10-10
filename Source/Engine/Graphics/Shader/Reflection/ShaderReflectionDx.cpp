@@ -275,21 +275,21 @@ namespace sw
              * @details 상수버퍼의 자리(공간 · 바인드 포인트)는 **이름으로** 바인딩 서술을 찾아 정한다 — `GetConstantBufferByIndex` 의 열거
              *          순서는 register(bN) 과 다를 수 있다. 찾지 못하면 열거 순서를 쓴다.
              */
-            template <typename TApi>
-            static ShaderReflectionData fillFromReflection( typename TApi::Reflection* pReflection )
+            template <typename TAPI>
+            static ShaderReflectionData fillFromReflection( typename TAPI::Reflection* pReflection )
             {
                 ShaderReflectionData      data{};
-                typename TApi::ShaderDesc shaderDesc{};
+                typename TAPI::ShaderDesc shaderDesc{};
                 pReflection->GetDesc( &shaderDesc );
-                if ( TApi::isVertexShader( shaderDesc.Version ) )
-                    fillVertexInputs<typename TApi::Reflection, typename TApi::ParameterDesc>( pReflection, shaderDesc.InputParameters, data );
+                if ( TAPI::isVertexShader( shaderDesc.Version ) )
+                    fillVertexInputs<typename TAPI::Reflection, typename TAPI::ParameterDesc>( pReflection, shaderDesc.InputParameters, data );
 
                 for ( UINT cbIndex = 0; cbIndex < shaderDesc.ConstantBuffers; ++cbIndex )
                 {
-                    typename TApi::ConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
+                    typename TAPI::ConstantBuffer* pCb = pReflection->GetConstantBufferByIndex( cbIndex );
                     if ( pCb == nullptr )
                         continue;
-                    typename TApi::BufferDesc cbDesc{};
+                    typename TAPI::BufferDesc cbDesc{};
                     pCb->GetDesc( &cbDesc );
                     // StructuredBuffer<T> 의 원소 타입 레이아웃은 "가상 CB"(Type == D3D_CT_RESOURCE_BIND_INFO, 변수 $Element 하나)로 열거된다.
                     // CB 가 아니라 **원소 레이아웃**으로 따로 낸다 — GPUScene 머티리얼 데이터(g_SwMaterials)의 패킹 기준이다.
@@ -301,14 +301,14 @@ namespace sw
                     bufferInfo._name      = cbDesc.Name != nullptr ? cbDesc.Name : "";
                     bufferInfo._bindPoint = cbIndex;
                     bufferInfo._totalSize = cbDesc.Size; ///< 원소 레이아웃이면 원소 stride
-                    typename TApi::BindDesc nameBindDesc{};
+                    typename TAPI::BindDesc nameBindDesc{};
                     if ( cbDesc.Name != nullptr && SUCCEEDED( pReflection->GetResourceBindingDescByName( cbDesc.Name, &nameBindDesc ) ) )
                     {
-                        bufferInfo._registerSpace = TApi::getRegisterSpace( nameBindDesc );
+                        bufferInfo._registerSpace = TAPI::getRegisterSpace( nameBindDesc );
                         bufferInfo._bindPoint     = nameBindDesc.BindPoint;
                     }
-                    fillConstantBufferMembers<typename TApi::ConstantBuffer, typename TApi::Variable, typename TApi::VariableDesc, typename TApi::Type,
-                                              typename TApi::TypeDesc>( pCb, cbDesc.Variables, bufferInfo );
+                    fillConstantBufferMembers<typename TAPI::ConstantBuffer, typename TAPI::Variable, typename TAPI::VariableDesc, typename TAPI::Type,
+                                              typename TAPI::TypeDesc>( pCb, cbDesc.Variables, bufferInfo );
                     if ( bStructuredElement == false )
                         data._listConstantBuffer.push_back( std::move( bufferInfo ) );
                     else if ( bufferInfo._listVariable.empty() == false )
@@ -317,12 +317,12 @@ namespace sw
 
                 for ( UINT resourceIndex = 0; resourceIndex < shaderDesc.BoundResources; ++resourceIndex )
                 {
-                    typename TApi::BindDesc bindDesc{};
+                    typename TAPI::BindDesc bindDesc{};
                     pReflection->GetResourceBindingDesc( resourceIndex, &bindDesc );
 
                     ShaderReflectedBinding resourceBinding{};
                     resourceBinding._name          = bindDesc.Name != nullptr ? bindDesc.Name : "";
-                    resourceBinding._registerSpace = TApi::getRegisterSpace( bindDesc );
+                    resourceBinding._registerSpace = TAPI::getRegisterSpace( bindDesc );
                     resourceBinding._bindPoint     = bindDesc.BindPoint;
                     resourceBinding._bindCount     = bindDesc.BindCount; ///< 무제한 배열([])은 0
                     resourceBinding._type          = resourceTypeName( static_cast<uint32>( bindDesc.Type ) );

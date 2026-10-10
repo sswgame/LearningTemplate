@@ -15,7 +15,7 @@
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 #include "GameFramework/Base/Online/Http/HttpServer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/PlatformLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/PlatformLoginClient.h"
 
 namespace sw
 {

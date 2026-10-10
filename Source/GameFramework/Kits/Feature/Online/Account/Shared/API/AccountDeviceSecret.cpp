@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountDeviceSecret.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountDeviceSecret.h"
 
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"

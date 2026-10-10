@@ -25,7 +25,7 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct EditorModuleHostInternal
         {
-            static constexpr ModuleApiSymbols kEditorSymbols{ "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "exportEditorApi", "Editor" };
+            static constexpr ModuleAPISymbols kEditorSymbols{ "getEditorModuleAbiVersion", "getEditorModuleAbiStamp", "exportEditorAPI", "Editor" };
 
 #if !defined( SW_SHIPPING )
             /**
@@ -78,7 +78,7 @@ namespace sw
 
     EditorModuleHost::EditorModuleHost()
         : ModuleHost{}
-        , _editorApi{}
+        , _editorAPI{}
         , _editor{ nullptr }
         , _bEnableEditor{ SW_FALSE }
         , _bEditorModuleActive{ SW_TRUE }
@@ -188,18 +188,18 @@ namespace sw
 
     bool EditorModuleHost::queryGameplayActive() const
     {
-        if ( hasEditor() == false || _editorApi.isPlaying == nullptr )
+        if ( hasEditor() == false || _editorAPI.isPlaying == nullptr )
             return true;
-        return _editorApi.isPlaying( _editor );
+        return _editorAPI.isPlaying( _editor );
     }
 
     bool EditorModuleHost::queryTickScene() const
     {
         if ( hasEditor() == false )
             return true;
-        if ( _editorApi.isPaused != nullptr && _editorApi.isPaused( _editor ) )
+        if ( _editorAPI.isPaused != nullptr && _editorAPI.isPaused( _editor ) )
         {
-            if ( _editorApi.isPlaying == nullptr || _editorApi.isPlaying( _editor ) == false )
+            if ( _editorAPI.isPlaying == nullptr || _editorAPI.isPlaying( _editor ) == false )
                 return false;
         }
         return true;
@@ -213,11 +213,11 @@ namespace sw
             return;
 
         HostViewTarget& game = frameState._views._game;
-        if ( _editorApi.getGameViewport != nullptr )
-            _editorApi.getGameViewport( _editor, &game._renderTarget, &game._width, &game._height );
+        if ( _editorAPI.getGameViewport != nullptr )
+            _editorAPI.getGameViewport( _editor, &game._renderTarget, &game._width, &game._height );
         HostViewTarget& scene = frameState._views._scene;
-        if ( _editorApi.getSceneViewport != nullptr )
-            _editorApi.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
+        if ( _editorAPI.getSceneViewport != nullptr )
+            _editorAPI.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
     }
 
     void EditorModuleHost::updateEditorUi( float32 /*deltaTime*/ )
@@ -226,8 +226,8 @@ namespace sw
         if ( hasEditor() == false )
             return;
 
-        if ( _editorApi.updateUi != nullptr )
-            _editorApi.updateUi( _editor );
+        if ( _editorAPI.updateUi != nullptr )
+            _editorAPI.updateUi( _editor );
 
         // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
@@ -238,25 +238,25 @@ namespace sw
     void EditorModuleHost::endEditorFrame()
     {
         SW_MEMORY_SCOPE( Editor );
-        if ( hasEditor() == false || _editorApi.endFrame == nullptr )
+        if ( hasEditor() == false || _editorAPI.endFrame == nullptr )
             return;
-        _editorApi.endFrame( _editor );
+        _editorAPI.endFrame( _editor );
     }
 
     bool EditorModuleHost::onWindowMessage( const NativeWindowEvent& event )
     {
-        if ( hasEditor() == false || _editorApi.processEvent == nullptr )
+        if ( hasEditor() == false || _editorAPI.processEvent == nullptr )
             return false;
 
         // 에디터 내부 상태 갱신과 입력 필터링은 에디터 모듈 안에서 처리한다
-        return _editorApi.processEvent( _editor, &event );
+        return _editorAPI.processEvent( _editor, &event );
     }
 
     CameraComponent* EditorModuleHost::getSceneViewCamera() const
     {
-        if ( hasEditor() == false || _editorApi.getSceneViewCamera == nullptr )
+        if ( hasEditor() == false || _editorAPI.getSceneViewCamera == nullptr )
             return nullptr;
-        return static_cast<CameraComponent*>( _editorApi.getSceneViewCamera( _editor ) );
+        return static_cast<CameraComponent*>( _editorAPI.getSceneViewCamera( _editor ) );
     }
 
     // ======================================================================
@@ -271,7 +271,7 @@ namespace sw
     void EditorModuleHost::onAfterEditorReload( void* pLibraryModule )
     {
         SW_MEMORY_SCOPE( Editor );
-        if ( bindEditorApi( pLibraryModule ) == false )
+        if ( bindEditorAPI( pLibraryModule ) == false )
         {
             markReloadGraphBroken( "EditorAPI bind failed after reload" );
             return;
@@ -279,7 +279,7 @@ namespace sw
 
         if ( createEditorInstance() == false )
         {
-            _editorApi = {};
+            _editorAPI = {};
             markReloadGraphBroken( "Editor create/initialize failed after reload" );
             return;
         }
@@ -288,7 +288,7 @@ namespace sw
     bool EditorModuleHost::isEditorImageUsable( void* pLibraryModule ) const
     {
         EditorAPI api{};
-        if ( ModuleInstanceUtil::exportApiFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, api ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, api ) == false )
             return false;
         return api.create != nullptr && api.destroy != nullptr;
     }
@@ -299,7 +299,7 @@ namespace sw
         SW_LOG_ERROR( "Editor module faulted after the reload (code 0x%#) — the editor is off until restart",
                       Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
         _editor    = nullptr;
-        _editorApi = {};
+        _editorAPI = {};
     }
 
     // ======================================================================
@@ -308,44 +308,44 @@ namespace sw
 
     void EditorModuleHost::onBeforeSuspendModules()
     {
-        const bool bStopSimulation = hasEditor() && _editorApi.stopSimulation != nullptr;
+        const bool bStopSimulation = hasEditor() && _editorAPI.stopSimulation != nullptr;
         if ( bStopSimulation )
         {
             SW_LOG_INFO( "Stopping editor simulation before module suspend." );
-            _editorApi.stopSimulation( _editor );
+            _editorAPI.stopSimulation( _editor );
         }
     }
 
-    void EditorModuleHost::suspendHostModule( bool bReleaseApiTable )
+    void EditorModuleHost::suspendHostModule( bool bReleaseAPITable )
     {
-        destroyEditorInstance( bReleaseApiTable );
+        destroyEditorInstance( bReleaseAPITable );
     }
 
     void EditorModuleHost::onRenderWorkersDrained()
     {
-        if ( _editor != nullptr && _editorApi.abandonPendingDraw != nullptr )
-            _editorApi.abandonPendingDraw( _editor );
+        if ( _editor != nullptr && _editorAPI.abandonPendingDraw != nullptr )
+            _editorAPI.abandonPendingDraw( _editor );
     }
 
     // ======================================================================
     // API 바인딩 · 인스턴스
     // ======================================================================
 
-    bool EditorModuleHost::bindEditorApi( void* pLibraryModule )
+    bool EditorModuleHost::bindEditorAPI( void* pLibraryModule )
     {
-        if ( ModuleInstanceUtil::exportApiFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, _editorApi ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, EditorModuleHostInternal::kEditorSymbols, _editorAPI ) == false )
             return false;
 
         rebindEditorService();
 
         engine::registerModuleTypes( sw::config::kTargetEditorModule );
-        return _editorApi.create != nullptr && _editorApi.destroy != nullptr;
+        return _editorAPI.create != nullptr && _editorAPI.destroy != nullptr;
     }
 
 #if !defined( SW_SHIPPING )
-    void EditorModuleHost::attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor )
+    void EditorModuleHost::attachEditorInstance( const EditorAPI& editorAPI, EditorHandle editor )
     {
-        _editorApi = editorApi;
+        _editorAPI = editorAPI;
         _editor    = editor;
     }
 #endif
@@ -371,7 +371,7 @@ namespace sw
             return true;
 
         // 테이블이 비어 있으면 모듈에서 다시 바인딩해야 한다 — 리로드 경로가 그 일을 한다.
-        if ( _editorApi.create == nullptr || _editorApi.initialize == nullptr )
+        if ( _editorAPI.create == nullptr || _editorAPI.initialize == nullptr )
         {
             onAfterEditorReload( pEditorModule );
             return _editor != nullptr;
@@ -383,22 +383,22 @@ namespace sw
 
     void EditorModuleHost::rebindEditorService()
     {
-        if ( _editorApi.bindService == nullptr )
+        if ( _editorAPI.bindService == nullptr )
             return;
 
         ModuleService editorService{};
         fillModuleService( editorService, false );
-        _editorApi.bindService( &editorService );
+        _editorAPI.bindService( &editorService );
     }
 
-    void EditorModuleHost::destroyEditorInstance( bool bReleaseApiTable )
+    void EditorModuleHost::destroyEditorInstance( bool bReleaseAPITable )
     {
-        ModuleInstanceUtil::destroyInstance( _editorApi, _editor, bReleaseApiTable, sw::config::kTargetEditorModule );
+        ModuleInstanceUtil::destroyInstance( _editorAPI, _editor, bReleaseAPITable, sw::config::kTargetEditorModule );
     }
 
     bool EditorModuleHost::createEditorInstance()
     {
         SW_MEMORY_SCOPE( Editor );
-        return ModuleInstanceUtil::createInstance( _editorApi, _editor, getWindow(), getRhi(), true, "Editor" );
+        return ModuleInstanceUtil::createInstance( _editorAPI, _editor, getWindow(), getRhi(), true, "Editor" );
     }
 } // namespace sw

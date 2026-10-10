@@ -110,7 +110,7 @@ namespace sw
         {
             if ( pGameModule == nullptr )
                 return false;
-            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pGameModule, "exportGameApi" ) );
+            const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pGameModule, "exportGameAPI" ) );
             if ( pfnExport == nullptr )
                 return false;
             sw::GameAPI api{};
@@ -723,9 +723,9 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadEditorModule )
     SW_EXPECT_TRUE( onAfterCalled );
     SW_ASSERT_NOT_NULL( newHandle );
 
-    // 새로 로드된 모듈에서 C-ABI exportEditorApi 정상 동작 검증
+    // 새로 로드된 모듈에서 C-ABI exportEditorAPI 정상 동작 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1086,7 +1086,7 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
     SW_EXPECT_EQUAL( 0u, manager.getDeferredUnloadImageCount() );
 
     void* const                 pFirstGame     = manager.getModuleHandle( "SWGame" );
-    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pFirstGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnFirstExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( pFirstGame, "exportGameAPI" ) );
     SW_ASSERT_TRUE( pfnFirstExport != nullptr );
 
     SW_ASSERT_TRUE( sw::reloadAndWait( manager, "SWGame" ) );
@@ -1094,8 +1094,8 @@ SW_TEST_CASE( ArchitectureTest, DeferredUnloadImagesStayMappedUntilTheirBatchIsE
     SW_EXPECT_EQUAL( 1u, manager.getDeferredUnloadImageCount() );
 
     // 첫 이미지는 아직 올라와 있다 — 그 코드를 불러도 된다.
-    sw::GameAPI firstApi{};
-    SW_EXPECT_TRUE( pfnFirstExport( &firstApi ) );
+    sw::GameAPI firstAPI{};
+    SW_EXPECT_TRUE( pfnFirstExport( &firstAPI ) );
 
     for ( uint32 reloadIndex = 0; reloadIndex < sw::LiveReloadManager::kMaxDeferredUnloadBatchCount + 2; ++reloadIndex )
     {
@@ -1344,9 +1344,9 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
     SW_EXPECT_TRUE( onAfterCalled );
     SW_ASSERT_NOT_NULL( newHandle );
 
-    // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorApi 심볼 및 함수 테이블 유효성 검증
+    // 6) 새로 핫스왑된 모듈에서 C-ABI exportEditorAPI 심볼 및 함수 테이블 유효성 검증
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( newHandle, "exportEditorAPI" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1443,15 +1443,15 @@ SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 #if defined( SW_SHIPPING )
 
 // ------------------------------------------------------------------------------
-// 2) ModuleApiTest — exportGameApi / exportEditorApi
+// 2) ModuleAPITest — exportGameAPI / exportEditorAPI
 // ------------------------------------------------------------------------------
 /**
- * @brief [ModuleApiTest] Shipping 정적 exportGameApi
+ * @brief [ModuleAPITest] Shipping 정적 exportGameAPI
  */
-SW_TEST_CASE( ModuleApiTest, ExportGameAPI_ShippingStatic )
+SW_TEST_CASE( ModuleAPITest, ExportGameAPI_ShippingStatic )
 {
     sw::GameAPI api{};
-    SW_EXPECT_TRUE( exportGameApi( &api ) );
+    SW_EXPECT_TRUE( exportGameAPI( &api ) );
     SW_EXPECT_TRUE( api.create != nullptr );
     SW_EXPECT_TRUE( api.destroy != nullptr );
     SW_EXPECT_TRUE( api.initialize != nullptr );
@@ -1467,9 +1467,9 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI_ShippingStatic )
 #else
 
 /**
- * @brief [ModuleApiTest] SWGame DLL exportGameApi
+ * @brief [ModuleAPITest] SWGame DLL exportGameAPI
  */
-SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
+SW_TEST_CASE( ModuleAPITest, ExportGameAPI )
 {
     void* handle = sw::loadModule( "SWGame" );
     SW_EXPECT_TRUE( handle != nullptr );
@@ -1477,7 +1477,7 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
         return;
 
     const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1501,9 +1501,9 @@ SW_TEST_CASE( ModuleApiTest, ExportGameAPI )
 }
 
 /**
- * @brief [ModuleApiTest] Full Game Scene, Component Lifecycle & Tick Verification
+ * @brief [ModuleAPITest] Full Game Scene, Component Lifecycle & Tick Verification
  */
-SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
+SW_TEST_CASE( ModuleAPITest, FullGameSceneAndComponentLifecycle )
 {
     void* hOverworld = sw::loadModule( "GF_Overworld" );
     if ( hOverworld != nullptr )
@@ -1523,7 +1523,7 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 
     sw::engine::registerModuleTypes( "SWGame" );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
     SW_EXPECT_TRUE( pfnExport != nullptr );
     if ( pfnExport == nullptr )
     {
@@ -1598,9 +1598,9 @@ SW_TEST_CASE( ModuleApiTest, FullGameSceneAndComponentLifecycle )
 }
 
 /**
- * @brief [ModuleApiTest] EditorModule DLL exportEditorApi
+ * @brief [ModuleAPITest] EditorModule DLL exportEditorAPI
  */
-SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
+SW_TEST_CASE( ModuleAPITest, ExportEditorAPI )
 {
     // 전용 서버 타깃(Server)은 에디터 모듈을 짓지 않는다(매니페스트 `_listTarget: ["Client"]`).
     if ( sw::FileUtil::exists( sw::modulePath( "EditorModule" ) ) == false )
@@ -1609,7 +1609,7 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
     SW_ASSERT_NOT_NULL( handle );
 
     const sw::PFN_ExportEditorAPI pfnExport = reinterpret_cast<sw::PFN_ExportEditorAPI>(
-        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportEditorApi" ) );
+        sw::ModuleImageUtil::getDynamicSymbol( handle, "exportEditorAPI" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
 
     sw::EditorAPI api{};
@@ -1623,9 +1623,9 @@ SW_TEST_CASE( ModuleApiTest, ExportEditorAPI )
 }
 
 /**
- * @brief [ModuleApiTest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증
+ * @brief [ModuleAPITest] 장르별 독립 Kit 모듈 (GF_Overworld, GF_MonsterCollector, GF_ActionCombat) 타입 등록 검증
  */
-SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
+SW_TEST_CASE( ModuleAPITest, GameFrameworkKitsModuleTypeRegistration )
 {
     for ( const utf8* kitName : { "GF_Overworld", "GF_MonsterCollector", "GF_ActionCombat" } )
     {
@@ -1640,12 +1640,12 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkKitsModuleTypeRegistration )
 }
 
 /**
- * @brief [ModuleApiTest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
+ * @brief [ModuleAPITest] 자식 프로세스 역할: 공용 모듈을 먼저 올리면 GameFramework 의 타입이 제 이름으로 남는다. 그냥 실행하면 건너뛴다.
  * @details `ModuleHost` 의 순서를 그대로 밟는다 — 공용 모듈 → 키트 → SWGame 등록, SWGame 서비스 묶기(공용 모듈을 먼저 올리지 않으면 여기서
- *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameApi` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
+ *          GameFramework 가 지연 로드로 **처음** 올라온다), 그리고 `bindGameAPI` 끝의 인자 없는 등록. 프로세스마다 한 번뿐인 일이라(이미지는 내려가지 않는다)
  *          앞선 케이스가 SWGame 을 올린 이 프로세스에서는 잴 수 없어 자식에서 잰다.
  */
-SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
+SW_TEST_CASE( ModuleAPITest, SharedModuleChildKeepsItsRegistrations )
 {
     if ( std::getenv( "SW_SHARED_MODULE_CHILD" ) == nullptr )
         SW_TEST_SKIP( "child only — GameFrameworkRegistersUnderItsOwnName launches it" );
@@ -1657,7 +1657,7 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
 
     void* const hGame = manager.getModuleHandle( "SWGame" );
     SW_ASSERT_NOT_NULL( hGame );
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameAPI" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1680,11 +1680,11 @@ SW_TEST_CASE( ModuleApiTest, SharedModuleChildKeepsItsRegistrations )
 }
 
 /**
- * @brief [ModuleApiTest] 공용 모듈(GameFramework)의 타입은 그것을 링크한 키트 · SWGame 이 아니라 **제 이름**으로 등록된다
+ * @brief [ModuleAPITest] 공용 모듈(GameFramework)의 타입은 그것을 링크한 키트 · SWGame 이 아니라 **제 이름**으로 등록된다
  * @details 공용 모듈을 처음 부르는 쪽(Windows 지연 로드 · 리눅스 첫 키트의 DT_NEEDED)이 올리면 그 정적 등록기가 SWGame · 첫 키트의
  *          이름으로 들어가, 첫 SWGame 리로드가 GameFramework 컴포넌트를 모든 씬에서 지우고 돌아오지 않는다. 새 프로세스에서 잰다.
  */
-SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
+SW_TEST_CASE( ModuleAPITest, GameFrameworkRegistersUnderItsOwnName )
 {
     if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "GF_Overworld" ) ) == false )
         SW_TEST_SKIP( "GameFramework · GF_Overworld 모듈이 옆에 없습니다" );
@@ -1692,7 +1692,7 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_SHARED_MODULE_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.SharedModuleChildKeepsItsRegistrations", arrEnvironment, 60 );
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.SharedModuleChildKeepsItsRegistrations", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0,
@@ -1700,12 +1700,12 @@ SW_TEST_CASE( ModuleApiTest, GameFrameworkRegistersUnderItsOwnName )
 }
 
 /**
- * @brief [ModuleApiTest] 자식 프로세스 역할: 모듈을 모두 올린 뒤 등록된 모든 PROPERTY 를 직렬화기 판정으로 본다. 그냥 실행하면 건너뛴다.
+ * @brief [ModuleAPITest] 자식 프로세스 역할: 모듈을 모두 올린 뒤 등록된 모든 PROPERTY 를 직렬화기 판정으로 본다. 그냥 실행하면 건너뛴다.
  * @details `ModuleHost` 의 순서대로 공용 모듈 → 킷 → 게임 → 에디터를 올린다. 모듈마다 타입이 하나 이상 올라왔는지 먼저 본다 — 아무것도 안
  *          올라왔으면 아래 판정은 엔진 타입만 본 셈이다. 공용 모듈의 등록 귀속은 프로세스마다 한 번뿐이라(이미지는 내려가지 않는다) 앞선 케이스가
  *          모듈을 올린 이 프로세스가 아니라 자식에서 잰다(`SharedModuleChildKeepsItsRegistrations` 와 같은 까닭).
  */
-SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
+SW_TEST_CASE( ModuleAPITest, ModulePropertyChildChecksEveryType )
 {
     if ( std::getenv( "SW_MODULE_PROPERTY_CHILD" ) == nullptr )
         SW_TEST_SKIP( "child only — EveryModulePropertyHasATypeTheSerializersCanCarry launches it" );
@@ -1739,12 +1739,12 @@ SW_TEST_CASE( ModuleApiTest, ModulePropertyChildChecksEveryType )
 }
 
 /**
- * @brief [ModuleApiTest] 모듈(GameFramework · 킷 · 게임 · 에디터)이 등록하는 모든 PROPERTY 도 세 형식이 실어 나를 수 있는 타입이다
+ * @brief [ModuleAPITest] 모듈(GameFramework · 킷 · 게임 · 에디터)이 등록하는 모든 PROPERTY 도 세 형식이 실어 나를 수 있는 타입이다
  * @details 같은 판정(`ReflectionSerializationTest.EveryPropertyHasATypeTheSerializersCanCarry`)은 ReflectionTest 가 등록하는 타입만 본다 —
  *          모듈 타입의 PROPERTY 가 직렬화기가 모르는 타입이면 씬 · 프리팹 · 세이브 · 에디터 설정에 조용히 `null` 로 쓰인다. 모듈을 올리는 실행 파일이
  *          여기뿐이라 여기서 본다(자식 프로세스 — 위 케이스 머리말).
  */
-SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
+SW_TEST_CASE( ModuleAPITest, EveryModulePropertyHasATypeTheSerializersCanCarry )
 {
     for ( const utf8* pModule : { "GameFramework", "GF_Overworld", "GF_ActionCombat", "SWGame", "EditorModule" } )
     {
@@ -1755,16 +1755,16 @@ SW_TEST_CASE( ModuleApiTest, EveryModulePropertyHasATypeTheSerializersCanCarry )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_MODULE_PROPERTY_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.ModulePropertyChildChecksEveryType", arrEnvironment, 60 );
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.ModulePropertyChildChecksEveryType", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈 타입의 PROPERTY 판정이 실패했습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
 }
 
 /**
- * @brief [ModuleApiTest] SWGame 모듈 반복 로드/언로드 사이클 안정성
+ * @brief [ModuleAPITest] SWGame 모듈 반복 로드/언로드 사이클 안정성
  */
-SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
+SW_TEST_CASE( ModuleAPITest, GameModuleRepeatedReloadCycle )
 {
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {
@@ -1778,7 +1778,7 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
         sw::engine::registerModuleTypes( "SWGame" );
 
         const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>(
-            sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameApi" ) );
+            sw::ModuleImageUtil::getDynamicSymbol( handle, "exportGameAPI" ) );
         SW_ASSERT_NOT_NULL( pfnExport );
 
         sw::GameAPI api{};
@@ -1826,12 +1826,12 @@ SW_TEST_CASE( ModuleApiTest, GameModuleRepeatedReloadCycle )
 }
 
 /**
- * @brief [ModuleApiTest] 자식 프로세스 역할: GameFramework 를 직접 올리고 게임을 한 번 돌린 뒤 내리면, GameFramework 가 만든 이벤트 채널 항목이 디스패처에서 빠진다.
+ * @brief [ModuleAPITest] 자식 프로세스 역할: GameFramework 를 직접 올리고 게임을 한 번 돌린 뒤 내리면, GameFramework 가 만든 이벤트 채널 항목이 디스패처에서 빠진다.
  * @details 게임이 첫 씬을 요청하면 GameFramework 의 코드가 "game" 채널에 이벤트를 낸다(`GameEventUtil::send`). 그 채널 항목의 브로드캐스트 함수와
  *          멀티캐스트의 해제자(`shared_ptr` 제어 블록)는 GameFramework 이미지의 코드라, 이미지를 내린 뒤 디스패처가 소멸하면 내려간 코드로 뛴다.
  *          공용 모듈은 프로세스마다 한 번 올라오므로(이미지는 내려가지 않는다) 깨끗한 자식에서 잰다. 그냥 실행하면 건너뛴다.
  */
-SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
+SW_TEST_CASE( ModuleAPITest, UnloadChildReleasesTheChannelsItsImageCreated )
 {
     if ( std::getenv( "SW_UNLOAD_CHANNEL_CHILD" ) == nullptr )
         SW_TEST_SKIP( "child only — UnloadReleasesTheChannelsTheImageCreated launches it" );
@@ -1847,7 +1847,7 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
     const void* pFrameworkEnd{ nullptr };
     SW_ASSERT_TRUE( sw::ModuleImageUtil::findDynamicLibraryRange( hFramework, pFrameworkBegin, pFrameworkEnd ) );
 
-    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameApi" ) );
+    const sw::PFN_ExportGameAPI pfnExport = reinterpret_cast<sw::PFN_ExportGameAPI>( sw::ModuleImageUtil::getDynamicSymbol( hGame, "exportGameAPI" ) );
     SW_ASSERT_NOT_NULL( pfnExport );
     sw::GameAPI api{};
     SW_ASSERT_TRUE( pfnExport( &api ) );
@@ -1887,9 +1887,9 @@ SW_TEST_CASE( ModuleApiTest, UnloadChildReleasesTheChannelsItsImageCreated )
 }
 
 /**
- * @brief [ModuleApiTest] 모듈 이미지를 내리면 그 이미지가 만든 이벤트 채널 항목도 디스패처에서 빠진다(자식 프로세스 — 위 케이스 머리말)
+ * @brief [ModuleAPITest] 모듈 이미지를 내리면 그 이미지가 만든 이벤트 채널 항목도 디스패처에서 빠진다(자식 프로세스 — 위 케이스 머리말)
  */
-SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
+SW_TEST_CASE( ModuleAPITest, UnloadReleasesTheChannelsTheImageCreated )
 {
     if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false || sw::FileUtil::exists( sw::modulePath( "SWGame" ) ) == false )
         SW_TEST_SKIP( "GameFramework · SWGame 모듈이 옆에 없습니다" );
@@ -1897,19 +1897,19 @@ SW_TEST_CASE( ModuleApiTest, UnloadReleasesTheChannelsTheImageCreated )
     const test::ChildEnvironmentVariable arrEnvironment[] = {
         { "SW_UNLOAD_CHANNEL_CHILD", "1" }
     };
-    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleApiTest.UnloadChildReleasesTheChannelsItsImageCreated", arrEnvironment, 60 );
+    const test::ChildRunResult child = test::runThisExecutableAsChild( "ModuleAPITest.UnloadChildReleasesTheChannelsItsImageCreated", arrEnvironment, 60 );
     SW_ASSERT_TRUE( child._bLaunched );
     SW_EXPECT_FALSE_MSG( child._bTimedOut, ( "자식 프로세스가 시한 안에 끝나지 않았습니다 — 마지막 출력:" + child.getOutputTail() ).c_str() );
     SW_EXPECT_TRUE_MSG( child._exitCode == 0, ( "모듈을 내린 뒤 채널 항목이 남았거나 자식이 죽었습니다 — 마지막 출력:" + child.getOutputTail( 40 ) ).c_str() );
 }
 
 /**
- * @brief [ModuleApiTest] 모듈 이미지를 내려도 그 이미지가 끌어온 의존 이미지(GameFramework)는 올라와 있다
+ * @brief [ModuleAPITest] 모듈 이미지를 내려도 그 이미지가 끌어온 의존 이미지(GameFramework)는 올라와 있다
  * @details 의존 이미지의 코드(그것이 만든 이벤트 채널 항목)를 쥔 등록은 모듈을 내릴 때 뗄 수 없다 — 의존이 함께 내려갈지는 로더만 안다. 그래서
  *          `ModuleImageUtil::unloadModuleImage` 는 의존을 고정한다. Windows 는 지연 로드가 GameFramework 를 원래 잡고 있고, 리눅스는 `DT_NEEDED` 참조가
  *          함께 풀려 GameFramework 가 내려간다.
  */
-SW_TEST_CASE( ModuleApiTest, UnloadKeepsTheImagesTheModulePulledIn )
+SW_TEST_CASE( ModuleAPITest, UnloadKeepsTheImagesTheModulePulledIn )
 {
     if ( sw::FileUtil::exists( sw::modulePath( "GameFramework" ) ) == false )
         SW_TEST_SKIP( "GameFramework 모듈이 옆에 없습니다" );

@@ -16,9 +16,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 

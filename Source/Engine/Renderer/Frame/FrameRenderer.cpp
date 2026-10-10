@@ -31,20 +31,20 @@ namespace sw
         struct FrameRendererInternal
         {
             /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다(뷰어가 큐 이름 옆에 보여 준다). */
-            static ProfilerGpuApi toProfilerGpuApi( RHIBackend backend )
+            static ProfilerGraphicsAPI toProfilerGraphicsAPI( RHIBackend backend )
             {
                 switch ( backend )
                 {
                     case RHIBackend::DirectX11:
-                        return ProfilerGpuApi::Direct3D11;
+                        return ProfilerGraphicsAPI::Direct3D11;
                     case RHIBackend::DirectX12:
-                        return ProfilerGpuApi::Direct3D12;
+                        return ProfilerGraphicsAPI::Direct3D12;
                     case RHIBackend::Vulkan:
-                        return ProfilerGpuApi::Vulkan;
+                        return ProfilerGraphicsAPI::Vulkan;
                     case RHIBackend::OpenGL:
-                        return ProfilerGpuApi::OpenGl;
+                        return ProfilerGraphicsAPI::OpenGl;
                 }
-                return ProfilerGpuApi::Direct3D12;
+                return ProfilerGraphicsAPI::Direct3D12;
             }
         };
 #endif
@@ -339,7 +339,7 @@ namespace sw
                 return;
             int64      gpuNow{ 0 };
             const bool bClockRead = pDevice->readGpuClockNanos( gpuNow );
-            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGpuApi( pDevice->getBackendType() ),
+            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGraphicsAPI( pDevice->getBackendType() ),
                                                                             pDevice->getBackendName(), pDevice, gpuNow );
             if ( bOpened == false )
             {

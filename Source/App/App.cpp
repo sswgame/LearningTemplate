@@ -759,7 +759,7 @@ namespace sw
         if ( pEditor == nullptr )
             return;
 
-        const EditorAPI& editorAPI = _moduleHost->getEditorApi();
+        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
         if ( editorAPI.preRender != nullptr )
             editorAPI.preRender( pEditor, &renderDevice );
 
@@ -777,7 +777,7 @@ namespace sw
         if ( pEditor == nullptr )
             return;
 
-        const EditorAPI& editorAPI = _moduleHost->getEditorApi();
+        const EditorAPI& editorAPI = _moduleHost->getEditorAPI();
         if ( editorAPI.postPresent != nullptr )
             editorAPI.postPresent( pEditor, &renderDevice );
     }

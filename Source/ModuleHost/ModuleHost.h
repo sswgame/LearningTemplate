@@ -153,7 +153,7 @@ namespace sw
          */
         [[nodiscard]] bool onBeforeCommitBatch( const vector<string>& listModuleName );
         /**
-         * @brief 새 게임 이미지가 이 호스트와 같은 API 표로 빌드됐는지 봅니다(ABI 버전 · 지문 · `exportGameApi`). 옛 이미지를 내리기 전에 불립니다.
+         * @brief 새 게임 이미지가 이 호스트와 같은 API 표로 빌드됐는지 봅니다(ABI 버전 · 지문 · `exportGameAPI`). 옛 이미지를 내리기 전에 불립니다.
          * @details 여기서 거절하면 옛 게임이 그대로 돈다. 같은 검사를 옛 것을 내린 뒤(`onAfterGameReload`)에야 하면 거절이 곧 게임을 잃는 일이 된다.
          */
         bool isGameImageUsable( void* pLibraryModule ) const;
@@ -166,12 +166,12 @@ namespace sw
         /**
          * @brief 모듈 인스턴스를 안전하게 내립니다(워커 비우기 → 상태 보존 → 파괴).
          * @param scope 내릴 대상
-         * @param bReleaseApiTable true 면 API 테이블과 타입 등록까지 놓습니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
+         * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 놓습니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
          *        만들** 때는 false 이고, 테이블을 그대로 재사용합니다.
          * @details 종료 · 핫 리로드 · RHI 핫스왑이 모두 이 순서를 지켜야 합니다. 사유마다 따로 조립하면 한 곳만 고치고 나머지를
          *          잊게 됩니다.
          */
-        void suspendModules( ModuleScope scope, bool bReleaseApiTable );
+        void suspendModules( ModuleScope scope, bool bReleaseAPITable );
         /**
          * @brief 렌더 워커 · GPU · 태스크가 하던 일을 모두 끝낼 때까지 기다립니다. 모듈을 내리기 전에 반드시 거치는 곳입니다.
          * @details 디바이스가 없는 RHI 도 여기에 들어옵니다(백엔드 교체 실패). 그래서 `hasDevice()` 를 먼저 확인합니다.
@@ -181,15 +181,15 @@ namespace sw
         void markReloadGraphBroken( const utf8* pReason );
 
         // 4) 모듈 바인딩
-        /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameApi`, 개발 구성은 DLL 심볼을 씁니다. */
-        bool bindGameApi( void* pLibraryModule );
+        /** @brief 게임 API 테이블을 바인딩합니다. 배포 구성은 정적 `exportGameAPI`, 개발 구성은 DLL 심볼을 씁니다. */
+        bool bindGameAPI( void* pLibraryModule );
 #if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 게임 인스턴스와 그 API 표를 호스트에 붙입니다.
          * @details 모듈 DLL · 디바이스 없이 가짜 API 표로 게임을 내리는 순서(상태 찍기 → shutdown → destroy)를 시험하려고 둡니다.
          *          시험 전용 창구라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
          */
-        void attachGameInstance( const GameAPI& gameApi, GameHandle game );
+        void attachGameInstance( const GameAPI& gameAPI, GameHandle game );
 #endif
 
     protected:
@@ -219,15 +219,15 @@ namespace sw
         /** @brief 무엇을 내리든 그 전에 불립니다(에디터 시뮬레이션 멈춤). 게임 상태를 찍기 전입니다. */
         virtual void onBeforeSuspendModules() {}
         /** @brief `ModuleScope::Editor` · `Both` 를 내릴 때 게임보다 먼저 불립니다(에디터 인스턴스 파괴). */
-        virtual void suspendHostModule( bool bReleaseApiTable ) { (void)bReleaseApiTable; }
+        virtual void suspendHostModule( bool bReleaseAPITable ) { (void)bReleaseAPITable; }
         /** @brief 렌더 워커 · GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시 버리기). */
         virtual void onRenderWorkersDrained() {}
 
     private:
         /** @brief ModuleService 를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 채워집니다). */
         void rebindGameService();
-        /** @brief 게임 인스턴스를 shutdown → destroy 하고 핸들을 비웁니다. @p bReleaseApiTable 은 `suspendModules` 와 같습니다. */
-        void destroyGameInstance( bool bReleaseApiTable );
+        /** @brief 게임 인스턴스를 shutdown → destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */
+        void destroyGameInstance( bool bReleaseAPITable );
         /**
          * @brief 이미 바인딩한 API 테이블로 게임 인스턴스를 만들고 초기화합니다. 실패하면 정리한 뒤 false 를 반환합니다.
          * @note RHI 를 받은 호스트는 **디바이스가 없으면 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로, 디바이스가 없는 상태에서
@@ -245,14 +245,14 @@ namespace sw
          * @param bKeepGameOnCaptureFailure true 면 게임 상태를 찍지 못했을 때 아무것도 내리지 않고 false 를 돌려줍니다(리로드 직전).
          *        종료 · RHI 교체처럼 상태를 넘겨받을 새 이미지가 없으면 false 로 둡니다.
          */
-        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseApiTable, bool bKeepGameOnCaptureFailure );
+        [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure );
         /** @brief 보존해 둔 상태를 새 인스턴스에 되돌립니다. 실패하면 **버리지 않고** 다음 리로드까지 들고 있습니다. */
         void restoreGameState();
 
     private:
         unique_ptr<ModuleCompiler> _moduleCompiler;
 
-        GameAPI    _gameApi;
+        GameAPI    _gameAPI;
         GameHandle _game;
 
         LiveReloadManager* _pLiveReloadManager; // 소유하지 않는다

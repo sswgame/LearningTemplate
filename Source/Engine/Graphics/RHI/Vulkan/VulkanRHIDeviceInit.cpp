@@ -8,9 +8,9 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 
 #if defined( SW_PLATFORM_LINUX )
@@ -28,8 +28,8 @@ namespace sw
 {
     SW_LOG_CALLER( "Vulkan" );
 
-    static_assert( VulkanRHIApiVersion::makeApiVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
-                   "VulkanRHIApiVersion::makeApiVersion must encode like VK_MAKE_API_VERSION" );
+    static_assert( VulkanRHIRequiredVersion::makeAPIVersion( 1, 3 ) == VK_MAKE_API_VERSION( 0, 1, 3, 0 ),
+                   "VulkanRHIRequiredVersion::makeAPIVersion must encode like VK_MAKE_API_VERSION" );
 
     static const vector<const utf8*> s_listValidationLayers = {
         "VK_LAYER_KHRONOS_validation" };
@@ -109,7 +109,7 @@ namespace sw
         appInfo.applicationVersion = VK_MAKE_VERSION( 1, 0, 0 );
         appInfo.pEngineName        = "SW Engine";
         appInfo.engineVersion      = VK_MAKE_VERSION( 1, 0, 0 );
-        appInfo.apiVersion         = VulkanRHIApiVersion::kRequiredApiVersion;
+        appInfo.apiVersion         = VulkanRHIRequiredVersion::kRequiredAPIVersion;
 
         VkInstanceCreateInfo createInfo{};
         createInfo.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -211,15 +211,15 @@ namespace sw
 
         for ( const VkPhysicalDevice& device : devices )
         {
-            // 셰이더는 요구 판(VulkanRHIApiVersion) 타깃의 SPIR-V 로 쿠킹한다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
+            // 셰이더는 요구 판(VulkanRHIRequiredVersion) 타깃의 SPIR-V 로 쿠킹한다. 그보다 낮은 디바이스는 그 모듈을 하나도 받지 못한다.
             VkPhysicalDeviceProperties candidateProperties{};
             vkGetPhysicalDeviceProperties( device, &candidateProperties );
-            if ( VulkanRHIApiVersion::isApiVersionSupported( candidateProperties.apiVersion ) == false )
+            if ( VulkanRHIRequiredVersion::isAPIVersionSupported( candidateProperties.apiVersion ) == false )
             {
                 SW_LOG_WARNING( "Skipping Vulkan device '%#': API %#.%# is below the required %#.%# (shaders are SPIR-V for that target)",
                                 candidateProperties.deviceName, VK_API_VERSION_MAJOR( candidateProperties.apiVersion ),
-                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), VulkanRHIApiVersion::kRequiredMajor,
-                                VulkanRHIApiVersion::kRequiredMinor );
+                                VK_API_VERSION_MINOR( candidateProperties.apiVersion ), VulkanRHIRequiredVersion::kRequiredMajor,
+                                VulkanRHIRequiredVersion::kRequiredMinor );
                 continue;
             }
             // 소프트웨어 어댑터를 요청했으면(gv_rhiSoftwareAdapter) CPU 디바이스(lavapipe · SwiftShader)만 후보다.
@@ -273,8 +273,8 @@ namespace sw
             _initResult = RHIInitResult::DriverUnsupported;
         }
         else if ( _physicalDevice == nullptr )
-            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIApiVersion::kRequiredMajor,
-                          VulkanRHIApiVersion::kRequiredMinor );
+            SW_LOG_ERROR( "No Vulkan %#.%# device with a graphics queue that can present to this surface", VulkanRHIRequiredVersion::kRequiredMajor,
+                          VulkanRHIRequiredVersion::kRequiredMinor );
         return _physicalDevice != nullptr;
     }
 

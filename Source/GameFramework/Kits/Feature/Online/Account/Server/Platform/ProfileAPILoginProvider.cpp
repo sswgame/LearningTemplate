@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 
 #include "Engine/Serialization/Json/JsonDocument.h"
 
@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    ProfileApiLoginProvider::ProfileApiLoginProvider( const PlatformLoginProviderSettings& settings, HttpClient* pHttpClient )
+    ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HttpClient* pHttpClient )
         : _settings{ settings }
         , _mapRequestToVerification{}
         , _listDone{}
@@ -17,7 +17,7 @@ namespace sw
     {
     }
 
-    uint64 ProfileApiLoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
+    uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
     {
         const uint64      verificationId = _nextVerificationId++;
         HttpClientRequest request;
@@ -29,7 +29,7 @@ namespace sw
         return verificationId;
     }
 
-    int32 ProfileApiLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
+    int32 ProfileAPILoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
     {
         const int32 count = static_cast<int32>( _listDone.size() );
         for ( PlatformLoginVerification& verification : _listDone )
@@ -40,7 +40,7 @@ namespace sw
         return count;
     }
 
-    void ProfileApiLoginProvider::tick( int64 nowMs )
+    void ProfileAPILoginProvider::tick( int64 nowMs )
     {
         _pHttpClient->tick( nowMs );
         vector<HttpClientResponse> listResponse;
@@ -76,7 +76,7 @@ namespace sw
         }
     }
 
-    bool ProfileApiLoginProvider::findPathText( const JsonValue& root, string_view path, string& outText )
+    bool ProfileAPILoginProvider::findPathText( const JsonValue& root, string_view path, string& outText )
     {
         JsonValue current = root;
         while ( path.empty() == false )

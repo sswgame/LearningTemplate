@@ -54,7 +54,7 @@ namespace test
         void onAllocate( const void*, size_t, const utf8* ) override {}
         void onFree( const void*, const utf8* ) override {}
 
-        uint32 createGpuContext( sw::ProfilerGpuApi, const utf8* pName, int64 gpuNanos ) override
+        uint32 createGpuContext( sw::ProfilerGraphicsAPI, const utf8* pName, int64 gpuNanos ) override
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "context " ) + ( pName != nullptr ? pName : "" ) + "@" + sw::to_string( gpuNanos ) );

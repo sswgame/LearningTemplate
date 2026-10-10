@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Json/JsonDocument.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
 namespace sw
@@ -48,7 +48,7 @@ namespace sw
                 return nullptr;
             return make_unique<OidcLoginProvider>( settings, pProvider, pHttpClient );
         }
-        return make_unique<ProfileApiLoginProvider>( settings, pHttpClient );
+        return make_unique<ProfileAPILoginProvider>( settings, pHttpClient );
     }
 
     bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError )

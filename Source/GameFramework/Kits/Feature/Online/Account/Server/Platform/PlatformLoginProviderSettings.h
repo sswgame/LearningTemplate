@@ -1,7 +1,7 @@
 /**
  * @file PlatformLoginProviderSettings.h
  * @brief 외부 로그인 제공자는 **데이터**다 — 이름 · 방식(OIDC | 액세스 토큰 프로필 조회) · 발급자/JWKS 주소 또는 프로필 주소 · client id(aud) · 주체 필드 경로.
- *        공장이 설정에서 공통 구현(`OidcLoginProvider` · `ProfileApiLoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽습니다.
+ *        공장이 설정에서 공통 구현(`OidcLoginProvider` · `ProfileAPILoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽습니다.
  * @details 구글 · 애플 · 카카오(OIDC ID 토큰)는 Oidc, 네이버(OIDC 없음 — 액세스 토큰으로 프로필 API)는 AccessTokenProfile. 코드가 필요한 예외(애플 client secret
  *          JWT 서명 · 탈퇴 때 토큰 철회)만 `Provider/<제품>/` 폴더에 둔다. 실제 제공자 등록(앱 등록 · client id)은 쓰는 게임이 생기면(백로그).
  */

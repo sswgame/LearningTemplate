@@ -158,13 +158,13 @@ py -3 -m Scripts test ProcessTest.* --repeat 20 --shuffle
 
 `ctest` 는 어느 구성에서나 똑같이 "Passed"라고만 말하지만, 실제로 도는 케이스 수는 구성마다 다릅니다. 각 실행 파일에서 `--test_list` 로 셉니다.
 
-- **SmokeTest** 는 Debug보다 Shipping에서 훨씬 적습니다(예: 52개와 3개). 핫 리로드와 모듈 백그라운드 컴파일은 Dev에만 있고, Shipping 스모크는 정적 `exportGameApi` 경로만 보기 때문입니다(`Test/SmokeTest/CMakeLists.txt`).
+- **SmokeTest** 는 Debug보다 Shipping에서 훨씬 적습니다(예: 52개와 3개). 핫 리로드와 모듈 백그라운드 컴파일은 Dev에만 있고, Shipping 스모크는 정적 `exportGameAPI` 경로만 보기 때문입니다(`Test/SmokeTest/CMakeLists.txt`).
 - **AppTest** 도 Shipping에서 줄어듭니다. 에디터 실행, 백엔드 교체, 메모리 태그 보고 케이스는 배포본에 그 기능이 없어 컴파일되지 않습니다.
 - EngineTest와 EditorTest의 차이는 Dev 전용 경로(모듈 코드 해제, 셰이더 라이브 컴파일, 인스펙터 메타데이터) 케이스입니다.
 - Shipping은 `SW_LOG_*` 가 컴파일에서 빠지므로 로그를 확인하는 검사가 빠집니다.
 
 어느 구성에서나 스킵되는 것은 **자식 역할 케이스**입니다. 환경 변수가 없으면 스스로 빠지고, 다른 케이스가 자기 실행 파일을 자식 프로세스로 띄울 때만 돕니다.
-`CrashReportTest.ChildProcessCrashesAsRequested`, `TestFrameworkTest.ChildRoleEchoesOrHangs`, `ModuleApiTest.SharedModuleChildKeepsItsRegistrations` 가 그 예입니다.
+`CrashReportTest.ChildProcessCrashesAsRequested`, `TestFrameworkTest.ChildRoleEchoesOrHangs`, `ModuleAPITest.SharedModuleChildKeepsItsRegistrations` 가 그 예입니다.
 
 **의도한 축소와 사고를 가르는 기준은 하나입니다. 스위트가 통째로 비면 실패합니다.** 필터로 고른 스위트의 케이스가 전부 스킵되면 아무것도 검증하지 않은 것이므로 프레임워크가 실패로 처리합니다.
 DXC가 사라지거나 쿠킹된 셰이더가 없어져도 초록으로 끝나지 않게 하기 위해서입니다. 정말 비어도 되는 실행이면 `--allow_empty_suite` 를 줍니다.

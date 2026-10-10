@@ -17,9 +17,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/LoopbackPkceLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -325,7 +325,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCa
     SW_EXPECT_EQUAL( fetchBefore + 1, provider.getJwksFetchCount() );
 }
 
-SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
+SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
 {
     IssuerFixture                 fixture;
     PlatformLoginProviderSettings settings;
@@ -335,7 +335,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
     settings._subjectPath     = "response.id";
     settings._displayNamePath = "response.nickname";
     SW_ASSERT_TRUE( PlatformLoginProviderFactory::isValidSettings( settings ) );
-    ProfileApiLoginProvider         provider{ settings, &fixture._client };
+    ProfileAPILoginProvider         provider{ settings, &fixture._client };
     const PlatformLoginVerification good = fixture.verify( provider, "good" );
     SW_ASSERT_TRUE( good.isVerified() );
     SW_EXPECT_EQUAL( string( "n-1" ), good._subject );

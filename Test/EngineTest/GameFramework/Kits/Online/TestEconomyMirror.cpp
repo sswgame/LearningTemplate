@@ -4,7 +4,7 @@
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyMirror.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyMirror.h"
 
 #include "TestFramework/TestFramework.h"
 
