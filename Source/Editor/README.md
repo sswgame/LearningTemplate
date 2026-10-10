@@ -604,7 +604,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   말 것 — 새 종류는 엔진에 `IAssetCache` 등록 + `EditorAssetTypeRegistry` 줄의 `_pCacheKindName`(· 임포트하는 종류는 `_pfnImportSource`).
   컴포넌트 알림은 `AssetHotReload::notifyAssetUsers` 가 `PROPERTY( AssetPath )` 값으로 찾아 `onPropertyChanged` 를 부른다 — 에셋에서 계산한 상태는
   `onPropertyChanged` 가 **값이 같아도** 다시 맞춰야 한다. 리로드 전용 컴포넌트 훅 · `#if !SW_SHIPPING` 가드는 두지 않는다.
-- **에디터 draw 스냅샷(`EditorDrawDataSnapshot`)은 ImGui 내부에 기댑니다.** `ImDrawList::CloneOutput()` 뒤 쓰기 커서를 "다 썼음" 으로 맞추고, `OwnerViewport` 는 원본 것을 두며, `Textures` 는 비우고 텍스처 갱신은 UI 스레드의 `processTextureUpdates` 가 합니다.
+- **에디터 draw 스냅샷(`EditorDrawDataSnapshot`)은 ImGui 내부에 기댑니다.** 그리기 목록은 풀로 두고 버퍼만 옮겨 담은 뒤(`CloneOutput` 으로 매 프레임 새로 만들면 프레임당 ~260 KB 를 잡고 놓는다 — 6 분에 20 GB) 쓰기 커서를 "다 썼음" 으로 맞추고, `OwnerViewport` 는 원본 것을 두며, `Textures` 는 비우고 텍스처 갱신은 UI 스레드의 `processTextureUpdates` 가 합니다.
   떠 있는 뷰포트는 UI 스레드가 그리고, GL 처럼 컨텍스트가 스레드에 묶인 백엔드는 `requiresRenderThreadContext()` 가 참이라 그 GPU 호출을 렌더 스레드의 present 훅에서 합니다. ImGui 버전을 올리면 이 셋을 먼저 다시 확인합니다.
 - **`ed::EndCreate()` 는 `ed::BeginCreate()` 의 반환값과 상관없이 늘 부릅니다.** `BeginCreate` 는 false 를 돌려줘도 내부 활성 상태를 세워 두므로, if 안에서만 닫으면 다음 프레임에 라이브러리 단언으로 멈춥니다.
 - **노드 편집기 캔버스는 창의 첫 그리기가 되지 않게 한다.** imgui-node-editor 의 캔버스는 마지막 그리기 명령이 비어 있으면 자기 클립 사각형을 그 명령에 덮어쓰고
@@ -646,6 +646,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **노드 그래프 캔버스 안의 위젯 좌표는 캔버스 좌표다.** 시험 이름표를 `note` 로 적으면 화면과 어긋난 자리를 누른다 — `ed::CanvasToScreen` 으로 바꿔
   `EditorSelfTestMarks::noteRect` 로 적는다(`animGraph.node.<이름>`). Animation Graph 의 편집 대상(오른쪽 상태 · 전이 인스펙터)은 캔버스 선택이 **바뀐 프레임에만**
   따라간다 — 매 프레임 따르면 전이 목록으로 고른 것을 노드 선택이 덮는다. Link Selected 는 고른 순서(먼저 → 나중)로 잇는다. 시나리오 `editor/animgraphedit`.
+- **Output Log 의 그리기 사본은 새 줄만 덧붙인다**(받은 줄 누계 `_entrySerial` 과 사본이 따라잡은 누계를 비교). 통째로 다시 담으면 로그가 올 때마다 최대 2048 줄을 복사한다.
 - **Output Log 의 따라가기는 스크롤 위치로 정한다.** 지난 프레임 배치의 `GetScrollY` 가 `GetScrollMaxY` 에 붙어 있을 때만 새 로그에 맨 아래로 내린다.
   "새 로그가 오면 늘 내린다" 로 되돌리면 위로 올려 읽는 중에 끌려 내려간다. 명령을 친 뒤에는 답을 보도록 한 번 내린다.
 - **도구 문서 패널은 열기 단추와 최근 목록을 기반이 그린다**(`EditorDocumentPanel::drawDocumentOpenBar`). 고른 문서는 워크스페이스 포커스로 넘기고,

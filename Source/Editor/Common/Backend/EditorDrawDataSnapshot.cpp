@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 
+#include <cstring>
 #include <imgui.h>
 
 namespace sw::editor
@@ -12,14 +13,23 @@ namespace sw::editor
     {
         struct EditorDrawDataSnapshotInternal
         {
+            /** @brief @p src 의 원소를 @p outDst 에 옮겨 담습니다. 담을 자리가 있으면 버퍼를 다시 잡지 않는다(`ImVector::operator=` 는 먼저 해제한다). */
+            template <typename T>
+            static void copyVector( const ImVector<T>& src, ImVector<T>& outDst )
+            {
+                outDst.resize( src.Size );
+                if ( src.Size > 0 )
+                    std::memcpy( outDst.Data, src.Data, static_cast<size_t>( src.Size ) * sizeof( T ) );
+            }
+
+            /**
+             * @brief 그리기 목록을 스냅샷에 복사합니다. 목록 객체와 버퍼는 프레임마다 다시 쓴다(풀 — `outListOwned`).
+             * @details `ImDrawList::CloneOutput` 으로 매 프레임 새로 만들면 목록 수 × 버퍼 넷을 프레임마다 잡고 놓는다 — 에디터 할당의 대부분이었다
+             *          (프레임당 ~260 KB, 6 분에 20 GB). 버퍼 크기는 거의 그대로라 한 번 자란 뒤로는 할당이 없다.
+             */
             static void cloneDrawData( const ImDrawData* pSrc, ImDrawData& outDrawData, vector<ImDrawList*>& outListOwned )
             {
                 outDrawData.Clear();
-                for ( ImDrawList* pOwned : outListOwned )
-                {
-                    IM_DELETE( pOwned );
-                }
-                outListOwned.clear();
 
                 if ( pSrc == nullptr || pSrc->Valid == false )
                     return;
@@ -39,15 +49,20 @@ namespace sw::editor
                 outDrawData.TotalIdxCount = pSrc->TotalIdxCount;
                 outDrawData.TotalVtxCount = pSrc->TotalVtxCount;
 
-                outListOwned.reserve( static_cast<size_t>( pSrc->CmdLists.Size ) );
+                size_t usedCount = 0;
                 for ( int32 listIndex = 0; listIndex < pSrc->CmdLists.Size; ++listIndex )
                 {
                     ImDrawList* pSrcList = pSrc->CmdLists[listIndex];
                     if ( pSrcList == nullptr )
                         continue;
-                    ImDrawList* pClone = pSrcList->CloneOutput();
-                    if ( pClone == nullptr )
-                        continue;
+                    if ( usedCount == outListOwned.size() )
+                        outListOwned.push_back( IM_NEW( ImDrawList )( pSrcList->_Data ) );
+                    ImDrawList* pClone = outListOwned[usedCount++];
+                    pClone->_Data      = pSrcList->_Data;
+                    pClone->Flags      = pSrcList->Flags;
+                    copyVector( pSrcList->CmdBuffer, pClone->CmdBuffer );
+                    copyVector( pSrcList->IdxBuffer, pClone->IdxBuffer );
+                    copyVector( pSrcList->VtxBuffer, pClone->VtxBuffer );
 
                     // ImGui 1.92+ 의 ImDrawData::AddDrawList() 는 PrimReserve 와 실제 쓰기가 맞는지 assert 한다.
                     // CloneOutput() 은 버퍼만 복사하고 내부 쓰기 커서는 맞추지 않으므로(초기값 NULL), "다 쓴 상태" 로 직접 맞춰 준다.
@@ -56,7 +71,6 @@ namespace sw::editor
                     pClone->_IdxWritePtr   = pClone->IdxBuffer.Data + pClone->IdxBuffer.Size;
                     pClone->_VtxCurrentIdx = static_cast<uint32>( pClone->VtxBuffer.Size );
 
-                    outListOwned.push_back( pClone );
                     outDrawData.AddDrawList( pClone );
                 }
 
@@ -112,9 +126,15 @@ namespace sw::editor
 
     void EditorDrawDataSnapshot::capture( uint64 sequence )
     {
-        clear();
+        // 목록 풀은 두고 다시 쓴다(`cloneDrawData`). 컨텍스트가 없으면 풀까지 놓는다.
+        _pImpl->_mainDrawData.Clear();
+        _pImpl->_bValid = SW_FALSE;
+        _sequence       = 0;
         if ( ImGui::GetCurrentContext() == nullptr )
+        {
+            clear();
             return;
+        }
 
         _sequence = sequence;
         EditorDrawDataSnapshotInternal::cloneDrawData( ImGui::GetDrawData(), _pImpl->_mainDrawData, _pImpl->_listMainOwned );

@@ -95,6 +95,8 @@ namespace sw::editor
         mutex                                 _entriesMutex;
         DelegateHandle                        _logListenerHandle;
         uint64                                _errorSerial;     ///< 받은 오류 줄 누계(_entriesMutex 가 지킨다)
+        uint64                                _entrySerial;     ///< 받은 줄 누계(_entriesMutex 가 지킨다)
+        uint64                                _snapshotSerial;  ///< 그리기 사본이 따라잡은 누계(UI 스레드)
         uint64                                _seenErrorSerial; ///< Error Pause 가 마지막으로 본 누계
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         DevConsole                            _devConsole;

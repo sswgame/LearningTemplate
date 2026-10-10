@@ -163,6 +163,8 @@ namespace sw::editor
         , _entriesMutex{}
         , _logListenerHandle{}
         , _errorSerial{ 0 }
+        , _entrySerial{ 0 }
+        , _snapshotSerial{ 0 }
         , _seenErrorSerial{ 0 }
         , _filterBuffer{}
         , _devConsole{}
@@ -230,9 +232,19 @@ namespace sw::editor
             std::scoped_lock<mutex> lock{ _entriesMutex };
             if ( _bHasNewLogs == SW_TRUE )
             {
-                _listDrawSnapshot.assign( _listEntry.begin(), _listEntry.end() );
-                bNewLogs     = true;
-                _bHasNewLogs = SW_FALSE;
+                // 새 줄만 덧붙이고 넘친 앞줄을 뺀다. 통째로 다시 담으면 새 로그가 올 때마다 최대 2048 줄(글자열마다 할당)을 복사한다.
+                const uint64 newCount = _entrySerial - _snapshotSerial;
+                if ( newCount >= _listEntry.size() )
+                    _listDrawSnapshot.assign( _listEntry.begin(), _listEntry.end() );
+                else
+                {
+                    _listDrawSnapshot.insert( _listDrawSnapshot.end(), _listEntry.end() - static_cast<ptrdiff_t>( newCount ), _listEntry.end() );
+                    if ( _listDrawSnapshot.size() > _listEntry.size() )
+                        _listDrawSnapshot.erase( _listDrawSnapshot.begin(), _listDrawSnapshot.begin() + static_cast<ptrdiff_t>( _listDrawSnapshot.size() - _listEntry.size() ) );
+                }
+                _snapshotSerial = _entrySerial;
+                bNewLogs        = true;
+                _bHasNewLogs    = SW_FALSE;
             }
         }
 
@@ -584,7 +596,8 @@ namespace sw::editor
         _listVisible.clear();
         _listRow.clear();
         _selection.clear();
-        _bHasNewLogs = SW_FALSE;
+        _snapshotSerial = _entrySerial;
+        _bHasNewLogs    = SW_FALSE;
     }
 
     string ConsolePanel::formatEntryLine( const LogEntry& entry )
@@ -690,6 +703,7 @@ namespace sw::editor
         SW_MEMORY_SCOPE( Editor );
         std::scoped_lock<mutex> lock{ _entriesMutex };
         _listEntry.push_back( entry );
+        ++_entrySerial;
         if ( entry._level == LogLevel::Error )
             ++_errorSerial;
         while ( _listEntry.size() > constant::kMaxBuffer2048 )
