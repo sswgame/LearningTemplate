@@ -101,10 +101,10 @@ namespace sw
 
             // 실패를 조용히 삼키지 않는다. PSO 가 null 이면 드로우가 아무 흔적 없이 사라진다(루트 시그니처와 셰이더 불일치가
             // 그렇게 숨는다). 디버그 레이어 메시지를 바로 비워 원인이 같은 줄에 나오게 한다.
-            const HRESULT hrPso = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
-            if ( FAILED( hrPso ) )
+            const HRESULT hrPSO = _pDevice->_device->CreateGraphicsPipelineState( &psoDesc, IID_PPV_ARGS( pso.GetAddressOf() ) );
+            if ( FAILED( hrPSO ) )
             {
-                SW_LOG_ERROR( "CreateGraphicsPipelineState 실패 (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPso ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
+                SW_LOG_ERROR( "CreateGraphicsPipelineState 실패 (hr=%#): VS '%#' PS '%#'", static_cast<uint32>( hrPSO ), desc._vertexShaderPath.c_str(), desc._pixelShaderPath.c_str() );
                 _pDevice->flushDebugMessages( "CreateGraphicsPipelineState" );
             }
         }
@@ -150,8 +150,8 @@ namespace sw
         D3D12RHIDevice::D3D12PipelineStateRecord record{};
         if ( _pDevice->_pipelineStates.take( pso, record ) == false )
             return;
-        if ( _pDevice->_frameStreamState._activeGraphicsPso == pso )
-            _pDevice->_frameStreamState._activeGraphicsPso = 0;
+        if ( _pDevice->_frameStreamState._activeGraphicsPSO == pso )
+            _pDevice->_frameStreamState._activeGraphicsPSO = 0;
         Microsoft::WRL::ComPtr<ID3D12PipelineState> owned     = record._pso;
         auto                                        releaseCb = [owned]()
         { (void)owned.Get(); };

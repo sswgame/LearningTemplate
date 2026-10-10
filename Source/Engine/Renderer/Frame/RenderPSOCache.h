@@ -1,8 +1,8 @@
 /**
- * @file RenderPsoCache.h
+ * @file RenderPSOCache.h
  * @brief FrameRenderer 가 만든 PSO 들의 저장소입니다: 엔진 패스 PSO · 출력 포맷별 PSO(Present · Canvas) · 머티리얼 퍼뮤테이션 변형과 그 바인딩 레이아웃.
  * @details **만드는 일은 하지 않습니다.** PSO 를 만드는 데는 파이프라인 XML · 디바이스 · 씬 배치가 필요하고 그것은 FrameRenderer 의
- *          일입니다(FrameRendererPso.cpp). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 놓는가" 만 압니다.
+ *          일입니다(FrameRendererPSO.cpp). 여기는 "만든 것을 어디에 두고, 누가 소유하고, 어떤 순서로 놓는가" 만 압니다.
  *          해제 순서(변형 → 패스 PSO)도 이 타입이 지킵니다.
  *
  *          드로우 경로가 배치마다 조회하므로 조회는 락 하나로 짧게 끝납니다. 삽입은 기록 시작 전에만 일어납니다.
@@ -25,19 +25,19 @@ namespace sw
     class ShaderBindingLayout;
 
     /**
-     * @class RenderPsoCache
+     * @class RenderPSOCache
      * @brief PSO 핸들과 레이아웃의 소유자입니다. 해제 순서와 뮤텍스가 여기 한 곳에 있습니다.
      */
-    class SW_API RenderPsoCache
+    class SW_API RenderPSOCache
     {
     public:
         /**
-         * @struct MaterialPsoEntry
+         * @struct MaterialPSOEntry
          * @brief (패스, 머티리얼 퍼뮤테이션, 뷰 모드) 하나에 대응하는 PSO 입니다.
          * @details `_bOwned` 가 0 이면 값은 패스 PSO 그대로입니다. 퍼뮤테이션이 아무것도 안 바꾸는 흔한 경우라
          *          새로 만들지 않습니다. 그래서 파괴할 때 **이 PSO 는 건드리면 안 됩니다**(패스가 소유합니다).
          */
-        struct MaterialPsoEntry
+        struct MaterialPSOEntry
         {
             RHIPipelineStateHandle _pso{ 0 };
             uint8                  _bOwned{ 0 };
@@ -50,11 +50,11 @@ namespace sw
             const ShaderBindingLayout* _pLayout{ nullptr };
         };
 
-        RenderPsoCache();
-        ~RenderPsoCache() = default;
+        RenderPSOCache();
+        ~RenderPSOCache() = default;
 
-        RenderPsoCache( const RenderPsoCache& )            = delete;
-        RenderPsoCache& operator=( const RenderPsoCache& ) = delete;
+        RenderPSOCache( const RenderPSOCache& )            = delete;
+        RenderPSOCache& operator=( const RenderPSOCache& ) = delete;
 
         // ------------------------------------------------------------------------------
         // 1) 바인딩 레이아웃: PSO 를 만든 desc 로 리플렉션 레이아웃을 만들어 핸들에 매핑한다
@@ -78,16 +78,16 @@ namespace sw
         // 2) 엔진 패스 PSO · 출력 포맷별 PSO(Present · Canvas — 주 출력에 그리는 패스는 대상 포맷마다 PSO 가 다르다)
         // ------------------------------------------------------------------------------
         /** @brief 패스 타입의 엔진 PSO 를 둡니다(있으면 덮어씁니다). */
-        void setEnginePso( RenderPassType passType, RHIPipelineStateHandle pso );
+        void setEnginePSO( RenderPassType passType, RHIPipelineStateHandle pso );
         /** @brief 패스 타입의 엔진 PSO 입니다. 없으면 0 입니다. */
-        RHIPipelineStateHandle findEnginePso( RenderPassType passType ) const;
+        RHIPipelineStateHandle findEnginePSO( RenderPassType passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePsos() const { return _mapEnginePso; }
+        const unordered_map<RenderPassType, RHIPipelineStateHandle>& getEnginePSOs() const { return _mapEnginePSO; }
 
         /** @brief 주 출력에 그리는 패스(Present · Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다 — 부르는 쪽이 폴백으로 갑니다. */
-        void setOutputPso( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
+        void setOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle pso );
         /** @brief 그 패스 · 대상 포맷의 PSO 가 **등록돼 있으면** true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
-        bool findOutputPso( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPso ) const;
+        bool findOutputPSO( RenderPassType passType, RHIFormat targetFormat, RHIPipelineStateHandle& outPipelineState ) const;
 
         // ------------------------------------------------------------------------------
         // 3) 머티리얼 퍼뮤테이션 변형: 키는 (패스 PSO, 퍼뮤테이션 해시, 뷰 모드, 컬 반전)
@@ -98,13 +98,13 @@ namespace sw
          *          모드를 되돌리면 이미 만들어 둔 것이 다시 나옵니다(다시 컴파일하지 않습니다).
          *          컬 반전(거울 변환 배치, `GpuMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
          */
-        static uint64 materialPsoKey( RHIPipelineStateHandle passPso, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling );
+        static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling );
         /** @brief 그 키의 변형이 이미 있는지 반환합니다. */
-        bool hasMaterialPso( uint64 key ) const;
+        bool hasMaterialPSO( uint64 key ) const;
         /** @brief 변형을 둡니다(있으면 덮어씁니다). */
-        void setMaterialPso( uint64 key, const MaterialPsoEntry& entry );
+        void setMaterialPSO( uint64 key, const MaterialPSOEntry& entry );
         /** @brief 그 키의 변형 PSO 입니다. 없거나 0 이면 0 이고, 부르는 쪽은 패스 PSO 로 그립니다. */
-        RHIPipelineStateHandle findMaterialPso( uint64 key ) const;
+        RHIPipelineStateHandle findMaterialPSO( uint64 key ) const;
 
         // ------------------------------------------------------------------------------
         // 4) 수명
@@ -120,21 +120,21 @@ namespace sw
 
     private:
         /** @brief (패스 << 32 | 대상 포맷) 키입니다. */
-        static uint64 makeOutputPsoKey( RenderPassType passType, RHIFormat targetFormat )
+        static uint64 makeOutputPSOKey( RenderPassType passType, RHIFormat targetFormat )
         {
             return ( static_cast<uint64>( passType ) << 32 ) | static_cast<uint64>( targetFormat );
         }
 
     private:
         ShaderBindingLayoutCache                                          _bindingLayoutCache;
-        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPsoLayout;
-        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPsoDesc;
+        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout;
+        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc>       _mapPSODesc;
         mutable mutex                                                     _layoutMutex;
         /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
-        unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePso;
-        /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPsoKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
-        unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPso;
-        unordered_map<uint64, MaterialPsoEntry>       _mapMaterialPso;
-        mutable mutex                                 _materialPsoMutex;
+        unordered_map<RenderPassType, RHIPipelineStateHandle> _mapEnginePSO;
+        /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
+        unordered_map<uint64, RHIPipelineStateHandle> _mapOutputPSO;
+        unordered_map<uint64, MaterialPSOEntry>       _mapMaterialPSO;
+        mutable mutex                                 _materialPSOMutex;
     };
 } // namespace sw

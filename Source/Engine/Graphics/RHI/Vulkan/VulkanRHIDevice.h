@@ -100,7 +100,7 @@ namespace sw
      */
     struct VulkanRecordingState
     {
-        RHIPipelineStateHandle _activeGraphicsPso;
+        RHIPipelineStateHandle _activeGraphicsPSO;
 
         RHIBufferHandle _boundMeshVb;
         uint32          _boundMeshStride;
@@ -124,7 +124,7 @@ namespace sw
 
         /** @brief 아무것도 안 걸린 상태로 시작합니다. */
         VulkanRecordingState()
-            : _activeGraphicsPso{ 0 }
+            : _activeGraphicsPSO{ 0 }
             , _boundMeshVb{ 0 }
             , _boundMeshStride{ sizeof( RHIVertex ) }
             , _boundMeshOffset{ 0 }

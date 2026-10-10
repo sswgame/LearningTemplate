@@ -2049,7 +2049,7 @@ Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실�
     };
     static_assert( std::size( kArrRenderViewModeInfo ) == static_cast<size_t>( RenderViewMode::Count ), "보기 모드 표와 열거형의 개수가 다릅니다" );
 ```
-`kViewModeUnlitDefine` 상수와 `findViewModeDefine` 은 표를 읽게 바꾼다(`return kArrRenderViewModeInfo[index]._pShaderDefine;`). `FrameRendererPso.cpp` `applyViewModeToDesc`:
+`kViewModeUnlitDefine` 상수와 `findViewModeDefine` 은 표를 읽게 바꾼다(`return kArrRenderViewModeInfo[index]._pShaderDefine;`). `FrameRendererPSO.cpp` `applyViewModeToDesc`:
 ```cpp
             const RenderViewModeInfo& info = kArrRenderViewModeInfo[static_cast<uint8>( viewMode )];
             if ( info._bWireframe )

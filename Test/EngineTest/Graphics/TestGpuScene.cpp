@@ -1459,7 +1459,7 @@ SW_TEST_CASE( GpuSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
  *          퍼뮤테이션이 없는 것처럼 보인다 — 패킷 경로(= 실제 앱과 에디터가 쓰는 경로)에서 머티리얼 퍼뮤테이션이
  *          **하나도** 걸리지 않아 유리 머티리얼의 `MATERIAL_BLEND_TRANSLUCENT` 도 화면에 닿지 않는다.
  *
- *          `MaterialPermutationDrivesBatchPso` 는 동기 `execute()` 경로만 태우므로 이 결함을 볼 수
+ *          `MaterialPermutationDrivesBatchPSO` 는 동기 `execute()` 경로만 태우므로 이 결함을 볼 수
  *          없다 — 두 경로를 가르는 것이 이 테스트의 존재 이유다. GPU 가 필요 없다.
  */
 SW_TEST_CASE( GpuSceneTest, CpuSnapshotCarriesShaderPermutations )

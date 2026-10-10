@@ -324,7 +324,7 @@ namespace sw
             }
 
             // PSO 가 0 이면 `drawFullscreen` 이 파이프라인 설정을 건너뛴다. 대신할 PSO 는 표가 정한 것만 쓴다(Tonemap → Present).
-            const RHIPipelineStateHandle pso = findPassPso( passType );
+            const RHIPipelineStateHandle pso = findPassPSO( passType );
 
             // 기본 클리어는 표의 값(SSAO 는 흰색 = 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선이다.
             const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
@@ -374,7 +374,7 @@ namespace sw
                         // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리). 끝나면 지금 뷰의 칸으로 돌아간다.
                         const uint32 viewCull = ctx._cullViewIndex;
                         ctx._cullViewIndex    = static_cast<uint32>( RenderViewType::Shadow );
-                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::Shadow ), passCb, bTransparentBatch );
+                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::Shadow ), passCb, bTransparentBatch );
                         ctx._cullViewIndex = viewCull;
                     }
                     ctx._pCmd->endRenderPass();
@@ -384,7 +384,7 @@ namespace sw
                 {
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
                     beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-                    drawSceneMeshes( ctx, findPassPso( RenderPassType::DepthPrepass ), passCb, bTransparentBatch );
+                    drawSceneMeshes( ctx, findPassPSO( RenderPassType::DepthPrepass ), passCb, bTransparentBatch );
                     ctx._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
@@ -410,9 +410,9 @@ namespace sw
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
                     if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
-                        const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePso( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
-                                                                    ? getEnginePso( RenderPassType::ForwardOpaqueNoDepthWrite )
-                                                                    : getEnginePso( RenderPassType::ForwardOpaque );
+                        const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
+                                                                    ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite )
+                                                                    : getEnginePSO( RenderPassType::ForwardOpaque );
                         drawSceneMeshes( ctx, psoForward, passCb, bTransparentBatch );
                         ctx._pCmd->endRenderPass();
                     }
@@ -428,7 +428,7 @@ namespace sw
                     const hashed_string*   pNormalTarget = pDeclaredColor != nullptr ? pickColorOutput( RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget )
                                                                                      : &names._gbufferNormal;
                     const bool             bHasNormal    = pNormalTarget != nullptr && findTransient( pNormalTarget->view() ) != 0;
-                    if ( bHasNormal == false || getEnginePso( RenderPassType::GBuffer ) == 0 )
+                    if ( bHasNormal == false || getEnginePSO( RenderPassType::GBuffer ) == 0 )
                         break;
                     const float4              clearColor   = getAttachmentClearColorOrDefault( albedoTarget.view(), float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
                     const float4              normalClear  = getAttachmentClearColorOrDefault( pNormalTarget->view(), FrameRendererUtil::kNormalClear );
@@ -437,7 +437,7 @@ namespace sw
                     const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
                     if ( beginColorPassMrt( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::GBuffer ), passCb, bTransparentBatch );
+                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::GBuffer ), passCb, bTransparentBatch );
                         ctx._pCmd->endRenderPass();
                     }
                     break;
@@ -462,7 +462,7 @@ namespace sw
 
                     if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
                     {
-                        drawSceneMeshes( ctx, findPassPso( RenderPassType::Transparent ), passCb, bTransparentBatch );
+                        drawSceneMeshes( ctx, findPassPSO( RenderPassType::Transparent ), passCb, bTransparentBatch );
                         ctx._pCmd->endRenderPass();
                     }
                     break;
@@ -477,7 +477,7 @@ namespace sw
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
                     if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( ctx, getEnginePso( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
+                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
                         ctx._pCmd->endRenderPass();
                     }
                     break;
@@ -532,9 +532,9 @@ namespace sw
                         ctx._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
                     if ( beginColorPass( ctx, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load ) )
                     {
-                        const RHIPipelineStateHandle taaPso = getEnginePso( RenderPassType::TAA );
-                        if ( taaPso != 0 )
-                            drawFullscreen( ctx, taaPso, passCb );
+                        const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
+                        if ( taaPSO != 0 )
+                            drawFullscreen( ctx, taaPSO, passCb );
                         else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
                             ctx._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
                         ctx._pCmd->endRenderPass();
@@ -564,7 +564,7 @@ namespace sw
                                                          : bFullRect                                         ? RHIRenderPassLoadOp::DontCare
                                                                                                              : RHIRenderPassLoadOp::Clear;
                     // PSO 는 대상의 실제 포맷으로 고른다 — 렌더 타깃 포맷은 PSO 의 일부라 대상마다 PSO 가 다르다.
-                    const RHIPipelineStateHandle psoBlit = findOutputPso( RenderPassType::Present, target._format );
+                    const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
                     if ( src != 0 && psoBlit != 0 )
                     {
                         registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
@@ -623,7 +623,7 @@ namespace sw
                     const PresentTarget target = resolvePresentTarget();
                     const bool          bDraw  = isRenderingExtraView() == false && _canvasFrame._mainOutput.isEmpty() == false && target._width > 0 &&
                                        target._height > 0;
-                    const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPso( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
+                    const RHIPipelineStateHandle psoCanvas = bDraw ? findOutputPSO( RenderPassType::Canvas, target._format ) : RHIPipelineStateHandle{ 0 };
                     if ( psoCanvas != 0 )
                     {
                         RHIRenderPassBeginInfo beginInfo{};

@@ -47,7 +47,7 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0;
+        return gv_gpuCulling != 0 && getEnginePSO( RenderPassType::GpuCull ) != 0;
     }
 
     void FrameRenderer::dispatchInstanceAnimation( uint32 instanceCount )
@@ -59,8 +59,8 @@ namespace sw
         // 매 프레임 인스턴스당 96 바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
         if ( _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0 )
         {
-            const RHIPipelineStateHandle animPso = getEnginePso( RenderPassType::InstanceAnim );
-            if ( animPso != 0 && _instanceAnimCb.isValid() &&
+            const RHIPipelineStateHandle animPSO = getEnginePSO( RenderPassType::InstanceAnim );
+            if ( animPSO != 0 && _instanceAnimCb.isValid() &&
                  _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
             {
                 FrameRendererUtil::GpuAnimParams animParams{};
@@ -75,7 +75,7 @@ namespace sw
                 // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 · Vulkan 에서 쓰기가
                 // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
-                _pCmd->setComputePipelineState( animPso );
+                _pCmd->setComputePipelineState( animPSO );
                 // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 대응.
                 _pCmd->bindComputeConstantBuffer( _instanceAnimCb._index, 0 );
                 _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
@@ -196,8 +196,8 @@ namespace sw
             return;
         }
 
-        const RHIPipelineStateHandle morphPso = getEnginePso( RenderPassType::MeshMorph );
-        if ( morphPso == 0 || _meshMorphCb.isValid() == false )
+        const RHIPipelineStateHandle morphPSO = getEnginePSO( RenderPassType::MeshMorph );
+        if ( morphPSO == 0 || _meshMorphCb.isValid() == false )
             return;
 
         FrameRendererUtil::GpuMorphParams morphParams{};
@@ -212,7 +212,7 @@ namespace sw
         // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
         // DX12 · Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정).
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->setComputePipelineState( morphPso );
+        _pCmd->setComputePipelineState( morphPSO );
         _pCmd->bindComputeConstantBuffer( _meshMorphCb._index, 0 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getRestBuffer()._srv, 0 );
         _pCmd->bindComputeUav( _meshMorphPool.getMorphBuffer()._uav, 0 );
@@ -232,8 +232,8 @@ namespace sw
             return;
         if ( _meshMorphPool.isSkinDispatchable() == false )
             return;
-        const RHIPipelineStateHandle skinPso = getEnginePso( RenderPassType::MeshSkin );
-        if ( skinPso == 0 || _meshSkinCb.isValid() == false )
+        const RHIPipelineStateHandle skinPSO = getEnginePSO( RenderPassType::MeshSkin );
+        if ( skinPSO == 0 || _meshSkinCb.isValid() == false )
             return;
 
         FrameRendererUtil::GpuSkinParams skinParams{};
@@ -246,7 +246,7 @@ namespace sw
 
         // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로(배리어가 빠지면 DX12 · Vulkan 에서 예전 값이 나온다).
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->setComputePipelineState( skinPso );
+        _pCmd->setComputePipelineState( skinPSO );
         // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
         // meshskin.hlsl 레지스터와 1:1 대응.
         _pCmd->bindComputeConstantBuffer( _meshSkinCb._index, 0 );
@@ -271,7 +271,7 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV · PiP)도 자기 칸을 돈다.
         if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGpuFilled() == false )
             return;
-        if ( getEnginePso( RenderPassType::GpuCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
+        if ( getEnginePSO( RenderPassType::GpuCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
              _gpuScene.getBatchInfoSrv() == kInvalidDescriptorIndex )
             return;
 
@@ -311,7 +311,7 @@ namespace sw
         _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 건다. 아래 정렬 패스가 둘 다 갈아 끼우므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
-        _pCmd->setComputePipelineState( getEnginePso( RenderPassType::GpuCull ) );
+        _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::GpuCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
         // gpucull.hlsl 레지스터와 1:1 대응이다. 인스턴스 · 배치 구간은 뷰가 공유한다(절두체만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
@@ -331,8 +331,8 @@ namespace sw
         _pCmd->uavBarrier( view._indirectArgs._buffer );
         _pCmd->uavBarrier( view._visibleInstances._buffer );
 
-        const RHIPipelineStateHandle sortPso = getEnginePso( RenderPassType::InstanceSort );
-        if ( sortPso != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
+        const RHIPipelineStateHandle sortPSO = getEnginePSO( RenderPassType::InstanceSort );
+        if ( sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
         {
             FrameRendererUtil::GpuSortParams sortParams{};
             // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 추가 뷰는 CPU 가 그 뷰의 눈으로 다시 정한 순번(t2)으로.
@@ -349,7 +349,7 @@ namespace sw
             // 정렬 상수버퍼도 **뷰마다 자기 것**이다 — 뷰마다 다른 값(눈 자리)을 실으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
-            _pCmd->setComputePipelineState( sortPso );
+            _pCmd->setComputePipelineState( sortPSO );
             // 바인딩 자리는 컬링과 같다. 인자 · 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 표, 그 밖은 자리표다.
             _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
             _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );

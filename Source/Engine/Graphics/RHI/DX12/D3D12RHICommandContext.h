@@ -105,7 +105,7 @@ namespace sw
         /** @brief 메시 정점버퍼가 걸려 있으면 그것을, 없으면 풀스크린 버퍼를 겁니다. 건 메시 버퍼가 부서졌으면 알리고 false — 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다). */
         [[nodiscard]] bool bindMeshVertexBufferForDraw();
         /** @brief 활성 그래픽스 PSO 를 네이티브 리스트에 겁니다(바뀌었을 때만). PSO 가 없으면 false 이고, 드로우를 내지 않습니다. */
-        bool bindActiveGraphicsPso();
+        bool bindActiveGraphicsPSO();
         void bindFullscreenVertexBuffer();
         void bindBoundIndexBuffer();
         void transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );

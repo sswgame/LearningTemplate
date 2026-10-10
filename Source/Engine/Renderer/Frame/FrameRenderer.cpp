@@ -149,7 +149,7 @@ namespace sw
         , _bPassResourcesReady{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bOutputPsoMissingLogged{ 0 }
+        , _bOutputPSOMissingLogged{ 0 }
         , _bCaptureMismatchLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
@@ -806,7 +806,7 @@ namespace sw
         ensurePassCbCapacityForFrame();
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
-        ensureMaterialPsos();
+        ensureMaterialPSOs();
 
         // 캔버스의 아틀라스 텍스처 · 사각형 버퍼 · 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스 · 대상 그리기는 그리기만 한다).
         prepareCanvasTargets();

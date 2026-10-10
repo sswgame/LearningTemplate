@@ -285,8 +285,8 @@ namespace sw
             } ),
                                                        _pDevice->_frameFenceCounter + 1 );
         }
-        if ( _pDevice->_recordingState._activeGraphicsPso == pso )
-            _pDevice->_recordingState._activeGraphicsPso = 0;
+        if ( _pDevice->_recordingState._activeGraphicsPSO == pso )
+            _pDevice->_recordingState._activeGraphicsPSO = 0;
     }
 
     RHIRenderPassHandle VulkanRHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )

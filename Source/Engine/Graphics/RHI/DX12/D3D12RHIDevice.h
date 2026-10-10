@@ -73,11 +73,11 @@ namespace sw
         RHIBufferHandle        _boundIndexBuffer;
         uint32                 _boundIndexStride;
         uint32                 _boundIndexOffset;
-        RHIPipelineStateHandle _activeGraphicsPso;
+        RHIPipelineStateHandle _activeGraphicsPSO;
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
-         *  드로우가 _activeGraphicsPso 와 같으면 다시 걸지 않습니다. Reset() 직후에는
+         *  드로우가 _activeGraphicsPSO 와 같으면 다시 걸지 않습니다. Reset() 직후에는
          *  0 으로 되돌려야 합니다(그 리스트에는 아직 아무 PSO 도 안 걸려 캐시가 무효입니다). */
-        RHIPipelineStateHandle _boundNativeGraphicsPso;
+        RHIPipelineStateHandle _boundNativeGraphicsPSO;
         RHITextureHandle       _arrActiveColorTarget[kMaxColorAttachments];
         RHITextureHandle       _activeDepthTarget;
         uint8                  _bActiveSwapchainRT : 1;
@@ -104,8 +104,8 @@ namespace sw
             , _boundIndexBuffer{ 0 }
             , _boundIndexStride{ 4 }
             , _boundIndexOffset{ 0 }
-            , _activeGraphicsPso{ 0 }
-            , _boundNativeGraphicsPso{ 0 }
+            , _activeGraphicsPSO{ 0 }
+            , _boundNativeGraphicsPSO{ 0 }
             , _arrActiveColorTarget{}
             , _activeDepthTarget{ 0 }
             , _bActiveSwapchainRT{ SW_FALSE }

@@ -210,7 +210,7 @@ namespace sw
         _gpuBuffers.clear();
         _depthEnabledState.Reset();
         _depthDisabledState.Reset();
-        _recordingState._activeGraphicsPso = 0;
+        _recordingState._activeGraphicsPSO = 0;
         _listRegisteredBindless.clear();
         _listBindlessFree.clear();
         _listRegisteredTexture.clear();

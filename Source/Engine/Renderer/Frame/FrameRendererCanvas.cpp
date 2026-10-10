@@ -83,7 +83,7 @@ namespace sw
                 continue;
             const uint32                 width  = pState->_pTexture->getWidth();
             const uint32                 height = pState->_pTexture->getHeight();
-            const RHIPipelineStateHandle pso    = findOutputPso( RenderPassType::Canvas, pState->_pTexture->getFormat() );
+            const RHIPipelineStateHandle pso    = findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat() );
             if ( pso == 0 || width == 0 || height == 0 )
                 continue;
             RHIRenderPassBeginInfo beginInfo{};

@@ -153,7 +153,7 @@ namespace sw
         // 백버퍼 포맷은 요청값(constant::kBackBufferFormat)이지 보장이 아니다. 서피스가 B8G8R8A8 만 줄 수 있다.
         // 언리얼 FVulkanSwapChain 과 같은 규칙이다: 요청 → 대체 → 첫 번째 순으로 고르고, 채택한 값을 반환한다
         // (getActualBackBufferFormat → IRHIDevice::getBackBufferFormat). 백버퍼에 그리는 PSO 는 그 값으로
-        // 만든다(FrameRenderer::ensurePresentPso). 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
+        // 만든다(FrameRenderer::ensurePresentPSO). 렌더타깃 포맷은 PSO 의 일부이지 계약 상수가 아니다.
         const VkFormat requestedFormat = VulkanRHIDeviceInternal::toVulkanTextureFormat( _requestedFormat );
         const VkFormat arrPreferred[]  = { requestedFormat, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM };
 
