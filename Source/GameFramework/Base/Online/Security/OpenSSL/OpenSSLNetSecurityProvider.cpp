@@ -165,10 +165,10 @@ namespace sw
         };
 
         /** @brief 메모리 BIO 둘 위의 TLS 세션 — 핸드셰이크 전에 쓴 평문은 모아 두었다가 핸드셰이크가 끝나면 보낸다. */
-        class OpenSSLTLSSession final : public ITLSSession
+        class OpenSSLSession final : public ITLSSession
         {
         public:
-            OpenSSLTLSSession( SSL_CTX* pContext, TLSRole role, const string& serverName, const string& pinnedSha256Hex )
+            OpenSSLSession( SSL_CTX* pContext, TLSRole role, const string& serverName, const string& pinnedSha256Hex )
                 : _pendingBytes{}
                 , _pinnedSha256Hex{ pinnedSha256Hex }
                 , _failureText{}
@@ -197,7 +197,7 @@ namespace sw
                 advanceHandshake(); // ClientHello
             }
 
-            ~OpenSSLTLSSession() override
+            ~OpenSSLSession() override
             {
                 if ( _pSsl != nullptr )
                 {
@@ -208,8 +208,8 @@ namespace sw
                 BIO_free( _pWriteBio );
             }
 
-            OpenSSLTLSSession( const OpenSSLTLSSession& )            = delete;
-            OpenSSLTLSSession& operator=( const OpenSSLTLSSession& ) = delete;
+            OpenSSLSession( const OpenSSLSession& )            = delete;
+            OpenSSLSession& operator=( const OpenSSLSession& ) = delete;
 
             TLSSessionState getState() const override { return _state; }
             const utf8*     getFailureText() const override { return _failureText.c_str(); }
@@ -351,22 +351,22 @@ namespace sw
             TLSSessionState _state;
         };
 
-        class OpenSSLTLSContext final : public ITLSContext
+        class OpenSSLContext final : public ITLSContext
         {
         public:
-            OpenSSLTLSContext( SSL_CTX* pContext, const TLSContextSettings& settings )
+            OpenSSLContext( SSL_CTX* pContext, const TLSContextSettings& settings )
                 : _serverName{ settings._serverName }
                 , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
                 , _pContext{ pContext }
                 , _role{ settings._role }
             {
             }
-            ~OpenSSLTLSContext() override { SSL_CTX_free( _pContext ); }
+            ~OpenSSLContext() override { SSL_CTX_free( _pContext ); }
 
-            OpenSSLTLSContext( const OpenSSLTLSContext& )            = delete;
-            OpenSSLTLSContext& operator=( const OpenSSLTLSContext& ) = delete;
+            OpenSSLContext( const OpenSSLContext& )            = delete;
+            OpenSSLContext& operator=( const OpenSSLContext& ) = delete;
 
-            unique_ptr<ITLSSession> createSession() override { return sw::make_unique<OpenSSLTLSSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
+            unique_ptr<ITLSSession> createSession() override { return sw::make_unique<OpenSSLSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
             TLSRole                 getRole() const override { return _role; }
 
         private:
@@ -648,7 +648,7 @@ namespace sw
             SSL_CTX_free( pContext );
             return nullptr;
         }
-        return sw::make_unique<OpenSSLTLSContext>( pContext, settings );
+        return sw::make_unique<OpenSSLContext>( pContext, settings );
     }
 
     bool OpenSSLNetSecurityProvider::createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem )
