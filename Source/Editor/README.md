@@ -376,6 +376,10 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 - **로그 줄 → IDE**: 줄을 더블 클릭(또는 오른쪽 클릭 `Open in IDE`)하면 그 줄이 가리키는 소스 위치를 IDE 로 연다. 메시지 안의 위치
   (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 환경설정 General 의
   `_ideOpenCommand`(`{file}` · `{line}`), 비우면 VS Code(`code -g`, Windows 는 `cmd /c`)다. 판정은 `Common/Commands/EditorLogCommands`.
+- **접기 · 따라가기 · 여러 줄**: 툴바 `Collapse` 는 수준 · 태그 · 카테고리 · 메시지가 같은 줄을 처음 나온 자리에 접고 횟수를 적는다(유니티 Collapse).
+  `Clear on Play` 는 Play 를 시작하면 지우고, `Error Pause` 는 Play 중 오류 줄이 오면 다음 그리기에서 멈춘다. 새 로그는 스크롤이 맨 아래에 붙어 있을 때만 따라간다.
+  줄을 끌거나 Shift 로 눌러 여러 줄을 고르고 Ctrl+C 로 복사한다. `Open Log File` 은 로그 폴더의 가장 최근 파일을 탐색기에서 연다.
+  판단은 ImGui 없는 `Panels/ConsoleLogRows`(EditorTest), 시나리오 `editor/outputlog`(탐침 `Editor.OutputLogVisibleRows`, 개발 명령 `log.repeat`).
 - **카테고리 필터**: 툴바 `Tags` 팝업이 로그 카테고리(로그를 쓴 자리 `SW_LOG_CALLER`, 없으면 모듈 태그)마다 보이기를 켜고 끈다(`EditorLogTagFilter`).
 - **설정 파일 핫 리로드**: `Common/Workspace/ConfigHotReload` 가 `Config/` 의 `.json` 을 감시한다(에셋과 같은 `FileWatchDispatcher`, 루트만 다름).
   호스트 설정(`ConfigManager` 가 파일에서 읽은 EngineConfig · GameConfig)은 `ConfigManager::reloadConfigFile` 이 **제자리에서** 다시 읽고
@@ -629,3 +633,5 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   판단은 ImGui 없는 `EditorNodeGraphRules`(EditorTest). 캔버스는 `beginGraphCanvas` · `endGraphCanvas` 로 연다 — 확장 모듈은 imgui-node-editor 를 정적으로 따로
   링크해 틀이 건 지금 편집기를 모르므로 템플릿(확장 안에서 컴파일된다)이 자기 사본에도 건다. 이것을 건너뛰고 `_nodeGraph.beginCanvas` 를 바로 부르면 확장의
   `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다. 시나리오 `editor/graphaddnode`(탐침 `Editor.GraphNodeCount` 는 가장 최근에 그린 캔버스의 노드 수).
+- **Output Log 의 따라가기는 스크롤 위치로 정한다.** 지난 프레임 배치의 `GetScrollY` 가 `GetScrollMaxY` 에 붙어 있을 때만 새 로그에 맨 아래로 내린다.
+  "새 로그가 오면 늘 내린다" 로 되돌리면 위로 올려 읽는 중에 끌려 내려간다. 명령을 친 뒤에는 답을 보도록 한 번 내린다.

@@ -250,6 +250,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.PackagingState` | Packaging 창의 상태(0 대기, 1 도는 중, 2 성공, 3 실패) |
 | `Editor.ReferenceCount` | 역색인에서 `gv_editorProbeAsset`(리소스 id)을 적은 텍스트 에셋 파일 수 |
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
+| `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
@@ -257,6 +258,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
+Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를 남깁니다.
 
 ## 확장하는 법
 
