@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
 
 #include "Core/Common/StdHeaders.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 
 #include <imgui.h>
 

@@ -3,7 +3,7 @@
  * @brief 본 계층을 보여 주는 플로팅 팝업입니다(IEditorPopup 구현).
  */
 #pragma once
-#include "Editor/Common/Gui/IEditorPopup.h"
+#include "Editor/Common/GUI/IEditorPopup.h"
 
 namespace sw::editor
 {

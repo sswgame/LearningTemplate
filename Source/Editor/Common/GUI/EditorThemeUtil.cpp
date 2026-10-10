@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"

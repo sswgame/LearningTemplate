@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/EditorDocumentPanel.h"
 
 #include "Core/Log/Logger.h"
 

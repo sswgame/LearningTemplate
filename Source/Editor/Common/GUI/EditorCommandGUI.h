@@ -1,5 +1,5 @@
 /**
- * @file EditorCommandGui.h
+ * @file EditorCommandGUI.h
  * @brief 커맨드 레지스트리를 ImGui 에 연결합니다(기본 커맨드 표 · 전역 단축키 · 메뉴 항목).
  */
 #pragma once
@@ -9,14 +9,14 @@
 namespace sw::editor
 {
     /**
-     * @class EditorCommandGui
+     * @class EditorCommandGUI
      * @brief 에디터 커맨드를 등록하고, 단축키를 처리하고, 메뉴 항목 하나를 그립니다.
      * @details 정의는 `registerDefaults` 의 표 하나이고, 메뉴바 · 단축키 처리 · 커맨드 팔레트는 그것을 읽기만 합니다 — 곳마다 따로
      *          적으면 라벨의 단축키 안내와 실제 처리가 어긋나고, 같은 조합을 두 곳이 처리합니다.
      *          커맨드를 하나 더하려면 표에 한 줄을 넣으면 메뉴 · 단축키 · 팔레트에 함께 나타납니다. 어느 메뉴의 어디에 놓일지도
      *          그 줄의 메뉴 경로 · 순서 칸이 정합니다.
      */
-    class EditorCommandGui
+    class EditorCommandGUI
     {
     public:
         /** @brief 기본 커맨드 표를 레지스트리에 등록합니다. 중복 id·단축키는 오류로 로그합니다. */

@@ -1,6 +1,6 @@
 /**
  * @file EditorMenuBar.h
- * @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGui)
+ * @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGUI)
  */
 #pragma once
 
@@ -13,7 +13,7 @@ namespace sw::editor
 {
     class EditorDockLayout;
 
-    /** @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGui) */
+    /** @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGUI) */
     class EditorMenuBar
     {
     public:

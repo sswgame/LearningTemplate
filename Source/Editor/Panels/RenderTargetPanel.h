@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 

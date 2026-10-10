@@ -71,12 +71,12 @@ class SeedIndexTest(unittest.TestCase):
             unityRoot = buildDir.as_posix() + "/Source/{0}/CMakeFiles/{0}.dir/Unity/unity_0_cxx.cxx"
             listSeed = makeSeedIndex([{"file": unityRoot.format("Core"), "command": "core"},
                                       {"file": unityRoot.format("Editor"), "command": "editor"}], buildDir, root)
-            header = root.as_posix() + "/Source/Editor/Common/Gui/EditorThemeUtil.h"
+            header = root.as_posix() + "/Source/Editor/Common/GUI/EditorThemeUtil.h"
             self.assertEqual("editor", findSeedEntry(header, listSeed)["command"])
 
     def testLongestSharedFolderWins(self) -> None:
         listSeed = makeSeedIndex([{"file": "D:/r/Source/Engine/Scene/Scene.cpp", "command": "scene"},
-                                  {"file": "D:/r/Source/Editor/Common/Gui/EditorThemeUtil.cpp", "command": "editor"}])
+                                  {"file": "D:/r/Source/Editor/Common/GUI/EditorThemeUtil.cpp", "command": "editor"}])
         self.assertEqual("editor", findSeedEntry("D:/r/Source/Editor/Common/Widgets/EditorWidgets.h", listSeed)["command"])
 
 

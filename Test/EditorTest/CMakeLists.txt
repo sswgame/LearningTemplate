@@ -34,7 +34,7 @@ sw_addTestExecutable(EditorTest
 		Common/Widgets/TestEditorListFilter.cpp
 		Common/Widgets/TestEditorNodeGraph.cpp
 		Common/Commands/TestEditorLogCommands.cpp
-		Common/Gui/TestEditorPanelDocument.cpp
+		Common/GUI/TestEditorPanelDocument.cpp
 		Common/Workspace/TestEditorRegistry.cpp
 		Common/Workspace/TestEditorPlaySession.cpp
 		Common/Commands/TestEditorResourceIndex.cpp

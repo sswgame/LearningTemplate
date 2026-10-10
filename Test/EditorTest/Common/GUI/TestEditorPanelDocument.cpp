@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "TestFramework/TestFramework.h"
 

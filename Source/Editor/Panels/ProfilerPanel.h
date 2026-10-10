@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIo.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/ProfilerScopeHistory.h"
 
 namespace sw::editor

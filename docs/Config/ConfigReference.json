@@ -2353,7 +2353,7 @@
    "default": "",
    "kind": "시험",
    "description": "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)",
-   "source": "Source/Editor/Common/Gui/EditorDockLayout.cpp"
+   "source": "Source/Editor/Common/GUI/EditorDockLayout.cpp"
   },
   {
    "name": "gv_editorPanelDump",
@@ -2361,7 +2361,7 @@
    "default": "0",
    "kind": "시험",
    "description": "N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함)",
-   "source": "Source/Editor/Common/Gui/EditorPanelDump.cpp"
+   "source": "Source/Editor/Common/GUI/EditorPanelDump.cpp"
   },
   {
    "name": "gv_editorPanelTimes",

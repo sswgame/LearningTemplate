@@ -6,7 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
-#include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/IEditor.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"

@@ -1,10 +1,10 @@
 /**
- * @file EditorCommandGui.cpp
+ * @file EditorCommandGUI.cpp
  * @brief 기본 커맨드 표와, 그것을 ImGui 에 드러내는 곳(메뉴 항목 · 전역 단축키)입니다.
  */
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorCommandGui.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
@@ -15,9 +15,9 @@
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
-#include "Editor/Common/Gui/EditorMenuBar.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorMenuBar.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -43,7 +43,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorCommandGuiInternal
+        struct EditorCommandGUIInternal
         {
             // ------------------------------------------------------------------------------
             // 1) 커맨드 동작. 표가 함수 포인터로 가리킨다
@@ -522,7 +522,7 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "Editor" );
 
-    void EditorCommandGui::registerDefaults()
+    void EditorCommandGUI::registerDefaults()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -535,7 +535,7 @@ namespace sw::editor
         EditorCommandRegistry& registry = pContext->getCommandRegistry();
         registry.clear();
 
-        for ( const EditorCommandGuiInternal::CommandRow& row : EditorCommandGuiInternal::_s_arrCommandRow )
+        for ( const EditorCommandGUIInternal::CommandRow& row : EditorCommandGUIInternal::_s_arrCommandRow )
         {
             EditorCommandDesc desc{};
             desc._id              = row._pId;
@@ -568,7 +568,7 @@ namespace sw::editor
         }
     }
 
-    void EditorCommandGui::processHotkeys()
+    void EditorCommandGUI::processHotkeys()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -579,8 +579,8 @@ namespace sw::editor
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();
         for ( const EditorCommandDesc& desc : registry.getCommands() )
         {
-            const bool bPressed = ( EditorCommandGuiInternal::isShortcutPressed( desc._shortcut ) ||
-                                    EditorCommandGuiInternal::isShortcutPressed( desc._altShortcut ) );
+            const bool bPressed = ( EditorCommandGUIInternal::isShortcutPressed( desc._shortcut ) ||
+                                    EditorCommandGUIInternal::isShortcutPressed( desc._altShortcut ) );
             if ( bPressed == false )
                 continue;
 
@@ -590,7 +590,7 @@ namespace sw::editor
         }
     }
 
-    void EditorCommandGui::drawMainMenus()
+    void EditorCommandGUI::drawMainMenus()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -603,13 +603,13 @@ namespace sw::editor
                 continue;
             if ( ImGui::BeginMenu( menu._name.c_str() ) )
             {
-                EditorCommandGuiInternal::drawMenu( registry, menu );
+                EditorCommandGUIInternal::drawMenu( registry, menu );
                 ImGui::EndMenu();
             }
         }
     }
 
-    void EditorCommandGui::drawMenuItems( string_view menuPath )
+    void EditorCommandGUI::drawMenuItems( string_view menuPath )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -618,6 +618,6 @@ namespace sw::editor
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();
         const EditorMenu*            pMenu    = registry.findMenu( menuPath );
         if ( pMenu != nullptr )
-            EditorCommandGuiInternal::drawMenu( registry, *pMenu );
+            EditorCommandGUIInternal::drawMenu( registry, *pMenu );
     }
 } // namespace sw::editor

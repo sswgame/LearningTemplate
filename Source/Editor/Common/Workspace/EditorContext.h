@@ -2,7 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewTargetUtil.h"
 

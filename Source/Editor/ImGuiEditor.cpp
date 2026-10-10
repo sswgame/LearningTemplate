@@ -19,13 +19,13 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorCommandGui.h"
-#include "Editor/Common/Gui/EditorFontSetup.h"
-#include "Editor/Common/Gui/EditorMenuBar.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
-#include "Editor/Common/Gui/EditorPanelDump.h"
-#include "Editor/Common/Gui/EditorPlayToolbar.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorFontSetup.h"
+#include "Editor/Common/GUI/EditorMenuBar.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelDump.h"
+#include "Editor/Common/GUI/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -317,7 +317,7 @@ namespace sw::editor
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
-            EditorCommandGui::registerDefaults();
+            EditorCommandGUI::registerDefaults();
             // 리로드 전에 기록한 오브젝트 편집도 되돌리면 이 모듈이 선택 · 씬 dirty 를 맞춘다.
             CommandStack* pCommandStack = editor::getService<CommandStack>();
             if ( pCommandStack != nullptr )
@@ -464,7 +464,7 @@ namespace sw::editor
 
         {
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.commandsAndWatchers" );
-            EditorCommandGui::processHotkeys();
+            EditorCommandGUI::processHotkeys();
             EditorMenuBar::processOpenPanelRequests();
             EditorMenuBar::processSceneSession();
 

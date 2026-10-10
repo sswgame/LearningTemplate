@@ -20,9 +20,9 @@
   - `Backend/Platform/`: Win32 / X11
   - `Backend/Render/`: DX11 / DX12 / Vulkan / OpenGL. 네이티브 객체는 `IRHIDevice` 가 판 번호를 대조해 내주는 `RHINativeHandles`
     로만 받습니다 — 백엔드 디바이스 클래스로 캐스팅하지 않습니다.
-- **Gui/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,
+- **GUI/**: ImGui 를 **직접 그리는** 공용 셸 — `EditorChrome`, `EditorMenuBar`, `EditorDockLayout`,
   `EditorDocumentPanel`, `EditorThemeUtil`, `EditorFontSetup`, `EditorNotificationManager`(토스트), `EditorPanelDump`(아래 "그려진 결과"),
-  `EditorCommandGui`(커맨드 표 · 전역 단축키 · 메뉴 항목),
+  `EditorCommandGUI`(커맨드 표 · 전역 단축키 · 메뉴 항목),
   인터페이스 `IEditorPanel` / `IEditorPopup`
 - **Widgets/**: 검색, 헤더, 툴바 구분선, 노드 그래프 캔버스(`EditorNodeGraph`), 뷰포트 입력 오버레이
 - **Workspace/**: ImGui 없는 **상태** — 컨텍스트·선택·트랜잭션(Undo)·서비스 로케이터·애셋 종류 ·
@@ -60,9 +60,9 @@
 
 | 새로 쓰는 것 | 자리 |
 |---|---|
-| 메뉴·단축키·커맨드 팔레트에 나타날 동작 | `Common/Gui/EditorCommandGui.cpp` 의 커맨드 표 (아래) |
+| 메뉴·단축키·커맨드 팔레트에 나타날 동작 | `Common/GUI/EditorCommandGUI.cpp` 의 커맨드 표 (아래) |
 | 저장되지 않을 수 있는 편집 | `IEditorPanel` 의 문서 계약 (아래) — 자기 dirty 플래그 금지 |
-| ImGui 를 그린다 | `Common/Gui/` · `Common/Widgets/` · `Panels/` · `Popups/` |
+| ImGui 를 그린다 | `Common/GUI/` · `Common/Widgets/` · `Panels/` · `Popups/` |
 | ImGui 없이 상태만 든다 | `Common/Workspace/` |
 | ImGui 없이 무언가를 바꾸거나 읽고 쓴다 | `Common/Commands/` |
 
@@ -105,13 +105,13 @@
 ## 커맨드를 하나 더하려면
 
 메뉴 항목 · 전역 단축키 · 커맨드 팔레트 항목은 **한 정의에서 나옵니다** —
-`Common/Gui/EditorCommandGui.cpp` 의 `_s_arrCommandRow` 표입니다. 한 줄을 넣으면
+`Common/GUI/EditorCommandGUI.cpp` 의 `_s_arrCommandRow` 표입니다. 한 줄을 넣으면
 팔레트에 바로 나타나고(`_bPaletteVisible`), 단축키를 적었으면 전역에서 바로 먹습니다.
 메뉴에 **보이게** 하려면 그 줄의 마지막 두 칸 — 메뉴 경로(`"MainMenu/File"`, 툴바 정렬 팝업은
 `commandmenu::kViewportAlign`)와 순서 — 를 채우십시오. 순서의 백의 자리가 바뀌는 자리에 구분선이 들어가고, 메인
 메뉴바의 메뉴끼리도 가장 작은 순서로 줄 섭니다(File 1xxx · Edit 2xxx · Build 3xxx). 라벨·아이콘·단축키
 표기·활성 조건·툴팁도 표에서 옵니다. 같은 메뉴의 같은 순서는 `validate` 가 잡습니다.
-메인 메뉴바는 한 단계 메뉴만 그립니다. 그 밖의 경로는 코드가 `EditorCommandGui::drawMenuItems` 로 그리는 경로
+메인 메뉴바는 한 단계 메뉴만 그립니다. 그 밖의 경로는 코드가 `EditorCommandGUI::drawMenuItems` 로 그리는 경로
 (`commandmenu::kArrHostedMenuPath`)여야 하고, 아니면 `validate` 가 "그려지지 않는 메뉴 경로" 로 시작할 때 Error 를 남깁니다
 (그 목록의 경로에 표의 줄이 없어도 Error). 에디터 스모크의 `[Error]` 0 건이 그것을 잡습니다.
 
@@ -124,7 +124,7 @@
 
 ## 테마 프리셋을 하나 더하려면
 
-`Common/Gui/EditorThemeUtil.cpp` 의 프리셋 표(`getPresetRows`)에 한 줄을 넣고 열거형에 값을
+`Common/GUI/EditorThemeUtil.cpp` 의 프리셋 표(`getPresetRows`)에 한 줄을 넣고 열거형에 값을
 하나 더하면 끝입니다 — 저장 이름 · 콤보 라벨 · 팔레트가 그 한 줄에 있고, 대화상자의 콤보와
 `EditorConfig` 저장·복원이 모두 표에서 나옵니다. 표와 열거형의 개수는 `static_assert` 가 맞춥니다.
 
@@ -160,12 +160,12 @@
 **자기 dirty 플래그를 새로 만들지 마십시오.** 계약 밖의 플래그는 `Ctrl+S` 가 포커스된 문서 대신 씬을 저장하게 하고,
 종료 확인이 그 편집을 세지 않아 편집이 조용히 사라집니다.
 
-문서 하나가 애셋 경로와 연동되는 도구 패널은 `Common/Gui/EditorDocumentPanel` 을 상속하십시오
+문서 하나가 애셋 경로와 연동되는 도구 패널은 `Common/GUI/EditorDocumentPanel` 을 상속하십시오
 (포커스 추적 · Undo 기준선 · 문서 전환 확인 팝업까지 얹어 줍니다). 한 패널이 문서를 둘 이상
 들면(`DataTablePanel`) 기반 비트는 "무언가 바뀌었다"만 말하므로, 어느 쪽인지는 패널이 자기
 반쪽 비트로 알고 한곳에서 동기화합니다(`syncDocumentDirty`).
 
-계약 자체는 ImGui 없이 컴파일되므로 테스트가 있습니다: `Test/EditorTest/Common/Gui/TestEditorPanelDocument.cpp`.
+계약 자체는 ImGui 없이 컴파일되므로 테스트가 있습니다: `Test/EditorTest/Common/GUI/TestEditorPanelDocument.cpp`.
 
 ## 그려진 결과를 검증하는 법
 
@@ -180,7 +180,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 남깁니다. **보이는데 정점이 0인 패널**이 곧 빈 패널입니다. 컨테이너(자식이 내용을 든 창)와 순수
 오버레이(`NoInputs` — ImGuizmo 의 `gizmo` 가 그렇습니다)는 정상적으로 비므로 빼고 셉니다.
 
-구현과 스위치 선언은 `Common/Gui/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
+구현과 스위치 선언은 `Common/GUI/EditorPanelDump.*` 에 있습니다 — 모듈의 전역 변수도 모듈을 올릴 때 커맨드라인 값을 받습니다.
 기준선과 비교 방법은 [검증과 측정](../../docs/08_Verification.md) 1절에 있습니다.
 
 ## 텍스처는 들일 때 임포트한다
@@ -496,7 +496,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
 - **에디터는 `-EnableEditor` 로 켜야 뜬다.** 에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙인다(`-gv_editorPanelDump` 는 스스로 끝나지 않는다). 창 수가 모자라면 코드보다 로컬
   `Saved/Editor/` 의 `windows.ini` · `imgui.ini` 를 먼저 본다(추적하지 않는 파일 — 세션 간 픽셀 비교도 이것 때문에 안 된다). `-gv_editorOpenPanel=<id|all>`.
-- **에디터 커맨드 정본은 `Common/Gui/EditorCommandGui.cpp` 의 표 하나**(메뉴 · 단축키 · 팔레트, `EditorCommandRegistry::validate` 가 중복 조합을 잡는다). 한 줄짜리 래퍼는 이유가 있어
+- **에디터 커맨드 정본은 `Common/GUI/EditorCommandGUI.cpp` 의 표 하나**(메뉴 · 단축키 · 팔레트, `EditorCommandRegistry::validate` 가 중복 조합을 잡는다). 한 줄짜리 래퍼는 이유가 있어
   남았다(파일 머리) — "마저 정리" 하지 말 것. 확장자 정본은 `EditorAssetTypeRegistry`(`kArrAssetMatch` 한 줄), 핫 리로드 경로도 같은 줄의 칸(`_pCacheKindName` · `_pfnImportSource`)이다. 복합 접미사
   `.prefab.xml` 은 접미사 비교로(`hasExtension` 은 마지막 점 뒤만 본다).
 - **nullable 조회는 받아서 확인하고 쓴다** — `editor::getService<T>()` · `game::getService<T>()` · `EditorContext::get()`. 나중에 불리는 람다 안에서는 다시 받는다. `getService<…>()->` 꼴은

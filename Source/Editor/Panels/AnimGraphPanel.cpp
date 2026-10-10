@@ -5,7 +5,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"

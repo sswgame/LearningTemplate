@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorFontSetup.h"
+#include "Editor/Common/GUI/EditorFontSetup.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Resource/ResourceUtil.h"

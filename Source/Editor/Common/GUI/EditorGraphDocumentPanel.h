@@ -19,7 +19,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Gui/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"

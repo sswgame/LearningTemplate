@@ -11,7 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorLogCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "Engine/Console/DevConsole.h"
 

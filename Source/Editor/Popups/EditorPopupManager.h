@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Gui/IEditorPopup.h"
+#include "Editor/Common/GUI/IEditorPopup.h"
 #include "Editor/Common/Workspace/EditorRegistry.h"
 
 namespace sw::editor

@@ -8,7 +8,7 @@
 #include "Editor/Common/Asset/HeightfieldImporter.h"
 #include "Editor/Common/Asset/ModelImporter.h"
 #include "Editor/Common/Asset/TextureImporter.h"
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/Rig/RigAsset.h"

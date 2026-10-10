@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"

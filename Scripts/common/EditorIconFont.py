@@ -33,7 +33,7 @@ kFirstCodepoint = 0xE000        # 사용자 영역(PUA) 시작
 #: 폰트 파일 (저장소 기준 경로). 에디터는 `editor/fonts/` 에서 읽는다(`EditorFontSetup`).
 kFontRelativePath = "Resource/editor/fonts/sweditoricons.ttf"
 #: 글리프 상수 헤더 (저장소 기준 경로).
-kHeaderRelativePath = "Source/Editor/Common/Gui/EditorIconGlyphs.h"
+kHeaderRelativePath = "Source/Editor/Common/GUI/EditorIconGlyphs.h"
 kFamilyName = "SW Editor Icons"
 kPostScriptName = "SWEditorIcons-Regular"
 kVersionText = "Version 1.000"

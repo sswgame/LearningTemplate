@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
-#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 
 #include <imgui.h>
 

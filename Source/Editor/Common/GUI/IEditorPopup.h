@@ -1,6 +1,6 @@
 /**
  * @file IEditorPopup.h
- * @brief 모달 및 비도킹 플로팅 에디터 팝업 인터페이스 (Common/Gui 계층)
+ * @brief 모달 및 비도킹 플로팅 에디터 팝업 인터페이스 (Common/GUI 계층)
  */
 #pragma once
 #include "Core/Common/Types.h"

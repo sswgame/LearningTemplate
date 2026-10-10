@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 
 namespace sw
 {

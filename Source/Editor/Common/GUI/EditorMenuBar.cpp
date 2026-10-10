@@ -1,17 +1,17 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorMenuBar.h"
+#include "Editor/Common/GUI/EditorMenuBar.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
-#include "Editor/Common/Gui/EditorCommandGui.h"
-#include "Editor/Common/Gui/EditorDockLayout.h"
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -51,8 +51,8 @@ namespace sw::editor
         if ( ImGui::BeginMainMenuBar() == false )
             return;
 
-        // File · Edit · Build 는 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다(`EditorCommandGui.cpp`).
-        EditorCommandGui::drawMainMenus();
+        // File · Edit · Build 는 커맨드 표의 메뉴 경로 · 순서 칸에서 나온다(`EditorCommandGUI.cpp`).
+        EditorCommandGUI::drawMainMenus();
         drawAssetsMenu();
         drawPanelMenu( dockLayout );
         drawStatusArea();

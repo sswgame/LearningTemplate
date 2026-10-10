@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Gui/EditorDockLayout.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 
 #include <imgui.h>
 

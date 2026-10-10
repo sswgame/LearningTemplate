@@ -10,7 +10,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"

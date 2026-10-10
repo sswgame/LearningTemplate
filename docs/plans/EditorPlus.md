@@ -28,7 +28,7 @@
 
 | 원문 | 지금 |
 |---|---|
-| `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/Gui/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
+| `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/GUI/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
 | "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Renderer/README.md`, 프로파일링은 `Source/Engine/Profiling/README.md` |
 | "백로그 1-4 의 C, G, H 줄", "대기열 S, M 의 항목" | 이 문서. 백로그 1-4 에는 이 문서를 가리키는 항목 하나만 있습니다 |
 | `cmake/Engine/TargetRules.cmake` | `cmake/Engine/ModuleTargets.cmake`(`sw_addGameFrameworkKit`, `sw_addGameModule` 이 있는 파일) |
@@ -316,7 +316,7 @@ namespace sw::editor
 | `Common/Workspace/EditorService.h` | `getRawService` · `bindRawLocalService` · `getRawLocalService` · `getActiveScene` · `getActiveObjectManager` · `findGameObject` · `findComponent` |
 | `Common/Workspace/EditorContext.h` | `class SW_EDITOR_API EditorContext`(`get()` 이 비인라인 정적) |
 | `Common/Workspace/EditorSelection.h` · `EditorWorkspace.h` · `EditorTransaction.h` | 클래스 |
-| `Common/Gui/IEditorPanel.h` · `EditorDocumentPanel.h` · `EditorChrome.h` · `EditorThemeUtil.h` · `EditorNotificationManager.h` | 클래스 · 정적 struct |
+| `Common/GUI/IEditorPanel.h` · `EditorDocumentPanel.h` · `EditorChrome.h` · `EditorThemeUtil.h` · `EditorNotificationManager.h` | 클래스 · 정적 struct |
 | `Common/Widgets/EditorWidgets.h` · `EditorListFilter.h` | 정적 struct · 클래스 |
 | `Viewport/EditorViewportProjection.h` · `EditorVisualizerGeometry.h` | `EditorViewportProjectionUtil` · `EditorVisualizerGeometryUtil` · `EditorDebugDrawStats` |
 | `Panels/Inspector/IInspectorComponent.h` · `IInspectorProperty.h` | 클래스(인터페이스 — vtable 은 각 DLL, 붙여도 무해) |
@@ -536,7 +536,7 @@ namespace sw::editor
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorPropertyManager().releaseDrawersWithin( pBegin, pEnd );   // I3 뒤
-        releasedCount += EditorCommandGui::releaseCommandsWithin( pBegin, pEnd );                      // C3 뒤
+        releasedCount += EditorCommandGUI::releaseCommandsWithin( pBegin, pEnd );                      // C3 뒤
         return releasedCount;
     }
 ```
@@ -651,7 +651,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 **목적.** (1) 확장 DLL 은 vcpkg 정적 imgui 의 **자기 사본**을 갖는다 — 그 사본의 `GImGui` · 할당자 · ImPlot 컨텍스트를 EditorModule 이 만든 것으로 맞춰야 확장의 `ImGui::Button` 이 같은 창에 그려진다.
 (2) 확장이 메뉴 · 단축키 · 팔레트에 커맨드를 넣는 길(D4).
 
-**(1) 결속기 — 새 `Common/Gui/EditorUiContext.h` · `.cpp`(ImGui 헤더를 include 하지 않는다 — 컨텍스트는 `void*`):**
+**(1) 결속기 — 새 `Common/GUI/EditorUiContext.h` · `.cpp`(ImGui 헤더를 include 하지 않는다 — 컨텍스트는 `void*`):**
 ```cpp
 namespace sw::editor
 {
@@ -750,7 +750,7 @@ namespace sw::editor
 
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Gui/EditorUiContext.h"
+#include "Editor/Common/GUI/EditorUiContext.h"
 
 #include <imgui.h>
 #include <implot.h>
@@ -784,7 +784,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorCommandRegistration
-     * @brief 확장 모듈(또는 EditorModule 의 아무 파일)이 커맨드 하나를 더하는 등록 줄입니다. 표(`EditorCommandGui.cpp` 의 `_s_arrCommandRow`)와 같은 칸이고,
+     * @brief 확장 모듈(또는 EditorModule 의 아무 파일)이 커맨드 하나를 더하는 등록 줄입니다. 표(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)와 같은 칸이고,
      *        등록부가 표 + 등록 줄을 합쳐 메뉴 · 단축키 · 팔레트를 만듭니다. id 는 표와도 겹치면 안 됩니다(`validate`).
      * @details 문자열은 리터럴. 메뉴 경로는 기존 메뉴(`"MainMenu/Tools"` …)거나 새 한 단계 메뉴(`"MainMenu/ThemePark"`)다.
      */
@@ -813,7 +813,7 @@ namespace sw::editor
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pId, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
                         shortcut, pfnAction, pfnEnabled, pMenuPath )
 ```
-`EditorCommandGui.h/.cpp`:
+`EditorCommandGUI.h/.cpp`:
 ```cpp
         /** @brief 표 + 등록 줄로 커맨드 등록부를 다시 만듭니다(단축키 덮어쓰기 — P3 — 도 여기서 입힌다). 등록 세대가 같으면 아무것도 하지 않는다. */
         static void syncWithRegistry();
@@ -864,7 +864,7 @@ namespace sw::editor
 
 문제점:
 - vcpkg imgui 는 정적 라이브러리라 DLL 마다 GImGui · 할당자 사본이 생긴다. 확장 DLL 의 ImGui 호출은 컨텍스트가 없어 죽거나 다른 곳에 그린다.
-- 커맨드(메뉴 · 단축키 · 팔레트)는 EditorCommandGui.cpp 의 정적 표 하나라 다른 모듈이 더할 수 없었다.
+- 커맨드(메뉴 · 단축키 · 팔레트)는 EditorCommandGUI.cpp 의 정적 표 하나라 다른 모듈이 더할 수 없었다.
 
 해결방안:
 - EditorUiContext::publish(컨텍스트를 만든 직후 · 지우기 직전) + 결속 등록 줄(uibinder). 등록자는 이미 컨텍스트가 있으면 바로 건다(핫 리로드).
@@ -997,7 +997,7 @@ endfunction()
 종료: `ModuleHost::shutdown` 의 `suspendModules` 뒤 LiveReloadManager 가 의존 역순으로 내리는지 확인(적용 때 — 확장이 EditorModule 보다 먼저 내려가야 등록 목록이 살아 있다). 아니면 확장 이름을 먼저 `unloadModule` 한다.
 헤드리스 임포트(`--import-*` — EditorModule 을 인스턴스 없이 올림)는 확장을 올리지 않는다(에디터 블록 밖).
 
-5) `EditorCommandGui.cpp` 의 `commandCompileEditor` 가 짓는 타깃 `EditorModule` → `EditorAll`(C1 의 묶음 타깃), 라벨 `"Compile Editor (EditorModule + extensions)"`.
+5) `EditorCommandGUI.cpp` 의 `commandCompileEditor` 가 짓는 타깃 `EditorModule` → `EditorAll`(C1 의 묶음 타깃), 라벨 `"Compile Editor (EditorModule + extensions)"`.
 
 6) 게이트:
 - `Scripts/lint/gate/CheckGameFrameworkLayers.py` 규칙 4: `Kits/<묶음>/<키트>/Editor/` 아래 파일은 `Editor/` include 를 허용한다(`_kForbiddenPrefixes` 검사 앞에 `"/Editor/" in relativeFilePath` 면 건너뜀). 규칙 3(키트끼리)은 확장에도 그대로(확장은 자기 키트만).
@@ -1555,7 +1555,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 **바꿀 것.**
 1) 키 넓히기 — `EditorCommandRegistry.h` 의 `EditorCommandKey` 에 **Space 뒤에**(계약 주석대로): `Num0 … Num9, Delete, Insert, Home, End, PageUp, PageDown, Left, Right, Up, Down, Tab, Enter, Escape, Backspace, Minus, Equal, Comma, Period, Slash, Count`.
-   `EditorCommandRegistry.cpp` 의 이름 표에 같은 순서로 이름, `EditorCommandGui.cpp` 의 `toImGuiKey` 는 A..Z · F1..F12 뺄셈 뒤 **새 키는 표**(`kArrExtraKey[]` = `{ EditorCommandKey::Num0, ImGuiKey_0 }, …`).
+   `EditorCommandRegistry.cpp` 의 이름 표에 같은 순서로 이름, `EditorCommandGUI.cpp` 의 `toImGuiKey` 는 A..Z · F1..F12 뺄셈 뒤 **새 키는 표**(`kArrExtraKey[]` = `{ EditorCommandKey::Num0, ImGuiKey_0 }, …`).
    Space 뒤 static_assert 하나 더(`Num0 == 40`).
 2) 덮어쓰기 저장 — 새 `Common/Commands/EditorShortcutOverrides.h` · `.cpp`(ImGui 없음):
 ```cpp
@@ -1599,10 +1599,10 @@ namespace sw::editor
     };
 } // namespace sw::editor
 ```
-`EditorCommandGui::syncWithRegistry`(C3)가 등록부를 다시 만든 뒤 `applyTo` → `validate`. 기본값(표 · 등록 줄의 원래 조합)은 등록부가 `EditorCommandDesc::_defaultShortcut` · `_defaultAltShortcut` 두 칸으로 든다(덮어쓰기 전 값 — "Reset" 이 쓴다).
+`EditorCommandGUI::syncWithRegistry`(C3)가 등록부를 다시 만든 뒤 `applyTo` → `validate`. 기본값(표 · 등록 줄의 원래 조합)은 등록부가 `EditorCommandDesc::_defaultShortcut` · `_defaultAltShortcut` 두 칸으로 든다(덮어쓰기 전 값 — "Reset" 이 쓴다).
 3) 창 — `Panels/ShortcutsPanel.h` · `.cpp` `SW_EDITOR_PANEL( ShortcutsPanel, "shortcuts", EditorPanelCategory::Tool, 2010 );` 제목 `"Keyboard Shortcuts"`(환경설정 창의 왼쪽 목록 맨 아래에도 링크).
    표: 커맨드(아이콘 · 라벨) · 묶음 · 단축키 · 보조 · 단추. "Set" 을 누르면 그 칸이 **다음 키 조합을 받는다**(수정자만 누른 동안은 기다림, Esc 는 취소, Backspace 는 지움 —
-   받는 동안은 전역 단축키 처리(`processHotkeys`)를 멈춘다: `EditorCommandGui::setHotkeysSuspended( true )`). 받은 조합이 다른 커맨드와 같으면 **두 줄을 빨갛게** 하고
+   받는 동안은 전역 단축키 처리(`processHotkeys`)를 멈춘다: `EditorCommandGUI::setHotkeysSuspended( true )`). 받은 조합이 다른 커맨드와 같으면 **두 줄을 빨갛게** 하고
    "Replace (clear <다른 커맨드>)" / "Cancel" 을 묻는다. 줄마다 기본과 다르면 "↺" 단추(Reset), 위에 "Reset All" · 검색(라벨 · id · 조합 글자 — `Ctrl+S` 로도 찾는다).
    ImGuiKey → `EditorCommandKey` 는 `toImGuiKey` 의 역(표 하나를 양쪽이 쓴다).
 
@@ -2585,7 +2585,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | `EditorViewportClient.cpp` · `EditorViewportToolbar.*` | C2 · G1 · R4 · R5 · N1 | C2(마스크 → id) 먼저. R4 의 `getMaskBitById` 는 C2 의 `EditorVisualizerToggles` 로 바꿔 쓴다 |
 | `ContentBrowserPanel.*` | A1 · R9 · N3 | A1 의 역색인 뒤에 N3(이름 바꾸기 · 옮기기) |
 | `ModuleHost.cpp` · `ModuleCatalog.*` · `ModuleManifest.cmake` · `ModuleTargets.cmake` | C4 · P4 | 게이트(`CheckModuleTargets`)는 한 커밋에서 |
-| `EditorCommandGui.cpp` · `EditorCommandRegistry.*` | C3 · P3 · R5 · 여러 단위의 표 한 줄 | 표 줄은 메뉴 순서 값이 겹치지 않게(`validate` 가 잡는다) |
+| `EditorCommandGUI.cpp` · `EditorCommandRegistry.*` | C3 · P3 · R5 · 여러 단위의 표 한 줄 | 표 줄은 메뉴 순서 값이 겹치지 않게(`validate` 가 잡는다) |
 | `EditorSelfTestCases.cpp` · `AppSmokeTest` 기대 목록 | 11 줄 | 줄 더하기 — 순서 키 겹침만 본다 |
 | `AnimGraphPanel.cpp` | T3 · R5 · N8 | T3 → N8 |
 
@@ -2624,7 +2624,7 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 ### R3 컴포넌트와 오브젝트 아이콘(Hierarchy, 인스펙터) ★
 
-**무엇.** 컴포넌트 타입에서 아이콘과 색을 찾는 테이블 `EditorComponentIcon`(`Source/Editor/Common/Gui/EditorComponentIcon.h`, 새 파일)을 두고, Hierarchy 의 오브젝트 줄과 컴포넌트 줄, 인스펙터의 컴포넌트 카드 머리에 붙입니다.
+**무엇.** 컴포넌트 타입에서 아이콘과 색을 찾는 테이블 `EditorComponentIcon`(`Source/Editor/Common/GUI/EditorComponentIcon.h`, 새 파일)을 두고, Hierarchy 의 오브젝트 줄과 컴포넌트 줄, 인스펙터의 컴포넌트 카드 머리에 붙입니다.
 찾는 순서는 셋입니다. 먼저 타입 이름 테이블을 타입 자신부터 부모 타입으로 올라가며 찾고, 없으면 리플렉션 `Category` 테이블, 그래도 없으면 `editoricon::kComponent` 입니다.
 에디터는 GameFramework 를 링크하지 않으므로 타입 포인터가 아니라 짧은 타입 이름(`TypeInfo::_name`)으로 맞춥니다. 행마다 빌보드 여부(`_bBillboard`, 메시가 없는 종류)를 둬서 R4 가 같은 테이블을 씁니다.
 오브젝트 줄은 빌보드 종류 컴포넌트가 있으면 그 아이콘(전구, 카메라)을, 없으면 `kGameObject` 를 보입니다. `[Category]` 배지는 그대로 둡니다.

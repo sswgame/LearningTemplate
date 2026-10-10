@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Editor/Common/Gui/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/EditorPlayToolbar.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Gui/EditorIconGlyphs.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
