@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorRegistry.h"
 
@@ -72,7 +73,7 @@ namespace sw::editor
      * @class EditorPanelManager
      * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다(EditorContext 소유).
      */
-    class EditorPanelManager
+    class SW_EDITOR_API EditorPanelManager
     {
     public:
         EditorPanelManager();

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 확장 모듈(GF_Editor_ThemePark, 확장 지점 C5)이 로드되어 커맨드 · 패널이 에디터에 붙는다.
+  커맨드 팔레트로 확장의 커맨드(themepark.openLayoutPanel)를 실행해 Park Layout 패널을 열고, 패널의 Reload 단추를 누른다.
+  결속기가 틀리면 확장의 ImGui 호출이 다른 컨텍스트로 가서 이름표가 남지 않고 클릭 단계가 진다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/extensionpanel.scenario.xml -dx12
+-->
+<Scenario name="editor.extensionpanel" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="40">
+		<Variable name="gv_editorProbePanel" value="themepark.layout"/>
+	</At>
+	<At frame="45"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="60"><EditorKey key="Ctrl+Shift+P"/></At>
+	<At frame="75"><EditorText value="Open the park"/></At>
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="110">
+		<Expect probe="Editor.PanelOpen" equals="1"/>
+		<ExpectLog contains="Park Layout panel opened" count="1"/>
+	</At>
+	<At frame="115"><DevCommand line="panel.focus themepark.layout"/></At>
+	<At frame="135"><EditorClick mark="themepark.layout.reload"/></At>
+	<At frame="150"><ExpectLog contains="Park layout reloaded on request" count="1"/></At>
+	<At frame="160"><Pass/></At>
+</Scenario>

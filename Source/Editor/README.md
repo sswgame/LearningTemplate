@@ -102,6 +102,18 @@
   `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 그 줄을 기대 목록과 대조합니다(새 줄이 끼는 것은 괜찮고, 기존 줄의 순서 ·
   제목이 바뀌면 집니다 — 패널 제목은 기본 도킹 배치가 대조하는 이름이기도 합니다).
 
+## 확장 모듈 — 키트 · 게임의 에디터 코드
+
+키트나 게임이 에디터에 패널, 시각화, 인스펙터, 커맨드를 더하려면 그 폴더의 `Editor/` 하위 폴더에 에디터 확장 모듈을 둡니다(키트는 `GF_Editor_<키트>`, 게임은 `SWGameEditor`).
+확장 모듈은 Dev 전용 SHARED DLL 이고 EditorModule 을 링크합니다. 등록은 EditorModule 과 똑같이 자기 파일의 `SW_EDITOR_*` 한 줄이고, 등록 줄은 EditorModule 의 목록 하나에 오릅니다.
+만드는 절차는 [Kits README](../GameFramework/Kits/README.md) "키트에 에디터 도구를 붙일 때" 절이고, 본보기는 `GF_Editor_ThemePark` 입니다.
+
+- 확장 모듈이 언로드되면(핫 리로드, 종료) 그 모듈의 등록 줄로 만든 패널, 팝업, 인스펙터, 커맨드가 이미지를 언로드하기 **전에** 지워집니다(`EditorModuleUnloadListener`).
+- 확장 DLL 의 ImGui 호출은 CMake 가 만든 결속기가 에디터 컨텍스트에 겁니다. ImGuizmo 를 쓰면 그리기 전에 `ImGuizmo::SetImGuiContext( ImGui::GetCurrentContext() )` 를 부릅니다.
+  ImDrawList 콜백(`AddCallback`)은 쓰지 않습니다. 렌더 스레드가 늦게 부르므로 그때는 확장이 이미 언로드되었을 수 있습니다.
+- 확장이 쓰는 에디터 API 는 `SW_EDITOR_API` 로 내보낸 것뿐입니다. 링크 오류(undefined symbol)가 나면 그 클래스에 `SW_EDITOR_API` 를 붙입니다.
+- 씬 뷰 카메라를 옮기는 진입점은 `EditorSceneViewUtil::focusOn` 입니다. 시나리오 `editor/extensionpanel`, 자체 시험 `themepark.*`.
+
 ## 커맨드를 하나 더하려면
 
 메뉴 항목 · 전역 단축키 · 커맨드 팔레트 항목은 **한 정의에서 나옵니다** —

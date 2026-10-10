@@ -102,6 +102,11 @@ _kCmakeFileNames = ("CMakeLists.txt",)
 _kLinkCallRe = re.compile(r"\btarget_link_libraries\s*\(", re.IGNORECASE)
 
 
+def isEditorExtensionPath(relative: str) -> bool:
+    """키트 · 게임의 에디터 확장 폴더(`Source/GameFramework/Kits/…/Editor/` · `Source/Games/<게임>/Editor/`) 안의 파일인가."""
+    return relative.startswith(("Source/GameFramework/Kits/", "Source/Games/")) and "/Editor/" in relative
+
+
 def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> list[str]:
     """백엔드 폴더 밖에서 감싼 라이브러리 헤더를 include 하는 줄입니다."""
     listPath = LintGate.selectTargetFiles(repositoryRoot, listFileArgument, listScanRoot=_kListSourceRoot, suffixes=_kSourceSuffixes)
@@ -111,6 +116,8 @@ def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | No
         for lineNumber, rawInclude in iterIncludes(text):
             includePath = normalizePath(rawInclude)
             for rule in _kListLibraryRule:
+                if rule.name == "ImGui" and isEditorExtensionPath(relative):
+                    continue  # 키트 · 게임의 에디터 확장(`<…>/Editor/`, Dev 전용 모듈)은 에디터와 같은 ImGui 를 쓴다
                 if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.listAllowedRoot) is False:
                     listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {' · '.join(rule.listAllowedRoot)} 안에서만 include 합니다")
     return listViolation

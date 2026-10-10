@@ -47,6 +47,8 @@ namespace sw::editor
 {
     /** @brief 탐침 `Editor.VisualizerOn` 이 볼 시각화 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
+    /** @brief 탐침 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -736,6 +738,19 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( gv_editorProbePanel );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->isOpen() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -799,6 +814,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
     SW_AUTOMATION_PROBE( editorVisualizerOn, "Editor.VisualizerOn", "1 when the scene view shows the visualizer named by gv_editorProbeVisualizer",
                          &EditorScenarioStepsInternal::readVisualizerOn );
+    SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
+                         &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
 } // namespace sw::editor

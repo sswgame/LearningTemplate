@@ -32,6 +32,8 @@ namespace sw::editor
 
         /** @brief 뷰포트 클라이언트입니다(에디터 자체 시험이 기즈모 · 카메라 상태를 읽습니다). */
         const EditorViewportClient& getViewportClient() const { return _viewportClient; }
+        /** @brief 뷰포트 클라이언트입니다(카메라를 옮기는 쪽 — `EditorSceneViewUtil::focusOn`). */
+        EditorViewportClient& getViewportClient() { return _viewportClient; }
 
     private:
         /** @brief 디버그 드로우 카테고리를 켜고 끄는 팝업을 그립니다. */

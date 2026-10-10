@@ -1,0 +1,25 @@
+{
+    "_name": "GF_Editor_ThemePark",
+    "_version": "1.0.0",
+    "_kind": "EditorExtension",
+    "_description": "ThemePark 키트의 에디터 확장 — 배치 파일(rides.xml)을 뷰포트에 겹쳐 보이고 놀이기구 목록 패널을 둔다",
+    "_listDependency": [
+        {
+            "_name": "EditorModule"
+        },
+        {
+            "_name": "GF_ThemePark"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

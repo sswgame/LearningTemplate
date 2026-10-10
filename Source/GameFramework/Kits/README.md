@@ -155,6 +155,17 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 
 리플렉션 헤더는 자동 탐색이라 키트 `CMakeLists.txt` 에 헤더 목록을 적지 않습니다.
 
+### 키트에 에디터 도구를 붙일 때
+
+키트 데이터를 에디터에서 보거나 고치는 코드(패널, 뷰포트 시각화, 인스펙터, 커맨드)는 키트 폴더의 `Editor/` 하위 폴더에 따로 짓는 에디터 확장 모듈로 둡니다.
+언리얼 플러그인이 런타임 모듈 옆에 `<X>Editor` 모듈을 두는 것과 같습니다. 키트 DLL(배포본 포함)에는 섞이지 않습니다.
+
+1. `Editor/GF_Editor_<키트>.module.json` 을 둡니다. `_kind` 는 `EditorExtension`, `_listConfiguration` 은 `["Dev"]`, `_listTarget` 은 `["Client"]`,
+   `_listDependency` 에는 `EditorModule` 과 키트를 적습니다.
+2. `Editor/CMakeLists.txt` 에 `sw_addEditorExtension(GF_Editor_<키트>)` 한 줄을 씁니다. 키트 함수가 `Editor/` 를 키트 소스에서 빼고 이 폴더로 들어갑니다.
+3. 에디터 코드는 EditorModule 과 똑같이 `SW_EDITOR_PANEL` · `SW_EDITOR_VISUALIZER` · `SW_EDITOR_COMMAND` · `SW_EDITOR_SELF_TEST` 한 줄로 등록합니다.
+   본보기는 `Kits/Genre/Simulation/ThemePark/Editor/`(배치 시각화, Park Layout 패널, 커맨드, 자체 시험)입니다.
+
 ### 키트 안의 폴더
 
 키트 루트의 소스 파일(`.h` · `.cpp`)이 10 개가 되기 전까지는 평평하게 둡니다. 10 개가 되면 아래 이름의 하위 폴더로 나눕니다.

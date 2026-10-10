@@ -48,6 +48,8 @@ namespace sw::editor
 
         /** @brief 현재 선택한 GameObject 가 화면에 들어오도록 카메라를 맞춥니다(F 키). */
         void frameSelected();
+        /** @brief 에디터 카메라가 @p target 을 반지름 @p radius 의 물체처럼 화면에 담도록 지금 방향 그대로 물러섭니다(`frameSelected` 의 위치 판). */
+        void focusOnPoint( const float3& target, float32 radius );
 
         const float3& getCameraPosition() const { return _cameraPos; }
         /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다(-1 = 아직 없음). 에디터 자체 시험(`sceneView.gridAndGizmoDraw`)이 읽습니다. */

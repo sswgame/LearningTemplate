@@ -10,6 +10,8 @@
 #include "Core/Container/string.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw::editor
 {
     /** @brief 이름표 하나 — 위젯이 그려진 프레임의 ID 와 화면 사각형(ImGui 좌표)입니다. */
@@ -29,7 +31,7 @@ namespace sw::editor
      * @struct EditorSelfTestMarks
      * @brief 패널이 위젯을 그린 직후 남기는 이름표입니다. 시험이 켜졌을 때만 적습니다.
      */
-    struct EditorSelfTestMarks
+    struct SW_EDITOR_API EditorSelfTestMarks
     {
         /** @brief 바로 앞에 그린 위젯(ImGui "last item")을 @p pKey 로 적습니다. 시험이 꺼져 있으면 아무것도 하지 않습니다. */
         static void note( const utf8* pKey );

@@ -682,7 +682,6 @@ namespace sw::editor
             return;
 
         const float3 worldPos = pSceneComp->getWorldPosition();
-        _orbitTarget          = worldPos;
 
         // 크기는 오브젝트의 월드 상자로 잰다(`GameObject::getWorldBox`). 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈하면
         // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
@@ -694,7 +693,13 @@ namespace sw::editor
             objectRadius = MathUtil::max( diagonal.getLength() * 0.5f, 0.1f );
         }
 
-        _orbitDistance = MathUtil::clamp( objectRadius * 2.5f, 3.0f, 60.0f );
+        focusOnPoint( worldPos, objectRadius );
+    }
+
+    void EditorViewportClient::focusOnPoint( const float3& target, float32 radius )
+    {
+        _orbitTarget   = target;
+        _orbitDistance = MathUtil::clamp( MathUtil::max( radius, 0.1f ) * 2.5f, 3.0f, 60.0f );
 
         const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
