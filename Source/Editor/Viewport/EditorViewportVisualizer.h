@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorRegistry.h"
+#include "Editor/Viewport/EditorVisualizerToggles.h"
 
 struct ImDrawList;
 
@@ -54,7 +55,7 @@ namespace sw::editor
      * @struct EditorVisualizerRegistration
      * @brief 시각화 하나의 등록 줄입니다. 시각화의 .cpp 가 `SW_EDITOR_VISUALIZER` 로 둡니다.
      * @details 한 줄이 라벨 · 툴팁 · 기본값 · 그리기 함수를 모두 들고, 툴바 체크박스는 이 줄들에서 만들어집니다. `_order` 가 툴바
-     *          체크박스의 순서이자 시각화 마스크의 비트 자리입니다.
+     *          체크박스의 순서입니다. 켬/끔은 id 로 보관합니다(`EditorVisualizerToggles`).
      */
     struct EditorVisualizerRegistration : EditorRegistration
     {
@@ -74,24 +75,17 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportVisualizer
-     * @brief 등록된 뷰포트 디버그 시각화를 마스크로 켜고 그립니다. 시각화를 하나 더하려면 자기 .cpp 에 `SW_EDITOR_VISUALIZER` 한 줄입니다.
+     * @brief 등록된 뷰포트 디버그 시각화 가운데 켜진 것을 그립니다. 시각화를 하나 더하려면 자기 .cpp 에 `SW_EDITOR_VISUALIZER` 한 줄입니다.
      */
-    class EditorViewportVisualizer
+    class SW_EDITOR_API EditorViewportVisualizer
     {
     public:
-        /** @brief 시각화 마스크가 uint32 라 시각화는 이만큼까지 켤 수 있습니다. 넘는 등록은 그리지 않습니다. */
-        static constexpr uint32 kMaxVisualizerCount = 32;
-
-        /** @brief 켤 수 있는 시각화 수입니다(`kMaxVisualizerCount` 이하). */
+        /** @brief 등록된 시각화 수입니다. */
         static uint32 getCount();
         /** @brief 순서대로 index 번째 시각화입니다. */
         static const EditorVisualizerRegistration& getAt( uint32 index );
-        /** @brief 기본으로 켜지는 시각화 비트마스크입니다. */
-        static uint32 getDefaultMask();
-        /** @brief 마스크에서 켜진 시각화를 모두 그립니다. */
-        static void drawAll( const EditorViewportVisualizerArgs& args, uint32 visualizerMask );
-        /** @brief index번째 시각화의 마스크 비트입니다. */
-        static uint32 getMaskBit( uint32 index ) { return 1u << index; }
+        /** @brief @p toggles 에서 켜진 시각화를 모두 그립니다. */
+        static void drawAll( const EditorViewportVisualizerArgs& args, const EditorVisualizerToggles& toggles );
     };
 } // namespace sw::editor
 

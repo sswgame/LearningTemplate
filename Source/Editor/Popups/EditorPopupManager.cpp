@@ -2,6 +2,8 @@
 
 #include "Editor/Popups/EditorPopupManager.h"
 
+#include "Core/Module/ModuleUnloadListener.h"
+
 #include "Editor/Common/GUI/IEditorPopup.h"
 
 namespace sw::editor
@@ -31,8 +33,7 @@ namespace sw::editor
 
     IEditorPopup* EditorPopupManager::findPopup( string_view id )
     {
-        if ( _bDefaultsRegistered == false )
-            registerDefaultPopups();
+        syncWithRegistry();
 
         for ( EditorPopupEntry& entry : _listPopup )
         {
@@ -75,8 +76,7 @@ namespace sw::editor
 
     void EditorPopupManager::drawOpenPopups()
     {
-        if ( _bDefaultsRegistered == false )
-            registerDefaultPopups();
+        syncWithRegistry();
 
         for ( EditorPopupEntry& entry : _listPopup )
         {
@@ -87,20 +87,59 @@ namespace sw::editor
 
     void EditorPopupManager::registerDefaultPopups()
     {
-        if ( _bDefaultsRegistered )
-            return;
-        _bDefaultsRegistered = true;
+        syncWithRegistry();
+    }
 
-        using PopupRegistry = EditorRegistry<EditorPopupRegistration>;
+    void EditorPopupManager::syncWithRegistry()
+    {
+        using PopupRegistry                = EditorRegistry<EditorPopupRegistration>;
+        const EditorRegistrationList& list = PopupRegistry::getList();
+        if ( list.getGeneration() == _syncedGeneration )
+            return;
+        _syncedGeneration = list.getGeneration();
+
+        for ( size_t index = _listPopup.size(); index-- > 0; )
+        {
+            const EditorPopupEntry& entry = _listPopup[index];
+            if ( entry._pRegistration == nullptr || PopupRegistry::find( entry._id ) == entry._pRegistration )
+                continue;
+            _listPopup.erase( _listPopup.begin() + static_cast<ptrdiff_t>( index ) );
+        }
         for ( uint32 index = 0; index < PopupRegistry::getCount(); ++index )
         {
-            registerPopup( PopupRegistry::getAt( index )._pCreate() );
+            const EditorPopupRegistration& registration = PopupRegistry::getAt( index );
+            bool                           bExisting    = false;
+            for ( const EditorPopupEntry& entry : _listPopup )
+            {
+                bExisting = bExisting || entry._pRegistration == &registration;
+            }
+            if ( bExisting )
+                continue;
+            registerPopup( registration._pCreate() );
+            for ( EditorPopupEntry& entry : _listPopup )
+            {
+                if ( entry._id == registration._pID )
+                    entry._pRegistration = &registration;
+            }
         }
+    }
+
+    uint32 EditorPopupManager::releasePopupsWithin( const void* pBegin, const void* pEnd )
+    {
+        uint32 releasedCount{ 0 };
+        for ( size_t index = _listPopup.size(); index-- > 0; )
+        {
+            if ( IModuleUnloadListener::isAddressWithin( _listPopup[index]._pRegistration, pBegin, pEnd ) == false )
+                continue;
+            _listPopup.erase( _listPopup.begin() + static_cast<ptrdiff_t>( index ) );
+            ++releasedCount;
+        }
+        return releasedCount;
     }
 
     void EditorPopupManager::clear()
     {
         _listPopup.clear();
-        _bDefaultsRegistered = false;
+        _syncedGeneration = invalid_index::kUint32;
     }
 } // namespace sw::editor

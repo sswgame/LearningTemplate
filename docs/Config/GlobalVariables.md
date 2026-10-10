@@ -55,6 +55,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_editorProbeVisualizer` | `string` | — | 시험 | 탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorRegistryDump` | `bool` | `false` | 시험 | 시작할 때 에디터 레지스트리(패널 · 팝업 · 인스펙터 · 시각화 · 메뉴)를 로그로 덤프 | [EditorRegistryDump.cpp](../../Source/Editor/SelfTest/EditorRegistryDump.cpp) |
 | `gv_editorSelfTest` | `string` | — | 시험 | 에디터가 뜬 뒤 이름이 패턴에 맞는 에디터 자체 시험을 돌리고 끝낸다 (* · 쉼표, 비우면 사용 안 함) | [EditorSelfTest.cpp](../../Source/Editor/SelfTest/EditorSelfTest.cpp) |
 | `gv_editorSelfTestReport` | `string` | — | 시험 | 에디터 자체 시험 결과를 쓸 파일 (비우면 로그에만) | [EditorSelfTest.cpp](../../Source/Editor/SelfTest/EditorSelfTest.cpp) |

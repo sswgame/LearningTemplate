@@ -44,12 +44,25 @@ namespace sw::editor
         return make_unique<TInspector>();
     }
 
+    /** @brief 컴포넌트 타입 하나에 건 인스펙터 확장입니다. */
+    struct InspectorComponentEntry
+    {
+        hashed_string                      _typeName;
+        unique_ptr<IInspectorComponent>    _pInstance;
+        const EditorInspectorRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerType 한 것은 nullptr)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 컴포넌트 타입별 인스펙터 UI 관리자 (EditorContext 소유) */
     class InspectorComponentManager
     {
     public:
-        InspectorComponentManager()  = default;
-        ~InspectorComponentManager() = default;
+        InspectorComponentManager();
+        ~InspectorComponentManager();
+        InspectorComponentManager( const InspectorComponentManager& )            = delete;
+        InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 
         /** @brief 타입 이름에 확장을 겁니다. 같은 이름이 있으면 바꿉니다. */
         void                 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
@@ -61,9 +74,17 @@ namespace sw::editor
         void collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const;
         /** @brief `SW_EDITOR_INSPECTOR` 로 등록된 확장을 모두 만들어 둡니다. */
         void registerDefaults();
+        /** @brief 등록 목록과 맞춥니다. 새 줄은 만들고 사라진 줄의 확장은 지웁니다. 세대가 같으면 바로 돌아갑니다. */
+        void syncWithRegistry();
+        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 확장을 지웁니다. 지운 수를 돌려줍니다. 이미지를 언로드하기 전에 부릅니다. */
+        uint32 releaseInspectorsWithin( const void* pBegin, const void* pEnd );
 
     private:
-        NameRegistry<unique_ptr<IInspectorComponent>> _registry; ///< 컴포넌트 타입 이름 → 확장
+        vector<InspectorComponentEntry> _listEntry;        ///< 확장은 열 개 안팎이라 줄 찾기로 충분하다
+        uint32                          _syncedGeneration; ///< 마지막으로 맞춘 등록 세대
+
+        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
+        static constexpr uint32 kNotSynced = invalid_index::kUint32;
     };
 } // namespace sw::editor
 

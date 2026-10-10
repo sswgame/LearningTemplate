@@ -448,6 +448,8 @@ namespace sw::editor
 
         if ( _editorContext != nullptr )
         {
+            // 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다 — 등록 세대가 바뀌었으면 인스턴스를 맞춘다(같으면 비교 하나로 끝).
+            _editorContext->syncExtensionRegistrations();
             _editorContext->setGameViewFocused( false );
             _editorContext->setGameViewHovered( false );
             _editorContext->clearViewDrawnMarks();

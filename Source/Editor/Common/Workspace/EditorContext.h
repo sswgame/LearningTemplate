@@ -19,6 +19,7 @@ namespace sw::editor
     class EditorAssetValidation;
     class EditorCommandRegistry;
     class EditorDockLayout;
+    class EditorModuleUnloadListener;
     class EditorNotificationManager;
     class EditorPanelManager;
     class EditorPopupManager;
@@ -56,6 +57,11 @@ namespace sw::editor
         void initialize();
         /** @brief 에디터 서브시스템들을 정리 및 해제합니다. */
         void shutdown();
+        /**
+         * @brief 패널 · 팝업 · 인스펙터 매니저를 등록 목록과 맞춥니다. 에디터 프레임 앞에서 부릅니다.
+         * @details 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드됩니다(핫 리로드). 등록 세대가 같으면 비교 하나로 끝납니다.
+         */
+        void syncExtensionRegistrations();
 
         /** @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다. */
         static EditorContext* get();
@@ -114,24 +120,25 @@ namespace sw::editor
         EditorThemeConfig& getThemeConfig() { return _themeConfig; }
 
     private:
-        unique_ptr<EditorSelection>           _pEditorSelection;
-        unique_ptr<EditorWorkspace>           _pWorkspace;
-        unique_ptr<EditorNotificationManager> _pNotificationManager;
-        unique_ptr<EditorCommandRegistry>     _pCommandRegistry;
-        unique_ptr<EditorPanelManager>        _pPanelManager;
-        unique_ptr<EditorPopupManager>        _pPopupManager;
-        unique_ptr<AssetHotReload>            _pAssetHotReload;
-        unique_ptr<ConfigHotReload>           _pConfigHotReload;
-        unique_ptr<EditorAssetValidation>     _pAssetValidation;
-        unique_ptr<EditorSourceControl>       _pSourceControl;
-        unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
-        unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;
-        IRHIDevice*                           _pRHIDevice;
-        EditorDockLayout*                     _pDockLayout;
-        IImGuiRendererBackend*                _pRendererBackend;
-        EditorViewTarget                      _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];
-        PlaySessionData                       _playSessionData;
-        EditorThemeConfig                     _themeConfig;
+        unique_ptr<EditorSelection>            _pEditorSelection;
+        unique_ptr<EditorWorkspace>            _pWorkspace;
+        unique_ptr<EditorNotificationManager>  _pNotificationManager;
+        unique_ptr<EditorCommandRegistry>      _pCommandRegistry;
+        unique_ptr<EditorPanelManager>         _pPanelManager;
+        unique_ptr<EditorPopupManager>         _pPopupManager;
+        unique_ptr<AssetHotReload>             _pAssetHotReload;
+        unique_ptr<ConfigHotReload>            _pConfigHotReload;
+        unique_ptr<EditorAssetValidation>      _pAssetValidation;
+        unique_ptr<EditorSourceControl>        _pSourceControl;
+        unique_ptr<InspectorComponentManager>  _pInspectorComponentManager;
+        unique_ptr<InspectorPropertyManager>   _pInspectorPropertyManager;
+        unique_ptr<EditorModuleUnloadListener> _pModuleUnloadListener; ///< 매니저들보다 먼저 지운다(shutdown)
+        IRHIDevice*                            _pRHIDevice;
+        EditorDockLayout*                      _pDockLayout;
+        IImGuiRendererBackend*                 _pRendererBackend;
+        EditorViewTarget                       _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];
+        PlaySessionData                        _playSessionData;
+        EditorThemeConfig                      _themeConfig;
 
         uint8                  _bGameViewHovered : 1;
         uint8                  _bGameViewFocused : 1;

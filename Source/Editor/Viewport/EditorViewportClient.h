@@ -55,6 +55,9 @@ namespace sw::editor
         /** @brief 그 프레임에 기즈모를 단 오브젝트 수입니다. */
         uint32 getLastGizmoObjectCount() const { return _lastGizmoObjectCount; }
 
+        /** @brief 툴바 설정(스냅 · 시각화 켬/끔 …)입니다. */
+        const ViewportToolbarSettings& getToolbarSettings() const { return _toolbarSettings; }
+
     private:
         void processFlyInput( float32 deltaTime );
         void processOrbitInput();

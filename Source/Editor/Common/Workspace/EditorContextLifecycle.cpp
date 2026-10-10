@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -96,6 +97,8 @@ namespace sw::editor
         _pInspectorComponentManager->registerDefaults();
         _pInspectorPropertyManager->registerDefaults();
         _pPopupManager->registerDefaultPopups();
+        // 확장 모듈이 언로드되기 전에 그 모듈의 등록 줄로 만든 인스턴스를 지운다 — 매니저가 다 선 뒤에 만든다.
+        _pModuleUnloadListener = make_unique<EditorModuleUnloadListener>( *this );
 
         // 애셋 핫 리로드는 개발 기능이라 **에디터가 켜져 있을 때만** 감시가 돈다.
         // 리소스 루트가 없으면(팩만 실린 실행) 조용히 꺼진 채로 둔다.
@@ -113,6 +116,7 @@ namespace sw::editor
         if ( s_pActiveContext == this )
             setActive( nullptr );
 
+        _pModuleUnloadListener.reset(); // 매니저보다 먼저 — 언로드 훑기가 지워진 매니저를 밟지 않게
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
         _pConfigHotReload.reset();
@@ -128,6 +132,13 @@ namespace sw::editor
         _pRendererBackend = nullptr;
         _pRHIDevice       = nullptr;
         unbindLocalService<EditorContext>();
+    }
+
+    void EditorContext::syncExtensionRegistrations()
+    {
+        _pPanelManager->syncWithRegistry( _pRHIDevice );
+        _pPopupManager->syncWithRegistry();
+        _pInspectorComponentManager->syncWithRegistry();
     }
 
     void EditorContext::clearViewDrawnMarks()

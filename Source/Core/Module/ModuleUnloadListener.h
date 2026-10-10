@@ -16,7 +16,8 @@ namespace sw
     /**
      * @class IModuleUnloadListener
      * @brief 모듈 이미지의 코드를 가리킬 수 있는 등록부입니다. 상속하면 프로세스 목록에 자동으로 오르내립니다.
-     * @warning `onModuleUnloading` 안에서 다른 리스너를 만들거나 지우지 않습니다 — 훑기는 목록 잠금을 쥔 채 돕니다.
+     * @details 훑기는 목록 잠금을 쥔 채 돕니다. 훑는 스레드가 `onModuleUnloading` 안에서 리스너를 만들거나 지우는 것은 됩니다
+     *          (에디터가 확장 패널을 지우면 그 패널의 Undo 스택도 지워진다). 훑기는 시작할 때의 목록 사본을 돌고, 그사이 지워진 리스너는 건너뜁니다.
      * @note 리스너 자체는 엔진(또는 App) 쪽 코드가 만들어야 합니다. 모듈이 만든 리스너는 vtable 이 그 이미지에 있어, 모듈보다 오래 살면 훑기가
      *       내려간 코드로 뜁니다. 생성자를 헤더에 인라인으로 두지 않는 것이 그 때문입니다(생성자가 vptr 을 박는 이미지가 vtable 의 집이다).
      */
@@ -32,6 +33,7 @@ namespace sw
             const utf8* _pListenerName{ nullptr };  ///< `getModuleUnloadListenerName` (정적 문자열)
             uint32      _releasedCount{ 0 };        ///< 뗀 것의 수
             bool        _bKeepImageMapped{ false }; ///< 떼어 낼 수 없는 것이 남아 이미지를 내리면 안 된다
+            bool        _bExpected{ false };        ///< 떼는 것이 정상인 리스너다(`isReleaseExpected`) — 경고가 아니라 정보로 남긴다
         };
 
         /** @brief 목록에 자기를 올립니다. */
@@ -53,6 +55,11 @@ namespace sw
          * @return 뗀 것의 수입니다.
          */
         virtual uint32 onModuleUnloading( const void* pBegin, const void* pEnd, bool& outKeepImageMapped ) = 0;
+        /**
+         * @brief 이 리스너가 떼는 것이 정상 경로인지 묻습니다. 기본은 false 입니다(모듈이 스스로 떼지 않고 남긴 것 — 경고).
+         * @details 에디터처럼 다른 모듈의 등록 줄로 인스턴스를 만들어 두는 쪽은 그 모듈이 언로드되기 전에 떼는 것이 할 일이라 true 입니다.
+         */
+        virtual bool isReleaseExpected() const { return false; }
 
         /**
          * @brief 살아 있는 모든 리스너에게 범위를 넘겨 뗍니다. 리스너마다 결과 한 줄입니다(뗀 것이 없어도).

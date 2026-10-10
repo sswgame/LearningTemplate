@@ -497,7 +497,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   이중 버퍼로. `ActionRoom::drawDebug` 를 부르는 곳은 아직 없다. 메뉴 경로는 `EditorCommandRegistry::validate` 가 "그려지지 않는 경로" 를 잡는다.
 - **패널 · 팝업 · 인스펙터 · 시각화는 자기 .cpp 의 `SW_EDITOR_PANEL` · `SW_EDITOR_POPUP` · `SW_EDITOR_INSPECTOR` · `SW_EDITOR_VISUALIZER` 한 줄로 등록한다**
   (`EditorRegistry<T>`, (order, id) 정렬, 같은 id 거절). 메뉴 배치는 커맨드 표 줄의 `_menuPath` · `_menuOrder`(백의 자리가 바뀌면 구분선). 매니저 · 메뉴바에
-  손 목록을 다시 만들지 말 것. 시각화 마스크 비트는 등록 순서의 index 라 순서 키를 바꾸면 비트 자리도 바뀐다(지금은 저장하지 않아 무해).
+  손 목록을 다시 만들지 말 것. 등록 목록은 EditorModule 에 하나다(`getEditorRegistrationList`) — 확장 모듈의 등록도 같은 목록에 오른다.
+  매니저(패널 · 팝업 · 인스펙터)는 등록 세대를 따라가고(`syncWithRegistry`, 에디터 프레임 앞), 확장 모듈이 언로드되기 전에 `EditorModuleUnloadListener` 가
+  그 이미지의 등록 줄로 만든 인스턴스를 지운다(열려 있던 패널은 id 로 기억해 다시 로드되면 연다). 시각화 켬/끔은 id 로 보관한다(`EditorVisualizerToggles`) —
+  등록 순서의 비트 위치로 보관하면 줄이 끼어들 때 엉뚱한 시각화가 켜진다. 시나리오 `editor/visualizertoggle`.
 - **에셋 종류 하나 = `EditorAssetType` 한 값 + `EditorAssetType.cpp` 의 `kArrAssetMatch`(판정 · 핫 리로드 칸) · `kArrKindInfo`(이름 · 라벨 · 패널 · 아이콘 · 색 ·
   임포트) 각 한 줄 + 필요하면 `Source/Editor/AssetActions/<Kind>AssetTypeActions.cpp`(썸네일 · 열기 · 드롭, 정적 등록).** 종류별 if-체인을 다시 만들지 말 것 —
   칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.

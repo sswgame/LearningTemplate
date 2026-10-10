@@ -9,8 +9,8 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
-# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 MODULE DLL 이라
-# 링크할 수 없다.
+# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 ImGui 를
+# 링크하므로 시험은 그것을 링크하지 않는다(시험은 ImGui 없이 돈다).
 #
 # **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야
 # 하는 것만 적는다. 기계가 대신 고를 수 없어서 목록은 손으로 두되,
@@ -41,6 +41,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowserLogic.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentManager.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMapPaintUtil.cpp"
@@ -76,6 +77,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorGridUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewTargetUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerGeometry.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorVisualizerToggles.cpp"
 	LIBS
 		Engine
 		Microsoft::DirectXTex

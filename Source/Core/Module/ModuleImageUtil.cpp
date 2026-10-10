@@ -434,7 +434,9 @@ namespace sw
         for ( const IModuleUnloadListener::ReleaseResult& result : listResult )
         {
             releasedCount += result._releasedCount;
-            if ( result._releasedCount > 0 )
+            if ( result._releasedCount > 0 && result._bExpected )
+                SW_LOG_INFO( "Module %#: released %# %# before unloading its image", moduleName, result._releasedCount, result._pListenerName );
+            else if ( result._releasedCount > 0 )
                 SW_LOG_WARNING( "Module %# left %# %# behind — released them before unloading its image", moduleName, result._releasedCount, result._pListenerName );
             // 떼어 낼 수 없는 것(다른 코드가 아직 구독하는 이 이미지의 이벤트 채널)이 남았다. 내리면 다음 발행 · 종료 때 내려간 코드로 뛴다.
             if ( result._bKeepImageMapped )

@@ -20,6 +20,7 @@ namespace sw
         {
             mutex                                   _mutex;
             RegistrationList<IModuleUnloadListener> _registeredListener;
+            std::thread::id                         _walkingThread; ///< `releaseAllWithin` 이 잠금을 쥐고 도는 스레드(돌지 않으면 빈 id)
         };
 
         ModuleUnloadListenerList& getModuleUnloadListenerList()
@@ -28,11 +29,34 @@ namespace sw
             return s_list;
         }
 
+        /** @brief 지금 스레드가 훑기 중인 그 스레드인지 묻습니다(그러면 이미 잠금을 쥐고 있다). */
+        bool isWalkingThread( const ModuleUnloadListenerList& list )
+        {
+            return list._walkingThread == std::this_thread::get_id();
+        }
+
         void addListener( IModuleUnloadListener* pListener )
         {
             ModuleUnloadListenerList& list = getModuleUnloadListenerList();
-            std::scoped_lock<mutex>   lock{ list._mutex };
+            if ( isWalkingThread( list ) )
+            {
+                (void)list._registeredListener.add( pListener ); // 훑기 안에서 — 잠금은 훑기가 쥐고 있다
+                return;
+            }
+            std::scoped_lock<mutex> lock{ list._mutex };
             (void)list._registeredListener.add( pListener ); // 생성자에서 한 번 — 같은 객체가 두 번 오를 일은 없다
+        }
+
+        void removeListener( IModuleUnloadListener* pListener )
+        {
+            ModuleUnloadListenerList& list = getModuleUnloadListenerList();
+            if ( isWalkingThread( list ) )
+            {
+                (void)list._registeredListener.remove( pListener ); // 훑기 안에서 — 훑기는 사본을 돌고 지워진 것은 건너뛴다
+                return;
+            }
+            std::scoped_lock<mutex> lock{ list._mutex };
+            (void)list._registeredListener.remove( pListener ); // 올라 있지 않으면(정적 소멸 순서) 할 일이 없다
         }
     } // namespace
 } // namespace sw
@@ -52,9 +76,7 @@ namespace sw
 
     IModuleUnloadListener::~IModuleUnloadListener()
     {
-        ModuleUnloadListenerList& list = getModuleUnloadListenerList();
-        std::scoped_lock<mutex>   lock{ list._mutex };
-        (void)list._registeredListener.remove( this ); // 올라 있지 않으면(정적 소멸 순서) 할 일이 없다
+        removeListener( this );
     }
 
     IModuleUnloadListener& IModuleUnloadListener::operator=( const IModuleUnloadListener& other )
@@ -71,14 +93,22 @@ namespace sw
 
         ModuleUnloadListenerList& list = getModuleUnloadListenerList();
         std::scoped_lock<mutex>   lock{ list._mutex };
-        outListResult.reserve( list._registeredListener.getCount() );
-        for ( IModuleUnloadListener* pListener : list._registeredListener.getItems() )
+        // 사본을 돈다 — 리스너가 훑기 안에서 다른 리스너를 만들거나 지울 수 있다(같은 스레드는 잠금 없이 목록을 고친다).
+        const vector<IModuleUnloadListener*> listSnapshot = list._registeredListener.getItems();
+        list._walkingThread                               = std::this_thread::get_id();
+        outListResult.reserve( listSnapshot.size() );
+        for ( IModuleUnloadListener* pListener : listSnapshot )
         {
+            const vector<IModuleUnloadListener*>& listLive = list._registeredListener.getItems();
+            if ( std::find( listLive.begin(), listLive.end(), pListener ) == listLive.end() )
+                continue; // 앞 리스너의 훑기 안에서 지워졌다
             ReleaseResult result{};
             result._pListenerName = pListener->getModuleUnloadListenerName();
+            result._bExpected     = pListener->isReleaseExpected();
             result._releasedCount = pListener->onModuleUnloading( pBegin, pEnd, result._bKeepImageMapped );
             outListResult.push_back( result );
         }
+        list._walkingThread = std::thread::id{};
     }
 
     uint32 IModuleUnloadListener::getListenerCount()

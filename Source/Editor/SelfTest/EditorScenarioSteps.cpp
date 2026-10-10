@@ -8,6 +8,7 @@
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -20,9 +21,11 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
@@ -39,6 +42,12 @@
 
 #include <imgui.h>
 #include <imgui_internal.h>
+
+namespace sw::editor
+{
+    /** @brief 탐침 `Editor.VisualizerOn` 이 볼 시각화 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -713,6 +722,20 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 씬 뷰가 `-gv_editorProbeVisualizer` 의 시각화를 켜 두었으면 1 입니다. 패널이나 그 id 의 시각화가 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readVisualizerOn( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const SceneViewPanel*               pPanel        = static_cast<const SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) );
+                const EditorVisualizerRegistration* pRegistration = EditorRegistry<EditorVisualizerRegistration>::find( gv_editorProbeVisualizer );
+                if ( pPanel == nullptr || pRegistration == nullptr )
+                    return false;
+                outValue = pPanel->getViewportClient().getToolbarSettings()._visualizerToggles.isOn( *pRegistration ) ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -774,6 +797,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSceneViewDrawn, "Editor.SceneViewDrawn", "1 when the Scene panel drew the scene view this UI frame (its tab is in front)",
                          &EditorScenarioStepsInternal::readSceneViewDrawn );
     SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
+    SW_AUTOMATION_PROBE( editorVisualizerOn, "Editor.VisualizerOn", "1 when the scene view shows the visualizer named by gv_editorProbeVisualizer",
+                         &EditorScenarioStepsInternal::readVisualizerOn );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
 } // namespace sw::editor

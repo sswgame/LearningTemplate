@@ -15,6 +15,7 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -128,18 +129,15 @@ namespace sw::editor
             for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
             {
                 const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );
-                const uint32                        maskBit    = EditorViewportVisualizer::getMaskBit( index );
-                bool                                bOn        = ( settings._visualizerMask & maskBit ) != 0;
+                bool                                bOn        = settings._visualizerToggles.isOn( visualizer );
 
                 ImGui::SameLine();
-                ImGui::PushID( static_cast<int32>( index ) );
+                ImGui::PushID( visualizer._pID );
                 if ( ImGui::Checkbox( visualizer._pToggleLabel, &bOn ) )
-                {
-                    if ( bOn )
-                        settings._visualizerMask |= maskBit;
-                    else
-                        settings._visualizerMask &= ~maskBit;
-                }
+                    settings._visualizerToggles.setOn( visualizer, bOn );
+                fixed_string<constant::kMaxBuffer64> mark;
+                formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
+                EditorSelfTestMarks::note( mark.c_str() );
                 EditorWidgets::drawTooltip( visualizer._pTooltip );
                 ImGui::PopID();
             }

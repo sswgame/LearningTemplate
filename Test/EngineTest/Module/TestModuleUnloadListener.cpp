@@ -44,6 +44,32 @@ namespace
         const void* _pCode;
         bool        _bKeepImageMapped;
     };
+
+    /**
+     * @brief 훑기 안에서 다른 리스너를 지우고 새로 만드는 리스너입니다 — 에디터가 확장 패널을 지우면 그 패널의 Undo 스택(리스너)도 사라진다.
+     */
+    class OwningUnloadListener final : public sw::IModuleUnloadListener
+    {
+    public:
+        OwningUnloadListener()
+            : _pOwned{ sw::make_unique<ProbeUnloadListener>() }
+            , _pCreated{}
+        {
+        }
+
+        const utf8* getModuleUnloadListenerName() const override { return "owning entries"; }
+        bool        isReleaseExpected() const override { return true; }
+
+        uint32 onModuleUnloading( const void* /*pBegin*/, const void* /*pEnd*/, bool& /*outKeepImageMapped*/ ) override
+        {
+            _pOwned.reset();                                    // 같은 스레드의 훑기 안에서 지운다 — 잠금을 다시 잡지 않는다
+            _pCreated = sw::make_unique<ProbeUnloadListener>(); // 만들어도 된다
+            return 1;
+        }
+
+        sw::unique_ptr<ProbeUnloadListener> _pOwned;
+        sw::unique_ptr<ProbeUnloadListener> _pCreated;
+    };
 } // namespace
 
 /**
@@ -79,6 +105,32 @@ SW_TEST_CASE( ModuleUnloadListenerTest, ReleaseModuleCodeSweepsEveryLiveListener
         // 사본도 따로 오른다(복사로 생긴 등록부가 훑기에서 빠지지 않게).
         const ProbeUnloadListener copy{ probe };
         SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );
+    }
+    SW_EXPECT_EQUAL( listenerCountBefore, sw::IModuleUnloadListener::getListenerCount() );
+}
+
+/**
+ * @brief [ModuleUnloadListenerTest] 훑기 안에서 리스너를 지우거나 만들어도 멈추지 않고, 지워진 리스너는 건너뛴다
+ * @details 목록 잠금은 재진입하지 않는다. 훑는 스레드는 잠금 없이 목록을 고치고, 훑기는 시작할 때의 사본을 돈다.
+ */
+SW_TEST_CASE( ModuleUnloadListenerTest, ListenerMayDestroyAndCreateListenersDuringTheSweep )
+{
+    const uint32 listenerCountBefore = sw::IModuleUnloadListener::getListenerCount();
+    {
+        OwningUnloadListener owner;
+        SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );
+        sw::vector<sw::IModuleUnloadListener::ReleaseResult> listResult;
+        sw::IModuleUnloadListener::releaseAllWithin( s_arrProbeImage, s_arrProbeImage + 16, listResult );
+        SW_EXPECT_TRUE( owner._pOwned == nullptr );
+        SW_EXPECT_TRUE( owner._pCreated != nullptr );
+        SW_EXPECT_EQUAL( listenerCountBefore + 2, sw::IModuleUnloadListener::getListenerCount() );
+        uint32 expectedCount = 0;
+        for ( const sw::IModuleUnloadListener::ReleaseResult& result : listResult )
+        {
+            if ( result._bExpected )
+                expectedCount += result._releasedCount;
+        }
+        SW_EXPECT_EQUAL( 1u, expectedCount );
     }
     SW_EXPECT_EQUAL( listenerCountBefore, sw::IModuleUnloadListener::getListenerCount() );
 }

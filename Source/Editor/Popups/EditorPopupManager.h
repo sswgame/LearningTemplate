@@ -14,11 +14,14 @@
 namespace sw::editor
 {
 
+    struct EditorPopupRegistration;
+
     /** @brief 등록된 팝업 항목 메타데이터 */
     struct EditorPopupEntry
     {
-        string                   _id;
-        unique_ptr<IEditorPopup> _pInstance;
+        string                         _id;
+        unique_ptr<IEditorPopup>       _pInstance;
+        const EditorPopupRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerPopup 한 것은 nullptr)
     };
 } // namespace sw::editor
 
@@ -80,13 +83,17 @@ namespace sw::editor
         bool isPopupOpen( string_view id ) const;
 
         void drawOpenPopups();
-        /** @brief `SW_EDITOR_POPUP` 으로 등록된 팝업을 순서대로 만들어 둡니다. 두 번째 부름부터는 아무것도 하지 않습니다. */
+        /** @brief `SW_EDITOR_POPUP` 으로 등록된 팝업을 순서대로 만들어 둡니다. 두 번째 부름부터는 등록 목록과 맞추기만 합니다. */
         void registerDefaultPopups();
-        void clear();
+        /** @brief 등록 목록과 맞춥니다. 새 줄은 만들고 사라진 줄의 팝업은 지웁니다. 세대가 같으면 바로 돌아갑니다. */
+        void syncWithRegistry();
+        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 팝업을 지웁니다(열려 있으면 닫힌 채로 사라진다). 지운 수를 돌려줍니다. */
+        uint32 releasePopupsWithin( const void* pBegin, const void* pEnd );
+        void   clear();
 
     private:
         vector<EditorPopupEntry> _listPopup;
-        bool                     _bDefaultsRegistered{ false };
+        uint32                   _syncedGeneration{ invalid_index::kUint32 }; ///< 마지막으로 맞춘 등록 세대(맞춘 적이 없으면 kUint32)
     };
 } // namespace sw::editor
 

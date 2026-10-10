@@ -27,15 +27,18 @@ namespace sw::editor
         Custom    // 게임/플러그인 커스텀 패널
     };
 
+    struct EditorPanelRegistration;
+
     /** @brief 등록된 에디터 패널 항목 메타데이터 */
     struct EditorPanelEntry
     {
-        string                   _id;
-        string                   _title;
-        EditorPanelCategory      _category{ EditorPanelCategory::Core };
-        unique_ptr<IEditorPanel> _pInstance;
-        uint64                   _drawNanosSum{ 0 }; ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간 합(ns)
-        uint64                   _drawNanosMax{ 0 }; ///< 그 가운데 가장 긴 한 프레임(ns)
+        string                         _id;
+        string                         _title;
+        EditorPanelCategory            _category{ EditorPanelCategory::Core };
+        unique_ptr<IEditorPanel>       _pInstance;
+        const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerPanel 한 것은 nullptr)
+        uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간 합(ns)
+        uint64                         _drawNanosMax{ 0 };        ///< 그 가운데 가장 긴 한 프레임(ns)
     };
 } // namespace sw::editor
 
@@ -72,8 +75,10 @@ namespace sw::editor
     class EditorPanelManager
     {
     public:
-        EditorPanelManager()  = default;
-        ~EditorPanelManager() = default;
+        EditorPanelManager();
+        ~EditorPanelManager();
+        EditorPanelManager( const EditorPanelManager& )            = delete;
+        EditorPanelManager& operator=( const EditorPanelManager& ) = delete;
 
         /** @brief 패널을 등록합니다. 메뉴에 보이는 이름은 패널의 `getPanelTitle()` 입니다. */
         void registerPanel( unique_ptr<IEditorPanel> pPanel,
@@ -86,9 +91,20 @@ namespace sw::editor
         void                            clear();
         /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다(앞의 목록은 버립니다). */
         void registerDefaultPanels();
-        void drawOpenPanels();
-        void preRenderOpenPanels( IRHIDevice* pRHIDevice );
-        void shutdownAllPanels( IRHIDevice* pRHIDevice );
+        /**
+         * @brief 등록 목록과 맞춥니다. 새 줄은 인스턴스를 만들고(지난번에 열려 있던 id 면 열린 채로), 사라진 줄의 인스턴스는 종료합니다.
+         * @details 세대(`EditorRegistrationList::getGeneration`)가 같으면 바로 돌아갑니다. 에디터 프레임 앞에서 부릅니다(`EditorContext::syncExtensionRegistrations`).
+         */
+        void syncWithRegistry( IRHIDevice* pRHIDevice );
+        /**
+         * @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 패널을 종료하고 지웁니다. 지운 수를 돌려줍니다.
+         * @details 이미지를 언로드하기 **전에** 부릅니다(`EditorModuleUnloadListener`). 저장하지 않은 문서는 경고하고 버립니다.
+         *          열림 상태는 id 로 기억해 같은 id 가 다시 등록되면 연 채로 만듭니다.
+         */
+        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice );
+        void   drawOpenPanels();
+        void   preRenderOpenPanels( IRHIDevice* pRHIDevice );
+        void   shutdownAllPanels( IRHIDevice* pRHIDevice );
         /** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
         /** @brief 모든 더티 도구 문서를 저장합니다. 하나라도 실패하면 false입니다. */
@@ -103,8 +119,13 @@ namespace sw::editor
         void reportPanelTimes();
 
         vector<EditorPanelEntry> _listPanel;
-        uint32                   _panelTimeFrameCount{ 0 };     ///< 패널 시간을 모은 프레임 수
-        bool                     _bPanelTimesReported{ false }; ///< 한 번 찍었으면 더 모으지 않는다
+        vector<string>           _listRememberedOpenID; ///< 지운 패널 가운데 열려 있던 id(다시 등록되면 연다)
+        uint32                   _syncedGeneration;     ///< 마지막으로 맞춘 등록 세대(맞춘 적이 없으면 kNotSynced)
+        uint32                   _panelTimeFrameCount;  ///< 패널 시간을 모은 프레임 수
+        bool                     _bPanelTimesReported;  ///< 한 번 찍었으면 더 모으지 않는다
+
+        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
+        static constexpr uint32 kNotSynced = invalid_index::kUint32;
     };
 } // namespace sw::editor
 

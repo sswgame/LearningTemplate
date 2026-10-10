@@ -174,7 +174,6 @@ namespace sw::editor
         , _reservedGizmo{ 0 }
     {
         // 어떤 시각화가 기본으로 켜지는지는 시각화 표가 정한다.
-        _toolbarSettings._visualizerMask = EditorViewportVisualizer::getDefaultMask();
     }
 
     void EditorViewportClient::getViewMatrix( float32* pOutMatrix ) const
@@ -405,7 +404,7 @@ namespace sw::editor
             visualizerArgs._pListCollider   = ( pSnapshotManager != nullptr ) ? &pSnapshotManager->getOverlapWorld2D().getColliders() : nullptr;
             visualizerArgs._pDebugDrawQueue = getService<DebugDrawQueue>();
             visualizerArgs._bFlat2D         = EditorVisualizerGeometryUtil::isFlat2DView( pCamera->isOrthographic(), pCamera->getViewMatrix() );
-            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerMask );
+            EditorViewportVisualizer::drawAll( visualizerArgs, _toolbarSettings._visualizerToggles );
 
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
             pCanvasDrawList->PopClipRect();
