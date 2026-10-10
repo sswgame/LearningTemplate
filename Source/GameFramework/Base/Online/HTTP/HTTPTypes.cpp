@@ -119,12 +119,12 @@ namespace sw
         {
             outAddress._bSecure = SW_TRUE;
             outAddress._port    = 443;
-            rest            = url.substr( 8 );
+            rest                = url.substr( 8 );
         }
         else if ( url.substr( 0, 7 ) == "http://" )
         {
             outAddress._port = 80;
-            rest         = url.substr( 7 );
+            rest             = url.substr( 7 );
         }
         else
         {
@@ -137,7 +137,7 @@ namespace sw
         if ( authority.empty() || authority.find( '@' ) != string_view::npos )
             return false;
         const size_t colon = authority.rfind( ':' );
-        outAddress._host       = string( authority.substr( 0, colon ) );
+        outAddress._host   = string( authority.substr( 0, colon ) );
         if ( colon != string_view::npos )
         {
             int64 port = 0;
