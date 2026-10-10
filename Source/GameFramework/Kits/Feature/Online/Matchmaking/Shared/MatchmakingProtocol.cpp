@@ -15,24 +15,24 @@ namespace sw
         {
             static constexpr int32 kMaxTicketCount = MatchmakingLimit::kMaxTeamCount * MatchmakingLimit::kMaxTeamSize;
 
-            static void writeAccounts( BitWriter& outWriter, const vector<AccountId>& listAccount )
+            static void writeAccounts( BitWriter& outWriter, const vector<AccountID>& listAccount )
             {
                 outWriter.writeVarUint( listAccount.size() );
-                for ( const AccountId accountId : listAccount )
+                for ( const AccountID accountID : listAccount )
                 {
-                    outWriter.writeVarUint( accountId );
+                    outWriter.writeVarUint( accountID );
                 }
             }
 
-            [[nodiscard]] static bool readAccounts( BitReader& reader, int32 maxCount, vector<AccountId>& outListAccount )
+            [[nodiscard]] static bool readAccounts( BitReader& reader, int32 maxCount, vector<AccountID>& outListAccount )
             {
                 const uint64 count = reader.readVarUint();
                 if ( count > static_cast<uint64>( maxCount ) )
                     return false;
                 outListAccount.resize( static_cast<size_t>( count ) );
-                for ( AccountId& accountId : outListAccount )
+                for ( AccountID& accountID : outListAccount )
                 {
-                    accountId = reader.readVarUint();
+                    accountID = reader.readVarUint();
                 }
                 return reader.hasOverflowed() == false;
             }
@@ -42,7 +42,7 @@ namespace sw
                 outWriter.writeVarUint( listMember.size() );
                 for ( const MatchMember& member : listMember )
                 {
-                    outWriter.writeVarUint( member._accountId );
+                    outWriter.writeVarUint( member._accountID );
                     outWriter.writeVarInt( member._rating );
                 }
             }
@@ -55,7 +55,7 @@ namespace sw
                 outListMember.resize( static_cast<size_t>( count ) );
                 for ( MatchMember& member : outListMember )
                 {
-                    member._accountId = reader.readVarUint();
+                    member._accountID = reader.readVarUint();
                     member._rating    = static_cast<int32>( reader.readVarInt() );
                 }
                 return reader.hasOverflowed() == false;
@@ -68,34 +68,34 @@ namespace sw
 {
     void MatchmakingProtocol::writeParty( BitWriter& outWriter, const PartySnapshot& party )
     {
-        outWriter.writeVarUint( party._partyId );
-        outWriter.writeVarUint( party._queuedTicketId );
+        outWriter.writeVarUint( party._partyID );
+        outWriter.writeVarUint( party._queuedTicketID );
         outWriter.writeVarInt( party._maxMemberCount );
-        MatchmakingProtocolInternal::writeAccounts( outWriter, party._listMemberId );
+        MatchmakingProtocolInternal::writeAccounts( outWriter, party._listMemberID );
     }
 
     bool MatchmakingProtocol::readParty( BitReader& reader, PartySnapshot& outParty )
     {
-        outParty._partyId        = reader.readVarUint();
-        outParty._queuedTicketId = reader.readVarUint();
+        outParty._partyID        = reader.readVarUint();
+        outParty._queuedTicketID = reader.readVarUint();
         outParty._maxMemberCount = static_cast<int32>( reader.readVarInt() );
         if ( outParty._maxMemberCount < 0 || outParty._maxMemberCount > PartyLobbyLimit::kMaxPartySize )
             return false;
-        return MatchmakingProtocolInternal::readAccounts( reader, PartyLobbyLimit::kMaxPartySize, outParty._listMemberId );
+        return MatchmakingProtocolInternal::readAccounts( reader, PartyLobbyLimit::kMaxPartySize, outParty._listMemberID );
     }
 
     void MatchmakingProtocol::writeLobby( BitWriter& outWriter, const LobbySnapshot& lobby )
     {
-        outWriter.writeVarUint( lobby._lobbyId );
+        outWriter.writeVarUint( lobby._lobbyID );
         ServiceKeyUtil::writeString( outWriter, lobby._name );
-        ServiceKeyUtil::writeString( outWriter, lobby._modeId );
+        ServiceKeyUtil::writeString( outWriter, lobby._modeID );
         outWriter.writeVarInt( lobby._createdMs );
         outWriter.writeVarInt( lobby._maxMemberCount );
         outWriter.writeBits( static_cast<uint32>( lobby._state ), 8 );
         outWriter.writeVarUint( lobby._listMember.size() );
         for ( const LobbyMember& member : lobby._listMember )
         {
-            outWriter.writeVarUint( member._accountId );
+            outWriter.writeVarUint( member._accountID );
             outWriter.writeVarInt( member._team );
             outWriter.writeBool( member._bReady != SW_FALSE );
         }
@@ -109,9 +109,9 @@ namespace sw
 
     bool MatchmakingProtocol::readLobby( BitReader& reader, LobbySnapshot& outLobby )
     {
-        outLobby._lobbyId  = reader.readVarUint();
+        outLobby._lobbyID  = reader.readVarUint();
         const bool bTextOk = ServiceKeyUtil::readString( reader, PartyLobbyLimit::kMaxLobbyNameSize, outLobby._name ) &&
-                             ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIdSize, outLobby._modeId );
+                             ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIDSize, outLobby._modeID );
         if ( bTextOk == false )
             return false;
         outLobby._createdMs      = reader.readVarInt();
@@ -126,7 +126,7 @@ namespace sw
         outLobby._listMember.resize( static_cast<size_t>( memberCount ) );
         for ( LobbyMember& member : outLobby._listMember )
         {
-            member._accountId = reader.readVarUint();
+            member._accountID = reader.readVarUint();
             member._team      = static_cast<int32>( reader.readVarInt() );
             member._bReady    = reader.readBool() ? SW_TRUE : SW_FALSE;
         }
@@ -146,14 +146,14 @@ namespace sw
 
     void MatchmakingProtocol::writeInvite( BitWriter& outWriter, const PartyInvite& invite )
     {
-        outWriter.writeVarUint( invite._partyId );
-        outWriter.writeVarUint( invite._inviterId );
+        outWriter.writeVarUint( invite._partyID );
+        outWriter.writeVarUint( invite._inviterID );
     }
 
     bool MatchmakingProtocol::readInvite( BitReader& reader, PartyInvite& outInvite )
     {
-        outInvite._partyId   = reader.readVarUint();
-        outInvite._inviterId = reader.readVarUint();
+        outInvite._partyID   = reader.readVarUint();
+        outInvite._inviterID = reader.readVarUint();
         return reader.hasOverflowed() == false;
     }
 
@@ -185,23 +185,23 @@ namespace sw
         return reader.readBits( 8 ) == kRecordFormat && readLobby( reader, outLobby );
     }
 
-    vector<uint8> MatchmakingProtocol::encodeId( uint64 id )
+    vector<uint8> MatchmakingProtocol::encodeID( uint64 id )
     {
         const string text = ServiceKeyUtil::makeHex64( id );
         return vector<uint8>( text.begin(), text.end() );
     }
 
-    bool MatchmakingProtocol::decodeId( const vector<uint8>& bytes, uint64& outId )
+    bool MatchmakingProtocol::decodeID( const vector<uint8>& bytes, uint64& outID )
     {
         const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-        return ServiceKeyUtil::parseHex64( text, outId );
+        return ServiceKeyUtil::parseHex64( text, outID );
     }
 
     void MatchmakingProtocol::writeTicket( BitWriter& outWriter, const MatchTicket& ticket )
     {
-        outWriter.writeVarUint( ticket._ticketId );
-        outWriter.writeVarUint( ticket._partyId );
-        outWriter.writeVarUint( ticket._originServerId );
+        outWriter.writeVarUint( ticket._ticketID );
+        outWriter.writeVarUint( ticket._partyID );
+        outWriter.writeVarUint( ticket._originServerID );
         outWriter.writeVarInt( ticket._enqueuedMs );
         ServiceKeyUtil::writeString( outWriter, ticket._region );
         MatchmakingProtocolInternal::writeMembers( outWriter, ticket._listMember );
@@ -209,9 +209,9 @@ namespace sw
 
     bool MatchmakingProtocol::readTicket( BitReader& reader, MatchTicket& outTicket )
     {
-        outTicket._ticketId       = reader.readVarUint();
-        outTicket._partyId        = reader.readVarUint();
-        outTicket._originServerId = reader.readVarUint();
+        outTicket._ticketID       = reader.readVarUint();
+        outTicket._partyID        = reader.readVarUint();
+        outTicket._originServerID = reader.readVarUint();
         outTicket._enqueuedMs     = reader.readVarInt();
         return ServiceKeyUtil::readString( reader, ServerRecord::kMaxNameSize, outTicket._region ) &&
                MatchmakingProtocolInternal::readMembers( reader, outTicket._listMember );
@@ -219,8 +219,8 @@ namespace sw
 
     void MatchmakingProtocol::writeFormed( BitWriter& outWriter, const MatchFormed& match )
     {
-        outWriter.writeVarUint( match._matchId );
-        ServiceKeyUtil::writeString( outWriter, match._modeId );
+        outWriter.writeVarUint( match._matchID );
+        ServiceKeyUtil::writeString( outWriter, match._modeID );
         ServiceKeyUtil::writeString( outWriter, match._region );
         outWriter.writeVarInt( match._averageRating );
         outWriter.writeVarUint( match._listTeam.size() );
@@ -238,8 +238,8 @@ namespace sw
     bool MatchmakingProtocol::readFormed( BitReader& reader, MatchFormed& outMatch )
     {
         using Internal     = MatchmakingProtocolInternal;
-        outMatch._matchId  = reader.readVarUint();
-        const bool bTextOk = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIdSize, outMatch._modeId ) &&
+        outMatch._matchID  = reader.readVarUint();
+        const bool bTextOk = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIDSize, outMatch._modeID ) &&
                              ServiceKeyUtil::readString( reader, ServerRecord::kMaxNameSize, outMatch._region );
         if ( bTextOk == false )
             return false;
@@ -268,10 +268,10 @@ namespace sw
     void MatchmakingProtocol::writeAssignment( BitWriter& outWriter, const MatchAssignment& assignment )
     {
         outWriter.writeBits( static_cast<uint32>( assignment._outcome ), 8 );
-        outWriter.writeVarUint( assignment._ticketId );
-        outWriter.writeVarUint( assignment._matchId );
-        outWriter.writeVarUint( assignment._serverId );
-        ServiceKeyUtil::writeString( outWriter, assignment._modeId );
+        outWriter.writeVarUint( assignment._ticketID );
+        outWriter.writeVarUint( assignment._matchID );
+        outWriter.writeVarUint( assignment._serverID );
+        ServiceKeyUtil::writeString( outWriter, assignment._modeID );
         ServiceKeyUtil::writeString( outWriter, assignment._address );
         outWriter.writeBits( assignment._port, 16 );
         outWriter.writeVarInt( assignment._team );
@@ -282,10 +282,10 @@ namespace sw
     {
         using Internal          = MatchmakingProtocolInternal;
         const uint32 outcome    = reader.readBits( 8 );
-        outAssignment._ticketId = reader.readVarUint();
-        outAssignment._matchId  = reader.readVarUint();
-        outAssignment._serverId = reader.readVarUint();
-        const bool bTextOk      = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIdSize, outAssignment._modeId ) &&
+        outAssignment._ticketID = reader.readVarUint();
+        outAssignment._matchID  = reader.readVarUint();
+        outAssignment._serverID = reader.readVarUint();
+        const bool bTextOk      = ServiceKeyUtil::readString( reader, MatchmakingLimit::kMaxIDSize, outAssignment._modeID ) &&
                              ServiceKeyUtil::readString( reader, ServerRecord::kMaxAddressSize, outAssignment._address );
         if ( outcome >= static_cast<uint32>( MatchQueueOutcome::Count ) || bTextOk == false )
             return false;
@@ -302,7 +302,7 @@ namespace sw
             return;
         writeParty( outWriter, reply._party );
         writeLobby( outWriter, reply._lobby );
-        outWriter.writeVarUint( reply._ticketId );
+        outWriter.writeVarUint( reply._ticketID );
         outWriter.writeVarUint( reply._listLobby.size() );
         for ( const LobbySnapshot& lobby : reply._listLobby )
         {
@@ -320,7 +320,7 @@ namespace sw
             return true;
         if ( readParty( reader, outReply._party ) == false || readLobby( reader, outReply._lobby ) == false )
             return false;
-        outReply._ticketId      = reader.readVarUint();
+        outReply._ticketID      = reader.readVarUint();
         const uint64 lobbyCount = reader.readVarUint();
         if ( lobbyCount > static_cast<uint64>( PartyLobbyLimit::kMaxLobbyList ) )
             return false;

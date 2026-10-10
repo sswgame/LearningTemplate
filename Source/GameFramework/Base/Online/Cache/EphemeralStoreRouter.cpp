@@ -11,7 +11,7 @@ namespace sw
         , _listSubscription{}
         , _mapRequestToReply{}
         , _pStore{ nullptr }
-        , _nextSubscriptionId{ 1 }
+        , _nextSubscriptionID{ 1 }
     {
     }
 
@@ -42,12 +42,12 @@ namespace sw
         mapPending = std::move( _mapRequestToReply );
         _mapRequestToReply.clear();
         _pStore = nullptr;
-        for ( auto& [requestId, onReply] : mapPending )
+        for ( auto& [requestID, onReply] : mapPending )
         {
             if ( onReply.isBound() == false )
                 continue;
             EphemeralReply reply;
-            reply._requestId = requestId;
+            reply._requestID = requestID;
             reply._result    = EphemeralResult::Unavailable;
             onReply( reply );
         }
@@ -63,7 +63,7 @@ namespace sw
         (void)_pStore->pollReplies( _listReplyScratch );
         for ( const EphemeralReply& reply : _listReplyScratch )
         {
-            const auto replyIt = _mapRequestToReply.find( reply._requestId );
+            const auto replyIt = _mapRequestToReply.find( reply._requestID );
             if ( replyIt == _mapRequestToReply.end() )
                 continue;
             const ReplyDelegate onReply = replyIt->second;
@@ -95,10 +95,10 @@ namespace sw
     uint64 EphemeralStoreRouter::submit( const EphemeralRequest& request, ReplyDelegate onReply )
     {
         SW_ASSERT( _pStore != nullptr );
-        const uint64 requestId = _pStore->submit( request );
+        const uint64 requestID = _pStore->submit( request );
         // 메모리 앞은 맡기는 자리에서 답을 큐에 넣지만 꺼내는 것은 다음 pump 다 — 등록이 늦지 않다.
-        _mapRequestToReply.emplace( requestId, onReply );
-        return requestId;
+        _mapRequestToReply.emplace( requestID, onReply );
+        return requestID;
     }
 
     uint64 EphemeralStoreRouter::subscribe( string_view channel, MessageDelegate onMessage )
@@ -110,15 +110,15 @@ namespace sw
         Subscription& subscription   = _listSubscription.emplace_back();
         subscription._channel        = string( channel );
         subscription._onMessage      = onMessage;
-        subscription._subscriptionId = _nextSubscriptionId++;
-        return subscription._subscriptionId;
+        subscription._subscriptionID = _nextSubscriptionID++;
+        return subscription._subscriptionID;
     }
 
-    void EphemeralStoreRouter::unsubscribe( uint64 subscriptionId )
+    void EphemeralStoreRouter::unsubscribe( uint64 subscriptionID )
     {
         for ( size_t index = 0; index < _listSubscription.size(); ++index )
         {
-            if ( _listSubscription[index]._subscriptionId != subscriptionId )
+            if ( _listSubscription[index]._subscriptionID != subscriptionID )
                 continue;
             const string channel = std::move( _listSubscription[index]._channel );
             _listSubscription.erase( _listSubscription.begin() + static_cast<ptrdiff_t>( index ) );

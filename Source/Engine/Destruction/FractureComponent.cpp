@@ -62,8 +62,8 @@ namespace sw
         for ( Component* pComp : pOwner->getComponents() )
         {
             const MeshComponent* pMesh = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
-            if ( pMesh != nullptr && pMesh->getMeshId().empty() == false )
-                return FractureAsset::makePathForMesh( pMesh->getMeshId() );
+            if ( pMesh != nullptr && pMesh->getMeshID().empty() == false )
+                return FractureAsset::makePathForMesh( pMesh->getMeshID() );
         }
         return {};
     }

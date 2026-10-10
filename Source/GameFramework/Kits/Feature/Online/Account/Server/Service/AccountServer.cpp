@@ -79,12 +79,12 @@ namespace sw
     void AccountServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
         _nowMs = context._nowMs;
-        if ( AccountServerInternal::isLoginMethod( context._method ) && context._accountId != kInvalidAccountId )
+        if ( AccountServerInternal::isLoginMethod( context._method ) && context._accountID != kInvalidAccountID )
         {
             (void)host.respondError( context._token, OnlineError::kInvalidRequest ); // 한 연결에 계정 하나
             return;
         }
-        const auto          sessionIt     = _mapAccountToSession.find( context._accountId );
+        const auto          sessionIt     = _mapAccountToSession.find( context._accountID );
         const BoundSession* pSession      = sessionIt != _mapAccountToSession.end() ? &sessionIt->second : nullptr;
         const bool          bNeedsSession = isAnonymousMethod( context._method ) == false;
         if ( bNeedsSession && pSession == nullptr )
@@ -168,10 +168,10 @@ namespace sw
             }
             case AccountMethod::kIssueGameTicket:
             {
-                string serverId;
-                bDecoded = AccountWire::readText( body, LoginConstant::kMaxDisplayNameSize, serverId ) && serverId.empty() == false;
+                string serverID;
+                bDecoded = AccountWire::readText( body, LoginConstant::kMaxDisplayNameSize, serverID ) && serverID.empty() == false;
                 if ( bDecoded )
-                    _pLoginService->issueGameTicket( pSession->_token, hashed_string( serverId ), nowMs, tag );
+                    _pLoginService->issueGameTicket( pSession->_token, hashed_string( serverID ), nowMs, tag );
                 break;
             }
             case AccountMethod::kUnlinkPlatform:
@@ -244,16 +244,16 @@ namespace sw
         }
     }
 
-    void AccountServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+    void AccountServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
-        _presence.noteOffline( accountId );
-        const auto sessionIt = _mapAccountToSession.find( accountId );
+        _presence.noteOffline( accountID );
+        const auto sessionIt = _mapAccountToSession.find( accountID );
         if ( sessionIt == _mapAccountToSession.end() )
             return; // 이 객체가 끊은 연결(밀려남 · 로그아웃) — 세션 표에서 먼저 뺐다
-        const uint64 sessionId = sessionIt->second._token._sessionId;
+        const uint64 sessionID = sessionIt->second._token._sessionID;
         _mapAccountToSession.erase( sessionIt );
-        _pLoginService->markDisconnected( sessionId, _nowMs ); // 클라이언트가 끊겼다 — 재접속 유예
+        _pLoginService->markDisconnected( sessionID, _nowMs ); // 클라이언트가 끊겼다 — 재접속 유예
     }
 
     void AccountServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
@@ -263,34 +263,34 @@ namespace sw
             (void)_presence.handlePushMessage( message );
             return;
         }
-        if ( host.getServerBus() != nullptr && message._originServerId == host.getServerBus()->getServerId() )
+        if ( host.getServerBus() != nullptr && message._originServerID == host.getServerBus()->getServerID() )
             return; // 이 서버가 보낸 것 — 이미 끊었다
         BitReader       reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
-        const AccountId accountId = reader.readVarUint();
-        const uint64    sessionId = reader.readVarUint();
+        const AccountID accountID = reader.readVarUint();
+        const uint64    sessionID = reader.readVarUint();
         const uint64    reason    = reader.readVarUint();
         string          reasonCode;
         if ( ServiceKeyUtil::readString( reader, LoginConstant::kMaxReasonCodeSize, reasonCode ) == false || reader.hasOverflowed() ||
              reason > static_cast<uint64>( LoginRevokeReason::AccountDeleted ) )
         {
-            SW_LOG_WARNING( "Malformed account revoke bus message from server %#", message._originServerId );
+            SW_LOG_WARNING( "Malformed account revoke bus message from server %#", message._originServerID );
             return;
         }
-        if ( reasonCode.empty() == false && findSessionId( accountId ) == sessionId )
-            _mapAccountToReasonCode[accountId] = reasonCode;
-        _pLoginService->noteRevokedElsewhere( accountId, sessionId, static_cast<LoginRevokeReason>( reason ) );
+        if ( reasonCode.empty() == false && findSessionID( accountID ) == sessionID )
+            _mapAccountToReasonCode[accountID] = reasonCode;
+        _pLoginService->noteRevokedElsewhere( accountID, sessionID, static_cast<LoginRevokeReason>( reason ) );
     }
 
-    void AccountServer::revokeAccountSessions( AccountId accountId, string_view reasonCode, int64 nowMs )
+    void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs )
     {
-        _mapAccountToReasonCode[accountId] = string( reasonCode );
-        _pLoginService->revokeAccountSessions( accountId, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 꼬리표에 짝이 없다 — 완료는 버리고 사건으로 끊는다
+        _mapAccountToReasonCode[accountID] = string( reasonCode );
+        _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 꼬리표에 짝이 없다 — 완료는 버리고 사건으로 끊는다
     }
 
-    uint64 AccountServer::findSessionId( AccountId accountId ) const
+    uint64 AccountServer::findSessionID( AccountID accountID ) const
     {
-        const auto sessionIt = _mapAccountToSession.find( accountId );
-        return sessionIt == _mapAccountToSession.end() ? 0 : sessionIt->second._token._sessionId;
+        const auto sessionIt = _mapAccountToSession.find( accountID );
+        return sessionIt == _mapAccountToSession.end() ? 0 : sessionIt->second._token._sessionID;
     }
 
     void AccountServer::handleCompletion( OnlineServiceHost& host, const LoginCompletion& completion )
@@ -335,24 +335,24 @@ namespace sw
         const bool bOk = completion._result == LoginResult::Ok;
         if ( bOk && AccountServerInternal::isGrantOperation( completion._operation ) )
         {
-            const AccountId accountId = completion._grant._identity._accountId;
-            if ( host.bindAccount( call._connection, accountId ) == false )
+            const AccountID accountID = completion._grant._identity._accountID;
+            if ( host.bindAccount( call._connection, accountID ) == false )
             {
                 // 같은 계정이 이 프로세스의 다른 연결에 붙어 있다 — 새 로그인이 옛 연결을 밀어낸다(사용자 결정).
-                revokeBound( host, accountId, LoginRevokeReason::DuplicateLogin );
-                if ( host.bindAccount( call._connection, accountId ) == false )
+                revokeBound( host, accountID, LoginRevokeReason::DuplicateLogin );
+                if ( host.bindAccount( call._connection, accountID ) == false )
                 {
                     // 그새 이 연결이 닫혔다 — 세션은 재접속 유예로 둔다.
-                    _pLoginService->markDisconnected( completion._grant._token._sessionId, _nowMs );
+                    _pLoginService->markDisconnected( completion._grant._token._sessionID, _nowMs );
                     (void)host.respondOk( call._token, body );
                     return;
                 }
             }
-            _mapAccountToSession[accountId] = BoundSession{ completion._grant._token, call._connection };
+            _mapAccountToSession[accountID] = BoundSession{ completion._grant._token, call._connection };
             _presence.noteOnline( completion._grant._identity );
         }
         const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
-        if ( bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountId ) != _mapAccountToSession.end() )
+        if ( bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end() )
             _presence.noteOnline( completion._identity ); // 표시 이름 · 게스트 깃발이 바뀌었다
         (void)host.respondOk( call._token, body );
         if ( bOk && completion._operation == LoginOperation::Logout )
@@ -361,9 +361,9 @@ namespace sw
             {
                 if ( sessionIt->second._connection != call._connection )
                     continue;
-                const AccountId accountId = sessionIt->first;
+                const AccountID accountID = sessionIt->first;
                 _mapAccountToSession.erase( sessionIt );
-                host.unbindAccount( accountId );
+                host.unbindAccount( accountID );
                 break;
             }
         }
@@ -373,10 +373,10 @@ namespace sw
     {
         if ( event._kind != LoginEvent::Kind::Revoked )
             return;
-        const auto sessionIt = _mapAccountToSession.find( event._accountId );
-        if ( sessionIt == _mapAccountToSession.end() || sessionIt->second._token._sessionId != event._sessionId )
+        const auto sessionIt = _mapAccountToSession.find( event._accountID );
+        if ( sessionIt == _mapAccountToSession.end() || sessionIt->second._token._sessionID != event._sessionID )
             return; // 이 프로세스에 그 세션의 연결이 없다(이미 새 세션으로 바뀌었다)
-        revokeBound( host, event._accountId, event._reason );
+        revokeBound( host, event._accountID, event._reason );
     }
 
     bool AccountServer::respondCommonError( OnlineServiceHost& host, const NetRequestToken& token, LoginResult result, const LoginGrant& grant )
@@ -408,11 +408,11 @@ namespace sw
         }
     }
 
-    void AccountServer::revokeBound( OnlineServiceHost& host, AccountId accountId, LoginRevokeReason reason )
+    void AccountServer::revokeBound( OnlineServiceHost& host, AccountID accountID, LoginRevokeReason reason )
     {
-        _mapAccountToSession.erase( accountId );
+        _mapAccountToSession.erase( accountID );
         string     reasonCode;
-        const auto codeIt = _mapAccountToReasonCode.find( accountId );
+        const auto codeIt = _mapAccountToReasonCode.find( accountID );
         if ( codeIt != _mapAccountToReasonCode.end() )
         {
             reasonCode = codeIt->second;
@@ -420,8 +420,8 @@ namespace sw
         }
         BitWriter push;
         AccountWire::writeRevokedPush( push, reason, reasonCode );
-        (void)host.sendPush( accountId, AccountMethod::kPushRevoked, push );
-        host.unbindAccount( accountId );
+        (void)host.sendPush( accountID, AccountMethod::kPushRevoked, push );
+        host.unbindAccount( accountID );
     }
 
     void AccountServer::attachHost( OnlineServiceHost& host )
@@ -431,7 +431,7 @@ namespace sw
         if ( _presence.isEnabled() == false )
             return; // 서버 한 대
         host.subscribeServerBus( kRevokeTopic, this );
-        host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerId() ), this );
+        host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this );
     }
 
     void AccountServer::publishRemoteRevocations( OnlineServiceHost& host )
@@ -442,7 +442,7 @@ namespace sw
         for ( const LoginEvent& event : _listEventScratch )
         {
             string     reasonCode;
-            const auto codeIt = _mapAccountToReasonCode.find( event._accountId );
+            const auto codeIt = _mapAccountToReasonCode.find( event._accountID );
             if ( codeIt != _mapAccountToReasonCode.end() )
             {
                 reasonCode = codeIt->second;
@@ -451,8 +451,8 @@ namespace sw
             if ( pBus == nullptr )
                 continue; // 서버 한 대 — 붙어 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
             BitWriter message;
-            message.writeVarUint( event._accountId );
-            message.writeVarUint( event._sessionId );
+            message.writeVarUint( event._accountID );
+            message.writeVarUint( event._sessionID );
             message.writeVarUint( static_cast<uint64>( event._reason ) );
             ServiceKeyUtil::writeString( message, reasonCode );
             pBus->publish( kRevokeTopic, message.getBytes().data(), message.getByteCount() );

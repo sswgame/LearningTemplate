@@ -51,13 +51,13 @@ namespace sw::editor
         static bool isOpeningAllPanels();
 
     private:
-        void applyDefaultDockLayout( uint32 dockspaceId );
+        void applyDefaultDockLayout( uint32 dockspaceID );
         /**
          * @brief 메인 뷰포트 크기가 바뀌었으면 도크 트리의 기준 크기(SizeRef)를 같은 비율로 맞춥니다. `DockSpaceOverViewport` 앞에서 부릅니다.
          * @details ImGui 는 중앙 노드 옆 노드에 마지막 픽셀 크기(SizeRef)를 그대로 주고 나머지를 중앙에 줍니다. 그대로 두면 창을 줄일 때 옆 패널은
          *          그대로이고 중앙(게임 뷰) 쪽이 최소 폭으로 눌립니다.
          */
-        void scaleDockSizeToViewport( uint32 dockspaceId );
+        void scaleDockSizeToViewport( uint32 dockspaceID );
 
         string                 _imguiIniPath;
         string                 _windowsIniPath;

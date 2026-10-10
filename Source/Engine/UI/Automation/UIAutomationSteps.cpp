@@ -27,7 +27,7 @@ namespace sw
             {
                 const UIFocusManager& focus   = ui.getFocusManager();
                 const WidgetTree*     pTree   = focus.getFocusedTree();
-                const Widget*         pWidget = pTree != nullptr ? pTree->findWidgetById( focus.getFocusedWidget() ) : nullptr;
+                const Widget*         pWidget = pTree != nullptr ? pTree->findWidgetByID( focus.getFocusedWidget() ) : nullptr;
                 if ( pWidget == nullptr )
                     return kNone;
                 return pWidget->getName().empty() ? string( "(unnamed)" ) : string( pWidget->getName().c_str() );

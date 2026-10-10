@@ -38,10 +38,10 @@ namespace sw
         return hash;
     }
 
-    ChatSpamVerdict ChatSpamGuard::check( AccountId accountId, string_view text, int64 nowMs, int64& outRetryAfterMs )
+    ChatSpamVerdict ChatSpamGuard::check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs )
     {
         const uint64 hash        = computeTextHash( text );
-        History&     history     = _mapAccountToHistory[accountId];
+        History&     history     = _mapAccountToHistory[accountID];
         int32        repeatCount = 0;
         for ( int32 index = 0; index < kHistorySize; ++index )
         {
@@ -53,7 +53,7 @@ namespace sw
             outRetryAfterMs = _settings._repeatWindowMs;
             return ChatSpamVerdict::Repeated;
         }
-        if ( _bucketMap.tryConsume( accountId, nowMs, outRetryAfterMs ) == false )
+        if ( _bucketMap.tryConsume( accountID, nowMs, outRetryAfterMs ) == false )
             return ChatSpamVerdict::RateLimited;
         history._arrHash[history._next]   = hash;
         history._arrTimeMs[history._next] = nowMs != 0 ? nowMs : 1;

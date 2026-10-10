@@ -37,7 +37,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( AssetPath, AssetType = "Mesh" )
-        string _meshId{};
+        string _meshID{};
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
     };

@@ -154,7 +154,7 @@ namespace sw
                         bOk = false;
                         continue;
                     }
-                    condition._settingId = hashed_string( StringUtil::trim( part.substr( 0, operatorPos ) ) );
+                    condition._settingID = hashed_string( StringUtil::trim( part.substr( 0, operatorPos ) ) );
                     condition._value     = string( StringUtil::trim( part.substr( valuePos ) ) );
                     inoutDef._listEnabledCondition.push_back( condition );
                 }
@@ -162,7 +162,7 @@ namespace sw
             }
 
             /** @brief `windows linux` 를 비트로 읽습니다. */
-            [[nodiscard]] static bool parsePlatforms( string_view text, uint8& outMask, string_view sourceName, const hashed_string& settingId )
+            [[nodiscard]] static bool parsePlatforms( string_view text, uint8& outMask, string_view sourceName, const hashed_string& settingID )
             {
                 if ( text.empty() )
                 {
@@ -184,7 +184,7 @@ namespace sw
                     uint8 bit = 0;
                     if ( findNamedValue( kArrPlatformName, name, bit ) == false )
                     {
-                        SW_LOG_ERROR( "%#: setting '%#' names an unknown platform '%#'", sourceName, settingId.c_str(), name );
+                        SW_LOG_ERROR( "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
                         bOk = false;
                         continue;
                     }
@@ -417,7 +417,7 @@ namespace sw
             {
                 bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrScalabilityAttribute, sourceName ) && bOk;
                 ScalabilityGroupDef group;
-                group._settingId          = hashed_string( child.getAttributeText( "setting" ) );
+                group._settingID          = hashed_string( child.getAttributeText( "setting" ) );
                 group._customValue        = string( child.getAttributeText( "custom" ) );
                 group._autoDetectFallback = hashed_string( child.getAttributeText( "autoDetectFallback" ) );
                 for ( XMLNode groupChild = child.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
@@ -556,17 +556,17 @@ namespace sw
         return nullptr;
     }
 
-    const ScalabilityGroupDef* UserSettingsSchema::findScalabilityGroupOf( const hashed_string& settingId ) const
+    const ScalabilityGroupDef* UserSettingsSchema::findScalabilityGroupOf( const hashed_string& settingID ) const
     {
         for ( const ScalabilityGroupDef& group : _listScalabilityGroup )
         {
-            if ( group._settingId == settingId )
+            if ( group._settingID == settingID )
                 return &group;
             for ( const ScalabilityPresetDef& preset : group._listPreset )
             {
                 for ( const ScalabilityPresetValue& value : preset._listValue )
                 {
-                    if ( value._settingId == settingId )
+                    if ( value._settingID == settingID )
                         return &group;
                 }
             }
@@ -655,10 +655,10 @@ namespace sw
 
         for ( const UserSettingDef& def : _listSetting )
         {
-            const utf8* const pId = def._id.c_str();
+            const utf8* const pID = def._id.c_str();
             if ( findCategory( def._category ) == nullptr )
             {
-                SW_LOG_ERROR( "setting '%#' names an unknown category '%#'", pId, def._category.c_str() );
+                SW_LOG_ERROR( "setting '%#' names an unknown category '%#'", pID, def._category.c_str() );
                 bOk = false;
             }
             if ( Internal::isNumeric( def._type ) )
@@ -666,7 +666,7 @@ namespace sw
                 const bool bRangeValid = def._minValue <= def._maxValue && def._step >= 0.0;
                 if ( bRangeValid == false )
                 {
-                    SW_LOG_ERROR( "setting '%#' has an invalid range [%#, %#] step %#", pId, def._minValue, def._maxValue, def._step );
+                    SW_LOG_ERROR( "setting '%#' has an invalid range [%#, %#] step %#", pID, def._minValue, def._maxValue, def._step );
                     bOk = false;
                 }
             }
@@ -675,12 +675,12 @@ namespace sw
                 const bool bHasProvider = def._optionProvider.empty() == false;
                 if ( bHasProvider == false && def._listOption.empty() )
                 {
-                    SW_LOG_ERROR( "enum setting '%#' has neither <Option> children nor optionsFrom", pId );
+                    SW_LOG_ERROR( "enum setting '%#' has neither <Option> children nor optionsFrom", pID );
                     bOk = false;
                 }
                 if ( bHasProvider && registry.hasOptionProvider( def._optionProvider ) == false )
                 {
-                    SW_LOG_ERROR( "setting '%#' names an unknown option provider '%#'", pId, def._optionProvider.c_str() );
+                    SW_LOG_ERROR( "setting '%#' names an unknown option provider '%#'", pID, def._optionProvider.c_str() );
                     bOk = false;
                 }
                 for ( size_t optionIndex = 0; optionIndex < def._listOption.size(); ++optionIndex )
@@ -689,7 +689,7 @@ namespace sw
                     {
                         if ( StringUtil::equals( def._listOption[optionIndex]._value, def._listOption[otherIndex]._value, true ) )
                         {
-                            SW_LOG_ERROR( "setting '%#' lists option '%#' twice", pId, def._listOption[optionIndex]._value );
+                            SW_LOG_ERROR( "setting '%#' lists option '%#' twice", pID, def._listOption[optionIndex]._value );
                             bOk = false;
                         }
                     }
@@ -697,14 +697,14 @@ namespace sw
             }
             if ( def._type == UserSettingType::KeyBinding && def._action.empty() )
             {
-                SW_LOG_ERROR( "key binding setting '%#' has no action", pId );
+                SW_LOG_ERROR( "key binding setting '%#' has no action", pID );
                 bOk = false;
             }
 
             string normalized;
             if ( normalizeValue( def, def._defaultValue, normalized ) != UserSettingValueResult::Accepted )
             {
-                SW_LOG_ERROR( "setting '%#' has a default '%#' that is not a valid value", pId, def._defaultValue );
+                SW_LOG_ERROR( "setting '%#' has a default '%#' that is not a valid value", pID, def._defaultValue );
                 bOk = false;
             }
 
@@ -721,12 +721,12 @@ namespace sw
                     const GlobalVariableInfo* pVariable = pGlobalVariableManager->findVariable( def._targetName.c_str() );
                     if ( pVariable == nullptr )
                     {
-                        SW_LOG_ERROR( "setting '%#' targets an unknown global variable '%#'", pId, def._targetName.c_str() );
+                        SW_LOG_ERROR( "setting '%#' targets an unknown global variable '%#'", pID, def._targetName.c_str() );
                         bOk = false;
                     }
                     else if ( Internal::acceptsGlobalVariable( def._type, pVariable->_type ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#' cannot drive global variable '%#' (type mismatch)", pId, def._targetName.c_str() );
+                        SW_LOG_ERROR( "setting '%#' cannot drive global variable '%#' (type mismatch)", pID, def._targetName.c_str() );
                         bOk = false;
                     }
                     break;
@@ -735,21 +735,21 @@ namespace sw
                 {
                     if ( registry.hasApplier( def._targetName ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#' targets an unknown applier '%#'", pId, def._targetName.c_str() );
+                        SW_LOG_ERROR( "setting '%#' targets an unknown applier '%#'", pID, def._targetName.c_str() );
                         bOk = false;
                         break;
                     }
                     // 적용기가 받는 값을 아는 경우(창 방식 이름 · 해상도 형식) 기본값과 선택지를 지금 대조한다 — 실행 중에 처음 알면 늦다.
                     if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
                     {
-                        SW_LOG_ERROR( "setting '%#': applier '%#' does not accept the default '%#'", pId, def._targetName.c_str(), def._defaultValue );
+                        SW_LOG_ERROR( "setting '%#': applier '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
                         bOk = false;
                     }
                     for ( const UserSettingOption& option : def._listOption )
                     {
                         if ( registry.acceptsValue( def._targetName, option._value ) == false )
                         {
-                            SW_LOG_ERROR( "setting '%#': applier '%#' does not accept option '%#'", pId, def._targetName.c_str(), option._value );
+                            SW_LOG_ERROR( "setting '%#': applier '%#' does not accept option '%#'", pID, def._targetName.c_str(), option._value );
                             bOk = false;
                         }
                     }
@@ -759,16 +759,16 @@ namespace sw
 
             for ( const UserSettingCondition& condition : def._listEnabledCondition )
             {
-                const UserSettingDef* pOther = findSetting( condition._settingId );
+                const UserSettingDef* pOther = findSetting( condition._settingID );
                 if ( pOther == nullptr )
                 {
-                    SW_LOG_ERROR( "setting '%#' depends on an unknown setting '%#'", pId, condition._settingId.c_str() );
+                    SW_LOG_ERROR( "setting '%#' depends on an unknown setting '%#'", pID, condition._settingID.c_str() );
                     bOk = false;
                     continue;
                 }
                 if ( normalizeValue( *pOther, condition._value, normalized ) != UserSettingValueResult::Accepted )
                 {
-                    SW_LOG_ERROR( "setting '%#' depends on '%#' = '%#', which is not a valid value of it", pId, condition._settingId.c_str(), condition._value );
+                    SW_LOG_ERROR( "setting '%#' depends on '%#' = '%#', which is not a valid value of it", pID, condition._settingID.c_str(), condition._value );
                     bOk = false;
                 }
             }
@@ -776,17 +776,17 @@ namespace sw
 
         for ( const ScalabilityGroupDef& group : _listScalabilityGroup )
         {
-            const UserSettingDef* pGroupSetting = findSetting( group._settingId );
+            const UserSettingDef* pGroupSetting = findSetting( group._settingID );
             if ( pGroupSetting == nullptr || pGroupSetting->_type != UserSettingType::Enum )
             {
-                SW_LOG_ERROR( "<Scalability> setting '%#' is not an enum setting", group._settingId.c_str() );
+                SW_LOG_ERROR( "<Scalability> setting '%#' is not an enum setting", group._settingID.c_str() );
                 bOk = false;
                 continue;
             }
             string normalized;
             if ( normalizeValue( *pGroupSetting, group._customValue, normalized ) != UserSettingValueResult::Accepted )
             {
-                SW_LOG_ERROR( "<Scalability> '%#': custom value '%#' is not an option", group._settingId.c_str(), group._customValue );
+                SW_LOG_ERROR( "<Scalability> '%#': custom value '%#' is not an option", group._settingID.c_str(), group._customValue );
                 bOk = false;
             }
             // 선택지 하나하나(custom 밖)가 프리셋 하나다 — 프리셋이 없는 선택지를 고르면 묶인 설정이 아무것도 바뀌지 않는다.
@@ -801,7 +801,7 @@ namespace sw
                 }
                 if ( bHasPreset == false )
                 {
-                    SW_LOG_ERROR( "<Scalability> '%#': option '%#' has no <Preset>", group._settingId.c_str(), option._value );
+                    SW_LOG_ERROR( "<Scalability> '%#': option '%#' has no <Preset>", group._settingID.c_str(), option._value );
                     bOk = false;
                 }
             }
@@ -809,21 +809,21 @@ namespace sw
             {
                 if ( normalizeValue( *pGroupSetting, preset._name.c_str(), normalized ) != UserSettingValueResult::Accepted )
                 {
-                    SW_LOG_ERROR( "<Scalability> '%#': preset '%#' is not an option", group._settingId.c_str(), preset._name.c_str() );
+                    SW_LOG_ERROR( "<Scalability> '%#': preset '%#' is not an option", group._settingID.c_str(), preset._name.c_str() );
                     bOk = false;
                 }
                 for ( const ScalabilityPresetValue& value : preset._listValue )
                 {
-                    const UserSettingDef* pMember = findSetting( value._settingId );
+                    const UserSettingDef* pMember = findSetting( value._settingID );
                     if ( pMember == nullptr || pMember == pGroupSetting )
                     {
-                        SW_LOG_ERROR( "<Scalability> preset '%#' sets an unknown setting '%#'", preset._name.c_str(), value._settingId.c_str() );
+                        SW_LOG_ERROR( "<Scalability> preset '%#' sets an unknown setting '%#'", preset._name.c_str(), value._settingID.c_str() );
                         bOk = false;
                         continue;
                     }
                     if ( normalizeValue( *pMember, value._value, normalized ) != UserSettingValueResult::Accepted )
                     {
-                        SW_LOG_ERROR( "<Scalability> preset '%#' sets '%#' to an invalid value '%#'", preset._name.c_str(), value._settingId.c_str(), value._value );
+                        SW_LOG_ERROR( "<Scalability> preset '%#' sets '%#' to an invalid value '%#'", preset._name.c_str(), value._settingID.c_str(), value._value );
                         bOk = false;
                     }
                 }
@@ -838,7 +838,7 @@ namespace sw
             }
             if ( group._autoDetectFallback.empty() == false && normalizeValue( *pGroupSetting, group._autoDetectFallback.c_str(), normalized ) != UserSettingValueResult::Accepted )
             {
-                SW_LOG_ERROR( "<Scalability> '%#': autoDetectFallback '%#' is not an option", group._settingId.c_str(), group._autoDetectFallback.c_str() );
+                SW_LOG_ERROR( "<Scalability> '%#': autoDetectFallback '%#' is not an option", group._settingID.c_str(), group._autoDetectFallback.c_str() );
                 bOk = false;
             }
         }

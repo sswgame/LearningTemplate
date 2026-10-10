@@ -175,9 +175,9 @@ namespace sw
         {
             _body.setWaterBlock( pCatalog->findBlockIndex( hashed_string( "water" ) ) );
             const utf8* arrStartBlock[] = { "planks", "cobblestone", "brick", "log", "sand", "leaves" };
-            for ( const utf8* pId : arrStartBlock )
+            for ( const utf8* pID : arrStartBlock )
             {
-                (void)_hotbar.addBlock( pCatalog->findBlockIndex( hashed_string( pId ) ), 64 );
+                (void)_hotbar.addBlock( pCatalog->findBlockIndex( hashed_string( pID ) ), 64 );
             }
         }
         GameObject*                   pOwner    = getOwner();

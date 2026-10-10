@@ -362,7 +362,7 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
     SW_ASSERT_TRUE( listFirst.size() == listSecond.size() );
     for ( size_t index = 0; index < listFirst.size(); ++index )
     {
-        SW_EXPECT_TRUE( listFirst[index]._itemId == listSecond[index]._itemId );
+        SW_EXPECT_TRUE( listFirst[index]._itemID == listSecond[index]._itemID );
         SW_EXPECT_EQUAL( listFirst[index]._count, listSecond[index]._count );
     }
     // 확률 0 인 창고와 모르는 지점은 비고, 집마다 2..3 번 굴려 무엇인가 놓인다.
@@ -386,7 +386,7 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
         sameCount += item._spotIndex != 11 ? 1 : 0;
     }
     SW_ASSERT_TRUE( listThird.size() == sameCount );
-    SW_EXPECT_TRUE( listThird.back()._itemId == listFirst[sameCount - 1]._itemId );
+    SW_EXPECT_TRUE( listThird.back()._itemID == listFirst[sameCount - 1]._itemID );
 
     // 씨앗이 다르면 배치가 바뀐다.
     vector<BrGroundItem> listOther;
@@ -394,7 +394,7 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
     bool bDifferent = listOther.size() != listFirst.size();
     for ( size_t index = 0; bDifferent == false && index < listFirst.size(); ++index )
     {
-        bDifferent = listFirst[index]._itemId != listOther[index]._itemId || listFirst[index]._count != listOther[index]._count;
+        bDifferent = listFirst[index]._itemID != listOther[index]._itemID || listFirst[index]._count != listOther[index]._count;
     }
     SW_EXPECT_TRUE( bDifferent );
 }
@@ -436,13 +436,13 @@ SW_TEST_CASE( BattleRoyaleTest, ArmorBackpackAndAmmoReload )
     SW_EXPECT_NEAR_EQUAL( 70.0f, inventory.getMaxWeight(), 0.001f );
     SW_EXPECT_EQUAL( 60, inventory.addItem( "ammo556", 60 ) ); // 100 발 = 50
     SW_EXPECT_FALSE( loadout.tryEquipBackpack( "bag1", inventory ) );
-    SW_EXPECT_TRUE( loadout.getBackpackId() == hashed_string( "bag3" ) );
+    SW_EXPECT_TRUE( loadout.getBackpackID() == hashed_string( "bag3" ) );
     SW_EXPECT_FALSE( loadout.tryEquipBackpack( "helmet1", inventory ) );
 
     // 재장전 — 탄약 아이템에서 빈 만큼만 옮긴다.
     WeaponDef rifle;
     rifle._id             = hashed_string( "rifle" );
-    rifle._ammoId         = hashed_string( "ammo556" );
+    rifle._ammoID         = hashed_string( "ammo556" );
     rifle._magazineSize   = 30;
     rifle._maxReserveAmmo = 300;
     rifle._fireInterval   = 0.1f;
@@ -566,7 +566,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneDamageBleedoutCreditAndSupplyDrop )
     const BrSupplyDrop& drop = world._match.getSupplyDrops()[0];
     SW_EXPECT_NEAR_EQUAL( 40.0f, drop._time, 0.11f );
     SW_EXPECT_TRUE( drop._listItem.size() == 2 );
-    SW_EXPECT_TRUE( drop._listItem[0]._itemId == hashed_string( "awm" ) && drop._listItem[1]._itemId == hashed_string( "ghillie" ) );
+    SW_EXPECT_TRUE( drop._listItem[0]._itemID == hashed_string( "awm" ) && drop._listItem[1]._itemID == hashed_string( "ghillie" ) );
     SW_EXPECT_TRUE( containsBrEvent( world._listEvent, BrEvent::Kind::SupplyDropLanded ) );
 
     world.run( 40.0f );
@@ -627,7 +627,7 @@ SW_TEST_CASE( BattleRoyaleTest, StateRoundTripContinuesTheSameMatch )
     SW_EXPECT_NEAR_EQUAL( world._match.findPlayer( 0 )->_revive.getProgress(), pRestoredLooter->_revive.getProgress(), 1.0e-6f );
     SW_EXPECT_EQUAL( 0, restored._match.findPlayer( 1 )->_revivingTarget );
     SW_EXPECT_TRUE( pRestoredLooter->_loadout.getHelmet()._pDef != nullptr );
-    SW_EXPECT_TRUE( pRestoredLooter->_loadout.getBackpackId() == hashed_string( "bag1" ) );
+    SW_EXPECT_TRUE( pRestoredLooter->_loadout.getBackpackID() == hashed_string( "bag1" ) );
     SW_EXPECT_EQUAL( 30, pRestoredLooter->_inventory.getItemCount( "ammo556" ) );
     SW_EXPECT_NEAR_EQUAL( pLooter->_inventory.getMaxWeight(), pRestoredLooter->_inventory.getMaxWeight(), 1.0e-6f );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( restored._match.getSupplyDrops().size() ) );

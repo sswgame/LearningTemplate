@@ -53,7 +53,7 @@ namespace sw
 
         /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 올립니다. */
         void registerTLSContext( string_view host, ITLSContext* pTLSContext );
-        /** @brief 요청을 맡깁니다. 0 이 아닌 요청 id 입니다(응답의 `_requestId`). 응답은 반드시 한 번 온다(실패도). */
+        /** @brief 요청을 맡깁니다. 0 이 아닌 요청 id 입니다(응답의 `_requestID`). 응답은 반드시 한 번 온다(실패도). */
         uint64 submitRequest( const HTTPClientRequest& request, int64 nowMs );
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 시한을 봅니다. */
         void tick( int64 nowMs );
@@ -73,14 +73,14 @@ namespace sw
             HTTPMessageParser _parser{};
             vector<uint8>     _requestBytes{};
             vector<uint8>     _plainBytes{};
-            uint64            _requestId{ 0 };
+            uint64            _requestID{ 0 };
             int64             _deadlineMs{ 0 };
             uint8             _bOpened{ SW_FALSE };
         };
 
         /** @brief 잠금 안에서 — 요청을 끝내고 응답을 쌓는다(연결은 부르는 쪽이 닫는다). */
         void finishLocked( Call& call, const utf8* pFailure );
-        void failImmediately( uint64 requestId, const utf8* pFailure );
+        void failImmediately( uint64 requestID, const utf8* pFailure );
 
         mutable mutex                           _mutex;
         unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
@@ -88,7 +88,7 @@ namespace sw
         vector<HTTPClientResponse>              _listDone;
         unique_ptr<IStreamTransport>            _transport;
         HTTPClientSettings                      _settings;
-        uint64                                  _nextRequestId;
+        uint64                                  _nextRequestID;
         int32                                   _ioThreadCount;
         uint8                                   _bInitialized;
     };

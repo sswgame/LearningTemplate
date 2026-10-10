@@ -22,7 +22,7 @@ namespace sw
     struct LeaderboardClientReply
     {
         LeaderboardReply _reply{};
-        uint64           _requestId{ 0 };
+        uint64           _requestID{ 0 };
         uint16           _method{ 0 };
         uint16           _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
     };
@@ -44,12 +44,12 @@ namespace sw
         /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이(초기화 전에). */
         void initialize( OnlineServiceClient* pClient );
 
-        uint64 requestTop( string_view boardId, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply );
-        uint64 requestAround( string_view boardId, int32 radius, const LeaderboardReplyDelegate& onReply );
+        uint64 requestTop( string_view boardID, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply );
+        uint64 requestAround( string_view boardID, int32 radius, const LeaderboardReplyDelegate& onReply );
         uint64 requestStats( const LeaderboardReplyDelegate& onReply );
-        uint64 submitScore( string_view boardId, int64 score, const LeaderboardReplyDelegate& onReply );
+        uint64 submitScore( string_view boardID, int64 score, const LeaderboardReplyDelegate& onReply );
         uint64 requestAchievements( const LeaderboardReplyDelegate& onReply );
-        uint64 requestSeasonResult( string_view boardId, uint32 seasonId, const LeaderboardReplyDelegate& onReply );
+        uint64 requestSeasonResult( string_view boardID, uint32 seasonID, const LeaderboardReplyDelegate& onReply );
 
         /** @brief 쌓인 업적 달성 알림을 꺼냅니다. */
         void drainAchievementUnlocks( vector<AchievementState>& outListAchievement ) { _unlockBuffer.drainTo( outListAchievement ); }

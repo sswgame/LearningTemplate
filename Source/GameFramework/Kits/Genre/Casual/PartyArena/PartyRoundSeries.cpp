@@ -106,11 +106,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Round" ); node; node = node.findNextSibling( "Round" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             PartyRoundDef round;
-            round._id         = hashed_string( pId );
+            round._id         = hashed_string( pID );
             round._timeLimit  = MathUtil::max( 0.0f, node.getAttributeFloat( "time", 0.0f ) );
             round._scoreLimit = MathUtil::max( 0, node.getAttributeInt( "scoreLimit", 0 ) );
             _listRound.push_back( round );
@@ -129,7 +129,7 @@ namespace sw
         event._value                = value;
         event._points               = points;
         const PartyRoundDef* pRound = getCurrentRound();
-        event._roundId              = pRound != nullptr ? pRound->_id : hashed_string{};
+        event._roundID              = pRound != nullptr ? pRound->_id : hashed_string{};
         _eventBuffer.push( event );
     }
 } // namespace sw

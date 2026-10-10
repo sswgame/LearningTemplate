@@ -49,11 +49,11 @@ namespace sw
 
 namespace sw
 {
-    LedgerHolder LedgerHolder::makeAccount( uint64 accountId )
+    LedgerHolder LedgerHolder::makeAccount( uint64 accountID )
     {
         LedgerHolder holder;
         holder._kind      = LedgerHolderKind::Account;
-        holder._accountId = accountId;
+        holder._accountID = accountID;
         return holder;
     }
 
@@ -85,7 +85,7 @@ namespace sw
         switch ( _kind )
         {
             case LedgerHolderKind::Account:
-                return _accountId != 0;
+                return _accountID != 0;
             case LedgerHolderKind::Escrow:
                 return LedgerUtil::isValidEscrowDomain( _escrowDomain ) && LedgerUtil::isValidEscrowToken( _escrowToken );
             case LedgerHolderKind::Mint:
@@ -105,7 +105,7 @@ namespace sw
             case LedgerHolderKind::Account:
             {
                 key = "acct/";
-                ServiceKeyUtil::appendHex64( key, _accountId );
+                ServiceKeyUtil::appendHex64( key, _accountID );
                 break;
             }
             case LedgerHolderKind::Escrow:
@@ -141,7 +141,7 @@ namespace sw
         switch ( _kind )
         {
             case LedgerHolderKind::Account:
-                return _accountId == other._accountId;
+                return _accountID == other._accountID;
             case LedgerHolderKind::Escrow:
                 return _escrowDomain == other._escrowDomain && _escrowToken == other._escrowToken;
             case LedgerHolderKind::Mint:
@@ -202,21 +202,21 @@ namespace sw
         return true;
     }
 
-    string LedgerJournalKey::makeAccountScope( uint64 accountId )
+    string LedgerJournalKey::makeAccountScope( uint64 accountID )
     {
         string scope{ "acct." };
-        ServiceKeyUtil::appendHex64( scope, accountId );
+        ServiceKeyUtil::appendHex64( scope, accountID );
         return scope;
     }
 
-    string LedgerJournalKey::makeAdminScope( uint64 adminAccountId )
+    string LedgerJournalKey::makeAdminScope( uint64 adminAccountID )
     {
         string scope{ "gm." };
-        ServiceKeyUtil::appendHex64( scope, adminAccountId );
+        ServiceKeyUtil::appendHex64( scope, adminAccountID );
         return scope;
     }
 
-    bool LedgerUtil::isValidAssetId( string_view assetId ) { return LedgerTypesInternal::isTokenText( assetId, LedgerConstant::kMaxAssetIdSize, "_.-" ); }
+    bool LedgerUtil::isValidAssetID( string_view assetID ) { return LedgerTypesInternal::isTokenText( assetID, LedgerConstant::kMaxAssetIDSize, "_.-" ); }
 
     bool LedgerUtil::isValidReasonCode( string_view reason ) { return LedgerTypesInternal::isTokenText( reason, LedgerConstant::kMaxReasonSize, "_." ); }
 
@@ -237,7 +237,7 @@ namespace sw
         outWriter.writeVarUint( static_cast<uint64>( holder._kind ) );
         if ( holder._kind == LedgerHolderKind::Account )
         {
-            outWriter.writeVarUint( holder._accountId );
+            outWriter.writeVarUint( holder._accountID );
         }
         else if ( holder._kind == LedgerHolderKind::Escrow )
         {
@@ -255,7 +255,7 @@ namespace sw
         outHolder._kind = static_cast<LedgerHolderKind>( kind );
         if ( outHolder._kind == LedgerHolderKind::Account )
         {
-            outHolder._accountId = reader.readVarUint();
+            outHolder._accountID = reader.readVarUint();
         }
         else if ( outHolder._kind == LedgerHolderKind::Escrow )
         {
@@ -271,7 +271,7 @@ namespace sw
     {
         writeHolder( outWriter, posting._from );
         writeHolder( outWriter, posting._to );
-        ServiceKeyUtil::writeString( outWriter, posting._assetId );
+        ServiceKeyUtil::writeString( outWriter, posting._assetID );
         outWriter.writeVarInt( posting._amount );
     }
 
@@ -279,7 +279,7 @@ namespace sw
     {
         if ( readHolder( reader, outPosting._from ) == false || readHolder( reader, outPosting._to ) == false )
             return false;
-        if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, outPosting._assetId ) == false )
+        if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, outPosting._assetID ) == false )
             return false;
         outPosting._amount = reader.readVarInt();
         return reader.hasOverflowed() == false;

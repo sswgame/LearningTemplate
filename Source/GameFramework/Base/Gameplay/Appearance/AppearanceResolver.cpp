@@ -23,7 +23,7 @@ namespace sw
                 const ItemVisualDef*         _pVisual{ nullptr };
                 const AppearanceSlotRequest* _pRequest{ nullptr }; ///< 칸의 장비일 때
                 hashed_string                _owner{};
-                hashed_string                _itemId{};
+                hashed_string                _itemID{};
                 hashed_string                _state{};
                 hashed_string                _customVariant{};         ///< 꾸미기 고르기가 정한 메시 변형
                 hashed_string                _customMaterialVariant{}; ///< 꾸미기 고르기가 정한 머티리얼 변형
@@ -367,7 +367,7 @@ namespace sw
                     {
                         ResolvedDetachedPart detached;
                         detached._owner            = entry._owner;
-                        detached._itemId           = entry._itemId;
+                        detached._itemID           = entry._itemID;
                         detached._partName         = part._name;
                         detached._asset            = part._asset;
                         detached._impulse          = part._breakImpulse;
@@ -396,8 +396,8 @@ namespace sw
                     }
                     ResolvedPart resolved;
                     resolved._owner       = entry._owner;
-                    resolved._itemId      = entry._itemId;
-                    resolved._visualId    = visual._id;
+                    resolved._itemID      = entry._itemID;
+                    resolved._visualID    = visual._id;
                     resolved._partName    = part._name;
                     resolved._kind        = part._kind;
                     resolved._asset       = part._asset;
@@ -584,7 +584,7 @@ namespace sw
         using Internal         = AppearanceResolverInternal;
         using Entry            = AppearanceResolverInternal::Entry;
         outResolved            = ResolvedAppearance{};
-        outResolved._presetId  = spec._presetId;
+        outResolved._presetID  = spec._presetID;
         outResolved._bodyType  = spec._bodyType;
         outResolved._bodyShape = spec._bodyShape;
         outResolved._face      = spec._face;
@@ -619,28 +619,28 @@ namespace sw
         const ItemCatalog* pItemCatalog = database.getItemCatalog();
         for ( const AppearanceSlotRequest& request : spec._listSlot )
         {
-            if ( request._itemId.empty() )
+            if ( request._itemID.empty() )
                 continue;
-            const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->findItem( request._itemId ) : nullptr;
-            const hashed_string  visualId = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualId : hashed_string{} );
-            const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualId );
+            const ItemDef*       pItem    = pItemCatalog != nullptr ? pItemCatalog->findItem( request._itemID ) : nullptr;
+            const hashed_string  visualID = request._visibleVisual.empty() == false ? request._visibleVisual : ( pItem != nullptr ? pItem->_visualID : hashed_string{} );
+            const ItemVisualDef* pVisual  = database.getVisuals().findVisual( visualID );
             if ( pVisual == nullptr )
             {
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "item '%#' has no visual", request._itemId.c_str() );
+                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "item '%#' has no visual", request._itemID.c_str() );
                 continue;
             }
             Entry entry;
             entry._pVisual  = pVisual;
             entry._pRequest = &request;
             entry._owner    = request._slot;
-            entry._itemId   = request._itemId;
+            entry._itemID   = request._itemID;
             entry._state    = request._state.empty() ? Internal::getDefaultState( *pVisual ) : request._state;
             if ( request._visibleVisual.empty() == false )
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' shows visual '%#' (transmog)", request._itemId.c_str(), visualId.c_str() );
+                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' shows visual '%#' (transmog)", request._itemID.c_str(), visualID.c_str() );
             if ( request._bSuppressed == SW_TRUE )
             {
                 entry._bHidden = SW_TRUE;
-                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' hidden - its equip condition is broken", request._itemId.c_str() );
+                Internal::addTrace( outResolved, AppearanceTraceStep::Output, request._slot, "'%#' hidden - its equip condition is broken", request._itemID.c_str() );
             }
             listEntry.push_back( entry );
         }
@@ -660,8 +660,8 @@ namespace sw
                 if ( otherIndex < 0 )
                     continue;
                 listEntry[static_cast<size_t>( otherIndex )]._bHidden = SW_TRUE;
-                Internal::addTrace( outResolved, AppearanceTraceStep::Occupancy, occupier._owner, "'%#' occupies slot '%#' - '%#' hidden", occupier._itemId.c_str(), slot.c_str(),
-                                    listEntry[static_cast<size_t>( otherIndex )]._itemId.c_str() );
+                Internal::addTrace( outResolved, AppearanceTraceStep::Occupancy, occupier._owner, "'%#' occupies slot '%#' - '%#' hidden", occupier._itemID.c_str(), slot.c_str(),
+                                    listEntry[static_cast<size_t>( otherIndex )]._itemID.c_str() );
             }
         }
 
@@ -674,7 +674,7 @@ namespace sw
             const EquipSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&]( const hashed_string& slot )
             {
                 const AppearanceSlotRequest* pRequest = spec.findSlot( slot );
-                return pRequest == nullptr || pRequest->_bSuppressed == SW_TRUE ? hashed_string{} : pRequest->_itemId;
+                return pRequest == nullptr || pRequest->_bSuppressed == SW_TRUE ? hashed_string{} : pRequest->_itemID;
             } );
             if ( progress.isComplete() == false )
                 continue;
@@ -833,12 +833,12 @@ namespace sw
     {
         AppearanceResolverInternal::HashBuilder builder;
         builder.addUint64( computeMeshHash( resolved ) );
-        builder.addName( resolved._presetId );
+        builder.addName( resolved._presetID );
         for ( const ResolvedPart& part : resolved._listPart )
         {
             builder.addName( part._owner );
-            builder.addName( part._itemId );
-            builder.addName( part._visualId );
+            builder.addName( part._itemID );
+            builder.addName( part._visualID );
             builder.addName( part._partName );
             builder.addName( part._variant );
             builder.addName( part._materialVariant );
@@ -875,7 +875,7 @@ namespace sw
         for ( const ResolvedDetachedPart& detached : resolved._listDetachedPart )
         {
             builder.addName( detached._owner );
-            builder.addName( detached._itemId );
+            builder.addName( detached._itemID );
             builder.addName( detached._partName );
             builder.addFloat3( detached._impulse );
             builder.addInt( detached._bFromDamageStage );
@@ -895,7 +895,7 @@ namespace sw
                     pEquipSlot = &equipSlot;
             }
             const bool bEmpty = pEquipSlot == nullptr || pEquipSlot->_item.isEmpty();
-            request._itemId   = bEmpty ? hashed_string{} : pEquipSlot->_item._itemId;
+            request._itemID   = bEmpty ? hashed_string{} : pEquipSlot->_item._itemID;
             if ( bEmpty )
             {
                 request._customization.clear();
@@ -905,7 +905,7 @@ namespace sw
                 continue;
             }
             const InventorySlot& item = pEquipSlot->_item;
-            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->findItem( item._itemId ) : nullptr;
+            const ItemDef*       pDef = pCatalog != nullptr ? pCatalog->findItem( item._itemID ) : nullptr;
             const float32        worn = pDef != nullptr && pDef->_maxDurability > 0.0f ? 1.0f - MathUtil::saturate( item._durability / pDef->_maxDurability ) : 0.0f;
             request._customization    = item._customization;
             request._listDetachedPart = item._listDetachedPart;

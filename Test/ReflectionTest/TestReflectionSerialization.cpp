@@ -3182,8 +3182,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
     SW_ASSERT_NOT_NULL( pType );
     sw::ContainerShapeActor source;
     source._uniqueTag   = { "fire", "ice" };
-    source._uniqueId    = { 3, 9 };
-    source._mapIdToName = {
+    source._uniqueID    = { 3, 9 };
+    source._mapIDToName = {
         { 7, "seven"},
         {-2, "minus"}
     };
@@ -3191,7 +3191,7 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
         {   sw::SampleStatus::Moving, 4},
         {sw::SampleStatus::Attacking, 1}
     };
-    source._mapGroupToId = {
+    source._mapGroupToID = {
         {"a", { 1, 2 }},
         {"b",       {}}
     };
@@ -3208,12 +3208,12 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
     const auto isSame = [&source]( const sw::ContainerShapeActor& actor )
     {
         bool bSame = actor._uniqueTag.size() == 2 && actor._uniqueTag.count( "fire" ) == 1 && actor._uniqueTag.count( "ice" ) == 1;
-        bSame      = bSame && actor._uniqueId.size() == 2 && actor._uniqueId.count( 3 ) == 1 && actor._uniqueId.count( 9 ) == 1;
-        bSame      = bSame && actor._mapIdToName.size() == 2 && actor._mapIdToName.count( 7 ) == 1 && actor._mapIdToName.find( 7 )->second == "seven" && actor._mapIdToName.count( -2 ) == 1;
+        bSame      = bSame && actor._uniqueID.size() == 2 && actor._uniqueID.count( 3 ) == 1 && actor._uniqueID.count( 9 ) == 1;
+        bSame      = bSame && actor._mapIDToName.size() == 2 && actor._mapIDToName.count( 7 ) == 1 && actor._mapIDToName.find( 7 )->second == "seven" && actor._mapIDToName.count( -2 ) == 1;
         bSame      = bSame && actor._mapStatusToCount.size() == 2 && actor._mapStatusToCount.at( sw::SampleStatus::Moving ) == 4 &&
                 actor._mapStatusToCount.at( sw::SampleStatus::Attacking ) == 1;
-        bSame = bSame && actor._mapGroupToId.size() == 2 && actor._mapGroupToId.at( "a" ).size() == 2 && actor._mapGroupToId.at( "a" ).count( 2 ) == 1 &&
-                actor._mapGroupToId.at( "b" ).empty();
+        bSame = bSame && actor._mapGroupToID.size() == 2 && actor._mapGroupToID.at( "a" ).size() == 2 && actor._mapGroupToID.at( "a" ).count( 2 ) == 1 &&
+                actor._mapGroupToID.at( "b" ).empty();
         bSame = bSame && actor._listScoreTable.size() == 2 && actor._listScoreTable[0].at( "x" ) == 1 && actor._listScoreTable[1].size() == 2 &&
                 actor._listScoreTable[1].at( "z" ) == 3;
         bSame = bSame && actor._mapNameToGrid.count( "g" ) == 1 && actor._mapNameToGrid.find( "g" )->second == source._mapNameToGrid.find( "g" )->second;

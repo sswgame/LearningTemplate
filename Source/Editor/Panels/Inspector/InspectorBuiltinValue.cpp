@@ -58,9 +58,9 @@ namespace sw::editor
                 else if constexpr ( std::is_same_v<T, SlotHandle> )
                     formatstring( pOutBuf, capacity, "index %# / generation %#", value.index(), value.generation() );
                 else if constexpr ( std::is_same_v<T, ComponentHandle> )
-                    formatstring( pOutBuf, capacity, "object %# / component %#", value.objectId(), value.componentId() );
+                    formatstring( pOutBuf, capacity, "object %# / component %#", value.objectID(), value.componentID() );
                 else if constexpr ( std::is_same_v<T, GameObjectHandle> )
-                    formatstring( pOutBuf, capacity, "object %#", value.objectId() );
+                    formatstring( pOutBuf, capacity, "object %#", value.objectID() );
                 else if constexpr ( std::is_same_v<T, TagID> )
                     formatstring( pOutBuf, capacity, "%#", value.isValid() ? value.getString() : "(none)" );
                 else

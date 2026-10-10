@@ -117,7 +117,7 @@ namespace sw
         , _sourceLabel{}
         , _typeName{}
         , _propertyName{}
-        , _sourceId{ 0 }
+        , _sourceID{ 0 }
     {
     }
 
@@ -141,9 +141,9 @@ namespace sw
         return false;
     }
 
-    void ValidationContext::setSource( const uint64 sourceId, const string_view sourceLabel )
+    void ValidationContext::setSource( const uint64 sourceID, const string_view sourceLabel )
     {
-        _sourceId    = sourceId;
+        _sourceID    = sourceID;
         _sourceLabel = string( sourceLabel );
     }
 
@@ -160,7 +160,7 @@ namespace sw
         issue._sourceLabel  = _sourceLabel;
         issue._typeName     = _typeName;
         issue._propertyName = _propertyName;
-        issue._sourceId     = _sourceId;
+        issue._sourceID     = _sourceID;
         issue._severity     = severity;
         _listIssue.push_back( std::move( issue ) );
     }
@@ -186,27 +186,27 @@ namespace sw
         return s_log;
     }
 
-    void ValidationIssueLog::replaceIssues( const uint64 sourceId, const vector<ValidationIssue>& listIssue )
+    void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )
     {
         std::lock_guard<mutex>  lock( _mutex );
         vector<ValidationIssue> listKept;
         listKept.reserve( _listIssue.size() + listIssue.size() );
         for ( ValidationIssue& issue : _listIssue )
         {
-            if ( issue._sourceId != sourceId )
+            if ( issue._sourceID != sourceID )
                 listKept.push_back( std::move( issue ) );
         }
         for ( const ValidationIssue& issue : listIssue )
         {
             listKept.push_back( issue );
-            listKept.back()._sourceId = sourceId;
+            listKept.back()._sourceID = sourceID;
         }
         _listIssue = std::move( listKept );
     }
 
-    void ValidationIssueLog::removeSource( const uint64 sourceId )
+    void ValidationIssueLog::removeSource( const uint64 sourceID )
     {
-        replaceIssues( sourceId, {} );
+        replaceIssues( sourceID, {} );
     }
 
     void ValidationIssueLog::collectIssues( vector<ValidationIssue>& outListIssue ) const

@@ -46,7 +46,7 @@ namespace
             if ( outUnit == nullptr )
                 return nullptr;
             outUnit->setSkeletonPath( kSkeletonPath );
-            outUnit->setMeshId( kMeshPath );
+            outUnit->setMeshID( kMeshPath );
             outUnit->resolveRenderAssets();
             outUnit->dispatchBeginPlay();
             if ( pAnimatorState != nullptr )

@@ -16,12 +16,12 @@ namespace sw
     {
         struct EconomyMirrorInternal
         {
-            /** @brief @p assetId 가 @p prefix 로 시작하면 뒤 이름을 @p outName 에 넣고 true 입니다. */
-            static bool findSuffix( string_view assetId, string_view prefix, hashed_string& outName )
+            /** @brief @p assetID 가 @p prefix 로 시작하면 뒤 이름을 @p outName 에 넣고 true 입니다. */
+            static bool findSuffix( string_view assetID, string_view prefix, hashed_string& outName )
             {
-                if ( StringUtil::startsWith( assetId, prefix ) == false || assetId.size() == prefix.size() )
+                if ( StringUtil::startsWith( assetID, prefix ) == false || assetID.size() == prefix.size() )
                     return false;
-                outName = hashed_string( assetId.substr( prefix.size() ) );
+                outName = hashed_string( assetID.substr( prefix.size() ) );
                 return true;
             }
 
@@ -30,7 +30,7 @@ namespace sw
                 for ( const LedgerBalance& balance : listBalance )
                 {
                     hashed_string listedName;
-                    if ( findSuffix( balance._assetId, prefix, listedName ) && listedName == name )
+                    if ( findSuffix( balance._assetID, prefix, listedName ) && listedName == name )
                         return true;
                 }
                 return false;
@@ -55,7 +55,7 @@ namespace sw
         for ( const LedgerBalance& balance : listBalance )
         {
             hashed_string currency;
-            if ( EconomyMirrorInternal::findSuffix( balance._assetId, kCurrencyPrefix, currency ) )
+            if ( EconomyMirrorInternal::findSuffix( balance._assetID, kCurrencyPrefix, currency ) )
                 EconomyMirrorInternal::setWalletBalance( inoutWallet, currency, balance._amount );
         }
         if ( bSnapshot == false )
@@ -78,14 +78,14 @@ namespace sw
             for ( int32 slot = 0; slot < inoutInventory.getSlotCount(); ++slot )
             {
                 const InventorySlot& held = inoutInventory.getSlot( slot );
-                if ( held.isEmpty() == false && std::find( listHeld.begin(), listHeld.end(), held._itemId ) == listHeld.end() )
-                    listHeld.push_back( held._itemId );
+                if ( held.isEmpty() == false && std::find( listHeld.begin(), listHeld.end(), held._itemID ) == listHeld.end() )
+                    listHeld.push_back( held._itemID );
             }
-            for ( const hashed_string& itemId : listHeld )
+            for ( const hashed_string& itemID : listHeld )
             {
-                if ( EconomyMirrorInternal::isListed( listBalance, kItemPrefix, itemId ) )
+                if ( EconomyMirrorInternal::isListed( listBalance, kItemPrefix, itemID ) )
                     continue;
-                const bool bRemoved = inoutInventory.removeItem( itemId, inoutInventory.getItemCount( itemId ) );
+                const bool bRemoved = inoutInventory.removeItem( itemID, inoutInventory.getItemCount( itemID ) );
                 SW_ASSERT( bRemoved ); // 가진 개수를 그대로 빼므로 늘 된다
                 (void)bRemoved;
             }
@@ -93,19 +93,19 @@ namespace sw
         int32 overflowCount = 0;
         for ( const LedgerBalance& balance : listBalance )
         {
-            hashed_string itemId;
-            if ( EconomyMirrorInternal::findSuffix( balance._assetId, kItemPrefix, itemId ) == false )
+            hashed_string itemID;
+            if ( EconomyMirrorInternal::findSuffix( balance._assetID, kItemPrefix, itemID ) == false )
                 continue;
             const int64 target  = balance._amount > 0 ? balance._amount : 0; // 아이템 빚은 0 으로 비춘다
-            const int64 current = inoutInventory.getItemCount( itemId );
+            const int64 current = inoutInventory.getItemCount( itemID );
             if ( target > current )
             {
                 const int32 wanted = static_cast<int32>( target - current );
-                overflowCount += wanted - inoutInventory.addItem( itemId, wanted );
+                overflowCount += wanted - inoutInventory.addItem( itemID, wanted );
             }
             else if ( target < current )
             {
-                const bool bRemoved = inoutInventory.removeItem( itemId, static_cast<int32>( current - target ) );
+                const bool bRemoved = inoutInventory.removeItem( itemID, static_cast<int32>( current - target ) );
                 SW_ASSERT( bRemoved ); // 가진 개수보다 적게 빼므로 늘 된다
                 (void)bRemoved;
             }

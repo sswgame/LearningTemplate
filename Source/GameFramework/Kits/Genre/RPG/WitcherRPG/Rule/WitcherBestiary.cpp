@@ -28,54 +28,54 @@ namespace sw
         _eventBuffer.clear();
     }
 
-    bool WitcherBestiary::readBook( const hashed_string& monsterId )
+    bool WitcherBestiary::readBook( const hashed_string& monsterID )
     {
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterId ) : nullptr;
-        return pMonster != nullptr && raiseKnowledge( monsterId, pMonster->_readLevel );
+        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
+        return pMonster != nullptr && raiseKnowledge( monsterID, pMonster->_readLevel );
     }
 
-    bool WitcherBestiary::recordKill( const hashed_string& monsterId )
+    bool WitcherBestiary::recordKill( const hashed_string& monsterID )
     {
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterId ) : nullptr;
+        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
         if ( pMonster == nullptr )
             return false;
-        if ( findEntry( monsterId ) == nullptr )
+        if ( findEntry( monsterID ) == nullptr )
         {
             Entry entry;
-            entry._monsterId = monsterId;
+            entry._monsterID = monsterID;
             _listEntry.push_back( entry );
         }
-        Entry* pEntry = findEntryMutable( monsterId );
+        Entry* pEntry = findEntryMutable( monsterID );
         ++pEntry->_killCount;
         const int32 level = MathUtil::min( pMonster->_killCap, pEntry->_killCount / pMonster->_killsPerLevel );
-        return raiseKnowledge( monsterId, level );
+        return raiseKnowledge( monsterID, level );
     }
 
-    bool WitcherBestiary::investigate( const hashed_string& monsterId )
+    bool WitcherBestiary::investigate( const hashed_string& monsterID )
     {
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterId ) : nullptr;
-        return pMonster != nullptr && raiseKnowledge( monsterId, pMonster->_investigateLevel );
+        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
+        return pMonster != nullptr && raiseKnowledge( monsterID, pMonster->_investigateLevel );
     }
 
-    int32 WitcherBestiary::getKnowledge( const hashed_string& monsterId ) const
+    int32 WitcherBestiary::getKnowledge( const hashed_string& monsterID ) const
     {
-        const Entry* pEntry = findEntry( monsterId );
+        const Entry* pEntry = findEntry( monsterID );
         return pEntry != nullptr ? pEntry->_knowledge : 0;
     }
 
-    int32 WitcherBestiary::getKillCount( const hashed_string& monsterId ) const
+    int32 WitcherBestiary::getKillCount( const hashed_string& monsterID ) const
     {
-        const Entry* pEntry = findEntry( monsterId );
+        const Entry* pEntry = findEntry( monsterID );
         return pEntry != nullptr ? pEntry->_killCount : 0;
     }
 
-    void WitcherBestiary::collectKnownWeaknesses( const hashed_string& monsterId, vector<const WitcherWeakness*>& outListWeakness ) const
+    void WitcherBestiary::collectKnownWeaknesses( const hashed_string& monsterID, vector<const WitcherWeakness*>& outListWeakness ) const
     {
         outListWeakness.clear();
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterId ) : nullptr;
+        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
         if ( pMonster == nullptr )
             return;
-        const int32 knowledge = getKnowledge( monsterId );
+        const int32 knowledge = getKnowledge( monsterID );
         for ( const WitcherWeakness& weakness : pMonster->_listWeakness )
         {
             if ( weakness._knowledge <= knowledge )
@@ -83,9 +83,9 @@ namespace sw
         }
     }
 
-    float32 WitcherBestiary::computeMultiplier( const hashed_string& monsterId, const hashed_string& attackElement ) const
+    float32 WitcherBestiary::computeMultiplier( const hashed_string& monsterID, const hashed_string& attackElement ) const
     {
-        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterId ) : nullptr;
+        const WitcherMonsterDef* pMonster = _pCatalog != nullptr ? _pCatalog->findMonster( monsterID ) : nullptr;
         if ( pMonster == nullptr || _pChart == nullptr || attackElement.empty() )
             return 1.0f;
         return _pChart->computeMultiplier( attackElement, pMonster->_listElement );
@@ -96,36 +96,36 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    WitcherBestiary::Entry* WitcherBestiary::findEntryMutable( const hashed_string& monsterId )
+    WitcherBestiary::Entry* WitcherBestiary::findEntryMutable( const hashed_string& monsterID )
     {
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._monsterId == monsterId )
+            if ( entry._monsterID == monsterID )
                 return &entry;
         }
         return nullptr;
     }
 
-    const WitcherBestiary::Entry* WitcherBestiary::findEntry( const hashed_string& monsterId ) const
+    const WitcherBestiary::Entry* WitcherBestiary::findEntry( const hashed_string& monsterID ) const
     {
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._monsterId == monsterId )
+            if ( entry._monsterID == monsterID )
                 return &entry;
         }
         return nullptr;
     }
 
-    bool WitcherBestiary::raiseKnowledge( const hashed_string& monsterId, int32 level )
+    bool WitcherBestiary::raiseKnowledge( const hashed_string& monsterID, int32 level )
     {
-        const WitcherMonsterDef* pMonster = _pCatalog->findMonster( monsterId );
-        if ( findEntry( monsterId ) == nullptr )
+        const WitcherMonsterDef* pMonster = _pCatalog->findMonster( monsterID );
+        if ( findEntry( monsterID ) == nullptr )
         {
             Entry entry;
-            entry._monsterId = monsterId;
+            entry._monsterID = monsterID;
             _listEntry.push_back( entry );
         }
-        Entry*      pEntry   = findEntryMutable( monsterId );
+        Entry*      pEntry   = findEntryMutable( monsterID );
         const int32 newLevel = MathUtil::min( level, pMonster->_maxKnowledge );
         if ( newLevel <= pEntry->_knowledge )
             return false;
@@ -133,7 +133,7 @@ namespace sw
         pEntry->_knowledge   = newLevel;
         WitcherBestiaryEvent raised;
         raised._kind      = WitcherBestiaryEvent::Kind::KnowledgeRaised;
-        raised._monsterId = monsterId;
+        raised._monsterID = monsterID;
         raised._value     = newLevel;
         _eventBuffer.push( raised );
         for ( const WitcherWeakness& weakness : pMonster->_listWeakness )
@@ -142,8 +142,8 @@ namespace sw
                 continue;
             WitcherBestiaryEvent revealed;
             revealed._kind       = WitcherBestiaryEvent::Kind::WeaknessRevealed;
-            revealed._monsterId  = monsterId;
-            revealed._weaknessId = weakness._id;
+            revealed._monsterID  = monsterID;
+            revealed._weaknessID = weakness._id;
             revealed._value      = newLevel;
             _eventBuffer.push( revealed );
         }
@@ -155,7 +155,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listEntry.size() );
         for ( const Entry& entry : _listEntry )
         {
-            StateArchiveUtil::writeName( outArchive, entry._monsterId );
+            StateArchiveUtil::writeName( outArchive, entry._monsterID );
             outArchive << entry._knowledge;
             outArchive << entry._killCount;
         }
@@ -170,7 +170,7 @@ namespace sw
         vector<Entry> listEntry( count );
         for ( Entry& entry : listEntry )
         {
-            if ( StateArchiveUtil::readName( archive, entry._monsterId ) == false || _pCatalog->findMonster( entry._monsterId ) == nullptr )
+            if ( StateArchiveUtil::readName( archive, entry._monsterID ) == false || _pCatalog->findMonster( entry._monsterID ) == nullptr )
                 return false;
             archive >> entry._knowledge;
             archive >> entry._killCount;

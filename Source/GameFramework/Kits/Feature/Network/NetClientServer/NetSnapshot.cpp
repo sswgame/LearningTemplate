@@ -9,18 +9,18 @@
 
 namespace sw
 {
-    const NetEntityState* NetSnapshot::findEntity( uint32 entityId ) const
+    const NetEntityState* NetSnapshot::findEntity( uint32 entityID ) const
     {
-        const auto entityIter = std::lower_bound( _listEntity.begin(), _listEntity.end(), entityId,
+        const auto entityIter = std::lower_bound( _listEntity.begin(), _listEntity.end(), entityID,
                                                   []( const NetEntityState& entity, uint32 id )
-        { return entity._entityId < id; } );
-        return entityIter != _listEntity.end() && entityIter->_entityId == entityId ? &*entityIter : nullptr;
+        { return entity._entityID < id; } );
+        return entityIter != _listEntity.end() && entityIter->_entityID == entityID ? &*entityIter : nullptr;
     }
 
     void NetSnapshot::sortEntities()
     {
         std::sort( _listEntity.begin(), _listEntity.end(), []( const NetEntityState& lhs, const NetEntityState& rhs )
-        { return lhs._entityId < rhs._entityId; } );
+        { return lhs._entityID < rhs._entityID; } );
     }
 
     void NetSnapshot::writeDelta( BitWriter& writer, const NetSnapshot* pBaseline, int32 maxBytes, NetSnapshot& outWritten, const vector<int32>* pListOrder,
@@ -56,8 +56,8 @@ namespace sw
         {
             for ( const NetEntityState& old : pBaseline->_listEntity )
             {
-                if ( findEntity( old._entityId ) == nullptr )
-                    listRemoved.push_back( old._entityId );
+                if ( findEntity( old._entityID ) == nullptr )
+                    listRemoved.push_back( old._entityID );
             }
         }
         budget.reserveBits( BitMath::computeVarUintBits( listRemoved.size() ) );
@@ -77,7 +77,7 @@ namespace sw
         {
             for ( const NetEntityState& old : pBaseline->_listEntity )
             {
-                const bool bRemovalSent = std::binary_search( listRemoved.begin(), listRemoved.begin() + static_cast<ptrdiff_t>( removedCount ), old._entityId );
+                const bool bRemovalSent = std::binary_search( listRemoved.begin(), listRemoved.begin() + static_cast<ptrdiff_t>( removedCount ), old._entityID );
                 if ( bRemovalSent == false )
                     appendWritten( old );
             }
@@ -90,8 +90,8 @@ namespace sw
         {
             const size_t          entityIndex = pListOrder != nullptr ? static_cast<size_t>( ( *pListOrder )[orderIndex] ) : orderIndex;
             const NetEntityState& entity      = _listEntity[entityIndex];
-            const NetEntityState* pOld        = pBaseline != nullptr ? pBaseline->findEntity( entity._entityId ) : nullptr;
-            if ( pOld != nullptr && pOld->_typeId == entity._typeId && pOld->_buffer == entity._buffer )
+            const NetEntityState* pOld        = pBaseline != nullptr ? pBaseline->findEntity( entity._entityID ) : nullptr;
+            if ( pOld != nullptr && pOld->_typeID == entity._typeID && pOld->_buffer == entity._buffer )
             {
                 if ( pOutListCurrent != nullptr )
                     ( *pOutListCurrent )[entityIndex] = kEntityAlreadyCurrent;
@@ -100,21 +100,21 @@ namespace sw
             const int32 size = static_cast<int32>( entity._buffer.size() );
             if ( size > kMaxEntityBytes )
                 continue; // 받는 쪽이 읽지 않는 크기 — 싣지도 재구성에 넣지도 않는다
-            const int32 entityBits = 1 + BitMath::computeVarUintBits( entity._entityId ) + BitMath::computeVarUintBits( entity._typeId ) + BitMath::computeBlobBits( size );
+            const int32 entityBits = 1 + BitMath::computeVarUintBits( entity._entityID ) + BitMath::computeVarUintBits( entity._typeID ) + BitMath::computeBlobBits( size );
             if ( budget.tryReserveBits( entityBits ) == false )
                 continue; // 작은 다음 것은 들어갈 수 있다
             writer.writeBool( true );
-            writer.writeVarUint( entity._entityId );
-            writer.writeVarUint( entity._typeId );
+            writer.writeVarUint( entity._entityID );
+            writer.writeVarUint( entity._typeID );
             writer.writeBlob( entity._buffer.data(), size );
             if ( pOutListCurrent != nullptr )
                 ( *pOutListCurrent )[entityIndex] = kEntityWritten;
             // 기준에 있던 것은 그 자리를 덮고(id 순 — 이분 탐색), 새 것은 뒤에 붙인 뒤 끝에서 한 번 정렬한다. 붙이면 저장소가 옮겨질 수 있어 시작은 매번 다시 읽는다.
             NetEntityState* const pBegin = outWritten._listEntity.data();
             NetEntityState* const pEnd   = pBegin + baselineCount;
-            NetEntityState* const pFound = std::lower_bound( pBegin, pEnd, entity._entityId, []( const NetEntityState& written, uint32 entityId )
-            { return written._entityId < entityId; } );
-            if ( pFound != pEnd && pFound->_entityId == entity._entityId )
+            NetEntityState* const pFound = std::lower_bound( pBegin, pEnd, entity._entityID, []( const NetEntityState& written, uint32 entityID )
+            { return written._entityID < entityID; } );
+            if ( pFound != pEnd && pFound->_entityID == entity._entityID )
                 *pFound = entity;
             else
                 appendWritten( entity );
@@ -145,32 +145,32 @@ namespace sw
         if ( removedCount > 0 )
         {
             vector<uint32> listRemoved( static_cast<size_t>( removedCount ) );
-            for ( uint32& entityId : listRemoved )
+            for ( uint32& entityID : listRemoved )
             {
-                entityId = static_cast<uint32>( reader.readVarUint() );
+                entityID = static_cast<uint32>( reader.readVarUint() );
             }
             if ( reader.hasOverflowed() )
                 return false;
             std::sort( listRemoved.begin(), listRemoved.end() );
             outSnapshot._listEntity.erase( std::remove_if( outSnapshot._listEntity.begin(), outSnapshot._listEntity.end(),
                                                            [&listRemoved]( const NetEntityState& entity )
-            { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityId ); } ),
+            { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityID ); } ),
                                            outSnapshot._listEntity.end() );
         }
         // 기준에 있던 것은 그 자리의 버퍼에 바로 읽고(id 순 — 이분 탐색), 새 것은 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
         const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순
         while ( reader.readBool() )
         {
-            const uint32          entityId = static_cast<uint32>( reader.readVarUint() );
-            const uint32          typeId   = static_cast<uint32>( reader.readVarUint() );
+            const uint32          entityID = static_cast<uint32>( reader.readVarUint() );
+            const uint32          typeID   = static_cast<uint32>( reader.readVarUint() );
             NetEntityState* const pBegin   = outSnapshot._listEntity.data();
             NetEntityState* const pEnd     = pBegin + baselineCount;
-            NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityId, []( const NetEntityState& existing, uint32 id )
-                   { return existing._entityId < id; } );
-            if ( pEntity == pEnd || pEntity->_entityId != entityId )
+            NetEntityState*       pEntity  = std::lower_bound( pBegin, pEnd, entityID, []( const NetEntityState& existing, uint32 id )
+                   { return existing._entityID < id; } );
+            if ( pEntity == pEnd || pEntity->_entityID != entityID )
                 pEntity = &outSnapshot._listEntity.emplace_back();
-            pEntity->_entityId = entityId;
-            pEntity->_typeId   = typeId;
+            pEntity->_entityID = entityID;
+            pEntity->_typeID   = typeID;
             if ( reader.readBlob( pEntity->_buffer, kMaxEntityBytes ) == false )
                 return false;
             if ( reader.hasOverflowed() )

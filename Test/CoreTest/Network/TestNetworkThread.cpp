@@ -103,17 +103,17 @@ SW_TEST_CASE( NetworkThreadTest, ThreadedHostsConnectAsyncAndExchangeWithoutGame
     }
     int32          clientReceived = 0;
     int32          serverReceived = 0;
-    int32          connectionId   = -1;
+    int32          connectionID   = -1;
     NetChannelType channel        = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     const bool     bAllReceived = waitUntil( [&]()
     {
-        while ( client.receiveMessage( connectionId, channel, buffer ) )
+        while ( client.receiveMessage( connectionID, channel, buffer ) )
         {
             if ( readInt( buffer, 0 ) == 1 && readInt( buffer, 4 ) == clientReceived )
                 ++clientReceived;
         }
-        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
             if ( readInt( buffer, 0 ) == 2 && readInt( buffer, 4 ) == serverReceived )
                 ++serverReceived;
@@ -181,19 +181,19 @@ SW_TEST_CASE( NetworkThreadTest, GameThreadsSendAndReceiveConcurrently )
         arrCount[receiver].assign( kSenderCount, 0 );
         listReceiver.emplace_back( [&, receiver]()
         {
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             vector<uint8>  buffer;
             while ( bStop.load() == false )
             {
-                if ( server.receiveMessage( connectionId, channel, buffer ) == false )
+                if ( server.receiveMessage( connectionID, channel, buffer ) == false )
                 {
                     std::this_thread::sleep_for( std::chrono::microseconds( 100 ) );
                     continue;
                 }
                 const int32 sender   = readInt( buffer, 0 );
                 const int32 sequence = readInt( buffer, 4 );
-                if ( sender < 0 || sender >= kSenderCount || connectionId != ( sender % 2 == 0 ? 0 : 1 ) )
+                if ( sender < 0 || sender >= kSenderCount || connectionID != ( sender % 2 == 0 ? 0 : 1 ) )
                 {
                     orderErrorCount.fetch_add( 1 );
                     continue;
@@ -291,12 +291,12 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     // 부하 아래의 루프백 지연(수십 ms)에 넉넉하게 연결 타임아웃(0.5 초)으로 둔다.
     SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < static_cast<float32>( settings._timeout ) );
     int32          received     = 0;
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     SW_EXPECT_TRUE( waitUntil( [&]()
     {
-        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
             received += readInt( buffer, 4 ) == received ? 1 : 0;
         }
@@ -335,12 +335,12 @@ SW_TEST_CASE( NetworkThreadTest, UDPHostsRunOnThreadsOverLocalhost )
         SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, makeTaggedMessage( 7, index ) ) );
     }
     int32          received     = 0;
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     SW_EXPECT_TRUE( waitUntil( [&]()
     {
-        while ( server.receiveMessage( connectionId, channel, buffer ) )
+        while ( server.receiveMessage( connectionID, channel, buffer ) )
         {
             received += readInt( buffer, 4 ) == received ? 1 : 0;
         }
@@ -383,12 +383,12 @@ SW_TEST_CASE( NetworkThreadTest, LargeReliableMessagesCrossHostThreads )
         listSent.push_back( std::move( message ) );
     }
     vector<vector<uint8>> listReceived;
-    int32                 connectionId = -1;
+    int32                 connectionID = -1;
     NetChannelType        channel      = NetChannelType::Unreliable;
     vector<uint8>         buffer;
     const bool            bAllReceived = waitUntil( [&]()
     {
-        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
             listReceived.push_back( buffer );
         }
@@ -419,11 +419,11 @@ SW_TEST_CASE( NetworkThreadTest, SendRateCapHoldsOnHostThreads )
     const vector<uint8> message( static_cast<size_t>( NetConnection::kMaxReliableMessageSize ), static_cast<uint8>( 0x5A ) );
     const Stopwatch     stopwatch;
     SW_ASSERT_TRUE( client.sendMessage( 0, NetChannelType::ReliableOrdered, message ) );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     SW_ASSERT_TRUE( waitUntil( [&]()
-    { return cluster.getServer().receiveMessage( connectionId, channel, buffer ); }, 5.0 ) );
+    { return cluster.getServer().receiveMessage( connectionID, channel, buffer ); }, 5.0 ) );
     const int64 milliseconds = stopwatch.getElapsedMilliseconds();
     SW_EXPECT_TRUE( buffer == message );
     SW_EXPECT_TRUE_MSG( milliseconds >= 200, "the host thread does not send faster than the cap" );

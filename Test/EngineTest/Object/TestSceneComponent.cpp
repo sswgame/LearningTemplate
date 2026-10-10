@@ -596,24 +596,24 @@ namespace
     struct KeyedTickWrite
     {
         sw::SceneTransformWrite _write;
-        uint64                  _writerId{ 0 };
+        uint64                  _writerID{ 0 };
     };
 
     /** @brief 컴포넌트 하나의 로컬 위치 X 를 쓰는 틱 큐 건입니다. */
-    KeyedTickWrite makeTickWrite( sw::SceneComponent* pTarget, uint64 writerId, float32 positionX )
+    KeyedTickWrite makeTickWrite( sw::SceneComponent* pTarget, uint64 writerID, float32 positionX )
     {
         KeyedTickWrite keyed{};
         keyed._write.setValue( sw::SceneTransformPage::kLocalPosition, sw::float3( positionX, 0.0f, 0.0f ) );
         keyed._write._handle  = pTarget->getHandle();
         keyed._write._pTarget = pTarget;
-        keyed._writerId       = writerId;
+        keyed._writerID       = writerID;
         return keyed;
     }
 
     /** @brief 이 스레드의 스크래치 슬롯에 건을 올립니다. */
     bool queueTickWrite( sw::SceneTransformHierarchy& hierarchy, const KeyedTickWrite& keyed )
     {
-        return hierarchy.queueWriteParallel( keyed._write, keyed._writerId );
+        return hierarchy.queueWriteParallel( keyed._write, keyed._writerID );
     }
 
     /** @brief 다른 스레드(다른 스크래치 슬롯)에서 건들을 틱 큐에 올리고, 받은 도우미 슬롯을 돌려줍니다. 모두 올렸으면 true 입니다. */
@@ -685,7 +685,7 @@ SW_TEST_CASE( SceneComponentTest, TickWritesFromDifferentWritersAreNotMerged )
 /**
  * @brief [SceneComponentTest] 배치에 같은 핸들이 두 번 있으면 병렬로 나눠도 배열에서 뒤의 것이 이긴다
  * @details 배치를 배열의 연속 구간으로 잘라 워커에 주면 같은 핸들이 여러 구간에 있을 때 워커 여럿이 한 칸을 동시에 쓰고, 마지막에 끝난 워커의
- *          값이 남는다(배열의 마지막 값이 아니다). 그래서 대상 버킷(componentId)으로 나눠 한 대상은 한 워커가 배열 순서대로 쓴다. 반복 핸들을 배열
+ *          값이 남는다(배열의 마지막 값이 아니다). 그래서 대상 버킷(componentID)으로 나눠 한 대상은 한 워커가 배열 순서대로 쓴다. 반복 핸들을 배열
  *          전체에 흩어 두어(61 칸마다) 나눔이 어긋나면 거의 확실히 진다. 월드도 이긴 로컬과 맞아야 한다(잎 루트는 적용 자리에서 합성한다).
  */
 SW_TEST_CASE( SceneComponentTest, BatchWithARepeatedHandleKeepsTheLastWrite )

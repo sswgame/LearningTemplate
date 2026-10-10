@@ -30,52 +30,52 @@ namespace sw
         _round = 0;
     }
 
-    TurnOrder::Actor* TurnOrder::findActor( int32 actorId )
+    TurnOrder::Actor* TurnOrder::findActor( int32 actorID )
     {
         for ( Actor& actor : _listActor )
         {
-            if ( actor._actorId == actorId )
+            if ( actor._actorID == actorID )
                 return &actor;
         }
         return nullptr;
     }
 
-    void TurnOrder::addActor( int32 actorId, float32 speed )
+    void TurnOrder::addActor( int32 actorID, float32 speed )
     {
-        if ( findActor( actorId ) != nullptr )
+        if ( findActor( actorID ) != nullptr )
             return;
         Actor actor;
-        actor._actorId = actorId;
+        actor._actorID = actorID;
         actor._speed   = MathUtil::max( 0.01f, speed );
         actor._gauge   = kTimelineThreshold;
         _listActor.push_back( actor );
     }
 
-    void TurnOrder::removeActor( int32 actorId )
+    void TurnOrder::removeActor( int32 actorID )
     {
-        _listActor.erase( std::remove_if( _listActor.begin(), _listActor.end(), [actorId]( const Actor& actor )
-        { return actor._actorId == actorId; } ),
+        _listActor.erase( std::remove_if( _listActor.begin(), _listActor.end(), [actorID]( const Actor& actor )
+        { return actor._actorID == actorID; } ),
                           _listActor.end() );
-        _listRoundQueue.erase( std::remove( _listRoundQueue.begin(), _listRoundQueue.end(), actorId ), _listRoundQueue.end() );
+        _listRoundQueue.erase( std::remove( _listRoundQueue.begin(), _listRoundQueue.end(), actorID ), _listRoundQueue.end() );
     }
 
-    void TurnOrder::setSpeed( int32 actorId, float32 speed )
+    void TurnOrder::setSpeed( int32 actorID, float32 speed )
     {
-        Actor* pActor = findActor( actorId );
+        Actor* pActor = findActor( actorID );
         if ( pActor != nullptr )
             pActor->_speed = MathUtil::max( 0.01f, speed ); // 게이지는 "남은 양" 이라 속도가 바뀌면 남은 시간이 저절로 바뀐다
     }
 
-    void TurnOrder::setPriority( int32 actorId, int32 priority )
+    void TurnOrder::setPriority( int32 actorID, int32 priority )
     {
-        Actor* pActor = findActor( actorId );
+        Actor* pActor = findActor( actorID );
         if ( pActor != nullptr )
             pActor->_priority = priority;
     }
 
-    void TurnOrder::delayActor( int32 actorId, float32 amount )
+    void TurnOrder::delayActor( int32 actorID, float32 amount )
     {
-        Actor* pActor = findActor( actorId );
+        Actor* pActor = findActor( actorID );
         if ( pActor != nullptr )
             pActor->_gauge = MathUtil::max( 0.0f, pActor->_gauge + amount * kTimelineThreshold );
     }
@@ -100,7 +100,7 @@ namespace sw
         outListQueue.clear();
         for ( const Actor& actor : listSorted )
         {
-            outListQueue.push_back( actor._actorId );
+            outListQueue.push_back( actor._actorID );
         }
     }
 
@@ -123,7 +123,7 @@ namespace sw
             actor._gauge = MathUtil::max( 0.0f, actor._gauge - bestTime * actor._speed );
         }
         listActor[bestIndex]._gauge = kTimelineThreshold;
-        return listActor[bestIndex]._actorId;
+        return listActor[bestIndex]._actorID;
     }
 
     int32 TurnOrder::next()
@@ -137,9 +137,9 @@ namespace sw
             makeRoundQueue( _listRoundQueue, _listActor, _random );
             ++_round;
         }
-        const int32 actorId = _listRoundQueue.front();
+        const int32 actorID = _listRoundQueue.front();
         _listRoundQueue.erase( _listRoundQueue.begin() );
-        return actorId;
+        return actorID;
     }
 
     void TurnOrder::previewOrder( int32 count, vector<int32>& outListActor ) const
@@ -174,14 +174,14 @@ namespace sw
         {
             outArchive << actor._speed;
             outArchive << actor._gauge;
-            outArchive << actor._actorId;
+            outArchive << actor._actorID;
             outArchive << actor._priority;
             outArchive << actor._tieBreak;
         }
         outArchive << static_cast<uint32>( _listRoundQueue.size() );
-        for ( const int32 actorId : _listRoundQueue )
+        for ( const int32 actorID : _listRoundQueue )
         {
-            outArchive << actorId;
+            outArchive << actorID;
         }
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _round;
@@ -200,16 +200,16 @@ namespace sw
         {
             archive >> actor._speed;
             archive >> actor._gauge;
-            archive >> actor._actorId;
+            archive >> actor._actorID;
             archive >> actor._priority;
             archive >> actor._tieBreak;
         }
         if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
             return false;
         restored._listRoundQueue.resize( count );
-        for ( int32& actorId : restored._listRoundQueue )
+        for ( int32& actorID : restored._listRoundQueue )
         {
-            archive >> actorId;
+            archive >> actorID;
         }
         uint8      mode        = 0;
         const bool bRandomRead = StateArchiveUtil::readRandom( archive, restored._random );

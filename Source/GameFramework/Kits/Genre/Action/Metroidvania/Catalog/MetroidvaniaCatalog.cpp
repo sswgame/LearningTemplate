@@ -119,12 +119,12 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MetroAbilityDef ability;
-            ability._id         = hashed_string( pId );
-            ability._name       = MetroidvaniaCatalogInternal::readText( node, "name", pId );
+            ability._id         = hashed_string( pID );
+            ability._name       = MetroidvaniaCatalogInternal::readText( node, "name", pID );
             ability._flag       = MetroidvaniaCatalogInternal::readName( node, "flag" );
             const XMLNode motor = node.findChild( "Motor" );
             if ( motor )
@@ -132,7 +132,7 @@ namespace sw
             for ( const StatValue& value : ability._motor.getValues() )
             {
                 if ( MetroAbilitySet::isMotorSettingName( value._name ) == false )
-                    SW_LOG_WARNING( "%#: ability '%#' changes an unknown motor setting '%#' - ignored", sourceName, pId, value._name.c_str() );
+                    SW_LOG_WARNING( "%#: ability '%#' changes an unknown motor setting '%#' - ignored", sourceName, pID, value._name.c_str() );
             }
             (void)_abilityCatalog.add( ability );
             ++loadedCount;
@@ -140,12 +140,12 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Charm" ); node; node = node.findNextSibling( "Charm" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MetroCharmDef charm;
-            charm._id           = hashed_string( pId );
-            charm._name         = MetroidvaniaCatalogInternal::readText( node, "name", pId );
+            charm._id           = hashed_string( pID );
+            charm._name         = MetroidvaniaCatalogInternal::readText( node, "name", pID );
             charm._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", charm._cost ) );
             const XMLNode stats = node.findChild( "Stats" );
             if ( stats )
@@ -170,51 +170,51 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MetroSiteDef site;
-            site._id          = hashed_string( pId );
+            site._id          = hashed_string( pID );
             site._area        = MetroidvaniaCatalogInternal::readName( node, "area" );
             site._bRest       = MetroidvaniaCatalogInternal::readFlag( node, "rest", SW_FALSE );
             site._bFastTravel = MetroidvaniaCatalogInternal::readFlag( node, "fastTravel", SW_FALSE );
             if ( site._area.empty() )
-                SW_LOG_WARNING( "%#: site '%#' has no area - it never shows on the map", sourceName, pId );
+                SW_LOG_WARNING( "%#: site '%#' has no area - it never shows on the map", sourceName, pID );
             (void)_siteCatalog.add( site );
             ++loadedCount;
         }
 
         for ( XMLNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MetroPickupDef pickup;
-            pickup._id      = hashed_string( pId );
+            pickup._id      = hashed_string( pID );
             pickup._area    = MetroidvaniaCatalogInternal::readName( node, "area" );
             pickup._ability = MetroidvaniaCatalogInternal::readName( node, "ability" );
             pickup._charm   = MetroidvaniaCatalogInternal::readName( node, "charm" );
             if ( pickup._ability.empty() == false && _abilityCatalog.find( pickup._ability ) == nullptr )
-                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pId, pickup._ability.c_str() );
+                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown ability '%#'", sourceName, pID, pickup._ability.c_str() );
             if ( pickup._charm.empty() == false && _charmCatalog.find( pickup._charm ) == nullptr )
-                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pId, pickup._charm.c_str() );
+                SW_LOG_WARNING( "%#: pickup '%#' grants an unknown charm '%#'", sourceName, pID, pickup._charm.c_str() );
             (void)_pickupCatalog.add( pickup );
             ++loadedCount;
         }
 
         for ( XMLNode node = root.findChild( "Enemy" ); node; node = node.findNextSibling( "Enemy" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MetroEnemyDef enemy;
-            enemy._id        = hashed_string( pId );
+            enemy._id        = hashed_string( pID );
             enemy._currency  = MathUtil::max( 0, node.getAttributeInt( "currency", enemy._currency ) );
             enemy._lootTable = MetroidvaniaCatalogInternal::readName( node, "loot" );
             enemy._bBoss     = MetroidvaniaCatalogInternal::readFlag( node, "boss", SW_FALSE );
             enemy._flag      = MetroidvaniaCatalogInternal::readName( node, "flag" );
             if ( enemy._bBoss == SW_TRUE && enemy._flag.empty() )
-                enemy._flag = hashed_string( string( "boss." ) + pId );
+                enemy._flag = hashed_string( string( "boss." ) + pID );
             (void)_enemyCatalog.add( enemy );
             ++loadedCount;
         }

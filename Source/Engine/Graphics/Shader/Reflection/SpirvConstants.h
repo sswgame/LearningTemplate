@@ -46,8 +46,8 @@ namespace sw::spirv
     inline constexpr uint32 kStorageClassUniform         = 2u;
     inline constexpr uint32 kStorageClassStorageBuffer   = 12u;
 
-    inline constexpr uint32 kBuiltInVertexId      = 5u;
-    inline constexpr uint32 kBuiltInInstanceId    = 6u;
+    inline constexpr uint32 kBuiltInVertexID      = 5u;
+    inline constexpr uint32 kBuiltInInstanceID    = 6u;
     inline constexpr uint32 kBuiltInVertexIndex   = 42u;
     inline constexpr uint32 kBuiltInInstanceIndex = 43u;
 } // namespace sw::spirv

@@ -60,7 +60,7 @@ namespace sw
         ReceiptValidationResult& result = _listPending.emplace_back();
         result._storeName               = request._storeName;
         result._ticket                  = request._ticket;
-        result._accountId               = request._accountId;
+        result._accountID               = request._accountID;
         string_view arrField[FakeReceiptValidatorInternal::kFieldCount];
         const bool  bSplit   = FakeReceiptValidatorInternal::splitFields( request._payload, arrField );
         const bool  bShapeOk = bSplit && arrField[0] == "fake" && arrField[1].empty() == false && arrField[2].empty() == false;
@@ -70,8 +70,8 @@ namespace sw
             result._failureText = "fake receipt must be fake|product|transaction|status";
             return;
         }
-        result._productId     = string( arrField[1] );
-        result._transactionId = string( arrField[2] );
+        result._productID     = string( arrField[1] );
+        result._transactionID = string( arrField[2] );
         result._status        = FakeReceiptValidatorInternal::parseStatus( arrField[3], result._bSandbox );
     }
 

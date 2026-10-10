@@ -116,11 +116,11 @@ namespace sw
         const ResolvedSocketTable* pTable = _owner._pSocketTable;
         if ( pTable != nullptr )
         {
-            const SocketId   socketId = pTable->resolveTarget( pTable->findSocket( socketName ) );
-            const SocketDef* pDef     = ( socketId != kInvalidSocketId ) ? pTable->findSocketDef( socketId ) : nullptr;
+            const SocketID   socketID = pTable->resolveTarget( pTable->findSocket( socketName ) );
+            const SocketDef* pDef     = ( socketID != kInvalidSocketID ) ? pTable->findSocketDef( socketID ) : nullptr;
             if ( pDef != nullptr )
             {
-                const uint32 unitIndex = pTable->getSocketUnit( socketId );
+                const uint32 unitIndex = pTable->getSocketUnit( socketID );
                 const bool   bOwnUnit  = unitIndex < _owner._listTableUnit.size() && _owner._pUnit != nullptr &&
                                       _owner._listTableUnit[unitIndex] == _owner._pUnit->getHandle();
                 if ( bOwnUnit == false )
@@ -157,7 +157,7 @@ namespace sw
         , _pGroundQueryOverride{ nullptr }
         , _pFrameAnimator{ nullptr }
         , _pUnit{ nullptr }
-        , _boundContentId{ 0 }
+        , _boundContentID{ 0 }
         , _bRigEnabled{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -334,7 +334,7 @@ namespace sw
         releaseDependencies();
         _instance.shutdown();
         _listExternal.clear();
-        _boundContentId               = 0;
+        _boundContentID               = 0;
         GameObject*            pOwner = getOwner();
         SkeletalMeshComponent* pUnit  = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         if ( pUnit != _pUnit )
@@ -354,7 +354,7 @@ namespace sw
             SW_LOG_ERROR( "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );
             return;
         }
-        _boundContentId = _asset->getContentId();
+        _boundContentID = _asset->getContentID();
         _groundQuery.reset();
         if ( pOwner->getManager() != nullptr )
             _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE );
@@ -492,9 +492,9 @@ namespace sw
             }
             else if ( _pSocketTable != nullptr )
             {
-                const SocketId   socketId  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
-                const SocketDef* pDef      = ( socketId != kInvalidSocketId ) ? _pSocketTable->findSocketDef( socketId ) : nullptr;
-                const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketId ) : MathUtil::kMaxUInt32;
+                const SocketID   socketID  = _pSocketTable->resolveTarget( _pSocketTable->findSocket( def._socket ) );
+                const SocketDef* pDef      = ( socketID != kInvalidSocketID ) ? _pSocketTable->findSocketDef( socketID ) : nullptr;
+                const uint32     unitIndex = ( pDef != nullptr ) ? _pSocketTable->getSocketUnit( socketID ) : MathUtil::kMaxUInt32;
                 if ( unitIndex < _listTableUnit.size() && getOwner()->getManager() != nullptr )
                     pTargetUnit = castTo<SkeletalMeshComponent>( getOwner()->getManager()->resolveComponent( _listTableUnit[unitIndex] ) );
                 if ( pDef != nullptr )
@@ -580,7 +580,7 @@ namespace sw
         if ( _bRigEnabled == SW_FALSE )
             return;
         // 리그가 핫 리로드됐으면(내용 번호가 바뀜) 다시 묶는다.
-        if ( _asset != nullptr && _asset->getContentId() != _boundContentId )
+        if ( _asset != nullptr && _asset->getContentID() != _boundContentID )
             bindRig();
         if ( _instance.isInitialized() == false )
             return;

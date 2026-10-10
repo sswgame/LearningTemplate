@@ -37,12 +37,12 @@ namespace sw
         /** @brief 이벤트 라이브러리를 내립니다(게임 종료 · 모듈 내림). */
         static void unloadEvents( string_view path );
         /** @brief 이벤트를 2D(공간화 없음 — UI · 플레이어 자신의 소리)로 냅니다. */
-        static AudioPlayingId postEvent( const hashed_string& eventName );
+        static AudioPlayingID postEvent( const hashed_string& eventName );
         /**
          * @brief 이벤트를 월드 자리 하나에서 냅니다(따라 움직이지 않는 원샷 — 폭발 · 착탄 · 죽음).
          * @details 한 번 쓰는 에미터를 만들어 그 자리에 두고, 소리가 끝나면 엔진이 지웁니다.
          */
-        static AudioPlayingId postEventAt( const hashed_string& eventName, const float3& position );
+        static AudioPlayingID postEventAt( const hashed_string& eventName, const float3& position );
     };
 } // namespace sw
 

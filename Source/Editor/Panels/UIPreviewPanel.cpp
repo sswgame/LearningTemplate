@@ -45,10 +45,10 @@ namespace sw::editor
         , _error{}
         , _theme{}
         , _viewport{}
-        , _pTextureId{ nullptr }
+        , _pTextureID{ nullptr }
         , _texture{ 0 }
         , _screen{ kInvalidUIScreenHandle }
-        , _selected{ kInvalidWidgetId }
+        , _selected{ kInvalidWidgetID }
         , _resolutionIndex{ 1 }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
@@ -65,12 +65,12 @@ namespace sw::editor
 
     void UIPreviewPanel::releaseTexture()
     {
-        if ( _pTextureId == nullptr )
+        if ( _pTextureID == nullptr )
             return;
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr && pContext->getRendererBackend() != nullptr )
-            pContext->getRendererBackend()->unregisterTexture( _pTextureId );
-        _pTextureId = nullptr;
+            pContext->getRendererBackend()->unregisterTexture( _pTextureID );
+        _pTextureID = nullptr;
         _texture    = 0;
     }
 
@@ -82,7 +82,7 @@ namespace sw::editor
         _screen = kInvalidUIScreenHandle;
         _openedDocument.clear();
         _targetPath.clear();
-        _selected = kInvalidWidgetId;
+        _selected = kInvalidWidgetID;
     }
 
     void UIPreviewPanel::syncPreview( UISystem& ui )
@@ -101,7 +101,7 @@ namespace sw::editor
             _screen         = _documentPath.empty() ? kInvalidUIScreenHandle : ui.openOffscreenScreen( _documentPath, targetPath );
             _openedDocument = _documentPath;
             _targetPath     = targetPath;
-            _selected       = kInvalidWidgetId;
+            _selected       = kInvalidWidgetID;
             _error          = _screen == kInvalidUIScreenHandle ? "Could not build the document (see the log)." : "";
         }
         if ( _screen != kInvalidUIScreenHandle )
@@ -113,14 +113,14 @@ namespace sw::editor
         AssetManager*    pAssets  = editor::getService<AssetManager>();
         const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getTextureManager().find( _targetPath ) : nullptr;
         const uint64     texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
-        if ( texture == _texture && _pTextureId != nullptr )
+        if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
         EditorContext* pContext = EditorContext::get();
         if ( texture == 0 || pContext == nullptr || pContext->getRendererBackend() == nullptr )
             return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pTextureId = pContext->getRendererBackend()->registerTexture( texture );
-        _texture    = _pTextureId != nullptr ? texture : 0;
+        _pTextureID = pContext->getRendererBackend()->registerTexture( texture );
+        _texture    = _pTextureID != nullptr ? texture : 0;
     }
 
     void UIPreviewPanel::drawToolbar( UISystem& ui )
@@ -195,7 +195,7 @@ namespace sw::editor
     {
         using Internal = UIPreviewPanelInternal;
         ImGui::BeginChild( "##uipreviewimage", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders );
-        const Widget* pSelected = screen.getTree().findWidgetById( _selected );
+        const Widget* pSelected = screen.getTree().findWidgetByID( _selected );
         if ( pSelected != nullptr )
         {
             const UIRect bounds = pSelected->getGeometry().computeScreenBounds();
@@ -208,7 +208,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%.0f x %.0f UI units, scale %.2f - click the image or the tree to select a widget",
                                  static_cast<float64>( _viewport._size._x ), static_cast<float64>( _viewport._size._y ), static_cast<float64>( _viewport._uiScale ) );
         }
-        if ( _pTextureId == nullptr )
+        if ( _pTextureID == nullptr )
         {
             ImGui::TextDisabled( "Waiting for the render thread to create the preview texture..." );
             ImGui::EndChild();
@@ -217,7 +217,7 @@ namespace sw::editor
         const ImVec2 avail    = ImGui::GetContentRegionAvail();
         const float2 drawSize = UIPreviewLogic::fitImage( _viewport._physicalSize, float2{ avail.x, avail.y } );
         const ImVec2 origin   = ImGui::GetCursorScreenPos();
-        ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureId ), ImVec2{ drawSize._x, drawSize._y } );
+        ImGui::Image( reinterpret_cast<ImTextureID>( _pTextureID ), ImVec2{ drawSize._x, drawSize._y } );
         if ( ImGui::IsItemClicked() )
         {
             const ImVec2 mouse = ImGui::GetMousePos();

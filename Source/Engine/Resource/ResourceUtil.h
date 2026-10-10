@@ -79,7 +79,7 @@ namespace sw
          * @details 편집기는 이 변환을 자리마다 따로 하지 않고 이것을 씁니다 — 프로젝트 루트 기준 `makeRelativePath` 를 리소스 id 에 다시 걸면
          *          경로가 깨진다(텍스처를 떨군 스프라이트가 흰 사각형이 된다).
          */
-        static string toResourceId( string_view path );
+        static string toResourceID( string_view path );
 
         /**
          * @brief 상대 리소스 경로를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다(OS 절대 경로는 디스크에서 바로 읽습니다).

@@ -202,7 +202,7 @@ namespace
         }
 
         /** @brief 요청 id 의 응답이 올 때까지 돌립니다. */
-        AccountClientReply waitReply( ClientSide& client, uint64 requestId )
+        AccountClientReply waitReply( ClientSide& client, uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -210,7 +210,7 @@ namespace
                 (void)client._account.pollReplies( listReply );
                 for ( AccountClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -231,8 +231,8 @@ namespace
         NetHost                     _client{};
         float64                     _time{ 0.0 };
 
-        UDPPair( const LoginTicketAuthority& authority, const utf8* pServerId, int64 nowMs )
-            : _authenticator{ &authority, hashed_string( pServerId ) }
+        UDPPair( const LoginTicketAuthority& authority, const utf8* pServerID, int64 nowMs )
+            : _authenticator{ &authority, hashed_string( pServerID ) }
         {
             _authenticator.setNowMs( nowMs );
             NetHostSettings serverSettings;
@@ -276,8 +276,8 @@ SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUDPConnec
         const AccountClientReply loggedIn = rig.waitReply( client, client._account.login( "udp_hero", "password123" ) );
         SW_ASSERT_TRUE( loggedIn._result == LoginResult::Ok );
         SW_EXPECT_TRUE( client._account.isLoggedIn() );
-        SW_EXPECT_EQUAL( registered._grant._identity._accountId, loggedIn._grant._identity._accountId );
-        SW_EXPECT_EQUAL( loggedIn._grant._token._sessionId, rig._server->_accountServer.findSessionId( loggedIn._grant._identity._accountId ) );
+        SW_EXPECT_EQUAL( registered._grant._identity._accountID, loggedIn._grant._identity._accountID );
+        SW_EXPECT_EQUAL( loggedIn._grant._token._sessionID, rig._server->_accountServer.findSessionID( loggedIn._grant._identity._accountID ) );
 
         const AccountClientReply ticket = rig.waitReply( client, client._account.issueGameTicket( "zone-1" ) );
         SW_ASSERT_TRUE( ticket._result == LoginResult::Ok );
@@ -290,14 +290,14 @@ SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUDPConnec
         SW_ASSERT_EQUAL( 1, udp._server.getConnectedCount() );
         vector<NetHostEvent> listEvent;
         udp._server.drainEvents( listEvent );
-        int32 connectionId = -1;
+        int32 connectionID = -1;
         for ( const NetHostEvent& event : listEvent )
         {
             if ( event._kind == NetHostEvent::Kind::Connected )
-                connectionId = event._connectionId;
+                connectionID = event._connectionID;
         }
-        SW_ASSERT_TRUE( connectionId >= 0 );
-        SW_EXPECT_EQUAL( loggedIn._grant._identity._accountId, udp._server.getConnectionPrincipal( connectionId ) );
+        SW_ASSERT_TRUE( connectionID >= 0 );
+        SW_EXPECT_EQUAL( loggedIn._grant._identity._accountID, udp._server.getConnectionPrincipal( connectionID ) );
         rig._listClient.clear();
     }
 }
@@ -314,7 +314,7 @@ SW_TEST_CASE( AccountStreamTest, ForgedOrForeignTicketsAndBadTokensAreRefused )
     SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, early._errorCode );
 
     LoginSessionToken bogus;
-    bogus._sessionId = 12345;
+    bogus._sessionID = 12345;
     client._account.setToken( bogus );
     SW_EXPECT_TRUE( rig.waitReply( client, client._account.resume() )._result == LoginResult::InvalidToken );
 
@@ -365,7 +365,7 @@ SW_TEST_CASE( AccountStreamTest, SecondLoginKicksTheFirstConnection )
     SW_EXPECT_FALSE( first._account.isLoggedIn() );
     SW_EXPECT_TRUE( first._account.getToken().isEmpty() ); // 밀려난 토큰으로 돌아오지 않는다
     SW_EXPECT_TRUE( second._account.isLoggedIn() );
-    SW_EXPECT_EQUAL( secondLogin._grant._token._sessionId, rig._server->_accountServer.findSessionId( secondLogin._grant._identity._accountId ) );
+    SW_EXPECT_EQUAL( secondLogin._grant._token._sessionID, rig._server->_accountServer.findSessionID( secondLogin._grant._identity._accountID ) );
 }
 
 SW_TEST_CASE( AccountStreamTest, DroppedStreamReconnectsResumesFirstAndThenSendsQueuedRequests )
@@ -392,10 +392,10 @@ SW_TEST_CASE( AccountStreamTest, DroppedStreamReconnectsResumesFirstAndThenSends
     SW_EXPECT_TRUE( listReply[0]._operation == AccountClientOperation::Resume );
     SW_EXPECT_TRUE( listReply[0]._bAutomatic == SW_TRUE );
     SW_ASSERT_TRUE( listReply[0]._result == LoginResult::Ok );
-    SW_EXPECT_EQUAL( login._grant._identity._accountId, listReply[0]._grant._identity._accountId );
-    SW_EXPECT_EQUAL( login._grant._token._sessionId, listReply[0]._grant._token._sessionId );                                                          // 같은 세션
+    SW_EXPECT_EQUAL( login._grant._identity._accountID, listReply[0]._grant._identity._accountID );
+    SW_EXPECT_EQUAL( login._grant._token._sessionID, listReply[0]._grant._token._sessionID );                                                          // 같은 세션
     SW_EXPECT_FALSE( Memory::compare( login._grant._token._arrSecret, listReply[0]._grant._token._arrSecret, LoginConstant::kTokenSecretSize ) == 0 ); // 새 비밀
-    SW_EXPECT_EQUAL( ticketRequest, listReply[1]._requestId );
+    SW_EXPECT_EQUAL( ticketRequest, listReply[1]._requestID );
     SW_EXPECT_TRUE( listReply[1]._result == LoginResult::Ok );
 }
 
@@ -420,7 +420,7 @@ SW_TEST_CASE( AccountStreamTest, ServerRestartKeepsSessionsAndOldBuildsAreToldTo
         }
         SW_ASSERT_EQUAL( size_t( 1 ), listReply.size() );
         SW_EXPECT_TRUE( listReply[0]._result == LoginResult::Ok );
-        SW_EXPECT_EQUAL( login._grant._identity._accountId, listReply[0]._grant._identity._accountId );
+        SW_EXPECT_EQUAL( login._grant._identity._accountID, listReply[0]._grant._identity._accountID );
         rig._listClient.clear();
     }
 
@@ -492,7 +492,7 @@ SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGues
     SW_EXPECT_TRUE( client._account.getIdentity()._bGuest == SW_TRUE );
 
     IAccountSessionControl& control = rig._server->_accountServer;
-    control.revokeAccountSessions( guest._grant._identity._accountId, "sanction.cheating", rig._nowMs );
+    control.revokeAccountSessions( guest._grant._identity._accountID, "sanction.cheating", rig._nowMs );
     rig.step( 10 );
     vector<AccountClientEvent> listEvent;
     (void)client._account.pollEvents( listEvent );

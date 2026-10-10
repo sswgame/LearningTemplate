@@ -743,7 +743,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryBoundNameIsInCookedReflection )
         &passNames._swInstances,
         &passNames._swMorphVertices,
         &passNames._swVertexAnimation,
-        &passNames._swVisibleInstanceIds,
+        &passNames._swVisibleInstanceIDs,
         &passNames._swMaterials,
         &passNames._swLights,
         &passNames._swBatches,

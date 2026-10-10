@@ -135,13 +135,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Killer" ); node; node = node.findNextSibling( "Killer" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             HorrorKillerDef killer;
-            killer._id                 = hashed_string( pId );
+            killer._id                 = hashed_string( pID );
             const utf8* pName          = node.findAttribute( "name" );
-            killer._name               = pName != nullptr ? pName : pId;
+            killer._name               = pName != nullptr ? pName : pID;
             killer._speedRatio         = MathUtil::max( 0.1f, node.getAttributeFloat( "speedRatio", killer._speedRatio ) );
             killer._lungeRange         = MathUtil::max( 0.1f, node.getAttributeFloat( "lungeRange", killer._lungeRange ) );
             killer._lungeAngle         = MathUtil::clamp( node.getAttributeFloat( "lungeAngle", killer._lungeAngle ), 1.0f, 180.0f );
@@ -156,9 +156,9 @@ namespace sw
         }
         for ( XMLNode node = root.findChild( "Category" ); node; node = node.findNextSibling( "Category" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId != nullptr )
-                _categoryCap.setValue( hashed_string( pId ), MathUtil::max( 0.0f, node.getAttributeFloat( "cap", 0.0f ) ) );
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID != nullptr )
+                _categoryCap.setValue( hashed_string( pID ), MathUtil::max( 0.0f, node.getAttributeFloat( "cap", 0.0f ) ) );
         }
         for ( XMLNode node = root.findChild( "Score" ); node; node = node.findNextSibling( "Score" ) )
         {

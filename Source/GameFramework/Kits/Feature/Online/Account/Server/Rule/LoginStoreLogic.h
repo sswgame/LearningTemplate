@@ -27,8 +27,8 @@ namespace sw
     /** @brief (계정, 세션) 하나 + 까닭입니다. */
     struct LoginSessionRef
     {
-        uint64            _accountId{ 0 };
-        uint64            _sessionId{ 0 };
+        uint64            _accountID{ 0 };
+        uint64            _sessionID{ 0 };
         LoginRevokeReason _reason{ LoginRevokeReason::None };
     };
 } // namespace sw
@@ -58,7 +58,7 @@ namespace sw
         LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginSettings& settings, const LoginTicketAuthority& ticketAuthority,
                          LoginStoreOutcome& outOutcome );
 
-        LoginResult registerAccount( const LoginCredential& credential, uint64* pOutAccountId );
+        LoginResult registerAccount( const LoginCredential& credential, uint64* pOutAccountID );
         LoginResult login( const LoginCredential& credential, int64 nowMs, LoginGrant& outGrant );
         /** @brief 장치 비밀로 들어옵니다 — 그 장치의 게스트 계정이 없으면 만든다(`_bCreated`). 비밀은 저장하지 않는다(다이제스트만). */
         LoginResult guestLogin( const uint8 ( &arrDeviceSecret )[LoginConstant::kDeviceSecretSize], int64 nowMs, LoginGrant& outGrant );
@@ -67,9 +67,9 @@ namespace sw
         LoginResult resumeSession( const LoginSessionToken& token, int64 nowMs, LoginGrant& outGrant );
         LoginResult validateSession( const LoginSessionToken& token, int64 nowMs, AccountIdentity& outIdentity, LoginRevokeReason* pOutRevokeReason = nullptr );
         LoginResult logout( const LoginSessionToken& token, int64 nowMs );
-        void        markDisconnected( uint64 sessionId, int64 nowMs );
-        LoginResult revokeAccountSessions( uint64 accountId, LoginRevokeReason reason, int64 nowMs );
-        LoginResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverId, int64 nowMs, NetGameTicket& outTicket );
+        void        markDisconnected( uint64 sessionID, int64 nowMs );
+        LoginResult revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs );
+        LoginResult issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket );
 
         /** @brief 세션의 계정에 이름 · 비밀번호를 붙입니다(게스트 → 정식). 이 계정에 이미 이름이 있거나 이름이 다른 계정 것이면 `AlreadyLinked`. */
         LoginResult linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, AccountIdentity& outIdentity );
@@ -90,7 +90,7 @@ namespace sw
         /** @brief 서비스가 고른 세션을 다시 읽어, 다른 프로세스가 밀어낸 · 끝난 세션을 `_listRevoked` 에 넣습니다. 저장소가 아프면 아무도 끊지 않는다. */
         void refreshSessions( const vector<LoginSessionRef>& listOnline, int64 nowMs );
         /** @brief 계정 id 의 공개 신원입니다(이름 색인 `AccountNameIndex` 가 다른 키트의 저장소 일 안에서 부른다). */
-        [[nodiscard]] static ServiceStoreResult readIdentity( IServiceStoreConnection& connection, uint64 accountId, AccountIdentity& outIdentity );
+        [[nodiscard]] static ServiceStoreResult readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity );
         /** @brief 정식 계정(소문자 로그인 이름 = 표시 이름)을 이름으로 찾습니다. 규칙 밖 이름이면 NotFound. */
         [[nodiscard]] static ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity );
 
@@ -99,15 +99,15 @@ namespace sw
         /** @brief 없는 계정에도 해시를 한 번 돌린다(응답 시간으로 계정 유무가 드러나지 않게). */
         void burnPasswordHash( string_view password );
         /** @brief 로그인을 막는 제재(정지 · 영구 정지)가 있으면 `AccountSuspended` 와 끝 시각 · 사유를 @p outGrant 에. 읽지 못하면 `StoreUnavailable`. */
-        LoginResult evaluateSanction( uint64 accountId, int64 nowMs, LoginGrant& outGrant );
+        LoginResult evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant );
         /** @brief 옛 세션을 정책대로 거절하거나 묘비로 바꾸고 새 세션 · 계정 → 세션 연결을 @p inoutTransaction 에 붙입니다. */
-        LoginResult stageSessionOpen( uint64 accountId, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
-                                      uint64& outReplacedSessionId );
+        LoginResult stageSessionOpen( uint64 accountID, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
+                                      uint64& outReplacedSessionID );
         /** @brief 커밋이 된 새 세션을 결과(밀려남 · 온라인 · 사건)에 적습니다. */
-        void recordSessionOpened( uint64 accountId, const LoginSessionToken& token, uint64 replacedSessionId );
-        /** @brief 계정의 지금 세션을 @p reason 의 묘비로 바꾸고 연결을 지우는 쓰기를 붙입니다. 세션이 없으면 아무것도 붙이지 않고 @p outSessionId 는 0. */
-        LoginResult stageSessionRevoke( uint64 accountId, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionId );
-        LoginResult purgeAccount( uint64 accountId, string_view deletionKey, int64 nowMs );
+        void recordSessionOpened( uint64 accountID, const LoginSessionToken& token, uint64 replacedSessionID );
+        /** @brief 계정의 지금 세션을 @p reason 의 묘비로 바꾸고 연결을 지우는 쓰기를 붙입니다. 세션이 없으면 아무것도 붙이지 않고 @p outSessionID 는 0. */
+        LoginResult stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID );
+        LoginResult purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs );
 
         IServiceStoreConnection&    _connection;
         ILoginCrypto&               _crypto;

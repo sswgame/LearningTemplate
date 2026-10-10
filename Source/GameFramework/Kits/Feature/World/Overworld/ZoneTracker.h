@@ -68,7 +68,7 @@ namespace sw
         void setFromMap( string_view mapPath, string_view mapName, int32 width, int32 height, string_view tagText = "" );
 
         /** @brief 지정 존을 활성화합니다. */
-        void activate( string_view zoneId );
+        void activate( string_view zoneID );
 
         /** @brief 활성 존의 클리어 게이트를 잠그거나 풉니다. */
         void setClearGateLocked( bool bLocked );
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 활성 존 정의를 반환합니다. 없으면 nullptr 입니다. */
         const ZoneDef* getActiveZone() const;
         /** @brief 활성 존의 ID 입니다(없으면 빈 문자열). */
-        string getActiveZoneId() const;
+        string getActiveZoneID() const;
         /** @brief 카메라 경계를 반환합니다. */
         const ZoneBounds& getCameraBounds() const;
 

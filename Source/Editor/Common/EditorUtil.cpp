@@ -104,7 +104,7 @@ namespace sw::editor
 
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectId(), pPath );
+            pContext->getWorkspace().setGameObjectPrefabPath( pSpawned->getObjectID(), pPath );
 
         SW_LOG_TRACE( "Spawned prefab from %#", pPath );
         return pSpawned;

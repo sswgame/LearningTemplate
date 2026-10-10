@@ -23,7 +23,7 @@ namespace sw
     {
         float3  _point{};
         float32 _fraction{ 1.0f }; ///< 시작(0)..끝(1) 사이 맞은 자리
-        uint64  _objectId{ 0 };
+        uint64  _objectID{ 0 };
     };
 } // namespace sw
 
@@ -39,8 +39,8 @@ namespace sw
         IWorldQuery( const IWorldQuery& )            = default;
         IWorldQuery& operator=( const IWorldQuery& ) = default;
 
-        /** @brief @p from → @p to 선분이 처음 맞는 막는 바디입니다. @p ignoreObjectId 의 바디는 건너뜁니다. 맞으면 true 입니다. */
-        virtual bool raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const = 0;
+        /** @brief @p from → @p to 선분이 처음 맞는 막는 바디입니다. @p ignoreObjectID 의 바디는 건너뜁니다. 맞으면 true 입니다. */
+        virtual bool raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const = 0;
     };
 } // namespace sw
 
@@ -52,7 +52,7 @@ namespace sw
     public:
         explicit PhysicsWorldQuery( const PhysicsWorld& physicsWorld );
 
-        bool raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const override;
+        bool raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const override;
 
     private:
         const PhysicsWorld& _physicsWorld;
@@ -70,7 +70,7 @@ namespace sw
     public:
         explicit ScenePhysicsWorldQuery( const GameObjectManager& manager );
 
-        bool raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const override;
+        bool raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const override;
 
     private:
         const GameObjectManager& _manager;
@@ -85,10 +85,10 @@ namespace sw
      */
     struct SW_GF_API WorldQuery
     {
-        static bool raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit );
+        static bool raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit );
         /**
-         * @brief @p from 에서 @p to 가 보이는가입니다 — 보는 쪽(@p viewerObjectId)은 건너뛰고, 처음 맞은 것이 없거나 대상(@p targetObjectId) 자신이면 보입니다.
+         * @brief @p from 에서 @p to 가 보이는가입니다 — 보는 쪽(@p viewerObjectID)은 건너뛰고, 처음 맞은 것이 없거나 대상(@p targetObjectID) 자신이면 보입니다.
          */
-        static bool hasLineOfSight( const GameObjectManager& manager, const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId );
+        static bool hasLineOfSight( const GameObjectManager& manager, const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID );
     };
 } // namespace sw

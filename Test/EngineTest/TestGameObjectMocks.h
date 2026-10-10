@@ -94,12 +94,12 @@ namespace sw
         bool          _bTickSubTickRemoveVisibleInTick{ false };
         bool          _bTickSubTickMaskOffInTick{ false }; ///< 끄고 해제한 1 · 2 가 틱 안에서 곧바로 꺼져 보였는지(마스크)
 
-        /** @brief @p pComponent 에 @p subTickId 서브틱이 등록돼 있으면 그 정보, 없으면 nullptr 입니다. */
-        static const SubTickInfo* findSubTick( const Component* pComponent, uint32 subTickId )
+        /** @brief @p pComponent 에 @p subTickID 서브틱이 등록돼 있으면 그 정보, 없으면 nullptr 입니다. */
+        static const SubTickInfo* findSubTick( const Component* pComponent, uint32 subTickID )
         {
             for ( const SubTickInfo& info : pComponent->getAllSubTicks() )
             {
-                if ( info._subTickId == subTickId )
+                if ( info._subTickID == subTickID )
                     return &info;
             }
             return nullptr;
@@ -411,14 +411,14 @@ namespace sw
                 _pTickOrderLog->push_back( _componentTag );
         }
 
-        void onSubTick( uint32 subTickId, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override
         {
-            SceneComponent::onSubTick( subTickId, deltaTime );
+            SceneComponent::onSubTick( subTickID, deltaTime );
             if ( _pTickOrderLog != nullptr )
             {
                 string entry = _componentTag;
                 entry += "_SubTick_";
-                entry += std::to_string( subTickId ).c_str();
+                entry += std::to_string( subTickID ).c_str();
                 _pTickOrderLog->push_back( entry );
             }
         }
@@ -541,7 +541,7 @@ namespace sw
         Component*      _pTargetComp{ nullptr };
         vector<string>* _pTickOrderLog{ nullptr };
         string          _componentTag{ "Deactivator" };
-        uint32          _targetSubTickId{ 0 };
+        uint32          _targetSubTickID{ 0 };
         uint32          _selfSubTickToUnregister{ 0 };
         int32           _subTickCount{ 0 };
 
@@ -549,7 +549,7 @@ namespace sw
             : _pTargetComp{ nullptr }
             , _pTickOrderLog{ nullptr }
             , _componentTag{ "Deactivator" }
-            , _targetSubTickId{ 0 }
+            , _targetSubTickID{ 0 }
             , _selfSubTickToUnregister{ 0 }
             , _subTickCount{ 0 }
         {
@@ -561,20 +561,20 @@ namespace sw
             return StaticType();
         }
 
-        void onSubTick( uint32 subTickId, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override
         {
-            Component::onSubTick( subTickId, deltaTime );
+            Component::onSubTick( subTickID, deltaTime );
             ++_subTickCount;
             if ( _pTickOrderLog != nullptr )
             {
                 string entry = _componentTag;
                 entry += "_SubTick_";
-                entry += std::to_string( subTickId ).c_str();
+                entry += std::to_string( subTickID ).c_str();
                 _pTickOrderLog->push_back( entry );
             }
 
-            if ( _pTargetComp != nullptr && _targetSubTickId != 0 )
-                _pTargetComp->setSubTickActive( _targetSubTickId, false );
+            if ( _pTargetComp != nullptr && _targetSubTickID != 0 )
+                _pTargetComp->setSubTickActive( _targetSubTickID, false );
 
             if ( _selfSubTickToUnregister != 0 )
                 unregisterSubTick( _selfSubTickToUnregister );
@@ -601,14 +601,14 @@ namespace sw
         std::atomic<uint32>* _pExecutionOrderArray{ nullptr };
         std::atomic<uint32>  _tickCount{ 0 };
         std::atomic<uint32>  _subTickCount{ 0 };
-        uint32               _subTickGlobalIdOffset{ 0 };
+        uint32               _subTickGlobalIDOffset{ 0 };
 
         MockSubTickStressComponent()
             : _pGlobalTickSequence{ nullptr }
             , _pExecutionOrderArray{ nullptr }
             , _tickCount{ 0 }
             , _subTickCount{ 0 }
-            , _subTickGlobalIdOffset{ 0 }
+            , _subTickGlobalIDOffset{ 0 }
         {
             setCanEverTick( true );
         }
@@ -624,15 +624,15 @@ namespace sw
             _tickCount.fetch_add( 1, std::memory_order_relaxed );
         }
 
-        void onSubTick( uint32 subTickId, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override
         {
-            Component::onSubTick( subTickId, deltaTime );
+            Component::onSubTick( subTickID, deltaTime );
             _subTickCount.fetch_add( 1, std::memory_order_relaxed );
             if ( _pGlobalTickSequence != nullptr && _pExecutionOrderArray != nullptr )
             {
                 const uint32 order    = _pGlobalTickSequence->fetch_add( 1, std::memory_order_relaxed );
-                const uint32 globalId = _subTickGlobalIdOffset + subTickId;
-                _pExecutionOrderArray[globalId].store( order, std::memory_order_release );
+                const uint32 globalID = _subTickGlobalIDOffset + subTickID;
+                _pExecutionOrderArray[globalID].store( order, std::memory_order_release );
             }
         }
     };
@@ -681,9 +681,9 @@ namespace sw
             return StaticType();
         }
 
-        void onSubTick( uint32 subTickId, float32 deltaTime ) override
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override
         {
-            SceneComponent::onSubTick( subTickId, deltaTime );
+            SceneComponent::onSubTick( subTickID, deltaTime );
             ++_subTickCount;
             _pTickingObjectSeen = GameObjectManager::getTickingObject();
             float3 base{};

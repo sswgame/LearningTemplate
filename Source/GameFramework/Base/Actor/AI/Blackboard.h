@@ -54,7 +54,7 @@ namespace sw
         void setInt( const hashed_string& key, int32 value );
         void setBool( const hashed_string& key, bool bValue );
         void setVector( const hashed_string& key, const float3& value );
-        void setObject( const hashed_string& key, uint64 objectId );
+        void setObject( const hashed_string& key, uint64 objectID );
         /** @brief 값을 지웁니다(없음 — `isSet` 이 false). */
         void clearValue( const hashed_string& key );
         void clear();

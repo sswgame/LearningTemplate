@@ -93,7 +93,7 @@ namespace sw
      * @brief 서버 — 등록한 파괴 오브젝트의 새 사건 · 덩어리 자세 · 해시 · 청한(또는 늦게 온 클라이언트의) 스냅숏을 틱마다 보냅니다.
      * @code
      *     server.initialize( &host, &manager, settings );
-     *     server.registerObject( netId, *pFracture );           // 서버 · 클라이언트가 같은 번호(씬 엔티티 순서 등)
+     *     server.registerObject( netID, *pFracture );           // 서버 · 클라이언트가 같은 번호(씬 엔티티 순서 등)
      *     router.addHandler( &server );                         // 연결 사건도 라우터가 넘긴다(늦은 참가 스냅숏)
      *     server.update( serverTick );                          // 월드 틱 뒤
      * @endcode
@@ -105,7 +105,7 @@ namespace sw
 
         void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 서버 쪽은 권한을 켠다. 같은 번호면 바꾼다. */
-        void registerObject( uint32 netId, FractureComponentBase& component );
+        void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 뒤에 부릅니다 — 새 사건 → 스냅숏 → 자세 → 해시 순으로 보낸다. */
         void update( uint32 serverTick );
 
@@ -113,9 +113,9 @@ namespace sw
         uint16          getMessageKindMask() const override { return 1u << ( NetDestructionMessage::kSnapshotRequest - NetKitMessageRange::kDestruction ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 클라이언트가 들어왔다 — 사건이 있는 오브젝트마다 스냅숏을 보낸다(다음 `update`). */
-        void onConnectionOpened( int32 connectionId ) override;
+        void onConnectionOpened( int32 connectionID ) override;
         /** @brief 그 연결에 쌓인 스냅숏 요청을 지운다. */
-        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         const DestructionReplicationStats& getStats() const { return _stats; }
 
@@ -123,7 +123,7 @@ namespace sw
         /** @brief 덩어리 하나의 마지막으로 보낸 상태입니다. */
         struct ChunkSendState
         {
-            uint32 _groupId{ 0 };
+            uint32 _groupID{ 0 };
             uint8  _bRestSent{ SW_FALSE };
             uint8  _restRepeatLeft{ 0 }; ///< 멈춘 뒤에도 비신뢰 자세로 몇 번 더 보낸다(신뢰 확정이 밀린 회선에서 늦게 와도 그 자리에 먼저 닿게)
         };
@@ -132,22 +132,22 @@ namespace sw
         {
             vector<ChunkSendState> _listChunk{};
             ComponentHandle        _component{};
-            uint32                 _netId{ 0 };
+            uint32                 _netID{ 0 };
             uint32                 _sentEventCount{ 0 };
             float32                _poseTime{ 0.0f };
         };
 
         struct Request
         {
-            int32  _connectionId{ -1 };
-            uint32 _netId{ 0 };
+            int32  _connectionID{ -1 };
+            uint32 _netID{ 0 };
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
-        Entry*                 findEntry( uint32 netId );
+        Entry*                 findEntry( uint32 netID );
         void                   sendEvents( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         /** @brief 스냅숏 메시지 하나를 보냅니다. 신뢰 창이 찼으면 false — 요청을 다음 `update` 로 미룬다. */
-        [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId );
+        [[nodiscard]] bool sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID );
         void               sendPoses( Entry& entry, FractureComponentBase& component, uint32 serverTick );
         void               sendHash( const Entry& entry, const FractureComponentBase& component );
         int32              broadcast( NetChannelType channel );
@@ -170,7 +170,7 @@ namespace sw
      * @brief 클라이언트 — 사건을 번호 순으로 컴포넌트에 넘기고, 스냅숏을 적용하고, 덩어리 자세를 보간해 몰고, 해시가 어긋나면 스냅숏을 청합니다.
      * @code
      *     client.initialize( &host, &manager, settings );
-     *     client.registerObject( netId, *pFracture );          // 권한을 끈다
+     *     client.registerObject( netID, *pFracture );          // 권한을 끈다
      *     router.addHandler( &client );
      *     client.update( deltaTime );                          // 월드 틱 앞(받은 것을 나눠 준 뒤)
      * @endcode
@@ -182,11 +182,11 @@ namespace sw
 
         void initialize( NetHost* pHost, GameObjectManager* pManager, const DestructionReplicationSettings& settings );
         /** @brief 파괴 오브젝트를 번호로 등록합니다. 권한을 끈다(부딪힘이 사건을 만들지 않는다). */
-        void registerObject( uint32 netId, FractureComponentBase& component );
+        void registerObject( uint32 netID, FractureComponentBase& component );
         /** @brief 월드 틱 앞에 부릅니다 — 지난 틱에 적용된 상태로 해시를 비교하고, 렌더 틱을 흘려 덩어리 자세를 몬다. */
         void update( float32 deltaTime );
         /** @brief 시험 · 결함 주입 — 그 오브젝트의 다음 사건 하나를 적용하지 않고 넘깁니다(해시 어긋남 → 스냅숏 복구를 본다). */
-        void skipNextEvent( uint32 netId );
+        void skipNextEvent( uint32 netID );
 
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kDestruction; }
         /** @brief 사건 · 스냅숏 · 자세 · 해시 — 같은 영역의 스냅숏 요청은 서버가 맡는다. */
@@ -213,7 +213,7 @@ namespace sw
         struct ChunkTrack
         {
             InterpolationBuffer<ChunkPose> _poseBuffer{}; ///< 틱 오름차순 — 같은 틱이면 멈춤 확정이 이긴다
-            uint32                         _groupId{ 0 };
+            uint32                         _groupID{ 0 };
         };
 
         struct HashCheck
@@ -236,14 +236,14 @@ namespace sw
             vector<HashCheck>     _listHashCheck{};
             vector<ChunkTrack>    _listChunk{};
             ComponentHandle       _component{};
-            uint32                _netId{ 0 };
+            uint32                _netID{ 0 };
             uint32                _nextEventIndex{ 0 };
             uint32                _skipCount{ 0 };
             uint8                 _bAwaitingSnapshot{ SW_FALSE };
         };
 
         FractureComponentBase* resolve( const Entry& entry ) const;
-        Entry*                 findEntry( uint32 netId );
+        Entry*                 findEntry( uint32 netID );
         void                   handleEvent( Entry& entry, const BufferedEvent& received );
         /** @brief 앞선 사건을 쌓아 둡니다(같은 번호는 한 번만). */
         static void bufferEvent( Entry& entry, const BufferedEvent& received );

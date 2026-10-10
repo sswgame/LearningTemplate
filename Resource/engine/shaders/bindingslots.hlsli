@@ -77,8 +77,8 @@
 // 머티리얼 셰이더 타입마다 버퍼 하나(원소 = 그 셰이더의 머티리얼 구조체). 네 백엔드 공통.
 #define SW_SLOT_MATERIAL_BUFFER        9
 
-// GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIds).
-// 정점 셰이더가 g_SwVisibleInstanceIds[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
+// GPU 컬링이 만든 **가시 인스턴스 ID 목록** (StructuredBuffer<uint> g_SwVisibleInstanceIDs).
+// 정점 셰이더가 g_SwVisibleInstanceIDs[인스턴스 슬롯] 으로 자기 인스턴스 번호를 찾는다(슬롯은 입력 어셈블러가 주는 SW_INSTANCESLOT —
 // 간접 인자의 startInstance + 서수) — 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리. 안 걸려 있으면(kInvalidIndex)
 // 슬롯이 곧 인스턴스 번호다(컬링 없음 경로).
 #define SW_SLOT_VISIBLE_INSTANCE_SRV   10

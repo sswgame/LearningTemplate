@@ -184,11 +184,11 @@ namespace sw
         }
     }
 
-    const AnimGraphNode* AnimGraphAsset::findNode( int32 nodeId ) const
+    const AnimGraphNode* AnimGraphAsset::findNode( int32 nodeID ) const
     {
         for ( const AnimGraphNode& node : _listNode )
         {
-            if ( node._id == nodeId )
+            if ( node._id == nodeID )
                 return &node;
         }
         return nullptr;
@@ -226,11 +226,11 @@ namespace sw
         return &_listNode.front();
     }
 
-    const AnimGraphLink* AnimGraphAsset::findFinishLink( int32 fromNodeId ) const
+    const AnimGraphLink* AnimGraphAsset::findFinishLink( int32 fromNodeID ) const
     {
         for ( const AnimGraphLink& link : _listLink )
         {
-            if ( link._fromNode == fromNodeId && link._op == AnimConditionOp::None )
+            if ( link._fromNode == fromNodeID && link._op == AnimConditionOp::None )
                 return &link;
         }
         return nullptr;
@@ -255,11 +255,11 @@ namespace sw
         return index < static_cast<uint32>( std::size( AnimGraphAssetInternal::kArrOpText ) ) ? AnimGraphAssetInternal::kArrOpText[index] : "";
     }
 
-    int32 AnimGraphAsset::findFirstOutgoingNodeId( int32 fromNodeId ) const
+    int32 AnimGraphAsset::findFirstOutgoingNodeID( int32 fromNodeID ) const
     {
         for ( const AnimGraphLink& link : _listLink )
         {
-            if ( link._fromNode == fromNodeId )
+            if ( link._fromNode == fromNodeID )
                 return link._toNode;
         }
         return 0;

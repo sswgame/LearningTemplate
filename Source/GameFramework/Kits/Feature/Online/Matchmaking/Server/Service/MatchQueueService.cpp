@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kQueuePrefix  = "mm.queue.";
             static constexpr const utf8* kCancelPrefix = "mm.cancel.";
-            static constexpr int32       kIdShift      = 32;
+            static constexpr int32       kIDShift      = 32;
 
             static bool hasPrefix( string_view text, string_view prefix ) { return text.size() > prefix.size() && StringUtil::startsWith( text, prefix ); }
 
@@ -53,15 +53,15 @@ namespace sw
 
     MatchQueueService::~MatchQueueService() { shutdown(); }
 
-    string MatchQueueService::makeLeaseKey( string_view modeId ) { return "mm/lease/" + string( modeId ); }
+    string MatchQueueService::makeLeaseKey( string_view modeID ) { return "mm/lease/" + string( modeID ); }
 
-    string MatchQueueService::makeQueueTopic( string_view modeId ) { return MatchQueueServiceInternal::kQueuePrefix + string( modeId ); }
+    string MatchQueueService::makeQueueTopic( string_view modeID ) { return MatchQueueServiceInternal::kQueuePrefix + string( modeID ); }
 
-    string MatchQueueService::makeCancelTopic( string_view modeId ) { return MatchQueueServiceInternal::kCancelPrefix + string( modeId ); }
+    string MatchQueueService::makeCancelTopic( string_view modeID ) { return MatchQueueServiceInternal::kCancelPrefix + string( modeID ); }
 
-    string MatchQueueService::makeResultTopic( uint64 serverId ) { return "mm.result." + ServiceKeyUtil::makeHex64( serverId ); }
+    string MatchQueueService::makeResultTopic( uint64 serverID ) { return "mm.result." + ServiceKeyUtil::makeHex64( serverID ); }
 
-    string MatchQueueService::makeAssignTopic( uint64 serverId ) { return "mm.assign." + ServiceKeyUtil::makeHex64( serverId ); }
+    string MatchQueueService::makeAssignTopic( uint64 serverID ) { return "mm.assign." + ServiceKeyUtil::makeHex64( serverID ); }
 
     void MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
     {
@@ -69,34 +69,34 @@ namespace sw
         _dependencies = dependencies;
         for ( const MatchModeDefinition& mode : listMode )
         {
-            if ( isValidMatchModeId( mode._modeId ) == false )
+            if ( isValidMatchModeID( mode._modeID ) == false )
             {
-                SW_LOG_ERROR( "MatchQueue: mode id '%#' breaks the id rule — skipped", mode._modeId );
+                SW_LOG_ERROR( "MatchQueue: mode id '%#' breaks the id rule — skipped", mode._modeID );
                 continue;
             }
-            _mapMode[mode._modeId] = mode;
-            ModeState& state       = _mapModeState[mode._modeId];
-            state._maker.initialize( mode, dependencies._serverId );
+            _mapMode[mode._modeID] = mode;
+            ModeState& state       = _mapModeState[mode._modeID];
+            state._maker.initialize( mode, dependencies._serverID );
             state._reader = make_unique<ServerRegistryReader>();
             state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs );
             if ( dependencies._pBus == nullptr )
                 state._bAuthority = SW_TRUE; // 서버 한 대 — 늘 권한
         }
         if ( dependencies._pBus != nullptr )
-            _topicBuffer.push( MatchQueueTopicChange{ makeResultTopic( dependencies._serverId ), SW_TRUE } );
+            _topicBuffer.push( MatchQueueTopicChange{ makeResultTopic( dependencies._serverID ), SW_TRUE } );
     }
 
     void MatchQueueService::shutdown()
     {
         if ( _dependencies._pRouter != nullptr )
         {
-            for ( const auto& [requestId, modeId] : _mapLeaseRequestToMode )
+            for ( const auto& [requestID, modeID] : _mapLeaseRequestToMode )
             {
-                _dependencies._pRouter->cancel( requestId );
+                _dependencies._pRouter->cancel( requestID );
             }
         }
         _mapLeaseRequestToMode.clear();
-        for ( auto& [modeId, state] : _mapModeState )
+        for ( auto& [modeID, state] : _mapModeState )
         {
             if ( state._reader != nullptr )
                 state._reader->shutdown();
@@ -107,107 +107,107 @@ namespace sw
         _dependencies._pBus    = nullptr;
     }
 
-    bool MatchQueueService::hasMode( string_view modeId ) const { return _mapMode.find( string( modeId ) ) != _mapMode.end(); }
+    bool MatchQueueService::hasMode( string_view modeID ) const { return _mapMode.find( string( modeID ) ) != _mapMode.end(); }
 
-    MatchQueueService::ModeState* MatchQueueService::findModeState( string_view modeId )
+    MatchQueueService::ModeState* MatchQueueService::findModeState( string_view modeID )
     {
-        const auto stateIt = _mapModeState.find( string( modeId ) );
+        const auto stateIt = _mapModeState.find( string( modeID ) );
         return stateIt == _mapModeState.end() ? nullptr : &stateIt->second;
     }
 
-    bool MatchQueueService::isAuthority( string_view modeId ) const
+    bool MatchQueueService::isAuthority( string_view modeID ) const
     {
-        const auto stateIt = _mapModeState.find( string( modeId ) );
+        const auto stateIt = _mapModeState.find( string( modeID ) );
         return stateIt != _mapModeState.end() && stateIt->second._bAuthority != SW_FALSE;
     }
 
-    int32 MatchQueueService::getQueuedTicketCount( string_view modeId ) const
+    int32 MatchQueueService::getQueuedTicketCount( string_view modeID ) const
     {
-        const auto stateIt = _mapModeState.find( string( modeId ) );
+        const auto stateIt = _mapModeState.find( string( modeID ) );
         return stateIt == _mapModeState.end() ? 0 : stateIt->second._maker.getTicketCount();
     }
 
-    int32 MatchQueueService::findRating( AccountId accountId, string_view modeId ) const
+    int32 MatchQueueService::findRating( AccountID accountID, string_view modeID ) const
     {
-        return _dependencies._pRatingSource != nullptr ? _dependencies._pRatingSource->findRating( accountId, modeId ) : MatchQueueLimit::kDefaultRating;
+        return _dependencies._pRatingSource != nullptr ? _dependencies._pRatingSource->findRating( accountID, modeID ) : MatchQueueLimit::kDefaultRating;
     }
 
     void MatchQueueService::tick( int64 nowMs )
     {
         if ( _dependencies._pRouter == nullptr )
             return;
-        for ( auto& [modeId, state] : _mapModeState )
+        for ( auto& [modeID, state] : _mapModeState )
         {
             if ( _dependencies._pBus != nullptr )
-                tickLease( modeId, state, nowMs );
+                tickLease( modeID, state, nowMs );
             state._reader->tick( nowMs ); // 로비 배정은 권한이 아니어도 고른다
             if ( state._bAuthority != SW_FALSE )
                 placeMatches( state, nowMs );
         }
         // 이 서버가 낸 표의 시한 — 권한이 넘어가 표를 잃었으면 결과가 오지 않는다
         vector<uint64> listExpired;
-        for ( const auto& [ticketId, ticket] : _mapLocalTicket )
+        for ( const auto& [ticketID, ticket] : _mapLocalTicket )
         {
             if ( nowMs > ticket._deadlineMs )
-                listExpired.push_back( ticketId );
+                listExpired.push_back( ticketID );
         }
-        for ( const uint64 ticketId : listExpired )
+        for ( const uint64 ticketID : listExpired )
         {
             MatchAssignment assignment;
-            assignment._ticketId = ticketId;
-            assignment._modeId   = _mapLocalTicket[ticketId]._modeId;
+            assignment._ticketID = ticketID;
+            assignment._modeID   = _mapLocalTicket[ticketID]._modeID;
             assignment._outcome  = MatchQueueOutcome::Timeout;
-            notifyLocalTicket( ticketId, assignment );
+            notifyLocalTicket( ticketID, assignment );
         }
     }
 
-    void MatchQueueService::tickLease( const string& modeId, ModeState& state, int64 nowMs )
+    void MatchQueueService::tickLease( const string& modeID, ModeState& state, int64 nowMs )
     {
-        if ( state._leaseRequestId != 0 )
+        if ( state._leaseRequestID != 0 )
             return; // 답을 기다린다
         if ( state._bLeaseAttempted != SW_FALSE && nowMs - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
             return;
-        const vector<uint8>    selfValue              = MatchmakingProtocol::encodeId( _dependencies._serverId );
+        const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
         const EphemeralRequest request                = state._bAuthority != SW_FALSE
-                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeId ), selfValue, selfValue, MatchQueueLimit::kLeaseTtlMs )
-                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeId ), selfValue, MatchQueueLimit::kLeaseTtlMs, EphemeralCondition::IfAbsent );
-        state._leaseRequestId                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ) );
+                                                          ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, MatchQueueLimit::kLeaseTtlMs )
+                                                          : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, MatchQueueLimit::kLeaseTtlMs, EphemeralCondition::IfAbsent );
+        state._leaseRequestID                         = _dependencies._pRouter->submit( request, EphemeralStoreRouter::ReplyDelegate::create<&MatchQueueService::onLeaseReply>( this ) );
         state._leaseAttemptMs                         = nowMs;
         state._bLeaseAttempted                        = SW_TRUE;
-        _mapLeaseRequestToMode[state._leaseRequestId] = modeId;
+        _mapLeaseRequestToMode[state._leaseRequestID] = modeID;
     }
 
     void MatchQueueService::onLeaseReply( const EphemeralReply& reply )
     {
-        const auto modeIt = _mapLeaseRequestToMode.find( reply._requestId );
+        const auto modeIt = _mapLeaseRequestToMode.find( reply._requestID );
         if ( modeIt == _mapLeaseRequestToMode.end() )
             return;
-        const string modeId = modeIt->second;
+        const string modeID = modeIt->second;
         _mapLeaseRequestToMode.erase( modeIt );
-        ModeState* pState = findModeState( modeId );
+        ModeState* pState = findModeState( modeID );
         if ( pState == nullptr )
             return;
-        pState->_leaseRequestId = 0;
+        pState->_leaseRequestID = 0;
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
             return; // 캐시가 아프다 — 지금 상태로 다음 주기에 다시
         const bool bHold = reply._result == EphemeralResult::Ok;
         if ( bHold == ( pState->_bAuthority != SW_FALSE ) )
             return;
         pState->_bAuthority = bHold ? SW_TRUE : SW_FALSE;
-        _topicBuffer.push( MatchQueueTopicChange{ makeQueueTopic( modeId ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
-        _topicBuffer.push( MatchQueueTopicChange{ makeCancelTopic( modeId ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
+        _topicBuffer.push( MatchQueueTopicChange{ makeQueueTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
+        _topicBuffer.push( MatchQueueTopicChange{ makeCancelTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
         if ( bHold == false )
         {
             // 권한을 잃었다 — 매처를 비운다(표는 새 권한 서버가 모르는 채 잃는다 — 낸 서버의 시한이 알린다)
-            pState->_maker.initialize( _mapMode[modeId], _dependencies._serverId );
+            pState->_maker.initialize( _mapMode[modeID], _dependencies._serverID );
             pState->_listUnplaced.clear();
         }
-        SW_LOG_INFO( "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverId, bHold ? "took" : "lost", modeId );
+        SW_LOG_INFO( "MatchQueue: server %# %# authority for mode '%#'", _dependencies._serverID, bHold ? "took" : "lost", modeID );
     }
 
-    void MatchQueueService::joinQueue( AccountId accountId, string_view modeId, string_view region, int64 nowMs, uint64 requestTag )
+    void MatchQueueService::joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag )
     {
-        if ( hasMode( modeId ) == false )
+        if ( hasMode( modeID ) == false )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::UnknownMode } );
             return;
@@ -215,28 +215,28 @@ namespace sw
         bool bLookupPending = false;
         for ( const auto& [lookupTag, join] : _mapLookupToJoin )
         {
-            bLookupPending = bLookupPending || join._accountId == accountId;
+            bLookupPending = bLookupPending || join._accountID == accountID;
         }
-        if ( _mapAccountToTicket.count( accountId ) != 0 || bLookupPending )
+        if ( _mapAccountToTicket.count( accountID ) != 0 || bLookupPending )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::AlreadyQueued } );
             return;
         }
         PendingJoin join;
-        join._accountId  = accountId;
-        join._modeId     = string( modeId );
+        join._accountID  = accountID;
+        join._modeID     = string( modeID );
         join._region     = string( region );
         join._requestTag = requestTag;
         join._nowMs      = nowMs;
         if ( _dependencies._pPartyLobby == nullptr )
         {
-            submitTicket( join, vector<AccountId>{ accountId }, 0 );
+            submitTicket( join, vector<AccountID>{ accountID }, 0 );
             return;
         }
         // 파티 장이면 파티 전체를 — 파티 기록을 읽은 뒤(onPartyFound)
         const uint64 lookupTag      = _nextLookupTag++;
         _mapLookupToJoin[lookupTag] = join;
-        _dependencies._pPartyLobby->findPartyOfAccount( accountId, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onPartyFound>( this ) );
+        _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onPartyFound>( this ) );
     }
 
     void MatchQueueService::onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party )
@@ -248,7 +248,7 @@ namespace sw
         _mapLookupToJoin.erase( joinIt );
         if ( result == MatchmakingResult::NotInParty )
         {
-            submitTicket( join, vector<AccountId>{ join._accountId }, 0 );
+            submitTicket( join, vector<AccountID>{ join._accountID }, 0 );
             return;
         }
         if ( result != MatchmakingResult::Ok )
@@ -256,36 +256,36 @@ namespace sw
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, result } );
             return;
         }
-        if ( party.getLeaderId() != join._accountId )
+        if ( party.getLeaderID() != join._accountID )
         {
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::NotPartyLeader } );
             return;
         }
-        bool bMemberQueued = party._queuedTicketId != 0;
-        for ( const AccountId memberId : party._listMemberId )
+        bool bMemberQueued = party._queuedTicketID != 0;
+        for ( const AccountID memberID : party._listMemberID )
         {
-            bMemberQueued = bMemberQueued || _mapAccountToTicket.count( memberId ) != 0;
+            bMemberQueued = bMemberQueued || _mapAccountToTicket.count( memberID ) != 0;
         }
         if ( bMemberQueued )
         {
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::AlreadyQueued } );
             return;
         }
-        submitTicket( join, party._listMemberId, party._partyId );
+        submitTicket( join, party._listMemberID, party._partyID );
     }
 
-    void MatchQueueService::submitTicket( const PendingJoin& join, const vector<AccountId>& listAccount, uint64 partyId )
+    void MatchQueueService::submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID )
     {
-        const MatchModeDefinition& mode = _mapMode[join._modeId];
+        const MatchModeDefinition& mode = _mapMode[join._modeID];
         MatchTicket                ticket;
-        ticket._ticketId       = ( _dependencies._serverId << MatchQueueServiceInternal::kIdShift ) | ++_sequence;
+        ticket._ticketID       = ( _dependencies._serverID << MatchQueueServiceInternal::kIDShift ) | ++_sequence;
         ticket._region         = join._region;
-        ticket._partyId        = partyId;
-        ticket._originServerId = _dependencies._serverId;
+        ticket._partyID        = partyID;
+        ticket._originServerID = _dependencies._serverID;
         ticket._enqueuedMs     = join._nowMs;
-        for ( const AccountId accountId : listAccount )
+        for ( const AccountID accountID : listAccount )
         {
-            ticket._listMember.push_back( MatchMember{ accountId, findRating( accountId, join._modeId ) } );
+            ticket._listMember.push_back( MatchMember{ accountID, findRating( accountID, join._modeID ) } );
         }
         if ( static_cast<int32>( ticket._listMember.size() ) > mode._teamSize )
         {
@@ -293,21 +293,21 @@ namespace sw
             return;
         }
 
-        LocalTicket& local = _mapLocalTicket[ticket._ticketId];
+        LocalTicket& local = _mapLocalTicket[ticket._ticketID];
         local._listAccount = listAccount;
-        local._modeId      = join._modeId;
-        local._ticketId    = ticket._ticketId;
-        local._partyId     = partyId;
+        local._modeID      = join._modeID;
+        local._ticketID    = ticket._ticketID;
+        local._partyID     = partyID;
         local._deadlineMs  = join._nowMs + mode._maxWaitMs + MatchQueueLimit::kNoServerGiveUpMs + MatchQueueLimit::kResultGraceMs;
-        for ( const AccountId accountId : listAccount )
+        for ( const AccountID accountID : listAccount )
         {
-            _mapAccountToTicket[accountId] = ticket._ticketId;
+            _mapAccountToTicket[accountID] = ticket._ticketID;
         }
-        if ( partyId != 0 && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->setPartyTicket( partyId, ticket._ticketId );
-        _completionBuffer.push( MatchQueueCompletion{ join._requestTag, ticket._ticketId, MatchmakingResult::Ok } );
+        if ( partyID != 0 && _dependencies._pPartyLobby != nullptr )
+            _dependencies._pPartyLobby->setPartyTicket( partyID, ticket._ticketID );
+        _completionBuffer.push( MatchQueueCompletion{ join._requestTag, ticket._ticketID, MatchmakingResult::Ok } );
 
-        ModeState* pState = findModeState( join._modeId );
+        ModeState* pState = findModeState( join._modeID );
         if ( pState->_bAuthority != SW_FALSE )
         {
             (void)pState->_maker.addTicket( ticket );
@@ -317,7 +317,7 @@ namespace sw
             return;
         BitWriter body;
         MatchmakingProtocol::writeTicket( body, ticket );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeQueueTopic( join._modeId ), body );
+        MatchQueueServiceInternal::publish( _dependencies._pBus, makeQueueTopic( join._modeID ), body );
     }
 
     void MatchQueueService::placeMatches( ModeState& state, int64 nowMs )
@@ -328,10 +328,10 @@ namespace sw
         for ( const MatchTicket& ticket : listTimedOut )
         {
             MatchAssignment assignment;
-            assignment._ticketId = ticket._ticketId;
-            assignment._modeId   = state._maker.getDefinition()._modeId;
+            assignment._ticketID = ticket._ticketID;
+            assignment._modeID   = state._maker.getDefinition()._modeID;
             assignment._outcome  = MatchQueueOutcome::Timeout;
-            deliverToTicket( ticket._originServerId, assignment );
+            deliverToTicket( ticket._originServerID, assignment );
         }
         for ( MatchFormed& match : listFormed )
         {
@@ -351,19 +351,19 @@ namespace sw
         }
     }
 
-    void MatchQueueService::fillTeam( const MatchFormed& match, AccountId accountId, MatchAssignment& inoutAssignment )
+    void MatchQueueService::fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment )
     {
         for ( size_t team = 0; team < match._listTeam.size(); ++team )
         {
             for ( const MatchMember& member : match._listTeam[team] )
             {
-                if ( member._accountId != accountId )
+                if ( member._accountID != accountID )
                     continue;
                 inoutAssignment._team = static_cast<int32>( team );
                 inoutAssignment._listTeammate.clear();
                 for ( const MatchMember& mate : match._listTeam[team] )
                 {
-                    inoutAssignment._listTeammate.push_back( mate._accountId );
+                    inoutAssignment._listTeammate.push_back( mate._accountID );
                 }
                 return;
             }
@@ -372,7 +372,7 @@ namespace sw
 
     bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, int64 nowMs )
     {
-        const MatchModeDefinition& mode = _mapMode[match._modeId];
+        const MatchModeDefinition& mode = _mapMode[match._modeID];
         ServerSelectionQuery       query;
         query._kind         = mode._serverKind;
         query._region       = match._region;
@@ -391,47 +391,47 @@ namespace sw
         {
             BitWriter body;
             MatchmakingProtocol::writeFormed( body, match );
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverId ), body );
+            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
         }
         for ( const MatchTicket& ticket : match._listTicket )
         {
             MatchAssignment assignment;
-            assignment._ticketId = ticket._ticketId;
-            assignment._matchId  = match._matchId;
-            assignment._modeId   = match._modeId;
+            assignment._ticketID = ticket._ticketID;
+            assignment._matchID  = match._matchID;
+            assignment._modeID   = match._modeID;
             assignment._outcome  = bPlaced ? MatchQueueOutcome::Found : failOutcome;
             if ( bPlaced )
             {
-                assignment._serverId = picked._descriptor._serverId;
+                assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
                 assignment._port     = picked._descriptor._port;
             }
             if ( ticket._listMember.empty() == false )
-                fillTeam( match, ticket._listMember.front()._accountId, assignment ); // 표 하나는 한 팀
-            deliverToTicket( ticket._originServerId, assignment );
+                fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 표 하나는 한 팀
+            deliverToTicket( ticket._originServerID, assignment );
         }
         if ( bPlaced == false )
-            SW_LOG_WARNING( "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchId, match._region );
+            SW_LOG_WARNING( "MatchQueue: no '%#' server for match %# in region '%#' — gave up", mode._serverKind, match._matchID, match._region );
         return bPlaced;
     }
 
     void MatchQueueService::placeLobby( const LobbySnapshot& lobby, int64 nowMs )
     {
-        ModeState*  pState = findModeState( lobby._modeId );
+        ModeState*  pState = findModeState( lobby._modeID );
         MatchFormed match;
-        match._modeId  = lobby._modeId;
-        match._matchId = ( _dependencies._serverId << MatchQueueServiceInternal::kIdShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
+        match._modeID  = lobby._modeID;
+        match._matchID = ( _dependencies._serverID << MatchQueueServiceInternal::kIDShift ) | MatchQueueLimit::kLobbyMatchBit | ++_lobbySequence;
         match._listTeam.resize( static_cast<size_t>( PartyLobbyLimit::kLobbyTeamCount ) );
         for ( const LobbyMember& member : lobby._listMember )
         {
             const size_t team = static_cast<size_t>( std::clamp( member._team, 0, PartyLobbyLimit::kLobbyTeamCount - 1 ) );
-            match._listTeam[team].push_back( MatchMember{ member._accountId, findRating( member._accountId, lobby._modeId ) } );
+            match._listTeam[team].push_back( MatchMember{ member._accountID, findRating( member._accountID, lobby._modeID ) } );
         }
         ServerStatus picked;
         bool         bPlaced = false;
         if ( pState != nullptr )
         {
-            const MatchModeDefinition& mode = _mapMode[lobby._modeId];
+            const MatchModeDefinition& mode = _mapMode[lobby._modeID];
             ServerSelectionQuery       query;
             query._kind              = mode._serverKind;
             query._buildVersion      = mode._buildVersion;
@@ -443,69 +443,69 @@ namespace sw
         {
             BitWriter body;
             MatchmakingProtocol::writeFormed( body, match );
-            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverId ), body );
+            MatchQueueServiceInternal::publish( _dependencies._pBus, makeAssignTopic( picked._descriptor._serverID ), body );
         }
         for ( const LobbyMember& member : lobby._listMember )
         {
             MatchAssignment assignment;
-            assignment._matchId = match._matchId;
-            assignment._modeId  = lobby._modeId;
+            assignment._matchID = match._matchID;
+            assignment._modeID  = lobby._modeID;
             assignment._outcome = bPlaced ? MatchQueueOutcome::Found : MatchQueueOutcome::NoServer;
             if ( bPlaced )
             {
-                assignment._serverId = picked._descriptor._serverId;
+                assignment._serverID = picked._descriptor._serverID;
                 assignment._address  = picked._descriptor._address;
                 assignment._port     = picked._descriptor._port;
             }
-            fillTeam( match, member._accountId, assignment );
-            _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountId } );
+            fillTeam( match, member._accountID, assignment );
+            _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );
         }
         if ( bPlaced == false && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->reopenLobby( lobby._lobbyId ); // 다시 시작할 수 있게
+            _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게
     }
 
-    void MatchQueueService::deliverToTicket( uint64 originServerId, const MatchAssignment& assignment )
+    void MatchQueueService::deliverToTicket( uint64 originServerID, const MatchAssignment& assignment )
     {
-        if ( originServerId == _dependencies._serverId || _dependencies._pBus == nullptr )
+        if ( originServerID == _dependencies._serverID || _dependencies._pBus == nullptr )
         {
-            notifyLocalTicket( assignment._ticketId, assignment );
+            notifyLocalTicket( assignment._ticketID, assignment );
             return;
         }
         BitWriter body;
         MatchmakingProtocol::writeAssignment( body, assignment );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeResultTopic( originServerId ), body );
+        MatchQueueServiceInternal::publish( _dependencies._pBus, makeResultTopic( originServerID ), body );
     }
 
-    void MatchQueueService::notifyLocalTicket( uint64 ticketId, const MatchAssignment& assignment )
+    void MatchQueueService::notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment )
     {
-        const auto ticketIt = _mapLocalTicket.find( ticketId );
+        const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt == _mapLocalTicket.end() )
             return; // 이미 끝냄(시한 뒤 늦은 결과 · 빠진 표)
-        for ( const AccountId accountId : ticketIt->second._listAccount )
+        for ( const AccountID accountID : ticketIt->second._listAccount )
         {
-            _notificationBuffer.push( MatchQueueNotification{ assignment, accountId } );
-            const auto accountIt = _mapAccountToTicket.find( accountId );
-            if ( accountIt != _mapAccountToTicket.end() && accountIt->second == ticketId )
+            _notificationBuffer.push( MatchQueueNotification{ assignment, accountID } );
+            const auto accountIt = _mapAccountToTicket.find( accountID );
+            if ( accountIt != _mapAccountToTicket.end() && accountIt->second == ticketID )
                 _mapAccountToTicket.erase( accountIt );
         }
-        if ( ticketIt->second._partyId != 0 && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->setPartyTicket( ticketIt->second._partyId, 0 );
+        if ( ticketIt->second._partyID != 0 && _dependencies._pPartyLobby != nullptr )
+            _dependencies._pPartyLobby->setPartyTicket( ticketIt->second._partyID, 0 );
         _mapLocalTicket.erase( ticketIt );
     }
 
-    void MatchQueueService::removeFromQueue( const string& modeId, uint64 ticketId )
+    void MatchQueueService::removeFromQueue( const string& modeID, uint64 ticketID )
     {
-        ModeState* pState = findModeState( modeId );
+        ModeState* pState = findModeState( modeID );
         if ( pState != nullptr && pState->_bAuthority != SW_FALSE )
         {
-            (void)pState->_maker.removeTicket( ticketId ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+            (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;
-        body.writeVarUint( ticketId );
-        MatchQueueServiceInternal::publish( _dependencies._pBus, makeCancelTopic( modeId ), body );
+        body.writeVarUint( ticketID );
+        MatchQueueServiceInternal::publish( _dependencies._pBus, makeCancelTopic( modeID ), body );
     }
 
     void MatchQueueService::handleBusMessage( string_view topic, const vector<uint8>& bytes, int64 nowMs )
@@ -523,58 +523,58 @@ namespace sw
         }
         if ( Internal::hasPrefix( topic, Internal::kCancelPrefix ) )
         {
-            const uint64 ticketId = reader.readVarUint();
+            const uint64 ticketID = reader.readVarUint();
             ModeState*   pState   = findModeState( topic.substr( string_view( Internal::kCancelPrefix ).size() ) );
             if ( pState != nullptr && pState->_bAuthority != SW_FALSE && reader.hasOverflowed() == false )
-                (void)pState->_maker.removeTicket( ticketId ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
+                (void)pState->_maker.removeTicket( ticketID ); // 이미 짝지어졌거나 없는 표면 false — 지울 것이 없다
             return;
         }
-        if ( topic == makeResultTopic( _dependencies._serverId ) )
+        if ( topic == makeResultTopic( _dependencies._serverID ) )
         {
             MatchAssignment assignment;
             if ( MatchmakingProtocol::readAssignment( reader, assignment ) )
-                notifyLocalTicket( assignment._ticketId, assignment );
+                notifyLocalTicket( assignment._ticketID, assignment );
         }
     }
 
-    void MatchQueueService::leaveQueue( AccountId accountId, uint64 requestTag )
+    void MatchQueueService::leaveQueue( AccountID accountID, uint64 requestTag )
     {
-        const auto accountIt = _mapAccountToTicket.find( accountId );
+        const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt == _mapAccountToTicket.end() )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::NotQueued } );
             return;
         }
-        const uint64 ticketId = accountIt->second;
-        cancelTicket( ticketId );
-        _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketId, MatchmakingResult::Ok } );
+        const uint64 ticketID = accountIt->second;
+        cancelTicket( ticketID );
+        _completionBuffer.push( MatchQueueCompletion{ requestTag, ticketID, MatchmakingResult::Ok } );
     }
 
-    void MatchQueueService::cancelTicket( uint64 ticketId )
+    void MatchQueueService::cancelTicket( uint64 ticketID )
     {
         MatchAssignment cancelled;
-        cancelled._ticketId = ticketId;
+        cancelled._ticketID = ticketID;
         cancelled._outcome  = MatchQueueOutcome::Cancelled;
-        const auto ticketIt = _mapLocalTicket.find( ticketId );
+        const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt != _mapLocalTicket.end() )
         {
-            const string modeId = ticketIt->second._modeId;
-            cancelled._modeId   = modeId;
-            removeFromQueue( modeId, ticketId );
-            notifyLocalTicket( ticketId, cancelled );
+            const string modeID = ticketIt->second._modeID;
+            cancelled._modeID   = modeID;
+            removeFromQueue( modeID, ticketID );
+            notifyLocalTicket( ticketID, cancelled );
             return;
         }
         // 다른 서버가 낸 파티 표 — 모드를 모르니 모든 모드의 권한에서 빼고, 낸 서버(표 id 의 위 32 비트)에 Cancelled 를 알린다
-        for ( const auto& [modeId, mode] : _mapMode )
+        for ( const auto& [modeID, mode] : _mapMode )
         {
-            removeFromQueue( modeId, ticketId );
+            removeFromQueue( modeID, ticketID );
         }
-        deliverToTicket( ticketId >> MatchQueueServiceInternal::kIdShift, cancelled );
+        deliverToTicket( ticketID >> MatchQueueServiceInternal::kIDShift, cancelled );
     }
 
-    void MatchQueueService::removeAccount( AccountId accountId )
+    void MatchQueueService::removeAccount( AccountID accountID )
     {
-        const auto accountIt = _mapAccountToTicket.find( accountId );
+        const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt != _mapAccountToTicket.end() )
             cancelTicket( accountIt->second );
     }

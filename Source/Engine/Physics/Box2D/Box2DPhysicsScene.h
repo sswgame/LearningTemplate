@@ -119,10 +119,10 @@ namespace sw
         struct BodyRecord
         {
             shared_ptr<const ShapeDescList> _pListShape;
-            vector<b2ShapeId>               _listShapeId;
-            vector<b2ChainId>               _listChainId;
+            vector<b2ShapeId>               _listShapeID;
+            vector<b2ChainId>               _listChainID;
             uint64                          _userData{ 0 };
-            b2BodyId                        _bodyId{};
+            b2BodyId                        _bodyID{};
             PhysicsBodyType                 _type{ PhysicsBodyType::Dynamic };
             uint8                           _layer{ 0 };
             bool                            _bTrigger{ false };
@@ -131,7 +131,7 @@ namespace sw
 
         struct JointRecord
         {
-            b2JointId         _jointId{};
+            b2JointId         _jointID{};
             PhysicsBodyHandle _bodyA{};
             PhysicsBodyHandle _bodyB{};
             PhysicsJointType  _type{ PhysicsJointType::Fixed };
@@ -160,7 +160,7 @@ namespace sw
         void              applyFilter( const BodyRecord& record );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
-        PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeId ) const;
+        PhysicsBodyHandle findHandleOfShape( b2ShapeId shapeID ) const;
         /** @brief 쌍 예외 필터 관절 표에서 @p body 가 낀 것을 지웁니다(바디를 지우면 Box2D 가 관절도 지운다). */
         void forgetPairJointsOf( PhysicsBodyHandle body );
         /** @brief 스텝이 낸 Box2D 이벤트를 추적기에 넣고 충격량을 채웁니다. */
@@ -172,8 +172,8 @@ namespace sw
 
         PhysicsSettings                           _settings;
         CollisionLayers                           _layers;
-        b2WorldId                                 _worldId;
-        b2BodyId                                  _groundBodyId; ///< 월드에 붙는 관절의 상대(정적, 원점)
+        b2WorldId                                 _worldID;
+        b2BodyId                                  _groundBodyID; ///< 월드에 붙는 관절의 상대(정적, 원점)
         SlotHandleTable<BodyRecord>               _bodies;
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;

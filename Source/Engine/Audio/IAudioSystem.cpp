@@ -57,7 +57,7 @@ namespace sw
         , _listBusVolume{}
         , _listOfflineBlock{}
         , _musicPath{}
-        , _musicPlayingId{ 0 }
+        , _musicPlayingID{ 0 }
         , _offlineFrameDebt{ 0.0 }
         , _masterVolume{ 1.0f }
         , _musicVolume{ 1.0f }
@@ -111,7 +111,7 @@ namespace sw
         _bOutputOpen = false;
         _pEngine->shutdown();
         _musicPath.clear();
-        _musicPlayingId = 0;
+        _musicPlayingID = 0;
         _bInitialized   = false;
         SW_LOG_INFO( "Shut down." );
     }
@@ -156,7 +156,7 @@ namespace sw
     {
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingId ) )
+        if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         // 있는 곡인지 **멈추기 전에** 본다 — 없는 곡을 요청해 틀어져 있던 BGM 만 꺼지면 안 된다.
         if ( ResourceUtil::hasResource( path ) == false )
@@ -164,10 +164,10 @@ namespace sw
             SW_LOG_WARNING( "Audio resource not found: %#", path );
             return false;
         }
-        const bool bCrossfade = _musicPlayingId != 0;
+        const bool bCrossfade = _musicPlayingID != 0;
         if ( bCrossfade )
         {
-            _pEngine->stop( _musicPlayingId, IAudioSystemInternal::kMusicCrossfadeSeconds );
+            _pEngine->stop( _musicPlayingID, IAudioSystemInternal::kMusicCrossfadeSeconds );
             _pEngine->stopMusic( IAudioSystemInternal::kMusicCrossfadeSeconds );
         }
 
@@ -175,45 +175,45 @@ namespace sw
         params._bLoop         = true;
         params._fadeInSeconds = bCrossfade ? IAudioSystemInternal::kMusicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
-        _musicPlayingId       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
-        return _musicPlayingId != 0;
+        _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
+        return _musicPlayingID != 0;
     }
 
     bool IAudioSystem::playAdaptiveMusic( string_view path )
     {
         if ( _bInitialized == false || path.empty() )
             return false;
-        if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingId ) )
+        if ( _musicPath == path && _pEngine->isPlaying( _musicPlayingID ) )
             return true;
         shared_ptr<AudioMusicDesc> pMusic = make_shared<AudioMusicDesc>();
         if ( pMusic->loadFromResource( path ) == false )
             return false;
-        if ( _musicPlayingId != 0 )
-            _pEngine->stop( _musicPlayingId, IAudioSystemInternal::kMusicCrossfadeSeconds );
+        if ( _musicPlayingID != 0 )
+            _pEngine->stop( _musicPlayingID, IAudioSystemInternal::kMusicCrossfadeSeconds );
         _musicPath      = string( path );
-        _musicPlayingId = _pEngine->startMusic( std::move( pMusic ), IAudioSystemInternal::kMusicCrossfadeSeconds );
-        return _musicPlayingId != 0;
+        _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), IAudioSystemInternal::kMusicCrossfadeSeconds );
+        return _musicPlayingID != 0;
     }
 
     void IAudioSystem::stopMusic()
     {
-        if ( _musicPlayingId != 0 )
-            _pEngine->stop( _musicPlayingId, 0.0f );
+        if ( _musicPlayingID != 0 )
+            _pEngine->stop( _musicPlayingID, 0.0f );
         _pEngine->stopMusic( 0.0f );
-        _musicPlayingId = 0;
+        _musicPlayingID = 0;
         _musicPath.clear();
     }
 
     void IAudioSystem::pauseMusic()
     {
-        if ( _musicPlayingId != 0 )
-            _pEngine->setPaused( _musicPlayingId, true );
+        if ( _musicPlayingID != 0 )
+            _pEngine->setPaused( _musicPlayingID, true );
     }
 
     void IAudioSystem::resumeMusic()
     {
-        if ( _musicPlayingId != 0 )
-            _pEngine->setPaused( _musicPlayingId, false );
+        if ( _musicPlayingID != 0 )
+            _pEngine->setPaused( _musicPlayingID, false );
     }
 
     bool IAudioSystem::loadMixer( string_view resourcePath )

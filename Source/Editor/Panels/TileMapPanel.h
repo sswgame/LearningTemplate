@@ -114,7 +114,7 @@ namespace sw::editor
         int32                                 _inputWidth;
         int32                                 _inputHeight;
         int32                                 _paintHeight;
-        int32                                 _atlasId;
+        int32                                 _atlasID;
         int32                                 _warpTx;
         int32                                 _warpTy;
         int2                                  _lastPaintCell; ///< 지난 프레임에 칠한 칸(`_bStrokeActive` 일 때만 뜻이 있다)

@@ -54,7 +54,7 @@ namespace sw
     WidgetComponent::WidgetComponent()
         : Component{}
         , _pendingContent{}
-        , _markerWidget{ kInvalidWidgetId }
+        , _markerWidget{ kInvalidWidgetID }
         , _lastPlacement{}
         , _pUISystem{ nullptr }
         , _worldTree{}
@@ -117,7 +117,7 @@ namespace sw
     void WidgetComponent::forgetUISystem()
     {
         _pUISystem    = nullptr;
-        _markerWidget = kInvalidWidgetId;
+        _markerWidget = kInvalidWidgetID;
     }
 
     void WidgetComponent::setContent( unique_ptr<Widget> content )
@@ -144,7 +144,7 @@ namespace sw
 
     string WidgetComponent::getRenderTargetPath() const
     {
-        return "rendertarget/widget_" + to_string( getComponentId() );
+        return "rendertarget/widget_" + to_string( getComponentID() );
     }
 
     void WidgetComponent::attachMarker()
@@ -160,7 +160,7 @@ namespace sw
             _worldTree->setRoot( std::move( _pendingContent ) );
             return;
         }
-        if ( _markerWidget != kInvalidWidgetId )
+        if ( _markerWidget != kInvalidWidgetID )
             return;
         // 첫 자리가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게).
         _pendingContent->setVisibility( WidgetVisibility::Collapsed );
@@ -170,11 +170,11 @@ namespace sw
     void WidgetComponent::detachMarker()
     {
         _worldTree.reset();
-        if ( _markerWidget == kInvalidWidgetId )
+        if ( _markerWidget == kInvalidWidgetID )
             return;
         if ( _pUISystem != nullptr )
             _pUISystem->removeScreenMarker( _markerWidget );
-        _markerWidget = kInvalidWidgetId;
+        _markerWidget = kInvalidWidgetID;
     }
 
     WidgetMarkerPlacement WidgetComponent::computeMarkerPlacement( const float4x4& viewProjection, const float3& cameraPosition, const float3& worldPosition,
@@ -233,7 +233,7 @@ namespace sw
 
     void WidgetComponent::updateScreenMarker( const UIViewport& viewport )
     {
-        if ( _markerWidget == kInvalidWidgetId || viewport._physicalSize._y <= 0.0f )
+        if ( _markerWidget == kInvalidWidgetID || viewport._physicalSize._y <= 0.0f )
             return;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
@@ -362,7 +362,7 @@ namespace sw
             engine::getAssetManager().getTextureManager().declareRenderTarget( getRenderTargetPath(), static_cast<uint32>( textureSize._x ),
                                                                                static_cast<uint32>( textureSize._y ) );
         }
-        pMesh->setMeshId( "Sprite" );
+        pMesh->setMeshID( "Sprite" );
         pMesh->setMaterialPath( SpriteRenderUtil::getSpriteMaterialPath().c_str() );
         pMesh->setLocalScale( float3{ _worldSize._x, _worldSize._y, 1.0f } );
         if ( pMesh->getMaterial() != nullptr )
@@ -381,7 +381,7 @@ namespace sw
             return;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        GameObject*        pQuad    = pManager != nullptr ? pManager->findGameObjectById( _worldQuad.objectId() ) : nullptr;
+        GameObject*        pQuad    = pManager != nullptr ? pManager->findGameObjectByID( _worldQuad.objectID() ) : nullptr;
         if ( pQuad != nullptr )
             pQuad->destroy();
         _worldQuad = GameObjectHandle{};

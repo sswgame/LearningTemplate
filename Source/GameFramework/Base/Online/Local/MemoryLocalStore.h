@@ -75,7 +75,7 @@ namespace sw
         vector<LocalStoreCompletion> _listCompletion;
         LocalSealContext             _sealContext;
         MemoryLocalDatabase*         _pDatabase;
-        uint64                       _nextRequestId;
+        uint64                       _nextRequestID;
         uint8                        _bShutdown;
     };
 } // namespace sw

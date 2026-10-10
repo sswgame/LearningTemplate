@@ -129,7 +129,7 @@ namespace sw
                 }
                 for ( const UIBindingDesc& binding : listBinding )
                 {
-                    if ( binding._widget == widget.getId() )
+                    if ( binding._widget == widget.getID() )
                         writeAtPath( element, binding._propertyPath, binding._expression );
                 }
 

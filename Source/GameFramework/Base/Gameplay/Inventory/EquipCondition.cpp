@@ -29,7 +29,7 @@ namespace sw
                     const bool bSetCondition = condition._kind == EquipConditionKind::SetComplete || condition._kind == EquipConditionKind::SetPieces;
                     listSetItem.clear();
                     if ( bSetCondition && pSetLookup != nullptr )
-                        pSetLookup->collectSetItems( condition._setId, listSetItem );
+                        pSetLookup->collectSetItems( condition._setID, listSetItem );
                     for ( size_t toIndex = 0; toIndex < listItem.size(); ++toIndex )
                     {
                         const ItemDef& to = listItem[toIndex];
@@ -38,9 +38,9 @@ namespace sw
                         bool bEdge = false;
                         if ( bSetCondition )
                         {
-                            for ( const hashed_string& setItemId : listSetItem )
+                            for ( const hashed_string& setItemID : listSetItem )
                             {
-                                bEdge = bEdge || setItemId == to._id;
+                                bEdge = bEdge || setItemID == to._id;
                             }
                         }
                         else if ( condition._kind == EquipConditionKind::EquippedTag )
@@ -123,11 +123,11 @@ namespace sw
         {
             case EquipConditionKind::SetComplete:
             {
-                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setId, listSlot, context._bodyType ).isComplete();
+                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setID, listSlot, context._bodyType ).isComplete();
             }
             case EquipConditionKind::SetPieces:
             {
-                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setId, listSlot, context._bodyType )._equippedCount >= condition._pieceCount;
+                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setID, listSlot, context._bodyType )._equippedCount >= condition._pieceCount;
             }
             case EquipConditionKind::EquippedTag:
             {
@@ -136,7 +136,7 @@ namespace sw
                     const EquipSlot& slot = listSlot[slotIndex];
                     if ( static_cast<int32>( slotIndex ) == selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE )
                         continue;
-                    const ItemDef* pDef = catalog.findItem( slot._item._itemId );
+                    const ItemDef* pDef = catalog.findItem( slot._item._itemID );
                     if ( pDef != nullptr && pDef->hasTagUnder( condition._tag ) )
                         return true;
                 }

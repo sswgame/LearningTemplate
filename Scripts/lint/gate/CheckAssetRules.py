@@ -53,7 +53,7 @@ class CheckAssetRulesGate(LintGate):
                 _kRulePath: _kSelfTestRules,
                 "Resource/game/probe/maps/a.scene.xml": (
                     '<Scene><entities><entity id="1" name="A"><GameObject><_listComponent>'
-                    '<MeshComponent _meshId="game/probe/models/missing.mesh"/></_listComponent></GameObject></entity></entities></Scene>'
+                    '<MeshComponent _meshID="game/probe/models/missing.mesh"/></_listComponent></GameObject></entity></entities></Scene>'
                 ),
             },
         },

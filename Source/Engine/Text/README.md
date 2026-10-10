@@ -101,7 +101,7 @@ cd build/Ninja-Debug/Bin
 `IFontRasterizer` 가 글꼴 파일을 열고 글리프를 SDF로 래스터화합니다. 기본 구현은 `Text/FreeType/` 의 FreeType 래스터라이저이고,
 밖에서는 `IFontRasterizer::createDefault()` 로만 만듭니다. 테스트는 결정적인 가짜 구현(`Test/EngineTest/Text/FakeFontRasterizer.h`)을 씁니다.
 
-- 면은 글꼴 파일 바이트로 엽니다(`loadFace`). 래스터라이저가 그 바이트를 면이 살아 있는 동안 보관합니다. 면 번호는 1부터이고, 0은 `kInvalidFontFaceId` 입니다.
+- 면은 글꼴 파일 바이트로 엽니다(`loadFace`). 래스터라이저가 그 바이트를 면이 살아 있는 동안 보관합니다. 면 번호는 1부터이고, 0은 `kInvalidFontFaceID` 입니다.
 - 길이 단위가 둘입니다. 면과 글리프의 메트릭(`FontFaceMetrics`, `GlyphMetrics`, 커닝)은 em에 대한 비율입니다.
   래스터 결과(`SdfGlyphBitmap`)는 래스터 픽셀 단위이고, 크기는 `SdfRasterParams::_pixelSize`(기본 48 px/em)가 정합니다.
   둘을 섞지 않습니다. 화면 크기는 em 비율에 글꼴 크기를 곱한 값이고, 래스터 크기와 상관없습니다.

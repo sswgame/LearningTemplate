@@ -18,8 +18,8 @@ namespace sw
         , _listDone{}
         , _pProvider{ pProvider }
         , _pHTTPClient{ pHTTPClient }
-        , _nextVerificationId{ 1 }
-        , _jwksRequestId{ 0 }
+        , _nextVerificationID{ 1 }
+        , _jwksRequestID{ 0 }
         , _lastFetchStartMs{ 0 }
         , _fetchGeneration{ 0 }
         , _jwksFetchCount{ 0 }
@@ -35,8 +35,8 @@ namespace sw
         PendingTicket&    pending = _listPending.emplace_back();
         pending._token            = string( text.substr( 0, bar ) );
         pending._nonce            = bar == string_view::npos ? string{} : string( text.substr( bar + 1 ) );
-        pending._verificationId   = _nextVerificationId++;
-        return pending._verificationId;
+        pending._verificationID   = _nextVerificationID++;
+        return pending._verificationID;
     }
 
     int32 OidcLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
@@ -57,20 +57,20 @@ namespace sw
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            if ( response._requestId != _jwksRequestId )
+            if ( response._requestID != _jwksRequestID )
                 continue;
             const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJwks( response.getBodyText(), nowMs );
             if ( bReplaced == false )
                 SW_LOG_WARNING( "JWKS fetch for '%#' failed: %#", _settings._name.c_str(), response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "bad response" );
             _bLastFetchFailed = bReplaced ? SW_FALSE : SW_TRUE;
-            _jwksRequestId    = 0;
+            _jwksRequestID    = 0;
             ++_fetchGeneration;
         }
 
         const bool bStale     = _keyCache.hasKeys() && nowMs - _keyCache.getFetchedAtMs() >= _settings._jwksRefreshMs;
         const bool bMayFetch  = _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
         const bool bWantFirst = _keyCache.hasKeys() == false && _listPending.empty() == false;
-        if ( _jwksRequestId == 0 && ( bStale || bWantFirst ) && bMayFetch )
+        if ( _jwksRequestID == 0 && ( bStale || bWantFirst ) && bMayFetch )
             startJwksFetch( nowMs );
 
         for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); )
@@ -83,14 +83,14 @@ namespace sw
                 continue;
             }
             PlatformLoginVerification verification;
-            verification._verificationId = pending._verificationId;
+            verification._verificationID = pending._verificationID;
             if ( evaluate( pending, nowMs, verification ) == Decision::NeedKey )
             {
                 const bool bAlreadyWaited = pending._waitedFetchGeneration != 0;
-                const bool bCanRefetch    = _jwksRequestId != 0 || _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
+                const bool bCanRefetch    = _jwksRequestID != 0 || _jwksFetchCount == 0 || nowMs - _lastFetchStartMs >= _settings._minRefetchMs;
                 if ( bAlreadyWaited == false && bCanRefetch )
                 {
-                    if ( _jwksRequestId == 0 )
+                    if ( _jwksRequestID == 0 )
                         startJwksFetch( nowMs );
                     pending._waitedFetchGeneration = _fetchGeneration + 1;
                     ++pendingIndex;
@@ -113,7 +113,7 @@ namespace sw
         request._url       = _settings._jwksURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _jwksRequestId    = _pHTTPClient->submitRequest( request, nowMs );
+        _jwksRequestID    = _pHTTPClient->submitRequest( request, nowMs );
         _lastFetchStartMs = nowMs;
         ++_jwksFetchCount;
     }
@@ -126,7 +126,7 @@ namespace sw
             outVerification._bRejected = SW_TRUE;
             return Decision::Done;
         }
-        const NetPublicKey* pKey = _keyCache.findKey( token.getKeyId() );
+        const NetPublicKey* pKey = _keyCache.findKey( token.getKeyID() );
         if ( pKey == nullptr )
             return Decision::NeedKey;
         if ( token.verifySignature( *_pProvider, *pKey ) == false )
@@ -140,9 +140,9 @@ namespace sw
         int64  expiresAt = 0;
         int64  issuedAt  = 0;
         bool   bAudience = false;
-        for ( const string& clientId : _settings._listClientId )
+        for ( const string& clientID : _settings._listClientID )
         {
-            bAudience = bAudience || token.hasAudience( clientId );
+            bAudience = bAudience || token.hasAudience( clientID );
         }
         const bool bIssuerOk  = token.findText( "iss", issuer ) && issuer == _settings._issuer;
         const bool bExpiresOk = token.findInteger( "exp", expiresAt ) && nowMs < expiresAt * 1000 + _settings._clockSkewMs;

@@ -77,11 +77,11 @@ namespace sw
         _listAbility.clear();
     }
 
-    bool MetroAbilitySet::grantAbility( const hashed_string& abilityId, GameFlags& flags )
+    bool MetroAbilitySet::grantAbility( const hashed_string& abilityID, GameFlags& flags )
     {
-        if ( _pCatalog == nullptr || hasAbility( abilityId ) )
+        if ( _pCatalog == nullptr || hasAbility( abilityID ) )
             return false;
-        const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityId );
+        const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityID );
         if ( pAbility == nullptr )
             return false;
         _listAbility.push_back( pAbility->_id );
@@ -102,11 +102,11 @@ namespace sw
         return static_cast<int32>( _listAbility.size() );
     }
 
-    bool MetroAbilitySet::hasAbility( const hashed_string& abilityId ) const
+    bool MetroAbilitySet::hasAbility( const hashed_string& abilityID ) const
     {
         for ( const hashed_string& owned : _listAbility )
         {
-            if ( owned == abilityId )
+            if ( owned == abilityID )
                 return true;
         }
         return false;
@@ -118,9 +118,9 @@ namespace sw
         if ( _pCatalog == nullptr )
             return;
         const hashed_string wallJumpName( MetroAbilitySetInternal::kWallJumpName );
-        for ( const hashed_string& abilityId : _listAbility )
+        for ( const hashed_string& abilityID : _listAbility )
         {
-            const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityId );
+            const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityID );
             if ( pAbility == nullptr )
                 continue;
             for ( const StatValue& value : pAbility->_motor.getValues() )
@@ -164,9 +164,9 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const hashed_string dashName( MetroAbilitySetInternal::kDashName );
-        for ( const hashed_string& abilityId : _listAbility )
+        for ( const hashed_string& abilityID : _listAbility )
         {
-            const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityId );
+            const MetroAbilityDef* pAbility = _pCatalog->findAbility( abilityID );
             if ( pAbility != nullptr && pAbility->_motor.getValue( dashName ) != 0.0f )
                 return true;
         }
@@ -193,9 +193,9 @@ namespace sw
     void MetroAbilitySet::writeState( Archive& outArchive ) const
     {
         outArchive << static_cast<uint32>( _listAbility.size() );
-        for ( const hashed_string& abilityId : _listAbility )
+        for ( const hashed_string& abilityID : _listAbility )
         {
-            StateArchiveUtil::writeName( outArchive, abilityId );
+            StateArchiveUtil::writeName( outArchive, abilityID );
         }
     }
 
@@ -210,13 +210,13 @@ namespace sw
         listAbility.reserve( abilityCount );
         for ( uint32 entry = 0; entry < abilityCount; ++entry )
         {
-            hashed_string abilityId;
-            if ( StateArchiveUtil::readName( archive, abilityId ) == false )
+            hashed_string abilityID;
+            if ( StateArchiveUtil::readName( archive, abilityID ) == false )
                 return false;
-            const bool bDuplicate = std::find( listAbility.begin(), listAbility.end(), abilityId ) != listAbility.end();
-            if ( _pCatalog->findAbility( abilityId ) == nullptr || bDuplicate )
+            const bool bDuplicate = std::find( listAbility.begin(), listAbility.end(), abilityID ) != listAbility.end();
+            if ( _pCatalog->findAbility( abilityID ) == nullptr || bDuplicate )
                 return false;
-            listAbility.push_back( abilityId );
+            listAbility.push_back( abilityID );
         }
         _listAbility = std::move( listAbility );
         return true;

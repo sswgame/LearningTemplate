@@ -17,8 +17,8 @@ namespace sw
     /** @brief 포인터 사건 하나를 보낸 결과입니다. */
     struct UIPointerResult
     {
-        WidgetId _handler{ kInvalidWidgetId };      ///< 처리한 위젯(없으면 무효)
-        WidgetId _focusRequest{ kInvalidWidgetId }; ///< 처리한 위젯이 포커스를 옮겨 달라고 했다
+        WidgetID _handler{ kInvalidWidgetID };      ///< 처리한 위젯(없으면 무효)
+        WidgetID _focusRequest{ kInvalidWidgetID }; ///< 처리한 위젯이 포커스를 옮겨 달라고 했다
         uint8    _bHandled{ SW_FALSE };             ///< 위젯이 처리했다 — 그 마우스 버튼은 이번 프레임 UI 가 먹은 입력이다
         uint8    _bHitWidget{ SW_FALSE };           ///< 점 아래에 위젯이 있었다(처리하지 않았어도)
     };
@@ -45,9 +45,9 @@ namespace sw
         /** @brief @p tree 를 더 쓰지 않습니다 — 그 트리의 호버 · 잡기를 알림 없이 버립니다(트리를 지우기 직전). */
         void forgetTree( const WidgetTree& tree );
 
-        WidgetId            getCapturedWidget() const { return _captured; }
+        WidgetID            getCapturedWidget() const { return _captured; }
         const WidgetTree*   getCaptureTree() const { return _pCaptureTree; }
-        WidgetId            getHoveredWidget() const { return _hoverPath.getLeaf(); }
+        WidgetID            getHoveredWidget() const { return _hoverPath.getLeaf(); }
         const UIWidgetPath& getHoverPath() const { return _hoverPath; }
         /** @brief 호버 경로가 든 트리입니다(없으면 nullptr). */
         const WidgetTree* getHoverTree() const { return _pHoverTree; }
@@ -61,6 +61,6 @@ namespace sw
         UIWidgetPath _scratchPath;
         WidgetTree*  _pHoverTree;
         WidgetTree*  _pCaptureTree;
-        WidgetId     _captured;
+        WidgetID     _captured;
     };
 } // namespace sw

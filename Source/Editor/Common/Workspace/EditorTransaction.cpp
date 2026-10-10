@@ -44,7 +44,7 @@ namespace sw::editor
             static void onObjectEdit( const CommandStack::ObjectEditNotice& notice )
             {
                 EditorContext* pContext = EditorContext::get();
-                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectId ) );
+                GameObject*    pTarget  = editor::findGameObject( GameObjectHandle::make( notice._objectID ) );
                 if ( pContext != nullptr && pTarget != nullptr )
                 {
                     EditorSelection& selection = pContext->getEditorSelection();

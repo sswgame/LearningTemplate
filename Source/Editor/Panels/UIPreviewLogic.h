@@ -34,7 +34,7 @@ namespace sw::editor
     struct UIPreviewWidgetRow
     {
         string   _label{}; ///< "타입 #이름"(이름이 없으면 타입만)
-        WidgetId _widget{ kInvalidWidgetId };
+        WidgetID _widget{ kInvalidWidgetID };
         uint32   _depth{ 0 }; ///< 루트 = 0
     };
 } // namespace sw::editor
@@ -64,7 +64,7 @@ namespace sw::editor
         /** @brief 트리의 위젯을 문서 순서로 한 줄씩(깊이 · "타입 #이름") 모읍니다. */
         static void collectWidgetRows( const WidgetTree& tree, vector<UIPreviewWidgetRow>& outListRow );
         /** @brief UI 점 @p point 아래의 맨 위(문서 순서로 마지막) 보이는 위젯입니다. 없으면 무효입니다. */
-        static WidgetId findWidgetAt( const WidgetTree& tree, const float2& point );
+        static WidgetID findWidgetAt( const WidgetTree& tree, const float2& point );
         /** @brief 미리보기 렌더 텍스처 경로입니다 — 크기마다 다르다(렌더 텍스처 크기는 처음 만들 때 정해진다). */
         static string makeTargetPath( const UIViewport& viewport );
     };

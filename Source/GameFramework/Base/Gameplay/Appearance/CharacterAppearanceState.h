@@ -40,7 +40,7 @@ namespace sw
         /** @brief 프리셋을 바꿔 입힙니다(런타임 프리셋 교체 — 같은 해석 경로). */
         void setSpec( const CharacterAppearanceSpec& spec );
         /** @brief 칸의 보이는 외형을 덮습니다(형상 변경). 비우면 아이템 자신의 외형입니다. */
-        void setVisibleVisual( const hashed_string& slot, const hashed_string& visualId );
+        void setVisibleVisual( const hashed_string& slot, const hashed_string& visualID );
         /** @brief 칸 외형의 상태(뽑음 ↔ 꽂음)를 바꿉니다 — 다시 스폰하지 않고 부품을 다른 소켓으로 옮기는 해석이 나옵니다. */
         void setSlotState( const hashed_string& slot, const hashed_string& state );
         /** @brief 캐릭터 꾸미기 값을 바꿉니다. */

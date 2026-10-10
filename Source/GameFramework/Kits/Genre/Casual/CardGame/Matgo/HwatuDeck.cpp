@@ -97,18 +97,18 @@ namespace sw
         }
     }
 
-    const HwatuCardInfo& HwatuDeck::getInfo( uint16 cardId )
+    const HwatuCardInfo& HwatuDeck::getInfo( uint16 cardID )
     {
         static const HwatuCardInfo s_emptyInfo{};
-        if ( cardId >= kCardCount )
+        if ( cardID >= kCardCount )
             return s_emptyInfo;
-        return HwatuDeckInternal::getTable()._arrInfo[cardId];
+        return HwatuDeckInternal::getTable()._arrInfo[cardID];
     }
 
     Card HwatuDeck::makeCard( int32 month, int32 indexInMonth )
     {
-        const uint16         cardId = static_cast<uint16>( ( month - 1 ) * HwatuDeckInternal::kCardsPerMonth + indexInMonth );
-        const HwatuCardInfo& info   = getInfo( cardId );
-        return Card{ cardId, static_cast<uint8>( info._kind ), info._month };
+        const uint16         cardID = static_cast<uint16>( ( month - 1 ) * HwatuDeckInternal::kCardsPerMonth + indexInMonth );
+        const HwatuCardInfo& info   = getInfo( cardID );
+        return Card{ cardID, static_cast<uint8>( info._kind ), info._month };
     }
 } // namespace sw

@@ -41,14 +41,14 @@ namespace sw
     /** @brief 밭 한 칸입니다. */
     struct FarmTile
     {
-        hashed_string _cropId{};    ///< 비었으면 작물 없음
+        hashed_string _cropID{};    ///< 비었으면 작물 없음
         int32         _growth{ 0 }; ///< 물 받고 지난 날 수
         uint8         _bTilled{ SW_FALSE };
         uint8         _bWatered{ SW_FALSE };  ///< 오늘 물을 받았다(비 포함)
         uint8         _bReady{ SW_FALSE };    ///< 거둘 수 있다
         uint8         _bWithered{ SW_FALSE }; ///< 계절이 지나 시들었다(거두면 치워진다)
 
-        bool hasCrop() const { return _cropId.empty() == false; }
+        bool hasCrop() const { return _cropID.empty() == false; }
     };
 } // namespace sw
 

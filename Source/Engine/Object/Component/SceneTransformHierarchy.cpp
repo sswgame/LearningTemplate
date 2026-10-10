@@ -27,39 +27,39 @@ namespace sw
             /** @brief 배치를 나눌 대상 버킷의 최대 수입니다. 잡 하나가 버킷 몇 개를 돕니다. */
             static constexpr uint32 kMaxBatchBucketCount = 64;
 
-            /** @brief 배치 버킷 하나가 맡는 componentId 연속 구간의 크기(2 의 거듭제곱 지수)입니다. 256 개씩 묶어 돌려 가며 버킷에 줍니다. */
+            /** @brief 배치 버킷 하나가 맡는 componentID 연속 구간의 크기(2 의 거듭제곱 지수)입니다. 256 개씩 묶어 돌려 가며 버킷에 줍니다. */
             static constexpr uint32 kBatchBucketRunShift = 8;
 
             /**
-             * @brief 배치 건이 갈 버킷입니다. 같은 대상(componentId)은 늘 같은 버킷이라 한 워커가 배열 순서대로 씁니다.
-             * @details componentId 를 256 개씩 묶은 **연속 구간**을 돌려 가며 버킷에 줍니다. 이웃한 컴포넌트(이웃한 칸)가 같은 버킷이라 워커끼리
+             * @brief 배치 건이 갈 버킷입니다. 같은 대상(componentID)은 늘 같은 버킷이라 한 워커가 배열 순서대로 씁니다.
+             * @details componentID 를 256 개씩 묶은 **연속 구간**을 돌려 가며 버킷에 줍니다. 이웃한 컴포넌트(이웃한 칸)가 같은 버킷이라 워커끼리
              *          칸의 캐시 라인을 나눠 쓰지 않습니다. 주의: 나머지(`id % 버킷 수`)로 나누면 이웃한 칸을 서로 다른 워커가 써(캐시 라인
              *          핑퐁) 잎 루트 8000 건이 150 → 450 us 가 된다(Release p50). 최솟값 · 최댓값으로 구간을 나누면 한 번 더 훑어야 합니다.
              */
             static uint32 batchBucketOf( const SceneTransformWrite& write, uint32 bucketCount )
             {
-                return static_cast<uint32>( ( write._handle.componentId() >> kBatchBucketRunShift ) % bucketCount );
+                return static_cast<uint32>( ( write._handle.componentID() >> kBatchBucketRunShift ) % bucketCount );
             }
 
-            /** @brief 배치의 대상(componentId)이 엄격히 늘어나면 true 입니다 — 같은 핸들이 둘일 수 없어 연속 구간으로 나눠도 안전합니다. */
+            /** @brief 배치의 대상(componentID)이 엄격히 늘어나면 true 입니다 — 같은 핸들이 둘일 수 없어 연속 구간으로 나눠도 안전합니다. */
             static bool hasStrictlyIncreasingTargets( const SceneTransformWrite* pWrite, uint32 count )
             {
                 for ( uint32 index = 1; index < count; ++index )
                 {
-                    if ( pWrite[index]._handle.componentId() <= pWrite[index - 1]._handle.componentId() )
+                    if ( pWrite[index]._handle.componentID() <= pWrite[index - 1]._handle.componentID() )
                         return false;
                 }
                 return true;
             }
 
-            /** @brief 틱 큐 건의 적용 순서입니다 — 대상(componentId), 쓴 오브젝트, 그 스레드의 순번. 같은 대상의 건이 연속하고 마지막이 이깁니다. */
+            /** @brief 틱 큐 건의 적용 순서입니다 — 대상(componentID), 쓴 오브젝트, 그 스레드의 순번. 같은 대상의 건이 연속하고 마지막이 이깁니다. */
             template <typename TOrderedWrite>
             static bool isWriteOrderedBefore( const TOrderedWrite& left, const TOrderedWrite& right )
             {
-                if ( left._targetId != right._targetId )
-                    return left._targetId < right._targetId;
-                if ( left._key._writerId != right._key._writerId )
-                    return left._key._writerId < right._key._writerId;
+                if ( left._targetID != right._targetID )
+                    return left._targetID < right._targetID;
+                if ( left._key._writerID != right._key._writerID )
+                    return left._key._writerID < right._key._writerID;
                 return left._key._sequence < right._key._sequence;
             }
 
@@ -236,7 +236,7 @@ namespace sw
         return true;
     }
 
-    bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write, uint64 writerId )
+    bool SceneTransformHierarchy::queueWriteParallel( const SceneTransformWrite& write, uint64 writerID )
     {
         const uint32 slot = engine::getParallelScratchSlot();
         if ( slot >= _writeScratchCount )
@@ -246,7 +246,7 @@ namespace sw
         vector<TickWriteKey>&        listKey  = _pWriteKeyScratch[slot];
         // 같은 오브젝트의 틱이 같은 컴포넌트에 잇따라 쓰면 한 건으로 합친다. 마지막 값이 이긴다(세터를 차례로 부른 것과 같다). 쓴 오브젝트가
         // 다르면 합치지 않는다 — 합친 건은 앞 건의 순서 키를 들고 있어, 사이에 다른 스레드가 쓴 건과의 순서가 틀어진다.
-        if ( listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerId == writerId )
+        if ( listSlot.empty() == false && listSlot.back()._handle == write._handle && listKey.back()._writerID == writerID )
         {
             SceneTransformWrite& last      = listSlot.back();
             const uint8          valueMask = write.getValueMask();
@@ -258,7 +258,7 @@ namespace sw
             return true;
         }
         listSlot.push_back( write );
-        listKey.push_back( TickWriteKey{ writerId, t_writeSequence++ } );
+        listKey.push_back( TickWriteKey{ writerID, t_writeSequence++ } );
         return true;
     }
 
@@ -459,7 +459,7 @@ namespace sw
             const vector<TickWriteKey>&        listKey   = std::as_const( _pWriteKeyScratch[slot] );
             for ( size_t index = 0; index < listWrite.size(); ++index )
             {
-                _listOrderedWrite.push_back( OrderedTickWrite{ &listWrite[index], listWrite[index]._handle.componentId(), listKey[index] } );
+                _listOrderedWrite.push_back( OrderedTickWrite{ &listWrite[index], listWrite[index]._handle.componentID(), listKey[index] } );
             }
         }
         const uint32 totalCount = static_cast<uint32>( _listOrderedWrite.size() );
@@ -479,7 +479,7 @@ namespace sw
         _listWriteGroupStart.push_back( 0 );
         for ( uint32 index = 1; index < totalCount; ++index )
         {
-            const bool bSameTarget = _listOrderedWrite[index]._targetId == _listOrderedWrite[index - 1]._targetId;
+            const bool bSameTarget = _listOrderedWrite[index]._targetID == _listOrderedWrite[index - 1]._targetID;
             if ( index - _listWriteGroupStart.back() >= groupSize && bSameTarget == false )
                 _listWriteGroupStart.push_back( index );
         }

@@ -76,7 +76,7 @@ if ( pTelemetry != nullptr )
 게임을 플레이하면 사용자 데이터 폴더(`%LOCALAPPDATA%/SWEngine/<팩>/telemetry/`)에 `telemetry_<세션>_0000.jsonl` 이 생깁니다. 자동화 테스트에서는 `-gv_telemetryFolder=<경로>` 로 폴더를 바꿉니다.
 
 ```text
-{"type":"context","schema":1,"session":"9c1f...","build":"Debug","platform":"Windows","buildId":"6B1E...1","game":"shooter3d","file":0}
+{"type":"context","schema":1,"session":"9c1f...","build":"Debug","platform":"Windows","buildID":"6B1E...1","game":"shooter3d","file":0}
 {"type":"event","event":"progression.waveReached","seq":3,"t":61.233,"sample":1,"fields":{"wave":2,"kills":14,"seconds":61.2}}
 ```
 
@@ -161,7 +161,7 @@ Breakpad, Crashpad, Sentry의 미니덤프 엔드포인트가 받는 이름입�
 미니덤프만으로는 함수 이름을 알 수 없고, 빌드할 때 만든 PDB가 있어야 합니다. 덤프의 모듈 목록에는 모듈마다 빌드 id가 들어 있고, 심볼 서버는 이 id로 PDB를 찾습니다.
 
 - **Windows.** 빌드 id는 PE CodeView `RSDS` 레코드의 GUID와 age, PDB 이름입니다. 심볼 서버(`symstore`) 배치는 `<pdb 이름>/<GUID 32자리><age 16진>/<pdb 이름>` 입니다.
-  `ModuleBuildId::find` 가 같은 키를 만들어 문맥의 `BuildId` 에 적으므로, 덤프를 열지 않고도 어느 빌드의 PDB가 필요한지 알 수 있습니다.
+  `ModuleBuildID::find` 가 같은 키를 만들어 문맥의 `BuildId` 에 적으므로, 덤프를 열지 않고도 어느 빌드의 PDB가 필요한지 알 수 있습니다.
 - **모든 구성이 PDB를 만듭니다.** Release와 Shipping도 `/DEBUG:FULL` 과 `/PDBALTPATH:%_PDB%` 로 링크합니다. 두 번째 옵션은 PDB 이름만 남겨 빌드 기계의 경로가 새지 않게 합니다.
   디버그 정보의 양은 `SW_RELEASE_DEBUG_INFO` 로 정합니다(기본 `lines` 는 함수와 줄 정보만, 그 외 `full`, `none`).
   Shipping의 PDB는 배포 폴더 밖의 `build/<프리셋>/Symbols/` 에 놓입니다. 테스트 실행 파일의 PDB는 `TestBin` 에 있습니다.

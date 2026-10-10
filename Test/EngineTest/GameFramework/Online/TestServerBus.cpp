@@ -40,7 +40,7 @@ namespace
             SW_EXPECT_EQUAL( 1, serverA.pollMessages( listMessageA ) );
             SW_EXPECT_EQUAL( 2, serverB.pollMessages( listMessageB ) );
             SW_ASSERT_EQUAL( size_t( 1 ), listMessageA.size() );
-            SW_EXPECT_EQUAL( uint64( 1 ), listMessageA[0]._originServerId ); // 자기 메시지도 온다 — 보낸 서버 id 로 거른다
+            SW_EXPECT_EQUAL( uint64( 1 ), listMessageA[0]._originServerID ); // 자기 메시지도 온다 — 보낸 서버 id 로 거른다
             SW_EXPECT_TRUE( isText( listMessageA[0], "acct-7" ) );
             SW_ASSERT_EQUAL( size_t( 2 ), listMessageB.size() );
             SW_EXPECT_TRUE( listMessageB[0]._topic == "account.revoke" );

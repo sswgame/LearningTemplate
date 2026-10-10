@@ -56,14 +56,14 @@ namespace sw
         GameObject* createGameObject( hashed_string name = hashed_string( GameObject::kDefaultName ) ) { return _store.createGameObject( name ); }
 
         /**
-         * @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
-         * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectId 로 대상을 찾으므로, 되살린 오브젝트가 같은 id 를 받아야
+         * @brief 앞서 발급한 objectID 를 그대로 써서 오브젝트를 다시 만듭니다. 되돌리기 · 플레이 세션 복원 · 핫 리로드가 씁니다.
+         * @details 핸들(`GameObjectHandle` · `ComponentHandle`)은 objectID 로 대상을 찾으므로, 되살린 오브젝트가 같은 id 를 받아야
          *          그 너머로도 핸들이 이어집니다. 그 id 로 등록된 오브젝트가 아직 있으면(삭제 대기 포함) 새 id 를 쓰고 경고를 남깁니다.
          *          옛 오브젝트의 지연 파괴가 나중에 id 로 정리하는 항목(슬롯 표 · 에디터 GUID 맵 등)이 새 오브젝트 몫까지 지우지
          *          않게 하기 위해서입니다. 발급 카운터는 그 id 뒤로 밀어 앞으로의 발급과 겹치지 않게 합니다.
-         * @return 만든 오브젝트입니다. 실제로 받은 id 는 `getObjectId()` 로 확인합니다.
+         * @return 만든 오브젝트입니다. 실제로 받은 id 는 `getObjectID()` 로 확인합니다.
          */
-        GameObject* createGameObjectWithId( hashed_string name, uint64 objectId ) { return _store.createGameObjectWithId( name, objectId ); }
+        GameObject* createGameObjectWithID( hashed_string name, uint64 objectID ) { return _store.createGameObjectWithID( name, objectID ); }
 
         /**
          * @brief 등록된 GameObject 의 이름이 바뀐 것을 이름 맵에 반영합니다.
@@ -75,7 +75,7 @@ namespace sw
         GameObject* findGameObjectByName( hashed_string name ) const { return _store.findGameObjectByName( name ); }
 
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
-        GameObject* findGameObjectById( uint64 objectId ) const { return _store.findGameObjectById( objectId ); }
+        GameObject* findGameObjectByID( uint64 objectID ) const { return _store.findGameObjectByID( objectID ); }
 
         /**
          * @brief 락 없는 id 표의 칸 수입니다. 칸은 id 의 아래 비트(`id % kObjectSlotCount`)입니다.
@@ -301,7 +301,7 @@ namespace sw
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
         Component* resolveComponent( ComponentHandle handle ) { return _store.resolveComponent( handle ); }
 
-        /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectById`). */
+        /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. 락을 잡지 않습니다(`findGameObjectByID`). */
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return _store.resolveGameObject( handle ); }
 
         /**

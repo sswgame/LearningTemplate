@@ -51,16 +51,16 @@ namespace sw
         /** @brief 읽은 메시 id · 머티리얼 참조를 자원으로 풉니다(`resolveRenderAssets`). 편집 중 되돌리기 · 프리팹 드래그로 다시 만든 메시가 그려진다. */
         void onPostLoad() override { resolveRenderAssets(); }
         /**
-         * @brief `_meshId` 를 메시로 해석합니다. `.mesh` 경로면 메시 캐시(`MeshCache::acquire`), 아니면 내장 도형입니다.
-         * @details 지금 메시가 지금 id 로 잡은 것이면 그대로 둡니다(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙).
+         * @brief `_meshID` 를 메시로 해석합니다. `.mesh` 경로면 메시 캐시(`MeshCache::acquire`), 아니면 내장 도형입니다.
+         * @details 지금 메시가 지금 id 로 잡은 것이면 그대로 둡니다(`_resolvedMeshID` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙).
          *          "메시가 있으면 그대로" 로 판정하면 id 를 바꿔도(인스펙터 · 붙여넣기 · 되돌리기) 옛 메시를 그린다. 비어 있으면 타입의
-         *          기본(`getDefaultMeshId` — 메시는 단위 큐브, 스프라이트는 사각형)입니다.
+         *          기본(`getDefaultMeshID` — 메시는 단위 큐브, 스프라이트는 사각형)입니다.
          */
         void resolveRuntimeMesh();
         /** @brief 저장되는 메시 id 를 바꾸고 곧바로 해석합니다(프리미티브 이름 또는 `.mesh` 에셋 경로). */
-        void setMeshId( string_view meshId );
+        void setMeshID( string_view meshID );
         /** @brief 저장되는 메시 id 입니다(프리미티브 이름 또는 `.mesh` 에셋 경로). 비어 있으면 타입의 기본입니다. */
-        const string& getMeshId() const { return _meshId; }
+        const string& getMeshID() const { return _meshID; }
 
         /** @brief 메시를 설정합니다. 저장되지 않는 런타임 지정이고, 메시 id 가 바뀔 때까지 유지됩니다. */
         void setMesh( shared_ptr<Mesh> mesh );
@@ -180,8 +180,8 @@ namespace sw
         void onOwnerActiveInHierarchyChanged() override;
 
     protected:
-        /** @brief `_meshId` 가 비었을 때의 메시 id 입니다. 빈 글이면 단위 큐브입니다(`MeshUtil::acquirePrimitive`). */
-        virtual string_view getDefaultMeshId() const { return {}; }
+        /** @brief `_meshID` 가 비었을 때의 메시 id 입니다. 빈 글이면 단위 큐브입니다(`MeshUtil::acquirePrimitive`). */
+        virtual string_view getDefaultMeshID() const { return {}; }
         /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 빈 것이면 씬 기본 머티리얼입니다(렌더러가 고른다). */
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
         /** @brief 스프라이트 프레임 · 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다(같은 프레임을 다시 넣는 애니메이터는 공짜). */
@@ -197,13 +197,13 @@ namespace sw
         shared_ptr<MaterialInstance> _materialInstance;
         /** @brief 저장되는 메시 id 입니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Mesh Asset", AssetPath, AssetType = "Mesh", Tooltip = "Mesh asset name or path" )
-        string _meshId;
+        string _meshID;
         /** @brief 저장되는 머티리얼 참조입니다. */
         PROPERTY( Category = "Rendering", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material asset; empty uses the scene default" )
         hashed_string _materialPath;
         hashed_string _acquiredMaterialPath;  ///< 캐시에서 잡아 둔 경로(저장하지 않습니다). 인스펙터가 `_materialPath` 를 먼저 고쳐 써도 이것으로 놓습니다
         hashed_string _requestedMaterialPath; ///< 마지막으로 해석한 요청 경로(저장하지 않습니다). 누락 머티리얼로 대신한 뒤에도 같은 요청을 다시 시도 · 경고하지 않습니다
-        hashed_string _resolvedMeshId;        ///< `_mesh` 가 어느 메시 id 의 것인지(저장하지 않습니다). 지금 id 와 다르면 다시 잡습니다
+        hashed_string _resolvedMeshID;        ///< `_mesh` 가 어느 메시 id 의 것인지(저장하지 않습니다). 지금 id 와 다르면 다시 잡습니다
         PROPERTY( Category = "Rendering", DisplayName = "Bounds Radius", Tooltip = "Bounding sphere radius", Min = 0.0, Units = m )
         float32 _boundsRadius;
         PROPERTY( Category = "Rendering", DisplayName = "Blend Mode", Tooltip = "RHI blend mode for rasterization" )

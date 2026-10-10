@@ -25,7 +25,7 @@ namespace sw
          * @brief 현재 스레드의 64비트 ID 입니다.
          * @details Linux 의 `pthread_t` 는 정수라 그대로 캐스팅합니다.
          */
-        uint64 currentThreadId64Internal()
+        uint64 currentThreadID64Internal()
         {
             return static_cast<uint64>( ::pthread_self() );
         }
@@ -36,7 +36,7 @@ namespace sw
          * @details bool 로 두면 두 스레드가 거의 동시에 죽을 때 두 번째 스레드가 "이미 보고 중" 을 보고 곧장 기본 동작으로 시그널을 다시
          *          올려 프로세스를 끝냅니다 — 첫 스레드가 리포트를 쓰는 도중에.
          */
-        atomic<uint64> s_reportingThreadId{ 0 };
+        atomic<uint64> s_reportingThreadID{ 0 };
         /** @brief 지금 보고 중인 시그널 — 시한이 지나 끝낼 때 종료 코드(128 + 시그널)로 쓴다. */
         atomic<int32> s_reportSignalNumber{ 0 };
 
@@ -59,16 +59,16 @@ namespace sw
          */
         void reportCrash( int32 signalNumber, const utf8* pReason, const void* pFaultAddress, void* pPlatformContext )
         {
-            const uint64 selfThreadId = currentThreadId64Internal();
-            uint64       expectedId   = 0;
-            if ( s_reportingThreadId.compare_exchange_strong( expectedId, selfThreadId ) == false )
+            const uint64 selfThreadID = currentThreadID64Internal();
+            uint64       expectedID   = 0;
+            if ( s_reportingThreadID.compare_exchange_strong( expectedID, selfThreadID ) == false )
             {
                 // 같은 스레드가 보고하다 또 죽었다 — 더 할 수 있는 것이 없다.
-                if ( expectedId == selfThreadId )
+                if ( expectedID == selfThreadID )
                     return;
                 // 다른 스레드가 보고 중이다. 그 스레드가 끝낼 때까지 기다린다(nanosleep 은 시그널 안에서 불러도 된다). 상한을 둔다.
                 const timespec waitStep{ 0, 10 * 1000 * 1000 };
-                for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadId.load() != 0; ++waitIndex )
+                for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadID.load() != 0; ++waitIndex )
                 {
                     ::nanosleep( &waitStep, nullptr );
                 }
@@ -92,13 +92,13 @@ namespace sw
             // 없다. 그래서 컨텍스트와 심볼 변환한 스택을 파일로 남기는 것이 여기서 할 수 있는 전부이고, 코어 덤프가 켜져
             // 있으면 세션 ID 로 그것과 짝지을 수 있다.
             writeCrashContextFile( pReason, pFaultAddress, static_cast<uint64>( ::getpid() ),
-                                   currentThreadId64Internal() );
+                                   currentThreadID64Internal() );
 
             // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp). 미니덤프는 여기서 만들 수 없으므로 목록에도 넣지 않는다.
             writeCrashReport( pReason, pFaultAddress, pPlatformContext, false );
 
             ::alarm( 0 );
-            s_reportingThreadId.store( 0 );
+            s_reportingThreadID.store( 0 );
         }
 
         /** @brief 시그널 번호를 이름으로 바꿉니다. */

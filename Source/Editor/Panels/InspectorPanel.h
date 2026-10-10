@@ -129,7 +129,7 @@ namespace sw::editor
         /** @brief 컨테이너 "더하기" 칸의 글입니다. 키는 그 칸의 ImGui id 라 컨테이너마다 따로 듭니다. */
         unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;
         /** @brief `_nameEditBuffer` 가 가리키는 오브젝트입니다(선택이 바뀌면 버린다). */
-        uint64 _nameEditObjectId;
+        uint64 _nameEditObjectID;
         /** @brief 중첩 · 컨테이너 재귀 깊이입니다. 통지는 가장 바깥에서 한 번만 합니다. */
         uint32                 _propertyDrawDepth;
         uint8                  _bComponentPresetDirty : 1;

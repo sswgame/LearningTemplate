@@ -34,10 +34,10 @@ namespace sw
     {
         string           _escrowDomain{}; ///< Escrow 만 — `[0-9a-z_]`, 16 자 이하("mail" · "auction")
         string           _escrowToken{};  ///< Escrow 만 — `[0-9a-z_.-]`, 64 자 이하
-        uint64           _accountId{ 0 }; ///< Account 만
+        uint64           _accountID{ 0 }; ///< Account 만
         LedgerHolderKind _kind{ LedgerHolderKind::Mint };
 
-        static LedgerHolder makeAccount( uint64 accountId );
+        static LedgerHolder makeAccount( uint64 accountID );
         static LedgerHolder makeEscrow( string_view domain, string_view token );
         static LedgerHolder makeMint();
         static LedgerHolder makeSink();
@@ -53,12 +53,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이동 한 다리 — @p _from 에서 @p _to 로 @p _assetId 를 @p _amount(1 이상)만큼입니다. */
+    /** @brief 이동 한 다리 — @p _from 에서 @p _to 로 @p _assetID 를 @p _amount(1 이상)만큼입니다. */
     struct LedgerPosting
     {
         LedgerHolder _from{};
         LedgerHolder _to{};
-        string       _assetId{};
+        string       _assetID{};
         int64        _amount{ 0 };
     };
 } // namespace sw
@@ -68,7 +68,7 @@ namespace sw
     /** @brief 잔액 하나입니다. 계정 잔액은 환불 회수로 음수(빚)일 수 있다. */
     struct LedgerBalance
     {
-        string _assetId{};
+        string _assetID{};
         int64  _amount{ 0 };
         uint64 _version{ 0 }; ///< 레코드 판 — 0 이면 레코드가 없다(잔액 0)
 
@@ -114,8 +114,8 @@ namespace sw
         ILedgerPolicy( const ILedgerPolicy& )            = default;
         ILedgerPolicy& operator=( const ILedgerPolicy& ) = default;
 
-        /** @brief @p assetId 의 계정 잔액 상한입니다(0 이하 = 상한 없음 — 그래도 `kMaxBalance`). 저장소 스레드에서 불린다 — 읽기만 한다. */
-        virtual int64 getBalanceCap( string_view assetId ) const = 0;
+        /** @brief @p assetID 의 계정 잔액 상한입니다(0 이하 = 상한 없음 — 그래도 `kMaxBalance`). 저장소 스레드에서 불린다 — 읽기만 한다. */
+        virtual int64 getBalanceCap( string_view assetID ) const = 0;
     };
 } // namespace sw
 
@@ -127,7 +127,7 @@ namespace sw
         static constexpr int32 kMaxPostingCount   = 16;                 ///< 한 이동의 다리 수
         static constexpr int64 kMaxAmount         = 1000000000000000ll; ///< 다리 하나 · 잔액 하나(10^15 — 다리 16 개 합이 int64 안)
         static constexpr int64 kMaxBalance        = kMaxAmount;
-        static constexpr int32 kMaxAssetIdSize    = 48;
+        static constexpr int32 kMaxAssetIDSize    = 48;
         static constexpr int32 kMaxReasonSize     = 32;
         static constexpr int32 kMaxMemoSize       = 256;
         static constexpr int32 kMaxJournalKeySize = 200;
@@ -153,7 +153,7 @@ namespace sw
         string                _memo{};   ///< 자유 글(GM 메모 · 티켓 번호), UTF-8
         const ILedgerPolicy*  _pPolicy{ nullptr };
         int64                 _timeMs{ 0 }; ///< 서버 벽시계(유닉스 밀리초)
-        uint64                _actorId{ 0 };
+        uint64                _actorID{ 0 };
         LedgerActorKind       _actorKind{ LedgerActorKind::System };
         uint8                 _bAllowDebt{ SW_FALSE };
     };
@@ -191,7 +191,7 @@ namespace sw
         string                _reason{};
         string                _memo{};
         int64                 _timeMs{ 0 };
-        uint64                _actorId{ 0 };
+        uint64                _actorID{ 0 };
         uint64                _contentHash{ 0 }; ///< 다리 · 사유 · 빚 허용의 해시 — 같은 키 다른 내용 판정
         LedgerActorKind       _actorKind{ LedgerActorKind::System };
     };
@@ -206,8 +206,8 @@ namespace sw
         static string makeFromIdempotency( string_view scope, uint64 keyHigh, uint64 keyLow );
         /** @brief 바깥 토큰(영수증 거래 id · 우편 키 · 거래 id)으로 — `<범위>/<토큰 바이트의 16 진>`. 범위가 틀리거나 토큰이 비거나 `kMaxTokenBytes` 를 넘으면 false 입니다. */
         [[nodiscard]] static bool makeFromToken( string_view scope, string_view token, string& outKey );
-        static string             makeAccountScope( uint64 accountId );    ///< `acct.<16 진 16>`
-        static string             makeAdminScope( uint64 adminAccountId ); ///< `gm.<16 진 16>`
+        static string             makeAccountScope( uint64 accountID );    ///< `acct.<16 진 16>`
+        static string             makeAdminScope( uint64 adminAccountID ); ///< `gm.<16 진 16>`
     };
 } // namespace sw
 
@@ -216,7 +216,7 @@ namespace sw
     /** @brief 원장 글자 규칙 · 보유자 직렬화 — 원장 · 우편 · 키트가 같이 씁니다. */
     struct SW_GF_API LedgerUtil
     {
-        static bool isValidAssetId( string_view assetId );       ///< `[0-9a-z_.-]`, 1..48
+        static bool isValidAssetID( string_view assetID );       ///< `[0-9a-z_.-]`, 1..48
         static bool isValidReasonCode( string_view reason );     ///< `[0-9a-z_.]`, 1..32
         static bool isValidEscrowDomain( string_view domain );   ///< `[0-9a-z_]`, 1..16
         static bool isValidEscrowToken( string_view token );     ///< `[0-9a-z_.-]`, 1..64

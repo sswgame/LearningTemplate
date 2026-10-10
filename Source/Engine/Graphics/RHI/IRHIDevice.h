@@ -148,9 +148,9 @@ namespace sw
          * @brief 렌더 스레드가 이 장치로 기록을 시작할 때 걸고(`RenderThread::start`), 멈춘 뒤 풉니다(nullptr).
          * @param pfnDrain         다른 스레드의 `waitIdle` 이 먼저 부를 함수. nullptr 이면 풉니다.
          * @param pContext         그 함수에 넘길 값(렌더 스레드 객체)
-         * @param renderThreadId   렌더 스레드. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않는다.
+         * @param renderThreadID   렌더 스레드. 이 스레드에서 부른 `waitIdle` 은 자기 자신을 기다리지 않는다.
          */
-        void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId );
+        void setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID );
 
         /**
          * @brief 자원 핸들 하나를 내립니다. 렌더 스레드가 프레임을 들고 있는 동안 다른 스레드가 부르면, 그 프레임이 끝난 자리(병렬 기록 밖)까지 미룹니다.
@@ -478,7 +478,7 @@ namespace sw
         IRenderSurface*           _pSurface;
         RenderThreadDrainFunction _pfnRenderThreadDrain;
         void*                     _pRenderThreadDrainContext;
-        std::thread::id           _renderThreadId;
+        std::thread::id           _renderThreadID;
         uint32                    _backBufferWidth;
         uint32                    _backBufferHeight;
         bool                      _bPreferredVSync;

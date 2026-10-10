@@ -87,7 +87,7 @@ namespace sw
 {
     /**
      * @class RigAssetCache
-     * @brief 후처리 리그(`.rig.json`)를 경로로 나눠 줍니다. 다시 읽으면 제자리로 바꾸고 내용 번호(`RigAsset::getContentId`)가 바뀌어, 쓰는
+     * @brief 후처리 리그(`.rig.json`)를 경로로 나눠 줍니다. 다시 읽으면 제자리로 바꾸고 내용 번호(`RigAsset::getContentID`)가 바뀌어, 쓰는
      *        `PoseModifierComponent` 가 다음 프레임에 다시 묶습니다.
      */
     class SW_API RigAssetCache final : public IAssetCache

@@ -25,7 +25,7 @@ namespace sw
     struct SocialMethod
     {
         static constexpr uint16 kRequestFriend       = OnlineMethodRange::kSocial + 0x01; ///< 상대 id
-        static constexpr uint16 kRequestFriendByName = OnlineMethodRange::kSocial + 0x02; ///< 상대 표시 이름(정식 계정) — 응답 `_otherId`
+        static constexpr uint16 kRequestFriendByName = OnlineMethodRange::kSocial + 0x02; ///< 상대 표시 이름(정식 계정) — 응답 `_otherID`
         static constexpr uint16 kRespondFriend       = OnlineMethodRange::kSocial + 0x03; ///< 신청한 이 · 수락 여부
         static constexpr uint16 kRemoveFriend        = OnlineMethodRange::kSocial + 0x04; ///< 친구 · 보낸 신청 · 받은 신청 지우기
         static constexpr uint16 kBlock               = OnlineMethodRange::kSocial + 0x05;
@@ -58,8 +58,8 @@ namespace sw
     struct SocialRequest
     {
         string               _text{};                       ///< 이름(kRequestFriendByName · kGuildCreate) · 활동 글(kSetPresence) · 공지(kGuildSetNotice)
-        AccountId            _otherId{ kInvalidAccountId }; ///< 상대 · 길드 대상
-        uint64               _guildId{ 0 };                 ///< kGuildAccept
+        AccountID            _otherID{ kInvalidAccountID }; ///< 상대 · 길드 대상
+        uint64               _guildID{ 0 };                 ///< kGuildAccept
         SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
         GuildRole            _role{ GuildRole::Member }; ///< kGuildSetRole
         uint8                _bAccept{ SW_FALSE };       ///< kRespondFriend
@@ -74,7 +74,7 @@ namespace sw
         vector<SocialLink>     _listLink{};                   ///< kListLinks
         vector<SocialPresence> _listPresence{};               ///< kFriendPresence
         GuildInfo              _guild{};                      ///< kGuildCreate(id · 이름) · kGuildGet
-        AccountId              _otherId{ kInvalidAccountId }; ///< 관계 바꾸기 — 상대(이름으로 찾았으면 찾은 계정)
+        AccountID              _otherID{ kInvalidAccountID }; ///< 관계 바꾸기 — 상대(이름으로 찾았으면 찾은 계정)
         SocialResult           _result{ SocialResult::Ok };
     };
 } // namespace sw

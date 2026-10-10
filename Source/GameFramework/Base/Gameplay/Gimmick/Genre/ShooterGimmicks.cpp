@@ -111,16 +111,16 @@ namespace sw
         if ( pManager == nullptr || _radius <= 0.0f )
             return;
         // 반경 안의 것에 거리 감쇠 피해 — 다른 드럼통은 자기 걸음에 터진다(사슬). 파괴 오브젝트는 경계가 반경에 닿으면 자리 있는 폭발로 깬다.
-        const uint64      selfId         = owner.getObjectId();
+        const uint64      selfID         = owner.getObjectID();
         const float32     radius         = _radius;
         const float32     damage         = _damage;
         const float32     fractureStrain = _fractureStrain;
         const float32     blastImpulse   = _blastImpulse;
         const GameObject* pSource        = &owner;
-        pManager->forEachGameObject( [selfId, radius, damage, fractureStrain, blastImpulse, center, pSource]( GameObject* pObject )
+        pManager->forEachGameObject( [selfID, radius, damage, fractureStrain, blastImpulse, center, pSource]( GameObject* pObject )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr || pObject->getObjectId() == selfId )
+            if ( pOther == nullptr || pObject->getObjectID() == selfID )
                 return;
             FractureComponentBase* pFracture = ShooterGimmicksInternal::findFracture( *pObject );
             if ( pFracture != nullptr && pFracture->isReachedBy( center, radius ) )
@@ -171,7 +171,7 @@ namespace sw
         InteractionViewer viewer;
         viewer._position = origin;
         viewer._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pScene->getWorldMatrix() );
-        viewer._objectId = pOwner->getObjectId();
+        viewer._objectID = pOwner->getObjectID();
         vector<InteractionCandidate> listCandidate;
         const TagContainer&          targetTags = _targetTags;
         const float32                range      = _range;
@@ -183,14 +183,14 @@ namespace sw
                 return;
             InteractionCandidate candidate;
             candidate._position    = pOther->getWorldPosition();
-            candidate._objectId    = pObject->getObjectId();
+            candidate._objectID    = pObject->getObjectID();
             candidate._maxDistance = range;
             candidate._maxAngle    = viewAngle;
             listCandidate.push_back( candidate );
         } );
         const WorldLineOfSightQuery lineOfSight{ *pManager };
         const int32                 pick = InteractionSelector::selectBest( viewer, listCandidate, &lineOfSight );
-        _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectId ) : GameObjectHandle{};
+        _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectID ) : GameObjectHandle{};
         if ( pick < 0 )
             return;
 

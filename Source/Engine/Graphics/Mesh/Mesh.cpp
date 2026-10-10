@@ -35,7 +35,7 @@ namespace sw
         instance->setSkin( source._listSkinVertex, source._skinBoneCount );
         instance->setMorphTargets( source._listMorphTarget );
         // 정점 · 스킨이 원본과 같다 — 모프 풀이 원본 데이터를 한 번만 올리게 번호를 나눈다(setVertices · setSkin 이 지운 뒤에 적는다).
-        instance->_sharedSkinDataId = source.getSkinDataId();
+        instance->_sharedSkinDataID = source.getSkinDataID();
         return instance;
     }
 
@@ -43,8 +43,8 @@ namespace sw
     {
         releaseVertexBuffer();
         _listVertex       = listVertex;
-        _contentId        = allocateContentId();
-        _sharedSkinDataId = 0;
+        _contentID        = allocateContentID();
+        _sharedSkinDataID = 0;
         refreshBoundingRadius();
     }
 
@@ -52,8 +52,8 @@ namespace sw
     {
         releaseVertexBuffer();
         _listVertex       = std::move( listVertex );
-        _contentId        = allocateContentId();
-        _sharedSkinDataId = 0;
+        _contentID        = allocateContentID();
+        _sharedSkinDataID = 0;
         refreshBoundingRadius();
     }
 
@@ -62,8 +62,8 @@ namespace sw
         const bool bMatches = boneCount > 0 && listSkinVertex.size() == _listVertex.size();
         _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
         _skinBoneCount      = bMatches ? boneCount : 0u;
-        _contentId          = allocateContentId();
-        _sharedSkinDataId   = 0;
+        _contentID          = allocateContentID();
+        _sharedSkinDataID   = 0;
     }
 
     void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )
@@ -77,8 +77,8 @@ namespace sw
                                      target._listDelta.end() );
         }
         _listMorphTarget  = std::move( listTarget );
-        _contentId        = allocateContentId();
-        _sharedSkinDataId = 0;
+        _contentID        = allocateContentID();
+        _sharedSkinDataID = 0;
     }
 
     int32 Mesh::findMorphTargetIndex( const hashed_string& name ) const
@@ -94,7 +94,7 @@ namespace sw
     void Mesh::setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation )
     {
         _vertexAnimation = std::move( animation );
-        _contentId       = allocateContentId();
+        _contentID       = allocateContentID();
     }
 
     void Mesh::refreshBoundingRadius()
@@ -114,10 +114,10 @@ namespace sw
         _localBoundsMax = _listVertex.empty() ? float3{} : boundsMax;
     }
 
-    uint64 Mesh::allocateContentId()
+    uint64 Mesh::allocateContentID()
     {
-        static atomic<uint64> s_nextContentId{ 1 };
-        return s_nextContentId.fetch_add( 1u, std::memory_order_relaxed );
+        static atomic<uint64> s_nextContentID{ 1 };
+        return s_nextContentID.fetch_add( 1u, std::memory_order_relaxed );
     }
 
     bool Mesh::initRHI( IRHIDevice* pDevice )

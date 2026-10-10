@@ -38,14 +38,14 @@ namespace sw
             static constexpr uint32 kLightHashMemoryKiB    = 256;     ///< 시험용 가벼운 Argon2id
             static constexpr uint32 kLightHashIterations   = 1;
             static constexpr int32  kMatchTeamCount        = 2;
-            static constexpr uint64 kGameServerId          = 0x100;
+            static constexpr uint64 kGameServerID          = 0x100;
             static constexpr uint16 kGameServerPort        = 7777;
             static constexpr uint8  kDevTicketKeyByte      = 0x5A; ///< 개발용 표 주 키(모든 바이트 같은 값) — 이 조립 밖으로 나가지 않는다
 
-            static MatchModeDefinition makeMode( string_view modeId, int32 teamSize )
+            static MatchModeDefinition makeMode( string_view modeID, int32 teamSize )
             {
                 MatchModeDefinition mode;
-                mode._modeId    = string( modeId );
+                mode._modeID    = string( modeID );
                 mode._teamCount = kMatchTeamCount;
                 mode._teamSize  = teamSize;
                 return mode;
@@ -85,13 +85,13 @@ namespace sw
         ServerRegistration      _gameServer;
         OnlineServiceHost       _host;
 
-        explicit Parts( uint64 serverId )
+        explicit Parts( uint64 serverID )
             : _database{}
             , _cacheDatabase{}
             , _busHub{}
             , _store{ &_database }
             , _cache{ &_cacheDatabase }
-            , _bus{ &_busHub, serverId }
+            , _bus{ &_busHub, serverID }
             , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
@@ -130,7 +130,7 @@ namespace sw
     {
         using Internal = LoadBotLocalServerInternal;
         SW_ASSERT( _bInitialized == SW_FALSE );
-        _parts        = make_unique<Parts>( settings._serverId );
+        _parts        = make_unique<Parts>( settings._serverID );
         Parts& parts  = *_parts;
         _bInitialized = SW_TRUE; // 실패해도 `shutdown` 이 올린 것까지 내린다
 
@@ -186,7 +186,7 @@ namespace sw
         chatDependencies._pBus       = &parts._bus;
         chatDependencies._pPresence  = pPresence;
         chatDependencies._pDirectory = &parts._loginService;
-        chatDependencies._serverId   = settings._serverId;
+        chatDependencies._serverID   = settings._serverID;
         if ( parts._chatService.initialize( chatDependencies, ChatSettings{} ) == false )
         {
             outError = "load bot local server could not start the chat service";
@@ -206,27 +206,27 @@ namespace sw
         leaderboardDependencies._pStore  = &parts._store;
         leaderboardDependencies._pRouter = pRouter;
         parts._leaderboardService.initialize( leaderboardDependencies );
-        vector<string> listBoardId = settings._listBoardId;
-        if ( listBoardId.empty() )
-            listBoardId.push_back( "kills" );
-        for ( const string& boardId : listBoardId )
+        vector<string> listBoardID = settings._listBoardID;
+        if ( listBoardID.empty() )
+            listBoardID.push_back( "kills" );
+        for ( const string& boardID : listBoardID )
         {
             LeaderboardDefinition board;
-            board._boardId = boardId;
+            board._boardID = boardID;
             if ( parts._leaderboardService.registerBoard( board ) == false )
             {
-                outError = "load bot local server rejected leaderboard '" + boardId + "'";
+                outError = "load bot local server rejected leaderboard '" + boardID + "'";
                 return false;
             }
         }
         parts._leaderboardServer.initialize( &parts._leaderboardService, &parts._loginService, pPresence );
 
-        parts._partyLobby.initialize( pRouter, settings._serverId );
+        parts._partyLobby.initialize( pRouter, settings._serverID );
         MatchQueueDependencies queueDependencies;
         queueDependencies._pRouter     = pRouter;
         queueDependencies._pBus        = &parts._bus;
         queueDependencies._pPartyLobby = &parts._partyLobby;
-        queueDependencies._serverId    = settings._serverId;
+        queueDependencies._serverID    = settings._serverID;
         parts._matchQueue.initialize( queueDependencies, vector<MatchModeDefinition>{ Internal::makeMode( "solo", 1 ), Internal::makeMode( "duo", 2 ) } );
         parts._matchmakingServer.initialize( &parts._partyLobby, &parts._matchQueue, nullptr, pPresence );
 
@@ -237,7 +237,7 @@ namespace sw
         parts._liveOpsServer.initialize( &parts._liveOpsService );
 
         ServerDescriptor gameServer;
-        gameServer._serverId = Internal::kGameServerId;
+        gameServer._serverID = Internal::kGameServerID;
         gameServer._kind     = "game";
         gameServer._region   = settings._region;
         gameServer._address  = "127.0.0.1";

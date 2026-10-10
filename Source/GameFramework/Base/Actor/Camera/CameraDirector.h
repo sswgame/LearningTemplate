@@ -51,7 +51,7 @@ namespace sw
         /** @brief 시간을 흘리고 이번 프레임의 포즈를 돌려줍니다. 켠 프리셋이 없으면 지난 포즈(처음엔 기본값) 그대로입니다. */
         const CameraPose& step( float32 deltaTime, const CameraTarget& target );
 
-        const hashed_string&   getActivePresetId() const { return _activeDef._id; }
+        const hashed_string&   getActivePresetID() const { return _activeDef._id; }
         const CameraPresetDef& getActivePreset() const { return _activeDef; }
         bool                   hasActivePreset() const { return _bHasActive == SW_TRUE; }
         bool                   isBlending() const { return _blender.isBlending(); }

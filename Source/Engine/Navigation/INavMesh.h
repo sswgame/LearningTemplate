@@ -76,24 +76,24 @@ namespace sw
     public:
         virtual ~INavCrowd() = default;
 
-        /** @brief 에이전트를 더합니다. 자리는 가장 가까운 내비메시 위로 붙습니다. 자리가 다 찼으면 `kInvalidAgentId` 입니다. */
-        virtual NavCrowdAgentId addAgent( const float3& position, const NavCrowdAgentParams& params ) = 0;
+        /** @brief 에이전트를 더합니다. 자리는 가장 가까운 내비메시 위로 붙습니다. 자리가 다 찼으면 `kInvalidAgentID` 입니다. */
+        virtual NavCrowdAgentID addAgent( const float3& position, const NavCrowdAgentParams& params ) = 0;
         /** @brief 에이전트를 뺍니다. */
-        virtual void removeAgent( NavCrowdAgentId agentId ) = 0;
+        virtual void removeAgent( NavCrowdAgentID agentID ) = 0;
         /** @brief 몸 · 움직임 값을 바꿉니다. */
-        virtual void updateAgentParams( NavCrowdAgentId agentId, const NavCrowdAgentParams& params ) = 0;
+        virtual void updateAgentParams( NavCrowdAgentID agentID, const NavCrowdAgentParams& params ) = 0;
         /** @brief 목적지를 겁니다. 목적지를 내비메시에서 찾지 못하면 false 이고 상태가 `Failed` 입니다. */
-        virtual bool requestMoveTarget( NavCrowdAgentId agentId, const float3& target ) = 0;
+        virtual bool requestMoveTarget( NavCrowdAgentID agentID, const float3& target ) = 0;
         /** @brief 목적지를 지우고 멈춥니다. */
-        virtual void resetMoveTarget( NavCrowdAgentId agentId ) = 0;
+        virtual void resetMoveTarget( NavCrowdAgentID agentID ) = 0;
         /** @brief 순간이동 — 경로를 버리고 새 자리에서 다시 시작합니다(목적지는 다시 건다). */
-        virtual void teleportAgent( NavCrowdAgentId agentId, const float3& position ) = 0;
+        virtual void teleportAgent( NavCrowdAgentID agentID, const float3& position ) = 0;
         /** @brief 바깥이 옮긴 자리를 알립니다(경로는 지킨다). 다음 `update` 가 그 자리에서 이어 갑니다. */
-        virtual void syncAgentPosition( NavCrowdAgentId agentId, const float3& position ) = 0;
+        virtual void syncAgentPosition( NavCrowdAgentID agentID, const float3& position ) = 0;
         /** @brief 군중을 @p deltaTime 만큼 진행합니다. */
         virtual void update( float32 deltaTime ) = 0;
         /** @brief 에이전트의 상태입니다. 없는 번호면 false 입니다. */
-        [[nodiscard]] virtual bool findAgentState( NavCrowdAgentId agentId, NavCrowdAgentState& outState ) const = 0;
+        [[nodiscard]] virtual bool findAgentState( NavCrowdAgentID agentID, NavCrowdAgentState& outState ) const = 0;
         /** @brief 군중의 질의 거름(영역 비용 · 막을 영역)을 바꿉니다. 모든 에이전트가 같이 씁니다. */
         virtual void setQueryFilter( const NavQueryFilter& filter ) = 0;
         /** @brief 쓰는 중인 에이전트 수입니다. */

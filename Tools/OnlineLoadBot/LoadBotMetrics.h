@@ -43,7 +43,7 @@ namespace sw
         void recordPush( uint16 pushKind );
         void recordConnection( bool bOpened );
         void recordDisconnect();
-        void recordMatch( uint64 matchId );
+        void recordMatch( uint64 matchID );
 
         void   summarize( vector<LoadBotActionSummary>& outListSummary ) const;
         string formatTable( int64 elapsedMs ) const;
@@ -67,7 +67,7 @@ namespace sw
     private:
         vector<vector<int64>> _listSampleByAction; ///< 동작 번호 → 지연 표본
         vector<int64>         _listErrorCountByAction;
-        vector<uint64>        _listMatchId;
+        vector<uint64>        _listMatchID;
         map<string, int64>    _mapErrorKeyToCount;
         map<uint16, int64>    _mapPushKindToCount;
         int64                 _openedCount;

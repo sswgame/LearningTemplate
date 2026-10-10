@@ -107,7 +107,7 @@ namespace sw
 
         unique_ptr<IFileWatcher>      _fileWatcher;
         vector<WatchEntry>            _listWatch;
-        uint64                        _nextWatchId{ 1 };
+        uint64                        _nextWatchID{ 1 };
         unordered_map<string, uint64> _mapPollMtime;
         uint64                        _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
         bool                          _bUseMtimePoll{ false };

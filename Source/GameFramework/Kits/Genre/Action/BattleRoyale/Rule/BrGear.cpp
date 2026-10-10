@@ -33,7 +33,7 @@ namespace sw
         : _pCatalog{ nullptr }
         , _helmet{}
         , _vest{}
-        , _backpackId{}
+        , _backpackID{}
     {
     }
 
@@ -42,12 +42,12 @@ namespace sw
         _pCatalog   = pCatalog;
         _helmet     = BrArmorSlot{};
         _vest       = BrArmorSlot{};
-        _backpackId = hashed_string{};
+        _backpackID = hashed_string{};
     }
 
-    bool BrLoadout::tryEquipArmor( const hashed_string& itemId, float32 durability )
+    bool BrLoadout::tryEquipArmor( const hashed_string& itemID, float32 durability )
     {
-        const BrArmorDef* pDef = _pCatalog != nullptr ? _pCatalog->findArmor( itemId ) : nullptr;
+        const BrArmorDef* pDef = _pCatalog != nullptr ? _pCatalog->findArmor( itemID ) : nullptr;
         if ( pDef == nullptr )
             return false;
         BrArmorSlot& slot = pDef->_slot == BrGearInternal::getHelmetName() ? _helmet : _vest;
@@ -56,14 +56,14 @@ namespace sw
         return true;
     }
 
-    bool BrLoadout::tryEquipBackpack( const hashed_string& itemId, Inventory& inoutInventory )
+    bool BrLoadout::tryEquipBackpack( const hashed_string& itemID, Inventory& inoutInventory )
     {
-        if ( itemId.empty() == false && ( _pCatalog == nullptr || _pCatalog->findBackpack( itemId ) == nullptr ) )
+        if ( itemID.empty() == false && ( _pCatalog == nullptr || _pCatalog->findBackpack( itemID ) == nullptr ) )
             return false;
-        const float32 limit = computeCarryLimit( itemId );
+        const float32 limit = computeCarryLimit( itemID );
         if ( inoutInventory.computeWeight() > limit )
             return false;
-        _backpackId = itemId;
+        _backpackID = itemID;
         inoutInventory.setMaxWeight( limit );
         return true;
     }
@@ -91,14 +91,14 @@ namespace sw
         const WeaponDef& def = inoutWeapon.getDef();
         if ( inoutWeapon.isReloading() || inoutWeapon.getMagazineAmmo() >= def._magazineSize )
             return false;
-        if ( def._ammoId.empty() == false )
+        if ( def._ammoID.empty() == false )
         {
             const int32 needed  = def._magazineSize - inoutWeapon.getMagazineAmmo() - inoutWeapon.getReserveAmmo();
             const int32 room    = def._maxReserveAmmo - inoutWeapon.getReserveAmmo();
-            const int32 takeNow = MathUtil::min( MathUtil::min( needed, room ), inoutInventory.getItemCount( def._ammoId ) );
+            const int32 takeNow = MathUtil::min( MathUtil::min( needed, room ), inoutInventory.getItemCount( def._ammoID ) );
             if ( takeNow > 0 )
             {
-                if ( inoutInventory.removeItem( def._ammoId, takeNow ) == false )
+                if ( inoutInventory.removeItem( def._ammoID, takeNow ) == false )
                     return false;
                 inoutWeapon.addReserveAmmo( takeNow );
             }
@@ -106,13 +106,13 @@ namespace sw
         return inoutWeapon.startReload();
     }
 
-    float32 BrLoadout::computeCarryLimit() const { return computeCarryLimit( _backpackId ); }
+    float32 BrLoadout::computeCarryLimit() const { return computeCarryLimit( _backpackID ); }
 
-    float32 BrLoadout::computeCarryLimit( const hashed_string& backpackId ) const
+    float32 BrLoadout::computeCarryLimit( const hashed_string& backpackID ) const
     {
         if ( _pCatalog == nullptr )
             return 0.0f;
-        const BrBackpackDef* pBackpack = backpackId.empty() ? nullptr : _pCatalog->findBackpack( backpackId );
+        const BrBackpackDef* pBackpack = backpackID.empty() ? nullptr : _pCatalog->findBackpack( backpackID );
         return _pCatalog->getPlayerSettings()._baseCarryWeight + ( pBackpack != nullptr ? pBackpack->_capacity : 0.0f );
     }
 
@@ -123,7 +123,7 @@ namespace sw
             StateArchiveUtil::writeName( outArchive, pSlot->_pDef != nullptr ? pSlot->_pDef->_id : hashed_string{} );
             outArchive << pSlot->_durability;
         }
-        StateArchiveUtil::writeName( outArchive, _backpackId );
+        StateArchiveUtil::writeName( outArchive, _backpackID );
     }
 
     bool BrLoadout::readState( Archive& archive )
@@ -135,32 +135,32 @@ namespace sw
         for ( int32 slotIndex = 0; slotIndex < 2; ++slotIndex )
         {
             BrArmorSlot&  slot = arrSlot[slotIndex];
-            hashed_string armorId;
-            if ( StateArchiveUtil::readName( archive, armorId ) == false )
+            hashed_string armorID;
+            if ( StateArchiveUtil::readName( archive, armorID ) == false )
                 return false;
             archive >> slot._durability;
             if ( archive.isError() )
                 return false;
-            if ( armorId.empty() )
+            if ( armorID.empty() )
             {
                 slot = BrArmorSlot{};
                 continue;
             }
-            slot._pDef               = _pCatalog->findArmor( armorId );
+            slot._pDef               = _pCatalog->findArmor( armorID );
             const bool bHelmetSlot   = slotIndex == 0;
             const bool bSlotMatches  = slot._pDef != nullptr && ( slot._pDef->_slot == BrGearInternal::getHelmetName() ) == bHelmetSlot;
             const bool bDurableValid = 0.0f < slot._durability && slot._durability <= ( slot._pDef != nullptr ? slot._pDef->_durability : 0.0f );
             if ( bSlotMatches == false || bDurableValid == false )
                 return false;
         }
-        hashed_string backpackId;
-        if ( StateArchiveUtil::readName( archive, backpackId ) == false )
+        hashed_string backpackID;
+        if ( StateArchiveUtil::readName( archive, backpackID ) == false )
             return false;
-        if ( backpackId.empty() == false && _pCatalog->findBackpack( backpackId ) == nullptr )
+        if ( backpackID.empty() == false && _pCatalog->findBackpack( backpackID ) == nullptr )
             return false;
         _helmet     = arrSlot[0];
         _vest       = arrSlot[1];
-        _backpackId = backpackId;
+        _backpackID = backpackID;
         return true;
     }
 } // namespace sw

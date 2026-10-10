@@ -170,33 +170,33 @@ namespace sw
         return &_listNode.front();
     }
 
-    const DialogueAssetNode* DialogueGraphAsset::findNode( int32 nodeId ) const
+    const DialogueAssetNode* DialogueGraphAsset::findNode( int32 nodeID ) const
     {
         for ( const DialogueAssetNode& node : _listNode )
         {
-            if ( node._id == nodeId )
+            if ( node._id == nodeID )
                 return &node;
         }
         return nullptr;
     }
 
-    int32 DialogueGraphAsset::encodePin( int32 nodeId, int32 pinOffset )
+    int32 DialogueGraphAsset::encodePin( int32 nodeID, int32 pinOffset )
     {
         // 오프셋이 자릿수를 넘으면 노드 id 를 오염시킨다. 링크가 **다른 노드**를 가리키게 된다.
         // 조용히 그런 값을 만들지 않고 0(없는 핀)을 반환한다.
-        if ( nodeId <= 0 || pinOffset <= 0 || pinOffset >= kPinScale )
+        if ( nodeID <= 0 || pinOffset <= 0 || pinOffset >= kPinScale )
             return 0;
-        return nodeId * kPinScale + pinOffset;
+        return nodeID * kPinScale + pinOffset;
     }
 
-    int32 DialogueGraphAsset::encodeChoicePin( int32 nodeId, int32 choiceIndex )
+    int32 DialogueGraphAsset::encodeChoicePin( int32 nodeID, int32 choiceIndex )
     {
         if ( choiceIndex < 0 || choiceIndex >= getMaxChoiceCount() )
             return 0;
-        return encodePin( nodeId, kPinOffsetChoiceBase + choiceIndex );
+        return encodePin( nodeID, kPinOffsetChoiceBase + choiceIndex );
     }
 
-    int32 DialogueGraphAsset::decodePinNodeId( int32 pin )
+    int32 DialogueGraphAsset::decodePinNodeID( int32 pin )
     {
         if ( pin < kPinScale )
             return 0; // 노드 id 는 1 부터라 핀 값은 kPinScale 이상이다
@@ -210,38 +210,38 @@ namespace sw
         return pin % kPinScale;
     }
 
-    int32 DialogueGraphAsset::findLinkedNodeId( int32 fromNodeId, int32 pinOffset ) const
+    int32 DialogueGraphAsset::findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const
     {
         for ( const DialogueAssetLink& link : _listLink )
         {
-            if ( decodePinNodeId( link._fromPin ) != fromNodeId )
+            if ( decodePinNodeID( link._fromPin ) != fromNodeID )
                 continue;
             if ( decodePinOffset( link._fromPin ) != pinOffset )
                 continue;
-            return decodePinNodeId( link._toPin );
+            return decodePinNodeID( link._toPin );
         }
         return 0;
     }
 
-    int32 DialogueGraphAsset::findDefaultNextNodeId( int32 fromNodeId ) const
+    int32 DialogueGraphAsset::findDefaultNextNodeID( int32 fromNodeID ) const
     {
-        return findLinkedNodeId( fromNodeId, kPinOffsetOut );
+        return findLinkedNodeID( fromNodeID, kPinOffsetOut );
     }
 
-    int32 DialogueGraphAsset::findChoiceNextNodeId( int32 fromNodeId, int32 choiceIndex ) const
+    int32 DialogueGraphAsset::findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const
     {
         if ( 0 <= choiceIndex && choiceIndex < getMaxChoiceCount() )
         {
-            const int32 nextId = findLinkedNodeId( fromNodeId, kPinOffsetChoiceBase + choiceIndex );
-            if ( nextId > 0 )
-                return nextId;
+            const int32 nextID = findLinkedNodeID( fromNodeID, kPinOffsetChoiceBase + choiceIndex );
+            if ( nextID > 0 )
+                return nextID;
         }
-        return findDefaultNextNodeId( fromNodeId );
+        return findDefaultNextNodeID( fromNodeID );
     }
 
-    int32 DialogueGraphAsset::findBranchNextNodeId( int32 fromNodeId, bool bTrue ) const
+    int32 DialogueGraphAsset::findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const
     {
-        return findLinkedNodeId( fromNodeId, bTrue ? kPinOffsetTrue : kPinOffsetFalse );
+        return findLinkedNodeID( fromNodeID, bTrue ? kPinOffsetTrue : kPinOffsetFalse );
     }
 
     const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )

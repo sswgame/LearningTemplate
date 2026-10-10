@@ -21,7 +21,7 @@ namespace sw
     /** @brief 가격 다리 하나 — 화폐(가상이면 재원 순서로) · 양입니다. */
     struct OfferPrice
     {
-        string _currencyId{};
+        string _currencyID{};
         int64  _amount{ 0 };
     };
 } // namespace sw
@@ -31,7 +31,7 @@ namespace sw
     /** @brief 지급 다리 하나 — 자산 · 양입니다. */
     struct OfferGrant
     {
-        string _assetId{};
+        string _assetID{};
         int64  _amount{ 0 };
     };
 } // namespace sw
@@ -42,7 +42,7 @@ namespace sw
     struct OfferProduct
     {
         string _storeName{};
-        string _productId{};
+        string _productID{};
     };
 } // namespace sw
 
@@ -77,7 +77,7 @@ namespace sw
         [[nodiscard]] bool addOffer( const OfferDef& def );
 
         const OfferDef*         findOffer( string_view id ) const;
-        const OfferDef*         findOfferByProduct( string_view storeName, string_view productId ) const;
+        const OfferDef*         findOfferByProduct( string_view storeName, string_view productID ) const;
         const vector<OfferDef>& getOffers() const { return _listOffer; }
 
     private:

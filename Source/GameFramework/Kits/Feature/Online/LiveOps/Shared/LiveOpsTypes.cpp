@@ -26,11 +26,11 @@ namespace sw
         return "Unknown";
     }
 
-    bool PushLimit::isValidProviderId( string_view providerId )
+    bool PushLimit::isValidProviderID( string_view providerID )
     {
-        if ( providerId.empty() || providerId.size() > static_cast<size_t>( kMaxProviderIdSize ) )
+        if ( providerID.empty() || providerID.size() > static_cast<size_t>( kMaxProviderIDSize ) )
             return false;
-        for ( const utf8 ch : providerId )
+        for ( const utf8 ch : providerID )
         {
             const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
             if ( bAllowed == false )

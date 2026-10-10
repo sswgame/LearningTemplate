@@ -805,7 +805,7 @@ namespace sw
     bool Archive::readVarUint( uint32& outValue )
     {
         // 범위 밖을 조용히 자르지 않는다. 자르면 망가진 아카이브가 **거부되는 대신 엉뚱하게
-        // 읽힌다.** readPooledString 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
+        // 읽힌다.** readPooledString 의 `poolID >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
         // 잘린 뒤라 통과해 버린다. 되감을 오프셋이 있으므로 읽기 전 자리를 기억해 둔다.
         const uint64 startOffset = _offset;
         uint64       val64       = 0;
@@ -854,19 +854,19 @@ namespace sw
 
     void Archive::writePooledString( string_view str )
     {
-        const uint32 poolId = _stringPool.internString( str );
-        writeVarUint( static_cast<uint64>( poolId ) );
+        const uint32 poolID = _stringPool.internString( str );
+        writeVarUint( static_cast<uint64>( poolID ) );
     }
 
     bool Archive::readPooledString( string& outStr )
     {
-        uint64 poolId = 0;
-        if ( readVarUint( poolId ) == false || poolId >= _stringPool.getCount() )
+        uint64 poolID = 0;
+        if ( readVarUint( poolID ) == false || poolID >= _stringPool.getCount() )
         {
             _bError = SW_TRUE;
             return false;
         }
-        const string_view sv = _stringPool.getString( static_cast<uint32>( poolId ) );
+        const string_view sv = _stringPool.getString( static_cast<uint32>( poolID ) );
         outStr.assign( sv.data(), sv.size() );
         return true;
     }

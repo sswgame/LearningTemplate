@@ -52,15 +52,15 @@ namespace sw
         if ( pManager == nullptr || pScene == nullptr || ( _bOpen && _bStaysOpen ) || _requiredTags.getTagCount() == 0 )
             return;
         const float3        center     = pScene->getWorldPosition();
-        const uint64        selfId     = pOwner->getObjectId();
+        const uint64        selfID     = pOwner->getObjectID();
         const TagContainer& required   = _requiredTags;
         const float32       radius     = _openRadius;
         const bool          bPlanar    = _bPlanar;
         bool                bQualified = false;
-        pManager->forEachGameObject( [&bQualified, &required, center, selfId, radius, bPlanar]( GameObject* pObject )
+        pManager->forEachGameObject( [&bQualified, &required, center, selfID, radius, bPlanar]( GameObject* pObject )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( bQualified || pOther == nullptr || pObject->getObjectId() == selfId || pObject->getTags().hasAllTags( required ) == false )
+            if ( bQualified || pOther == nullptr || pObject->getObjectID() == selfID || pObject->getTags().hasAllTags( required ) == false )
                 return;
             float3 offset = pOther->getWorldPosition() - center;
             if ( bPlanar )

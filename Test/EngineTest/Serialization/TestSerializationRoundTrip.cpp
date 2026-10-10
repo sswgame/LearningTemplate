@@ -40,34 +40,34 @@ namespace
             sw::vector<sw::GameObject*>           _listObject;
         };
 
-        static bool isScene( sw::string_view resourceId ) { return sw::StringUtil::endsWith( resourceId, ".scene.xml", true ); }
-        static bool isPrefab( sw::string_view resourceId )
+        static bool isScene( sw::string_view resourceID ) { return sw::StringUtil::endsWith( resourceID, ".scene.xml", true ); }
+        static bool isPrefab( sw::string_view resourceID )
         {
-            return sw::StringUtil::endsWith( resourceId, ".prefab.xml", true ) || sw::StringUtil::endsWith( resourceId, ".prefab.json", true );
+            return sw::StringUtil::endsWith( resourceID, ".prefab.xml", true ) || sw::StringUtil::endsWith( resourceID, ".prefab.json", true );
         }
 
         /** @brief Resource/ 의 씬 · 프리팹 리소스 id 입니다(같은 트리면 실행마다 같은 순서). */
-        static sw::vector<sw::string> collectSceneAndPrefabIds()
+        static sw::vector<sw::string> collectSceneAndPrefabIDs()
         {
             sw::vector<sw::string> listFilePath;
             (void)sw::FileUtil::collectFiles( sw::ResourceUtil::getRootFolderPath(), "", listFilePath, true ); // 실패하면 빈 목록 — 부르는 쪽이 개수로 잡는다
-            sw::vector<sw::string> listResourceId;
+            sw::vector<sw::string> listResourceID;
             for ( const sw::string& filePath : listFilePath )
             {
-                const sw::string resourceId = sw::ResourceUtil::toResourceId( filePath );
-                if ( isScene( resourceId ) || isPrefab( resourceId ) )
-                    listResourceId.push_back( resourceId );
+                const sw::string resourceID = sw::ResourceUtil::toResourceID( filePath );
+                if ( isScene( resourceID ) || isPrefab( resourceID ) )
+                    listResourceID.push_back( resourceID );
             }
-            return listResourceId;
+            return listResourceID;
         }
 
         /** @brief 씬은 문서를 읽어 만들고, 프리팹은 오브젝트 하나에 적용합니다(ResourceDataSchemaTest 와 같은 로더). */
-        [[nodiscard]] static bool loadObjects( const sw::string& resourceId, LoadedObjects& outLoaded )
+        [[nodiscard]] static bool loadObjects( const sw::string& resourceID, LoadedObjects& outLoaded )
         {
-            if ( isScene( resourceId ) )
+            if ( isScene( resourceID ) )
             {
                 sw::SceneDocument doc;
-                if ( doc.loadXML( resourceId ) == false )
+                if ( doc.loadXML( resourceID ) == false )
                     return false;
                 outLoaded._scene = sw::make_unique<sw::Scene>( "SerializationRoundTripScene" );
                 if ( outLoaded._scene->instantiate( doc ) == false )
@@ -76,7 +76,7 @@ namespace
                 return true;
             }
             sw::PrefabAsset prefab;
-            const bool      bLoaded = sw::StringUtil::endsWith( resourceId, ".json", true ) ? prefab.loadFromJSONFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
+            const bool      bLoaded = sw::StringUtil::endsWith( resourceID, ".json", true ) ? prefab.loadFromJSONFile( resourceID ) : prefab.loadFromXMLFile( resourceID );
             if ( bLoaded == false )
                 return false;
             outLoaded._manager      = sw::make_unique<sw::GameObjectManager>();
@@ -150,16 +150,16 @@ namespace
 SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSameBytes )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::vector<sw::string> listResourceId = SerializationRoundTripInternal::collectSceneAndPrefabIds();
-    SW_ASSERT_TRUE( listResourceId.size() >= 5u );
+    const sw::vector<sw::string> listResourceID = SerializationRoundTripInternal::collectSceneAndPrefabIDs();
+    SW_ASSERT_TRUE( listResourceID.size() >= 5u );
 
     test::ScopedLogSuppressor suppressor; // 게임 모듈 타입의 "모르는 타입" 경고 — ResourceDataSchemaTest 가 따로 본다
     uint32                    componentCount{ 0 };
     sw::string                mismatches;
-    for ( const sw::string& resourceId : listResourceId )
+    for ( const sw::string& resourceID : listResourceID )
     {
         SerializationRoundTripInternal::LoadedObjects loaded;
-        SW_EXPECT_TRUE_MSG( SerializationRoundTripInternal::loadObjects( resourceId, loaded ), resourceId.c_str() );
+        SW_EXPECT_TRUE_MSG( SerializationRoundTripInternal::loadObjects( resourceID, loaded ), resourceID.c_str() );
         for ( sw::GameObject* pObject : loaded._listObject )
         {
             for ( sw::Component* pComponent : pObject->getComponents() )
@@ -174,7 +174,7 @@ SW_TEST_CASE( SerializationRoundTripTest, EveryResourceComponentRewritesToTheSam
                 ++componentCount;
                 const sw::string mismatch = SerializationRoundTripInternal::findRewriteMismatch( pComponent, *pType );
                 if ( mismatch.empty() == false )
-                    mismatches += resourceId + " " + pType->_name.c_str() + ": " + mismatch + "\n";
+                    mismatches += resourceID + " " + pType->_name.c_str() + ": " + mismatch + "\n";
             }
         }
     }
@@ -195,15 +195,15 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
 
     test::ScopedLogSuppressor suppressor;
     uint32                    fileCount{ 0 };
-    for ( const sw::string& resourceId : SerializationRoundTripInternal::collectSceneAndPrefabIds() )
+    for ( const sw::string& resourceID : SerializationRoundTripInternal::collectSceneAndPrefabIDs() )
     {
         SerializationRoundTripInternal::LoadedObjects loaded;
-        if ( SerializationRoundTripInternal::loadObjects( resourceId, loaded ) == false )
+        if ( SerializationRoundTripInternal::loadObjects( resourceID, loaded ) == false )
             continue;
         for ( size_t objectIndex = 0; objectIndex < loaded._listObject.size(); ++objectIndex )
         {
             const sw::GameObject* pObject = loaded._listObject[objectIndex];
-            const sw::string      stem    = sw::string( pDumpDir ) + "/" + resourceId + "/" + sw::to_string( static_cast<uint32>( objectIndex ) );
+            const sw::string      stem    = sw::string( pDumpDir ) + "/" + resourceID + "/" + sw::to_string( static_cast<uint32>( objectIndex ) );
             sw::vector<uint8>     bytes;
             SW_EXPECT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes ) );
             SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".xml", sw::ObjectStateSerializer::saveToXMLString( pObject ) ) );

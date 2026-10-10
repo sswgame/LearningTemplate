@@ -97,7 +97,7 @@ namespace sw
     private:
         struct SentPacket
         {
-            uint16  _arrReliableId[kMaxReliablePerPacket]{};
+            uint16  _arrReliableID[kMaxReliablePerPacket]{};
             float64 _time{ 0.0 };
             int32   _byteCount{ 0 };
             int32   _reliableCount{ 0 };
@@ -133,7 +133,7 @@ namespace sw
         /** @brief 순서만 채널의 흐름 하나(메시지 첫 바이트 = 종류)에서 마지막으로 건넨 메시지 번호입니다. */
         struct SequencedStream
         {
-            uint16 _lastId{ 0 };
+            uint16 _lastID{ 0 };
             uint8  _kind{ 0 };
         };
 
@@ -170,10 +170,10 @@ namespace sw
         float64                          _lastStatsTime;
         float64                          _lastAckRequestTime; ///< 확인을 바란 패킷을 마지막으로 보낸 때
         uint16                           _nextPacketSequence;
-        uint16                           _nextReliableSendId;
-        uint16                           _oldestUnackedReliableId;
-        uint16                           _nextReliableReceiveId;
-        uint16                           _nextSequencedSendId;
+        uint16                           _nextReliableSendID;
+        uint16                           _oldestUnackedReliableID;
+        uint16                           _nextReliableReceiveID;
+        uint16                           _nextSequencedSendID;
         uint8                            _bAckPending;         ///< 받은 패킷이 있어 확인을 돌려줘야 한다
         uint8                            _bDiscardingAssembly; ///< 모으던 메시지가 상한을 넘었다(상대의 규약 위반) — 마지막 조각까지 버린다
         uint8                            _bUnreliableFirst;    ///< 다음 패킷은 순서만 · 비신뢰부터 싣는다(앞 패킷의 조각이 그쪽을 남겼다)

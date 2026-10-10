@@ -24,7 +24,7 @@ namespace sw
     struct HorrorInvestigator
     {
         float32 _speed{ 1.0f };
-        int32   _actorId{ 0 }; ///< 게임이 정한 번호(0 이상)
+        int32   _actorID{ 0 }; ///< 게임이 정한 번호(0 이상)
         int32   _health{ 5 };
         int32   _sanity{ 5 };
         int32   _will{ 2 };     ///< 공포 판정 주사위 수
@@ -46,8 +46,8 @@ namespace sw
     /** @brief 한 차례의 결과입니다. */
     struct HorrorTurnResult
     {
-        int32 _actorId{ -1 };
-        int32 _targetId{ -1 };       ///< 괴물 차례 — 맞은 조사자
+        int32 _actorID{ -1 };
+        int32 _targetID{ -1 };       ///< 괴물 차례 — 맞은 조사자
         int32 _horrorSuccesses{ 0 }; ///< 조사자 차례 — 공포 판정 성공 수
         int32 _combatSuccesses{ 0 }; ///< 조사자 차례 — 전투 판정 성공 수(= 괴물에게 준 피해)
         int32 _sanityLoss{ 0 };
@@ -64,7 +64,7 @@ namespace sw
     class SW_GF_API HorrorEncounter
     {
     public:
-        static constexpr int32  kMonsterActorId = 1000000; ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
+        static constexpr int32  kMonsterActorID = 1000000; ///< 괴물의 차례 번호(조사자 번호와 겹치지 않게)
         static constexpr uint32 kStateTag       = FourCcUtil::make( "HENC" );
         static constexpr uint32 kStateVersion   = 1;
 
@@ -72,7 +72,7 @@ namespace sw
 
         /** @brief @p successFace 이상이 나오면 성공(기본 5 — 여섯 면 중 둘)입니다. */
         void initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
-        /** @brief 다음 차례를 치릅니다. 이미 끝났으면 `_actorId` 가 −1 인 빈 결과입니다. */
+        /** @brief 다음 차례를 치릅니다. 이미 끝났으면 `_actorID` 가 −1 인 빈 결과입니다. */
         HorrorTurnResult playNextTurn();
 
         /**
@@ -90,7 +90,7 @@ namespace sw
 
     private:
         int32               rollSuccesses( int32 diceCount );
-        HorrorInvestigator* findInvestigator( int32 actorId );
+        HorrorInvestigator* findInvestigator( int32 actorID );
         void                defeatIfBroken( HorrorInvestigator& investigator );
         void                refreshState();
 

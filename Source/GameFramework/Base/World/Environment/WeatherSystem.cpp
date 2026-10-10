@@ -31,11 +31,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             WeatherDef weather;
-            weather._id          = hashed_string( pId );
+            weather._id          = hashed_string( pID );
             weather._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", weather._weight ) );
             weather._minDuration = MathUtil::max( 1.0f, node.getAttributeFloat( "minDuration", weather._minDuration ) );
             weather._maxDuration = MathUtil::max( weather._minDuration, node.getAttributeFloat( "maxDuration", weather._maxDuration ) );
@@ -127,9 +127,9 @@ namespace sw
         return bChanged;
     }
 
-    void WeatherSystem::forceWeather( const hashed_string& weatherId, float32 duration, bool bImmediate )
+    void WeatherSystem::forceWeather( const hashed_string& weatherID, float32 duration, bool bImmediate )
     {
-        const WeatherDef* pWeather = _pCatalog != nullptr ? _pCatalog->findWeather( weatherId ) : nullptr;
+        const WeatherDef* pWeather = _pCatalog != nullptr ? _pCatalog->findWeather( weatherID ) : nullptr;
         if ( pWeather == nullptr )
             return;
         if ( pWeather != _pCurrent )
@@ -183,19 +183,19 @@ namespace sw
 
     bool WeatherSystem::readState( Archive& archive )
     {
-        hashed_string currentId;
-        hashed_string previousId;
+        hashed_string currentID;
+        hashed_string previousID;
         GameRandom    random            = _random;
         float32       remaining         = 0.0f;
         float32       transitionElapsed = 0.0f;
-        const bool    bRead             = StateArchiveUtil::readName( archive, currentId ) && StateArchiveUtil::readName( archive, previousId ) && StateArchiveUtil::readRandom( archive, random );
+        const bool    bRead             = StateArchiveUtil::readName( archive, currentID ) && StateArchiveUtil::readName( archive, previousID ) && StateArchiveUtil::readRandom( archive, random );
         archive >> remaining;
         archive >> transitionElapsed;
         if ( bRead == false || archive.isError() )
             return false;
-        const WeatherDef* pCurrent  = currentId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( currentId );
-        const WeatherDef* pPrevious = previousId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( previousId );
-        const bool        bKnown    = ( currentId.empty() || pCurrent != nullptr ) && ( previousId.empty() || pPrevious != nullptr );
+        const WeatherDef* pCurrent  = currentID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( currentID );
+        const WeatherDef* pPrevious = previousID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findWeather( previousID );
+        const bool        bKnown    = ( currentID.empty() || pCurrent != nullptr ) && ( previousID.empty() || pPrevious != nullptr );
         if ( bKnown == false )
             return false;
         _pCurrent          = pCurrent;

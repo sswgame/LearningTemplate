@@ -62,7 +62,7 @@ namespace sw
     {
         float64           _timeoutSeconds{ 10.0 }; ///< 클라이언트 시한 — 서버에도 남은 시간을 실어 보낸다
         NetIdempotencyKey _idempotencyKey{};       ///< 상태를 바꾸는 요청(거래 · 구매)은 꼭 채운다
-        LogTraceId        _traceId{};              ///< 요청 추적 id — 비면 보내는 스레드의 로그 문맥(`LogContext::getCurrent`)의 것을 싣는다
+        LogTraceID        _traceID{};              ///< 요청 추적 id — 비면 보내는 스레드의 로그 문맥(`LogContext::getCurrent`)의 것을 싣는다
     };
 } // namespace sw
 
@@ -73,7 +73,7 @@ namespace sw
     {
         const uint8*     _pBody{ nullptr };
         int32            _bodySize{ 0 };
-        uint64           _requestId{ 0 };
+        uint64           _requestID{ 0 };
         uint16           _method{ 0 };
         NetRequestStatus _status{ NetRequestStatus::Ok };
     };
@@ -85,7 +85,7 @@ namespace sw
     struct NetRequestToken
     {
         StreamConnectionHandle _handle{};
-        uint64                 _requestId{ 0 };
+        uint64                 _requestID{ 0 };
         uint32                 _serial{ 0 }; ///< 서버 안의 일련번호 — 같은 요청 id 를 다시 쓴 연결과 섞이지 않게
         uint16                 _method{ 0 };
     };
@@ -98,8 +98,8 @@ namespace sw
     {
         NetRequestToken   _token{};
         NetIdempotencyKey _idempotencyKey{};
-        LogTraceId        _traceId{};              ///< 요청 머리의 추적 id(없으면 서버가 만든다) — 처리기는 {추적 id, 주체} 로그 문맥 안에서 불린다
-        uint64            _principalId{ 0 };       ///< `NetRequestServer::setPrincipal` 로 붙인 주체(로그인한 계정) — 없으면 0
+        LogTraceID        _traceID{};              ///< 요청 머리의 추적 id(없으면 서버가 만든다) — 처리기는 {추적 id, 주체} 로그 문맥 안에서 불린다
+        uint64            _principalID{ 0 };       ///< `NetRequestServer::setPrincipal` 로 붙인 주체(로그인한 계정) — 없으면 0
         float64           _deadlineSeconds{ 0.0 }; ///< 서버 단조 시계(초)로 이때까지 답하지 않으면 클라이언트는 이미 포기했다
         const uint8*      _pBody{ nullptr };
         int32             _bodySize{ 0 };
@@ -140,7 +140,7 @@ namespace sw
      * @brief 요청을 보내고 응답 · 시한 · 취소 · 연결 끊김 · 과부하를 콜백 하나로 끝냅니다(정확히 한 번). 콜백은 `handleFrame` · `update` ·
      *        `onConnectionClosed` 를 부른 스레드(= `pump` 스레드)이고, 보내지 못한 경우만 `sendRequest` 를 부른 스레드입니다.
      * @code
-     *     const uint64 requestId = _requestClient.sendRequest( handle, LoginMethod::kLogin, body.data(), size, options,
+     *     const uint64 requestID = _requestClient.sendRequest( handle, LoginMethod::kLogin, body.data(), size, options,
      *                                                           Delegate<void( const NetResponse& )>::create<&LoginClient::onLoginResponse>( this ) );
      *     // 리스너에서:
      *     void onEndpointFrame( handle, kind, pBody, size ) { if ( _requestClient.handleFrame( handle, kind, pBody, size ) ) return; ... }
@@ -161,7 +161,7 @@ namespace sw
         uint64 sendRequest( StreamConnectionHandle handle, uint16 method, const uint8* pBody, int32 bodySize, const NetRequestOptions& options,
                             Delegate<void( const NetResponse& )> onResponse );
         /** @brief 취소합니다 — 서버에 Cancel 을 보내고 콜백을 Cancelled 로 바로 부릅니다. 이미 끝났으면 false. */
-        bool cancel( uint64 requestId );
+        bool cancel( uint64 requestID );
 
         /** @brief Response 프레임이면 먹고 true 입니다. */
         [[nodiscard]] bool handleFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize );
@@ -179,13 +179,13 @@ namespace sw
             uint16                               _method{ 0 };
         };
 
-        static void finish( uint64 requestId, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize );
+        static void finish( uint64 requestID, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize );
 
         mutable mutex                  _mutex;
         unordered_map<uint64, Pending> _mapPending;
         BitWriter                      _writer; ///< _mutex 안에서
         StreamMessageEndpoint*         _pEndpoint;
-        uint64                         _nextRequestId;
+        uint64                         _nextRequestID;
         int32                          _maxPendingRequests;
     };
 } // namespace sw
@@ -210,7 +210,7 @@ namespace sw
         /** @brief 메서드에 처리기를 답니다. 이미 단 메서드면 오류 로그와 함께 false 이고 앞 처리기를 그대로 둔다(키트 둘이 같은 번호를 쓰는 조립). */
         [[nodiscard]] bool registerMethod( uint16 method, INetRequestHandler* pHandler );
         void               unregisterMethod( uint16 method );
-        void               setPrincipal( StreamConnectionHandle handle, uint64 principalId );
+        void               setPrincipal( StreamConnectionHandle handle, uint64 principalID );
 
         /** @brief 답합니다(아무 스레드). 이미 답했으면 false — 연결이 닫혔어도 멱등 키가 있으면 응답은 기억한다(재시도가 받는다). */
         bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize );
@@ -242,9 +242,9 @@ namespace sw
         struct RequestKey
         {
             uint64 _handlePacked{ 0 };
-            uint64 _requestId{ 0 };
+            uint64 _requestID{ 0 };
 
-            bool operator==( const RequestKey& other ) const { return _handlePacked == other._handlePacked && _requestId == other._requestId; }
+            bool operator==( const RequestKey& other ) const { return _handlePacked == other._handlePacked && _requestID == other._requestID; }
         };
         struct RequestKeyHash
         {
@@ -267,7 +267,7 @@ namespace sw
             uint8                   _bDone{ SW_FALSE };
         };
 
-        void sendResponse( StreamConnectionHandle handle, uint64 requestId, NetRequestStatus status, const uint8* pBody, int32 bodySize );
+        void sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
         void purgeIdempotencyLocked( int64 now );
 
         mutable mutex                                           _mutex;

@@ -21,12 +21,12 @@ namespace sw
             {
                 for ( const MonsterLearnEntry& learn : species._listLearn )
                 {
-                    if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveId ) >= 0 )
+                    if ( learn._level != level || inoutMonster.findMoveSlot( learn._moveID ) >= 0 )
                         continue;
                     MonsterGrowthEvent event;
-                    event._id    = learn._moveId;
+                    event._id    = learn._moveID;
                     event._level = level;
-                    if ( MonsterRules::learnMove( catalog, inoutMonster, learn._moveId ) )
+                    if ( MonsterRules::learnMove( catalog, inoutMonster, learn._moveID ) )
                         event._kind = MonsterGrowthEvent::Kind::LearnedMove;
                     else
                         event._kind = MonsterGrowthEvent::Kind::MoveLearnBlocked;
@@ -49,13 +49,13 @@ namespace sw
         return count;
     }
 
-    int32 MonsterInstance::findMoveSlot( const hashed_string& moveId ) const
+    int32 MonsterInstance::findMoveSlot( const hashed_string& moveID ) const
     {
-        if ( moveId.empty() )
+        if ( moveID.empty() )
             return -1;
         for ( int32 slot = 0; slot < kMoveSlotCount; ++slot )
         {
-            if ( _arrMove[slot]._moveId == moveId )
+            if ( _arrMove[slot]._moveID == moveID )
                 return slot;
         }
         return -1;
@@ -63,12 +63,12 @@ namespace sw
 
     void MonsterInstance::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _speciesId );
-        StateArchiveUtil::writeName( outArchive, _natureId );
+        StateArchiveUtil::writeName( outArchive, _speciesID );
+        StateArchiveUtil::writeName( outArchive, _natureID );
         outArchive << string_view( _nickname );
         for ( const MonsterMoveSlot& slot : _arrMove )
         {
-            StateArchiveUtil::writeName( outArchive, slot._moveId );
+            StateArchiveUtil::writeName( outArchive, slot._moveID );
             outArchive << slot._pp;
             outArchive << slot._ppMax;
         }
@@ -89,13 +89,13 @@ namespace sw
     bool MonsterInstance::readState( Archive& archive )
     {
         MonsterInstance restored;
-        const bool      bNamesRead = StateArchiveUtil::readName( archive, restored._speciesId ) && StateArchiveUtil::readName( archive, restored._natureId );
+        const bool      bNamesRead = StateArchiveUtil::readName( archive, restored._speciesID ) && StateArchiveUtil::readName( archive, restored._natureID );
         if ( bNamesRead == false )
             return false;
         archive >> restored._nickname;
         for ( MonsterMoveSlot& slot : restored._arrMove )
         {
-            if ( StateArchiveUtil::readName( archive, slot._moveId ) == false )
+            if ( StateArchiveUtil::readName( archive, slot._moveID ) == false )
                 return false;
             archive >> slot._pp;
             archive >> slot._ppMax;
@@ -133,10 +133,10 @@ namespace sw
 
     void MonsterRules::recomputeStats( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster )
     {
-        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesId );
+        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesID );
         if ( pSpecies == nullptr )
             return;
-        const MonsterNatureDef* pNature  = catalog.findNature( inoutMonster._natureId );
+        const MonsterNatureDef* pNature  = catalog.findNature( inoutMonster._natureID );
         const int32             oldMaxHp = inoutMonster.getMaxHp();
         for ( int32 index = 0; index < kMonsterStatCount; ++index )
         {
@@ -149,14 +149,14 @@ namespace sw
             inoutMonster._hp = MathUtil::clamp( inoutMonster._hp + inoutMonster.getMaxHp() - oldMaxHp, 1, inoutMonster.getMaxHp() );
     }
 
-    MonsterInstance MonsterRules::createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesId, int32 level, GameRandom& random )
+    MonsterInstance MonsterRules::createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random )
     {
         MonsterInstance          monster;
-        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( speciesId );
+        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( speciesID );
         if ( pSpecies == nullptr )
             return monster;
 
-        monster._speciesId = speciesId;
+        monster._speciesID = speciesID;
         monster._nickname  = pSpecies->_name;
         monster._level     = MathUtil::clamp( level, 1, MonsterCollectorCatalog::kMaxLevel );
         monster._exp       = MonsterCollectorCatalog::computeTotalExp( pSpecies->_expGroup, monster._level );
@@ -166,16 +166,16 @@ namespace sw
         }
         const vector<MonsterNatureDef>& listNature = catalog.getNatures();
         if ( listNature.empty() == false )
-            monster._natureId = listNature[static_cast<size_t>( random.nextInt( 0, static_cast<int32>( listNature.size() ) - 1 ) )]._id;
+            monster._natureID = listNature[static_cast<size_t>( random.nextInt( 0, static_cast<int32>( listNature.size() ) - 1 ) )]._id;
 
         // 그 레벨까지 배운 것 중 마지막 넷 — 앞에서부터 채우고, 차면 가장 오래된 칸부터 밀어낸다.
         for ( const MonsterLearnEntry& learn : pSpecies->_listLearn )
         {
             if ( learn._level > monster._level )
                 break;
-            if ( monster.findMoveSlot( learn._moveId ) >= 0 )
+            if ( monster.findMoveSlot( learn._moveID ) >= 0 )
                 continue;
-            const MonsterMoveDef* pMove = catalog.findMove( learn._moveId );
+            const MonsterMoveDef* pMove = catalog.findMove( learn._moveID );
             if ( pMove == nullptr )
                 continue;
             int32 targetSlot = monster.countMoves();
@@ -188,7 +188,7 @@ namespace sw
                 }
                 targetSlot = MonsterInstance::kMoveSlotCount - 1;
             }
-            monster._arrMove[targetSlot] = MonsterMoveSlot{ learn._moveId, pMove->_pp, pMove->_pp };
+            monster._arrMove[targetSlot] = MonsterMoveSlot{ learn._moveID, pMove->_pp, pMove->_pp };
         }
 
         monster._hp = 1;
@@ -222,7 +222,7 @@ namespace sw
 
     int32 MonsterRules::gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent )
     {
-        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesId );
+        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesID );
         if ( pSpecies == nullptr || amount <= 0 || inoutMonster._level >= MonsterCollectorCatalog::kMaxLevel )
             return 0;
 
@@ -248,10 +248,10 @@ namespace sw
         return gained;
     }
 
-    bool MonsterRules::learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveId, int32 replaceSlot )
+    bool MonsterRules::learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID, int32 replaceSlot )
     {
-        const MonsterMoveDef* pMove = catalog.findMove( moveId );
-        if ( pMove == nullptr || inoutMonster.findMoveSlot( moveId ) >= 0 )
+        const MonsterMoveDef* pMove = catalog.findMove( moveID );
+        if ( pMove == nullptr || inoutMonster.findMoveSlot( moveID ) >= 0 )
             return false;
         int32 targetSlot = -1;
         for ( int32 slot = 0; slot < MonsterInstance::kMoveSlotCount; ++slot )
@@ -268,40 +268,40 @@ namespace sw
                 return false;
             targetSlot = replaceSlot;
         }
-        inoutMonster._arrMove[targetSlot] = MonsterMoveSlot{ moveId, pMove->_pp, pMove->_pp };
+        inoutMonster._arrMove[targetSlot] = MonsterMoveSlot{ moveID, pMove->_pp, pMove->_pp };
         return true;
     }
 
-    hashed_string MonsterRules::findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemId )
+    hashed_string MonsterRules::findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemID )
     {
-        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( monster._speciesId );
+        const MonsterSpeciesDef* pSpecies = catalog.findSpecies( monster._speciesID );
         if ( pSpecies == nullptr )
             return hashed_string{};
         for ( const MonsterEvolutionDef& evolution : pSpecies->_listEvolution )
         {
-            if ( evolution._itemId != itemId )
+            if ( evolution._itemID != itemID )
                 continue;
             if ( evolution._level > 0 && monster._level < evolution._level )
                 continue;
             if ( evolution._friendship > 0 && monster._friendship < evolution._friendship )
                 continue;
-            if ( catalog.findSpecies( evolution._targetId ) == nullptr )
+            if ( catalog.findSpecies( evolution._targetID ) == nullptr )
                 continue;
-            return evolution._targetId;
+            return evolution._targetID;
         }
         return hashed_string{};
     }
 
-    bool MonsterRules::evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesId )
+    bool MonsterRules::evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesID )
     {
-        const MonsterSpeciesDef* pFrom = catalog.findSpecies( inoutMonster._speciesId );
-        const MonsterSpeciesDef* pTo   = catalog.findSpecies( targetSpeciesId );
+        const MonsterSpeciesDef* pFrom = catalog.findSpecies( inoutMonster._speciesID );
+        const MonsterSpeciesDef* pTo   = catalog.findSpecies( targetSpeciesID );
         if ( pFrom == nullptr || pTo == nullptr )
             return false;
         // 이름을 따로 붙이지 않았으면 새 종 이름을 따른다.
         if ( inoutMonster._nickname == pFrom->_name )
             inoutMonster._nickname = pTo->_name;
-        inoutMonster._speciesId = targetSpeciesId;
+        inoutMonster._speciesID = targetSpeciesID;
         recomputeStats( catalog, inoutMonster );
         return true;
     }

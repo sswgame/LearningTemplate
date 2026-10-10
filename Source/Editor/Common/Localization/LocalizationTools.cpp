@@ -485,7 +485,7 @@ namespace sw
                 string     text;
                 if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
                     continue;
-                gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourceUtil::toResourceId( filePath ) );
+                gatherAssetFile( project, gatherer, FileUtil::skipUtf8Bom( text ), ResourceUtil::toResourceID( filePath ) );
                 gatherer.countFile();
             }
         }

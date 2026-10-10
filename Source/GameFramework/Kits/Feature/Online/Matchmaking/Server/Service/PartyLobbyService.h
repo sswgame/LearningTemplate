@@ -66,7 +66,7 @@ namespace sw
         PartySnapshot _party{};
         LobbySnapshot _lobby{};
         PartyInvite   _invite{};
-        AccountId     _recipientId{ kInvalidAccountId };
+        AccountID     _recipientID{ kInvalidAccountID };
         uint16        _pushKind{ 0 };
     };
 } // namespace sw
@@ -96,12 +96,12 @@ namespace sw
         {
             LobbySnapshot       _lobby{}; ///< LobbyCreate 의 요청
             PartyFoundDelegate  _onPartyFound{};
-            string              _modeId{};
-            AccountId           _actorId{ kInvalidAccountId };
-            AccountId           _targetId{ kInvalidAccountId };
-            uint64              _partyId{ 0 };
-            uint64              _lobbyId{ 0 };
-            uint64              _ticketId{ 0 };
+            string              _modeID{};
+            AccountID           _actorID{ kInvalidAccountID };
+            AccountID           _targetID{ kInvalidAccountID };
+            uint64              _partyID{ 0 };
+            uint64              _lobbyID{ 0 };
+            uint64              _ticketID{ 0 };
             uint64              _requestTag{ 0 };
             int64               _nowMs{ 0 };
             PartyLobbyOperation _operation{ PartyLobbyOperation::PartyCreate };
@@ -114,53 +114,53 @@ namespace sw
         PartyLobbyService( const PartyLobbyService& )            = delete;
         PartyLobbyService& operator=( const PartyLobbyService& ) = delete;
 
-        /** @brief @p pRouter 는 빌려 쓴다. 새 파티 · 로비 id = @p serverId << 32 | 순번(서버마다 겹치지 않는다). */
-        void initialize( EphemeralStoreRouter* pRouter, uint64 serverId, int32 maxPartySize = 4 );
+        /** @brief @p pRouter 는 빌려 쓴다. 새 파티 · 로비 id = @p serverID << 32 | 순번(서버마다 겹치지 않는다). */
+        void initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize = 4 );
         /** @brief 기다리던 캐시 요청을 취소합니다(라우터보다 먼저 내려갈 때). */
         void shutdown();
 
         // 파티
-        void createParty( AccountId accountId, uint64 requestTag );
-        void inviteToParty( AccountId leaderId, AccountId targetId, uint64 requestTag );
-        void acceptPartyInvite( AccountId accountId, uint64 partyId, uint64 requestTag );
-        void leaveParty( AccountId accountId, uint64 requestTag );
-        void kickFromParty( AccountId leaderId, AccountId targetId, uint64 requestTag );
+        void createParty( AccountID accountID, uint64 requestTag );
+        void inviteToParty( AccountID leaderID, AccountID targetID, uint64 requestTag );
+        void acceptPartyInvite( AccountID accountID, uint64 partyID, uint64 requestTag );
+        void leaveParty( AccountID accountID, uint64 requestTag );
+        void kickFromParty( AccountID leaderID, AccountID targetID, uint64 requestTag );
         /** @brief 파티의 대기열 표를 적습니다(0 = 빠짐). 완료 없음. */
-        void setPartyTicket( uint64 partyId, uint64 ticketId );
+        void setPartyTicket( uint64 partyID, uint64 ticketID );
         /** @brief 계정의 파티를 찾습니다 — 결과는 @p onFound( @p lookupTag, Ok · NotInParty · Unavailable, 파티 )로 한 번(나중에). */
-        void findPartyOfAccount( AccountId accountId, uint64 lookupTag, const PartyFoundDelegate& onFound );
+        void findPartyOfAccount( AccountID accountID, uint64 lookupTag, const PartyFoundDelegate& onFound );
 
         // 로비
         /** @brief @p request 의 이름 · 모드 · 정원 · 설정으로 만듭니다(만든 이가 방장). */
-        void createLobby( AccountId accountId, const LobbySnapshot& request, int64 nowMs, uint64 requestTag );
-        void listLobbies( string_view modeId, uint64 requestTag );
-        void joinLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag );
-        void leaveLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag );
-        void setLobbyReady( AccountId accountId, uint64 lobbyId, bool bReady, uint64 requestTag );
-        void startLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag );
+        void createLobby( AccountID accountID, const LobbySnapshot& request, int64 nowMs, uint64 requestTag );
+        void listLobbies( string_view modeID, uint64 requestTag );
+        void joinLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag );
+        void leaveLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag );
+        void setLobbyReady( AccountID accountID, uint64 lobbyID, bool bReady, uint64 requestTag );
+        void startLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag );
         /** @brief 시작한 로비를 다시 Open 으로(배정 실패). 완료 없음 — 회원에게 알림. */
-        void reopenLobby( uint64 lobbyId );
+        void reopenLobby( uint64 lobbyID );
 
         /** @brief 계정이 이 서버에서 떠났다 — 파티에서, 이 서버가 들여보낸 로비에서 뺀다. */
-        void removeAccount( AccountId accountId );
+        void removeAccount( AccountID accountID );
 
         void drainCompletions( vector<PartyLobbyCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void drainNotifications( vector<PartyLobbyNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
         void drainLobbyStarts( vector<LobbyStartRequest>& outListStart ) { _lobbyStartBuffer.drainTo( outListStart ); }
         /** @brief 사람이 바뀌어 대기열에서 빠져야 할 파티 표입니다. */
-        void drainBrokenTickets( vector<uint64>& outListTicketId ) { _brokenTicketBuffer.drainTo( outListTicketId ); }
+        void drainBrokenTickets( vector<uint64>& outListTicketID ) { _brokenTicketBuffer.drainTo( outListTicketID ); }
 
         int32 getPendingCount() const { return _updater.getPendingCount() + static_cast<int32>( _mapRequestToStep.size() ); }
 
-        static string makePartyKey( uint64 partyId );
-        static string makeAccountPartyKey( AccountId accountId );
-        static string makeInviteKey( AccountId accountId, uint64 partyId );
-        static string makeLobbyKey( uint64 lobbyId );
-        static string makeLobbyListKey( string_view modeId );
+        static string makePartyKey( uint64 partyID );
+        static string makeAccountPartyKey( AccountID accountID );
+        static string makeInviteKey( AccountID accountID, uint64 partyID );
+        static string makeLobbyKey( uint64 lobbyID );
+        static string makeLobbyListKey( string_view modeID );
 
         /** @brief 바꾸기 객체가 부른다(키트 안). */
-        void  finishParty( const Request& request, MatchmakingResult result, const PartySnapshot& party, AccountId removedId, uint64 brokenTicketId );
-        void  finishLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby, AccountId removedId, bool bErased );
+        void  finishParty( const Request& request, MatchmakingResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID );
+        void  finishLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby, AccountID removedID, bool bErased );
         int32 getMaxPartySize() const { return _maxPartySize; }
 
     private:
@@ -177,7 +177,7 @@ namespace sw
         struct PendingStep
         {
             Request  _request{};
-            uint64   _listId{ 0 };
+            uint64   _listID{ 0 };
             int32    _slot{ 0 };
             StepKind _kind{ StepKind::IndexRead };
         };
@@ -186,36 +186,36 @@ namespace sw
         {
             vector<LobbySnapshot> _listLobby{};
             vector<uint8>         _listFound{};
-            string                _modeId{};
+            string                _modeID{};
             uint64                _requestTag{ 0 };
             int32                 _remainingCount{ 0 };
         };
 
-        void   submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listId = 0, int32 slot = 0 );
+        void   submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID = 0, int32 slot = 0 );
         void   submitFireAndForget( const EphemeralRequest& cacheRequest );
         void   onStepReply( const EphemeralReply& reply );
         void   handleIndexRead( const Request& request, const EphemeralReply& reply );
-        void   handleListGet( uint64 listId, int32 slot, const EphemeralReply& reply );
+        void   handleListGet( uint64 listID, int32 slot, const EphemeralReply& reply );
         void   startPartyMutation( const Request& request );
         void   startLobbyMutation( const Request& request );
         void   refreshIndexTtl( const PartySnapshot& party );
-        void   notifyParty( const PartySnapshot& party, AccountId removedId );
-        void   notifyLobby( const LobbySnapshot& lobby, AccountId removedId );
+        void   notifyParty( const PartySnapshot& party, AccountID removedID );
+        void   notifyLobby( const LobbySnapshot& lobby, AccountID removedID );
         void   completeParty( const Request& request, MatchmakingResult result, const PartySnapshot& party );
         void   completeLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby );
-        uint64 allocateId() { return ( _serverId << 32 ) | ++_sequence; }
+        uint64 allocateID() { return ( _serverID << 32 ) | ++_sequence; }
 
         CacheRecordUpdater                  _updater;
         unordered_map<uint64, PendingStep>  _mapRequestToStep;
-        unordered_map<uint64, PendingList>  _mapListIdToList;
-        unordered_map<AccountId, uint64>    _mapAccountToLobby; ///< 이 서버가 들여보낸 로비
+        unordered_map<uint64, PendingList>  _mapListIDToList;
+        unordered_map<AccountID, uint64>    _mapAccountToLobby; ///< 이 서버가 들여보낸 로비
         EventBuffer<PartyLobbyCompletion>   _completionBuffer;
         EventBuffer<PartyLobbyNotification> _notificationBuffer;
         EventBuffer<LobbyStartRequest>      _lobbyStartBuffer;
         EventBuffer<uint64>                 _brokenTicketBuffer;
         EphemeralStoreRouter*               _pRouter;
-        uint64                              _serverId;
-        uint64                              _nextListId;
+        uint64                              _serverID;
+        uint64                              _nextListID;
         int32                               _maxPartySize;
         uint32                              _sequence;
     };

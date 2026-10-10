@@ -3,7 +3,7 @@
  * @brief 호스트가 소유한 코어 매니저 포인터를 Engine.dll 에 바인딩하는 서비스 테이블입니다.
  *
  * @details **서비스를 추가하려면 `EngineServiceList.xxx` 에 한 줄을 더하면 됩니다.** 구조체 멤버 · getter
- *          선언/정의 · areEngineServicesBound() · ModuleServiceId 가 그 목록에서 생성되고, `EngineCreated` 이면 소유 · 생성 ·
+ *          선언/정의 · areEngineServicesBound() · ModuleServiceID 가 그 목록에서 생성되고, `EngineCreated` 이면 소유 · 생성 ·
  *          바인딩까지 `EngineServiceCollection` 가 맡습니다(호스트는 손댈 것이 없습니다). `HostCreated` 은 만드는 방법이
  *          특별한 것(팩토리 · 구성별 조건부)뿐이고, 그때만 호스트가 직접 연결합니다. `CheckEngineServiceBinding.py` 가
  *          그 자리를 대조합니다.

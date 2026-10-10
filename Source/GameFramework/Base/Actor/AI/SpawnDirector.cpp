@@ -45,11 +45,11 @@ namespace sw
         _bRefundOnDespawn = root.getAttributeBool( "refund", false ) ? SW_TRUE : SW_FALSE;
         for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             SpawnEntryDef entry;
-            entry._id      = hashed_string( pId );
+            entry._id      = hashed_string( pID );
             entry._cost    = MathUtil::max( 0.0f, node.getAttributeFloat( "cost", entry._cost ) );
             entry._weight  = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
             entry._minTime = MathUtil::max( 0.0f, node.getAttributeFloat( "minTime", entry._minTime ) );
@@ -73,7 +73,7 @@ namespace sw
         , _budgetScale{ 1.0f }
         , _time{ 0.0f }
         , _pendingIndex{ -1 }
-        , _nextSpawnId{ 1 }
+        , _nextSpawnID{ 1 }
         , _bRefundOnDespawn{ SW_FALSE }
     {
     }
@@ -89,7 +89,7 @@ namespace sw
         _budgetScale      = 1.0f;
         _time             = 0.0f;
         _pendingIndex     = -1;
-        _nextSpawnId      = 1;
+        _nextSpawnID      = 1;
         _bRefundOnDespawn = pTable != nullptr && pTable->isRefundOnDespawn() ? SW_TRUE : SW_FALSE;
     }
 
@@ -159,16 +159,16 @@ namespace sw
             _budget -= entry._cost;
             ++_listAliveCount[static_cast<size_t>( _pendingIndex )];
             SpawnAlive alive;
-            alive._spawnId    = _nextSpawnId++;
+            alive._spawnID    = _nextSpawnID++;
             alive._entryIndex = _pendingIndex;
             _listAlive.push_back( alive );
 
             SpawnEvent event;
             event._kind    = SpawnEvent::Kind::Spawned;
-            event._entryId = entry._id;
+            event._entryID = entry._id;
             event._time    = _time;
             event._cost    = entry._cost;
-            event._spawnId = alive._spawnId;
+            event._spawnID = alive._spawnID;
             _eventBuffer.push( event );
             _pendingIndex = -1;
             ++spawnCount;
@@ -176,11 +176,11 @@ namespace sw
         return spawnCount;
     }
 
-    bool SpawnDirector::notifyDespawned( uint32 spawnId )
+    bool SpawnDirector::notifyDespawned( uint32 spawnID )
     {
         for ( size_t index = 0; index < _listAlive.size(); ++index )
         {
-            if ( _listAlive[index]._spawnId != spawnId )
+            if ( _listAlive[index]._spawnID != spawnID )
                 continue;
             const int32          entryIndex = _listAlive[index]._entryIndex;
             const SpawnEntryDef& entry      = _pTable->getEntries()[static_cast<size_t>( entryIndex )];
@@ -191,10 +191,10 @@ namespace sw
 
             SpawnEvent event;
             event._kind    = SpawnEvent::Kind::Despawned;
-            event._entryId = entry._id;
+            event._entryID = entry._id;
             event._time    = _time;
             event._cost    = refund;
-            event._spawnId = spawnId;
+            event._spawnID = spawnID;
             _eventBuffer.push( event );
             return true;
         }
@@ -206,9 +206,9 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    int32 SpawnDirector::getAliveCount( const hashed_string& entryId ) const
+    int32 SpawnDirector::getAliveCount( const hashed_string& entryID ) const
     {
-        const int32 entryIndex = _pTable != nullptr ? _pTable->findEntryIndex( entryId ) : -1;
+        const int32 entryIndex = _pTable != nullptr ? _pTable->findEntryIndex( entryID ) : -1;
         return entryIndex >= 0 ? _listAliveCount[static_cast<size_t>( entryIndex )] : 0;
     }
 
@@ -217,13 +217,13 @@ namespace sw
         return _pendingIndex >= 0 ? _pTable->getEntries()[static_cast<size_t>( _pendingIndex )]._id : hashed_string{};
     }
 
-    void SpawnDirector::collectAliveSpawnIds( vector<uint32>& outListSpawnId ) const
+    void SpawnDirector::collectAliveSpawnIDs( vector<uint32>& outListSpawnID ) const
     {
-        outListSpawnId.clear();
-        outListSpawnId.reserve( _listAlive.size() );
+        outListSpawnID.clear();
+        outListSpawnID.reserve( _listAlive.size() );
         for ( const SpawnAlive& alive : _listAlive )
         {
-            outListSpawnId.push_back( alive._spawnId );
+            outListSpawnID.push_back( alive._spawnID );
         }
     }
 
@@ -232,7 +232,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listAlive.size() );
         for ( const SpawnAlive& alive : _listAlive )
         {
-            outArchive << alive._spawnId;
+            outArchive << alive._spawnID;
             outArchive << alive._entryIndex;
         }
         outArchive << static_cast<uint32>( _listAliveCount.size() );
@@ -250,7 +250,7 @@ namespace sw
         outArchive << _budgetScale;
         outArchive << _time;
         outArchive << _pendingIndex;
-        outArchive << _nextSpawnId;
+        outArchive << _nextSpawnID;
         outArchive << _bRefundOnDespawn;
     }
 
@@ -264,7 +264,7 @@ namespace sw
         vector<SpawnAlive> listAlive( count );
         for ( SpawnAlive& alive : listAlive )
         {
-            archive >> alive._spawnId;
+            archive >> alive._spawnID;
             archive >> alive._entryIndex;
             if ( alive._entryIndex < 0 || alive._entryIndex >= entryCount )
                 archive.setError();
@@ -289,14 +289,14 @@ namespace sw
         float32    budgetScale  = 1.0f;
         float32    time         = 0.0f;
         int32      pendingIndex = -1;
-        uint32     nextSpawnId  = 1;
+        uint32     nextSpawnID  = 1;
         uint8      bRefund      = SW_FALSE;
         const bool bRandomRead  = StateArchiveUtil::readRandom( archive, random );
         archive >> budget;
         archive >> budgetScale;
         archive >> time;
         archive >> pendingIndex;
-        archive >> nextSpawnId;
+        archive >> nextSpawnID;
         archive >> bRefund;
         const bool bValid = bRandomRead && archive.isOk() && -1 <= pendingIndex && pendingIndex < entryCount && bRefund <= SW_TRUE;
         if ( bValid == false )
@@ -309,7 +309,7 @@ namespace sw
         _budgetScale      = budgetScale;
         _time             = time;
         _pendingIndex     = pendingIndex;
-        _nextSpawnId      = nextSpawnId;
+        _nextSpawnID      = nextSpawnID;
         _bRefundOnDespawn = bRefund;
         _eventBuffer.clear();
         return true;

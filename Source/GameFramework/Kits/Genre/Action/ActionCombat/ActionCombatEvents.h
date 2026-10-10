@@ -79,7 +79,7 @@ namespace sw
     /** @brief 클리어 게이트 잠금이 바뀌었음을 알립니다(`ActionRoom` — 전투 시작에 닫히고, 클리어 · 패배에 열린다). */
     struct SW_GF_API ClearGateStateChangedEvent final : IEvent
     {
-        string                 _zoneId;         ///< 존 ID
+        string                 _zoneID;         ///< 존 ID
         uint8                  _bLocked    : 1; ///< 잠김 여부
         uint8                  _bTriggered : 1; ///< 방 진입 시 닫힘 트리거
         [[maybe_unused]] uint8 _reserved   : 6;

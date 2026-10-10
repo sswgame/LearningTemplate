@@ -43,7 +43,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
     manager.tick( 0.0f );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
     SW_EXPECT_EQUAL( hero, manager.findGameObjectByName( hashed_string( "Hero" ) ) );
-    SW_EXPECT_EQUAL( enemy, manager.findGameObjectById( enemy->getObjectId() ) );
+    SW_EXPECT_EQUAL( enemy, manager.findGameObjectByID( enemy->getObjectID() ) );
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Missing" ) ) );
 
     hero->setName( hashed_string( "HeroRenamed" ) );
@@ -52,7 +52,7 @@ SW_TEST_CASE( GameObjectManagerTest, CreationSearchAndDeferredDestruction )
 
     manager.destroyObject( enemy );
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Enemy" ) ) );
-    SW_EXPECT_NULL( manager.findGameObjectById( enemy->getObjectId() ) );
+    SW_EXPECT_NULL( manager.findGameObjectByID( enemy->getObjectID() ) );
     SW_EXPECT_EQUAL( size_t( 2 ), manager.getAllGameObjects().size() );
 
     manager.tick( 0.0f );
@@ -73,20 +73,20 @@ SW_TEST_CASE( GameObjectManagerTest, OwnershipReleasedAfterDeferredDestroy )
     sw::GameObjectManager manager;
     GameObject*           first = manager.createGameObject( hashed_string( "Owned" ) );
     SW_ASSERT_NOT_NULL( first );
-    const uint64 firstId = first->getObjectId();
+    const uint64 firstID = first->getObjectID();
 
     manager.destroyObject( first );
 
     manager.tick( 0.0f );
 
     SW_EXPECT_NULL( manager.findGameObjectByName( hashed_string( "Owned" ) ) );
-    SW_EXPECT_NULL( manager.findGameObjectById( firstId ) );
+    SW_EXPECT_NULL( manager.findGameObjectByID( firstID ) );
     SW_EXPECT_EQUAL( size_t( 0 ), manager.getAllGameObjects().size() );
 
     GameObject* second = manager.createGameObject( hashed_string( "Owned" ) );
     SW_ASSERT_NOT_NULL( second );
     SW_EXPECT_EQUAL( second, manager.findGameObjectByName( hashed_string( "Owned" ) ) );
-    SW_EXPECT_NOT_EQUAL( firstId, second->getObjectId() );
+    SW_EXPECT_NOT_EQUAL( firstID, second->getObjectID() );
 }
 
 /**
@@ -349,13 +349,13 @@ SW_TEST_CASE( GameObjectManagerTest, SpawnAndDestroyInOneFrame )
     manager.tick( 0.016f );
 
     sw::GameObject* pBrief  = manager.createGameObject( hashed_string( "Brief" ) );
-    const uint64    briefId = pBrief->getObjectId();
+    const uint64    briefID = pBrief->getObjectID();
     sw::GameObject* pAlso   = manager.createGameObject( hashed_string( "AlsoNew" ) );
     manager.destroyObject( pBrief );
     manager.tick( 0.016f );
 
     SW_EXPECT_TRUE( manager.findGameObjectByName( hashed_string( "Brief" ) ) == nullptr );
-    SW_EXPECT_TRUE( manager.findGameObjectById( briefId ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( briefID ) == nullptr );
     const sw::vector<sw::GameObject*> listAll = manager.getAllGameObjects();
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), listAll.size() );
     SW_EXPECT_TRUE( std::find( listAll.begin(), listAll.end(), pKeep ) != listAll.end() );
@@ -386,9 +386,9 @@ SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )
     SW_EXPECT_NOT_EQUAL( pAddr0, pAddr1 );
     SW_EXPECT_NOT_EQUAL( pAddr1, pAddr2 );
 
-    const uint64 id0 = pObj0->getObjectId();
-    const uint64 id1 = pObj1->getObjectId();
-    const uint64 id2 = pObj2->getObjectId();
+    const uint64 id0 = pObj0->getObjectID();
+    const uint64 id1 = pObj1->getObjectID();
+    const uint64 id2 = pObj2->getObjectID();
 
     // 2) 액터 지연 삭제 처리
     manager.destroyObject( pObj2 );
@@ -417,9 +417,9 @@ SW_TEST_CASE( GameObjectPoolTest, GameObjectPoolMemoryReuseAndStateReset )
     SW_EXPECT_EQUAL( pAddr2, pNewAddr2 );
 
     // 새로운 고유 ID가 발급되었는지 확인 (이전 ID와 다름)
-    SW_EXPECT_NOT_EQUAL( id0, pNewObj0->getObjectId() );
-    SW_EXPECT_NOT_EQUAL( id1, pNewObj1->getObjectId() );
-    SW_EXPECT_NOT_EQUAL( id2, pNewObj2->getObjectId() );
+    SW_EXPECT_NOT_EQUAL( id0, pNewObj0->getObjectID() );
+    SW_EXPECT_NOT_EQUAL( id1, pNewObj1->getObjectID() );
+    SW_EXPECT_NOT_EQUAL( id2, pNewObj2->getObjectID() );
 
     // 이름 및 기본 상태가 깨끗하게 초기화되었는지 확인
     SW_EXPECT_STREQ( "NewActor_0", pNewObj0->getName().c_str() );

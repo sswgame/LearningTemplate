@@ -38,7 +38,7 @@ namespace sw
                 return s_table;
             }
 
-            static const hashed_string& getAccountIdTable()
+            static const hashed_string& getAccountIDTable()
             {
                 static const hashed_string s_table{ "login_account_id" };
                 return s_table;
@@ -84,7 +84,7 @@ namespace sw
             {
                 NetPasswordHashParams _params{};
                 string                _displayName{};
-                uint64                _accountId{ 0 };
+                uint64                _accountID{ 0 };
                 int64                 _lockedUntilMs{ 0 };
                 int32                 _failedCount{ 0 };
                 uint8                 _arrSalt[LoginConstant::kSaltSize]{};
@@ -104,7 +104,7 @@ namespace sw
 
             struct SessionRecord
             {
-                uint64            _accountId{ 0 };
+                uint64            _accountID{ 0 };
                 int64             _issuedAtMs{ 0 };
                 int64             _expiresAtMs{ 0 };
                 int64             _resumeDeadlineMs{ 0 }; ///< 0 = 붙어 있다
@@ -117,7 +117,7 @@ namespace sw
             {
                 BitWriter writer;
                 writer.writeBits( kRecordFormat, 8 );
-                writer.writeVarUint( record._accountId );
+                writer.writeVarUint( record._accountID );
                 ServiceKeyUtil::writeString( writer, record._displayName );
                 writer.writeBytes( record._arrSalt, LoginConstant::kSaltSize );
                 writer.writeBytes( record._arrPasswordHash, LoginConstant::kPasswordHashSize );
@@ -135,7 +135,7 @@ namespace sw
                 if ( reader.readBits( 8 ) != kRecordFormat )
                     return false;
                 AccountRecord record;
-                record._accountId = reader.readVarUint();
+                record._accountID = reader.readVarUint();
                 if ( ServiceKeyUtil::readString( reader, LoginConstant::kMaxLoginNameSize, record._displayName ) == false )
                     return false;
                 if ( reader.readBytes( record._arrSalt, LoginConstant::kSaltSize ) == false ||
@@ -188,7 +188,7 @@ namespace sw
             {
                 BitWriter writer;
                 writer.writeBits( kRecordFormat, 8 );
-                writer.writeVarUint( record._accountId );
+                writer.writeVarUint( record._accountID );
                 writer.writeVarInt( record._issuedAtMs );
                 writer.writeVarInt( record._expiresAtMs );
                 writer.writeVarInt( record._resumeDeadlineMs );
@@ -204,7 +204,7 @@ namespace sw
                 if ( reader.readBits( 8 ) != kRecordFormat )
                     return false;
                 SessionRecord record;
-                record._accountId        = reader.readVarUint();
+                record._accountID        = reader.readVarUint();
                 record._issuedAtMs       = reader.readVarInt();
                 record._expiresAtMs      = reader.readVarInt();
                 record._resumeDeadlineMs = reader.readVarInt();
@@ -219,14 +219,14 @@ namespace sw
                 return true;
             }
 
-            static vector<uint8> encodeId( uint64 id )
+            static vector<uint8> encodeID( uint64 id )
             {
                 BitWriter writer;
                 writer.writeVarUint( id );
                 return writer.releaseBytes();
             }
 
-            static uint64 decodeId( const vector<uint8>& bytes )
+            static uint64 decodeID( const vector<uint8>& bytes )
             {
                 BitReader    reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
                 const uint64 id = reader.readVarUint();
@@ -319,33 +319,33 @@ namespace sw
                 return key;
             }
 
-            static string makeAccountExternalKey( uint64 accountId, string_view provider )
+            static string makeAccountExternalKey( uint64 accountID, string_view provider )
             {
-                string key = ServiceKeyUtil::makeHex64( accountId );
+                string key = ServiceKeyUtil::makeHex64( accountID );
                 key.push_back( '/' );
                 key += provider;
                 return key;
             }
 
-            static string makeDeletionKey( int64 dueMs, uint64 accountId )
+            static string makeDeletionKey( int64 dueMs, uint64 accountID )
             {
                 string key = ServiceKeyUtil::makeHex64( static_cast<uint64>( dueMs < 0 ? 0 : dueMs ) );
                 key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, accountId );
+                ServiceKeyUtil::appendHex64( key, accountID );
                 return key;
             }
 
             /** @brief 표시 이름 끝에 붙이는 계정 id 꼬리 — 16 진 뒤 @p digitCount 자리입니다. */
-            static string makeIdSuffix( uint64 accountId, int32 digitCount )
+            static string makeIDSuffix( uint64 accountID, int32 digitCount )
             {
-                const string hex = ServiceKeyUtil::makeHex64( accountId );
+                const string hex = ServiceKeyUtil::makeHex64( accountID );
                 return hex.substr( hex.size() - static_cast<size_t>( digitCount ) );
             }
 
-            static string makeGuestDisplayName( uint64 accountId ) { return string( kGuestNamePrefix ) + makeIdSuffix( accountId, 6 ); }
+            static string makeGuestDisplayName( uint64 accountID ) { return string( kGuestNamePrefix ) + makeIDSuffix( accountID, 6 ); }
 
             /** @brief 제공자가 준 이름의 ASCII 영숫자 · _ 만 12 자까지 + "-" + 계정 id 꼬리 4 자리입니다(없으면 "Player"). */
-            static string makePlatformDisplayName( string_view hint, uint64 accountId )
+            static string makePlatformDisplayName( string_view hint, uint64 accountID )
             {
                 string name;
                 for ( const utf8 ch : hint )
@@ -360,12 +360,12 @@ namespace sw
                 if ( name.empty() )
                     name = kPlayerNamePrefix;
                 name.push_back( '-' );
-                name += makeIdSuffix( accountId, 4 );
+                name += makeIDSuffix( accountID, 4 );
                 return name;
             }
 
             /** @brief 0 이 아닌 64 비트 난수입니다(0 은 "없음"). */
-            [[nodiscard]] static bool makeNonZeroId( ILoginCrypto& crypto, uint64& outId )
+            [[nodiscard]] static bool makeNonZeroID( ILoginCrypto& crypto, uint64& outID )
             {
                 for ( int32 attempt = 0; attempt < 4; ++attempt )
                 {
@@ -379,7 +379,7 @@ namespace sw
                     }
                     if ( value != 0 )
                     {
-                        outId = value;
+                        outID = value;
                         return true;
                     }
                 }
@@ -399,51 +399,51 @@ namespace sw
             }
 
             /** @brief 프로필을 읽습니다. 없으면 NotFound. */
-            static ServiceStoreResult readProfile( IServiceStoreConnection& connection, uint64 accountId, ProfileRecord& outProfile )
+            static ServiceStoreResult readProfile( IServiceStoreConnection& connection, uint64 accountID, ProfileRecord& outProfile )
             {
                 ServiceRecord            raw;
-                const ServiceStoreResult read = connection.readRecord( getAccountIdTable(), ServiceKeyUtil::makeHex64( accountId ), raw );
+                const ServiceStoreResult read = connection.readRecord( getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), raw );
                 if ( read != ServiceStoreResult::Ok )
                     return read;
                 if ( decodeProfile( raw._bytes, raw._version, outProfile ) == false )
                 {
-                    SW_LOG_ERROR( "account profile %# is corrupt", ServiceKeyUtil::makeHex64( accountId ).c_str() );
+                    SW_LOG_ERROR( "account profile %# is corrupt", ServiceKeyUtil::makeHex64( accountID ).c_str() );
                     return ServiceStoreResult::Unavailable;
                 }
                 return ServiceStoreResult::Ok;
             }
 
             /** @brief 계정의 외부 연결(제공자 → 주체 다이제스트)을 읽습니다. */
-            static ServiceStoreResult listAccountLinks( IServiceStoreConnection& connection, uint64 accountId, vector<ServiceRecord>& outListLink )
+            static ServiceStoreResult listAccountLinks( IServiceStoreConnection& connection, uint64 accountID, vector<ServiceRecord>& outListLink )
             {
-                string prefix = ServiceKeyUtil::makeHex64( accountId );
+                string prefix = ServiceKeyUtil::makeHex64( accountID );
                 prefix.push_back( '/' );
                 return connection.listRecords( getAccountExternalTable(), prefix, "", kMaxLinkCount, false, outListLink );
             }
 
-            static AccountIdentity makeIdentity( uint64 accountId, const ProfileRecord& profile )
+            static AccountIdentity makeIdentity( uint64 accountID, const ProfileRecord& profile )
             {
                 AccountIdentity identity;
-                identity._accountId   = accountId;
+                identity._accountID   = accountID;
                 identity._displayName = profile._displayName;
                 identity._bGuest      = profile._bGuest;
                 return identity;
             }
 
-            static void fillGrantIdentity( uint64 accountId, const ProfileRecord& profile, const LoginSessionToken& token, int64 expiresAtMs, uint64 replacedSessionId,
+            static void fillGrantIdentity( uint64 accountID, const ProfileRecord& profile, const LoginSessionToken& token, int64 expiresAtMs, uint64 replacedSessionID,
                                            LoginGrant& outGrant )
             {
-                outGrant._identity          = makeIdentity( accountId, profile );
+                outGrant._identity          = makeIdentity( accountID, profile );
                 outGrant._token             = token;
                 outGrant._expiresAtMs       = expiresAtMs;
-                outGrant._replacedSessionId = replacedSessionId;
+                outGrant._replacedSessionID = replacedSessionID;
                 outGrant._deletionDueMs     = profile._deletionDueMs;
             }
 
-            static ServiceAuditEntry makeAuditEntry( uint64 accountId, const utf8* pAction, int64 nowMs )
+            static ServiceAuditEntry makeAuditEntry( uint64 accountID, const utf8* pAction, int64 nowMs )
             {
                 ServiceAuditEntry entry;
-                entry._actor   = "acct." + ServiceKeyUtil::makeHex64( accountId );
+                entry._actor   = "acct." + ServiceKeyUtil::makeHex64( accountID );
                 entry._action  = pAction;
                 entry._subject = entry._actor;
                 entry._timeMs  = nowMs < 0 ? 0 : nowMs;
@@ -465,7 +465,7 @@ namespace sw
     {
     }
 
-    LoginResult LoginStoreLogic::registerAccount( const LoginCredential& credential, uint64* pOutAccountId )
+    LoginResult LoginStoreLogic::registerAccount( const LoginCredential& credential, uint64* pOutAccountID )
     {
         using Internal = LoginStoreLogicInternal;
         string nameKey;
@@ -488,11 +488,11 @@ namespace sw
         profile._displayName = credential._loginName;
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
-            if ( Internal::makeNonZeroId( _crypto, account._accountId ) == false )
+            if ( Internal::makeNonZeroID( _crypto, account._accountID ) == false )
                 return LoginResult::StoreUnavailable;
             ServiceTransaction transaction;
             transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), ServiceRecord::kAbsentVersion );
-            transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( account._accountId ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+            transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( account._accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult result = _connection.commit( transaction, &info );
             if ( result == ServiceStoreResult::Conflict && info._conflictIndex == 0 )
@@ -501,8 +501,8 @@ namespace sw
                 continue; // 계정 id 가 겹쳤다(2^-64) — 새 id 로. SQL 의 직렬화 실패(번호 −1)도 다시 본다
             if ( result != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            if ( pOutAccountId != nullptr )
-                *pOutAccountId = account._accountId;
+            if ( pOutAccountID != nullptr )
+                *pOutAccountID = account._accountID;
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
@@ -548,11 +548,11 @@ namespace sw
             if ( Internal::isEqualConstantTime( arrHash, account._arrPasswordHash, LoginConstant::kPasswordHashSize ) == false )
                 return recordFailure( nameKey, accountRaw._bytes, accountRaw._version, nowMs, outGrant._retryAfterMs );
 
-            const LoginResult sanction = evaluateSanction( account._accountId, nowMs, outGrant );
+            const LoginResult sanction = evaluateSanction( account._accountID, nowMs, outGrant );
             if ( sanction != LoginResult::Ok )
                 return sanction;
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, account._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, account._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
             ServiceTransaction transaction;
@@ -573,12 +573,12 @@ namespace sw
                 account._lockedUntilMs = 0;
                 transaction.put( Internal::getAccountTable(), nameKey, Internal::encodeAccount( account ), accountRaw._version );
             }
-            transaction.requireVersion( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( account._accountId ), profile._version );
+            transaction.requireVersion( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( account._accountID ), profile._version );
 
             LoginSessionToken token;
             int64             expiresAtMs       = 0;
-            uint64            replacedSessionId = 0;
-            const LoginResult staged            = stageSessionOpen( account._accountId, nowMs, transaction, token, expiresAtMs, replacedSessionId );
+            uint64            replacedSessionID = 0;
+            const LoginResult staged            = stageSessionOpen( account._accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
@@ -587,8 +587,8 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable; // 적용됐는지 모른다 — 클라이언트가 다시 로그인하면 그 세션을 밀어낸다
 
-            recordSessionOpened( account._accountId, token, replacedSessionId );
-            Internal::fillGrantIdentity( account._accountId, profile, token, expiresAtMs, replacedSessionId, outGrant );
+            recordSessionOpened( account._accountID, token, replacedSessionID );
+            Internal::fillGrantIdentity( account._accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
@@ -611,24 +611,24 @@ namespace sw
 
             ServiceTransaction      transaction;
             Internal::ProfileRecord profile;
-            uint64                  accountId = 0;
+            uint64                  accountID = 0;
             const bool              bCreate   = guestRead == ServiceStoreResult::NotFound;
             if ( bCreate )
             {
-                if ( Internal::makeNonZeroId( _crypto, accountId ) == false )
+                if ( Internal::makeNonZeroID( _crypto, accountID ) == false )
                     return LoginResult::StoreUnavailable;
-                profile._displayName    = Internal::makeGuestDisplayName( accountId );
+                profile._displayName    = Internal::makeGuestDisplayName( accountID );
                 profile._guestDigestHex = digestHex;
                 profile._bGuest         = SW_TRUE;
-                transaction.put( Internal::getGuestTable(), digestHex, Internal::encodeId( accountId ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( accountId ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getGuestTable(), digestHex, Internal::encodeID( accountID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
             }
             else
             {
-                accountId = Internal::decodeId( guestRaw._bytes );
-                if ( accountId == 0 || Internal::readProfile( _connection, accountId, profile ) != ServiceStoreResult::Ok )
+                accountID = Internal::decodeID( guestRaw._bytes );
+                if ( accountID == 0 || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginResult::StoreUnavailable;
-                const LoginResult sanction = evaluateSanction( accountId, nowMs, outGrant );
+                const LoginResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
                     return sanction;
                 transaction.requireVersion( Internal::getGuestTable(), digestHex, guestRaw._version );
@@ -636,8 +636,8 @@ namespace sw
 
             LoginSessionToken token;
             int64             expiresAtMs       = 0;
-            uint64            replacedSessionId = 0;
-            const LoginResult staged            = stageSessionOpen( accountId, nowMs, transaction, token, expiresAtMs, replacedSessionId );
+            uint64            replacedSessionID = 0;
+            const LoginResult staged            = stageSessionOpen( accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
@@ -646,8 +646,8 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
-            recordSessionOpened( accountId, token, replacedSessionId );
-            Internal::fillGrantIdentity( accountId, profile, token, expiresAtMs, replacedSessionId, outGrant );
+            recordSessionOpened( accountID, token, replacedSessionID );
+            Internal::fillGrantIdentity( accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             outGrant._bCreated = bCreate ? SW_TRUE : SW_FALSE;
             return LoginResult::Ok;
         }
@@ -674,24 +674,24 @@ namespace sw
 
             ServiceTransaction      transaction;
             Internal::ProfileRecord profile;
-            uint64                  accountId = 0;
+            uint64                  accountID = 0;
             const bool              bCreate   = externalRead == ServiceStoreResult::NotFound;
             if ( bCreate )
             {
-                if ( Internal::makeNonZeroId( _crypto, accountId ) == false )
+                if ( Internal::makeNonZeroID( _crypto, accountID ) == false )
                     return LoginResult::StoreUnavailable;
-                profile._displayName = Internal::makePlatformDisplayName( displayNameHint, accountId );
-                transaction.put( Internal::getExternalTable(), externalKey, Internal::encodeId( accountId ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountId, provider ), vector<uint8>( digestHex.begin(), digestHex.end() ),
+                profile._displayName = Internal::makePlatformDisplayName( displayNameHint, accountID );
+                transaction.put( Internal::getExternalTable(), externalKey, Internal::encodeID( accountID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), vector<uint8>( digestHex.begin(), digestHex.end() ),
                                  ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( accountId ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
             }
             else
             {
-                accountId = Internal::decodeId( externalRaw._bytes );
-                if ( accountId == 0 || Internal::readProfile( _connection, accountId, profile ) != ServiceStoreResult::Ok )
+                accountID = Internal::decodeID( externalRaw._bytes );
+                if ( accountID == 0 || Internal::readProfile( _connection, accountID, profile ) != ServiceStoreResult::Ok )
                     return LoginResult::StoreUnavailable;
-                const LoginResult sanction = evaluateSanction( accountId, nowMs, outGrant );
+                const LoginResult sanction = evaluateSanction( accountID, nowMs, outGrant );
                 if ( sanction != LoginResult::Ok )
                     return sanction;
                 transaction.requireVersion( Internal::getExternalTable(), externalKey, externalRaw._version );
@@ -699,8 +699,8 @@ namespace sw
 
             LoginSessionToken token;
             int64             expiresAtMs       = 0;
-            uint64            replacedSessionId = 0;
-            const LoginResult staged            = stageSessionOpen( accountId, nowMs, transaction, token, expiresAtMs, replacedSessionId );
+            uint64            replacedSessionID = 0;
+            const LoginResult staged            = stageSessionOpen( accountID, nowMs, transaction, token, expiresAtMs, replacedSessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
@@ -709,8 +709,8 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
-            recordSessionOpened( accountId, token, replacedSessionId );
-            Internal::fillGrantIdentity( accountId, profile, token, expiresAtMs, replacedSessionId, outGrant );
+            recordSessionOpened( accountID, token, replacedSessionID );
+            Internal::fillGrantIdentity( accountID, profile, token, expiresAtMs, replacedSessionID, outGrant );
             outGrant._bCreated = bCreate ? SW_TRUE : SW_FALSE;
             return LoginResult::Ok;
         }
@@ -721,7 +721,7 @@ namespace sw
     {
         using Internal          = LoginStoreLogicInternal;
         outGrant                = LoginGrant{};
-        const string sessionKey = ServiceKeyUtil::makeHex64( token._sessionId );
+        const string sessionKey = ServiceKeyUtil::makeHex64( token._sessionID );
         uint8        arrDigest[LoginConstant::kDigestSize];
         if ( Internal::computeTokenDigest( _crypto, token._arrSecret, arrDigest ) == false )
             return LoginResult::StoreUnavailable;
@@ -745,17 +745,17 @@ namespace sw
                 outGrant._revokeReason = session._revokeReason;
                 return state;
             }
-            const LoginResult sanction = evaluateSanction( session._accountId, nowMs, outGrant );
+            const LoginResult sanction = evaluateSanction( session._accountID, nowMs, outGrant );
             if ( sanction != LoginResult::Ok )
                 return sanction;
             // 신원은 비밀을 바꾸기 **전에** 읽는다 — 못 읽으면 빈 신원으로 Ok 를 주지 않고, 클라이언트가 든 토큰도 살려 둔다(validateSession 과 같은 결과).
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, session._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, session._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
             // 재접속마다 비밀을 돌려 바꾼다 — 옛 토큰은 이 커밋으로 죽는다.
             LoginSessionToken rotated;
-            rotated._sessionId     = token._sessionId;
+            rotated._sessionID     = token._sessionID;
             const bool bSecretMade = _crypto.fillRandom( rotated._arrSecret, LoginConstant::kTokenSecretSize );
             if ( bSecretMade == false || Internal::computeTokenDigest( _crypto, rotated._arrSecret, session._arrTokenDigest ) == false )
                 return LoginResult::StoreUnavailable;
@@ -769,9 +769,9 @@ namespace sw
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
 
-            _outcome._listOnline.push_back( LoginSessionRef{ session._accountId, token._sessionId, LoginRevokeReason::None } );
-            _outcome._listEvent.push_back( LoginEvent{ session._accountId, token._sessionId, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
-            outGrant._identity      = Internal::makeIdentity( session._accountId, profile );
+            _outcome._listOnline.push_back( LoginSessionRef{ session._accountID, token._sessionID, LoginRevokeReason::None } );
+            _outcome._listEvent.push_back( LoginEvent{ session._accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::Resumed } );
+            outGrant._identity      = Internal::makeIdentity( session._accountID, profile );
             outGrant._deletionDueMs = profile._deletionDueMs;
             outGrant._token         = rotated;
             outGrant._expiresAtMs   = session._expiresAtMs;
@@ -784,7 +784,7 @@ namespace sw
     {
         using Internal = LoginStoreLogicInternal;
         ServiceRecord            sessionRaw;
-        const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionId ), sessionRaw );
+        const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ), sessionRaw );
         if ( readResult == ServiceStoreResult::NotFound )
             return LoginResult::InvalidToken;
         if ( readResult != ServiceStoreResult::Ok )
@@ -802,7 +802,7 @@ namespace sw
             *pOutRevokeReason = session._revokeReason;
         if ( state != LoginResult::Ok )
             return state;
-        return readIdentity( _connection, session._accountId, outIdentity ) == ServiceStoreResult::Ok ? LoginResult::Ok : LoginResult::StoreUnavailable;
+        return readIdentity( _connection, session._accountID, outIdentity ) == ServiceStoreResult::Ok ? LoginResult::Ok : LoginResult::StoreUnavailable;
     }
 
     LoginResult LoginStoreLogic::logout( const LoginSessionToken& token, int64 nowMs )
@@ -812,25 +812,25 @@ namespace sw
         const LoginResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        const string       accountKey = ServiceKeyUtil::makeHex64( identity._accountId );
+        const string       accountKey = ServiceKeyUtil::makeHex64( identity._accountID );
         ServiceRecord      linkRaw;
         ServiceTransaction transaction;
-        transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionId ) );
+        transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( token._sessionID ) );
         const ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
-        if ( readResult == ServiceStoreResult::Ok && Internal::decodeId( linkRaw._bytes ) == token._sessionId )
+        if ( readResult == ServiceStoreResult::Ok && Internal::decodeID( linkRaw._bytes ) == token._sessionID )
             transaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
         const ServiceStoreResult commitResult = _connection.commit( transaction );
         if ( commitResult != ServiceStoreResult::Ok && commitResult != ServiceStoreResult::Conflict )
             return LoginResult::StoreUnavailable;
-        _outcome._listOffline.push_back( LoginSessionRef{ identity._accountId, token._sessionId, LoginRevokeReason::LoggedOut } );
-        _outcome._listEvent.push_back( LoginEvent{ identity._accountId, token._sessionId, LoginRevokeReason::LoggedOut, LoginEvent::Kind::LoggedOut } );
+        _outcome._listOffline.push_back( LoginSessionRef{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut } );
+        _outcome._listEvent.push_back( LoginEvent{ identity._accountID, token._sessionID, LoginRevokeReason::LoggedOut, LoginEvent::Kind::LoggedOut } );
         return LoginResult::Ok;
     }
 
-    void LoginStoreLogic::markDisconnected( uint64 sessionId, int64 nowMs )
+    void LoginStoreLogic::markDisconnected( uint64 sessionID, int64 nowMs )
     {
         using Internal          = LoginStoreLogicInternal;
-        const string sessionKey = ServiceKeyUtil::makeHex64( sessionId );
+        const string sessionKey = ServiceKeyUtil::makeHex64( sessionID );
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             ServiceRecord sessionRaw;
@@ -840,7 +840,7 @@ namespace sw
             if ( Internal::decodeSession( sessionRaw._bytes, session ) == false )
                 return;
             if ( attempt == 0 )
-                _outcome._listDisconnected.push_back( LoginSessionRef{ session._accountId, sessionId, LoginRevokeReason::None } );
+                _outcome._listDisconnected.push_back( LoginSessionRef{ session._accountID, sessionID, LoginRevokeReason::None } );
             if ( session._revokeReason != LoginRevokeReason::None || session._resumeDeadlineMs != 0 )
                 return;
             session._resumeDeadlineMs = nowMs + _settings._reconnectGraceMs;
@@ -855,35 +855,35 @@ namespace sw
         }
     }
 
-    LoginResult LoginStoreLogic::revokeAccountSessions( uint64 accountId, LoginRevokeReason reason, int64 nowMs )
+    LoginResult LoginStoreLogic::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs )
     {
         for ( int32 attempt = 0; attempt < LoginStoreLogicInternal::kStoreRetryLimit; ++attempt )
         {
             ServiceTransaction transaction;
-            uint64             sessionId = 0;
-            const LoginResult  staged    = stageSessionRevoke( accountId, reason, nowMs, transaction, sessionId );
+            uint64             sessionID = 0;
+            const LoginResult  staged    = stageSessionRevoke( accountID, reason, nowMs, transaction, sessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
-            if ( sessionId == 0 )
+            if ( sessionID == 0 )
                 return LoginResult::Ok;
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            _outcome._listRevoked.push_back( LoginSessionRef{ accountId, sessionId, reason } );
+            _outcome._listRevoked.push_back( LoginSessionRef{ accountID, sessionID, reason } );
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
     }
 
-    LoginResult LoginStoreLogic::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverId, int64 nowMs, NetGameTicket& outTicket )
+    LoginResult LoginStoreLogic::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, NetGameTicket& outTicket )
     {
         AccountIdentity   identity;
         const LoginResult state = validateSession( token, nowMs, identity );
         if ( state != LoginResult::Ok )
             return state;
-        const bool bIssued = _ticketAuthority.issueTicket( identity._accountId, token._sessionId, serverId, nowMs + _settings._ticketLifetimeMs, outTicket );
+        const bool bIssued = _ticketAuthority.issueTicket( identity._accountID, token._sessionID, serverID, nowMs + _settings._ticketLifetimeMs, outTicket );
         return bIssued ? LoginResult::Ok : LoginResult::StoreUnavailable;
     }
 
@@ -901,7 +901,7 @@ namespace sw
             return state;
 
         Internal::AccountRecord account;
-        account._accountId   = identity._accountId;
+        account._accountID   = identity._accountID;
         account._displayName = credential._loginName;
         account._params      = _settings._passwordHashParams;
         if ( _crypto.fillRandom( account._arrSalt, LoginConstant::kSaltSize ) == false )
@@ -913,7 +913,7 @@ namespace sw
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             if ( profile._nameKey.empty() == false )
                 return LoginResult::AlreadyLinked;
@@ -928,8 +928,8 @@ namespace sw
                 transaction.erase( Internal::getGuestTable(), profile._guestDigestHex );
                 profile._guestDigestHex.clear();
             }
-            transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( identity._accountId ), Internal::encodeProfile( profile ), profileVersion );
-            ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountId, "account.link.credential", nowMs ), identity._accountId,
+            transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
+            ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountID, "account.link.credential", nowMs ), identity._accountID,
                                          profileVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
@@ -939,7 +939,7 @@ namespace sw
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            outIdentity = Internal::makeIdentity( identity._accountId, profile );
+            outIdentity = Internal::makeIdentity( identity._accountID, profile );
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
@@ -961,19 +961,19 @@ namespace sw
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             const uint64 profileVersion = profile._version;
             profile._bGuest             = SW_FALSE;
             ServiceTransaction transaction;
-            transaction.put( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ), Internal::encodeId( identity._accountId ),
+            transaction.put( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ), Internal::encodeID( identity._accountID ),
                              ServiceRecord::kAbsentVersion );
-            transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( identity._accountId, provider ),
+            transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( identity._accountID, provider ),
                              vector<uint8>( digestHex.begin(), digestHex.end() ), ServiceRecord::kAbsentVersion );
-            transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( identity._accountId ), Internal::encodeProfile( profile ), profileVersion );
-            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountId, "account.link.platform", nowMs );
+            transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
+            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.link.platform", nowMs );
             audit._after            = string( provider );
-            ServiceAuditLog::stageEntry( transaction, audit, identity._accountId, profileVersion );
+            ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, profileVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult commitResult = _connection.commit( transaction, &info );
             const bool               bTaken       = commitResult == ServiceStoreResult::Conflict && ( info._conflictIndex == 0 || info._conflictIndex == 1 );
@@ -983,7 +983,7 @@ namespace sw
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            outIdentity = Internal::makeIdentity( identity._accountId, profile );
+            outIdentity = Internal::makeIdentity( identity._accountID, profile );
             return LoginResult::Ok;
         }
         return LoginResult::StoreUnavailable;
@@ -999,12 +999,12 @@ namespace sw
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             vector<ServiceRecord> listLink;
-            if ( Internal::listAccountLinks( _connection, identity._accountId, listLink ) != ServiceStoreResult::Ok )
+            if ( Internal::listAccountLinks( _connection, identity._accountID, listLink ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            const string         linkKey = Internal::makeAccountExternalKey( identity._accountId, provider );
+            const string         linkKey = Internal::makeAccountExternalKey( identity._accountID, provider );
             const ServiceRecord* pLink   = nullptr;
             for ( const ServiceRecord& link : listLink )
             {
@@ -1020,10 +1020,10 @@ namespace sw
             ServiceTransaction transaction;
             transaction.erase( Internal::getAccountExternalTable(), linkKey, pLink->_version );
             transaction.erase( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ) );
-            transaction.requireVersion( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( identity._accountId ), profile._version );
-            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountId, "account.unlink.platform", nowMs );
+            transaction.requireVersion( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), profile._version );
+            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.unlink.platform", nowMs );
             audit._before           = string( provider );
-            ServiceAuditLog::stageEntry( transaction, audit, identity._accountId, pLink->_version );
+            ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, pLink->_version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
@@ -1041,12 +1041,12 @@ namespace sw
         if ( state != LoginResult::Ok )
             return state;
         Internal::ProfileRecord profile;
-        if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+        if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
         vector<ServiceRecord> listLink;
-        if ( Internal::listAccountLinks( _connection, identity._accountId, listLink ) != ServiceStoreResult::Ok )
+        if ( Internal::listAccountLinks( _connection, identity._accountID, listLink ) != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
-        const size_t prefixSize = ServiceKeyUtil::makeHex64( identity._accountId ).size() + 1;
+        const size_t prefixSize = ServiceKeyUtil::makeHex64( identity._accountID ).size() + 1;
         for ( const ServiceRecord& link : listLink )
         {
             outSummary._listProvider.push_back( link._key.substr( prefixSize ) );
@@ -1068,27 +1068,27 @@ namespace sw
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             const uint64 profileVersion = profile._version;
             if ( profile._deletionDueMs == 0 )
                 profile._deletionDueMs = nowMs + _settings._deletionGraceMs;
             ServiceTransaction transaction;
-            transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( identity._accountId ), Internal::encodeProfile( profile ), profileVersion );
-            transaction.put( Internal::getDeletionTable(), Internal::makeDeletionKey( profile._deletionDueMs, identity._accountId ), vector<uint8>{} );
-            uint64            sessionId = 0;
-            const LoginResult staged    = stageSessionRevoke( identity._accountId, LoginRevokeReason::AccountDeleted, nowMs, transaction, sessionId );
+            transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
+            transaction.put( Internal::getDeletionTable(), Internal::makeDeletionKey( profile._deletionDueMs, identity._accountID ), vector<uint8>{} );
+            uint64            sessionID = 0;
+            const LoginResult staged    = stageSessionRevoke( identity._accountID, LoginRevokeReason::AccountDeleted, nowMs, transaction, sessionID );
             if ( staged != LoginResult::Ok )
                 return staged;
-            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountId, "account.delete.request", nowMs );
-            ServiceAuditLog::stageEntry( transaction, audit, identity._accountId, static_cast<uint64>( profile._deletionDueMs ) );
+            ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.delete.request", nowMs );
+            ServiceAuditLog::stageEntry( transaction, audit, identity._accountID, static_cast<uint64>( profile._deletionDueMs ) );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
             if ( commitResult != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
-            if ( sessionId != 0 )
-                _outcome._listRevoked.push_back( LoginSessionRef{ identity._accountId, sessionId, LoginRevokeReason::AccountDeleted } );
+            if ( sessionID != 0 )
+                _outcome._listRevoked.push_back( LoginSessionRef{ identity._accountID, sessionID, LoginRevokeReason::AccountDeleted } );
             outDueMs = profile._deletionDueMs;
             return LoginResult::Ok;
         }
@@ -1105,7 +1105,7 @@ namespace sw
         for ( int32 attempt = 0; attempt < Internal::kStoreRetryLimit; ++attempt )
         {
             Internal::ProfileRecord profile;
-            if ( Internal::readProfile( _connection, identity._accountId, profile ) != ServiceStoreResult::Ok )
+            if ( Internal::readProfile( _connection, identity._accountID, profile ) != ServiceStoreResult::Ok )
                 return LoginResult::StoreUnavailable;
             if ( profile._deletionDueMs == 0 )
                 return LoginResult::Ok;
@@ -1113,9 +1113,9 @@ namespace sw
             const int64  dueMs          = profile._deletionDueMs;
             profile._deletionDueMs      = 0;
             ServiceTransaction transaction;
-            transaction.put( Internal::getAccountIdTable(), ServiceKeyUtil::makeHex64( identity._accountId ), Internal::encodeProfile( profile ), profileVersion );
-            transaction.erase( Internal::getDeletionTable(), Internal::makeDeletionKey( dueMs, identity._accountId ) );
-            ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountId, "account.delete.cancel", nowMs ), identity._accountId, profileVersion );
+            transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
+            transaction.erase( Internal::getDeletionTable(), Internal::makeDeletionKey( dueMs, identity._accountID ) );
+            ServiceAuditLog::stageEntry( transaction, Internal::makeAuditEntry( identity._accountID, "account.delete.cancel", nowMs ), identity._accountID, profileVersion );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
@@ -1136,10 +1136,10 @@ namespace sw
         for ( const ServiceRecord& due : listDue )
         {
             uint64       dueMs     = 0;
-            uint64       accountId = 0;
+            uint64       accountID = 0;
             const size_t slash     = due._key.find( '/' );
             const bool   bParsed   = slash != string::npos && ServiceKeyUtil::parseHex64( string_view( due._key ).substr( 0, slash ), dueMs ) &&
-                                 ServiceKeyUtil::parseHex64( string_view( due._key ).substr( slash + 1 ), accountId );
+                                 ServiceKeyUtil::parseHex64( string_view( due._key ).substr( slash + 1 ), accountID );
             if ( bParsed == false )
             {
                 SW_LOG_WARNING( "account deletion key '%#' is malformed", due._key.c_str() );
@@ -1147,7 +1147,7 @@ namespace sw
             }
             if ( static_cast<int64>( dueMs ) > nowMs )
                 break; // 키 순서 = 예약 시각 순서 — 뒤는 모두 아직이다
-            const LoginResult purged = purgeAccount( accountId, due._key, nowMs );
+            const LoginResult purged = purgeAccount( accountID, due._key, nowMs );
             if ( purged == LoginResult::StoreUnavailable )
                 break;
             purgedCount += purged == LoginResult::Ok ? 1 : 0;
@@ -1155,11 +1155,11 @@ namespace sw
         return purgedCount;
     }
 
-    LoginResult LoginStoreLogic::purgeAccount( uint64 accountId, string_view deletionKey, int64 nowMs )
+    LoginResult LoginStoreLogic::purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs )
     {
         using Internal = LoginStoreLogicInternal;
         Internal::ProfileRecord  profile;
-        const ServiceStoreResult profileRead = Internal::readProfile( _connection, accountId, profile );
+        const ServiceStoreResult profileRead = Internal::readProfile( _connection, accountID, profile );
         const bool               bStale      = profileRead == ServiceStoreResult::NotFound || ( profileRead == ServiceStoreResult::Ok && profile._deletionDueMs == 0 );
         if ( bStale )
         {
@@ -1171,12 +1171,12 @@ namespace sw
         if ( profileRead != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
         vector<ServiceRecord> listLink;
-        if ( Internal::listAccountLinks( _connection, accountId, listLink ) != ServiceStoreResult::Ok )
+        if ( Internal::listAccountLinks( _connection, accountID, listLink ) != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
 
-        const string       accountKey = ServiceKeyUtil::makeHex64( accountId );
+        const string       accountKey = ServiceKeyUtil::makeHex64( accountID );
         ServiceTransaction transaction;
-        transaction.erase( Internal::getAccountIdTable(), accountKey, profile._version );
+        transaction.erase( Internal::getAccountIDTable(), accountKey, profile._version );
         transaction.erase( Internal::getDeletionTable(), deletionKey );
         if ( profile._nameKey.empty() == false )
             transaction.erase( Internal::getAccountTable(), profile._nameKey );
@@ -1195,11 +1195,11 @@ namespace sw
         if ( linkRead == ServiceStoreResult::Ok )
         {
             transaction.erase( Internal::getAccountSessionTable(), accountKey );
-            transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( Internal::decodeId( linkRaw._bytes ) ) );
+            transaction.erase( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( Internal::decodeID( linkRaw._bytes ) ) );
         }
-        ServiceAuditEntry audit = Internal::makeAuditEntry( accountId, "account.delete", nowMs );
+        ServiceAuditEntry audit = Internal::makeAuditEntry( accountID, "account.delete", nowMs );
         audit._actor            = "system";
-        ServiceAuditLog::stageEntry( transaction, audit, accountId, static_cast<uint64>( profile._deletionDueMs ) );
+        ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( profile._deletionDueMs ) );
         const ServiceStoreResult commitResult = _connection.commit( transaction );
         if ( commitResult == ServiceStoreResult::Conflict )
             return LoginResult::NotLinked; // 그새 취소 · 로그인 — 다음 쓸기에서 다시 본다
@@ -1212,7 +1212,7 @@ namespace sw
         for ( const LoginSessionRef& online : listOnline )
         {
             ServiceRecord            sessionRaw;
-            const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( online._sessionId ), sessionRaw );
+            const ServiceStoreResult readResult = _connection.readRecord( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( online._sessionID ), sessionRaw );
             if ( readResult == ServiceStoreResult::Unavailable )
                 return; // 저장소가 아프면 아무도 끊지 않는다
             Internal::SessionRecord session;
@@ -1220,17 +1220,17 @@ namespace sw
             if ( bReadable && Internal::evaluateSession( session, nowMs ) == LoginResult::Ok )
                 continue;
             const LoginRevokeReason reason = bReadable ? session._revokeReason : LoginRevokeReason::Administrative;
-            _outcome._listRevoked.push_back( LoginSessionRef{ online._accountId, online._sessionId, reason } );
+            _outcome._listRevoked.push_back( LoginSessionRef{ online._accountID, online._sessionID, reason } );
         }
     }
 
-    ServiceStoreResult LoginStoreLogic::readIdentity( IServiceStoreConnection& connection, uint64 accountId, AccountIdentity& outIdentity )
+    ServiceStoreResult LoginStoreLogic::readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity )
     {
         LoginStoreLogicInternal::ProfileRecord profile;
-        const ServiceStoreResult               readResult = LoginStoreLogicInternal::readProfile( connection, accountId, profile );
+        const ServiceStoreResult               readResult = LoginStoreLogicInternal::readProfile( connection, accountID, profile );
         if ( readResult != ServiceStoreResult::Ok )
             return readResult;
-        outIdentity = LoginStoreLogicInternal::makeIdentity( accountId, profile );
+        outIdentity = LoginStoreLogicInternal::makeIdentity( accountID, profile );
         return ServiceStoreResult::Ok;
     }
 
@@ -1250,7 +1250,7 @@ namespace sw
             SW_LOG_ERROR( "account record '%#' is corrupt", nameKey.c_str() );
             return ServiceStoreResult::Unavailable;
         }
-        return readIdentity( connection, account._accountId, outIdentity );
+        return readIdentity( connection, account._accountID, outIdentity );
     }
 
     LoginResult LoginStoreLogic::recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs )
@@ -1284,10 +1284,10 @@ namespace sw
                                            LoginConstant::kPasswordHashSize );
     }
 
-    LoginResult LoginStoreLogic::evaluateSanction( uint64 accountId, int64 nowMs, LoginGrant& outGrant )
+    LoginResult LoginStoreLogic::evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant )
     {
         ServiceSanctionState state;
-        if ( ServiceSanction::readState( _connection, accountId, state ) != ServiceStoreResult::Ok )
+        if ( ServiceSanction::readState( _connection, accountID, state ) != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
         const int64 blockedUntilMs = ServiceSanction::getLoginBlockedUntilMs( state, nowMs );
         if ( blockedUntilMs == 0 )
@@ -1297,21 +1297,21 @@ namespace sw
         return LoginResult::AccountSuspended;
     }
 
-    LoginResult LoginStoreLogic::stageSessionOpen( uint64 accountId, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
-                                                   uint64& outReplacedSessionId )
+    LoginResult LoginStoreLogic::stageSessionOpen( uint64 accountID, int64 nowMs, ServiceTransaction& inoutTransaction, LoginSessionToken& outToken, int64& outExpiresAtMs,
+                                                   uint64& outReplacedSessionID )
     {
         using Internal                = LoginStoreLogicInternal;
-        outReplacedSessionId          = 0;
-        const string       accountKey = ServiceKeyUtil::makeHex64( accountId );
+        outReplacedSessionID          = 0;
+        const string       accountKey = ServiceKeyUtil::makeHex64( accountID );
         ServiceRecord      linkRaw;
         ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
         if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
             return LoginResult::StoreUnavailable;
-        const uint64 oldSessionId = readResult == ServiceStoreResult::Ok ? Internal::decodeId( linkRaw._bytes ) : 0;
-        if ( oldSessionId != 0 )
+        const uint64 oldSessionID = readResult == ServiceStoreResult::Ok ? Internal::decodeID( linkRaw._bytes ) : 0;
+        if ( oldSessionID != 0 )
         {
             ServiceRecord oldSessionRaw;
-            const string  oldSessionKey = ServiceKeyUtil::makeHex64( oldSessionId );
+            const string  oldSessionKey = ServiceKeyUtil::makeHex64( oldSessionID );
             readResult                  = _connection.readRecord( Internal::getSessionTable(), oldSessionKey, oldSessionRaw );
             if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
                 return LoginResult::StoreUnavailable;
@@ -1326,47 +1326,47 @@ namespace sw
                 oldSession._revokeReason = LoginRevokeReason::DuplicateLogin;
                 oldSession._expiresAtMs  = std::min( oldSession._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
                 inoutTransaction.put( Internal::getSessionTable(), oldSessionKey, Internal::encodeSession( oldSession ), oldSessionRaw._version );
-                outReplacedSessionId = oldSessionId;
+                outReplacedSessionID = oldSessionID;
             }
         }
 
-        const bool bIdMade = Internal::makeNonZeroId( _crypto, outToken._sessionId );
-        if ( bIdMade == false || _crypto.fillRandom( outToken._arrSecret, LoginConstant::kTokenSecretSize ) == false )
+        const bool bIDMade = Internal::makeNonZeroID( _crypto, outToken._sessionID );
+        if ( bIDMade == false || _crypto.fillRandom( outToken._arrSecret, LoginConstant::kTokenSecretSize ) == false )
             return LoginResult::StoreUnavailable;
         Internal::SessionRecord session;
-        session._accountId   = accountId;
+        session._accountID   = accountID;
         session._issuedAtMs  = nowMs;
         session._expiresAtMs = nowMs + _settings._sessionLifetimeMs;
         if ( Internal::computeTokenDigest( _crypto, outToken._arrSecret, session._arrTokenDigest ) == false )
             return LoginResult::StoreUnavailable;
-        inoutTransaction.put( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( outToken._sessionId ), Internal::encodeSession( session ),
+        inoutTransaction.put( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( outToken._sessionID ), Internal::encodeSession( session ),
                               ServiceRecord::kAbsentVersion );
-        inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, Internal::encodeId( outToken._sessionId ), linkRaw._version );
+        inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, Internal::encodeID( outToken._sessionID ), linkRaw._version );
         outExpiresAtMs = session._expiresAtMs;
         return LoginResult::Ok;
     }
 
-    void LoginStoreLogic::recordSessionOpened( uint64 accountId, const LoginSessionToken& token, uint64 replacedSessionId )
+    void LoginStoreLogic::recordSessionOpened( uint64 accountID, const LoginSessionToken& token, uint64 replacedSessionID )
     {
-        if ( replacedSessionId != 0 )
-            _outcome._listRevoked.push_back( LoginSessionRef{ accountId, replacedSessionId, LoginRevokeReason::DuplicateLogin } );
-        _outcome._listOnline.push_back( LoginSessionRef{ accountId, token._sessionId, LoginRevokeReason::None } );
-        _outcome._listEvent.push_back( LoginEvent{ accountId, token._sessionId, LoginRevokeReason::None, LoginEvent::Kind::LoggedIn } );
+        if ( replacedSessionID != 0 )
+            _outcome._listRevoked.push_back( LoginSessionRef{ accountID, replacedSessionID, LoginRevokeReason::DuplicateLogin } );
+        _outcome._listOnline.push_back( LoginSessionRef{ accountID, token._sessionID, LoginRevokeReason::None } );
+        _outcome._listEvent.push_back( LoginEvent{ accountID, token._sessionID, LoginRevokeReason::None, LoginEvent::Kind::LoggedIn } );
     }
 
-    LoginResult LoginStoreLogic::stageSessionRevoke( uint64 accountId, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionId )
+    LoginResult LoginStoreLogic::stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID )
     {
         using Internal                = LoginStoreLogicInternal;
-        outSessionId                  = 0;
-        const string       accountKey = ServiceKeyUtil::makeHex64( accountId );
+        outSessionID                  = 0;
+        const string       accountKey = ServiceKeyUtil::makeHex64( accountID );
         ServiceRecord      linkRaw;
         ServiceStoreResult readResult = _connection.readRecord( Internal::getAccountSessionTable(), accountKey, linkRaw );
         if ( readResult == ServiceStoreResult::NotFound )
             return LoginResult::Ok;
         if ( readResult != ServiceStoreResult::Ok )
             return LoginResult::StoreUnavailable;
-        const uint64  sessionId  = Internal::decodeId( linkRaw._bytes );
-        const string  sessionKey = ServiceKeyUtil::makeHex64( sessionId );
+        const uint64  sessionID  = Internal::decodeID( linkRaw._bytes );
+        const string  sessionKey = ServiceKeyUtil::makeHex64( sessionID );
         ServiceRecord sessionRaw;
         readResult = _connection.readRecord( Internal::getSessionTable(), sessionKey, sessionRaw );
         if ( readResult == ServiceStoreResult::NotFound )
@@ -1383,7 +1383,7 @@ namespace sw
         session._expiresAtMs  = std::min( session._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
         inoutTransaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
         inoutTransaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
-        outSessionId = sessionId;
+        outSessionID = sessionID;
         return LoginResult::Ok;
     }
 } // namespace sw

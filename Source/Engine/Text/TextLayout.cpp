@@ -146,7 +146,7 @@ namespace sw
                 bool    _bHasMetrics{ false };
 
                 /** @brief 면 하나를 그 글꼴 크기로 더합니다(값은 UI 단위). */
-                void accumulate( const IFontRasterizer& rasterizer, FontFaceId face, float32 fontSize )
+                void accumulate( const IFontRasterizer& rasterizer, FontFaceID face, float32 fontSize )
                 {
                     FontFaceMetrics metrics{};
                     if ( rasterizer.findFaceMetrics( face, metrics ) == false )
@@ -185,7 +185,7 @@ namespace sw
             /** @brief 줄임표 글리프입니다(면 · 글리프 · 폭). */
             struct EllipsisGlyph
             {
-                FontFaceId _face{ kInvalidFontFaceId };
+                FontFaceID _face{ kInvalidFontFaceID };
                 uint32     _glyphIndex{ 0 };
                 uint32     _count{ 0 };
                 float32    _width{ 0.0f }; ///< 글리프 하나의 폭(UI 단위)

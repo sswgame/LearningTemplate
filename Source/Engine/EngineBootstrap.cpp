@@ -10,7 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/LogSink/AsyncLogSink.h"
-#include "Core/Module/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildID.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/String/hashed_string.h"
 
@@ -110,11 +110,11 @@ namespace sw
         CrashHandler::setContextValue( "Build", build::kConfigName );
         CrashHandler::setContextValue( "Platform", build::kPlatformName );
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.
-        const ModuleBuildId executableId = ModuleBuildId::find( nullptr );
-        const ModuleBuildId engineId     = ModuleBuildId::find( reinterpret_cast<const void*>( &CrashHandler::setContextValue ) );
-        CrashHandler::setContextValue( "BuildId", executableId._id );
-        if ( engineId._id != executableId._id )
-            CrashHandler::setContextValue( "EngineBuildId", engineId._id );
+        const ModuleBuildID executableID = ModuleBuildID::find( nullptr );
+        const ModuleBuildID engineID     = ModuleBuildID::find( reinterpret_cast<const void*>( &CrashHandler::setContextValue ) );
+        CrashHandler::setContextValue( "BuildId", executableID._id );
+        if ( engineID._id != executableID._id )
+            CrashHandler::setContextValue( "EngineBuildId", engineID._id );
 
         if ( bDiagnostics )
         {

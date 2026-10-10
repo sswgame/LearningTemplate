@@ -137,7 +137,7 @@ namespace sw
     {
         Component::onBeginPlay();
         // 깜빡임 · 사카드가 캐릭터마다 다른 박자로 돌게 씨앗을 컴포넌트 id 로 섞는다(결정적).
-        const uint64 mixed = getHandle().componentId() * HashUtil::kGoldenRatio64;
+        const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
         _randomState       = static_cast<uint32>( mixed ^ ( mixed >> 32 ) ) | 1u;
         // 경로로 이미 읽었으면(`setFacialRigPath` · `setFacialRig`) 그대로 둔다 — 시작 전에 정한 표정 · 말하기를 지우지 않게.
         if ( _binding.isAnimationActive() == false )

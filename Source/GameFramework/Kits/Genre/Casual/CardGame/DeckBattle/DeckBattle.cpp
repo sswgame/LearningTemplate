@@ -35,7 +35,7 @@ namespace sw
             }
 
             /** @brief 더미의 카드 번호가 모두 덱(@p cardCount 장) 안인가입니다. */
-            static bool arePileIdsInDeck( const CardPile& pile, size_t cardCount )
+            static bool arePileIDsInDeck( const CardPile& pile, size_t cardCount )
             {
                 for ( const Card& card : pile.getCards() )
                 {
@@ -60,13 +60,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Card" ); node; node = node.findNextSibling( "Card" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             DeckBattleCardDef def;
-            def._id           = hashed_string( pId );
+            def._id           = hashed_string( pID );
             const utf8* pName = node.findAttribute( "name" );
-            def._name         = pName != nullptr ? pName : pId;
+            def._name         = pName != nullptr ? pName : pID;
             def._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", 1 ) );
             def._bExhaust     = node.getAttributeBool( "exhaust", false ) ? SW_TRUE : SW_FALSE;
             GameDataXML::forEachToken( node.getAttributeText( "effects" ), ",; ", [&]( string_view token )
@@ -78,7 +78,7 @@ namespace sw
                 if ( bKind && bAmount )
                     def._listEffect.push_back( effect );
                 else
-                    SW_LOG_WARNING( "%#: card '%#' has an unreadable effect '%#'", sourceName, pId, token );
+                    SW_LOG_WARNING( "%#: card '%#' has an unreadable effect '%#'", sourceName, pID, token );
             } );
             if ( _catalog.add( def ) >= 0 )
                 ++loadedCount;
@@ -104,7 +104,7 @@ namespace sw
     {
     }
 
-    bool DeckBattle::initialize( const DeckBattleCatalog* pCatalog, const DeckBattleSettings& settings, const vector<hashed_string>& listDeckCardId,
+    bool DeckBattle::initialize( const DeckBattleCatalog* pCatalog, const DeckBattleSettings& settings, const vector<hashed_string>& listDeckCardID,
                                  const DeckBattleEnemy& enemy, uint32 seed )
     {
         _pCatalog = pCatalog;
@@ -121,9 +121,9 @@ namespace sw
         _turn        = 0;
         if ( pCatalog == nullptr )
             return false;
-        for ( const hashed_string& cardId : listDeckCardId )
+        for ( const hashed_string& cardID : listDeckCardID )
         {
-            const int32 defIndex = pCatalog->findIndex( cardId );
+            const int32 defIndex = pCatalog->findIndex( cardID );
             if ( defIndex < 0 )
                 continue;
             _drawPile.push( Card{ static_cast<uint16>( _listDefIndex.size() ), 0, 0 } );
@@ -295,10 +295,10 @@ namespace sw
         battle._listDefIndex.assign( defCount, -1 );
         for ( int32& defIndex : battle._listDefIndex )
         {
-            hashed_string defId;
-            if ( StateArchiveUtil::readName( archive, defId ) == false )
+            hashed_string defID;
+            if ( StateArchiveUtil::readName( archive, defID ) == false )
                 return false;
-            defIndex = _pCatalog->findIndex( defId );
+            defIndex = _pCatalog->findIndex( defID );
             if ( defIndex < 0 )
                 return false;
         }
@@ -338,10 +338,10 @@ namespace sw
 
         // 더미의 카드 번호가 덱 안이어야 한다(`getCardDef` 가 정의 자리를 찾는다).
         const size_t cardCount = battle._listDefIndex.size();
-        const bool   bIdsValid = DeckBattleInternal::arePileIdsInDeck( battle._drawPile, cardCount ) && DeckBattleInternal::arePileIdsInDeck( battle._hand, cardCount ) &&
-                               DeckBattleInternal::arePileIdsInDeck( battle._discardPile, cardCount ) &&
-                               DeckBattleInternal::arePileIdsInDeck( battle._exhaustPile, cardCount );
-        if ( bIdsValid == false )
+        const bool   bIDsValid = DeckBattleInternal::arePileIDsInDeck( battle._drawPile, cardCount ) && DeckBattleInternal::arePileIDsInDeck( battle._hand, cardCount ) &&
+                               DeckBattleInternal::arePileIDsInDeck( battle._discardPile, cardCount ) &&
+                               DeckBattleInternal::arePileIDsInDeck( battle._exhaustPile, cardCount );
+        if ( bIDsValid == false )
             return false;
         *this = std::move( battle );
         return true;

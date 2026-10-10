@@ -42,10 +42,10 @@ namespace
         }
 
         /** @brief 에미터 1 에서 클립을 공간화해 재생합니다. */
-        static sw::AudioPlayingId playAtEmitter( sw::AudioEngine& engine, const utf8* pClip )
+        static sw::AudioPlayingID playAtEmitter( sw::AudioEngine& engine, const utf8* pClip )
         {
             sw::AudioClipPlayParams params;
-            params._emitterId   = 1;
+            params._emitterID   = 1;
             params._attenuation = sw::hashed_string( "Test" );
             params._bLoop       = true;
             return engine.playClip( sw::hashed_string( pClip ), sw::hashed_string( "sfx" ), params );

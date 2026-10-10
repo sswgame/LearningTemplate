@@ -75,6 +75,8 @@ class CheckAcronymSpellingGate(LintGate):
         parser.add_argument("--enforce", action="append", default=None,
                             help="이 약어도 강제한다(UI · Gpu …, 쉼표로 여럿, `all` 은 전부) — 등록부의 kEnforced 에 더한다")
         parser.add_argument("--verbose", action="store_true", help="강제하지 않는 약어의 남은 철자 수를 약어별로 찍는다")
+        parser.add_argument("--enforce-only", action="append", default=None,
+                            help="등록부의 kEnforced 대신 이 약어만 강제한다(시험용 — 등록부 상태와 무관하게 '강제 전엔 보고만' 을 본다)")
 
     def scan(self, repositoryRoot: Path, args: argparse.Namespace) -> GateResult:
         listProblem = registry.checkRegistry()
@@ -82,8 +84,9 @@ class CheckAcronymSpellingGate(LintGate):
             raise GateError("등록부: " + " · ".join(listProblem))
         listEnforceArgument = [value for value in (args.enforce or []) if value.strip().lower() != "all"]
         try:
+            setBase = set(registry.resolveAcronyms(args.enforce_only)) if args.enforce_only else set(registry.kEnforced)
             setEnforced = set(registry.kAcronym) if any(value.strip().lower() == "all" for value in (args.enforce or [])) \
-                else set(registry.kEnforced) | (set(registry.resolveAcronyms(listEnforceArgument)) if listEnforceArgument else set())
+                else setBase | (set(registry.resolveAcronyms(listEnforceArgument)) if listEnforceArgument else set())
         except ValueError as error:
             raise GateError(str(error)) from error
 

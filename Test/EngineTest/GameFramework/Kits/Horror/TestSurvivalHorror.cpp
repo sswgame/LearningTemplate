@@ -207,7 +207,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
     for ( int32 x = 0; x < 4; ++x )
     {
         const int32 junkInstance = grid.findInstanceAt( x, 1 );
-        if ( junkInstance > 0 && grid.findInstance( junkInstance )->_itemId == hashed_string( "junk" ) )
+        if ( junkInstance > 0 && grid.findInstance( junkInstance )->_itemID == hashed_string( "junk" ) )
             SW_EXPECT_TRUE( session.storeInBox( junkInstance, 1 ) );
     }
     SW_EXPECT_EQUAL( 4, sessionContainers._box.getItemCount( "junk" ) );
@@ -250,11 +250,11 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
     SW_EXPECT_EQUAL( 2, session.getInventory().getItemCount( "ammo" ) );
     session.applyDamage( 60.0f );
     SW_EXPECT_EQUAL( 1, session.getInventory().addItem( "herbGreen", 1 ) );
-    const int32 herb = session.getInventory().getItems().back()._instanceId;
+    const int32 herb = session.getInventory().getItems().back()._instanceID;
     SW_EXPECT_TRUE( session.tryUseItem( herb ) );
     SW_EXPECT_NEAR_EQUAL( 65.0f, session.getHealth(), 1.0e-4f );
     SW_EXPECT_FALSE( session.tryUseItem( herb ) );
-    SW_EXPECT_FALSE( session.tryUseItem( session.getInventory().getItems().front()._instanceId ) ); // 탄약은 "쓰는" 아이템이 아니다
+    SW_EXPECT_FALSE( session.tryUseItem( session.getInventory().getItems().front()._instanceID ) ); // 탄약은 "쓰는" 아이템이 아니다
 }
 
 SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlashlightHoldsItBack )
@@ -278,7 +278,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     SW_EXPECT_TRUE( hasEvent( listEvent, SurvivalHorrorEvent::Kind::HallucinationStarted ) );
 
     SW_EXPECT_EQUAL( 1, session.getInventory().addItem( "sedative", 1 ) );
-    SW_EXPECT_TRUE( session.tryUseItem( session.getInventory().getItems().back()._instanceId ) );
+    SW_EXPECT_TRUE( session.tryUseItem( session.getInventory().getItems().back()._instanceID ) );
     SW_EXPECT_NEAR_EQUAL( 42.5f, session.getSanity().getValue(), 1.0e-4f );
     SW_EXPECT_FALSE( session.isHallucinating() );
 
@@ -307,7 +307,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
     SW_EXPECT_NEAR_EQUAL( beforeDark - 10.0f, session.getSanity().getValue(), 1.0e-4f );
 
     SW_EXPECT_EQUAL( 1, session.getInventory().addItem( "battery", 1 ) );
-    SW_EXPECT_TRUE( session.tryUseItem( session.getInventory().getItems().back()._instanceId ) );
+    SW_EXPECT_TRUE( session.tryUseItem( session.getInventory().getItems().back()._instanceID ) );
     SW_EXPECT_TRUE( session.trySetFlashlight( true ) );
 }
 
@@ -402,9 +402,9 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     SW_ASSERT_NOT_NULL( pZombie );
 
     vector<HorrorInvestigator> listInvestigator( 2 );
-    listInvestigator[0]._actorId = 1;
+    listInvestigator[0]._actorID = 1;
     listInvestigator[0]._health  = 4;
-    listInvestigator[1]._actorId = 2;
+    listInvestigator[1]._actorID = 2;
     listInvestigator[1]._health  = 3;
 
     // 같은 씨앗이면 차례마다 같은 결과.
@@ -417,12 +417,12 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
     {
         const HorrorTurnResult a = first.playNextTurn();
         const HorrorTurnResult b = second.playNextTurn();
-        SW_EXPECT_EQUAL( a._actorId, b._actorId );
+        SW_EXPECT_EQUAL( a._actorID, b._actorID );
         SW_EXPECT_EQUAL( a._combatSuccesses, b._combatSuccesses );
         SW_EXPECT_EQUAL( a._horrorSuccesses, b._horrorSuccesses );
-        SW_EXPECT_EQUAL( a._targetId, b._targetId );
-        if ( a._actorId == HorrorEncounter::kMonsterActorId && a._targetId >= 0 && turn == 0 )
-            SW_EXPECT_EQUAL( 2, a._targetId ); // 첫 공격은 체력이 낮은 조사자에게
+        SW_EXPECT_EQUAL( a._targetID, b._targetID );
+        if ( a._actorID == HorrorEncounter::kMonsterActorID && a._targetID >= 0 && turn == 0 )
+            SW_EXPECT_EQUAL( 2, a._targetID ); // 첫 공격은 체력이 낮은 조사자에게
     }
     SW_EXPECT_TRUE( turn < 200 );
     SW_EXPECT_TRUE( first.getState() != HorrorEncounterState::Ongoing );
@@ -538,9 +538,9 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     SW_ASSERT_NOT_NULL( pZombie );
     SW_ASSERT_NOT_NULL( pElder );
     vector<HorrorInvestigator> listInvestigator( 2 );
-    listInvestigator[0]._actorId = 1;
+    listInvestigator[0]._actorID = 1;
     listInvestigator[0]._health  = 4;
-    listInvestigator[1]._actorId = 2;
+    listInvestigator[1]._actorID = 2;
     listInvestigator[1]._health  = 3;
 
     HorrorEncounter encounter;
@@ -571,10 +571,10 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
     {
         const HorrorTurnResult original = encounter.playNextTurn();
         const HorrorTurnResult next     = restored.playNextTurn();
-        SW_EXPECT_EQUAL( original._actorId, next._actorId );
+        SW_EXPECT_EQUAL( original._actorID, next._actorID );
         SW_EXPECT_EQUAL( original._combatSuccesses, next._combatSuccesses );
         SW_EXPECT_EQUAL( original._horrorSuccesses, next._horrorSuccesses );
-        SW_EXPECT_EQUAL( original._targetId, next._targetId );
+        SW_EXPECT_EQUAL( original._targetID, next._targetID );
     }
     SW_EXPECT_TRUE( encounter.getState() == restored.getState() );
     Archive afterOriginal;

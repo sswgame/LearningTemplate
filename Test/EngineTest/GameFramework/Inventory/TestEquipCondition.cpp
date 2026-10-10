@@ -19,18 +19,18 @@ namespace
 {
     struct EquipConditionTestInternal
     {
-        static InventorySlot makeItem( const utf8* pItemId )
+        static InventorySlot makeItem( const utf8* pItemID )
         {
             InventorySlot item;
-            item._itemId = hashed_string( pItemId );
+            item._itemID = hashed_string( pItemID );
             item._count  = 1;
             return item;
         }
 
-        static EquipResult equip( Equipment& equipment, const utf8* pSlot, const utf8* pItemId )
+        static EquipResult equip( Equipment& equipment, const utf8* pSlot, const utf8* pItemID )
         {
             vector<InventorySlot> listRemoved;
-            return equipment.equip( hashed_string( pSlot ), makeItem( pItemId ), listRemoved );
+            return equipment.equip( hashed_string( pSlot ), makeItem( pItemID ), listRemoved );
         }
 
         /** @brief 기사 세트 셋을 낍니다. */
@@ -116,8 +116,8 @@ SW_TEST_CASE( EquipConditionTest, BrokenConditionFollowsThePerItemPolicy )
         // 바꿔 끼기도 세트를 깬다 — 판갑을 셔츠로.
         SW_EXPECT_TRUE( equipment.equip( hashed_string( "Body" ), Internal::makeItem( "shirt" ), listRemoved ) == EquipResult::Ok );
         SW_ASSERT_EQUAL( size_t( 2 ), listRemoved.size() );
-        SW_EXPECT_TRUE( listRemoved[0]._itemId == hashed_string( "plate" ) );
-        SW_EXPECT_TRUE( listRemoved[1]._itemId == hashed_string( "cape_together" ) );
+        SW_EXPECT_TRUE( listRemoved[0]._itemID == hashed_string( "plate" ) );
+        SW_EXPECT_TRUE( listRemoved[1]._itemID == hashed_string( "cape_together" ) );
         SW_EXPECT_TRUE( equipment.findEquipped( hashed_string( "Back" ) ) == nullptr );
     }
     // 벗기 거부 — 아무것도 바뀌지 않는다.
@@ -171,7 +171,7 @@ SW_TEST_CASE( EquipConditionTest, TagCharacterTagAndBodyShapeConditions )
     context._bodyShape = hashed_string( "Thin" );
     equipment.setCharacterContext( context, listRemoved );
     SW_ASSERT_EQUAL( size_t( 1 ), listRemoved.size() );
-    SW_EXPECT_TRUE( listRemoved[0]._itemId == hashed_string( "belt_big" ) );
+    SW_EXPECT_TRUE( listRemoved[0]._itemID == hashed_string( "belt_big" ) );
     SW_EXPECT_TRUE( equipment.findEquipped( hashed_string( "Head" ) ) != nullptr );
 }
 
@@ -216,7 +216,7 @@ SW_TEST_CASE( EquipConditionTest, InstanceStateKeepsItemsFromStacking )
     inventory.initialize( &catalog, 4 );
     SW_EXPECT_EQUAL( 1, inventory.addItem( hashed_string( "gem" ), 1 ) );
     InventorySlot dyed;
-    dyed._itemId = hashed_string( "gem" );
+    dyed._itemID = hashed_string( "gem" );
     dyed._count  = 1;
     dyed._customization.setColor( hashed_string( "Tint" ), float4( 1.0f, 0.0f, 0.0f, 1.0f ) );
     SW_EXPECT_TRUE( inventory.addStack( dyed ) );

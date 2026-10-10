@@ -260,14 +260,14 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     sw::string recordedNewLang;
     uint32     callCount{ 0 };
 
-    const uint32 callbackId = loc.registerLanguageChangedCallback(
+    const uint32 callbackID = loc.registerLanguageChangedCallback(
         [&]( sw::string_view oldLang, sw::string_view newLang )
     {
         recordedOldLang = oldLang;
         recordedNewLang = newLang;
         ++callCount;
     } );
-    SW_EXPECT_TRUE( callbackId > 0 );
+    SW_EXPECT_TRUE( callbackID > 0 );
 
     loc.setCurrentLanguage( "ko_KR" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
@@ -277,7 +277,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
     loc.setCurrentLanguage( "ko_KR" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
 
-    loc.unregisterLanguageChangedCallback( callbackId );
+    loc.unregisterLanguageChangedCallback( callbackID );
     loc.setCurrentLanguage( "ja_JP" );
     SW_EXPECT_EQUAL( uint32( 1 ), callCount );
     SW_EXPECT_EQUAL( sw::string( "ja_jp" ), loc.getCurrentLanguage() );
@@ -289,7 +289,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageChangedCallbackNotification )
 SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
 {
     sw::ModuleService gameService{};
-    gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::LocalizationManager )] = &sw::engine::getLocalizationManager();
+    gameService.arrServices[sw::internal::toRawServiceID( sw::internal::ModuleServiceID::LocalizationManager )] = &sw::engine::getLocalizationManager();
     sw::test::ScopedGameServiceBinding scopedBinding{ gameService };
 
     const sw::string folder           = test::makeTempDirectory( "loc_gamestrings" );
@@ -306,12 +306,12 @@ SW_TEST_CASE( LocalizationManagerTest, GameStringsMountsTheGameProject )
     SW_EXPECT_STREQ( "Mystery Island", sw::GameStrings::getFromLanguage( "en", "ui.title" ) );
 
     sw::string   notifiedNewLang;
-    const uint32 callbackId = sw::GameStrings::registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
+    const uint32 callbackID = sw::GameStrings::registerLanguageChangedCallback( [&]( sw::string_view, sw::string_view newLang )
     { notifiedNewLang = newLang; } );
     SW_EXPECT_TRUE( sw::GameStrings::setLanguage( "en" ) );
     SW_EXPECT_STREQ( "en", notifiedNewLang.c_str() );
     SW_EXPECT_STREQ( "Start Game", sw::GameStrings::get( "ui.start" ) );
-    sw::GameStrings::unregisterLanguageChangedCallback( callbackId );
+    sw::GameStrings::unregisterLanguageChangedCallback( callbackID );
 
     sw::GameStrings::clear();
     SW_EXPECT_FALSE( sw::engine::getLocalizationManager().hasString( sw::hashed_string( "ui.title" ) ) );

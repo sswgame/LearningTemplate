@@ -47,7 +47,7 @@ namespace sw
 
         const CurrencyDef*         findCurrency( string_view id ) const;
         const vector<CurrencyDef>& getCurrencies() const { return _listCurrency; }
-        int64                      getBalanceCap( string_view assetId ) const override;
+        int64                      getBalanceCap( string_view assetID ) const override;
 
     private:
         static constexpr const utf8* kXMLRootName = "CurrencyCatalog";

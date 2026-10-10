@@ -27,7 +27,7 @@ namespace sw::editor
     {
         struct EditorViewportToolbarInternal
         {
-            static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboId, bool& bEnabled, float32& value,
+            static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
                                              float32 comboWidth, int32 fallbackIndex )
             {
@@ -47,7 +47,7 @@ namespace sw::editor
                     }
                 }
 
-                if ( ImGui::Combo( pComboId, &currentIndex, arrLabel, valueCount ) )
+                if ( ImGui::Combo( pComboID, &currentIndex, arrLabel, valueCount ) )
                 {
                     if ( 0 <= currentIndex && currentIndex < valueCount )
                         value = arrValue[currentIndex];
@@ -217,7 +217,7 @@ namespace sw::editor
                                                   bool bEnabled )
     {
         editor::EditorFloatingBarDesc barDesc{};
-        barDesc._pId       = "##EditorTransformBar";
+        barDesc._pID       = "##EditorTransformBar";
         barDesc._anchorPos = anchorPos;
         barDesc._pivot     = float2{ 0.5f, 0.0f };
         barDesc._maxWidth  = maxWidth;

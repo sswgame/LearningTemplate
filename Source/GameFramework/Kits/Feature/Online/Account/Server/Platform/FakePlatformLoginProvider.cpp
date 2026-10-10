@@ -19,7 +19,7 @@ namespace sw
         : _listPending{}
         , _listDone{}
         , _name{ name }
-        , _nextVerificationId{ 1 }
+        , _nextVerificationID{ 1 }
         , _submittedCount{ 0 }
     {
     }
@@ -29,9 +29,9 @@ namespace sw
         (void)nowMs;
         PendingTicket& pending  = _listPending.emplace_back();
         pending._text           = string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() );
-        pending._verificationId = _nextVerificationId++;
+        pending._verificationID = _nextVerificationID++;
         ++_submittedCount;
-        return pending._verificationId;
+        return pending._verificationID;
     }
 
     int32 FakePlatformLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
@@ -52,7 +52,7 @@ namespace sw
         for ( const PendingTicket& pending : _listPending )
         {
             PlatformLoginVerification& verification = _listDone.emplace_back();
-            verification._verificationId            = pending._verificationId;
+            verification._verificationID            = pending._verificationID;
             const string_view text{ pending._text };
             if ( text == "down" )
             {

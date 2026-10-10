@@ -84,7 +84,7 @@ namespace
             _menu = _ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
         }
 
-        bool focus( uint32 index ) { return _ui.getFocusManager().setFocus( _ui.findScreen( _menu )->getTree(), _listButton[index]->getId() ); }
+        bool focus( uint32 index ) { return _ui.getFocusManager().setFocus( _ui.findScreen( _menu )->getTree(), _listButton[index]->getID() ); }
 
         /** @brief 지금 포커스 버튼의 자리입니다(없으면 -1). */
         int32 getFocusedIndex() const
@@ -340,7 +340,7 @@ SW_TEST_CASE( UIInputTest, PointerPositionIsInUIUnits )
     fixture.beginFrame();
     SW_EXPECT_TRUE( fixture._input.getInputMap().wasActionTriggered( "Fire" ) );
     SW_EXPECT_FALSE( fixture.wasTriggeredForGame( "Fire" ) );
-    SW_EXPECT_EQUAL( fixture._listButton[0]->getId(), fixture._ui.getPointerState().getHoveredWidget() );
+    SW_EXPECT_EQUAL( fixture._listButton[0]->getID(), fixture._ui.getPointerState().getHoveredWidget() );
     fixture.endFrame();
 }
 
@@ -359,7 +359,7 @@ SW_TEST_CASE( UIInputTest, RightStickScrollsFocusedList )
     pContent->addChild( sw::make_unique<sw::test::TestFocusableFixedWidget>( "second", sw::float2{ 100.0f, 1000.0f } ) );
     const sw::UIScreenHandle screen = fixture._ui.pushScreen( sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( root ) ) );
     fixture.runFrame(); // 놓는다
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( screen )->getTree(), pFirst->getId() ) );
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( screen )->getTree(), pFirst->getID() ) );
     fixture._script.addGamepadAxis( 1, 3, -1.0f ); // 오른쪽 스틱 y — 아래
     fixture.attachScript();
 

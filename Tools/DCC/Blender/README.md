@@ -29,7 +29,7 @@ Blender에서 만든 모델을 엔진에 넣으려면 glTF로 내보내고, 축�
 | glTF 원본 | `Resource/<도메인>/models_raw/<이름>.glb` |
 | 임포트 결과 | `Resource/<도메인>/models/<이름>.mesh` |
 | 소켓 초안 | `Resource/<도메인>/models/<이름>.sockets.xml`(파일이 없을 때만 씀) |
-| 메시 id | `<도메인>/models/<이름>.mesh`. `MeshComponent::_meshId` 에 적는 값 |
+| 메시 id | `<도메인>/models/<이름>.mesh`. `MeshComponent::_meshID` 에 적는 값 |
 
 **5단계 — 확인하고 커밋합니다.** `py -3 -m Scripts validate-assets` 가 깨끗한지 봅니다. `.glb`, `.mesh`, `.sockets.xml` 과 함께 `models_raw/import.stamp` 도 커밋합니다.
 

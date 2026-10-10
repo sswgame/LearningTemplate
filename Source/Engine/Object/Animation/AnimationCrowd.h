@@ -85,7 +85,7 @@ namespace sw
     struct AnimationCrowdBucketKey
     {
         const Skeleton* _pSkeleton{ nullptr };
-        uint64          _skinDataId{ 0 };
+        uint64          _skinDataID{ 0 };
         const AnimClip* _pClip{ nullptr };
         float32         _playRate{ 1.0f };
         uint32          _variation{ 0 };
@@ -93,13 +93,13 @@ namespace sw
 
         bool operator==( const AnimationCrowdBucketKey& other ) const
         {
-            return _pSkeleton == other._pSkeleton && _skinDataId == other._skinDataId && _pClip == other._pClip && _playRate == other._playRate &&
+            return _pSkeleton == other._pSkeleton && _skinDataID == other._skinDataID && _pClip == other._pClip && _playRate == other._playRate &&
                    _variation == other._variation && _bAnchorRootMotion == other._bAnchorRootMotion;
         }
         /** @brief 변형 번호만 다른가(같은 상태)입니다. */
         bool isSameState( const AnimationCrowdBucketKey& other ) const
         {
-            return _pSkeleton == other._pSkeleton && _skinDataId == other._skinDataId && _pClip == other._pClip && _playRate == other._playRate &&
+            return _pSkeleton == other._pSkeleton && _skinDataID == other._skinDataID && _pClip == other._pClip && _playRate == other._playRate &&
                    _bAnchorRootMotion == other._bAnchorRootMotion;
         }
     };
@@ -113,7 +113,7 @@ namespace sw
         size_t operator()( const AnimationCrowdBucketKey& key ) const
         {
             size_t hash = reinterpret_cast<size_t>( key._pSkeleton ) * 1315423911u;
-            hash ^= static_cast<size_t>( key._skinDataId ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._skinDataID ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pClip ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( key._variation * 2u + key._bAnchorRootMotion ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
@@ -247,7 +247,7 @@ namespace sw
         /** @brief 구운 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
         {
-            uint64           _skinDataId{ 0 };
+            uint64           _skinDataID{ 0 };
             const Skeleton*  _pSkeleton{ nullptr };
             const AnimClip*  _pClip{ nullptr };
             uint8            _bAnchorRootMotion{ SW_FALSE };

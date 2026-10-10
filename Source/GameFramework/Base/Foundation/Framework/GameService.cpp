@@ -37,7 +37,7 @@ namespace sw
 
         SW_GAMESERVICE_API bool areGameServicesBound()
         {
-            return s_gameService.arrServices[sw::internal::toRawServiceId( sw::internal::ModuleServiceId::SceneManager )] != nullptr;
+            return s_gameService.arrServices[sw::internal::toRawServiceID( sw::internal::ModuleServiceID::SceneManager )] != nullptr;
         }
 
         namespace internal
@@ -65,12 +65,12 @@ namespace sw
                 return it != s_mapLocalService.end() ? it->second : nullptr;
             }
 
-            SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceId id )
+            SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceID id )
             {
-                const uint32 rawId = sw::internal::toRawServiceId( id );
-                if ( rawId >= sw::internal::kModuleServiceCount )
+                const uint32 rawID = sw::internal::toRawServiceID( id );
+                if ( rawID >= sw::internal::kModuleServiceCount )
                     return nullptr;
-                return const_cast<void*>( s_gameService.arrServices[rawId] );
+                return const_cast<void*>( s_gameService.arrServices[rawID] );
             }
         } // namespace internal
     } // namespace game

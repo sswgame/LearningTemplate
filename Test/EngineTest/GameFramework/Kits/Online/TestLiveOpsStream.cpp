@@ -60,10 +60,10 @@ namespace
 
     struct LiveOpsStreamTestInternal
     {
-        static LiveEventDefinition makeEvent( string_view eventId, string_view kind )
+        static LiveEventDefinition makeEvent( string_view eventID, string_view kind )
         {
             LiveEventDefinition definition;
-            definition._eventId = string( eventId );
+            definition._eventID = string( eventID );
             definition._kind    = string( kind );
             definition._startMs = 0;
             definition._endMs   = 1000000;
@@ -149,11 +149,11 @@ SW_TEST_CASE( LiveOpsStreamTest, DeviceRegistrationOverTheWireReachesTheDispatch
 
     LiveOpsRecorder        recorder;
     PushDeviceRegistration registration;
-    registration._providerId = "fake";
+    registration._providerID = "fake";
     registration._token      = "device-token";
     registration._locale     = "ko-KR";
     (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
-    registration._providerId = "Not Valid";
+    registration._providerID = "Not Valid";
     (void)liveOpsClient.registerDevice( registration, recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 1000 );
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 2 ) );

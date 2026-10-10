@@ -416,11 +416,11 @@ namespace sw
         listMeshVariant.reserve( meshVariantCount );
         for ( uint32 variantIndex = 0; variantIndex < meshVariantCount; ++variantIndex )
         {
-            const utf8*      pShapeId = kArrBenchShape[variantIndex % shapeCount];
-            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeId, PrimitiveVertexColor::Diagnostic );
+            const utf8*      pShapeID = kArrBenchShape[variantIndex % shapeCount];
+            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
-                SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeId );
+                SW_LOG_ERROR( "[Bench] 도형 '%#' 을 만들지 못했습니다.", pShapeID );
                 return;
             }
             // GPU 모프 옵트인 — 유니티의 vertexBufferTarget 옵트인과 같은 자리다. 켠 메시만 풀에 들어간다.
@@ -589,7 +589,7 @@ namespace sw
             if ( pMesh == nullptr || pAnimator == nullptr )
                 continue;
             pMesh->setShareCrowdPose( gv_benchCrowdShare != 0 );
-            pMesh->setMeshId( kBenchCharacterMesh );
+            pMesh->setMeshID( kBenchCharacterMesh );
             pMesh->setSkeletonPath( kBenchCharacterSkeleton );
             pMesh->resolveRenderAssets();
             // 기사는 +Z 를 본다 — 카메라(-Z 쪽)를 보도록 돌린다. 격자면 열 · 행으로 펼친다(행은 +Z 로 멀어진다).
@@ -670,7 +670,7 @@ namespace sw
             SkeletalMeshComponent* pMesh = pObject->addComponent<SkeletalMeshComponent>();
             if ( pMesh == nullptr )
                 continue;
-            pMesh->setMeshId( kBenchFaceMesh );
+            pMesh->setMeshID( kBenchFaceMesh );
             pMesh->setSkeletonPath( kBenchFaceSkeleton );
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( float3{ origin + static_cast<float32>( index ) * kBenchFaceSpacing, 0.0f, 0.0f } );

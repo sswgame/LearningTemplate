@@ -150,7 +150,7 @@ namespace sw
     FileWatchHandle FileWatchDispatcher::registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch )
     {
         WatchEntry entry{};
-        entry._handle = FileWatchHandle{ _nextWatchId++ };
+        entry._handle = FileWatchHandle{ _nextWatchID++ };
         // mtime 폴링 · 네이티브 감시자에는 실제 파일 시스템 경로를 쓰고, 맞춰 보는 데는 normalizePath 를 쓴다.
         entry._pathPrefix = FileUtil::normalizeSeparators( pathPrefix );
         // 맞춰 볼 때 쓰는 형태로 **여기서 한 번** 만들어 둔다.

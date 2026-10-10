@@ -239,7 +239,7 @@ SW_TEST_CASE( ReflectionComponentTest, ComponentPropertySerialization )
 /**
  * @brief [ReflectionComponentTest] 파일 상태 묶음은 옮기지 못하는 핸들(ComponentHandle)을 비우고 알리고, 묶음에 없는 오브젝트를 가리키던 핸들은 없음이 된다 — 같은 실행 상태는 그대로 둔다
  * @details 묶음은 `GameObjectHandle` 을 어디에 들었든(단일 · 시퀀스 · set · 맵 키 · 값 · 중첩) 저장된 id 에서 이 실행의 오브젝트로 옮긴다. `ComponentHandle` 에 남은
- *          파일 id 는 이 실행에서 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIdSpace::Live`)는 런타임 id 그대로가 맞다.
+ *          파일 id 는 이 실행에서 우연히 같은 값을 받은 다른 컴포넌트를 가리키므로 비운다. 같은 실행의 상태(`ObjectIDSpace::Live`)는 런타임 id 그대로가 맞다.
  */
 SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
 {
@@ -263,7 +263,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
     {
         sw::GameObject* pLive = manager.createGameObject( sw::hashed_string( "LiveCopy" ) );
         SW_ASSERT_NOT_NULL( pLive );
-        sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Live );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Live );
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLive, state, context ) );
@@ -281,10 +281,10 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "unremappable handle property" );
-        sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Saved );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Saved );
         sw::ObjectLoadContext context{};
         context._pBatch  = &batch;
-        context._savedId = 900000001; // 런타임 id 와 겹치지 않는 파일 id
+        context._savedID = 900000001; // 런타임 id 와 겹치지 않는 파일 id
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
         batch.finish();
     }
@@ -341,11 +341,11 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
         sw::GameObject* pNewHolder      = manager.createGameObject( sw::hashed_string( "RemapHolderCopy" ) );
         SW_ASSERT_TRUE( pNewTarget != nullptr && pNewHolder != nullptr );
 
-        sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
-        batch.add( pNewTarget, pTarget->getObjectId(), sw::hashed_string( "RemapTarget" ), false );
+        sw::ObjectStateBatch batch( sw::ObjectIDSpace::Saved );
+        batch.add( pNewTarget, pTarget->getObjectID(), sw::hashed_string( "RemapTarget" ), false );
         sw::ObjectLoadContext context{};
         context._pBatch  = &batch;
-        context._savedId = 900000101 + formatIndex;
+        context._savedID = 900000101 + formatIndex;
         bool bLoaded     = false;
         if ( formatIndex == 0 )
             bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pNewHolder, xmlState, context );

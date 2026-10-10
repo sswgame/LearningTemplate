@@ -223,7 +223,7 @@ namespace sw
         {
             shared_ptr<const ShapeDescList> _pListShape;
             uint64                          _userData{ 0 };
-            JPH::BodyID                     _bodyId{};
+            JPH::BodyID                     _bodyID{};
             PhysicsBodyType                 _type{ PhysicsBodyType::Dynamic };
             uint8                           _layer{ 0 };
             bool                            _bTrigger{ false };
@@ -263,9 +263,9 @@ namespace sw
         };
 
         /** @brief BodyID 색인 → 엔진 핸들입니다. 콜백(`OnContactRemoved` 는 BodyID 만 준다)과 질의 결과가 씁니다. */
-        struct BodyIdEntry
+        struct BodyIDEntry
         {
-            JPH::uint32       _bodyIdValue{ JPH::BodyID::cInvalidBodyID };
+            JPH::uint32       _bodyIDValue{ JPH::BodyID::cInvalidBodyID };
             PhysicsBodyHandle _body{};
         };
 
@@ -293,8 +293,8 @@ namespace sw
         PhysicsBodyHandle createBodyUnadded( const PhysicsBodyDesc3D& desc );
         const BodyRecord* findBody( PhysicsBodyHandle body ) const;
         BodyRecord*       findBody( PhysicsBodyHandle body );
-        PhysicsBodyHandle findHandle( const JPH::BodyID& bodyId ) const;
-        void              setHandle( const JPH::BodyID& bodyId, PhysicsBodyHandle body );
+        PhysicsBodyHandle findHandle( const JPH::BodyID& bodyID ) const;
+        void              setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body );
         /** @brief 바디들에 붙은 관절 · 바퀴 차를 지웁니다(바디를 지우기 전에). */
         void destroyJointsOf( span<const PhysicsBodyHandle> listBody );
         /** @brief 구속을 시스템에서 내립니다(구속 · 스텝 리스너 둘 다). */
@@ -318,7 +318,7 @@ namespace sw
         SlotHandleTable<CharacterRecord>          _characters;
         SlotHandleTable<VehicleRecord>            _vehicles;
         SlotHandleTable<ShapeRecord>              _shapes;
-        vector<BodyIdEntry>                       _listBodyIdEntry;
+        vector<BodyIDEntry>                       _listBodyIDEntry;
         PhysicsPairFilter                         _pairFilter;
         PhysicsContactTracker<PhysicsDimension3D> _contactTracker;
         vector<PhysicsContactEvent3D>             _listContactEvent;

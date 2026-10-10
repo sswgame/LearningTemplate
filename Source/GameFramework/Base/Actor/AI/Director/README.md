@@ -43,7 +43,7 @@ director.getBuiltinIntensityModel().addSignal( "damageTaken", 12 ); // 또는 se
 director.setContext( context );                                     // 지역 태그, 시계(fillFromClock), 플래그, 플레이어 태그, 날씨
 director.update( dt );
 director.drainEvents( listEvent );                                  // PhaseChanged, Spawned, Despawned, Encounter, Reward
-director.notifyDespawned( spawnId );
+director.notifyDespawned( spawnID );
 ```
 
 자동 플레이(`-gv_shooterAutoPlay=1`)는 씨앗이 고정이라, 고정 프레임 시간으로 돌리면 같은 페이싱이 나옵니다.
@@ -130,7 +130,7 @@ director.notifyDespawned( spawnId );
   `ResourceDataSchemaTest` 가 `Resource/` 아래 모든 `*.director.xml` 과 `*.spawns.xml` 을 읽습니다.
 - **감독의 상태는 `writeState` 와 `readState` 로 넘깁니다**(태그 `AIDR`). 핫 리로드와 세이브가 웨이브를 이어 가는 방법입니다.
   프로필 구조(단계, 풀, 항목, 신호 수)가 다르면 읽기를 거절하고 처음부터 돕니다. 게임 긴장도 모델과 추적, 쌓인 사건은 싣지 않습니다.
-- **스폰 감독의 살아 있는 개체는 상태에 실립니다.** 모습을 정리했다가 다시 만드는 게임은 `collectAliveSpawnIds` 로 같은 스폰 id 의 개체를 다시 스폰해야 예산과 상한이 맞습니다.
+- **스폰 감독의 살아 있는 개체는 상태에 실립니다.** 모습을 정리했다가 다시 만드는 게임은 `collectAliveSpawnIDs` 로 같은 스폰 id 의 개체를 다시 스폰해야 예산과 상한이 맞습니다.
 - **태그 거르기는 상태에 싣지 않고 단계에서 다시 거는데, 읽기 전에 겁니다.** 읽은 뒤에 걸면 상한에 걸려 있던 미리 고른 항목을 비워서 원래 상태와 갈라집니다.
 
 ## 더 볼 곳

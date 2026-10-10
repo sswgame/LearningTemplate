@@ -238,7 +238,7 @@ namespace sw
             }
 
             /** @brief 바인딩이 가리키는 필드 이름입니다. 넷 역할은 필드 이름 자리에 역할을 적으므로 NetRole 필드입니다. */
-            static string_view getBoundFieldId( const AnnotationBinding& binding ) noexcept
+            static string_view getBoundFieldID( const AnnotationBinding& binding ) noexcept
             {
                 if ( binding._kind == AnnotationBinding::Kind::NetRole )
                     return annotation::kNetRoleField;
@@ -257,12 +257,12 @@ namespace sw
             {
                 const AnnotationScope<TParsed>& scope   = getAnnotationScope<TParsed>();
                 const AnnotationBinding&        binding = entry._binding;
-                const AnnotationField<TParsed>* pField  = scope.findField( getBoundFieldId( binding ) );
+                const AnnotationField<TParsed>* pField  = scope.findField( getBoundFieldID( binding ) );
                 if ( pField == nullptr )
                 {
                     SW_LOG_ERROR( "AnnotationMeta.txt [%#] binds '%#', but PredefinedAnnotationField.xxx has no %# row for it "
                                   "- every token spelled that way would be dropped.",
-                                  entry._scope, binding._field, getBoundFieldId( binding ) );
+                                  entry._scope, binding._field, getBoundFieldID( binding ) );
                     return false;
                 }
                 if ( acceptsKind( pField->_value, binding._kind ) == false )
@@ -293,7 +293,7 @@ namespace sw
                     bool bBound = false;
                     for ( const AnnotationMetaEntry& entry : meta.getEntries() )
                     {
-                        if ( isInScope<TParsed>( entry ) && getBoundFieldId( entry._binding ) == field._id )
+                        if ( isInScope<TParsed>( entry ) && getBoundFieldID( entry._binding ) == field._id )
                         {
                             bBound = true;
                             break;
@@ -329,16 +329,16 @@ namespace sw
 #define SW_ANNOTATION_OUTPUT_Runtime                   SW_ANNOTATION_OUTPUT_Editor
 #define SW_ANNOTATION_OUTPUT_Manual( TParsed, Member ) nullptr, nullptr
 
-#define SW_ANNOTATION_ROW( TParsed, Id, Member, ApplyStatement, Emit )                                                   \
-    { #Id, []( TParsed& target, string_view value ) { ApplyStatement; }, SW_ANNOTATION_OUTPUT_##Emit( TParsed, Member ), \
+#define SW_ANNOTATION_ROW( TParsed, ID, Member, ApplyStatement, Emit )                                                   \
+    { #ID, []( TParsed& target, string_view value ) { ApplyStatement; }, SW_ANNOTATION_OUTPUT_##Emit( TParsed, Member ), \
       AnnotationFieldsInternal::getValueKind<decltype( TParsed::Member )>(), AnnotationEmit::Emit },
 
-#define REGISTER_ANNOTATION_FIELD( Scope, Id, Member, Emit )                                                                                 \
-    SW_ANNOTATION_IN_##Scope( SW_ANNOTATION_ROW( SW_ANNOTATION_TARGET_##Scope, Id, Member,                                                   \
+#define REGISTER_ANNOTATION_FIELD( Scope, ID, Member, Emit )                                                                                 \
+    SW_ANNOTATION_IN_##Scope( SW_ANNOTATION_ROW( SW_ANNOTATION_TARGET_##Scope, ID, Member,                                                   \
                                                  target.Member = AnnotationFieldsInternal::convertValue<decltype( target.Member )>( value ), \
                                                  Emit ) )
-#define REGISTER_ANNOTATION_FIELD_FN( Scope, Id, Member, Fn, Emit ) \
-    SW_ANNOTATION_IN_##Scope( SW_ANNOTATION_ROW( SW_ANNOTATION_TARGET_##Scope, Id, Member, AnnotationFieldsInternal::Fn( target, value ), Emit ) )
+#define REGISTER_ANNOTATION_FIELD_FN( Scope, ID, Member, Fn, Emit ) \
+    SW_ANNOTATION_IN_##Scope( SW_ANNOTATION_ROW( SW_ANNOTATION_TARGET_##Scope, ID, Member, AnnotationFieldsInternal::Fn( target, value ), Emit ) )
 
         // ── REFLECT ──
 #define SW_ANNOTATION_IN_Reflect( Row ) Row

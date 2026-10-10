@@ -71,7 +71,7 @@ namespace sw
         RenderViewSettings   _settings{};
         hashed_string        _renderTexture{};  ///< `RenderTexture` 의 경로(`rendertarget/<이름>`)
         RHITextureHandle     _hostTarget{ 0 };  ///< `HostTarget` 의 렌더 타깃 핸들
-        uint64               _viewId{ 0 };      ///< 카메라 컴포넌트 id — 렌더러가 뷰마다의 상태를 이것으로 찾는다
+        uint64               _viewID{ 0 };      ///< 카메라 컴포넌트 id — 렌더러가 뷰마다의 상태를 이것으로 찾는다
         uint32               _outputWidth{ 0 }; ///< 출력 크기(렌더 텍스처 크기, 화면 사각형이면 그 픽셀 크기)
         uint32               _outputHeight{ 0 };
         RenderViewOutputKind _outputKind{ RenderViewOutputKind::RenderTexture };

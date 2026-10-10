@@ -6,10 +6,10 @@
 
 namespace sw
 {
-    TradeResult TradeInventoryUtil::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIdFromItem pAssetIdFromItem, vector<TradeLeg>& outListLeg )
+    TradeResult TradeInventoryUtil::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg )
     {
         outListLeg.clear();
-        if ( pAssetIdFromItem == nullptr )
+        if ( pAssetIDFromItem == nullptr )
             return TradeResult::Invalid;
         for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
         {
@@ -26,19 +26,19 @@ namespace sw
                 return TradeResult::Invalid;
             if ( stack.hasInstanceState() || stack._durability > 0.0f )
                 return TradeResult::NotTradable;
-            string assetId;
-            if ( pAssetIdFromItem( stack._itemId, assetId ) == false )
+            string assetID;
+            if ( pAssetIDFromItem( stack._itemID, assetID ) == false )
                 return TradeResult::NotTradable;
             TradeLeg* pLeg = nullptr;
             for ( TradeLeg& leg : outListLeg )
             {
-                if ( leg._assetId == assetId )
+                if ( leg._assetID == assetID )
                     pLeg = &leg;
             }
             if ( pLeg == nullptr )
             {
                 pLeg           = &outListLeg.emplace_back();
-                pLeg->_assetId = assetId;
+                pLeg->_assetID = assetID;
             }
             pLeg->_amount += stack._count;
         }

@@ -93,9 +93,9 @@ namespace
     }
 
     /** @brief 묶음 알림 하나가 기대와 같은가입니다. */
-    bool isPartySeriesEvent( const PartySeriesEvent& event, PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points, const hashed_string& roundId )
+    bool isPartySeriesEvent( const PartySeriesEvent& event, PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points, const hashed_string& roundID )
     {
-        return event._kind == kind && event._player == player && event._value == value && event._points == points && event._roundId == roundId;
+        return event._kind == kind && event._player == player && event._value == value && event._points == points && event._roundID == roundID;
     }
 
     /** @brief 셋이 하는 아레나를 대본 입력으로 @p firstFrame 부터 @p frameCount 걸음 돌립니다(같은 걸음이면 같은 입력). */
@@ -508,7 +508,7 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
 /**
  * @brief [PartyArenaTest] 라운드 묶음 알림 — 순서(순위 → 다음 라운드 · 우승), 라운드 id(끝난 라운드 · 새 라운드), 순위 · 순위 점수, 목록보다 낮은 순위는 0 점
  */
-SW_TEST_CASE( PartyArenaTest, RoundSeriesEventsCarryRoundIdRankAndPoints )
+SW_TEST_CASE( PartyArenaTest, RoundSeriesEventsCarryRoundIDRankAndPoints )
 {
     PartyRoundSeries series;
     SW_ASSERT_TRUE( series.loadFromXMLText( R"(<PartySeries winScore="4" placementPoints="3,1"><Round id="trampoline"/><Round id="sumo"/></PartySeries>)",

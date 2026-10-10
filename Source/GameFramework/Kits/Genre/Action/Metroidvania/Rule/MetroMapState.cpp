@@ -29,7 +29,7 @@ namespace sw
         _listPickup.clear();
     }
 
-    bool MetroMapState::enterArea( const hashed_string& areaId ) { return _pGraph != nullptr && _pGraph->enterArea( areaId ); }
+    bool MetroMapState::enterArea( const hashed_string& areaID ) { return _pGraph != nullptr && _pGraph->enterArea( areaID ); }
 
     MetroMapPurchase MetroMapState::buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency )
     {
@@ -49,26 +49,26 @@ namespace sw
 
     bool MetroMapState::hasRegionMap( const hashed_string& region ) const { return contains( _listRegionMap, region ); }
 
-    bool MetroMapState::isShownOnMap( const hashed_string& areaId ) const
+    bool MetroMapState::isShownOnMap( const hashed_string& areaID ) const
     {
         if ( _pGraph == nullptr )
             return false;
-        const AreaDef* pArea = _pGraph->findArea( areaId );
-        return pArea != nullptr && hasRegionMap( pArea->_region ) && _pGraph->isDiscovered( areaId );
+        const AreaDef* pArea = _pGraph->findArea( areaID );
+        return pArea != nullptr && hasRegionMap( pArea->_region ) && _pGraph->isDiscovered( areaID );
     }
 
-    const MetroPickupDef* MetroMapState::collectPickup( const hashed_string& pickupId )
+    const MetroPickupDef* MetroMapState::collectPickup( const hashed_string& pickupID )
     {
-        if ( _pCatalog == nullptr || isCollected( pickupId ) )
+        if ( _pCatalog == nullptr || isCollected( pickupID ) )
             return nullptr;
-        const MetroPickupDef* pPickup = _pCatalog->findPickup( pickupId );
+        const MetroPickupDef* pPickup = _pCatalog->findPickup( pickupID );
         if ( pPickup == nullptr )
             return nullptr;
         _listPickup.push_back( pPickup->_id );
         return pPickup;
     }
 
-    bool MetroMapState::isCollected( const hashed_string& pickupId ) const { return contains( _listPickup, pickupId ); }
+    bool MetroMapState::isCollected( const hashed_string& pickupID ) const { return contains( _listPickup, pickupID ); }
 
     void MetroMapState::collectItemMarkers( vector<const MetroPickupDef*>& outListPickup ) const
     {
@@ -83,28 +83,28 @@ namespace sw
         }
     }
 
-    bool MetroMapState::activateSite( const hashed_string& siteId )
+    bool MetroMapState::activateSite( const hashed_string& siteID )
     {
-        if ( _pCatalog == nullptr || _pGraph == nullptr || isSiteActive( siteId ) )
+        if ( _pCatalog == nullptr || _pGraph == nullptr || isSiteActive( siteID ) )
             return false;
-        const MetroSiteDef* pSite = _pCatalog->findSite( siteId );
+        const MetroSiteDef* pSite = _pCatalog->findSite( siteID );
         if ( pSite == nullptr || _pGraph->isVisited( pSite->_area ) == false )
             return false;
         _listSite.push_back( pSite->_id );
         return true;
     }
 
-    bool MetroMapState::isSiteActive( const hashed_string& siteId ) const { return contains( _listSite, siteId ); }
+    bool MetroMapState::isSiteActive( const hashed_string& siteID ) const { return contains( _listSite, siteID ); }
 
-    bool MetroMapState::canFastTravel( const hashed_string& fromSiteId, const hashed_string& toSiteId ) const
+    bool MetroMapState::canFastTravel( const hashed_string& fromSiteID, const hashed_string& toSiteID ) const
     {
-        if ( _pCatalog == nullptr || fromSiteId == toSiteId )
+        if ( _pCatalog == nullptr || fromSiteID == toSiteID )
             return false;
-        const MetroSiteDef* pFrom = _pCatalog->findSite( fromSiteId );
-        const MetroSiteDef* pTo   = _pCatalog->findSite( toSiteId );
+        const MetroSiteDef* pFrom = _pCatalog->findSite( fromSiteID );
+        const MetroSiteDef* pTo   = _pCatalog->findSite( toSiteID );
         if ( pFrom == nullptr || pTo == nullptr || pFrom->_bFastTravel == SW_FALSE || pTo->_bFastTravel == SW_FALSE )
             return false;
-        return isSiteActive( fromSiteId ) && isSiteActive( toSiteId );
+        return isSiteActive( fromSiteID ) && isSiteActive( toSiteID );
     }
 
     float32 MetroMapState::computeExplorationRatio() const { return _pGraph != nullptr ? _pGraph->computeExplorationRatio() : 0.0f; }
@@ -167,21 +167,21 @@ namespace sw
             if ( _pGraph != nullptr )
                 (void)_pGraph->discoverRegion( region );
         }
-        for ( const hashed_string& siteId : listSite )
+        for ( const hashed_string& siteID : listSite )
         {
-            if ( _pCatalog->findSite( siteId ) != nullptr && isSiteActive( siteId ) == false )
-                _listSite.push_back( siteId );
+            if ( _pCatalog->findSite( siteID ) != nullptr && isSiteActive( siteID ) == false )
+                _listSite.push_back( siteID );
         }
-        for ( const hashed_string& pickupId : listPickup )
+        for ( const hashed_string& pickupID : listPickup )
         {
-            if ( _pCatalog->findPickup( pickupId ) != nullptr && isCollected( pickupId ) == false )
-                _listPickup.push_back( pickupId );
+            if ( _pCatalog->findPickup( pickupID ) != nullptr && isCollected( pickupID ) == false )
+                _listPickup.push_back( pickupID );
         }
     }
 
-    bool MetroMapState::contains( const vector<hashed_string>& listId, const hashed_string& id )
+    bool MetroMapState::contains( const vector<hashed_string>& listID, const hashed_string& id )
     {
-        for ( const hashed_string& entry : listId )
+        for ( const hashed_string& entry : listID )
         {
             if ( entry == id )
                 return true;
@@ -191,10 +191,10 @@ namespace sw
 
     void MetroMapState::writeState( Archive& outArchive ) const
     {
-        for ( const vector<hashed_string>* pListId : { &_listRegionMap, &_listSite, &_listPickup } )
+        for ( const vector<hashed_string>* pListID : { &_listRegionMap, &_listSite, &_listPickup } )
         {
-            outArchive << static_cast<uint32>( pListId->size() );
-            for ( const hashed_string& id : *pListId )
+            outArchive << static_cast<uint32>( pListID->size() );
+            for ( const hashed_string& id : *pListID )
             {
                 StateArchiveUtil::writeName( outArchive, id );
             }
@@ -211,11 +211,11 @@ namespace sw
         vector<hashed_string> listPickup;
         for ( int32 listIndex = 0; listIndex < 3; ++listIndex )
         {
-            vector<hashed_string>& listId  = listIndex == 0 ? listRegionMap : ( listIndex == 1 ? listSite : listPickup );
+            vector<hashed_string>& listID  = listIndex == 0 ? listRegionMap : ( listIndex == 1 ? listSite : listPickup );
             uint32                 idCount = 0;
             if ( StateArchiveUtil::readCount( archive, 4, idCount ) == false )
                 return false;
-            listId.reserve( idCount );
+            listID.reserve( idCount );
             for ( uint32 entry = 0; entry < idCount; ++entry )
             {
                 hashed_string id;
@@ -228,9 +228,9 @@ namespace sw
                     bKnown = _pCatalog->findSite( id ) != nullptr;
                 else
                     bKnown = _pCatalog->findPickup( id ) != nullptr;
-                if ( bKnown == false || contains( listId, id ) )
+                if ( bKnown == false || contains( listID, id ) )
                     return false;
-                listId.push_back( id );
+                listID.push_back( id );
             }
         }
         restoreSaveState( listRegionMap, listSite, listPickup );

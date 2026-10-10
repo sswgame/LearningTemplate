@@ -30,8 +30,8 @@ namespace sw
         JRPGEncounterWalker();
 
         void initialize( const JRPGCatalog* pCatalog, uint32 seed );
-        /** @brief @p areaId 에서 한 걸음 걷습니다. 조우하면 그 무리, 아니면 nullptr 입니다(모르는 지역 · 무리 없는 지역도 nullptr). */
-        const JRPGEncounterGroup* step( const hashed_string& areaId );
+        /** @brief @p areaID 에서 한 걸음 걷습니다. 조우하면 그 무리, 아니면 nullptr 입니다(모르는 지역 · 무리 없는 지역도 nullptr). */
+        const JRPGEncounterGroup* step( const hashed_string& areaID );
         /** @brief 유예를 처음부터 다시 셉니다(마을에서 나왔을 때 · 성수). */
         void restartGrace() { _stepsSinceEncounter = 0; }
         /** @brief 난수 · 조우 뒤 걸음 · 총 걸음을 씁니다. 카탈로그는 싣지 않는다. */

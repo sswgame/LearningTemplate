@@ -19,9 +19,9 @@ namespace sw
     /** @brief 사냥한 한 마리의 사정입니다. */
     struct WesternKill
     {
-        hashed_string _animalId{};
-        hashed_string _weaponId{};    ///< 마지막(죽인) 무기
-        hashed_string _zoneId{};      ///< 죽인 한 발이 맞은 부위
+        hashed_string _animalID{};
+        hashed_string _weaponID{};    ///< 마지막(죽인) 무기
+        hashed_string _zoneID{};      ///< 죽인 한 발이 맞은 부위
         int32         _hitCount{ 1 }; ///< 맞힌 발 수(첫 발 뒤로는 한 발마다 가죽이 상한다)
     };
 } // namespace sw
@@ -31,7 +31,7 @@ namespace sw
     /** @brief 땅(또는 말 등)에 있는 사체 하나입니다. */
     struct WesternCarcass
     {
-        hashed_string _animalId{};
+        hashed_string _animalID{};
         float32       _ageHours{ 0.0f };
         int32         _stars{ 0 }; ///< 잡았을 때의 등급(0 = 못 쓰는 가죽)
         uint8         _bSkinned{ SW_FALSE };
@@ -43,7 +43,7 @@ namespace sw
     /** @brief 벗긴 가죽 하나입니다(썩지 않는다). */
     struct WesternPelt
     {
-        hashed_string _animalId{};
+        hashed_string _animalID{};
         int32         _stars{ 0 };
     };
 } // namespace sw

@@ -27,22 +27,22 @@ namespace sw
                 return HashUtil::mix64( value + HashUtil::kGoldenRatio64 );
             }
 
-            static string makeOwnerKey( uint64 serverId, uint64 tradeId )
+            static string makeOwnerKey( uint64 serverID, uint64 tradeID )
             {
-                string key = ServiceKeyUtil::makeHex64( serverId );
+                string key = ServiceKeyUtil::makeHex64( serverID );
                 key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, tradeId );
+                ServiceKeyUtil::appendHex64( key, tradeID );
                 return key;
             }
 
-            static vector<uint8> encodeId( uint64 id )
+            static vector<uint8> encodeID( uint64 id )
             {
                 BitWriter writer;
                 writer.writeVarUint( id );
                 return writer.releaseBytes();
             }
 
-            static uint64 decodeId( const vector<uint8>& bytes )
+            static uint64 decodeID( const vector<uint8>& bytes )
             {
                 BitReader    reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
                 const uint64 id = reader.readVarUint();
@@ -65,10 +65,10 @@ namespace sw
                 {
                     const TradeSide& side = trade._arrSide[sideIndex];
                     text += sideIndex == 0 ? "a=" : ";b=";
-                    text += ServiceKeyUtil::makeHex64( side._accountId );
+                    text += ServiceKeyUtil::makeHex64( side._accountID );
                     for ( const TradeLeg& leg : side._listLeg )
                     {
-                        text += "," + leg._assetId + "x" + to_string( leg._amount );
+                        text += "," + leg._assetID + "x" + to_string( leg._amount );
                     }
                 }
                 return text;
@@ -79,13 +79,13 @@ namespace sw
 
 namespace sw
 {
-    TradeStoreLogic::TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverId,
+    TradeStoreLogic::TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID,
                                       const TradeSettings& settings )
         : _connection{ connection }
         , _policy{ policy }
         , _pLedgerPolicy{ pLedgerPolicy }
         , _settings{ settings }
-        , _serverId{ serverId }
+        , _serverID{ serverID }
     {
     }
 
@@ -115,20 +115,20 @@ namespace sw
         return nowMs >= trade._updatedMs + timeoutMs;
     }
 
-    TradeResult TradeStoreLogic::invite( AccountId fromId, AccountId toId, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot )
+    TradeResult TradeStoreLogic::invite( AccountID fromID, AccountID toID, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot )
     {
         using Internal = TradeStoreLogicInternal;
-        if ( fromId == kInvalidAccountId || toId == kInvalidAccountId || fromId == toId )
+        if ( fromID == kInvalidAccountID || toID == kInvalidAccountID || fromID == toID )
             return TradeResult::Invalid;
         uint64 candidate = seed;
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             candidate                      = Internal::mixSeed( candidate );
-            const uint64       tradeId     = candidate == 0 ? 1 : candidate;
-            const AccountId    arrParty[2] = { fromId, toId };
+            const uint64       tradeID     = candidate == 0 ? 1 : candidate;
+            const AccountID    arrParty[2] = { fromID, toID };
             ServiceTransaction transaction;
             uint64             arrLinkVersion[2] = { ServiceRecord::kAbsentVersion, ServiceRecord::kAbsentVersion };
-            uint64             closedTradeId     = 0;
+            uint64             closedTradeID     = 0;
             for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
             {
                 ServiceRecord            linkRaw;
@@ -139,35 +139,35 @@ namespace sw
                     return TradeResult::Unavailable;
                 // 남은 링크 — 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다(게으른 만료).
                 SessionRead       stale;
-                const TradeResult staleRead = readSession( Internal::decodeId( linkRaw._bytes ), stale );
+                const TradeResult staleRead = readSession( Internal::decodeID( linkRaw._bytes ), stale );
                 const bool        bOrphan   = staleRead == TradeResult::NotFound;
                 const bool        bExpired  = staleRead == TradeResult::Ok && ( stale._snapshot.isClosed() || isIdleExpired( stale._snapshot, _settings, nowMs ) );
                 if ( bOrphan == false && bExpired == false )
                     return staleRead == TradeResult::Ok ? ( sideIndex == 0 ? TradeResult::AlreadyTrading : TradeResult::PeerBusy ) : TradeResult::Unavailable;
                 arrLinkVersion[sideIndex]     = linkRaw._version;
-                const bool bAlreadyClosedHere = closedTradeId != 0 && closedTradeId == stale._snapshot._tradeId; // 두 사람의 옛 거래가 같은 것
+                const bool bAlreadyClosedHere = closedTradeID != 0 && closedTradeID == stale._snapshot._tradeID; // 두 사람의 옛 거래가 같은 것
                 if ( bExpired && stale._snapshot.isClosed() == false && bAlreadyClosedHere == false )
                 {
-                    closedTradeId        = stale._snapshot._tradeId;
+                    closedTradeID        = stale._snapshot._tradeID;
                     TradeSnapshot closed = stale._snapshot;
                     TradeStateMachine::close( closed, TradeState::Cancelled, TradeCloseReason::Timeout, nowMs );
-                    transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeId ), TradeRecordUtil::encodeSession( closed, stale._ownerServerId ),
+                    transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeRecordUtil::encodeSession( closed, stale._ownerServerID ),
                                      stale._version );
-                    transaction.erase( getOwnerTable(), Internal::makeOwnerKey( stale._ownerServerId, closed._tradeId ) );
+                    transaction.erase( getOwnerTable(), Internal::makeOwnerKey( stale._ownerServerID, closed._tradeID ) );
                 }
             }
             TradeSnapshot trade;
-            trade._tradeId               = tradeId;
+            trade._tradeID               = tradeID;
             trade._createdMs             = nowMs;
             trade._updatedMs             = nowMs;
             trade._state                 = TradeState::Invited;
-            trade._arrSide[0]._accountId = fromId;
-            trade._arrSide[1]._accountId = toId;
+            trade._arrSide[0]._accountID = fromID;
+            trade._arrSide[1]._accountID = toID;
             // 쓰기 번호 0 · 1 = 두 활성 링크(Conflict 번호로 누가 바쁜지 가린다)
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromId ), Internal::encodeId( tradeId ), arrLinkVersion[0] );
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toId ), Internal::encodeId( tradeId ), arrLinkVersion[1] );
-            transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeId ), TradeRecordUtil::encodeSession( trade, _serverId ), ServiceRecord::kAbsentVersion );
-            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverId, tradeId ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), Internal::encodeID( tradeID ), arrLinkVersion[0] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), Internal::encodeID( tradeID ), arrLinkVersion[1] );
+            transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeRecordUtil::encodeSession( trade, _serverID ), ServiceRecord::kAbsentVersion );
+            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
             const ServiceStoreResult committed = _connection.commit( transaction, &info );
             if ( committed == ServiceStoreResult::Ok )
@@ -182,18 +182,18 @@ namespace sw
         return TradeResult::Unavailable;
     }
 
-    TradeResult TradeStoreLogic::applyCommand( uint64 tradeId, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger )
+    TradeResult TradeStoreLogic::applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger )
     {
         using Internal = TradeStoreLogicInternal;
         outLedger      = LedgerTransferOutcome{};
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             SessionRead       session;
-            const TradeResult read = readSession( tradeId, session );
+            const TradeResult read = readSession( tradeID, session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
-            if ( session._snapshot.findSideIndex( command._actorId ) < 0 )
+            if ( session._snapshot.findSideIndex( command._actorID ) < 0 )
                 return TradeResult::NotParty;
             if ( session._snapshot.isClosed() )
                 return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도 · 다른 서버가 먼저
@@ -219,7 +219,7 @@ namespace sw
                 return result;
             if ( command._kind == TradeCommandKind::Lock )
             {
-                const TradeResult funds = evaluateFunds( next._arrSide[next.findSideIndex( command._actorId )] );
+                const TradeResult funds = evaluateFunds( next._arrSide[next.findSideIndex( command._actorID )] );
                 if ( funds != TradeResult::Ok )
                     return funds;
             }
@@ -229,13 +229,13 @@ namespace sw
             bool                  bStaged = false;
             if ( bSettle )
             {
-                if ( TradeRecordUtil::makeJournalKey( tradeId, request._journalKey ) == false )
+                if ( TradeRecordUtil::makeJournalKey( tradeID, request._journalKey ) == false )
                     return TradeResult::Invalid;
                 request._reason    = "trade.settle";
                 request._pPolicy   = _pLedgerPolicy;
                 request._timeMs    = nowMs;
                 request._actorKind = LedgerActorKind::Player;
-                request._actorId   = command._actorId; // 마지막 확정 — 분개는 두 계정 모두의 내역에 든다
+                request._actorID   = command._actorID; // 마지막 확정 — 분개는 두 계정 모두의 내역에 든다
                 for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
                 {
                     const TradeSide& giver    = next._arrSide[sideIndex];
@@ -243,7 +243,7 @@ namespace sw
                     for ( const TradeLeg& leg : giver._listLeg )
                     {
                         request._listPosting.push_back(
-                            LedgerPosting{ LedgerHolder::makeAccount( giver._accountId ), LedgerHolder::makeAccount( receiver._accountId ), leg._assetId, leg._amount } );
+                            LedgerPosting{ LedgerHolder::makeAccount( giver._accountID ), LedgerHolder::makeAccount( receiver._accountID ), leg._assetID, leg._amount } );
                     }
                 }
                 if ( request._listPosting.empty() )
@@ -277,15 +277,15 @@ namespace sw
                 ServiceAuditEntry audit;
                 audit._actor   = "system";
                 audit._action  = next._state == TradeState::Settled ? "trade.settle" : "trade.fail";
-                audit._subject = "trade." + ServiceKeyUtil::makeHex64( tradeId );
+                audit._subject = "trade." + ServiceKeyUtil::makeHex64( tradeID );
                 audit._after   = Internal::describeForAudit( next );
                 audit._timeMs  = nowMs < 0 ? 0 : nowMs;
                 if ( next._state != TradeState::Cancelled )
-                    ServiceAuditLog::stageEntry( transaction, audit, tradeId, Internal::kSettleAuditUnique );
+                    ServiceAuditLog::stageEntry( transaction, audit, tradeID, Internal::kSettleAuditUnique );
             }
             else
             {
-                transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeId ), TradeRecordUtil::encodeSession( next, session._ownerServerId ), session._version );
+                transaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), TradeRecordUtil::encodeSession( next, session._ownerServerID ), session._version );
             }
 
             const ServiceStoreResult committed = _connection.commit( transaction );
@@ -308,12 +308,12 @@ namespace sw
         return TradeResult::Unavailable;
     }
 
-    TradeResult TradeStoreLogic::closeIfIdle( uint64 tradeId, int64 nowMs, TradeSnapshot& outSnapshot )
+    TradeResult TradeStoreLogic::closeIfIdle( uint64 tradeID, int64 nowMs, TradeSnapshot& outSnapshot )
     {
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             SessionRead       session;
-            const TradeResult read = readSession( tradeId, session );
+            const TradeResult read = readSession( tradeID, session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
@@ -334,19 +334,19 @@ namespace sw
         return TradeResult::Unavailable;
     }
 
-    TradeResult TradeStoreLogic::closeForAccount( AccountId accountId, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot )
+    TradeResult TradeStoreLogic::closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot )
     {
         using Internal = TradeStoreLogicInternal;
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             ServiceRecord            linkRaw;
-            const ServiceStoreResult linkRead = _connection.readRecord( getActiveTable(), ServiceKeyUtil::makeHex64( accountId ), linkRaw );
+            const ServiceStoreResult linkRead = _connection.readRecord( getActiveTable(), ServiceKeyUtil::makeHex64( accountID ), linkRaw );
             if ( linkRead == ServiceStoreResult::NotFound )
                 return TradeResult::NotFound;
             if ( linkRead != ServiceStoreResult::Ok )
                 return TradeResult::Unavailable;
             SessionRead       session;
-            const TradeResult read = readSession( Internal::decodeId( linkRaw._bytes ), session );
+            const TradeResult read = readSession( Internal::decodeID( linkRaw._bytes ), session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
@@ -370,20 +370,20 @@ namespace sw
     TradeResult TradeStoreLogic::recoverOwned( int64 nowMs, vector<TradeSnapshot>& outListClosed )
     {
         using Internal = TradeStoreLogicInternal;
-        string prefix  = ServiceKeyUtil::makeHex64( _serverId );
+        string prefix  = ServiceKeyUtil::makeHex64( _serverID );
         prefix.push_back( '/' );
         vector<ServiceRecord> listOwned;
         if ( _connection.listRecords( getOwnerTable(), prefix, "", Internal::kMaxRecoverCount, false, listOwned ) != ServiceStoreResult::Ok )
             return TradeResult::Unavailable;
         for ( const ServiceRecord& owned : listOwned )
         {
-            uint64 tradeId = 0;
-            if ( ServiceKeyUtil::parseHex64( string_view( owned._key ).substr( prefix.size() ), tradeId ) == false )
+            uint64 tradeID = 0;
+            if ( ServiceKeyUtil::parseHex64( string_view( owned._key ).substr( prefix.size() ), tradeID ) == false )
                 continue;
             for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
             {
                 SessionRead        session;
-                const TradeResult  read = readSession( tradeId, session );
+                const TradeResult  read = readSession( tradeID, session );
                 ServiceTransaction transaction;
                 if ( read == TradeResult::NotFound || ( read == TradeResult::Ok && session._snapshot.isClosed() ) )
                 {
@@ -408,17 +408,17 @@ namespace sw
         return TradeResult::Ok;
     }
 
-    TradeResult TradeStoreLogic::readSession( uint64 tradeId, SessionRead& outSession )
+    TradeResult TradeStoreLogic::readSession( uint64 tradeID, SessionRead& outSession )
     {
         ServiceRecord            raw;
-        const ServiceStoreResult read = _connection.readRecord( getSessionTable(), ServiceKeyUtil::makeHex64( tradeId ), raw );
+        const ServiceStoreResult read = _connection.readRecord( getSessionTable(), ServiceKeyUtil::makeHex64( tradeID ), raw );
         if ( read == ServiceStoreResult::NotFound )
             return TradeResult::NotFound;
         if ( read != ServiceStoreResult::Ok )
             return TradeResult::Unavailable;
-        if ( TradeRecordUtil::decodeSession( raw._bytes, outSession._snapshot, outSession._ownerServerId ) == false )
+        if ( TradeRecordUtil::decodeSession( raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
         {
-            SW_LOG_ERROR( "trade record %# is corrupt", ServiceKeyUtil::makeHex64( tradeId ).c_str() );
+            SW_LOG_ERROR( "trade record %# is corrupt", ServiceKeyUtil::makeHex64( tradeID ).c_str() );
             return TradeResult::Unavailable;
         }
         outSession._version = raw._version;
@@ -427,13 +427,13 @@ namespace sw
 
     void TradeStoreLogic::stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction )
     {
-        inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeId ), TradeRecordUtil::encodeSession( closed, session._ownerServerId ),
+        inoutTransaction.put( getSessionTable(), ServiceKeyUtil::makeHex64( closed._tradeID ), TradeRecordUtil::encodeSession( closed, session._ownerServerID ),
                               session._version );
         for ( const TradeSide& side : closed._arrSide )
         {
-            inoutTransaction.erase( getActiveTable(), ServiceKeyUtil::makeHex64( side._accountId ) );
+            inoutTransaction.erase( getActiveTable(), ServiceKeyUtil::makeHex64( side._accountID ) );
         }
-        inoutTransaction.erase( getOwnerTable(), TradeStoreLogicInternal::makeOwnerKey( session._ownerServerId, closed._tradeId ) );
+        inoutTransaction.erase( getOwnerTable(), TradeStoreLogicInternal::makeOwnerKey( session._ownerServerID, closed._tradeID ) );
     }
 
     TradeResult TradeStoreLogic::evaluateFunds( const TradeSide& side )
@@ -441,7 +441,7 @@ namespace sw
         for ( const TradeLeg& leg : side._listLeg )
         {
             LedgerBalance balance;
-            if ( Ledger::readBalance( _connection, LedgerHolder::makeAccount( side._accountId ), leg._assetId, balance ) != ServiceStoreResult::Ok )
+            if ( Ledger::readBalance( _connection, LedgerHolder::makeAccount( side._accountID ), leg._assetID, balance ) != ServiceStoreResult::Ok )
                 return TradeResult::Unavailable;
             if ( balance._amount < leg._amount )
                 return TradeResult::InsufficientFunds;
@@ -449,23 +449,23 @@ namespace sw
         return TradeResult::Ok;
     }
 
-    vector<uint8> TradeRecordUtil::encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerId )
+    vector<uint8> TradeRecordUtil::encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID )
     {
         BitWriter writer;
         writer.writeBits( TradeStoreLogicInternal::kRecordFormat, 8 );
-        writer.writeVarUint( ownerServerId );
+        writer.writeVarUint( ownerServerID );
         TradeWire::writeSnapshot( writer, snapshot );
         return writer.releaseBytes();
     }
 
-    bool TradeRecordUtil::decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerId )
+    bool TradeRecordUtil::decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
     {
         BitReader reader{ bytes.data(), static_cast<int32>( bytes.size() ) };
         if ( reader.readBits( 8 ) != TradeStoreLogicInternal::kRecordFormat )
             return false;
-        outOwnerServerId = reader.readVarUint();
+        outOwnerServerID = reader.readVarUint();
         return TradeWire::readSnapshot( reader, outSnapshot );
     }
 
-    bool TradeRecordUtil::makeJournalKey( uint64 tradeId, string& outKey ) { return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeId ), outKey ); }
+    bool TradeRecordUtil::makeJournalKey( uint64 tradeID, string& outKey ) { return LedgerJournalKey::makeFromToken( "trade", ServiceKeyUtil::makeHex64( tradeID ), outKey ); }
 } // namespace sw

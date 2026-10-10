@@ -54,48 +54,48 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        string channelId;
+        string channelID;
         string text;
         switch ( context._method )
         {
             case ChatMethod::kJoin:
             case ChatMethod::kLeave:
             {
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIdSize, channelId ) == false || body.hasOverflowed() )
+                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false || body.hasOverflowed() )
                     break;
                 const uint64 requestTag = _pendingTable.add( context._token );
                 if ( context._method == ChatMethod::kJoin )
-                    _pService->joinChannel( context._accountId, channelId, context._nowMs, requestTag );
+                    _pService->joinChannel( context._accountID, channelID, context._nowMs, requestTag );
                 else
-                    _pService->leaveChannel( context._accountId, channelId, requestTag );
+                    _pService->leaveChannel( context._accountID, channelID, requestTag );
                 return;
             }
             case ChatMethod::kSend:
             {
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIdSize, channelId ) == false ||
+                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
                      ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed() )
                     break;
-                _pService->sendMessage( context._accountId, channelId, text, context._nowMs, _pendingTable.add( context._token ) );
+                _pService->sendMessage( context._accountID, channelID, text, context._nowMs, _pendingTable.add( context._token ) );
                 return;
             }
             case ChatMethod::kWhisper:
             {
-                const AccountId recipientId = body.readVarUint();
+                const AccountID recipientID = body.readVarUint();
                 if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxTextSize, text ) == false || body.hasOverflowed() )
                     break;
-                _pService->sendWhisper( context._accountId, recipientId, text, context._nowMs, _pendingTable.add( context._token ) );
+                _pService->sendWhisper( context._accountID, recipientID, text, context._nowMs, _pendingTable.add( context._token ) );
                 return;
             }
             case ChatMethod::kHistory:
             {
                 string cursor;
-                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIdSize, channelId ) == false ||
+                if ( ServiceKeyUtil::readString( body, ChatLimit::kMaxChannelIDSize, channelID ) == false ||
                      ServiceKeyUtil::readString( body, ChatProtocol::kMaxCursorSize, cursor ) == false )
                     break;
                 const uint64 maxCount = body.readVarUint();
                 if ( body.hasOverflowed() || maxCount > static_cast<uint64>( ChatLimit::kMaxHistoryPage ) )
                     break;
-                _pService->readHistory( context._accountId, channelId, cursor, static_cast<int32>( maxCount ), _pendingTable.add( context._token ) );
+                _pService->readHistory( context._accountID, channelID, cursor, static_cast<int32>( maxCount ), _pendingTable.add( context._token ) );
                 return;
             }
             default:
@@ -152,15 +152,15 @@ namespace sw
         {
             BitWriter body;
             ChatProtocol::writeMessage( body, delivery._message );
-            (void)host.sendPush( delivery._recipientId, ChatMethod::kPushMessage, body ); // 그새 떠난 계정이면 버린다
+            (void)host.sendPush( delivery._recipientID, ChatMethod::kPushMessage, body ); // 그새 떠난 계정이면 버린다
         }
     }
 
-    void ChatServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+    void ChatServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         if ( _pService == nullptr )
             return;
-        _pService->removeAccount( accountId );
+        _pService->removeAccount( accountID );
         flushServiceOutput( host );
     }
 

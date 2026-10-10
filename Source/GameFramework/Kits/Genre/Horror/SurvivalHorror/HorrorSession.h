@@ -109,17 +109,17 @@ namespace sw
         GridInventory&       getInventory() { return *_pInventory; }
         const GridInventory& getInventory() const { return *_pInventory; }
         /** @brief 가방 자리 하나에서 @p count 개를 상자로 넣습니다. 모자라면 false 입니다. */
-        [[nodiscard]] bool storeInBox( int32 instanceId, int32 count );
+        [[nodiscard]] bool storeInBox( int32 instanceID, int32 count );
         /** @brief 상자에서 꺼내 가방에 넣고 넣은 개수를 돌려줍니다(자리가 모자란 만큼은 상자에 남는다). */
-        int32 takeFromBox( const hashed_string& itemId, int32 count );
+        int32 takeFromBox( const hashed_string& itemID, int32 count );
         /** @brief 두 자리의 아이템을 하나씩 써서 섞습니다(약초 · 화약). 레시피가 없거나 결과 자리가 없으면 아무것도 바꾸지 않고 false 입니다. */
-        [[nodiscard]] bool combineItems( int32 firstInstanceId, int32 secondInstanceId );
+        [[nodiscard]] bool combineItems( int32 firstInstanceID, int32 secondInstanceID );
 
         // ── 자원 ──────────────────────────────────────────────────────────
         /** @brief 가방의 탄약을 @p count 발 씁니다. 모자라면 쏘지 않고 false 입니다. */
-        [[nodiscard]] bool tryConsumeAmmo( const hashed_string& ammoItemId, int32 count );
+        [[nodiscard]] bool tryConsumeAmmo( const hashed_string& ammoItemID, int32 count );
         /** @brief 회복 · 진정 · 배터리 아이템 하나를 씁니다. 쓸 수 없는 아이템이면 false 입니다. */
-        [[nodiscard]] bool tryUseItem( int32 instanceId );
+        [[nodiscard]] bool tryUseItem( int32 instanceID );
         void               applyDamage( float32 amount );
         /** @brief 세이브합니다(타자기). 규칙의 제한(횟수 · 잉크 리본)을 따릅니다. */
         [[nodiscard]] HorrorSaveResult trySave();
@@ -128,7 +128,7 @@ namespace sw
         /** @brief 손전등을 켜고 끕니다. 배터리가 없으면 켜지지 않고 false 입니다. */
         [[nodiscard]] bool trySetFlashlight( bool bOn );
         /** @brief 괴물을 봅니다. 깎인 정신력입니다(모르는 괴물은 0). */
-        float32 witnessMonster( const hashed_string& monsterId );
+        float32 witnessMonster( const hashed_string& monsterID );
         /** @brief 정신력을 깎습니다(퍼즐 · 추리 벌칙 · 초자연 전투). */
         void loseSanity( float32 amount, const hashed_string& cause );
         bool isHallucinating() const { return _bHallucinating == SW_TRUE; }
@@ -137,19 +137,19 @@ namespace sw
 
         // ── 퍼즐 · 잠금 · 지도 ────────────────────────────────────────────
         /** @brief 가방의 열쇠로 자물쇠를 엽니다 — 플래그를 세우고(`AreaGraph` 연결이 읽는다), 정의에 따라 열쇠를 씁니다. */
-        HorrorPuzzleResult useKey( const hashed_string& lockId );
+        HorrorPuzzleResult useKey( const hashed_string& lockID );
         /** @brief 다이얼 자물쇠에 번호를 넣습니다. */
-        HorrorPuzzleResult enterDialCode( const hashed_string& lockId, const vector<int32>& listDigit );
+        HorrorPuzzleResult enterDialCode( const hashed_string& lockID, const vector<int32>& listDigit );
         /** @brief 순서 퍼즐의 다음 걸음을 누릅니다. 틀리면 처음부터입니다. */
-        HorrorPuzzleResult pressSequenceStep( const hashed_string& puzzleId, const hashed_string& step );
+        HorrorPuzzleResult pressSequenceStep( const hashed_string& puzzleID, const hashed_string& step );
         /** @brief 지금 방에서 바로 이어진 방으로 갑니다. 잠긴 문이면 false 입니다. */
-        [[nodiscard]] bool tryMoveTo( const hashed_string& areaId );
+        [[nodiscard]] bool tryMoveTo( const hashed_string& areaID );
 
         // ── 문서 · 단서 보드 ──────────────────────────────────────────────
         /** @brief 문서를 읽습니다(처음이면 단서가 생긴다). 처음 읽었으면 true 입니다. */
-        [[nodiscard]] bool readDocument( const hashed_string& documentId );
-        void               addClue( const hashed_string& clueId );
-        bool               hasClue( const hashed_string& clueId ) const;
+        [[nodiscard]] bool readDocument( const hashed_string& documentID );
+        void               addClue( const hashed_string& clueID );
+        bool               hasClue( const hashed_string& clueID ) const;
         /** @brief 단서 둘을 보드에서 잇습니다. 둘 다 가진 단서여야 하고 이미 이어져 있으면 false 입니다. */
         [[nodiscard]] bool linkClues( const hashed_string& firstClue, const hashed_string& secondClue );
         bool               unlinkClues( const hashed_string& firstClue, const hashed_string& secondClue );
@@ -158,7 +158,7 @@ namespace sw
          * @brief 결론을 냅니다. 답이 맞고 필요한 연결이 보드에 모두 있어야 풀립니다(찍어서 맞히기를 막는다).
          * @details 틀리면 정신력 벌칙을 받고, 규칙에 따라 보드의 연결을 모두 지웁니다. 필요한 단서를 아직 갖지 못했으면 벌칙 없이 `MissingItem` 입니다.
          */
-        HorrorPuzzleResult submitDeduction( const hashed_string& deductionId, const hashed_string& answer );
+        HorrorPuzzleResult submitDeduction( const hashed_string& deductionID, const hashed_string& answer );
 
         void drainEvents( vector<SurvivalHorrorEvent>& outListEvent );
 
@@ -183,7 +183,7 @@ namespace sw
     private:
         void pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value = 0.0f );
         void refreshHallucination();
-        bool markSolved( const hashed_string& puzzleId, const hashed_string& flag );
+        bool markSolved( const hashed_string& puzzleID, const hashed_string& flag );
 
         ResourceGauge                       _sanity;
         ResourceGauge                       _battery;

@@ -25,29 +25,29 @@ namespace sw
         struct SceneCookerInternal
         {
             /** @brief 파일 id → 그 엔티티로 지은 오브젝트 표를 만듭니다(씬의 런타임 id → 파일 id 표를 뒤집습니다). */
-            static void makeObjectByFileId( const Scene& scene, unordered_map<uint64, GameObject*>& outMap )
+            static void makeObjectByFileID( const Scene& scene, unordered_map<uint64, GameObject*>& outMap )
             {
                 outMap.clear();
                 const GameObjectManager* pManager = scene.getObjectManager();
                 if ( pManager == nullptr )
                     return;
-                ObjectSavedIdMap mapSavedId;
-                scene.collectSavedIdMap( mapSavedId );
-                for ( const auto& [objectId, fileId] : mapSavedId )
+                ObjectSavedIDMap mapSavedID;
+                scene.collectSavedIDMap( mapSavedID );
+                for ( const auto& [objectID, fileID] : mapSavedID )
                 {
-                    GameObject* pObject = pManager->findGameObjectById( objectId );
+                    GameObject* pObject = pManager->findGameObjectByID( objectID );
                     if ( pObject != nullptr )
-                        outMap.emplace( fileId, pObject );
+                        outMap.emplace( fileID, pObject );
                 }
             }
 
             /** @brief 오브젝트의 상태를 파일 id 로 적은 XML 입니다. 쿠킹 전 · 쿠킹된 뒤의 상태를 견주는 기준입니다. */
             static string makeStateText( const Scene& scene, const GameObject* pObject )
             {
-                ObjectSavedIdMap mapSavedId;
-                scene.collectSavedIdMap( mapSavedId );
+                ObjectSavedIDMap mapSavedID;
+                scene.collectSavedIDMap( mapSavedID );
                 ObjectSaveOptions options{};
-                options._pSavedIdMap = &mapSavedId;
+                options._pSavedIDMap = &mapSavedID;
                 return ObjectStateSerializer::saveToXMLString( pObject, options );
             }
 
@@ -127,7 +127,7 @@ namespace sw
         // 엔티티는 파일 id 로 찾는다 — 쿠킹된 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
         for ( const SceneDocument::SceneObjectNode& entity : inoutDoc._listSceneObjectNode )
         {
-            if ( entity._fileId == 0 )
+            if ( entity._fileID == 0 )
             {
                 SW_LOG_ERROR( "Scene cook: entity '%#' of '%#' has no id - nothing is cooked", entity._name, inoutDoc._name );
                 return 0;
@@ -141,21 +141,21 @@ namespace sw
         const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( source );
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = missingComponentCount;
-        unordered_map<uint64, GameObject*> mapSourceByFileId;
-        SceneCookerInternal::makeObjectByFileId( source, mapSourceByFileId );
+        unordered_map<uint64, GameObject*> mapSourceByFileID;
+        SceneCookerInternal::makeObjectByFileID( source, mapSourceByFileID );
 
-        ObjectSavedIdMap mapSourceSavedId;
-        source.collectSavedIdMap( mapSourceSavedId );
+        ObjectSavedIDMap mapSourceSavedID;
+        source.collectSavedIDMap( mapSourceSavedID );
         ObjectSaveOptions saveOptions{};
-        saveOptions._pSavedIdMap = &mapSourceSavedId;
+        saveOptions._pSavedIDMap = &mapSourceSavedID;
 
         SceneDocument cooked = inoutDoc;
         for ( SceneDocument::SceneObjectNode& entity : cooked._listSceneObjectNode )
         {
             if ( entity._embeddedXML.empty() )
                 continue;
-            const auto  sourceIt = mapSourceByFileId.find( entity._fileId );
-            GameObject* pSource  = ( sourceIt != mapSourceByFileId.end() ) ? sourceIt->second : nullptr;
+            const auto  sourceIt = mapSourceByFileID.find( entity._fileID );
+            GameObject* pSource  = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
             if ( pSource == nullptr )
                 continue;
             vector<uint8> stateBytes;
@@ -171,8 +171,8 @@ namespace sw
         Scene verify{ "SceneCooker.Verify" };
         if ( verify.instantiate( cooked ) == false )
             return 0;
-        unordered_map<uint64, GameObject*> mapVerifyByFileId;
-        SceneCookerInternal::makeObjectByFileId( verify, mapVerifyByFileId );
+        unordered_map<uint64, GameObject*> mapVerifyByFileID;
+        SceneCookerInternal::makeObjectByFileID( verify, mapVerifyByFileID );
 
         uint32 cookedCount{ 0 };
         for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
@@ -185,10 +185,10 @@ namespace sw
                     SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
                 continue;
             }
-            const auto        sourceIt = mapSourceByFileId.find( entity._fileId );
-            const auto        verifyIt = mapVerifyByFileId.find( entity._fileId );
-            const GameObject* pSource  = ( sourceIt != mapSourceByFileId.end() ) ? sourceIt->second : nullptr;
-            const GameObject* pVerify  = ( verifyIt != mapVerifyByFileId.end() ) ? verifyIt->second : nullptr;
+            const auto        sourceIt = mapSourceByFileID.find( entity._fileID );
+            const auto        verifyIt = mapVerifyByFileID.find( entity._fileID );
+            const GameObject* pSource  = ( sourceIt != mapSourceByFileID.end() ) ? sourceIt->second : nullptr;
+            const GameObject* pVerify  = ( verifyIt != mapVerifyByFileID.end() ) ? verifyIt->second : nullptr;
             if ( pSource == nullptr || pVerify == nullptr ||
                  SceneCookerInternal::makeStateText( source, pSource ) != SceneCookerInternal::makeStateText( verify, pVerify ) )
             {

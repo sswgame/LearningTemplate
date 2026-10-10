@@ -113,15 +113,15 @@ namespace sw
         void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const GameStateRefs& refs, uint32 seed );
 
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방 유령이 (숨은 채로) 나옵니다. 나온 유령 수이고 없는 방이면 −1 입니다. */
-        int32 enterRoom( const hashed_string& roomId );
+        int32 enterRoom( const hashed_string& roomID );
         /** @brief 시간을 흘립니다 — 싸움 · 잡은 유령 세기 · 불 켜기, 들킨 부의 탈출 시간. */
         void update( float32 deltaTime );
         /** @brief 열쇠 문을 엽니다(열쇠 하나를 쓴다). */
-        GhostDoorResult unlockDoor( const hashed_string& doorId );
+        GhostDoorResult unlockDoor( const hashed_string& doorID );
         /** @brief 가구를 뒤집니다. 한 가구는 한 번만 전리품을 줍니다. 나온 것은 @p outLoot 에 더합니다. */
-        GhostSearchResult searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemStackList& outLoot );
+        GhostSearchResult searchFurniture( const hashed_string& furnitureID, GhostSearchMode mode, ItemStackList& outLoot );
         /** @brief 들킨 부에게 피해를 줍니다(청소기). 이번에 잡혔으면 true 입니다. */
-        bool damageBoo( const hashed_string& booId, float32 amount );
+        bool damageBoo( const hashed_string& booID, float32 amount );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<GhostMansionEvent>& outListEvent );
         /** @brief 지금 방 싸움의 알림(나타남 · 공격 · 잡힘 …)을 꺼내 갑니다 — 저택이 `update` 에서 싸움 알림을 받아 잡은 수를 세므로 게임은 여기서 받습니다. */
@@ -138,14 +138,14 @@ namespace sw
         GhostEncounter&        getEncounter() { return _encounter; }
         const GhostEncounter&  getEncounter() const { return _encounter; }
         const hashed_string&   getCurrentRoom() const { return _currentRoom; }
-        bool                   isRoomLit( const hashed_string& roomId ) const;
-        const GhostBooRuntime* findBoo( const hashed_string& booId ) const;
+        bool                   isRoomLit( const hashed_string& roomID ) const;
+        const GhostBooRuntime* findBoo( const hashed_string& booID ) const;
         int32                  countCaughtBoos() const;
-        bool                   isSearched( const hashed_string& furnitureId ) const;
+        bool                   isSearched( const hashed_string& furnitureID ) const;
 
     private:
-        int32 findFurnitureIndex( const hashed_string& furnitureId ) const;
-        void  lightRoom( const hashed_string& roomId );
+        int32 findFurnitureIndex( const hashed_string& furnitureID ) const;
+        void  lightRoom( const hashed_string& roomID );
         void  moveBooAway( size_t booIndex );
         void  revealBoo( size_t booIndex );
         void  pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );

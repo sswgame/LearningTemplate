@@ -85,8 +85,8 @@ SW_TEST_CASE( EditorPlaySessionTest, StopAfterSceneChangeRebuildsTheEditedScene 
     GameObject* pHero = pEdited->getObjectManager()->createGameObject( hashed_string( "Hero" ) );
     SW_ASSERT_NOT_NULL( pHero );
     pEdited->getObjectManager()->mergePendingAdds();
-    const uint64 heroId = pHero->getObjectId();
-    pEdited->setEntityPrefabPath( heroId, "game/prefabs/hero.prefab" );
+    const uint64 heroID = pHero->getObjectID();
+    pEdited->setEntityPrefabPath( heroID, "game/prefabs/hero.prefab" );
 
     PlaySessionData data;
     EditorPlaySession::captureSnapshot( data );
@@ -111,11 +111,11 @@ SW_TEST_CASE( EditorPlaySessionTest, StopAfterSceneChangeRebuildsTheEditedScene 
     SW_ASSERT_NOT_NULL( pObjects );
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
-    GameObject* pRestoredHero = pObjects->findGameObjectById( heroId );
+    GameObject* pRestoredHero = pObjects->findGameObjectByID( heroID );
     SW_ASSERT_NOT_NULL( pRestoredHero );
     SW_EXPECT_TRUE( pRestoredHero->getName() == hashed_string( "Hero" ) );
     SW_EXPECT_EQUAL( size_t( 0 ), countLivePlayObjectsNamed( *pObjects, "Boss" ) );
-    SW_EXPECT_TRUE( pActive->getEntityPrefabPath( heroId ) == "game/prefabs/hero.prefab" );
+    SW_EXPECT_TRUE( pActive->getEntityPrefabPath( heroID ) == "game/prefabs/hero.prefab" );
 }
 
 /**
@@ -133,7 +133,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
     GameObject*        pHero    = pObjects->createGameObject( hashed_string( "Hero" ) );
     SW_ASSERT_NOT_NULL( pHero );
     pObjects->mergePendingAdds();
-    const uint64 heroId = pHero->getObjectId();
+    const uint64 heroID = pHero->getObjectID();
 
     PlaySessionData data;
     EditorPlaySession::captureSnapshot( data );
@@ -149,7 +149,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopWithoutSceneChangeRestoresInPlace )
     SW_EXPECT_TRUE_MSG( sceneManager.getActiveScene() == pEdited, "씬이 그대로인데 다시 세웠습니다" );
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
-    SW_EXPECT_NOT_NULL( pObjects->findGameObjectById( heroId ) );
+    SW_EXPECT_NOT_NULL( pObjects->findGameObjectByID( heroID ) );
     SW_EXPECT_EQUAL( size_t( 0 ), countLivePlayObjectsNamed( *pObjects, "Bullet" ) );
 }
 
@@ -172,8 +172,8 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
     SW_ASSERT_NOT_NULL( pParent->addComponent<SceneComponent>() );
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
     pObjects->mergePendingAdds();
-    const uint64 childId  = pChild->getObjectId();
-    const uint64 parentId = pParent->getObjectId();
+    const uint64 childID  = pChild->getObjectID();
+    const uint64 parentID = pParent->getObjectID();
 
     PlaySessionData data;
     EditorPlaySession::captureSnapshot( data );
@@ -182,14 +182,14 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
     pObjects->destroyObject( pParent, true );
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
-    SW_ASSERT_TRUE( pObjects->findGameObjectById( childId ) == nullptr );
+    SW_ASSERT_TRUE( pObjects->findGameObjectByID( childID ) == nullptr );
 
     EditorPlaySession::restoreSnapshot( data );
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
 
-    GameObject* pRestoredChild  = pObjects->findGameObjectById( childId );
-    GameObject* pRestoredParent = pObjects->findGameObjectById( parentId );
+    GameObject* pRestoredChild  = pObjects->findGameObjectByID( childID );
+    GameObject* pRestoredParent = pObjects->findGameObjectByID( parentID );
     SW_ASSERT_NOT_NULL( pRestoredChild );
     SW_ASSERT_NOT_NULL( pRestoredParent );
     SW_EXPECT_TRUE_MSG( pRestoredChild->getParent() == pRestoredParent, "자식이 부모보다 먼저 되살아나 루트로 남았습니다" );
@@ -201,7 +201,7 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresAHierarchyWhoseChildWasCreatedF
  *          아직 B 의 것이라 A 는 `Left_2` 가 되고, A 의 자식은 이름 "Left" 로 **B** 를 찾아 붙는다. 부모는 원래 id 로 찾고, 모두 읽은 뒤 비어 있는
  *          저장된 이름을 되찾는다.
  */
-SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
+SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIDAfterPlayRenames )
 {
     SceneManager sceneManager;
     Scene*       pEdited = sceneManager.createEmptyActiveScene( "RenamedLevel" );
@@ -218,9 +218,9 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
     }
     SW_ASSERT_TRUE( pChild->attachToParent( pLeft ) );
     pObjects->mergePendingAdds();
-    const uint64 leftId  = pLeft->getObjectId();
-    const uint64 childId = pChild->getObjectId();
-    const uint64 rightId = pRight->getObjectId();
+    const uint64 leftID  = pLeft->getObjectID();
+    const uint64 childID = pChild->getObjectID();
+    const uint64 rightID = pRight->getObjectID();
 
     PlaySessionData data;
     EditorPlaySession::captureSnapshot( data );
@@ -234,9 +234,9 @@ SW_TEST_CASE( EditorPlaySessionTest, StopRestoresParentsByIdAfterPlayRenames )
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
 
-    GameObject* pRestoredLeft  = pObjects->findGameObjectById( leftId );
-    GameObject* pRestoredChild = pObjects->findGameObjectById( childId );
-    GameObject* pRestoredRight = pObjects->findGameObjectById( rightId );
+    GameObject* pRestoredLeft  = pObjects->findGameObjectByID( leftID );
+    GameObject* pRestoredChild = pObjects->findGameObjectByID( childID );
+    GameObject* pRestoredRight = pObjects->findGameObjectByID( rightID );
     SW_ASSERT_NOT_NULL( pRestoredLeft );
     SW_ASSERT_NOT_NULL( pRestoredChild );
     SW_ASSERT_NOT_NULL( pRestoredRight );
@@ -260,7 +260,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
     GameObject*               pHero    = pObjects->createGameObject( hashed_string( "Hero" ) );
     SW_ASSERT_NOT_NULL( pHero );
     pObjects->mergePendingAdds();
-    const uint64 heroId = pHero->getObjectId();
+    const uint64 heroID = pHero->getObjectID();
 
     PlaySessionData data;
     EditorPlaySession::setState( data, PlaySessionState::Paused );
@@ -276,7 +276,7 @@ SW_TEST_CASE( EditorPlaySessionTest, PauseFromStoppedThenPlayStartsTheWorld )
     SW_EXPECT_FALSE( sceneManager.isWorldPlaying() );
     pObjects->processDeferredDestruction();
     pObjects->mergePendingAdds();
-    SW_EXPECT_NOT_NULL( pObjects->findGameObjectById( heroId ) );
+    SW_EXPECT_NOT_NULL( pObjects->findGameObjectByID( heroID ) );
 }
 
 /**

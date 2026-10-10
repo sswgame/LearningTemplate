@@ -9,11 +9,11 @@
 namespace sw
 {
     EconomyClient::EconomyClient()
-        : _mapClientIdToCall{}
+        : _mapClientIDToCall{}
         , _listBalance{}
         , _sendingCall{}
         , _pClient{ nullptr }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _revision{ 0 }
         , _bSending{ SW_FALSE }
     {
@@ -57,7 +57,7 @@ namespace sw
                 LedgerBalance* pCached = nullptr;
                 for ( LedgerBalance& cached : _listBalance )
                 {
-                    if ( cached._assetId == balance._assetId )
+                    if ( cached._assetID == balance._assetID )
                         pCached = &cached;
                 }
                 if ( pCached != nullptr )
@@ -71,11 +71,11 @@ namespace sw
 
     void EconomyClient::applyLedgerBalances( Wallet& inoutWallet ) const { EconomyMirror::applyToWallet( _listBalance, true, inoutWallet ); }
 
-    int64 EconomyClient::getBalance( string_view assetId ) const
+    int64 EconomyClient::getBalance( string_view assetID ) const
     {
         for ( const LedgerBalance& balance : _listBalance )
         {
-            if ( balance._assetId == assetId )
+            if ( balance._assetID == assetID )
                 return balance._amount;
         }
         return 0;
@@ -89,12 +89,12 @@ namespace sw
 
     uint64 EconomyClient::send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key, ReplyDelegate onReply )
     {
-        const uint64 requestId = _nextRequestId++;
-        _sendingCall           = PendingCall{ onReply, key, requestId, method };
+        const uint64 requestID = _nextRequestID++;
+        _sendingCall           = PendingCall{ onReply, key, requestID, method };
         if ( _pClient == nullptr )
         {
             EconomyClientReply reply;
-            reply._requestId      = requestId;
+            reply._requestID      = requestID;
             reply._method         = method;
             reply._idempotencyKey = key;
             reply._errorCode      = OnlineError::kUnavailable;
@@ -102,39 +102,39 @@ namespace sw
             _sendingCall          = PendingCall{};
             if ( onReply.isBound() )
                 onReply( reply );
-            return requestId;
+            return requestID;
         }
         NetRequestOptions options;
         options._idempotencyKey = key;
         _bSending               = SW_TRUE;
-        const uint64 clientId   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ) );
+        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&EconomyClient::onResponse>( this ) );
         _bSending               = SW_FALSE;
-        if ( _sendingCall._requestId != 0 )
-            _mapClientIdToCall[clientId] = _sendingCall; // 그 자리에서 끝나지 않았다 — 응답을 기다린다
+        if ( _sendingCall._requestID != 0 )
+            _mapClientIDToCall[clientID] = _sendingCall; // 그 자리에서 끝나지 않았다 — 응답을 기다린다
         _sendingCall = PendingCall{};
-        return requestId;
+        return requestID;
     }
 
     void EconomyClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIdToCall.find( response._requestId );
-        if ( callIt != _mapClientIdToCall.end() )
+        const auto  callIt = _mapClientIDToCall.find( response._requestID );
+        if ( callIt != _mapClientIDToCall.end() )
         {
             call = callIt->second;
-            _mapClientIdToCall.erase( callIt );
+            _mapClientIDToCall.erase( callIt );
         }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestId != 0 )
+        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
         {
             call                    = _sendingCall;
-            _sendingCall._requestId = 0;
+            _sendingCall._requestID = 0;
         }
         else
         {
             return;
         }
         EconomyClientReply reply;
-        reply._requestId      = call._requestId;
+        reply._requestID      = call._requestID;
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;

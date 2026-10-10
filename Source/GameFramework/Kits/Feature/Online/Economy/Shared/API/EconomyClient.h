@@ -28,7 +28,7 @@ namespace sw
     {
         EconomyReply      _reply{};
         NetIdempotencyKey _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘긴다
-        uint64            _requestId{ 0 };
+        uint64            _requestID{ 0 };
         uint16            _method{ 0 };
         uint16            _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_reply._result` 는 그 코드의 결과
     };
@@ -50,7 +50,7 @@ namespace sw
         /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이. */
         void initialize( OnlineServiceClient* pClient );
 
-        /** @brief 우리 요청 번호입니다(응답의 `_requestId`). */
+        /** @brief 우리 요청 번호입니다(응답의 `_requestID`). */
         uint64 requestWallet( ReplyDelegate onReply );
         uint64 requestHistory( const EconomyHistoryRequest& request, ReplyDelegate onReply );
         /** @brief @p key 가 비면 새로 만든다 — 재시도는 응답의 키를 다시 넘긴다. */
@@ -63,7 +63,7 @@ namespace sw
         void applyLedgerBalances( Wallet& inoutWallet ) const;
 
         const vector<LedgerBalance>& getBalances() const { return _listBalance; }
-        int64                        getBalance( string_view assetId ) const;
+        int64                        getBalance( string_view assetID ) const;
         uint32                       getRevision() const { return _revision; }
 
         // IOnlineClientService
@@ -76,18 +76,18 @@ namespace sw
         {
             ReplyDelegate     _onReply{};
             NetIdempotencyKey _key{};
-            uint64            _requestId{ 0 };
+            uint64            _requestID{ 0 };
             uint16            _method{ 0 };
         };
 
         uint64 send( uint16 method, const BitWriter& body, const NetIdempotencyKey& key, ReplyDelegate onReply );
         void   onResponse( const OnlineResponse& response );
 
-        unordered_map<uint64, PendingCall> _mapClientIdToCall;
+        unordered_map<uint64, PendingCall> _mapClientIDToCall;
         vector<LedgerBalance>              _listBalance;
         PendingCall                        _sendingCall;
         OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestId;
+        uint64                             _nextRequestID;
         uint32                             _revision;
         uint8                              _bSending;
     };

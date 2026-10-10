@@ -91,7 +91,7 @@ namespace sw
         : _listCompletion{}
         , _sealContext{ sealContext }
         , _pDatabase{ pDatabase }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _bShutdown{ SW_FALSE }
     {
     }
@@ -145,11 +145,11 @@ namespace sw
 
     uint64 MemoryLocalStore::executeRequest( LocalStoreRequest& request )
     {
-        request._requestId = _nextRequestId++;
+        request._requestID = _nextRequestID++;
         if ( _bShutdown == SW_TRUE )
             _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
         else
             _listCompletion.push_back( LocalStoreRequestUtil::execute( request, *_pDatabase, _sealContext ) );
-        return request._requestId;
+        return request._requestID;
     }
 } // namespace sw

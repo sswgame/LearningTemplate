@@ -62,10 +62,10 @@ namespace sw::editor
         string                     _error;          ///< 마지막으로 열지 못한 까닭
         hashed_string              _theme;          ///< 빈 이름 = 게임의 지금 테마
         UIViewport                 _viewport;
-        void*                      _pTextureId; ///< ImGui 텍스처 id(이 패널 소유)
+        void*                      _pTextureID; ///< ImGui 텍스처 id(이 패널 소유)
         uint64                     _texture;    ///< 그 id 의 RHI 텍스처
         UIScreenHandle             _screen;
-        WidgetId                   _selected;
+        WidgetID                   _selected;
         uint32                     _resolutionIndex;
         float32                    _uiScale;
         float32                    _textScale;

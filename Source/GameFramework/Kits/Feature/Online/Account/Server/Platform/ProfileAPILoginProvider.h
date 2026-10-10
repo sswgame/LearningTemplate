@@ -40,6 +40,6 @@ namespace sw
         unordered_map<uint64, uint64>     _mapRequestToVerification;
         vector<PlatformLoginVerification> _listDone;
         HTTPClient*                       _pHTTPClient;
-        uint64                            _nextVerificationId;
+        uint64                            _nextVerificationID;
     };
 } // namespace sw

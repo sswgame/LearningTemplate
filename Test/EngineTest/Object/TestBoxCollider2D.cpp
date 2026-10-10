@@ -26,10 +26,10 @@ namespace sw
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
         void            onOverlapBegin( const OverlapInfo& overlap ) override
         {
-            _listBeginOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectId() : 0 );
+            _listBeginOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 );
             _listBeginOtherTrigger.push_back( overlap._bOtherTrigger == SW_TRUE );
         }
-        void onOverlapEnd( const OverlapInfo& overlap ) override { _listEndOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectId() : 0 ); }
+        void onOverlapEnd( const OverlapInfo& overlap ) override { _listEndOther.push_back( overlap._pOther != nullptr ? overlap._pOther->getObjectID() : 0 ); }
     };
 
     inline const TypeInfo* MockOverlapListenerComponent::StaticType()
@@ -156,8 +156,8 @@ SW_TEST_CASE( BoxCollider2DTest, OverlapEventsReachBothObjectsAfterTheTick )
     SW_ASSERT_NOT_NULL( a._pListener );
     SW_ASSERT_NOT_NULL( b._pListener );
     SW_ASSERT_NOT_NULL( c._pListener );
-    const uint64 idA = a._pObject->getObjectId();
-    const uint64 idB = b._pObject->getObjectId();
+    const uint64 idA = a._pObject->getObjectID();
+    const uint64 idB = b._pObject->getObjectID();
 
     manager.beginPlay();
     manager.tick( 0.016f );

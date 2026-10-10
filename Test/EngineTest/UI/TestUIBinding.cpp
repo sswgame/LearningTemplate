@@ -90,14 +90,14 @@ namespace
             sw::unique_ptr<sw::TextWidget> text = sw::make_unique<sw::TextWidget>();
             pOutText                            = text.get();
             sw::unique_ptr<sw::UIScreen> screen = sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( text ) );
-            screen->addBinding( sw::UIBindingDesc{ pPropertyPath, pExpression, pOutText->getId(), 1 } );
+            screen->addBinding( sw::UIBindingDesc{ pPropertyPath, pExpression, pOutText->getID(), 1 } );
             return screen;
         }
 
         /** @brief 트리의 그리기 더러움 목록에 위젯이 있는가입니다. */
-        static bool isPaintDirty( const sw::WidgetTree& tree, sw::WidgetId id )
+        static bool isPaintDirty( const sw::WidgetTree& tree, sw::WidgetID id )
         {
-            for ( const sw::WidgetId dirty : tree.getPaintDirtyWidgets() )
+            for ( const sw::WidgetID dirty : tree.getPaintDirtyWidgets() )
             {
                 if ( dirty == id )
                     return true;
@@ -285,13 +285,13 @@ SW_TEST_CASE( UIBindingTest, TypeMismatchWithoutConverterIsError )
     TestHUDViewModel viewModel;
     viewModel._name                           = "abc";
     sw::unique_ptr<sw::SliderWidget> slider   = sw::make_unique<sw::SliderWidget>();
-    const sw::WidgetId               sliderId = slider->getId();
+    const sw::WidgetID               sliderID = slider->getID();
     slider->setRange( 0.0f, 10.0f, 1.0f );
     slider->setValue( 3.0f );
     sw::unique_ptr<sw::UIScreen> screen = sw::make_unique<sw::UIScreen>( sw::UIScreenDesc{}, std::move( slider ) );
-    screen->addBinding( sw::UIBindingDesc{ "_value", "{bind:_name}", sliderId, 7 } );
-    screen->addBinding( sw::UIBindingDesc{ "_maxValue", "{bind:_tint}", sliderId, 8 } );
-    screen->addBinding( sw::UIBindingDesc{ "_minValue", "{bind:_missing}", sliderId, 9 } );
+    screen->addBinding( sw::UIBindingDesc{ "_value", "{bind:_name}", sliderID, 7 } );
+    screen->addBinding( sw::UIBindingDesc{ "_maxValue", "{bind:_tint}", sliderID, 8 } );
+    screen->addBinding( sw::UIBindingDesc{ "_minValue", "{bind:_missing}", sliderID, 9 } );
     screen->setViewModel( &viewModel );
     sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.pushScreen( std::move( screen ) ) );
     {
@@ -304,7 +304,7 @@ SW_TEST_CASE( UIBindingTest, TypeMismatchWithoutConverterIsError )
     SW_EXPECT_TRUE_MSG( listError[1].find( "cannot bind struct 'float4'" ) != sw::string::npos, listError[1].c_str() );
     SW_EXPECT_TRUE_MSG( listError[2].find( "has no property '_missing'" ) != sw::string::npos, listError[2].c_str() );
     SW_EXPECT_EQUAL( 0u, pScreen->getBindingSet().getBindingCount() );
-    const sw::SliderWidget* pSlider = static_cast<const sw::SliderWidget*>( pScreen->getTree().findWidgetById( sliderId ) );
+    const sw::SliderWidget* pSlider = static_cast<const sw::SliderWidget*>( pScreen->getTree().findWidgetByID( sliderID ) );
     SW_ASSERT_NOT_NULL( pSlider );
     SW_EXPECT_NEAR_EQUAL( 3.0f, pSlider->getValue(), 0.001f ); // 걸리지 않은 칸은 그대로
 }
@@ -316,8 +316,8 @@ SW_TEST_CASE( UIBindingTest, LayoutFieldMakesLayoutDirty )
     sw::unique_ptr<sw::TextWidget> text  = sw::make_unique<sw::TextWidget>();
     sw::TextWidget*                pText = text.get();
     sw::UIScreen                   screen( sw::UIScreenDesc{}, std::move( text ) );
-    screen.addBinding( sw::UIBindingDesc{ "_text", "{bind:_name}", pText->getId(), 1 } );
-    screen.addBinding( sw::UIBindingDesc{ "_color", "{bind:_tint}", pText->getId(), 2 } );
+    screen.addBinding( sw::UIBindingDesc{ "_text", "{bind:_name}", pText->getID(), 1 } );
+    screen.addBinding( sw::UIBindingDesc{ "_color", "{bind:_tint}", pText->getID(), 2 } );
     screen.setViewModel( &viewModel );
     const sw::UIBindingContext context{};
     screen.getBindingSet().update( screen.getBindings(), context );
@@ -328,7 +328,7 @@ SW_TEST_CASE( UIBindingTest, LayoutFieldMakesLayoutDirty )
     screen.getBindingSet().update( screen.getBindings(), context );
     SW_EXPECT_TRUE( pText->getColor() == sw::float4( 1.0f, 0.0f, 0.0f, 1.0f ) );
     SW_EXPECT_TRUE( screen.getTree().getLayoutDirtyRoots().empty() ); // 색만 — 레이아웃은 그대로
-    SW_EXPECT_TRUE( UIBindingTestUtil::isPaintDirty( screen.getTree(), pText->getId() ) );
+    SW_EXPECT_TRUE( UIBindingTestUtil::isPaintDirty( screen.getTree(), pText->getID() ) );
     screen.getTree().clearAllDirty();
 
     viewModel.setName( "Longer name" );

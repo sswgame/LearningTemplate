@@ -62,7 +62,7 @@ namespace sw
     LoadBotMetrics::LoadBotMetrics()
         : _listSampleByAction{}
         , _listErrorCountByAction{}
-        , _listMatchId{}
+        , _listMatchID{}
         , _mapErrorKeyToCount{}
         , _mapPushKindToCount{}
         , _openedCount{ 0 }
@@ -95,7 +95,7 @@ namespace sw
 
     void LoadBotMetrics::recordDisconnect() { ++_disconnectCount; }
 
-    void LoadBotMetrics::recordMatch( uint64 matchId ) { _listMatchId.push_back( matchId ); }
+    void LoadBotMetrics::recordMatch( uint64 matchID ) { _listMatchID.push_back( matchID ); }
 
     int64 LoadBotMetrics::computePercentile( const vector<int64>& listSortedSample, int32 percentile )
     {
@@ -250,8 +250,8 @@ namespace sw
 
     int64 LoadBotMetrics::getDistinctMatchCount() const
     {
-        vector<uint64> listMatchId = _listMatchId;
-        std::sort( listMatchId.begin(), listMatchId.end() );
-        return static_cast<int64>( std::unique( listMatchId.begin(), listMatchId.end() ) - listMatchId.begin() );
+        vector<uint64> listMatchID = _listMatchID;
+        std::sort( listMatchID.begin(), listMatchID.end() );
+        return static_cast<int64>( std::unique( listMatchID.begin(), listMatchID.end() ) - listMatchID.begin() );
     }
 } // namespace sw

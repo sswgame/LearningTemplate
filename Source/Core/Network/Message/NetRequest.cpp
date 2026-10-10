@@ -81,7 +81,7 @@ namespace sw
         , _mapPending{}
         , _writer{}
         , _pEndpoint{ nullptr }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _maxPendingRequests{ 1024 }
     {
     }
@@ -100,20 +100,20 @@ namespace sw
             mapPending = std::move( _mapPending );
             _mapPending.clear();
         }
-        for ( auto& [requestId, pending] : mapPending )
+        for ( auto& [requestID, pending] : mapPending )
         {
-            finish( requestId, std::move( pending ), NetRequestStatus::Cancelled, nullptr, 0 );
+            finish( requestID, std::move( pending ), NetRequestStatus::Cancelled, nullptr, 0 );
         }
     }
 
-    void NetRequestClient::finish( uint64 requestId, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize )
+    void NetRequestClient::finish( uint64 requestID, Pending&& pending, NetRequestStatus status, const uint8* pBody, int32 bodySize )
     {
         if ( pending._onResponse.isBound() == false )
             return;
         NetResponse response;
         response._pBody     = pBody;
         response._bodySize  = bodySize;
-        response._requestId = requestId;
+        response._requestID = requestID;
         response._method    = pending._method;
         response._status    = status;
         pending._onResponse( response );
@@ -128,7 +128,7 @@ namespace sw
         pending._method              = method;
         pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + static_cast<int64>( options._timeoutSeconds * 1.0e9 );
         NetRequestStatus failure     = NetRequestStatus::Ok;
-        uint64           requestId   = 0;
+        uint64           requestID   = 0;
         {
             std::scoped_lock<mutex> lock{ _mutex };
             if ( _pEndpoint == nullptr || static_cast<int32>( _mapPending.size() ) >= _maxPendingRequests )
@@ -137,9 +137,9 @@ namespace sw
             }
             else
             {
-                requestId = _nextRequestId++;
+                requestID = _nextRequestID++;
                 _writer.clear();
-                _writer.writeVarUint( requestId );
+                _writer.writeVarUint( requestID );
                 _writer.writeBits( method, 16 );
                 _writer.writeVarUint( static_cast<uint64>( options._timeoutSeconds * 1000.0 ) );
                 _writer.writeBool( options._idempotencyKey.isValid() );
@@ -150,52 +150,52 @@ namespace sw
                     _writer.writeBits( static_cast<uint32>( options._idempotencyKey._low >> 32 ), 32 );
                     _writer.writeBits( static_cast<uint32>( options._idempotencyKey._low ), 32 );
                 }
-                const LogTraceId traceId = options._traceId.isValid() ? options._traceId : LogContext::getCurrent()._traceId;
-                _writer.writeBool( traceId.isValid() );
-                if ( traceId.isValid() )
+                const LogTraceID traceID = options._traceID.isValid() ? options._traceID : LogContext::getCurrent()._traceID;
+                _writer.writeBool( traceID.isValid() );
+                if ( traceID.isValid() )
                 {
-                    _writer.writeBits( static_cast<uint32>( traceId._high >> 32 ), 32 );
-                    _writer.writeBits( static_cast<uint32>( traceId._high ), 32 );
-                    _writer.writeBits( static_cast<uint32>( traceId._low >> 32 ), 32 );
-                    _writer.writeBits( static_cast<uint32>( traceId._low ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceID._high >> 32 ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceID._high ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceID._low >> 32 ), 32 );
+                    _writer.writeBits( static_cast<uint32>( traceID._low ), 32 );
                 }
                 _writer.alignToByte();
                 if ( bodySize > 0 )
                     _writer.writeBytes( pBody, bodySize );
                 // 줄에 먼저 넣는다 — 같은 연결의 응답이 다른 스레드의 pump 로 보내기보다 먼저 올 수 있다.
-                _mapPending.emplace( requestId, std::move( pending ) );
+                _mapPending.emplace( requestID, std::move( pending ) );
                 const StreamSendResult result = _pEndpoint->sendFrame( handle, StreamFrameKind::Request, _writer.getBytes().data(), _writer.getByteCount() );
                 if ( result == StreamSendResult::Closed || result == StreamSendResult::QueueFull )
                 {
-                    pending = std::move( _mapPending[requestId] );
-                    _mapPending.erase( requestId );
+                    pending = std::move( _mapPending[requestID] );
+                    _mapPending.erase( requestID );
                     failure = NetRequestStatus::ConnectionLost;
                 }
             }
         }
         if ( failure != NetRequestStatus::Ok )
         {
-            finish( requestId, std::move( pending ), failure, nullptr, 0 );
+            finish( requestID, std::move( pending ), failure, nullptr, 0 );
             return 0;
         }
-        return requestId;
+        return requestID;
     }
 
-    bool NetRequestClient::cancel( uint64 requestId )
+    bool NetRequestClient::cancel( uint64 requestID )
     {
         Pending pending;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapPending.find( requestId );
+            const auto              found = _mapPending.find( requestID );
             if ( found == _mapPending.end() )
                 return false;
             pending = std::move( found->second );
             _mapPending.erase( found );
             _writer.clear();
-            _writer.writeVarUint( requestId );
+            _writer.writeVarUint( requestID );
             (void)_pEndpoint->sendFrame( pending._handle, StreamFrameKind::Cancel, _writer.getBytes().data(), _writer.getByteCount() );
         }
-        finish( requestId, std::move( pending ), NetRequestStatus::Cancelled, nullptr, 0 );
+        finish( requestID, std::move( pending ), NetRequestStatus::Cancelled, nullptr, 0 );
         return true;
     }
 
@@ -204,14 +204,14 @@ namespace sw
         if ( kind != StreamFrameKind::Response )
             return false;
         BitReader              reader( pBody, bodySize );
-        const uint64           requestId = reader.readVarUint();
+        const uint64           requestID = reader.readVarUint();
         const NetRequestStatus status    = static_cast<NetRequestStatus>( reader.readBits( 8 ) );
         if ( reader.hasOverflowed() || status >= NetRequestStatus::Count )
             return true; // 깨진 응답 — 그 요청은 시한으로 끝난다
         Pending pending;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapPending.find( requestId );
+            const auto              found = _mapPending.find( requestID );
             if ( found == _mapPending.end() || found->second._handle != handle )
                 return true; // 이미 끝났다(시한 · 취소) — 늦은 응답
             pending = std::move( found->second );
@@ -220,7 +220,7 @@ namespace sw
         const uint8* pPayload    = nullptr;
         int32        payloadSize = 0;
         NetRequestInternal::findPayload( reader, pBody, bodySize, pPayload, payloadSize );
-        finish( requestId, std::move( pending ), status, pPayload, payloadSize );
+        finish( requestID, std::move( pending ), status, pPayload, payloadSize );
         return true;
     }
 
@@ -242,9 +242,9 @@ namespace sw
                 }
             }
         }
-        for ( auto& [requestId, pending] : listLost )
+        for ( auto& [requestID, pending] : listLost )
         {
-            finish( requestId, std::move( pending ), NetRequestStatus::ConnectionLost, nullptr, 0 );
+            finish( requestID, std::move( pending ), NetRequestStatus::ConnectionLost, nullptr, 0 );
         }
     }
 
@@ -267,9 +267,9 @@ namespace sw
                 }
             }
         }
-        for ( auto& [requestId, pending] : listExpired )
+        for ( auto& [requestID, pending] : listExpired )
         {
-            finish( requestId, std::move( pending ), NetRequestStatus::DeadlineExceeded, nullptr, 0 );
+            finish( requestID, std::move( pending ), NetRequestStatus::DeadlineExceeded, nullptr, 0 );
         }
     }
 
@@ -296,7 +296,7 @@ namespace sw
 
     size_t NetRequestServer::RequestKeyHash::operator()( const RequestKey& key ) const
     {
-        return static_cast<size_t>( NetRequestInternal::mixHash( key._handlePacked, key._requestId ) );
+        return static_cast<size_t>( NetRequestInternal::mixHash( key._handlePacked, key._requestID ) );
     }
 
     NetRequestServer::NetRequestServer()
@@ -347,17 +347,17 @@ namespace sw
         _mapHandler.erase( method );
     }
 
-    void NetRequestServer::setPrincipal( StreamConnectionHandle handle, uint64 principalId )
+    void NetRequestServer::setPrincipal( StreamConnectionHandle handle, uint64 principalID )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapPrincipal[handle.packed()] = principalId;
+        _mapPrincipal[handle.packed()] = principalID;
     }
 
-    void NetRequestServer::sendResponse( StreamConnectionHandle handle, uint64 requestId, NetRequestStatus status, const uint8* pBody, int32 bodySize )
+    void NetRequestServer::sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize )
     {
         std::scoped_lock<mutex> lock{ _writerMutex };
         _writer.clear();
-        _writer.writeVarUint( requestId );
+        _writer.writeVarUint( requestID );
         _writer.writeBits( static_cast<uint32>( status ), 8 );
         _writer.alignToByte();
         if ( bodySize > 0 )
@@ -370,11 +370,11 @@ namespace sw
         if ( kind == StreamFrameKind::Cancel )
         {
             BitReader    reader( pBody, bodySize );
-            const uint64 requestId = reader.readVarUint();
+            const uint64 requestID = reader.readVarUint();
             if ( reader.hasOverflowed() )
                 return true;
             std::scoped_lock<mutex> lock{ _mutex };
-            const auto              found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestId } );
+            const auto              found = _mapSerialByRequest.find( RequestKey{ handle.packed(), requestID } );
             if ( found != _mapSerialByRequest.end() )
                 _mapInFlight[found->second]._bCancelled = SW_TRUE;
             return true;
@@ -383,7 +383,7 @@ namespace sw
             return false;
 
         BitReader         reader( pBody, bodySize );
-        const uint64      requestId    = reader.readVarUint();
+        const uint64      requestID    = reader.readVarUint();
         const uint16      method       = static_cast<uint16>( reader.readBits( 16 ) );
         const uint64      timeoutMilli = reader.readVarUint();
         const bool        bHasKey      = reader.readBool();
@@ -393,18 +393,18 @@ namespace sw
             key._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
             key._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
         }
-        const bool bHasTraceId = reader.readBool();
-        LogTraceId traceId;
-        if ( bHasTraceId )
+        const bool bHasTraceID = reader.readBool();
+        LogTraceID traceID;
+        if ( bHasTraceID )
         {
-            traceId._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
-            traceId._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
+            traceID._high = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
+            traceID._low  = ( static_cast<uint64>( reader.readBits( 32 ) ) << 32 ) | reader.readBits( 32 );
         }
-        if ( traceId.isValid() == false )
-            traceId = LogTraceId::makeRandom(); // 클라이언트가 싣지 않았으면 서버가 만든다 — 서버 쪽 줄은 늘 요청마다 갈린다
+        if ( traceID.isValid() == false )
+            traceID = LogTraceID::makeRandom(); // 클라이언트가 싣지 않았으면 서버가 만든다 — 서버 쪽 줄은 늘 요청마다 갈린다
         if ( reader.hasOverflowed() )
         {
-            sendResponse( handle, requestId, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
+            sendResponse( handle, requestID, NetRequestStatus::Malformed, nullptr, 0 ); // id 를 못 읽었으면 0 — 클라이언트는 시한으로 끝낸다
             return true;
         }
         const uint8* pPayload    = nullptr;
@@ -440,13 +440,13 @@ namespace sw
             {
                 pHandler                    = handlerFound->second;
                 const auto   principalFound = _mapPrincipal.find( handle.packed() );
-                const uint64 principalId    = principalFound != _mapPrincipal.end() ? principalFound->second : 0;
+                const uint64 principalID    = principalFound != _mapPrincipal.end() ? principalFound->second : 0;
                 InFlight     inFlight;
-                inFlight._token = NetRequestToken{ handle, requestId, _nextSerial++, method };
+                inFlight._token = NetRequestToken{ handle, requestID, _nextSerial++, method };
                 if ( key.isValid() )
                 {
-                    const bool bPrincipal   = principalId != 0;
-                    inFlight._scope         = ScopeKey{ bPrincipal ? principalId : handle.packed(), key._high, key._low, method, static_cast<uint8>( bPrincipal ? SW_FALSE : SW_TRUE ) };
+                    const bool bPrincipal   = principalID != 0;
+                    inFlight._scope         = ScopeKey{ bPrincipal ? principalID : handle.packed(), key._high, key._low, method, static_cast<uint8>( bPrincipal ? SW_FALSE : SW_TRUE ) };
                     IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
                     if ( entry._bDone == SW_TRUE )
                     {
@@ -468,11 +468,11 @@ namespace sw
                 if ( action == RequestAction::Dispatch )
                 {
                     ++inFlightCount;
-                    _mapSerialByRequest[RequestKey{ handle.packed(), requestId }] = inFlight._token._serial;
+                    _mapSerialByRequest[RequestKey{ handle.packed(), requestID }] = inFlight._token._serial;
                     context._token                                                = inFlight._token;
                     context._idempotencyKey                                       = key;
-                    context._traceId                                              = traceId;
-                    context._principalId                                          = principalId;
+                    context._traceID                                              = traceID;
+                    context._principalID                                          = principalID;
                     context._deadlineSeconds                                      = static_cast<float64>( MonotonicClock::nowNanoseconds() ) * 1.0e-9 + static_cast<float64>( timeoutMilli ) * 1.0e-3;
                     context._pBody                                                = pPayload;
                     context._bodySize                                             = payloadSize;
@@ -484,13 +484,13 @@ namespace sw
         {
             case RequestAction::Dispatch:
             {
-                ScopedLogContext scope( LogContext{ context._traceId, context._principalId } ); // 처리기 · 그가 맡긴 저장소 일의 줄에 같은 꼬리표
+                ScopedLogContext scope( LogContext{ context._traceID, context._principalID } ); // 처리기 · 그가 맡긴 저장소 일의 줄에 같은 꼬리표
                 pHandler->onNetRequest( *this, context );                                       // 어떤 잠금도 쥐지 않은 채
                 break;
             }
             case RequestAction::Reply:
             {
-                sendResponse( handle, requestId, replyStatus, replyBytes.data(), static_cast<int32>( replyBytes.size() ) );
+                sendResponse( handle, requestID, replyStatus, replyBytes.data(), static_cast<int32>( replyBytes.size() ) );
                 break;
             }
             case RequestAction::Wait:
@@ -511,7 +511,7 @@ namespace sw
                 return false; // 이미 답했다
             const InFlight inFlight = found->second;
             _mapInFlight.erase( found );
-            _mapSerialByRequest.erase( RequestKey{ token._handle.packed(), token._requestId } );
+            _mapSerialByRequest.erase( RequestKey{ token._handle.packed(), token._requestID } );
             const auto countFound = _mapInFlightCount.find( token._handle.packed() );
             if ( countFound != _mapInFlightCount.end() && --countFound->second <= 0 )
                 _mapInFlightCount.erase( countFound );
@@ -528,10 +528,10 @@ namespace sw
                 purgeIdempotencyLocked( MonotonicClock::nowNanoseconds() );
             }
         }
-        sendResponse( token._handle, token._requestId, status, pBody, bodySize ); // 연결이 닫혔으면 끝점이 Closed 로 버린다 — 기억은 이미 했다
+        sendResponse( token._handle, token._requestID, status, pBody, bodySize ); // 연결이 닫혔으면 끝점이 Closed 로 버린다 — 기억은 이미 했다
         for ( const NetRequestToken& waiter : listWaiter )
         {
-            sendResponse( waiter._handle, waiter._requestId, status, pBody, bodySize );
+            sendResponse( waiter._handle, waiter._requestID, status, pBody, bodySize );
         }
         return true;
     }

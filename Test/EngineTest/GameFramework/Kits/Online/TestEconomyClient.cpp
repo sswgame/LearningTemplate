@@ -141,7 +141,7 @@ namespace
         RemoteConfig          _remoteConfig;
         EconomyServerSide     _server;
         EconomyClientSide     _player;
-        AccountId             _playerId;
+        AccountID             _playerID;
         int64                 _nowMs;
 
         EconomyRig()
@@ -150,7 +150,7 @@ namespace
             , _remoteConfig{}
             , _server{ _network, _database, &_remoteConfig }
             , _player{ _network }
-            , _playerId{ kInvalidAccountId }
+            , _playerID{ kInvalidAccountID }
             , _nowMs{ 500000 }
         {
         }
@@ -171,7 +171,7 @@ namespace
             return capture._count == 1;
         }
 
-        AccountClientReply waitAccount( uint64 requestId )
+        AccountClientReply waitAccount( uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -179,7 +179,7 @@ namespace
                 (void)_player._account.pollReplies( listReply );
                 for ( AccountClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -195,16 +195,16 @@ namespace
             }
             const bool               bRegistered = waitAccount( _player._account.registerAccount( "buyer", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply loggedIn    = waitAccount( _player._account.login( "buyer", "password123" ) );
-            _playerId                            = loggedIn._grant._identity._accountId;
+            _playerID                            = loggedIn._grant._identity._accountID;
             return bRegistered && loggedIn._result == LoginResult::Ok;
         }
 
         void grantGold( int64 amount )
         {
             LedgerTransferRequest request;
-            request._journalKey = string( "test/gold." ) + ServiceKeyUtil::makeHex64( _playerId );
+            request._journalKey = string( "test/gold." ) + ServiceKeyUtil::makeHex64( _playerID );
             request._reason     = "test.grant";
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( _playerId ), "cur.gold", amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( _playerID ), "cur.gold", amount } );
             LedgerTransferOutcome outcome;
             (void)Ledger::executeTransfer( _database, request, outcome );
         }
@@ -229,7 +229,7 @@ SW_TEST_CASE( EconomyClientTest, LedgerResponseOverwritesTheLocalWallet )
 
     EconomyReplyCapture    purchase;
     EconomyPurchaseRequest request;
-    request._offerId = "potion";
+    request._offerID = "potion";
     request._count   = 2;
     (void)rig._player._economy.requestPurchase( request, NetIdempotencyKey{}, purchase.makeDelegate() );
     SW_ASSERT_TRUE( rig.waitFor( purchase ) );
@@ -246,7 +246,7 @@ SW_TEST_CASE( EconomyClientTest, RetryWithTheSameKeyChargesOnce )
     SW_ASSERT_TRUE( rig.login() );
     rig.grantGold( 100 );
     EconomyPurchaseRequest request;
-    request._offerId = "potion";
+    request._offerID = "potion";
     EconomyReplyCapture first;
     (void)rig._player._economy.requestPurchase( request, NetIdempotencyKey{}, first.makeDelegate() );
     SW_ASSERT_TRUE( rig.waitFor( first ) );
@@ -257,7 +257,7 @@ SW_TEST_CASE( EconomyClientTest, RetryWithTheSameKeyChargesOnce )
     SW_EXPECT_TRUE( retry._reply._reply._result == EconomyResult::Ok );
     SW_EXPECT_EQUAL( rig._player._economy.getBalance( "cur.gold" ), int64( 80 ) );
     LedgerBalance gold;
-    SW_ASSERT_TRUE( Ledger::readBalance( rig._database, LedgerHolder::makeAccount( rig._playerId ), "cur.gold", gold ) == ServiceStoreResult::Ok );
+    SW_ASSERT_TRUE( Ledger::readBalance( rig._database, LedgerHolder::makeAccount( rig._playerID ), "cur.gold", gold ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( gold._amount, int64( 80 ) );
 }
 
@@ -286,7 +286,7 @@ SW_TEST_CASE( EconomyClientTest, FeatureFlagAndSignInGateRequests )
     rig._remoteConfig.submitSet( rig._server._store, nullptr, EconomyService::kFeatureFlag, off, audit );
     (void)rig._server._store.pollCompletions();
     EconomyPurchaseRequest request;
-    request._offerId = "potion";
+    request._offerID = "potion";
     EconomyReplyCapture disabled;
     (void)rig._player._economy.requestPurchase( request, NetIdempotencyKey{}, disabled.makeDelegate() );
     SW_ASSERT_TRUE( rig.waitFor( disabled ) );

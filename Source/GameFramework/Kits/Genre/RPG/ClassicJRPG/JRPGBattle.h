@@ -41,8 +41,8 @@ namespace sw
         JRPGCommandKind _kind{ JRPGCommandKind::None };
 
         static JRPGCommand makeAttack( int32 enemyIndex ) { return JRPGCommand{ hashed_string{}, enemyIndex, JRPGCommandKind::Attack }; }
-        static JRPGCommand makeSpell( const hashed_string& spellId, int32 target ) { return JRPGCommand{ spellId, target, JRPGCommandKind::Spell }; }
-        static JRPGCommand makeCombo( const hashed_string& comboId, int32 enemyIndex ) { return JRPGCommand{ comboId, enemyIndex, JRPGCommandKind::Combo }; }
+        static JRPGCommand makeSpell( const hashed_string& spellID, int32 target ) { return JRPGCommand{ spellID, target, JRPGCommandKind::Spell }; }
+        static JRPGCommand makeCombo( const hashed_string& comboID, int32 enemyIndex ) { return JRPGCommand{ comboID, enemyIndex, JRPGCommandKind::Combo }; }
         static JRPGCommand makeDefend() { return JRPGCommand{ hashed_string{}, 0, JRPGCommandKind::Defend }; }
     };
 } // namespace sw
@@ -99,7 +99,7 @@ namespace sw
     /** @brief 전투 중 적 하나입니다. */
     struct JRPGEnemyState
     {
-        hashed_string         _enemyId{};
+        hashed_string         _enemyID{};
         vector<hashed_string> _listLock{}; ///< 남은 잠금
         int32                 _hp{ 1 };
         int32                 _castTurnsLeft{ 0 }; ///< 0 = 시전 중이 아니다
@@ -184,7 +184,7 @@ namespace sw
         void initialize( const JRPGCatalog* pCatalog, const TimingJudge* pJudge, const JRPGBattleSettings& settings, uint32 seed );
         void setTimingInput( const IJRPGTimingInput* pTimingInput ) { _pTimingInput = pTimingInput; }
         /** @brief 파티와 적 목록으로 시작합니다. 모르는 적은 빼고, 남은 적이 없으면 false 입니다. */
-        [[nodiscard]] bool start( JRPGParty* pParty, const vector<hashed_string>& listEnemyId );
+        [[nodiscard]] bool start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID );
         /** @brief 멤버의 이번 라운드 명령입니다. 쓸 수 없는 명령(쓰러진 멤버 · 모르는 주문 · 포인트 부족 · 참여 멤버가 쓰러진 합동기)은 false 입니다. */
         [[nodiscard]] bool setCommand( int32 memberIndex, const JRPGCommand& command );
         void               resolveRound();

@@ -87,7 +87,7 @@ namespace sw
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 서버 — 클라이언트 연결이 닫히면 그 플레이어의 떠남 틱을 정해 모두에게 알립니다. */
-        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         uint32 getCurrentTick() const { return _currentTick; }
         /** @brief 입력을 기다리며 멈춘 틱 수(누가 느린가 — 화면의 "기다리는 중" 표시)입니다. */

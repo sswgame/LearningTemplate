@@ -13,20 +13,20 @@ namespace sw
         , _mapRequestToVerification{}
         , _listDone{}
         , _pHTTPClient{ pHTTPClient }
-        , _nextVerificationId{ 1 }
+        , _nextVerificationID{ 1 }
     {
     }
 
     uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
     {
-        const uint64      verificationId = _nextVerificationId++;
+        const uint64      verificationID = _nextVerificationID++;
         HTTPClientRequest request;
         request._url       = _settings._profileURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs )] = verificationId;
-        return verificationId;
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs )] = verificationID;
+        return verificationID;
     }
 
     int32 ProfileAPILoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
@@ -47,11 +47,11 @@ namespace sw
         (void)_pHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const auto requestIt = _mapRequestToVerification.find( response._requestId );
+            const auto requestIt = _mapRequestToVerification.find( response._requestID );
             if ( requestIt == _mapRequestToVerification.end() )
                 continue;
             PlatformLoginVerification& verification = _listDone.emplace_back();
-            verification._verificationId            = requestIt->second;
+            verification._verificationID            = requestIt->second;
             _mapRequestToVerification.erase( requestIt );
             const bool bDenied = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
             if ( bDenied )

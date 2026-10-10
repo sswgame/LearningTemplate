@@ -82,36 +82,36 @@ namespace sw
         _listSearched.assign( pCatalog->getFurniture().size(), SW_FALSE );
     }
 
-    int32 GhostMansion::enterRoom( const hashed_string& roomId )
+    int32 GhostMansion::enterRoom( const hashed_string& roomID )
     {
         if ( _pCatalog == nullptr )
             return -1;
-        const GhostRoomDef* pRoom    = _pCatalog->findRoom( roomId );
-        const bool          bOnGraph = _pAreaGraph != nullptr && _pAreaGraph->findArea( roomId ) != nullptr;
+        const GhostRoomDef* pRoom    = _pCatalog->findRoom( roomID );
+        const bool          bOnGraph = _pAreaGraph != nullptr && _pAreaGraph->findArea( roomID ) != nullptr;
         if ( pRoom == nullptr && bOnGraph == false )
             return -1;
         if ( bOnGraph )
-            (void)_pAreaGraph->enterArea( roomId );
+            (void)_pAreaGraph->enterArea( roomID );
         _encounter.clear();
-        _currentRoom = roomId;
+        _currentRoom = roomID;
         // 가구 없이 방에 숨은 부는 들어서면 나온다.
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
             const GhostBooRuntime& boo = _listBoo[booIndex];
-            if ( boo._state == GhostBooState::Hiding && boo._room == roomId && boo._furniture.empty() )
+            if ( boo._state == GhostBooState::Hiding && boo._room == roomID && boo._furniture.empty() )
                 revealBoo( booIndex );
         }
-        if ( pRoom == nullptr || isRoomLit( roomId ) )
+        if ( pRoom == nullptr || isRoomLit( roomID ) )
             return 0;
         if ( pRoom->_listGhost.empty() )
         {
-            lightRoom( roomId ); // 유령이 없는 방은 들어서면 밝다
+            lightRoom( roomID ); // 유령이 없는 방은 들어서면 밝다
             return 0;
         }
         int32 spawnedCount = 0;
-        for ( const hashed_string& ghostId : pRoom->_listGhost )
+        for ( const hashed_string& ghostID : pRoom->_listGhost )
         {
-            if ( _encounter.spawnGhost( ghostId, float3{} ) != 0 )
+            if ( _encounter.spawnGhost( ghostID, float3{} ) != 0 )
                 ++spawnedCount;
         }
         return spawnedCount;
@@ -149,9 +149,9 @@ namespace sw
         }
     }
 
-    GhostDoorResult GhostMansion::unlockDoor( const hashed_string& doorId )
+    GhostDoorResult GhostMansion::unlockDoor( const hashed_string& doorID )
     {
-        const GhostDoorDef* pDoor = _pCatalog != nullptr ? _pCatalog->findDoor( doorId ) : nullptr;
+        const GhostDoorDef* pDoor = _pCatalog != nullptr ? _pCatalog->findDoor( doorID ) : nullptr;
         if ( pDoor == nullptr || _pFlags == nullptr )
             return GhostDoorResult::UnknownDoor;
         if ( _pFlags->hasFlag( pDoor->_flag ) )
@@ -159,13 +159,13 @@ namespace sw
         if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->removeItem( pDoor->_key, 1 ) == false ) )
             return GhostDoorResult::NeedKey;
         _pFlags->setFlag( pDoor->_flag, 1 );
-        pushEvent( GhostMansionEventType::DoorOpened, doorId );
+        pushEvent( GhostMansionEventType::DoorOpened, doorID );
         return GhostDoorResult::Opened;
     }
 
-    GhostSearchResult GhostMansion::searchFurniture( const hashed_string& furnitureId, GhostSearchMode mode, ItemStackList& outLoot )
+    GhostSearchResult GhostMansion::searchFurniture( const hashed_string& furnitureID, GhostSearchMode mode, ItemStackList& outLoot )
     {
-        const int32 furnitureIndex = findFurnitureIndex( furnitureId );
+        const int32 furnitureIndex = findFurnitureIndex( furnitureID );
         if ( furnitureIndex < 0 )
             return GhostSearchResult::UnknownFurniture;
         const GhostFurnitureDef& furniture = _pCatalog->getFurniture()[static_cast<size_t>( furnitureIndex )];
@@ -175,7 +175,7 @@ namespace sw
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
             const GhostBooRuntime& boo = _listBoo[booIndex];
-            if ( boo._state == GhostBooState::Hiding && boo._furniture == furnitureId )
+            if ( boo._state == GhostBooState::Hiding && boo._furniture == furnitureID )
             {
                 revealBoo( booIndex );
                 return GhostSearchResult::BooFound;
@@ -187,15 +187,15 @@ namespace sw
         if ( _pLoot != nullptr && furniture._lootTable.empty() == false )
         {
             // 가구마다 따로 씨앗을 내어 — 어느 가구부터 뒤져도 같은 것이 나온다.
-            GameRandom random( GameHash::mix32( _seed ^ static_cast<uint32>( furnitureId.getHash() ) ) );
+            GameRandom random( GameHash::mix32( _seed ^ static_cast<uint32>( furnitureID.getHash() ) ) );
             (void)_pLoot->roll( furniture._lootTable, random, outLoot );
         }
         return GhostSearchResult::Found;
     }
 
-    bool GhostMansion::damageBoo( const hashed_string& booId, float32 amount )
+    bool GhostMansion::damageBoo( const hashed_string& booID, float32 amount )
     {
-        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booId ) : -1;
+        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : -1;
         if ( booIndex < 0 || static_cast<size_t>( booIndex ) >= _listBoo.size() )
             return false;
         GhostBooRuntime& boo = _listBoo[static_cast<size_t>( booIndex )];
@@ -206,7 +206,7 @@ namespace sw
             return false;
         boo._hp    = 0.0f;
         boo._state = GhostBooState::Caught;
-        pushEvent( GhostMansionEventType::BooCaught, booId, boo._room );
+        pushEvent( GhostMansionEventType::BooCaught, booID, boo._room );
         return true;
     }
 
@@ -221,17 +221,17 @@ namespace sw
         _listGhostEvent.clear();
     }
 
-    bool GhostMansion::isRoomLit( const hashed_string& roomId ) const
+    bool GhostMansion::isRoomLit( const hashed_string& roomID ) const
     {
-        const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomId ) : nullptr;
+        const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomID ) : nullptr;
         if ( pRoom == nullptr )
             return true; // 유령이 정해지지 않은 방(복도)은 늘 밝다
         return _pFlags != nullptr && _pFlags->hasFlag( pRoom->_lightFlag );
     }
 
-    const GhostBooRuntime* GhostMansion::findBoo( const hashed_string& booId ) const
+    const GhostBooRuntime* GhostMansion::findBoo( const hashed_string& booID ) const
     {
-        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booId ) : -1;
+        const int32 booIndex = _pCatalog != nullptr ? _pCatalog->findBooIndex( booID ) : -1;
         return booIndex >= 0 && static_cast<size_t>( booIndex ) < _listBoo.size() ? &_listBoo[static_cast<size_t>( booIndex )] : nullptr;
     }
 
@@ -246,38 +246,38 @@ namespace sw
         return count;
     }
 
-    bool GhostMansion::isSearched( const hashed_string& furnitureId ) const
+    bool GhostMansion::isSearched( const hashed_string& furnitureID ) const
     {
-        const int32 furnitureIndex = findFurnitureIndex( furnitureId );
+        const int32 furnitureIndex = findFurnitureIndex( furnitureID );
         return furnitureIndex >= 0 && _listSearched[static_cast<size_t>( furnitureIndex )] == SW_TRUE;
     }
 
-    int32 GhostMansion::findFurnitureIndex( const hashed_string& furnitureId ) const
+    int32 GhostMansion::findFurnitureIndex( const hashed_string& furnitureID ) const
     {
         if ( _pCatalog == nullptr )
             return -1;
         const vector<GhostFurnitureDef>& listFurniture = _pCatalog->getFurniture();
         for ( size_t index = 0; index < listFurniture.size(); ++index )
         {
-            if ( listFurniture[index]._id == furnitureId )
+            if ( listFurniture[index]._id == furnitureID )
                 return static_cast<int32>( index );
         }
         return -1;
     }
 
-    void GhostMansion::lightRoom( const hashed_string& roomId )
+    void GhostMansion::lightRoom( const hashed_string& roomID )
     {
-        const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomId ) : nullptr;
+        const GhostRoomDef* pRoom = _pCatalog != nullptr ? _pCatalog->findRoom( roomID ) : nullptr;
         if ( pRoom == nullptr || _pFlags == nullptr )
             return;
         _pFlags->setFlag( pRoom->_lightFlag, 1 );
-        pushEvent( GhostMansionEventType::RoomLit, roomId, roomId );
+        pushEvent( GhostMansionEventType::RoomLit, roomID, roomID );
         if ( pRoom->_keyReward.empty() )
             return;
         // 가방이 없거나 차면 열쇠를 받지 못한다(알림도 없다) — 칸 수는 게임이 정한다.
         if ( _pInventory == nullptr || _pInventory->addItem( pRoom->_keyReward, 1 ) == 0 )
             return;
-        pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomId );
+        pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomID );
     }
 
     void GhostMansion::revealBoo( size_t booIndex )

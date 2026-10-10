@@ -53,13 +53,13 @@ namespace sw
         return s_table;
     }
 
-    ServiceStoreResult ServiceSanction::readState( IServiceStoreConnection& connection, uint64 accountId, ServiceSanctionState& outState )
+    ServiceStoreResult ServiceSanction::readState( IServiceStoreConnection& connection, uint64 accountID, ServiceSanctionState& outState )
     {
         outState = ServiceSanctionState{};
-        if ( accountId == 0 )
+        if ( accountID == 0 )
             return ServiceStoreResult::Invalid;
         ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getTable(), ServiceKeyUtil::makeHex64( accountId ), record );
+        const ServiceStoreResult read = connection.readRecord( getTable(), ServiceKeyUtil::makeHex64( accountID ), record );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
@@ -95,9 +95,9 @@ namespace sw
         return untilMs;
     }
 
-    void ServiceSanction::stageWrite( ServiceTransaction& inoutTransaction, uint64 accountId, const ServiceSanctionState& state )
+    void ServiceSanction::stageWrite( ServiceTransaction& inoutTransaction, uint64 accountID, const ServiceSanctionState& state )
     {
-        const string key = ServiceKeyUtil::makeHex64( accountId );
+        const string key = ServiceKeyUtil::makeHex64( accountID );
         if ( ServiceSanctionInternal::isEmpty( state ) )
         {
             if ( state._version != 0 )

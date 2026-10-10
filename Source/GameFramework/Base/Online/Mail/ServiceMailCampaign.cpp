@@ -41,16 +41,16 @@ namespace sw
         const bool bTextOk = campaign._titleKey.size() <= static_cast<size_t>( ServiceMailConstant::kMaxTitleSize ) &&
                              campaign._body.size() <= static_cast<size_t>( ServiceMailConstant::kMaxBodySize ) &&
                              campaign._senderName.size() <= static_cast<size_t>( ServiceMailConstant::kMaxSenderNameSize );
-        const bool bShapeOk = campaign._campaignId != 0 && campaign._startMs < campaign._endMs && bAttachmentCountOk && bTextOk;
+        const bool bShapeOk = campaign._campaignID != 0 && campaign._startMs < campaign._endMs && bAttachmentCountOk && bTextOk;
         if ( bShapeOk == false )
             return false;
         for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
         {
             const bool bAmountOk = 1 <= attachment._amount && attachment._amount <= LedgerConstant::kMaxAmount;
-            if ( bAmountOk == false || LedgerUtil::isValidAssetId( attachment._assetId ) == false )
+            if ( bAmountOk == false || LedgerUtil::isValidAssetID( attachment._assetID ) == false )
                 return false;
         }
-        inoutTransaction.put( getCampaignTable(), ServiceKeyUtil::makeHex64( campaign._campaignId ), encode( campaign ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getCampaignTable(), ServiceKeyUtil::makeHex64( campaign._campaignID ), encode( campaign ), ServiceRecord::kAbsentVersion );
         return true;
     }
 
@@ -77,11 +77,11 @@ namespace sw
         }
     }
 
-    string ServiceMailCampaignTable::makeClaimKey( uint64 campaignId, uint64 accountId )
+    string ServiceMailCampaignTable::makeClaimKey( uint64 campaignID, uint64 accountID )
     {
-        string key = ServiceKeyUtil::makeHex64( campaignId );
+        string key = ServiceKeyUtil::makeHex64( campaignID );
         key.push_back( '/' );
-        ServiceKeyUtil::appendHex64( key, accountId );
+        ServiceKeyUtil::appendHex64( key, accountID );
         return key;
     }
 
@@ -89,8 +89,8 @@ namespace sw
     {
         BitWriter writer;
         writer.writeVarUint( ServiceMailCampaignInternal::kFormat );
-        writer.writeVarUint( campaign._campaignId );
-        writer.writeVarUint( campaign._actorId );
+        writer.writeVarUint( campaign._campaignID );
+        writer.writeVarUint( campaign._actorID );
         writer.writeVarInt( campaign._startMs );
         writer.writeVarInt( campaign._endMs );
         writer.writeBool( campaign._bLiteralText == SW_TRUE );
@@ -100,7 +100,7 @@ namespace sw
         writer.writeVarUint( campaign._listAttachment.size() );
         for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
         {
-            ServiceKeyUtil::writeString( writer, attachment._assetId );
+            ServiceKeyUtil::writeString( writer, attachment._assetID );
             writer.writeVarInt( attachment._amount );
         }
         return writer.getBytes();
@@ -111,8 +111,8 @@ namespace sw
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( reader.readVarUint() != ServiceMailCampaignInternal::kFormat )
             return false;
-        outCampaign._campaignId   = reader.readVarUint();
-        outCampaign._actorId      = reader.readVarUint();
+        outCampaign._campaignID   = reader.readVarUint();
+        outCampaign._actorID      = reader.readVarUint();
         outCampaign._startMs      = reader.readVarInt();
         outCampaign._endMs        = reader.readVarInt();
         outCampaign._bLiteralText = reader.readBool() ? SW_TRUE : SW_FALSE;
@@ -125,7 +125,7 @@ namespace sw
         outCampaign._listAttachment.resize( static_cast<size_t>( attachmentCount ) );
         for ( ServiceMailAttachment& attachment : outCampaign._listAttachment )
         {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, attachment._assetId ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
                 return false;
             attachment._amount = reader.readVarInt();
         }

@@ -241,7 +241,7 @@ SW_TEST_CASE( UIStyleTest, FocusVisibleOnlyInNavigationMode )
     sw::ButtonWidget* pGo = pScreen->getTree().findWidget<sw::ButtonWidget>( "Go" );
     SW_ASSERT_NOT_NULL( pGo );
     fixture._ui.setInputMode( sw::UIInputMode::Pointer );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), pGo->getId() ) );
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), pGo->getID() ) );
     Util::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_EQUAL( 1.0f, pGo->getComputedStyle()->_value._borderWidth );
 

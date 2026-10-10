@@ -1,9 +1,9 @@
 /**
  * @file RuntimeAPI/Service/EngineServiceList.xxx
- * @brief 호스트가 소유하고 Engine.dll 이 조회하는 코어 서비스의 단일 등록표입니다(X-macro). 서비스 id(`ModuleServiceId`)가 여기서 나옵니다.
+ * @brief 호스트가 소유하고 Engine.dll 이 조회하는 코어 서비스의 단일 등록표입니다(X-macro). 서비스 id(`ModuleServiceID`)가 여기서 나옵니다.
  * @details include 하기 전에 아래 매크로를 정의한 뒤 여러 번 include 합니다(#pragma once 없음).
  *          전방 선언 · EngineServices 멤버 · engine::getXxx() 선언/정의 · areEngineServicesBound() 본문 ·
- *          ModuleServiceId 열거형 · ModuleServiceTraits 가 이 목록에서 생성됩니다.
+ *          ModuleServiceID 열거형 · ModuleServiceTraits 가 이 목록에서 생성됩니다.
  *          RuntimeAPI 에 있는 이유: 서비스 id 는 호스트 ↔ 모듈 계약이다(모듈은 `getService<T>()` 로 타입에서 id 를 찾는다). 줄의 타입 이름은 전방
  *          선언만 만들고 Engine 헤더를 include 하지 않는다. member · getter · requirement · creator 칸은 Engine(`EngineServices` · `EngineServiceCollection`)만 읽는다.
  *

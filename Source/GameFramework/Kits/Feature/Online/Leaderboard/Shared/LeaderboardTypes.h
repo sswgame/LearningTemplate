@@ -67,7 +67,7 @@ namespace sw
     /** @brief 시즌 보상 구간 하나입니다(순위 from..to 에게 자산 · 수량을 우편으로). */
     struct LeaderboardRewardTier
     {
-        string _assetId{};      ///< 원장 자산 id("cur.gem" · "item.badge_gold")
+        string _assetID{};      ///< 원장 자산 id("cur.gem" · "item.badge_gold")
         string _mailTitleKey{}; ///< 우편 제목 로컬라이제이션 키
         int64  _amount{ 0 };
         int32  _rankFrom{ 1 };
@@ -83,7 +83,7 @@ namespace sw
         vector<LeaderboardRewardTier> _listRewardTier{};
         int64                         _startMs{ 0 };
         int64                         _endMs{ 0 };
-        uint32                        _seasonId{ 0 }; ///< 1 부터, 표 안에서 유일
+        uint32                        _seasonID{ 0 }; ///< 1 부터, 표 안에서 유일
     };
 } // namespace sw
 
@@ -93,7 +93,7 @@ namespace sw
     struct LeaderboardDefinition
     {
         vector<LeaderboardSeason> _listSeason{};          ///< Season 표만
-        string                    _boardId{};             ///< `[0-9a-z_]`, 1..32
+        string                    _boardID{};             ///< `[0-9a-z_]`, 1..32
         string                    _sourceStat{};          ///< 비지 않으면 이 통계가 바뀔 때 같은 값을 낸다
         int32                     _resetMinuteOfDay{ 0 }; ///< UTC 0..1439
         int32                     _resetDayOfWeek{ 0 };   ///< 0 = 월요일
@@ -110,7 +110,7 @@ namespace sw
     struct LeaderboardEntry
     {
         string    _displayName{};
-        AccountId _accountId{ kInvalidAccountId };
+        AccountID _accountID{ kInvalidAccountID };
         int64     _score{ 0 };
         int32     _rank{ 0 }; ///< 1 부터(같은 점수도 다른 순위 — 자리 순)
     };
@@ -131,7 +131,7 @@ namespace sw
     /** @brief 상한입니다. */
     struct LeaderboardLimit
     {
-        static constexpr int32 kMaxIdSize           = 32;
+        static constexpr int32 kMaxIDSize           = 32;
         static constexpr int32 kMaxPage             = 100;
         static constexpr int32 kMaxAround           = 25;
         static constexpr int64 kMaxAbsScore         = 1ll << 53;  ///< 캐시 점수(배정밀도)가 정확한 범위
@@ -147,7 +147,7 @@ namespace sw
     struct SW_GF_API LeaderboardNameRule
     {
         /** @brief `[0-9a-z_]`, 1..32 바이트인가입니다(저장소 키 · 캐시 키 · 예약 작업 id 에 그대로 들어간다). */
-        static bool isValidId( string_view id );
+        static bool isValidID( string_view id );
     };
 } // namespace sw
 
@@ -156,9 +156,9 @@ namespace sw
     /** @brief 업적 하나의 정의입니다(서버가 기동 때 올린다). 통계가 문턱을 넘으면 한 번 달성 · 보상은 우편. */
     struct AchievementDefinition
     {
-        string _achievementId{}; ///< `[0-9a-z_]`
+        string _achievementID{}; ///< `[0-9a-z_]`
         string _statName{};
-        string _rewardAssetId{}; ///< 비면 보상 없음
+        string _rewardAssetID{}; ///< 비면 보상 없음
         string _mailTitleKey{};
         int64  _threshold{ 1 };
         int64  _rewardAmount{ 0 };
@@ -170,7 +170,7 @@ namespace sw
     /** @brief 달성한 업적 하나입니다. */
     struct AchievementState
     {
-        string _achievementId{};
+        string _achievementID{};
         int64  _unlockedMs{ 0 };
     };
 } // namespace sw

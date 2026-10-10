@@ -18,13 +18,13 @@ namespace sw
     void ItemStackList::writeState( Archive& outArchive ) const
     {
         vector<hashed_string> listItem;
-        getItemIds( listItem );
+        getItemIDs( listItem );
         std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
         outArchive << static_cast<uint32>( listItem.size() );
-        for ( const hashed_string& itemId : listItem )
+        for ( const hashed_string& itemID : listItem )
         {
-            StateArchiveUtil::writeName( outArchive, itemId );
-            outArchive << getItemCount( itemId );
+            StateArchiveUtil::writeName( outArchive, itemID );
+            outArchive << getItemCount( itemID );
         }
     }
 
@@ -36,35 +36,35 @@ namespace sw
         ItemStackList list;
         for ( uint32 index = 0; index < count; ++index )
         {
-            hashed_string itemId;
+            hashed_string itemID;
             int32         itemCount = 0;
-            if ( StateArchiveUtil::readName( archive, itemId ) == false )
+            if ( StateArchiveUtil::readName( archive, itemID ) == false )
                 return false;
             archive >> itemCount;
-            if ( archive.isError() || itemId.empty() || itemCount <= 0 )
+            if ( archive.isError() || itemID.empty() || itemCount <= 0 )
                 return false;
-            list.addItem( itemId, itemCount );
+            list.addItem( itemID, itemCount );
         }
         _listStack = std::move( list._listStack );
         return true;
     }
 
-    void ItemStackList::addItem( const hashed_string& itemId, int32 count )
+    void ItemStackList::addItem( const hashed_string& itemID, int32 count )
     {
-        if ( itemId.empty() || count <= 0 )
+        if ( itemID.empty() || count <= 0 )
             return;
-        ItemStack* pStack = findStack( itemId );
+        ItemStack* pStack = findStack( itemID );
         if ( pStack != nullptr )
         {
             pStack->_count += count;
             return;
         }
-        _listStack.push_back( ItemStack{ itemId, count } );
+        _listStack.push_back( ItemStack{ itemID, count } );
     }
 
-    bool ItemStackList::removeItem( const hashed_string& itemId, int32 count )
+    bool ItemStackList::removeItem( const hashed_string& itemID, int32 count )
     {
-        ItemStack* pStack = findStack( itemId );
+        ItemStack* pStack = findStack( itemID );
         if ( count <= 0 || pStack == nullptr || pStack->_count < count )
             return false;
         pStack->_count -= count;
@@ -73,19 +73,19 @@ namespace sw
         return true;
     }
 
-    bool ItemStackList::moveItemTo( ItemStackList& target, const hashed_string& itemId, int32 count )
+    bool ItemStackList::moveItemTo( ItemStackList& target, const hashed_string& itemID, int32 count )
     {
-        if ( &target == this || removeItem( itemId, count ) == false )
+        if ( &target == this || removeItem( itemID, count ) == false )
             return false;
-        target.addItem( itemId, count );
+        target.addItem( itemID, count );
         return true;
     }
 
-    int32 ItemStackList::getItemCount( const hashed_string& itemId ) const
+    int32 ItemStackList::getItemCount( const hashed_string& itemID ) const
     {
         for ( const ItemStack& stack : _listStack )
         {
-            if ( stack._itemId == itemId )
+            if ( stack._itemID == itemID )
                 return stack._count;
         }
         return 0;
@@ -101,21 +101,21 @@ namespace sw
         return total;
     }
 
-    void ItemStackList::getItemIds( vector<hashed_string>& outListItem ) const
+    void ItemStackList::getItemIDs( vector<hashed_string>& outListItem ) const
     {
         outListItem.clear();
         outListItem.reserve( _listStack.size() );
         for ( const ItemStack& stack : _listStack )
         {
-            outListItem.push_back( stack._itemId );
+            outListItem.push_back( stack._itemID );
         }
     }
 
-    ItemStack* ItemStackList::findStack( const hashed_string& itemId )
+    ItemStack* ItemStackList::findStack( const hashed_string& itemID )
     {
         for ( ItemStack& stack : _listStack )
         {
-            if ( stack._itemId == itemId )
+            if ( stack._itemID == itemID )
                 return &stack;
         }
         return nullptr;

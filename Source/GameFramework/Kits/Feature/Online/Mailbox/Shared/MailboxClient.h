@@ -25,7 +25,7 @@ namespace sw
     {
         MailboxReply      _reply{};
         NetIdempotencyKey _idempotencyKey{}; ///< 수령 재시도 때 그대로 다시 넘긴다
-        uint64            _requestId{ 0 };
+        uint64            _requestID{ 0 };
         uint16            _method{ 0 };
         uint16            _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
     };
@@ -70,7 +70,7 @@ namespace sw
             ReplyDelegate     _onReply{};
             string            _mailKey{};
             NetIdempotencyKey _key{};
-            uint64            _requestId{ 0 };
+            uint64            _requestID{ 0 };
             uint16            _method{ 0 };
             uint8             _bFirstPage{ SW_FALSE };
         };
@@ -79,11 +79,11 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   applyToCache( const PendingCall& call, const MailboxReply& reply );
 
-        unordered_map<uint64, PendingCall> _mapClientIdToCall;
+        unordered_map<uint64, PendingCall> _mapClientIDToCall;
         vector<MailView>                   _listMail;
         PendingCall                        _sendingCall;
         OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestId;
+        uint64                             _nextRequestID;
         uint32                             _revision;
         uint8                              _bSending;
     };

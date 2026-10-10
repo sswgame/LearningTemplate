@@ -73,9 +73,9 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kUnavailable );
             return;
         }
-        const AccountId accountId = context._accountId;
+        const AccountID accountID = context._accountID;
         uint64          id        = 0;
-        string          modeId;
+        string          modeID;
         string          region;
         LobbySnapshot   lobby;
         bool            bReady  = false;
@@ -105,12 +105,12 @@ namespace sw
             }
             case MatchmakingMethod::kLobbyList:
             {
-                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIdSize, modeId );
+                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIDSize, modeID );
                 break;
             }
             case MatchmakingMethod::kQueueJoin:
             {
-                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIdSize, modeId ) &&
+                bBodyOk = ServiceKeyUtil::readString( body, MatchmakingLimit::kMaxIDSize, modeID ) &&
                           ServiceKeyUtil::readString( body, ServerRecord::kMaxNameSize, region );
                 break;
             }
@@ -136,67 +136,67 @@ namespace sw
         {
             case MatchmakingMethod::kPartyCreate:
             {
-                _pPartyLobby->createParty( accountId, tag );
+                _pPartyLobby->createParty( accountID, tag );
                 break;
             }
             case MatchmakingMethod::kPartyInvite:
             {
-                _pPartyLobby->inviteToParty( accountId, id, tag );
+                _pPartyLobby->inviteToParty( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kPartyAccept:
             {
-                _pPartyLobby->acceptPartyInvite( accountId, id, tag );
+                _pPartyLobby->acceptPartyInvite( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kPartyLeave:
             {
-                _pPartyLobby->leaveParty( accountId, tag );
+                _pPartyLobby->leaveParty( accountID, tag );
                 break;
             }
             case MatchmakingMethod::kPartyKick:
             {
-                _pPartyLobby->kickFromParty( accountId, id, tag );
+                _pPartyLobby->kickFromParty( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyCreate:
             {
-                _pPartyLobby->createLobby( accountId, lobby, context._nowMs, tag );
+                _pPartyLobby->createLobby( accountID, lobby, context._nowMs, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyList:
             {
-                _pPartyLobby->listLobbies( modeId, tag );
+                _pPartyLobby->listLobbies( modeID, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyJoin:
             {
-                _pPartyLobby->joinLobby( accountId, id, tag );
+                _pPartyLobby->joinLobby( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyLeave:
             {
-                _pPartyLobby->leaveLobby( accountId, id, tag );
+                _pPartyLobby->leaveLobby( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyReady:
             {
-                _pPartyLobby->setLobbyReady( accountId, id, bReady, tag );
+                _pPartyLobby->setLobbyReady( accountID, id, bReady, tag );
                 break;
             }
             case MatchmakingMethod::kLobbyStart:
             {
-                _pPartyLobby->startLobby( accountId, id, tag );
+                _pPartyLobby->startLobby( accountID, id, tag );
                 break;
             }
             case MatchmakingMethod::kQueueJoin:
             {
-                _pQueue->joinQueue( accountId, modeId, region, context._nowMs, tag );
+                _pQueue->joinQueue( accountID, modeID, region, context._nowMs, tag );
                 break;
             }
             case MatchmakingMethod::kQueueLeave:
             {
-                _pQueue->leaveQueue( accountId, tag );
+                _pQueue->leaveQueue( accountID, tag );
                 break;
             }
             default:
@@ -225,9 +225,9 @@ namespace sw
         }
         _listBrokenTicketScratch.clear();
         _pPartyLobby->drainBrokenTickets( _listBrokenTicketScratch );
-        for ( const uint64 ticketId : _listBrokenTicketScratch )
+        for ( const uint64 ticketID : _listBrokenTicketScratch )
         {
-            _pQueue->cancelTicket( ticketId );
+            _pQueue->cancelTicket( ticketID );
         }
 
         _listPartyCompletionScratch.clear();
@@ -247,7 +247,7 @@ namespace sw
         {
             MatchmakingReply reply;
             reply._result   = completion._result;
-            reply._ticketId = completion._ticketId;
+            reply._ticketID = completion._ticketID;
             respond( host, completion._requestTag, reply );
         }
 
@@ -262,7 +262,7 @@ namespace sw
                 MatchmakingProtocol::writeLobby( body, notification._lobby );
             else
                 MatchmakingProtocol::writeParty( body, notification._party );
-            push( host, notification._recipientId, notification._pushKind, body );
+            push( host, notification._recipientID, notification._pushKind, body );
         }
         _listQueueNotificationScratch.clear();
         _pQueue->drainNotifications( _listQueueNotificationScratch );
@@ -270,7 +270,7 @@ namespace sw
         {
             BitWriter body;
             MatchmakingProtocol::writeAssignment( body, notification._assignment );
-            push( host, notification._recipientId, MatchmakingMethod::kPushMatch, body );
+            push( host, notification._recipientID, MatchmakingMethod::kPushMatch, body );
         }
 
         _listTopicChangeScratch.clear();
@@ -291,13 +291,13 @@ namespace sw
         }
     }
 
-    void MatchmakingServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+    void MatchmakingServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
         if ( _pQueue != nullptr )
-            _pQueue->removeAccount( accountId );
+            _pQueue->removeAccount( accountID );
         if ( _pPartyLobby != nullptr )
-            _pPartyLobby->removeAccount( accountId );
+            _pPartyLobby->removeAccount( accountID );
     }
 
     void MatchmakingServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
@@ -332,11 +332,11 @@ namespace sw
         (void)host.respondOk( token, body );
     }
 
-    void MatchmakingServer::push( OnlineServiceHost& host, AccountId accountId, uint16 kind, const BitWriter& body )
+    void MatchmakingServer::push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body )
     {
-        if ( host.sendPush( accountId, kind, body ) )
+        if ( host.sendPush( accountID, kind, body ) )
             return;
         if ( _pPresence != nullptr )
-            (void)_pPresence->sendRemotePush( accountId, kind, body ); // 다른 서버에 붙은 회원
+            (void)_pPresence->sendRemotePush( accountID, kind, body ); // 다른 서버에 붙은 회원
     }
 } // namespace sw

@@ -414,7 +414,7 @@ SW_TEST_CASE( AnimNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRaiseEv
         {
             bFoundStep = true;
             SW_EXPECT_TRUE( action._detail == hashed_string( "Stone" ) );
-            SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectId(), action._targetObjectId );
+            SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectID(), action._targetObjectID );
         }
     }
     SW_EXPECT_TRUE( bFoundStep );

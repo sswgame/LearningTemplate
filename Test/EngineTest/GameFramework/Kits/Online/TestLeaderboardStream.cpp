@@ -58,14 +58,14 @@ namespace
             _binding.initialize( &_service, nullptr, &server._presence );
 
             LeaderboardDefinition serverOnly;
-            serverOnly._boardId = "kills";
+            serverOnly._boardID = "kills";
             SW_EXPECT_TRUE( _service.registerBoard( serverOnly ) );
             LeaderboardDefinition casual;
-            casual._boardId       = "casual";
+            casual._boardID       = "casual";
             casual._bClientSubmit = SW_TRUE;
             SW_EXPECT_TRUE( _service.registerBoard( casual ) );
             AchievementDefinition achievement;
-            achievement._achievementId = "first_win";
+            achievement._achievementID = "first_win";
             achievement._statName      = "wins";
             achievement._threshold     = 1;
             SW_EXPECT_TRUE( _service.registerAchievement( achievement ) );
@@ -115,13 +115,13 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     (void)leaderboardClient.requestTop( "casual", 0, 10, recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 40 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listEntry.size(), size_t( 2 ) );
-    SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[0]._accountId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[0]._accountID, AccountID( 2 ) );
     SW_EXPECT_STREQ( recorder.getLast()._reply._listEntry[0]._displayName.c_str(), "bob" );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._rank, 2 );
     (void)leaderboardClient.requestAround( "casual", 1, recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 50 );
     SW_ASSERT_EQUAL( recorder.getLast()._reply._listEntry.size(), size_t( 2 ) );
-    SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._accountId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( recorder.getLast()._reply._listEntry[1]._accountID, AccountID( 1 ) );
 
     // 통계가 업적 문턱을 넘음 → 그 계정의 연결에 알림, 조회에도 보인다
     leaderboard._service.changeStat( 1, "alice", "wins", 1, LeaderboardUpdate::Sum, 60, 0 );
@@ -129,7 +129,7 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     vector<AchievementState> listUnlock;
     leaderboardClient.drainAchievementUnlocks( listUnlock );
     SW_ASSERT_EQUAL( listUnlock.size(), size_t( 1 ) );
-    SW_EXPECT_STREQ( listUnlock[0]._achievementId.c_str(), "first_win" );
+    SW_EXPECT_STREQ( listUnlock[0]._achievementID.c_str(), "first_win" );
     (void)leaderboardClient.requestAchievements( recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 70 );
     SW_EXPECT_EQUAL( recorder.getLast()._reply._listAchievement.size(), size_t( 1 ) );
@@ -142,6 +142,6 @@ SW_TEST_CASE( LeaderboardStreamTest, ClientSubmitOnlyOnOpenBoardsAndAchievementP
     leaderboard._service.changeStat( 3, "carol", "wins", 1, LeaderboardUpdate::Sum, 90, 0 );
     test::tickAll( { &server }, clients, 90 );
     SW_ASSERT_EQUAL( server._presence._listRemotePush.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountId, AccountId( 3 ) );
+    SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountID, AccountID( 3 ) );
     SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._kind, LeaderboardMethod::kPushAchievement );
 }

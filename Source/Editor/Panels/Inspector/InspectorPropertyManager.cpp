@@ -149,10 +149,10 @@ namespace sw::editor
         }
 
         /** @brief Enter 로 확정하는 입력 칸입니다. 키 입력마다 인턴하지 않으려는 것입니다. 확정했으면 true 입니다. */
-        bool drawNameInput( const utf8* pId, hashed_string& value )
+        bool drawNameInput( const utf8* pID, hashed_string& value )
         {
             fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };
-            if ( ImGui::InputText( pId, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
+            if ( ImGui::InputText( pID, buf.data(), buf.capacity(), ImGuiInputTextFlags_EnterReturnsTrue ) == false )
                 return false;
             value = hashed_string( buf.c_str() );
             return true;
@@ -221,18 +221,18 @@ namespace sw::editor
             {
                 if constexpr ( std::is_same_v<T, GameObjectHandle> )
                 {
-                    uint64 objectId = value.objectId();
-                    if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectId ) == false )
+                    uint64 objectID = value.objectID();
+                    if ( ImGui::InputScalar( pLabel, ImGuiDataType_U64, &objectID ) == false )
                         return false;
-                    value = GameObjectHandle::make( objectId );
+                    value = GameObjectHandle::make( objectID );
                     return true;
                 }
                 else if constexpr ( std::is_same_v<T, ComponentHandle> )
                 {
-                    uint64 arrId[2] = { value.objectId(), value.componentId() };
-                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrId, 2 ) == false )
+                    uint64 arrID[2] = { value.objectID(), value.componentID() };
+                    if ( ImGui::InputScalarN( pLabel, ImGuiDataType_U64, arrID, 2 ) == false )
                         return false;
-                    value = ComponentHandle::makeOwned( arrId[0], arrId[1] );
+                    value = ComponentHandle::makeOwned( arrID[0], arrID[1] );
                     return true;
                 }
                 else
@@ -416,8 +416,8 @@ namespace sw::editor
                 {
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
-                        [pPtr]( const utf8* pId )
-                    { EditorWidgets::drawTextField( pId, *pPtr ); }, droppedPath );
+                        [pPtr]( const utf8* pID )
+                    { EditorWidgets::drawTextField( pID, *pPtr ); }, droppedPath );
                     // `FileFilter` 에 맞지 않는 파일은 받지 않는다.
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
                         *pPtr = droppedPath;
@@ -458,8 +458,8 @@ namespace sw::editor
                 {
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
-                        [pPtr]( const utf8* pId )
-                    { drawNameInput( pId, *pPtr ); }, droppedPath );
+                        [pPtr]( const utf8* pID )
+                    { drawNameInput( pID, *pPtr ); }, droppedPath );
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
                         *pPtr = hashed_string( droppedPath.c_str() );
                     else if ( action == AssetFieldAction::Cleared )

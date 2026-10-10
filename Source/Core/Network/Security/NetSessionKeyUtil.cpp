@@ -41,7 +41,7 @@ namespace sw
     void NetSessionKeys::wipe() { NetSessionKeyUtilInternal::wipeBytes( this, sizeof( NetSessionKeys ) ); }
 
     bool NetSessionKeyUtil::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
-                                                uint64 serverSalt, uint32 protocolId, NetSessionKeys& outKeys )
+                                                uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys )
     {
         using Internal             = NetSessionKeyUtilInternal;
         constexpr int32 kLabelSize = static_cast<int32>( sizeof( Internal::kSessionLabel ) - 1 );
@@ -49,7 +49,7 @@ namespace sw
         std::memcpy( arrInfo, Internal::kSessionLabel, static_cast<size_t>( kLabelSize ) );
         Internal::writeLittle( arrInfo + kLabelSize, clientSalt, 8 );
         Internal::writeLittle( arrInfo + kLabelSize + 8, serverSalt, 8 );
-        Internal::writeLittle( arrInfo + kLabelSize + 16, protocolId, 4 );
+        Internal::writeLittle( arrInfo + kLabelSize + 16, protocolID, 4 );
         const uint8  arrZeroSalt[NetSecurityConstant::kSha256Size] = {};
         const uint8* pSalt                                         = pSessionSecret != nullptr ? pSessionSecret->_arrByte : arrZeroSalt;
         uint8        arrBlock[Internal::kKeyBlockSize];

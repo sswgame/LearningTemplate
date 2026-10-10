@@ -43,7 +43,7 @@ namespace sw
         : _payload{ make_unique<JSONDocument>() }
         , _signatureBytes{}
         , _signingInput{}
-        , _keyId{}
+        , _keyID{}
         , _algorithm{ NetSignatureAlgorithm::RsaPkcs1Sha256 }
     {
     }
@@ -76,8 +76,8 @@ namespace sw
             _algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
         else
             return false; // none · HS256 · 그 밖 — 받지 않는다
-        const JSONValue keyId = header.getRoot().get( "kid", false );
-        _keyId                = keyId.isString() ? keyId.asString() : string{};
+        const JSONValue keyID = header.getRoot().get( "kid", false );
+        _keyID                = keyID.isString() ? keyID.asString() : string{};
         _signingInput         = string( compact.substr( 0, secondDot ) );
         return true;
     }
@@ -124,11 +124,11 @@ namespace sw
                                          static_cast<int32>( _signatureBytes.size() ) );
     }
 
-    bool JSONWebTokenUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJSON,
+    bool JSONWebTokenUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
                                        const string& privateKeyPem, string& outCompact )
     {
         using Internal            = JSONWebTokenInternal;
-        const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JSONDocument::escapeString( keyId ) + "\"}";
+        const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\"}";
         string       signingInput = Internal::encodeText( header );
         signingInput.push_back( '.' );
         signingInput += Internal::encodeText( payloadJSON );
@@ -140,9 +140,9 @@ namespace sw
         return true;
     }
 
-    string JSONWebTokenUtil::writeJwk( const NetPublicKey& publicKey, string_view keyId )
+    string JSONWebTokenUtil::writeJwk( const NetPublicKey& publicKey, string_view keyID )
     {
-        string jwk = "{\"kid\":\"" + JSONDocument::escapeString( keyId ) + "\",\"use\":\"sig\",";
+        string jwk = "{\"kid\":\"" + JSONDocument::escapeString( keyID ) + "\",\"use\":\"sig\",";
         if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
         {
             jwk += "\"kty\":\"RSA\",\"alg\":\"RS256\",\"n\":\"" + Base64Util::encodeURL( publicKey._modulus.data(), publicKey._modulus.size() ) + "\",\"e\":\"" +
@@ -180,7 +180,7 @@ namespace sw
             if ( key.isObject() == false || bSign == false || kid.isString() == false || type.isString() == false )
                 continue;
             Entry entry;
-            entry._keyId          = kid.asString();
+            entry._keyID          = kid.asString();
             const string typeName = type.asString();
             bool         bRead    = false;
             if ( typeName == "RSA" )
@@ -203,11 +203,11 @@ namespace sw
         return true;
     }
 
-    const NetPublicKey* JwksKeyCache::findKey( string_view keyId ) const
+    const NetPublicKey* JwksKeyCache::findKey( string_view keyID ) const
     {
         for ( const Entry& entry : _listEntry )
         {
-            if ( entry._keyId == keyId )
+            if ( entry._keyID == keyID )
                 return &entry._publicKey;
         }
         return nullptr;

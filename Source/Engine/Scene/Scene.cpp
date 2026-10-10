@@ -176,7 +176,7 @@ namespace sw
         // 오브젝트 **사이의** 부착은 모든 엔티티가 생긴 뒤라야 풀 수 있다 — 엔티티를 모두 하나의 묶음으로 읽고 끝에서 잇는다. 부착은 부모를
         // 그 엔티티의 **파일 id** 로 가리킨다(파일 안에서만 뜻이 있는 값이라 묶음 안에서만 푼다). 이름으로 찾으면 이름이 겹친
         // 엔티티(병합)에서 자식이 앞의 것에 붙는다.
-        ObjectStateBatch batch( ObjectIdSpace::Saved );
+        ObjectStateBatch batch( ObjectIDSpace::Saved );
         // 프리팹마다 원형 상태를 한 번만 짓는다(같은 프리팹을 여럿 놓은 씬).
         unordered_map<string, string> mapPrefabBaseState;
 
@@ -222,13 +222,13 @@ namespace sw
             if ( pGo != nullptr )
             {
                 if ( entity._prefab.empty() == false )
-                    _mapPrefabSource[pGo->getObjectId()] = entity._prefab;
-                if ( entity._fileId != 0 )
-                    _mapObjectIdToFileId[pGo->getObjectId()] = entity._fileId;
+                    _mapPrefabSource[pGo->getObjectID()] = entity._prefab;
+                if ( entity._fileID != 0 )
+                    _mapObjectIDToFileID[pGo->getObjectID()] = entity._fileID;
 
                 ObjectLoadContext context{};
                 context._pBatch  = &batch;
-                context._savedId = entity._fileId;
+                context._savedID = entity._fileID;
                 // **쿠킹된 바이너리 상태가 있으면 그것이 기준이다.** 쿠커가 왕복 검증에 성공한
                 // 엔티티만 이쪽에 담고 XML 을 비우므로, 둘 다 차 있는 문서는 없다.
                 if ( entity._embeddedStateBytes.empty() == false )
@@ -251,7 +251,7 @@ namespace sw
                 else
                 {
                     // 상태 없이 지은 빈 엔티티 — 다른 엔티티가 파일 id 로 가리킬 수 있으니 묶음에 적는다.
-                    batch.add( pGo, entity._fileId, hashed_string( entity._name.c_str() ), false );
+                    batch.add( pGo, entity._fileID, hashed_string( entity._name.c_str() ), false );
                 }
             }
         }
@@ -274,18 +274,18 @@ namespace sw
         outDoc._bValid = true;
 
         // 파일 id 를 먼저 모두 정한다 — 자식의 부착이 부모의 파일 id 를 적으므로, 쓰는 동안 부모의 id 가 이미 있어야 한다.
-        ObjectSavedIdMap mapSavedId;
-        collectSavedIdMap( mapSavedId );
+        ObjectSavedIDMap mapSavedID;
+        collectSavedIDMap( mapSavedID );
         ObjectSaveOptions saveOptions{};
-        saveOptions._pSavedIdMap = &mapSavedId;
+        saveOptions._pSavedIDMap = &mapSavedID;
         // 프리팹 원형은 순회 **밖에서** 미리 짓는다 — 원형은 임시 매니저에 오브젝트를 만들어 짓는데, `forEachGameObject` 콜백 안에서는 어느
         // 매니저에도 오브젝트를 만들 수 없다(`GameObjectManager::WalkScope`).
         unordered_map<string, string> mapPrefabBaseState;
         if ( engine::areEngineServicesBound() )
         {
-            for ( const auto& [objectId, prefabPath] : _mapPrefabSource )
+            for ( const auto& [objectID, prefabPath] : _mapPrefabSource )
             {
-                (void)objectId;
+                (void)objectID;
                 (void)SceneInternal::findPrefabBaseState( mapPrefabBaseState, prefabPath ); // 못 지은 프리팹은 빈 글로 남아 전체 상태를 적게 된다
             }
         }
@@ -302,10 +302,10 @@ namespace sw
                 return;
             SceneDocument::SceneObjectNode node{};
             node._name           = pGo->getName().c_str();
-            const auto savedIdIt = mapSavedId.find( pGo->getObjectId() );
-            node._fileId         = ( savedIdIt != mapSavedId.end() ) ? savedIdIt->second : 0;
+            const auto savedIDIt = mapSavedID.find( pGo->getObjectID() );
+            node._fileID         = ( savedIDIt != mapSavedID.end() ) ? savedIDIt->second : 0;
 
-            const auto prefabIt = _mapPrefabSource.find( pGo->getObjectId() );
+            const auto prefabIt = _mapPrefabSource.find( pGo->getObjectID() );
             if ( prefabIt != _mapPrefabSource.end() )
                 node._prefab = prefabIt->second;
 
@@ -335,7 +335,7 @@ namespace sw
         return true;
     }
 
-    void Scene::collectSavedIdMap( ObjectSavedIdMap& outMap ) const
+    void Scene::collectSavedIDMap( ObjectSavedIDMap& outMap ) const
     {
         outMap.clear();
         if ( _objectManager == nullptr )
@@ -343,15 +343,15 @@ namespace sw
 
         // 새 id 는 이 씬이 지금껏 쓴 어느 파일 id 보다 크다 — 사라진 오브젝트 · 풀지 못한 엔티티의 id 를 다시 주면 그것을 가리키던 참조가
         // 새 오브젝트에 붙는다.
-        uint64 nextFileId = 1;
-        for ( const auto& [objectId, fileId] : _mapObjectIdToFileId )
+        uint64 nextFileID = 1;
+        for ( const auto& [objectID, fileID] : _mapObjectIDToFileID )
         {
-            (void)objectId;
-            nextFileId = MathUtil::max( nextFileId, fileId + 1 );
+            (void)objectID;
+            nextFileID = MathUtil::max( nextFileID, fileID + 1 );
         }
         for ( const SceneDocument::SceneObjectNode& unresolved : _listUnresolvedEntity )
         {
-            nextFileId = MathUtil::max( nextFileId, unresolved._fileId + 1 );
+            nextFileID = MathUtil::max( nextFileID, unresolved._fileID + 1 );
         }
 
         vector<GameObject*> listObject;
@@ -361,15 +361,15 @@ namespace sw
         {
             if ( pGo == nullptr )
                 continue;
-            const auto mapIt = _mapObjectIdToFileId.find( pGo->getObjectId() );
-            if ( mapIt != _mapObjectIdToFileId.end() )
+            const auto mapIt = _mapObjectIDToFileID.find( pGo->getObjectID() );
+            if ( mapIt != _mapObjectIDToFileID.end() )
             {
-                outMap.emplace( pGo->getObjectId(), mapIt->second );
+                outMap.emplace( pGo->getObjectID(), mapIt->second );
                 continue;
             }
-            _mapObjectIdToFileId.emplace( pGo->getObjectId(), nextFileId );
-            outMap.emplace( pGo->getObjectId(), nextFileId );
-            ++nextFileId;
+            _mapObjectIDToFileID.emplace( pGo->getObjectID(), nextFileID );
+            outMap.emplace( pGo->getObjectID(), nextFileID );
+            ++nextFileID;
         }
     }
 
@@ -380,7 +380,7 @@ namespace sw
     {
         releaseDefaultMaterial();
         _mapPrefabSource.clear();
-        _mapObjectIdToFileId.clear();
+        _mapObjectIDToFileID.clear();
         _listUnresolvedEntity.clear();
         if ( _objectManager != nullptr )
         {
@@ -485,20 +485,20 @@ namespace sw
         handle = pCamera != nullptr ? pCamera->getHandle() : sw::ComponentHandle{};
     }
 
-    void Scene::setEntityPrefabPath( uint64 objectId, string_view prefabPath )
+    void Scene::setEntityPrefabPath( uint64 objectID, string_view prefabPath )
     {
-        if ( objectId == 0 )
+        if ( objectID == 0 )
             return;
         if ( prefabPath.empty() )
-            _mapPrefabSource.erase( objectId );
+            _mapPrefabSource.erase( objectID );
         else
-            _mapPrefabSource[objectId] = string{ prefabPath };
+            _mapPrefabSource[objectID] = string{ prefabPath };
     }
 
-    const string& Scene::getEntityPrefabPath( uint64 objectId ) const
+    const string& Scene::getEntityPrefabPath( uint64 objectID ) const
     {
         static const string s_emptyString{};
-        const auto          it = _mapPrefabSource.find( objectId );
+        const auto          it = _mapPrefabSource.find( objectID );
         if ( it != _mapPrefabSource.end() )
             return it->second;
         return s_emptyString;

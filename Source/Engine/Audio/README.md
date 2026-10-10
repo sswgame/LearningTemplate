@@ -139,7 +139,7 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 
 ### 공간화
 
-보이스에 에미터(`_emitterId`)와 감쇠 프리셋(`_attenuation`)이 모두 있으면 블록마다 리스너 기준으로 공간화합니다. 하나라도 없으면 공간화하지 않는 2D 소리입니다(`AudioSpatial`).
+보이스에 에미터(`_emitterID`)와 감쇠 프리셋(`_attenuation`)이 모두 있으면 블록마다 리스너 기준으로 공간화합니다. 하나라도 없으면 공간화하지 않는 2D 소리입니다(`AudioSpatial`).
 감쇠 프리셋은 믹서 데이터의 `_listAttenuation` 에 있습니다. Wwise 의 Attenuation ShareSet, 언리얼의 Sound Attenuation 에 해당합니다.
 
 **리스너.** `setListener( 번호, AudioListenerState )` 로 최대 4개(화면 분할)를 둡니다. 리스너가 여럿이면 보이스마다 가장 크게 들리는 리스너를 기준으로 계산합니다. 리스너를 섞는 다중 리스너 믹스는 없습니다.

@@ -56,8 +56,8 @@ namespace sw
         { return pEvent != nullptr ? sw::ModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::processEvent, *pEvent ) : false; };                                                      \
         pOutAPI->registerTexture = []( sw::EditorHandle editorHandle, sw::TextureHandle textureHandle ) -> void*                                                                                                   \
         { return sw::ModuleForwardUtil::callOr<EditorClass, void*>( editorHandle, nullptr, &EditorClass::registerTexture, textureHandle ); };                                                                      \
-        pOutAPI->unregisterTexture = []( sw::EditorHandle editorHandle, void* pTextureId )                                                                                                                         \
-        { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::unregisterTexture, pTextureId ); };                                                                                            \
+        pOutAPI->unregisterTexture = []( sw::EditorHandle editorHandle, void* pTextureID )                                                                                                                         \
+        { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::unregisterTexture, pTextureID ); };                                                                                            \
         pOutAPI->getGameViewport = []( sw::EditorHandle editorHandle, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )                                                                                     \
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::getGameViewport, pRenderTarget, pWidth, pHeight ); };                                                                          \
         pOutAPI->getSceneViewport = []( sw::EditorHandle editorHandle, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )                                                                                    \

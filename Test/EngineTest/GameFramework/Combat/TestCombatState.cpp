@@ -148,7 +148,7 @@ SW_TEST_CASE( CombatStateTest, DownedBleedsOutReviveInterruptsAndDownLimitKills 
     vitality.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.empty() == false );
     SW_EXPECT_TRUE( listEvent.back()._type == VitalityEventType::Died );
-    SW_EXPECT_EQUAL( 3, listEvent.back()._instigatorId ); // 출혈사는 기절시킨 쪽에 귀속
+    SW_EXPECT_EQUAL( 3, listEvent.back()._instigatorID ); // 출혈사는 기절시킨 쪽에 귀속
     SW_EXPECT_TRUE( vitality.startRevive( 1 ) == false ); // 죽은 개체는 살리지 못한다
 
     // 리스폰(기절 횟수 1 은 남는다) — 두 번째 기절, 부활 중 맞으면 끊기고 진행은 처음부터.

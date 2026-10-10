@@ -105,7 +105,7 @@ namespace sw
         , _joints{}
         , _characters{}
         , _shapes{}
-        , _listBodyIdEntry{}
+        , _listBodyIDEntry{}
         , _pairFilter{}
         , _contactTracker{}
         , _listContactEvent{}
@@ -145,8 +145,8 @@ namespace sw
         _bodies.forEach( [&bodyInterface]( BodyRecord& record )
         {
             if ( record._bEnabled )
-                bodyInterface.RemoveBody( record._bodyId );
-            bodyInterface.DestroyBody( record._bodyId );
+                bodyInterface.RemoveBody( record._bodyID );
+            bodyInterface.DestroyBody( record._bodyID );
         } );
         _bodies.clear();
         _shapes.clear();
@@ -193,8 +193,8 @@ namespace sw
                 return;
             JPH::RVec3 position;
             JPH::Quat  rotation;
-            bodyInterface.GetPositionAndRotation( record._bodyId, position, rotation );
-            const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyId ) == false;
+            bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
+            const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
             const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
             for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
             {
@@ -420,21 +420,21 @@ namespace sw
         return _bodies.get( body.getSlot() );
     }
 
-    PhysicsBodyHandle JoltPhysicsScene::findHandle( const JPH::BodyID& bodyId ) const
+    PhysicsBodyHandle JoltPhysicsScene::findHandle( const JPH::BodyID& bodyID ) const
     {
-        const JPH::uint32 index = bodyId.GetIndex();
-        if ( index >= _listBodyIdEntry.size() || _listBodyIdEntry[index]._bodyIdValue != bodyId.GetIndexAndSequenceNumber() )
+        const JPH::uint32 index = bodyID.GetIndex();
+        if ( index >= _listBodyIDEntry.size() || _listBodyIDEntry[index]._bodyIDValue != bodyID.GetIndexAndSequenceNumber() )
             return PhysicsBodyHandle{};
-        return _listBodyIdEntry[index]._body;
+        return _listBodyIDEntry[index]._body;
     }
 
-    void JoltPhysicsScene::setHandle( const JPH::BodyID& bodyId, PhysicsBodyHandle body )
+    void JoltPhysicsScene::setHandle( const JPH::BodyID& bodyID, PhysicsBodyHandle body )
     {
-        const JPH::uint32 index = bodyId.GetIndex();
-        if ( index >= _listBodyIdEntry.size() )
-            _listBodyIdEntry.resize( static_cast<size_t>( index ) + 1 );
-        _listBodyIdEntry[index]._bodyIdValue = body.isValid() ? bodyId.GetIndexAndSequenceNumber() : JPH::BodyID::cInvalidBodyID;
-        _listBodyIdEntry[index]._body        = body;
+        const JPH::uint32 index = bodyID.GetIndex();
+        if ( index >= _listBodyIDEntry.size() )
+            _listBodyIDEntry.resize( static_cast<size_t>( index ) + 1 );
+        _listBodyIDEntry[index]._bodyIDValue = body.isValid() ? bodyID.GetIndexAndSequenceNumber() : JPH::BodyID::cInvalidBodyID;
+        _listBodyIDEntry[index]._body        = body;
     }
 
     PhysicsBodyHandle JoltPhysicsScene::createBodyUnadded( const PhysicsBodyDesc3D& desc )
@@ -494,7 +494,7 @@ namespace sw
             SW_LOG_ERROR( "createBody: Jolt is out of bodies (limit %#)", JoltPhysicsSceneInternal::kMaxBodyCount );
             return PhysicsBodyHandle{};
         }
-        record._bodyId                 = pBody->GetID();
+        record._bodyID                 = pBody->GetID();
         record._userData               = desc._userData;
         record._type                   = desc._type;
         record._layer                  = desc._layer;
@@ -514,15 +514,15 @@ namespace sw
         if ( pRecord == nullptr )
             return PhysicsBodyHandle{};
         const bool bActivate = desc._type != PhysicsBodyType::Static;
-        _system.GetBodyInterface().AddBody( pRecord->_bodyId, bActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
+        _system.GetBodyInterface().AddBody( pRecord->_bodyID, bActivate ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
         return handle;
     }
 
     void JoltPhysicsScene::createBodies( span<const PhysicsBodyDesc3D> listDesc, vector<PhysicsBodyHandle>& outListBody )
     {
         // 넓은 단계 트리를 한 번에 고치려고 움직이는 것과 정적인 것을 따로 모아 묶음으로 넣는다.
-        vector<JPH::BodyID> listMovingId;
-        vector<JPH::BodyID> listStaticId;
+        vector<JPH::BodyID> listMovingID;
+        vector<JPH::BodyID> listStaticID;
         outListBody.reserve( outListBody.size() + listDesc.size() );
         for ( const PhysicsBodyDesc3D& desc : listDesc )
         {
@@ -532,20 +532,20 @@ namespace sw
             if ( pRecord == nullptr )
                 continue;
             if ( desc._type == PhysicsBodyType::Static )
-                listStaticId.push_back( pRecord->_bodyId );
+                listStaticID.push_back( pRecord->_bodyID );
             else
-                listMovingId.push_back( pRecord->_bodyId );
+                listMovingID.push_back( pRecord->_bodyID );
         }
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
-        if ( listStaticId.empty() == false )
+        if ( listStaticID.empty() == false )
         {
-            const JPH::BodyInterface::AddState state = bodyInterface.AddBodiesPrepare( listStaticId.data(), static_cast<int32>( listStaticId.size() ) );
-            bodyInterface.AddBodiesFinalize( listStaticId.data(), static_cast<int32>( listStaticId.size() ), state, JPH::EActivation::DontActivate );
+            const JPH::BodyInterface::AddState state = bodyInterface.AddBodiesPrepare( listStaticID.data(), static_cast<int32>( listStaticID.size() ) );
+            bodyInterface.AddBodiesFinalize( listStaticID.data(), static_cast<int32>( listStaticID.size() ), state, JPH::EActivation::DontActivate );
         }
-        if ( listMovingId.empty() == false )
+        if ( listMovingID.empty() == false )
         {
-            const JPH::BodyInterface::AddState state = bodyInterface.AddBodiesPrepare( listMovingId.data(), static_cast<int32>( listMovingId.size() ) );
-            bodyInterface.AddBodiesFinalize( listMovingId.data(), static_cast<int32>( listMovingId.size() ), state, JPH::EActivation::Activate );
+            const JPH::BodyInterface::AddState state = bodyInterface.AddBodiesPrepare( listMovingID.data(), static_cast<int32>( listMovingID.size() ) );
+            bodyInterface.AddBodiesFinalize( listMovingID.data(), static_cast<int32>( listMovingID.size() ), state, JPH::EActivation::Activate );
         }
     }
 
@@ -596,8 +596,8 @@ namespace sw
         if ( listBody.empty() )
             return;
         destroyJointsOf( listBody );
-        vector<JPH::BodyID>       listRemoveId;
-        vector<JPH::BodyID>       listDestroyId;
+        vector<JPH::BodyID>       listRemoveID;
+        vector<JPH::BodyID>       listDestroyID;
         vector<PhysicsBodyHandle> listDestroyed;
         for ( const PhysicsBodyHandle& body : listBody )
         {
@@ -605,17 +605,17 @@ namespace sw
             if ( _bodies.take( body.getSlot(), record ) == false )
                 continue;
             if ( record._bEnabled )
-                listRemoveId.push_back( record._bodyId );
-            listDestroyId.push_back( record._bodyId );
-            setHandle( record._bodyId, PhysicsBodyHandle{} );
+                listRemoveID.push_back( record._bodyID );
+            listDestroyID.push_back( record._bodyID );
+            setHandle( record._bodyID, PhysicsBodyHandle{} );
             listDestroyed.push_back( body );
             --_bodyCount;
         }
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
-        if ( listRemoveId.empty() == false )
-            bodyInterface.RemoveBodies( listRemoveId.data(), static_cast<int32>( listRemoveId.size() ) );
-        if ( listDestroyId.empty() == false )
-            bodyInterface.DestroyBodies( listDestroyId.data(), static_cast<int32>( listDestroyId.size() ) );
+        if ( listRemoveID.empty() == false )
+            bodyInterface.RemoveBodies( listRemoveID.data(), static_cast<int32>( listRemoveID.size() ) );
+        if ( listDestroyID.empty() == false )
+            bodyInterface.DestroyBodies( listDestroyID.data(), static_cast<int32>( listDestroyID.size() ) );
         const span<const PhysicsBodyHandle> destroyed{ listDestroyed.data(), listDestroyed.size() };
         _contactTracker.removeBodies( destroyed );
         _pairFilter.removeBodies( destroyed );
@@ -639,11 +639,11 @@ namespace sw
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         if ( bEnabled )
         {
-            bodyInterface.AddBody( pRecord->_bodyId, pRecord->_type != PhysicsBodyType::Static ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
+            bodyInterface.AddBody( pRecord->_bodyID, pRecord->_type != PhysicsBodyType::Static ? JPH::EActivation::Activate : JPH::EActivation::DontActivate );
         }
         else
         {
-            bodyInterface.RemoveBody( pRecord->_bodyId );
+            bodyInterface.RemoveBody( pRecord->_bodyID );
             // 빠진 바디의 접촉은 Jolt 가 알리지 않는다 — 추적기가 끝낸다.
             _contactTracker.removeBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
         }
@@ -663,7 +663,7 @@ namespace sw
             return false;
         JPH::RVec3 position;
         JPH::Quat  rotation;
-        _system.GetBodyInterface().GetPositionAndRotation( pRecord->_bodyId, position, rotation );
+        _system.GetBodyInterface().GetPositionAndRotation( pRecord->_bodyID, position, rotation );
         outPosition = JoltUtil::toEngine( position );
         outRotation = JoltUtil::toEngine( rotation );
         return true;
@@ -675,7 +675,7 @@ namespace sw
         if ( pRecord == nullptr )
             return;
         const JPH::EActivation activation = pRecord->_type == PhysicsBodyType::Static ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
-        _system.GetBodyInterface().SetPositionAndRotation( pRecord->_bodyId, JoltUtil::toJolt( position ), JoltUtil::toJolt( rotation ), activation );
+        _system.GetBodyInterface().SetPositionAndRotation( pRecord->_bodyID, JoltUtil::toJolt( position ), JoltUtil::toJolt( rotation ), activation );
     }
 
     void JoltPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float3& targetPosition, const quaternion& targetRotation, float32 deltaTime )
@@ -683,61 +683,61 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f )
             return;
-        _system.GetBodyInterface().MoveKinematic( pRecord->_bodyId, JoltUtil::toJolt( targetPosition ), JoltUtil::toJolt( targetRotation ), deltaTime );
+        _system.GetBodyInterface().MoveKinematic( pRecord->_bodyID, JoltUtil::toJolt( targetPosition ), JoltUtil::toJolt( targetRotation ), deltaTime );
     }
 
     float3 JoltPhysicsScene::getLinearVelocity( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr ? JoltUtil::toEngine( _system.GetBodyInterface().GetLinearVelocity( pRecord->_bodyId ) ) : float3{};
+        return pRecord != nullptr ? JoltUtil::toEngine( _system.GetBodyInterface().GetLinearVelocity( pRecord->_bodyID ) ) : float3{};
     }
 
     void JoltPhysicsScene::setLinearVelocity( PhysicsBodyHandle body, const float3& velocity )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().SetLinearVelocity( pRecord->_bodyId, JoltUtil::toJolt( velocity ) );
+            _system.GetBodyInterface().SetLinearVelocity( pRecord->_bodyID, JoltUtil::toJolt( velocity ) );
     }
 
     float3 JoltPhysicsScene::getAngularVelocity( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr ? JoltUtil::toEngine( _system.GetBodyInterface().GetAngularVelocity( pRecord->_bodyId ) ) : float3{};
+        return pRecord != nullptr ? JoltUtil::toEngine( _system.GetBodyInterface().GetAngularVelocity( pRecord->_bodyID ) ) : float3{};
     }
 
     void JoltPhysicsScene::setAngularVelocity( PhysicsBodyHandle body, const float3& velocity )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().SetAngularVelocity( pRecord->_bodyId, JoltUtil::toJolt( velocity ) );
+            _system.GetBodyInterface().SetAngularVelocity( pRecord->_bodyID, JoltUtil::toJolt( velocity ) );
     }
 
     void JoltPhysicsScene::addForce( PhysicsBodyHandle body, const float3& force )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().AddForce( pRecord->_bodyId, JoltUtil::toJolt( force ) );
+            _system.GetBodyInterface().AddForce( pRecord->_bodyID, JoltUtil::toJolt( force ) );
     }
 
     void JoltPhysicsScene::addImpulse( PhysicsBodyHandle body, const float3& impulse )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().AddImpulse( pRecord->_bodyId, JoltUtil::toJolt( impulse ) );
+            _system.GetBodyInterface().AddImpulse( pRecord->_bodyID, JoltUtil::toJolt( impulse ) );
     }
 
     void JoltPhysicsScene::addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().AddImpulse( pRecord->_bodyId, JoltUtil::toJolt( impulse ), JoltUtil::toJolt( point ) );
+            _system.GetBodyInterface().AddImpulse( pRecord->_bodyID, JoltUtil::toJolt( impulse ), JoltUtil::toJolt( point ) );
     }
 
     void JoltPhysicsScene::addTorque( PhysicsBodyHandle body, const float3& torque )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().AddTorque( pRecord->_bodyId, JoltUtil::toJolt( torque ) );
+            _system.GetBodyInterface().AddTorque( pRecord->_bodyID, JoltUtil::toJolt( torque ) );
     }
 
     void JoltPhysicsScene::setBodyType( PhysicsBodyHandle body, PhysicsBodyType type )
@@ -749,7 +749,7 @@ namespace sw
         if ( pRecord->_type == PhysicsBodyType::Static )
         {
             // 정적으로 만든 바디는 움직임 정보가 없다 — `_bAllowTypeChange` 로 만든 것만 바꿀 수 있다.
-            const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyId };
+            const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
             if ( lock.Succeeded() && lock.GetBody().GetMotionPropertiesUnchecked() == nullptr )
             {
                 SW_LOG_ERROR( "setBodyType: the body was created Static without _bAllowTypeChange" );
@@ -757,8 +757,8 @@ namespace sw
             }
         }
         const JPH::EActivation activation = type == PhysicsBodyType::Static ? JPH::EActivation::DontActivate : JPH::EActivation::Activate;
-        bodyInterface.SetMotionType( pRecord->_bodyId, JoltPhysicsSceneInternal::toMotionType( type ), activation );
-        bodyInterface.SetObjectLayer( pRecord->_bodyId, JoltLayerUtil::makeObjectLayer( pRecord->_layer, type != PhysicsBodyType::Static ) );
+        bodyInterface.SetMotionType( pRecord->_bodyID, JoltPhysicsSceneInternal::toMotionType( type ), activation );
+        bodyInterface.SetObjectLayer( pRecord->_bodyID, JoltLayerUtil::makeObjectLayer( pRecord->_layer, type != PhysicsBodyType::Static ) );
         pRecord->_type = type;
     }
 
@@ -773,7 +773,7 @@ namespace sw
         BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr || layer >= CollisionLayers::kLayerCount )
             return;
-        _system.GetBodyInterface().SetObjectLayer( pRecord->_bodyId, JoltLayerUtil::makeObjectLayer( layer, pRecord->_type != PhysicsBodyType::Static ) );
+        _system.GetBodyInterface().SetObjectLayer( pRecord->_bodyID, JoltLayerUtil::makeObjectLayer( layer, pRecord->_type != PhysicsBodyType::Static ) );
         pRecord->_layer = layer;
     }
 
@@ -787,7 +787,7 @@ namespace sw
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            _system.GetBodyInterface().SetGravityFactor( pRecord->_bodyId, factor );
+            _system.GetBodyInterface().SetGravityFactor( pRecord->_bodyID, factor );
     }
 
     float32 JoltPhysicsScene::getBodyMass( PhysicsBodyHandle body ) const
@@ -795,7 +795,7 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr )
             return 0.0f;
-        const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyId };
+        const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
         if ( lock.Succeeded() == false || lock.GetBody().GetMotionPropertiesUnchecked() == nullptr )
             return 0.0f;
         const float32 inverseMass = lock.GetBody().GetMotionPropertiesUnchecked()->GetInverseMassUnchecked();
@@ -805,14 +805,14 @@ namespace sw
     bool JoltPhysicsScene::isBodySleeping( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr && pRecord->_type != PhysicsBodyType::Static && _system.GetBodyInterface().IsActive( pRecord->_bodyId ) == false;
+        return pRecord != nullptr && pRecord->_type != PhysicsBodyType::Static && _system.GetBodyInterface().IsActive( pRecord->_bodyID ) == false;
     }
 
     void JoltPhysicsScene::wakeBody( PhysicsBodyHandle body )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr && pRecord->_bEnabled && pRecord->_type != PhysicsBodyType::Static )
-            _system.GetBodyInterface().ActivateBody( pRecord->_bodyId );
+            _system.GetBodyInterface().ActivateBody( pRecord->_bodyID );
     }
 
     uint64 JoltPhysicsScene::getBodyUserData( PhysicsBodyHandle body ) const

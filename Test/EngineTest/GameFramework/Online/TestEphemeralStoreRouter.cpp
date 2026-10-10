@@ -65,10 +65,10 @@ SW_TEST_CASE( EphemeralStoreRouterTest, TwoSubscribersShareOneChannelAndCanLeave
 
     RouterRecorder first;
     RouterRecorder second;
-    const uint64   firstId = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &first ) );
+    const uint64   firstID = router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &first ) );
     (void)router.subscribe( "chan:a", EphemeralStoreRouter::MessageDelegate::create<&RouterRecorder::onMessage>( &second ) );
     second._pRouter            = &router;
-    second._subscriptionToDrop = firstId; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
+    second._subscriptionToDrop = firstID; // 두 번째가 받는 동안 첫 번째를 뺀다 — 이번 메시지는 둘 다 받는다(복사본)
 
     (void)publisher.submit( EphemeralRequest::makePublish( "chan:a", vector<uint8>{ 7 } ) );
     (void)router.pump();
@@ -104,16 +104,16 @@ SW_TEST_CASE( EphemeralStoreRouterTest, CancelledRequestsAreNeverAnswered )
     EphemeralStoreRouter    router;
     router.initialize( &store );
     RouterRecorder recorder;
-    const uint64   answeredId = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    const uint64   droppedId  = router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    router.cancel( droppedId );
+    const uint64   answeredID = router.submit( EphemeralRequest::makeGet( "a" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    const uint64   droppedID  = router.submit( EphemeralRequest::makeGet( "b" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    router.cancel( droppedID );
     router.cancel( 9999 ); // 없는 요청 — 아무것도 하지 않는다
     (void)router.pump();
     SW_ASSERT_EQUAL( recorder._listReply.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( recorder._listReply[0]._requestId, answeredId );
+    SW_EXPECT_EQUAL( recorder._listReply[0]._requestID, answeredID );
 
-    const uint64 pendingId = router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
-    router.cancel( pendingId ); // 주인이 먼저 내려간다
+    const uint64 pendingID = router.submit( EphemeralRequest::makeGet( "c" ), EphemeralStoreRouter::ReplyDelegate::create<&RouterRecorder::onReply>( &recorder ) );
+    router.cancel( pendingID ); // 주인이 먼저 내려간다
     router.shutdown();
     SW_EXPECT_EQUAL( recorder._listReply.size(), size_t( 1 ) ); // 내릴 때의 Unavailable 도 오지 않는다
     SW_EXPECT_EQUAL( router.getPendingCount(), 0 );

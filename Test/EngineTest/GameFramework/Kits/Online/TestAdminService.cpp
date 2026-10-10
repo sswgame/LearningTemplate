@@ -23,11 +23,11 @@ namespace
 {
     struct AdminFixture
     {
-        static constexpr AccountId kViewer   = 0x1;
-        static constexpr AccountId kSupport  = 0x2;
-        static constexpr AccountId kOperator = 0x3;
-        static constexpr AccountId kSuper    = 0x4;
-        static constexpr AccountId kPlayer   = 0x100;
+        static constexpr AccountID kViewer   = 0x1;
+        static constexpr AccountID kSupport  = 0x2;
+        static constexpr AccountID kOperator = 0x3;
+        static constexpr AccountID kSuper    = 0x4;
+        static constexpr AccountID kPlayer   = 0x100;
 
         MemoryServiceDatabase _database;
         uint64                _nextKey;
@@ -42,10 +42,10 @@ namespace
             (void)AdminStoreLogic::seedRole( _database, kSuper, AdminRole::Super, 1 );
         }
 
-        AdminResult run( AccountId adminId, uint16 method, AdminRequest request, AdminReply* pOutReply = nullptr, uint64 keyLow = 0 )
+        AdminResult run( AccountID adminID, uint16 method, AdminRequest request, AdminReply* pOutReply = nullptr, uint64 keyLow = 0 )
         {
             AdminCommand command;
-            command._adminId = adminId;
+            command._adminID = adminID;
             command._method  = method;
             command._nowMs   = 5000;
             command._keyHigh = 7;
@@ -63,8 +63,8 @@ namespace
         AdminRequest adjust( int64 amount ) const
         {
             AdminRequest request;
-            request._accountId = kPlayer;
-            request._assetId   = "cur.gold";
+            request._accountID = kPlayer;
+            request._assetID   = "cur.gold";
             request._amount    = amount;
             return request;
         }
@@ -89,13 +89,13 @@ namespace
     class FakeSessionControl final : public IAccountSessionControl
     {
     public:
-        vector<AccountId> _listRevoked{};
+        vector<AccountID> _listRevoked{};
 
-        void revokeAccountSessions( AccountId accountId, string_view reasonCode, int64 nowMs ) override
+        void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override
         {
             (void)reasonCode;
             (void)nowMs;
-            _listRevoked.push_back( accountId );
+            _listRevoked.push_back( accountID );
         }
     };
 
@@ -118,7 +118,7 @@ SW_TEST_CASE( AdminServiceTest, RoleGatesEveryCommand )
 {
     AdminFixture fixture;
     AdminRequest lookup;
-    lookup._accountId = AdminFixture::kPlayer;
+    lookup._accountID = AdminFixture::kPlayer;
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, lookup ) == AdminResult::Ok );
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kAdjustAsset, fixture.adjust( 10 ) ) == AdminResult::Forbidden );
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kPlayer, AdminMethod::kLookupAccount, lookup ) == AdminResult::Forbidden ); // 등급 없음
@@ -135,7 +135,7 @@ SW_TEST_CASE( AdminServiceTest, GrantAndRevokeAreAuditedInTheSameTransaction )
     SW_EXPECT_EQUAL( fixture.gold(), int64( 70 ) );
     SW_EXPECT_EQUAL( fixture.countAudit( "acct.0000000000000100/" ), 2 ); // 거절된 회수는 감사 줄도 없다
     AdminCommand command;
-    command._adminId = AdminFixture::kOperator;
+    command._adminID = AdminFixture::kOperator;
     command._method  = AdminMethod::kAdjustAsset;
     command._keyLow  = 999;
     command._request = fixture.adjust( 1 ); // 메모 없음
@@ -188,7 +188,7 @@ SW_TEST_CASE( AdminServiceTest, SanctionNeedsTheRightRole )
 {
     AdminFixture fixture;
     AdminRequest mute;
-    mute._accountId       = AdminFixture::kPlayer;
+    mute._accountID       = AdminFixture::kPlayer;
     mute._sanctionKind    = ServiceSanctionKind::ChatMute;
     mute._untilMs         = 9000;
     AdminRequest suspend  = mute;
@@ -213,7 +213,7 @@ SW_TEST_CASE( AdminServiceTest, LookupShowsBalancesSanctionHistoryAndAudit )
     AdminFixture fixture;
     SW_ASSERT_TRUE( fixture.run( AdminFixture::kOperator, AdminMethod::kAdjustAsset, fixture.adjust( 40 ) ) == AdminResult::Ok );
     AdminRequest lookup;
-    lookup._accountId = AdminFixture::kPlayer;
+    lookup._accountID = AdminFixture::kPlayer;
     AdminReply reply;
     SW_ASSERT_TRUE( fixture.run( AdminFixture::kViewer, AdminMethod::kLookupAccount, lookup, &reply ) == AdminResult::Ok );
     SW_ASSERT_EQUAL( reply._listBalance.size(), size_t( 1 ) );
@@ -238,14 +238,14 @@ SW_TEST_CASE( AdminServiceTest, BulkMailResumesWithoutDuplicates )
 {
     AdminFixture fixture;
     AdminRequest bulk;
-    bulk._batchId  = 0xB1;
+    bulk._batchID  = 0xB1;
     bulk._titleKey = "운영 보상";
     bulk._listAttachment.push_back( ServiceMailAttachment{ "cur.gold", 10 } );
-    bulk._listAccountId = { 0x201, 0x202, 0x203 };
+    bulk._listAccountID = { 0x201, 0x202, 0x203 };
     AdminReply first;
     SW_ASSERT_TRUE( fixture.run( AdminFixture::kSuper, AdminMethod::kBulkMail, bulk, &first ) == AdminResult::Ok );
     SW_EXPECT_EQUAL( first._processedCount, 3 );
-    bulk._listAccountId = { 0x201, 0x202, 0x203, 0x204 }; // 끊긴 뒤 다시 — 새 명령 키, 같은 배치
+    bulk._listAccountID = { 0x201, 0x202, 0x203, 0x204 }; // 끊긴 뒤 다시 — 새 명령 키, 같은 배치
     AdminReply second;
     SW_ASSERT_TRUE( fixture.run( AdminFixture::kSuper, AdminMethod::kBulkMail, bulk, &second ) == AdminResult::Ok );
     SW_EXPECT_EQUAL( second._processedCount, 1 );
@@ -257,7 +257,7 @@ SW_TEST_CASE( AdminServiceTest, CampaignCreationIsAudited )
 {
     AdminFixture fixture;
     AdminRequest campaign;
-    campaign._batchId  = 0xC1;
+    campaign._batchID  = 0xC1;
     campaign._startMs  = 1000;
     campaign._endMs    = 100000;
     campaign._titleKey = "mail.title.anniversary";
@@ -273,11 +273,11 @@ SW_TEST_CASE( AdminServiceTest, AdminCannotChangeOwnRole )
 {
     AdminFixture fixture;
     AdminRequest demoteSelf;
-    demoteSelf._accountId = AdminFixture::kSuper;
+    demoteSelf._accountID = AdminFixture::kSuper;
     demoteSelf._role      = AdminRole::Viewer;
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSuper, AdminMethod::kSetRole, demoteSelf ) == AdminResult::Forbidden );
     AdminRequest promote;
-    promote._accountId = AdminFixture::kSupport;
+    promote._accountID = AdminFixture::kSupport;
     promote._role      = AdminRole::Operator;
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSuper, AdminMethod::kSetRole, promote ) == AdminResult::Ok );
     SW_EXPECT_TRUE( fixture.run( AdminFixture::kSupport, AdminMethod::kAdjustAsset, fixture.adjust( 1 ) ) == AdminResult::Ok ); // 다음 명령부터 새 등급
@@ -295,7 +295,7 @@ SW_TEST_CASE( AdminServiceTest, ServiceRevokesSessionsAfterSuspendOnce )
     service.seedRole( AdminFixture::kOperator, AdminRole::Operator, 1 );
     (void)store.pollCompletions();
     AdminRequest suspend;
-    suspend._accountId    = AdminFixture::kPlayer;
+    suspend._accountID    = AdminFixture::kPlayer;
     suspend._sanctionKind = ServiceSanctionKind::Suspend;
     suspend._untilMs      = 99999;
     suspend._memo         = "ticket-9";
@@ -330,7 +330,7 @@ SW_TEST_CASE( AdminServiceTest, SanctionChangeIsPublishedOnceOnTheBus )
     (void)store.pollCompletions();
 
     AdminRequest mute;
-    mute._accountId    = AdminFixture::kPlayer;
+    mute._accountID    = AdminFixture::kPlayer;
     mute._sanctionKind = ServiceSanctionKind::ChatMute;
     mute._untilMs      = 99999;
     mute._memo         = "ticket-10";

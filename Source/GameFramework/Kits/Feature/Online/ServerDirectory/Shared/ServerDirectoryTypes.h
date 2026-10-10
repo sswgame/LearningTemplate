@@ -46,7 +46,7 @@ namespace sw
     {
         static constexpr const utf8* kScopeAll = "all";
 
-        vector<AccountId> _listAllowedAccount{}; ///< 점검 중에도 들어가는 계정(GM · 시험자) — 클라이언트에는 보내지 않는다
+        vector<AccountID> _listAllowedAccount{}; ///< 점검 중에도 들어가는 계정(GM · 시험자) — 클라이언트에는 보내지 않는다
         string            _scope{};
         string            _messageKey{}; ///< 안내 글의 로컬라이제이션 키
         int64             _startMs{ 0 };
@@ -54,11 +54,11 @@ namespace sw
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && ( _endMs == 0 || nowMs < _endMs ); }
         bool appliesTo( string_view kind ) const { return _scope == kScopeAll || _scope == kind; }
-        bool allowsAccount( AccountId accountId ) const
+        bool allowsAccount( AccountID accountID ) const
         {
-            for ( const AccountId allowed : _listAllowedAccount )
+            for ( const AccountID allowed : _listAllowedAccount )
             {
-                if ( allowed == accountId )
+                if ( allowed == accountID )
                     return true;
             }
             return false;
@@ -72,7 +72,7 @@ namespace sw
     struct ServiceNotice
     {
         string _text{}; ///< 로컬라이제이션 키(`_bLiteralText` 가 거짓) 또는 GM 이 쓴 글
-        uint64 _noticeId{ 0 };
+        uint64 _noticeID{ 0 };
         int64  _startMs{ 0 };
         int64  _endMs{ 0 };    ///< 0 = 내릴 때까지
         int32  _priority{ 0 }; ///< 큰 것이 위
@@ -111,7 +111,7 @@ namespace sw
     {
         string                _address{};
         string                _messageKey{};
-        uint64                _serverId{ 0 };
+        uint64                _serverID{ 0 };
         int64                 _maintenanceEndMs{ 0 };
         uint16                _port{ 0 };
         ServerDirectoryResult _result{ ServerDirectoryResult::NoServer };
@@ -125,7 +125,7 @@ namespace sw
     {
         string      _region{};
         string      _address{};
-        uint64      _serverId{ 0 };
+        uint64      _serverID{ 0 };
         uint16      _port{ 0 };
         uint8       _fillPercent{ 0 };
         ServerState _state{ ServerState::Open };

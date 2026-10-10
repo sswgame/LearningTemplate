@@ -78,7 +78,7 @@ namespace sw
         , _updateRateDivisor{ 1 }
         , _skeleton{ SkeletalMeshComponentInternal::getImplicitSkeleton() }
         , _skinSourceMesh{}
-        , _skinSourceContentId{ 0 }
+        , _skinSourceContentID{ 0 }
         , _localPose{}
         , _listModelSpace{}
         , _listSkinPalette{}
@@ -148,7 +148,7 @@ namespace sw
         _pAnimationSystem = &manager.getAnimationSystem();
         _pAnimationSystem->registerUnit( this );
         _pAnimationSystem->registerLODClient( &_lodClient );
-        _updatePhase = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentId() );
+        _updatePhase = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentID() );
     }
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
@@ -299,28 +299,28 @@ namespace sw
         {
             // 군중 공유 — 사본을 두지 않는다. 지금 메시가 원본이거나 군중이 준 것(묶음 · 사본)이고 원본이 그대로면 둔다.
             const bool bCrowdMesh   = ( _pCrowdBucket != nullptr && current == _pCrowdBucket->getMesh() ) || ( _soloMesh != nullptr && current == _soloMesh );
-            const bool bSourceFresh = _skinSourceMesh != nullptr && _skinSourceMesh->getContentId() == _skinSourceContentId;
+            const bool bSourceFresh = _skinSourceMesh != nullptr && _skinSourceMesh->getContentID() == _skinSourceContentID;
             if ( bSourceFresh && ( current == _skinSourceMesh || bCrowdMesh ) )
                 return;
             // 원본이 바뀌었다(핫 리로드 · 다른 id) — 묶음을 놓고 새 원본을 그린다. 다음 평가가 다시 묶는다.
             shared_ptr<Mesh> source = bCrowdMesh ? _skinSourceMesh : current;
             leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
             _skinSourceMesh      = source;
-            _skinSourceContentId = source->getContentId();
+            _skinSourceContentID = source->getContentID();
             setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
             setMesh( std::move( source ) );
             return;
         }
         // 지금 메시가 이미 이 컴포넌트의 복사본이고 원본이 그대로면 둔다. 원본이 바뀌었으면(핫 리로드 · 다른 id) 새 복사본을 만든다 —
         // 옛 복사본은 스냅샷이 쥔 동안 산다(정점 버퍼를 제자리에서 바꾸지 않는다).
-        const bool bOwnCopy = _skinSourceMesh != nullptr && current != _skinSourceMesh && _skinSourceMesh->getContentId() == _skinSourceContentId;
+        const bool bOwnCopy = _skinSourceMesh != nullptr && current != _skinSourceMesh && _skinSourceMesh->getContentID() == _skinSourceContentID;
         if ( bOwnCopy )
             return;
 
         shared_ptr<Mesh> source   = ( _skinSourceMesh != nullptr && current != _skinSourceMesh ) ? _skinSourceMesh : current;
         shared_ptr<Mesh> instance = Mesh::createSkinInstance( *source );
         _skinSourceMesh           = source;
-        _skinSourceContentId      = source->getContentId();
+        _skinSourceContentID      = source->getContentID();
         setBoundsRadius( source->getBoundingRadius() * SkeletalMeshComponentInternal::kSkinnedBoundsScale );
         setMesh( std::move( instance ) );
     }
@@ -337,7 +337,7 @@ namespace sw
         refreshBoneLODMasks();
         const shared_ptr<Mesh>& mesh = getMesh();
         if ( mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount() )
-            SW_LOG_ERROR( "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshId().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
+            SW_LOG_ERROR( "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
                           _skeleton->getBoneCount() );
     }
 
@@ -517,7 +517,7 @@ namespace sw
             if ( _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f )
             {
                 shared_ptr<Mesh> vertexMesh =
-                    crowd.findVertexAnimationMesh( _skinSourceMesh, *_skeleton, *clip, request._bAnchorRootMotion == SW_TRUE, getMeshId() );
+                    crowd.findVertexAnimationMesh( _skinSourceMesh, *_skeleton, *clip, request._bAnchorRootMotion == SW_TRUE, getMeshID() );
                 if ( vertexMesh != nullptr )
                 {
                     const bool bEntering = _crowdMode != AnimationCrowdMode::VertexAnimation || _pVertexAnimationClip != clip.get();

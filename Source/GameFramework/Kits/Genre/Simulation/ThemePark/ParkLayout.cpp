@@ -40,14 +40,14 @@ namespace sw
         _listPlacement.clear();
         for ( XMLNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ParkRidePlacement placement;
             ParkRide&         ride     = placement._ride;
-            ride._id                   = hashed_string( pId );
+            ride._id                   = hashed_string( pID );
             const utf8* pName          = node.findAttribute( "name" );
-            ride._name                 = pName != nullptr ? pName : pId;
+            ride._name                 = pName != nullptr ? pName : pID;
             ride._excitement           = node.getAttributeFloat( "excitement", ride._excitement );
             ride._intensity            = node.getAttributeFloat( "intensity", ride._intensity );
             ride._nausea               = node.getAttributeFloat( "nausea", ride._nausea );
@@ -69,15 +69,15 @@ namespace sw
         }
         for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
-            const utf8*             pLayoutId = node.findAttribute( "layout" );
-            const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutId ) ? nullptr : layouts.findLayout( hashed_string( pLayoutId ) );
+            const utf8*             pLayoutID = node.findAttribute( "layout" );
+            const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutID ) ? nullptr : layouts.findLayout( hashed_string( pLayoutID ) );
             if ( pLayout == nullptr )
             {
-                SW_LOG_WARNING( "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, pLayoutId != nullptr ? pLayoutId : "" );
+                SW_LOG_WARNING( "%#: <Coaster> layout '%#' is not in the coaster catalog - skipped", sourceName, pLayoutID != nullptr ? pLayoutID : "" );
                 continue;
             }
             ParkRidePlacement placement;
-            placement._layoutId       = pLayout->_id;
+            placement._layoutID       = pLayout->_id;
             placement._ride._id       = pLayout->_id;
             placement._ride._name     = pLayout->_name;
             placement._ride._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", 24 ) );

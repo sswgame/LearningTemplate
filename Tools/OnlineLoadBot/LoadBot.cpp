@@ -96,7 +96,7 @@ namespace sw
         , _listLobbySnapshot{}
         , _pRunner{ pRunner }
         , _connection{}
-        , _accountId{ kInvalidAccountId }
+        , _accountID{ kInvalidAccountID }
         , _waitUntilMs{ 0 }
         , _requestStartUs{ 0 }
         , _botIndex{ botIndex }
@@ -321,13 +321,13 @@ namespace sw
             case LoadBotAction::SocialFriendRandom:
             {
                 const LoadBot* pOther = _pRunner->findBot( _random.nextInt( 0, _pRunner->getBotCount() - 1 ) );
-                if ( pOther == nullptr || pOther == this || pOther->getAccountId() == kInvalidAccountId )
+                if ( pOther == nullptr || pOther == this || pOther->getAccountID() == kInvalidAccountID )
                 {
                     advance(); // 고를 상대가 아직 없다 — 건너뛴다(지표에 적지 않는다)
                     return;
                 }
                 _awaitKind = AwaitKind::Response;
-                (void)_socialClient.requestFriend( pOther->getAccountId(), SocialReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                (void)_socialClient.requestFriend( pOther->getAccountID(), SocialReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
                 return;
             }
             default:
@@ -483,7 +483,7 @@ namespace sw
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(재지 않는다)
-                (void)_socialClient.respondFriend( notification._otherId, true, SocialReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
+                (void)_socialClient.respondFriend( notification._otherID, true, SocialReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
         }
     }
 
@@ -514,7 +514,7 @@ namespace sw
             const bool bLoggedIn = reply._errorCode == 0 && reply._result == LoginResult::Ok &&
                                    ( reply._operation == AccountClientOperation::Login || reply._operation == AccountClientOperation::GuestLogin );
             if ( bLoggedIn )
-                _accountId = reply._grant._identity._accountId;
+                _accountID = reply._grant._identity._accountID;
             finishWithResult( reply._errorCode, static_cast<uint8>( reply._result ) );
         }
     }
@@ -528,7 +528,7 @@ namespace sw
             const MatchAssignment& assignment = _listMatchAssignment.front();
             if ( assignment._outcome == MatchQueueOutcome::Found )
             {
-                _pRunner->getMutableMetrics().recordMatch( assignment._matchId );
+                _pRunner->getMutableMetrics().recordMatch( assignment._matchID );
                 finishStep( string_view{} );
                 return;
             }

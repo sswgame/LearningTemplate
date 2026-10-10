@@ -57,7 +57,7 @@ namespace sw
             }
 
             template <size_t Count>
-            static bool isKnownId( const hashed_string& id, const utf8* const ( &arrKnown )[Count] )
+            static bool isKnownID( const hashed_string& id, const utf8* const ( &arrKnown )[Count] )
             {
                 for ( const utf8* pKnown : arrKnown )
                 {
@@ -275,11 +275,11 @@ namespace sw
         // 감독 예산으로 선 적은 감독이 아직 산 것으로 센다 — 같은 스폰 id 로 다시 세운다(체력은 새로). 무리 · 정예는 예산 밖이라 걷힌 채 끝난다.
         if ( _bPacingReady == SW_TRUE )
         {
-            vector<uint32> listSpawnId;
-            _director.getSpawnDirector().collectAliveSpawnIds( listSpawnId );
-            for ( const uint32 spawnId : listSpawnId )
+            vector<uint32> listSpawnID;
+            _director.getSpawnDirector().collectAliveSpawnIDs( listSpawnID );
+            for ( const uint32 spawnID : listSpawnID )
             {
-                requestEnemies( 1, 1.0f, spawnId, false );
+                requestEnemies( 1, 1.0f, spawnID, false );
             }
         }
     }
@@ -372,16 +372,16 @@ namespace sw
             return;
         }
         // 감독은 id 만 낸다 — 이 게임이 모르는 id 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
-        vector<hashed_string> listId;
-        _profile.collectEncounterIds( listId );
-        for ( const hashed_string& id : listId )
+        vector<hashed_string> listID;
+        _profile.collectEncounterIDs( listID );
+        for ( const hashed_string& id : listID )
         {
-            if ( Internal::isKnownId( id, Internal::kArrKnownEncounter ) == false )
+            if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
                 SW_LOG_ERROR( "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
         }
         for ( const SpawnEntryDef& entry : _table.getEntries() )
         {
-            if ( Internal::isKnownId( entry._id, Internal::kArrKnownSpawn ) == false )
+            if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
                 SW_LOG_ERROR( "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
         }
         _director.initialize( &_profile, &_table, static_cast<uint32>( _pacingSeed ) );
@@ -389,7 +389,7 @@ namespace sw
         applyDirectorEvents(); // 시작 단계 사건
     }
 
-    void ShooterDirectorComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnId, bool bElite )
+    void ShooterDirectorComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
     {
         // 웨이브(감독 순환 + 1)마다 체력 · 속도가 오른다 — 감독이 정하는 것은 언제 · 몇 기이고, 적 한 기의 세기는 게임 규칙이다.
         const float32 wave   = static_cast<float32>( getWave() );
@@ -401,7 +401,7 @@ namespace sw
             request._health  = health;
             request._speed   = speed;
             request._slot    = _spawnCursor++;
-            request._spawnId = spawnId;
+            request._spawnID = spawnID;
             request._bElite  = bElite ? SW_TRUE : SW_FALSE;
             _listPendingEnemy.push_back( request );
         }
@@ -432,7 +432,7 @@ namespace sw
                 }
                 case AIDirectorEventKind::Spawned:
                 {
-                    requestEnemies( 1, 1.0f, event._spawnId, false );
+                    requestEnemies( 1, 1.0f, event._spawnID, false );
                     break;
                 }
                 case AIDirectorEventKind::Encounter:
@@ -585,8 +585,8 @@ namespace sw
         {
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
-            if ( request._spawnId != 0 && _bPacingReady == SW_TRUE )
-                (void)_director.notifyDespawned( request._spawnId ); // 서지 못한 적의 예산 자리를 돌려준다
+            if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
+                (void)_director.notifyDespawned( request._spawnID ); // 서지 못한 적의 예산 자리를 돌려준다
             return;
         }
         // 모습 — 정예는 전사, 나머지는 목록을 차례로. 씨앗은 스폰 순번이라 같은 판은 같은 얼굴들이다.
@@ -612,7 +612,7 @@ namespace sw
         pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed );
         EnemyRecord record;
         record._object  = pObject->getHandle();
-        record._spawnId = request._spawnId;
+        record._spawnID = request._spawnID;
         _listEnemy.push_back( record );
     }
 
@@ -640,16 +640,16 @@ namespace sw
                 if ( _bPacingReady == SW_TRUE )
                 {
                     (void)_director.getBuiltinIntensityModel().addSignal( hashed_string( "enemyKilled" ), 1.0f );
-                    if ( record._spawnId != 0 )
-                        (void)_director.notifyDespawned( record._spawnId );
+                    if ( record._spawnID != 0 )
+                        (void)_director.notifyDespawned( record._spawnID );
                 }
                 getSoundQueue().queueEventAt( ShooterDirectorComponentInternal::kEventEnemyDown, pEnemy->getPosition() );
             }
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )
             {
-                if ( pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnId != 0 && record._bCounted == SW_FALSE )
-                    (void)_director.notifyDespawned( record._spawnId );
+                if ( pEnemy == nullptr && _bPacingReady == SW_TRUE && record._spawnID != 0 && record._bCounted == SW_FALSE )
+                    (void)_director.notifyDespawned( record._spawnID );
                 if ( pObject != nullptr )
                     pManager->destroyObject( pObject );
                 _listEnemy[enemyIndex] = _listEnemy.back();

@@ -33,7 +33,7 @@ namespace sw
 
             static bool isKind( string_view text, const utf8* pKind ) { return StringUtil::equals( text, string_view( pKind ), true ); }
 
-            static AdventureDoorKind parseDoorKind( string_view text, string_view sourceName, const utf8* pId )
+            static AdventureDoorKind parseDoorKind( string_view text, string_view sourceName, const utf8* pID )
             {
                 if ( text.empty() || isKind( text, "SmallKey" ) )
                     return AdventureDoorKind::SmallKey;
@@ -41,11 +41,11 @@ namespace sw
                     return AdventureDoorKind::BossKey;
                 if ( isKind( text, "Condition" ) )
                     return AdventureDoorKind::Condition;
-                SW_LOG_WARNING( "%#: door '%#' has an unknown kind '%#' - read as SmallKey", sourceName, pId, text );
+                SW_LOG_WARNING( "%#: door '%#' has an unknown kind '%#' - read as SmallKey", sourceName, pID, text );
                 return AdventureDoorKind::SmallKey;
             }
 
-            static AdventureDeviceKind parseDeviceKind( string_view text, string_view sourceName, const utf8* pId )
+            static AdventureDeviceKind parseDeviceKind( string_view text, string_view sourceName, const utf8* pID )
             {
                 if ( text.empty() || isKind( text, "Switch" ) )
                     return AdventureDeviceKind::Switch;
@@ -55,7 +55,7 @@ namespace sw
                     return AdventureDeviceKind::TimedSwitch;
                 if ( isKind( text, "TorchGroup" ) )
                     return AdventureDeviceKind::TorchGroup;
-                SW_LOG_WARNING( "%#: device '%#' has an unknown kind '%#' - read as Switch", sourceName, pId, text );
+                SW_LOG_WARNING( "%#: device '%#' has an unknown kind '%#' - read as Switch", sourceName, pID, text );
                 return AdventureDeviceKind::Switch;
             }
 
@@ -140,34 +140,34 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode dungeonNode = root.findChild( "Dungeon" ); dungeonNode; dungeonNode = dungeonNode.findNextSibling( "Dungeon" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( dungeonNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( dungeonNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             AdventureDungeonDef dungeon;
-            dungeon._id     = hashed_string( pId );
+            dungeon._id     = hashed_string( pID );
             dungeon._region = AdventureDungeonInternal::readName( dungeonNode, "region", dungeon._id );
             for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
             {
-                const utf8* pDoorId = GameDataXML::findRequiredId( node, sourceName );
-                if ( pDoorId == nullptr )
+                const utf8* pDoorID = GameDataXML::findRequiredID( node, sourceName );
+                if ( pDoorID == nullptr )
                     continue;
                 AdventureDoorDef door;
-                door._id                       = hashed_string( pDoorId );
+                door._id                       = hashed_string( pDoorID );
                 door._flag                     = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "door", door._id ) );
-                door._kind                     = AdventureDungeonInternal::parseDoorKind( node.getAttributeText( "kind" ), sourceName, pDoorId );
+                door._kind                     = AdventureDungeonInternal::parseDoorKind( node.getAttributeText( "kind" ), sourceName, pDoorID );
                 const string_view requiresText = node.getAttributeText( "requires" );
                 door._requires                 = string( requiresText.data(), requiresText.size() );
                 if ( door._kind == AdventureDoorKind::Condition && door._requires.empty() )
-                    SW_LOG_WARNING( "%#: condition door '%#' has no requires - it always opens", sourceName, pDoorId );
+                    SW_LOG_WARNING( "%#: condition door '%#' has no requires - it always opens", sourceName, pDoorID );
                 dungeon._listDoor.push_back( door );
             }
             for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
             {
-                const utf8* pTreasureId = GameDataXML::findRequiredId( node, sourceName );
-                if ( pTreasureId == nullptr )
+                const utf8* pTreasureID = GameDataXML::findRequiredID( node, sourceName );
+                if ( pTreasureID == nullptr )
                     continue;
                 AdventureTreasureDef treasure;
-                treasure._id    = hashed_string( pTreasureId );
+                treasure._id    = hashed_string( pTreasureID );
                 treasure._area  = AdventureDungeonInternal::readName( node, "area", hashed_string{} );
                 treasure._item  = AdventureDungeonInternal::readName( node, "item", hashed_string{} );
                 treasure._flag  = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "treasure", treasure._id ) );
@@ -176,19 +176,19 @@ namespace sw
             }
             for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
             {
-                const utf8* pDeviceId = GameDataXML::findRequiredId( node, sourceName );
-                if ( pDeviceId == nullptr )
+                const utf8* pDeviceID = GameDataXML::findRequiredID( node, sourceName );
+                if ( pDeviceID == nullptr )
                     continue;
                 AdventureDeviceDef device;
-                device._id         = hashed_string( pDeviceId );
+                device._id         = hashed_string( pDeviceID );
                 device._flag       = AdventureDungeonInternal::readName( node, "flag", AdventureDungeonInternal::makeDefaultFlag( "device", device._id ) );
-                device._kind       = AdventureDungeonInternal::parseDeviceKind( node.getAttributeText( "kind" ), sourceName, pDeviceId );
+                device._kind       = AdventureDungeonInternal::parseDeviceKind( node.getAttributeText( "kind" ), sourceName, pDeviceID );
                 device._duration   = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
                 device._torchCount = MathUtil::max( 1, node.getAttributeInt( "torches", 1 ) );
                 device._bLatch     = node.getAttributeBool( "latch", false ) ? SW_TRUE : SW_FALSE;
                 if ( device._kind == AdventureDeviceKind::TimedSwitch && device._duration <= 0.0f )
                 {
-                    SW_LOG_WARNING( "%#: timed switch '%#' has no duration - 5 seconds", sourceName, pDeviceId );
+                    SW_LOG_WARNING( "%#: timed switch '%#' has no duration - 5 seconds", sourceName, pDeviceID );
                     device._duration = 5.0f;
                 }
                 dungeon._listDevice.push_back( device );
@@ -220,11 +220,11 @@ namespace sw
         }
     }
 
-    AdventureDungeonState::DungeonRuntime* AdventureDungeonState::findRuntime( const hashed_string& dungeonId, const AdventureDungeonDef** ppOutDef )
+    AdventureDungeonState::DungeonRuntime* AdventureDungeonState::findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef )
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findDungeonIndex( dungeonId );
+        const int32 index = _pCatalog->findDungeonIndex( dungeonID );
         if ( index < 0 || static_cast<size_t>( index ) >= _listRuntime.size() )
             return nullptr;
         if ( ppOutDef != nullptr )
@@ -232,20 +232,20 @@ namespace sw
         return &_listRuntime[static_cast<size_t>( index )];
     }
 
-    bool AdventureDungeonState::addSmallKey( const hashed_string& dungeonId, int32 count )
+    bool AdventureDungeonState::addSmallKey( const hashed_string& dungeonID, int32 count )
     {
-        DungeonRuntime* pRuntime = findRuntime( dungeonId, nullptr );
+        DungeonRuntime* pRuntime = findRuntime( dungeonID, nullptr );
         if ( pRuntime == nullptr || count <= 0 )
             return false;
         pRuntime->_progress._smallKeyCount += count;
         return true;
     }
 
-    AdventureDoorResult AdventureDungeonState::openDoor( const hashed_string& dungeonId, const hashed_string& doorId, GameFlags& flags )
+    AdventureDoorResult AdventureDungeonState::openDoor( const hashed_string& dungeonID, const hashed_string& doorID, GameFlags& flags )
     {
         const AdventureDungeonDef* pDungeon = nullptr;
-        DungeonRuntime*            pRuntime = findRuntime( dungeonId, &pDungeon );
-        const AdventureDoorDef*    pDoor    = pDungeon != nullptr ? pDungeon->findDoor( doorId ) : nullptr;
+        DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
+        const AdventureDoorDef*    pDoor    = pDungeon != nullptr ? pDungeon->findDoor( doorID ) : nullptr;
         if ( pRuntime == nullptr || pDoor == nullptr )
             return AdventureDoorResult::UnknownDoor;
         if ( flags.hasFlag( pDoor->_flag ) )
@@ -275,15 +275,15 @@ namespace sw
             }
         }
         flags.setFlag( pDoor->_flag, 1 );
-        pushEvent( AdventureDungeonEventType::DoorOpened, dungeonId, doorId );
+        pushEvent( AdventureDungeonEventType::DoorOpened, dungeonID, doorID );
         return AdventureDoorResult::Opened;
     }
 
-    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward )
+    bool AdventureDungeonState::openTreasure( const hashed_string& dungeonID, const hashed_string& treasureID, GameFlags& flags, ItemStackList& outReward )
     {
         const AdventureDungeonDef*  pDungeon  = nullptr;
-        DungeonRuntime*             pRuntime  = findRuntime( dungeonId, &pDungeon );
-        const AdventureTreasureDef* pTreasure = pDungeon != nullptr ? pDungeon->findTreasure( treasureId ) : nullptr;
+        DungeonRuntime*             pRuntime  = findRuntime( dungeonID, &pDungeon );
+        const AdventureTreasureDef* pTreasure = pDungeon != nullptr ? pDungeon->findTreasure( treasureID ) : nullptr;
         if ( pRuntime == nullptr || pTreasure == nullptr || flags.hasFlag( pTreasure->_flag ) )
             return false;
         flags.setFlag( pTreasure->_flag, 1 );
@@ -299,25 +299,25 @@ namespace sw
             progress._bCompass = SW_TRUE;
         else
             outReward.addItem( item, pTreasure->_count );
-        pushEvent( AdventureDungeonEventType::TreasureOpened, dungeonId, treasureId, item, pTreasure->_count );
+        pushEvent( AdventureDungeonEventType::TreasureOpened, dungeonID, treasureID, item, pTreasure->_count );
         return true;
     }
 
-    int32 AdventureDungeonState::revealMap( const hashed_string& dungeonId, AreaGraph& areaGraph ) const
+    int32 AdventureDungeonState::revealMap( const hashed_string& dungeonID, AreaGraph& areaGraph ) const
     {
-        const AdventureDungeonProgress* pProgress = findProgress( dungeonId );
-        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonId ) : nullptr;
+        const AdventureDungeonProgress* pProgress = findProgress( dungeonID );
+        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
         if ( pProgress == nullptr || pDungeon == nullptr || pProgress->_bMap == SW_FALSE )
             return 0;
         return areaGraph.discoverRegion( pDungeon->_region );
     }
 
-    void AdventureDungeonState::collectCompassMarker( const hashed_string& dungeonId, const GameFlags& flags,
+    void AdventureDungeonState::collectCompassMarker( const hashed_string& dungeonID, const GameFlags& flags,
                                                       vector<const AdventureTreasureDef*>& outListTreasure ) const
     {
         outListTreasure.clear();
-        const AdventureDungeonProgress* pProgress = findProgress( dungeonId );
-        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonId ) : nullptr;
+        const AdventureDungeonProgress* pProgress = findProgress( dungeonID );
+        const AdventureDungeonDef*      pDungeon  = _pCatalog != nullptr ? _pCatalog->findDungeon( dungeonID ) : nullptr;
         if ( pProgress == nullptr || pDungeon == nullptr || pProgress->_bCompass == SW_FALSE )
             return;
         for ( const AdventureTreasureDef& treasure : pDungeon->_listTreasure )
@@ -340,11 +340,11 @@ namespace sw
         pushEvent( bActive ? AdventureDungeonEventType::DeviceActivated : AdventureDungeonEventType::DeviceDeactivated, dungeon._id, def._id );
     }
 
-    bool AdventureDungeonState::hitSwitch( const hashed_string& dungeonId, const hashed_string& deviceId, GameFlags& flags )
+    bool AdventureDungeonState::hitSwitch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags )
     {
         const AdventureDungeonDef* pDungeon = nullptr;
-        DungeonRuntime*            pRuntime = findRuntime( dungeonId, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceId ) : -1;
+        DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
         if ( pRuntime == nullptr || index < 0 )
             return false;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
@@ -356,11 +356,11 @@ namespace sw
         return true;
     }
 
-    void AdventureDungeonState::setPlatePressed( const hashed_string& dungeonId, const hashed_string& deviceId, bool bPressed, GameFlags& flags )
+    void AdventureDungeonState::setPlatePressed( const hashed_string& dungeonID, const hashed_string& deviceID, bool bPressed, GameFlags& flags )
     {
         const AdventureDungeonDef* pDungeon = nullptr;
-        DungeonRuntime*            pRuntime = findRuntime( dungeonId, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceId ) : -1;
+        DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
         if ( pRuntime == nullptr || index < 0 )
             return;
         const AdventureDeviceDef& def = pDungeon->_listDevice[static_cast<size_t>( index )];
@@ -372,11 +372,11 @@ namespace sw
         setDeviceActive( *pDungeon, index, bPressed, flags );
     }
 
-    bool AdventureDungeonState::lightTorch( const hashed_string& dungeonId, const hashed_string& deviceId, GameFlags& flags )
+    bool AdventureDungeonState::lightTorch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags )
     {
         const AdventureDungeonDef* pDungeon = nullptr;
-        DungeonRuntime*            pRuntime = findRuntime( dungeonId, &pDungeon );
-        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceId ) : -1;
+        DungeonRuntime*            pRuntime = findRuntime( dungeonID, &pDungeon );
+        const int32                index    = pDungeon != nullptr ? pDungeon->findDeviceIndex( deviceID ) : -1;
         if ( pRuntime == nullptr || index < 0 )
             return false;
         const AdventureDeviceDef& def    = pDungeon->_listDevice[static_cast<size_t>( index )];
@@ -428,42 +428,42 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    const AdventureDungeonProgress* AdventureDungeonState::findProgress( const hashed_string& dungeonId ) const
+    const AdventureDungeonProgress* AdventureDungeonState::findProgress( const hashed_string& dungeonID ) const
     {
         if ( _pCatalog == nullptr )
             return nullptr;
-        const int32 index = _pCatalog->findDungeonIndex( dungeonId );
+        const int32 index = _pCatalog->findDungeonIndex( dungeonID );
         return index >= 0 && static_cast<size_t>( index ) < _listRuntime.size() ? &_listRuntime[static_cast<size_t>( index )]._progress : nullptr;
     }
 
-    bool AdventureDungeonState::isDeviceActive( const hashed_string& dungeonId, const hashed_string& deviceId ) const
+    bool AdventureDungeonState::isDeviceActive( const hashed_string& dungeonID, const hashed_string& deviceID ) const
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonId );
+        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
         if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
             return false;
-        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceId );
+        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
         return deviceIndex >= 0 && _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._bActive == SW_TRUE;
     }
 
-    int32 AdventureDungeonState::getLitTorchCount( const hashed_string& dungeonId, const hashed_string& deviceId ) const
+    int32 AdventureDungeonState::getLitTorchCount( const hashed_string& dungeonID, const hashed_string& deviceID ) const
     {
         if ( _pCatalog == nullptr )
             return 0;
-        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonId );
+        const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
         if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= _listRuntime.size() )
             return 0;
-        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceId );
+        const int32 deviceIndex = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )].findDeviceIndex( deviceID );
         return deviceIndex >= 0 ? _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._litCount : 0;
     }
 
-    void AdventureDungeonState::pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonId, const hashed_string& id, const hashed_string& item,
+    void AdventureDungeonState::pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item,
                                            int32 count )
     {
         AdventureDungeonEvent event;
         event._type    = type;
-        event._dungeon = dungeonId;
+        event._dungeon = dungeonID;
         event._id      = id;
         event._item    = item;
         event._count   = count;
@@ -505,10 +505,10 @@ namespace sw
         vector<DungeonRuntime> listRuntime = _listRuntime;
         for ( uint32 entry = 0; entry < dungeonCount; ++entry )
         {
-            hashed_string dungeonId;
-            if ( StateArchiveUtil::readName( archive, dungeonId ) == false )
+            hashed_string dungeonID;
+            if ( StateArchiveUtil::readName( archive, dungeonID ) == false )
                 return false;
-            const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonId );
+            const int32 dungeonIndex = _pCatalog->findDungeonIndex( dungeonID );
             if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= listRuntime.size() )
                 return false;
             const AdventureDungeonDef& dungeon = _pCatalog->getDungeons()[static_cast<size_t>( dungeonIndex )];

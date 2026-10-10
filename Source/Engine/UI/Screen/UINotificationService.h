@@ -78,7 +78,7 @@ namespace sw
             uint64             _order{ 0 };
             float32            _ageSeconds{ 0.0f };
             uint32             _count{ 1 };
-            WidgetId           _widget{ kInvalidWidgetId };
+            WidgetID           _widget{ kInvalidWidgetID };
         };
 
         /** @brief 같은 글의 알림을 찾습니다(없으면 nullptr). */

@@ -77,15 +77,15 @@ namespace sw
         {
             if ( StringUtil::equals( child.getName(), "Node", true ) )
             {
-                const utf8* pId   = child.findAttribute( "id" );
+                const utf8* pID   = child.findAttribute( "id" );
                 const utf8* pKind = child.findAttribute( "kind" );
-                if ( pId == nullptr || pKind == nullptr )
+                if ( pID == nullptr || pKind == nullptr )
                 {
                     SW_LOG_WARNING( "%#: <Node> needs both id and kind", _sourceName );
                     bValid = false;
                     continue;
                 }
-                GimmickNodeDef& node = addNode( hashed_string( pId ), hashed_string( pKind ) );
+                GimmickNodeDef& node = addNode( hashed_string( pID ), hashed_string( pKind ) );
                 for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     const bool bReserved = StringUtil::equals( attribute.getName(), "id", true ) || StringUtil::equals( attribute.getName(), "kind", true );

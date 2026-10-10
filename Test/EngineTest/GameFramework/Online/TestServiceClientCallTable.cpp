@@ -29,7 +29,7 @@ namespace
         void onResponse( const OnlineResponse& response )
         {
             DoneDelegate onDone;
-            if ( _callTable.take( response._requestId, onDone ) && onDone.isBound() )
+            if ( _callTable.take( response._requestID, onDone ) && onDone.isBound() )
                 onDone( response._errorCode );
         }
     };
@@ -48,8 +48,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReaches
     CallTableClient     tableClient;
     tableClient._pClient = &client;
     DoneRecorder recorder;
-    const uint64 requestId = tableClient.send( OnlineMethodRange::kGame + 1, BitWriter{}, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
-    SW_EXPECT_TRUE( requestId != 0 );
+    const uint64 requestID = tableClient.send( OnlineMethodRange::kGame + 1, BitWriter{}, DoneDelegate::create<&DoneRecorder::onDone>( &recorder ) );
+    SW_EXPECT_TRUE( requestID != 0 );
     SW_ASSERT_EQUAL( recorder._listErrorCode.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( recorder._listErrorCode[0], OnlineError::kUnavailable );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 0 ) ); // 남은 것 없음 — 늦게 오는 응답이 다른 델리게이트를 꺼내지 않는다

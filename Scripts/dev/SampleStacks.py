@@ -117,9 +117,9 @@ class StackSampler:
         self._mapName[address] = name
         return name
 
-    def captureStack(self, threadId: int) -> list[int]:
+    def captureStack(self, threadID: int) -> list[int]:
         """스레드 하나의 프레임 주소들(맨 위부터). 멈추지 못하면 빈 목록."""
-        thread = self._kernel.OpenThread(_kThreadAllAccess, False, threadId)
+        thread = self._kernel.OpenThread(_kThreadAllAccess, False, threadID)
         if not thread:
             return []
         listAddress: list[int] = []
@@ -164,8 +164,8 @@ def main(listArgument: list[str] | None = None) -> int:
     stackCount = 0
     for _ in range(args.samples):
         listThreadId = [args.thread] if args.thread else sampler.collectThreadIds()
-        for threadId in listThreadId:
-            listAddress = sampler.captureStack(threadId)
+        for threadID in listThreadId:
+            listAddress = sampler.captureStack(threadID)
             if not listAddress:
                 continue
             stackCount += 1

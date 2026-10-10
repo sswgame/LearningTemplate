@@ -8,7 +8,7 @@ namespace sw
         : _listPreset{}
         , _listPending{}
         , _listDone{}
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
     {
     }
 
@@ -29,9 +29,9 @@ namespace sw
     {
         (void)nowMs;
         PlatformLoginClientResult& result = _listPending.emplace_back();
-        result._requestId                 = _nextRequestId++;
+        result._requestID                 = _nextRequestID++;
         result._provider                  = string( provider );
-        return result._requestId;
+        return result._requestID;
     }
 
     void FakePlatformLoginClient::tick( int64 nowMs )

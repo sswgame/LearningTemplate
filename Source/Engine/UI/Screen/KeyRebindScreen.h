@@ -35,8 +35,8 @@ namespace sw
         KeyRebindScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
         ~KeyRebindScreen() override;
 
-        /** @brief 문서 @p documentPath 로 창을 열어 설정 @p settingId 의 키를 받습니다. 열지 못하면 무효 핸들입니다. */
-        static UIScreenHandle open( UISystem& ui, UserSettingsManager& settings, const hashed_string& settingId, string_view documentPath );
+        /** @brief 문서 @p documentPath 로 창을 열어 설정 @p settingID 의 키를 받습니다. 열지 못하면 무효 핸들입니다. */
+        static UIScreenHandle open( UISystem& ui, UserSettingsManager& settings, const hashed_string& settingID, string_view documentPath );
 
         bool onCommand( const hashed_string& command, Widget& source ) override;
         bool onBack() override;
@@ -46,17 +46,17 @@ namespace sw
 
         /** @brief 키를 기다리는 중인가입니다(겹침을 묻는 중이면 false). */
         bool                 isListening() const { return _bListening; }
-        const hashed_string& getSettingId() const { return _settingId; }
+        const hashed_string& getSettingID() const { return _settingID; }
 
     private:
         /** @brief 받은 슬롯을 먹고, 겹치면 묻는 상태로, 아니면 보류 값으로 넣고 닫습니다. */
         void capture( const InputSlot& slot );
         /** @brief 겹침을 묻는 상태로 바꿉니다 — 상대 이름 · 바꾸기 단추(상대가 설정일 때만) · 포커스. */
-        void showConflict( const hashed_string& otherSettingId, const hashed_string& otherAction );
+        void showConflict( const hashed_string& otherSettingID, const hashed_string& otherAction );
 
     private:
         string               _capturedSlotText; ///< 받은 슬롯의 글(겹침을 물을 때 바꾸기에 쓴다)
-        hashed_string        _settingId;
+        hashed_string        _settingID;
         UserSettingsManager* _pSettings;         ///< 보류 값을 넣을 설정(창보다 오래 산다 — 엔진 서비스)
         uint32               _openFrame;         ///< 연 프레임의 입력 번호(`InputManager::getBeginFrameCount`) — 연 입력을 받지 않게
         float32              _escapeHeldSeconds; ///< Esc 를 누르고 있는 시간(0 = 누르지 않음)

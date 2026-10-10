@@ -21,9 +21,9 @@ namespace sw
     {
         if ( _pRouter != nullptr )
         {
-            for ( const auto& [requestId, operation] : _mapRequestToOperation )
+            for ( const auto& [requestID, operation] : _mapRequestToOperation )
             {
-                _pRouter->cancel( requestId );
+                _pRouter->cancel( requestID );
             }
         }
         _mapRequestToOperation.clear();
@@ -46,14 +46,14 @@ namespace sw
 
     void CacheRecordUpdater::startRead( unique_ptr<Operation> operation )
     {
-        const uint64 requestId = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
+        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
                                                    EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onReadReply>( this ) );
-        _mapRequestToOperation.emplace( requestId, std::move( operation ) );
+        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 
     void CacheRecordUpdater::onReadReply( const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestId );
+        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
         if ( operationIt == _mapRequestToOperation.end() )
             return;
         unique_ptr<Operation> operation = std::move( operationIt->second );
@@ -86,13 +86,13 @@ namespace sw
             write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldBytes, operation->_newBytes, operation->_ttlMs );
         else
             write = EphemeralRequest::makeSet( operation->_key, operation->_newBytes, operation->_ttlMs, EphemeralCondition::IfAbsent );
-        const uint64 requestId = _pRouter->submit( write, EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onWriteReply>( this ) );
-        _mapRequestToOperation.emplace( requestId, std::move( operation ) );
+        const uint64 requestID = _pRouter->submit( write, EphemeralStoreRouter::ReplyDelegate::create<&CacheRecordUpdater::onWriteReply>( this ) );
+        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
     }
 
     void CacheRecordUpdater::onWriteReply( const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestId );
+        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
         if ( operationIt == _mapRequestToOperation.end() )
             return;
         unique_ptr<Operation> operation = std::move( operationIt->second );

@@ -74,7 +74,7 @@ namespace
         MechPilotConfig config;
         for ( const utf8* pMech : listMech )
         {
-            config._listMechId.push_back( hashed_string( pMech ) );
+            config._listMechID.push_back( hashed_string( pMech ) );
         }
         config._team          = team;
         config._spawnPosition = position;
@@ -136,7 +136,7 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsModesAndDeckCostLimit )
     const MechDef* pStriker = catalog.findMech( hashed_string( "striker" ) );
     SW_ASSERT_TRUE( pStriker != nullptr );
     SW_EXPECT_EQUAL( static_cast<int32>( pStriker->_listMode.size() ), 1 ); // <Mode> 없이 적은 무기는 형태 하나
-    SW_EXPECT_EQUAL( static_cast<int32>( pStriker->_listMode[0]._listWeapon[1]._listMoveId.size() ), 2 );
+    SW_EXPECT_EQUAL( static_cast<int32>( pStriker->_listMode[0]._listWeapon[1]._listMoveID.size() ), 2 );
 
     MechArenaWorld world;
     fixture.initialize( world );
@@ -379,7 +379,7 @@ SW_TEST_CASE( MechArenaTest, HealthBelowSkillDoublesAttackOncePerLife )
     MechArenaWorld world;
     fixture.initialize( world );
     MechPilotConfig config = makePilot( { "striker" }, 0, float3{} );
-    config._listSkillId.push_back( hashed_string( "berserk" ) );
+    config._listSkillID.push_back( hashed_string( "berserk" ) );
     const int32 pilot = world.addPilot( config );
     const int32 enemy = world.addPilot( makePilot( { "heavy" }, 1, float3{ 0.0f, 0.0f, 50.0f } ) );
     world.start();
@@ -544,7 +544,7 @@ SW_TEST_CASE( MechArenaTest, StateRoundTripContinuesTheSameArena )
     MechArenaWorld world;
     fixture.initialize( world );
     MechPilotConfig config = makePilot( { "striker", "sniper" }, 0, float3{ -5.0f, 0.0f, 0.0f } );
-    config._listSkillId.push_back( hashed_string( "berserk" ) );
+    config._listSkillID.push_back( hashed_string( "berserk" ) );
     SW_ASSERT_EQUAL( world.addPilot( config ), 0 );
     SW_ASSERT_EQUAL( world.addPilot( makePilot( { "sniper" }, 1, float3{ 5.0f, 0.0f, 30.0f } ) ), 1 );
     world.start();

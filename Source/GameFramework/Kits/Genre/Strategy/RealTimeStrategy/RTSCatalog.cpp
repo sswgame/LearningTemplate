@@ -19,12 +19,12 @@ namespace sw
     {
     }
 
-    void RTSCatalog::findProducts( const hashed_string& producerId, vector<const RTSUnitDef*>& outListDef ) const
+    void RTSCatalog::findProducts( const hashed_string& producerID, vector<const RTSUnitDef*>& outListDef ) const
     {
         outListDef.clear();
         for ( const RTSUnitDef& def : _catalog.getAll() )
         {
-            if ( def._producedBy == producerId )
+            if ( def._producedBy == producerID )
                 outListDef.push_back( &def );
         }
     }
@@ -35,20 +35,20 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             RTSUnitDef def;
-            def._id                = hashed_string( pId );
+            def._id                = hashed_string( pID );
             const utf8* pName      = node.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pId;
+            def._name              = pName != nullptr ? pName : pID;
             const string_view kind = node.getAttributeText( "kind" );
             if ( StringUtil::equals( kind, string_view( "Building" ), true ) )
                 def._kind = RTSUnitKind::Building;
             else if ( StringUtil::equals( kind, string_view( "Resource" ), true ) )
                 def._kind = RTSUnitKind::Resource;
             else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Unit" ), true ) == false )
-                SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a unit", sourceName, pId, kind );
+                SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a unit", sourceName, pID, kind );
             const string_view resource = node.getAttributeText( "resource" );
             if ( StringUtil::equals( resource, string_view( "Minerals" ), true ) )
                 def._resourceType = RTSResourceType::Minerals;

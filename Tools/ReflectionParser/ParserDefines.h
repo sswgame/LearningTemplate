@@ -29,13 +29,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     namespace annotation
     {
-        /** @brief `k<Id>` 는 그 애노테이션의 설명자 한 벌입니다. 접두사와 매크로 철자를 따로 들고 다니지 않게 합니다. */
-#define REGISTER_REFLECT_ANNOTATION( Id, MacroName, AnnotatePrefix, ScopeName )                          \
-    inline constexpr ReflectAnnotationDesc k##Id{ MacroName, AnnotatePrefix, MacroName "(", ScopeName }; \
-    inline constexpr const utf8*           k##Id##Macro     = MacroName;                                 \
-    inline constexpr const utf8*           k##Id##Prefix    = AnnotatePrefix;                            \
-    inline constexpr const utf8*           k##Id##MacroOpen = MacroName "(";                             \
-    inline constexpr const utf8*           k##Id##Scope     = ScopeName;
+        /** @brief `k<ID>` 는 그 애노테이션의 설명자 한 벌입니다. 접두사와 매크로 철자를 따로 들고 다니지 않게 합니다. */
+#define REGISTER_REFLECT_ANNOTATION( ID, MacroName, AnnotatePrefix, ScopeName )                          \
+    inline constexpr ReflectAnnotationDesc k##ID{ MacroName, AnnotatePrefix, MacroName "(", ScopeName }; \
+    inline constexpr const utf8*           k##ID##Macro     = MacroName;                                 \
+    inline constexpr const utf8*           k##ID##Prefix    = AnnotatePrefix;                            \
+    inline constexpr const utf8*           k##ID##MacroOpen = MacroName "(";                             \
+    inline constexpr const utf8*           k##ID##Scope     = ScopeName;
 #include "PredefinedReflectAnnotation.xxx"
 #undef REGISTER_REFLECT_ANNOTATION
 
@@ -213,7 +213,7 @@ namespace sw
     namespace templatekey
     {
         inline constexpr const utf8* kSourcePath   = "SourcePath";
-        inline constexpr const utf8* kId           = "Id";
+        inline constexpr const utf8* kID           = "ID";
         inline constexpr const utf8* kName         = "Name";
         inline constexpr const utf8* kFqn          = "FQN";
         inline constexpr const utf8* kParentFqn    = "ParentFQN";

@@ -44,7 +44,7 @@ namespace sw
         vector<uint8>          _bytes{};
         string                 _slot{};
         LocalStoreWriteOptions _options{};
-        uint64                 _requestId{ 0 };
+        uint64                 _requestID{ 0 };
         LocalStoreOperation    _operation{ LocalStoreOperation::Read };
     };
 } // namespace sw

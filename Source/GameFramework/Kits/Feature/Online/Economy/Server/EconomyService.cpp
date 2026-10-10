@@ -55,17 +55,17 @@ namespace sw
             EconomyPurchaseInput  _purchase;
             EconomyRedeemInput    _redeem;
             EconomyHistoryRequest _history;
-            AccountId             _accountId;
+            AccountID             _accountID;
 
-            EconomyRequestWork( EconomyService* pService, const EconomyServiceSettings& settings, uint64 callId, int32 methodIndex )
+            EconomyRequestWork( EconomyService* pService, const EconomyServiceSettings& settings, uint64 callID, int32 methodIndex )
                 : _purchase{}
                 , _redeem{}
                 , _history{}
-                , _accountId{ kInvalidAccountId }
+                , _accountID{ kInvalidAccountID }
                 , _reply{}
                 , _settings{ settings }
                 , _pService{ pService }
-                , _callId{ callId }
+                , _callID{ callID }
                 , _methodIndex{ methodIndex }
             {
             }
@@ -77,13 +77,13 @@ namespace sw
                     case EconomyServiceInternal::kWalletIndex:
                     {
                         // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
-                        (void)EconomyStoreLogic::readWallet( connection, _accountId, _reply );
+                        (void)EconomyStoreLogic::readWallet( connection, _accountID, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kHistoryIndex:
                     {
                         // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
-                        (void)EconomyStoreLogic::readHistory( connection, _accountId, _history, _reply );
+                        (void)EconomyStoreLogic::readHistory( connection, _accountID, _history, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kPurchaseIndex:
@@ -104,13 +104,13 @@ namespace sw
                 }
             }
 
-            void complete() override { _pService->completeCall( _callId, _reply ); }
+            void complete() override { _pService->completeCall( _callID, _reply ); }
 
         private:
             EconomyReply           _reply;
             EconomyServiceSettings _settings;
             EconomyService*        _pService;
-            uint64                 _callId;
+            uint64                 _callID;
             int32                  _methodIndex;
         };
     } // namespace
@@ -123,7 +123,7 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _pStore{ nullptr }
-        , _nextCallId{ 1 }
+        , _nextCallID{ 1 }
         , _nowMs{ 0 }
     {
     }
@@ -179,14 +179,14 @@ namespace sw
     {
         const bool          bMutating = context._method == EconomyMethod::kPurchase || context._method == EconomyMethod::kRedeemReceipt;
         const RemoteConfig* pConfig   = host.getRemoteConfig();
-        if ( bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountId, true ) == false )
+        if ( bMutating && pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false )
         {
             (void)host.respondError( context._token, OnlineError::kFeatureDisabled );
             return;
         }
         EconomyCall call;
         call._method         = context._method;
-        call._accountId      = context._accountId;
+        call._accountID      = context._accountID;
         call._idempotencyKey = context._idempotencyKey;
         call._nowMs          = context._nowMs;
         bool bDecoded        = true;
@@ -240,9 +240,9 @@ namespace sw
 
     void EconomyService::startCall( const EconomyCall& call, PendingCall pending )
     {
-        pending._callId              = _nextCallId++;
+        pending._callID              = _nextCallID++;
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
-        pending._accountId           = call._accountId;
+        pending._accountID           = call._accountID;
         pending._methodIndex         = EconomyMethod::toIndex( call._method );
         _listPendingCall.push_back( pending );
         const size_t pendingIndex = _listPendingCall.size() - 1;
@@ -251,7 +251,7 @@ namespace sw
         refused._result = EconomyResult::Ok;
         if ( pending._methodIndex < 0 || _pStore == nullptr )
             refused._result = EconomyResult::InvalidRequest;
-        else if ( call._accountId == kInvalidAccountId )
+        else if ( call._accountID == kInvalidAccountID )
             refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙
         else if ( call._method == EconomyMethod::kPurchase && call._idempotencyKey.isValid() == false )
             refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청은 멱등 키 필수
@@ -263,7 +263,7 @@ namespace sw
         if ( call._method == EconomyMethod::kRedeemReceipt )
         {
             const uint64 ticket = _settings._pReceiptRegistry != nullptr
-                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountId )
+                                    ? _settings._pReceiptRegistry->submitValidation( call._redeem._storeName, call._redeem._payload, call._accountID )
                                     : 0;
             if ( ticket == 0 )
             {
@@ -275,14 +275,14 @@ namespace sw
             return;
         }
         const int64                    nowMs = call._nowMs != 0 ? call._nowMs : _nowMs;
-        unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, pending._callId, pending._methodIndex );
-        work->_accountId                     = call._accountId;
+        unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, pending._callID, pending._methodIndex );
+        work->_accountID                     = call._accountID;
         work->_history                       = call._history;
-        work->_purchase._offerId             = call._purchase._offerId;
+        work->_purchase._offerID             = call._purchase._offerID;
         work->_purchase._count               = call._purchase._count;
-        work->_purchase._accountId           = call._accountId;
+        work->_purchase._accountID           = call._accountID;
         work->_purchase._nowMs               = nowMs;
-        work->_purchase._journalKey          = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountId ), call._idempotencyKey._high,
+        work->_purchase._journalKey          = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( call._accountID ), call._idempotencyKey._high,
                                                                                       call._idempotencyKey._low );
         _pStore->submit( std::move( work ) );
     }
@@ -300,10 +300,10 @@ namespace sw
                 if ( pending._receiptTicket != result._ticket )
                     continue;
                 pending._receiptTicket              = 0;
-                unique_ptr<EconomyRequestWork> work = make_unique<EconomyRequestWork>( this, _settings, pending._callId, EconomyServiceInternal::kRedeemIndex );
-                work->_accountId                    = pending._accountId;
+                unique_ptr<EconomyRequestWork> work = make_unique<EconomyRequestWork>( this, _settings, pending._callID, EconomyServiceInternal::kRedeemIndex );
+                work->_accountID                    = pending._accountID;
                 work->_redeem._receipt              = std::move( result );
-                work->_redeem._accountId            = pending._accountId;
+                work->_redeem._accountID            = pending._accountID;
                 work->_redeem._nowMs                = _nowMs;
                 work->_redeem._bAcceptSandbox       = _settings._bAcceptSandboxReceipts;
                 _pStore->submit( std::move( work ) );
@@ -312,17 +312,17 @@ namespace sw
         }
     }
 
-    void EconomyService::completeCall( uint64 callId, const EconomyReply& reply )
+    void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
     {
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
         {
-            if ( _listPendingCall[pendingIndex]._callId == callId )
+            if ( _listPendingCall[pendingIndex]._callID == callID )
             {
                 finishCall( pendingIndex, reply );
                 return;
             }
         }
-        SW_LOG_WARNING( "EconomyService completed an unknown call %#", callId );
+        SW_LOG_WARNING( "EconomyService completed an unknown call %#", callID );
     }
 
     void EconomyService::finishCall( size_t pendingIndex, const EconomyReply& reply )

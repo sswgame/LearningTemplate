@@ -1,7 +1,7 @@
 /**
  * @file MeshMerger.h
  * @brief 같은 애니메이션 단위(스켈레톤 하나)의 부품을 한 형상으로 병합합니다 — 잘린 삼각형을 빼고 인덱스 · 정점을 압축하고, 머티리얼(아틀라스) 묶음별 구간을 냅니다.
- * @details **스켈레톤을 넘어 병합하지 않습니다** — 부품마다 `_skeletonId` 가 같아야 하고, 다르면 실패입니다(애니메이션 단위가 다르면 포즈 버퍼가
+ * @details **스켈레톤을 넘어 병합하지 않습니다** — 부품마다 `_skeletonID` 가 같아야 하고, 다르면 실패입니다(애니메이션 단위가 다르면 포즈 버퍼가
  *          다르다). 쉬고 있는 강체 부품(칼집에 꽂힌 검)은 쉬는 변환으로 옮겨 소켓 본에 가중치 1 로 묶어 같이 병합하고, 뽑을 때(`extractPart`)
  *          다시 떼어 냅니다. 머티리얼 묶음 · UV 아틀라스는 훅(`IMeshMergeHooks`)이 정합니다 — 아틀라스를 굽는 쪽이 UV 를 옮깁니다.
  *          참고: 언리얼 Leader Pose / Skeletal Mesh Merge, Mutable.
@@ -30,7 +30,7 @@ namespace sw
         const AppearanceGeometry* _pGeometry{ nullptr };
         const FitPartResult*      _pFit{ nullptr };  ///< 있으면 보임 마스크로 잘린 삼각형을 빼고 정점 델타를 더함
         float4x4                  _restTransform{};  ///< 강체 부품의 쉬는 자리(유닛 공간). 스킨 부품은 항등
-        uint32                    _skeletonId{ 0 };  ///< 애니메이션 단위(스켈레톤) 번호 — 모두 같아야 병합
+        uint32                    _skeletonID{ 0 };  ///< 애니메이션 단위(스켈레톤) 번호 — 모두 같아야 병합
         int32                     _socketBone{ -1 }; ///< 0 이상이면 강체 부품 — 모든 정점을 이 본에 가중치 1 로 묶음
     };
 } // namespace sw
@@ -67,7 +67,7 @@ namespace sw
         AppearanceGeometry      _geometry{};
         vector<MergedSection>   _listSection{};
         vector<MergedPartRange> _listPart{};
-        uint32                  _skeletonId{ 0 };
+        uint32                  _skeletonID{ 0 };
     };
 } // namespace sw
 

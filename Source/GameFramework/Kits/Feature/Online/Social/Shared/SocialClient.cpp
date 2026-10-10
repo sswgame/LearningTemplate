@@ -15,10 +15,10 @@ namespace sw
 
     void SocialClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
 
-    uint64 SocialClient::requestFriend( AccountId otherId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::requestFriend( AccountID otherID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = otherId;
+        request._otherID = otherID;
         return send( SocialMethod::kRequestFriend, request, onReply );
     }
 
@@ -29,32 +29,32 @@ namespace sw
         return send( SocialMethod::kRequestFriendByName, request, onReply );
     }
 
-    uint64 SocialClient::respondFriend( AccountId requesterId, bool bAccept, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::respondFriend( AccountID requesterID, bool bAccept, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = requesterId;
+        request._otherID = requesterID;
         request._bAccept = bAccept ? SW_TRUE : SW_FALSE;
         return send( SocialMethod::kRespondFriend, request, onReply );
     }
 
-    uint64 SocialClient::removeFriend( AccountId otherId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::removeFriend( AccountID otherID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = otherId;
+        request._otherID = otherID;
         return send( SocialMethod::kRemoveFriend, request, onReply );
     }
 
-    uint64 SocialClient::block( AccountId otherId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::block( AccountID otherID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = otherId;
+        request._otherID = otherID;
         return send( SocialMethod::kBlock, request, onReply );
     }
 
-    uint64 SocialClient::unblock( AccountId otherId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::unblock( AccountID otherID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = otherId;
+        request._otherID = otherID;
         return send( SocialMethod::kUnblock, request, onReply );
     }
 
@@ -77,33 +77,33 @@ namespace sw
         return send( SocialMethod::kGuildCreate, request, onReply );
     }
 
-    uint64 SocialClient::inviteToGuild( AccountId targetId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::inviteToGuild( AccountID targetID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = targetId;
+        request._otherID = targetID;
         return send( SocialMethod::kGuildInvite, request, onReply );
     }
 
-    uint64 SocialClient::acceptGuildInvite( uint64 guildId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::acceptGuildInvite( uint64 guildID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._guildId = guildId;
+        request._guildID = guildID;
         return send( SocialMethod::kGuildAccept, request, onReply );
     }
 
     uint64 SocialClient::leaveGuild( const SocialReplyDelegate& onReply ) { return send( SocialMethod::kGuildLeave, SocialRequest{}, onReply ); }
 
-    uint64 SocialClient::kickFromGuild( AccountId targetId, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::kickFromGuild( AccountID targetID, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = targetId;
+        request._otherID = targetID;
         return send( SocialMethod::kGuildKick, request, onReply );
     }
 
-    uint64 SocialClient::setGuildRole( AccountId targetId, GuildRole role, const SocialReplyDelegate& onReply )
+    uint64 SocialClient::setGuildRole( AccountID targetID, GuildRole role, const SocialReplyDelegate& onReply )
     {
         SocialRequest request;
-        request._otherId = targetId;
+        request._otherID = targetID;
         request._role    = role;
         return send( SocialMethod::kGuildSetRole, request, onReply );
     }
@@ -150,10 +150,10 @@ namespace sw
     void SocialClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        if ( _callTable.take( response._requestId, call ) == false )
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
         SocialClientReply reply;
-        reply._requestId = response._requestId;
+        reply._requestID = response._requestID;
         reply._method    = call._method;
         reply._errorCode = response._errorCode;
         if ( response._errorCode != OnlineError::kOk )

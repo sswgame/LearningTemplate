@@ -498,7 +498,7 @@ namespace sw
         const uint64          nowNanos   = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
         const uint64          sinceNanos = _contextOwnedSinceNanos.load( std::memory_order_relaxed );
         const uint64          heldMs     = nowNanos > sinceNanos ? ( nowNanos - sinceNanos ) / 1000000ull : 0ull;
-        const bool            bRtOwner   = owner == _renderThreadId && owner != std::thread::id{};
+        const bool            bRtOwner   = owner == _renderThreadID && owner != std::thread::id{};
         SW_LOG_ERROR( "GL context not acquired in %# ms - held by thread %# (%#) for %# ms; GL calls on this thread are dropped", timeoutMs,
                       static_cast<uint64>( std::hash<std::thread::id>{}( owner ) ), bRtOwner ? "render thread" : "not the render thread", heldMs );
         return false;

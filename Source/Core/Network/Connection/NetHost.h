@@ -2,7 +2,7 @@
  * @file NetHost.h
  * @brief 서버 · 클라이언트 끝점 — 연결 핸드셰이크(요청 → 도전 → 응답 → 수락), 체크섬 · 프로토콜 id 로 남의 패킷 거르기, 연결 유지 · 타임아웃 · 끊기, 연결마다의 신뢰성 계층입니다.
  * @details 연결 요청에는 게임 id 와 프로토콜 id(게임 id + 와이어 판, `NetProtocol`)가 실린다. 서버는 프로토콜 id 가 다르면 이유를 붙여 거절한다 — 같은 게임의
- *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로
+ *          다른 판은 `VersionMismatch`, 다른 게임은 `Rejected`(양쪽 로그에 두 값을 남긴다). 요청 · 거절만 판과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로
  *          싸고, 나머지 패킷은 프로토콜 id 로 싸서 다른 판의 패킷은 체크섬부터 틀린다.
  *          장르별 네트워크 방식(클라이언트-서버 복제 · 락스텝 · 턴 중계 · MMO)은 이 위에 키트로 얹습니다. 여기는 "누가 연결됐고 어느 채널로 무엇이 왔는가" 까지입니다.
  *          도전(challenge) 단계는 위조한 주소로 서버에 연결 자리를 잡는 것을 막습니다 — 도전 값은 실제 그 주소로 간 패킷에만 들어 있습니다.
@@ -50,7 +50,7 @@ namespace sw
     /** @brief 호스트 설정입니다. 시간은 초입니다. */
     struct NetHostSettings
     {
-        uint32              _gameId{ NetProtocol::kDefaultGameId }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
+        uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
         uint32              _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
         uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
         float64             _timeout{ 5.0 };
@@ -74,7 +74,7 @@ namespace sw
             Connected = 0,
             Disconnected
         };
-        int32               _connectionId{ -1 };
+        int32               _connectionID{ -1 };
         NetDisconnectReason _reason{ NetDisconnectReason::None };
         Kind                _kind{ Kind::Connected };
     };
@@ -97,7 +97,7 @@ namespace sw
     /** @brief `NetInbound` 의 메시지 하나 — 바이트는 `NetInbound::_bytes` 의 [_offset, _offset + _size) 입니다(첫 바이트 = 종류). */
     struct NetInboundMessage
     {
-        int32          _connectionId{ -1 };
+        int32          _connectionID{ -1 };
         int32          _offset{ 0 };
         int32          _size{ 0 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
@@ -131,7 +131,7 @@ namespace sw
      *     host.initialize( &transport, settings );
      *     (void)host.listen();
      *     host.update( time );                                    // 또는 netThread.start( &host ) — 그러면 update 를 부르지 않는다
-     *     while ( host.receiveMessage( connectionId, channel, buffer ) ) { ... }
+     *     while ( host.receiveMessage( connectionID, channel, buffer ) ) { ... }
      *
      *     TaskFuture<NetConnectResult> future = client.connectAsync( serverAddress );
      *     future.then( []( const NetConnectResult& result ) { ... } ); // 결과는 update 를 돈 스레드에서 — 잠금 밖
@@ -168,16 +168,16 @@ namespace sw
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다(`update` 를 도는 스레드가 부른다). */
         bool waitForReceive( float64 timeoutSeconds );
 
-        [[nodiscard]] bool sendMessage( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size );
-        [[nodiscard]] bool sendMessage( int32 connectionId, NetChannelType channel, const vector<uint8>& buffer )
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
+        [[nodiscard]] bool sendMessage( int32 connectionID, NetChannelType channel, const vector<uint8>& buffer )
         {
-            return sendMessage( connectionId, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
+            return sendMessage( connectionID, channel, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
-        /** @brief 연결된 모두에게 보냅니다(@p exceptId 는 빼고). 보낸 수입니다. */
-        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptId = -1 );
+        /** @brief 연결된 모두에게 보냅니다(@p exceptID 는 빼고). 보낸 수입니다. */
+        int32 broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID = -1 );
         /** @brief 받은 메시지 하나를 꺼냅니다 — 연결 순, 채널은 신뢰 순서 → 신뢰 순서 없음 → 순서만 → 비신뢰 순(채널 값 순). */
-        [[nodiscard]] bool receiveMessage( int32& outConnectionId, NetChannelType& outChannel, vector<uint8>& outBuffer );
-        void               disconnect( int32 connectionId );
+        [[nodiscard]] bool receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer );
+        void               disconnect( int32 connectionID );
         void               disconnectAll();
         void               drainEvents( vector<NetHostEvent>& outListEvent );
         /**
@@ -188,28 +188,28 @@ namespace sw
         void drainInbound( NetInbound& outInbound );
 
         bool               isServer() const;
-        NetConnectionState getConnectionState( int32 connectionId ) const;
+        NetConnectionState getConnectionState( int32 connectionID ) const;
         /** @brief 연결 통계의 사본입니다(연결돼 있지 않으면 false). 다른 스레드가 `update` 하는 중에도 안전합니다. */
-        [[nodiscard]] bool getConnectionStats( int32 connectionId, NetConnectionStats& outStats ) const;
+        [[nodiscard]] bool getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const;
         /**
          * @brief 연결 객체를 그대로 빌려줍니다.
          * @warning 잠금 밖으로 나가는 포인터입니다 — `update` 를 도는 다른 스레드가 없을 때만(한 스레드로 쓸 때 · 시험). 스레드가 돌면 `getConnectionStats`.
          */
-        const NetConnection* findConnection( int32 connectionId ) const;
-        NetAddress           getConnectionAddress( int32 connectionId ) const;
+        const NetConnection* findConnection( int32 connectionID ) const;
+        NetAddress           getConnectionAddress( int32 connectionID ) const;
         int32                getConnectedCount() const;
         /** @brief 클라이언트 — 서버가 준 자기 번호(서버의 연결 id)입니다. 연결 전이면 −1 입니다. */
         int32  getClientIndex() const;
         void   collectConnected( vector<int32>& outListConnection ) const;
         uint64 getRejectedPacketCount() const;
         /** @brief 서버 — 인증기가 이 연결에 준 주체(로그인 계정)입니다. 없으면 0 입니다. */
-        uint64 getConnectionPrincipal( int32 connectionId ) const;
+        uint64 getConnectionPrincipal( int32 connectionID ) const;
         /** @brief 복호 · 증명 · 키 확인 실패로 버린 패킷 수입니다(진단 · 시험). */
         uint64 getAuthenticationFailureCount() const;
         /** @brief 재전송 방지 창이 버린 패킷 수입니다. */
         uint64 getReplayRejectedCount() const;
-        /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolId( 게임 id, 와이어 판 )`)입니다. */
-        uint32 getProtocolId() const;
+        /** @brief 이 호스트의 프로토콜 id(`NetProtocol::makeProtocolID( 게임 id, 와이어 판 )`)입니다. */
+        uint32 getProtocolID() const;
         /** @brief 연결마다의 보내기 상한(초당 바이트, `NetHostSettings::_maxBytesPerSecond`)입니다 — 키트가 틱 예산을 셈한다(`NetSendBudget::computeTickBudget`). */
         int32 getMaxBytesPerSecond() const;
 
@@ -229,10 +229,10 @@ namespace sw
         /** @brief 데이터그램(머리 포함)의 패킷 종류를 엿봅니다 — 체크섬은 보지 않는다. 너무 짧으면 Count 입니다(흉내 거르개 · 진단). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
         /** @brief 패킷 체크섬(머리 값을 먼저 섞은 FNV-1a)입니다 — 시험 · 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때. */
-        static uint32 computePacketChecksum( uint32 headerId, const uint8* pBody, int32 size );
+        static uint32 computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size );
 
     private:
-        /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
+        /** @brief 판과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로 싸는 패킷 — 요청과 거절뿐입니다. 두 패킷의 배치는 판이 바뀌어도 그대로 둔다. */
         static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 
         /** @brief 연결 하나의 암호 상태 — 암호화 방식일 때만 있다. */
@@ -244,7 +244,7 @@ namespace sw
             unique_ptr<INetAead> _receiveAead{};  ///< 받는 방향 키를 박은 AEAD
             NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호
             uint64               _sendPacketNumber{ 0 };
-            uint64               _principalId{ 0 };                                      ///< 서버 — 인증기가 준 주체
+            uint64               _principalID{ 0 };                                      ///< 서버 — 인증기가 준 주체
             uint8                _arrKeyConfirmTag[NetSecurityConstant::kAeadTagSize]{}; ///< 서버 — 수락을 다시 보낼 때 같은 태그
             uint8                _bKeysReady{ SW_FALSE };
         };
@@ -322,7 +322,7 @@ namespace sw
         uint32 computeFeatureMask() const;
         bool   isEncrypted() const { return _settings._security._mode == NetSecurityMode::Encrypted; }
         /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
-        void sendFramed( const NetAddress& to, uint32 headerId );
+        void sendFramed( const NetAddress& to, uint32 headerID );
         /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
         void sendPayload( float64 time, Slot& slot );
         /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
@@ -333,7 +333,7 @@ namespace sw
         TaskFuture<NetConnectResult> connectAsyncWith( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
         void                         pushEvent( const NetHostEvent& event );
         void                         finishConnect( NetDisconnectReason reason );
-        bool                         sendMessageLocked( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size );
+        bool                         sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size );
         void                         takePending( OutgoingBatch& outBatch, vector<FinishedConnect>& outListFinished );
 
         // 잠금 밖에서.
@@ -374,7 +374,7 @@ namespace sw
         uint64                        _replayRejectedCount;
         uint64                        _mismatchLogCount;
         uint64                        _challengeSecret; ///< 서버 — 도전 값의 비밀 키(소금 씨앗에서) ///< 판 · 게임이 다른 요청 수 — 로그는 1 · 2 · 4 · 8 … 번째에만(요청 폭주가 로그를 메우지 않게)
-        uint32                        _protocolId;
+        uint32                        _protocolID;
         atomic<uint32>                _updateDepth; ///< `update` 를 동시에 두 스레드가 부르는 실수를 잡는다
         int32                         _clientIndex;
         int32                         _receiveCursor; ///< 받기를 연결마다 고르게 돌리는 자리

@@ -252,9 +252,9 @@ namespace sw
         for ( const VitalityEvent& event : listEvent )
         {
             if ( event._type == VitalityEventType::Downed )
-                handleDowned( player, event._instigatorId );
+                handleDowned( player, event._instigatorID );
             else if ( event._type == VitalityEventType::Died )
-                handleDeath( player, event._instigatorId );
+                handleDeath( player, event._instigatorID );
         }
     }
 
@@ -351,7 +351,7 @@ namespace sw
         drop._time = _time;
         (void)_zone.pickPointInside( _random, drop._position );
         if ( _pLootCatalog != nullptr )
-            (void)BrLootPlacement::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableId, drop._position, -1, 1, _random, drop._listItem );
+            (void)BrLootPlacement::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableID, drop._position, -1, 1, _random, drop._listItem );
         _listSupplyDrop.push_back( drop );
         BrEvent event;
         event._kind     = BrEvent::Kind::SupplyDropLanded;
@@ -416,7 +416,7 @@ namespace sw
             for ( const BrGroundItem& item : drop._listItem )
             {
                 outArchive << item._position;
-                StateArchiveUtil::writeName( outArchive, item._itemId );
+                StateArchiveUtil::writeName( outArchive, item._itemID );
                 outArchive << item._count;
                 outArchive << item._spotIndex;
             }
@@ -495,7 +495,7 @@ namespace sw
             for ( BrGroundItem& item : drop._listItem )
             {
                 archive >> item._position;
-                if ( StateArchiveUtil::readName( archive, item._itemId ) == false )
+                if ( StateArchiveUtil::readName( archive, item._itemID ) == false )
                     return false;
                 archive >> item._count;
                 archive >> item._spotIndex;

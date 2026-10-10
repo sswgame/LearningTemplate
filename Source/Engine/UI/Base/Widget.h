@@ -36,7 +36,7 @@ namespace sw
     /**
      * @class Widget
      * @brief 런타임 UI 의 노드 하나입니다(언리얼 SWidget/UWidget · 유니티 VisualElement · Godot Control 자리).
-     * @details 수명: 부모 패널이 `unique_ptr` 로 소유합니다. 트리 밖에서 위젯을 오래 가리킬 때는 `WidgetId` 로 들고 `WidgetTree::findWidgetById` 로 풉니다
+     * @details 수명: 부모 패널이 `unique_ptr` 로 소유합니다. 트리 밖에서 위젯을 오래 가리킬 때는 `WidgetID` 로 들고 `WidgetTree::findWidgetByID` 로 풉니다
      *          (포인터는 그 호출 안에서만). 값이 바뀌면 `invalidate( 이유 )` — 세터는 값이 같으면 아무것도 하지 않습니다(무효화가 쏟아지지 않게).
      *          리플렉션 파생 위젯은 `getTypeInfo()` 를 자기 `StaticType()` 으로 덮어씁니다(`castTo` · 문서 · 인스펙터가 동적 타입을 이것으로 안다 — RTTI 없음).
      *          스레드: 게임 스레드만. 렌더 스레드는 그리기 목록(패킷)만 봅니다.
@@ -56,7 +56,7 @@ namespace sw
         virtual const TypeInfo* getTypeInfo() const;
 
         // --- 트리 ---------------------------------------------------------------
-        WidgetId             getId() const { return _id; }
+        WidgetID             getID() const { return _id; }
         const hashed_string& getName() const { return _name; }
         /** @brief 이름을 바꿉니다. 트리에 붙어 있으면 이름표도 고칩니다. */
         void         setName( const hashed_string& name );
@@ -233,7 +233,7 @@ namespace sw
         float2         _lastSlotSize;      ///< 마지막 arrange 의 슬롯 크기
         PanelWidget*   _pParent;           ///< 소유자(구조 링크 — 원시 포인터)
         WidgetTree*    _pTree;             ///< 붙은 트리(떨어져 있으면 nullptr)
-        WidgetId       _id;
+        WidgetID       _id;
         uint32         _dirtyFlags;   ///< WidgetDirty 비트
         uint32         _layoutSerial; ///< 마지막으로 잰 레이아웃 걷기 번호(0 = 아직 잰 적 없음)
 

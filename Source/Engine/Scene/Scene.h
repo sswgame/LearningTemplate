@@ -37,7 +37,7 @@ namespace sw
         /**
          * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
          * @details 모든 엔티티를 하나의 묶음(`ObjectStateBatch`, 파일 id 공간)으로 읽고 끝에서 한 번에 잇습니다 — 자식이 부모보다 앞에 적혀도 된다.
-         *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIdMap`) 저장할 때 같은 값을 다시 씁니다.
+         *          엔티티의 파일 id 는 오브젝트의 런타임 id 와 짝지어 들고 있다가(`collectSavedIDMap`) 저장할 때 같은 값을 다시 씁니다.
          *          프리팹 엔티티는 프리팹의 원형 상태에 덮어쓴 것(`SceneObjectNode::_prefabOverrideXML`)을 얹어 짓습니다 — 프리팹을 고치면 퍼집니다.
          *          전체 상태가 실린 프리팹 엔티티는 그 상태가 기준입니다.
          */
@@ -52,7 +52,7 @@ namespace sw
          * @brief 살아 있는 오브젝트마다의 파일 id 표(런타임 id → 파일 id)를 채웁니다. id 가 없는 오브젝트(새로 만든 것)에는 여기서 줍니다.
          * @details 파일 id 는 한 번 정하면 그 오브젝트가 사라져도 다시 쓰지 않습니다 — 남은 참조가 새 오브젝트를 가리키지 않게. 쿠커 · 저장이 씁니다.
          */
-        void collectSavedIdMap( ObjectSavedIdMap& outMap ) const;
+        void collectSavedIDMap( ObjectSavedIDMap& outMap ) const;
 
         /**
          * @brief 활성 씬의 GameObject 를 병렬로 틱합니다.
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 활성 게임 카메라를 직접 고릅니다. 그 카메라가 살아 있고 켜져 있는 동안 등록부의 선택보다 먼저입니다(nullptr 이면 해제). */
         void setActiveGameCamera( CameraComponent* pCamera );
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
-        void setEntityPrefabPath( uint64 objectId, string_view prefabPath );
+        void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
 
         /** @brief 씬 이름을 반환합니다. */
         const string& getName() const { return _name; }
@@ -103,7 +103,7 @@ namespace sw
          */
         class DirectionalLightComponent* findShadowCastingDirectionalLight() const;
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 반환합니다(없으면 빈 문자열). */
-        const string& getEntityPrefabPath( uint64 objectId ) const;
+        const string& getEntityPrefabPath( uint64 objectID ) const;
 
         /**
          * @brief 프리팹을 찾지 못해 오브젝트로 만들지 못한 엔티티의 수입니다(유니티의 "Missing Prefab").
@@ -128,10 +128,10 @@ namespace sw
         Material*                     _pMaterial;
         unordered_map<uint64, string> _mapPrefabSource;
         /**
-         * @brief 런타임 오브젝트 id → 파일 id 입니다. 읽을 때 엔티티의 id 로 채우고 저장 때 없는 것을 새로 줍니다(`collectSavedIdMap`).
+         * @brief 런타임 오브젝트 id → 파일 id 입니다. 읽을 때 엔티티의 id 로 채우고 저장 때 없는 것을 새로 줍니다(`collectSavedIDMap`).
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
-        mutable ObjectSavedIdMap               _mapObjectIdToFileId;
+        mutable ObjectSavedIDMap               _mapObjectIDToFileID;
         vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity; ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
         sw::ComponentHandle                    _activeGameCamera;     ///< 마지막 `ensureDefaultCameras` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
         sw::ComponentHandle                    _gameCameraOverride;   ///< `setActiveGameCamera` 로 직접 고른 카메라

@@ -136,10 +136,10 @@ namespace sw
             GroundPound,   ///< _value = 밀린 사람 수
             RingOut,       ///< _player = 떨어진 쪽, _other = 점수를 받은 쪽(−1 = 없음)
             Respawned,
-            ItemPicked ///< _itemId
+            ItemPicked ///< _itemID
         };
         hashed_string _grade{};
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int32         _player{ -1 };
         int32         _other{ -1 };
         int32         _value{ 0 };

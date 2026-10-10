@@ -37,7 +37,7 @@ namespace
 /**
  * @brief [WindowEventTest] 창 이벤트는 엔진 예약 ID 를 싣고, 기본 생성은 크기 0 · 플래그 꺼짐이며, 디스패처로 구독자에게 간다
  */
-SW_TEST_CASE( WindowEventTest, EventsCarryReservedIdsAndReachSubscribers )
+SW_TEST_CASE( WindowEventTest, EventsCarryReservedIDsAndReachSubscribers )
 {
     sw::WindowResizeEvent   resizeEvent;
     sw::WindowCloseEvent    closeEvent;

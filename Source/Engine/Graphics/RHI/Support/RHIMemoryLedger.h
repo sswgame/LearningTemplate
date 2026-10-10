@@ -222,7 +222,7 @@ namespace sw
         void subtractLocked( const LiveEntry& entry );
 
         mutable mutex                    _mutex;
-        unordered_map<uint64, LiveEntry> _arrMapIdToEntry[kRHIMemoryKeySpaceCount];
+        unordered_map<uint64, LiveEntry> _arrMapIDToEntry[kRHIMemoryKeySpaceCount];
         RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount];
         RHIMemoryBudget                  _driverBudget;
         RHIMemorySizeBasis               _sizeBasis;

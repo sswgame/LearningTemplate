@@ -15,7 +15,7 @@ namespace sw::editor
     {
     public:
         /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */
-        static constexpr const utf8* kPopupId = "BoneHierarchy";
+        static constexpr const utf8* kPopupID = "BoneHierarchy";
 
         BoneHierarchyPopup();
         virtual ~BoneHierarchyPopup() override = default;
@@ -23,7 +23,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // IEditorPopup 구현
         // ------------------------------------------------------------------------------
-        virtual const utf8* getPopupId() const override { return kPopupId; }
+        virtual const utf8* getPopupID() const override { return kPopupID; }
         virtual const utf8* getPopupTitle() const override { return "Hierarchy / Skeleton View"; }
 
         // ------------------------------------------------------------------------------

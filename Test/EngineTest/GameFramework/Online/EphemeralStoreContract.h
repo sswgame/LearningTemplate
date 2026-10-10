@@ -24,7 +24,7 @@ namespace test
         /** @brief 요청 하나를 맡기고 그 답을 기다립니다(RESP 는 소켓 왕복 — 10 초 상한). 답을 받았으면 true 입니다. */
         static bool executeRequest( sw::IEphemeralStore& store, const sw::EphemeralRequest& request, sw::EphemeralReply& outReply )
         {
-            const uint64                   requestId = store.submit( request );
+            const uint64                   requestID = store.submit( request );
             const sw::Deadline             deadline  = sw::Deadline::afterMilliseconds( 10000 );
             sw::vector<sw::EphemeralReply> listReply;
             while ( deadline.isExpired() == false )
@@ -37,7 +37,7 @@ namespace test
                 }
                 for ( sw::EphemeralReply& reply : listReply )
                 {
-                    if ( reply._requestId != requestId )
+                    if ( reply._requestID != requestID )
                         continue;
                     outReply = std::move( reply );
                     return true;
@@ -227,22 +227,22 @@ namespace test
             using namespace sw;
             IEphemeralStore& store = fixture.getStore();
             const string     key   = fixture.makeKey( "order" );
-            vector<uint64>   listRequestId;
+            vector<uint64>   listRequestID;
             for ( int32 index = 0; index < 50; ++index )
             {
-                listRequestId.push_back( store.submit( EphemeralRequest::makeIncrement( key, 1, 0 ) ) );
+                listRequestID.push_back( store.submit( EphemeralRequest::makeIncrement( key, 1, 0 ) ) );
             }
             vector<EphemeralReply> listReply;
             const Deadline         deadline = Deadline::afterMilliseconds( 10000 );
-            while ( listReply.size() < listRequestId.size() && deadline.isExpired() == false )
+            while ( listReply.size() < listRequestID.size() && deadline.isExpired() == false )
             {
                 if ( store.pollReplies( listReply ) == 0 )
                     std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             }
-            SW_ASSERT_EQUAL( listRequestId.size(), listReply.size() );
+            SW_ASSERT_EQUAL( listRequestID.size(), listReply.size() );
             for ( size_t index = 0; index < listReply.size(); ++index )
             {
-                SW_EXPECT_EQUAL( listRequestId[index], listReply[index]._requestId );
+                SW_EXPECT_EQUAL( listRequestID[index], listReply[index]._requestID );
                 SW_EXPECT_EQUAL( static_cast<int64>( index + 1 ), listReply[index]._integer );
             }
         }

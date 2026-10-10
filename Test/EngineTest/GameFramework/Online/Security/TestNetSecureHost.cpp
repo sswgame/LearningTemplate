@@ -24,12 +24,12 @@ namespace
     class TestAuthenticator final : public INetConnectAuthenticator
     {
     public:
-        bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalId ) override
+        bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override
         {
             if ( tokenSize != 6 || std::memcmp( pToken, "token1", 6 ) != 0 )
                 return false;
             std::memset( outSecret._arrByte, 0x5A, sizeof( outSecret._arrByte ) );
-            outPrincipalId = 42;
+            outPrincipalID = 42;
             return true;
         }
     };
@@ -65,9 +65,9 @@ namespace
             {
                 _bTamperNext = SW_FALSE;
                 bytes[static_cast<size_t>( size - 20 )] ^= 0x01;
-                const uint32 headerId = static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
+                const uint32 headerID = static_cast<uint32>( pData[0] ) | ( static_cast<uint32>( pData[1] ) << 8 ) | ( static_cast<uint32>( pData[2] ) << 16 ) |
                                         ( static_cast<uint32>( pData[3] ) << 24 );
-                const uint32 checksum = NetHost::computePacketChecksum( headerId, bytes.data() + 8, size - 8 );
+                const uint32 checksum = NetHost::computePacketChecksum( headerID, bytes.data() + 8, size - 8 );
                 for ( int32 index = 0; index < 4; ++index )
                 {
                     bytes[static_cast<size_t>( 4 + index )] = static_cast<uint8>( checksum >> ( index * 8 ) );
@@ -164,10 +164,10 @@ SW_TEST_CASE( NetSecureHostTest, TokenBoundConnectionCarriesMessagesWithoutPlain
     const utf8* pMarker = "SW-SECRET-MARKER";
     SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, reinterpret_cast<const uint8*>( pMarker ), 16 ) );
     pair.run( 0.3 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     SW_ASSERT_EQUAL( 16, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_TRUE( std::memcmp( buffer.data(), pMarker, 16 ) == 0 );
     SW_EXPECT_FALSE( containsBytes( pair._clientTap._listSent, pMarker ) );
@@ -192,10 +192,10 @@ SW_TEST_CASE( NetSecureHostTest, TamperedAndReplayedPacketsAreDroppedAndCounted 
     SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::Unreliable, arrFirst, 24 ) );
     pair.run( 0.1 );
     SW_EXPECT_FALSE( pair._clientTap._bTamperNext == SW_TRUE ); // 실제로 하나를 뒤집었다
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_TRUE( pair._server.getAuthenticationFailureCount() >= 1 );
 
     // 연결은 산다 — 다음 메시지는 온다. 그 데이터그램을 그대로 다시 보내면 재전송 창이 버린다(두 번 받지 않는다).
@@ -203,15 +203,15 @@ SW_TEST_CASE( NetSecureHostTest, TamperedAndReplayedPacketsAreDroppedAndCounted 
     const size_t sentBefore    = pair._clientTap._listSent.size();
     SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::Unreliable, arrSecond, 24 ) );
     pair.run( 0.1 );
-    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( buffer[1] ) );
-    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     for ( size_t index = sentBefore; index < pair._clientTap._listSent.size(); ++index )
     {
         pair._clientTap.replay( index );
     }
     pair.run( 0.1 );
-    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_FALSE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_TRUE( pair._server.getReplayRejectedCount() >= 1 );
     SW_EXPECT_EQUAL( 1, pair._server.getConnectedCount() );
 }
@@ -261,10 +261,10 @@ SW_TEST_CASE( NetSecureHostTest, EphemeralModeWithoutAuthenticatorIsDevelopmentO
     const uint8 arrMessage[8] = { 0x81, 7 };
     SW_ASSERT_TRUE( pair._client.sendMessage( 0, NetChannelType::ReliableOrdered, arrMessage, 8 ) );
     pair.run( 0.3 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair._server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( buffer[1] ) );
 #endif
 }

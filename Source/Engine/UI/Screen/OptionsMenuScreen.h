@@ -61,9 +61,9 @@ namespace sw
         void   selectTab( uint32 index );
         uint32 getRowCount() const { return static_cast<uint32>( _listRow.size() ); }
         /** @brief 행 @p index 의 설정 id 입니다. */
-        const hashed_string& getRowSetting( uint32 index ) const { return _listRow[index]._settingId; }
-        /** @brief 설정 @p settingId 행의 값 위젯(`Value`)입니다. 지금 탭에 없으면 nullptr 입니다. */
-        Widget* findRowValueWidget( const hashed_string& settingId ) const;
+        const hashed_string& getRowSetting( uint32 index ) const { return _listRow[index]._settingID; }
+        /** @brief 설정 @p settingID 행의 값 위젯(`Value`)입니다. 지금 탭에 없으면 nullptr 입니다. */
+        Widget* findRowValueWidget( const hashed_string& settingID ) const;
         /** @brief 이 메뉴가 연 확인 창(카운트다운 · 변경 확인 · 키 받기)입니다. 없으면 무효입니다. */
         UIScreenHandle getPromptScreen() const { return _promptScreen; }
 
@@ -76,9 +76,9 @@ namespace sw
         /** @struct RowEntry @brief 지금 탭의 행 하나입니다. */
         struct RowEntry
         {
-            hashed_string _settingId{};
-            WidgetId      _value{ kInvalidWidgetId }; ///< 값 위젯(키 바인딩이면 단추)
-            WidgetId      _glyph{ kInvalidWidgetId }; ///< 키 바인딩의 글리프 글(아니면 무효)
+            hashed_string _settingID{};
+            WidgetID      _value{ kInvalidWidgetID }; ///< 값 위젯(키 바인딩이면 단추)
+            WidgetID      _glyph{ kInvalidWidgetID }; ///< 키 바인딩의 글리프 글(아니면 무효)
         };
 
         /** @brief 설정에서 탭을 다시 짓고 지금 탭(범위 밖이면 0)의 행을 짓습니다. */
@@ -98,7 +98,7 @@ namespace sw
 
     private:
         vector<hashed_string> _listCategory;  ///< 탭 순서의 카테고리 id
-        vector<WidgetId>      _listTabButton; ///< 탭 단추(같은 순서)
+        vector<WidgetID>      _listTabButton; ///< 탭 단추(같은 순서)
         vector<RowEntry>      _listRow;       ///< 지금 탭의 행
         UserSettingsManager*  _pSettings;     ///< 설정 출처(엔진 서비스 · 시험 — 메뉴보다 오래 산다)
         UIScreenHandle        _promptScreen;  ///< 이 메뉴가 연 확인 창

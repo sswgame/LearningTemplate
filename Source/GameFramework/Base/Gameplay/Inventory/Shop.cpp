@@ -22,21 +22,21 @@ namespace sw
         {
             static int32 roundPrice( float32 value ) { return MathUtil::max( 0, static_cast<int32>( MathUtil::round( value ) ) ); }
 
-            static bool containsId( const vector<hashed_string>& listId, const hashed_string& id )
+            static bool containsID( const vector<hashed_string>& listID, const hashed_string& id )
             {
-                for ( const hashed_string& ownId : listId )
+                for ( const hashed_string& ownID : listID )
                 {
-                    if ( ownId == id )
+                    if ( ownID == id )
                         return true;
                 }
                 return false;
             }
 
-            static int32 findSaturationIndex( const ShopRuntime& runtime, const hashed_string& itemId )
+            static int32 findSaturationIndex( const ShopRuntime& runtime, const hashed_string& itemID )
             {
                 for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
                 {
-                    if ( runtime._listSaturatedItem[index] == itemId )
+                    if ( runtime._listSaturatedItem[index] == itemID )
                         return static_cast<int32>( index );
                 }
                 return -1;
@@ -169,11 +169,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // ShopDef / ShopCatalog
     // ------------------------------------------------------------------------------
-    const ShopStockDef* ShopDef::findStock( const hashed_string& itemId ) const
+    const ShopStockDef* ShopDef::findStock( const hashed_string& itemID ) const
     {
         for ( const ShopStockDef& stock : _listStock )
         {
-            if ( stock._itemId == itemId )
+            if ( stock._itemID == itemID )
                 return &stock;
         }
         return nullptr;
@@ -181,7 +181,7 @@ namespace sw
 
     bool ShopDef::refusesCategory( const hashed_string& category ) const
     {
-        return category.empty() == false && ShopInternal::containsId( _listRefusedCategory, category );
+        return category.empty() == false && ShopInternal::containsID( _listRefusedCategory, category );
     }
 
     const utf8* toString( ShopResult result )
@@ -217,11 +217,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ShopDef def;
-            def._id               = hashed_string( pId );
+            def._id               = hashed_string( pID );
             const utf8* pCurrency = node.findAttribute( "currency" );
             def._currency         = pCurrency != nullptr && pCurrency[0] != '\0' ? hashed_string( pCurrency ) : Wallet::getDefaultCurrency();
             def._buyMultiplier    = MathUtil::max( 0.0f, node.getAttributeFloat( "buyMultiplier", def._buyMultiplier ) );
@@ -239,11 +239,11 @@ namespace sw
                 const utf8* pItem = stockNode.findAttribute( "item" );
                 if ( pItem == nullptr || pItem[0] == '\0' )
                 {
-                    SW_LOG_WARNING( "%#: shop '%#' has a <Stock> without an item - skipped", sourceName, pId );
+                    SW_LOG_WARNING( "%#: shop '%#' has a <Stock> without an item - skipped", sourceName, pID );
                     continue;
                 }
                 ShopStockDef stock;
-                stock._itemId            = hashed_string( pItem );
+                stock._itemID            = hashed_string( pItem );
                 stock._price             = stockNode.getAttributeInt( "price", stock._price );
                 stock._count             = MathUtil::max( -1, stockNode.getAttributeInt( "count", stock._count ) );
                 stock._restock           = MathUtil::max( 0, stockNode.getAttributeInt( "restock", stock._restock ) );
@@ -283,7 +283,7 @@ namespace sw
         for ( const ShopDef& shop : _pShopCatalog->getShops() )
         {
             ShopRuntime runtime;
-            runtime._shopId = shop._id;
+            runtime._shopID = shop._id;
             for ( const ShopStockDef& stock : shop._listStock )
             {
                 runtime._listStockCount.push_back( stock._count );
@@ -292,31 +292,31 @@ namespace sw
         }
     }
 
-    void ShopState::setPriceModifier( const hashed_string& shopId, float32 buyModifier, float32 sellModifier )
+    void ShopState::setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier )
     {
-        ShopRuntime* pRuntime = findRuntime( shopId );
+        ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pRuntime == nullptr )
             return;
         pRuntime->_buyModifier  = MathUtil::max( 0.0f, buyModifier );
         pRuntime->_sellModifier = MathUtil::max( 0.0f, sellModifier );
     }
 
-    void ShopState::refuseCategory( const hashed_string& shopId, const hashed_string& category )
+    void ShopState::refuseCategory( const hashed_string& shopID, const hashed_string& category )
     {
-        ShopRuntime* pRuntime = findRuntime( shopId );
-        if ( pRuntime != nullptr && category.empty() == false && ShopInternal::containsId( pRuntime->_listExtraRefused, category ) == false )
+        ShopRuntime* pRuntime = findRuntime( shopID );
+        if ( pRuntime != nullptr && category.empty() == false && ShopInternal::containsID( pRuntime->_listExtraRefused, category ) == false )
             pRuntime->_listExtraRefused.push_back( category );
     }
 
-    ShopResult ShopState::evaluateBuy( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Wallet& wallet,
+    ShopResult ShopState::evaluateBuy( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Wallet& wallet,
                                        const Inventory& inventory ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopId );
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
-        const int32 stockIndex = findStockIndex( *pShop, itemId );
-        if ( stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->findItem( itemId ) == nullptr )
+        const int32 stockIndex = findStockIndex( *pShop, itemID );
+        if ( stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr )
             return ShopResult::UnknownItem;
         if ( count <= 0 )
             return ShopResult::InvalidCount;
@@ -326,80 +326,80 @@ namespace sw
         const int32 stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
         if ( stockCount >= 0 && stockCount < count )
             return ShopResult::OutOfStock;
-        const int64 total = static_cast<int64>( computeBuyPrice( shopId, itemId ) ) * count;
+        const int64 total = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
         if ( wallet.canAfford( pShop->_currency, total ) == false )
             return ShopResult::NotEnoughMoney;
-        if ( inventory.hasRoomFor( itemId, count ) == false )
+        if ( inventory.hasRoomFor( itemID, count ) == false )
             return ShopResult::NoRoom;
         return ShopResult::Ok;
     }
 
-    ShopResult ShopState::buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
+    ShopResult ShopState::buy( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid )
     {
-        const ShopResult result = evaluateBuy( shopId, itemId, count, wallet, inventory );
+        const ShopResult result = evaluateBuy( shopID, itemID, count, wallet, inventory );
         if ( result != ShopResult::Ok )
             return result;
-        const ShopDef* pShop      = _pShopCatalog->findShop( shopId );
-        ShopRuntime*   pRuntime   = findRuntime( shopId );
-        const int32    stockIndex = findStockIndex( *pShop, itemId );
-        const int64    total      = static_cast<int64>( computeBuyPrice( shopId, itemId ) ) * count;
+        const ShopDef* pShop      = _pShopCatalog->findShop( shopID );
+        ShopRuntime*   pRuntime   = findRuntime( shopID );
+        const int32    stockIndex = findStockIndex( *pShop, itemID );
+        const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
         if ( wallet.trySpend( pShop->_currency, total ) == false )
             return ShopResult::NotEnoughMoney;
-        const int32 addedCount = inventory.addItem( itemId, count );
+        const int32 addedCount = inventory.addItem( itemID, count );
         if ( addedCount != count )
-            SW_LOG_WARNING( "inventory accepted %# of %# '%#' after hasRoomFor said yes", addedCount, count, itemId.c_str() );
+            SW_LOG_WARNING( "inventory accepted %# of %# '%#' after hasRoomFor said yes", addedCount, count, itemID.c_str() );
         int32& stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
         if ( stockCount >= 0 )
             stockCount -= count;
-        _eventBuffer.push( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Bought } );
+        _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Bought } );
         if ( pOutPaid != nullptr )
             *pOutPaid = total;
         return ShopResult::Ok;
     }
 
-    ShopResult ShopState::evaluateSell( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Inventory& inventory ) const
+    ShopResult ShopState::evaluateSell( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Inventory& inventory ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopId );
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
-        if ( _pItemCatalog == nullptr || _pItemCatalog->findItem( itemId ) == nullptr )
+        if ( _pItemCatalog == nullptr || _pItemCatalog->findItem( itemID ) == nullptr )
             return ShopResult::UnknownItem;
         if ( count <= 0 )
             return ShopResult::InvalidCount;
-        if ( isRefused( *pShop, *pRuntime, itemId ) )
+        if ( isRefused( *pShop, *pRuntime, itemID ) )
             return ShopResult::Refused;
-        if ( inventory.hasItem( itemId, count ) == false )
+        if ( inventory.hasItem( itemID, count ) == false )
             return ShopResult::NotOwned;
         return ShopResult::Ok;
     }
 
-    ShopResult ShopState::sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived )
+    ShopResult ShopState::sell( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived )
     {
-        const ShopResult result = evaluateSell( shopId, itemId, count, inventory );
+        const ShopResult result = evaluateSell( shopID, itemID, count, inventory );
         if ( result != ShopResult::Ok )
             return result;
-        const int64 total = computeSellTotal( shopId, itemId, count );
-        if ( inventory.removeItem( itemId, count ) == false )
+        const int64 total = computeSellTotal( shopID, itemID, count );
+        if ( inventory.removeItem( itemID, count ) == false )
             return ShopResult::NotOwned;
-        const ShopDef* pShop    = _pShopCatalog->findShop( shopId );
-        ShopRuntime*   pRuntime = findRuntime( shopId );
+        const ShopDef* pShop    = _pShopCatalog->findShop( shopID );
+        ShopRuntime*   pRuntime = findRuntime( shopID );
         wallet.add( pShop->_currency, total );
         if ( pOutReceived != nullptr )
             *pOutReceived = total;
         if ( pShop->_saturation > 0.0f )
         {
-            int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemId );
+            int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
             if ( saturationIndex < 0 )
             {
                 saturationIndex = static_cast<int32>( pRuntime->_listSaturatedItem.size() );
-                pRuntime->_listSaturatedItem.push_back( itemId );
+                pRuntime->_listSaturatedItem.push_back( itemID );
                 pRuntime->_listSellFactor.push_back( 1.0f );
             }
             float32& factor = pRuntime->_listSellFactor[static_cast<size_t>( saturationIndex )];
             factor          = MathUtil::max( pShop->_minSellFactor, factor - pShop->_saturation * static_cast<float32>( count ) );
         }
-        _eventBuffer.push( ShopEvent{ shopId, itemId, total, count, ShopEvent::Kind::Sold } );
+        _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Sold } );
         return ShopResult::Ok;
     }
 
@@ -409,7 +409,7 @@ namespace sw
             return;
         for ( ShopRuntime& runtime : _listRuntime )
         {
-            const ShopDef* pShop = _pShopCatalog->findShop( runtime._shopId );
+            const ShopDef* pShop = _pShopCatalog->findShop( runtime._shopID );
             if ( pShop == nullptr )
                 continue;
             for ( float32& factor : runtime._listSellFactor )
@@ -429,7 +429,7 @@ namespace sw
                 if ( stock._count < 0 || stock._restock <= 0 || stockCount >= stock._count )
                     continue;
                 const int32 newCount = MathUtil::min( stock._count, stockCount + stock._restock );
-                _eventBuffer.push( ShopEvent{ runtime._shopId, stock._itemId, 0, newCount - stockCount, ShopEvent::Kind::Restocked } );
+                _eventBuffer.push( ShopEvent{ runtime._shopID, stock._itemID, 0, newCount - stockCount, ShopEvent::Kind::Restocked } );
                 stockCount = newCount;
             }
         }
@@ -440,28 +440,28 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    int32 ShopState::computeBuyPrice( const hashed_string& shopId, const hashed_string& itemId ) const
+    int32 ShopState::computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopId );
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return -1;
-        const int32 stockIndex = findStockIndex( *pShop, itemId );
+        const int32 stockIndex = findStockIndex( *pShop, itemID );
         if ( stockIndex < 0 )
             return -1;
         const int32 basePrice = computeBasePrice( pShop->_listStock[static_cast<size_t>( stockIndex )] );
         return ShopInternal::roundPrice( static_cast<float32>( basePrice ) * pShop->_buyMultiplier * pRuntime->_buyModifier );
     }
 
-    int64 ShopState::computeSellTotal( const hashed_string& shopId, const hashed_string& itemId, int32 count ) const
+    int64 ShopState::computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopId );
-        const ItemDef*     pItem    = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemId ) : nullptr;
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime = findRuntime( shopID );
+        const ItemDef*     pItem    = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
         if ( pShop == nullptr || pRuntime == nullptr || pItem == nullptr || count <= 0 )
             return 0;
         const float32 unitValue = static_cast<float32>( pItem->_value ) * pShop->_sellMultiplier * pRuntime->_sellModifier;
-        float32       factor    = getSellFactor( shopId, itemId );
+        float32       factor    = getSellFactor( shopID, itemID );
         int64         total     = 0;
         for ( int32 unitIndex = 0; unitIndex < count; ++unitIndex )
         {
@@ -471,22 +471,22 @@ namespace sw
         return total;
     }
 
-    int32 ShopState::getStockCount( const hashed_string& shopId, const hashed_string& itemId ) const
+    int32 ShopState::getStockCount( const hashed_string& shopID, const hashed_string& itemID ) const
     {
-        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
-        const ShopRuntime* pRuntime = findRuntime( shopId );
+        const ShopDef*     pShop    = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
+        const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return 0;
-        const int32 stockIndex = findStockIndex( *pShop, itemId );
+        const int32 stockIndex = findStockIndex( *pShop, itemID );
         return stockIndex >= 0 ? pRuntime->_listStockCount[static_cast<size_t>( stockIndex )] : 0;
     }
 
-    float32 ShopState::getSellFactor( const hashed_string& shopId, const hashed_string& itemId ) const
+    float32 ShopState::getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const
     {
-        const ShopRuntime* pRuntime = findRuntime( shopId );
+        const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pRuntime == nullptr )
             return 1.0f;
-        const int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemId );
+        const int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
         return saturationIndex >= 0 ? pRuntime->_listSellFactor[static_cast<size_t>( saturationIndex )] : 1.0f;
     }
 
@@ -497,32 +497,32 @@ namespace sw
         return _pConditionEvaluator != nullptr && _pConditionEvaluator->isConditionMet( string_view( stock._requirement.c_str(), stock._requirement.size() ) );
     }
 
-    hashed_string ShopState::getCurrency( const hashed_string& shopId ) const
+    hashed_string ShopState::getCurrency( const hashed_string& shopID ) const
     {
-        const ShopDef* pShop = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopId ) : nullptr;
+        const ShopDef* pShop = _pShopCatalog != nullptr ? _pShopCatalog->findShop( shopID ) : nullptr;
         return pShop != nullptr ? pShop->_currency : Wallet::getDefaultCurrency();
     }
 
-    const ShopRuntime* ShopState::findRuntime( const hashed_string& shopId ) const
+    const ShopRuntime* ShopState::findRuntime( const hashed_string& shopID ) const
     {
         for ( const ShopRuntime& runtime : _listRuntime )
         {
-            if ( runtime._shopId == shopId )
+            if ( runtime._shopID == shopID )
                 return &runtime;
         }
         return nullptr;
     }
 
-    ShopRuntime* ShopState::findRuntime( const hashed_string& shopId )
+    ShopRuntime* ShopState::findRuntime( const hashed_string& shopID )
     {
-        return const_cast<ShopRuntime*>( static_cast<const ShopState*>( this )->findRuntime( shopId ) );
+        return const_cast<ShopRuntime*>( static_cast<const ShopState*>( this )->findRuntime( shopID ) );
     }
 
-    int32 ShopState::findStockIndex( const ShopDef& shop, const hashed_string& itemId ) const
+    int32 ShopState::findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const
     {
         for ( size_t index = 0; index < shop._listStock.size(); ++index )
         {
-            if ( shop._listStock[index]._itemId == itemId )
+            if ( shop._listStock[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -532,16 +532,16 @@ namespace sw
     {
         if ( stock._price >= 0 )
             return stock._price;
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( stock._itemId ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( stock._itemID ) : nullptr;
         return pItem != nullptr ? pItem->_value : 0;
     }
 
-    bool ShopState::isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemId ) const
+    bool ShopState::isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const
     {
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemId ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
         if ( pItem == nullptr || pItem->_category.empty() )
             return false;
-        return shop.refusesCategory( pItem->_category ) || ShopInternal::containsId( runtime._listExtraRefused, pItem->_category );
+        return shop.refusesCategory( pItem->_category ) || ShopInternal::containsID( runtime._listExtraRefused, pItem->_category );
     }
 
     void ShopState::writeState( Archive& outArchive ) const
@@ -549,7 +549,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listRuntime.size() );
         for ( const ShopRuntime& runtime : _listRuntime )
         {
-            StateArchiveUtil::writeName( outArchive, runtime._shopId );
+            StateArchiveUtil::writeName( outArchive, runtime._shopID );
             outArchive << static_cast<uint32>( runtime._listStockCount.size() );
             for ( const int32 count : runtime._listStockCount )
             {
@@ -583,7 +583,7 @@ namespace sw
         {
             ShopRuntime saved;
             uint32      count = 0;
-            if ( StateArchiveUtil::readName( archive, saved._shopId ) == false || StateArchiveUtil::readCount( archive, 4, count ) == false )
+            if ( StateArchiveUtil::readName( archive, saved._shopID ) == false || StateArchiveUtil::readCount( archive, 4, count ) == false )
                 return false;
             saved._listStockCount.resize( count, 0 );
             for ( int32& stockCount : saved._listStockCount )
@@ -616,7 +616,7 @@ namespace sw
             // 카탈로그에서 지운 가게는 버리고, 재고 줄 수가 바뀐 가게는 깨진 것으로 본다(재고는 정의 순서로 짝짓는다)
             for ( ShopRuntime& runtime : listRuntime )
             {
-                if ( runtime._shopId != saved._shopId )
+                if ( runtime._shopID != saved._shopID )
                     continue;
                 if ( runtime._listStockCount.size() != saved._listStockCount.size() )
                     return false;

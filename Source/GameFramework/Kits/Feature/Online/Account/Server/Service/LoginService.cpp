@@ -26,7 +26,7 @@ namespace sw
             /** @brief 돌아가며 다시 읽는 차례가 해시맵 순서에 기대지 않게(결정적) 계정 id 로 정렬한다. */
             struct SessionRefLess
             {
-                bool operator()( const LoginSessionRef& left, const LoginSessionRef& right ) const { return left._accountId < right._accountId; }
+                bool operator()( const LoginSessionRef& left, const LoginSessionRef& right ) const { return left._accountID < right._accountID; }
             };
 
             static string makeNameKey( string_view displayName ) { return StringUtil::toLower( string( displayName ).c_str() ); }
@@ -44,12 +44,12 @@ namespace sw
             public:
                 LoginCredential   _credential;
                 LoginSessionToken _token;
-                hashed_string     _serverId;
+                hashed_string     _serverID;
                 string            _provider;
                 string            _subject;
                 string            _displayNameHint;
                 string            _storeURL;
-                uint64            _accountId;
+                uint64            _accountID;
                 LoginRevokeReason _revokeReason;
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
                 uint8             _bUpdateRecommended;
@@ -57,12 +57,12 @@ namespace sw
                 LoginWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginSettings& settings, LoginOperation operation, uint64 requestTag, int64 nowMs )
                     : _credential{}
                     , _token{}
-                    , _serverId{}
+                    , _serverID{}
                     , _provider{}
                     , _subject{}
                     , _displayNameHint{}
                     , _storeURL{}
-                    , _accountId{ 0 }
+                    , _accountID{ 0 }
                     , _revokeReason{ LoginRevokeReason::Administrative }
                     , _arrDeviceSecret{}
                     , _bUpdateRecommended{ SW_FALSE }
@@ -84,9 +84,9 @@ namespace sw
                     {
                         case LoginOperation::Register:
                         {
-                            uint64 accountId                   = 0;
-                            _completion._result                = logic.registerAccount( _credential, &accountId );
-                            _completion._identity._accountId   = accountId;
+                            uint64 accountID                   = 0;
+                            _completion._result                = logic.registerAccount( _credential, &accountID );
+                            _completion._identity._accountID   = accountID;
                             _completion._identity._displayName = _credential._loginName;
                             break;
                         }
@@ -122,12 +122,12 @@ namespace sw
                         }
                         case LoginOperation::IssueGameTicket:
                         {
-                            _completion._result = logic.issueGameTicket( _token, _serverId, _nowMs, _completion._ticket );
+                            _completion._result = logic.issueGameTicket( _token, _serverID, _nowMs, _completion._ticket );
                             break;
                         }
                         case LoginOperation::Revoke:
                         {
-                            _completion._result = logic.revokeAccountSessions( _accountId, _revokeReason, _nowMs );
+                            _completion._result = logic.revokeAccountSessions( _accountID, _revokeReason, _nowMs );
                             break;
                         }
                         case LoginOperation::LinkCredential:
@@ -188,12 +188,12 @@ namespace sw
             {
             public:
                 vector<LoginSessionRef> _listOnline;
-                uint64                  _disconnectedSessionId;
+                uint64                  _disconnectedSessionID;
                 int32                   _purgeCount;
 
                 LoginMaintenanceWork( LoginService* pService, ILoginCrypto* pCrypto, const LoginSettings& settings, int64 nowMs )
                     : _listOnline{}
-                    , _disconnectedSessionId{ 0 }
+                    , _disconnectedSessionID{ 0 }
                     , _purgeCount{ 0 }
                     , _outcome{}
                     , _settings{ settings }
@@ -206,8 +206,8 @@ namespace sw
                 void run( IServiceStoreConnection& connection ) override
                 {
                     LoginStoreLogic logic{ connection, *_pCrypto, _settings, _pService->getTicketAuthority(), _outcome };
-                    if ( _disconnectedSessionId != 0 )
-                        logic.markDisconnected( _disconnectedSessionId, _nowMs );
+                    if ( _disconnectedSessionID != 0 )
+                        logic.markDisconnected( _disconnectedSessionID, _nowMs );
                     if ( _listOnline.empty() == false )
                         logic.refreshSessions( _listOnline, _nowMs );
                     if ( _purgeCount > 0 )
@@ -308,7 +308,7 @@ namespace sw
                 for ( size_t pendingIndex = 0; pendingIndex < _listPendingVerification.size(); ++pendingIndex )
                 {
                     const PendingVerification& pending  = _listPendingVerification[pendingIndex];
-                    const bool                 bMatches = pending._pProvider == pProvider && pending._verificationId == verification._verificationId;
+                    const bool                 bMatches = pending._pProvider == pProvider && pending._verificationID == verification._verificationID;
                     if ( bMatches == false )
                         continue;
                     const PendingVerification finished = pending;
@@ -431,20 +431,20 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverId, int64 nowMs, uint64 requestTag )
+    void LoginService::issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work =
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::IssueGameTicket, requestTag, nowMs );
         work->_token    = token;
-        work->_serverId = serverId;
+        work->_serverID = serverID;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::revokeAccountSessions( uint64 accountId, LoginRevokeReason reason, int64 nowMs, uint64 requestTag )
+    void LoginService::revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Revoke, requestTag, nowMs );
-        work->_accountId                                 = accountId;
+        work->_accountID                                 = accountID;
         work->_revokeReason                              = reason;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
@@ -512,10 +512,10 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::markDisconnected( uint64 sessionId, int64 nowMs )
+    void LoginService::markDisconnected( uint64 sessionID, int64 nowMs )
     {
         unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
-        work->_disconnectedSessionId                                = sessionId;
+        work->_disconnectedSessionID                                = sessionID;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -526,9 +526,9 @@ namespace sw
             return;
         vector<LoginSessionRef> listOnline;
         listOnline.reserve( _mapAccountToSession.size() );
-        for ( const auto& [accountId, sessionId] : _mapAccountToSession )
+        for ( const auto& [accountID, sessionID] : _mapAccountToSession )
         {
-            listOnline.push_back( LoginSessionRef{ accountId, sessionId, LoginRevokeReason::None } );
+            listOnline.push_back( LoginSessionRef{ accountID, sessionID, LoginRevokeReason::None } );
         }
         std::sort( listOnline.begin(), listOnline.end(), LoginServiceInternal::SessionRefLess{} );
         unique_ptr<LoginServiceInternal::LoginMaintenanceWork> work       = make_unique<LoginServiceInternal::LoginMaintenanceWork>( this, _pCrypto, _settings, nowMs );
@@ -542,19 +542,19 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void LoginService::noteRevokedElsewhere( AccountId accountId, uint64 sessionId, LoginRevokeReason reason )
+    void LoginService::noteRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason )
     {
-        const auto onlineIt = _mapAccountToSession.find( accountId );
-        if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != sessionId )
+        const auto onlineIt = _mapAccountToSession.find( accountID );
+        if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != sessionID )
             return; // 이 프로세스의 세션이 아니다(이미 새 세션으로 바뀌었다)
         _mapAccountToSession.erase( onlineIt );
-        _eventBuffer.push( LoginEvent{ accountId, sessionId, reason, LoginEvent::Kind::Revoked } );
+        _eventBuffer.push( LoginEvent{ accountID, sessionID, reason, LoginEvent::Kind::Revoked } );
         removeOfflineIdentities();
     }
 
-    bool LoginService::findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const
+    bool LoginService::findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const
     {
-        const auto identityIt = _mapAccountToIdentity.find( accountId );
+        const auto identityIt = _mapAccountToIdentity.find( accountID );
         if ( identityIt == _mapAccountToIdentity.end() )
             return false;
         outIdentity = identityIt->second;
@@ -567,9 +567,9 @@ namespace sw
         return nameIt != _mapNameKeyToAccount.end() && findIdentity( nameIt->second, outIdentity );
     }
 
-    uint64 LoginService::findOnlineSessionId( AccountId accountId ) const
+    uint64 LoginService::findOnlineSessionID( AccountID accountID ) const
     {
-        const auto onlineIt = _mapAccountToSession.find( accountId );
+        const auto onlineIt = _mapAccountToSession.find( accountID );
         return onlineIt == _mapAccountToSession.end() ? 0 : onlineIt->second;
     }
 
@@ -578,36 +578,36 @@ namespace sw
         --_pendingCount;
         for ( const LoginSessionRef& revoked : outcome._listRevoked )
         {
-            const auto onlineIt = _mapAccountToSession.find( revoked._accountId );
-            if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != revoked._sessionId )
+            const auto onlineIt = _mapAccountToSession.find( revoked._accountID );
+            if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != revoked._sessionID )
             {
                 // 다른 서버(또는 재접속 유예)의 세션이다 — 바인딩이 버스로 알린다.
-                _remoteRevokeBuffer.push( LoginEvent{ revoked._accountId, revoked._sessionId, revoked._reason, LoginEvent::Kind::Revoked } );
+                _remoteRevokeBuffer.push( LoginEvent{ revoked._accountID, revoked._sessionID, revoked._reason, LoginEvent::Kind::Revoked } );
                 continue;
             }
             _mapAccountToSession.erase( onlineIt );
-            _eventBuffer.push( LoginEvent{ revoked._accountId, revoked._sessionId, revoked._reason, LoginEvent::Kind::Revoked } );
+            _eventBuffer.push( LoginEvent{ revoked._accountID, revoked._sessionID, revoked._reason, LoginEvent::Kind::Revoked } );
         }
         for ( const LoginSessionRef& offline : outcome._listOffline )
         {
-            const auto onlineIt = _mapAccountToSession.find( offline._accountId );
-            if ( onlineIt != _mapAccountToSession.end() && onlineIt->second == offline._sessionId )
+            const auto onlineIt = _mapAccountToSession.find( offline._accountID );
+            if ( onlineIt != _mapAccountToSession.end() && onlineIt->second == offline._sessionID )
                 _mapAccountToSession.erase( onlineIt );
         }
         for ( const LoginSessionRef& disconnected : outcome._listDisconnected )
         {
-            const auto onlineIt = _mapAccountToSession.find( disconnected._accountId );
-            if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != disconnected._sessionId )
+            const auto onlineIt = _mapAccountToSession.find( disconnected._accountID );
+            if ( onlineIt == _mapAccountToSession.end() || onlineIt->second != disconnected._sessionID )
                 continue;
             _mapAccountToSession.erase( onlineIt );
-            _eventBuffer.push( LoginEvent{ disconnected._accountId, disconnected._sessionId, LoginRevokeReason::None, LoginEvent::Kind::Disconnected } );
+            _eventBuffer.push( LoginEvent{ disconnected._accountID, disconnected._sessionID, LoginRevokeReason::None, LoginEvent::Kind::Disconnected } );
         }
         for ( const LoginSessionRef& online : outcome._listOnline )
         {
-            const auto onlineIt = _mapAccountToSession.find( online._accountId );
-            if ( onlineIt != _mapAccountToSession.end() && onlineIt->second != online._sessionId )
-                _eventBuffer.push( LoginEvent{ online._accountId, onlineIt->second, LoginRevokeReason::DuplicateLogin, LoginEvent::Kind::Revoked } );
-            _mapAccountToSession[online._accountId] = online._sessionId;
+            const auto onlineIt = _mapAccountToSession.find( online._accountID );
+            if ( onlineIt != _mapAccountToSession.end() && onlineIt->second != online._sessionID )
+                _eventBuffer.push( LoginEvent{ online._accountID, onlineIt->second, LoginRevokeReason::DuplicateLogin, LoginEvent::Kind::Revoked } );
+            _mapAccountToSession[online._accountID] = online._sessionID;
         }
         for ( const LoginEvent& event : outcome._listEvent )
         {
@@ -617,21 +617,21 @@ namespace sw
         const bool bGrantOperation = completion._operation == LoginOperation::Login || completion._operation == LoginOperation::Resume ||
                                      completion._operation == LoginOperation::GuestLogin || completion._operation == LoginOperation::PlatformLogin;
         const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
-        if ( completion._result == LoginResult::Ok && bGrantOperation && completion._grant._identity._accountId != kInvalidAccountId )
+        if ( completion._result == LoginResult::Ok && bGrantOperation && completion._grant._identity._accountID != kInvalidAccountID )
         {
             const AccountIdentity& identity                                                  = completion._grant._identity;
-            _mapAccountToIdentity[identity._accountId]                                       = identity;
-            _mapNameKeyToAccount[LoginServiceInternal::makeNameKey( identity._displayName )] = identity._accountId;
+            _mapAccountToIdentity[identity._accountID]                                       = identity;
+            _mapNameKeyToAccount[LoginServiceInternal::makeNameKey( identity._displayName )] = identity._accountID;
         }
-        if ( completion._result == LoginResult::Ok && bLinkOperation && isAccountOnline( completion._identity._accountId ) )
+        if ( completion._result == LoginResult::Ok && bLinkOperation && isAccountOnline( completion._identity._accountID ) )
         {
             // 연동이 표시 이름 · 게스트 깃발을 바꿨다 — 옛 이름 색인을 지우고 새 것으로.
             const AccountIdentity& identity = completion._identity;
-            const auto             oldIt    = _mapAccountToIdentity.find( identity._accountId );
+            const auto             oldIt    = _mapAccountToIdentity.find( identity._accountID );
             if ( oldIt != _mapAccountToIdentity.end() )
                 _mapNameKeyToAccount.erase( LoginServiceInternal::makeNameKey( oldIt->second._displayName ) );
-            _mapAccountToIdentity[identity._accountId]                                       = identity;
-            _mapNameKeyToAccount[LoginServiceInternal::makeNameKey( identity._displayName )] = identity._accountId;
+            _mapAccountToIdentity[identity._accountID]                                       = identity;
+            _mapNameKeyToAccount[LoginServiceInternal::makeNameKey( identity._displayName )] = identity._accountID;
         }
         removeOfflineIdentities();
         if ( completion._requestTag != 0 )
@@ -705,7 +705,7 @@ namespace sw
         pending._nowMs               = nowMs;
         pending._operation           = operation;
         pending._bUpdateRecommended  = buildGrant._bUpdateRecommended;
-        pending._verificationId      = pProvider->submitVerification( ticketBytes, nowMs );
+        pending._verificationID      = pProvider->submitVerification( ticketBytes, nowMs );
     }
 
     void LoginService::finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification )

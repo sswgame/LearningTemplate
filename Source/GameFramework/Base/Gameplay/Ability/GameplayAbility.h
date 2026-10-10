@@ -74,7 +74,7 @@ namespace sw
      *          `applyEffectSpecToTarget` 처럼 프레임워크 길로 합니다(틱 중이면 틱 직후로 미룹니다). 오브젝트 생성은 `GameObjectManager::executeOrDeferPostTick` 로 합니다.
      *
      *          **핫 리로드**: 게임 모듈의 어빌리티 인스턴스는 모듈이 내려가기 전에 컴포넌트가 정리합니다(`IModuleUnloadListener`). 다시 올라온 뒤에는
-     *          컴포넌트의 `_abilitySetId` 가 다시 부여합니다 — 코드로 준 어빌리티는 게임이 다시 줍니다.
+     *          컴포넌트의 `_abilitySetID` 가 다시 부여합니다 — 코드로 준 어빌리티는 게임이 다시 줍니다.
      */
     class SW_GF_API GameplayAbility
     {
@@ -156,8 +156,8 @@ namespace sw
         // --------------------------------------------------------------------------
         // 이펙트 — 레벨 · 컨텍스트가 채워진 스펙을 만들고 건다
         // --------------------------------------------------------------------------
-        /** @brief 카탈로그의 이펙트 @p effectId 로 이 어빌리티 레벨의 스펙을 만듭니다. 없으면 빈 스펙입니다(경고). */
-        GameplayEffectSpec makeOutgoingSpec( const hashed_string& effectId ) const;
+        /** @brief 카탈로그의 이펙트 @p effectID 로 이 어빌리티 레벨의 스펙을 만듭니다. 없으면 빈 스펙입니다(경고). */
+        GameplayEffectSpec makeOutgoingSpec( const hashed_string& effectID ) const;
         /** @brief 주인에게 스펙을 겁니다. */
         ActiveEffectHandle applyEffectSpecToOwner( const GameplayEffectSpec& spec );
         /** @brief 대상에게 스펙을 겁니다. 틱 중이면 틱 직후로 미룹니다(`AbilitySystemComponent::applyGameplayEffectSpecToTarget`). */

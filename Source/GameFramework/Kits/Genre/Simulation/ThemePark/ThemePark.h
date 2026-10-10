@@ -227,7 +227,7 @@ namespace sw
         void leaveQueue( ParkGuest& guest );
         void updateParkRating();
         /** @brief id 로 손님을 찾습니다. 목록은 id 오름차순이라(새 손님은 뒤에 붙고 지울 때 순서를 지킨다) 이분 탐색입니다. */
-        ParkGuest* findGuest( uint32 guestId );
+        ParkGuest* findGuest( uint32 guestID );
         float32    nextRandom() { return _random.nextFloat(); }
 
         ThemeParkSettings _settings;
@@ -242,7 +242,7 @@ namespace sw
         LandRegistry*     _pLand;   ///< 빌린 공유 땅(없으면 단독)
         int32             _parkRating;
         uint16            _landOwner;
-        uint32            _nextGuestId;
+        uint32            _nextGuestID;
         uint32            _totalVisitorCount;
     };
 } // namespace sw

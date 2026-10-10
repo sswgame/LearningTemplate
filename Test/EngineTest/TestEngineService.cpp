@@ -32,11 +32,11 @@ SW_TEST_CASE( EngineServiceTest, GameModuleTableHidesHostOnlyServices )
 
 #define SW_CHECK_SERVICE_VISIBILITY( Type, visibility )                                      \
     {                                                                                        \
-        const uint32 rawId = internal::toRawServiceId( internal::ModuleServiceId::Type );    \
+        const uint32 rawID = internal::toRawServiceID( internal::ModuleServiceID::Type );    \
         if constexpr ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 0 )                       \
-            SW_EXPECT_NULL( gameTable.arrServices[rawId] );                                  \
+            SW_EXPECT_NULL( gameTable.arrServices[rawID] );                                  \
         else                                                                                 \
-            SW_EXPECT_EQUAL( editorTable.arrServices[rawId], gameTable.arrServices[rawId] ); \
+            SW_EXPECT_EQUAL( editorTable.arrServices[rawID], gameTable.arrServices[rawID] ); \
     }
 
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       SW_CHECK_SERVICE_VISIBILITY( Type, visibility )
@@ -59,12 +59,12 @@ SW_TEST_CASE( EngineServiceTest, FillClearsTheWholeTableFirst )
 {
     ModuleService table{};
     // 호스트 서비스 자리에 미리 값을 넣어 둔다 — Engine 이 채우는 자리가 아니다.
-    const uint32 hostRawId       = internal::toRawServiceId( internal::ModuleServiceId::IModuleCompiler );
-    table.arrServices[hostRawId] = &table;
+    const uint32 hostRawID       = internal::toRawServiceID( internal::ModuleServiceID::IModuleCompiler );
+    table.arrServices[hostRawID] = &table;
 
     engine::fillModuleServices( table, false );
 
-    SW_EXPECT_NULL( table.arrServices[hostRawId] );
+    SW_EXPECT_NULL( table.arrServices[hostRawID] );
 }
 
 /**

@@ -184,15 +184,15 @@ namespace sw
             }
 
             // 넷 역할은 토큰 자체가 값이다 — `FUNCTION( Server )` 는 NetRole 필드에 "Server" 를 넣는다.
-            string_view fieldId = pBinding->_field;
+            string_view fieldID = pBinding->_field;
             if ( pBinding->_kind == AnnotationBinding::Kind::NetRole )
             {
-                fieldId = annotation::kNetRoleField;
+                fieldID = annotation::kNetRoleField;
                 value   = pBinding->_field;
             }
 
             // 바인딩이 가리키는 줄은 파서가 시작할 때 `AnnotationFields::validateBindings` 가 보장한다.
-            const AnnotationField<TParsed>* pField = scope.findField( fieldId );
+            const AnnotationField<TParsed>* pField = scope.findField( fieldID );
             if ( pField == nullptr )
                 continue;
             // 숫자를 받는 줄에 숫자가 아닌 값(`Min = 0.5f` · `Max = ten`)은 거절한다(조용히 0 이 되지 않게).

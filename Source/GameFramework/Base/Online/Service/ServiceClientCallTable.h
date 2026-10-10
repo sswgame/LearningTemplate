@@ -12,7 +12,7 @@
  *     void XClient::onFooResponse( const OnlineResponse& response )
  *     {
  *         FooDelegate onFoo;
- *         if ( _fooCallTable.take( response._requestId, onFoo ) && onFoo.isBound() )
+ *         if ( _fooCallTable.take( response._requestID, onFoo ) && onFoo.isBound() )
  *             onFoo( response._errorCode, ... ); // _errorCode: OnlineError::kOk · 공통 · 키트 코드, 전송 실패는 kUnavailable
  *     }
  * @endcode
@@ -45,19 +45,19 @@ namespace sw
             _sendingDelegate                 = onDone;
             _bSending                        = SW_TRUE;
             _bSendingTaken                   = SW_FALSE;
-            const uint64 requestId           = client.sendRequest( method, body, options, onResponse );
+            const uint64 requestID           = client.sendRequest( method, body, options, onResponse );
             if ( _bSendingTaken == SW_FALSE )
-                _mapRequestToDelegate.emplace( requestId, onDone );
+                _mapRequestToDelegate.emplace( requestID, onDone );
             _sendingDelegate = previousDelegate;
             _bSending        = bPreviousSending;
             _bSendingTaken   = bPreviousTaken;
-            return requestId;
+            return requestID;
         }
 
         /** @brief 꺼냅니다(한 번만). 없으면 false. `send` 안에서 바로 온 응답이면 보내는 중인 델리게이트입니다. */
-        [[nodiscard]] bool take( uint64 requestId, TDelegate& outDelegate )
+        [[nodiscard]] bool take( uint64 requestID, TDelegate& outDelegate )
         {
-            const auto delegateIt = _mapRequestToDelegate.find( requestId );
+            const auto delegateIt = _mapRequestToDelegate.find( requestID );
             if ( delegateIt != _mapRequestToDelegate.end() )
             {
                 outDelegate = delegateIt->second;

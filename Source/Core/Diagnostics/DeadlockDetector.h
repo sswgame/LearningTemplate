@@ -55,15 +55,15 @@ namespace sw
         /** @brief 스레드 하나가 기다리는 락 · 잡고 있는 락 · 콜 스택입니다. */
         struct ThreadState
         {
-            std::thread::id                 _threadId;
+            std::thread::id                 _threadID;
             void*                           _pWaitingLock{ nullptr };
             vector<void*>                   _listHeldLock;
             CallStack                       _waitingCallStack;
             unordered_map<void*, CallStack> _mapAcquiredCallStack;
         };
 
-        /** @brief startThreadId 가 pLockRequested 를 기다릴 때 대기 사이클이 생기는지 확인합니다. */
-        bool hasCycle( std::thread::id startThreadId, void* pLockRequested );
+        /** @brief startThreadID 가 pLockRequested 를 기다릴 때 대기 사이클이 생기는지 확인합니다. */
+        bool hasCycle( std::thread::id startThreadID, void* pLockRequested );
         /** @brief 사이클에 걸린 스레드들의 대기 · 보유 락을 로그로 남깁니다. */
         void dumpDeadlock( const vector<std::thread::id>& listCycle );
 

@@ -94,7 +94,7 @@ namespace sw
 
         VehicleRecord record;
         {
-            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pChassis->_bodyId );
+            JPH::BodyLockWrite lock( _system.GetBodyLockInterface(), pChassis->_bodyID );
             if ( lock.Succeeded() == false )
                 return PhysicsVehicleHandle{};
             record._pConstraint = JoltUtil::createObject<JPH::VehicleConstraint>( lock.GetBody(), settings );
@@ -153,7 +153,7 @@ namespace sw
         if ( pBody == nullptr || pRecord->_pConstraint == nullptr )
             return false;
         {
-            JPH::BodyLockRead lock( _system.GetBodyLockInterface(), pBody->_bodyId );
+            JPH::BodyLockRead lock( _system.GetBodyLockInterface(), pBody->_bodyID );
             if ( lock.Succeeded() )
             {
                 const JPH::Body& body    = lock.GetBody();

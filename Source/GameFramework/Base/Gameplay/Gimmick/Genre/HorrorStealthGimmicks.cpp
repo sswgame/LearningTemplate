@@ -32,9 +32,9 @@ namespace sw
             static TagID getHideActivityTag() { return TagID::request( "Activity.Hide" ); }
 
             /** @brief 빛까지 막는 것이 있는가입니다(가림을 볼 때만). */
-            static bool isOccluded( const GameObjectManager& manager, const float3& position, const float3& lightPosition, uint64 ignoreObjectId, uint64 lightObjectId )
+            static bool isOccluded( const GameObjectManager& manager, const float3& position, const float3& lightPosition, uint64 ignoreObjectID, uint64 lightObjectID )
             {
-                return WorldQuery::hasLineOfSight( manager, position, lightPosition, ignoreObjectId, lightObjectId ) == false;
+                return WorldQuery::hasLineOfSight( manager, position, lightPosition, ignoreObjectID, lightObjectID ) == false;
             }
         };
     } // namespace
@@ -229,11 +229,11 @@ namespace sw
         _lastOccupantCount = count;
     }
 
-    float32 LightExposure::computeExposure( const GameObjectManager& manager, const float3& position, bool bOcclusion, uint64 ignoreObjectId )
+    float32 LightExposure::computeExposure( const GameObjectManager& manager, const float3& position, bool bOcclusion, uint64 ignoreObjectID )
     {
         using Internal   = HorrorStealthGimmicksInternal;
         float32 exposure = 0.0f;
-        manager.forEachGameObject( [&manager, &exposure, &position, bOcclusion, ignoreObjectId]( GameObject* pObject )
+        manager.forEachGameObject( [&manager, &exposure, &position, bOcclusion, ignoreObjectID]( GameObject* pObject )
         {
             if ( pObject == nullptr || pObject->isActiveInHierarchy() == false )
                 return;
@@ -241,7 +241,7 @@ namespace sw
             if ( pSun != nullptr && pSun->isActive() )
             {
                 const float3 toward = position - pSun->getLightDirection().normalize() * Internal::kSunDistance;
-                if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectId, pObject->getObjectId() ) == false )
+                if ( bOcclusion == false || Internal::isOccluded( manager, position, toward, ignoreObjectID, pObject->getObjectID() ) == false )
                     exposure += pSun->getIntensity();
             }
             const PointLightComponent* pPoint = pObject->getComponent<PointLightComponent>();
@@ -249,7 +249,7 @@ namespace sw
             {
                 const float32 distance = float3::getDistance( position, pPoint->getLightPosition() );
                 const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pPoint->getRadius() );
-                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pPoint->getLightPosition(), ignoreObjectId, pObject->getObjectId() );
+                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pPoint->getLightPosition(), ignoreObjectID, pObject->getObjectID() );
                 if ( bBlocked == false )
                     exposure += pPoint->getIntensity() * falloff * falloff;
             }
@@ -260,7 +260,7 @@ namespace sw
                 const float32 distance = offset.getLength();
                 const float32 falloff  = MathUtil::max( 0.0f, 1.0f - distance / pSpot->getRadius() );
                 const bool    bInCone  = distance <= 1.0e-4f || pSpot->getLightDirection().normalize().dot( offset / distance ) >= MathUtil::cos( pSpot->getOuterConeAngle() );
-                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pSpot->getLightPosition(), ignoreObjectId, pObject->getObjectId() );
+                const bool    bBlocked = bOcclusion && falloff > 0.0f && Internal::isOccluded( manager, position, pSpot->getLightPosition(), ignoreObjectID, pObject->getObjectID() );
                 if ( bInCone && bBlocked == false )
                     exposure += pSpot->getIntensity() * falloff * falloff;
             }

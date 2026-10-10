@@ -25,20 +25,20 @@ namespace sw
         return true;
     }
 
-    bool FarmShippingBin::shipItem( Inventory& inoutBag, const hashed_string& itemId, int32 count )
+    bool FarmShippingBin::shipItem( Inventory& inoutBag, const hashed_string& itemID, int32 count )
     {
-        if ( count <= 0 || inoutBag.removeItem( itemId, count ) == false )
+        if ( count <= 0 || inoutBag.removeItem( itemID, count ) == false )
             return false;
-        _bin.addItem( itemId, count );
+        _bin.addItem( itemID, count );
         return true;
     }
 
     int32 FarmShippingBin::settleShipping( const CropCatalog& catalog, Wallet& inoutWallet )
     {
         int32 earned = 0;
-        for ( const auto& [itemId, count] : _bin.getItems() )
+        for ( const auto& [itemID, count] : _bin.getItems() )
         {
-            earned += catalog.findSellPrice( itemId ) * count;
+            earned += catalog.findSellPrice( itemID ) * count;
         }
         _bin.clear();
         if ( 0 < earned )

@@ -257,7 +257,7 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 - **gamesettings 의 모르는 원소는 로드 오류입니다.** 게임만의 값은 `<custom><prop key>` 안에만 둡니다. 설정 파일 이름은 `path::kGameSettingsFile` 하나입니다.
 - **언어 코드는 `LocalizationManager::normalizeLanguageCode` 가 돌려주는 철자 하나로 씁니다.** 로컬라이제이션 조회가 돌려주는 문자열은 추가만 하는 `LocalizedTextArena` 에 있어서 계속 유효합니다.
 - **대화 노드 종류는 테이블 한 줄로 더합니다.** `kArrDialogueNodeInfo` 한 줄과 러너 switch 의 case 하나입니다. 빠뜨리면 `-Wswitch-enum` 이 알려 줍니다.
-  다음 노드 계산은 러너와 에디터 미리보기가 같이 쓰는 `DialogueCursor::step` 이고, 핀 번호(`nodeId * 100 + offset`)는 디스크 형식이라 바꾸지 않습니다.
+  다음 노드 계산은 러너와 에디터 미리보기가 같이 쓰는 `DialogueCursor::step` 이고, 핀 번호(`nodeID * 100 + offset`)는 디스크 형식이라 바꾸지 않습니다.
 - **시퀀서의 `SequenceItemKind` 값은 JSON 에 정수로 저장되므로 번호를 바꾸지 않습니다.** 시퀀서 이벤트는 `SequencePlayerComponent::registerSequenceEvent` 로 받습니다.
 - **카메라 포즈는 어느 공간의 값인지 보고 씁니다.** 월드 값이면 `CameraPoseUtil::applyToCamera`, 카메라 주인의 로컬 값(1인칭 눈 위치)이면 `applyToCameraLocal` 입니다.
   로컬 값을 월드로 쓰면 부모가 움직여도 카메라가 원점 근처에 남습니다. 루트 카메라에서는 둘이 같아서 드러나지 않습니다.

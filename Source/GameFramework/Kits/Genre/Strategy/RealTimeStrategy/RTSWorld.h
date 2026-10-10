@@ -29,7 +29,7 @@ namespace sw
     class Wallet;
 
     /** @brief 유닛 id 입니다. 죽은 유닛의 자리가 다시 쓰여도 옛 id 는 세대가 달라 찾지 못합니다. */
-    using RTSUnitId = SlotHandle;
+    using RTSUnitID = SlotHandle;
 
     /** @brief 규칙의 수치입니다. 시간은 게임 초입니다. */
     struct RTSSettings
@@ -66,10 +66,10 @@ namespace sw
     /** @brief 명령 하나입니다. */
     struct RTSOrder
     {
-        hashed_string    _buildId{};
+        hashed_string    _buildID{};
         float3           _target{};
         int2             _buildCell{ -1, -1 };
-        RTSUnitId        _targetUnit{};
+        RTSUnitID        _targetUnit{};
         const FlowField* _pFlowField{ nullptr }; ///< 무리 이동 — 월드가 빌려 준 흐름장(명령이 끝나면 돌려준다)
         float32          _arriveRadius{ 0.0f };  ///< 무리 이동 — 목표 이 안이면 다 왔다(한 점에 모두 설 수 없다)
         RTSOrderType     _type{ RTSOrderType::Move };
@@ -115,12 +115,12 @@ namespace sw
         float3               _rallyPoint{};
         float3               _moveGoal{};     ///< 지금 다가가는 자리(다시 구할지 정한다)
         int2                 _cell{ -1, -1 }; ///< 건물 · 자원 — 왼쪽 아래 칸
-        RTSUnitId            _id{};
-        RTSUnitId            _attackTarget{};   ///< 지금 치는 유닛(명령 · 자동)
-        RTSUnitId            _gatherTarget{};   ///< 캐는 자원 · 정제소
-        RTSUnitId            _harvester{};      ///< 자원 · 정제소 — 지금 캐는 일꾼
-        RTSUnitId            _builder{};        ///< 짓는 중인 건물 — 짓는 일꾼
-        RTSUnitId            _linkedResource{}; ///< 정제소 — 아래 간헐천
+        RTSUnitID            _id{};
+        RTSUnitID            _attackTarget{};   ///< 지금 치는 유닛(명령 · 자동)
+        RTSUnitID            _gatherTarget{};   ///< 캐는 자원 · 정제소
+        RTSUnitID            _harvester{};      ///< 자원 · 정제소 — 지금 캐는 일꾼
+        RTSUnitID            _builder{};        ///< 짓는 중인 건물 — 짓는 일꾼
+        RTSUnitID            _linkedResource{}; ///< 정제소 — 아래 간헐천
         float32              _hp{ 0.0f };
         Countdown            _cooldown{};            ///< 다음 공격까지
         float32              _buildProgress{ 1.0f }; ///< 0..1 — 1 이면 다 지었다
@@ -189,10 +189,10 @@ namespace sw
             PlayerDefeated,
             GameOver ///< _player = 이긴 팀
         };
-        hashed_string _defId{};
+        hashed_string _defID{};
         float3        _position{};
-        RTSUnitId     _unit{};
-        RTSUnitId     _other{}; ///< 죽음 — 죽인 유닛
+        RTSUnitID     _unit{};
+        RTSUnitID     _other{}; ///< 죽음 — 죽인 유닛
         int32         _player{ -1 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::UnitCreated };
@@ -233,37 +233,37 @@ namespace sw
         /** @brief 플레이어를 더합니다. 자원은 빌린 지갑(@p pWallet — 월드보다 오래 살아야 한다, nullptr 이면 아무것도 사지 못한다)입니다. 플레이어 번호입니다. */
         int32 addPlayer( int32 team, Wallet* pWallet, const float3& startPosition );
         /** @brief 유닛 · 건물(다 지은 채) · 자원을 놓습니다. 건물 · 자원은 @p position 이 든 칸이 왼쪽 아래입니다. 놓을 수 없으면 무효 id 입니다. */
-        RTSUnitId spawnUnit( const hashed_string& defId, int32 owner, const float3& position );
+        RTSUnitID spawnUnit( const hashed_string& defID, int32 owner, const float3& position );
 
         // 명령 — @p bQueue 면 명령 대기열 뒤에 붙인다(쉬프트).
-        RTSCommandResult issueMove( RTSUnitId unitId, const float3& target, bool bQueue = false );
-        RTSCommandResult issueAttackMove( RTSUnitId unitId, const float3& target, bool bQueue = false );
-        RTSCommandResult issueAttack( RTSUnitId unitId, RTSUnitId targetId, bool bQueue = false );
-        RTSCommandResult issueGather( RTSUnitId unitId, RTSUnitId resourceId, bool bQueue = false );
-        /** @brief 일꾼이 @p cell(왼쪽 아래)에 @p buildingId 를 짓게 합니다. 값은 자리에 닿아 짓기 시작할 때 냅니다. */
-        RTSCommandResult issueBuild( RTSUnitId workerId, const hashed_string& buildingId, const int2& cell, bool bQueue = false );
-        RTSCommandResult issueHold( RTSUnitId unitId );
-        RTSCommandResult issueStop( RTSUnitId unitId );
+        RTSCommandResult issueMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
+        RTSCommandResult issueAttackMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
+        RTSCommandResult issueAttack( RTSUnitID unitID, RTSUnitID targetID, bool bQueue = false );
+        RTSCommandResult issueGather( RTSUnitID unitID, RTSUnitID resourceID, bool bQueue = false );
+        /** @brief 일꾼이 @p cell(왼쪽 아래)에 @p buildingID 를 짓게 합니다. 값은 자리에 닿아 짓기 시작할 때 냅니다. */
+        RTSCommandResult issueBuild( RTSUnitID workerID, const hashed_string& buildingID, const int2& cell, bool bQueue = false );
+        RTSCommandResult issueHold( RTSUnitID unitID );
+        RTSCommandResult issueStop( RTSUnitID unitID );
         /**
          * @brief 오른쪽 클릭 — 적이면 공격, 자원 · 내 정제소면 채취(일꾼), 내 덜 지은 건물이면 이어 짓기(일꾼), 아니면 이동입니다.
-         * @param targetId 클릭한 유닛(없으면 무효 id).
+         * @param targetID 클릭한 유닛(없으면 무효 id).
          */
-        RTSCommandResult issueSmart( RTSUnitId unitId, const float3& position, RTSUnitId targetId, bool bQueue = false );
+        RTSCommandResult issueSmart( RTSUnitID unitID, const float3& position, RTSUnitID targetID, bool bQueue = false );
         /** @brief 여럿에게 같은 이동 · 공격 이동을 줍니다. 무리가 크면 흐름장 하나를 함께 씁니다. 받은 유닛 수입니다. */
-        int32 issueGroupMove( const vector<RTSUnitId>& listUnit, const float3& target, bool bAttackMove, bool bQueue = false );
+        int32 issueGroupMove( const vector<RTSUnitID>& listUnit, const float3& target, bool bAttackMove, bool bQueue = false );
 
         /** @brief 건물의 생산 대기열에 넣습니다. 값(광물 · 가스)은 지금 내고 보급은 생산을 시작할 때 봅니다. */
-        RTSCommandResult train( RTSUnitId buildingId, const hashed_string& unitId );
+        RTSCommandResult train( RTSUnitID buildingID, const hashed_string& unitID );
         /** @brief 대기열 마지막을 빼고 값을 돌려받습니다. */
-        bool cancelTrain( RTSUnitId buildingId );
-        void setRallyPoint( RTSUnitId buildingId, const float3& position );
+        bool cancelTrain( RTSUnitID buildingID );
+        void setRallyPoint( RTSUnitID buildingID, const float3& position );
 
         /** @brief 시간을 넘깁니다(고정 걸음). */
         void update( float32 deltaTime );
         void drainEvents( vector<RTSEvent>& outListEvent );
 
         // 조회
-        const RTSUnit*   findUnit( RTSUnitId unitId ) const;
+        const RTSUnit*   findUnit( RTSUnitID unitID ) const;
         const RTSPlayer* findPlayer( int32 player ) const;
         int32            getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
         /** @brief 그 플레이어 지갑의 광물 · 가스입니다(지갑이 없으면 0). */
@@ -280,27 +280,27 @@ namespace sw
             }
         }
         /** @brief @p center 둘레 @p radius 안(몸 가장자리 기준)의 산 유닛입니다. */
-        void queryUnits( const float3& center, float32 radius, vector<RTSUnitId>& outListUnit ) const;
+        void queryUnits( const float3& center, float32 radius, vector<RTSUnitID>& outListUnit ) const;
         /** @brief 그 자리를 덮는 유닛(건물 · 자원은 칸, 유닛은 몸)입니다 — 클릭 고르기. */
-        RTSUnitId pickUnit( const float3& position ) const;
-        int32     countUnits( int32 player, const hashed_string& defId, bool bIncludeUnfinished ) const;
+        RTSUnitID pickUnit( const float3& position ) const;
+        int32     countUnits( int32 player, const hashed_string& defID, bool bIncludeUnfinished ) const;
         /** @brief 다 지은 그 건물이 있는가입니다(테크). */
-        bool hasConstructed( int32 player, const hashed_string& defId ) const;
+        bool hasConstructed( int32 player, const hashed_string& defID ) const;
         /** @brief 생산 대기열 · 짓는 중까지 셉니다(AI 가 같은 것을 두 번 시키지 않게). */
-        int32 countPlanned( int32 player, const hashed_string& defId ) const;
+        int32 countPlanned( int32 player, const hashed_string& defID ) const;
 
         /** @brief 건물을 그 칸에 놓을 수 있는가입니다(격자 · 다른 건물 · 땅 유닛 · 정제소는 간헐천 위 · 빌린 공유 땅이 남의 것이 아님). @p ignoreUnit 은 짓는 일꾼. */
-        bool canPlaceBuilding( const hashed_string& buildingId, const int2& cell, RTSUnitId ignoreUnit = RTSUnitId{} ) const;
+        bool canPlaceBuilding( const hashed_string& buildingID, const int2& cell, RTSUnitID ignoreUnit = RTSUnitID{} ) const;
         /** @brief @p nearPosition 둘레에서 둘레 한 칸을 비운 건물 자리를 찾습니다(AI · 자동 배치). 정제소는 가까운 빈 간헐천입니다. */
-        [[nodiscard]] bool findBuildSite( const hashed_string& buildingId, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const;
+        [[nodiscard]] bool findBuildSite( const hashed_string& buildingID, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const;
         /** @brief @p position 에서 가장 가까운 자원(그 종류)입니다. @p maxDistance 밖이면 무효 id 입니다. */
-        RTSUnitId findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const;
+        RTSUnitID findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const;
         /** @brief 그 플레이어의 가장 가까운 다 지은 본진입니다. */
-        RTSUnitId findNearestDepot( int32 player, const float3& position ) const;
+        RTSUnitID findNearestDepot( int32 player, const float3& position ) const;
 
         RTSVisibility getVisibility( int32 player, const int2& cell ) const;
         /** @brief 그 플레이어(팀)가 지금 그 유닛을 보는가입니다. */
-        bool isVisibleTo( int32 player, RTSUnitId unitId ) const;
+        bool isVisibleTo( int32 player, RTSUnitID unitID ) const;
         /** @brief 두 플레이어가 서로 적인가입니다(팀이 다르면 적 — `TeamAttitudeUtil::isHostile`). 없는 플레이어(주인 없음)는 누구와도 적이 아닙니다. */
         bool areEnemies( int32 playerA, int32 playerB ) const;
         /** @brief 남은 팀이 하나면 그 팀, 아니면 −1 입니다. */
@@ -333,13 +333,13 @@ namespace sw
             int32     _userCount{ 0 };
         };
 
-        RTSUnit*  findUnitMutable( RTSUnitId unitId );
+        RTSUnit*  findUnitMutable( RTSUnitID unitID );
         void      freeDeadUnits();
         void      beginOrder( RTSUnit& unit );
         void      releaseOrder( RTSUnit& unit, RTSOrder& order );
         void      nudgeToWalkable( RTSUnit& unit );
         float32   computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const;
-        RTSUnitId allocateUnit();
+        RTSUnitID allocateUnit();
         void      stepFixed( float32 deltaTime );
         void      recomputeSupply();
         void      rebuildBuckets();
@@ -361,9 +361,9 @@ namespace sw
         bool      isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const;
         float32   computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const;
         bool      canAttack( const RTSUnit& attacker, const RTSUnit& target ) const;
-        RTSUnitId findAutoTarget( const RTSUnit& unit, float32 radius ) const;
+        RTSUnitID findAutoTarget( const RTSUnit& unit, float32 radius ) const;
         void      dealDamage( RTSUnit& attacker, RTSUnit& target );
-        void      killUnit( RTSUnit& unit, RTSUnitId killerId );
+        void      killUnit( RTSUnit& unit, RTSUnitID killerID );
         void      placeFootprint( const RTSUnit& unit, bool bBlocked );
         /** @brief 땅 격자를 지형 · 남의 막힌 땅 · 서 있는 건물 · 자원의 발자국으로 다시 칠합니다. */
         void             repaintGrid();
@@ -373,7 +373,7 @@ namespace sw
         RTSCommandResult evaluateCost( int32 player, const RTSUnitDef& def ) const;
         void             payCost( RTSPlayer& player, const RTSUnitDef& def );
         void             refundCost( RTSPlayer& player, const RTSUnitDef& def );
-        void             pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitId unitId, const hashed_string& defId, int32 value = 0, RTSUnitId otherId = RTSUnitId{} );
+        void             pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
         FlowField*       acquireFlowField( const int2& goal );
         void             releaseFlowField( const FlowField* pField );
         int32            computeBucketIndex( const float3& position ) const;
@@ -391,7 +391,7 @@ namespace sw
         vector<int32>         _listBucketHead;     ///< 버킷마다 첫 유닛 자리(−1 끝)
         vector<int32>         _listBucketNext;     ///< 유닛 자리마다 다음 자리
         vector<float3>        _listNeighborScratch;
-        vector<RTSUnitId>     _listQueryScratch;
+        vector<RTSUnitID>     _listQueryScratch;
         deque<FlowFieldSlot>  _listFlowField; ///< deque — 자리가 움직이지 않아 행위자가 포인터를 들 수 있다
         const RTSCatalog*     _pCatalog;
         RTSSettings           _settings;

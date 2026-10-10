@@ -60,10 +60,10 @@ namespace sw
         ShieldBroken,      ///< 실드가 0 이 됐다
         Healed,            ///< `_amount` = 실제로 찬 체력
         Downed,            ///< 기절했다
-        ReviveStarted,     ///< `_instigatorId` = 살리는 쪽
+        ReviveStarted,     ///< `_instigatorID` = 살리는 쪽
         ReviveInterrupted, ///< 맞아서 부활이 끊겼다(`stopRevive` 로 그만둔 것은 알리지 않는다)
-        Revived,           ///< `_instigatorId` = 살린 쪽
-        Died,              ///< `_instigatorId` = 마지막으로 때린 쪽(출혈사면 기절시킨 쪽)
+        Revived,           ///< `_instigatorID` = 살린 쪽
+        Died,              ///< `_instigatorID` = 마지막으로 때린 쪽(출혈사면 기절시킨 쪽)
         PoiseBroken,       ///< 경직 붕괴 — 게임이 비틀거림 · 다운 애니메이션을 튼다
         PoiseRecovered     ///< 붕괴가 끝나 게이지가 가득 찼다
     };
@@ -72,7 +72,7 @@ namespace sw
     struct VitalityEvent
     {
         float32           _amount{ 0.0f };
-        int32             _instigatorId{ -1 };
+        int32             _instigatorID{ -1 };
         VitalityEventType _type{ VitalityEventType::Damaged };
     };
 } // namespace sw
@@ -119,9 +119,9 @@ namespace sw
 
         /**
          * @brief 피해를 줍니다. @p amount 는 실드 → 체력 순서, @p poiseDamage 는 경직 게이지에 갑니다.
-         * @param instigatorId 때린 쪽(게임이 정한 번호 — 알림과 죽음 귀속에 실린다)
+         * @param instigatorID 때린 쪽(게임이 정한 번호 — 알림과 죽음 귀속에 실린다)
          */
-        VitalityDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorId = -1 );
+        VitalityDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorID = -1 );
         /** @brief 체력을 채웁니다(살아 있을 때만, 최대까지). 실제로 찬 양입니다. */
         float32 heal( float32 amount );
         /** @brief 실드를 채웁니다(살아 있을 때만, 최대까지 — 실드 전지). 실제로 찬 양입니다. */
@@ -133,13 +133,13 @@ namespace sw
          * @brief 기절한 개체를 살리기 시작합니다. 기절 상태가 아니면 false 입니다.
          * @param speedScale 진행 배율(둘이 살리면 2 처럼 — 게임이 정한다). 이미 살리는 중이면 배율과 살리는 쪽만 바뀐다.
          */
-        [[nodiscard]] bool startRevive( int32 reviverId, float32 speedScale = 1.0f );
+        [[nodiscard]] bool startRevive( int32 reviverID, float32 speedScale = 1.0f );
         /** @brief 살리기를 그만둡니다(살리는 쪽이 떠났다). 진행은 `_bKeepReviveProgress` 에 따릅니다. */
         void stopRevive();
         /** @brief @p seconds 동안 피해를 받지 않습니다(이미 남은 것보다 길 때만 늘린다). */
         void setInvulnerable( float32 seconds );
         /** @brief 상태를 가리지 않고 죽입니다(낙사 · 존 밖 · 갈고리 희생). 이미 죽었으면 아무 일도 없습니다. */
-        void kill( int32 instigatorId = -1 );
+        void kill( int32 instigatorID = -1 );
         void resetDownCount() { _downCount = 0; }
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<VitalityEvent>& outListEvent );
@@ -157,7 +157,7 @@ namespace sw
         float32                 getDownedHealth() const { return _downedHealth; }
         int32                   getDownCount() const { return _downCount; }
         bool                    isReviving() const { return _bReviving == SW_TRUE; }
-        int32                   getReviverId() const { return _reviverId; }
+        int32                   getReviverID() const { return _reviverID; }
         /** @brief 부활 진행 0..1 입니다. */
         float32 getReviveProgress() const;
         bool    isInvulnerable() const { return _invulnerable.isActive(); }
@@ -170,10 +170,10 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        void enterDowned( int32 instigatorId );
-        void enterDead( int32 instigatorId );
+        void enterDowned( int32 instigatorID );
+        void enterDead( int32 instigatorID );
         void finishRevive();
-        void pushEvent( VitalityEventType type, float32 amount, int32 instigatorId );
+        void pushEvent( VitalityEventType type, float32 amount, int32 instigatorID );
 
         VitalitySettings           _settings;
         EventBuffer<VitalityEvent> _eventBuffer;
@@ -187,8 +187,8 @@ namespace sw
         Countdown                  _invulnerable;
         float32                    _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
         float32                    _reviveSpeedScale;
-        int32                      _reviverId;
-        int32                      _lastInstigatorId;
+        int32                      _reviverID;
+        int32                      _lastInstigatorID;
         int32                      _downCount;
         VitalityState              _state;
         uint8                      _bReviving;

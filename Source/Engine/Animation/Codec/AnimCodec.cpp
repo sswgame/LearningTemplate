@@ -20,7 +20,7 @@ namespace sw
             /** @brief 등록된 코덱 표입니다. 번호 순서입니다. */
             static const IAnimCodec* const* getCodecTable()
             {
-                static const IAnimCodec* const s_arrCodec[static_cast<uint32>( AnimCodecId::Count )] = { &RawAnimCodec::getInstance(), &ACLAnimCodec::getInstance() };
+                static const IAnimCodec* const s_arrCodec[static_cast<uint32>( AnimCodecID::Count )] = { &RawAnimCodec::getInstance(), &ACLAnimCodec::getInstance() };
                 return s_arrCodec;
             }
 
@@ -58,15 +58,15 @@ namespace sw
         }
     }
 
-    const IAnimCodec* AnimCodecRegistry::findCodec( AnimCodecId id )
+    const IAnimCodec* AnimCodecRegistry::findCodec( AnimCodecID id )
     {
         const uint32 index = static_cast<uint32>( id );
-        return index < static_cast<uint32>( AnimCodecId::Count ) ? AnimCodecInternal::getCodecTable()[index] : nullptr;
+        return index < static_cast<uint32>( AnimCodecID::Count ) ? AnimCodecInternal::getCodecTable()[index] : nullptr;
     }
 
     const IAnimCodec* AnimCodecRegistry::findCodecByName( string_view name )
     {
-        for ( uint32 index = 0; index < static_cast<uint32>( AnimCodecId::Count ); ++index )
+        for ( uint32 index = 0; index < static_cast<uint32>( AnimCodecID::Count ); ++index )
         {
             const IAnimCodec* pCodec = AnimCodecInternal::getCodecTable()[index];
             if ( StringUtil::equals( name, string_view( pCodec->getName() ), true ) )

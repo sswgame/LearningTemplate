@@ -38,14 +38,14 @@ namespace
     struct EchoService final : public INetRequestHandler
     {
         vector<NetRequestToken> _listDeferred{};
-        vector<LogTraceId>      _listTraceId{};        ///< 요청 머리의 추적 id(받은 순)
+        vector<LogTraceID>      _listTraceID{};        ///< 요청 머리의 추적 id(받은 순)
         vector<LogContext>      _listHandlerContext{}; ///< 처리기 안의 로그 문맥(받은 순)
         int32                   _callCount{ 0 };
 
         void onNetRequest( NetRequestServer& server, const NetRequestContext& context ) override
         {
             ++_callCount;
-            _listTraceId.push_back( context._traceId );
+            _listTraceID.push_back( context._traceID );
             _listHandlerContext.push_back( LogContext::getCurrent() );
             if ( context._token._method == 1 )
                 (void)server.respond( context._token, NetRequestStatus::Ok, context._pBody, context._bodySize );
@@ -59,15 +59,15 @@ namespace
     {
         NetRequestServer               _server{};
         vector<StreamConnectionHandle> _listOpened{};
-        uint64                         _principalId{ 0 };
+        uint64                         _principalID{ 0 };
 
         void onEndpointOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
         {
             (void)remote;
             (void)bAccepted;
             _listOpened.push_back( handle );
-            if ( _principalId != 0 )
-                _server.setPrincipal( handle, _principalId );
+            if ( _principalID != 0 )
+                _server.setPrincipal( handle, _principalID );
         }
         void onEndpointFrame( StreamConnectionHandle handle, StreamFrameKind kind, const uint8* pBody, int32 bodySize ) override
         {
@@ -112,10 +112,10 @@ namespace
         ClientSide               _clientSide{};
         test::StreamEndpointPair _pair;
 
-        explicit RequestRig( const NetRequestServerSettings& serverSettings = NetRequestServerSettings{}, uint64 principalId = 0 )
+        explicit RequestRig( const NetRequestServerSettings& serverSettings = NetRequestServerSettings{}, uint64 principalID = 0 )
             : _pair{ _serverSide, _clientSide, StreamEndpointSettings{}, LoopbackStreamConditions{} }
         {
-            _serverSide._principalId = principalId;
+            _serverSide._principalID = principalID;
             _serverSide._server.initialize( &_pair._server, serverSettings );
             SW_EXPECT_TRUE( _serverSide._server.registerMethod( 1, &_echo ) );
             SW_EXPECT_TRUE( _serverSide._server.registerMethod( 2, &_echo ) );
@@ -170,13 +170,13 @@ SW_TEST_CASE( NetRequestTest, CancelCompletesLocallyAndMarksServerRequest )
 {
     RequestRig   rig;
     ResponseLog  log;
-    const uint64 requestId = rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log );
+    const uint64 requestID = rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, NetRequestOptions{}, log );
     rig._pair.step( 2 );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( rig._echo._listDeferred.size() ) );
-    SW_EXPECT_TRUE( rig._clientSide._client.cancel( requestId ) );
+    SW_EXPECT_TRUE( rig._clientSide._client.cancel( requestID ) );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( log._listStatus.size() ) );
     SW_EXPECT_TRUE( log._listStatus[0] == NetRequestStatus::Cancelled );
-    SW_EXPECT_FALSE( rig._clientSide._client.cancel( requestId ) ); // 이미 끝났다
+    SW_EXPECT_FALSE( rig._clientSide._client.cancel( requestID ) ); // 이미 끝났다
     rig._pair.step( 2 );
     SW_EXPECT_TRUE( rig._serverSide._server.isCancelled( rig._echo._listDeferred[0] ) );
 }
@@ -263,32 +263,32 @@ SW_TEST_CASE( NetRequestTest, ConnectionLossAndOverloadComplete )
     SW_EXPECT_EQUAL( 0, rig._clientSide._client.getPendingCount() );
 }
 
-SW_TEST_CASE( NetRequestTest, TraceIdTravelsInTheHeadAndWrapsTheHandler )
+SW_TEST_CASE( NetRequestTest, TraceIDTravelsInTheHeadAndWrapsTheHandler )
 {
     RequestRig  rig( NetRequestServerSettings{}, 7 );
     ResponseLog log;
     LogContext  caller;
-    caller._traceId = LogTraceId{ 0xAB, 0xCD };
+    caller._traceID = LogTraceID{ 0xAB, 0xCD };
     {
         ScopedLogContext scope( caller ); // 보내는 스레드의 문맥 — 옵션이 비면 이것이 실린다
         SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 1 }, NetRequestOptions{}, log ) != 0 );
         NetRequestOptions explicitOptions;
-        explicitOptions._traceId = LogTraceId{ 0x1, 0x2 }; // 옵션에 적은 것이 이긴다
+        explicitOptions._traceID = LogTraceID{ 0x1, 0x2 }; // 옵션에 적은 것이 이긴다
         SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 2 }, explicitOptions, log ) != 0 );
     }
     SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 3 }, NetRequestOptions{}, log ) != 0 ); // 아무 데도 없으면 서버가 만든다
     SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 1, vector<uint8>{ 4 }, NetRequestOptions{}, log ) != 0 );
     rig._pair.step( 4 ); // 문맥 밖에서 돈다 — 처리기의 문맥은 서버가 건 것이다
-    SW_ASSERT_EQUAL( 4, static_cast<int32>( rig._echo._listTraceId.size() ) );
-    SW_EXPECT_TRUE( rig._echo._listTraceId[0] == caller._traceId );
-    SW_EXPECT_TRUE( rig._echo._listTraceId[1] == ( LogTraceId{ 0x1, 0x2 } ) );
-    SW_EXPECT_TRUE( rig._echo._listTraceId[2].isValid() );
-    SW_EXPECT_TRUE( rig._echo._listTraceId[2] != rig._echo._listTraceId[3] );
+    SW_ASSERT_EQUAL( 4, static_cast<int32>( rig._echo._listTraceID.size() ) );
+    SW_EXPECT_TRUE( rig._echo._listTraceID[0] == caller._traceID );
+    SW_EXPECT_TRUE( rig._echo._listTraceID[1] == ( LogTraceID{ 0x1, 0x2 } ) );
+    SW_EXPECT_TRUE( rig._echo._listTraceID[2].isValid() );
+    SW_EXPECT_TRUE( rig._echo._listTraceID[2] != rig._echo._listTraceID[3] );
     for ( int32 index = 0; index < 4; ++index )
     {
         const LogContext& handlerContext = rig._echo._listHandlerContext[static_cast<size_t>( index )];
-        SW_EXPECT_TRUE( handlerContext._traceId == rig._echo._listTraceId[static_cast<size_t>( index )] );
-        SW_EXPECT_EQUAL( handlerContext._principalId, uint64( 7 ) );
+        SW_EXPECT_TRUE( handlerContext._traceID == rig._echo._listTraceID[static_cast<size_t>( index )] );
+        SW_EXPECT_EQUAL( handlerContext._principalID, uint64( 7 ) );
     }
     SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( log._listStatus.size() ) );

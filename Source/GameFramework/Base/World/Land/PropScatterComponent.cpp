@@ -266,7 +266,7 @@ namespace sw
                 pManager->destroyObject( pProp );
                 continue;
             }
-            pMesh->setMeshId( _listModel[static_cast<size_t>( placement._modelIndex )]._meshId );
+            pMesh->setMeshID( _listModel[static_cast<size_t>( placement._modelIndex )]._meshID );
             if ( _materialPath.empty() == false )
                 pMesh->setMaterialPath( _materialPath );
             pMesh->setLocalPosition( placement._position );

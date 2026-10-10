@@ -304,8 +304,8 @@ SW_TEST_CASE( TickPrerequisiteTest, MainTickOfAnotherComponentIsAPrerequisite )
     sw::SubTickHandle              followerTick{};
     sw::MockSubTickMoverComponent* pFollower  = createMover( manager, "MainTickFollower", sw::float3{ 0.0f, 0.0f, 1.0f }, pLeader, followerTick );
     const sw::SubTickHandle        leaderTick = pLeader->getTickHandle();
-    SW_EXPECT_EQUAL( 0u, leaderTick._subTickId );
-    SW_EXPECT_EQUAL( pLeaderObj->getObjectId(), leaderTick._objectId );
+    SW_EXPECT_EQUAL( 0u, leaderTick._subTickID );
+    SW_EXPECT_EQUAL( pLeaderObj->getObjectID(), leaderTick._objectID );
     SW_ASSERT_TRUE( pFollower->addSubTickPrerequisite( kMove, leaderTick ) );
 
     manager.tick( 0.016f );

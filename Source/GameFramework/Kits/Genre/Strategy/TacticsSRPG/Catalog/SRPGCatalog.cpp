@@ -134,42 +134,42 @@ namespace sw
             const bool  bDefinition = bTerrain || bWeapon || bUnit || bPilot;
             if ( bDefinition == false )
                 continue;
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             if ( bTerrain )
-                loadTerrain( node, pId );
+                loadTerrain( node, pID );
             else if ( bWeapon )
-                loadWeapon( node, pId, sourceName );
+                loadWeapon( node, pID, sourceName );
             else if ( bUnit )
-                loadUnit( node, pId, sourceName );
+                loadUnit( node, pID, sourceName );
             else
-                loadPilot( node, pId );
+                loadPilot( node, pID );
             ++loadedCount;
         }
 
         for ( const SRPGUnitDef& def : _unitCatalog.getAll() )
         {
-            for ( const hashed_string& weaponId : def._listWeaponId )
+            for ( const hashed_string& weaponID : def._listWeaponID )
             {
-                if ( _weaponCatalog.find( weaponId ) == nullptr )
-                    SW_LOG_WARNING( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponId.c_str() );
+                if ( _weaponCatalog.find( weaponID ) == nullptr )
+                    SW_LOG_WARNING( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponID.c_str() );
             }
             for ( const SRPGDevelopTarget& target : def._listDevelop )
             {
-                if ( _unitCatalog.find( target._unitId ) == nullptr )
-                    SW_LOG_WARNING( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitId.c_str() );
+                if ( _unitCatalog.find( target._unitID ) == nullptr )
+                    SW_LOG_WARNING( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitID.c_str() );
             }
         }
         return loadedCount;
     }
 
-    void SRPGCatalog::loadTerrain( const XMLNode& node, const utf8* pId )
+    void SRPGCatalog::loadTerrain( const XMLNode& node, const utf8* pID )
     {
         SRPGTerrainDef def;
-        def._id           = hashed_string( pId );
+        def._id           = hashed_string( pID );
         const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pId;
+        def._name         = pName != nullptr ? pName : pID;
         SRPGCatalogInternal::parseFourInts( node.getAttributeText( "cost" ), -1, def._arrMoveCost, false );
         def._defenseBonus = node.getAttributeInt( "defense", def._defenseBonus );
         def._evasionBonus = node.getAttributeInt( "evasion", def._evasionBonus );
@@ -179,12 +179,12 @@ namespace sw
         (void)_terrainCatalog.add( def );
     }
 
-    void SRPGCatalog::loadWeapon( const XMLNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadWeapon( const XMLNode& node, const utf8* pID, string_view sourceName )
     {
         SRPGWeaponDef def;
-        def._id                = hashed_string( pId );
+        def._id                = hashed_string( pID );
         const utf8* pName      = node.findAttribute( "name" );
-        def._name              = pName != nullptr ? pName : pId;
+        def._name              = pName != nullptr ? pName : pID;
         def._minRange          = MathUtil::max( 0, node.getAttributeInt( "minRange", def._minRange ) );
         def._maxRange          = MathUtil::max( def._minRange, node.getAttributeInt( "maxRange", def._maxRange ) );
         def._power             = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
@@ -201,7 +201,7 @@ namespace sw
         else if ( StringUtil::equals( kind, string_view( "Awaken" ), true ) )
             def._kind = SRPGWeaponKind::Awaken;
         else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Shooting" ), true ) == false )
-            SW_LOG_WARNING( "%#: weapon '%#' has an unknown kind '%#' - read as shooting", sourceName, pId, kind );
+            SW_LOG_WARNING( "%#: weapon '%#' has an unknown kind '%#' - read as shooting", sourceName, pID, kind );
 
         const string_view mapAnchor = node.getAttributeText( "map" );
         if ( StringUtil::equals( mapAnchor, string_view( "Self" ), true ) )
@@ -218,7 +218,7 @@ namespace sw
             } );
             if ( def._listMapOffset.empty() )
             {
-                SW_LOG_WARNING( "%#: MAP weapon '%#' has no pattern - hits only the anchor cell", sourceName, pId );
+                SW_LOG_WARNING( "%#: MAP weapon '%#' has no pattern - hits only the anchor cell", sourceName, pID );
                 def._listMapOffset.push_back( int2{ 0, 0 } );
             }
             def._bCounter = SW_FALSE; // MAP 병기로는 반격하지 않는다
@@ -226,12 +226,12 @@ namespace sw
         (void)_weaponCatalog.add( def );
     }
 
-    void SRPGCatalog::loadUnit( const XMLNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadUnit( const XMLNode& node, const utf8* pID, string_view sourceName )
     {
         SRPGUnitDef def;
-        def._id                    = hashed_string( pId );
+        def._id                    = hashed_string( pID );
         const utf8* pName          = node.findAttribute( "name" );
-        def._name                  = pName != nullptr ? pName : pId;
+        def._name                  = pName != nullptr ? pName : pID;
         def._hp                    = MathUtil::max( 1, node.getAttributeInt( "hp", def._hp ) );
         def._en                    = MathUtil::max( 0, node.getAttributeInt( "en", def._en ) );
         def._move                  = MathUtil::max( 0, node.getAttributeInt( "move", def._move ) );
@@ -240,29 +240,29 @@ namespace sw
         def._size                  = SRPGCatalogInternal::parseSize( node.getAttributeText( "size" ), def._size );
         const string_view moveType = node.getAttributeText( "moveType" );
         if ( moveType.empty() == false && SRPGCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
-            SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pId, moveType );
+            SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pID, moveType );
         SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
         GameDataXML::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
-        { def._listWeaponId.push_back( hashed_string( token ) ); } );
+        { def._listWeaponID.push_back( hashed_string( token ) ); } );
         GameDataXML::forEachToken( node.getAttributeText( "developsTo" ), ",; \t", [&]( string_view token )
         {
             SRPGDevelopTarget target;
             const size_t      colon = token.find( ':' );
-            target._unitId          = hashed_string( token.substr( 0, colon ) );
+            target._unitID          = hashed_string( token.substr( 0, colon ) );
             if ( colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), target._requiredLevel ) == false )
-                SW_LOG_WARNING( "%#: unit '%#' has a bad develop level in '%#'", sourceName, pId, token );
+                SW_LOG_WARNING( "%#: unit '%#' has a bad develop level in '%#'", sourceName, pID, token );
             target._requiredLevel = MathUtil::max( 1, target._requiredLevel );
             def._listDevelop.push_back( target );
         } );
         (void)_unitCatalog.add( def );
     }
 
-    void SRPGCatalog::loadPilot( const XMLNode& node, const utf8* pId )
+    void SRPGCatalog::loadPilot( const XMLNode& node, const utf8* pID )
     {
         SRPGPilotDef def;
-        def._id           = hashed_string( pId );
+        def._id           = hashed_string( pID );
         const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pId;
+        def._name         = pName != nullptr ? pName : pID;
         for ( int32 stat = 0; stat < kSRPGPilotStatCount; ++stat )
         {
             def._arrStat[stat]   = node.getAttributeInt( SRPGCatalogInternal::kArrPilotStatName[stat], def._arrStat[stat] );

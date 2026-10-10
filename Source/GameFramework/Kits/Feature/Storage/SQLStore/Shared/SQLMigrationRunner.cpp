@@ -220,7 +220,7 @@ namespace sw
     {
         string text = StringUtil::replace( sql, "{{blob}}", dialect._pBlobType );
         text        = StringUtil::replace( text, "{{keytext}}", dialect._pKeyTextType );
-        return StringUtil::replace( text, "{{autoid}}", dialect._pAutoIdColumn );
+        return StringUtil::replace( text, "{{autoid}}", dialect._pAutoIDColumn );
     }
 
     string SQLMigrationRunner::computeChecksum( string_view sql )

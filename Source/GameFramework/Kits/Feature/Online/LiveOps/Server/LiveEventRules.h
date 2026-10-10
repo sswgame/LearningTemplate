@@ -21,7 +21,7 @@ namespace sw
         /** @brief 계정과 무관한 열림(기간 · 회차)입니다. 열렸으면 이번 창의 끝을 @p outWindowEndMs 에. */
         static bool isWindowOpen( const LiveEventDefinition& definition, int64 nowMs, int64& outWindowEndMs );
         /** @brief 이 계정 · 지역 · 빌드에 보이나입니다(창은 따로). */
-        static bool isAudienceMatch( const LiveEventDefinition& definition, AccountId accountId, string_view region, uint32 buildVersion );
+        static bool isAudienceMatch( const LiveEventDefinition& definition, AccountID accountID, string_view region, uint32 buildVersion );
         static bool isValid( const LiveEventDefinition& definition );
     };
 } // namespace sw

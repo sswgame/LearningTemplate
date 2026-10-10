@@ -48,7 +48,7 @@ namespace sw
         void initialize( const MetroidvaniaCatalog* pCatalog, AreaGraph* pGraph );
 
         /** @brief 방에 들어갑니다(그래프의 방문 · 이웃 발견). 처음 방문이면 true 입니다. */
-        bool enterArea( const hashed_string& areaId );
+        bool enterArea( const hashed_string& areaID );
         /**
          * @brief 지역 지도를 삽니다 — 값만큼 @p inoutCurrency 를 줄이고 그 지역의 방을 모두 드러냅니다.
          * @details 실패하면 통화는 그대로입니다.
@@ -56,19 +56,19 @@ namespace sw
         MetroMapPurchase buyRegionMap( const hashed_string& region, Wallet& inoutWallet, const hashed_string& currency );
         bool             hasRegionMap( const hashed_string& region ) const;
         /** @brief 방이 지도에 그려지는가 — 그 지역 지도를 가졌고 방이 발견되었다입니다. */
-        bool isShownOnMap( const hashed_string& areaId ) const;
+        bool isShownOnMap( const hashed_string& areaID ) const;
 
         /** @brief 줍습니다. 처음이면 정의를, 이미 주웠거나 모르는 것이면 nullptr 입니다(능력 · 부적 주기는 부르는 쪽이 한다). */
-        const MetroPickupDef* collectPickup( const hashed_string& pickupId );
-        bool                  isCollected( const hashed_string& pickupId ) const;
+        const MetroPickupDef* collectPickup( const hashed_string& pickupID );
+        bool                  isCollected( const hashed_string& pickupID ) const;
         /** @brief 지도에 찍을 아이템 — 그려진 방, 아직 방문하지 않은 방, 아직 줍지 않은 것(카탈로그 순서)입니다. */
         void collectItemMarkers( vector<const MetroPickupDef*>& outListPickup ) const;
 
         /** @brief 지점을 엽니다(그 방을 방문한 적이 있어야 한다). 새로 열었으면 true 입니다. */
-        bool activateSite( const hashed_string& siteId );
-        bool isSiteActive( const hashed_string& siteId ) const;
+        bool activateSite( const hashed_string& siteID );
+        bool isSiteActive( const hashed_string& siteID ) const;
         /** @brief 빠른 이동 — 두 지점 모두 빠른 이동 정거장이고 열려 있어야 하고 서로 달라야 합니다. */
-        bool canFastTravel( const hashed_string& fromSiteId, const hashed_string& toSiteId ) const;
+        bool canFastTravel( const hashed_string& fromSiteID, const hashed_string& toSiteID ) const;
 
         /** @brief 방문한 방 / 모든 방(0..1)입니다. */
         float32 computeExplorationRatio() const;
@@ -88,7 +88,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        static bool contains( const vector<hashed_string>& listId, const hashed_string& id );
+        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
 
         const MetroidvaniaCatalog* _pCatalog;
         AreaGraph*                 _pGraph;

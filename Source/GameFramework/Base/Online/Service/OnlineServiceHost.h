@@ -41,9 +41,9 @@ namespace sw
         NetRequestToken        _token{};
         NetIdempotencyKey      _idempotencyKey{};
         StreamConnectionHandle _connection{};
-        AccountId              _accountId{ kInvalidAccountId }; ///< 로그인한 연결이면(`bindAccount` 로 붙인 주체)
+        AccountID              _accountID{ kInvalidAccountID }; ///< 로그인한 연결이면(`bindAccount` 로 붙인 주체)
         uint64                 _remoteKey{ 0 };                 ///< 원격 주소 해시(로그인 전 도배 제한 단위)
-        LogTraceId             _traceId{};                      ///< 요청 추적 id(요청 머리 — 없으면 요청 서버가 만든다)
+        LogTraceID             _traceID{};                      ///< 요청 추적 id(요청 머리 — 없으면 요청 서버가 만든다)
         int64                  _nowMs{ 0 };                     ///< 서버 벽시계(마지막 `tick` 의 시각)
         uint16                 _method{ 0 };
     };
@@ -81,12 +81,12 @@ namespace sw
             (void)nowMs;
         }
         /** @brief 계정이 이 프로세스에서 떠났다(로그아웃 · 끊김 · 밀려남). 거래 취소 · 채널 떠나기. */
-        virtual void onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+        virtual void onAccountLeft( OnlineServiceHost& host, AccountID accountID )
         {
             (void)host;
-            (void)accountId;
+            (void)accountID;
         }
-        /** @brief 이 서비스가 `subscribeServerBus` 한 주제의 메시지입니다. 자기 서버가 낸 것도 온다(`_originServerId` 로 거른다). */
+        /** @brief 이 서비스가 `subscribeServerBus` 한 주제의 메시지입니다. 자기 서버가 낸 것도 온다(`_originServerID` 로 거른다). */
         virtual void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
         {
             (void)host;
@@ -149,12 +149,12 @@ namespace sw
 
         // 계정 ↔ 연결(계정 키트가 로그인 · 재접속 때 부른다)
         /** @brief 연결에 계정을 붙입니다. 그 계정이 다른 연결에 붙어 있으면 false(계정 키트가 먼저 `unbindAccount`). */
-        [[nodiscard]] bool bindAccount( StreamConnectionHandle connection, AccountId accountId );
+        [[nodiscard]] bool bindAccount( StreamConnectionHandle connection, AccountID accountID );
         /** @brief 계정의 연결을 닫고 서비스들에 `onAccountLeft` 를 알립니다. */
-        void unbindAccount( AccountId accountId );
-        bool findConnection( AccountId accountId, StreamConnectionHandle& outConnection ) const;
+        void unbindAccount( AccountID accountID );
+        bool findConnection( AccountID accountID, StreamConnectionHandle& outConnection ) const;
         /** @brief 알림 — Message 프레임 `[종류 u16][몸]`. 종류는 영역 + 0x80..0xFF. 그 계정이 이 프로세스에 없으면 false. */
-        bool sendPush( AccountId accountId, uint16 kind, const BitWriter& body );
+        bool sendPush( AccountID accountID, uint16 kind, const BitWriter& body );
         /** @brief 이 프로세스에 붙은(로그인한) 모든 계정에 알림을 보냅니다. 보낸 수입니다. 다른 서버는 각자 보낸다(서비스가 버스로 알린다). */
         int32 sendPushToAll( uint16 kind, const BitWriter& body );
 
@@ -181,7 +181,7 @@ namespace sw
         struct ConnectionState
         {
             uint64    _remoteKey{ 0 };
-            AccountId _accountId{ kInvalidAccountId };
+            AccountID _accountID{ kInvalidAccountID };
             uint8     _bHelloDone{ SW_FALSE };
         };
 
@@ -196,7 +196,7 @@ namespace sw
         IOnlineService* findService( uint16 method ) const;
         bool            sendPushToConnection( StreamConnectionHandle connection, uint16 kind, const BitWriter& body );
         void            dispatchServerBusMessage( const ServerBusMessage& message );
-        void            notifyAccountLeft( AccountId accountId );
+        void            notifyAccountLeft( AccountID accountID );
 
         OnlineServiceHostSettings                        _settings;
         StreamMessageEndpoint                            _endpoint;
@@ -209,7 +209,7 @@ namespace sw
         vector<ServerBusMessage>                         _listBusScratch;
         vector<uint8>                                    _responseBytes;
         unordered_map<uint64, ConnectionState>           _mapConnection; ///< 연결(packed) → 상태
-        unordered_map<AccountId, StreamConnectionHandle> _mapAccountToConnection;
+        unordered_map<AccountID, StreamConnectionHandle> _mapAccountToConnection;
         IStreamTransport*                                _pTransport;
         int64                                            _nowMs;
         uint8                                            _bInitialized;

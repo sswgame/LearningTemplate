@@ -36,7 +36,7 @@ namespace sw
         uint32     _glyphIndex{ 0 };            ///< 면 안의 글리프 번호(0 = 두부)
         uint32     _cluster{ 0 };               ///< 원문 바이트 위치
         uint32     _codepoint{ 0 };             ///< 이 글리프가 나온 코드 포인트(줄 바꿈 판정이 읽는다 — 합자면 클러스터 첫 코드 포인트)
-        FontFaceId _face{ kInvalidFontFaceId }; ///< 글리프를 가진 면
+        FontFaceID _face{ kInvalidFontFaceID }; ///< 글리프를 가진 면
     };
 } // namespace sw
 
@@ -47,7 +47,7 @@ namespace sw
     {
         string_view   _text{};                                  ///< 런의 글(전체 글의 부분)
         uint32        _byteOffset{ 0 };                         ///< 전체 글 안의 시작 바이트 — 클러스터를 전체 기준으로 맞춘다
-        FontFaceId    _face{ kInvalidFontFaceId };              ///< 런의 면
+        FontFaceID    _face{ kInvalidFontFaceID };              ///< 런의 면
         TextDirection _direction{ TextDirection::LeftToRight }; ///< 런의 방향
     };
 } // namespace sw

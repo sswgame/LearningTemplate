@@ -89,7 +89,7 @@
 | 종류 | 자기 .cpp 에 둘 한 줄 | 순서가 정하는 것 |
 |---|---|---|
 | 패널 | `SW_EDITOR_PANEL( MyPanel, "my_panel", EditorPanelCategory::Tool, 1900 );` | Panel 메뉴 · 그리기 순서 |
-| 팝업 | `SW_EDITOR_POPUP( MyPopup, 400 );` (클래스에 `kPopupId`) | 그리기 순서 |
+| 팝업 | `SW_EDITOR_POPUP( MyPopup, 400 );` (클래스에 `kPopupID`) | 그리기 순서 |
 | 컴포넌트 인스펙터 | `SW_EDITOR_INSPECTOR( MyComponent, MyComponentInspector );` | (타입 계층이 정함) |
 | 뷰포트 시각화 | `SW_EDITOR_VISUALIZER( Name, "id", 300, "Lbl", "툴팁", true, &draw );` | 툴바 체크박스 · 마스크 비트 |
 
@@ -203,7 +203,7 @@ N 번째 ImGui 프레임에 창 하나당 한 줄(이름 · 크기 · **정점 �
 
 glTF 원본(`.glb` · `.gltf` · `.vrm`)은 `models_raw/` 에 두고 같은 상대 경로의 `models/<이름>.mesh`(스킨드 모델이면 옆 폴더의 스켈레톤 · 부착 메시 · 클립까지)로
 임포트합니다(`ModelImporter`, cgltf + meshoptimizer).
-런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshId` 에 그 경로를 적습니다.
+런타임은 `.mesh` 만 읽고(`MeshCache`), `MeshComponent::_meshID` 에 그 경로를 적습니다.
 
 - **변환**: (스킨 없는 모델) 기본 씬의 노드 계층을 월드 변환째 한 메시로 합칩니다. glTF(오른손 · +Y 위 · 앞 +Z)를 엔진(왼손 · +Y 위 · 앞 +Z, 앞면 = 시계 방향)으로
   옮기려고 **X 를 뒤집고 삼각형마다 감김을 뒤집습니다**(노드가 거울상이면 한 번 더). 노멀이 없으면 면 노멀, 색은 baseColorFactor × COLOR_0.

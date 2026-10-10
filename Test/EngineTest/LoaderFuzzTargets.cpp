@@ -46,7 +46,7 @@ namespace test
             static string makeScratchPath( string_view tag )
             {
                 const string tempDir = FileUtil::getTempDirectory();
-                return FileUtil::joinPath( tempDir, string( "sw_fuzz_" ) + to_string( Process::getCurrentProcessId() ) + "_" + string( tag ) );
+                return FileUtil::joinPath( tempDir, string( "sw_fuzz_" ) + to_string( Process::getCurrentProcessID() ) + "_" + string( tag ) );
             }
 
             static string_view asText( const uint8* pData, size_t size ) { return string_view( reinterpret_cast<const utf8*>( pData ), size ); }

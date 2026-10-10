@@ -304,14 +304,14 @@ namespace sw
             };
             ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
 
-            BinaryWriteFn tagIdWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
+            BinaryWriteFn tagIDWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
             {
                 const TagID&       tag  = *static_cast<const TagID*>( pPtr );
                 const utf8*        pStr = tag._pString != nullptr ? tag._pString : "";
                 BinaryStreamWriter writer{ listBuf };
                 writer.writeString( pStr );
             };
-            BinaryReadFn tagIdReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
+            BinaryReadFn tagIDReadBin = []( void* pPtr, const uint8* pData, size_t size, size_t& offset ) -> bool
             {
                 BinaryStreamReader reader{ pData, size };
                 if ( reader.skip( offset ) == false )
@@ -326,7 +326,7 @@ namespace sw
                 offset = reader.getOffset();
                 return true;
             };
-            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIdWriteBin, tagIdReadBin );
+            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
 #define SW_BUILTIN_TEXT_stoi( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
@@ -371,12 +371,12 @@ namespace sw
             };
             ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
 
-            auto tagIdWrite = []( const void* pPtr ) -> string
+            auto tagIDWrite = []( const void* pPtr ) -> string
             {
                 const TagID& tag = *static_cast<const TagID*>( pPtr );
                 return tag._pString != nullptr ? string( tag._pString ) : string{};
             };
-            auto tagIdRead = []( void* pPtr, string_view strView ) -> bool
+            auto tagIDRead = []( void* pPtr, string_view strView ) -> bool
             {
                 string_view text = StringUtil::trim( strView );
                 if ( StringUtil::startsWith( text, "str:" ) )
@@ -389,7 +389,7 @@ namespace sw
                 *static_cast<TagID*>( pPtr ) = TagID::request( text );
                 return true;
             };
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIdWrite, tagIdRead );
+            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
 
             TextWriteFn strWriteTxt = []( const void* pPtr )
             { return string( static_cast<const string*>( pPtr )->c_str() ); };
@@ -433,7 +433,7 @@ namespace sw
             {
                 const auto&                           handle = *static_cast<const ComponentHandle*>( pPtr );
                 StringBuilder<constant::kMaxBuffer64> sb;
-                sb.append( handle.objectId() ).append( ':' ).append( handle.componentId() );
+                sb.append( handle.objectID() ).append( ':' ).append( handle.componentID() );
                 return string{ sb.c_str(), sb.size() };
             },
                 []( void* pPtr, string_view strView )
@@ -442,26 +442,26 @@ namespace sw
                 const size_t      sep     = trimmed.find( ':' );
                 if ( sep == string_view::npos )
                     return false;
-                uint64 objectId{ 0 };
-                uint64 componentId{ 0 };
-                if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectId, 10 ) == false ||
-                     StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentId, 10 ) == false )
+                uint64 objectID{ 0 };
+                uint64 componentID{ 0 };
+                if ( StringUtil::parseUint64( trimmed.substr( 0, sep ), objectID, 10 ) == false ||
+                     StringUtil::parseUint64( trimmed.substr( sep + 1 ), componentID, 10 ) == false )
                     return false;
                 *static_cast<ComponentHandle*>( pPtr ) =
-                    ComponentHandle::makeOwned( objectId, componentId );
+                    ComponentHandle::makeOwned( objectID, componentID );
                 return true;
             } );
 
             ctx.registerTextHandler(
                 hashed_string( "GameObjectHandle" ),
                 []( const void* pPtr )
-            { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectId() ); },
+            { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
                 []( void* pPtr, string_view strView )
             {
-                uint64 objectId{ 0 };
-                if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectId, 10 ) == false )
+                uint64 objectID{ 0 };
+                if ( StringUtil::parseUint64( StringUtil::trim( strView ), objectID, 10 ) == false )
                     return false;
-                *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectId );
+                *static_cast<GameObjectHandle*>( pPtr ) = GameObjectHandle::make( objectID );
                 return true;
             } );
 

@@ -37,8 +37,8 @@ namespace sw
     struct NetEntityState
     {
         vector<uint8> _buffer{};
-        uint32        _entityId{ 0 };
-        uint32        _typeId{ 0 }; ///< 클라이언트가 무엇을 만들지(프리팹 번호)
+        uint32        _entityID{ 0 };
+        uint32        _typeID{ 0 }; ///< 클라이언트가 무엇을 만들지(프리팹 번호)
     };
 } // namespace sw
 
@@ -59,7 +59,7 @@ namespace sw
         uint32                 _lastProcessedInputTick{ 0 }; ///< 받는 클라이언트의 입력을 서버가 어디까지 썼나(예측 맞추기)
         uint32                 _firstMissingInputTick{ 0 };  ///< 받는 클라이언트의 입력을 서버가 빈틈없이 받은(또는 이미 꺼낸) 다음 틱 — 클라이언트는 여기서부터 다시 보낸다
 
-        const NetEntityState* findEntity( uint32 entityId ) const;
+        const NetEntityState* findEntity( uint32 entityID ) const;
         void                  sortEntities();
         /**
          * @brief @p baseline 대비 바뀐 엔티티 · 사라진 엔티티를 씁니다. @p pBaseline 이 없으면 모두 씁니다.

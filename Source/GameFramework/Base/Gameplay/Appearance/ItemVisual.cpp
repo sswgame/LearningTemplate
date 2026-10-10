@@ -61,14 +61,14 @@ namespace sw
             }
 
             /** @brief 종류에 맞지 않는 에셋 속성이 있으면 오류입니다. */
-            static void reportMisplacedAssetAttributes( const XMLNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
+            static void reportMisplacedAssetAttributes( const XMLNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
                 constexpr const utf8* kArrAssetAttribute[] = { "mesh", "prefab", "sprite" };
                 const utf8*           pExpected            = getAssetAttribute( kind );
                 for ( const utf8* pAttribute : kArrAssetAttribute )
                 {
                     if ( node.findAttribute( pAttribute ) != nullptr && ( pExpected == nullptr || StringUtil::equals( pAttribute, pExpected, true ) == false ) )
-                        report.addError( "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualId.c_str(), node.getName(), toString( kind ), pAttribute );
+                        report.addError( "%#: visual '%#' <%#> of kind %# cannot have '%#'", sourceName, visualID.c_str(), node.getName(), toString( kind ), pAttribute );
                 }
             }
 
@@ -80,20 +80,20 @@ namespace sw
                 return false;
             }
 
-            static void readPartChild( const XMLNode& child, const XMLNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
+            static void readPartChild( const XMLNode& child, const XMLNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
                 const utf8* pName         = child.getName();
                 const bool  bModification = inoutPart._kind == AppearancePartKind::BodyModification;
                 if ( StringUtil::equals( pName, "Variant", true ) && bModification == false )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrVariantAttribute, report, sourceName );
-                    reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualId );
+                    reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
                     variant._name     = AppearanceXMLUtil::readName( child, "name" );
                     variant._asset    = AppearanceXMLUtil::readName( child, getAssetAttribute( inoutPart._kind ) );
                     variant._material = AppearanceXMLUtil::readName( child, "material" );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
-                        report.addError( "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualId.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
+                        report.addError( "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
                         inoutPart._listVariant.push_back( variant );
                 }
@@ -104,7 +104,7 @@ namespace sw
                     variant._name     = AppearanceXMLUtil::readName( child, "name" );
                     variant._material = AppearanceXMLUtil::readName( child, "material" );
                     if ( variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr )
-                        report.addError( "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualId.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
+                        report.addError( "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
                         inoutPart._listMaterialVariant.push_back( variant );
                 }

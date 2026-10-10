@@ -101,7 +101,7 @@ namespace sw
          * @details GUID API 를 쓰지 않는 이유는 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것"
          *          뿐이기 때문입니다. 로그 파일 이름에도 같은 값이 들어갑니다.
          */
-        const utf8* makeSessionId()
+        const utf8* makeSessionID()
         {
             static utf8 s_arrSession[24]{};
             if ( s_arrSession[0] != '\0' )
@@ -234,9 +234,9 @@ namespace sw
         return length;
     }
 
-    const utf8* getCrashSessionId()
+    const utf8* getCrashSessionID()
     {
-        return makeSessionId();
+        return makeSessionID();
     }
 
     const utf8* getCrashReportFolder()
@@ -260,11 +260,11 @@ namespace sw
             return;
         const utf8* pFolder = getCrashReportFolder();
         const utf8* pPrefix = ( pFolder != nullptr && pFolder[0] != '\0' ) ? pFolder : ".";
-        std::snprintf( pOutPath, outSize, "%s/crash_%s.%s", pPrefix, getCrashSessionId(),
+        std::snprintf( pOutPath, outSize, "%s/crash_%s.%s", pPrefix, getCrashSessionID(),
                        ( pExtension != nullptr ) ? pExtension : "txt" );
     }
 
-    void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processId, uint64 threadId )
+    void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID )
     {
         utf8 arrPath[constant::kMaxBuffer1024]{};
         buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "txt" );
@@ -273,13 +273,13 @@ namespace sw
         // 도중에 죽으면 반쯤 쓰인 파일이 남는다.
         utf8   arrReport[constant::kMaxBuffer8192]{};
         uint32 length{ 0 };
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "session   : %#\n", getCrashSessionId() );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "session   : %#\n", getCrashSessionID() );
         appendLine( arrReport, constant::kMaxBuffer8192, length, "reason    : %#\n", ( pReason != nullptr ) ? pReason : "unknown" );
         // 주소는 16진수여야 맵 파일 · 디스어셈블리와 맞춰 볼 수 있다(CallStackCapture 도 같은 형식이다).
         appendLine( arrReport, constant::kMaxBuffer8192, length, "address   : 0x%#\n",
                     Fmt( reinterpret_cast<uint64>( pFaultAddress ), Format().hex() ) );
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "processId : %#\n", processId );
-        appendLine( arrReport, constant::kMaxBuffer8192, length, "threadId  : %#\n", threadId );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "processId : %#\n", processID );
+        appendLine( arrReport, constant::kMaxBuffer8192, length, "threadId  : %#\n", threadID );
 
         const CrashContextStore& store = CrashContextStore::get();
         for ( uint32 entryIndex = 0; entryIndex < store._entryCount; ++entryIndex )
@@ -443,8 +443,8 @@ namespace sw
         CrashBreadcrumbStore::get().add( text );
     }
 
-    const utf8* CrashHandler::getSessionId()
+    const utf8* CrashHandler::getSessionID()
     {
-        return getCrashSessionId();
+        return getCrashSessionID();
     }
 } // namespace sw

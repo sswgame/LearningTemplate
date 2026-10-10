@@ -189,23 +189,23 @@ namespace sw
     /**
      * @brief 새 물리 바디를 월드에 등록하고 공간 그리드에 배치합니다.
      */
-    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectId )
+    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const AABB& aabb, uint8 layer, uint64 objectID )
     {
         SW_MEMORY_SCOPE( Physics );
         PhysicsBodyState state{};
         state._aabb  = aabb;
         state._layer = layer;
-        return addBody( state, objectId );
+        return addBody( state, objectID );
     }
 
-    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const PhysicsBodyState& state, uint64 objectId )
+    PhysicsWorld::BodyHandle PhysicsWorld::addBody( const PhysicsBodyState& state, uint64 objectID )
     {
         SW_MEMORY_SCOPE( Physics );
         PhysicsBody body{};
         body._aabb        = state._aabb;
         body._stepAABB    = state._aabb; // 출발점은 더한 자리다 — 더하기 전 어딘가에서 쓸려 오지 않는다
         body._layer       = state._layer;
-        body._objectId    = objectId;
+        body._objectID    = objectID;
         body._bContinuous = state._bContinuous;
         body._bTrigger    = state._bTrigger;
         std::unique_lock<std::shared_mutex> lock{ _mutex };
@@ -372,13 +372,13 @@ namespace sw
             {
                 const OverlapPair& pair = _listScratchPair[currentIndex++];
                 _listOverlapEvent.push_back(
-                    PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, pair._time, SW_TRUE, pair._bFirstTrigger, pair._bSecondTrigger } );
+                    PhysicsOverlapEvent{ pair._firstObjectID, pair._secondObjectID, pair._time, SW_TRUE, pair._bFirstTrigger, pair._bSecondTrigger } );
                 continue;
             }
             // 끝 이벤트의 트리거 여부는 겹쳐 있던 때의 것이다 — 바디가 이미 사라졌을 수 있다.
             const OverlapPair& pair = _listOverlapPair[previousIndex++];
             _listOverlapEvent.push_back(
-                PhysicsOverlapEvent{ pair._firstObjectId, pair._secondObjectId, 1.0f, SW_FALSE, pair._bFirstTrigger, pair._bSecondTrigger } );
+                PhysicsOverlapEvent{ pair._firstObjectID, pair._secondObjectID, 1.0f, SW_FALSE, pair._bFirstTrigger, pair._bSecondTrigger } );
         }
         // **먼저 닿은 것이 먼저 간다.** 빠른 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 앞의 이벤트에 반응해 사라진다 — 핸들 순서로 두면
         // 뒤의 적이 맞을 수 있다. 같은 때끼리는 쌍 순서 그대로다(안정 정렬).
@@ -534,7 +534,7 @@ namespace sw
                             bFoundHit               = true;
                             nearestHit              = hit;
                             nearestHit._hitBody     = handle;
-                            nearestHit._hitObjectId = body._objectId;
+                            nearestHit._hitObjectID = body._objectID;
                         }
                     }
                 }
@@ -564,7 +564,7 @@ namespace sw
                         bFoundHit               = true;
                         nearestHit              = hit;
                         nearestHit._hitBody     = handle;
-                        nearestHit._hitObjectId = pBody->_objectId;
+                        nearestHit._hitObjectID = pBody->_objectID;
                     }
                 }
             }

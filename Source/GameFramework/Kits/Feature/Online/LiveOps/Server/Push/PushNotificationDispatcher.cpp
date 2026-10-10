@@ -38,9 +38,9 @@ namespace sw
             }
 
             /** @brief 계정의 기기 레코드를 모두 읽습니다(한도 + 1 — 넘친 것도 보이게). */
-            static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountId accountId, vector<ServiceRecord>& outListRecord )
+            static ServiceStoreResult listDevices( IServiceStoreConnection& connection, AccountID accountID, vector<ServiceRecord>& outListRecord )
             {
-                return connection.listRecords( getDeviceTable(), PushNotificationDispatcher::makeAccountPrefix( accountId ), "", PushLimit::kMaxDevicePerAccount + 1, false,
+                return connection.listRecords( getDeviceTable(), PushNotificationDispatcher::makeAccountPrefix( accountID ), "", PushLimit::kMaxDevicePerAccount + 1, false,
                                                outListRecord );
             }
         };
@@ -53,11 +53,11 @@ namespace sw
     class PushDeviceReadWork final : public IServiceStoreWork
     {
     public:
-        PushDeviceReadWork( PushNotificationDispatcher* pDispatcher, AccountId accountId, const PushNotificationMessage& message, int64 nowMs )
+        PushDeviceReadWork( PushNotificationDispatcher* pDispatcher, AccountID accountID, const PushNotificationMessage& message, int64 nowMs )
             : _listDevice{}
             , _message{ message }
             , _pDispatcher{ pDispatcher }
-            , _accountId{ accountId }
+            , _accountID{ accountID }
             , _nowMs{ nowMs }
         {
         }
@@ -65,7 +65,7 @@ namespace sw
         void run( IServiceStoreConnection& connection ) override
         {
             vector<ServiceRecord> listRecord;
-            if ( PushNotificationDispatcherInternal::listDevices( connection, _accountId, listRecord ) != ServiceStoreResult::Ok )
+            if ( PushNotificationDispatcherInternal::listDevices( connection, _accountID, listRecord ) != ServiceStoreResult::Ok )
                 return; // 저장소가 아프다 — 이 알림은 버린다(최대 한 번)
             for ( const ServiceRecord& record : listRecord )
             {
@@ -75,13 +75,13 @@ namespace sw
             }
         }
 
-        void complete() override { _pDispatcher->applyDevices( _accountId, _message, std::move( _listDevice ), _nowMs ); }
+        void complete() override { _pDispatcher->applyDevices( _accountID, _message, std::move( _listDevice ), _nowMs ); }
 
     private:
         vector<PushDeviceRegistration> _listDevice;
         PushNotificationMessage        _message;
         PushNotificationDispatcher*    _pDispatcher;
-        AccountId                      _accountId;
+        AccountID                      _accountID;
         int64                          _nowMs;
     };
 } // namespace sw
@@ -95,7 +95,7 @@ namespace sw
         PushDeviceRegistration      _registration;
         string                      _key;
         PushNotificationDispatcher* _pDispatcher;
-        AccountId                   _accountId;
+        AccountID                   _accountID;
         uint64                      _requestTag;
         LiveOpsResult               _result;
         uint8                       _bErase;
@@ -104,7 +104,7 @@ namespace sw
             : _registration{}
             , _key{}
             , _pDispatcher{ nullptr }
-            , _accountId{ kInvalidAccountId }
+            , _accountID{ kInvalidAccountID }
             , _requestTag{ 0 }
             , _result{ LiveOpsResult::Unavailable }
             , _bErase{ SW_FALSE }
@@ -132,7 +132,7 @@ namespace sw
             else
             {
                 vector<ServiceRecord> listRecord;
-                if ( Internal::listDevices( connection, _accountId, listRecord ) != ServiceStoreResult::Ok )
+                if ( Internal::listDevices( connection, _accountID, listRecord ) != ServiceStoreResult::Ok )
                     return;
                 bool          bReplacing  = false;
                 const string* pOldestKey  = nullptr;
@@ -172,7 +172,7 @@ namespace sw
         , _accountBucketMap{}
         , _stats{}
         , _pStore{ nullptr }
-        , _nextDeliveryId{ 1 }
+        , _nextDeliveryID{ 1 }
         , _pendingWorkCount{ 0 }
     {
     }
@@ -186,7 +186,7 @@ namespace sw
 
     bool PushNotificationDispatcher::registerProvider( IPushNotificationProvider* pProvider )
     {
-        if ( pProvider == nullptr || findProvider( pProvider->getProviderId() ) != nullptr )
+        if ( pProvider == nullptr || findProvider( pProvider->getProviderID() ) != nullptr )
         {
             SW_LOG_ERROR( "PushDispatcher: provider is null or registered twice" );
             return false;
@@ -195,59 +195,59 @@ namespace sw
         return true;
     }
 
-    string PushNotificationDispatcher::makeAccountPrefix( AccountId accountId ) { return ServiceKeyUtil::makeHex64( accountId ) + "/"; }
+    string PushNotificationDispatcher::makeAccountPrefix( AccountID accountID ) { return ServiceKeyUtil::makeHex64( accountID ) + "/"; }
 
-    string PushNotificationDispatcher::makeDeviceKey( AccountId accountId, string_view providerId, string_view token )
+    string PushNotificationDispatcher::makeDeviceKey( AccountID accountID, string_view providerID, string_view token )
     {
         // 토큰은 키 규칙 밖 글자를 가질 수 있다 — 키에는 해시만, 토큰은 값에
-        return makeAccountPrefix( accountId ) + string( providerId ) + "." + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( token.data(), token.size(), false ) );
+        return makeAccountPrefix( accountID ) + string( providerID ) + "." + ServiceKeyUtil::makeHex64( StringUtil::computeHash64( token.data(), token.size(), false ) );
     }
 
-    IPushNotificationProvider* PushNotificationDispatcher::findProvider( string_view providerId ) const
+    IPushNotificationProvider* PushNotificationDispatcher::findProvider( string_view providerID ) const
     {
         for ( IPushNotificationProvider* pProvider : _listProvider )
         {
-            if ( pProvider->getProviderId() == providerId )
+            if ( pProvider->getProviderID() == providerID )
                 return pProvider;
         }
         return nullptr;
     }
 
-    bool PushNotificationDispatcher::notifyAccount( AccountId accountId, const PushNotificationMessage& message, int64 nowMs )
+    bool PushNotificationDispatcher::notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs )
     {
         int64 retryAfterMs = 0;
-        if ( _pStore == nullptr || _accountBucketMap.tryConsume( accountId, nowMs, retryAfterMs ) == false )
+        if ( _pStore == nullptr || _accountBucketMap.tryConsume( accountID, nowMs, retryAfterMs ) == false )
         {
             ++_stats._rateLimitedCount;
             return false;
         }
         ++_pendingWorkCount;
-        _pStore->submit( make_unique<PushDeviceReadWork>( this, accountId, message, nowMs ) );
+        _pStore->submit( make_unique<PushDeviceReadWork>( this, accountID, message, nowMs ) );
         return true;
     }
 
-    void PushNotificationDispatcher::applyDevices( AccountId accountId, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs )
+    void PushNotificationDispatcher::applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs )
     {
         --_pendingWorkCount;
         for ( PushDeviceRegistration& device : listDevice )
         {
-            if ( findProvider( device._providerId ) == nullptr )
+            if ( findProvider( device._providerID ) == nullptr )
                 continue; // 이 서버 빌드에 없는 제공자
-            const uint64 deliveryId = _nextDeliveryId++;
-            Delivery&    delivery   = _mapDelivery[deliveryId];
+            const uint64 deliveryID = _nextDeliveryID++;
+            Delivery&    delivery   = _mapDelivery[deliveryID];
             delivery._message       = message;
             delivery._device        = std::move( device );
-            delivery._accountId     = accountId;
+            delivery._accountID     = accountID;
             delivery._nextAttemptMs = nowMs;
-            sendDelivery( deliveryId, delivery );
+            sendDelivery( deliveryID, delivery );
         }
     }
 
-    void PushNotificationDispatcher::sendDelivery( uint64 deliveryId, Delivery& delivery )
+    void PushNotificationDispatcher::sendDelivery( uint64 deliveryID, Delivery& delivery )
     {
         delivery._bInFlight = SW_TRUE;
         ++_stats._sentCount;
-        findProvider( delivery._device._providerId )->send( deliveryId, delivery._device._token, delivery._device._locale, delivery._message );
+        findProvider( delivery._device._providerID )->send( deliveryID, delivery._device._token, delivery._device._locale, delivery._message );
     }
 
     void PushNotificationDispatcher::tick( int64 nowMs )
@@ -258,7 +258,7 @@ namespace sw
             (void)pProvider->pollResults( _listResultScratch );
             for ( const PushDeliveryResult& result : _listResultScratch )
             {
-                const auto deliveryIt = _mapDelivery.find( result._deliveryId );
+                const auto deliveryIt = _mapDelivery.find( result._deliveryID );
                 if ( deliveryIt == _mapDelivery.end() )
                     continue;
                 Delivery& delivery  = deliveryIt->second;
@@ -274,7 +274,7 @@ namespace sw
                     case PushDeliveryStatus::InvalidToken:
                     {
                         ++_stats._invalidTokenCount;
-                        unregisterDevice( delivery._accountId, delivery._device._providerId, delivery._device._token, 0 ); // 꼬리표 0 — 완료 없음
+                        unregisterDevice( delivery._accountID, delivery._device._providerID, delivery._device._token, 0 ); // 꼬리표 0 — 완료 없음
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }
@@ -293,23 +293,23 @@ namespace sw
                     case PushDeliveryStatus::Rejected:
                     {
                         ++_stats._droppedCount;
-                        SW_LOG_WARNING( "PushDispatcher: provider '%#' rejected a notification for account %#", delivery._device._providerId.c_str(), delivery._accountId );
+                        SW_LOG_WARNING( "PushDispatcher: provider '%#' rejected a notification for account %#", delivery._device._providerID.c_str(), delivery._accountID );
                         _mapDelivery.erase( deliveryIt );
                         break;
                     }
                 }
             }
         }
-        for ( auto& [deliveryId, delivery] : _mapDelivery ) // 물러남이 끝난 것을 다시
+        for ( auto& [deliveryID, delivery] : _mapDelivery ) // 물러남이 끝난 것을 다시
         {
             if ( delivery._bInFlight == SW_FALSE && nowMs >= delivery._nextAttemptMs )
-                sendDelivery( deliveryId, delivery );
+                sendDelivery( deliveryID, delivery );
         }
     }
 
-    void PushNotificationDispatcher::registerDevice( AccountId accountId, const PushDeviceRegistration& registration, uint64 requestTag )
+    void PushNotificationDispatcher::registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag )
     {
-        const bool bValid = accountId != kInvalidAccountId && PushLimit::isValidProviderId( registration._providerId ) && registration._token.empty() == false &&
+        const bool bValid = accountID != kInvalidAccountID && PushLimit::isValidProviderID( registration._providerID ) && registration._token.empty() == false &&
                             registration._token.size() <= static_cast<size_t>( PushLimit::kMaxTokenSize ) &&
                             registration._locale.size() <= static_cast<size_t>( PushLimit::kMaxLocaleSize );
         if ( bValid == false || _pStore == nullptr )
@@ -320,26 +320,26 @@ namespace sw
         }
         unique_ptr<PushDeviceWriteWork> work = make_unique<PushDeviceWriteWork>();
         work->_registration                  = registration;
-        work->_key                           = makeDeviceKey( accountId, registration._providerId, registration._token );
+        work->_key                           = makeDeviceKey( accountID, registration._providerID, registration._token );
         work->_pDispatcher                   = this;
-        work->_accountId                     = accountId;
+        work->_accountID                     = accountID;
         work->_requestTag                    = requestTag;
         ++_pendingWorkCount;
         _pStore->submit( std::move( work ) );
     }
 
-    void PushNotificationDispatcher::unregisterDevice( AccountId accountId, string_view providerId, string_view token, uint64 requestTag )
+    void PushNotificationDispatcher::unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag )
     {
-        if ( PushLimit::isValidProviderId( providerId ) == false || token.empty() || _pStore == nullptr )
+        if ( PushLimit::isValidProviderID( providerID ) == false || token.empty() || _pStore == nullptr )
         {
             if ( requestTag != 0 )
                 _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } );
             return;
         }
         unique_ptr<PushDeviceWriteWork> work = make_unique<PushDeviceWriteWork>();
-        work->_key                           = makeDeviceKey( accountId, providerId, token );
+        work->_key                           = makeDeviceKey( accountID, providerID, token );
         work->_pDispatcher                   = this;
-        work->_accountId                     = accountId;
+        work->_accountID                     = accountID;
         work->_requestTag                    = requestTag;
         work->_bErase                        = SW_TRUE;
         ++_pendingWorkCount;

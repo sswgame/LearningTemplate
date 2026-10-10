@@ -26,13 +26,13 @@ namespace sw
                 return result;
             }
 
-            static string makeActor( AccountId adminId ) { return "gm." + ServiceKeyUtil::makeHex64( adminId ); }
-            static string makeSubject( AccountId accountId ) { return "acct." + ServiceKeyUtil::makeHex64( accountId ); }
+            static string makeActor( AccountID adminID ) { return "gm." + ServiceKeyUtil::makeHex64( adminID ); }
+            static string makeSubject( AccountID accountID ) { return "acct." + ServiceKeyUtil::makeHex64( accountID ); }
 
-            static string formatAmount( string_view assetId, int64 amount )
+            static string formatAmount( string_view assetID, int64 amount )
             {
                 utf8 arrBuffer[constant::kMaxBuffer128];
-                formatstring( arrBuffer, constant::kMaxBuffer128, "%#=%#", assetId, amount );
+                formatstring( arrBuffer, constant::kMaxBuffer128, "%#=%#", assetID, amount );
                 return string( arrBuffer );
             }
 
@@ -65,18 +65,18 @@ namespace sw
                 return AdminResult::Unavailable;
             }
 
-            static ServiceMailMessage makeGmMail( const AdminCommand& command, AccountId recipient, string idempotencyKey )
+            static ServiceMailMessage makeGmMail( const AdminCommand& command, AccountID recipient, string idempotencyKey )
             {
                 const AdminRequest& request = command._request;
                 ServiceMailMessage  message;
-                message._recipientAccountId = recipient;
+                message._recipientAccountID = recipient;
                 message._listAttachment     = request._listAttachment;
                 message._titleKey           = request._titleKey;
                 message._body               = request._body;
                 message._senderName         = kGmSenderName;
                 message._bLiteralText       = SW_TRUE;
                 message._fundingHolder      = LedgerHolder::makeMint();
-                message._actorId            = command._adminId;
+                message._actorID            = command._adminID;
                 message._actorKind          = LedgerActorKind::Admin;
                 message._createdMs          = command._nowMs;
                 message._expiresMs          = command._nowMs + ServiceMailConstant::kDefaultRetentionMs;
@@ -91,24 +91,24 @@ namespace sw
                 const AdminRequest& request   = command._request;
                 const bool          bGrant    = request._amount > 0;
                 const int64         magnitude = bGrant ? request._amount : -request._amount;
-                const LedgerHolder  account   = LedgerHolder::makeAccount( request._accountId );
+                const LedgerHolder  account   = LedgerHolder::makeAccount( request._accountID );
                 LedgerBalance       before;
-                if ( Ledger::readBalance( connection, account, request._assetId, before ) != ServiceStoreResult::Ok )
+                if ( Ledger::readBalance( connection, account, request._assetID, before ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
                 const bool            bRefund = bGrant == false && request._bRefund == SW_TRUE;
                 LedgerTransferRequest transfer;
-                transfer._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAdminScope( command._adminId ), command._keyHigh, command._keyLow );
+                transfer._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAdminScope( command._adminID ), command._keyHigh, command._keyLow );
                 transfer._reason     = bGrant ? "admin.grant" : ( bRefund ? "refund.revoke" : "admin.revoke" );
                 transfer._memo       = request._memo.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
                 transfer._pPolicy    = command._pPolicy;
                 transfer._timeMs     = command._nowMs;
-                transfer._actorId    = command._adminId;
+                transfer._actorID    = command._adminID;
                 transfer._actorKind  = LedgerActorKind::Admin;
                 transfer._bAllowDebt = bRefund ? SW_TRUE : SW_FALSE; // 환불 회수만 빚 허용 — 이미 쓴 재화도 거둔다
                 if ( bGrant )
-                    transfer._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, request._assetId, magnitude } );
+                    transfer._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, request._assetID, magnitude } );
                 else
-                    transfer._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), request._assetId, magnitude } );
+                    transfer._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), request._assetID, magnitude } );
                 LedgerTransferOutcome outcome;
                 const LedgerResult    staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, outcome );
                 if ( staged != LedgerResult::Ok )
@@ -120,8 +120,8 @@ namespace sw
                     after = holderBalance._balance._amount;
                 }
                 inoutAudit._action = transfer._reason;
-                inoutAudit._before = formatAmount( request._assetId, before._amount );
-                inoutAudit._after  = formatAmount( request._assetId, after );
+                inoutAudit._before = formatAmount( request._assetID, before._amount );
+                inoutAudit._after  = formatAmount( request._assetID, after );
                 return AdminResult::Ok;
             }
 
@@ -130,14 +130,14 @@ namespace sw
             {
                 const AdminRequest&  request = command._request;
                 ServiceSanctionState state;
-                if ( ServiceSanction::readState( connection, request._accountId, state ) != ServiceStoreResult::Ok )
+                if ( ServiceSanction::readState( connection, request._accountID, state ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
                 inoutAudit._before                                             = formatSanction( state );
                 const bool bBan                                                = request._sanctionKind == ServiceSanctionKind::Ban && request._untilMs != 0;
                 state._arrUntilMs[static_cast<int32>( request._sanctionKind )] = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
                 if ( request._reasonCode.empty() == false )
                     state._reasonCode = request._reasonCode;
-                ServiceSanction::stageWrite( inoutTransaction, request._accountId, state );
+                ServiceSanction::stageWrite( inoutTransaction, request._accountID, state );
                 inoutAudit._action        = "admin.sanction";
                 inoutAudit._after         = formatSanction( state );
                 outReply._sanction        = state;
@@ -150,10 +150,10 @@ namespace sw
                                               ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest& request = command._request;
-                for ( const AccountId recipient : request._listAccountId )
+                for ( const AccountID recipient : request._listAccountID )
                 {
                     // 받는 계정마다 배치 키 — 끊긴 뒤 다시 돌리면 이미 보낸 계정은 건너뛴다.
-                    string             key = "bulk." + ServiceKeyUtil::makeHex64( request._batchId ) + "." + ServiceKeyUtil::makeHex64( recipient );
+                    string             key = "bulk." + ServiceKeyUtil::makeHex64( request._batchID ) + "." + ServiceKeyUtil::makeHex64( recipient );
                     string             mailKey;
                     bool               bReplayed = false;
                     const LedgerResult staged    = ServiceMail::stageSend( connection, makeGmMail( command, recipient, std::move( key ) ), inoutTransaction, mailKey, bReplayed );
@@ -162,7 +162,7 @@ namespace sw
                     outReply._processedCount += bReplayed ? 0 : 1;
                 }
                 inoutAudit._action  = "admin.bulk_mail";
-                inoutAudit._subject = "batch." + ServiceKeyUtil::makeHex64( request._batchId );
+                inoutAudit._subject = "batch." + ServiceKeyUtil::makeHex64( request._batchID );
                 inoutAudit._after   = formatAmount( "sent", outReply._processedCount );
                 return AdminResult::Ok;
             }
@@ -170,13 +170,13 @@ namespace sw
             static AdminResult stageSetRole( IServiceStoreConnection& connection, const AdminCommand& command, ServiceTransaction& inoutTransaction, ServiceAuditEntry& inoutAudit )
             {
                 const AdminRequest& request = command._request;
-                if ( request._accountId == command._adminId )
+                if ( request._accountID == command._adminID )
                     return AdminResult::Forbidden; // 자기 등급은 못 바꾼다(마지막 Super 가 스스로 잠그지 않게)
                 AdminRole current = AdminRole::None;
                 uint64    version = 0;
-                if ( AdminStoreLogic::readRole( connection, request._accountId, current, version ) != ServiceStoreResult::Ok )
+                if ( AdminStoreLogic::readRole( connection, request._accountID, current, version ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
-                const string key = ServiceKeyUtil::makeHex64( request._accountId );
+                const string key = ServiceKeyUtil::makeHex64( request._accountID );
                 if ( request._role == AdminRole::None )
                 {
                     if ( version != 0 )
@@ -197,8 +197,8 @@ namespace sw
             {
                 const AdminRequest& request = command._request;
                 ServiceAuditEntry   audit;
-                audit._actor       = makeActor( command._adminId );
-                audit._subject     = makeSubject( request._accountId );
+                audit._actor       = makeActor( command._adminID );
+                audit._subject     = makeSubject( request._accountID );
                 audit._memo        = request._memo;
                 audit._timeMs      = command._nowMs;
                 AdminResult staged = AdminResult::InvalidRequest;
@@ -218,8 +218,8 @@ namespace sw
                     {
                         string             mailKey;
                         bool               bReplayed = false;
-                        const string       key       = "gm." + ServiceKeyUtil::makeHex64( command._adminId ) + "." + ServiceKeyUtil::makeHex64( command._keyLow );
-                        const LedgerResult sent      = ServiceMail::stageSend( connection, makeGmMail( command, request._accountId, key ), inoutTransaction, mailKey, bReplayed );
+                        const string       key       = "gm." + ServiceKeyUtil::makeHex64( command._adminID ) + "." + ServiceKeyUtil::makeHex64( command._keyLow );
+                        const LedgerResult sent      = ServiceMail::stageSend( connection, makeGmMail( command, request._accountID, key ), inoutTransaction, mailKey, bReplayed );
                         staged                       = toAdminResult( sent );
                         audit._action                = "admin.mail";
                         audit._after                 = mailKey;
@@ -233,7 +233,7 @@ namespace sw
                     case AdminMethod::kCreateCampaign:
                     {
                         ServiceMailCampaign campaign;
-                        campaign._campaignId     = request._batchId;
+                        campaign._campaignID     = request._batchID;
                         campaign._listAttachment = request._listAttachment;
                         campaign._titleKey       = request._titleKey;
                         campaign._body           = request._body;
@@ -241,10 +241,10 @@ namespace sw
                         campaign._bLiteralText   = SW_TRUE;
                         campaign._startMs        = request._startMs;
                         campaign._endMs          = request._endMs;
-                        campaign._actorId        = command._adminId;
+                        campaign._actorID        = command._adminID;
                         staged                   = ServiceMailCampaignTable::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminResult::InvalidRequest;
                         audit._action            = "admin.campaign";
-                        audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchId );
+                        audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchID );
                         break;
                     }
                     case AdminMethod::kSetRole:
@@ -272,18 +272,18 @@ namespace sw
                 const bool bMemoOk = request._memo.empty() == false && request._memo.size() <= static_cast<size_t>( AdminProtocol::kMaxMemoSize );
                 if ( bKeyOk == false || bMemoOk == false )
                     return false;
-                const bool bHasAccount = request._accountId != kInvalidAccountId;
+                const bool bHasAccount = request._accountID != kInvalidAccountID;
                 switch ( command._method )
                 {
                     case AdminMethod::kAdjustAsset:
-                        return bHasAccount && request._amount != 0 && LedgerUtil::isValidAssetId( request._assetId );
+                        return bHasAccount && request._amount != 0 && LedgerUtil::isValidAssetID( request._assetID );
                     case AdminMethod::kSetSanction:
                         return bHasAccount && request._untilMs >= 0;
                     case AdminMethod::kSendMail:
                         return bHasAccount;
                     case AdminMethod::kBulkMail:
-                        return request._listAccountId.empty() == false && static_cast<int32>( request._listAccountId.size() ) <= AdminProtocol::kMaxBulkCount &&
-                               request._batchId != 0;
+                        return request._listAccountID.empty() == false && static_cast<int32>( request._listAccountID.size() ) <= AdminProtocol::kMaxBulkCount &&
+                               request._batchID != 0;
                     case AdminMethod::kSetRole:
                         return bHasAccount;
                     default:
@@ -293,15 +293,15 @@ namespace sw
 
             static AdminResult lookup( IServiceStoreConnection& connection, const AdminRequest& request, AdminReply& outReply )
             {
-                if ( request._accountId == kInvalidAccountId )
+                if ( request._accountID == kInvalidAccountID )
                     return AdminResult::UnknownAccount;
-                const LedgerHolder account = LedgerHolder::makeAccount( request._accountId );
+                const LedgerHolder account = LedgerHolder::makeAccount( request._accountID );
                 if ( Ledger::listBalances( connection, account, outReply._listBalance ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
-                if ( ServiceSanction::readState( connection, request._accountId, outReply._sanction ) != ServiceStoreResult::Ok )
+                if ( ServiceSanction::readState( connection, request._accountID, outReply._sanction ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
                 uint64 roleVersion = 0;
-                if ( AdminStoreLogic::readRole( connection, request._accountId, outReply._targetRole, roleVersion ) != ServiceStoreResult::Ok )
+                if ( AdminStoreLogic::readRole( connection, request._accountID, outReply._targetRole, roleVersion ) != ServiceStoreResult::Ok )
                     return AdminResult::Unavailable;
                 vector<LedgerJournalEntry> listEntry;
                 string                     ignoredCursor;
@@ -313,16 +313,16 @@ namespace sw
                     line._reason           = entry._reason;
                     line._memo             = entry._memo;
                     line._timeMs           = entry._timeMs;
-                    line._actorId          = entry._actorId;
+                    line._actorID          = entry._actorID;
                     line._actorKind        = entry._actorKind;
                     for ( const LedgerPosting& posting : entry._listPosting )
                     {
                         const int64 sign = posting._to == account ? 1 : ( posting._from == account ? -1 : 0 );
                         if ( sign != 0 )
-                            line._listChange.push_back( LedgerBalance{ posting._assetId, sign * posting._amount, 0 } );
+                            line._listChange.push_back( LedgerBalance{ posting._assetID, sign * posting._amount, 0 } );
                     }
                 }
-                const string             subject = makeSubject( request._accountId ) + "/";
+                const string             subject = makeSubject( request._accountID ) + "/";
                 const ServiceStoreResult listed  = ServiceAuditLog::listEntries( connection, subject, "", AdminProtocol::kMaxLookupCount, outReply._listAudit, ignoredCursor );
                 return listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable;
             }
@@ -338,12 +338,12 @@ namespace sw
         return s_table;
     }
 
-    ServiceStoreResult AdminStoreLogic::readRole( IServiceStoreConnection& connection, AccountId accountId, AdminRole& outRole, uint64& outVersion )
+    ServiceStoreResult AdminStoreLogic::readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion )
     {
         outRole    = AdminRole::None;
         outVersion = 0;
         ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getRoleTable(), ServiceKeyUtil::makeHex64( accountId ), record );
+        const ServiceStoreResult read = connection.readRecord( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), record );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
@@ -359,7 +359,7 @@ namespace sw
         outReply          = AdminReply{};
         AdminRole role    = AdminRole::None;
         uint64    version = 0;
-        if ( readRole( connection, command._adminId, role, version ) != ServiceStoreResult::Ok )
+        if ( readRole( connection, command._adminID, role, version ) != ServiceStoreResult::Ok )
             return AdminStoreLogicInternal::finish( outReply, AdminResult::Unavailable );
         const AdminRole required = AdminProtocol::getRequiredRole( command._method, command._request._sanctionKind );
         if ( required == AdminRole::Count || role < required )
@@ -375,7 +375,7 @@ namespace sw
             return AdminStoreLogicInternal::finish( outReply, listed == ServiceStoreResult::Ok ? AdminResult::Ok : AdminResult::Unavailable );
         }
 
-        const string scope = AdminStoreLogicInternal::makeActor( command._adminId );
+        const string scope = AdminStoreLogicInternal::makeActor( command._adminID );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             vector<uint8>            listStoredReply;
@@ -422,23 +422,23 @@ namespace sw
         return AdminStoreLogicInternal::finish( outReply, AdminResult::Busy );
     }
 
-    AdminResult AdminStoreLogic::seedRole( IServiceStoreConnection& connection, AccountId accountId, AdminRole role, int64 nowMs )
+    AdminResult AdminStoreLogic::seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs )
     {
         AdminRole current = AdminRole::None;
         uint64    version = 0;
-        if ( readRole( connection, accountId, current, version ) != ServiceStoreResult::Ok )
+        if ( readRole( connection, accountID, current, version ) != ServiceStoreResult::Ok )
             return AdminResult::Unavailable;
         if ( version != 0 )
             return AdminResult::Ok; // 이미 있다 — 설정 파일이 운영 중 바뀐 등급을 덮지 않는다
         ServiceTransaction transaction;
-        transaction.put( getRoleTable(), ServiceKeyUtil::makeHex64( accountId ), vector<uint8>{ static_cast<uint8>( role ) }, ServiceRecord::kAbsentVersion );
+        transaction.put( getRoleTable(), ServiceKeyUtil::makeHex64( accountID ), vector<uint8>{ static_cast<uint8>( role ) }, ServiceRecord::kAbsentVersion );
         ServiceAuditEntry audit;
         audit._actor   = "system.bootstrap";
         audit._action  = "admin.role";
-        audit._subject = AdminStoreLogicInternal::makeSubject( accountId );
+        audit._subject = AdminStoreLogicInternal::makeSubject( accountID );
         audit._after   = toString( role );
         audit._timeMs  = nowMs;
-        ServiceAuditLog::stageEntry( transaction, audit, accountId, static_cast<uint64>( nowMs ) );
+        ServiceAuditLog::stageEntry( transaction, audit, accountID, static_cast<uint64>( nowMs ) );
         const ServiceStoreResult committed = connection.commit( transaction );
         return committed == ServiceStoreResult::Ok || committed == ServiceStoreResult::Conflict ? AdminResult::Ok : AdminResult::Unavailable;
     }

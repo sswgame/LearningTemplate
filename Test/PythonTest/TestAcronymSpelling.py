@@ -210,9 +210,10 @@ class AcronymGateTest(unittest.TestCase):
             root = Path(folder)
             (root / "Source" / "Probe").mkdir(parents=True)
             (root / "Source" / "Probe" / "Probe.h").write_text("class IdProbe {};\nclass GPUScene {};\n", encoding="utf-8")
-            self.assertEqual(self.runGateInternal(root), 0)
-            self.assertEqual(self.runGateInternal(root, "--enforce", "GPU"), 0)
-            self.assertEqual(self.runGateInternal(root, "--enforce", "ID"), 1)
+            # 등록부가 모든 약어를 강제해도 --enforce-only 로 "아직 강제 전" 상태를 만든다.
+            self.assertEqual(self.runGateInternal(root, "--enforce-only", "GPU"), 0)
+            self.assertEqual(self.runGateInternal(root, "--enforce-only", "GPU", "--enforce", "ID"), 1)
+            self.assertEqual(self.runGateInternal(root), 1)
 
 
 if __name__ == "__main__":

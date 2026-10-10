@@ -133,7 +133,7 @@ namespace
         explicit ScopedGameStateSceneService( SceneManager& manager )
         {
             ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
             game::bindGameService( service );
         }
         ~ScopedGameStateSceneService() { game::unbindGameService(); }

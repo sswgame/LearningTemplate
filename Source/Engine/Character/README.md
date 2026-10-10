@@ -140,7 +140,7 @@ pRagdoll->setPhysicsAssetPath( "game/shooter3d/characters/skeleton_warrior/skele
 **해석된 소켓 테이블**(`ResolvedSocketTable`)은 여러 유닛의 소켓을 이름 하나의 공간으로 모읍니다. `beginResolve` 후 유닛마다 `addUnit` 을 부르고 `endResolve` 로 끝냅니다.
 몸의 소켓은 접두어가 없고, 부품의 소켓은 `MainHand.Muzzle` 처럼 슬롯 이름이 붙습니다.
 
-- 이름에서 얻은 `SocketId` 는 다시 해석해도 같습니다. 이번 해석에 없는 이름은 꺼집니다(`isSocketActive`). 그래서 무기를 바꾸면 같은 id 가 새 무기의 총구를 가리킵니다.
+- 이름에서 얻은 `SocketID` 는 다시 해석해도 같습니다. 이번 해석에 없는 이름은 꺼집니다(`isSocketActive`). 그래서 무기를 바꾸면 같은 id 가 새 무기의 총구를 가리킵니다.
 - 후보 목록(`fallback="Belt.Hook"`)은 `endResolve` 가 처리합니다. 처음 켜진 후보를 쓰고, 없으면 자기 위치를 씁니다.
 - 부모 본이 스켈레톤에 있는지는 `addUnit` 이 확인합니다.
 
@@ -261,7 +261,7 @@ KayKit 리그의 영역 테이블은 `skeleton_warrior.fit.xml`(Head, Arm_L, Arm
 
 **몸에서 장비로 전이**(`SurfaceTransferUtil`)는 장비 정점마다 몸의 가장 가까운 삼각형에 묶고, 몸의 모프 이동량과 스킨 가중치를 옮깁니다. 쿠킹 때 한 번 합니다.
 
-**병합**(`MeshMerger::merge`)은 같은 스켈레톤(`_skeletonId`)의 부품만 합칩니다. 보임 마스크로 숨긴 삼각형을 빼고, 쓰는 정점만 원래 순서대로 남기고, 피팅 이동량을 적용합니다.
+**병합**(`MeshMerger::merge`)은 같은 스켈레톤(`_skeletonID`)의 부품만 합칩니다. 보임 마스크로 숨긴 삼각형을 빼고, 쓰는 정점만 원래 순서대로 남기고, 피팅 이동량을 적용합니다.
 머티리얼 그룹마다 구간을 냅니다(`IMeshMergeHooks` 가 아틀라스와 UV 이동을 맡습니다). 쉬는 강체 부품은 소켓 본에 가중치 1 로 묶고, `extractPart` 로 다시 떼어 낼 수 있습니다.
 
 **자르기 도우미**(`GeometryCutUtil`)는 마스크로 나누기, 경계 고리 찾기, 캡 만들기, 닫힘 검사, 이어 붙이기를 합니다. 절단, 찢김, 병합, 파괴(`Destruction`)가 함께 씁니다.

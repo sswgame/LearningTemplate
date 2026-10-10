@@ -91,7 +91,7 @@ namespace sw
         ArcadeVehicleSettings _baseSettings{};
         KartRacerInput        _input{};
         vector<float32>       _listLapTime{};
-        hashed_string         _itemId{}; ///< 들고 있는 아이템(비면 없음)
+        hashed_string         _itemID{}; ///< 들고 있는 아이템(비면 없음)
         float3                _previousPosition{};
         float32               _distance{ 0.0f }; ///< 중심선 거리
         float32               _progress{ 0.0f }; ///< 순위 진행값
@@ -121,7 +121,7 @@ namespace sw
     {
         float3        _position{};
         float3        _direction{ 0.0f, 0.0f, 1.0f }; ///< 수평 단위
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         float32       _age{ 0.0f };
         int32         _owner{ -1 };
         int32         _target{ -1 }; ///< 유도 대상(−1 = 곧게)
@@ -148,14 +148,14 @@ namespace sw
             Finished,     ///< _value = 순위, _time = 기록
             WrongWay,     ///< _value 1 시작 · 0 끝
             PlaceChanged, ///< _value = 새 순위
-            ItemBoxTaken, ///< _value = 상자 번호, _itemId = 받은 것(비면 이미 들고 있었다)
+            ItemBoxTaken, ///< _value = 상자 번호, _itemID = 받은 것(비면 이미 들고 있었다)
             ItemUsed,
             Hit,           ///< _racer = 맞은 차, _other = 쏜 차
             ShieldBlocked, ///< _racer = 막은 차
             BoostPad,
             RaceEnded
         };
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         float32       _time{ 0.0f };
         int32         _racer{ -1 };
         int32         _other{ -1 };
@@ -206,7 +206,7 @@ namespace sw
         /** @brief 차 @p racer 의 입력을 @p pGhost 에(빌려 쓴다) 기록합니다. 출발 자리에서 기록을 시작하고 결승에서 멈춥니다. */
         void startGhostRecording( int32 racer, KartGhost* pGhost );
         /** @brief 아이템을 쥐여 줍니다(시험 · 이벤트). 들고 있던 것은 바뀝니다. */
-        void giveItem( int32 racer, const hashed_string& itemId );
+        void giveItem( int32 racer, const hashed_string& itemID );
         /** @brief 들고 있는 아이템을 씁니다. 없으면 false 입니다. */
         [[nodiscard]] bool useItem( int32 racer );
         /** @brief 아이템에 맞습니다(게임 쪽 함정 · 시험). 방어막이 막으면 false 입니다. */
@@ -238,7 +238,7 @@ namespace sw
 
     private:
         bool               isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
-        bool               isKnownItem( const hashed_string& itemId ) const; ///< 빈 id 거나 카탈로그에 있는 아이템인가(상태 읽기)
+        bool               isKnownItem( const hashed_string& itemID ) const; ///< 빈 id 거나 카탈로그에 있는 아이템인가(상태 읽기)
         ArcadeVehicleInput resolveInput( int32 racer, bool& outUseItem );
         void               updateProgress( int32 racer );
         void               completeLap( int32 racer );

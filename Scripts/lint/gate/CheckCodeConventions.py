@@ -174,7 +174,7 @@ class ContainerVocabulary:
 
     - `prefix`       : 요구하는 접두어 (`list` · `map` · `unique` · `arr`)
     - `noun`         : 위반 메시지에 쓰는 우리말 이름
-    - `bSingular`    : 단수형을 요구하는가. `unique` 만 예외다 (`AGENTS.md`: `outUniqueIds` 허용)
+    - `bSingular`    : 단수형을 요구하는가. `unique` 만 예외다 (`AGENTS.md`: `outUniqueIDs` 허용)
     - `bBanListSuffix`: `List` 접미어를 금지하는가 (`actorList` → `listActor`). `list` 만 해당
     - `bByteException`: 바이트 버퍼 이름이면 접두어를 **생략**해야 하는가. `list` 만 해당
     """
@@ -1105,7 +1105,7 @@ def checkLocalVariableItemInternal(line: str, relPath: str, lineNum: int) -> lis
 #   - <[^>]+>                                : 템플릿 인자 (<Key, Value>) 매칭
 #   - \s+(_[a-zA-Z0-9_]+)\s*;                : 멤버 변수명 캡처
 # 매칭 예시 (위반): unordered_map<string, int32> _table; (위반 -> _mapTable 이어야 함)
-# 올바른 예시: unordered_map<string, int32> _mapTable;, map<int32, Actor*> _mapIdToActor;
+# 올바른 예시: unordered_map<string, int32> _mapTable;, map<int32, Actor*> _mapIDToActor;
 # 컨벤션 규칙: 연관 컨테이너 멤버는 '_map' 접두어로 시작해야 합니다.
 _kMemberMapRe = re.compile(
     r'^\s*(?:(?:sw::)?(?:unordered_map|map))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
@@ -1116,9 +1116,9 @@ _kMemberMapRe = re.compile(
 #   - ^\s*(?:(?:sw::)?(?:unordered_set|set)) : set 또는 unordered_set 매칭
 #   - <[^>]+>                                : 템플릿 인자 (<Key>) 매칭
 #   - \s+(_[a-zA-Z0-9_]+)\s*;                : 멤버 변수명 캡처
-# 매칭 예시 (위반): set<uint32> _ids; (위반 -> _uniqueIds 이어야 함)
-# 올바른 예시: set<uint32> _uniqueIds;, unordered_set<string> _uniqueTags;
-# 컨벤션 규칙: 고유 집합 멤버는 '_unique' 접두어로 시작하며, 컨테이너 중 유일하게 복수형 명사(_uniqueIds)가 허용됩니다.
+# 매칭 예시 (위반): set<uint32> _ids; (위반 -> _uniqueIDs 이어야 함)
+# 올바른 예시: set<uint32> _uniqueIDs;, unordered_set<string> _uniqueTags;
+# 컨벤션 규칙: 고유 집합 멤버는 '_unique' 접두어로 시작하며, 컨테이너 중 유일하게 복수형 명사(_uniqueIDs)가 허용됩니다.
 _kMemberSetRe = re.compile(
     r'^\s*(?:(?:sw::)?(?:unordered_set|set))\s*<[^>]+>\s+(_[a-zA-Z0-9_]+)\s*;'
 )

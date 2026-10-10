@@ -29,8 +29,8 @@ namespace sw
             struct StageCandidate
             {
                 TickItem                     _item;
-                uint64                       _objectId{ 0 };
-                uint64                       _componentId{ 0 };
+                uint64                       _objectID{ 0 };
+                uint64                       _componentID{ 0 };
                 uint32                       _originalIndex{ 0 };
                 const vector<SubTickHandle>* _pListPrerequisite{ nullptr };      ///< 서브틱의 선행 목록
                 uint8                        _externalGroup{ kNoExternalGroup }; ///< 보통 길에서 도는 선행 조건 중 가장 늦은 그룹
@@ -50,11 +50,11 @@ namespace sw
             /** @brief 항목의 서브틱 정보에서 선행 목록을 찾습니다. 주 틱이거나 없으면 nullptr. */
             static const vector<SubTickHandle>* findPrerequisiteList( const TickItem& item )
             {
-                if ( item._subTickId == 0 || item._pComponent == nullptr )
+                if ( item._subTickID == 0 || item._pComponent == nullptr )
                     return nullptr;
                 for ( const SubTickInfo& subTick : item._pComponent->getAllSubTicks() )
                 {
-                    if ( subTick._subTickId == item._subTickId )
+                    if ( subTick._subTickID == item._subTickID )
                         return &subTick._listPrerequisite;
                 }
                 return nullptr;
@@ -66,12 +66,12 @@ namespace sw
              */
             static uint8 findExternalGroup( GameObjectManager& manager, const SubTickHandle& handle )
             {
-                GameObject* pObj = manager.findGameObjectById( handle._objectId );
+                GameObject* pObj = manager.findGameObjectByID( handle._objectID );
                 if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
                     return kNoExternalGroup;
                 for ( const TickItem& item : pObj->getTickItems() )
                 {
-                    if ( item._pComponent != nullptr && item._pComponent->getComponentId() == handle._componentId && item._subTickId == handle._subTickId &&
+                    if ( item._pComponent != nullptr && item._pComponent->getComponentID() == handle._componentID && item._subTickID == handle._subTickID &&
                          item._pComponent->isPendingDestroy() == false )
                         return item._group;
                 }
@@ -93,7 +93,7 @@ namespace sw
                 for ( const size_t candidateIndex : listLevel )
                 {
                     const StageCandidate& candidate = listCandidate[candidateIndex];
-                    uint32&               slot      = mapNextSlot[candidate._objectId];
+                    uint32&               slot      = mapNextSlot[candidate._objectID];
                     if ( firstStage + slot == outListStage.size() )
                     {
                         TickStage& stage    = outListStage.emplace_back();
@@ -116,7 +116,7 @@ namespace sw
                 mapLookup.reserve( count );
                 for ( size_t index = 0; index < count; ++index )
                 {
-                    mapLookup[SubTickHandle{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId, 0 }] = index;
+                    mapLookup[SubTickHandle{ listCandidate[index]._componentID, listCandidate[index]._item._subTickID, 0 }] = index;
                 }
 
                 outListAdjacent.assign( count, vector<size_t>{} );
@@ -253,8 +253,8 @@ namespace sw
 {
     TickRegistry::TickRegistry()
         : _arrListEntry{}
-        , _listDirtyObjectId{}
-        , _listProcessingObjectId{}
+        , _listDirtyObjectID{}
+        , _listProcessingObjectID{}
         , _dirtyMutex{}
         , _bAllDirty{ SW_TRUE }
         , _prerequisiteCount{ 0 }
@@ -262,8 +262,8 @@ namespace sw
         , _stageBuildCount{ 0 }
         , _stageGeneration{ 1 }
         , _builtStageGeneration{ 0 }
-        , _uniqueDependentObjectId{}
-        , _uniqueReferencedObjectId{}
+        , _uniqueDependentObjectID{}
+        , _uniqueReferencedObjectID{}
         , _listStage{}
     {
     }
@@ -273,7 +273,7 @@ namespace sw
         if ( pObj == nullptr || pObj->_bTickDirty.exchange( SW_TRUE, std::memory_order_acq_rel ) != SW_FALSE )
             return;
         std::scoped_lock<mutex> lock{ _dirtyMutex };
-        _listDirtyObjectId.push_back( pObj->getObjectId() );
+        _listDirtyObjectID.push_back( pObj->getObjectID() );
     }
 
     void TickRegistry::markAllDirty()
@@ -286,7 +286,7 @@ namespace sw
         const bool bAll = _bAllDirty.exchange( SW_FALSE, std::memory_order_acq_rel ) != SW_FALSE;
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };
-            _listProcessingObjectId.swap( _listDirtyObjectId );
+            _listProcessingObjectID.swap( _listDirtyObjectID );
         }
         bool bRefreshedAny = false;
         if ( bAll )
@@ -297,22 +297,22 @@ namespace sw
                 refreshObject( pObj );
             } );
             // 모두 훑었으니 개별 표시는 지운다. 죽어 가는 오브젝트의 id 는 어차피 해석이 비었을 것이다.
-            _listProcessingObjectId.clear();
+            _listProcessingObjectID.clear();
             bRefreshedAny = true;
         }
         else
         {
-            for ( const uint64 objectId : _listProcessingObjectId )
+            for ( const uint64 objectID : _listProcessingObjectID )
             {
                 // 삭제 대기면 비어 있다. 그 오브젝트는 파괴 때 `unregisterObject` 로 빠진다.
-                GameObject* pObj = manager.findGameObjectById( objectId );
+                GameObject* pObj = manager.findGameObjectByID( objectID );
                 if ( pObj == nullptr )
                     continue;
                 pObj->_bTickDirty.store( SW_FALSE, std::memory_order_relaxed );
                 refreshObject( pObj );
                 bRefreshedAny = true;
             }
-            _listProcessingObjectId.clear();
+            _listProcessingObjectID.clear();
         }
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
@@ -323,8 +323,8 @@ namespace sw
 
     void TickRegistry::refreshObject( GameObject* pObj )
     {
-        const uint64  objectId   = pObj->getObjectId();
-        const bool    bWasLinked = _uniqueDependentObjectId.contains( objectId ) || _uniqueReferencedObjectId.contains( objectId );
+        const uint64  objectID   = pObj->getObjectID();
+        const bool    bWasLinked = _uniqueDependentObjectID.contains( objectID ) || _uniqueReferencedObjectID.contains( objectID );
         TickItemList& listItem   = pObj->_listTickItem;
         listItem.clear();
 
@@ -349,7 +349,7 @@ namespace sw
                     continue;
                 const bool bHasPrerequisite = subTick._listPrerequisite.empty() == false;
                 // 우선순위는 등록할 때 `kMaxTickPriority` 로 묶였다 — 단계(64 칸)를 넘지 않는다.
-                listItem.push_back( TickItem{ pComp, subTick._subTickId, group, static_cast<uint8>( static_cast<uint8>( subTick._phase ) + subTick._priority ),
+                listItem.push_back( TickItem{ pComp, subTick._subTickID, group, static_cast<uint8>( static_cast<uint8>( subTick._phase ) + subTick._priority ),
                                               static_cast<uint8>( bHasPrerequisite ? SW_TRUE : SW_FALSE ) } );
                 prerequisiteCount += static_cast<uint32>( subTick._listPrerequisite.size() );
                 dependentCount += bHasPrerequisite ? 1u : 0u;
@@ -397,9 +397,9 @@ namespace sw
         _prerequisiteCount           = _prerequisiteCount - pObj->_tickPrerequisiteCount + prerequisiteCount;
         pObj->_tickPrerequisiteCount = prerequisiteCount;
         if ( dependentCount > 0 )
-            _uniqueDependentObjectId.insert( objectId );
+            _uniqueDependentObjectID.insert( objectID );
         else
-            _uniqueDependentObjectId.erase( objectId );
+            _uniqueDependentObjectID.erase( objectID );
         if ( bWasLinked || dependentCount > 0 )
             ++_stageGeneration;
     }
@@ -438,9 +438,9 @@ namespace sw
         {
             setMembership( pObj, group, false, TickObjectEntry{} );
         }
-        const uint64 objectId = pObj->getObjectId();
+        const uint64 objectID = pObj->getObjectID();
         // 스테이지가 이 오브젝트의 항목을 들고 있거나(선행 조건을 가진 쪽) 이 오브젝트를 기다린다(가리켜진 쪽) — 다음 틱 전에 다시 짓는다.
-        if ( _uniqueDependentObjectId.erase( objectId ) > 0 || _uniqueReferencedObjectId.contains( objectId ) )
+        if ( _uniqueDependentObjectID.erase( objectID ) > 0 || _uniqueReferencedObjectID.contains( objectID ) )
             ++_stageGeneration;
         _prerequisiteCount -= pObj->_tickPrerequisiteCount;
         pObj->_tickPrerequisiteCount = 0;
@@ -455,12 +455,12 @@ namespace sw
         }
         {
             std::scoped_lock<mutex> lock{ _dirtyMutex };
-            _listDirtyObjectId.clear();
+            _listDirtyObjectID.clear();
         }
-        _listProcessingObjectId.clear();
+        _listProcessingObjectID.clear();
         _prerequisiteCount = 0;
-        _uniqueDependentObjectId.clear();
-        _uniqueReferencedObjectId.clear();
+        _uniqueDependentObjectID.clear();
+        _uniqueReferencedObjectID.clear();
         _listStage.clear();
         _stageItemCount = 0;
         ++_stageGeneration;
@@ -472,20 +472,20 @@ namespace sw
         _builtStageGeneration = _stageGeneration;
         ++_stageBuildCount;
         _listStage.clear();
-        _uniqueReferencedObjectId.clear();
+        _uniqueReferencedObjectID.clear();
         _stageItemCount = 0;
-        if ( _uniqueDependentObjectId.empty() )
+        if ( _uniqueDependentObjectID.empty() )
             return;
 
         // 집합의 순서는 정해져 있지 않다 — 오브젝트 id(만든 순서) 순으로 모아 같은 씬이 늘 같은 스테이지를 짓게 한다.
-        vector<uint64> listDependentId( _uniqueDependentObjectId.begin(), _uniqueDependentObjectId.end() );
-        std::sort( listDependentId.begin(), listDependentId.end() );
+        vector<uint64> listDependentID( _uniqueDependentObjectID.begin(), _uniqueDependentObjectID.end() );
+        std::sort( listDependentID.begin(), listDependentID.end() );
 
         vector<TickRegistryInternal::StageCandidate> listCandidate;
         uint32                                       originalIndex = 0;
-        for ( const uint64 objectId : listDependentId )
+        for ( const uint64 objectID : listDependentID )
         {
-            GameObject* pObj = manager.findGameObjectById( objectId );
+            GameObject* pObj = manager.findGameObjectByID( objectID );
             if ( pObj == nullptr || pObj->isPendingDestroy() || pObj->isActiveInHierarchy() == false )
                 continue;
             for ( const TickItem& item : pObj->_listTickItem )
@@ -497,8 +497,8 @@ namespace sw
                     continue;
                 TickRegistryInternal::StageCandidate candidate{};
                 candidate._item              = item;
-                candidate._objectId          = objectId;
-                candidate._componentId       = item._pComponent->getComponentId();
+                candidate._objectID          = objectID;
+                candidate._componentID       = item._pComponent->getComponentID();
                 candidate._originalIndex     = originalIndex++;
                 candidate._pListPrerequisite = pListPrerequisite;
                 listCandidate.push_back( candidate );
@@ -510,13 +510,13 @@ namespace sw
         mapCandidate.reserve( listCandidate.size() );
         for ( size_t index = 0; index < listCandidate.size(); ++index )
         {
-            mapCandidate[SubTickHandle{ listCandidate[index]._componentId, listCandidate[index]._item._subTickId, 0 }] = index;
+            mapCandidate[SubTickHandle{ listCandidate[index]._componentID, listCandidate[index]._item._subTickID, 0 }] = index;
         }
         for ( TickRegistryInternal::StageCandidate& candidate : listCandidate )
         {
             for ( const SubTickHandle& prerequisite : *candidate._pListPrerequisite )
             {
-                _uniqueReferencedObjectId.insert( prerequisite._objectId );
+                _uniqueReferencedObjectID.insert( prerequisite._objectID );
                 if ( mapCandidate.contains( prerequisite ) )
                     continue;
                 const uint8 externalGroup = TickRegistryInternal::findExternalGroup( manager, prerequisite );

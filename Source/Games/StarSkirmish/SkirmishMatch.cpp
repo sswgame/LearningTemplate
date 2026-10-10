@@ -23,11 +23,11 @@ namespace sw
             static RTSCommanderAISettings makeAISettings( int32 style )
             {
                 RTSCommanderAISettings settings;
-                settings._workerId     = hashed_string( "worker" );
-                settings._depotId      = hashed_string( "command_center" );
-                settings._supplyId     = hashed_string( "supply_depot" );
-                settings._productionId = hashed_string( "barracks" );
-                settings._armyUnitId   = hashed_string( "marine" );
+                settings._workerID     = hashed_string( "worker" );
+                settings._depotID      = hashed_string( "command_center" );
+                settings._supplyID     = hashed_string( "supply_depot" );
+                settings._productionID = hashed_string( "barracks" );
+                settings._armyUnitID   = hashed_string( "marine" );
                 if ( style == 0 )
                 {
                     settings._workerTarget     = 12;
@@ -194,13 +194,13 @@ namespace sw
         return _listCliff[static_cast<size_t>( y * kMapSize + x )] != SW_FALSE;
     }
 
-    RTSUnitId SkirmishMatch::spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror )
+    RTSUnitID SkirmishMatch::spawnAt( const utf8* pDefID, int32 owner, int32 x, int32 y, bool bMirror )
     {
-        const RTSUnitDef* pDef = _world.getCatalog()->findUnit( hashed_string( pDefId ) );
+        const RTSUnitDef* pDef = _world.getCatalog()->findUnit( hashed_string( pDefID ) );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "[Skirmish] units.xml has no '%#' - not placed", pDefId );
-            return RTSUnitId{};
+            SW_LOG_WARNING( "[Skirmish] units.xml has no '%#' - not placed", pDefID );
+            return RTSUnitID{};
         }
         // 점 대칭 — 건물 · 자원은 왼쪽 아래 칸이 기준이라 자리 폭만큼 더 민다.
         const int32 footprint = pDef->isMobile() ? 1 : pDef->_footprint;
@@ -209,9 +209,9 @@ namespace sw
         return _world.spawnUnit( pDef->_id, owner, float3{ static_cast<float32>( cellX ) + 0.5f, 0.0f, static_cast<float32>( cellY ) + 0.5f } );
     }
 
-    void SkirmishMatch::spawnResource( const utf8* pDefId, int32 x, int32 y, bool bMirror )
+    void SkirmishMatch::spawnResource( const utf8* pDefID, int32 x, int32 y, bool bMirror )
     {
-        (void)spawnAt( pDefId, RTSWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
+        (void)spawnAt( pDefID, RTSWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
     }
 
     void SkirmishMatch::spawnBase( int32 player, bool bMirror )
@@ -230,17 +230,17 @@ namespace sw
 
         // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).
         const RTSPlayer*  pPlayer = _world.findPlayer( player );
-        vector<RTSUnitId> listWorker;
+        vector<RTSUnitID> listWorker;
         _world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( unit._owner == player && unit._pDef->_bWorker != SW_FALSE )
                 listWorker.push_back( unit._id );
         } );
-        for ( const RTSUnitId workerId : listWorker )
+        for ( const RTSUnitID workerID : listWorker )
         {
-            const RTSUnitId mineralId = _world.findNearestResource( pPlayer->_startPosition, RTSResourceType::Minerals, 16.0f );
-            if ( mineralId.isValid() )
-                (void)_world.issueGather( workerId, mineralId );
+            const RTSUnitID mineralID = _world.findNearestResource( pPlayer->_startPosition, RTSResourceType::Minerals, 16.0f );
+            if ( mineralID.isValid() )
+                (void)_world.issueGather( workerID, mineralID );
         }
     }
 
@@ -310,7 +310,7 @@ namespace sw
         const RTSPlayer* pEnemy = _world.findPlayer( enemy );
         if ( pEnemy == nullptr || pEnemy->_bDefeated != SW_FALSE )
             return;
-        vector<RTSUnitId> listArrived;
+        vector<RTSUnitID> listArrived;
         float3            groupPosition{};
         _world.forEachUnit( [&]( const RTSUnit& unit )
         {

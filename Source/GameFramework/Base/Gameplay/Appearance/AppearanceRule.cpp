@@ -23,7 +23,7 @@ namespace sw
             static constexpr const utf8* kArrMorphAttribute[]    = { "target", "name", "weight" };
             static constexpr const utf8* kArrSocketAttribute[]   = { "name", "parent", "offset", "rotation" };
 
-            [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
+            [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
                 outCondition._bNegate      = node.getAttributeBool( "not", false ) ? SW_TRUE : SW_FALSE;
@@ -37,7 +37,7 @@ namespace sw
                 const bool  bTargetUsed    = pTag != nullptr;
                 if ( predicateCount != 1 || ( outCondition._target.empty() == false && bTargetUsed == false ) )
                 {
-                    report.addError( "%#: rule '%#' <When> needs exactly one of tag / characterTag / occupied / bodyShape / bodyType (target only with tag)", sourceName, ruleId.c_str() );
+                    report.addError( "%#: rule '%#' <When> needs exactly one of tag / characterTag / occupied / bodyShape / bodyType (target only with tag)", sourceName, ruleID.c_str() );
                     return false;
                 }
                 if ( pTag != nullptr )
@@ -63,7 +63,7 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
+            [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleID )
             {
                 const utf8* pName = node.getName();
                 outAction._target = AppearanceXMLUtil::readName( node, "target" );
@@ -76,7 +76,7 @@ namespace sw
                     const int32 kindCount = ( outAction._target.empty() ? 0 : 1 ) + ( pItemTag != nullptr ? 1 : 0 ) + ( pRegion != nullptr ? 1 : 0 );
                     if ( kindCount != 1 )
                     {
-                        report.addError( "%#: rule '%#' <Hide> needs exactly one of target / itemTag / region", sourceName, ruleId.c_str() );
+                        report.addError( "%#: rule '%#' <Hide> needs exactly one of target / itemTag / region", sourceName, ruleID.c_str() );
                         return false;
                     }
                     outAction._kind = AppearanceRuleActionKind::HideTarget;
@@ -129,7 +129,7 @@ namespace sw
                     AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
-                report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleId.c_str(), pName );
+                report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                 return false;
             }
         };

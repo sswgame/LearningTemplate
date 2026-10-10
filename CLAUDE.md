@@ -338,7 +338,7 @@ hence the enforced lowercase rule. Rendering separates `RenderPassAsset` (bind t
 under `renderpass/`) from `RenderPipelineAsset` (the frame graph ordering passes, under `pipeline/`);
 `FrameRenderer` builds a `RenderGraph` from the pipeline and topologically sorts it at runtime. Textures are read
 as DDS only — source images live in `textures_raw/` and are imported with `App --import-textures`; glTF models live in
-`models_raw/` and are imported to `models/*.mesh` with `App --import-models` (read by `MeshCache`, named by `MeshComponent::_meshId`). Data is read in
+`models_raw/` and are imported to `models/*.mesh` with `App --import-models` (read by `MeshCache`, named by `MeshComponent::_meshID`). Data is read in
 its current shape only: no old-format readers, and a rename rewrites the data instead of adding `Alias` / `ValueAlias` (those are for after shipped data exists)
 (`ResourceDataSchemaTest`). Command-line arguments are listed in `Source/Core/Predefined/ArgumentList.xxx`.
 

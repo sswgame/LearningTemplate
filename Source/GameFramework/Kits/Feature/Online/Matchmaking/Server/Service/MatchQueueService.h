@@ -37,7 +37,7 @@ namespace sw
     {
     public:
         virtual ~IMatchRatingSource()                                             = default;
-        virtual int32 findRating( AccountId accountId, string_view modeId ) const = 0;
+        virtual int32 findRating( AccountID accountID, string_view modeID ) const = 0;
     };
 } // namespace sw
 
@@ -50,7 +50,7 @@ namespace sw
         IServerBus*               _pBus{ nullptr };          ///< 서버 한 대면 null(이 서버가 늘 권한)
         PartyLobbyService*        _pPartyLobby{ nullptr };   ///< 파티 표 · 로비 다시 열기(없으면 혼자 표만)
         const IMatchRatingSource* _pRatingSource{ nullptr }; ///< 없으면 모두 `MatchQueueLimit::kDefaultRating`
-        uint64                    _serverId{ 1 };            ///< 32 비트 안(표 · 경기 id 의 위 32 비트)
+        uint64                    _serverID{ 1 };            ///< 32 비트 안(표 · 경기 id 의 위 32 비트)
         int64                     _registryRefreshPeriodMs{ 2000 };
     };
 } // namespace sw
@@ -75,7 +75,7 @@ namespace sw
     struct MatchQueueCompletion
     {
         uint64            _requestTag{ 0 };
-        uint64            _ticketId{ 0 };
+        uint64            _ticketID{ 0 };
         MatchmakingResult _result{ MatchmakingResult::Ok };
     };
 } // namespace sw
@@ -86,7 +86,7 @@ namespace sw
     struct MatchQueueNotification
     {
         MatchAssignment _assignment{};
-        AccountId       _recipientId{ kInvalidAccountId };
+        AccountID       _recipientID{ kInvalidAccountID };
     };
 } // namespace sw
 
@@ -121,12 +121,12 @@ namespace sw
         /** @brief 임대 · 서버 목록 · 매처 · 배정 · 낸 표의 시한입니다. */
         void tick( int64 nowMs );
 
-        void joinQueue( AccountId accountId, string_view modeId, string_view region, int64 nowMs, uint64 requestTag );
-        void leaveQueue( AccountId accountId, uint64 requestTag );
+        void joinQueue( AccountID accountID, string_view modeID, string_view region, int64 nowMs, uint64 requestTag );
+        void leaveQueue( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 떠났다 — 그 계정이 든 표를 뺀다. */
-        void removeAccount( AccountId accountId );
+        void removeAccount( AccountID accountID );
         /** @brief 파티 사람이 바뀌어 표가 깨졌다(`PartyLobbyService::drainBrokenTickets`) — 이 서버의 표면 빼고, 다른 서버의 표면 권한 · 낸 서버에 버스로 알린다. */
-        void cancelTicket( uint64 ticketId );
+        void cancelTicket( uint64 ticketID );
         /** @brief 시작한 로비를 배정합니다. */
         void placeLobby( const LobbySnapshot& lobby, int64 nowMs );
 
@@ -136,16 +136,16 @@ namespace sw
         void drainNotifications( vector<MatchQueueNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
         void drainTopicChanges( vector<MatchQueueTopicChange>& outListChange ) { _topicBuffer.drainTo( outListChange ); }
 
-        bool  isAuthority( string_view modeId ) const;
-        int32 getQueuedTicketCount( string_view modeId ) const; ///< 권한 서버의 매처 안
+        bool  isAuthority( string_view modeID ) const;
+        int32 getQueuedTicketCount( string_view modeID ) const; ///< 권한 서버의 매처 안
         int32 getLocalTicketCount() const { return static_cast<int32>( _mapLocalTicket.size() ); }
-        bool  hasMode( string_view modeId ) const;
+        bool  hasMode( string_view modeID ) const;
 
-        static string makeLeaseKey( string_view modeId );
-        static string makeQueueTopic( string_view modeId );
-        static string makeCancelTopic( string_view modeId );
-        static string makeResultTopic( uint64 serverId );
-        static string makeAssignTopic( uint64 serverId );
+        static string makeLeaseKey( string_view modeID );
+        static string makeQueueTopic( string_view modeID );
+        static string makeCancelTopic( string_view modeID );
+        static string makeResultTopic( uint64 serverID );
+        static string makeAssignTopic( uint64 serverID );
 
     private:
         struct UnplacedMatch
@@ -160,46 +160,46 @@ namespace sw
             unique_ptr<ServerRegistryReader> _reader{};
             vector<UnplacedMatch>            _listUnplaced{}; ///< 자리가 없어 기다리는 경기
             int64                            _leaseAttemptMs{ 0 };
-            uint64                           _leaseRequestId{ 0 };
+            uint64                           _leaseRequestID{ 0 };
             uint8                            _bAuthority{ SW_FALSE };
             uint8                            _bLeaseAttempted{ SW_FALSE };
         };
 
         struct LocalTicket
         {
-            vector<AccountId> _listAccount{};
-            string            _modeId{};
-            uint64            _ticketId{ 0 };
-            uint64            _partyId{ 0 };
+            vector<AccountID> _listAccount{};
+            string            _modeID{};
+            uint64            _ticketID{ 0 };
+            uint64            _partyID{ 0 };
             int64             _deadlineMs{ 0 };
         };
 
         struct PendingJoin
         {
-            string    _modeId{};
+            string    _modeID{};
             string    _region{};
-            AccountId _accountId{ kInvalidAccountId };
+            AccountID _accountID{ kInvalidAccountID };
             uint64    _requestTag{ 0 };
             int64     _nowMs{ 0 };
         };
 
         void               onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
-        void               submitTicket( const PendingJoin& join, const vector<AccountId>& listAccount, uint64 partyId );
-        void               tickLease( const string& modeId, ModeState& state, int64 nowMs );
+        void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        void               tickLease( const string& modeID, ModeState& state, int64 nowMs );
         void               onLeaseReply( const EphemeralReply& reply );
         void               placeMatches( ModeState& state, int64 nowMs );
         [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, int64 nowMs );
-        void               deliverToTicket( uint64 originServerId, const MatchAssignment& assignment );
-        void               notifyLocalTicket( uint64 ticketId, const MatchAssignment& assignment );
-        void               removeFromQueue( const string& modeId, uint64 ticketId );
-        ModeState*         findModeState( string_view modeId );
-        int32              findRating( AccountId accountId, string_view modeId ) const;
-        static void        fillTeam( const MatchFormed& match, AccountId accountId, MatchAssignment& inoutAssignment );
+        void               deliverToTicket( uint64 originServerID, const MatchAssignment& assignment );
+        void               notifyLocalTicket( uint64 ticketID, const MatchAssignment& assignment );
+        void               removeFromQueue( const string& modeID, uint64 ticketID );
+        ModeState*         findModeState( string_view modeID );
+        int32              findRating( AccountID accountID, string_view modeID ) const;
+        static void        fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment );
 
         unordered_map<string, MatchModeDefinition> _mapMode;
         unordered_map<string, ModeState>           _mapModeState;
         unordered_map<uint64, LocalTicket>         _mapLocalTicket; ///< 이 서버가 낸 표
-        unordered_map<AccountId, uint64>           _mapAccountToTicket;
+        unordered_map<AccountID, uint64>           _mapAccountToTicket;
         unordered_map<uint64, PendingJoin>         _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기
         unordered_map<uint64, string>              _mapLeaseRequestToMode;
         EventBuffer<MatchQueueCompletion>          _completionBuffer;

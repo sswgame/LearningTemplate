@@ -31,12 +31,12 @@ namespace sw
         void initialize( const SmartObjectDef& def );
 
         /** @brief 비어 있으면 차지합니다. 이미 그 자리를 가졌으면 true(멱등), 다른 이가 가졌으면 false 입니다. 한 이는 한 자리만 가집니다. */
-        [[nodiscard]] bool claim( int32 slot, uint64 claimantId );
+        [[nodiscard]] bool claim( int32 slot, uint64 claimantID );
         /** @brief 그 이가 가진 자리를 비웁니다. 가진 자리가 없으면 false 입니다. */
-        bool release( uint64 claimantId );
+        bool release( uint64 claimantID );
         /** @brief @p requiredTags 를 모두 가진 빈자리 중 앞의 것입니다. 없으면 −1 입니다. */
         int32  findFreeSlot( const TagContainer& requiredTags ) const;
-        int32  findSlotOf( uint64 claimantId ) const;
+        int32  findSlotOf( uint64 claimantID ) const;
         uint64 getClaimant( int32 slot ) const;
         bool   isFree( int32 slot ) const { return getClaimant( slot ) == 0; }
         int32  getSlotCount() const { return static_cast<int32>( _listClaimant.size() ); }
@@ -55,7 +55,7 @@ namespace sw
 {
     /**
      * @class SmartObjectComponent
-     * @brief `_smartObjectId` 의 자리를 이 오브젝트에 둡니다. 차지 · 비움은 여러 스레드(병렬 틱의 AI)에서 불려도 됩니다(잠금).
+     * @brief `_smartObjectID` 의 자리를 이 오브젝트에 둡니다. 차지 · 비움은 여러 스레드(병렬 틱의 AI)에서 불려도 됩니다(잠금).
      * @details 차지한 이의 핸들 목록(`_listClaimant`, 자리 순서)은 PROPERTY 라 세이브 · 핫 리로드를 넘깁니다. 차지한 이가 사라지면 다음 찾기에서 비웁니다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Smart Object", Tooltip = "Claimable slots (bench, cover, workbench) shared by players and AI" )
@@ -77,7 +77,7 @@ namespace sw
         /** @brief 정의를 코드로 넣습니다(표보다 우선). */
         void setDefinition( const SmartObjectDef& def );
         /** @brief 정의 id 를 바꾸고 다시 찾습니다. */
-        void setSmartObjectId( const hashed_string& id );
+        void setSmartObjectID( const hashed_string& id );
         /** @brief 상호작용 표 경로를 바꾸고 다시 찾습니다(비면 공용 기본 표). */
         void setCatalogPath( string_view path );
         /** @brief 자리를 차지합니다. */
@@ -99,7 +99,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Smart Object", DisplayName = "Smart Object", Tooltip = "Smart object id in the interaction catalog" )
-        hashed_string _smartObjectId;
+        hashed_string _smartObjectID;
         PROPERTY( Category = "Smart Object", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table; empty uses the common default" )
         string _catalogPath;
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )

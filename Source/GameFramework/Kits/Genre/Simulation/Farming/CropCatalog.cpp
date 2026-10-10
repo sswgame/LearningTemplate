@@ -20,7 +20,7 @@ namespace sw
         struct CropCatalogInternal
         {
             /** @brief "Spring, Summer" 를 이름 목록으로 읽습니다. 알려 둔 계절이 있으면 모르는 이름은 알리고 뺀다. */
-            static void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropId,
+            static void parseSeasons( string_view text, const vector<hashed_string>& listKnown, string_view sourceName, const utf8* pCropID,
                                       vector<hashed_string>& outListSeason )
             {
                 outListSeason.clear();
@@ -31,7 +31,7 @@ namespace sw
                     if ( bKnown )
                         outListSeason.push_back( season );
                     else
-                        SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropId, season.c_str() );
+                        SW_LOG_WARNING( "%#: crop '%#' names an unknown season '%#'", sourceName, pCropID, season.c_str() );
                 } );
             }
         };
@@ -60,12 +60,12 @@ namespace sw
         return mapIter != _mapSeedIndex.end() ? &_catalog.getAt( mapIter->second ) : nullptr;
     }
 
-    int32 CropCatalog::findSellPrice( const hashed_string& itemId ) const
+    int32 CropCatalog::findSellPrice( const hashed_string& itemID ) const
     {
-        const auto produceIter = _mapProduceIndex.find( itemId );
+        const auto produceIter = _mapProduceIndex.find( itemID );
         if ( produceIter != _mapProduceIndex.end() )
             return _catalog.getAt( produceIter->second )._sellPrice;
-        const auto seedIter = _mapSeedIndex.find( itemId );
+        const auto seedIter = _mapSeedIndex.find( itemID );
         if ( seedIter != _mapSeedIndex.end() )
             return _catalog.getAt( seedIter->second )._seedPrice / 2;
         return 0;
@@ -91,17 +91,17 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Crop" ); node; node = node.findNextSibling( "Crop" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             CropDef crop;
-            crop._id             = hashed_string( pId );
+            crop._id             = hashed_string( pID );
             const utf8* pName    = node.findAttribute( "name" );
-            crop._name           = pName != nullptr ? pName : pId;
+            crop._name           = pName != nullptr ? pName : pID;
             const utf8* pSeed    = node.findAttribute( "seed" );
             const utf8* pProduce = node.findAttribute( "produce" );
-            crop._seedItem       = hashed_string( pSeed != nullptr ? pSeed : pId );
-            crop._produceItem    = hashed_string( pProduce != nullptr ? pProduce : pId );
+            crop._seedItem       = hashed_string( pSeed != nullptr ? pSeed : pID );
+            crop._produceItem    = hashed_string( pProduce != nullptr ? pProduce : pID );
             crop._growthDays     = MathUtil::max( 1, node.getAttributeInt( "days", crop._growthDays ) );
             crop._regrowDays     = MathUtil::max( 0, node.getAttributeInt( "regrow", crop._regrowDays ) );
             crop._seedPrice      = MathUtil::max( 0, node.getAttributeInt( "seedPrice", crop._seedPrice ) );
@@ -109,16 +109,16 @@ namespace sw
             crop._harvestCount   = MathUtil::max( 1, node.getAttributeInt( "harvest", crop._harvestCount ) );
             const utf8* pSeasons = node.findAttribute( "seasons" );
             if ( pSeasons != nullptr )
-                CropCatalogInternal::parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pId, crop._listSeason );
+                CropCatalogInternal::parseSeasons( string_view( pSeasons ), _listKnownSeason, sourceName, pID, crop._listSeason );
             else
                 crop._listSeason.push_back( hashed_string( "Spring" ) );
             if ( crop._listSeason.empty() )
             {
-                SW_LOG_WARNING( "%#: crop '%#' grows in no season - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: crop '%#' grows in no season - skipped", sourceName, pID );
                 continue;
             }
             if ( crop._regrowDays > crop._growthDays )
-                SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, pId, crop._regrowDays, crop._growthDays );
+                SW_LOG_WARNING( "%#: crop '%#' regrows slower (%#) than it first grows (%#)", sourceName, pID, crop._regrowDays, crop._growthDays );
             (void)_catalog.add( crop ); // 색인은 한 번에 — 작물마다 다시 짓지 않는다
             ++loadedCount;
         }
@@ -132,12 +132,12 @@ namespace sw
     {
         for ( const CropDef& crop : getCrops() )
         {
-            for ( const hashed_string& itemId : { crop._seedItem, crop._produceItem } )
+            for ( const hashed_string& itemID : { crop._seedItem, crop._produceItem } )
             {
-                if ( itemId.empty() || inoutItems.findItem( itemId ) != nullptr )
+                if ( itemID.empty() || inoutItems.findItem( itemID ) != nullptr )
                     continue;
                 ItemDef item;
-                item._id       = itemId;
+                item._id       = itemID;
                 item._maxStack = maxStack;
                 inoutItems.addItem( item );
             }

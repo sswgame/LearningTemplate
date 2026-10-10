@@ -93,10 +93,10 @@ namespace
 
         [[nodiscard]] bool load()
         {
-            for ( const utf8* pItemId : { "egg", "noodle", "broth", "flour" } )
+            for ( const utf8* pItemID : { "egg", "noodle", "broth", "flour" } )
             {
                 ItemDef item;
-                item._id       = hashed_string( pItemId );
+                item._id       = hashed_string( pItemID );
                 item._maxStack = 99;
                 item._value    = 3;
                 _items.addItem( item );
@@ -125,7 +125,7 @@ namespace
     }
 
     /** @brief 요리사 둘 · 서버 · 계산원, 화구 둘 · 오븐 하나인 식당 하루를 굴리고 결산합니다. */
-    RestaurantDaySummary runRestaurantDay( const RestaurantTestWorld& world, const hashed_string& weatherId, float32 stepMinutes )
+    RestaurantDaySummary runRestaurantDay( const RestaurantTestWorld& world, const hashed_string& weatherID, float32 stepMinutes )
     {
         RestaurantSettings settings;
         settings._seatCount = 6;
@@ -140,7 +140,7 @@ namespace
         (void)sim.hireStaff( "dee", StaffRole::Cashier, 15 );
         stockPantry( sim, 60 );
         simBorrowed._wallet.add( sim.getCurrency(), 500 );
-        sim.openDay( weatherId );
+        sim.openDay( weatherID );
         const int32 updateCount = static_cast<int32>( 300.0f / stepMinutes );
         for ( int32 updateIndex = 0; updateIndex < updateCount; ++updateIndex )
         {
@@ -198,7 +198,7 @@ SW_TEST_CASE( RestaurantSimTest, CatalogReadsMenuQualityAndArrivals )
     SW_EXPECT_EQUAL( 3, pRamen->computeQuality( 9 ) );
     SW_EXPECT_EQUAL( 3, pRamen->getMaxQuality() );
     SW_EXPECT_EQUAL( 1, world._catalog.findDish( "cake" )->computeQuality( 1 ) ); // 문턱 아래도 ★1
-    SW_EXPECT_TRUE( world._catalog.findDish( "omelette" )->_recipeId == hashed_string( "omelette" ) );
+    SW_EXPECT_TRUE( world._catalog.findDish( "omelette" )->_recipeID == hashed_string( "omelette" ) );
 
     SW_EXPECT_NEAR_EQUAL( 20.0f, world._catalog.getArrivalRate( 12 ), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, world._catalog.getArrivalRate( 15 ), 1.0e-4f );
@@ -528,12 +528,12 @@ SW_TEST_CASE( RestaurantSimTest, CustomersPickDishesLikeTheSeededWeightedDraw )
 
     GameRandom          oracle( settings._randomSeed );
     const float32       arrWeight[] = { 3.0f, 1.0f }; // 메뉴 순서 — 라멘 · 오믈렛
-    const hashed_string arrDishId[] = { hashed_string( "ramen" ), hashed_string( "omelette" ) };
+    const hashed_string arrDishID[] = { hashed_string( "ramen" ), hashed_string( "omelette" ) };
     for ( const KitchenOrder& order : sim.getOrders() )
     {
         const int32 expectedIndex = oracle.pickWeightedIndex( arrWeight, getRestaurantTestWeight );
         SW_ASSERT_TRUE( 0 <= expectedIndex && expectedIndex <= 1 );
-        SW_EXPECT_TRUE( order._dishId == arrDishId[expectedIndex] );
+        SW_EXPECT_TRUE( order._dishID == arrDishID[expectedIndex] );
     }
     SW_EXPECT_EQUAL( 0, sim.getToday()._noChoice );
 }
@@ -564,7 +564,7 @@ SW_TEST_CASE( RestaurantSimTest, ZeroWeightDishIsNotOrderedBesidePositiveOnes )
     SW_ASSERT_TRUE( sim.getOrders().size() == 6 );
     for ( const KitchenOrder& order : sim.getOrders() )
     {
-        SW_EXPECT_TRUE( order._dishId == hashed_string( "omelette" ) );
+        SW_EXPECT_TRUE( order._dishID == hashed_string( "omelette" ) );
     }
     SW_EXPECT_EQUAL( 0, sim.getToday()._noChoice );
 }

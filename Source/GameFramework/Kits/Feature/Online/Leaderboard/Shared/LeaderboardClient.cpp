@@ -15,29 +15,29 @@ namespace sw
 
     void LeaderboardClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
 
-    uint64 LeaderboardClient::requestTop( string_view boardId, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestTop( string_view boardID, int32 offset, int32 count, const LeaderboardReplyDelegate& onReply )
     {
         LeaderboardRequest request;
-        request._boardId = string( boardId );
+        request._boardID = string( boardID );
         request._offset  = offset;
         request._count   = count;
         return send( LeaderboardMethod::kGetTop, request, onReply );
     }
 
-    uint64 LeaderboardClient::requestAround( string_view boardId, int32 radius, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestAround( string_view boardID, int32 radius, const LeaderboardReplyDelegate& onReply )
     {
         LeaderboardRequest request;
-        request._boardId = string( boardId );
+        request._boardID = string( boardID );
         request._count   = radius;
         return send( LeaderboardMethod::kGetAround, request, onReply );
     }
 
     uint64 LeaderboardClient::requestStats( const LeaderboardReplyDelegate& onReply ) { return send( LeaderboardMethod::kGetStats, LeaderboardRequest{}, onReply ); }
 
-    uint64 LeaderboardClient::submitScore( string_view boardId, int64 score, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::submitScore( string_view boardID, int64 score, const LeaderboardReplyDelegate& onReply )
     {
         LeaderboardRequest request;
-        request._boardId = string( boardId );
+        request._boardID = string( boardID );
         request._score   = score;
         return send( LeaderboardMethod::kSubmitScore, request, onReply );
     }
@@ -47,11 +47,11 @@ namespace sw
         return send( LeaderboardMethod::kGetAchievements, LeaderboardRequest{}, onReply );
     }
 
-    uint64 LeaderboardClient::requestSeasonResult( string_view boardId, uint32 seasonId, const LeaderboardReplyDelegate& onReply )
+    uint64 LeaderboardClient::requestSeasonResult( string_view boardID, uint32 seasonID, const LeaderboardReplyDelegate& onReply )
     {
         LeaderboardRequest request;
-        request._boardId  = string( boardId );
-        request._seasonId = seasonId;
+        request._boardID  = string( boardID );
+        request._seasonID = seasonID;
         return send( LeaderboardMethod::kGetSeasonResult, request, onReply );
     }
 
@@ -87,10 +87,10 @@ namespace sw
     void LeaderboardClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        if ( _callTable.take( response._requestId, call ) == false )
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
         LeaderboardClientReply reply;
-        reply._requestId = response._requestId;
+        reply._requestID = response._requestID;
         reply._method    = call._method;
         reply._errorCode = response._errorCode;
         if ( response._errorCode != OnlineError::kOk )

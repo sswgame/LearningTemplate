@@ -34,7 +34,7 @@ namespace sw
             {
                 for ( const auto& item : outputs.getItems() )
                 {
-                    if ( inventory.hasRoomFor( item._itemId, item._count * count ) == false )
+                    if ( inventory.hasRoomFor( item._itemID, item._count * count ) == false )
                         return false;
                 }
                 return true;
@@ -44,7 +44,7 @@ namespace sw
             {
                 for ( const auto& item : items.getItems() )
                 {
-                    (void)inventory.addItem( item._itemId, item._count * count );
+                    (void)inventory.addItem( item._itemID, item._count * count );
                 }
             }
 
@@ -52,7 +52,7 @@ namespace sw
             {
                 for ( const auto& item : items.getItems() )
                 {
-                    (void)inventory.removeItem( item._itemId, item._count * count ); // 재료 수는 canCraft 가 미리 확인했다
+                    (void)inventory.removeItem( item._itemID, item._count * count ); // 재료 수는 canCraft 가 미리 확인했다
                 }
             }
         };
@@ -94,11 +94,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Recipe" ); node; node = node.findNextSibling( "Recipe" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             RecipeDef recipe;
-            recipe._id            = hashed_string( pId );
+            recipe._id            = hashed_string( pID );
             const utf8* pStation  = node.findAttribute( "station" );
             recipe._station       = pStation != nullptr ? hashed_string( pStation ) : hashed_string{};
             recipe._time          = MathUtil::max( 0.0f, node.getAttributeFloat( "time", recipe._time ) );
@@ -113,12 +113,12 @@ namespace sw
         return loadedCount;
     }
 
-    void RecipeCatalog::findRecipesFor( const hashed_string& itemId, vector<const RecipeDef*>& outListRecipe ) const
+    void RecipeCatalog::findRecipesFor( const hashed_string& itemID, vector<const RecipeDef*>& outListRecipe ) const
     {
         outListRecipe.clear();
         for ( const RecipeDef& recipe : _catalog.getAll() )
         {
-            if ( recipe._outputs.hasItem( itemId ) )
+            if ( recipe._outputs.hasItem( itemID ) )
                 outListRecipe.push_back( &recipe );
         }
     }
@@ -141,18 +141,18 @@ namespace sw
         _listJob.clear();
     }
 
-    bool Crafter::isLearned( const hashed_string& recipeId ) const
+    bool Crafter::isLearned( const hashed_string& recipeID ) const
     {
-        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeId ) : nullptr;
-        return pRecipe != nullptr && ( pRecipe->_bStartsKnown || _uniqueLearnedRecipe.find( recipeId ) != _uniqueLearnedRecipe.end() );
+        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeID ) : nullptr;
+        return pRecipe != nullptr && ( pRecipe->_bStartsKnown || _uniqueLearnedRecipe.find( recipeID ) != _uniqueLearnedRecipe.end() );
     }
 
-    CraftResult Crafter::evaluate( const hashed_string& recipeId, const Inventory& inventory, const hashed_string& station, int32 level, int32 count ) const
+    CraftResult Crafter::evaluate( const hashed_string& recipeID, const Inventory& inventory, const hashed_string& station, int32 level, int32 count ) const
     {
-        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeId ) : nullptr;
+        const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( recipeID ) : nullptr;
         if ( pRecipe == nullptr || count <= 0 )
             return CraftResult::UnknownRecipe;
-        if ( isLearned( recipeId ) == false )
+        if ( isLearned( recipeID ) == false )
             return CraftResult::NotLearned;
         if ( pRecipe->_station.empty() == false && pRecipe->_station != station )
             return CraftResult::WrongStation;
@@ -162,31 +162,31 @@ namespace sw
             return CraftResult::MissingTools;
         for ( const auto& item : pRecipe->_inputs.getItems() )
         {
-            if ( inventory.getItemCount( item._itemId ) < item._count * count )
+            if ( inventory.getItemCount( item._itemID ) < item._count * count )
                 return CraftResult::MissingInputs;
         }
         return CraftResult::Ok;
     }
 
-    int32 Crafter::computeMaxCraftCount( const hashed_string& recipeId, const Inventory& inventory, const hashed_string& station, int32 level ) const
+    int32 Crafter::computeMaxCraftCount( const hashed_string& recipeID, const Inventory& inventory, const hashed_string& station, int32 level ) const
     {
-        if ( evaluate( recipeId, inventory, station, level, 1 ) != CraftResult::Ok )
+        if ( evaluate( recipeID, inventory, station, level, 1 ) != CraftResult::Ok )
             return 0;
-        const RecipeDef* pRecipe  = _pCatalog->findRecipe( recipeId );
+        const RecipeDef* pRecipe  = _pCatalog->findRecipe( recipeID );
         int32            maxCount = 9999;
         for ( const auto& item : pRecipe->_inputs.getItems() )
         {
-            maxCount = MathUtil::min( maxCount, inventory.getItemCount( item._itemId ) / MathUtil::max( 1, item._count ) );
+            maxCount = MathUtil::min( maxCount, inventory.getItemCount( item._itemID ) / MathUtil::max( 1, item._count ) );
         }
         return maxCount;
     }
 
-    CraftResult Crafter::craft( const hashed_string& recipeId, Inventory& inventory, const hashed_string& station, int32 level, int32 count )
+    CraftResult Crafter::craft( const hashed_string& recipeID, Inventory& inventory, const hashed_string& station, int32 level, int32 count )
     {
-        const CraftResult result = evaluate( recipeId, inventory, station, level, count );
+        const CraftResult result = evaluate( recipeID, inventory, station, level, count );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeId );
+        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeID );
         if ( _consumeInputs.isBound() )
         {
             // 재료는 다른 곳에서 거둔다 — 되돌릴 길이 없으니 결과 자리를 먼저 본다.
@@ -207,12 +207,12 @@ namespace sw
         return CraftResult::Ok;
     }
 
-    CraftResult Crafter::enqueue( const hashed_string& recipeId, Inventory& inventory, const hashed_string& station, int32 level, int32 count )
+    CraftResult Crafter::enqueue( const hashed_string& recipeID, Inventory& inventory, const hashed_string& station, int32 level, int32 count )
     {
-        const CraftResult result = evaluate( recipeId, inventory, station, level, count );
+        const CraftResult result = evaluate( recipeID, inventory, station, level, count );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeId );
+        const RecipeDef* pRecipe = _pCatalog->findRecipe( recipeID );
         if ( _consumeInputs.isBound() )
         {
             if ( _consumeInputs( pRecipe->_inputs, count ) == false )
@@ -223,7 +223,7 @@ namespace sw
             CraftingInternal::takeItems( inventory, pRecipe->_inputs, count );
         }
         CraftJob job;
-        job._recipeId  = recipeId;
+        job._recipeID  = recipeID;
         job._remaining = pRecipe->_time;
         job._count     = count;
         _listJob.push_back( job );
@@ -235,7 +235,7 @@ namespace sw
         if ( index >= _listJob.size() )
             return false;
         const CraftJob&  job     = _listJob[index];
-        const RecipeDef* pRecipe = _pCatalog->findRecipe( job._recipeId );
+        const RecipeDef* pRecipe = _pCatalog->findRecipe( job._recipeID );
         if ( pRecipe != nullptr )
         {
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_inputs, job._count ) == false )
@@ -252,7 +252,7 @@ namespace sw
         while ( _listJob.empty() == false )
         {
             CraftJob&        job     = _listJob.front();
-            const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( job._recipeId ) : nullptr;
+            const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->findRecipe( job._recipeID ) : nullptr;
             if ( pRecipe == nullptr )
             {
                 _listJob.pop_front();
@@ -269,7 +269,7 @@ namespace sw
             if ( CraftingInternal::hasRoomForOutputs( inventory, pRecipe->_outputs, 1 ) == false )
                 return; // 자리가 날 때까지 기다린다
             CraftingInternal::giveItems( inventory, pRecipe->_outputs, 1 );
-            outListFinished.push_back( job._recipeId );
+            outListFinished.push_back( job._recipeID );
             if ( --job._count > 0 )
                 job._remaining = pRecipe->_time; // 남은 시간으로 다음 것을 이어 만든다
             else
@@ -285,14 +285,14 @@ namespace sw
             return string_view( left.c_str() ) < string_view( right.c_str() );
         } );
         outArchive << static_cast<uint32>( listLearned.size() );
-        for ( const hashed_string& recipeId : listLearned )
+        for ( const hashed_string& recipeID : listLearned )
         {
-            StateArchiveUtil::writeName( outArchive, recipeId );
+            StateArchiveUtil::writeName( outArchive, recipeID );
         }
         outArchive << static_cast<uint32>( _listJob.size() );
         for ( const CraftJob& job : _listJob )
         {
-            StateArchiveUtil::writeName( outArchive, job._recipeId );
+            StateArchiveUtil::writeName( outArchive, job._recipeID );
             outArchive << job._remaining;
             outArchive << job._count;
         }
@@ -306,10 +306,10 @@ namespace sw
         unordered_set<hashed_string> uniqueLearned;
         for ( uint32 index = 0; index < count; ++index )
         {
-            hashed_string recipeId;
-            if ( StateArchiveUtil::readName( archive, recipeId ) == false )
+            hashed_string recipeID;
+            if ( StateArchiveUtil::readName( archive, recipeID ) == false )
                 return false;
-            uniqueLearned.insert( recipeId );
+            uniqueLearned.insert( recipeID );
         }
         // 작업마다 이름(4) + 남은 시간(4) + 개수(4)
         if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
@@ -318,11 +318,11 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             CraftJob job;
-            if ( StateArchiveUtil::readName( archive, job._recipeId ) == false )
+            if ( StateArchiveUtil::readName( archive, job._recipeID ) == false )
                 return false;
             archive >> job._remaining;
             archive >> job._count;
-            const bool bValid = archive.isOk() && job._recipeId.empty() == false && 0.0f <= job._remaining && 0 < job._count;
+            const bool bValid = archive.isOk() && job._recipeID.empty() == false && 0.0f <= job._remaining && 0 < job._count;
             if ( bValid == false )
                 return false;
             listJob.push_back( job );

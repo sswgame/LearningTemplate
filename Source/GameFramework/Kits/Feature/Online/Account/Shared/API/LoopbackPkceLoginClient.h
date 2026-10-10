@@ -28,10 +28,10 @@ namespace sw
         string _provider{};         ///< 계정 서버의 제공자 이름과 같다
         string _authorizationURL{}; ///< 인증 주소(브라우저가 연다)
         string _tokenURL{};         ///< 토큰 주소(이 객체가 POST)
-        string _clientId{};
+        string _clientID{};
         string _scope{ "openid" };
         int64  _timeoutMs{ 300000 };    ///< 사용자가 브라우저에서 끝낼 때까지(5 분)
-        uint8  _bUseIdToken{ SW_TRUE }; ///< 표 = id_token|nonce(OIDC), 아니면 access_token(프로필 API 형)
+        uint8  _bUseIDToken{ SW_TRUE }; ///< 표 = id_token|nonce(OIDC), 아니면 access_token(프로필 API 형)
     };
 } // namespace sw
 
@@ -73,8 +73,8 @@ namespace sw
             string _codeVerifier{};
             string _state{};
             string _nonce{};
-            uint64 _requestId{ 0 };
-            uint64 _tokenRequestId{ 0 }; ///< 토큰 교환 중이면 0 이 아니다
+            uint64 _requestID{ 0 };
+            uint64 _tokenRequestID{ 0 }; ///< 토큰 교환 중이면 0 이 아니다
             int64  _deadlineMs{ 0 };
         };
 
@@ -91,6 +91,6 @@ namespace sw
         INetSecurityProvider*             _pProvider;
         IExternalBrowser*                 _pBrowser;
         int64                             _nowMs;
-        uint64                            _nextRequestId;
+        uint64                            _nextRequestID;
     };
 } // namespace sw

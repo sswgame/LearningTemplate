@@ -50,11 +50,11 @@ namespace sw
         return "Unknown";
     }
 
-    bool isValidMatchModeId( string_view modeId )
+    bool isValidMatchModeID( string_view modeID )
     {
-        if ( modeId.empty() || modeId.size() > static_cast<size_t>( MatchmakingLimit::kMaxIdSize ) )
+        if ( modeID.empty() || modeID.size() > static_cast<size_t>( MatchmakingLimit::kMaxIDSize ) )
             return false;
-        for ( const utf8 ch : modeId )
+        for ( const utf8 ch : modeID )
         {
             const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_';
             if ( bAllowed == false )
@@ -63,21 +63,21 @@ namespace sw
         return true;
     }
 
-    bool PartySnapshot::hasMember( AccountId accountId ) const
+    bool PartySnapshot::hasMember( AccountID accountID ) const
     {
-        for ( const AccountId memberId : _listMemberId )
+        for ( const AccountID memberID : _listMemberID )
         {
-            if ( memberId == accountId )
+            if ( memberID == accountID )
                 return true;
         }
         return false;
     }
 
-    bool LobbySnapshot::hasMember( AccountId accountId ) const
+    bool LobbySnapshot::hasMember( AccountID accountID ) const
     {
         for ( const LobbyMember& member : _listMember )
         {
-            if ( member._accountId == accountId )
+            if ( member._accountID == accountID )
                 return true;
         }
         return false;

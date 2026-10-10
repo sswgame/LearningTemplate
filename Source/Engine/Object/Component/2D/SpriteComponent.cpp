@@ -241,8 +241,8 @@ namespace sw
             if ( _bSliceMeshApplied == SW_FALSE )
                 return;
             _bSliceMeshApplied       = SW_FALSE;
-            const string_view meshId = getMeshId().empty() ? getDefaultMeshId() : string_view{ getMeshId() };
-            setMesh( MeshUtil::acquirePrimitive( meshId ) );
+            const string_view meshID = getMeshID().empty() ? getDefaultMeshID() : string_view{ getMeshID() };
+            setMesh( MeshUtil::acquirePrimitive( meshID ) );
             return;
         }
         SlicedSpriteDesc desc{};

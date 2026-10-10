@@ -65,6 +65,6 @@ namespace sw
         void initializePredefined();
 
         vector<string>                _listString;
-        unordered_map<string, uint32> _mapStringToId;
+        unordered_map<string, uint32> _mapStringToID;
     };
 } // namespace sw

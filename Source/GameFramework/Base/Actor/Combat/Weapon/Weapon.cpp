@@ -42,13 +42,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             WeaponDef weapon;
-            weapon._id                 = hashed_string( pId );
+            weapon._id                 = hashed_string( pID );
             const utf8* pName          = node.findAttribute( "name" );
-            weapon._name               = pName != nullptr ? pName : pId;
+            weapon._name               = pName != nullptr ? pName : pID;
             weapon._fireInterval       = MathUtil::max( 0.01f, node.getAttributeFloat( "fireInterval", weapon._fireInterval ) );
             weapon._reloadTime         = MathUtil::max( 0.0f, node.getAttributeFloat( "reloadTime", weapon._reloadTime ) );
             weapon._damage             = node.getAttributeFloat( "damage", weapon._damage );
@@ -68,8 +68,8 @@ namespace sw
             weapon._projectileSpeed    = MathUtil::max( 0.0f, node.getAttributeFloat( "projectileSpeed", weapon._projectileSpeed ) );
             weapon._projectileGravity  = node.getAttributeFloat( "projectileGravity", weapon._projectileGravity );
             weapon._headshotMultiplier = MathUtil::max( 0.0f, node.getAttributeFloat( "headshotMultiplier", weapon._headshotMultiplier ) );
-            const utf8* pAmmoId        = node.findAttribute( "ammo" );
-            weapon._ammoId             = pAmmoId != nullptr ? hashed_string( pAmmoId ) : hashed_string{};
+            const utf8* pAmmoID        = node.findAttribute( "ammo" );
+            weapon._ammoID             = pAmmoID != nullptr ? hashed_string( pAmmoID ) : hashed_string{};
             addWeapon( weapon );
             ++loadedCount;
         }
@@ -182,8 +182,8 @@ namespace sw
 
     bool WeaponState::readState( Archive& archive )
     {
-        hashed_string defId;
-        if ( StateArchiveUtil::readName( archive, defId ) == false || defId != _def._id )
+        hashed_string defID;
+        if ( StateArchiveUtil::readName( archive, defID ) == false || defID != _def._id )
             return false;
         WeaponState restored = *this;
         const bool  bRead    = StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCountdown( archive, restored._cooldown ) &&

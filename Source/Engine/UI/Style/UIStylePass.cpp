@@ -38,12 +38,12 @@ namespace sw
         if ( tree._listStyleDirty.empty() )
             return 0;
         // 목록을 떼어 걷는다 — 다시 맞추며 거는 무효화(kLayout · kPaint)가 목록을 건드리지 않게.
-        vector<WidgetId> listDirty;
+        vector<WidgetID> listDirty;
         listDirty.swap( tree._listStyleDirty );
         uint32 restyledCount = 0;
-        for ( const WidgetId id : listDirty )
+        for ( const WidgetID id : listDirty )
         {
-            Widget* pWidget = tree.findWidgetById( id );
+            Widget* pWidget = tree.findWidgetByID( id );
             if ( pWidget == nullptr || ( pWidget->_dirtyFlags & WidgetDirty::kStyle ) == 0 )
                 continue; // 떨어졌거나 이미 조상과 함께 맞췄다
             // 가장 위의 스타일 더러운 조상부터 — 부모 스타일이 먼저 정해져야 한다.

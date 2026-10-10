@@ -12,7 +12,7 @@ namespace sw
     {
         struct UIEventRouterInternal
         {
-            static bool hitTestRecursive( const Widget& widget, const float2& screenPoint, vector<WidgetId>& inoutListWidget )
+            static bool hitTestRecursive( const Widget& widget, const float2& screenPoint, vector<WidgetID>& inoutListWidget )
             {
                 const WidgetVisibility visibility = widget.getVisibility();
                 if ( visibility == WidgetVisibility::Collapsed || visibility == WidgetVisibility::Hidden || visibility == WidgetVisibility::HitTestInvisible )
@@ -24,7 +24,7 @@ namespace sw
                 const PanelWidget* pPanel  = castTo<const PanelWidget>( &widget );
                 // 자르는 패널 밖의 점은 자식도 받지 않는다(스크롤 영역 밖으로 삐져나온 항목).
                 const bool bChildrenReachable = pPanel != nullptr && ( pPanel->clipsChildren() == false || bInside );
-                inoutListWidget.push_back( widget.getId() );
+                inoutListWidget.push_back( widget.getID() );
                 if ( bChildrenReachable && pPanel->hasCustomPaintOrder() )
                 {
                     // z 순서를 둔 패널(캔버스) — 그리기 순서의 역순.
@@ -53,15 +53,15 @@ namespace sw
 
             /** @brief 경로를 따라 터널링 → 버블링으로 사건을 보냅니다. @p Handler 는 그 사건을 받는 Widget 의 가상 함수입니다. */
             template <typename EventType, UIReply ( Widget::*Handler )( const EventType&, UIRoutePhase )>
-            static UIReply route( const WidgetTree& tree, const UIWidgetPath& path, const EventType& event, WidgetId& outHandler )
+            static UIReply route( const WidgetTree& tree, const UIWidgetPath& path, const EventType& event, WidgetID& outHandler )
             {
-                outHandler = kInvalidWidgetId;
+                outHandler = kInvalidWidgetID;
                 // 경로는 시작할 때 고정한다 — 처리 중에 위젯이 떨어지면(목록을 지우는 핸들러) 그 번호만 건너뛴다.
-                const vector<WidgetId> listWidget = path._listWidget;
+                const vector<WidgetID> listWidget = path._listWidget;
                 const uint32           count      = static_cast<uint32>( listWidget.size() );
                 for ( uint32 index = 0; index < count; ++index )
                 {
-                    Widget* pWidget = tree.findWidgetById( listWidget[index] );
+                    Widget* pWidget = tree.findWidgetByID( listWidget[index] );
                     if ( pWidget == nullptr || pWidget->isEnabledInHierarchy() == false )
                         continue;
                     const UIReply reply = ( pWidget->*Handler )( event, UIRoutePhase::Tunnel );
@@ -73,7 +73,7 @@ namespace sw
                 }
                 for ( uint32 index = count; index > 0; --index )
                 {
-                    Widget* pWidget = tree.findWidgetById( listWidget[index - 1] );
+                    Widget* pWidget = tree.findWidgetByID( listWidget[index - 1] );
                     if ( pWidget == nullptr || pWidget->isEnabledInHierarchy() == false )
                         continue;
                     const UIReply reply = ( pWidget->*Handler )( event, UIRoutePhase::Bubble );
@@ -91,9 +91,9 @@ namespace sw
 
 namespace sw
 {
-    bool UIWidgetPath::contains( WidgetId id ) const
+    bool UIWidgetPath::contains( WidgetID id ) const
     {
-        for ( const WidgetId value : _listWidget )
+        for ( const WidgetID value : _listWidget )
         {
             if ( value == id )
                 return true;
@@ -108,33 +108,33 @@ namespace sw
         return pRoot != nullptr && UIEventRouterInternal::hitTestRecursive( *pRoot, screenPoint, outPath._listWidget );
     }
 
-    bool UIEventRouter::makePathTo( const WidgetTree& tree, WidgetId widget, UIWidgetPath& outPath )
+    bool UIEventRouter::makePathTo( const WidgetTree& tree, WidgetID widget, UIWidgetPath& outPath )
     {
         outPath._listWidget.clear();
-        const Widget* pWidget = tree.findWidgetById( widget );
+        const Widget* pWidget = tree.findWidgetByID( widget );
         if ( pWidget == nullptr )
             return false;
         for ( const Widget* pCurrent = pWidget; pCurrent != nullptr; pCurrent = pCurrent->getParent() )
         {
-            outPath._listWidget.push_back( pCurrent->getId() );
+            outPath._listWidget.push_back( pCurrent->getID() );
         }
         // 잎 → 뿌리로 모았다 — 뒤집는다.
         const uint32 count = static_cast<uint32>( outPath._listWidget.size() );
         for ( uint32 index = 0; index < count / 2; ++index )
         {
-            const WidgetId swapped                 = outPath._listWidget[index];
+            const WidgetID swapped                 = outPath._listWidget[index];
             outPath._listWidget[index]             = outPath._listWidget[count - 1 - index];
             outPath._listWidget[count - 1 - index] = swapped;
         }
         return true;
     }
 
-    UIReply UIEventRouter::routePointerEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetId& outHandler )
+    UIReply UIEventRouter::routePointerEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIPointerEvent& event, WidgetID& outHandler )
     {
         return UIEventRouterInternal::route<UIPointerEvent, &Widget::onPointerEvent>( tree, path, event, outHandler );
     }
 
-    UIReply UIEventRouter::routeActionEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetId& outHandler )
+    UIReply UIEventRouter::routeActionEvent( const WidgetTree& tree, const UIWidgetPath& path, const UIActionEvent& event, WidgetID& outHandler )
     {
         return UIEventRouterInternal::route<UIActionEvent, &Widget::onActionEvent>( tree, path, event, outHandler );
     }

@@ -104,7 +104,7 @@ namespace sw
             string              _lastPollText; ///< 폴링: 지난 프레임에 본 값(글 표기)
             hashed_string       _sourceField;  ///< 뷰모델의 맨 위 필드 이름(알림 단위) · 설정 바인딩이면 설정 id
             uint64              _skipSerial;   ///< 양방향: 이 바인딩이 되쓰며 낸 알림 번호 — 그 알림으로는 위젯에 다시 쓰지 않는다
-            WidgetId            _widget;
+            WidgetID            _widget;
             bool                _bPollKnown; ///< 폴링: `_lastPollText` 가 유효하다
             bool                _bDirty;     ///< 설정: 되쓴 뒤 다시 읽어야 한다(고쳐 받음 · 거절)
         };

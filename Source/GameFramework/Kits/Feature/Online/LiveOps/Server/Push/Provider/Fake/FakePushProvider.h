@@ -21,7 +21,7 @@ namespace sw
         {
             PushNotificationMessage _message{};
             string                  _deviceToken{};
-            uint64                  _deliveryId{ 0 };
+            uint64                  _deliveryID{ 0 };
         };
 
         FakePushProvider();
@@ -29,8 +29,8 @@ namespace sw
         /** @brief @p deviceToken 에 다음 @p count 번 @p status 를 돌려줍니다(그 뒤 Delivered). */
         void scriptResult( string_view deviceToken, PushDeliveryStatus status, int32 count = 1, int64 retryAfterMs = 0 );
 
-        string_view getProviderId() const override { return "fake"; }
-        void        send( uint64 deliveryId, const string& deviceToken, const string& locale, const PushNotificationMessage& message ) override;
+        string_view getProviderID() const override { return "fake"; }
+        void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message ) override;
         int32       pollResults( vector<PushDeliveryResult>& outListResult ) override;
 
         const vector<SentRecord>& getSent() const { return _listSent; }

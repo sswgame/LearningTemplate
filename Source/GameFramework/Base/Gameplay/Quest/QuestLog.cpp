@@ -47,44 +47,44 @@ namespace sw
         _eventBuffer.clear();
     }
 
-    QuestProgress* QuestLog::findProgressMutable( const hashed_string& questId )
+    QuestProgress* QuestLog::findProgressMutable( const hashed_string& questID )
     {
         for ( QuestProgress& progress : _listProgress )
         {
-            if ( progress._questId == questId )
+            if ( progress._questID == questID )
                 return &progress;
         }
         return nullptr;
     }
 
-    const QuestProgress* QuestLog::findProgress( const hashed_string& questId ) const { return const_cast<QuestLog*>( this )->findProgressMutable( questId ); }
+    const QuestProgress* QuestLog::findProgress( const hashed_string& questID ) const { return const_cast<QuestLog*>( this )->findProgressMutable( questID ); }
 
-    QuestStatus QuestLog::getStatus( const hashed_string& questId ) const
+    QuestStatus QuestLog::getStatus( const hashed_string& questID ) const
     {
-        const QuestProgress* pProgress = findProgress( questId );
+        const QuestProgress* pProgress = findProgress( questID );
         return pProgress != nullptr ? pProgress->_status : QuestStatus::NotStarted;
     }
 
-    const QuestStage* QuestLog::findCurrentStage( const hashed_string& questId ) const
+    const QuestStage* QuestLog::findCurrentStage( const hashed_string& questID ) const
     {
-        const QuestProgress* pProgress = findProgress( questId );
-        const QuestDef*      pQuest    = _pCatalog != nullptr ? _pCatalog->findQuest( questId ) : nullptr;
-        return pProgress != nullptr && pQuest != nullptr ? pQuest->findStage( pProgress->_stageId ) : nullptr;
+        const QuestProgress* pProgress = findProgress( questID );
+        const QuestDef*      pQuest    = _pCatalog != nullptr ? _pCatalog->findQuest( questID ) : nullptr;
+        return pProgress != nullptr && pQuest != nullptr ? pQuest->findStage( pProgress->_stageID ) : nullptr;
     }
 
-    QuestStartResult QuestLog::evaluateStart( const hashed_string& questId, int32 level ) const
+    QuestStartResult QuestLog::evaluateStart( const hashed_string& questID, int32 level ) const
     {
-        const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->findQuest( questId ) : nullptr;
+        const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->findQuest( questID ) : nullptr;
         if ( pQuest == nullptr )
             return QuestStartResult::UnknownQuest;
-        const QuestProgress* pProgress = findProgress( questId );
+        const QuestProgress* pProgress = findProgress( questID );
         if ( pProgress != nullptr && pProgress->_status == QuestStatus::Active )
             return QuestStartResult::AlreadyActive;
         if ( pProgress != nullptr && pProgress->_completedCount > 0 && pQuest->_bRepeatable == SW_FALSE )
             return QuestStartResult::AlreadyDone;
-        for ( const hashed_string& requiredId : pQuest->_listRequiredQuest )
+        for ( const hashed_string& requiredID : pQuest->_listRequiredQuest )
         {
-            const QuestProgress* pRequired = findProgress( requiredId );
+            const QuestProgress* pRequired = findProgress( requiredID );
             if ( pRequired == nullptr || pRequired->_completedCount <= 0 )
                 return QuestStartResult::RequirementMissing;
         }
@@ -93,18 +93,18 @@ namespace sw
         return QuestStartResult::Ok;
     }
 
-    QuestStartResult QuestLog::start( const hashed_string& questId, int32 level )
+    QuestStartResult QuestLog::start( const hashed_string& questID, int32 level )
     {
-        const QuestStartResult result = evaluateStart( questId, level );
+        const QuestStartResult result = evaluateStart( questID, level );
         if ( result != QuestStartResult::Ok )
             return result;
-        const QuestDef* pQuest    = _pCatalog->findQuest( questId );
-        QuestProgress*  pProgress = findProgressMutable( questId );
+        const QuestDef* pQuest    = _pCatalog->findQuest( questID );
+        QuestProgress*  pProgress = findProgressMutable( questID );
         if ( pProgress == nullptr )
         {
             _listProgress.push_back( QuestProgress{} );
             pProgress           = &_listProgress.back();
-            pProgress->_questId = questId;
+            pProgress->_questID = questID;
         }
         pProgress->_status = QuestStatus::Active;
         pushEvent( QuestEvent::Kind::Started, *pProgress );
@@ -112,16 +112,16 @@ namespace sw
         return QuestStartResult::Ok;
     }
 
-    void QuestLog::enterStage( QuestProgress& progress, const QuestDef& quest, const hashed_string& stageId, int32 depth )
+    void QuestLog::enterStage( QuestProgress& progress, const QuestDef& quest, const hashed_string& stageID, int32 depth )
     {
-        const QuestStage* pStage = quest.findStage( stageId );
+        const QuestStage* pStage = quest.findStage( stageID );
         if ( pStage == nullptr || depth >= kMaxChainedStages )
         {
             progress._status = QuestStatus::Failed; // 데이터가 끊겼다 — 멈추지 않게 실패로
             pushEvent( QuestEvent::Kind::Failed, progress );
             return;
         }
-        progress._stageId         = stageId;
+        progress._stageID         = stageID;
         progress._stageTime       = 0.0f;
         progress._bAwaitingChoice = SW_FALSE;
         progress._listCount.assign( pStage->_listObjective.size(), 0 );
@@ -159,8 +159,8 @@ namespace sw
 
     void QuestLog::tryAdvance( QuestProgress& progress )
     {
-        const QuestDef*   pQuest = _pCatalog->findQuest( progress._questId );
-        const QuestStage* pStage = pQuest != nullptr ? pQuest->findStage( progress._stageId ) : nullptr;
+        const QuestDef*   pQuest = _pCatalog->findQuest( progress._questID );
+        const QuestStage* pStage = pQuest != nullptr ? pQuest->findStage( progress._stageID ) : nullptr;
         if ( pStage == nullptr || progress._bAwaitingChoice )
             return;
         for ( size_t index = 0; index < pStage->_listObjective.size(); ++index )
@@ -188,7 +188,7 @@ namespace sw
             QuestProgress& progress = _listProgress[questIndex];
             if ( progress._status != QuestStatus::Active || progress._bAwaitingChoice )
                 continue;
-            const QuestStage* pStage = findCurrentStage( progress._questId );
+            const QuestStage* pStage = findCurrentStage( progress._questID );
             if ( pStage == nullptr )
                 continue;
             bool bChanged = false;
@@ -221,13 +221,13 @@ namespace sw
 
     int32 QuestLog::notifyCount( const hashed_string& kind, const hashed_string& target, int32 count ) { return applyNotify( kind, target, count, true ); }
 
-    bool QuestLog::choose( const hashed_string& questId, const hashed_string& choice )
+    bool QuestLog::choose( const hashed_string& questID, const hashed_string& choice )
     {
-        QuestProgress* pProgress = findProgressMutable( questId );
+        QuestProgress* pProgress = findProgressMutable( questID );
         if ( pProgress == nullptr || pProgress->_status != QuestStatus::Active || pProgress->_bAwaitingChoice == SW_FALSE )
             return false;
-        const QuestDef*   pQuest = _pCatalog->findQuest( questId );
-        const QuestStage* pStage = pQuest->findStage( pProgress->_stageId );
+        const QuestDef*   pQuest = _pCatalog->findQuest( questID );
+        const QuestStage* pStage = pQuest->findStage( pProgress->_stageID );
         for ( const QuestBranch& branch : pStage->_listBranch )
         {
             if ( branch._choice == choice )
@@ -239,9 +239,9 @@ namespace sw
         return false;
     }
 
-    bool QuestLog::fail( const hashed_string& questId )
+    bool QuestLog::fail( const hashed_string& questID )
     {
-        QuestProgress* pProgress = findProgressMutable( questId );
+        QuestProgress* pProgress = findProgressMutable( questID );
         if ( pProgress == nullptr || pProgress->_status != QuestStatus::Active )
             return false;
         pProgress->_status = QuestStatus::Failed;
@@ -249,9 +249,9 @@ namespace sw
         return true;
     }
 
-    bool QuestLog::abandon( const hashed_string& questId )
+    bool QuestLog::abandon( const hashed_string& questID )
     {
-        QuestProgress* pProgress = findProgressMutable( questId );
+        QuestProgress* pProgress = findProgressMutable( questID );
         if ( pProgress == nullptr || pProgress->_status != QuestStatus::Active )
             return false;
         pProgress->_status = QuestStatus::NotStarted; // 다시 받을 수 있다
@@ -265,7 +265,7 @@ namespace sw
         {
             if ( progress._status != QuestStatus::Active )
                 continue;
-            const QuestStage* pStage = findCurrentStage( progress._questId );
+            const QuestStage* pStage = findCurrentStage( progress._questID );
             if ( pStage == nullptr || pStage->_timeLimit <= 0.0f )
                 continue;
             progress._stageTime += deltaTime;
@@ -283,7 +283,7 @@ namespace sw
         for ( const QuestProgress& progress : _listProgress )
         {
             if ( progress._status == QuestStatus::Active )
-                outListQuest.push_back( progress._questId );
+                outListQuest.push_back( progress._questID );
         }
     }
 
@@ -291,8 +291,8 @@ namespace sw
     {
         QuestEvent event;
         event._kind      = kind;
-        event._questId   = progress._questId;
-        event._stageId   = progress._stageId;
+        event._questID   = progress._questID;
+        event._stageID   = progress._stageID;
         event._objective = objective;
         event._value     = value;
         event._pReward   = pReward;
@@ -309,8 +309,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listProgress.size() );
         for ( const QuestProgress& progress : _listProgress )
         {
-            StateArchiveUtil::writeName( outArchive, progress._questId );
-            StateArchiveUtil::writeName( outArchive, progress._stageId );
+            StateArchiveUtil::writeName( outArchive, progress._questID );
+            StateArchiveUtil::writeName( outArchive, progress._stageID );
             outArchive << static_cast<uint32>( progress._listCount.size() );
             for ( const int32 count : progress._listCount )
             {
@@ -335,7 +335,7 @@ namespace sw
         {
             QuestProgress progress;
             uint32        objectiveCount = 0;
-            const bool    bHeadRead      = StateArchiveUtil::readName( archive, progress._questId ) && StateArchiveUtil::readName( archive, progress._stageId ) &&
+            const bool    bHeadRead      = StateArchiveUtil::readName( archive, progress._questID ) && StateArchiveUtil::readName( archive, progress._stageID ) &&
                                    StateArchiveUtil::readCount( archive, 4, objectiveCount );
             if ( bHeadRead == false )
                 return false;
@@ -353,10 +353,10 @@ namespace sw
             if ( bValid == false )
                 return false;
             progress._status  = static_cast<QuestStatus>( status );
-            const bool bKnown = _pCatalog == nullptr || _pCatalog->findQuest( progress._questId ) != nullptr;
+            const bool bKnown = _pCatalog == nullptr || _pCatalog->findQuest( progress._questID ) != nullptr;
             if ( bKnown == false )
             {
-                SW_LOG_WARNING( "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questId.c_str() );
+                SW_LOG_WARNING( "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questID.c_str() );
                 continue;
             }
             listProgress.push_back( std::move( progress ) );

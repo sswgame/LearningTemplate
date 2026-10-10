@@ -45,7 +45,7 @@ namespace sw
 
         /** @brief 공유 비밀(kX25519KeySize 바이트) → 방향별 키 · IV 입니다. @p pSessionSecret 이 없으면 소금은 0 32 바이트. */
         [[nodiscard]] static bool computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
-                                                      uint64 serverSalt, uint32 protocolId, NetSessionKeys& outKeys );
+                                                      uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys );
         /** @brief 세션 비밀을 가졌음을 증명하는 키(연결 응답의 증명 태그)입니다 — HKDF( 비밀, 소금 없음, "sw-net-proof-v1" ) → kAeadKeySize 바이트. */
         [[nodiscard]] static bool computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey );
         /** @brief nonce = IV XOR (패킷 번호를 빅엔디언 8 바이트로 IV 뒤 8 바이트에)입니다. */

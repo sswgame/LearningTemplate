@@ -153,9 +153,9 @@ SW_TEST_CASE( AppearanceSocketRigTest, WeaponSitsOnTheBodySocketAndExposesItsMuz
     SW_EXPECT_NEAR_EQUAL( 1.55f, inBody.getTranslation()._y, 1.0e-5f );
 
     // 총구 — 부품 유닛의 월드(무기 오브젝트)에서 계산한다.
-    const SocketId muzzleId = rig.getTable().findSocket( hashed_string( "MainHand.Muzzle" ) );
-    SW_ASSERT_TRUE( muzzleId != kInvalidSocketId );
-    SW_EXPECT_FALSE( rig.getTable().findSocket( hashed_string( "Muzzle" ) ) != kInvalidSocketId ); // 접두어 없는 이름은 몸 소켓뿐
+    const SocketID muzzleID = rig.getTable().findSocket( hashed_string( "MainHand.Muzzle" ) );
+    SW_ASSERT_TRUE( muzzleID != kInvalidSocketID );
+    SW_EXPECT_FALSE( rig.getTable().findSocket( hashed_string( "Muzzle" ) ) != kInvalidSocketID ); // 접두어 없는 이름은 몸 소켓뿐
     const float4x4 arrUnitWorld[2] = { float4x4::Identity, float4x4::createTranslation( float3{ 10.0f, 0.0f, 0.0f } ) };
     float4x4       muzzleWorld;
     SW_ASSERT_TRUE( rig.findSocketWorldTransform( hashed_string( "MainHand.Muzzle" ), posed, vector_reference<const float4x4>( arrUnitWorld ), muzzleWorld ) );
@@ -166,10 +166,10 @@ SW_TEST_CASE( AppearanceSocketRigTest, WeaponSitsOnTheBodySocketAndExposesItsMuz
     CharacterAppearanceSpec spec;
     SW_ASSERT_TRUE( data._database.getPresets().expand( hashed_string( "Hero" ), 0u, data._database.getSlotTable(), data._database.getSets(),
                                                         data._database.getSchemas(), spec ) );
-    spec.findSlot( hashed_string( "MainHand" ) )->_itemId = hashed_string( "gun_long" );
+    spec.findSlot( hashed_string( "MainHand" ) )->_itemID = hashed_string( "gun_long" );
     AppearanceResolver::resolve( data._database, spec, resolved );
     SW_ASSERT_TRUE( rig.rebuild( resolved, bindBones, source, &error ) );
-    SW_EXPECT_EQUAL( muzzleId, rig.getTable().findSocket( hashed_string( "MainHand.Muzzle" ) ) );
+    SW_EXPECT_EQUAL( muzzleID, rig.getTable().findSocket( hashed_string( "MainHand.Muzzle" ) ) );
     SW_ASSERT_TRUE( rig.findSocketWorldTransform( hashed_string( "MainHand.Muzzle" ), posed, vector_reference<const float4x4>( arrUnitWorld ), muzzleWorld ) );
     SW_EXPECT_NEAR_EQUAL( 0.9f, muzzleWorld.getTranslation()._z, 1.0e-5f );
 }

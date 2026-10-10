@@ -166,7 +166,7 @@ namespace sw
         if ( pModel != nullptr )
         {
             const float32 scale = _modelScale * size * ( def._kind == CityBuildingKind::Decoration ? _decorationScale : 1.0f );
-            pMesh->setMeshId( makeModelPath( pModel ) );
+            pMesh->setMeshID( makeModelPath( pModel ) );
             pMesh->setLocalScale( float3{ scale } );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
             pMesh->setLocalPosition( center );
@@ -174,7 +174,7 @@ namespace sw
         else
         {
             const float32 height = Internal::computeBlockHeight( def, pBuilding->_level, bInhabited );
-            pMesh->setMeshId( def._kind == CityBuildingKind::Decoration ? "Cylinder" : "Cube" );
+            pMesh->setMeshID( def._kind == CityBuildingKind::Decoration ? "Cylinder" : "Cube" );
             pMesh->setLocalScale( float3{ size - 0.15f, height, size - 0.15f } );
             pMesh->setLocalPosition( center + float3{ 0.0f, height * 0.5f, 0.0f } );
         }

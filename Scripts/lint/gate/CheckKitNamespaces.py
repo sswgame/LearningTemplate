@@ -9,7 +9,7 @@
   2) 키트(`Source/GameFramework/Kits/`)는 키를 직접 읽지 않고(`isKeyDown` · `Key::W`) 입력 맵 액션 이름을 글자로 박지 않는다 — 액션 이름은
      키트 설정 칸으로 받는다(`PlayerControllerSettings::_moveAction`). 입력 맵은 게임에 하나라 키트가 이름을 정하면 다른 키트와 부딪힌다.
   3) 키트가 읽는 게임 설정의 사용자 칸(`GameSettings::getCustomProperty*`)은 `<키트>.` 로 시작한다(`Farming.startingGold`).
-  4) 키트가 평판 세력 id 로 쓰는 글자 리터럴(`changeValue( "x"` · `…Faction{ "x" }` · `k…FactionId = "x"`)은 키트 이름의 소문자 낱말 접두
+  4) 키트가 평판 세력 id 로 쓰는 글자 리터럴(`changeValue( "x"` · `…Faction{ "x" }` · `k…FactionID = "x"`)은 키트 이름의 소문자 낱말 접두
      `<접두>.` 로 시작한다(`restaurant.guests` · `western.honor`) — 평판을 나눠 쓰면 세력 id 가 한 이름 공간이다.
   5) 키트 클래스는 기반 공유 상태(지갑 · 가방 · 플래그 · 일지 · 시계 · 날씨 · 평판 · 땅 · 값 목록)를 값으로 들지 않는다 — 빌린다(`GameStateRefs`).
      예외는 이유와 함께 `mapExemption`(`<파일>:<멤버>`) 에(참가자마다의 가방 · 팔릴 목록 · 시뮬레이션 수치), 정의 구조체(`…Def` · `…Recipe` · `…Reward`) 안의 값 목록은 보지 않는다.
@@ -41,7 +41,7 @@ _kRawKeyRe = re.compile(r"\b(?:isKeyDown|wasKeyPressed|wasKeyReleased)\s*\(|\bKe
 _kActionLiteralRe = re.compile(r"\b(?:wasActionTriggered|isActionDown|wasActionPressed|wasActionReleased|isActionToggled|getActionHoldDuration|"
                                r"getVector2D|getAxis1D|isChordDown|wasChordTriggered)\s*\(\s*(?:hashed_string\s*\(\s*)?\"")
 _kCustomPropertyRe = re.compile(r"\bgetCustomProperty\w*\s*\(\s*\"([^\"]*)\"")
-_kFactionLiteralRe = re.compile(r"\bchangeValue\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]*)\"|\b_\w*[Ff]action\w*\s*\{\s*\"([^\"]*)\"|\bk\w*FactionId\s*=\s*\"([^\"]*)\"")
+_kFactionLiteralRe = re.compile(r"\bchangeValue\s*\(\s*(?:hashed_string\s*\(\s*)?\"([^\"]*)\"|\b_\w*[Ff]action\w*\s*\{\s*\"([^\"]*)\"|\bk\w*FactionID\s*=\s*\"([^\"]*)\"")
 _kKitPrefix = "Source/GameFramework/Kits/"
 _kGamePrefix = "Source/Games/"
 _kGameFrameworkPrefix = "Source/GameFramework/"
@@ -227,11 +227,11 @@ class CheckKitNamespacesGate(LintGate):
                     listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 게임 설정 칸 '{key}' 에 키트 접두가 없습니다 — "
                                          f"'{kitName}.{key}'")
             for match in _kFactionLiteralRe.finditer(code):
-                factionId = next(group for group in match.groups() if group is not None)
-                prefix = factionId.split(".", 1)[0] if "." in factionId else ""
+                factionID = next(group for group in match.groups() if group is not None)
+                prefix = factionID.split(".", 1)[0] if "." in factionID else ""
                 if kitName and (prefix == "" or prefix.islower() is False or prefix not in kitName.lower()):
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 평판 세력 '{factionId}' 에 키트 접두가 없습니다 — "
-                                         f"'<{kitName} 의 소문자 낱말>.{factionId}'")
+                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 평판 세력 '{factionID}' 에 키트 접두가 없습니다 — "
+                                         f"'<{kitName} 의 소문자 낱말>.{factionID}'")
         for tagText, listSite in sorted(mapTagToSite.items()):
             if len(listSite) > 1:
                 listViolation.append(f"상태 표 '{tagText}' 가 둘 이상입니다: {' · '.join(listSite)}")

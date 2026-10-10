@@ -45,7 +45,7 @@ namespace sw
     struct EquipCondition
     {
         vector<hashed_string> _listBodyShape{}; ///< BodyShape
-        hashed_string         _setId{};         ///< SetComplete · SetPieces
+        hashed_string         _setID{};         ///< SetComplete · SetPieces
         TagID                 _tag{};           ///< EquippedTag · CharacterTag
         int32                 _pieceCount{ 0 }; ///< SetPieces
         EquipConditionKind    _kind{ EquipConditionKind::SetComplete };
@@ -91,11 +91,11 @@ namespace sw
         IEquipSetLookup( IEquipSetLookup&& ) noexcept            = default;
         IEquipSetLookup& operator=( IEquipSetLookup&& ) noexcept = default;
 
-        virtual bool hasSet( const hashed_string& setId ) const = 0;
+        virtual bool hasSet( const hashed_string& setID ) const = 0;
         /** @brief 칸 목록에서 세트 조각을 셉니다. 숨김(`_bSuppressed`) 칸은 세지 않습니다. */
-        virtual EquipSetProgress computeProgress( const hashed_string& setId, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const = 0;
+        virtual EquipSetProgress computeProgress( const hashed_string& setID, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const = 0;
         /** @brief 세트의 조각이 될 수 있는 모든 아이템(모든 몸 변형)을 더합니다. 조건 순환 검사가 씁니다. */
-        virtual void collectSetItems( const hashed_string& setId, vector<hashed_string>& outListItemId ) const = 0;
+        virtual void collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const = 0;
     };
 } // namespace sw
 

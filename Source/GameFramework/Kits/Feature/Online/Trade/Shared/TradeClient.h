@@ -25,7 +25,7 @@ namespace sw
         TradeSnapshot        _snapshot{};
         vector<TradeBalance> _listBalance{};
         NetIdempotencyKey    _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘긴다
-        uint64               _requestId{ 0 };
+        uint64               _requestID{ 0 };
         uint16               _method{ 0 };
         uint16               _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_result` 는 Unavailable 또는 Invalid
         TradeResult          _result{ TradeResult::Ok };
@@ -58,20 +58,20 @@ namespace sw
         void initialize( OnlineServiceClient* pClient );
 
         uint64 invite( string_view peerDisplayName, const NetIdempotencyKey& key = NetIdempotencyKey{} );
-        uint64 respond( uint64 tradeId, bool bAccept, const NetIdempotencyKey& key = NetIdempotencyKey{} );
-        uint64 setOffer( uint64 tradeId, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key = NetIdempotencyKey{} );
-        uint64 lock( uint64 tradeId, const NetIdempotencyKey& key = NetIdempotencyKey{} );
+        uint64 respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key = NetIdempotencyKey{} );
+        uint64 setOffer( uint64 tradeID, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key = NetIdempotencyKey{} );
+        uint64 lock( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         /** @brief 지금 비추는 스냅숏의 (내 판, 상대 판)으로 확정합니다. */
-        uint64 confirm( uint64 tradeId, const NetIdempotencyKey& key = NetIdempotencyKey{} );
+        uint64 confirm( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
         /** @brief 판을 직접 주어 확정합니다(재시도 — 처음 본 판 그대로). */
-        uint64 confirmSeen( uint64 tradeId, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key );
-        uint64 cancel( uint64 tradeId, const NetIdempotencyKey& key = NetIdempotencyKey{} );
+        uint64 confirmSeen( uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key );
+        uint64 cancel( uint64 tradeID, const NetIdempotencyKey& key = NetIdempotencyKey{} );
 
         int32 pollReplies( vector<TradeClientReply>& outListReply );
         int32 pollUpdates( vector<TradeClientUpdate>& outListUpdate );
 
         /** @brief 내 계정 id — 스냅숏에서 내 쪽을 찾는다(로그인한 뒤 게임이 넣는다). */
-        void                 setAccountId( AccountId accountId ) { _accountId = accountId; }
+        void                 setAccountID( AccountID accountID ) { _accountID = accountID; }
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 
         // IOnlineClientService
@@ -83,7 +83,7 @@ namespace sw
         struct PendingCall
         {
             NetIdempotencyKey _key{};
-            uint64            _requestId{ 0 };
+            uint64            _requestID{ 0 };
             uint16            _method{ 0 };
         };
 
@@ -91,14 +91,14 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   observe( const TradeSnapshot& snapshot );
 
-        unordered_map<uint64, PendingCall> _mapClientIdToCall;
+        unordered_map<uint64, PendingCall> _mapClientIDToCall;
         vector<TradeClientReply>           _listReply;
         vector<TradeClientUpdate>          _listUpdate;
         TradeSnapshot                      _snapshot;
         PendingCall                        _sendingCall;
         OnlineServiceClient*               _pClient;
-        AccountId                          _accountId;
-        uint64                             _nextRequestId;
+        AccountID                          _accountID;
+        uint64                             _nextRequestID;
         uint8                              _bSending;
     };
 } // namespace sw

@@ -140,7 +140,7 @@ class SW_OT_export_engine_gltf(Operator):
             if process.returncode != 0 or not bClean:
                 self.report({"ERROR"}, f"App --import-models failed (exit {process.returncode}) - see the lines above")
                 return {"CANCELLED"}
-            self.report({"INFO"}, f"Imported: {paths['meshId']}")
+            self.report({"INFO"}, f"Imported: {paths['meshID']}")
         return {"FINISHED"}
 
 

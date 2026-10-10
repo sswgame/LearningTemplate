@@ -77,9 +77,9 @@ namespace sw::editor
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         ImGui::SetCursorScreenPos( imagePos );
-        const void* pTextureId = pEditorContext->getViewTarget( EditorViewKind::Game )._pTextureId;
-        if ( pTextureId != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f )
-            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), imageSize );
+        const void* pTextureID = pEditorContext->getViewTarget( EditorViewKind::Game )._pTextureID;
+        if ( pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f )
+            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
         EditorSelfTestMarks::note( "gameView.canvas" );

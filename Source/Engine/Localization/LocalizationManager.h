@@ -175,7 +175,7 @@ namespace sw
         /** @brief 글이 바뀔 때(언어 변경 · 같은 언어의 다시 읽기 — 그때는 두 인자가 같다) 부를 콜백을 등록하고 ID 를 반환합니다. */
         uint32 registerLanguageChangedCallback( LanguageChangedCallback callback );
         /** @brief 등록된 콜백을 해제합니다. */
-        void unregisterLanguageChangedCallback( uint32 callbackId );
+        void unregisterLanguageChangedCallback( uint32 callbackID );
 
     private:
         /** @brief 올린 프로젝트 하나 — 읽은 문서와 그 파일 경로입니다. */
@@ -219,6 +219,6 @@ namespace sw
         mutable set<string> _uniqueMissingKey;
 
         std::atomic<uint32> _textRevision;
-        uint32              _nextCallbackId;
+        uint32              _nextCallbackID;
     };
 } // namespace sw

@@ -92,7 +92,7 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
-        const TelemetryEventDef*         findEvent( const hashed_string& eventId ) const;
+        const TelemetryEventDef*         findEvent( const hashed_string& eventID ) const;
         const vector<TelemetryEventDef>& getEvents() const { return _listEvent; }
         const TelemetryPipelineSettings& getSettings() const { return _settings; }
         int32                            getVersion() const { return _version; }

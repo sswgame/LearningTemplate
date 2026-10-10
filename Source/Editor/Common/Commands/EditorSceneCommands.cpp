@@ -96,7 +96,7 @@ namespace sw::editor
         // 복제본끼리의 부착(자식 → 복제된 부모 · 오브젝트 안)은 묶음이 **원본 id** 로 잇는다. 복제한 루트의 부모(묶음 밖)는 같은 실행의 id 로
         // 원본과 같은 부모 · 같은 소켓에 붙는다. 주의: 이름으로 찾으면 이름이 유일하게 바뀐 복제본(`Rig` → `Rig_2`)의 메시가 **원본**의
         // 루트에 붙고, 루트는 원본 부모의 primary 에 다시 붙어 소켓을 잃는다.
-        ObjectStateBatch    batch( ObjectIdSpace::Live );
+        ObjectStateBatch    batch( ObjectIDSpace::Live );
         vector<GameObject*> listCopy;
         listCopy.reserve( listSource.size() );
         bool bAllLoaded = true;
@@ -111,7 +111,7 @@ namespace sw::editor
             listCopy.push_back( pCopy );
             ObjectLoadContext context{};
             context._pBatch            = &batch;
-            context._savedId           = listSource[sourceIndex]->getObjectId();
+            context._savedID           = listSource[sourceIndex]->getObjectID();
             const vector<uint8>& state = listState[sourceIndex];
             if ( ObjectStateSerializer::loadFromBinaryBuffer( pCopy, state.data(), state.size(), context ) == 0 )
             {
@@ -140,9 +140,9 @@ namespace sw::editor
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {
             const string prefabPath =
-                ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectId() ) : string{};
+                ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() ) : string{};
             if ( prefabPath.empty() == false && pContext != nullptr )
-                pContext->getWorkspace().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectId(), prefabPath );
+                pContext->getWorkspace().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
             EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );
         }
         EditorTransaction::endTransaction();
@@ -230,7 +230,7 @@ namespace sw::editor
         } );
         std::sort( outListRoot.begin(), outListRoot.end(),
                    []( const GameObject* pLeft, const GameObject* pRight )
-        { return pLeft->getObjectId() < pRight->getObjectId(); } );
+        { return pLeft->getObjectID() < pRight->getObjectID(); } );
     }
 
     void EditorSceneCommands::duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated )
@@ -337,10 +337,10 @@ namespace sw::editor
         if ( pContext != nullptr )
         {
             EditorWorkspace& ws = pContext->getWorkspace();
-            if ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-                 ws.getSelectedComponentId() == pComp->getComponentId() )
+            if ( ws.getSelectedObjectID() == pObj->getObjectID() &&
+                 ws.getSelectedComponentID() == pComp->getComponentID() )
             {
-                ws.setSelectedComponentId( 0 );
+                ws.setSelectedComponentID( 0 );
                 ws.setSelectedComponentKey( "" );
             }
         }
@@ -487,7 +487,7 @@ namespace sw::editor
         SweepHit sweepHit{};
         if ( pManager->getOverlapWorld2D().getPhysicsWorld().sweepTest( movingBox, displacement, 0, sweepHit ) )
         {
-            if ( sweepHit._hitObjectId != pObj->getObjectId() )
+            if ( sweepHit._hitObjectID != pObj->getObjectID() )
             {
                 hitY = movingBox._min._y + displacement._y * sweepHit._time;
                 bHit = true;

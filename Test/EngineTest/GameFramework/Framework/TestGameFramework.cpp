@@ -120,7 +120,7 @@ namespace
         explicit ScopedSceneGameService( SceneManager& manager )
         {
             ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
             game::bindGameService( service );
         }
         ~ScopedSceneGameService() { game::unbindGameService(); }
@@ -172,10 +172,10 @@ namespace
     }
 
     /** @brief SAV1 시험의 받침 — 이름 · 지역 · 태그 목록 · 자리 · 분이 다 다른 리플렉션 구조체 하나입니다. */
-    ScheduleNpcSaveState makeSaveSlotProbe( const utf8* pId, int32 minute )
+    ScheduleNpcSaveState makeSaveSlotProbe( const utf8* pID, int32 minute )
     {
         ScheduleNpcSaveState probe;
-        probe._id             = hashed_string( pId );
+        probe._id             = hashed_string( pID );
         probe._originArea     = hashed_string( "market" );
         probe._listTag        = { "smith", "night_owl" };
         probe._originPosition = float3{ 15.0f, 0.0f, -25.0f };
@@ -858,7 +858,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
         int32              _playerX{ 0 };
         int32              _playerY{ 0 };
         int64              _totalExp{ 0 };
-        vector<int32>      _listMonsterId{};
+        vector<int32>      _listMonsterID{};
         vector<string>     _listSkillName{};
         map<string, int32> _mapFlag{};
     };
@@ -884,8 +884,8 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
                      SW_OFFSET_OF( MassiveStressState, _playerY ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
                     { hashed_string( "_totalExp" ), hashed_string( "int64" ),
                      SW_OFFSET_OF( MassiveStressState, _totalExp ), false, ContainerKind::None, hashed_string(), hashed_string(), nullptr },
-                    { hashed_string( "_listMonsterId" ), hashed_string( "int32" ),
-                     SW_OFFSET_OF( MassiveStressState, _listMonsterId ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), sw::make_shared<VectorWrapper<vector<int32>>>() },
+                    { hashed_string( "_listMonsterID" ), hashed_string( "int32" ),
+                     SW_OFFSET_OF( MassiveStressState, _listMonsterID ), true, ContainerKind::Sequence, hashed_string( "int32" ), hashed_string(), sw::make_shared<VectorWrapper<vector<int32>>>() },
                     { hashed_string( "_listSkillName" ), hashed_string( "string" ),
                      SW_OFFSET_OF( MassiveStressState, _listSkillName ), true, ContainerKind::Sequence, hashed_string( "string" ), hashed_string(), sw::make_shared<VectorWrapper<vector<string>>>() },
                     { hashed_string( "_mapFlag" ), hashed_string( "int32" ),
@@ -905,10 +905,10 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
     writeInstance._state._totalExp = 987654321012345ll;
 
     // 10,000개의 Monster ID 채우기
-    writeInstance._state._listMonsterId.reserve( 10000 );
+    writeInstance._state._listMonsterID.reserve( 10000 );
     for ( int32 index = 0; index < 10000; ++index )
     {
-        writeInstance._state._listMonsterId.push_back( 100000 + index * 3 );
+        writeInstance._state._listMonsterID.push_back( 100000 + index * 3 );
     }
 
     // 5,000개의 Skill Name 채우기
@@ -934,14 +934,14 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseMassiveStateStressTest )
     SW_EXPECT_EQUAL( 1234, readInstance._state._playerX );
     SW_EXPECT_EQUAL( -5678, readInstance._state._playerY );
     SW_EXPECT_EQUAL( 987654321012345ll, readInstance._state._totalExp );
-    SW_EXPECT_EQUAL( 10000u, static_cast<uint32>( readInstance._state._listMonsterId.size() ) );
+    SW_EXPECT_EQUAL( 10000u, static_cast<uint32>( readInstance._state._listMonsterID.size() ) );
     SW_EXPECT_EQUAL( 5000u, static_cast<uint32>( readInstance._state._listSkillName.size() ) );
     SW_EXPECT_EQUAL( 2000u, static_cast<uint32>( readInstance._state._mapFlag.size() ) );
 
     // 샘플 데이터 검증 (앞/중간/끝)
-    SW_EXPECT_EQUAL( 100000, readInstance._state._listMonsterId[0] );
-    SW_EXPECT_EQUAL( 100000 + 5000 * 3, readInstance._state._listMonsterId[5000] );
-    SW_EXPECT_EQUAL( 100000 + 9999 * 3, readInstance._state._listMonsterId[9999] );
+    SW_EXPECT_EQUAL( 100000, readInstance._state._listMonsterID[0] );
+    SW_EXPECT_EQUAL( 100000 + 5000 * 3, readInstance._state._listMonsterID[5000] );
+    SW_EXPECT_EQUAL( 100000 + 9999 * 3, readInstance._state._listMonsterID[9999] );
 
     SW_EXPECT_EQUAL( string( "Skill_Ultimate_Power_Strike_0" ), readInstance._state._listSkillName[0] );
     SW_EXPECT_EQUAL( string( "Skill_Ultimate_Power_Strike_2500" ), readInstance._state._listSkillName[2500] );
@@ -1023,7 +1023,7 @@ SW_TEST_CASE( GameFrameworkTest, GameInstanceBaseCorruptedBufferFaultResilience 
  *          들고 있던 핸들(씬의 활성 카메라 등)이 이어진다. 세이브 파일처럼 다른 실행에서 찍은 것은 그 실행에서 나간 id 와 겹칠 수
  *          있어 되살리지 않는다. 봉투 머리의 프로세스 토큰(v2: magic 4 · version 4 · token 8 바이트)이 둘을 가른다.
  */
-SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIdsOnlyWithinTheSameProcess )
+SW_TEST_CASE( GameFrameworkTest, SnapshotRestoresIDsOnlyWithinTheSameProcess )
 {
     SceneManager sceneManager;
     Scene*       pScene = sceneManager.createEmptyActiveScene( "ReloadProbe" );
@@ -1215,10 +1215,10 @@ SW_TEST_CASE( GameFrameworkTest, ComponentStateStoreRejectsBrokenBytes )
     ComponentStateStore readStore;
     Archive             reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( readStore.read( reader ) );
-    const ComponentStateStore::Entry* pById = readStore.findEntry( hashed_string( "Director" ), 8, 0 );
-    SW_ASSERT_NOT_NULL( pById );
-    SW_EXPECT_EQUAL( size_t( 1 ), pById->_bytes.size() );
-    SW_EXPECT_EQUAL( uint8( 4 ), pById->_bytes[0] );
+    const ComponentStateStore::Entry* pByID = readStore.findEntry( hashed_string( "Director" ), 8, 0 );
+    SW_ASSERT_NOT_NULL( pByID );
+    SW_EXPECT_EQUAL( size_t( 1 ), pByID->_bytes.size() );
+    SW_EXPECT_EQUAL( uint8( 4 ), pByID->_bytes[0] );
     const ComponentStateStore::Entry* pByOrder = readStore.findEntry( hashed_string( "Director" ), 99, 0 );
     SW_ASSERT_NOT_NULL( pByOrder );
     SW_EXPECT_EQUAL( uint8( 9 ), pByOrder->_bytes[0] );
@@ -1367,11 +1367,11 @@ SW_TEST_CASE( GameFrameworkTest, DontDestroyOnLoadComponentKeepsItsOwnerAcrossSc
     // 플레이 중에 붙은 컴포넌트의 시작은 다음 틱 단계다.
     sceneManager.tick( 0.016f );
     SW_EXPECT_TRUE( sceneManager.isPersistent( pInventory ) );
-    const uint64 inventoryId = pInventory->getObjectId();
+    const uint64 inventoryID = pInventory->getObjectID();
 
     Scene* pDungeon = sceneManager.createEmptyActiveScene( "Dungeon" );
     SW_ASSERT_NOT_NULL( pDungeon );
-    const GameObject* pCarried = pDungeon->getObjectManager()->findGameObjectById( inventoryId );
+    const GameObject* pCarried = pDungeon->getObjectManager()->findGameObjectByID( inventoryID );
     SW_ASSERT_NOT_NULL( pCarried );
     SW_EXPECT_TRUE( pCarried->getComponent<DontDestroyOnLoadComponent>() != nullptr );
     SW_EXPECT_TRUE( pDungeon->getObjectManager()->findGameObjectByName( hashed_string( "Villager" ) ) == nullptr );
@@ -1446,7 +1446,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 {
     const utf8* dialogueJSON = R"({
-		"startNodeId": 1,
+		"startNodeID": 1,
 		"nodes": [
 			{ "id": 1, "type": "Action", "action": "CloseMenu" },
 			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Should not appear" }
@@ -2142,7 +2142,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneTagsComeFromTheMapRoleText )
     SW_EXPECT_TRUE( zones.hasActiveZoneTag( "indoors" ) );
     SW_EXPECT_FALSE( zones.hasActiveZoneTag( "gym" ) );
     SW_EXPECT_TRUE_MSG( zones.isClearGateLocked(), "clear_gate 태그가 있는데 게이트가 안 잠겼습니다" );
-    SW_EXPECT_STREQ( "Dungeon 1", zones.getActiveZoneId().c_str() );
+    SW_EXPECT_STREQ( "Dungeon 1", zones.getActiveZoneID().c_str() );
     SW_EXPECT_EQUAL( 19, zones.getCameraBounds()._max._x );
     SW_EXPECT_EQUAL( 9, zones.getCameraBounds()._max._y );
 
@@ -2153,7 +2153,7 @@ SW_TEST_CASE( GameFrameworkTest, ZoneTagsComeFromTheMapRoleText )
     zones.setFromMap( "levels/dungeon_02.scene", "", 4, 4, "" );
     SW_EXPECT_FALSE( zones.hasActiveZoneTag( "dungeon" ) );
     SW_EXPECT_FALSE( zones.isClearGateLocked() );
-    SW_EXPECT_STREQ( "levels/dungeon_02.scene", zones.getActiveZoneId().c_str() );
+    SW_EXPECT_STREQ( "levels/dungeon_02.scene", zones.getActiveZoneID().c_str() );
 
     // 같은 태그를 두 번 적어도 하나다 — 빈 조각은 건너뛴다.
     zones.setFromMap( "m", "m", 1, 1, ",,gym,  GYM ," );
@@ -2865,8 +2865,8 @@ SW_TEST_CASE( GameFrameworkTest, BootstrapGameSettingsIsBoundAndApplied )
         {
             (void)_input.initialize(); // 장치 등록뿐이다 — 아래 단언이 통합 맵을 본다
             ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::InputManager )]        = &_input;
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::LocalizationManager )] = &engine::getLocalizationManager();
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::InputManager )]        = &_input;
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::LocalizationManager )] = &engine::getLocalizationManager();
             game::bindGameService( service );
         }
         ~ScopedRunState()

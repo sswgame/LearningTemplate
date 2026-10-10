@@ -52,7 +52,7 @@ namespace sw
          */
         struct ObjectEditNotice
         {
-            uint64         _objectId{ 0 };
+            uint64         _objectID{ 0 };
             ObjectEditKind _kind{ ObjectEditKind::Modified };
         };
         /** @brief 에디터가 다는 알림 처리기입니다(선택 갱신 · 씬 dirty). 모듈 코드라 그 모듈이 내려갈 때 떼어집니다. */

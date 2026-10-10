@@ -132,7 +132,7 @@ namespace sw
             float32 _health{ 30.0f };
             float32 _speed{ 3.0f };
             uint32  _slot{ 0 };
-            uint32  _spawnId{ 0 }; ///< 감독의 스폰 예산으로 선 적(0 = 무리 · 정예 — 예산 밖)
+            uint32  _spawnID{ 0 }; ///< 감독의 스폰 예산으로 선 적(0 = 무리 · 정예 — 예산 밖)
             uint8   _bElite{ SW_FALSE };
         };
 
@@ -140,7 +140,7 @@ namespace sw
         struct EnemyRecord
         {
             GameObjectHandle _object{};
-            uint32           _spawnId{ 0 };
+            uint32           _spawnID{ 0 };
             uint8            _bCounted{ SW_FALSE };
         };
 
@@ -164,7 +164,7 @@ namespace sw
         void collectBoxes();
         void startPacing();
         void applyDirectorEvents();
-        void requestEnemies( int32 count, float32 healthScale, uint32 spawnId, bool bElite );
+        void requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite );
         void spawnEffectPools( GameObjectManager& manager );
         void spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool );
         /** @brief 풀에서 숨어 있는 것 하나를 꺼냅니다. 다 쓰고 있으면 순번 자리의 것을 다시 씁니다. 없으면 nullptr 입니다. */

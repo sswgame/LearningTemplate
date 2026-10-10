@@ -487,11 +487,11 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         for ( int32 index = 0; index < 3; ++index )
         {
             NetHost&       host         = cluster.getHost( index );
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( host.receiveMessage( connectionId, channel, buffer ) )
+            while ( host.receiveMessage( connectionID, channel, buffer ) )
             {
-                SW_EXPECT_TRUE( NetHandleResult::Handled == listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer ) );
+                SW_EXPECT_TRUE( NetHandleResult::Handled == listSession[static_cast<size_t>( index )].handleMessage( connectionID, buffer ) );
             }
         }
         if ( frame % 2 != 0 || frame > 60 * 5 )
@@ -538,11 +538,11 @@ SW_TEST_CASE( NetLockstepTest, LockstepPlayersAdvanceIdenticallyAndDetectDesyncs
         cluster.step();
         for ( int32 index = 0; index < 3; ++index )
         {
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getHost( index ).receiveMessage( connectionID, channel, buffer ) )
             {
-                (void)listSession[static_cast<size_t>( index )].handleMessage( connectionId, buffer );
+                (void)listSession[static_cast<size_t>( index )].handleMessage( connectionID, buffer );
             }
         }
     }
@@ -579,11 +579,11 @@ SW_TEST_CASE( NetLockstepTest, RollbackPredictsRewindsAndConvergesOnBothSides )
         cluster.step();
         for ( int32 index = 0; index < 2; ++index )
         {
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster.getHost( index ).receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getHost( index ).receiveMessage( connectionID, channel, buffer ) )
             {
-                SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionId, buffer ) );
+                SW_EXPECT_TRUE( NetHandleResult::Handled == arrSession[index].handleMessage( connectionID, buffer ) );
             }
             if ( arrSession[index].advanceFrame( scriptInput( index, arrLocalFrame[index] ) ) )
                 ++arrLocalFrame[index];

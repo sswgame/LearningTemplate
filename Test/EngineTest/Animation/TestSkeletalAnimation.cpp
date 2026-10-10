@@ -172,7 +172,7 @@ SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsACLMaxErrorUnderThreshold )
     // ACL 블롭을 클립으로 실어도 같은 값이 나온다(정렬된 보관 · 코덱 번호).
     AnimClip clip;
     SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), settings, nullptr ) );
-    SW_EXPECT_TRUE( clip.getCodecId() == AnimCodecId::ACL );
+    SW_EXPECT_TRUE( clip.getCodecID() == AnimCodecID::ACL );
     Pose rawPose;
     Pose aclPose;
     raw.sample( 1.0f, rawPose );

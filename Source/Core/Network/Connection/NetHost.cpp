@@ -55,11 +55,11 @@ namespace sw
             }
 
             /** @brief 데이터 · 끊기 패킷의 AAD — 프로토콜 id 4 LE ‖ 몸의 머리(종류 · 연결 값 · 패킷 번호). */
-            static void makePacketAad( uint32 protocolId, const uint8* pBodyHead, uint8* pOutAad )
+            static void makePacketAad( uint32 protocolID, const uint8* pBodyHead, uint8* pOutAad )
             {
                 for ( int32 index = 0; index < 4; ++index )
                 {
-                    pOutAad[index] = static_cast<uint8>( protocolId >> ( index * 8 ) );
+                    pOutAad[index] = static_cast<uint8>( protocolID >> ( index * 8 ) );
                 }
                 std::memcpy( pOutAad + 4, pBodyHead, kSecureHeadSize );
             }
@@ -141,7 +141,7 @@ namespace sw
         , _replayRejectedCount{ 0 }
         , _mismatchLogCount{ 0 }
         , _challengeSecret{ 0 }
-        , _protocolId{ 0 }
+        , _protocolID{ 0 }
         , _updateDepth{ 0 }
         , _clientIndex{ -1 }
         , _receiveCursor{ 0 }
@@ -178,7 +178,7 @@ namespace sw
             _bHasCredentials            = SW_FALSE;
             _credentials                = NetConnectCredentials{};
             _plainWriter.reserve( kNetMaxPacketSize );
-            _protocolId = NetProtocol::makeProtocolId( settings._gameId, settings._wireVersion, computeFeatureMask() ); // listen · connect 가 역할에 맞춰 다시 셈한다
+            _protocolID = NetProtocol::makeProtocolID( settings._gameID, settings._wireVersion, computeFeatureMask() ); // listen · connect 가 역할에 맞춰 다시 셈한다
             listFinished.swap( _listFinished );
         }
         deliverFinished( listFinished );
@@ -193,13 +193,13 @@ namespace sw
         return type < static_cast<uint32>( PacketType::Count ) ? static_cast<PacketType>( type ) : PacketType::Count;
     }
 
-    uint32 NetHost::computePacketChecksum( uint32 headerId, const uint8* pBody, int32 size )
+    uint32 NetHost::computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size )
     {
         // FNV-1a 32 — 머리 값(프로토콜 id)을 먼저 섞어 다른 게임 · 판의 패킷은 체크섬부터 틀린다.
         uint32 hash = HashUtil::kFnvOffset32;
         for ( int32 shift = 0; shift < 32; shift += 8 )
         {
-            hash = ( hash ^ ( ( headerId >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
+            hash = ( hash ^ ( ( headerID >> shift ) & 0xFFu ) ) * HashUtil::kFnvPrime32;
         }
         for ( int32 index = 0; index < size; ++index )
         {
@@ -254,7 +254,7 @@ namespace sw
         }
 #endif
         _bServer    = SW_TRUE;
-        _protocolId = NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, computeFeatureMask() );
+        _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
         _listSlot.clear();
         _listSlot.resize( static_cast<size_t>( MathUtil::max( 1, _settings._maxConnections ) ) );
         _mapSlotByAddress.clear();
@@ -319,7 +319,7 @@ namespace sw
             return false;
         }
         _bServer    = SW_FALSE;
-        _protocolId = NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, computeFeatureMask() );
+        _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
         _listSlot.clear();
         _listSlot.resize( 1 );
         _mapSlotByAddress.clear();
@@ -371,7 +371,7 @@ namespace sw
         return -1;
     }
 
-    void NetHost::sendFramed( const NetAddress& to, uint32 headerId )
+    void NetHost::sendFramed( const NetAddress& to, uint32 headerID )
     {
         // 보낼 묶음의 바이트 뒤에 바로 짓는다(헤더 + 몸) — 보내기는 잠금을 푼 뒤 `sendBatch` 가.
         const vector<uint8>& body     = _packetWriter.getBytes();
@@ -381,8 +381,8 @@ namespace sw
         uint8* pPacket = _pendingBatch._bytes.data() + offset;
         if ( bodySize > 0 )
             std::memcpy( pPacket + NetHostInternal::kHeaderSize, body.data(), static_cast<size_t>( bodySize ) );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerId );
-        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, computePacketChecksum( headerId, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset, headerID );
+        NetHostInternal::writeUint32( _pendingBatch._bytes, offset + 4, computePacketChecksum( headerID, pPacket + NetHostInternal::kHeaderSize, bodySize ) );
         _pendingBatch._listDatagram.push_back( OutgoingDatagram{ to, static_cast<int32>( offset ), NetHostInternal::kHeaderSize + bodySize } );
     }
 
@@ -439,12 +439,12 @@ namespace sw
         writer.writeBits( static_cast<uint32>( valueA >> 32 ), 32 );
         writer.writeBits( static_cast<uint32>( valueB ), 32 );
         writer.writeBits( static_cast<uint32>( valueB >> 32 ), 32 );
-        sendFramed( to, isHandshakeFramed( type ) ? NetProtocol::kHandshakeId : _protocolId );
+        sendFramed( to, isHandshakeFramed( type ) ? NetProtocol::kHandshakeID : _protocolID );
     }
 
     void NetHost::sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt )
     {
-        sendControl( to, PacketType::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolId ) << 32 ), clientSalt );
+        sendControl( to, PacketType::Denied, static_cast<uint64>( reason ) | ( static_cast<uint64>( _protocolID ) << 32 ), clientSalt );
     }
 
     void NetHost::sendChallengeResponse( Slot& slot )
@@ -479,7 +479,7 @@ namespace sw
                 writer.writeBytes( arrTag, NetSecurityConstant::kAeadTagSize );
             }
         }
-        sendFramed( slot._address, _protocolId );
+        sendFramed( slot._address, _protocolID );
     }
 
     void NetHost::sendAccepted( int32 slotIndex )
@@ -497,7 +497,7 @@ namespace sw
             writer.writeBytes( slot._security->_keyPair._arrPublicKey, NetSecurityConstant::kX25519KeySize );
             writer.writeBytes( slot._security->_arrKeyConfirmTag, NetSecurityConstant::kAeadTagSize );
         }
-        sendFramed( slot._address, _protocolId );
+        sendFramed( slot._address, _protocolID );
     }
 
     bool NetHost::acceptSecureResponse( BitReader& reader, const NetAddress& from, uint64 clientSalt, uint64 challenge, unique_ptr<SlotSecurity>& outSecurity )
@@ -516,14 +516,14 @@ namespace sw
             return false;
         }
         NetSessionSecret secret;
-        uint64           principalId = 0;
+        uint64           principalID = 0;
         if ( bTokenBound )
         {
             uint8                arrProofKey[NetSecurityConstant::kAeadKeySize]{};
             const uint8          arrZeroNonce[NetSecurityConstant::kAeadNonceSize]{};
             const vector<uint8>  aad = NetHostInternal::makeProofAad( clientSalt, challenge, arrClientPublic, listToken.data(), static_cast<int32>( listToken.size() ) );
             unique_ptr<INetAead> proof;
-            const bool           bKnown = _settings._security._pAuthenticator->findSessionSecret( listToken.data(), static_cast<int32>( listToken.size() ), secret, principalId ) &&
+            const bool           bKnown = _settings._security._pAuthenticator->findSessionSecret( listToken.data(), static_cast<int32>( listToken.size() ), secret, principalID ) &&
                                 NetSessionKeyUtil::computeProofKey( provider, secret, arrProofKey ) &&
                                 ( proof = provider.createAead( _settings._security._algorithm, arrProofKey ) ) != nullptr &&
                                 proof->open( arrZeroNonce, aad.data(), static_cast<int32>( aad.size() ), arrProof, NetSecurityConstant::kAeadTagSize, nullptr );
@@ -539,7 +539,7 @@ namespace sw
         uint8                    arrShared[NetSecurityConstant::kX25519KeySize]{};
         const bool               bKeys = provider.makeX25519KeyPair( security->_keyPair ) &&
                            provider.computeX25519SharedSecret( security->_keyPair._arrPrivateKey, arrClientPublic, arrShared ) &&
-                           NetSessionKeyUtil::computeSessionKeys( provider, arrShared, bTokenBound ? &secret : nullptr, clientSalt, challenge, _protocolId, security->_keys );
+                           NetSessionKeyUtil::computeSessionKeys( provider, arrShared, bTokenBound ? &secret : nullptr, clientSalt, challenge, _protocolID, security->_keys );
         std::memset( arrShared, 0, sizeof( arrShared ) );
         security->_keyPair.wipe(); // 서버는 공개 키만 남긴다(수락 재전송)
         if ( bKeys )
@@ -553,7 +553,7 @@ namespace sw
             sendDenied( from, NetDisconnectReason::AuthenticationFailed, clientSalt );
             return false;
         }
-        security->_principalId = principalId;
+        security->_principalID = principalID;
         security->_bKeysReady  = SW_TRUE;
         outSecurity            = std::move( security );
         return true;
@@ -569,7 +569,7 @@ namespace sw
         bool                  bOk = reader.readBytes( arrServerPublic, NetSecurityConstant::kX25519KeySize ) && reader.readBytes( arrTag, NetSecurityConstant::kAeadTagSize ) &&
                    provider.computeX25519SharedSecret( security._keyPair._arrPrivateKey, arrServerPublic, arrShared ) &&
                    NetSessionKeyUtil::computeSessionKeys( provider, arrShared, _bHasCredentials == SW_TRUE ? &_credentials._secret : nullptr, slot._clientSalt, slot._serverSalt,
-                                                          _protocolId, security._keys );
+                                                          _protocolID, security._keys );
         std::memset( arrShared, 0, sizeof( arrShared ) );
         if ( bOk )
         {
@@ -613,7 +613,7 @@ namespace sw
             arrHead[5 + index] = static_cast<uint8>( packetNumber >> ( 56 - index * 8 ) );
         }
         uint8 arrAad[NetHostInternal::kAadSize]{};
-        NetHostInternal::makePacketAad( _protocolId, arrHead, arrAad );
+        NetHostInternal::makePacketAad( _protocolID, arrHead, arrAad );
         uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         const NetDirectionKeys& keys = _bServer == SW_TRUE ? security._keys._serverToClient : security._keys._clientToServer;
         NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
@@ -624,7 +624,7 @@ namespace sw
         writer.clear();
         writer.writeBytes( arrHead, NetHostInternal::kSecureHeadSize );
         writer.writeBytes( _listSealScratch.data(), static_cast<int32>( _listSealScratch.size() ) );
-        sendFramed( slot._address, _protocolId );
+        sendFramed( slot._address, _protocolID );
         return NetHostInternal::kHeaderSize + writer.getByteCount();
     }
 
@@ -647,7 +647,7 @@ namespace sw
             return false;
         }
         uint8 arrAad[NetHostInternal::kAadSize]{};
-        NetHostInternal::makePacketAad( _protocolId, pBody, arrAad );
+        NetHostInternal::makePacketAad( _protocolID, pBody, arrAad );
         uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         const NetDirectionKeys& keys = _bServer == SW_TRUE ? security._keys._clientToServer : security._keys._serverToClient;
         NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
@@ -685,7 +685,7 @@ namespace sw
         // 대역폭 몫을 다 썼으면 머리(확인 · 유지)만 — 메시지는 다음 차례에 간다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
         slot._connection.writePacket( time, writer, maxBytes, _settings._keepAliveInterval );
-        sendFramed( slot._address, _protocolId );
+        sendFramed( slot._address, _protocolID );
         slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetHostInternal::kHeaderSize );
         slot._lastSendTime = time;
     }
@@ -780,7 +780,7 @@ namespace sw
                             sendChallengeResponse( slot );
                         else
                             sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt,
-                                         ( static_cast<uint64>( _settings._gameId ) << 32 ) | _protocolId );
+                                         ( static_cast<uint64>( _settings._gameID ) << 32 ) | _protocolID );
                         slot._lastSendTime = time;
                     }
                     break;
@@ -821,17 +821,17 @@ namespace sw
 
     void NetHost::handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size )
     {
-        const uint32 headerId = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
-        if ( size <= NetHostInternal::kHeaderSize || ( headerId != _protocolId && headerId != NetProtocol::kHandshakeId ) ||
+        const uint32 headerID = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
+        if ( size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
              NetHostInternal::readUint32( pData + 4 ) !=
-                 computePacketChecksum( headerId, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
+                 computePacketChecksum( headerID, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize ) )
         {
             ++_rejectedPacketCount; // 다른 판 · 다른 게임 · 깨진 패킷
             return;
         }
         BitReader        reader( pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
         const PacketType type = static_cast<PacketType>( reader.readBits( NetHostInternal::kTypeBits ) );
-        if ( type >= PacketType::Count || isHandshakeFramed( type ) != ( headerId == NetProtocol::kHandshakeId ) )
+        if ( type >= PacketType::Count || isHandshakeFramed( type ) != ( headerID == NetProtocol::kHandshakeID ) )
         {
             ++_rejectedPacketCount;
             return;
@@ -884,21 +884,21 @@ namespace sw
             {
                 if ( _bServer == SW_FALSE )
                     return;
-                const uint32 requestProtocolId = static_cast<uint32>( valueB );
-                if ( requestProtocolId != _protocolId )
+                const uint32 requestProtocolID = static_cast<uint32>( valueB );
+                if ( requestProtocolID != _protocolID )
                 {
-                    const uint32        requestGameId = static_cast<uint32>( valueB >> 32 );
-                    NetDisconnectReason reason        = requestGameId == _settings._gameId ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
+                    const uint32        requestGameID = static_cast<uint32>( valueB >> 32 );
+                    NetDisconnectReason reason        = requestGameID == _settings._gameID ? NetDisconnectReason::VersionMismatch : NetDisconnectReason::Rejected;
                     // 같은 게임 · 같은 판인데 기능 마스크만 다르면 — 한쪽만 암호화 · 토큰 결속이다.
                     for ( uint32 mask = 0; reason == NetDisconnectReason::VersionMismatch && mask <= NetProtocolFeature::kAllMask; ++mask )
                     {
-                        if ( NetProtocol::makeProtocolId( _settings._gameId, _settings._wireVersion, mask ) == requestProtocolId )
+                        if ( NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, mask ) == requestProtocolID )
                             reason = NetDisconnectReason::SecurityMismatch;
                     }
                     ++_mismatchLogCount;
                     if ( ( _mismatchLogCount & ( _mismatchLogCount - 1 ) ) == 0 )
                         SW_LOG_WARNING( "NetHost: refused a connection from %# (%#) — it speaks protocol 0x%08x (game 0x%08x), this server 0x%08x (game 0x%08x); %# such requests so far",
-                                        from.toString().c_str(), toString( reason ), requestProtocolId, requestGameId, _protocolId, _settings._gameId,
+                                        from.toString().c_str(), toString( reason ), requestProtocolID, requestGameID, _protocolID, _settings._gameID,
                                         _mismatchLogCount );
                     sendDenied( from, reason, valueA );
                     return;
@@ -1016,7 +1016,7 @@ namespace sw
                 const NetDisconnectReason reason = NetHostInternal::readDeniedReason( valueA );
                 if ( reason != NetDisconnectReason::ServerFull )
                     SW_LOG_WARNING( "NetHost: server %# refused the connection (%#) — it speaks protocol 0x%08x, this client 0x%08x (game 0x%08x)",
-                                    from.toString().c_str(), toString( reason ), static_cast<uint32>( valueA >> 32 ), _protocolId, _settings._gameId );
+                                    from.toString().c_str(), toString( reason ), static_cast<uint32>( valueA >> 32 ), _protocolID, _settings._gameID );
                 closeSlot( slotIndex, reason, false );
                 return;
             }
@@ -1102,32 +1102,32 @@ namespace sw
             _clientIndex = -1;
     }
 
-    bool NetHost::sendMessage( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetHost::sendMessage( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return sendMessageLocked( connectionId, channel, pData, size );
+        return sendMessageLocked( connectionID, channel, pData, size );
     }
 
-    bool NetHost::sendMessageLocked( int32 connectionId, NetChannelType channel, const uint8* pData, int32 size )
+    bool NetHost::sendMessageLocked( int32 connectionID, NetChannelType channel, const uint8* pData, int32 size )
     {
-        if ( isValidSlot( connectionId ) == false || _listSlot[static_cast<size_t>( connectionId )]._state != NetConnectionState::Connected )
+        if ( isValidSlot( connectionID ) == false || _listSlot[static_cast<size_t>( connectionID )]._state != NetConnectionState::Connected )
             return false;
-        return _listSlot[static_cast<size_t>( connectionId )]._connection.sendMessage( channel, pData, size );
+        return _listSlot[static_cast<size_t>( connectionID )]._connection.sendMessage( channel, pData, size );
     }
 
-    int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptId )
+    int32 NetHost::broadcast( NetChannelType channel, const uint8* pData, int32 size, int32 exceptID )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         int32                   sentCount = 0;
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
-            if ( static_cast<int32>( index ) != exceptId && sendMessageLocked( static_cast<int32>( index ), channel, pData, size ) )
+            if ( static_cast<int32>( index ) != exceptID && sendMessageLocked( static_cast<int32>( index ), channel, pData, size ) )
                 ++sentCount;
         }
         return sentCount;
     }
 
-    bool NetHost::receiveMessage( int32& outConnectionId, NetChannelType& outChannel, vector<uint8>& outBuffer )
+    bool NetHost::receiveMessage( int32& outConnectionID, NetChannelType& outChannel, vector<uint8>& outBuffer )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const int32             slotCount = static_cast<int32>( _listSlot.size() );
@@ -1141,7 +1141,7 @@ namespace sw
             {
                 if ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), outBuffer ) )
                 {
-                    outConnectionId = index;
+                    outConnectionID = index;
                     outChannel      = static_cast<NetChannelType>( channel );
                     _receiveCursor  = index; // 같은 연결부터 이어서 비운다
                     return true;
@@ -1152,7 +1152,7 @@ namespace sw
         return false;
     }
 
-    void NetHost::disconnect( int32 connectionId )
+    void NetHost::disconnect( int32 connectionID )
     {
         // 끊김 알림은 바로 보낸다(곧 호스트를 없앨 수 있다) — 이 스레드의 사본으로, 잠금 밖에서.
         OutgoingBatch           batch;
@@ -1160,8 +1160,8 @@ namespace sw
         INetTransport*          pTransport = nullptr;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            if ( isValidSlot( connectionId ) )
-                closeSlot( connectionId, NetDisconnectReason::Requested, true );
+            if ( isValidSlot( connectionID ) )
+                closeSlot( connectionID, NetDisconnectReason::Requested, true );
             takePending( batch, listFinished );
             pTransport = _pTransport;
         }
@@ -1222,7 +1222,7 @@ namespace sw
                 while ( slot._connection.receiveMessage( static_cast<NetChannelType>( channel ), _listDrainScratch ) )
                 {
                     NetInboundMessage message;
-                    message._connectionId = index;
+                    message._connectionID = index;
                     message._offset       = static_cast<int32>( outInbound._bytes.size() );
                     message._size         = static_cast<int32>( _listDrainScratch.size() );
                     message._channel      = static_cast<NetChannelType>( channel );
@@ -1251,13 +1251,13 @@ namespace sw
         return _rejectedPacketCount;
     }
 
-    uint64 NetHost::getConnectionPrincipal( int32 connectionId ) const
+    uint64 NetHost::getConnectionPrincipal( int32 connectionID ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( _bServer == SW_FALSE || isValidSlot( connectionId ) == false )
+        if ( _bServer == SW_FALSE || isValidSlot( connectionID ) == false )
             return 0;
-        const Slot& slot = _listSlot[static_cast<size_t>( connectionId )];
-        return slot._state == NetConnectionState::Connected && slot._security != nullptr ? slot._security->_principalId : 0;
+        const Slot& slot = _listSlot[static_cast<size_t>( connectionID )];
+        return slot._state == NetConnectionState::Connected && slot._security != nullptr ? slot._security->_principalID : 0;
     }
 
     uint64 NetHost::getAuthenticationFailureCount() const
@@ -1272,10 +1272,10 @@ namespace sw
         return _replayRejectedCount;
     }
 
-    uint32 NetHost::getProtocolId() const
+    uint32 NetHost::getProtocolID() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return _protocolId;
+        return _protocolID;
     }
 
     int32 NetHost::getMaxBytesPerSecond() const
@@ -1284,31 +1284,31 @@ namespace sw
         return _settings._maxBytesPerSecond;
     }
 
-    bool NetHost::getConnectionStats( int32 connectionId, NetConnectionStats& outStats ) const
+    bool NetHost::getConnectionStats( int32 connectionID, NetConnectionStats& outStats ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        if ( isValidSlot( connectionId ) == false || _listSlot[static_cast<size_t>( connectionId )]._state != NetConnectionState::Connected )
+        if ( isValidSlot( connectionID ) == false || _listSlot[static_cast<size_t>( connectionID )]._state != NetConnectionState::Connected )
             return false;
-        outStats = _listSlot[static_cast<size_t>( connectionId )]._connection.getStats();
+        outStats = _listSlot[static_cast<size_t>( connectionID )]._connection.getStats();
         return true;
     }
 
-    NetConnectionState NetHost::getConnectionState( int32 connectionId ) const
+    NetConnectionState NetHost::getConnectionState( int32 connectionID ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return isValidSlot( connectionId ) ? _listSlot[static_cast<size_t>( connectionId )]._state : NetConnectionState::Disconnected;
+        return isValidSlot( connectionID ) ? _listSlot[static_cast<size_t>( connectionID )]._state : NetConnectionState::Disconnected;
     }
 
-    const NetConnection* NetHost::findConnection( int32 connectionId ) const
+    const NetConnection* NetHost::findConnection( int32 connectionID ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return isValidSlot( connectionId ) && _listSlot[static_cast<size_t>( connectionId )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( connectionId )]._connection : nullptr;
+        return isValidSlot( connectionID ) && _listSlot[static_cast<size_t>( connectionID )]._state == NetConnectionState::Connected ? &_listSlot[static_cast<size_t>( connectionID )]._connection : nullptr;
     }
 
-    NetAddress NetHost::getConnectionAddress( int32 connectionId ) const
+    NetAddress NetHost::getConnectionAddress( int32 connectionID ) const
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        return isValidSlot( connectionId ) ? _listSlot[static_cast<size_t>( connectionId )]._address : NetAddress{};
+        return isValidSlot( connectionID ) ? _listSlot[static_cast<size_t>( connectionID )]._address : NetAddress{};
     }
 
     int32 NetHost::getConnectedCount() const

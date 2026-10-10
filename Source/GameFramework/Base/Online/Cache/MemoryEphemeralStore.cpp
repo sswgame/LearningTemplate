@@ -85,7 +85,7 @@ namespace sw
         , _mapScoreSet{}
         , _mapInbox{}
         , _manualTimeMs{ 0 }
-        , _nextInboxId{ 1 }
+        , _nextInboxID{ 1 }
         , _bManualTime{ SW_FALSE }
     {
     }
@@ -130,21 +130,21 @@ namespace sw
     uint64 MemoryEphemeralDatabase::registerInbox()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxId = _nextInboxId++;
-        _mapInbox[inboxId]              = Inbox{};
-        return inboxId;
+        const uint64            inboxID = _nextInboxID++;
+        _mapInbox[inboxID]              = Inbox{};
+        return inboxID;
     }
 
-    void MemoryEphemeralDatabase::unregisterInbox( uint64 inboxId )
+    void MemoryEphemeralDatabase::unregisterInbox( uint64 inboxID )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapInbox.erase( inboxId );
+        _mapInbox.erase( inboxID );
     }
 
-    void MemoryEphemeralDatabase::subscribe( uint64 inboxId, string_view channel )
+    void MemoryEphemeralDatabase::subscribe( uint64 inboxID, string_view channel )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
@@ -153,20 +153,20 @@ namespace sw
             listChannel.push_back( string{ channel } );
     }
 
-    void MemoryEphemeralDatabase::unsubscribe( uint64 inboxId, string_view channel )
+    void MemoryEphemeralDatabase::unsubscribe( uint64 inboxID, string_view channel )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listChannel = inboxIt->second._listChannel;
         listChannel.erase( std::remove( listChannel.begin(), listChannel.end(), channel ), listChannel.end() );
     }
 
-    int32 MemoryEphemeralDatabase::takeMessages( uint64 inboxId, vector<EphemeralMessage>& outListMessage )
+    int32 MemoryEphemeralDatabase::takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return 0;
         vector<EphemeralMessage>& listMessage = inboxIt->second._listMessage;
@@ -452,9 +452,9 @@ namespace sw
     void MemoryEphemeralDatabase::executePublish( const EphemeralRequest& request, EphemeralReply& outReply )
     {
         int64 receiverCount = 0;
-        for ( auto& [inboxId, inbox] : _mapInbox )
+        for ( auto& [inboxID, inbox] : _mapInbox )
         {
-            (void)inboxId;
+            (void)inboxID;
             const auto channelIt = std::find( inbox._listChannel.begin(), inbox._listChannel.end(), request._key );
             if ( channelIt == inbox._listChannel.end() )
                 continue;
@@ -472,8 +472,8 @@ namespace sw
     MemoryEphemeralStore::MemoryEphemeralStore( MemoryEphemeralDatabase* pDatabase )
         : _listReply{}
         , _pDatabase{ pDatabase }
-        , _inboxId{ pDatabase->registerInbox() }
-        , _nextRequestId{ 1 }
+        , _inboxID{ pDatabase->registerInbox() }
+        , _nextRequestID{ 1 }
         , _bShutdown{ SW_FALSE }
     {
     }
@@ -481,12 +481,12 @@ namespace sw
     MemoryEphemeralStore::~MemoryEphemeralStore()
     {
         if ( _bShutdown == SW_FALSE )
-            _pDatabase->unregisterInbox( _inboxId );
+            _pDatabase->unregisterInbox( _inboxID );
     }
 
     uint64 MemoryEphemeralStore::submit( const EphemeralRequest& request )
     {
-        const uint64   requestId = _nextRequestId++;
+        const uint64   requestID = _nextRequestID++;
         EphemeralReply reply;
         if ( _bShutdown == SW_TRUE )
             reply._result = EphemeralResult::Unavailable;
@@ -494,10 +494,10 @@ namespace sw
             reply._result = EphemeralResult::Invalid;
         else
             reply = _pDatabase->execute( request );
-        reply._requestId = requestId;
+        reply._requestID = requestID;
         reply._operation = request._operation;
         _listReply.push_back( std::move( reply ) );
-        return requestId;
+        return requestID;
     }
 
     int32 MemoryEphemeralStore::pollReplies( vector<EphemeralReply>& outListReply )
@@ -514,20 +514,20 @@ namespace sw
     void MemoryEphemeralStore::subscribe( string_view channel )
     {
         if ( _bShutdown == SW_FALSE && EphemeralRequest::isValidKey( channel ) )
-            _pDatabase->subscribe( _inboxId, channel );
+            _pDatabase->subscribe( _inboxID, channel );
     }
 
     void MemoryEphemeralStore::unsubscribe( string_view channel )
     {
         if ( _bShutdown == SW_FALSE )
-            _pDatabase->unsubscribe( _inboxId, channel );
+            _pDatabase->unsubscribe( _inboxID, channel );
     }
 
     int32 MemoryEphemeralStore::pollMessages( vector<EphemeralMessage>& outListMessage )
     {
         if ( _bShutdown == SW_TRUE )
             return 0;
-        return _pDatabase->takeMessages( _inboxId, outListMessage );
+        return _pDatabase->takeMessages( _inboxID, outListMessage );
     }
 
     void MemoryEphemeralStore::shutdown()
@@ -535,6 +535,6 @@ namespace sw
         if ( _bShutdown == SW_TRUE )
             return;
         _bShutdown = SW_TRUE;
-        _pDatabase->unregisterInbox( _inboxId );
+        _pDatabase->unregisterInbox( _inboxID );
     }
 } // namespace sw

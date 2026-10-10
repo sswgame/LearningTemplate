@@ -72,55 +72,55 @@ namespace sw
         return token != 0 ? token : 1u;
     }
 
-    TurnRoom* TurnRelayServer::findRoomMutable( uint32 roomId )
+    TurnRoom* TurnRelayServer::findRoomMutable( uint32 roomID )
     {
         for ( TurnRoom& room : _listRoom )
         {
-            if ( room._roomId == roomId )
+            if ( room._roomID == roomID )
                 return &room;
         }
         return nullptr;
     }
 
-    const TurnRoom* TurnRelayServer::findRoom( uint32 roomId ) const { return const_cast<TurnRelayServer*>( this )->findRoomMutable( roomId ); }
+    const TurnRoom* TurnRelayServer::findRoom( uint32 roomID ) const { return const_cast<TurnRelayServer*>( this )->findRoomMutable( roomID ); }
 
-    TurnRoom* TurnRelayServer::findRoomOfConnection( int32 connectionId )
+    TurnRoom* TurnRelayServer::findRoomOfConnection( int32 connectionID )
     {
         for ( TurnRoom& room : _listRoom )
         {
             for ( const TurnSeat& seat : room._listSeat )
             {
-                if ( seat._connectionId == connectionId )
+                if ( seat._connectionID == connectionID )
                     return &room;
             }
         }
         return nullptr;
     }
 
-    int32 TurnRelayServer::countPending( int32 connectionId ) const
+    int32 TurnRelayServer::countPending( int32 connectionID ) const
     {
         int32 count = 0;
         for ( const PendingMessage& pending : _listPending )
         {
-            count += pending._connectionId == connectionId ? 1 : 0;
+            count += pending._connectionID == connectionID ? 1 : 0;
         }
         return count;
     }
 
-    void TurnRelayServer::sendOrQueue( int32 connectionId )
+    void TurnRelayServer::sendOrQueue( int32 connectionID )
     {
-        const int32 pendingCount = countPending( connectionId );
-        if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) )
+        const int32 pendingCount = countPending( connectionID );
+        if ( pendingCount == 0 && _messageWriter.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) )
             return;
-        if ( _pHost->getConnectionState( connectionId ) != NetConnectionState::Connected )
+        if ( _pHost->getConnectionState( connectionID ) != NetConnectionState::Connected )
             return; // 닫힌 연결 — 돌아오면 표로 다시 받는다
         if ( pendingCount >= kMaxPendingPerConnection )
         {
-            SW_LOG_WARNING( "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionId, pendingCount );
-            _pHost->disconnect( connectionId );
+            SW_LOG_WARNING( "connection %# does not acknowledge - %# messages are waiting, disconnecting it", connectionID, pendingCount );
+            _pHost->disconnect( connectionID );
             return;
         }
-        _listPending.push_back( PendingMessage{ _messageWriter.getBytes(), connectionId } );
+        _listPending.push_back( PendingMessage{ _messageWriter.getBytes(), connectionID } );
     }
 
     void TurnRelayServer::flushPending()
@@ -134,12 +134,12 @@ namespace sw
             bool            bBlocked = false;
             for ( const int32 blocked : _listBlockedScratch )
             {
-                bBlocked = bBlocked || blocked == pending._connectionId;
+                bBlocked = bBlocked || blocked == pending._connectionID;
             }
-            if ( bBlocked == false && _pHost->sendMessage( pending._connectionId, NetChannelType::ReliableOrdered, pending._buffer ) )
+            if ( bBlocked == false && _pHost->sendMessage( pending._connectionID, NetChannelType::ReliableOrdered, pending._buffer ) )
                 continue;
             if ( bBlocked == false )
-                _listBlockedScratch.push_back( pending._connectionId );
+                _listBlockedScratch.push_back( pending._connectionID );
             if ( keepCount != index )
                 _listPending[keepCount] = std::move( pending );
             ++keepCount;
@@ -149,18 +149,18 @@ namespace sw
 
     void TurnRelayServer::flushSeat( const TurnRoom& room, TurnSeat& seat )
     {
-        if ( seat._connectionId < 0 )
+        if ( seat._connectionID < 0 )
             return;
         while ( seat._sentActionCount < static_cast<int32>( room._listAction.size() ) )
         {
             const int32       index  = seat._sentActionCount;
             const TurnAction& action = room._listAction[static_cast<size_t>( index )];
             BitWriter&        writer = _messageWriter.begin( NetTurnRelayMessage::kApplied );
-            writer.writeVarUint( room._roomId );
+            writer.writeVarUint( room._roomID );
             writer.writeVarUint( static_cast<uint64>( index ) );
             writer.writeVarUint( static_cast<uint64>( action._seat ) );
             writer.writeBlob( action._buffer.data(), static_cast<int32>( action._buffer.size() ) );
-            if ( _messageWriter.send( *_pHost, seat._connectionId, NetChannelType::ReliableOrdered ) == false )
+            if ( _messageWriter.send( *_pHost, seat._connectionID, NetChannelType::ReliableOrdered ) == false )
                 return; // 창이 찼다 — `update` 가 이어 보낸다
             ++seat._sentActionCount;
         }
@@ -180,52 +180,52 @@ namespace sw
         }
     }
 
-    void TurnRelayServer::sendJoined( int32 connectionId, uint32 roomId, int32 seat, uint32 token )
+    void TurnRelayServer::sendJoined( int32 connectionID, uint32 roomID, int32 seat, uint32 token )
     {
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kJoined );
-        writer.writeVarUint( roomId );
+        writer.writeVarUint( roomID );
         writer.writeVarUint( static_cast<uint64>( seat ) );
         writer.writeUint32( token );
-        sendOrQueue( connectionId );
+        sendOrQueue( connectionID );
     }
 
-    void TurnRelayServer::sendDenied( int32 connectionId, uint32 roomId, TurnRejectReason reason )
+    void TurnRelayServer::sendDenied( int32 connectionID, uint32 roomID, TurnRejectReason reason )
     {
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kDenied );
-        writer.writeVarUint( roomId );
+        writer.writeVarUint( roomID );
         writer.writeBits( static_cast<uint32>( reason ), 8 );
-        sendOrQueue( connectionId );
+        sendOrQueue( connectionID );
     }
 
-    bool TurnRelayServer::handleJoin( int32 connectionId, BitReader& reader )
+    bool TurnRelayServer::handleJoin( int32 connectionID, BitReader& reader )
     {
-        const uint32 roomId     = static_cast<uint32>( reader.readVarUint() );
+        const uint32 roomID     = static_cast<uint32>( reader.readVarUint() );
         const int64  wantedSeat = reader.readVarInt();
         const uint32 token      = reader.readUint32();
         const uint64 knownCount = reader.readVarUint(); // 이미 가진 행동 수
         if ( reader.hasOverflowed() )
             return false;
         // 한 연결은 자리 하나 — 같은 방이면 가진 자리를 다시 알리고, 다른 방이면 거절한다.
-        const TurnRoom* pHeldRoom = findRoomOfConnection( connectionId );
+        const TurnRoom* pHeldRoom = findRoomOfConnection( connectionID );
         if ( pHeldRoom != nullptr )
         {
-            if ( pHeldRoom->_roomId != roomId )
+            if ( pHeldRoom->_roomID != roomID )
             {
-                sendDenied( connectionId, roomId, TurnRejectReason::AlreadySeated );
+                sendDenied( connectionID, roomID, TurnRejectReason::AlreadySeated );
                 return true;
             }
             for ( size_t index = 0; index < pHeldRoom->_listSeat.size(); ++index )
             {
-                if ( pHeldRoom->_listSeat[index]._connectionId == connectionId )
-                    sendJoined( connectionId, roomId, static_cast<int32>( index ), pHeldRoom->_listSeat[index]._token );
+                if ( pHeldRoom->_listSeat[index]._connectionID == connectionID )
+                    sendJoined( connectionID, roomID, static_cast<int32>( index ), pHeldRoom->_listSeat[index]._token );
             }
             return true;
         }
-        TurnRoom* pRoom = findRoomMutable( roomId );
+        TurnRoom* pRoom = findRoomMutable( roomID );
         if ( pRoom == nullptr )
         {
             TurnRoom room;
-            room._roomId = roomId;
+            room._roomID = roomID;
             room._listSeat.resize( static_cast<size_t>( _seatCount ) );
             _listRoom.push_back( room );
             pRoom = &_listRoom.back();
@@ -238,9 +238,9 @@ namespace sw
                 seatIndex = static_cast<int32>( index );
         }
         const bool bReturning = seatIndex >= 0;
-        if ( bReturning && pRoom->_listSeat[static_cast<size_t>( seatIndex )]._connectionId >= 0 )
+        if ( bReturning && pRoom->_listSeat[static_cast<size_t>( seatIndex )]._connectionID >= 0 )
         {
-            sendDenied( connectionId, roomId, TurnRejectReason::SeatInUse );
+            sendDenied( connectionID, roomID, TurnRejectReason::SeatInUse );
             return true;
         }
         if ( seatIndex < 0 )
@@ -257,20 +257,20 @@ namespace sw
         }
         if ( seatIndex < 0 )
         {
-            sendDenied( connectionId, roomId, TurnRejectReason::RoomFull );
+            sendDenied( connectionID, roomID, TurnRejectReason::RoomFull );
             return true;
         }
         TurnSeat& seat        = pRoom->_listSeat[static_cast<size_t>( seatIndex )];
         seat._bTaken          = SW_TRUE;
-        seat._connectionId    = connectionId;
+        seat._connectionID    = connectionID;
         seat._sentActionCount = static_cast<int32>( MathUtil::min<uint64>( knownCount, pRoom->_listAction.size() ) );
         if ( bReturning == false )
             seat._token = nextToken();
-        sendJoined( connectionId, roomId, seatIndex, seat._token );
+        sendJoined( connectionID, roomID, seatIndex, seat._token );
 
         TurnRelayEvent event;
         event._kind   = bReturning ? TurnRelayEvent::Kind::SeatReturned : TurnRelayEvent::Kind::Joined;
-        event._roomId = roomId;
+        event._roomID = roomID;
         event._seat   = seatIndex;
         _eventBuffer.push( event );
 
@@ -286,41 +286,41 @@ namespace sw
         pRoom->_bStarted      = SW_TRUE;
         for ( const TurnSeat& other : pRoom->_listSeat )
         {
-            const bool bTold = other._connectionId >= 0 && ( bStartsNow || other._connectionId == connectionId );
+            const bool bTold = other._connectionID >= 0 && ( bStartsNow || other._connectionID == connectionID );
             if ( bTold == false )
                 continue;
             BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kStarted );
-            writer.writeVarUint( roomId );
+            writer.writeVarUint( roomID );
             writer.writeVarUint( static_cast<uint64>( pRoom->_currentSeat ) );
-            sendOrQueue( other._connectionId );
+            sendOrQueue( other._connectionID );
         }
         flushSeat( *pRoom, seat );
         if ( bStartsNow )
         {
             TurnRelayEvent startEvent;
             startEvent._kind   = TurnRelayEvent::Kind::Started;
-            startEvent._roomId = roomId;
+            startEvent._roomID = roomID;
             startEvent._seat   = pRoom->_currentSeat;
             _eventBuffer.push( startEvent );
         }
         return true;
     }
 
-    bool TurnRelayServer::handleAction( int32 connectionId, BitReader& reader )
+    bool TurnRelayServer::handleAction( int32 connectionID, BitReader& reader )
     {
-        const uint32  roomId   = static_cast<uint32>( reader.readVarUint() );
-        const int32   submitId = static_cast<int32>( reader.readVarUint() );
+        const uint32  roomID   = static_cast<uint32>( reader.readVarUint() );
+        const int32   submitID = static_cast<int32>( reader.readVarUint() );
         vector<uint8> actionBuffer;
         if ( reader.readBlob( actionBuffer, NetTurnRelayMessage::kMaxActionBytes ) == false )
             return false;
-        TurnRoom*        pRoom  = findRoomMutable( roomId );
+        TurnRoom*        pRoom  = findRoomMutable( roomID );
         int32            seat   = -1;
         TurnRejectReason reason = TurnRejectReason::UnknownRoom;
         if ( pRoom != nullptr )
         {
             for ( size_t index = 0; index < pRoom->_listSeat.size(); ++index )
             {
-                if ( pRoom->_listSeat[index]._connectionId == connectionId )
+                if ( pRoom->_listSeat[index]._connectionID == connectionID )
                     seat = static_cast<int32>( index );
             }
             if ( seat < 0 )
@@ -339,7 +339,7 @@ namespace sw
                 }
                 TurnRelayEvent event;
                 event._kind   = TurnRelayEvent::Kind::ActionApplied;
-                event._roomId = roomId;
+                event._roomID = roomID;
                 event._seat   = seat;
                 event._index  = static_cast<int32>( pRoom->_listAction.size() ) - 1;
                 event._buffer = std::move( actionBuffer );
@@ -348,10 +348,10 @@ namespace sw
             }
         }
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kRejected );
-        writer.writeVarUint( roomId );
-        writer.writeVarUint( static_cast<uint64>( submitId ) );
+        writer.writeVarUint( roomID );
+        writer.writeVarUint( static_cast<uint64>( submitID ) );
         writer.writeBits( static_cast<uint32>( reason ), 8 );
-        sendOrQueue( connectionId );
+        sendOrQueue( connectionID );
         return true;
     }
 
@@ -359,19 +359,19 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return NetHandleResult::Handled;
-        const bool bWellFormed = context._kind == NetTurnRelayMessage::kJoin ? handleJoin( context._connectionId, body )
-                                                                             : handleAction( context._connectionId, body );
+        const bool bWellFormed = context._kind == NetTurnRelayMessage::kJoin ? handleJoin( context._connectionID, body )
+                                                                             : handleAction( context._connectionID, body );
         return bWellFormed ? NetHandleResult::Handled : NetHandleResult::Malformed;
     }
 
-    void TurnRelayServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    void TurnRelayServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
         // 연결 id 는 다음 연결이 다시 쓴다 — 그 연결에 줄 선 알림도 버린다.
         size_t keepCount = 0;
         for ( size_t index = 0; index < _listPending.size(); ++index )
         {
-            if ( _listPending[index]._connectionId == connectionId )
+            if ( _listPending[index]._connectionID == connectionID )
                 continue;
             if ( keepCount != index )
                 _listPending[keepCount] = std::move( _listPending[index] );
@@ -383,12 +383,12 @@ namespace sw
             for ( size_t index = 0; index < room._listSeat.size(); ++index )
             {
                 TurnSeat& seat = room._listSeat[index];
-                if ( seat._connectionId != connectionId )
+                if ( seat._connectionID != connectionID )
                     continue;
-                seat._connectionId = -1; // 자리 · 표는 남긴다
+                seat._connectionID = -1; // 자리 · 표는 남긴다
                 TurnRelayEvent event;
                 event._kind   = TurnRelayEvent::Kind::SeatLeft;
-                event._roomId = room._roomId;
+                event._roomID = room._roomID;
                 event._seat   = static_cast<int32>( index );
                 _eventBuffer.push( event );
             }
@@ -407,10 +407,10 @@ namespace sw
         : _listAction{}
         , _eventBuffer{}
         , _pHost{ nullptr }
-        , _roomId{ 0 }
+        , _roomID{ 0 }
         , _token{ 0 }
         , _seat{ -1 }
-        , _nextSubmitId{ 0 }
+        , _nextSubmitID{ 0 }
         , _bStarted{ SW_FALSE }
         , _messageWriter{}
     {
@@ -418,16 +418,16 @@ namespace sw
 
     void TurnRelayClient::initialize( NetHost* pHost ) { _pHost = pHost; }
 
-    void TurnRelayClient::join( uint32 roomId, int32 seat )
+    void TurnRelayClient::join( uint32 roomID, int32 seat )
     {
-        if ( _roomId != roomId )
+        if ( _roomID != roomID )
         {
             _listAction.clear();
             _token = 0;
         }
-        _roomId           = roomId;
+        _roomID           = roomID;
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kJoin );
-        writer.writeVarUint( roomId );
+        writer.writeVarUint( roomID );
         writer.writeVarInt( seat );
         writer.writeUint32( _token );
         writer.writeVarUint( _listAction.size() );
@@ -441,23 +441,23 @@ namespace sw
             SW_LOG_ERROR( "Turn action of %# bytes exceeds the relay limit of %# bytes - not sent", buffer.size(), NetTurnRelayMessage::kMaxActionBytes );
             return -1;
         }
-        const int32 submitId = _nextSubmitId++;
+        const int32 submitID = _nextSubmitID++;
         BitWriter&  writer   = _messageWriter.begin( NetTurnRelayMessage::kAction );
-        writer.writeVarUint( _roomId );
-        writer.writeVarUint( static_cast<uint64>( submitId ) );
+        writer.writeVarUint( _roomID );
+        writer.writeVarUint( static_cast<uint64>( submitID ) );
         writer.writeBlob( buffer.data(), static_cast<int32>( buffer.size() ) );
         (void)_pHost->sendMessage( 0, NetChannelType::ReliableOrdered, writer.getBytes() );
-        return submitId;
+        return submitID;
     }
 
     NetHandleResult TurnRelayClient::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         BitReader&     reader = body;
         TurnRelayEvent event;
-        event._roomId = static_cast<uint32>( reader.readVarUint() );
+        event._roomID = static_cast<uint32>( reader.readVarUint() );
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
-        if ( event._roomId != _roomId )
+        if ( event._roomID != _roomID )
             return NetHandleResult::Handled;
         switch ( context._kind )
         {

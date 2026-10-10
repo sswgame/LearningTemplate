@@ -41,11 +41,11 @@ namespace sw
         enum class Kind : uint8
         {
             ClueFound = 0,
-            StepCompleted, ///< _stepId — 다음 단계로
+            StepCompleted, ///< _stepID — 다음 단계로
             Solved         ///< 마지막 단계까지 끝났다
         };
-        hashed_string _stepId{};
-        hashed_string _clueId{};
+        hashed_string _stepID{};
+        hashed_string _clueID{};
         Kind          _kind{ Kind::ClueFound };
     };
 } // namespace sw
@@ -68,16 +68,16 @@ namespace sw
         WitcherInvestigation();
 
         /** @brief 계약으로 시작합니다. 계약이 없으면 false 입니다. */
-        [[nodiscard]] bool initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId, QuestLog* pQuestLog );
+        [[nodiscard]] bool initialize( const WitcherCatalog* pCatalog, const hashed_string& contractID, QuestLog* pQuestLog );
         /** @brief 위쳐 감각 — @p position 에서 @p senseRadius 안의, 지금 찾을 수 있는(순서가 열린) 아직 못 찾은 단서입니다. */
         void senseClues( const float3& position, float32 senseRadius, vector<const WitcherClueDef*>& outListClue ) const;
         /** @brief @p position 에서 단서를 조사합니다. */
-        WitcherClueResult investigate( const hashed_string& clueId, const float3& position );
+        WitcherClueResult investigate( const hashed_string& clueID, const float3& position );
 
-        bool          isClueFound( const hashed_string& clueId ) const;
+        bool          isClueFound( const hashed_string& clueID ) const;
         bool          isSolved() const;
         int32         getStepIndex() const { return _stepIndex; }
-        hashed_string getStepId() const;
+        hashed_string getStepID() const;
         void          drainEvents( vector<WitcherInvestigationEvent>& outListEvent );
         /** @brief 계약 id · 단계 · 지금 단계에서 찾은 단서를 씁니다. 빌린 퀘스트 일지 · 카탈로그는 싣지 않는다. */
         void writeState( Archive& outArchive ) const;
@@ -87,7 +87,7 @@ namespace sw
     private:
         /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서입니다. 다 찾았으면 −1 입니다. */
         int32 computeOpenOrder() const;
-        bool  isFoundInternal( const hashed_string& clueId ) const;
+        bool  isFoundInternal( const hashed_string& clueID ) const;
 
         vector<hashed_string>                  _listFound; ///< 지금 단계에서 찾은 단서
         EventBuffer<WitcherInvestigationEvent> _eventBuffer;
@@ -125,7 +125,7 @@ namespace sw
 
         WitcherHaggle();
 
-        [[nodiscard]] bool  initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId );
+        [[nodiscard]] bool  initialize( const WitcherCatalog* pCatalog, const hashed_string& contractID );
         WitcherHaggleResult propose( int32 askReward );
         /** @brief 지금 제안을 그대로 받습니다. */
         int32 acceptOffer();

@@ -204,11 +204,11 @@ namespace
     }
 
     /** @brief 어트리뷰트 하나에 모디파이어 하나를 거는 이펙트 정의입니다. */
-    shared_ptr<GameplayEffectDef> makeModifierEffect( const utf8* pId, EffectDurationPolicy policy, float32 seconds, const hashed_string& attribute,
+    shared_ptr<GameplayEffectDef> makeModifierEffect( const utf8* pID, EffectDurationPolicy policy, float32 seconds, const hashed_string& attribute,
                                                       AttributeModOp op, float32 magnitude )
     {
         shared_ptr<GameplayEffectDef> pDef = make_shared<GameplayEffectDef>();
-        pDef->_id                          = hashed_string( pId );
+        pDef->_id                          = hashed_string( pID );
         pDef->_durationPolicy              = policy;
         pDef->_duration._baseValue         = seconds;
         GameplayEffectModifier modifier;
@@ -826,7 +826,7 @@ SW_TEST_CASE( AbilitySystemTest, TriggeredApplyEffectsHitsTheOtherPartyOfTheEven
     SW_ASSERT_TRUE( pAttacker != nullptr && pDefender != nullptr );
     pAttacker->setCatalog( &catalog );
     pDefender->setCatalog( &catalog );
-    SW_ASSERT_TRUE( pDefender->giveAbilityById( "GA_Thorns" ).isValid() );
+    SW_ASSERT_TRUE( pDefender->giveAbilityByID( "GA_Thorns" ).isValid() );
 
     shared_ptr<GameplayEffectDef> pDamage  = make_shared<GameplayEffectDef>();
     pDamage->_id                           = hashed_string( "Hit" );

@@ -21,7 +21,7 @@ namespace sw
 
     namespace internal
     {
-        enum class ModuleServiceId : uint32
+        enum class ModuleServiceID : uint32
         {
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )       Type,
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) Type,
@@ -38,9 +38,9 @@ namespace sw
             Count
         };
 
-        inline constexpr uint32 kModuleServiceCount = static_cast<uint32>( ModuleServiceId::Count );
+        inline constexpr uint32 kModuleServiceCount = static_cast<uint32>( ModuleServiceID::Count );
 
-        inline constexpr uint32 toRawServiceId( ModuleServiceId id )
+        inline constexpr uint32 toRawServiceID( ModuleServiceID id )
         {
             return static_cast<uint32>( id );
         }
@@ -48,27 +48,27 @@ namespace sw
         template <typename T>
         struct ModuleServiceTraits
         {
-            static constexpr ModuleServiceId id = ModuleServiceId::Count;
+            static constexpr ModuleServiceID id = ModuleServiceID::Count;
         };
 
-#define SW_DECLARE_MODULE_SERVICE( Type, Id )     \
+#define SW_DECLARE_MODULE_SERVICE( Type, ID )     \
     template <>                                   \
     struct ModuleServiceTraits<Type>              \
     {                                             \
-        static constexpr ModuleServiceId id = Id; \
+        static constexpr ModuleServiceID id = ID; \
     }
 
-#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
+#define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceID::Type );
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
-    SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );                                  \
-    SW_DECLARE_MODULE_SERVICE( const Type, ModuleServiceId::Type );
-#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
+    SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceID::Type );                                  \
+    SW_DECLARE_MODULE_SERVICE( const Type, ModuleServiceID::Type );
+#define SW_ENGINE_SERVICE_OPT( member, Tag, Type, getter, visibility, creator ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceID::Type );
 #include "RuntimeAPI/Service/EngineServiceList.xxx"
 #undef SW_ENGINE_SERVICE
 #undef SW_ENGINE_SERVICE_CONST
 #undef SW_ENGINE_SERVICE_OPT
 
-#define SW_HOST_SERVICE( member, Tag, Type, getter, visibility ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceId::Type );
+#define SW_HOST_SERVICE( member, Tag, Type, getter, visibility ) SW_DECLARE_MODULE_SERVICE( Type, ModuleServiceID::Type );
 #include "RuntimeAPI/Service/HostServiceList.xxx"
 #undef SW_HOST_SERVICE
     } // namespace internal

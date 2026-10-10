@@ -18,7 +18,7 @@ namespace sw
         , _listDone{}
         , _transport{}
         , _settings{}
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _ioThreadCount{ 0 }
         , _bInitialized{ SW_FALSE }
     {
@@ -68,28 +68,28 @@ namespace sw
     uint64 HTTPClient::submitRequest( const HTTPClientRequest& request, int64 nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            requestId = _nextRequestId++;
+        const uint64            requestID = _nextRequestID++;
         HTTPAddress             url;
         if ( _bInitialized == SW_FALSE )
         {
-            failImmediately( requestId, "client is not running" );
-            return requestId;
+            failImmediately( requestID, "client is not running" );
+            return requestID;
         }
         if ( HTTPAddress::parse( request._url, url ) == false )
         {
-            failImmediately( requestId, "malformed URL" );
-            return requestId;
+            failImmediately( requestID, "malformed URL" );
+            return requestID;
         }
         if ( static_cast<int32>( _mapCall.size() ) >= _settings._maxConcurrentRequests )
         {
-            failImmediately( requestId, "too many requests in flight" );
-            return requestId;
+            failImmediately( requestID, "too many requests in flight" );
+            return requestID;
         }
         NetAddress address;
         if ( NetAddress::parse( url._host == "localhost" ? string_view( "127.0.0.1" ) : string_view( url._host ), url._port, address ) == false )
         {
-            failImmediately( requestId, "host name resolution is not supported (IPv4 or localhost only)" );
-            return requestId;
+            failImmediately( requestID, "host name resolution is not supported (IPv4 or localhost only)" );
+            return requestID;
         }
         ITLSContext* pTLSContext = nullptr;
         if ( url._bSecure == SW_TRUE )
@@ -97,30 +97,30 @@ namespace sw
             const auto contextIt = _mapHostToTLSContext.find( url._host );
             if ( contextIt == _mapHostToTLSContext.end() || contextIt->second == nullptr )
             {
-                failImmediately( requestId, "no TLS context for this host" );
-                return requestId;
+                failImmediately( requestID, "no TLS context for this host" );
+                return requestID;
             }
             pTLSContext = contextIt->second;
         }
         unique_ptr<Call> call = make_unique<Call>();
-        call->_requestId      = requestId;
+        call->_requestID      = requestID;
         call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
         call->_parser.reset( HTTPMessageKind::Response, _settings._maxResponseBodyBytes );
         HTTPWriteUtil::writeRequest( request, url, call->_requestBytes );
         if ( call->_link.initialize( pTLSContext ) == false )
         {
-            failImmediately( requestId, "could not create a TLS session" );
-            return requestId;
+            failImmediately( requestID, "could not create a TLS session" );
+            return requestID;
         }
         const StreamConnectionHandle handle = _transport->connect( address );
         if ( handle.isValid() == false )
         {
-            failImmediately( requestId, "could not connect" );
-            return requestId;
+            failImmediately( requestID, "could not connect" );
+            return requestID;
         }
         call->_link.setHandle( handle );
         _mapCall[handle.packed()] = std::move( call );
-        return requestId;
+        return requestID;
     }
 
     void HTTPClient::tick( int64 nowMs )
@@ -134,7 +134,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             for ( auto& [packed, call] : _mapCall )
             {
-                if ( nowMs >= call->_deadlineMs && call->_requestId != 0 )
+                if ( nowMs >= call->_deadlineMs && call->_requestID != 0 )
                 {
                     finishLocked( *call, "timed out" );
                     listExpired.push_back( StreamConnectionHandle::fromPacked( packed ) );
@@ -166,7 +166,7 @@ namespace sw
         for ( const auto& [packed, call] : _mapCall )
         {
             (void)packed;
-            count += call->_requestId != 0 ? 1 : 0;
+            count += call->_requestID != 0 ? 1 : 0;
         }
         return count;
     }
@@ -177,7 +177,7 @@ namespace sw
         (void)bAccepted;
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              callIt = _mapCall.find( handle.packed() );
-        if ( callIt == _mapCall.end() || callIt->second->_requestId == 0 )
+        if ( callIt == _mapCall.end() || callIt->second->_requestID == 0 )
             return;
         Call& call    = *callIt->second;
         call._bOpened = SW_TRUE;
@@ -193,7 +193,7 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              callIt = _mapCall.find( handle.packed() );
-        if ( callIt == _mapCall.end() || callIt->second->_requestId == 0 )
+        if ( callIt == _mapCall.end() || callIt->second->_requestID == 0 )
             return;
         Call& call = *callIt->second;
         call._plainBytes.clear();
@@ -217,7 +217,7 @@ namespace sw
         if ( callIt == _mapCall.end() )
             return;
         Call& call = *callIt->second;
-        if ( call._requestId != 0 )
+        if ( call._requestID != 0 )
         {
             const HTTPParseState state = call._parser.finishOnClose();
             if ( state == HTTPParseState::Complete )
@@ -230,11 +230,11 @@ namespace sw
 
     void HTTPClient::finishLocked( Call& call, const utf8* pFailure )
     {
-        if ( call._requestId == 0 )
+        if ( call._requestID == 0 )
             return;
         HTTPClientResponse& response = _listDone.emplace_back();
-        response._requestId          = call._requestId;
-        call._requestId              = 0; // 한 번만 — 닫힘 콜백이 다시 끝내지 않게
+        response._requestID          = call._requestID;
+        call._requestID              = 0; // 한 번만 — 닫힘 콜백이 다시 끝내지 않게
         if ( pFailure != nullptr )
         {
             response._bTransportFailed = SW_TRUE;
@@ -246,10 +246,10 @@ namespace sw
         response._bodyBytes  = std::move( call._parser.getBody() );
     }
 
-    void HTTPClient::failImmediately( uint64 requestId, const utf8* pFailure )
+    void HTTPClient::failImmediately( uint64 requestID, const utf8* pFailure )
     {
         HTTPClientResponse& response = _listDone.emplace_back();
-        response._requestId          = requestId;
+        response._requestID          = requestID;
         response._bTransportFailed   = SW_TRUE;
         response._failureText        = pFailure;
     }

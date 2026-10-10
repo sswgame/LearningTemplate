@@ -28,7 +28,7 @@ namespace sw
     {
         vector<string> _listFilePath{}; ///< 덤프 · 컨텍스트 · 스택 · 빵부스러기 · 로그(매니페스트 제외)
         string         _folder{};
-        string         _sessionId{};
+        string         _sessionID{};
         string         _manifest{}; ///< manifest.json 의 글
     };
 } // namespace sw

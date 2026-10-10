@@ -76,7 +76,7 @@ namespace sw
 
         const hashed_string& getCurrentStateName() const { return _currentStateName; }
         /** @brief 지금 노드 id 입니다. 그래프 밖이면 0 입니다. */
-        int32                 getCurrentNodeId() const { return _currentNodeId; }
+        int32                 getCurrentNodeID() const { return _currentNodeID; }
         AnimPlayer&           getPlayer() { return _player; }
         const AnimPlayer&     getPlayer() const { return _player; }
         const AnimGraphAsset* getGraph() const { return _pGraph; }
@@ -95,7 +95,7 @@ namespace sw
         hashed_string              _currentStateName;
         const AnimGraphAsset*      _pGraph;
         const IAnimPlayableSource* _pSource;
-        int32                      _currentNodeId;
+        int32                      _currentNodeID;
         float32                    _defaultBlendSeconds;
     };
 } // namespace sw

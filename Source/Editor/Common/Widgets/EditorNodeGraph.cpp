@@ -60,7 +60,7 @@ namespace sw::editor
         }
     }
 
-    bool EditorNodeGraph::beginCanvas( const utf8* pCanvasId, const utf8* pSettingsFileName )
+    bool EditorNodeGraph::beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName )
     {
         ensureContext( pSettingsFileName );
         if ( _pEditor == nullptr )
@@ -72,7 +72,7 @@ namespace sw::editor
         _canvasSize            = float2{ available.x, available.y };
 
         ed::SetCurrentEditor( _pEditor );
-        ed::Begin( pCanvasId );
+        ed::Begin( pCanvasID );
         return true;
     }
 

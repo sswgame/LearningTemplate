@@ -79,7 +79,7 @@ namespace sw
         outMerged = MergedMesh{};
         if ( listSource.empty() )
             return true;
-        const uint32 skeletonId = listSource[0]._skeletonId;
+        const uint32 skeletonID = listSource[0]._skeletonID;
         for ( const MeshMergeSource& source : listSource )
         {
             if ( source._pGeometry == nullptr || source._pGeometry->isValid() == false )
@@ -88,7 +88,7 @@ namespace sw
                     *pOutError = string( "merge part '" ) + source._name.c_str() + "' has no valid geometry";
                 return false;
             }
-            if ( source._skeletonId != skeletonId )
+            if ( source._skeletonID != skeletonID )
             {
                 // 애니메이션 단위가 다르면 포즈 버퍼가 다르다 — 한 형상으로 그릴 수 없다.
                 if ( pOutError != nullptr )
@@ -96,7 +96,7 @@ namespace sw
                 return false;
             }
         }
-        outMerged._skeletonId = skeletonId;
+        outMerged._skeletonID = skeletonID;
 
         // 머티리얼 묶음은 처음 나온 순서. 묶음 안의 부품은 입력 순서.
         vector<hashed_string> listGroup;

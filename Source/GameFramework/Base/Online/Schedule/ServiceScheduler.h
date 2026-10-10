@@ -33,7 +33,7 @@ namespace sw
     /** @brief 작업 하나의 일정입니다. */
     struct ScheduleDefinition
     {
-        string       _jobId{}; ///< `[0-9a-z_.]`
+        string       _jobID{}; ///< `[0-9a-z_.]`
         int64        _windowStartMs{ 0 };
         int64        _windowEndMs{ 0 };
         int64        _leaseMs{ 10 * 60 * 1000 };
@@ -48,7 +48,7 @@ namespace sw
     /** @brief 차지한 회차 하나입니다. */
     struct ScheduledRun
     {
-        string _jobId{};
+        string _jobID{};
         int64  _occurrenceMs{ 0 }; ///< 회차의 정한 시각
         uint64 _runToken{ 0 };     ///< `completeRun` 에 돌려준다(차지 레코드의 판)
     };
@@ -85,7 +85,7 @@ namespace sw
         ServiceScheduler( const ServiceScheduler& )            = delete;
         ServiceScheduler& operator=( const ServiceScheduler& ) = delete;
 
-        void initialize( IServiceStore* pStore, uint64 serverId );
+        void initialize( IServiceStore* pStore, uint64 serverID );
         void shutdown();
 
         /** @brief 작업을 올립니다. 일정이 틀리면(작업 id 문자 · 시각 범위 · 임대) 경고를 남기고 올리지 않는다 — 올렸으면 true 입니다. */
@@ -131,7 +131,7 @@ namespace sw
 
         vector<Job>    _listJob;
         IServiceStore* _pStore;
-        uint64         _serverId;
+        uint64         _serverID;
         int64          _lastTickMs;
         int32          _pendingWorkCount;
     };

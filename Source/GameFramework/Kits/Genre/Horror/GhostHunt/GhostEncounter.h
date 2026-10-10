@@ -69,7 +69,7 @@ namespace sw
     struct GhostEvent
     {
         float32        _amount{ 0.0f };
-        uint32         _ghostId{ 0 };
+        uint32         _ghostID{ 0 };
         int32          _coins{ 0 };
         GhostEventType _type{ GhostEventType::Appeared };
     };
@@ -106,8 +106,8 @@ namespace sw
         /** @brief 유령을 모두 치웁니다(방을 나갔다). 흡입도 끊습니다. */
         void clear();
         /** @brief 유령을 숨은 채로 둡니다. 유령 번호(1 부터)이고 모르는 종류면 0 입니다. */
-        uint32 spawnGhost( const hashed_string& ghostId, const float3& position );
-        void   setGhostPosition( uint32 ghostId, const float3& position );
+        uint32 spawnGhost( const hashed_string& ghostID, const float3& position );
+        void   setGhostPosition( uint32 ghostID, const float3& position );
 
         /** @brief 보통 손전등을 비춥니다 — 원뿔 안에서 공격 중인(심장이 드러난) 유령이 기절합니다. 기절시킨 수입니다. */
         int32 shineBeam( const float3& eye, const float3& forward );
@@ -119,7 +119,7 @@ namespace sw
         bool isInCone( const float3& eye, const float3& forward, const float3& position, bool bStrobe ) const;
 
         /** @brief 기절한 유령을 빨아들이기 시작합니다. 거리 밖 · 기절이 아님 · 이미 흡입 중이면 false 입니다. */
-        [[nodiscard]] bool startSuction( uint32 ghostId, const float3& playerPosition );
+        [[nodiscard]] bool startSuction( uint32 ghostID, const float3& playerPosition );
         /** @brief 흡입을 그만둡니다(버튼을 뗐다) — 유령이 달아나 숨습니다. */
         void stopSuction();
         /**
@@ -140,7 +140,7 @@ namespace sw
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌거나 카탈로그에 없는 유령이면 false 이고 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        const GhostInstance*         findGhost( uint32 ghostId ) const;
+        const GhostInstance*         findGhost( uint32 ghostID ) const;
         const vector<GhostInstance>& getGhosts() const { return _listGhost; }
         int32                        countRemaining() const;
         uint32                       getSuctionTarget() const { return _suctionTarget; }
@@ -150,11 +150,11 @@ namespace sw
         float32                      computeVacuumPower() const;
 
     private:
-        GhostInstance* findGhostMutable( uint32 ghostId );
+        GhostInstance* findGhostMutable( uint32 ghostID );
         void           enterState( GhostInstance& ghost, GhostState state );
         void           chooseFleeDirection( GhostInstance& ghost );
         void           applySuctionDamage( GhostInstance& ghost, float32 damage );
-        void           pushEvent( GhostEventType type, uint32 ghostId, float32 amount = 0.0f, int32 coins = 0 );
+        void           pushEvent( GhostEventType type, uint32 ghostID, float32 amount = 0.0f, int32 coins = 0 );
 
         const GhostCatalog*     _pCatalog;
         GameRandom              _random;
@@ -163,7 +163,7 @@ namespace sw
         float32                 _strobeCharge;
         float32                 _surgeGauge; ///< 0..1
         uint32                  _suctionTarget;
-        uint32                  _nextGhostId;
+        uint32                  _nextGhostID;
         int32                   _vacuumStage;
     };
 } // namespace sw

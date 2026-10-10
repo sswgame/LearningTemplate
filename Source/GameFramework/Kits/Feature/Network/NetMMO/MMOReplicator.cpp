@@ -27,13 +27,13 @@ namespace sw
             /**
              * @brief 엔티티 id 를 공간 해시의 키로 바꿉니다. 격자는 키를 비교 · 해시만 하므로 세대는 늘 1 입니다(세대 0 은 무효 핸들이라 격자가 받지 않는다).
              */
-            static SlotHandle makeGridKey( uint32 entityId ) { return SlotHandle::make( entityId, 1u ); }
+            static SlotHandle makeGridKey( uint32 entityID ) { return SlotHandle::make( entityID, 1u ); }
 
             static void writeEntity( BitWriter& writer, const MMOEntity& entity, bool bWithType )
             {
-                writer.writeVarUint( entity._entityId );
+                writer.writeVarUint( entity._entityID );
                 if ( bWithType )
-                    writer.writeVarUint( entity._typeId );
+                    writer.writeVarUint( entity._typeID );
                 writer.writeFloat( entity._position._x );
                 writer.writeFloat( entity._position._y );
                 writer.writeFloat( entity._position._z );
@@ -42,9 +42,9 @@ namespace sw
 
             [[nodiscard]] static bool readEntity( BitReader& reader, MMOEntity& outEntity, bool bWithType )
             {
-                outEntity._entityId = static_cast<uint32>( reader.readVarUint() );
+                outEntity._entityID = static_cast<uint32>( reader.readVarUint() );
                 if ( bWithType )
-                    outEntity._typeId = static_cast<uint32>( reader.readVarUint() );
+                    outEntity._typeID = static_cast<uint32>( reader.readVarUint() );
                 outEntity._position._x = reader.readFloat();
                 outEntity._position._y = reader.readFloat();
                 outEntity._position._z = reader.readFloat();
@@ -54,8 +54,8 @@ namespace sw
             /** @brief 묶음에서 엔티티 하나가 쓰는 비트입니다 — `writeEntity( …, bWithType )` 와 같다(들어옴은 타입까지, 갱신은 없이). */
             static int32 computeEntityBits( const MMOEntity& entity, bool bWithType )
             {
-                const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeId ) : 0;
-                return BitMath::computeVarUintBits( entity._entityId ) + typeBits + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
+                const int32 typeBits = bWithType ? BitMath::computeVarUintBits( entity._typeID ) : 0;
+                return BitMath::computeVarUintBits( entity._entityID ) + typeBits + 3 * 32 + BitMath::computeBlobBits( static_cast<int32>( entity._listState.size() ) );
             }
         };
     } // namespace
@@ -103,54 +103,54 @@ namespace sw
         if ( static_cast<int32>( entity._listState.size() ) > NetMMOMessage::kMaxStateBytes )
         {
             if ( _oversizedEntityCount == 0 )
-                SW_LOG_WARNING( "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (further ones are only counted)", entity._entityId,
+                SW_LOG_WARNING( "MMOReplicator: entity %# has %# state bytes, more than the limit %# - ignored (further ones are only counted)", entity._entityID,
                                 static_cast<int32>( entity._listState.size() ), NetMMOMessage::kMaxStateBytes );
             ++_oversizedEntityCount;
             return;
         }
-        _mapEntity[entity._entityId] = entity;
-        _grid.update( MMOReplicatorInternal::makeGridKey( entity._entityId ), entity._position._x, entity._position._z, entity._position._x,
+        _mapEntity[entity._entityID] = entity;
+        _grid.update( MMOReplicatorInternal::makeGridKey( entity._entityID ), entity._position._x, entity._position._z, entity._position._x,
                       entity._position._z );
     }
 
-    void MMOReplicator::removeEntity( uint32 entityId )
+    void MMOReplicator::removeEntity( uint32 entityID )
     {
-        _mapEntity.erase( entityId );
-        _grid.remove( MMOReplicatorInternal::makeGridKey( entityId ) );
+        _mapEntity.erase( entityID );
+        _grid.remove( MMOReplicatorInternal::makeGridKey( entityID ) );
     }
 
-    void MMOReplicator::setObserver( int32 connectionId, uint32 entityId )
+    void MMOReplicator::setObserver( int32 connectionID, uint32 entityID )
     {
-        if ( connectionId < 0 )
+        if ( connectionID < 0 )
             return;
-        if ( connectionId >= static_cast<int32>( _listObserver.size() ) )
-            _listObserver.resize( static_cast<size_t>( connectionId + 1 ) );
-        Observer& observer = _listObserver[static_cast<size_t>( connectionId )];
+        if ( connectionID >= static_cast<int32>( _listObserver.size() ) )
+            _listObserver.resize( static_cast<size_t>( connectionID + 1 ) );
+        Observer& observer = _listObserver[static_cast<size_t>( connectionID )];
         if ( observer._bActive == SW_FALSE )
         {
             observer = Observer{};
             observer._ackedUpdate.initialize( static_cast<int32>( NetMMOMessage::kMaxUnconfirmedTicks ) );
         }
-        observer._entityId = entityId;
+        observer._entityID = entityID;
         observer._bActive  = SW_TRUE;
     }
 
-    void MMOReplicator::removeObserver( int32 connectionId )
+    void MMOReplicator::removeObserver( int32 connectionID )
     {
-        if ( connectionId >= 0 && connectionId < static_cast<int32>( _listObserver.size() ) )
-            _listObserver[static_cast<size_t>( connectionId )] = Observer{};
+        if ( connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() ) )
+            _listObserver[static_cast<size_t>( connectionID )] = Observer{};
     }
 
     NetHandleResult MMOReplicator::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
         // 메시지 펌프(게임 스레드)에서 불린다 — `update` 의 나눈 본문과 겹치지 않는다(같은 스레드에서 차례로).
-        if ( context._kind != NetMMOMessage::kUpdateAck || context._connectionId < 0 || context._connectionId >= static_cast<int32>( _listObserver.size() ) )
+        if ( context._kind != NetMMOMessage::kUpdateAck || context._connectionID < 0 || context._connectionID >= static_cast<int32>( _listObserver.size() ) )
             return NetHandleResult::Handled;
         const uint32 newestTick = static_cast<uint32>( body.readVarUint() );
         const uint32 bits       = body.readUint32();
         if ( body.hasOverflowed() || newestTick > _tick )
             return NetHandleResult::Malformed;
-        Observer& observer = _listObserver[static_cast<size_t>( context._connectionId )];
+        Observer& observer = _listObserver[static_cast<size_t>( context._connectionID )];
         if ( observer._bActive == SW_FALSE )
             return NetHandleResult::Handled;
         // 순서가 뒤바뀐 확인도 받은 틱은 받은 것이다 — 가장 새 틱은 앞으로만 가고, 그보다 표 크기 이상 옛 틱은 적지 않는다(고리의 새 틱 자리를 덮는다).
@@ -170,16 +170,16 @@ namespace sw
         return NetHandleResult::Handled;
     }
 
-    void MMOReplicator::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    void MMOReplicator::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        removeObserver( connectionId );
+        removeObserver( connectionID );
     }
 
-    int32 MMOReplicator::getVisibleCount( int32 connectionId ) const
+    int32 MMOReplicator::getVisibleCount( int32 connectionID ) const
     {
-        return connectionId >= 0 && connectionId < static_cast<int32>( _listObserver.size() )
-                 ? static_cast<int32>( _listObserver[static_cast<size_t>( connectionId )]._mapVisible.size() )
+        return connectionID >= 0 && connectionID < static_cast<int32>( _listObserver.size() )
+                 ? static_cast<int32>( _listObserver[static_cast<size_t>( connectionID )]._mapVisible.size() )
                  : 0;
     }
 
@@ -213,18 +213,18 @@ namespace sw
         }
     }
 
-    const MMOEntity& MMOReplicator::getEntity( uint32 entityId ) const
+    const MMOEntity& MMOReplicator::getEntity( uint32 entityID ) const
     {
         // 나눈 본문에서 부른다 — `operator[]` 는 없으면 넣으므로(쓰기) 쓰지 않는다. 보이는 엔티티는 나감 단계가 사라진 것을 이미 뺐다.
-        const auto entityIter = _mapEntity.find( entityId );
+        const auto entityIter = _mapEntity.find( entityID );
         SW_ASSERT( entityIter != _mapEntity.end() );
         return entityIter->second;
     }
 
-    void MMOReplicator::updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
+    void MMOReplicator::updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch )
     {
         // 관찰자의 자리는 엔티티 표에서 — 격자와 표는 setEntity · removeEntity 가 함께 바꾼다.
-        const auto observerIter = _mapEntity.find( observer._entityId );
+        const auto observerIter = _mapEntity.find( observer._entityID );
         if ( observerIter == _mapEntity.end() )
             return;
         const float3 center = observerIter->second._position;
@@ -242,12 +242,12 @@ namespace sw
                 listLeave.push_back( visible.first );
                 continue;
             }
-            const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionId, entityIter->second );
+            const bool bAlways = bAlwaysPolicy && _pPolicy->isAlwaysRelevant( connectionID, entityIter->second );
             if ( bAlways == false && MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ) > _settings._leaveRadius )
                 listLeave.push_back( visible.first );
         }
         std::sort( listLeave.begin(), listLeave.end() );
-        const size_t pendingLeaveIndex = sendLeaves( connectionId, observer, scratch );
+        const size_t pendingLeaveIndex = sendLeaves( connectionID, observer, scratch );
 
         // 2) 들어옴 — 들어오는 반경 안(가까운 것부터, 틱마다 상한).
         vector<SlotHandle>& listNear = scratch._listNear;
@@ -256,7 +256,7 @@ namespace sw
         {
             for ( const auto& entity : _mapEntity )
             {
-                if ( _pPolicy->isAlwaysRelevant( connectionId, entity.second ) )
+                if ( _pPolicy->isAlwaysRelevant( connectionID, entity.second ) )
                     listNear.push_back( MMOReplicatorInternal::makeGridKey( entity.first ) );
             }
         }
@@ -265,12 +265,12 @@ namespace sw
         listRank.clear();
         for ( const SlotHandle nearKey : listNear )
         {
-            const uint32 entityId = nearKey.index();
-            if ( observer._mapVisible.find( entityId ) != observer._mapVisible.end() )
+            const uint32 entityID = nearKey.index();
+            if ( observer._mapVisible.find( entityID ) != observer._mapVisible.end() )
                 continue;
-            const auto entityIter = _mapEntity.find( entityId );
+            const auto entityIter = _mapEntity.find( entityID );
             if ( entityIter != _mapEntity.end() )
-                listRank.emplace_back( MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ), entityId );
+                listRank.emplace_back( MMOReplicatorInternal::computeFlatDistance( center, entityIter->second._position ), entityID );
         }
         std::sort( listRank.begin(), listRank.end() );
         listRank.erase( std::unique( listRank.begin(), listRank.end() ), listRank.end() ); // 반경 안 + 늘 보이기 겹침
@@ -296,12 +296,12 @@ namespace sw
                 listEnter.push_back( ranked.second );
             }
             writer.writeBool( false );
-            if ( listEnter.empty() == false && _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) )
+            if ( listEnter.empty() == false && _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) )
             {
-                for ( const uint32 entityId : listEnter )
+                for ( const uint32 entityID : listEnter )
                 {
-                    VisibleEntry& entry  = observer._mapVisible[entityId];
-                    entry._listSentState = getEntity( entityId )._listState; // 신뢰 — 확인된 것으로 둔다
+                    VisibleEntry& entry  = observer._mapVisible[entityID];
+                    entry._listSentState = getEntity( entityID )._listState; // 신뢰 — 확인된 것으로 둔다
                     entry._bInFlight     = SW_FALSE;
                 }
             }
@@ -321,7 +321,7 @@ namespace sw
             // 오가는 갱신이 있으면 그것과 견준다 — 확인을 기다리는 동안 같은 상태를 "바뀜" 으로 가속하지 않는다. 잃으면 확인된 상태(옛것)와 견주게 된다.
             const vector<uint8>& reference = entry._bInFlight == SW_TRUE ? entry._listInFlightState : entry._listSentState;
             const bool           bChanged  = entity._listState != reference;
-            prioritizer.accumulate( visible.first, _pPolicy->computePriority( connectionId, entity, distance ) * ( bChanged ? _settings._changedBoost : 1.0f ), deltaTime );
+            prioritizer.accumulate( visible.first, _pPolicy->computePriority( connectionID, entity, distance ) * ( bChanged ? _settings._changedBoost : 1.0f ), deltaTime );
         }
         vector<uint32>& listOrder = scratch._listOrder;
         prioritizer.collectOrder( listOrder );
@@ -331,27 +331,27 @@ namespace sw
         budget.reserveBits( writer.getBitCount() + 1 ); // 머리 + 끝 표시
         vector<uint32>& listSent = scratch._listSent;
         listSent.clear();
-        for ( const uint32 entityId : listOrder )
+        for ( const uint32 entityID : listOrder )
         {
-            if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), entityId ) )
+            if ( std::binary_search( listLeave.begin() + static_cast<ptrdiff_t>( pendingLeaveIndex ), listLeave.end(), entityID ) )
                 continue;
-            const MMOEntity& entity = getEntity( entityId );
+            const MMOEntity& entity = getEntity( entityID );
             if ( budget.tryReserveBits( 1 + MMOReplicatorInternal::computeEntityBits( entity, false ) ) == false )
                 continue;
             writer.writeBool( true );
             MMOReplicatorInternal::writeEntity( writer, entity, false );
-            listSent.push_back( entityId );
+            listSent.push_back( entityID );
         }
         writer.writeBool( false );
         if ( listSent.empty() )
             return;
-        (void)_pHost->sendMessage( connectionId, NetChannelType::Unreliable, writer.getBytes() );
-        for ( const uint32 entityId : listSent )
+        (void)_pHost->sendMessage( connectionID, NetChannelType::Unreliable, writer.getBytes() );
+        for ( const uint32 entityID : listSent )
         {
             // 확인될 때까지는 보낸 상태를 따로 둔다 — 잃으면 확인된 상태(`_listSentState`)가 옛것이라 "바뀜" 가속이 다시 걸린다.
-            prioritizer.markSentUnconfirmed( entityId, _tick );
-            VisibleEntry& entry      = observer._mapVisible[entityId];
-            entry._listInFlightState = getEntity( entityId )._listState;
+            prioritizer.markSentUnconfirmed( entityID, _tick );
+            VisibleEntry& entry      = observer._mapVisible[entityID];
+            entry._listInFlightState = getEntity( entityID )._listState;
             entry._inFlightTick      = _tick;
             entry._bInFlight         = SW_TRUE;
         }
@@ -379,7 +379,7 @@ namespace sw
         }
     }
 
-    size_t MMOReplicator::sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch )
+    size_t MMOReplicator::sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch )
     {
         // 조각나지 않는 크기(1 KB)로 쪼갠다 — 묶어도 창 몫(조각 수)은 같고, 나눠 두면 창이 찼을 때 앞 묶음이라도 나간다. 보낸 것만 보이는 목록에서 뺀다(유령이 남지 않게).
         const vector<uint32>& listLeave = scratch._listLeave;
@@ -399,7 +399,7 @@ namespace sw
             {
                 writer.writeVarUint( listLeave[sentCount + index] );
             }
-            if ( _pHost->sendMessage( connectionId, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
+            if ( _pHost->sendMessage( connectionID, NetChannelType::ReliableOrdered, writer.getBytes() ) == false )
                 break; // 신뢰 창이 찼다 — 남은 것은 보이는 채로 두고 다음 틱에
             for ( size_t index = 0; index < count; ++index )
             {
@@ -414,9 +414,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // MMOClientView
     // ------------------------------------------------------------------------------
-    void MMOClientView::onConnectionOpened( int32 connectionId )
+    void MMOClientView::onConnectionOpened( int32 connectionID )
     {
-        (void)connectionId;
+        (void)connectionID;
         _mapEntity.clear();
         _bHasUpdate   = SW_FALSE;
         _receivedBits = 0;
@@ -449,14 +449,14 @@ namespace sw
             _receivedBits |= 1u << ( age - 1u );
     }
 
-    void MMOClientView::sendAck( NetHost& host, int32 connectionId )
+    void MMOClientView::sendAck( NetHost& host, int32 connectionID )
     {
         if ( _bHasUpdate == SW_FALSE )
             return;
         BitWriter& writer = _ackWriter.begin( NetMMOMessage::kUpdateAck );
         writer.writeVarUint( _newestUpdateTick );
         writer.writeUint32( _receivedBits );
-        (void)_ackWriter.send( host, connectionId, NetChannelType::Unreliable ); // 잃어도 다음 틱 확인이 같은 창을 다시 싣는다
+        (void)_ackWriter.send( host, connectionID, NetChannelType::Unreliable ); // 잃어도 다음 틱 확인이 같은 창을 다시 싣는다
     }
 
     NetHandleResult MMOClientView::handleNetMessage( const NetMessageContext& context, BitReader& body )
@@ -471,9 +471,9 @@ namespace sw
                 entry._tick = tick;
                 if ( MMOReplicatorInternal::readEntity( reader, entry._entity, true ) == false )
                     return NetHandleResult::Malformed;
-                const uint32 entityId = entry._entity._entityId;
-                _mapEntity[entityId]  = std::move( entry );
-                _eventBuffer.push( MMOClientEvent{ entityId, MMOClientEvent::Kind::Entered } );
+                const uint32 entityID = entry._entity._entityID;
+                _mapEntity[entityID]  = std::move( entry );
+                _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Entered } );
             }
             if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
@@ -483,9 +483,9 @@ namespace sw
             const uint64 count = reader.readVarUint();
             for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
             {
-                const uint32 entityId = static_cast<uint32>( reader.readVarUint() );
-                if ( reader.hasOverflowed() == false && _mapEntity.erase( entityId ) > 0 )
-                    _eventBuffer.push( MMOClientEvent{ entityId, MMOClientEvent::Kind::Left } );
+                const uint32 entityID = static_cast<uint32>( reader.readVarUint() );
+                if ( reader.hasOverflowed() == false && _mapEntity.erase( entityID ) > 0 )
+                    _eventBuffer.push( MMOClientEvent{ entityID, MMOClientEvent::Kind::Left } );
             }
             if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
@@ -501,7 +501,7 @@ namespace sw
                 MMOEntity update;
                 if ( MMOReplicatorInternal::readEntity( reader, update, false ) == false )
                     return NetHandleResult::Malformed;
-                const auto entityIter = _mapEntity.find( update._entityId );
+                const auto entityIter = _mapEntity.find( update._entityID );
                 if ( entityIter == _mapEntity.end() )
                     continue; // 들어옴보다 먼저 왔거나 이미 나갔다 — 버린다
                 if ( tick < entityIter->second._tick )
@@ -512,7 +512,7 @@ namespace sw
                 entityIter->second._tick              = tick;
                 entityIter->second._entity._position  = update._position;
                 entityIter->second._entity._listState = std::move( update._listState );
-                _eventBuffer.push( MMOClientEvent{ update._entityId, MMOClientEvent::Kind::Updated } );
+                _eventBuffer.push( MMOClientEvent{ update._entityID, MMOClientEvent::Kind::Updated } );
             }
             if ( reader.hasOverflowed() )
                 return NetHandleResult::Malformed;
@@ -525,9 +525,9 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    const MMOEntity* MMOClientView::findEntity( uint32 entityId ) const
+    const MMOEntity* MMOClientView::findEntity( uint32 entityID ) const
     {
-        const auto entityIter = _mapEntity.find( entityId );
+        const auto entityIter = _mapEntity.find( entityID );
         return entityIter != _mapEntity.end() ? &entityIter->second._entity : nullptr;
     }
 } // namespace sw

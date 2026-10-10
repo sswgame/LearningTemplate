@@ -11,12 +11,12 @@ namespace sw::editor
         if ( pPopup == nullptr )
             return;
 
-        const string popupId = string{ pPopup->getPopupId() };
+        const string popupID = string{ pPopup->getPopupID() };
 
         // 같은 ID 가 이미 등록돼 있으면 교체한다
         for ( EditorPopupEntry& entry : _listPopup )
         {
-            if ( entry._id == popupId )
+            if ( entry._id == popupID )
             {
                 entry._pInstance = std::move( pPopup );
                 return;
@@ -24,7 +24,7 @@ namespace sw::editor
         }
 
         EditorPopupEntry entry;
-        entry._id        = popupId;
+        entry._id        = popupID;
         entry._pInstance = std::move( pPopup );
         _listPopup.push_back( std::move( entry ) );
     }

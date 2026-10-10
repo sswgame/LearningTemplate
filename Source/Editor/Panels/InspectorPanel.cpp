@@ -107,7 +107,7 @@ namespace sw::editor
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
         , _mapContainerAddText{}
-        , _nameEditObjectId{ 0 }
+        , _nameEditObjectID{ 0 }
         , _propertyDrawDepth{ 0 }
         , _bComponentPresetDirty{ SW_TRUE }
         , _reserved{ 0 }
@@ -143,7 +143,7 @@ namespace sw::editor
         }
 
         EditorWorkspace& ws = pContext->getWorkspace();
-        if ( ws.getSelectedObjectId() == 0 )
+        if ( ws.getSelectedObjectID() == 0 )
         {
             EditorWidgets::drawEmptyHint( "Nothing selected. Pick in the Scene view or use Hierarchy." );
             return;
@@ -156,7 +156,7 @@ namespace sw::editor
             return;
         }
 
-        GameObject* pObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
+        GameObject* pObj = pScene->getObjectManager()->findGameObjectByID( ws.getSelectedObjectID() );
         if ( pObj == nullptr )
         {
             EditorWidgets::drawEmptyHint( "Selected object no longer exists." );
@@ -179,7 +179,7 @@ namespace sw::editor
         ImGui::Spacing();
         ImGui::Separator();
 
-        const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectId() );
+        const string& pfbPath = ws.getGameObjectPrefabPath( pObj->getObjectID() );
         if ( pfbPath.empty() == false )
             drawPrefabLinkSection( pObj, pfbPath );
 
@@ -246,16 +246,16 @@ namespace sw::editor
             bool       bActive    = bWasActive;
             bool       bRemove{ false };
             const bool bAccent   = isA<SceneComponent>( pComp );
-            const bool bScrollTo = ( workspace.getScrollToComponentId() != 0 &&
-                                     workspace.getScrollToComponentId() == pComp->getComponentId() );
+            const bool bScrollTo = ( workspace.getScrollToComponentID() != 0 &&
+                                     workspace.getScrollToComponentID() == pComp->getComponentID() );
 
             if ( bScrollTo )
             {
                 ImGui::SetNextItemOpen( true );
-                workspace.setScrollToComponentId( 0 );
+                workspace.setScrollToComponentID( 0 );
             }
 
-            if ( EditorWidgets::beginComponentCard( pName, pComp->getComponentId(), &bActive, &bRemove, bAccent ) )
+            if ( EditorWidgets::beginComponentCard( pName, pComp->getComponentID(), &bActive, &bRemove, bAccent ) )
             {
                 if ( bScrollTo )
                     ImGui::SetScrollHereY( 0.25f );
@@ -374,15 +374,15 @@ namespace sw::editor
 
     void InspectorPanel::drawGameObjectHeader( GameObject* pObj )
     {
-        ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectId() ) );
+        ImGui::Text( "GameObject  ID: %u", static_cast<uint32>( pObj->getObjectID() ) );
 
         // 편집 중이 아니면 오브젝트 이름으로 채운다. 편집 중인 글을 멤버로 들어야 칸을 떠난 프레임(ImGui 가 버퍼에 쓰지 않는다)에도 적용할 수 있다 —
         // Enter 로도, 다른 곳을 눌러 떠나도 적용한다(유니티 · 언리얼). Esc 는 ImGui 가 글을 되돌려 편집 없음으로 끝난다.
-        const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "Name" ) && _nameEditObjectId == pObj->getObjectId();
+        const bool bEditingName = ImGui::GetActiveID() == ImGui::GetID( "Name" ) && _nameEditObjectID == pObj->getObjectID();
         if ( bEditingName == false )
         {
             _nameEditBuffer   = pObj->getName().c_str();
-            _nameEditObjectId = pObj->getObjectId();
+            _nameEditObjectID = pObj->getObjectID();
         }
         const bool bEnter         = ImGui::InputText( "Name", _nameEditBuffer.data(), _nameEditBuffer.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         const bool bLeftAfterEdit = ImGui::IsItemDeactivatedAfterEdit();
@@ -432,7 +432,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentId() ) );
+        ImGui::TextDisabled( "ID: %u", static_cast<uint32>( pComp->getComponentID() ) );
 
         const TypeInfo* pTypeInfo = pComp->getTypeInfo();
         if ( pTypeInfo == nullptr )
@@ -979,8 +979,8 @@ namespace sw::editor
 
     bool InspectorPanel::drawContainerAddRow( const utf8* pHint, string& outText )
     {
-        const ImGuiID                          rowId = ImGui::GetID( "##add" );
-        fixed_string<constant::kMaxBuffer256>& text  = _mapContainerAddText[static_cast<uint32>( rowId )];
+        const ImGuiID                          rowID = ImGui::GetID( "##add" );
+        fixed_string<constant::kMaxBuffer256>& text  = _mapContainerAddText[static_cast<uint32>( rowID )];
         ImGui::SetNextItemWidth( -FLT_MIN );
         const bool bEntered = ImGui::InputTextWithHint( "##add", pHint, text.data(), text.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         if ( bEntered == false || text.empty() )

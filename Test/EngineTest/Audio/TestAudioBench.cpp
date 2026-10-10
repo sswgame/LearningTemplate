@@ -67,10 +67,10 @@ SW_TEST_CASE( AudioBenchTest, RenderCostPerVoice )
         for ( uint32 voiceIndex = 0; voiceIndex < voiceCount; ++voiceIndex )
         {
             const float32            angle     = static_cast<float32>( voiceIndex ) * 0.37f;
-            const sw::AudioEmitterId emitterId = voiceIndex + 1;
-            engine.setEmitter( emitterId, sw::float3( 4.0f * std::cos( angle ), 0.0f, 4.0f * std::sin( angle ) ), sw::float3( 0.0f, 0.0f, 0.0f ) );
-            engine.setEmitterOcclusion( emitterId, ( voiceIndex % 2u ) == 0u ? 0.0f : 0.7f );
-            (void)engine.postEvent( sw::hashed_string( "Engine" ), emitterId );
+            const sw::AudioEmitterID emitterID = voiceIndex + 1;
+            engine.setEmitter( emitterID, sw::float3( 4.0f * std::cos( angle ), 0.0f, 4.0f * std::sin( angle ) ), sw::float3( 0.0f, 0.0f, 0.0f ) );
+            engine.setEmitterOcclusion( emitterID, ( voiceIndex % 2u ) == 0u ? 0.0f : 0.7f );
+            (void)engine.postEvent( sw::hashed_string( "Engine" ), emitterID );
         }
         (void)test::AudioTestUtil::render( engine, 4096 ); // 클립 시작 · 첫 블록 램프
 

@@ -250,8 +250,8 @@ SW_TEST_CASE( ShaderCookerTest, SubfolderAndFormatMappingAliases )
 SW_TEST_CASE( ShaderCookerTest, PermutationHashCollisionStressTest )
 {
     constexpr uint32                  kPermutationCount = 10000;
-    sw::unordered_map<uint64, uint32> mapHashToId;
-    mapHashToId.reserve( kPermutationCount );
+    sw::unordered_map<uint64, uint32> mapHashToID;
+    mapHashToID.reserve( kPermutationCount );
 
     sw::fixed_string<sw::constant::kMaxBuffer64> defBuf;
     for ( uint32 index = 0; index < kPermutationCount; ++index )
@@ -261,11 +261,11 @@ SW_TEST_CASE( ShaderCookerTest, PermutationHashCollisionStressTest )
         const uint64                 hash     = sw::ShaderCooker::computePermutationHash( listPerm );
 
         SW_EXPECT_TRUE( hash != 0ull );
-        auto iter = mapHashToId.find( hash );
-        SW_EXPECT_TRUE( iter == mapHashToId.end() );
-        mapHashToId.insert_or_assign( hash, index );
+        auto iter = mapHashToID.find( hash );
+        SW_EXPECT_TRUE( iter == mapHashToID.end() );
+        mapHashToID.insert_or_assign( hash, index );
     }
-    SW_EXPECT_EQUAL( kPermutationCount, static_cast<uint32>( mapHashToId.size() ) );
+    SW_EXPECT_EQUAL( kPermutationCount, static_cast<uint32>( mapHashToID.size() ) );
 }
 
 /**
@@ -368,12 +368,12 @@ SW_TEST_CASE( ShaderCacheStressTest, MultiThreadedCacheAccessStress )
             for ( uint32 callIndex = 0; callIndex < kCallsPerThread; ++callIndex )
             {
                 sw::ShaderCompileDesc desc{};
-                const uint32          pathId = ( threadIndex + callIndex ) % 4;
-                if ( pathId == 0 )
+                const uint32          pathID = ( threadIndex + callIndex ) % 4;
+                if ( pathID == 0 )
                     desc._filePath = "engine/shaders/fullscreentriangle.hlsl";
-                else if ( pathId == 1 )
+                else if ( pathID == 1 )
                     desc._filePath = "engine/shaders/forwardlit.hlsl";
-                else if ( pathId == 2 )
+                else if ( pathID == 2 )
                     desc._filePath = "engine/shaders/shadowdepth.hlsl";
                 else
                     desc._filePath = "engine/shaders/tonemap.hlsl";

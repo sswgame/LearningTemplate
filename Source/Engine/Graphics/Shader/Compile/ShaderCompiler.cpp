@@ -130,9 +130,9 @@ namespace sw
                     if ( pValue != nullptr )
                     {
                         if ( *pValue == spirv::kBuiltInInstanceIndex )
-                            *pValue = spirv::kBuiltInInstanceId;
+                            *pValue = spirv::kBuiltInInstanceID;
                         else if ( *pValue == spirv::kBuiltInVertexIndex )
-                            *pValue = spirv::kBuiltInVertexId;
+                            *pValue = spirv::kBuiltInVertexID;
                     }
                     offset += length;
                 }

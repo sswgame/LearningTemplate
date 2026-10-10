@@ -34,9 +34,9 @@ namespace sw
         /** @brief 사각형(XZ, 두 모서리) 안을 고릅니다. @p bAdd 면 지금 고른 것에 더합니다(쉬프트). */
         void selectInRect( const RTSWorld& world, const float3& cornerA, const float3& cornerB, bool bAdd );
         /** @brief 유닛 하나를 고릅니다. @p bToggle 이면 이미 골랐을 때 뺍니다. */
-        void selectUnit( const RTSWorld& world, RTSUnitId unitId, bool bToggle );
-        /** @brief 사각형 안의 @p unitId 와 같은 종류 내 유닛을 고릅니다(두 번 클릭). */
-        void selectSameType( const RTSWorld& world, RTSUnitId unitId, const float3& cornerA, const float3& cornerB );
+        void selectUnit( const RTSWorld& world, RTSUnitID unitID, bool bToggle );
+        /** @brief 사각형 안의 @p unitID 와 같은 종류 내 유닛을 고릅니다(두 번 클릭). */
+        void selectSameType( const RTSWorld& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB );
         void clear() { _listSelected.clear(); }
 
         /** @brief 지금 고른 것을 부대로 정합니다(Ctrl + 숫자). */
@@ -49,11 +49,11 @@ namespace sw
         /** @brief 죽은 유닛을 고른 것 · 부대에서 뺍니다. */
         void prune( const RTSWorld& world );
 
-        const vector<RTSUnitId>& getSelected() const { return _listSelected; }
-        const vector<RTSUnitId>& getGroup( int32 group ) const;
+        const vector<RTSUnitID>& getSelected() const { return _listSelected; }
+        const vector<RTSUnitID>& getGroup( int32 group ) const;
         /** @brief 처음 고른 것(명령 카드 · 초상화)입니다. */
-        RTSUnitId getPrimary() const { return _listSelected.empty() ? RTSUnitId{} : _listSelected.front(); }
-        bool      isSelected( RTSUnitId unitId ) const;
+        RTSUnitID getPrimary() const { return _listSelected.empty() ? RTSUnitID{} : _listSelected.front(); }
+        bool      isSelected( RTSUnitID unitID ) const;
         /** @brief 고른 것이 모두 내 것이라 명령을 줄 수 있는가입니다. */
         bool  isCommandable( const RTSWorld& world ) const;
         int32 getPlayer() const { return _player; }
@@ -64,10 +64,10 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        void addUnit( RTSUnitId unitId );
+        void addUnit( RTSUnitID unitID );
 
-        vector<RTSUnitId> _listSelected;
-        vector<RTSUnitId> _arrGroup[kGroupCount];
+        vector<RTSUnitID> _listSelected;
+        vector<RTSUnitID> _arrGroup[kGroupCount];
         int32             _player;
         int32             _maxCount;
     };

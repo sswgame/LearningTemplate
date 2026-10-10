@@ -79,12 +79,12 @@ namespace sw
             progress._totalCount = static_cast<int32>( listPiece.size() );
             for ( const EquipSetPieceDef& piece : listPiece )
             {
-                const hashed_string itemId = findItemInSlot( piece._slot );
-                if ( itemId.empty() )
+                const hashed_string itemID = findItemInSlot( piece._slot );
+                if ( itemID.empty() )
                     continue;
                 for ( const hashed_string& pieceItem : piece._listItem )
                 {
-                    if ( pieceItem == itemId )
+                    if ( pieceItem == itemID )
                     {
                         ++progress._equippedCount;
                         break;
@@ -94,9 +94,9 @@ namespace sw
             return progress;
         }
 
-        bool             hasSet( const hashed_string& setId ) const override { return findSet( setId ) != nullptr; }
-        EquipSetProgress computeProgress( const hashed_string& setId, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const override;
-        void             collectSetItems( const hashed_string& setId, vector<hashed_string>& outListItemId ) const override;
+        bool             hasSet( const hashed_string& setID ) const override { return findSet( setID ) != nullptr; }
+        EquipSetProgress computeProgress( const hashed_string& setID, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const override;
+        void             collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const override;
 
     private:
         vector<EquipSetDef> _listSet{};

@@ -76,7 +76,7 @@ namespace
     bool beginMatch( HorrorMatch& outMatch, const AsymmetricHorrorRulesCatalog& catalog )
     {
         HorrorMatchSettings settings;
-        settings._killerId  = hashed_string( "trapper" );
+        settings._killerID  = hashed_string( "trapper" );
         settings._fixedStep = kAsymmetricHorrorStep;
         return outMatch.initialize( settings, &catalog );
     }

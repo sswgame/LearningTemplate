@@ -25,9 +25,9 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     EditorWorkspace::EditorWorkspace( EditorSelection* pEditorSelection )
         : _pEditorSelection{ pEditorSelection }
-        , _selectedComponentId{ 0 }
+        , _selectedComponentID{ 0 }
         , _observedSceneGeneration{ 0 }
-        , _scrollToComponentId{ 0 }
+        , _scrollToComponentID{ 0 }
         , _selectedComponentKey{}
         , _focusedAssetPath{}
         , _pendingOpenPanelTitle{}
@@ -51,10 +51,10 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 멤버 함수
     // ------------------------------------------------------------------------------
-    uint64 EditorWorkspace::getSelectedObjectId() const
+    uint64 EditorWorkspace::getSelectedObjectID() const
     {
         if ( _pEditorSelection != nullptr )
-            return _pEditorSelection->getPrimaryObjectId();
+            return _pEditorSelection->getPrimaryObjectID();
         return 0;
     }
 
@@ -77,7 +77,7 @@ namespace sw::editor
     {
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->clearAll();
-        _selectedComponentId = 0;
+        _selectedComponentID = 0;
         _selectedComponentKey.clear();
     }
 
@@ -85,7 +85,7 @@ namespace sw::editor
     {
         if ( _pEditorSelection != nullptr )
             _pEditorSelection->selectObject( pObj, mode );
-        _selectedComponentId = 0;
+        _selectedComponentID = 0;
         _selectedComponentKey.clear();
     }
 
@@ -95,9 +95,9 @@ namespace sw::editor
             _pEditorSelection->selectObject( pObj, SelectionMode::Replace );
 
         if ( pComp != nullptr )
-            _selectedComponentId = pComp->getComponentId();
+            _selectedComponentID = pComp->getComponentID();
         else
-            _selectedComponentId = 0;
+            _selectedComponentID = 0;
 
         // 씬 파일의 부착 대상과 같은 키(`ComponentStableKey`)다. 소유자가 다른 컴포넌트는 되찾을 수 없으니 비운다.
         if ( pObj != nullptr && pComp != nullptr && pComp->getOwner() == pObj )
@@ -105,7 +105,7 @@ namespace sw::editor
         else
             _selectedComponentKey.clear();
 
-        _scrollToComponentId = _selectedComponentId;
+        _scrollToComponentID = _selectedComponentID;
     }
 
     void EditorWorkspace::remapSelectionByObjectName( GameObjectManager* pGameObjectManager )
@@ -116,7 +116,7 @@ namespace sw::editor
         const string name = getSelectedObjectName();
         if ( name.empty() )
         {
-            _selectedComponentId = 0;
+            _selectedComponentID = 0;
             _selectedComponentKey.clear();
             return;
         }
@@ -133,15 +133,15 @@ namespace sw::editor
 
         if ( _selectedComponentKey.empty() )
         {
-            _selectedComponentId = 0;
+            _selectedComponentID = 0;
             return;
         }
 
         Component* pResolved = ComponentStableKey::findComponent( pObj, _selectedComponentKey );
         if ( pResolved != nullptr )
-            _selectedComponentId = pResolved->getComponentId();
+            _selectedComponentID = pResolved->getComponentID();
         else
-            _selectedComponentId = 0;
+            _selectedComponentID = 0;
     }
 
     void EditorWorkspace::setFocusedAssetPath( const utf8* pPath )
@@ -196,20 +196,20 @@ namespace sw::editor
         _pendingSceneActionPath.clear();
     }
 
-    void EditorWorkspace::setGameObjectPrefabPath( uint64 objectId, string_view prefabPath )
+    void EditorWorkspace::setGameObjectPrefabPath( uint64 objectID, string_view prefabPath )
     {
         Scene* pScene = editor::getActiveScene();
-        if ( objectId == 0 || pScene == nullptr )
+        if ( objectID == 0 || pScene == nullptr )
             return;
-        pScene->setEntityPrefabPath( objectId, prefabPath );
+        pScene->setEntityPrefabPath( objectID, prefabPath );
     }
 
-    const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectId ) const
+    const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectID ) const
     {
         const Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
             return _emptyString;
-        return pScene->getEntityPrefabPath( objectId );
+        return pScene->getEntityPrefabPath( objectID );
     }
 
     void EditorWorkspace::setCameraBookmark( uint32 slot, const CameraBookmark& bookmark )
@@ -285,11 +285,11 @@ namespace sw::editor
         return _listPrefabIsolationFrame.back()._prefabPath;
     }
 
-    uint64 EditorWorkspace::getPrefabIsolationRootId() const
+    uint64 EditorWorkspace::getPrefabIsolationRootID() const
     {
         if ( _listPrefabIsolationFrame.empty() )
             return 0;
-        return _listPrefabIsolationFrame.back()._rootObjectId;
+        return _listPrefabIsolationFrame.back()._rootObjectID;
     }
 
     const PrefabIsolationFrame* EditorWorkspace::getPrefabIsolationFrame() const

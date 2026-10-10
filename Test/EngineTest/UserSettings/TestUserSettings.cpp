@@ -503,7 +503,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
 
     sw::UserSettingBindingConflict conflict;
     SW_EXPECT_TRUE( settings.findBindingConflict( "controls.jump", "Mouse.Left", conflict ) );
-    SW_EXPECT_STREQ( "controls.fire", conflict._settingId.c_str() );
+    SW_EXPECT_STREQ( "controls.fire", conflict._settingID.c_str() );
     SW_EXPECT_FALSE( settings.findBindingConflict( "controls.jump", "Key.F", conflict ) );
 
     // 거절 — 메뉴가 "이미 Fire 에 쓰입니다" 를 묻는다.
@@ -516,7 +516,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
 
     // 스키마 밖 액션(Crouch)과 겹치면 맞바꿀 상대가 없다.
     SW_EXPECT_TRUE( settings.findBindingConflict( "controls.jump", "Key.C", conflict ) );
-    SW_EXPECT_TRUE( conflict._settingId.empty() );
+    SW_EXPECT_TRUE( conflict._settingID.empty() );
     SW_EXPECT_STREQ( "Crouch", conflict._action.c_str() );
     SW_EXPECT_TRUE( settings.setPendingBinding( "controls.jump", "Key.C", sw::UserSettingBindingPolicy::Swap ) == sw::UserSettingSetResult::Conflict );
 

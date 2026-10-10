@@ -14,7 +14,7 @@ namespace sw
         , _scratchPath{}
         , _pHoverTree{ nullptr }
         , _pCaptureTree{ nullptr }
-        , _captured{ kInvalidWidgetId }
+        , _captured{ kInvalidWidgetID }
     {
     }
 
@@ -22,13 +22,13 @@ namespace sw
     {
         UIPointerResult result{};
         // 잡은 위젯이 떨어졌으면 잡기를 푼다.
-        if ( _captured != kInvalidWidgetId && ( _pCaptureTree == nullptr || _pCaptureTree->findWidgetById( _captured ) == nullptr ) )
+        if ( _captured != kInvalidWidgetID && ( _pCaptureTree == nullptr || _pCaptureTree->findWidgetByID( _captured ) == nullptr ) )
         {
-            _captured     = kInvalidWidgetId;
+            _captured     = kInvalidWidgetID;
             _pCaptureTree = nullptr;
         }
 
-        const bool bCapturedHere = _captured != kInvalidWidgetId && _pCaptureTree == &tree;
+        const bool bCapturedHere = _captured != kInvalidWidgetID && _pCaptureTree == &tree;
         if ( bCapturedHere )
         {
             (void)UIEventRouter::makePathTo( tree, _captured, _scratchPath );
@@ -40,7 +40,7 @@ namespace sw
         }
         updateHover( &tree, _scratchPath );
 
-        WidgetId      handler = kInvalidWidgetId;
+        WidgetID      handler = kInvalidWidgetID;
         const UIReply reply   = UIEventRouter::routePointerEvent( tree, _scratchPath, event, handler );
         if ( reply.isHandled() == false )
             return result;
@@ -54,7 +54,7 @@ namespace sw
         }
         else if ( reply._bReleasePointer == SW_TRUE && _captured == handler )
         {
-            _captured     = kInvalidWidgetId;
+            _captured     = kInvalidWidgetID;
             _pCaptureTree = nullptr;
         }
         return result;
@@ -76,7 +76,7 @@ namespace sw
         if ( _pCaptureTree == &tree )
         {
             _pCaptureTree = nullptr;
-            _captured     = kInvalidWidgetId;
+            _captured     = kInvalidWidgetID;
         }
     }
 
@@ -97,7 +97,7 @@ namespace sw
         {
             for ( uint32 index = static_cast<uint32>( _hoverPath._listWidget.size() ); index > common; --index )
             {
-                Widget* pWidget = _pHoverTree->findWidgetById( _hoverPath._listWidget[index - 1] );
+                Widget* pWidget = _pHoverTree->findWidgetByID( _hoverPath._listWidget[index - 1] );
                 if ( pWidget == nullptr )
                     continue;
                 pWidget->_bHovered = false;
@@ -110,7 +110,7 @@ namespace sw
         {
             for ( uint32 index = common; index < static_cast<uint32>( newPath._listWidget.size() ); ++index )
             {
-                Widget* pWidget = pTree->findWidgetById( newPath._listWidget[index] );
+                Widget* pWidget = pTree->findWidgetByID( newPath._listWidget[index] );
                 if ( pWidget == nullptr )
                     continue;
                 pWidget->_bHovered = true;

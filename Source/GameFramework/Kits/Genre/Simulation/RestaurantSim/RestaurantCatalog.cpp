@@ -16,11 +16,11 @@ namespace sw
     {
         struct RestaurantCatalogInternal
         {
-            static void parseIdList( string_view text, vector<hashed_string>& outListId )
+            static void parseIDList( string_view text, vector<hashed_string>& outListID )
             {
-                outListId.clear();
+                outListID.clear();
                 GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
-                { outListId.push_back( hashed_string( token ) ); } );
+                { outListID.push_back( hashed_string( token ) ); } );
             }
         };
     } // namespace
@@ -58,15 +58,15 @@ namespace sw
         return _arrArrivalRate[hour];
     }
 
-    float32 RestaurantCatalog::findWeatherScale( const hashed_string& weatherId ) const
+    float32 RestaurantCatalog::findWeatherScale( const hashed_string& weatherID ) const
     {
-        const RestaurantWeatherDef* pWeather = _weatherCatalog.find( weatherId );
+        const RestaurantWeatherDef* pWeather = _weatherCatalog.find( weatherID );
         return pWeather != nullptr ? pWeather->_arrivalScale : 1.0f;
     }
 
-    int32 RestaurantCatalog::findShelfLife( const hashed_string& itemId ) const
+    int32 RestaurantCatalog::findShelfLife( const hashed_string& itemID ) const
     {
-        const IngredientDef* pIngredient = _ingredientCatalog.find( itemId );
+        const IngredientDef* pIngredient = _ingredientCatalog.find( itemID );
         return pIngredient != nullptr ? pIngredient->_shelfLife : 0;
     }
 
@@ -79,20 +79,20 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Dish" ); node; node = node.findNextSibling( "Dish" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             DishDef dish;
-            dish._id            = hashed_string( pId );
+            dish._id            = hashed_string( pID );
             const utf8* pName   = node.findAttribute( "name" );
-            dish._name          = pName != nullptr ? pName : pId;
+            dish._name          = pName != nullptr ? pName : pID;
             const utf8* pRecipe = node.findAttribute( "recipe" );
-            dish._recipeId      = hashed_string( pRecipe != nullptr ? pRecipe : pId );
+            dish._recipeID      = hashed_string( pRecipe != nullptr ? pRecipe : pID );
             dish._category      = hashed_string( node.getAttributeText( "category" ) );
             dish._basePrice     = node.getAttributeInt( "price", dish._basePrice );
             if ( dish._basePrice <= 0 )
             {
-                SW_LOG_WARNING( "%#: dish '%#' has no positive price - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: dish '%#' has no positive price - skipped", sourceName, pID );
                 continue;
             }
             GameDataXML::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
@@ -119,17 +119,17 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Customer" ); node; node = node.findNextSibling( "Customer" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             CustomerTypeDef customerType;
-            customerType._id         = hashed_string( pId );
+            customerType._id         = hashed_string( pID );
             customerType._weight     = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", customerType._weight ) );
             customerType._patience   = MathUtil::max( 1.0f, node.getAttributeFloat( "patience", customerType._patience ) );
             customerType._budget     = MathUtil::max( 0.0f, node.getAttributeFloat( "budget", customerType._budget ) );
             customerType._tipRate    = MathUtil::max( 0.0f, node.getAttributeFloat( "tipRate", customerType._tipRate ) );
             customerType._eatMinutes = MathUtil::max( 0.0f, node.getAttributeFloat( "eat", customerType._eatMinutes ) );
-            RestaurantCatalogInternal::parseIdList( node.getAttributeText( "categories" ), customerType._listCategory );
+            RestaurantCatalogInternal::parseIDList( node.getAttributeText( "categories" ), customerType._listCategory );
             addCustomerType( customerType );
             ++loadedCount;
         }
@@ -147,9 +147,9 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId != nullptr )
-                (void)_weatherCatalog.add( RestaurantWeatherDef{ hashed_string( pId ), MathUtil::max( 0.0f, node.getAttributeFloat( "arrival", 1.0f ) ) } );
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID != nullptr )
+                (void)_weatherCatalog.add( RestaurantWeatherDef{ hashed_string( pID ), MathUtil::max( 0.0f, node.getAttributeFloat( "arrival", 1.0f ) ) } );
         }
         if ( loadedCount == 0 )
             SW_LOG_WARNING( "%#: no <Dish> / <Customer> entries", sourceName );

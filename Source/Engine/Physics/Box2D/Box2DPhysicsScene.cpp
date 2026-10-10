@@ -45,8 +45,8 @@ namespace sw
     Box2DPhysicsScene::Box2DPhysicsScene( const PhysicsSettings& settings )
         : _settings{ settings }
         , _layers{}
-        , _worldId{}
-        , _groundBodyId{}
+        , _worldID{}
+        , _groundBodyID{}
         , _bodies{}
         , _joints{}
         , _characters{}
@@ -63,17 +63,17 @@ namespace sw
 
         b2WorldDef worldDef = b2DefaultWorldDef();
         worldDef.gravity    = Box2DUtil::toBox2D( _settings._gravity2D );
-        _worldId            = b2CreateWorld( &worldDef );
+        _worldID            = b2CreateWorld( &worldDef );
 
         b2BodyDef groundDef = b2DefaultBodyDef();
         groundDef.type      = b2_staticBody;
-        _groundBodyId       = b2CreateBody( _worldId, &groundDef );
+        _groundBodyID       = b2CreateBody( _worldID, &groundDef );
     }
 
     Box2DPhysicsScene::~Box2DPhysicsScene()
     {
         // 월드를 지우면 바디 · 셰이프 · 관절이 함께 사라진다.
-        b2DestroyWorld( _worldId );
+        b2DestroyWorld( _worldID );
         _bodies.clear();
         _joints.clear();
         _characters.clear();
@@ -87,18 +87,18 @@ namespace sw
         SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
         if ( fixedDeltaTime > 0.0f )
-            b2World_Step( _worldId, fixedDeltaTime, static_cast<int32>( _settings._subStepCount2D ) );
+            b2World_Step( _worldID, fixedDeltaTime, static_cast<int32>( _settings._subStepCount2D ) );
         flushEvents();
     }
 
     void Box2DPhysicsScene::setGravity( const float2& gravity )
     {
-        b2World_SetGravity( _worldId, Box2DUtil::toBox2D( gravity ) );
+        b2World_SetGravity( _worldID, Box2DUtil::toBox2D( gravity ) );
     }
 
     float2 Box2DPhysicsScene::getGravity() const
     {
-        return Box2DUtil::toEngine( b2World_GetGravity( _worldId ) );
+        return Box2DUtil::toEngine( b2World_GetGravity( _worldID ) );
     }
 
     void Box2DPhysicsScene::setLayerCollision( const CollisionLayers& layers )
@@ -114,8 +114,8 @@ namespace sw
         {
             if ( record._bEnabled == false || record._pListShape == nullptr )
                 return;
-            const b2Transform transform = b2Body_GetTransform( record._bodyId );
-            const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyId ) == false;
+            const b2Transform transform = b2Body_GetTransform( record._bodyID );
+            const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyID ) == false;
             const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
             for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
             {
@@ -159,10 +159,10 @@ namespace sw
     void Box2DPhysicsScene::applyFilter( const BodyRecord& record )
     {
         const b2Filter filter = makeFilter( record._layer );
-        for ( const b2ShapeId& shapeId : record._listShapeId )
+        for ( const b2ShapeId& shapeID : record._listShapeID )
         {
-            if ( b2Shape_IsValid( shapeId ) )
-                b2Shape_SetFilter( shapeId, filter );
+            if ( b2Shape_IsValid( shapeID ) )
+                b2Shape_SetFilter( shapeID, filter );
         }
     }
 
@@ -216,14 +216,14 @@ namespace sw
             chainDef.isLoop             = shape._bLoop;
             chainDef.enableSensorEvents = true;
             chainDef.userData           = pUserData;
-            const b2ChainId chainId     = b2CreateChain( record._bodyId, &chainDef );
-            record._listChainId.push_back( chainId );
-            const int32       segmentCount = b2Chain_GetSegmentCount( chainId );
+            const b2ChainId chainID     = b2CreateChain( record._bodyID, &chainDef );
+            record._listChainID.push_back( chainID );
+            const int32       segmentCount = b2Chain_GetSegmentCount( chainID );
             vector<b2ShapeId> listSegment( static_cast<size_t>( segmentCount ) );
-            b2Chain_GetSegments( chainId, listSegment.data(), segmentCount );
+            b2Chain_GetSegments( chainID, listSegment.data(), segmentCount );
             for ( const b2ShapeId& segment : listSegment )
             {
-                record._listShapeId.push_back( segment );
+                record._listShapeID.push_back( segment );
                 _mapShapeToBody[Box2DUtil::makeShapeKey( segment )] = handle;
             }
             return true;
@@ -241,19 +241,19 @@ namespace sw
         shapeDef.enableContactEvents     = true;
         shapeDef.enableHitEvents         = true;
 
-        b2ShapeId shapeId = b2_nullShapeId;
+        b2ShapeId shapeID = b2_nullShapeId;
         switch ( shape._type )
         {
             case PhysicsShapeType2D::Box:
             {
                 const b2Polygon box = b2MakeOffsetBox( shape._halfExtents._x, shape._halfExtents._y, center, rotation );
-                shapeId             = b2CreatePolygonShape( record._bodyId, &shapeDef, &box );
+                shapeID             = b2CreatePolygonShape( record._bodyID, &shapeDef, &box );
                 break;
             }
             case PhysicsShapeType2D::Circle:
             {
                 const b2Circle circle{ center, shape._radius };
-                shapeId = b2CreateCircleShape( record._bodyId, &shapeDef, &circle );
+                shapeID = b2CreateCircleShape( record._bodyID, &shapeDef, &circle );
                 break;
             }
             case PhysicsShapeType2D::Capsule:
@@ -261,7 +261,7 @@ namespace sw
                 const b2Transform local{ center, rotation };
                 const b2Capsule   capsule{ b2TransformPoint( local, b2Vec2{ 0.0f, -shape._halfHeight } ), b2TransformPoint( local, b2Vec2{ 0.0f, shape._halfHeight } ),
                                          shape._radius };
-                shapeId = b2CreateCapsuleShape( record._bodyId, &shapeDef, &capsule );
+                shapeID = b2CreateCapsuleShape( record._bodyID, &shapeDef, &capsule );
                 break;
             }
             case PhysicsShapeType2D::Polygon:
@@ -280,7 +280,7 @@ namespace sw
                     return false;
                 }
                 const b2Polygon polygon = b2MakeOffsetPolygon( &hull, center, rotation );
-                shapeId                 = b2CreatePolygonShape( record._bodyId, &shapeDef, &polygon );
+                shapeID                 = b2CreatePolygonShape( record._bodyID, &shapeDef, &polygon );
                 break;
             }
             case PhysicsShapeType2D::Chain:
@@ -288,10 +288,10 @@ namespace sw
                 break;
             }
         }
-        if ( B2_IS_NULL( shapeId ) )
+        if ( B2_IS_NULL( shapeID ) )
             return false;
-        record._listShapeId.push_back( shapeId );
-        _mapShapeToBody[Box2DUtil::makeShapeKey( shapeId )] = handle;
+        record._listShapeID.push_back( shapeID );
+        _mapShapeToBody[Box2DUtil::makeShapeKey( shapeID )] = handle;
         return true;
     }
 
@@ -352,9 +352,9 @@ namespace sw
         return _bodies.get( body.getSlot() );
     }
 
-    PhysicsBodyHandle Box2DPhysicsScene::findHandleOfShape( b2ShapeId shapeId ) const
+    PhysicsBodyHandle Box2DPhysicsScene::findHandleOfShape( b2ShapeId shapeID ) const
     {
-        const unordered_map<uint64, PhysicsBodyHandle>::const_iterator iter = _mapShapeToBody.find( Box2DUtil::makeShapeKey( shapeId ) );
+        const unordered_map<uint64, PhysicsBodyHandle>::const_iterator iter = _mapShapeToBody.find( Box2DUtil::makeShapeKey( shapeID ) );
         return iter != _mapShapeToBody.end() ? iter->second : PhysicsBodyHandle{};
     }
 
@@ -399,16 +399,16 @@ namespace sw
 
         BodyRecord record;
         record._pListShape             = pListShape;
-        record._bodyId                 = b2CreateBody( _worldId, &bodyDef );
+        record._bodyID                 = b2CreateBody( _worldID, &bodyDef );
         record._userData               = desc._userData;
         record._type                   = desc._type;
         record._layer                  = desc._layer;
         record._bTrigger               = desc._bTrigger;
         record._bEnabled               = true;
-        const b2BodyId          bodyId = record._bodyId;
+        const b2BodyId          bodyID = record._bodyID;
         const PhysicsBodyHandle handle = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
         BodyRecord&             stored = *findBody( handle );
-        b2Body_SetUserData( bodyId, Box2DUtil::toUserData( handle ) );
+        b2Body_SetUserData( bodyID, Box2DUtil::toUserData( handle ) );
         for ( const PhysicsShapeDesc2D& shape : *pListShape )
         {
             if ( attachShape( stored, shape, defaultMaterial, handle ) == false )
@@ -419,11 +419,11 @@ namespace sw
         }
         if ( desc._mass > 0.0f && desc._type == PhysicsBodyType::Dynamic )
         {
-            b2MassData    massData = b2Body_GetMassData( bodyId );
+            b2MassData    massData = b2Body_GetMassData( bodyID );
             const float32 scale    = massData.mass > 0.0f ? desc._mass / massData.mass : 1.0f;
             massData.rotationalInertia *= scale;
             massData.mass = desc._mass;
-            b2Body_SetMassData( bodyId, massData );
+            b2Body_SetMassData( bodyID, massData );
         }
         ++_bodyCount;
         return handle;
@@ -475,11 +475,11 @@ namespace sw
                 _joints.erase( joint.getSlot() );
             }
             forgetPairJointsOf( body );
-            for ( const b2ShapeId& shapeId : record._listShapeId )
+            for ( const b2ShapeId& shapeID : record._listShapeID )
             {
-                _mapShapeToBody.erase( Box2DUtil::makeShapeKey( shapeId ) );
+                _mapShapeToBody.erase( Box2DUtil::makeShapeKey( shapeID ) );
             }
-            b2DestroyBody( record._bodyId );
+            b2DestroyBody( record._bodyID );
             listDestroyed.push_back( body );
             --_bodyCount;
         }
@@ -503,11 +503,11 @@ namespace sw
             return;
         if ( bEnabled )
         {
-            b2Body_Enable( pRecord->_bodyId );
+            b2Body_Enable( pRecord->_bodyID );
         }
         else
         {
-            b2Body_Disable( pRecord->_bodyId );
+            b2Body_Disable( pRecord->_bodyID );
             _contactTracker.removeBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
         }
         pRecord->_bEnabled = bEnabled;
@@ -524,7 +524,7 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr )
             return false;
-        const b2Transform transform = b2Body_GetTransform( pRecord->_bodyId );
+        const b2Transform transform = b2Body_GetTransform( pRecord->_bodyID );
         outPosition                 = Box2DUtil::toEngine( transform.p );
         outRotation                 = b2Rot_GetAngle( transform.q );
         return true;
@@ -535,9 +535,9 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr )
             return;
-        b2Body_SetTransform( pRecord->_bodyId, Box2DUtil::toBox2D( position ), b2MakeRot( rotation ) );
+        b2Body_SetTransform( pRecord->_bodyID, Box2DUtil::toBox2D( position ), b2MakeRot( rotation ) );
         if ( pRecord->_type != PhysicsBodyType::Static )
-            b2Body_SetAwake( pRecord->_bodyId, true );
+            b2Body_SetAwake( pRecord->_bodyID, true );
     }
 
     void Box2DPhysicsScene::moveKinematic( PhysicsBodyHandle body, const float2& targetPosition, const float32& targetRotation, float32 deltaTime )
@@ -545,61 +545,61 @@ namespace sw
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr || pRecord->_type != PhysicsBodyType::Kinematic || deltaTime <= 0.0f )
             return;
-        b2Body_SetTargetTransform( pRecord->_bodyId, b2Transform{ Box2DUtil::toBox2D( targetPosition ), b2MakeRot( targetRotation ) }, deltaTime );
+        b2Body_SetTargetTransform( pRecord->_bodyID, b2Transform{ Box2DUtil::toBox2D( targetPosition ), b2MakeRot( targetRotation ) }, deltaTime );
     }
 
     float2 Box2DPhysicsScene::getLinearVelocity( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr ? Box2DUtil::toEngine( b2Body_GetLinearVelocity( pRecord->_bodyId ) ) : float2{};
+        return pRecord != nullptr ? Box2DUtil::toEngine( b2Body_GetLinearVelocity( pRecord->_bodyID ) ) : float2{};
     }
 
     void Box2DPhysicsScene::setLinearVelocity( PhysicsBodyHandle body, const float2& velocity )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_SetLinearVelocity( pRecord->_bodyId, Box2DUtil::toBox2D( velocity ) );
+            b2Body_SetLinearVelocity( pRecord->_bodyID, Box2DUtil::toBox2D( velocity ) );
     }
 
     float32 Box2DPhysicsScene::getAngularVelocity( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr ? b2Body_GetAngularVelocity( pRecord->_bodyId ) : 0.0f;
+        return pRecord != nullptr ? b2Body_GetAngularVelocity( pRecord->_bodyID ) : 0.0f;
     }
 
     void Box2DPhysicsScene::setAngularVelocity( PhysicsBodyHandle body, const float32& velocity )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_SetAngularVelocity( pRecord->_bodyId, velocity );
+            b2Body_SetAngularVelocity( pRecord->_bodyID, velocity );
     }
 
     void Box2DPhysicsScene::addForce( PhysicsBodyHandle body, const float2& force )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_ApplyForceToCenter( pRecord->_bodyId, Box2DUtil::toBox2D( force ), true );
+            b2Body_ApplyForceToCenter( pRecord->_bodyID, Box2DUtil::toBox2D( force ), true );
     }
 
     void Box2DPhysicsScene::addImpulse( PhysicsBodyHandle body, const float2& impulse )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_ApplyLinearImpulseToCenter( pRecord->_bodyId, Box2DUtil::toBox2D( impulse ), true );
+            b2Body_ApplyLinearImpulseToCenter( pRecord->_bodyID, Box2DUtil::toBox2D( impulse ), true );
     }
 
     void Box2DPhysicsScene::addImpulseAtPoint( PhysicsBodyHandle body, const float2& impulse, const float2& point )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_ApplyLinearImpulse( pRecord->_bodyId, Box2DUtil::toBox2D( impulse ), Box2DUtil::toBox2D( point ), true );
+            b2Body_ApplyLinearImpulse( pRecord->_bodyID, Box2DUtil::toBox2D( impulse ), Box2DUtil::toBox2D( point ), true );
     }
 
     void Box2DPhysicsScene::addTorque( PhysicsBodyHandle body, const float32& torque )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_ApplyTorque( pRecord->_bodyId, torque, true );
+            b2Body_ApplyTorque( pRecord->_bodyID, torque, true );
     }
 
     void Box2DPhysicsScene::setBodyType( PhysicsBodyHandle body, PhysicsBodyType type )
@@ -607,7 +607,7 @@ namespace sw
         BodyRecord* pRecord = findBody( body );
         if ( pRecord == nullptr || pRecord->_type == type )
             return;
-        b2Body_SetType( pRecord->_bodyId, Box2DPhysicsSceneInternal::toBodyType( type ) );
+        b2Body_SetType( pRecord->_bodyID, Box2DPhysicsSceneInternal::toBodyType( type ) );
         pRecord->_type = type;
     }
 
@@ -636,26 +636,26 @@ namespace sw
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr )
-            b2Body_SetGravityScale( pRecord->_bodyId, factor );
+            b2Body_SetGravityScale( pRecord->_bodyID, factor );
     }
 
     float32 Box2DPhysicsScene::getBodyMass( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr ? b2Body_GetMass( pRecord->_bodyId ) : 0.0f;
+        return pRecord != nullptr ? b2Body_GetMass( pRecord->_bodyID ) : 0.0f;
     }
 
     bool Box2DPhysicsScene::isBodySleeping( PhysicsBodyHandle body ) const
     {
         const BodyRecord* pRecord = findBody( body );
-        return pRecord != nullptr && pRecord->_type != PhysicsBodyType::Static && b2Body_IsAwake( pRecord->_bodyId ) == false;
+        return pRecord != nullptr && pRecord->_type != PhysicsBodyType::Static && b2Body_IsAwake( pRecord->_bodyID ) == false;
     }
 
     void Box2DPhysicsScene::wakeBody( PhysicsBodyHandle body )
     {
         const BodyRecord* pRecord = findBody( body );
         if ( pRecord != nullptr && pRecord->_type != PhysicsBodyType::Static )
-            b2Body_SetAwake( pRecord->_bodyId, true );
+            b2Body_SetAwake( pRecord->_bodyID, true );
     }
 
     uint64 Box2DPhysicsScene::getBodyUserData( PhysicsBodyHandle body ) const
@@ -685,9 +685,9 @@ namespace sw
             return;
         // 필터 관절은 힘을 내지 않고 두 바디의 충돌만 끈다(Box2D 의 "null joint").
         b2FilterJointDef jointDef = b2DefaultFilterJointDef();
-        jointDef.bodyIdA          = pRecordA->_bodyId;
-        jointDef.bodyIdB          = pRecordB->_bodyId;
-        _mapPairToJoint[key]      = b2CreateFilterJoint( _worldId, &jointDef );
+        jointDef.bodyIdA          = pRecordA->_bodyID;
+        jointDef.bodyIdB          = pRecordB->_bodyID;
+        _mapPairToJoint[key]      = b2CreateFilterJoint( _worldID, &jointDef );
     }
 
     // --- 이벤트 -----------------------------------------------------------------------------------------------------------
@@ -697,11 +697,11 @@ namespace sw
         const BodyRecord* pRecordA = findBody( bodyA );
         if ( pRecordA == nullptr )
             return 0.0f;
-        const int32 capacity = b2Body_GetContactCapacity( pRecordA->_bodyId );
+        const int32 capacity = b2Body_GetContactCapacity( pRecordA->_bodyID );
         if ( capacity <= 0 )
             return 0.0f;
         _listContactScratch.resize( static_cast<size_t>( capacity ) );
-        const int32 count   = b2Body_GetContactData( pRecordA->_bodyId, _listContactScratch.data(), capacity );
+        const int32 count   = b2Body_GetContactData( pRecordA->_bodyID, _listContactScratch.data(), capacity );
         float32     impulse = 0.0f;
         for ( int32 contactIndex = 0; contactIndex < count; ++contactIndex )
         {
@@ -722,7 +722,7 @@ namespace sw
 
     void Box2DPhysicsScene::flushEvents()
     {
-        const b2ContactEvents contactEvents = b2World_GetContactEvents( _worldId );
+        const b2ContactEvents contactEvents = b2World_GetContactEvents( _worldID );
         for ( int32 eventIndex = 0; eventIndex < contactEvents.beginCount; ++eventIndex )
         {
             const b2ContactBeginTouchEvent& event    = contactEvents.beginEvents[eventIndex];
@@ -754,8 +754,8 @@ namespace sw
             const BodyRecord*        pRecordB = findBody( bodyB );
             if ( pRecordA == nullptr || pRecordB == nullptr )
                 continue;
-            const float32 massA        = b2Body_GetMass( pRecordA->_bodyId );
-            const float32 massB        = b2Body_GetMass( pRecordB->_bodyId );
+            const float32 massA        = b2Body_GetMass( pRecordA->_bodyID );
+            const float32 massB        = b2Body_GetMass( pRecordB->_bodyID );
             const float32 inverseMass  = ( massA > 0.0f ? 1.0f / massA : 0.0f ) + ( massB > 0.0f ? 1.0f / massB : 0.0f );
             const float32 restitutionA = b2Shape_IsValid( event.shapeIdA ) ? b2Shape_GetRestitution( event.shapeIdA ) : 0.0f;
             const float32 restitutionB = b2Shape_IsValid( event.shapeIdB ) ? b2Shape_GetRestitution( event.shapeIdB ) : 0.0f;
@@ -764,7 +764,7 @@ namespace sw
             _contactTracker.persistSubContact( bodyA, bodyB, Box2DUtil::toEngine( event.point ), Box2DUtil::toEngine( event.normal ), impulse );
         }
 
-        const b2SensorEvents sensorEvents = b2World_GetSensorEvents( _worldId );
+        const b2SensorEvents sensorEvents = b2World_GetSensorEvents( _worldID );
         for ( int32 eventIndex = 0; eventIndex < sensorEvents.beginCount; ++eventIndex )
         {
             const b2SensorBeginTouchEvent& event    = sensorEvents.beginEvents[eventIndex];

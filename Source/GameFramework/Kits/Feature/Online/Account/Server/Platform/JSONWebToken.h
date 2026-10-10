@@ -34,7 +34,7 @@ namespace sw
         [[nodiscard]] bool parse( string_view compact );
 
         NetSignatureAlgorithm getAlgorithm() const { return _algorithm; }
-        const string&         getKeyId() const { return _keyId; }
+        const string&         getKeyID() const { return _keyID; }
         /** @brief 몸의 글 주장입니다. 없거나 글이 아니면 false 입니다. */
         [[nodiscard]] bool findText( string_view claim, string& outValue ) const;
         /** @brief 몸의 정수 주장(초 — exp · iat)입니다. 없거나 숫자가 아니면 false 입니다. */
@@ -48,7 +48,7 @@ namespace sw
         unique_ptr<JSONDocument> _payload;
         vector<uint8>            _signatureBytes;
         string                   _signingInput;
-        string                   _keyId;
+        string                   _keyID;
         NetSignatureAlgorithm    _algorithm;
     };
 } // namespace sw
@@ -59,10 +59,10 @@ namespace sw
     struct SW_GF_API JSONWebTokenUtil
     {
         /** @brief @p payloadJSON 을 몸으로 서명한 압축 JWT 를 만듭니다(머리 `alg` · `typ` · `kid`). */
-        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJSON,
+        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyID, string_view payloadJSON,
                                               const string& privateKeyPem, string& outCompact );
         /** @brief 공개 키를 JWK(JSON 객체 글)로 씁니다 — 시험의 가짜 JWKS. */
-        static string writeJwk( const NetPublicKey& publicKey, string_view keyId );
+        static string writeJwk( const NetPublicKey& publicKey, string_view keyID );
     };
 } // namespace sw
 
@@ -77,7 +77,7 @@ namespace sw
     public:
         struct Entry
         {
-            string       _keyId{};
+            string       _keyID{};
             NetPublicKey _publicKey{};
         };
 
@@ -85,7 +85,7 @@ namespace sw
 
         /** @brief JWKS 글(`{"keys":[…]}`)로 키를 바꿉니다. RSA(n · e) · EC P-256(x · y) 서명 키만, 다른 것은 건너뛴다. 읽은 키가 하나도 없으면 false 이고 옛 키를 둔다. */
         [[nodiscard]] bool  replaceFromJwks( string_view jwksJSON, int64 nowMs );
-        const NetPublicKey* findKey( string_view keyId ) const;
+        const NetPublicKey* findKey( string_view keyID ) const;
         int32               getKeyCount() const { return static_cast<int32>( _listEntry.size() ); }
         int64               getFetchedAtMs() const { return _fetchedAtMs; }
         bool                hasKeys() const { return _listEntry.empty() == false; }

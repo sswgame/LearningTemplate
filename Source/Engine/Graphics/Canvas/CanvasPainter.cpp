@@ -182,7 +182,7 @@ namespace sw
         }
     }
 
-    bool CanvasPainter::drawGlyph( const float2& origin, FontFaceId face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex )
+    bool CanvasPainter::drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex )
     {
         const CachedGlyph* pGlyph = glyphCache.findOrAddGlyph( face, glyphIndex, frameIndex );
         if ( pGlyph == nullptr || pGlyph->_rect._width == 0 || pGlyph->_rect._height == 0 )

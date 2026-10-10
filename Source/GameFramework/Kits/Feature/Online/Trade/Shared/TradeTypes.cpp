@@ -42,13 +42,13 @@ namespace sw
         return "Unknown";
     }
 
-    int32 TradeSnapshot::findSideIndex( AccountId accountId ) const
+    int32 TradeSnapshot::findSideIndex( AccountID accountID ) const
     {
-        if ( accountId == kInvalidAccountId )
+        if ( accountID == kInvalidAccountID )
             return -1;
-        if ( _arrSide[0]._accountId == accountId )
+        if ( _arrSide[0]._accountID == accountID )
             return 0;
-        if ( _arrSide[1]._accountId == accountId )
+        if ( _arrSide[1]._accountID == accountID )
             return 1;
         return -1;
     }
@@ -58,7 +58,7 @@ namespace sw
         outWriter.writeVarUint( listLeg.size() );
         for ( const TradeLeg& leg : listLeg )
         {
-            outWriter.writeBlob( reinterpret_cast<const uint8*>( leg._assetId.data() ), static_cast<int32>( leg._assetId.size() ) );
+            outWriter.writeBlob( reinterpret_cast<const uint8*>( leg._assetID.data() ), static_cast<int32>( leg._assetID.size() ) );
             outWriter.writeVarInt( leg._amount );
         }
     }
@@ -72,10 +72,10 @@ namespace sw
         for ( uint64 index = 0; index < legCount; ++index )
         {
             vector<uint8> assetBytes;
-            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIdSize ) == false )
+            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIDSize ) == false )
                 return false;
             TradeLeg& leg = outListLeg.emplace_back();
-            leg._assetId.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );
+            leg._assetID.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );
             leg._amount = reader.readVarInt();
         }
         return reader.hasOverflowed() == false;
@@ -83,14 +83,14 @@ namespace sw
 
     void TradeWire::writeSnapshot( BitWriter& outWriter, const TradeSnapshot& snapshot )
     {
-        outWriter.writeVarUint( snapshot._tradeId );
+        outWriter.writeVarUint( snapshot._tradeID );
         outWriter.writeVarInt( snapshot._createdMs );
         outWriter.writeVarInt( snapshot._updatedMs );
         outWriter.writeVarUint( static_cast<uint64>( snapshot._state ) );
         outWriter.writeVarUint( static_cast<uint64>( snapshot._closeReason ) );
         for ( const TradeSide& side : snapshot._arrSide )
         {
-            outWriter.writeVarUint( side._accountId );
+            outWriter.writeVarUint( side._accountID );
             outWriter.writeVarUint( side._offerRevision );
             outWriter.writeBool( side._bLocked == SW_TRUE );
             outWriter.writeBool( side._bConfirmed == SW_TRUE );
@@ -101,7 +101,7 @@ namespace sw
     bool TradeWire::readSnapshot( BitReader& reader, TradeSnapshot& outSnapshot )
     {
         outSnapshot              = TradeSnapshot{};
-        outSnapshot._tradeId     = reader.readVarUint();
+        outSnapshot._tradeID     = reader.readVarUint();
         outSnapshot._createdMs   = reader.readVarInt();
         outSnapshot._updatedMs   = reader.readVarInt();
         const uint64 state       = reader.readVarUint();
@@ -112,7 +112,7 @@ namespace sw
         outSnapshot._closeReason = static_cast<TradeCloseReason>( closeReason );
         for ( TradeSide& side : outSnapshot._arrSide )
         {
-            side._accountId     = reader.readVarUint();
+            side._accountID     = reader.readVarUint();
             side._offerRevision = static_cast<uint32>( reader.readVarUint() );
             side._bLocked       = reader.readBool() ? SW_TRUE : SW_FALSE;
             side._bConfirmed    = reader.readBool() ? SW_TRUE : SW_FALSE;

@@ -200,7 +200,7 @@ SW_TEST_CASE( SceneTest, CookedBinaryEntityStateSurvivesFileAndIsUsedOnLoad )
     doc._name = "CookedScene";
     sw::SceneDocument::SceneObjectNode node{};
     node._name        = "CookedHero";
-    node._fileId      = 1;
+    node._fileID      = 1;
     node._embeddedXML = sourceXML;
     doc._listSceneObjectNode.push_back( node );
 
@@ -392,7 +392,7 @@ SW_TEST_CASE( SceneTest, SerializeWritesPrefabSourcePath )
 
     sw::GameObject* pHero = scene.getObjectManager()->createGameObject( sw::hashed_string( "Hero" ) );
     SW_ASSERT_NOT_NULL( pHero );
-    scene.setEntityPrefabPath( pHero->getObjectId(), "prefabs/hero.prefab.xml" );
+    scene.setEntityPrefabPath( pHero->getObjectID(), "prefabs/hero.prefab.xml" );
 
     sw::SceneDocument doc{};
     SW_ASSERT_TRUE( scene.serializeToDocument( doc ) );
@@ -441,7 +441,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
 
     sw::SceneDocument::SceneObjectNode node{};
     node._name              = "HeroInstance";
-    node._fileId            = 2;
+    node._fileID            = 2;
     node._prefab            = "prefabs/old_hero.prefab.xml";
     const sw::UUID heroGuid = sw::UUID::generate();
     node._prefabGuid        = heroGuid.toString();
@@ -851,36 +851,36 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
  * @details 부착 · 핸들은 부모를 파일 id 로 가리키고 쿠커는 그 id 로 엔티티를 찾는다. 씬을 쓰는 쪽(`Scene::serializeToDocument`)은 모든 엔티티에
  *          id 를 주므로 id 없는 엔티티는 지금 형식이 아니다 — 읽는 쪽이 id 를 지어 주지 않고 거절한다.
  */
-SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIdIsRejected )
+SW_TEST_CASE( SceneTest, SceneEntityWithoutAnIDIsRejected )
 {
     const sw::string kHead  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scene formatVersion=\"1\" name=\"NoIds\">\n  <entities>\n";
     const sw::string kTail  = "  </entities>\n</Scene>\n";
-    const sw::string withId = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n" + kTail;
-    const sw::string noId   = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n    <entity name=\"NoId\"/>\n" + kTail;
-    const sw::string zeroId = kHead + "    <entity id=\"0\" name=\"ZeroId\"/>\n" + kTail;
+    const sw::string withID = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n" + kTail;
+    const sw::string noID   = kHead + "    <entity id=\"1\" name=\"Kept\"/>\n    <entity name=\"NoId\"/>\n" + kTail;
+    const sw::string zeroID = kHead + "    <entity id=\"0\" name=\"ZeroId\"/>\n" + kTail;
 
-    const sw::string withIdPath = test::makeTempPath( "with_id.scene.xml" );
-    const sw::string noIdPath   = test::makeTempPath( "no_id.scene.xml" );
-    const sw::string zeroIdPath = test::makeTempPath( "zero_id.scene.xml" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( withIdPath, withId ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( noIdPath, noId ) );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( zeroIdPath, zeroId ) );
+    const sw::string withIDPath = test::makeTempPath( "with_id.scene.xml" );
+    const sw::string noIDPath   = test::makeTempPath( "no_id.scene.xml" );
+    const sw::string zeroIDPath = test::makeTempPath( "zero_id.scene.xml" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( withIDPath, withID ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( noIDPath, noID ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( zeroIDPath, zeroID ) );
 
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXML( withIdPath ) );
+    SW_ASSERT_TRUE( doc.loadXML( withIDPath ) );
     SW_ASSERT_EQUAL( size_t( 1 ), doc._listSceneObjectNode.size() );
-    SW_EXPECT_EQUAL( uint64( 1 ), doc._listSceneObjectNode[0]._fileId );
+    SW_EXPECT_EQUAL( uint64( 1 ), doc._listSceneObjectNode[0]._fileID );
 
-    sw::SceneDocument::SceneObjectNode noIdEntity{};
-    noIdEntity._name = "NoId";
+    sw::SceneDocument::SceneObjectNode noIDEntity{};
+    noIDEntity._name = "NoId";
     {
         SW_TEST_DEFENSIVE_SCOPE( "a scene entity without an id" );
-        SW_EXPECT_FALSE( doc.loadXML( noIdPath ) );
+        SW_EXPECT_FALSE( doc.loadXML( noIDPath ) );
         SW_EXPECT_TRUE( doc._listSceneObjectNode.empty() ); // 반쯤 읽은 문서를 남기지 않는다
-        SW_EXPECT_FALSE( doc.loadXML( zeroIdPath ) );
+        SW_EXPECT_FALSE( doc.loadXML( zeroIDPath ) );
 
-        SW_ASSERT_TRUE( doc.loadXML( withIdPath ) );
-        doc._listSceneObjectNode.push_back( noIdEntity );
+        SW_ASSERT_TRUE( doc.loadXML( withIDPath ) );
+        doc._listSceneObjectNode.push_back( noIDEntity );
         SW_EXPECT_FALSE( doc.saveXML( test::makeTempPath( "no_id_written.scene.xml" ) ) );
         SW_EXPECT_EQUAL( 0u, sw::SceneCooker::cookEntityState( doc ) );
     }
@@ -899,7 +899,7 @@ SW_TEST_CASE( SceneTest, BinaryEntityCountIsBoundedByFileSize )
     doc._name = "BoundedScene";
     sw::SceneDocument::SceneObjectNode node{};
     node._name   = "Root";
-    node._fileId = 3;
+    node._fileID = 3;
     doc._listSceneObjectNode.push_back( std::move( node ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -1092,7 +1092,7 @@ SW_TEST_CASE( SceneTest, SceneCookFailsOnAComponentOfUnknownType )
     doc._name = "UnknownType";
     sw::SceneDocument::SceneObjectNode node{};
     node._name        = "Lamp";
-    node._fileId      = 4;
+    node._fileID      = 4;
     node._embeddedXML = xml;
     doc._listSceneObjectNode.push_back( node );
     const sw::string scenePath = sw::FileUtil::joinPath( root, "game/demo/maps/unknown.scene.xml" );
@@ -1212,7 +1212,7 @@ SW_TEST_CASE( SceneTest, MultiLineTextKeepsItsLineBreaksThroughASceneFile )
  * @details 부모는 파일 안의 id 로 가리킨다(유니티 fileID). 런타임 오브젝트 id 를 그대로 적으면 실행마다 값이 달라 저장할 때마다 모든 엔티티가
  *          바뀐 것처럼 보인다 — 씬이 런타임 id ↔ 파일 id 표를 들고 같은 값을 다시 쓴다. 상태 본문까지 바이트 단위로 같아야 한다.
  */
-SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
+SW_TEST_CASE( SceneTest, FileIDsStayTheSameAcrossSaveAndReload )
 {
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -1253,7 +1253,7 @@ SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
     SW_ASSERT_EQUAL( first._listSceneObjectNode.size(), second._listSceneObjectNode.size() );
     for ( const sw::SceneDocument::SceneObjectNode& before : first._listSceneObjectNode )
     {
-        SW_EXPECT_TRUE( before._fileId != 0 );
+        SW_EXPECT_TRUE( before._fileID != 0 );
         const sw::SceneDocument::SceneObjectNode* pAfter = nullptr;
         for ( const sw::SceneDocument::SceneObjectNode& candidate : second._listSceneObjectNode )
         {
@@ -1261,7 +1261,7 @@ SW_TEST_CASE( SceneTest, FileIdsStayTheSameAcrossSaveAndReload )
                 pAfter = &candidate;
         }
         SW_ASSERT_NOT_NULL( pAfter );
-        SW_EXPECT_EQUAL( before._fileId, pAfter->_fileId );
+        SW_EXPECT_EQUAL( before._fileID, pAfter->_fileID );
         SW_EXPECT_STREQ( before._embeddedXML.c_str(), pAfter->_embeddedXML.c_str() );
     }
 
@@ -1355,16 +1355,16 @@ SW_TEST_CASE( SceneTest, ChildOfAMissingPrefabEntityKeepsItsParentReference )
     sw::Scene* pOpened = manager.createScene( "GhostParentWorldOpened" );
     SW_ASSERT_NOT_NULL( pOpened );
     // 고스트의 **파일 id** 와 같은 **런타임 id** 를 가진 다른 오브젝트가 이 씬에 있다 — 파일 id 는 파일 안에서만 뜻이 있으니 이것에 붙으면 안 된다.
-    uint64 ghostFileId = 0;
+    uint64 ghostFileID = 0;
     for ( const sw::SceneDocument::SceneObjectNode& entity : withMissingPrefab._listSceneObjectNode )
     {
         if ( entity._name == "Ghost" )
-            ghostFileId = entity._fileId;
+            ghostFileID = entity._fileID;
     }
-    SW_ASSERT_TRUE( ghostFileId != 0 );
-    sw::GameObject* pSameNumber = pOpened->getObjectManager()->createGameObjectWithId( sw::hashed_string( "SameNumber" ), ghostFileId );
+    SW_ASSERT_TRUE( ghostFileID != 0 );
+    sw::GameObject* pSameNumber = pOpened->getObjectManager()->createGameObjectWithID( sw::hashed_string( "SameNumber" ), ghostFileID );
     SW_ASSERT_NOT_NULL( pSameNumber );
-    SW_ASSERT_EQUAL( ghostFileId, pSameNumber->getObjectId() );
+    SW_ASSERT_EQUAL( ghostFileID, pSameNumber->getObjectID() );
     SW_ASSERT_NOT_NULL( pSameNumber->addComponent<sw::SceneComponent>() );
     {
         test::ScopedDefensiveTestLog expected( "prefab of 'Ghost' does not exist and Gun cannot find its parent" );
@@ -1481,16 +1481,16 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     manager.markPersistent( pSpeaker );
     SW_EXPECT_FALSE( manager.isPersistent( pSpeaker ) );
 
-    const uint64              keeperId      = pKeeper->getObjectId();
-    const uint64              speakerId     = pSpeaker->getObjectId();
+    const uint64              keeperID      = pKeeper->getObjectID();
+    const uint64              speakerID     = pSpeaker->getObjectID();
     const sw::ComponentHandle mountHandle   = pKeeperMount->getHandle();
     const sw::ComponentHandle speakerHandle = pSpeakerScene->getHandle();
 
     sw::Scene* pSecond = manager.createEmptyActiveScene( "Second" );
     SW_ASSERT_NOT_NULL( pSecond );
     sw::GameObjectManager* pNext           = pSecond->getObjectManager();
-    sw::GameObject*        pCarried        = pNext->findGameObjectById( keeperId );
-    sw::GameObject*        pCarriedSpeaker = pNext->findGameObjectById( speakerId );
+    sw::GameObject*        pCarried        = pNext->findGameObjectByID( keeperID );
+    sw::GameObject*        pCarriedSpeaker = pNext->findGameObjectByID( speakerID );
     SW_ASSERT_NOT_NULL( pCarried );
     SW_ASSERT_NOT_NULL( pCarriedSpeaker );
     SW_EXPECT_TRUE( pCarried->getName() == sw::hashed_string( "MusicPlayer" ) );
@@ -1511,7 +1511,7 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     // 다음 전환에도 넘어간다.
     sw::Scene* pThird = manager.createEmptyActiveScene( "Third" );
     SW_ASSERT_NOT_NULL( pThird );
-    SW_EXPECT_TRUE( pThird->getObjectManager()->findGameObjectById( keeperId ) != nullptr );
+    SW_EXPECT_TRUE( pThird->getObjectManager()->findGameObjectByID( keeperID ) != nullptr );
 
     // 플레이를 멈추면 표시를 잊는다. 편집 중에는 표시를 받지 않는다.
     manager.setWorldPlaying( false );
@@ -1522,7 +1522,7 @@ SW_TEST_CASE( SceneTest, PersistentRootsCarryIntoTheNextScene )
     manager.setWorldPlaying( true );
     sw::Scene* pFourth = manager.createEmptyActiveScene( "Fourth" );
     SW_ASSERT_NOT_NULL( pFourth );
-    SW_EXPECT_TRUE( pFourth->getObjectManager()->findGameObjectById( keeperId ) == nullptr );
+    SW_EXPECT_TRUE( pFourth->getObjectManager()->findGameObjectByID( keeperID ) == nullptr );
     manager.setWorldPlaying( false );
 
     manager.shutdown();
@@ -1561,7 +1561,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     sw::SceneDocument                  doc;
     sw::SceneDocument::SceneObjectNode entity;
     entity._name        = "Lifecycle";
-    entity._fileId      = 5;
+    entity._fileID      = 5;
     entity._prefab      = prefabPath;
     entity._embeddedXML = savedState;
     doc._listSceneObjectNode.push_back( entity );
@@ -1574,7 +1574,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     sw::GameObject* pInstance = pScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Lifecycle" ) );
     SW_ASSERT_NOT_NULL( pInstance );
     SW_EXPECT_TRUE( pInstance->getComponent<sw::MockPoolLifecycleComponent>() != nullptr );
-    SW_EXPECT_STREQ( prefabPath.c_str(), pScene->getEntityPrefabPath( pInstance->getObjectId() ).c_str() );
+    SW_EXPECT_STREQ( prefabPath.c_str(), pScene->getEntityPrefabPath( pInstance->getObjectID() ).c_str() );
 
     manager.shutdown();
 }
@@ -1594,14 +1594,14 @@ SW_TEST_CASE( SceneTest, EntityWhosePrefabIsMissingSurvivesSave )
     sw::SceneDocument                  doc;
     sw::SceneDocument::SceneObjectNode ghost;
     ghost._name        = "Ghost";
-    ghost._fileId      = 6;
+    ghost._fileID      = 6;
     ghost._prefab      = "prefabs/test_missing_for_scene_test.prefab.xml";
     ghost._prefabGuid  = "0b7c2a9e-4f1d-4c3a-9e8b-1d2c3b4a5f60";
     ghost._embeddedXML = "<GameObject _name=\"Ghost\" />";
     doc._listSceneObjectNode.push_back( ghost );
     sw::SceneDocument::SceneObjectNode plain;
     plain._name   = "Plain";
-    plain._fileId = 7;
+    plain._fileID = 7;
     doc._listSceneObjectNode.push_back( plain );
 
     {

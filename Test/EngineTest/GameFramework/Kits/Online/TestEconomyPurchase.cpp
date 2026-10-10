@@ -77,9 +77,9 @@ namespace
         EconomyResult buy( const utf8* pOffer, int32 count, uint64 keyLow, int64 nowMs = 1500, EconomyReply* pOutReply = nullptr )
         {
             EconomyPurchaseInput input;
-            input._offerId    = pOffer;
+            input._offerID    = pOffer;
             input._count      = count;
-            input._accountId  = kBuyer;
+            input._accountID  = kBuyer;
             input._nowMs      = nowMs;
             input._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( kBuyer ), 1, keyLow );
             EconomyReply        reply;

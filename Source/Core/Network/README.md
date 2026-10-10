@@ -85,9 +85,9 @@ py -3 -m Scripts test NetworkThreadTest.*
 비밀 키, 주소, 솔트, 5초 단위 시간으로 만든 챌린지 값만 돌려주고, 그 값을 되돌려 준 응답이 같은 시간 단위나 다음 단위 안에 와야 자리를 잡습니다. 위조된 주소로 자리를 채우는 공격을 막기 위해서입니다.
 프로토콜 id와 체크섬으로 다른 프로그램의 패킷과 깨진 패킷을 걸러 냅니다. 클라이언트는 `Accepted` 를 받아야만 연결된 것으로 봅니다.
 
-**와이어 버전.** 프로토콜 id는 게임 id(`_gameId`), Core 버전(`NetWireVersion::kCore`), 게임과 키트 버전(`_wireVersion`, 키트는 `NetKitWireVersion`)을 섞어 만듭니다.
+**와이어 버전.** 프로토콜 id는 게임 id(`_gameID`), Core 버전(`NetWireVersion::kCore`), 게임과 키트 버전(`_wireVersion`, 키트는 `NetKitWireVersion`)을 섞어 만듭니다.
 형식을 바꾸는 커밋은 그 계층의 버전을 올리고, 예전 형식은 읽지 않습니다. 버전이 다르면 서버가 `VersionMismatch`(다른 게임이면 `Rejected`)로 거절하고 양쪽 로그에 두 프로토콜 id를 남깁니다.
-요청과 거절 패킷만 버전과 상관없는 고정 머리(`NetProtocol::kHandshakeId`)로 감싸서 버전이 달라도 읽힙니다. 그래서 이 두 패킷의 배치는 바꾸지 않습니다.
+요청과 거절 패킷만 버전과 상관없는 고정 머리(`NetProtocol::kHandshakeID`)로 감싸서 버전이 달라도 읽힙니다. 그래서 이 두 패킷의 배치는 바꾸지 않습니다.
 
 **대역폭.** 연결마다 대역폭 상한(`_maxBytesPerSecond`, 기본 100,000B/s)이 있습니다. 언리얼의 `NetSpeed` 에 해당합니다.
 보낼 것이 없으면 `_keepAliveInterval`(0.25초)마다만 보냅니다. 호스트는 주소에서 연결을 해시로 찾으므로 연결 수와 관계없이 패킷 하나를 O(1)로 처리합니다.

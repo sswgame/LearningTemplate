@@ -40,7 +40,7 @@ namespace sw
             RoundRanked,      ///< _player, _value = 순위(1 부터), _points = 받은 순위 점수
             SeriesWon         ///< _player = 우승한 사람
         };
-        hashed_string _roundId{};
+        hashed_string _roundID{};
         int32         _player{ -1 };
         int32         _value{ 0 };
         int32         _points{ 0 };

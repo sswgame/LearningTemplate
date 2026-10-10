@@ -60,7 +60,7 @@ namespace sw
         bool                   isFinished() const { return _bFinished == SW_TRUE; }
         bool                   isConnectionOpen() const { return _bConnectionOpen == SW_TRUE; }
         StreamConnectionHandle getConnection() const { return _connection; }
-        AccountId              getAccountId() const { return _accountId; }
+        AccountID              getAccountID() const { return _accountID; }
         int32                  getIndex() const { return _botIndex; }
 
     private:
@@ -122,7 +122,7 @@ namespace sw
         vector<LobbySnapshot>      _listLobbySnapshot;
         LoadBotRunner*             _pRunner;
         StreamConnectionHandle     _connection;
-        AccountId                  _accountId;
+        AccountID                  _accountID;
         int64                      _waitUntilMs;
         int64                      _requestStartUs;
         int32                      _botIndex;

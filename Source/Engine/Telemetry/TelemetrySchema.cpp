@@ -113,11 +113,11 @@ namespace sw
         _version  = 0;
     }
 
-    const TelemetryEventDef* TelemetrySchema::findEvent( const hashed_string& eventId ) const
+    const TelemetryEventDef* TelemetrySchema::findEvent( const hashed_string& eventID ) const
     {
         for ( const TelemetryEventDef& event : _listEvent )
         {
-            if ( event._id == eventId )
+            if ( event._id == eventID )
                 return &event;
         }
         return nullptr;

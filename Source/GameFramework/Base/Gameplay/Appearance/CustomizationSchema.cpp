@@ -87,7 +87,7 @@ namespace sw
                 }
             }
 
-            static void readDrive( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
+            static void readDrive( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
                 CustomizationDriveDef drive;
@@ -97,25 +97,25 @@ namespace sw
                 drive._channel = node.getAttributeInt( "channel", 0 );
                 if ( parseDriveKind( node.getAttributeText( "kind" ), drive._kind ) == false )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaId.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
+                    report.addError( "%#: schema '%#' parameter '%#' has unknown drive kind '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), node.getAttributeText( "kind" ) );
                     return;
                 }
                 const bool bSliderDrive = isSliderDrive( drive._kind );
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaId.c_str(), inoutParam._name.c_str(), toString( drive._kind ), drive._target.c_str() );
+                    report.addError( "%#: schema '%#' parameter '%#' cannot drive %# '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), toString( drive._kind ), drive._target.c_str() );
                     return;
                 }
                 if ( drive._kind == CustomizationDriveKind::DyeChannel && ( drive._channel < 0 || drive._channel > kMaxDyeChannel ) )
                 {
-                    report.addError( "%#: schema '%#' parameter '%#' dye channel %# is outside 0..3", sourceName, schemaId.c_str(), inoutParam._name.c_str(), drive._channel );
+                    report.addError( "%#: schema '%#' parameter '%#' dye channel %# is outside 0..3", sourceName, schemaID.c_str(), inoutParam._name.c_str(), drive._channel );
                     return;
                 }
                 inoutParam._listDrive.push_back( drive );
             }
 
-            static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
+            static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
                 CustomizationOptionDef option;
@@ -130,13 +130,13 @@ namespace sw
                 option._rotation           = AppearanceXMLUtil::readFloat3( node, "rotation", float3::Zero );
                 const bool bChoiceOnly     = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
-                    report.addError( "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaId.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addError( "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Attachment && bChoiceOnly )
-                    report.addError( "%#: schema '%#' attachment '%#' option '%#' may only name a prefab or sprite", sourceName, schemaId.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addError( "%#: schema '%#' attachment '%#' option '%#' may only name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( inoutParam._kind == CustomizationKind::Choice && option._asset.empty() == false )
-                    report.addError( "%#: schema '%#' choice '%#' option '%#' cannot name a prefab or sprite", sourceName, schemaId.c_str(), inoutParam._name.c_str(), option._name.c_str() );
+                    report.addError( "%#: schema '%#' choice '%#' option '%#' cannot name a prefab or sprite", sourceName, schemaID.c_str(), inoutParam._name.c_str(), option._name.c_str() );
                 else if ( prefab.empty() == false && sprite.empty() == false )
-                    report.addError( "%#: schema '%#' option '%#' names both a prefab and a sprite", sourceName, schemaId.c_str(), option._name.c_str() );
+                    report.addError( "%#: schema '%#' option '%#' names both a prefab and a sprite", sourceName, schemaID.c_str(), option._name.c_str() );
                 else
                     inoutParam._listOption.push_back( option );
             }

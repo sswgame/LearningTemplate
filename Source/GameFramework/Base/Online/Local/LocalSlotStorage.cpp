@@ -74,7 +74,7 @@ namespace sw
     {
         LocalStoreCompletion completion;
         completion._slot      = request._slot;
-        completion._requestId = request._requestId;
+        completion._requestID = request._requestID;
         completion._result    = result;
         completion._operation = request._operation;
         return completion;

@@ -81,13 +81,13 @@ namespace sw
             if ( sw::FileUtil::collectFiles( directory, "", listFile, false ) == false )
                 return 0;
             const sw::string prefix           = sw::string{ pModuleName } + sw::ShadowCopyName::kMarker;
-            const int32      currentProcessId = sw::Process::getCurrentProcessId();
+            const int32      currentProcessID = sw::Process::getCurrentProcessID();
             uint32           count{ 0 };
             for ( const sw::string& filePath : listFile )
             {
-                int32      ownerProcessId{ 0 };
-                const bool bOwnCopy = filePath.find( prefix ) != sw::string::npos && sw::ShadowCopyName::parse( filePath, ownerProcessId ) &&
-                                      ownerProcessId == currentProcessId;
+                int32      ownerProcessID{ 0 };
+                const bool bOwnCopy = filePath.find( prefix ) != sw::string::npos && sw::ShadowCopyName::parse( filePath, ownerProcessID ) &&
+                                      ownerProcessID == currentProcessID;
                 if ( bOwnCopy )
                     ++count;
             }
@@ -755,7 +755,7 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
     sw::GameObject*        pTarget  = pManager->createGameObject( sw::hashed_string( "UndoTarget" ) );
     SW_ASSERT_NOT_NULL( pTarget );
     pManager->mergePendingAdds();
-    const uint64 targetId = pTarget->getObjectId();
+    const uint64 targetID = pTarget->getObjectID();
 
     sw::CommandStack         stack;
     const sw::ObjectSnapshot before = sw::ObjectUndoUtil::captureSnapshot( pTarget );
@@ -773,9 +773,9 @@ SW_TEST_CASE( ArchitectureTest, ObjectUndoSurvivesAnEditorModuleReload )
 
     SW_ASSERT_EQUAL( size_t( 1 ), stack.getCommandCount() );
     stack.undo();
-    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == before._xml );
+    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectByID( targetID ) )._xml == before._xml );
     stack.redo();
-    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectById( targetId ) )._xml == after._xml );
+    SW_EXPECT_TRUE( sw::ObjectUndoUtil::captureSnapshot( pManager->findGameObjectByID( targetID ) )._xml == after._xml );
     manager.shutdown();
 }
 

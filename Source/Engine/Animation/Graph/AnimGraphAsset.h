@@ -88,15 +88,15 @@ namespace sw
         /** @brief 노드 이름 목록을 채웁니다. */
         void collectNodeNames( vector<string>& outListName ) const;
         /** @brief id 로 노드를 찾습니다. */
-        const AnimGraphNode* findNode( int32 nodeId ) const;
+        const AnimGraphNode* findNode( int32 nodeID ) const;
         /** @brief 이름으로 노드를 찾습니다. */
         const AnimGraphNode* findNodeByName( string_view name ) const;
         /** @brief 진입 노드(들어오는 링크가 없는 첫 노드, 없으면 목록 앞)를 반환합니다. */
         const AnimGraphNode* findEntryNode() const;
         /** @brief 그 노드에서 나가는 첫 링크의 대상 id 입니다. 없으면 0 입니다. */
-        int32 findFirstOutgoingNodeId( int32 fromNodeId ) const;
+        int32 findFirstOutgoingNodeID( int32 fromNodeID ) const;
         /** @brief 조건 없는 첫 나가는 링크("끝나면 다음")입니다. 없으면 nullptr 입니다. */
-        const AnimGraphLink* findFinishLink( int32 fromNodeId ) const;
+        const AnimGraphLink* findFinishLink( int32 fromNodeID ) const;
         /** @brief 조건 표기를 읽습니다. 모르는 표기면 false 입니다. */
         [[nodiscard]] static bool parseConditionOp( string_view text, AnimConditionOp& outOp );
         /** @brief 조건 표기를 씁니다. */

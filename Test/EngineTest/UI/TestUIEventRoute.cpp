@@ -58,7 +58,7 @@ namespace
             sw::UIWidgetPath path{};
             if ( sw::UIEventRouter::hitTest( _tree, sw::float2{ x, y }, path ) == false )
                 return sw::string{};
-            const sw::Widget* pLeaf = _tree.findWidgetById( path.getLeaf() );
+            const sw::Widget* pLeaf = _tree.findWidgetByID( path.getLeaf() );
             return pLeaf != nullptr ? sw::string{ pLeaf->getName().c_str() } : sw::string{};
         }
 
@@ -114,8 +114,8 @@ SW_TEST_CASE( UIEventRouteTest, HitTestPicksTopmostDeepest )
     sw::UIWidgetPath path{};
     SW_ASSERT_TRUE( sw::UIEventRouter::hitTest( fixture._tree, sw::float2{ 10.0f, 10.0f }, path ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( path._listWidget.size() ) );
-    SW_EXPECT_EQUAL( fixture._pRoot->getId(), path._listWidget[0] );
-    SW_EXPECT_EQUAL( pBack->getId(), path._listWidget[1] );
+    SW_EXPECT_EQUAL( fixture._pRoot->getID(), path._listWidget[0] );
+    SW_EXPECT_EQUAL( pBack->getID(), path._listWidget[1] );
 }
 
 /** @brief [UIEventRouteTest] HitTestInvisible 패널 아래 자식은 못 받고 SelfHitTestInvisible 패널 아래 자식은 받는다 — 패널 자신은 둘 다 못 받는다. Hidden 은 못 받는다 */
@@ -179,11 +179,11 @@ SW_TEST_CASE( UIEventRouteTest, TunnelThenBubbleOrder )
 
     sw::UIWidgetPath path{};
     SW_ASSERT_TRUE( sw::UIEventRouter::hitTest( fixture._tree, sw::float2{ 20.0f, 20.0f }, path ) );
-    sw::WidgetId      handler = sw::kInvalidWidgetId;
+    sw::WidgetID      handler = sw::kInvalidWidgetID;
     const sw::UIReply reply =
         sw::UIEventRouter::routePointerEvent( fixture._tree, path, UIRouteFixture::makePointer( sw::UIPointerEventKind::Down, 20.0f, 20.0f ), handler );
     SW_EXPECT_FALSE( reply.isHandled() );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, handler );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, handler );
     SW_EXPECT_STREQ( "root T, panel T, button T, button B, panel B, root B", fixture._record.joined().c_str() );
 }
 
@@ -197,11 +197,11 @@ SW_TEST_CASE( UIEventRouteTest, HandledStopsRoute )
 
     sw::UIWidgetPath path{};
     SW_ASSERT_TRUE( sw::UIEventRouter::hitTest( fixture._tree, sw::float2{ 20.0f, 20.0f }, path ) );
-    sw::WidgetId      handler = sw::kInvalidWidgetId;
+    sw::WidgetID      handler = sw::kInvalidWidgetID;
     const sw::UIReply reply =
         sw::UIEventRouter::routePointerEvent( fixture._tree, path, UIRouteFixture::makePointer( sw::UIPointerEventKind::Down, 20.0f, 20.0f ), handler );
     SW_EXPECT_TRUE( reply.isHandled() );
-    SW_EXPECT_EQUAL( pPanel->getId(), handler );
+    SW_EXPECT_EQUAL( pPanel->getID(), handler );
     SW_EXPECT_STREQ( "root T, panel T", fixture._record.joined().c_str() );
 }
 
@@ -218,19 +218,19 @@ SW_TEST_CASE( UIEventRouteTest, CaptureRoutesToCapturerOutsideItsRect )
     sw::UIPointerState        pointer;
     const sw::UIPointerResult down = pointer.process( fixture._tree, UIRouteFixture::makePointer( sw::UIPointerEventKind::Down, 20.0f, 20.0f ) );
     SW_EXPECT_TRUE( down._bHandled == SW_TRUE );
-    SW_EXPECT_EQUAL( pSlider->getId(), pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( pSlider->getID(), pointer.getCapturedWidget() );
 
     fixture._record._listLine.clear();
     const sw::UIPointerResult move = pointer.process( fixture._tree, UIRouteFixture::makePointer( sw::UIPointerEventKind::Move, 250.0f, 220.0f ) );
-    SW_EXPECT_EQUAL( pSlider->getId(), move._handler ); // "other" 위지만 잡은 슬라이더가 받는다
+    SW_EXPECT_EQUAL( pSlider->getID(), move._handler ); // "other" 위지만 잡은 슬라이더가 받는다
     SW_EXPECT_STREQ( "root T, slider T, slider B", fixture._record.joined().c_str() );
 
     const sw::UIPointerResult up = pointer.process( fixture._tree, UIRouteFixture::makePointer( sw::UIPointerEventKind::Up, 250.0f, 220.0f ) );
-    SW_EXPECT_EQUAL( pSlider->getId(), up._handler );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( pSlider->getID(), up._handler );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, pointer.getCapturedWidget() );
 
     const sw::UIPointerResult after = pointer.process( fixture._tree, UIRouteFixture::makePointer( sw::UIPointerEventKind::Move, 250.0f, 220.0f ) );
-    SW_EXPECT_EQUAL( pOther->getId(), after._handler ); // 놓은 뒤에는 다시 히트 테스트
+    SW_EXPECT_EQUAL( pOther->getID(), after._handler ); // 놓은 뒤에는 다시 히트 테스트
 }
 
 /** @brief [UIEventRouteTest] A 에서 B 로 옮기면 A 쪽은 잎부터 Leave, B 쪽은 뿌리부터 Enter — 공통 조상(루트)은 아무것도 받지 않는다 */
@@ -309,10 +309,10 @@ SW_TEST_CASE( UIEventRouteTest, ScrollBarDragMovesOffset )
 
     sw::UIPointerState pointer;
     SW_EXPECT_TRUE( pointer.process( fixture.getTree(), UIScrollRouteUtil::makeEvent( sw::UIPointerEventKind::Down, 197.0f, 10.0f ) )._bHandled == SW_TRUE );
-    SW_EXPECT_EQUAL( pScroll->getId(), pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( pScroll->getID(), pointer.getCapturedWidget() );
     (void)pointer.process( fixture.getTree(), UIScrollRouteUtil::makeEvent( sw::UIPointerEventKind::Move, 150.0f, 35.0f ) ); // 막대 밖으로 나가도 잡고 있다
     SW_EXPECT_NEAR_EQUAL( 50.0f, pScroll->getScrollOffset()._y, 0.001f );
     (void)pointer.process( fixture.getTree(), UIScrollRouteUtil::makeEvent( sw::UIPointerEventKind::Up, 150.0f, 35.0f ) );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, pointer.getCapturedWidget() );
     SW_EXPECT_FALSE( pScroll->isDraggingScrollBar() );
 }

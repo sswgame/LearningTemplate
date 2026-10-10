@@ -11,8 +11,8 @@ namespace sw
     void SocialProtocol::writeRequest( BitWriter& outWriter, const SocialRequest& request )
     {
         ServiceKeyUtil::writeString( outWriter, request._text );
-        outWriter.writeVarUint( request._otherId );
-        outWriter.writeVarUint( request._guildId );
+        outWriter.writeVarUint( request._otherID );
+        outWriter.writeVarUint( request._guildID );
         outWriter.writeVarUint( static_cast<uint64>( request._status ) );
         outWriter.writeVarUint( static_cast<uint64>( request._role ) );
         outWriter.writeBool( request._bAccept == SW_TRUE );
@@ -22,8 +22,8 @@ namespace sw
     {
         if ( ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._text ) == false )
             return false;
-        outRequest._otherId = reader.readVarUint();
-        outRequest._guildId = reader.readVarUint();
+        outRequest._otherID = reader.readVarUint();
+        outRequest._guildID = reader.readVarUint();
         const uint64 status = reader.readVarUint();
         const uint64 role   = reader.readVarUint();
         if ( status >= static_cast<uint64>( SocialPresenceStatus::Count ) || role >= static_cast<uint64>( GuildRole::Count ) )
@@ -37,11 +37,11 @@ namespace sw
     void SocialProtocol::writeReply( BitWriter& outWriter, const SocialReply& reply )
     {
         outWriter.writeVarUint( static_cast<uint64>( reply._result ) );
-        outWriter.writeVarUint( reply._otherId );
+        outWriter.writeVarUint( reply._otherID );
         outWriter.writeVarUint( reply._listLink.size() );
         for ( const SocialLink& link : reply._listLink )
         {
-            outWriter.writeVarUint( link._otherId );
+            outWriter.writeVarUint( link._otherID );
             outWriter.writeVarUint( static_cast<uint64>( link._state ) );
             outWriter.writeVarInt( link._sinceMs );
         }
@@ -59,14 +59,14 @@ namespace sw
         if ( result >= static_cast<uint64>( SocialResult::Count ) )
             return false;
         outReply._result       = static_cast<SocialResult>( result );
-        outReply._otherId      = reader.readVarUint();
+        outReply._otherID      = reader.readVarUint();
         const uint64 linkCount = reader.readVarUint();
         if ( linkCount > static_cast<uint64>( SocialLimit::kMaxLinkPage ) )
             return false;
         outReply._listLink.resize( static_cast<size_t>( linkCount ) );
         for ( SocialLink& link : outReply._listLink )
         {
-            link._otherId      = reader.readVarUint();
+            link._otherID      = reader.readVarUint();
             const uint64 state = reader.readVarUint();
             link._sinceMs      = reader.readVarInt();
             if ( state >= static_cast<uint64>( SocialLinkState::Count ) )
@@ -87,14 +87,14 @@ namespace sw
 
     void SocialProtocol::writePresence( BitWriter& outWriter, const SocialPresence& presence )
     {
-        outWriter.writeVarUint( presence._accountId );
+        outWriter.writeVarUint( presence._accountID );
         outWriter.writeVarUint( static_cast<uint64>( presence._status ) );
         ServiceKeyUtil::writeString( outWriter, presence._activity );
     }
 
     bool SocialProtocol::readPresence( BitReader& reader, SocialPresence& outPresence )
     {
-        outPresence._accountId = reader.readVarUint();
+        outPresence._accountID = reader.readVarUint();
         const uint64 status    = reader.readVarUint();
         if ( status >= static_cast<uint64>( SocialPresenceStatus::Count ) ||
              ServiceKeyUtil::readString( reader, SocialLimit::kMaxActivitySize, outPresence._activity ) == false )
@@ -105,16 +105,16 @@ namespace sw
 
     void SocialProtocol::writeGuild( BitWriter& outWriter, const GuildInfo& guild )
     {
-        outWriter.writeVarUint( guild._guildId );
+        outWriter.writeVarUint( guild._guildID );
         ServiceKeyUtil::writeString( outWriter, guild._name );
         ServiceKeyUtil::writeString( outWriter, guild._notice );
-        outWriter.writeVarUint( guild._masterId );
+        outWriter.writeVarUint( guild._masterID );
         outWriter.writeVarInt( guild._createdMs );
         outWriter.writeVarInt( guild._memberCount );
         outWriter.writeVarUint( guild._listMember.size() );
         for ( const GuildMember& member : guild._listMember )
         {
-            outWriter.writeVarUint( member._accountId );
+            outWriter.writeVarUint( member._accountID );
             outWriter.writeVarUint( static_cast<uint64>( member._role ) );
             outWriter.writeVarInt( member._joinedMs );
         }
@@ -122,12 +122,12 @@ namespace sw
 
     bool SocialProtocol::readGuild( BitReader& reader, GuildInfo& outGuild )
     {
-        outGuild._guildId  = reader.readVarUint();
+        outGuild._guildID  = reader.readVarUint();
         const bool bTextOk = ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outGuild._name ) &&
                              ServiceKeyUtil::readString( reader, GuildLimit::kMaxNoticeSize, outGuild._notice );
         if ( bTextOk == false )
             return false;
-        outGuild._masterId       = reader.readVarUint();
+        outGuild._masterID       = reader.readVarUint();
         outGuild._createdMs      = reader.readVarInt();
         outGuild._memberCount    = static_cast<int32>( reader.readVarInt() );
         const uint64 memberCount = reader.readVarUint();
@@ -136,7 +136,7 @@ namespace sw
         outGuild._listMember.resize( static_cast<size_t>( memberCount ) );
         for ( GuildMember& member : outGuild._listMember )
         {
-            member._accountId = reader.readVarUint();
+            member._accountID = reader.readVarUint();
             const uint64 role = reader.readVarUint();
             member._joinedMs  = reader.readVarInt();
             if ( role >= static_cast<uint64>( GuildRole::Count ) )
@@ -149,8 +149,8 @@ namespace sw
     void SocialProtocol::writeNotification( BitWriter& outWriter, const SocialNotification& notification )
     {
         outWriter.writeVarUint( static_cast<uint64>( notification._kind ) );
-        outWriter.writeVarUint( notification._otherId );
-        outWriter.writeVarUint( notification._guildId );
+        outWriter.writeVarUint( notification._otherID );
+        outWriter.writeVarUint( notification._guildID );
         if ( notification._kind == SocialNotificationKind::PresenceChanged )
             writePresence( outWriter, notification._presence );
     }
@@ -158,8 +158,8 @@ namespace sw
     bool SocialProtocol::readNotification( BitReader& reader, SocialNotification& outNotification )
     {
         const uint64 kind        = reader.readVarUint();
-        outNotification._otherId = reader.readVarUint();
-        outNotification._guildId = reader.readVarUint();
+        outNotification._otherID = reader.readVarUint();
+        outNotification._guildID = reader.readVarUint();
         if ( kind >= static_cast<uint64>( SocialNotificationKind::Count ) )
             return false;
         outNotification._kind = static_cast<SocialNotificationKind>( kind );

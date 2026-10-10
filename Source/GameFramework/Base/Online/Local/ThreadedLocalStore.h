@@ -49,7 +49,7 @@ namespace sw
         std::thread                   _worker;
         mutable mutex                 _mutex;
         std::condition_variable_any   _requestReady;
-        uint64                        _nextRequestId;
+        uint64                        _nextRequestID;
         int32                         _pendingCount;
         uint8                         _bStopping;
     };

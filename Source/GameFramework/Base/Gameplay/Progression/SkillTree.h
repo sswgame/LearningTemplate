@@ -21,7 +21,7 @@ namespace sw
     /** @brief 선행 조건 하나 — 그 스킬이 이 랭크 이상입니다. */
     struct SkillRequirement
     {
-        hashed_string _skillId{};
+        hashed_string _skillID{};
         int32         _rank{ 1 };
     };
 } // namespace sw
@@ -52,7 +52,7 @@ namespace sw
         hashed_string    _id{};
         vector<SkillDef> _listSkill{};
 
-        const SkillDef* findSkill( const hashed_string& skillId ) const;
+        const SkillDef* findSkill( const hashed_string& skillID ) const;
     };
 } // namespace sw
 
@@ -109,14 +109,14 @@ namespace sw
         void initialize( const SkillTreeDef* pTree );
         void addPoints( int32 points ) { _points += points; }
 
-        SkillResult evaluateRankUp( const hashed_string& skillId, int32 characterLevel ) const;
-        SkillResult rankUp( const hashed_string& skillId, int32 characterLevel );
+        SkillResult evaluateRankUp( const hashed_string& skillID, int32 characterLevel ) const;
+        SkillResult rankUp( const hashed_string& skillID, int32 characterLevel );
         /** @brief 랭크를 하나 내리고 점수를 돌려받습니다(다른 스킬이 그 랭크를 요구하면 못 한다). */
-        SkillResult rankDown( const hashed_string& skillId );
+        SkillResult rankDown( const hashed_string& skillID );
         /** @brief 모두 되돌리고 돌려받은 점수입니다(초기화 물약). */
         int32 refundAll();
 
-        int32 getRank( const hashed_string& skillId ) const;
+        int32 getRank( const hashed_string& skillID ) const;
         int32 getPoints() const { return _points; }
         int32 getSpentPoints() const;
         /** @brief 배운 스킬의 능력치(랭크 배)를 더합니다. */
@@ -126,7 +126,7 @@ namespace sw
         const SkillTreeDef* getTree() const { return _pTree; }
 
     private:
-        int32 findIndex( const hashed_string& skillId ) const;
+        int32 findIndex( const hashed_string& skillID ) const;
 
         vector<int32>       _listRank; ///< 트리의 스킬 자리마다
         const SkillTreeDef* _pTree;

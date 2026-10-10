@@ -28,9 +28,9 @@ namespace sw
                 return customer._state == CustomerState::WaitingFood || customer._state == CustomerState::Eating || customer._state == CustomerState::WaitingCheckout;
             }
 
-            static bool contains( const vector<hashed_string>& listId, const hashed_string& id )
+            static bool contains( const vector<hashed_string>& listID, const hashed_string& id )
             {
-                for ( const hashed_string& entry : listId )
+                for ( const hashed_string& entry : listID )
                 {
                     if ( entry == id )
                         return true;
@@ -85,7 +85,7 @@ namespace sw
         , _today{}
         , _stepTimer{ kStepMinutes, 24.0f * 60.0f }
         , _random{}
-        , _weatherId{}
+        , _weatherID{}
         , _pCatalog{ nullptr }
         , _pPantry{ nullptr }
         , _pWallet{ nullptr }
@@ -97,7 +97,7 @@ namespace sw
         , _minutes{ 0.0f }
         , _arrival{}
         , _pendingSpoilageCost{ 0 }
-        , _nextCustomerId{ 1 }
+        , _nextCustomerID{ 1 }
         , _bOpen{ SW_FALSE }
     {
     }
@@ -138,7 +138,7 @@ namespace sw
         _minutes = 0.0f;
         _arrival.reset();
         _pendingSpoilageCost = 0;
-        _nextCustomerId      = 1;
+        _nextCustomerID      = 1;
         _bOpen               = SW_FALSE;
         rollMarketPrices();
     }
@@ -191,11 +191,11 @@ namespace sw
         return true;
     }
 
-    bool RestaurantSimulation::setMenuPrice( const hashed_string& dishId, int64 price )
+    bool RestaurantSimulation::setMenuPrice( const hashed_string& dishID, int64 price )
     {
         for ( MenuEntry& entry : _listMenu )
         {
-            if ( entry._dishId == dishId )
+            if ( entry._dishID == dishID )
             {
                 entry._price = MathUtil::max<int64>( 1, price );
                 return true;
@@ -204,11 +204,11 @@ namespace sw
         return false;
     }
 
-    bool RestaurantSimulation::setDishOnMenu( const hashed_string& dishId, bool bOnMenu )
+    bool RestaurantSimulation::setDishOnMenu( const hashed_string& dishID, bool bOnMenu )
     {
         for ( MenuEntry& entry : _listMenu )
         {
-            if ( entry._dishId == dishId )
+            if ( entry._dishID == dishID )
             {
                 entry._bOnMenu = bOnMenu ? SW_TRUE : SW_FALSE;
                 return true;
@@ -217,29 +217,29 @@ namespace sw
         return false;
     }
 
-    ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopId, const hashed_string& itemId, int32 count )
+    ShopResult RestaurantSimulation::buyIngredient( const hashed_string& shopID, const hashed_string& itemID, int32 count )
     {
         if ( _pWallet == nullptr )
             return ShopResult::NotEnoughMoney;
         int64            spent  = 0;
-        const ShopResult result = _market.buy( shopId, itemId, count, *_pWallet, *_pPantry, &spent );
+        const ShopResult result = _market.buy( shopID, itemID, count, *_pWallet, *_pPantry, &spent );
         if ( result != ShopResult::Ok )
             return result;
-        const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemId ) : 0;
-        _stock.recordBatch( itemId, count, shelfLife, spent / count );
+        const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemID ) : 0;
+        _stock.recordBatch( itemID, count, shelfLife, spent / count );
         return ShopResult::Ok;
     }
 
-    int32 RestaurantSimulation::addIngredient( const hashed_string& itemId, int32 count, int64 unitCost )
+    int32 RestaurantSimulation::addIngredient( const hashed_string& itemID, int32 count, int64 unitCost )
     {
-        const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemId ) : 0;
-        return _stock.addFresh( itemId, count, shelfLife, unitCost );
+        const int32 shelfLife = _pCatalog != nullptr ? _pCatalog->findShelfLife( itemID ) : 0;
+        return _stock.addFresh( itemID, count, shelfLife, unitCost );
     }
 
-    void RestaurantSimulation::openDay( const hashed_string& weatherId )
+    void RestaurantSimulation::openDay( const hashed_string& weatherID )
     {
         _bOpen     = SW_TRUE;
-        _weatherId = weatherId;
+        _weatherID = weatherID;
         _minutes   = 0.0f;
         _arrival.reset();
         _today               = RestaurantDaySummary{};
@@ -266,18 +266,18 @@ namespace sw
         }
     }
 
-    int32 RestaurantSimulation::admitCustomer( const hashed_string& typeId )
+    int32 RestaurantSimulation::admitCustomer( const hashed_string& typeID )
     {
-        const CustomerTypeDef* pType = _pCatalog != nullptr ? _pCatalog->findCustomerType( typeId ) : nullptr;
+        const CustomerTypeDef* pType = _pCatalog != nullptr ? _pCatalog->findCustomerType( typeID ) : nullptr;
         if ( pType == nullptr )
             return -1;
         RestaurantCustomer customer;
-        customer._typeId   = typeId;
-        customer._id       = _nextCustomerId++;
+        customer._typeID   = typeID;
+        customer._id       = _nextCustomerID++;
         customer._patience = pType->_patience;
         _listCustomer.push_back( customer );
         ++_today._arrivals;
-        _eventBuffer.push( RestaurantEvent{ typeId, 0, customer._id, RestaurantEvent::Kind::CustomerArrived } );
+        _eventBuffer.push( RestaurantEvent{ typeID, 0, customer._id, RestaurantEvent::Kind::CustomerArrived } );
         return customer._id;
     }
 
@@ -326,7 +326,7 @@ namespace sw
         for ( const IngredientSpoilage& spoilage : _listSpoilageScratch )
         {
             _pendingSpoilageCost += spoilage._cost;
-            _eventBuffer.push( RestaurantEvent{ spoilage._itemId, spoilage._count, -1, RestaurantEvent::Kind::IngredientSpoiled } );
+            _eventBuffer.push( RestaurantEvent{ spoilage._itemID, spoilage._count, -1, RestaurantEvent::Kind::IngredientSpoiled } );
         }
         _market.advanceDay();
         rollMarketPrices();
@@ -353,8 +353,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listCustomer.size() );
         for ( const RestaurantCustomer& customer : _listCustomer )
         {
-            StateArchiveUtil::writeName( outArchive, customer._typeId );
-            StateArchiveUtil::writeName( outArchive, customer._dishId );
+            StateArchiveUtil::writeName( outArchive, customer._typeID );
+            StateArchiveUtil::writeName( outArchive, customer._dishID );
             outArchive << customer._waited;
             outArchive << customer._patience;
             outArchive << customer._eatRemaining;
@@ -369,10 +369,10 @@ namespace sw
         outArchive << static_cast<uint32>( _listOrder.size() );
         for ( const KitchenOrder& order : _listOrder )
         {
-            StateArchiveUtil::writeName( outArchive, order._dishId );
+            StateArchiveUtil::writeName( outArchive, order._dishID );
             StateArchiveUtil::writeName( outArchive, order._station );
             outArchive << order._remaining;
-            outArchive << order._customerId;
+            outArchive << order._customerID;
             outArchive << order._cook;
             outArchive << order._quality;
             outArchive << order._bReady;
@@ -380,7 +380,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listMenu.size() );
         for ( const MenuEntry& entry : _listMenu )
         {
-            StateArchiveUtil::writeName( outArchive, entry._dishId );
+            StateArchiveUtil::writeName( outArchive, entry._dishID );
             outArchive << entry._price;
             outArchive << entry._bOnMenu;
         }
@@ -412,11 +412,11 @@ namespace sw
         outArchive << _today._unservedAtClose;
         StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
         StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeName( outArchive, _weatherId );
+        StateArchiveUtil::writeName( outArchive, _weatherID );
         outArchive << _minutes;
         StateArchiveUtil::writeRateAccumulator( outArchive, _arrival );
         outArchive << _pendingSpoilageCost;
-        outArchive << _nextCustomerId;
+        outArchive << _nextCustomerID;
         outArchive << _bOpen;
     }
 
@@ -451,7 +451,7 @@ namespace sw
         for ( RestaurantCustomer& customer : restored._listCustomer )
         {
             uint8 state = 0;
-            if ( StateArchiveUtil::readName( archive, customer._typeId ) == false || StateArchiveUtil::readName( archive, customer._dishId ) == false )
+            if ( StateArchiveUtil::readName( archive, customer._typeID ) == false || StateArchiveUtil::readName( archive, customer._dishID ) == false )
                 return false;
             archive >> customer._waited;
             archive >> customer._patience;
@@ -477,10 +477,10 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             KitchenOrder order;
-            if ( StateArchiveUtil::readName( archive, order._dishId ) == false || StateArchiveUtil::readName( archive, order._station ) == false )
+            if ( StateArchiveUtil::readName( archive, order._dishID ) == false || StateArchiveUtil::readName( archive, order._station ) == false )
                 return false;
             archive >> order._remaining;
-            archive >> order._customerId;
+            archive >> order._customerID;
             archive >> order._cook;
             archive >> order._quality;
             archive >> order._bReady;
@@ -495,7 +495,7 @@ namespace sw
             return false;
         for ( MenuEntry& entry : restored._listMenu )
         {
-            if ( StateArchiveUtil::readName( archive, entry._dishId ) == false )
+            if ( StateArchiveUtil::readName( archive, entry._dishID ) == false )
                 return false;
             archive >> entry._price;
             archive >> entry._bOnMenu;
@@ -537,11 +537,11 @@ namespace sw
         archive >> restored._today._noChoice;
         archive >> restored._today._unservedAtClose;
         const bool bTailRead = StateArchiveUtil::readStepTimer( archive, restored._stepTimer ) && StateArchiveUtil::readRandom( archive, restored._random ) &&
-                               StateArchiveUtil::readName( archive, restored._weatherId );
+                               StateArchiveUtil::readName( archive, restored._weatherID );
         archive >> restored._minutes;
         const bool bArrivalRead = StateArchiveUtil::readRateAccumulator( archive, restored._arrival );
         archive >> restored._pendingSpoilageCost;
-        archive >> restored._nextCustomerId;
+        archive >> restored._nextCustomerID;
         archive >> restored._bOpen;
         if ( bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE )
             return false;
@@ -554,7 +554,7 @@ namespace sw
         }
         for ( const KitchenOrder& order : restored._listOrder )
         {
-            if ( restored.findCustomerIndex( order._customerId ) < 0 )
+            if ( restored.findCustomerIndex( order._customerID ) < 0 )
                 return false;
         }
         restored._eventBuffer.clear();
@@ -563,10 +563,10 @@ namespace sw
         return true;
     }
 
-    bool RestaurantSimulation::canServe( const hashed_string& dishId ) const
+    bool RestaurantSimulation::canServe( const hashed_string& dishID ) const
     {
-        const MenuEntry* pEntry = findMenuEntry( dishId );
-        const DishDef*   pDish  = _pCatalog != nullptr ? _pCatalog->findDish( dishId ) : nullptr;
+        const MenuEntry* pEntry = findMenuEntry( dishID );
+        const DishDef*   pDish  = _pCatalog != nullptr ? _pCatalog->findDish( dishID ) : nullptr;
         if ( pEntry == nullptr || pEntry->_bOnMenu == SW_FALSE || pDish == nullptr )
             return false;
         const RecipeDef* pRecipe = findRecipe( *pDish );
@@ -577,9 +577,9 @@ namespace sw
         return _crafter.evaluate( pRecipe->_id, *_pPantry, pRecipe->_station, findBestCookLevel() ) == CraftResult::Ok;
     }
 
-    int64 RestaurantSimulation::getMenuPrice( const hashed_string& dishId ) const
+    int64 RestaurantSimulation::getMenuPrice( const hashed_string& dishID ) const
     {
-        const MenuEntry* pEntry = findMenuEntry( dishId );
+        const MenuEntry* pEntry = findMenuEntry( dishID );
         return pEntry != nullptr ? pEntry->_price : 0;
     }
 
@@ -589,7 +589,7 @@ namespace sw
         int32   entryCount = 0;
         for ( const MenuEntry& entry : _listMenu )
         {
-            const DishDef* pDish = _pCatalog != nullptr ? _pCatalog->findDish( entry._dishId ) : nullptr;
+            const DishDef* pDish = _pCatalog != nullptr ? _pCatalog->findDish( entry._dishID ) : nullptr;
             if ( entry._bOnMenu == SW_FALSE || pDish == nullptr )
                 continue;
             ratioSum += static_cast<float32>( entry._price ) / static_cast<float32>( pDish->_basePrice );
@@ -607,7 +607,7 @@ namespace sw
             return 0.0f;
         const int32   hour            = _pCatalog->getOpenHour() + static_cast<int32>( _minutes / RestaurantSimulationInternal::kMinutesPerHour );
         const float32 reputationScale = MathUtil::max( 0.0f, 1.0f + static_cast<float32>( getReputation() ) * _settings._reputationArrivalScale );
-        return _pCatalog->getArrivalRate( hour ) * reputationScale * _pCatalog->findWeatherScale( _weatherId ) * computePriceDemandScale();
+        return _pCatalog->getArrivalRate( hour ) * reputationScale * _pCatalog->findWeatherScale( _weatherID ) * computePriceDemandScale();
     }
 
     float32 RestaurantSimulation::computeRating() const
@@ -671,7 +671,7 @@ namespace sw
                 continue;
             order._bReady      = SW_TRUE;
             cook._taskCustomer = -1;
-            _eventBuffer.push( RestaurantEvent{ order._dishId, order._quality, order._customerId, RestaurantEvent::Kind::DishCooked } );
+            _eventBuffer.push( RestaurantEvent{ order._dishID, order._quality, order._customerID, RestaurantEvent::Kind::DishCooked } );
             grantXp( cook, _settings._cookXp );
             order._cook = -1;
         }
@@ -705,14 +705,14 @@ namespace sw
                 customer._bServing = SW_FALSE;
                 for ( auto orderIter = _listOrder.begin(); orderIter != _listOrder.end(); ++orderIter )
                 {
-                    if ( orderIter->_customerId == customer._id && orderIter->_bReady != SW_FALSE )
+                    if ( orderIter->_customerID == customer._id && orderIter->_bReady != SW_FALSE )
                     {
                         customer._quality = orderIter->_quality;
                         _listOrder.erase( orderIter );
                         break;
                     }
                 }
-                const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeId );
+                const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeID );
                 customer._eatRemaining       = pType != nullptr ? pType->_eatMinutes : 0.0f;
                 customer._state              = customer._eatRemaining > 0.0f ? CustomerState::Eating : CustomerState::WaitingCheckout;
                 grantXp( staff, _settings._serveXp );
@@ -795,7 +795,7 @@ namespace sw
             if ( cookIndex < 0 )
                 return;
             StaffMember&   cook  = _listStaff[static_cast<size_t>( cookIndex )];
-            const DishDef* pDish = _pCatalog->findDish( order._dishId );
+            const DishDef* pDish = _pCatalog->findDish( order._dishID );
             const int32    level = cook._level.getLevel();
             order._cook          = cookIndex;
             order._quality       = pDish != nullptr ? pDish->computeQuality( level ) : 1;
@@ -807,7 +807,7 @@ namespace sw
                 order._remaining           = MathUtil::max( kStepMinutes, ( pRecipe != nullptr ? pRecipe->_time : 0.0f ) * timeScale );
             }
             cook._busyMinutes  = order._remaining;
-            cook._taskCustomer = order._customerId;
+            cook._taskCustomer = order._customerID;
         }
     }
 
@@ -817,14 +817,14 @@ namespace sw
         {
             if ( order._bReady == SW_FALSE )
                 continue;
-            const int32 customerIndex = findCustomerIndex( order._customerId );
+            const int32 customerIndex = findCustomerIndex( order._customerID );
             if ( customerIndex < 0 || _listCustomer[static_cast<size_t>( customerIndex )]._bServing != SW_FALSE )
                 continue;
             const int32 serverIndex = findIdleStaff( StaffRole::Server );
             if ( serverIndex < 0 )
                 return;
             StaffMember& server                                           = _listStaff[static_cast<size_t>( serverIndex )];
-            server._taskCustomer                                          = order._customerId;
+            server._taskCustomer                                          = order._customerID;
             server._busyMinutes                                           = _settings._serveMinutes;
             _listCustomer[static_cast<size_t>( customerIndex )]._bServing = SW_TRUE;
         }
@@ -850,14 +850,14 @@ namespace sw
 
     bool RestaurantSimulation::placeOrder( RestaurantCustomer& customer )
     {
-        const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeId );
+        const CustomerTypeDef* pType = _pCatalog->findCustomerType( customer._typeID );
         if ( pType == nullptr )
             return false;
         vector<RestaurantSimulationInternal::DishChoice> listChoice;
         for ( const MenuEntry& entry : _listMenu )
         {
-            const DishDef* pDish = _pCatalog->findDish( entry._dishId );
-            if ( pDish == nullptr || canServe( entry._dishId ) == false )
+            const DishDef* pDish = _pCatalog->findDish( entry._dishID );
+            if ( pDish == nullptr || canServe( entry._dishID ) == false )
                 continue;
             const float32 ratio = static_cast<float32>( entry._price ) / static_cast<float32>( pDish->_basePrice );
             if ( ratio > pType->_budget )
@@ -878,13 +878,13 @@ namespace sw
         if ( pRecipe == nullptr || _stock.consumeItems( pRecipe->_inputs, 1, cost ) == false )
             return false;
         _today._ingredientCost += cost;
-        customer._dishId = pDish->_id;
+        customer._dishID = pDish->_id;
         customer._price  = getMenuPrice( pDish->_id );
         customer._state  = CustomerState::WaitingFood;
         KitchenOrder order;
-        order._dishId     = pDish->_id;
+        order._dishID     = pDish->_id;
         order._station    = pRecipe->_station;
-        order._customerId = customer._id;
+        order._customerID = customer._id;
         _listOrder.push_back( order );
         _eventBuffer.push( RestaurantEvent{ pDish->_id, customer._price, customer._id, RestaurantEvent::Kind::OrderPlaced } );
         return true;
@@ -892,8 +892,8 @@ namespace sw
 
     void RestaurantSimulation::settlePayment( RestaurantCustomer& customer )
     {
-        const CustomerTypeDef* pType        = _pCatalog->findCustomerType( customer._typeId );
-        const DishDef*         pDish        = _pCatalog->findDish( customer._dishId );
+        const CustomerTypeDef* pType        = _pCatalog->findCustomerType( customer._typeID );
+        const DishDef*         pDish        = _pCatalog->findDish( customer._dishID );
         const float32          quality      = pDish != nullptr ? static_cast<float32>( customer._quality ) / static_cast<float32>( pDish->getMaxQuality() ) : 0.0f;
         const float32          waitRatio    = MathUtil::saturate( customer._waited / MathUtil::max( 1.0f, customer._patience ) );
         const float32          tipRate      = pType != nullptr ? pType->_tipRate : 0.0f;
@@ -911,14 +911,14 @@ namespace sw
         if ( reputationDelta != 0 )
             if ( _pReputation != nullptr )
                 (void)_pReputation->changeValue( _settings._reputationFaction, reputationDelta );
-        _eventBuffer.push( RestaurantEvent{ customer._dishId, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
+        _eventBuffer.push( RestaurantEvent{ customer._dishID, customer._price + tip, customer._id, RestaurantEvent::Kind::CustomerPaid } );
     }
 
     void RestaurantSimulation::leaveCustomer( RestaurantCustomer& customer, bool bWalkout )
     {
         for ( auto orderIter = _listOrder.begin(); orderIter != _listOrder.end(); )
         {
-            if ( orderIter->_customerId == customer._id )
+            if ( orderIter->_customerID == customer._id )
                 orderIter = _listOrder.erase( orderIter ); // 거둔 재료는 버린다(원가는 이미 들어갔다)
             else
                 ++orderIter;
@@ -944,7 +944,7 @@ namespace sw
         }
         customer._state = CustomerState::Left;
         customer._seat  = -1;
-        _eventBuffer.push( RestaurantEvent{ customer._typeId, bWalkout ? 1 : 0, customer._id, RestaurantEvent::Kind::CustomerLeft } );
+        _eventBuffer.push( RestaurantEvent{ customer._typeID, bWalkout ? 1 : 0, customer._id, RestaurantEvent::Kind::CustomerLeft } );
     }
 
     void RestaurantSimulation::pushSatisfaction( float32 satisfaction )
@@ -977,11 +977,11 @@ namespace sw
         }
     }
 
-    int32 RestaurantSimulation::findCustomerIndex( int32 customerId ) const
+    int32 RestaurantSimulation::findCustomerIndex( int32 customerID ) const
     {
         for ( int32 customerIndex = 0; customerIndex < static_cast<int32>( _listCustomer.size() ); ++customerIndex )
         {
-            if ( _listCustomer[static_cast<size_t>( customerIndex )]._id == customerId )
+            if ( _listCustomer[static_cast<size_t>( customerIndex )]._id == customerID )
                 return customerIndex;
         }
         return -1;
@@ -1030,11 +1030,11 @@ namespace sw
         return count;
     }
 
-    const MenuEntry* RestaurantSimulation::findMenuEntry( const hashed_string& dishId ) const
+    const MenuEntry* RestaurantSimulation::findMenuEntry( const hashed_string& dishID ) const
     {
         for ( const MenuEntry& entry : _listMenu )
         {
-            if ( entry._dishId == dishId )
+            if ( entry._dishID == dishID )
                 return &entry;
         }
         return nullptr;
@@ -1042,7 +1042,7 @@ namespace sw
 
     const RecipeDef* RestaurantSimulation::findRecipe( const DishDef& dish ) const
     {
-        return _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( dish._recipeId ) : nullptr;
+        return _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( dish._recipeID ) : nullptr;
     }
 
     float32 RestaurantSimulation::computeDishDemand( const DishDef& dish, int64 price ) const

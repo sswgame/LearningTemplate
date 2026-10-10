@@ -29,7 +29,7 @@ namespace sw
             {
                 writer.writeBits( static_cast<uint32>( event._kind ), 2 );
                 writer.writeVarInt( event._leafHint );
-                writer.writeVarUint( event._groupId );
+                writer.writeVarUint( event._groupID );
                 // 실수는 비트 그대로 — 받는 쪽 상태가 같아야 한다(양자화하면 다른 잎이 깨질 수 있다).
                 writer.writeFloat( event._position._x );
                 writer.writeFloat( event._position._y );
@@ -49,7 +49,7 @@ namespace sw
                     return false;
                 outEvent._kind         = static_cast<DestructionDamageKind>( kind );
                 outEvent._leafHint     = static_cast<int32>( reader.readVarInt() );
-                outEvent._groupId      = static_cast<uint32>( reader.readVarUint() );
+                outEvent._groupID      = static_cast<uint32>( reader.readVarUint() );
                 outEvent._position._x  = reader.readFloat();
                 outEvent._position._y  = reader.readFloat();
                 outEvent._position._z  = reader.readFloat();
@@ -145,26 +145,26 @@ namespace sw
         _hashTime = 0.0f;
     }
 
-    void DestructionReplicationServer::registerObject( uint32 netId, FractureComponentBase& component )
+    void DestructionReplicationServer::registerObject( uint32 netID, FractureComponentBase& component )
     {
         component.setAuthority( true );
-        Entry* pEntry = findEntry( netId );
+        Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
         {
             _listEntry.emplace_back();
             pEntry = &_listEntry.back();
         }
         *pEntry                 = Entry{};
-        pEntry->_netId          = netId;
+        pEntry->_netID          = netID;
         pEntry->_component      = component.getHandle();
         pEntry->_sentEventCount = static_cast<uint32>( component.getEventLog()._listEvent.size() );
     }
 
-    DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( uint32 netId )
+    DestructionReplicationServer::Entry* DestructionReplicationServer::findEntry( uint32 netID )
     {
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._netId == netId )
+            if ( entry._netID == netID )
                 return &entry;
         }
         return nullptr;
@@ -175,31 +175,31 @@ namespace sw
         return DestructionReplicationInternal::resolveFracture( _pManager, entry._component );
     }
 
-    void DestructionReplicationServer::onConnectionOpened( int32 connectionId )
+    void DestructionReplicationServer::onConnectionOpened( int32 connectionID )
     {
         for ( const Entry& entry : _listEntry )
         {
-            _listRequest.push_back( Request{ connectionId, entry._netId } );
+            _listRequest.push_back( Request{ connectionID, entry._netID } );
         }
     }
 
-    void DestructionReplicationServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    void DestructionReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
         for ( size_t index = _listRequest.size(); index > 0; --index )
         {
-            if ( _listRequest[index - 1]._connectionId == connectionId )
+            if ( _listRequest[index - 1]._connectionID == connectionID )
                 _listRequest.erase( _listRequest.begin() + static_cast<std::ptrdiff_t>( index - 1 ) );
         }
     }
 
     NetHandleResult DestructionReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        const uint32 netId = static_cast<uint32>( body.readVarUint() );
-        if ( body.hasOverflowed() || context._connectionId < 0 )
+        const uint32 netID = static_cast<uint32>( body.readVarUint() );
+        if ( body.hasOverflowed() || context._connectionID < 0 )
             return NetHandleResult::Malformed;
-        if ( findEntry( netId ) != nullptr )
-            _listRequest.push_back( Request{ context._connectionId, netId } );
+        if ( findEntry( netID ) != nullptr )
+            _listRequest.push_back( Request{ context._connectionID, netID } );
         return NetHandleResult::Handled;
     }
 
@@ -229,9 +229,9 @@ namespace sw
         listRequest.swap( _listRequest );
         for ( const Request& request : listRequest )
         {
-            Entry*                 pEntry     = findEntry( request._netId );
+            Entry*                 pEntry     = findEntry( request._netID );
             FractureComponentBase* pComponent = pEntry != nullptr ? resolve( *pEntry ) : nullptr;
-            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionId ) == false )
+            if ( pComponent != nullptr && sendSnapshot( *pEntry, *pComponent, request._connectionID ) == false )
                 _listRequest.push_back( request ); // 신뢰 창이 찼다 — 다음 틱에 다시(연결이 닫히면 onConnectionClosed 가 지운다)
         }
         for ( Entry& entry : _listEntry )
@@ -261,12 +261,12 @@ namespace sw
         for ( uint32 index = entry._sentEventCount; index < static_cast<uint32>( listEvent.size() ); ++index )
         {
             BitWriter& writer = _writer.begin( NetDestructionMessage::kEvent );
-            writer.writeVarUint( entry._netId );
+            writer.writeVarUint( entry._netID );
             writer.writeVarUint( serverTick );
             writer.writeVarUint( index );
             DestructionReplicationInternal::writeEvent( writer, listEvent[index] );
             // 떨어진 덩어리를 맞힌 사건이면 맞기 직전 그 덩어리 자세(비트 그대로) — 받는 쪽이 그 자리에서 가른다(신뢰 채널이 밀려 자세가 늦어도).
-            const bool bHasPose = index < listGroupPose.size() && listGroupPose[index]._groupId != 0;
+            const bool bHasPose = index < listGroupPose.size() && listGroupPose[index]._groupID != 0;
             writer.writeBool( bHasPose );
             if ( bHasPose )
                 DestructionReplicationInternal::writeExactPose( writer, listGroupPose[index]._position, listGroupPose[index]._rotation );
@@ -276,7 +276,7 @@ namespace sw
         entry._sentEventCount = static_cast<uint32>( listEvent.size() );
     }
 
-    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionId )
+    bool DestructionReplicationServer::sendSnapshot( Entry& entry, FractureComponentBase& component, int32 connectionID )
     {
         const uint32 eventCount = component.getState().getEventCount();
         if ( component.isStateReady() == false || eventCount == 0 )
@@ -284,18 +284,18 @@ namespace sw
         vector<uint8> bytes;
         component.makeNetworkSnapshot( bytes );
         BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshot );
-        writer.writeVarUint( entry._netId );
+        writer.writeVarUint( entry._netID );
         writer.writeVarUint( eventCount );
         writer.writeBlob( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( _writer.getByteCount() > NetConnection::kMaxReliableMessageSize )
         {
             // 다시 해도 같다 — 줄에 돌려놓지 않는다. 이 오브젝트는 늦은 참가 · 복구를 받지 못한다(해시 비교가 계속 어긋남을 알린다).
             SW_LOG_ERROR( "DestructionReplication: the snapshot of object %# is %# bytes, over the reliable message limit %# - it cannot be sent",
-                          entry._netId, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
+                          entry._netID, _writer.getByteCount(), NetConnection::kMaxReliableMessageSize );
             ++_stats._sendRejectedCount;
             return true;
         }
-        if ( _writer.send( *_pHost, connectionId, NetChannelType::ReliableOrdered ) == false )
+        if ( _writer.send( *_pHost, connectionID, NetChannelType::ReliableOrdered ) == false )
         {
             ++_stats._sendRejectedCount;
             return false;
@@ -327,10 +327,10 @@ namespace sw
             if ( pose._bGone == SW_TRUE || component.isChunkVolume( pose._volume ) == false )
                 continue;
             ChunkSendState state;
-            state._groupId = pose._groupId;
+            state._groupID = pose._groupID;
             for ( const ChunkSendState& previous : entry._listChunk )
             {
-                if ( previous._groupId == pose._groupId )
+                if ( previous._groupID == pose._groupID )
                     state = previous;
             }
             if ( pose._bResting == SW_TRUE )
@@ -371,7 +371,7 @@ namespace sw
             {
                 BitWriter& writer = _writer.begin( NetDestructionMessage::kPose );
                 writer.writeBool( bRest );
-                writer.writeVarUint( entry._netId );
+                writer.writeVarUint( entry._netID );
                 writer.writeVarUint( serverTick );
                 // 개수는 끝에서 알 수 있으므로 몇 개를 실을지 먼저 정한다(예산 안 · 최대 남은 것).
                 const int32  perPoseBytes = bRest ? 30 : 15;
@@ -381,7 +381,7 @@ namespace sw
                 for ( size_t index = start; index < start + count; ++index )
                 {
                     const FractureGroupPose& pose = *list[index];
-                    writer.writeVarUint( pose._groupId );
+                    writer.writeVarUint( pose._groupID );
                     // 질량 중심 + 회전 — 원점은 덩어리에서 멀 수 있어 돌면 크게 움직인다(보간이 그것을 직선으로 잇게 된다).
                     if ( bRest )
                         Internal::writeExactPose( writer, pose._center, pose._rotation );
@@ -403,7 +403,7 @@ namespace sw
         if ( component.isStateReady() == false || eventCount == 0 )
             return;
         BitWriter& writer = _writer.begin( NetDestructionMessage::kHash );
-        writer.writeVarUint( entry._netId );
+        writer.writeVarUint( entry._netID );
         writer.writeVarUint( eventCount );
         const uint64 hash = component.getState().computeStateHash();
         writer.writeUint32( static_cast<uint32>( hash & 0xFFFFFFFFull ) );
@@ -440,33 +440,33 @@ namespace sw
         _clock.initialize( clockSettings );
     }
 
-    void DestructionReplicationClient::registerObject( uint32 netId, FractureComponentBase& component )
+    void DestructionReplicationClient::registerObject( uint32 netID, FractureComponentBase& component )
     {
         component.setAuthority( false );
-        Entry* pEntry = findEntry( netId );
+        Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
         {
             _listEntry.emplace_back();
             pEntry = &_listEntry.back();
         }
         *pEntry            = Entry{};
-        pEntry->_netId     = netId;
+        pEntry->_netID     = netID;
         pEntry->_component = component.getHandle();
         _clock.setSampleInterval( MathUtil::max( _clock.getSampleInterval(), DestructionReplicationInternal::computePosePeriod( component ) ) );
     }
 
-    void DestructionReplicationClient::skipNextEvent( uint32 netId )
+    void DestructionReplicationClient::skipNextEvent( uint32 netID )
     {
-        Entry* pEntry = findEntry( netId );
+        Entry* pEntry = findEntry( netID );
         if ( pEntry != nullptr )
             ++pEntry->_skipCount;
     }
 
-    DestructionReplicationClient::Entry* DestructionReplicationClient::findEntry( uint32 netId )
+    DestructionReplicationClient::Entry* DestructionReplicationClient::findEntry( uint32 netID )
     {
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._netId == netId )
+            if ( entry._netID == netID )
                 return &entry;
         }
         return nullptr;
@@ -487,10 +487,10 @@ namespace sw
             handlePose( reader, bRest );
             return NetHandleResult::Handled;
         }
-        const uint32 netId = static_cast<uint32>( reader.readVarUint() );
+        const uint32 netID = static_cast<uint32>( reader.readVarUint() );
         if ( reader.hasOverflowed() )
             return NetHandleResult::Malformed;
-        Entry* pEntry = findEntry( netId );
+        Entry* pEntry = findEntry( netID );
         if ( pEntry == nullptr )
             return NetHandleResult::Handled; // 모르는 오브젝트(이 클라이언트에 없다) — 먹고 버린다
         if ( kind == NetDestructionMessage::kEvent )
@@ -505,7 +505,7 @@ namespace sw
                 buffered._bHasPose = reader.readBool() ? SW_TRUE : SW_FALSE;
                 if ( buffered._bHasPose == SW_TRUE )
                 {
-                    buffered._groupPose._groupId = buffered._event._groupId;
+                    buffered._groupPose._groupID = buffered._event._groupID;
                     DestructionReplicationInternal::readExactPose( reader, buffered._groupPose._position, buffered._groupPose._rotation );
                 }
                 if ( reader.hasOverflowed() == false )
@@ -624,17 +624,17 @@ namespace sw
     void DestructionReplicationClient::handlePose( BitReader& reader, bool bRest )
     {
         using Internal     = DestructionReplicationInternal;
-        const uint32 netId = static_cast<uint32>( reader.readVarUint() );
+        const uint32 netID = static_cast<uint32>( reader.readVarUint() );
         const uint32 tick  = static_cast<uint32>( reader.readVarUint() );
         const uint64 count = reader.readVarUint();
         if ( reader.hasOverflowed() )
             return;
-        Entry* pEntry = findEntry( netId );
+        Entry* pEntry = findEntry( netID );
         _clock.observeServerTick( tick );
         for ( uint64 index = 0; index < count && reader.hasOverflowed() == false; ++index )
         {
             ChunkPose    pose;
-            const uint32 groupId = static_cast<uint32>( reader.readVarUint() );
+            const uint32 groupID = static_cast<uint32>( reader.readVarUint() );
             if ( bRest )
                 Internal::readExactPose( reader, pose._position, pose._rotation );
             else
@@ -644,14 +644,14 @@ namespace sw
             ChunkTrack* pTrack = nullptr;
             for ( ChunkTrack& track : pEntry->_listChunk )
             {
-                if ( track._groupId == groupId )
+                if ( track._groupID == groupID )
                     pTrack = &track;
             }
             if ( pTrack == nullptr )
             {
                 pEntry->_listChunk.emplace_back();
                 pTrack           = &pEntry->_listChunk.back();
-                pTrack->_groupId = groupId;
+                pTrack->_groupID = groupID;
                 pTrack->_poseBuffer.initialize( Internal::kMaxPoseSample );
             }
             // 틱 순으로 끼운다(멈춤 확정은 다른 채널이라 앞질러 올 수 있다). 같은 틱이면 멈춤 쪽이 이긴다. 넘치면 가장 오래된 것을 버린다.
@@ -723,7 +723,7 @@ namespace sw
         if ( _pHost == nullptr )
             return;
         BitWriter& writer = _writer.begin( NetDestructionMessage::kSnapshotRequest );
-        writer.writeVarUint( entry._netId );
+        writer.writeVarUint( entry._netID );
         if ( _writer.send( *_pHost, 0, NetChannelType::ReliableOrdered ) )
             _stats._sentBytes += static_cast<uint64>( _writer.getByteCount() );
     }
@@ -734,16 +734,16 @@ namespace sw
         if ( renderTick < 0.0f )
             return;
         // 그룹 번호는 늘기만 한다 — 지금 가장 큰 번호보다 작은데 없는 그룹은 갈라져 사라진 것, 큰 것은 그 사건이 아직 오지 않은 것(자세를 먼저 받았다).
-        uint32 maxGroupId = 0;
+        uint32 maxGroupID = 0;
         for ( const DestructionGroup& group : component.getState().getGroups() )
         {
-            maxGroupId = MathUtil::max( maxGroupId, group._id );
+            maxGroupID = MathUtil::max( maxGroupID, group._id );
         }
         for ( size_t trackIndex = 0; trackIndex < entry._listChunk.size(); )
         {
             ChunkTrack& track     = entry._listChunk[trackIndex];
-            const bool  bHasGroup = component.getState().findGroup( track._groupId ) != nullptr;
-            const bool  bRemoved  = bHasGroup == false && track._groupId < maxGroupId && component.hasPendingDamage() == false;
+            const bool  bHasGroup = component.getState().findGroup( track._groupID ) != nullptr;
+            const bool  bRemoved  = bHasGroup == false && track._groupID < maxGroupID && component.hasPendingDamage() == false;
             if ( bRemoved )
             {
                 entry._listChunk.erase( entry._listChunk.begin() + static_cast<std::ptrdiff_t>( trackIndex ) );
@@ -768,7 +768,7 @@ namespace sw
                 position = pFrom->_value._position + ( pTo->_value._position - pFrom->_value._position ) * alpha;
                 rotation = quaternion::lerp( pFrom->_value._rotation, pTo->_value._rotation, alpha );
             }
-            component.driveGroup( track._groupId, position, rotation );
+            component.driveGroup( track._groupID, position, rotation );
             // 지난 것은 하나만 남긴다(보간의 앞).
             track._poseBuffer.removeConsumed( renderTick );
         }

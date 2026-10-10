@@ -91,11 +91,11 @@ namespace
         }
     };
 
-    bool hasDungeonEvent( const vector<AdventureDungeonEvent>& listEvent, AdventureDungeonEventType type, const utf8* pId )
+    bool hasDungeonEvent( const vector<AdventureDungeonEvent>& listEvent, AdventureDungeonEventType type, const utf8* pID )
     {
         for ( const AdventureDungeonEvent& event : listEvent )
         {
-            if ( event._type == type && event._id == hashed_string( pId ) )
+            if ( event._type == type && event._id == hashed_string( pID ) )
                 return true;
         }
         return false;
@@ -553,7 +553,7 @@ SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
     SW_EXPECT_EQUAL( 0, dish._effectTier );
     SW_EXPECT_TRUE( dish._effect.empty() );
     SW_EXPECT_EQUAL( 4, dish._heartQuarters );
-    SW_EXPECT_TRUE( dish._itemId == hashed_string( "dubiousFood" ) );
+    SW_EXPECT_TRUE( dish._itemID == hashed_string( "dubiousFood" ) );
 
     listPot = { "wildberry", "wildberry", "wildberry", "wildberry", "wildberry", "wildberry" };
     SW_EXPECT_TRUE( cooking.evaluate( listPot, dish ) == AdventureCookResult::TooManyIngredients );
@@ -576,7 +576,7 @@ SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
     listPot = { "hydromelon", "hydromelon" };
     SW_ASSERT_TRUE( cooking.cook( listPot, inventory, crafter, recipes, 0, dish ) == AdventureCookResult::Ok );
     SW_EXPECT_TRUE( dish._bNamedRecipe == SW_TRUE );
-    SW_EXPECT_TRUE( dish._itemId == hashed_string( "chillySorbet" ) );
+    SW_EXPECT_TRUE( dish._itemID == hashed_string( "chillySorbet" ) );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "chillySorbet" ) );
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "hydromelon" ) );
 

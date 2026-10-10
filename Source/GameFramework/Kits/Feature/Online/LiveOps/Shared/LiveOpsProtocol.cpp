@@ -46,7 +46,7 @@ namespace sw
 {
     void LiveOpsProtocol::writeEvent( BitWriter& outWriter, const LiveEventDefinition& definition )
     {
-        ServiceKeyUtil::writeString( outWriter, definition._eventId );
+        ServiceKeyUtil::writeString( outWriter, definition._eventID );
         ServiceKeyUtil::writeString( outWriter, definition._kind );
         outWriter.writeVarInt( definition._startMs );
         outWriter.writeVarInt( definition._endMs );
@@ -67,7 +67,7 @@ namespace sw
 
     bool LiveOpsProtocol::readEvent( BitReader& reader, LiveEventDefinition& outDefinition )
     {
-        const bool bTextOk = ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxIdSize, outDefinition._eventId ) &&
+        const bool bTextOk = ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxIDSize, outDefinition._eventID ) &&
                              ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxKindSize, outDefinition._kind );
         if ( bTextOk == false )
             return false;
@@ -116,7 +116,7 @@ namespace sw
         outWriter.writeVarUint( listEvent.size() );
         for ( const LiveEventState& state : listEvent )
         {
-            ServiceKeyUtil::writeString( outWriter, state._eventId );
+            ServiceKeyUtil::writeString( outWriter, state._eventID );
             ServiceKeyUtil::writeString( outWriter, state._kind );
             outWriter.writeVarInt( state._windowEndMs );
             LiveOpsProtocolInternal::writeParameters( outWriter, state._listParameter );
@@ -131,7 +131,7 @@ namespace sw
         outListEvent.resize( static_cast<size_t>( count ) );
         for ( LiveEventState& state : outListEvent )
         {
-            const bool bTextOk = ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxIdSize, state._eventId ) &&
+            const bool bTextOk = ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxIDSize, state._eventID ) &&
                                  ServiceKeyUtil::readString( reader, LiveOpsLimit::kMaxKindSize, state._kind );
             if ( bTextOk == false )
                 return false;
@@ -144,7 +144,7 @@ namespace sw
 
     void LiveOpsProtocol::writeDevice( BitWriter& outWriter, const PushDeviceRegistration& registration )
     {
-        ServiceKeyUtil::writeString( outWriter, registration._providerId );
+        ServiceKeyUtil::writeString( outWriter, registration._providerID );
         ServiceKeyUtil::writeString( outWriter, registration._token );
         ServiceKeyUtil::writeString( outWriter, registration._locale );
         outWriter.writeVarInt( registration._registeredMs );
@@ -152,7 +152,7 @@ namespace sw
 
     bool LiveOpsProtocol::readDevice( BitReader& reader, PushDeviceRegistration& outRegistration )
     {
-        const bool bTextOk = ServiceKeyUtil::readString( reader, PushLimit::kMaxProviderIdSize, outRegistration._providerId ) &&
+        const bool bTextOk = ServiceKeyUtil::readString( reader, PushLimit::kMaxProviderIDSize, outRegistration._providerID ) &&
                              ServiceKeyUtil::readString( reader, PushLimit::kMaxTokenSize, outRegistration._token ) &&
                              ServiceKeyUtil::readString( reader, PushLimit::kMaxLocaleSize, outRegistration._locale );
         if ( bTextOk == false )

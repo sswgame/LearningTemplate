@@ -32,7 +32,7 @@ namespace sw
     {
         const uint8*     _pBody{ nullptr }; ///< Ok 면 서비스 몸, ApplicationError 면 오류 코드 뒤의 자세한 몸
         int32            _bodySize{ 0 };
-        uint64           _requestId{ 0 }; ///< `sendRequest` 가 돌려준 id
+        uint64           _requestID{ 0 }; ///< `sendRequest` 가 돌려준 id
         uint16           _errorCode{ 0 }; ///< `OnlineError::kOk` 또는 공통 · 키트 코드. 전송 실패(끊김 · 시한)는 `kUnavailable`
         NetRequestStatus _status{ NetRequestStatus::Ok };
 
@@ -120,7 +120,7 @@ namespace sw
         /** @brief 자기 끝점 모드는 전송 · 끝점 · 요청 시한 · 다시 연결을 돈다. 두 모드 모두 모은 요청의 시한을 본다. */
         void tick( int64 nowMs );
 
-        /** @brief 요청을 보냅니다(Hello 전 · 문이 닫혀 있으면 모은다). id 입니다 — 콜백의 `_requestId`. 콜백은 정확히 한 번. */
+        /** @brief 요청을 보냅니다(Hello 전 · 문이 닫혀 있으면 모은다). id 입니다 — 콜백의 `_requestID`. 콜백은 정확히 한 번. */
         uint64 sendRequest( uint16 method, const BitWriter& body, const NetRequestOptions& options, OnlineResponseDelegate onResponse );
         /**
          * @brief 요청 문 — 닫히면 @p ownerRange(계정 키트) 밖의 요청은 문이 열릴 때까지 모은다. 다시 연결한 뒤 재접속 응답 전에 다른 키트의 요청이 서버에 닿아
@@ -150,7 +150,7 @@ namespace sw
             vector<uint8>          _bodyBytes{};
             NetRequestOptions      _options{};
             OnlineResponseDelegate _onResponse{};
-            uint64                 _requestId{ 0 };
+            uint64                 _requestID{ 0 };
             int64                  _deadlineMs{ 0 };
             uint16                 _method{ 0 };
         };
@@ -158,7 +158,7 @@ namespace sw
         struct PendingCall
         {
             OnlineResponseDelegate _onResponse{};
-            uint64                 _requestId{ 0 };
+            uint64                 _requestID{ 0 };
         };
 
         void        sendHello();
@@ -169,7 +169,7 @@ namespace sw
         void        beginConnect();
         void        onHelloResponse( const NetResponse& response );
         void        onNetResponse( const NetResponse& response );
-        static void deliver( const OnlineResponseDelegate& onResponse, uint64 requestId, const NetResponse& response );
+        static void deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response );
         void        dispatchPush( const uint8* pBody, int32 bodySize );
 
         OnlineServiceClientSettings        _settings;
@@ -188,7 +188,7 @@ namespace sw
         int64                              _backoffMs;
         int64                              _serverTimeMs;
         uint64                             _remoteConfigHash;
-        uint64                             _nextRequestId;
+        uint64                             _nextRequestID;
         uint16                             _gateOwnerRange;
         OnlineClientState                  _state;
         uint8                              _bGateClosed;

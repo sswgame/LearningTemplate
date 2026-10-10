@@ -121,19 +121,19 @@ SW_TEST_CASE( PhysicsWiringTest, WorldQueryAndCameraProbeSeeRigidBodies )
     manager.beginPlay();
     test::tickFrames( manager, 2 );
 
-    const uint64 viewerId = pViewer->getOwner()->getObjectId();
+    const uint64 viewerID = pViewer->getOwner()->getObjectID();
     WorldRayHit  hit;
-    SW_ASSERT_TRUE( WorldQuery::raycast( manager, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 10.0f }, viewerId, hit ) );
-    SW_EXPECT_EQUAL( pWall->getOwner()->getObjectId(), hit._objectId );
+    SW_ASSERT_TRUE( WorldQuery::raycast( manager, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 10.0f }, viewerID, hit ) );
+    SW_EXPECT_EQUAL( pWall->getOwner()->getObjectID(), hit._objectID );
     SW_EXPECT_NEAR_EQUAL( 4.8f, hit._point._z, 1e-2f );
-    SW_EXPECT_FALSE( WorldQuery::hasLineOfSight( manager, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 8.0f }, viewerId, 0 ) );
+    SW_EXPECT_FALSE( WorldQuery::hasLineOfSight( manager, float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 8.0f }, viewerID, 0 ) );
     // 2D 씬(XY 평면)의 바디도 맞는다.
     SW_ASSERT_TRUE( WorldQuery::raycast( manager, float3{ 10.0f, 10.0f, 0.0f }, float3{ 10.0f, 0.0f, 0.0f }, 0, hit ) );
-    SW_EXPECT_EQUAL( pPlatform2D->getObjectId(), hit._objectId );
+    SW_EXPECT_EQUAL( pPlatform2D->getObjectID(), hit._objectID );
     SW_EXPECT_NEAR_EQUAL( 0.48f, hit._fraction, 1e-2f );
 
     // 카메라 암 — 강체 벽 앞에서 멈춘다(반지름 0.25 면 4.55 쯤).
-    const SceneCameraProbe probe( manager, viewerId );
+    const SceneCameraProbe probe( manager, viewerID );
     float32                distance = 0.0f;
     SW_ASSERT_TRUE( probe.sweepSphere( float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 1.0f, 8.0f }, 0.25f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 4.55f, distance, 2e-2f );

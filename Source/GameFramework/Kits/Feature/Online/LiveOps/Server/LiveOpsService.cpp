@@ -28,7 +28,7 @@ namespace sw
                 return s_table;
             }
 
-            static string makeActor( AccountId actorId ) { return actorId == kInvalidAccountId ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorId ); }
+            static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, StringUtil::computeHash64( text.data(), text.size(), false ) ); }
         };
@@ -208,7 +208,7 @@ namespace sw
             int64 windowEndMs = 0;
             if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false )
                 continue;
-            hash = Internal::combineText( hash, definition._eventId );
+            hash = Internal::combineText( hash, definition._eventID );
             hash = HashUtil::combine( hash, static_cast<uint64>( windowEndMs ) ); // 반복 회차가 바뀌어도 바뀐다
             for ( const LiveEventParameter& parameter : definition._listParameter )
             {
@@ -238,17 +238,17 @@ namespace sw
         return value;
     }
 
-    const LiveEventDefinition* LiveOpsService::findEvent( string_view eventId ) const
+    const LiveEventDefinition* LiveOpsService::findEvent( string_view eventID ) const
     {
         for ( const LiveEventDefinition& definition : _listEvent )
         {
-            if ( definition._eventId == eventId )
+            if ( definition._eventID == eventID )
                 return &definition;
         }
         return nullptr;
     }
 
-    void LiveOpsService::computeActiveEvents( AccountId accountId, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly,
+    void LiveOpsService::computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly,
                                               vector<LiveEventState>& outListEvent ) const
     {
         if ( isKillSwitchOff() )
@@ -258,10 +258,10 @@ namespace sw
             int64 windowEndMs = 0;
             if ( bClientOnly && definition._bClientVisible == SW_FALSE )
                 continue;
-            if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false || LiveEventRules::isAudienceMatch( definition, accountId, region, buildVersion ) == false )
+            if ( LiveEventRules::isWindowOpen( definition, nowMs, windowEndMs ) == false || LiveEventRules::isAudienceMatch( definition, accountID, region, buildVersion ) == false )
                 continue;
             LiveEventState& state = outListEvent.emplace_back();
-            state._eventId        = definition._eventId;
+            state._eventID        = definition._eventID;
             state._kind           = definition._kind;
             state._windowEndMs    = windowEndMs;
             for ( const LiveEventParameter& parameter : definition._listParameter )
@@ -271,17 +271,17 @@ namespace sw
         }
     }
 
-    bool LiveOpsService::isEventActive( string_view eventId, AccountId accountId, string_view region, uint32 buildVersion, int64 nowMs ) const
+    bool LiveOpsService::isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs ) const
     {
-        const LiveEventDefinition* pDefinition = findEvent( eventId );
+        const LiveEventDefinition* pDefinition = findEvent( eventID );
         int64                      windowEndMs = 0;
         return pDefinition != nullptr && isKillSwitchOff() == false && LiveEventRules::isWindowOpen( *pDefinition, nowMs, windowEndMs ) &&
-               LiveEventRules::isAudienceMatch( *pDefinition, accountId, region, buildVersion );
+               LiveEventRules::isAudienceMatch( *pDefinition, accountID, region, buildVersion );
     }
 
-    bool LiveOpsService::findParameter( string_view eventId, string_view key, string& outValue ) const
+    bool LiveOpsService::findParameter( string_view eventID, string_view key, string& outValue ) const
     {
-        const LiveEventDefinition* pDefinition = findEvent( eventId );
+        const LiveEventDefinition* pDefinition = findEvent( eventID );
         if ( pDefinition == nullptr )
             return false;
         for ( const LiveEventParameter& parameter : pDefinition->_listParameter )
@@ -295,7 +295,7 @@ namespace sw
         return false;
     }
 
-    void LiveOpsService::putEvent( const LiveEventDefinition& definition, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag )
+    void LiveOpsService::putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
@@ -303,27 +303,27 @@ namespace sw
             return;
         }
         unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
-        work->_key                        = definition._eventId;
+        work->_key                        = definition._eventID;
         work->_bytes                      = LiveOpsProtocol::encodeEvent( definition );
-        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorId );
+        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorID );
         work->_auditEntry._action         = "liveops.event.put";
-        work->_auditEntry._subject        = "liveops/" + definition._eventId;
+        work->_auditEntry._subject        = "liveops/" + definition._eventID;
         work->_auditEntry._memo           = string( memo );
         work->_auditEntry._timeMs         = nowMs;
         work->_requestTag                 = requestTag;
         submitWrite( std::move( work ) );
     }
 
-    void LiveOpsService::removeEvent( string_view eventId, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag )
+    void LiveOpsService::removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
-        if ( LiveOpsLimit::isValidKey( eventId, LiveOpsLimit::kMaxIdSize ) == false )
+        if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )
         {
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } );
             return;
         }
         unique_ptr<LiveOpsWriteWork> work = make_unique<LiveOpsWriteWork>();
-        work->_key                        = string( eventId );
-        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorId );
+        work->_key                        = string( eventID );
+        work->_auditEntry._actor          = LiveOpsServiceInternal::makeActor( actorID );
         work->_auditEntry._action         = "liveops.event.remove";
         work->_auditEntry._subject        = "liveops/" + work->_key;
         work->_auditEntry._memo           = string( memo );

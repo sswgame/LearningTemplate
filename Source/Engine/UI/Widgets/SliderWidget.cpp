@@ -116,7 +116,7 @@ namespace sw
                     return UIReply::makeUnhandled();
                 _bDragging = true;
                 setValueFromUser( computeValueAt( event._position ) );
-                return UIReply::makeHandled().capturePointer().requestFocus( getId() );
+                return UIReply::makeHandled().capturePointer().requestFocus( getID() );
             }
             case UIPointerEventKind::Move:
             {

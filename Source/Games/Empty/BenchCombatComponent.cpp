@@ -89,7 +89,7 @@ namespace sw
         AnimNotifyComponent*       pNotify   = pEnemy->addComponent<AnimNotifyComponent>();
         SocketSetComponent*        pSockets  = pEnemy->addComponent<SocketSetComponent>();
         RagdollComponent*          pRagdoll  = pEnemy->addComponent<RagdollComponent>();
-        pUnit->setMeshId( Internal::kEnemyMesh );
+        pUnit->setMeshID( Internal::kEnemyMesh );
         pUnit->setSkeletonPath( Internal::kEnemySkeleton );
         pUnit->resolveRenderAssets();
         pUnit->setAnimateWhenOffscreen( true );
@@ -116,7 +116,7 @@ namespace sw
         pSwordBody->setBodyType( PhysicsBodyType::Kinematic );
         pSwordBody->setLayer( hashed_string( "Debris" ) );
         pSwordBody->setMaterial( hashed_string( "Metal" ) );
-        pSwordMesh->setMeshId( Internal::kSwordMesh );
+        pSwordMesh->setMeshID( Internal::kSwordMesh );
         (void)pBinding;
         outListObject.push_back( pSword->getHandle() );
 

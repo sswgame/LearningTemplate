@@ -18,7 +18,7 @@ namespace sw
     /** @brief 유닛 정의 → Kenney Space Kit 모델 이름 · 모델의 가로 폭(가장 넓은 수평 축)입니다. */
     struct SkirmishUnitModel
     {
-        const utf8* _pUnitId;
+        const utf8* _pUnitID;
         const utf8* _pModel;
         float32     _width;
     };
@@ -45,10 +45,10 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 따라갈 디렉터 · 유닛 · 모델 폭을 정합니다(디렉터가 스폰한 뒤 부른다). */
-        void assignUnit( GameObjectHandle director, SlotHandle unitId, float32 modelWidth );
+        void assignUnit( GameObjectHandle director, SlotHandle unitID, float32 modelWidth );
 
         /** @brief 유닛 정의의 모델입니다. 그리지 않는 유닛이면 nullptr 입니다. */
-        static const SkirmishUnitModel* findUnitModel( const hashed_string& unitId );
+        static const SkirmishUnitModel* findUnitModel( const hashed_string& unitID );
         static string                   makeModelPath( const utf8* pName );
 
     private:
@@ -58,7 +58,7 @@ namespace sw
         float32 _airHeight;
 
         float3      _lastPosition; ///< 지난 프레임 자리(움직인 쪽으로 돌린다)
-        SlotHandle  _unitId;
+        SlotHandle  _unitID;
         const void* _pShownLook; ///< 지금 입은 모습(인스턴스 주소 — 비교만 한다)
         float32     _modelWidth;
         float32     _yaw;

@@ -302,7 +302,7 @@ namespace sw
         {
             UnitSlot& slot = _listUnitSlot[static_cast<size_t>( slotIndex )];
             destroySpawned( manager, slot._object );
-            if ( slot._shownId.isValid() )
+            if ( slot._shownID.isValid() )
                 spawnUnit( manager, slotIndex );
         }
         _listPendingUnit.clear();
@@ -338,7 +338,7 @@ namespace sw
     void SkirmishDirectorComponent::spawnUnit( GameObjectManager& manager, int32 slotIndex )
     {
         UnitSlot&      slot  = _listUnitSlot[static_cast<size_t>( slotIndex )];
-        const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownId );
+        const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownID );
         if ( pUnit == nullptr )
             return;
         const SkirmishUnitModel* pModel = SkirmishUnitComponent::findUnitModel( pUnit->_pDef->_id );
@@ -354,11 +354,11 @@ namespace sw
             // 모델은 유닛 종류마다 정해져 바뀌지 않는다 — 여기(게임 스레드)서 건다. 색 · 자리 · 크기 · 방향은 뷰가 맞춘다.
             if ( _listUnitLook.empty() )
                 prepareUnitLooks( pMesh->getMaterial() );
-            pMesh->setMeshId( SkirmishUnitComponent::makeModelPath( pModel->_pModel ) );
+            pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_pModel ) );
         }
         SkirmishUnitComponent* pView = pObject->getComponent<SkirmishUnitComponent>();
         if ( pView != nullptr )
-            pView->assignUnit( getOwner()->getHandle(), slot._shownId, pModel->_width );
+            pView->assignUnit( getOwner()->getHandle(), slot._shownID, pModel->_width );
     }
 
     void SkirmishDirectorComponent::prepareUnitLooks( Material* pMaterial )
@@ -394,17 +394,17 @@ namespace sw
                 _listUnitSlot.resize( slotIndex + 1 );
             UnitSlot& slot = _listUnitSlot[slotIndex];
             slot._stamp    = _frameStamp;
-            if ( slot._shownId == unit._id )
+            if ( slot._shownID == unit._id )
                 return;
-            slot._shownId = unit._id;
+            slot._shownID = unit._id;
             _listPendingUnit.push_back( static_cast<int32>( slotIndex ) );
         } );
         for ( size_t slotIndex = 0; slotIndex < _listUnitSlot.size(); ++slotIndex )
         {
             UnitSlot& slot = _listUnitSlot[slotIndex];
-            if ( slot._stamp == _frameStamp || slot._shownId.isValid() == false )
+            if ( slot._stamp == _frameStamp || slot._shownID.isValid() == false )
                 continue;
-            slot._shownId = RTSUnitId{};
+            slot._shownID = RTSUnitID{};
             _listPendingUnit.push_back( static_cast<int32>( slotIndex ) );
         }
     }
@@ -455,9 +455,9 @@ namespace sw
             const bool bHold = inputMap.wasActionTriggered( hashed_string( "Skirmish.Hold" ) );
             if ( bHold || inputMap.wasActionTriggered( hashed_string( "Skirmish.Stop" ) ) )
             {
-                for ( const RTSUnitId unitId : _selection.getSelected() )
+                for ( const RTSUnitID unitID : _selection.getSelected() )
                 {
-                    (void)( bHold ? world.issueHold( unitId ) : world.issueStop( unitId ) );
+                    (void)( bHold ? world.issueHold( unitID ) : world.issueStop( unitID ) );
                 }
             }
             if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.Command1" ) ) )
@@ -471,7 +471,7 @@ namespace sw
                 struct BuildAction
                 {
                     const utf8* _pAction;
-                    const utf8* _pBuildingId;
+                    const utf8* _pBuildingID;
                 };
                 constexpr BuildAction kArrBuildAction[] = {
                     {"Skirmish.Build.SupplyDepot", "supply_depot"},
@@ -485,7 +485,7 @@ namespace sw
                 for ( const BuildAction& entry : kArrBuildAction )
                 {
                     if ( inputMap.wasActionTriggered( hashed_string( entry._pAction ) ) )
-                        orderBuild( entry._pBuildingId, point );
+                        orderBuild( entry._pBuildingID, point );
                 }
             }
         }
@@ -546,9 +546,9 @@ namespace sw
         const float32 dragged = MathUtil::max( MathUtil::abs( end._x - _dragStart._x ), MathUtil::abs( end._z - _dragStart._z ) );
         if ( dragged < SkirmishDirectorComponentInternal::kClickSlop )
         {
-            const RTSUnitId pickedId = world.pickUnit( end );
-            if ( pickedId.isValid() )
-                _selection.selectUnit( world, pickedId, bShift );
+            const RTSUnitID pickedID = world.pickUnit( end );
+            if ( pickedID.isValid() )
+                _selection.selectUnit( world, pickedID, bShift );
             else if ( bShift == false )
                 _selection.clear();
         }
@@ -568,39 +568,39 @@ namespace sw
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
             return;
         // 유닛 · 자원을 눌렀으면 하나씩 똑똑한 명령(공격 · 채취 · 이어 짓기), 빈 땅이면 움직이는 것은 무리 이동 · 건물은 집결지.
-        const RTSUnitId   targetId = world.pickUnit( point );
-        vector<RTSUnitId> listMobile;
-        for ( const RTSUnitId unitId : _selection.getSelected() )
+        const RTSUnitID   targetID = world.pickUnit( point );
+        vector<RTSUnitID> listMobile;
+        for ( const RTSUnitID unitID : _selection.getSelected() )
         {
-            const RTSUnit* pUnit = world.findUnit( unitId );
+            const RTSUnit* pUnit = world.findUnit( unitID );
             if ( pUnit == nullptr )
                 continue;
             if ( pUnit->isBuilding() )
-                world.setRallyPoint( unitId, point );
-            else if ( targetId.isValid() && targetId != unitId )
-                (void)world.issueSmart( unitId, point, targetId, bQueue );
+                world.setRallyPoint( unitID, point );
+            else if ( targetID.isValid() && targetID != unitID )
+                (void)world.issueSmart( unitID, point, targetID, bQueue );
             else
-                listMobile.push_back( unitId );
+                listMobile.push_back( unitID );
         }
         if ( listMobile.empty() == false )
             (void)world.issueGroupMove( listMobile, point, false, bQueue );
     }
 
-    void SkirmishDirectorComponent::orderBuild( const utf8* pBuildingId, const float3& point )
+    void SkirmishDirectorComponent::orderBuild( const utf8* pBuildingID, const float3& point )
     {
         RTSWorld&         world = _match.getWorld();
-        const RTSUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingId ) );
+        const RTSUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingID ) );
         if ( pDef == nullptr )
             return;
         // 고른 것 중 첫 일꾼이 짓는다. 정제소는 커서 가까운 빈 간헐천, 다른 건물은 커서가 가운데가 되는 자리.
-        RTSUnitId workerId{};
-        for ( const RTSUnitId unitId : _selection.getSelected() )
+        RTSUnitID workerID{};
+        for ( const RTSUnitID unitID : _selection.getSelected() )
         {
-            const RTSUnit* pUnit = world.findUnit( unitId );
-            if ( workerId.isValid() == false && pUnit != nullptr && pUnit->_pDef->_bWorker != SW_FALSE )
-                workerId = unitId;
+            const RTSUnit* pUnit = world.findUnit( unitID );
+            if ( workerID.isValid() == false && pUnit != nullptr && pUnit->_pDef->_bWorker != SW_FALSE )
+                workerID = unitID;
         }
-        if ( workerId.isValid() == false )
+        if ( workerID.isValid() == false )
         {
             SW_LOG_INFO( "[Skirmish] select a worker to build %#", pDef->_name.c_str() );
             return;
@@ -611,7 +611,7 @@ namespace sw
             SW_LOG_INFO( "[Skirmish] no free geyser near the cursor for %#", pDef->_name.c_str() );
             return;
         }
-        [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerId, pDef->_id, cell );
+        [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerID, pDef->_id, cell );
         SW_LOG_INFO( "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, toString( result ) );
     }
 
@@ -670,7 +670,7 @@ namespace sw
         {
             if ( event._player != 0 )
                 continue;
-            const RTSUnitDef*            pDef  = _catalog.findUnit( event._defId );
+            const RTSUnitDef*            pDef  = _catalog.findUnit( event._defID );
             [[maybe_unused]] const utf8* pName = pDef != nullptr ? pDef->_name.c_str() : "?";
             switch ( event._kind )
             {

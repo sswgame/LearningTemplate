@@ -62,7 +62,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
 
         ThreadState& state      = _mapThreadState[tid];
-        state._threadId         = tid;
+        state._threadID         = tid;
         state._pWaitingLock     = pLock;
         state._waitingCallStack = currentStack;
 
@@ -103,7 +103,7 @@ namespace sw
             state._mapAcquiredCallStack[pLock] = acquiredStack;
         }
 
-        state._threadId = tid;
+        state._threadID = tid;
         state._listHeldLock.push_back( pLock );
         state._pWaitingLock = nullptr;
 
@@ -134,10 +134,10 @@ namespace sw
     /**
      * @brief 대기 그래프(wait-for graph)에서 시작 스레드부터 대기 체인을 따라가며 순환이 있는지 판정합니다.
      */
-    bool DeadlockDetector::hasCycle( std::thread::id startThreadId, void* pLockRequested )
+    bool DeadlockDetector::hasCycle( std::thread::id startThreadID, void* pLockRequested )
     {
         vector<std::thread::id> listPath;
-        std::thread::id         currentThread = startThreadId;
+        std::thread::id         currentThread = startThreadID;
         void*                   pCurrentLock  = pLockRequested;
 
         while ( true )
@@ -152,7 +152,7 @@ namespace sw
             }
 
             std::thread::id ownerThread = ownerIt->second;
-            if ( ownerThread == startThreadId || std::find( listPath.begin(), listPath.end(), ownerThread ) != listPath.end() )
+            if ( ownerThread == startThreadID || std::find( listPath.begin(), listPath.end(), ownerThread ) != listPath.end() )
             {
                 // 대기 체인이 시작 스레드로 돌아왔거나 체인 안에서 순환이 생겼다. 교착 상태가 확정됐다.
                 listPath.push_back( ownerThread );

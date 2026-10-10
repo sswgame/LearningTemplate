@@ -18,7 +18,7 @@ namespace
     ServiceMailMessage makeMessage( const utf8* pIdempotencyKey, const LedgerHolder& funding, int64 amount )
     {
         ServiceMailMessage message;
-        message._recipientAccountId = kRecipient;
+        message._recipientAccountID = kRecipient;
         message._idempotencyKey     = pIdempotencyKey;
         message._fundingHolder      = funding;
         message._titleKey           = "mail.title.reward";
@@ -38,12 +38,12 @@ namespace
         return database.commit( transaction ) == ServiceStoreResult::Ok ? LedgerResult::Ok : LedgerResult::Unavailable;
     }
 
-    void grant( MemoryServiceDatabase& database, uint64 accountId, int64 amount )
+    void grant( MemoryServiceDatabase& database, uint64 accountID, int64 amount )
     {
         LedgerTransferRequest request;
         request._journalKey = "test/seed";
         request._reason     = "test.grant";
-        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), "cur.gold", amount } );
+        request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
         LedgerTransferOutcome outcome;
         (void)Ledger::executeTransfer( database, request, outcome );
     }

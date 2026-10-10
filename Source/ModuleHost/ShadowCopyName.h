@@ -25,14 +25,14 @@ namespace sw
         static constexpr utf8 kProcessPrefix = 'p';
 
         /** @brief 확장자 없는 복사본 이름을 만듭니다(예: `SWGame_temp_p4120_3_13435508261`). */
-        static string make( string_view moduleName, int32 processId, uint32 serial, uint64 sourceMtime );
+        static string make( string_view moduleName, int32 processID, uint32 serial, uint64 sourceMtime );
 
         /**
          * @brief 파일 이름(경로 가능)이 섀도 복사본인지 보고, 그렇다면 만든 프로세스 ID 를 꺼냅니다.
-         * @param outProcessId 만든 프로세스 ID 입니다. 프로세스 ID 를 넣기 전 형식(`<모듈>_temp_<번호>_<시각>`)이면 0 입니다.
+         * @param outProcessID 만든 프로세스 ID 입니다. 프로세스 ID 를 넣기 전 형식(`<모듈>_temp_<번호>_<시각>`)이면 0 입니다.
          * @return 두 형식 가운데 하나면 true 입니다. 표식이 없거나 뒤가 형식에 맞지 않으면 false 입니다.
          */
-        [[nodiscard]] static bool parse( string_view filePath, int32& outProcessId );
+        [[nodiscard]] static bool parse( string_view filePath, int32& outProcessID );
 
         /**
          * @brief @p directoryPath 에 남은 섀도 복사본(디버그 심볼 · 쓰다 만 임시 파일 포함) 가운데 이 프로세스 · 살아 있지 않은 프로세스 ·

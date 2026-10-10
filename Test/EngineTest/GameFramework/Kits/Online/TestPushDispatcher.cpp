@@ -45,14 +45,14 @@ namespace
             _dispatcher.drainCompletions( _listCompletion );
         }
 
-        void registerDevice( AccountId accountId, string_view providerId, string_view token, int64 nowMs )
+        void registerDevice( AccountID accountID, string_view providerID, string_view token, int64 nowMs )
         {
             PushDeviceRegistration registration;
-            registration._providerId   = string( providerId );
+            registration._providerID   = string( providerID );
             registration._token        = string( token );
             registration._locale       = "ko-KR";
             registration._registeredMs = nowMs;
-            _dispatcher.registerDevice( accountId, registration, 1 );
+            _dispatcher.registerDevice( accountID, registration, 1 );
             step( nowMs );
         }
     };
@@ -172,7 +172,7 @@ SW_TEST_CASE( PushDispatcherTest, DeviceLimitEvictsTheOldestAndUnregister )
     node._dispatcher.unregisterDevice( 1, "fake", "token-new", 7 );
     node._dispatcher.unregisterDevice( 1, "fake", "token-new", 8 ); // 이미 없다
     PushDeviceRegistration broken;
-    broken._providerId = "Bad Provider";
+    broken._providerID = "Bad Provider";
     broken._token      = "x";
     node._dispatcher.registerDevice( 1, broken, 9 );
     node.step( 600 );

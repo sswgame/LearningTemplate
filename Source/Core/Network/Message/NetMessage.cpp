@@ -21,14 +21,14 @@ namespace sw
         return _writer;
     }
 
-    bool NetMessageWriter::send( NetHost& host, int32 connectionId, NetChannelType channel ) const
+    bool NetMessageWriter::send( NetHost& host, int32 connectionID, NetChannelType channel ) const
     {
-        return host.sendMessage( connectionId, channel, _writer.getBytes().data(), _writer.getByteCount() );
+        return host.sendMessage( connectionID, channel, _writer.getBytes().data(), _writer.getByteCount() );
     }
 
-    int32 NetMessageWriter::broadcast( NetHost& host, NetChannelType channel, int32 exceptId ) const
+    int32 NetMessageWriter::broadcast( NetHost& host, NetChannelType channel, int32 exceptID ) const
     {
-        return host.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptId );
+        return host.broadcast( channel, _writer.getBytes().data(), _writer.getByteCount(), exceptID );
     }
 
     int32 NetMessageWriter::sendToPeers( NetHost& host, NetChannelType channel ) const
@@ -46,12 +46,12 @@ namespace sw
         return ( ( getMessageKindMask() >> ( kind - rangeBase ) ) & 1u ) != 0;
     }
 
-    NetHandleResult INetMessageHandler::handleMessage( int32 connectionId, const uint8* pData, int32 size, NetChannelType channel )
+    NetHandleResult INetMessageHandler::handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel )
     {
         if ( pData == nullptr || size <= 0 || isMessageKindHandled( pData[0] ) == false )
             return NetHandleResult::NotMine;
         BitReader body( pData + 1, size - 1 );
-        return handleNetMessage( NetMessageContext{ pData, size, connectionId, channel, pData[0] }, body );
+        return handleNetMessage( NetMessageContext{ pData, size, connectionID, channel, pData[0] }, body );
     }
 
     NetMessageRouter::NetMessageRouter()
@@ -126,7 +126,7 @@ namespace sw
         if ( pHandler == nullptr )
             return NetHandleResult::NotMine;
         BitReader             body( pData + 1, size - 1 );
-        const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionId, context._channel, pData[0] }, body );
+        const NetHandleResult result = pHandler->handleNetMessage( NetMessageContext{ pData, size, context._connectionID, context._channel, pData[0] }, body );
         if ( result == NetHandleResult::Malformed )
             ++_malformedCount;
         return result;
@@ -137,9 +137,9 @@ namespace sw
         for ( INetMessageHandler* pHandler : _listHandler )
         {
             if ( event._kind == NetHostEvent::Kind::Connected )
-                pHandler->onConnectionOpened( event._connectionId );
+                pHandler->onConnectionOpened( event._connectionID );
             else
-                pHandler->onConnectionClosed( event._connectionId, event._reason );
+                pHandler->onConnectionClosed( event._connectionID, event._reason );
         }
     }
 
@@ -155,13 +155,13 @@ namespace sw
         for ( const NetInboundMessage& message : _inbound._listMessage )
         {
             const uint8* pData = _inbound._bytes.data() + message._offset;
-            if ( dispatch( NetMessageContext{ pData, message._size, message._connectionId, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
+            if ( dispatch( NetMessageContext{ pData, message._size, message._connectionID, message._channel, message._size > 0 ? pData[0] : uint8{ 0 } }, pData, message._size ) !=
                      NetHandleResult::NotMine ||
                  pOutUnhandled == nullptr )
                 continue;
             NetReceivedMessage unhandled;
             unhandled._buffer.assign( pData, pData + message._size );
-            unhandled._connectionId = message._connectionId;
+            unhandled._connectionID = message._connectionID;
             unhandled._channel      = message._channel;
             pOutUnhandled->push_back( std::move( unhandled ) );
         }
@@ -172,6 +172,6 @@ namespace sw
     {
         if ( host.isServer() == false || context._pMessage == nullptr || context._messageSize <= 0 )
             return 0;
-        return host.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionId );
+        return host.broadcast( context._channel, context._pMessage, context._messageSize, context._connectionID );
     }
 } // namespace sw

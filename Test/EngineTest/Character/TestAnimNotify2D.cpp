@@ -168,7 +168,7 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
             {
                 bSawStep = true;
                 SW_EXPECT_TRUE( action._detail == hashed_string( "Stone" ) );
-                SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectId(), action._targetObjectId );
+                SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectID(), action._targetObjectID );
             }
         }
     }

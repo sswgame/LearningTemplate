@@ -27,19 +27,19 @@ namespace
     }
 
     /** @brief id 와 동작만 채운 최소 커맨드를 만듭니다. */
-    EditorCommandDesc makeCommand( const utf8* pId )
+    EditorCommandDesc makeCommand( const utf8* pID )
     {
         EditorCommandDesc desc{};
-        desc._id     = pId;
-        desc._label  = pId;
+        desc._id     = pID;
+        desc._label  = pID;
         desc._action = &bumpInvokeCount;
         return desc;
     }
 
     /** @brief 메뉴 경로 · 순서 칸까지 채운 커맨드를 만듭니다. */
-    EditorCommandDesc makeMenuCommand( const utf8* pId, const utf8* pMenuPath, int32 menuOrder )
+    EditorCommandDesc makeMenuCommand( const utf8* pID, const utf8* pMenuPath, int32 menuOrder )
     {
-        EditorCommandDesc desc = makeCommand( pId );
+        EditorCommandDesc desc = makeCommand( pID );
         desc._menuPath         = pMenuPath;
         desc._menuOrder        = menuOrder;
         return desc;
@@ -107,16 +107,16 @@ SW_TEST_CASE( EditorCommandRegistryTest, MenuLabelPrependsIconWhenPresent )
 /**
  * @brief [EditorCommandRegistryTest] id 로 찾아 실행하고, 없는 id 와 id 가 빈 등록은 거부하는지 검증
  */
-SW_TEST_CASE( EditorCommandRegistryTest, ExecuteByIdRunsBoundAction )
+SW_TEST_CASE( EditorCommandRegistryTest, ExecuteByIDRunsBoundAction )
 {
     EditorCommandRegistry registry;
     s_invokeCount = 0;
 
     registry.registerCommand( makeCommand( "test.bump" ) );
 
-    EditorCommandDesc noId = makeCommand( "test.dropped" );
-    noId._id               = "";
-    registry.registerCommand( std::move( noId ) );
+    EditorCommandDesc noID = makeCommand( "test.dropped" );
+    noID._id               = "";
+    registry.registerCommand( std::move( noID ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), registry.getCommands().size() );
 
     SW_EXPECT_NOT_NULL( registry.find( "test.bump" ) );
@@ -155,7 +155,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, DisabledCommandIsNotExecuted )
  * @details 같은 조합을 두 처리기가 받으면(전역 처리기와 Inspector 가 각각 Ctrl+Z) 한 번 눌러 두 번 되돌아간다. 정의가 표 한곳에
  *          모여 있으므로 그 충돌을 validate 가 잡는다.
  */
-SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
+SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIDAndChord )
 {
     EditorCommandRegistry clean;
     clean.registerCommand( makeCommand( "test.a" ) );
@@ -168,10 +168,10 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesDuplicateIdAndChord )
     SW_EXPECT_TRUE( clean.validate( report ) );
     SW_EXPECT_TRUE( report.empty() );
 
-    EditorCommandRegistry duplicateId;
-    duplicateId.registerCommand( makeCommand( "test.same" ) );
-    duplicateId.registerCommand( makeCommand( "test.same" ) );
-    SW_EXPECT_FALSE( duplicateId.validate( report ) );
+    EditorCommandRegistry duplicateID;
+    duplicateID.registerCommand( makeCommand( "test.same" ) );
+    duplicateID.registerCommand( makeCommand( "test.same" ) );
+    SW_EXPECT_FALSE( duplicateID.validate( report ) );
     SW_EXPECT_FALSE( report.empty() );
 
     EditorCommandRegistry duplicateChord;

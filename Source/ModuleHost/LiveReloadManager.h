@@ -275,7 +275,7 @@ namespace sw
             string _moduleName;
             string _tempPath;
             void*  _pHandle{ nullptr };
-            uint32 _batchId{ 0 };
+            uint32 _batchID{ 0 };
             bool   _bKeepMapped{ false }; ///< 다른 코드가 아직 구독하는 이벤트 채널을 만든 이미지 — 내리지 않는다(`ModuleImageUtil::releaseModuleCode`)
         };
 
@@ -329,7 +329,7 @@ namespace sw
         OnBeforeCommitBatchDelegate          _onBeforeCommitBatch;
         DrainWorkersDelegate                 _drainWorkers;
         vector<DeferredUnloadImage>          _listDeferredUnloadImage; ///< 언로드를 미룬 옛 이미지. 오래된 것부터
-        uint32                               _reloadBatchId;           ///< 연쇄 리로드마다 오르는 배치 번호
+        uint32                               _reloadBatchID;           ///< 연쇄 리로드마다 오르는 배치 번호
         uint8                                _bReloadGraphBroken : 1;
         [[maybe_unused]] uint8               _reserved           : 7;
     };

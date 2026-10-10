@@ -74,7 +74,7 @@ namespace sw
     /** @brief 캔슬 창 하나 — 이 프레임 구간에 이어 낼 수 있는 기술들입니다. */
     struct MoveCancelWindow
     {
-        vector<hashed_string> _listMoveId{};
+        vector<hashed_string> _listMoveID{};
         int32                 _fromFrame{ 0 };
         int32                 _toFrame{ 0 };
         uint8                 _bOnHitOnly{ SW_FALSE }; ///< 맞거나 막혔을 때만(헛치면 캔슬 불가 — 철권 · 스트리트 파이터의 일반기 캔슬)
@@ -198,8 +198,8 @@ namespace sw
         int32                getHitstopRemaining() const { return _hitstopRemaining; }
         /** @brief 지금 프레임에 켜진 히트박스를 @p outListHitbox 에 채웁니다(먼저 비운다). 개수입니다. */
         uint32 collectActiveHitboxes( vector<MoveHitbox>& outListHitbox ) const;
-        /** @brief 지금 프레임에 @p moveId 로 캔슬할 수 있는가입니다. */
-        bool canCancelInto( const hashed_string& moveId ) const;
+        /** @brief 지금 프레임에 @p moveID 로 캔슬할 수 있는가입니다. */
+        bool canCancelInto( const hashed_string& moveID ) const;
         /**
          * @brief 지금 프레임에 닿았다고 보고 낸 프레임 이득입니다.
          * @details 이득 = (막혔으면 blockstun, 아니면 hitstun) − (남은 지속 프레임 + 후딜)

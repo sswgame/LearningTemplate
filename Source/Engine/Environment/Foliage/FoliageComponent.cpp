@@ -46,9 +46,9 @@ namespace sw
                 return MathUtil::max( farCorner.getLength(), 0.01f );
             }
 
-            static shared_ptr<Mesh> acquireMesh( const string& meshId )
+            static shared_ptr<Mesh> acquireMesh( const string& meshID )
             {
-                return MeshAssetFormat::isMeshAssetPath( meshId ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
+                return MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
             }
         };
     } // namespace
@@ -248,9 +248,9 @@ namespace sw
             vector<float32>          listMeshRadius;
             for ( const FoliageMesh& foliageMesh : layer._listMesh )
             {
-                shared_ptr<Mesh> mesh = Internal::acquireMesh( foliageMesh._meshId );
+                shared_ptr<Mesh> mesh = Internal::acquireMesh( foliageMesh._meshID );
                 if ( mesh == nullptr )
-                    SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshId.c_str() );
+                    SW_LOG_WARNING( "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
                 listMeshRadius.push_back( mesh != nullptr ? Internal::computeOriginRadius( *mesh ) : 0.0f );
                 listMesh.push_back( std::move( mesh ) );
             }

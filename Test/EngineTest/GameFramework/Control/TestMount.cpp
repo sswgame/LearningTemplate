@@ -366,7 +366,7 @@ SW_TEST_CASE( MountTest, RiderStillTakesHitsWhileMounted )
         IPhysicsScene3D::CastHit hit;
         const bool               bHit = pScene->raycast( float3{ feet._x - 3.0f, feet._y + 0.9f, feet._z }, float3{ 1.0f, 0.0f, 0.0f }, 6.0f, PhysicsQueryFilter{}, hit );
         SW_ASSERT_TRUE( bHit );
-        SW_EXPECT_EQUAL( pHitbox->getObjectId(), hit._userData );
+        SW_EXPECT_EQUAL( pHitbox->getObjectID(), hit._userData );
         SW_EXPECT_TRUE( feet._z > 4.0f );
     }
     input.shutdown();

@@ -71,7 +71,7 @@ namespace sw
         outArchive << _topology._height;
         for ( const FarmTile& tile : _listTile )
         {
-            StateArchiveUtil::writeName( outArchive, tile._cropId );
+            StateArchiveUtil::writeName( outArchive, tile._cropID );
             outArchive << tile._growth;
             const uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
                                                     ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
@@ -91,7 +91,7 @@ namespace sw
         for ( FarmTile& tile : listTile )
         {
             uint8 flags = 0;
-            if ( StateArchiveUtil::readName( archive, tile._cropId ) == false )
+            if ( StateArchiveUtil::readName( archive, tile._cropID ) == false )
                 return false;
             archive >> tile._growth;
             archive >> flags;
@@ -147,7 +147,7 @@ namespace sw
         if ( pCrop->growsIn( season ) == false )
             return FarmActionResult::OutOfSeason;
 
-        pTile->_cropId    = pCrop->_id;
+        pTile->_cropID    = pCrop->_id;
         pTile->_growth    = 0;
         pTile->_bReady    = SW_FALSE;
         pTile->_bWithered = SW_FALSE;
@@ -167,7 +167,7 @@ namespace sw
         // 시든 작물은 치우기만 한다.
         if ( pTile->_bWithered == SW_TRUE )
         {
-            pTile->_cropId    = hashed_string{};
+            pTile->_cropID    = hashed_string{};
             pTile->_growth    = 0;
             pTile->_bReady    = SW_FALSE;
             pTile->_bWithered = SW_FALSE;
@@ -190,7 +190,7 @@ namespace sw
         }
         else
         {
-            pTile->_cropId = hashed_string{};
+            pTile->_cropID = hashed_string{};
             pTile->_growth = 0;
             pTile->_bReady = SW_FALSE;
         }
@@ -270,6 +270,6 @@ namespace sw
 
     const CropDef* FarmField::findCropDef( const FarmTile& tile ) const
     {
-        return _pCatalog != nullptr ? _pCatalog->findCrop( tile._cropId ) : nullptr;
+        return _pCatalog != nullptr ? _pCatalog->findCrop( tile._cropID ) : nullptr;
     }
 } // namespace sw

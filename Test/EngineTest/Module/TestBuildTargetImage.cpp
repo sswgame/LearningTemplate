@@ -2,7 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildID.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 
@@ -58,7 +58,7 @@ namespace
     /** @brief 이 빌드의 Engine 이미지(Dev 는 Engine.dll · libEngine.so, Shipping 은 시험 실행 파일 자신)입니다. */
     string findEngineImage()
     {
-        return ModuleBuildId::find( reinterpret_cast<const void*>( &ModuleCatalog::getBuildTargetMask ) )._modulePath;
+        return ModuleBuildID::find( reinterpret_cast<const void*>( &ModuleCatalog::getBuildTargetMask ) )._modulePath;
     }
 
     /** @brief Dev 의 모듈 라이브러리(Bin 의 .dll · Bin/Lib 의 .so)입니다. Shipping 은 모듈이 정적 링크라 비어 있다. */

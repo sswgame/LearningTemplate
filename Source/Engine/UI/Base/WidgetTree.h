@@ -51,19 +51,19 @@ namespace sw
             return pWidget != nullptr ? castTo<WidgetType>( pWidget ) : nullptr;
         }
         /** @brief 번호로 찾습니다. 떨어졌거나 지워졌으면 nullptr 입니다. */
-        Widget* findWidgetById( WidgetId id ) const;
-        uint32  getWidgetCount() const { return static_cast<uint32>( _mapIdToWidget.size() ); }
+        Widget* findWidgetByID( WidgetID id ) const;
+        uint32  getWidgetCount() const { return static_cast<uint32>( _mapIDToWidget.size() ); }
 
         /** @brief 위젯이 무효화를 알립니다(`Widget::invalidate` 만 부른다). */
         void notifyDirty( Widget& widget, uint32 dirtyReason );
         /** @brief 무효화 뒤 처리할 것(레이아웃 · 그리기 · 스타일)이 있는가. 없으면 프레임이 트리를 건너뜁니다. */
         bool hasPendingWork() const;
         /** @brief 다시 잴 뿌리(레이아웃 경계 · 루트)의 번호입니다 — 레이아웃 걷기가 읽고 비웁니다. */
-        const vector<WidgetId>& getLayoutDirtyRoots() const { return _listLayoutDirtyRoot; }
+        const vector<WidgetID>& getLayoutDirtyRoots() const { return _listLayoutDirtyRoot; }
         /** @brief 그림(또는 변환 · 불투명도)이 바뀐 위젯 번호입니다 — 그리기 걷기가 읽고 비웁니다. */
-        const vector<WidgetId>& getPaintDirtyWidgets() const { return _listPaintDirty; }
+        const vector<WidgetID>& getPaintDirtyWidgets() const { return _listPaintDirty; }
         /** @brief 계산된 스타일을 다시 할 위젯 번호입니다 — 스타일 걷기가 읽고 비웁니다. */
-        const vector<WidgetId>& getStyleDirtyWidgets() const { return _listStyleDirty; }
+        const vector<WidgetID>& getStyleDirtyWidgets() const { return _listStyleDirty; }
         /**
          * @brief 모든 무효화를 처리한 것으로 표시합니다 — 위젯의 더러움 비트와 세 목록을 비웁니다.
          * @details 걷는 쪽(레이아웃 · 스타일 · 그리기)이 할 일을 마친 뒤 부릅니다. 걷기가 아직 없는 단계에서는 프레임 끝에 부릅니다.
@@ -74,7 +74,7 @@ namespace sw
         UIScreen* getScreen() const { return _pScreen; }
 
         /** @brief 이 트리에서 포커스를 쥔 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */
-        WidgetId getFocusedWidget() const { return _focusedWidget; }
+        WidgetID getFocusedWidget() const { return _focusedWidget; }
 
         /** @brief 뿌리부터 모든 위젯을 깊이 우선 문서 순서(부모 다음 자식, 자식은 앞에서부터)로 @p outListWidget 에 담습니다. */
         void collectWidgetsInDocumentOrder( vector<Widget*>& outListWidget ) const;
@@ -101,15 +101,15 @@ namespace sw
 
     private:
         unique_ptr<Widget>                                             _root;
-        unordered_map<WidgetId, Widget*>                               _mapIdToWidget;
+        unordered_map<WidgetID, Widget*>                               _mapIDToWidget;
         unordered_map<hashed_string, Widget*, hashed_string::HashFunc> _mapNameToWidget;
-        vector<WidgetId>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
-        vector<WidgetId>                                               _listPaintDirty;
-        vector<WidgetId>                                               _listStyleDirty;
-        vector<WidgetId>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다)
+        vector<WidgetID>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
+        vector<WidgetID>                                               _listPaintDirty;
+        vector<WidgetID>                                               _listStyleDirty;
+        vector<WidgetID>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다)
         UIFocusManager*                                                _pFocusManager;       ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
         UIScreen*                                                      _pScreen;             ///< 소유한 화면(UIScreen 생성자가 적는다)
-        WidgetId                                                       _focusedWidget;
+        WidgetID                                                       _focusedWidget;
         float32                                                        _layoutUIScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UILayoutPass)
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 걷기의 글자 배율
         float4                                                         _layoutSafeInsets;     ///< 지난 레이아웃 걷기의 안전 영역(바뀌면 루트부터 다시 놓는다)

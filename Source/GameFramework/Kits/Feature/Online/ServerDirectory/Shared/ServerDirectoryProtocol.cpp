@@ -17,9 +17,9 @@ namespace sw
         if ( bIncludeAllowList == false )
             return;
         outWriter.writeVarUint( window._listAllowedAccount.size() );
-        for ( const AccountId accountId : window._listAllowedAccount )
+        for ( const AccountID accountID : window._listAllowedAccount )
         {
-            outWriter.writeVarUint( accountId );
+            outWriter.writeVarUint( accountID );
         }
     }
 
@@ -47,7 +47,7 @@ namespace sw
 
     void ServerDirectoryProtocol::writeNotice( BitWriter& outWriter, const ServiceNotice& notice )
     {
-        outWriter.writeVarUint( notice._noticeId );
+        outWriter.writeVarUint( notice._noticeID );
         ServiceKeyUtil::writeString( outWriter, notice._text );
         outWriter.writeVarInt( notice._startMs );
         outWriter.writeVarInt( notice._endMs );
@@ -57,7 +57,7 @@ namespace sw
 
     bool ServerDirectoryProtocol::readNotice( BitReader& reader, ServiceNotice& outNotice )
     {
-        outNotice._noticeId = reader.readVarUint();
+        outNotice._noticeID = reader.readVarUint();
         if ( ServiceKeyUtil::readString( reader, ServerDirectoryLimit::kMaxNoticeTextSize, outNotice._text ) == false )
             return false;
         outNotice._startMs      = reader.readVarInt();
@@ -126,7 +126,7 @@ namespace sw
     void ServerDirectoryProtocol::writeAssignment( BitWriter& outWriter, const ServerAssignment& assignment )
     {
         outWriter.writeBits( static_cast<uint32>( assignment._result ), 8 );
-        outWriter.writeVarUint( assignment._serverId );
+        outWriter.writeVarUint( assignment._serverID );
         ServiceKeyUtil::writeString( outWriter, assignment._address );
         outWriter.writeBits( assignment._port, 16 );
         outWriter.writeVarInt( assignment._maintenanceEndMs );
@@ -136,7 +136,7 @@ namespace sw
     bool ServerDirectoryProtocol::readAssignment( BitReader& reader, ServerAssignment& outAssignment )
     {
         const uint32 result     = reader.readBits( 8 );
-        outAssignment._serverId = reader.readVarUint();
+        outAssignment._serverID = reader.readVarUint();
         if ( result >= static_cast<uint32>( ServerDirectoryResult::Count ) ||
              ServiceKeyUtil::readString( reader, ServerRecord::kMaxAddressSize, outAssignment._address ) == false )
             return false;
@@ -151,7 +151,7 @@ namespace sw
         outWriter.writeVarUint( listEntry.size() );
         for ( const ServerListEntry& entry : listEntry )
         {
-            outWriter.writeVarUint( entry._serverId );
+            outWriter.writeVarUint( entry._serverID );
             ServiceKeyUtil::writeString( outWriter, entry._region );
             ServiceKeyUtil::writeString( outWriter, entry._address );
             outWriter.writeBits( entry._port, 16 );
@@ -168,7 +168,7 @@ namespace sw
         outListEntry.resize( static_cast<size_t>( count ) );
         for ( ServerListEntry& entry : outListEntry )
         {
-            entry._serverId    = reader.readVarUint();
+            entry._serverID    = reader.readVarUint();
             const bool bTextOk = ServiceKeyUtil::readString( reader, ServerRecord::kMaxNameSize, entry._region ) &&
                                  ServiceKeyUtil::readString( reader, ServerRecord::kMaxAddressSize, entry._address );
             if ( bTextOk == false )

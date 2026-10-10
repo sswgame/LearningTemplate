@@ -92,13 +92,13 @@ namespace
 </AIDirector>
 )";
 
-        static int32 countKind( const vector<AIDirectorEvent>& listEvent, AIDirectorEventKind kind, const utf8* pId = nullptr )
+        static int32 countKind( const vector<AIDirectorEvent>& listEvent, AIDirectorEventKind kind, const utf8* pID = nullptr )
         {
             int32 count = 0;
             for ( const AIDirectorEvent& event : listEvent )
             {
-                const bool bIdMatches = pId == nullptr || event._id == hashed_string( pId );
-                count += event._kind == kind && bIdMatches ? 1 : 0;
+                const bool bIDMatches = pID == nullptr || event._id == hashed_string( pID );
+                count += event._kind == kind && bIDMatches ? 1 : 0;
             }
             return count;
         }
@@ -133,9 +133,9 @@ namespace
                 director.drainEvents( outListEvent );
                 for ( const AIDirectorEvent& event : outListEvent )
                 {
-                    const bool bExpired = event._kind == AIDirectorEventKind::Spawned && director.getTime() - event._time >= 3.0f && event._spawnId != 0;
+                    const bool bExpired = event._kind == AIDirectorEventKind::Spawned && director.getTime() - event._time >= 3.0f && event._spawnID != 0;
                     if ( bExpired )
-                        (void)director.notifyDespawned( event._spawnId );
+                        (void)director.notifyDespawned( event._spawnID );
                 }
             }
             return director.computeStateHash();
@@ -157,9 +157,9 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
     SW_EXPECT_EQUAL( 0, profile.getStartPhaseIndex() );
     SW_EXPECT_EQUAL( 1, profile.getPhases()[0]._listExit[0]._toIndex );
     SW_EXPECT_NEAR_EQUAL( 1.5f, profile.getPhases()[0]._spawnCurve.evaluate( 5.0f ), 1.0e-6f );
-    vector<hashed_string> listId;
-    profile.collectEncounterIds( listId );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listId.size() ) );
+    vector<hashed_string> listID;
+    profile.collectEncounterIDs( listID );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listID.size() ) );
 
     struct BadCase
     {
@@ -390,8 +390,8 @@ SW_TEST_CASE( AIDirectorTest, SpawnBudgetFollowsThePhase )
     const AIDirectorEvent* pSpawned = Internal::findLast( listEvent, AIDirectorEventKind::Spawned );
     SW_ASSERT_TRUE( pSpawned != nullptr );
     const int32 aliveBefore = fresh.getSpawnDirector().getTotalAliveCount();
-    SW_EXPECT_TRUE( fresh.notifyDespawned( pSpawned->_spawnId ) );
-    SW_EXPECT_FALSE( fresh.notifyDespawned( pSpawned->_spawnId ) );
+    SW_EXPECT_TRUE( fresh.notifyDespawned( pSpawned->_spawnID ) );
+    SW_EXPECT_FALSE( fresh.notifyDespawned( pSpawned->_spawnID ) );
     SW_EXPECT_EQUAL( aliveBefore - 1, fresh.getSpawnDirector().getTotalAliveCount() );
     listEvent.clear();
     fresh.drainEvents( listEvent );
@@ -445,9 +445,9 @@ SW_TEST_CASE( AIDirectorTest, CooldownsAndCapsHoldForEverySeed )
             ++picks;
             SW_EXPECT_TRUE( event._time - lastPool >= 2.0f - 1.0e-3f );
             lastPool        = event._time;
-            float32& lastId = event._id == hashed_string( "bird" ) ? lastBird : lastWolf;
-            SW_EXPECT_TRUE( event._time - lastId >= 5.0f - 1.0e-3f );
-            lastId = event._time;
+            float32& lastID = event._id == hashed_string( "bird" ) ? lastBird : lastWolf;
+            SW_EXPECT_TRUE( event._time - lastID >= 5.0f - 1.0e-3f );
+            lastID = event._time;
         }
         SW_EXPECT_TRUE( Internal::countKind( listEvent, AIDirectorEventKind::Encounter, "wolf" ) <= 2 );
         // 60 초 — 새는 5 초마다 열리니 열 번쯤은 고른다(쿨다운이 고르기를 막기만 하고 굶기지 않는다).
@@ -604,7 +604,7 @@ SW_TEST_CASE( AIDirectorTest, TraceKeepsRecentEventsInOrder )
         for ( const AIDirectorEvent& event : listStep )
         {
             if ( event._kind == AIDirectorEventKind::Spawned )
-                (void)director.notifyDespawned( event._spawnId );
+                (void)director.notifyDespawned( event._spawnID );
         }
         listEvent.insert( listEvent.end(), listStep.begin(), listStep.end() );
     }
@@ -647,7 +647,7 @@ SW_TEST_CASE( AIDirectorTest, StateRoundTripContinuesFromTheSamePlace )
     /** @brief 대본 한 걸음 — 30 초마다 맞고, 처음 6 초는 둘러싸이고, 스폰은 3 초 뒤 돌려준다(산 목록은 게임의 몫이라 감독 밖에 든다). */
     struct Script
     {
-        vector<uint32>  _listAliveId;
+        vector<uint32>  _listAliveID;
         vector<float32> _listAliveTime;
 
         void step( AIDirector& director, int32 stepIndex, vector<AIDirectorEvent>& outListEvent )
@@ -660,21 +660,21 @@ SW_TEST_CASE( AIDirectorTest, StateRoundTripContinuesFromTheSamePlace )
             director.drainEvents( outListEvent );
             for ( size_t index = first; index < outListEvent.size(); ++index )
             {
-                if ( outListEvent[index]._kind == AIDirectorEventKind::Spawned && outListEvent[index]._spawnId != 0 )
+                if ( outListEvent[index]._kind == AIDirectorEventKind::Spawned && outListEvent[index]._spawnID != 0 )
                 {
-                    _listAliveId.push_back( outListEvent[index]._spawnId );
+                    _listAliveID.push_back( outListEvent[index]._spawnID );
                     _listAliveTime.push_back( director.getTime() );
                 }
             }
-            for ( size_t index = 0; index < _listAliveId.size(); )
+            for ( size_t index = 0; index < _listAliveID.size(); )
             {
                 if ( director.getTime() - _listAliveTime[index] < 3.0f )
                 {
                     ++index;
                     continue;
                 }
-                (void)director.notifyDespawned( _listAliveId[index] );
-                _listAliveId.erase( _listAliveId.begin() + static_cast<ptrdiff_t>( index ) );
+                (void)director.notifyDespawned( _listAliveID[index] );
+                _listAliveID.erase( _listAliveID.begin() + static_cast<ptrdiff_t>( index ) );
                 _listAliveTime.erase( _listAliveTime.begin() + static_cast<ptrdiff_t>( index ) );
             }
         }

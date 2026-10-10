@@ -23,7 +23,7 @@ namespace
         static LiveEventDefinition makeHalloween()
         {
             LiveEventDefinition definition;
-            definition._eventId = "halloween";
+            definition._eventID = "halloween";
             definition._kind    = "xp_boost";
             definition._startMs = kMonday20261005;
             definition._endMs   = kMonday20261005 + 7 * kDay;
@@ -50,9 +50,9 @@ namespace
         vector<LiveOpsCompletion> _listCompletion;
         int32                     _stateChangeCount;
 
-        LiveOpsNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverId, const RemoteConfig* pRemoteConfig = nullptr )
+        LiveOpsNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const RemoteConfig* pRemoteConfig = nullptr )
             : _store{ pDatabase }
-            , _bus{ pHub, serverId }
+            , _bus{ pHub, serverID }
             , _service{}
             , _listCompletion{}
             , _stateChangeCount{ 0 }
@@ -80,7 +80,7 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerId != _bus.getServerId() )
+                    if ( message._originServerID != _bus.getServerID() )
                         _service.notifyChanged();
                 }
                 _service.tick( nowMs );
@@ -139,7 +139,7 @@ SW_TEST_CASE( LiveOpsServiceTest, BoundaryRaisesStateChangeWithoutReload )
     LocalServerBusHub     hub;
     LiveOpsNode           node( &database, &hub, 1 );
     LiveEventDefinition   evening;
-    evening._eventId           = "evening_drop";
+    evening._eventID           = "evening_drop";
     evening._kind              = "drop";
     evening._startMs           = Internal::kMonday20261005;
     evening._endMs             = Internal::kMonday20261005 + 3 * Internal::kDay;

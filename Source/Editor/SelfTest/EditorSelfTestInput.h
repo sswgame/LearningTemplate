@@ -17,8 +17,8 @@ namespace sw::editor
     {
         float2 _min{};
         float2 _max{};
-        uint32 _itemId{ 0 };
-        uint32 _viewportId{ 0 }; ///< 위젯이 그려진 뷰포트 — 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
+        uint32 _itemID{ 0 };
+        uint32 _viewportID{ 0 }; ///< 위젯이 그려진 뷰포트 — 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };      ///< 적힌 ImGui 프레임 번호 — 지난 프레임에 안 그려진 위젯을 누르지 않게
     };
 } // namespace sw::editor
@@ -51,8 +51,8 @@ namespace sw::editor
      */
     struct EditorSelfTestInput
     {
-        /** @brief 마우스를 옮깁니다. @p viewportId 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다(플랫폼이 실제 커서로 넣는 값을 이긴다). */
-        static void moveMouse( const float2& position, uint32 viewportId = 0 );
+        /** @brief 마우스를 옮깁니다. @p viewportID 가 0 이 아니면 그 뷰포트를 커서 아래 뷰포트로 알립니다(플랫폼이 실제 커서로 넣는 값을 이긴다). */
+        static void moveMouse( const float2& position, uint32 viewportID = 0 );
         static void setMouseButton( int32 button, bool bDown );
         static void typeText( string_view utf8Text );
         /**

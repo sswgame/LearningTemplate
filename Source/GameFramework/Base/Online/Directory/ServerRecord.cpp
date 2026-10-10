@@ -8,10 +8,10 @@
 
 namespace sw
 {
-    string ServerRecord::makeRecordKey( uint64 serverId )
+    string ServerRecord::makeRecordKey( uint64 serverID )
     {
         string key{ "sd/srv/" };
-        ServiceKeyUtil::appendHex64( key, serverId );
+        ServiceKeyUtil::appendHex64( key, serverID );
         return key;
     }
 
@@ -22,9 +22,9 @@ namespace sw
         return key;
     }
 
-    string ServerRecord::makeMember( uint64 serverId ) { return ServiceKeyUtil::makeHex64( serverId ); }
+    string ServerRecord::makeMember( uint64 serverID ) { return ServiceKeyUtil::makeHex64( serverID ); }
 
-    bool ServerRecord::parseMember( string_view member, uint64& outServerId ) { return ServiceKeyUtil::parseHex64( member, outServerId ); }
+    bool ServerRecord::parseMember( string_view member, uint64& outServerID ) { return ServiceKeyUtil::parseHex64( member, outServerID ); }
 
     bool ServerRecord::isValidName( string_view name )
     {
@@ -42,7 +42,7 @@ namespace sw
     void ServerRecord::writeStatus( BitWriter& outWriter, const ServerStatus& status )
     {
         const ServerDescriptor& descriptor = status._descriptor;
-        outWriter.writeVarUint( descriptor._serverId );
+        outWriter.writeVarUint( descriptor._serverID );
         ServiceKeyUtil::writeString( outWriter, descriptor._kind );
         ServiceKeyUtil::writeString( outWriter, descriptor._region );
         ServiceKeyUtil::writeString( outWriter, descriptor._address );
@@ -57,7 +57,7 @@ namespace sw
     bool ServerRecord::readStatus( BitReader& reader, ServerStatus& outStatus )
     {
         ServerDescriptor& descriptor = outStatus._descriptor;
-        descriptor._serverId         = reader.readVarUint();
+        descriptor._serverID         = reader.readVarUint();
         const bool bTextOk           = ServiceKeyUtil::readString( reader, kMaxNameSize, descriptor._kind ) &&
                              ServiceKeyUtil::readString( reader, kMaxNameSize, descriptor._region ) &&
                              ServiceKeyUtil::readString( reader, kMaxAddressSize, descriptor._address );

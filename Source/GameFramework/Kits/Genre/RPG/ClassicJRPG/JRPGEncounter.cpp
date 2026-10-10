@@ -24,12 +24,12 @@ namespace sw
         _totalSteps          = 0;
     }
 
-    const JRPGEncounterGroup* JRPGEncounterWalker::step( const hashed_string& areaId )
+    const JRPGEncounterGroup* JRPGEncounterWalker::step( const hashed_string& areaID )
     {
         ++_totalSteps;
         if ( _stepsSinceEncounter < kNoEncounterYet )
             ++_stepsSinceEncounter;
-        const JRPGAreaDef* pArea = _pCatalog != nullptr ? _pCatalog->findArea( areaId ) : nullptr;
+        const JRPGAreaDef* pArea = _pCatalog != nullptr ? _pCatalog->findArea( areaID ) : nullptr;
         if ( pArea == nullptr || pArea->_listGroup.empty() )
             return nullptr;
         if ( _stepsSinceEncounter <= pArea->_graceSteps )

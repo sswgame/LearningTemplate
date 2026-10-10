@@ -22,25 +22,25 @@ namespace sw
         _pReputation = refs._pReputation;
     }
 
-    int32 WesternHonor::applyAction( const hashed_string& actionId )
+    int32 WesternHonor::applyAction( const hashed_string& actionID )
     {
-        const WesternHonorActionDef* pAction = _pCatalog != nullptr ? _pCatalog->findHonorAction( actionId ) : nullptr;
+        const WesternHonorActionDef* pAction = _pCatalog != nullptr ? _pCatalog->findHonorAction( actionID ) : nullptr;
         return pAction != nullptr ? changeValue( pAction->_delta ) : 0;
     }
 
-    int32 WesternHonor::applyCrime( const hashed_string& crimeId )
+    int32 WesternHonor::applyCrime( const hashed_string& crimeID )
     {
-        const WesternCrimeDef* pCrime = _pCatalog != nullptr ? _pCatalog->findCrime( crimeId ) : nullptr;
+        const WesternCrimeDef* pCrime = _pCatalog != nullptr ? _pCatalog->findCrime( crimeID ) : nullptr;
         return pCrime != nullptr ? changeValue( pCrime->_honor ) : 0;
     }
 
-    int32 WesternHonor::changeValue( int32 delta ) { return _pReputation != nullptr ? _pReputation->changeValue( hashed_string( WesternCatalog::kHonorFactionId ), delta ) : 0; }
+    int32 WesternHonor::changeValue( int32 delta ) { return _pReputation != nullptr ? _pReputation->changeValue( hashed_string( WesternCatalog::kHonorFactionID ), delta ) : 0; }
 
-    int32 WesternHonor::getValue() const { return _pReputation != nullptr ? _pReputation->getValue( hashed_string( WesternCatalog::kHonorFactionId ) ) : 0; }
+    int32 WesternHonor::getValue() const { return _pReputation != nullptr ? _pReputation->getValue( hashed_string( WesternCatalog::kHonorFactionID ) ) : 0; }
 
     hashed_string WesternHonor::getTierName() const
     {
-        return _pReputation != nullptr ? _pReputation->getTierName( hashed_string( WesternCatalog::kHonorFactionId ) ) : hashed_string{};
+        return _pReputation != nullptr ? _pReputation->getTierName( hashed_string( WesternCatalog::kHonorFactionID ) ) : hashed_string{};
     }
 
     const WesternHonorTierDef* WesternHonor::findTier() const { return _pCatalog != nullptr ? _pCatalog->findHonorTier( getTierName() ) : nullptr; }
@@ -56,7 +56,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return;
         const hashed_string current = getTierName();
-        const FactionDef*   pHonor  = _pCatalog->getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionId ) );
+        const FactionDef*   pHonor  = _pCatalog->getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionID ) );
         if ( pHonor == nullptr )
             return;
         for ( const ReputationTier& tier : pHonor->_listTier )

@@ -584,10 +584,10 @@ SW_TEST_CASE( ActionPlatformerTest, GunEnemyPatternAndParryReflectAreDeterminist
     ActionEnemyBrain brain;
     SW_EXPECT_FALSE( brain.initialize( nullptr ) );
     SW_ASSERT_TRUE( brain.initialize( scene._catalog.findPattern( "gunner" ), -1 ) );
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "patrol" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "patrol" ) );
     SW_EXPECT_NEAR_EQUAL( -1.0f, brain.advanceFrame( 10.0f )._moveX, 1.0e-4f );
     SW_EXPECT_TRUE( brain.advanceFrame( 5.0f )._bStateChanged != SW_FALSE );
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "aim" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "aim" ) );
     int32 fireCount = 0;
     int32 fireFrame = -1;
     for ( int32 frame = 0; frame < 40; ++frame )
@@ -602,15 +602,15 @@ SW_TEST_CASE( ActionPlatformerTest, GunEnemyPatternAndParryReflectAreDeterminist
     }
     SW_EXPECT_EQUAL( 1, fireCount );
     SW_EXPECT_EQUAL( 9, fireFrame ); // 조준 10 프레임(들어선 프레임 포함) 뒤
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "cooldown" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "cooldown" ) );
     SW_EXPECT_FALSE( brain.notifyHit() ); // 쉬는 중에는 경직이 없다
     for ( int32 frame = 0; frame < 30; ++frame )
     {
         (void)brain.advanceFrame( 10.0f );
     }
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "patrol" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "patrol" ) );
     SW_EXPECT_TRUE( brain.notifyHit() );
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "stagger" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "stagger" ) );
 
     // 패리 — 날아온 탄을 되받아쳐 사수가 두 배 피해를 받는다. 되받아칠 때 히트스톱 6 프레임.
     const ParryDuel parried = runParryDuel( scene, true );
@@ -757,14 +757,14 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     {
         (void)brain.advanceFrame( 5.0f );
     }
-    SW_EXPECT_TRUE( brain.getStateId() == hashed_string( "aim" ) );
+    SW_EXPECT_TRUE( brain.getStateID() == hashed_string( "aim" ) );
     const vector<uint8> brainBytes = capturePlatformerBytes( brain );
     ActionEnemyBrain    restoredBrain;
     restoredBrain.bindCatalog( &scene._catalog );
     Archive brainReader( brainBytes.data(), brainBytes.size() );
     SW_ASSERT_TRUE( restoredBrain.readState( brainReader ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, brainReader.getRemainingBytes() );
-    SW_EXPECT_TRUE( restoredBrain.getStateId() == hashed_string( "aim" ) );
+    SW_EXPECT_TRUE( restoredBrain.getStateID() == hashed_string( "aim" ) );
     SW_EXPECT_EQUAL( brain.getStateFrame(), restoredBrain.getStateFrame() );
     SW_EXPECT_EQUAL( -1, restoredBrain.getFacing() );
     SW_EXPECT_TRUE( brainBytes == capturePlatformerBytes( restoredBrain ) );
@@ -782,5 +782,5 @@ SW_TEST_CASE( ActionPlatformerTest, StateRoundTripContinuesTheSameRun )
     truncatedBrain.bindCatalog( &scene._catalog );
     Archive brainCut( brainBytes.data(), brainBytes.size() - 1 );
     SW_EXPECT_FALSE( truncatedBrain.readState( brainCut ) );
-    SW_EXPECT_TRUE( truncatedBrain.getStateId().empty() );
+    SW_EXPECT_TRUE( truncatedBrain.getStateID().empty() );
 }

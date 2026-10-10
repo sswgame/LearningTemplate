@@ -157,7 +157,7 @@ namespace sw::editor
                 EditorThemePreset preset = EditorThemePreset::ModernDark;
                 if ( listArgument.size() != 1 )
                     return false;
-                if ( EditorThemeUtil::findPresetByConfigId( listArgument[0], preset ) == false )
+                if ( EditorThemeUtil::findPresetByConfigID( listArgument[0], preset ) == false )
                 {
                     outReply = "unknown theme preset '" + listArgument[0] + "' (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)";
                     return false;
@@ -278,7 +278,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_DEV_COMMAND( EditorCommand, "editor", "editor <commandId>", "Run an editor command by id (the command palette ids, e.g. scene.saveScene)",
+    SW_DEV_COMMAND( EditorCommand, "editor", "editor <commandID>", "Run an editor command by id (the command palette ids, e.g. scene.saveScene)",
                     &EditorDevCommandsInternal::runEditorCommand );
     SW_DEV_COMMAND( Play, "play", "play", "Start (or switch to) play-in-editor", &EditorDevCommandsInternal::runPlay );
     SW_DEV_COMMAND( Simulate, "simulate", "simulate", "Start (or switch to) simulate - world only, no player or game input",
@@ -300,9 +300,9 @@ namespace sw::editor
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorDevCommandsInternal::runLayoutSave );
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );
-    SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelId>", "Open a panel and bring its window (its tab) to the front on the next frame",
+    SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
                     &EditorDevCommandsInternal::runPanelFocus );
-    SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelId>", "Close a panel", &EditorDevCommandsInternal::runPanelClose );
+    SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorDevCommandsInternal::runPanelClose );
     SW_DEV_COMMAND( LayoutReset, "layout.reset", "layout.reset", "Reset the dock layout to the default editor layout on the next frame (scenarios that click by position)",
                     &EditorDevCommandsInternal::runLayoutReset );
 } // namespace sw::editor

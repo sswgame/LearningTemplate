@@ -19,7 +19,7 @@ namespace sw
     {
         float3  _position{};
         float32 _radius{ 0.5f };
-        uint32  _entityId{ 0 };
+        uint32  _entityID{ 0 };
     };
 } // namespace sw
 
@@ -32,13 +32,13 @@ namespace sw
 
         void record( uint32 tick, const vector<LagRecord>& listRecord );
         /** @brief @p tick(소수)에서의 그 몸입니다 — 앞뒤 틱 사이를 섞는다. 기억 밖이면 가장 가까운 끝 틱입니다. 없으면 false 입니다. */
-        bool sampleAt( float32 tick, uint32 entityId, LagRecord& outRecord ) const;
+        bool sampleAt( float32 tick, uint32 entityID, LagRecord& outRecord ) const;
         /** @brief 그 시각의 광선 맞음(가장 가까운 몸)입니다. 안 맞으면 0 입니다. */
-        uint32 raycastAt( float32 tick, const float3& origin, const float3& direction, float32 maxDistance, uint32 ignoreEntityId, float32& outDistance ) const;
+        uint32 raycastAt( float32 tick, const float3& origin, const float3& direction, float32 maxDistance, uint32 ignoreEntityID, float32& outDistance ) const;
         uint32 getNewestTick() const { return _listFrame.getNewestTick(); }
 
     private:
-        static const LagRecord* findRecord( const vector<LagRecord>& listRecord, uint32 entityId );
+        static const LagRecord* findRecord( const vector<LagRecord>& listRecord, uint32 entityID );
 
         TickRingBuffer<vector<LagRecord>> _listFrame; ///< 틱마다 맞을 수 있는 몸들 — 가장 새 틱 = 기록한 틱 중 가장 큰 것
     };

@@ -32,7 +32,7 @@ namespace
         {
             sw::GameObject*    pObject = manager.createGameObject( sw::hashed_string( pName ) );
             sw::MeshComponent* pMesh   = pObject->addComponent<sw::MeshComponent>();
-            pMesh->setMeshId( "Cube" );
+            pMesh->setMeshID( "Cube" );
             pMesh->setLocalPosition( center );
             pMesh->setLocalScale( scale );
             return pObject;

@@ -430,13 +430,13 @@ class PackWriter:
         *,
         compression: int,
         compressionLevel: int = 0,
-        dlcAppId: int = 0,
+        dlcAppID: int = 0,
         bStripDebugStrings: bool = True,
     ) -> None:
         self._spec = spec
         self._compression = compression
         self._compressionLevel = compressionLevel
-        self._dlcAppId = dlcAppId
+        self._dlcAppID = dlcAppID
         self._bStripDebugStrings = bStripDebugStrings
         self._listEntry: list[tuple[int, str, Path | bytes]] = []
 
@@ -510,7 +510,7 @@ class PackWriter:
         header = spec.header.pack(
             _magic=spec.magic,
             _formatVersion=spec.formatVersion,
-            _dlcAppId=self._dlcAppId,
+            _dlcAppID=self._dlcAppID,
             _compressionType=self._compression,
             _encryptionType=spec.encryptionNone,
             _sectorAlignment=spec.sectorAlignment,
@@ -564,7 +564,7 @@ def collectPackFiles(sourceDir: Path, packConfig: dict | None, targetRhi: str = 
 def cookPack(
     sourceDir: Path,
     outPackPath: Path,
-    dlcAppId: int = 0,
+    dlcAppID: int = 0,
     compression: int | None = None,
     compressionLevel: int = 0,
     stripDebugStrings: bool = True,
@@ -589,7 +589,7 @@ def cookPack(
         _gPackFormat,
         compression=_gPackFormat.codecZlib if compression is None else compression,
         compressionLevel=compressionLevel,
-        dlcAppId=dlcAppId,
+        dlcAppID=dlcAppID,
         bStripDebugStrings=stripDebugStrings,
     )
 
@@ -611,7 +611,7 @@ def cookPack(
 
     fileCount = writer.entryCount
     packSize = writer.writeTo(outPackPath)
-    print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {packSize:,} bytes, DLC: {dlcAppId})")
+    print(f"[PackCooker] Cooked {outPackPath.name} ({fileCount} files, {packSize:,} bytes, DLC: {dlcAppID})")
     return True
 
 
@@ -659,7 +659,7 @@ def cookAllPacks(
             # 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로 폴백으로 간다(이름을 바꾼 에셋은 배포본에서만 못 찾는다).
             print(f"[CookAssets Warning] {src.name}: 스테이징에 {_kAssetRegistryFileName} 이 없습니다 - 엔진 쿠킹 단계(--all 또는 --prefabs-only)를 먼저 돌리십시오.",
                   file=sys.stderr)
-        success = cookPack(src, out, dlcAppId=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
+        success = cookPack(src, out, dlcAppID=dlcId, compression=packCompression, compressionLevel=packCompressionLevel,
                            stripDebugStrings=isShipping, packConfig=packConfig, targetRhi=targetRhi,
                            stagedDir=staged, buildTarget=buildTarget)
         if not success:

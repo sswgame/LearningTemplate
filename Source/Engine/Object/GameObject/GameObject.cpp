@@ -17,14 +17,14 @@ namespace sw
     {
         const TagContainer s_emptyTags{};
 
-        /** @brief 이 스레드에서 진행 중인 컴포넌트 ID 복원입니다. `GameObject::ComponentIdRestoreScope` 가 채우고 되돌립니다. */
-        struct ComponentIdRestoreState
+        /** @brief 이 스레드에서 진행 중인 컴포넌트 ID 복원입니다. `GameObject::ComponentIDRestoreScope` 가 채우고 되돌립니다. */
+        struct ComponentIDRestoreState
         {
             const GameObject*     _pTarget{ nullptr };
             const ObjectIdentity* _pIdentity{ nullptr };
             size_t                _cursor{ 0 }; ///< 목록에서 다음에 볼 자리
         };
-        thread_local ComponentIdRestoreState t_componentIdRestore{};
+        thread_local ComponentIDRestoreState t_componentIDRestore{};
 
         struct GameObjectInternal
         {
@@ -33,9 +33,9 @@ namespace sw
              * @details 커서부터 앞으로 찾아 타입이 같은 첫 항목을 가져갑니다. 목록과 다른 컴포넌트가 끼어들어도(생성 중에 다른
              *          컴포넌트를 스스로 붙이는 타입 등) 그 하나만 새 ID 를 받고 나머지 순서는 어긋나지 않습니다.
              */
-            static bool takeRestoredComponentId( const GameObject* pOwner, hashed_string typeName, uint64& outComponentId )
+            static bool takeRestoredComponentID( const GameObject* pOwner, hashed_string typeName, uint64& outComponentID )
             {
-                ComponentIdRestoreState& state = t_componentIdRestore;
+                ComponentIDRestoreState& state = t_componentIDRestore;
                 if ( state._pIdentity == nullptr || state._pTarget != pOwner )
                     return false;
 
@@ -45,8 +45,8 @@ namespace sw
                     if ( listEntry[entryIndex]._typeName != typeName )
                         continue;
                     state._cursor  = entryIndex + 1;
-                    outComponentId = listEntry[entryIndex]._componentId;
-                    return outComponentId != 0;
+                    outComponentID = listEntry[entryIndex]._componentID;
+                    return outComponentID != 0;
                 }
                 return false;
             }
@@ -72,7 +72,7 @@ namespace sw
     }
 
     GameObject::GameObject( hashed_string name )
-        : _objectId{ 0 }
+        : _objectID{ 0 }
         , _name{ name }
         , _pOwnerManager{ nullptr }
         , _bActive{ true }
@@ -252,12 +252,12 @@ namespace sw
         }
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            const uint64 childId  = _objectId;
-            const uint64 parentId = pParent->getObjectId();
-            pManager->deferHierarchyChange( [pManager, childId, parentId, rule]()
+            const uint64 childID  = _objectID;
+            const uint64 parentID = pParent->getObjectID();
+            pManager->deferHierarchyChange( [pManager, childID, parentID, rule]()
             {
-                GameObject* pChildObj  = pManager->findGameObjectById( childId );
-                GameObject* pParentObj = pManager->findGameObjectById( parentId );
+                GameObject* pChildObj  = pManager->findGameObjectByID( childID );
+                GameObject* pParentObj = pManager->findGameObjectByID( parentID );
                 // 미루기 전에 붙일 수 있는지 봤다(`canAttachTo`). 그사이 부모가 죽어 가면 붙지 않는다.
                 if ( pChildObj != nullptr && pParentObj != nullptr )
                     (void)pChildObj->attachToParent( pParentObj, rule ); // 거부는 미루기 전에 걸렀다 — 남는 실패는 부모가 사라진 경우뿐이다
@@ -282,10 +282,10 @@ namespace sw
         GameObjectManager* pManager = getManager();
         if ( pManager != nullptr && pManager->isStructuralMutationFrozen() )
         {
-            const uint64 childId = _objectId;
-            pManager->deferHierarchyChange( [pManager, childId, rule]()
+            const uint64 childID = _objectID;
+            pManager->deferHierarchyChange( [pManager, childID, rule]()
             {
-                GameObject* pChildObj = pManager->findGameObjectById( childId );
+                GameObject* pChildObj = pManager->findGameObjectByID( childID );
                 if ( pChildObj != nullptr )
                     pChildObj->detachFromParent( rule );
             } );
@@ -584,11 +584,11 @@ namespace sw
 
         // 상태를 되돌리는 로드 중이면 원래 ID 를 되살린다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
         // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
-        uint64 restoredComponentId = 0;
-        if ( GameObjectInternal::takeRestoredComponentId( this, typeKey, restoredComponentId ) )
+        uint64 restoredComponentID = 0;
+        if ( GameObjectInternal::takeRestoredComponentID( this, typeKey, restoredComponentID ) )
         {
-            pComp->_componentId = restoredComponentId;
-            Component::_s_nextComponentId.fetch_max( restoredComponentId + 1, std::memory_order_relaxed );
+            pComp->_componentID = restoredComponentID;
+            Component::_s_nextComponentID.fetch_max( restoredComponentID + 1, std::memory_order_relaxed );
         }
 
         _listComponent.push_back( pComp );
@@ -614,32 +614,32 @@ namespace sw
             markTickOrderDirty();
     }
 
-    GameObject::ComponentIdRestoreScope::ComponentIdRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity )
-        : _pPreviousTarget{ t_componentIdRestore._pTarget }
-        , _pPreviousIdentity{ t_componentIdRestore._pIdentity }
-        , _previousCursor{ t_componentIdRestore._cursor }
+    GameObject::ComponentIDRestoreScope::ComponentIDRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity )
+        : _pPreviousTarget{ t_componentIDRestore._pTarget }
+        , _pPreviousIdentity{ t_componentIDRestore._pIdentity }
+        , _previousCursor{ t_componentIDRestore._cursor }
     {
-        t_componentIdRestore._pTarget   = ( pIdentity != nullptr ) ? pTarget : nullptr;
-        t_componentIdRestore._pIdentity = pIdentity;
-        t_componentIdRestore._cursor    = 0;
+        t_componentIDRestore._pTarget   = ( pIdentity != nullptr ) ? pTarget : nullptr;
+        t_componentIDRestore._pIdentity = pIdentity;
+        t_componentIDRestore._cursor    = 0;
     }
 
-    GameObject::ComponentIdRestoreScope::~ComponentIdRestoreScope()
+    GameObject::ComponentIDRestoreScope::~ComponentIDRestoreScope()
     {
-        t_componentIdRestore._pTarget   = _pPreviousTarget;
-        t_componentIdRestore._pIdentity = _pPreviousIdentity;
-        t_componentIdRestore._cursor    = _previousCursor;
+        t_componentIDRestore._pTarget   = _pPreviousTarget;
+        t_componentIDRestore._pIdentity = _pPreviousIdentity;
+        t_componentIDRestore._cursor    = _previousCursor;
     }
 
     void GameObject::deferOnSelfStructural( Delegate<void( GameObject& )> func )
     {
         if ( _pOwnerManager == nullptr || func.isBound() == false )
             return;
-        const uint64       objectId = _objectId;
+        const uint64       objectID = _objectID;
         GameObjectManager* pManager = _pOwnerManager;
-        pManager->deferStructuralChange( [pManager, objectId, deferred = std::move( func )]()
+        pManager->deferStructuralChange( [pManager, objectID, deferred = std::move( func )]()
         {
-            GameObject* pObj = pManager->findGameObjectById( objectId );
+            GameObject* pObj = pManager->findGameObjectByID( objectID );
             if ( pObj != nullptr )
                 deferred( *pObj );
         } );
@@ -694,11 +694,11 @@ namespace sw
         sw_delete( pComp );
     }
 
-    Component* GameObject::findComponentById( uint64 componentId, bool bIncludePendingDestroy ) const
+    Component* GameObject::findComponentByID( uint64 componentID, bool bIncludePendingDestroy ) const
     {
         for ( Component* pComp : _listComponent )
         {
-            if ( pComp == nullptr || pComp->getComponentId() != componentId )
+            if ( pComp == nullptr || pComp->getComponentID() != componentID )
                 continue;
             if ( bIncludePendingDestroy == false && pComp->isPendingDestroy() )
                 return nullptr;

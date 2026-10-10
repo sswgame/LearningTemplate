@@ -303,7 +303,7 @@ namespace sw
         // 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
-        ObjectStateBatch batch( bRestoreIdentity ? ObjectIdSpace::Live : ObjectIdSpace::Saved );
+        ObjectStateBatch batch( bRestoreIdentity ? ObjectIDSpace::Live : ObjectIDSpace::Saved );
         for ( uint32 objectIndex = 0; objectIndex < count; ++objectIndex )
         {
             ObjectIdentity identity;
@@ -316,12 +316,12 @@ namespace sw
             }
             offset += identityBytes;
 
-            GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithId( hashed_string( GameObject::kDefaultName ), identity._objectId )
+            GameObject*       pObj = bRestoreIdentity ? pObjectManager->createGameObjectWithID( hashed_string( GameObject::kDefaultName ), identity._objectID )
                                                       : pObjectManager->createGameObject();
             ObjectLoadContext context{};
             context._pIdentity     = bRestoreIdentity ? &identity : nullptr;
             context._pBatch        = &batch;
-            context._savedId       = identity._objectId;
+            context._savedID       = identity._objectID;
             const size_t readBytes = ObjectStateSerializer::loadFromBinaryBuffer( pObj, pData + offset, size - offset, context );
             if ( readBytes == 0 )
             {

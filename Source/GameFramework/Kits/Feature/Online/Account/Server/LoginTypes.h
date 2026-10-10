@@ -65,8 +65,8 @@ namespace sw
             LoggedOut,
             Disconnected ///< 끊겨 재접속 유예에 들어갔다
         };
-        uint64            _accountId{ 0 };
-        uint64            _sessionId{ 0 };
+        uint64            _accountID{ 0 };
+        uint64            _sessionID{ 0 };
         LoginRevokeReason _reason{ LoginRevokeReason::None };
         Kind              _kind{ Kind::LoggedIn };
     };

@@ -56,7 +56,7 @@ namespace sw
     {
         vector<LiveEventParameter> _listParameter{}; ///< 16 개 이하
         vector<string>             _listRegion{};    ///< 비면 모든 지역
-        string                     _eventId{};       ///< `[0-9a-z_.]`, 48 바이트 이하 — 저장소 키
+        string                     _eventID{};       ///< `[0-9a-z_.]`, 48 바이트 이하 — 저장소 키
         string                     _kind{};          ///< 게임이 해석하는 종류 코드("xp_boost" · "shop_sale")
         int64                      _startMs{ 0 };
         int64                      _endMs{ 0 };             ///< 반열림 [시작, 끝)
@@ -76,7 +76,7 @@ namespace sw
     struct LiveEventState
     {
         vector<LiveEventParameter> _listParameter{};
-        string                     _eventId{};
+        string                     _eventID{};
         string                     _kind{};
         int64                      _windowEndMs{ 0 }; ///< 이번 회차(또는 기간)의 끝 — 화면의 "남은 시간"
     };
@@ -102,7 +102,7 @@ namespace sw
     /** @brief 기기 등록 하나 — 클라이언트가 OS 에서 받은 토큰입니다. */
     struct PushDeviceRegistration
     {
-        string _providerId{}; ///< `[0-9a-z_]` 16 바이트 — "fake" · "apns" · "fcm"
+        string _providerID{}; ///< `[0-9a-z_]` 16 바이트 — "fake" · "apns" · "fcm"
         string _token{};      ///< 256 바이트 이하(값으로만 둔다 — 저장소 키는 토큰 해시)
         string _locale{};     ///< "ko-KR"
         int64  _registeredMs{ 0 };
@@ -114,7 +114,7 @@ namespace sw
     /** @brief 푸시의 상한 · 물러남입니다. */
     struct PushLimit
     {
-        static constexpr int32 kMaxProviderIdSize   = 16;
+        static constexpr int32 kMaxProviderIDSize   = 16;
         static constexpr int32 kMaxTokenSize        = 256;
         static constexpr int32 kMaxLocaleSize       = 16;
         static constexpr int32 kMaxDevicePerAccount = 10;
@@ -122,7 +122,7 @@ namespace sw
         static constexpr int64 kFirstBackoffMs      = 1000; ///< 1 · 2 · 4 · 8 · 16 초
 
         /** @brief 제공자 id 규칙(`[0-9a-z_]`, 1..16 바이트)인가입니다. */
-        SW_GF_API static bool isValidProviderId( string_view providerId );
+        SW_GF_API static bool isValidProviderID( string_view providerID );
     };
 } // namespace sw
 
@@ -131,7 +131,7 @@ namespace sw
     /** @brief 라이브 운영의 상한입니다. */
     struct LiveOpsLimit
     {
-        static constexpr int32 kMaxIdSize         = 48;
+        static constexpr int32 kMaxIDSize         = 48;
         static constexpr int32 kMaxKindSize       = 32;
         static constexpr int32 kMaxParameterCount = 16;
         static constexpr int32 kMaxParameterKey   = 32;

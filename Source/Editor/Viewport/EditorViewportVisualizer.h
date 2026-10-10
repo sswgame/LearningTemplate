@@ -98,13 +98,13 @@ namespace sw::editor
 /**
  * @brief 뷰포트 시각화를 그 시각화의 .cpp 에서 등록합니다.
  * @param name         파일 안에서 유일한 이름 조각(변수 이름용)
- * @param pId          시각화 id(리터럴, 종류 안에서 유일)
+ * @param pID          시각화 id(리터럴, 종류 안에서 유일)
  * @param order        툴바 체크박스 순서(작을수록 왼쪽)
  * @param pToggleLabel 툴바 체크박스 라벨
  * @param pTooltip     체크박스 툴팁
  * @param bDefaultOn   처음에 켜져 있는가
  * @param pDraw        `void( const EditorViewportVisualizerArgs& )` 그리기 함수
  */
-#define SW_EDITOR_VISUALIZER( name, pId, order, pToggleLabel, pTooltip, bDefaultOn, pDraw )                                    \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pId, order }, pToggleLabel, pTooltip, \
+#define SW_EDITOR_VISUALIZER( name, pID, order, pToggleLabel, pTooltip, bDefaultOn, pDraw )                                    \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pToggleLabel, pTooltip, \
                         bDefaultOn, pDraw )

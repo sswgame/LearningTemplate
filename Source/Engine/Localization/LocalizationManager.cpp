@@ -91,7 +91,7 @@ namespace sw
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
-        , _nextCallbackId{ 1 }
+        , _nextCallbackID{ 1 }
     {
     }
 
@@ -841,17 +841,17 @@ namespace sw
         if ( callback == nullptr )
             return 0;
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        const uint32                        callbackId = _nextCallbackId++;
-        _mapCallback[callbackId]                       = std::move( callback );
-        return callbackId;
+        const uint32                        callbackID = _nextCallbackID++;
+        _mapCallback[callbackID]                       = std::move( callback );
+        return callbackID;
     }
 
-    void LocalizationManager::unregisterLanguageChangedCallback( uint32 callbackId )
+    void LocalizationManager::unregisterLanguageChangedCallback( uint32 callbackID )
     {
-        if ( callbackId == 0 )
+        if ( callbackID == 0 )
             return;
         std::unique_lock<std::shared_mutex> lock( _mutex );
-        _mapCallback.erase( callbackId );
+        _mapCallback.erase( callbackID );
     }
 
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )

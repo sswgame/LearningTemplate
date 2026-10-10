@@ -12,7 +12,7 @@
 
 namespace sw::test
 {
-    bool ResourcePackTestUtil::createPackFile( const string& packPath, uint32 dlcAppId, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
+    bool ResourcePackTestUtil::createPackFile( const string& packPath, uint32 dlcAppID, PackCompressionType compression, const vector<pair<string, string>>& listFileContent, bool bIncludeDebugStringPool )
     {
         FileUtil::ensureParentDirectoryExists( packPath );
 
@@ -23,7 +23,7 @@ namespace sw::test
         PackHeader header{};
         header._magic           = kPackMagic;
         header._formatVersion   = kPackFormatVersion;
-        header._dlcAppId        = dlcAppId;
+        header._dlcAppID        = dlcAppID;
         header._compressionType = static_cast<uint8>( compression );
         header._encryptionType  = static_cast<uint8>( PackEncryptionType::None );
         header._sectorAlignment = kPackSectorAlignment;

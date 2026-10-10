@@ -18,11 +18,11 @@ namespace sw
     /** @brief AI 가 쓰는 정의 id 와 목표 수입니다(종족 · 난이도마다 데이터로 바꾼다). */
     struct RTSCommanderAISettings
     {
-        hashed_string _workerId{};
-        hashed_string _depotId{};      ///< 본진(일꾼을 만든다)
-        hashed_string _supplyId{};     ///< 보급 건물
-        hashed_string _productionId{}; ///< 병력 건물
-        hashed_string _armyUnitId{};   ///< 병력 유닛
+        hashed_string _workerID{};
+        hashed_string _depotID{};      ///< 본진(일꾼을 만든다)
+        hashed_string _supplyID{};     ///< 보급 건물
+        hashed_string _productionID{}; ///< 병력 건물
+        hashed_string _armyUnitID{};   ///< 병력 유닛
         float32       _thinkInterval{ 0.5f };
         float32       _defendRadius{ 14.0f }; ///< 본진에서 이 안의 공격만 막으러 간다
         int32         _workerTarget{ 14 };
@@ -81,10 +81,10 @@ namespace sw
         static BehaviorStatus taskAttack( BehaviorContext& context );
 
         void makeTree();
-        /** @brief 노는 · 채취 중인 일꾼 하나로 @p buildingId 를 본진 둘레에 짓습니다. */
-        bool      orderConstruction( const hashed_string& buildingId );
-        RTSUnitId findDepot() const;
-        void      collectArmy( vector<RTSUnitId>& outListUnit ) const;
+        /** @brief 노는 · 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */
+        bool      orderConstruction( const hashed_string& buildingID );
+        RTSUnitID findDepot() const;
+        void      collectArmy( vector<RTSUnitID>& outListUnit ) const;
 
         BehaviorTree           _tree;
         BehaviorTreeRunner     _runner;

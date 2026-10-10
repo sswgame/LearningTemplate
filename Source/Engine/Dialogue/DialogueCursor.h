@@ -35,6 +35,6 @@ namespace sw
          */
         static int32 step( const DialogueGraphAsset& asset, const DialogueAssetNode& node, const DialogueStepInput& input );
         /** @brief 특성 표의 기본값으로 채운 새 노드를 만듭니다(화자 · 본문 · 선택지). */
-        static DialogueAssetNode makeNode( DialogueAssetNodeType type, int32 nodeId );
+        static DialogueAssetNode makeNode( DialogueAssetNodeType type, int32 nodeID );
     };
 } // namespace sw

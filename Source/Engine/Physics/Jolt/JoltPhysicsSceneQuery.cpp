@@ -53,7 +53,7 @@ namespace sw
                 {
                 }
 
-                bool ShouldCollide( const JPH::BodyID& bodyId ) const override { return bodyId != _ignoreBody; }
+                bool ShouldCollide( const JPH::BodyID& bodyID ) const override { return bodyID != _ignoreBody; }
                 bool ShouldCollideLocked( const JPH::Body& body ) const override
                 {
                     if ( _bIncludeTriggers == false && body.IsSensor() )
@@ -141,8 +141,8 @@ namespace sw
             SW_LOG_ERROR( "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
-        const JPH::BodyID bodyIdA = pRecordA->_bodyId;
-        const JPH::BodyID bodyIdB = pRecordB != nullptr ? pRecordB->_bodyId : JPH::BodyID{};
+        const JPH::BodyID bodyIDA = pRecordA->_bodyID;
+        const JPH::BodyID bodyIDB = pRecordB != nullptr ? pRecordB->_bodyID : JPH::BodyID{};
         const JPH::Vec3   anchor  = JoltUtil::toJolt( desc._anchor );
         const JPH::Vec3   axis    = JoltUtil::toJolt( desc._axis ).NormalizedOr( JPH::Vec3::sAxisY() );
 
@@ -155,7 +155,7 @@ namespace sw
                 JPH::FixedConstraintSettings settings;
                 settings.SetEmbedded();
                 settings.mAutoDetectPoint = true;
-                pConstraint               = bodyInterface.CreateConstraint( &settings, bodyIdA, bodyIdB );
+                pConstraint               = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
                 break;
             }
             case PhysicsJointType::Hinge:
@@ -170,7 +170,7 @@ namespace sw
                     settings.mLimitsMin = desc._minLimit;
                     settings.mLimitsMax = desc._maxLimit;
                 }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIdA, bodyIdB );
+                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
                 break;
             }
             case PhysicsJointType::Cone:
@@ -186,7 +186,7 @@ namespace sw
                 settings.mNormalHalfConeAngle = desc._swingLimitPlane;
                 settings.mTwistMinAngle       = desc._minLimit;
                 settings.mTwistMaxAngle       = desc._maxLimit;
-                pConstraint                   = bodyInterface.CreateConstraint( &settings, bodyIdA, bodyIdB );
+                pConstraint                   = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
                 break;
             }
             case PhysicsJointType::Distance:
@@ -200,7 +200,7 @@ namespace sw
                     settings.mMinDistance = desc._minLimit;
                     settings.mMaxDistance = desc._maxLimit;
                 }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIdA, bodyIdB );
+                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
                 break;
             }
             case PhysicsJointType::Slider:
@@ -214,7 +214,7 @@ namespace sw
                     settings.mLimitsMin = desc._minLimit;
                     settings.mLimitsMax = desc._maxLimit;
                 }
-                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIdA, bodyIdB );
+                pConstraint = bodyInterface.CreateConstraint( &settings, bodyIDA, bodyIDB );
                 break;
             }
         }
@@ -415,7 +415,7 @@ namespace sw
     {
         const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyID : JPH::BodyID{}, filter };
         const JPH::RRayCast                                  ray{ JoltUtil::toJolt( origin ), JoltUtil::toJolt( direction ) * maxDistance };
         JPH::RayCastResult                                   hit;
         if ( _system.GetNarrowPhaseQuery().CastRay( ray, hit, JPH::BroadPhaseLayerFilter{}, layerFilter, bodyFilter ) == false )
@@ -446,7 +446,7 @@ namespace sw
             return false;
         const BodyRecord*                                          pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter       layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter       bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter       bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyID : JPH::BodyID{}, filter };
         const JPH::RMat44                                          start = JPH::RMat44::sRotationTranslation( JoltUtil::toJolt( rotation ), JoltUtil::toJolt( position ) );
         const JPH::RShapeCast                                      cast  = JPH::RShapeCast::sFromWorldTransform( pShape.GetPtr(), JPH::Vec3::sReplicate( 1.0f ), start, JoltUtil::toJolt( direction ) * maxDistance );
         JPH::ShapeCastSettings                                     settings;
@@ -472,7 +472,7 @@ namespace sw
             return 0;
         const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );
         const JoltPhysicsSceneQueryInternal::LayerMaskFilter layerFilter{ filter._layerMask };
-        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyId : JPH::BodyID{}, filter };
+        const JoltPhysicsSceneQueryInternal::QueryBodyFilter bodyFilter{ *this, pIgnore != nullptr ? pIgnore->_bodyID : JPH::BodyID{}, filter };
         const JPH::RMat44                                    transform = JPH::RMat44::sRotationTranslation( JoltUtil::toJolt( rotation ), JoltUtil::toJolt( position ) ) *
                                       JPH::Mat44::sTranslation( pShape->GetCenterOfMass() );
         JPH::CollideShapeSettings                                 settings;

@@ -148,10 +148,10 @@ namespace
                 {
                     nextSnapshot = time + Internal::kSnapshotInterval;
                     server.collectConnected( listConnection );
-                    for ( const int32 connectionId : listConnection )
+                    for ( const int32 connectionID : listConnection )
                     {
-                        arrSnapshot[1] = static_cast<uint8>( connectionId );
-                        (void)server.sendMessage( connectionId, NetChannelType::Unreliable, arrSnapshot, Internal::kSnapshotBytes );
+                        arrSnapshot[1] = static_cast<uint8>( connectionID );
+                        (void)server.sendMessage( connectionID, NetChannelType::Unreliable, arrSnapshot, Internal::kSnapshotBytes );
                     }
                 }
                 server.update( time );
@@ -207,10 +207,10 @@ namespace
         vector<int32> listConnection;
         server.collectConnected( listConnection );
         vector<float32> listRtt;
-        for ( const int32 connectionId : listConnection )
+        for ( const int32 connectionID : listConnection )
         {
             NetConnectionStats stats;
-            if ( server.getConnectionStats( connectionId, stats ) )
+            if ( server.getConnectionStats( connectionID, stats ) )
                 listRtt.push_back( stats._rtt );
         }
         std::sort( listRtt.begin(), listRtt.end() );

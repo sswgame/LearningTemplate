@@ -41,7 +41,7 @@ namespace sw
     /** @brief 지금 도는 효과 하나입니다. */
     struct WitcherActiveEffect
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         Countdown     _remaining{};
         float32       _lockedToxicity{ 0.0f }; ///< 변이 혼합물 — 효과가 끝날 때까지 줄지 않는 몫
     };
@@ -64,15 +64,15 @@ namespace sw
 
         void initialize( const WitcherCatalog* pCatalog, const RecipeCatalog* pRecipeCatalog );
         /** @brief 레시피를 만듭니다(기반 `Crafter::craft`). 결과가 연금술 물건이면 그 사용 횟수를 가득 채웁니다. */
-        CraftResult brew( const hashed_string& recipeId, Inventory& inoutInventory, const hashed_string& station, int32 level );
+        CraftResult brew( const hashed_string& recipeID, Inventory& inoutInventory, const hashed_string& station, int32 level );
         /** @brief 마실 수 있는가입니다(물약 · 변이 혼합물). */
-        WitcherUseResult evaluateDrink( const hashed_string& itemId, const Inventory& inventory ) const;
+        WitcherUseResult evaluateDrink( const hashed_string& itemID, const Inventory& inventory ) const;
         /** @brief 마십니다 — 사용 횟수 하나 · 독성 · 효과. */
-        WitcherUseResult drink( const hashed_string& itemId, const Inventory& inventory );
+        WitcherUseResult drink( const hashed_string& itemID, const Inventory& inventory );
         /** @brief 칼에 오일을 바릅니다(앞의 오일은 지운다). */
-        WitcherUseResult applyOil( const hashed_string& itemId, const Inventory& inventory );
+        WitcherUseResult applyOil( const hashed_string& itemID, const Inventory& inventory );
         /** @brief 폭탄을 던집니다. 성공하면 @p outElement 가 폭탄의 속성입니다. */
-        WitcherUseResult throwBomb( const hashed_string& itemId, const Inventory& inventory, hashed_string& outElement );
+        WitcherUseResult throwBomb( const hashed_string& itemID, const Inventory& inventory, hashed_string& outElement );
         /** @brief 칼이 맞혔습니다 — 바른 오일의 속성을 돌려주고(없으면 빈 이름) 적중 횟수를 하나 씁니다. */
         hashed_string consumeOilHit();
         /** @brief 명상합니다 — 술 하나를 쓰고 가진 모든 연금술 물건의 사용 횟수를 채웁니다. 술이 없으면 false 입니다. */
@@ -81,8 +81,8 @@ namespace sw
 
         float32                            getToxicity() const;
         float32                            getMaxToxicity() const;
-        int32                              getCharges( const hashed_string& itemId ) const;
-        bool                               isEffectActive( const hashed_string& itemId ) const;
+        int32                              getCharges( const hashed_string& itemID ) const;
+        bool                               isEffectActive( const hashed_string& itemID ) const;
         hashed_string                      getOilElement() const;
         int32                              getOilHits() const { return _oilHits; }
         const vector<WitcherActiveEffect>& getActiveEffects() const { return _listEffect; }
@@ -95,22 +95,22 @@ namespace sw
     private:
         struct ChargeEntry
         {
-            hashed_string _itemId{};
+            hashed_string _itemID{};
             int32         _charges{ 0 };
         };
 
-        const WitcherAlchemyDef* findDef( const hashed_string& itemId ) const;
-        ChargeEntry*             findCharge( const hashed_string& itemId );
-        WitcherUseResult         evaluateUse( const hashed_string& itemId, const Inventory& inventory, WitcherAlchemyKind kind ) const;
-        void                     refill( const hashed_string& itemId );
-        void                     spendCharge( const hashed_string& itemId );
+        const WitcherAlchemyDef* findDef( const hashed_string& itemID ) const;
+        ChargeEntry*             findCharge( const hashed_string& itemID );
+        WitcherUseResult         evaluateUse( const hashed_string& itemID, const Inventory& inventory, WitcherAlchemyKind kind ) const;
+        void                     refill( const hashed_string& itemID );
+        void                     spendCharge( const hashed_string& itemID );
 
         Crafter                     _crafter;
         vector<ChargeEntry>         _listCharge;
         vector<WitcherActiveEffect> _listEffect;
         const WitcherCatalog*       _pCatalog;
         const RecipeCatalog*        _pRecipeCatalog;
-        hashed_string               _oilId;
+        hashed_string               _oilID;
         float32                     _floatingToxicity; ///< 묶이지 않은 독성(서서히 준다)
         int32                       _oilHits;
     };

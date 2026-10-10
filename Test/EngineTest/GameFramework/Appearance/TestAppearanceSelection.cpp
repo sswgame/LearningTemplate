@@ -26,7 +26,7 @@ namespace
         class CapeLock final : public IAppearanceUnlockQuery
         {
         public:
-            bool isItemUnlocked( const hashed_string& itemId ) const override { return itemId.view().find( "cape" ) == string_view::npos; }
+            bool isItemUnlocked( const hashed_string& itemID ) const override { return itemID.view().find( "cape" ) == string_view::npos; }
         };
 
         /** @brief 꾸민 기사 하나 — 무작위 마을 사람 위에 귀 · 수염 · 칼 보석 · 피해 · 형상 변경 · 상태를 얹는다. */
@@ -65,7 +65,7 @@ SW_TEST_CASE( AppearanceSelectionTest, ShareCodeRoundTripsAndRejectsCorruption )
     AppearanceSelection decoded;
     string              reason;
     SW_ASSERT_TRUE_MSG( AppearanceShareCode::decode( code, fixture._database, decoded, &reason ), reason.c_str() );
-    SW_EXPECT_TRUE( decoded._basePresetId == hashed_string( "Knight" ) && decoded._seed == 99u );
+    SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Knight" ) && decoded._seed == 99u );
     SW_EXPECT_EQUAL( selection._listSlot.size(), decoded._listSlot.size() );
 
     CharacterAppearanceSpec   applied;
@@ -98,20 +98,20 @@ SW_TEST_CASE( AppearanceSelectionTest, ContentChangesAreToleratedAndReported )
     Fixture fixture;
     SW_ASSERT_TRUE_MSG( fixture.load(), fixture._database.getReport().joined().c_str() );
     AppearanceSelection selection;
-    selection._basePresetId = hashed_string( "Knight" );
+    selection._basePresetID = hashed_string( "Knight" );
     selection._schema       = hashed_string( "Human" );
     selection._customization.setNumber( hashed_string( "Wingspan" ), 0.5f );                // 지워진 매개변수
     selection._customization.setOption( hashed_string( "Hair" ), hashed_string( "Afro" ) ); // 지워진 항목
     selection._customization.setNumber( hashed_string( "Fat" ), 0.25f );
     AppearanceSlotRequest gone;
     gone._slot   = hashed_string( "Head" );
-    gone._itemId = hashed_string( "laurel_wreath" ); // 지워진 아이템
+    gone._itemID = hashed_string( "laurel_wreath" ); // 지워진 아이템
     AppearanceSlotRequest locked;
     locked._slot   = hashed_string( "Back" );
-    locked._itemId = hashed_string( "cape_hidden" );
+    locked._itemID = hashed_string( "cape_hidden" );
     AppearanceSlotRequest tail;
     tail._slot          = hashed_string( "Tail" ); // 지워진 칸
-    tail._itemId        = hashed_string( "sword" );
+    tail._itemID        = hashed_string( "sword" );
     selection._listSlot = { gone, locked, tail };
 
     // 공유 코드를 거쳐도 같은 보고가 나온다 — 모르는 해시는 자리 이름이 된다.
@@ -129,15 +129,15 @@ SW_TEST_CASE( AppearanceSelectionTest, ContentChangesAreToleratedAndReported )
         }
         SW_EXPECT_FALSE( report.isClean() );
         SW_ASSERT_EQUAL( size_t( 3 ), report._listSlotFallback.size() );
-        SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Head" ) )->_itemId == hashed_string( "helm" ) ); // 기준 프리셋(기사)의 칸 기본
-        SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Back" ) )->_itemId.empty() );
+        SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Head" ) )->_itemID == hashed_string( "helm" ) ); // 기준 프리셋(기사)의 칸 기본
+        SW_EXPECT_TRUE( spec.findSlot( hashed_string( "Back" ) )->_itemID.empty() );
         SW_EXPECT_TRUE( report._listSlotFallback[1]._reason == AppearanceFallbackReason::LockedItem );
         SW_EXPECT_TRUE( report._listSlotFallback[2]._reason == AppearanceFallbackReason::UnknownSlot );
         SW_EXPECT_NEAR_EQUAL( 0.25f, spec._customization.findValue( hashed_string( "Fat" ) )->_number._x, 1.0e-4f );
         SW_EXPECT_TRUE( spec._customization.findValue( hashed_string( "Hair" ) ) == nullptr ); // 기본(Long)은 해석이 채운다
     }
     // 모르는 해시의 자리 이름.
-    SW_EXPECT_TRUE( decoded._listSlot[0]._itemId.view().front() == '#' );
+    SW_EXPECT_TRUE( decoded._listSlot[0]._itemID.view().front() == '#' );
 }
 
 /**
@@ -171,7 +171,7 @@ SW_TEST_CASE( AppearanceSelectionTest, PartialPresetAndPreview )
 
     CharacterAppearanceSpec applied;
     AppearanceSelectionUtil::applySelection( fixture._database, hairOnly, current, nullptr, applied, report );
-    SW_EXPECT_TRUE( applied.findSlot( hashed_string( "Body" ) )->_itemId == current.findSlot( hashed_string( "Body" ) )->_itemId ); // 장비는 그대로
+    SW_EXPECT_TRUE( applied.findSlot( hashed_string( "Body" ) )->_itemID == current.findSlot( hashed_string( "Body" ) )->_itemID ); // 장비는 그대로
     SW_EXPECT_TRUE( applied._bodyShape == current._bodyShape );
     SW_EXPECT_TRUE( applied._customization.findValue( hashed_string( "Beard" ) )->_option == hashed_string( "Full" ) );
 
@@ -184,7 +184,7 @@ SW_TEST_CASE( AppearanceSelectionTest, PartialPresetAndPreview )
     AppearanceSelection loadoutOnly;
     AppearanceSelectionUtil::makePartial( full, fixture._database, { hashed_string( AppearanceSelection::kLoadoutCategory ) }, loadoutOnly );
     AppearanceSelectionUtil::applySelection( fixture._database, loadoutOnly, current, nullptr, applied, report );
-    SW_EXPECT_TRUE( applied.findSlot( hashed_string( "MainHand" ) )->_itemId == hashed_string( "sword" ) );
+    SW_EXPECT_TRUE( applied.findSlot( hashed_string( "MainHand" ) )->_itemID == hashed_string( "sword" ) );
     SW_EXPECT_TRUE( applied._customization.findValue( hashed_string( "Beard" ) ) == nullptr ); // 머리 묶음은 그대로(마을 사람은 수염 값이 없다)
 }
 
@@ -279,14 +279,14 @@ SW_TEST_CASE( AppearanceSelectionTest, NetworkSyncResolvesToTheSameHash )
     };
     for ( const auto& piece : arrPiece )
     {
-        item._itemId = hashed_string( piece[1] );
+        item._itemID = hashed_string( piece[1] );
         SW_ASSERT_TRUE( equipment.equip( hashed_string( piece[0] ), item, listRemoved ) == EquipResult::Ok );
     }
-    item._itemId = hashed_string( "cape_hidden" );
+    item._itemID = hashed_string( "cape_hidden" );
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Back" ), item, listRemoved ) == EquipResult::Ok );
     SW_ASSERT_TRUE( equipment.unequip( hashed_string( "Legs" ), listRemoved ) == EquipResult::Ok );
     InventorySlot sword;
-    sword._itemId           = hashed_string( "sword" );
+    sword._itemID           = hashed_string( "sword" );
     sword._count            = 1;
     sword._durability       = 37.0f;
     sword._customization    = sender.findSlot( hashed_string( "MainHand" ) )->_customization;

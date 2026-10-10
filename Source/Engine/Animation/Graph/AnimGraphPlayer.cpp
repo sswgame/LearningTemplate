@@ -11,7 +11,7 @@ namespace sw
         , _currentStateName{}
         , _pGraph{ nullptr }
         , _pSource{ nullptr }
-        , _currentNodeId{ 0 }
+        , _currentNodeID{ 0 }
         , _defaultBlendSeconds{ 0.15f }
     {
     }
@@ -31,7 +31,7 @@ namespace sw
             if ( pNode != nullptr )
                 return enterNode( *pNode, bLoop ? kLoopYes : kLoopNo, blendSeconds );
         }
-        _currentNodeId    = 0;
+        _currentNodeID    = 0;
         _currentStateName = stateName;
         return startPlayable( stateName, bLoop, blendSeconds );
     }
@@ -39,7 +39,7 @@ namespace sw
     void AnimGraphPlayer::playPlayable( const hashed_string& stateName, const IAnimPlayable* pPlayable, bool bLoop )
     {
         const AnimGraphNode* pNode = ( _pGraph != nullptr && stateName.empty() == false ) ? _pGraph->findNodeByName( stateName.c_str() ) : nullptr;
-        _currentNodeId             = pNode != nullptr ? pNode->_id : 0;
+        _currentNodeID             = pNode != nullptr ? pNode->_id : 0;
         _currentStateName          = stateName;
         _player.play( pPlayable, bLoop );
     }
@@ -47,17 +47,17 @@ namespace sw
     void AnimGraphPlayer::stop()
     {
         _player.stop();
-        _currentNodeId    = 0;
+        _currentNodeID    = 0;
         _currentStateName = hashed_string{};
     }
 
     void AnimGraphPlayer::update( float32 deltaSeconds, AnimParameterSet* pParameter, vector<AnimFiredNotify>* pOutListFired )
     {
-        if ( _pGraph != nullptr && _currentNodeId > 0 && pParameter != nullptr )
+        if ( _pGraph != nullptr && _currentNodeID > 0 && pParameter != nullptr )
         {
             for ( const AnimGraphLink& link : _pGraph->_listLink )
             {
-                if ( link._fromNode != _currentNodeId || link._op == AnimConditionOp::None )
+                if ( link._fromNode != _currentNodeID || link._op == AnimConditionOp::None )
                     continue;
                 if ( link.isConditionMet( pParameter->getFloat( link._parameter ) ) == false )
                     continue;
@@ -72,12 +72,12 @@ namespace sw
 
         _player.update( deltaSeconds, pOutListFired );
 
-        if ( _pGraph == nullptr || _currentNodeId <= 0 || _player.hasFinished() == false )
+        if ( _pGraph == nullptr || _currentNodeID <= 0 || _player.hasFinished() == false )
             return;
         // 재생할 것이 없는 상태는 길이 0 이라 곧 "끝났다" — 그래도 다음으로 바로 넘어가지 않고 머문다(다음 advance · play 까지).
         if ( _player.getCurrentPlayable() == nullptr )
             return;
-        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeId );
+        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeID );
         const AnimGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
         if ( pNext != nullptr )
             (void)enterNode( *pNext, kLoopNo, pFinish->_blendSeconds );
@@ -87,9 +87,9 @@ namespace sw
     {
         if ( _pGraph == nullptr )
             return false;
-        if ( _currentNodeId <= 0 )
+        if ( _currentNodeID <= 0 )
             return play( hashed_string{}, false, 0.0f );
-        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeId );
+        const AnimGraphLink* pFinish = _pGraph->findFinishLink( _currentNodeID );
         const AnimGraphNode* pNext   = pFinish != nullptr ? _pGraph->findNode( pFinish->_toNode ) : nullptr;
         if ( pNext == nullptr )
             return false;
@@ -99,7 +99,7 @@ namespace sw
 
     bool AnimGraphPlayer::enterNode( const AnimGraphNode& node, int8 loopWhenUnspecified, float32 blendSeconds )
     {
-        _currentNodeId    = node._id;
+        _currentNodeID    = node._id;
         _currentStateName = hashed_string( node._name );
         int8 loop         = node._loopOverride >= 0 ? node._loopOverride : loopWhenUnspecified;
         if ( loop == kLoopFromPlayable )

@@ -636,12 +636,12 @@ namespace sw
         // 상태를 읽으면 컴포넌트 추가가 모두 미뤄져(nullptr) **프리팹의 값이 버려지고** 빈 오브젝트만 남는다.
         if ( pGameObjectManager->isStructuralMutationFrozen() )
         {
-            const uint64 objectId = pGameObject->getObjectId();
+            const uint64 objectID = pGameObject->getObjectID();
             const string instanceName( pInstanceNameUtf8 );
             // 캐시의 프리팹은 그 사이 다시 읽힐 수 있다(에디터 핫 리로드) — 포인터가 아니라 경로를 들고 그때 다시 찾는다.
-            pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectId, resolvedPath, instanceName]()
+            pGameObjectManager->deferStructuralChange( [this, pGameObjectManager, objectID, resolvedPath, instanceName]()
             {
-                GameObject*  pSpawned      = pGameObjectManager->findGameObjectById( objectId );
+                GameObject*  pSpawned      = pGameObjectManager->findGameObjectByID( objectID );
                 PrefabAsset* pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
                 const bool   bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName );
                 if ( pSpawned != nullptr && bStateWritten == false )

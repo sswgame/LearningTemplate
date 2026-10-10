@@ -46,7 +46,7 @@ namespace sw
      *          적용한 뒤에는 `CommandStack::notifyObjectEdit` 로 알려, 에디터가 선택 · 씬 dirty 를 맞춥니다.
      * @warning @p stack · @p sceneManager 는 명령보다 오래 살아야 합니다(엔진 소유 서비스 · 같은 스코프의 시험 객체).
      * @warning 이름 조회는 한 프레임 안에서 없애고 되살린 경우를 위한 것입니다. 옛 오브젝트가 지연 파괴를 기다리는 동안에는 그 id 가 아직 등록돼 있어
-     *          `GameObjectManager::createGameObjectWithId` 가 새 id 를 줍니다(히스토리 점프 · 시험처럼 프레임 없이 연달아 되돌릴 때).
+     *          `GameObjectManager::createGameObjectWithID` 가 새 id 를 줍니다(히스토리 점프 · 시험처럼 프레임 없이 연달아 되돌릴 때).
      */
     struct SW_API ObjectUndoUtil
     {

@@ -33,7 +33,7 @@ namespace sw
         hashed_string   _handler{};
         hashed_string   _detail{}; ///< 처리기마다 — 발소리는 바닥 재질, 소리는 경로, 판정은 맞은 히트 존
         float3          _position{};
-        uint64          _targetObjectId{ 0 }; ///< 맞힌 오브젝트(판정) · 스폰한 오브젝트
+        uint64          _targetObjectID{ 0 }; ///< 맞힌 오브젝트(판정) · 스폰한 오브젝트
         AnimNotifyPhase _phase{ AnimNotifyPhase::Instant };
     };
 } // namespace sw

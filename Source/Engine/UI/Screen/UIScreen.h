@@ -178,7 +178,7 @@ namespace sw
         unordered_map<hashed_string, UICommandDelegate, hashed_string::HashFunc> _mapCommandToHandler;
         UISystem*                                                                _pUISystem; ///< 올린 시스템(올리기 전 nullptr)
         UIScreenHandle                                                           _handle;
-        WidgetId                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯 — 다시 활성이 되면 돌려준다
+        WidgetID                                                                 _lastFocused; ///< 다른 화면에 덮일 때의 포커스 위젯 — 다시 활성이 되면 돌려준다
         uint32                                                                   _pushOrder;   ///< 같은 층 안 쌓인 순서(클수록 위)
         uint8                                                                    _bClosing;
     };

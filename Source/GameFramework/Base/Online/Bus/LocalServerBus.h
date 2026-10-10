@@ -28,12 +28,12 @@ namespace sw
         LocalServerBusHub& operator=( const LocalServerBusHub& ) = delete;
 
         uint64 registerInbox();
-        void   unregisterInbox( uint64 inboxId );
-        void   subscribe( uint64 inboxId, string_view topic );
-        void   unsubscribe( uint64 inboxId, string_view topic );
+        void   unregisterInbox( uint64 inboxID );
+        void   subscribe( uint64 inboxID, string_view topic );
+        void   unsubscribe( uint64 inboxID, string_view topic );
         /** @brief @p message 를 그 주제를 구독한 받은편지함마다 넣습니다. 받은 수입니다. */
         int32 deliver( const ServerBusMessage& message );
-        int32 takeMessages( uint64 inboxId, vector<ServerBusMessage>& outListMessage );
+        int32 takeMessages( uint64 inboxID, vector<ServerBusMessage>& outListMessage );
 
     private:
         struct Inbox
@@ -44,7 +44,7 @@ namespace sw
 
         mutable mutex                _mutex;
         unordered_map<uint64, Inbox> _mapInbox;
-        uint64                       _nextInboxId;
+        uint64                       _nextInboxID;
     };
 } // namespace sw
 
@@ -58,19 +58,19 @@ namespace sw
     {
     public:
         /** @brief @p pHub 는 빌려 쓴다(버스보다 오래 산다). */
-        LocalServerBus( LocalServerBusHub* pHub, uint64 serverId );
+        LocalServerBus( LocalServerBusHub* pHub, uint64 serverID );
         ~LocalServerBus() override;
 
         void   publish( string_view topic, const uint8* pData, int32 size ) override;
         void   subscribe( string_view topic ) override;
         void   unsubscribe( string_view topic ) override;
         int32  pollMessages( vector<ServerBusMessage>& outListMessage ) override;
-        uint64 getServerId() const override { return _serverId; }
+        uint64 getServerID() const override { return _serverID; }
 
     private:
         LocalServerBusHub* _pHub;
-        uint64             _serverId;
-        uint64             _inboxId;
+        uint64             _serverID;
+        uint64             _inboxID;
         uint64             _nextSequence;
     };
 } // namespace sw

@@ -181,7 +181,7 @@ namespace sw
             return nullptr;
         AnimationCrowdBucketKey key{};
         key._pSkeleton         = skeleton.get();
-        key._skinDataId        = sourceMesh->getSkinDataId();
+        key._skinDataID        = sourceMesh->getSkinDataID();
         key._pClip             = request._pClip;
         key._playRate          = request._playRate;
         key._bAnchorRootMotion = request._bAnchorRootMotion;
@@ -268,7 +268,7 @@ namespace sw
     {
         if ( sourceMesh == nullptr )
             return nullptr;
-        vector<shared_ptr<Mesh>>& listFree = _mapFreeSoloMesh[sourceMesh->getSkinDataId()];
+        vector<shared_ptr<Mesh>>& listFree = _mapFreeSoloMesh[sourceMesh->getSkinDataID()];
         if ( listFree.empty() == false )
         {
             shared_ptr<Mesh> mesh = std::move( listFree.back() );
@@ -282,7 +282,7 @@ namespace sw
     {
         if ( mesh == nullptr )
             return;
-        _mapFreeSoloMesh[mesh->getSkinDataId()].push_back( std::move( mesh ) );
+        _mapFreeSoloMesh[mesh->getSkinDataID()].push_back( std::move( mesh ) );
     }
 
     shared_ptr<Mesh> AnimationCrowd::findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimClip& clip, bool bAnchorRootMotion,
@@ -290,11 +290,11 @@ namespace sw
     {
         if ( sourceMesh == nullptr )
             return nullptr;
-        const uint64 skinDataId = sourceMesh->getSkinDataId();
+        const uint64 skinDataID = sourceMesh->getSkinDataID();
         const uint8  anchor     = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
         for ( const VertexAnimationEntry& entry : _listVertexAnimation )
         {
-            if ( entry._skinDataId == skinDataId && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor )
+            if ( entry._skinDataID == skinDataID && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor )
                 return entry._mesh;
         }
         // 쿠킹본이 있으면(배포본의 팩) 읽고, 없으면 처음 쓸 때 굽는다 — 같은 원본 · 클립의 먼 캐릭터는 이 메시 하나를 나눈다.
@@ -302,7 +302,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Animation.bakeVertexAnimation" );
         shared_ptr<MeshVertexAnimation> animation = make_shared<MeshVertexAnimation>();
         VertexAnimationEntry            entry{};
-        entry._skinDataId        = skinDataId;
+        entry._skinDataID        = skinDataID;
         entry._pSkeleton         = &skeleton;
         entry._pClip             = &clip;
         entry._bAnchorRootMotion = anchor;

@@ -70,7 +70,7 @@ namespace sw
     /** @brief 구매 요청입니다. */
     struct EconomyPurchaseRequest
     {
-        string _offerId{};
+        string _offerID{};
         int32  _count{ 1 };
     };
 } // namespace sw
@@ -114,7 +114,7 @@ namespace sw
     {
         vector<LedgerBalance>       _listBalance{}; ///< GetWallet: 전부(스냅숏), Purchase · Redeem: 바뀐 것만
         vector<EconomyHistoryEntry> _listHistory{};
-        string                      _productId{}; ///< Redeem — 영수증의 스토어 상품
+        string                      _productID{}; ///< Redeem — 영수증의 스토어 상품
         string                      _nextCursor{};
         EconomyResult               _result{ EconomyResult::Ok };
         uint8                       _bReplayed{ SW_FALSE }; ///< 같은 멱등 키 · 같은 영수증의 지난 결과
@@ -128,7 +128,7 @@ namespace sw
     {
         static constexpr uint32 kVersion          = 1;
         static constexpr int32  kMaxPayloadSize   = 16 * 1024; ///< 영수증(Apple JWS 는 수 KB)
-        static constexpr int32  kMaxIdSize        = 64;
+        static constexpr int32  kMaxIDSize        = 64;
         static constexpr int32  kMaxCursorSize    = 512;
         static constexpr int32  kMaxHistoryCount  = 100;
         static constexpr int32  kMaxBalanceCount  = 1024;

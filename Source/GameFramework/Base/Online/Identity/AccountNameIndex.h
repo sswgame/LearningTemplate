@@ -35,6 +35,6 @@ namespace sw
         [[nodiscard]] virtual ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName,
                                                                             AccountIdentity& outIdentity ) const = 0;
         /** @brief 계정 id 의 공개 신원을 읽습니다(게스트 · 외부 계정 포함). 없으면 NotFound. */
-        [[nodiscard]] virtual ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountId accountId, AccountIdentity& outIdentity ) const = 0;
+        [[nodiscard]] virtual ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const = 0;
     };
 } // namespace sw

@@ -19,10 +19,10 @@ namespace sw
         struct RigAssetInternal
         {
             /** @brief 다음 내용 번호입니다(0 은 "읽지 않음"). */
-            static uint64 allocateContentId()
+            static uint64 allocateContentID()
             {
-                static atomic<uint64> s_nextContentId{ 1 };
-                return s_nextContentId.fetch_add( 1, std::memory_order_relaxed );
+                static atomic<uint64> s_nextContentID{ 1 };
+                return s_nextContentID.fetch_add( 1, std::memory_order_relaxed );
             }
         };
     } // namespace
@@ -62,7 +62,7 @@ namespace sw
     RigAsset::RigAsset()
         : _listTarget{}
         , _listNode{}
-        , _contentId{ 0 }
+        , _contentID{ 0 }
         , _bPlanar{ SW_FALSE }
     {
     }
@@ -72,7 +72,7 @@ namespace sw
     RigAsset::RigAsset( RigAsset&& other ) noexcept
         : _listTarget{ std::move( other._listTarget ) }
         , _listNode{ std::move( other._listNode ) }
-        , _contentId{ other._contentId }
+        , _contentID{ other._contentID }
         , _bPlanar{ other._bPlanar }
     {
     }
@@ -81,7 +81,7 @@ namespace sw
     {
         _listTarget = std::move( other._listTarget );
         _listNode   = std::move( other._listNode );
-        _contentId  = other._contentId;
+        _contentID  = other._contentID;
         _bPlanar    = other._bPlanar;
         return *this;
     }
@@ -90,7 +90,7 @@ namespace sw
     {
         _listTarget.clear();
         _listNode.clear();
-        _contentId = 0;
+        _contentID = 0;
         _bPlanar   = SW_FALSE;
     }
 
@@ -116,7 +116,7 @@ namespace sw
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
         {
-            _contentId = RigAssetInternal::allocateContentId();
+            _contentID = RigAssetInternal::allocateContentID();
             return true;
         }
         clear();

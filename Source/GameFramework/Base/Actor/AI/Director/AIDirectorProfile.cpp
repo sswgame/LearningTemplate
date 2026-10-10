@@ -125,34 +125,34 @@ namespace sw
         _startPhaseIndex = -1;
     }
 
-    int32 AIDirectorProfile::findPhaseIndex( const hashed_string& phaseId ) const
+    int32 AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
     {
         for ( size_t index = 0; index < _listPhase.size(); ++index )
         {
-            if ( _listPhase[index]._id == phaseId )
+            if ( _listPhase[index]._id == phaseID )
                 return static_cast<int32>( index );
         }
         return -1;
     }
 
-    int32 AIDirectorProfile::findSignalIndex( const hashed_string& signalId ) const
+    int32 AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
     {
         for ( size_t index = 0; index < _intensity._listSignal.size(); ++index )
         {
-            if ( _intensity._listSignal[index]._id == signalId )
+            if ( _intensity._listSignal[index]._id == signalID )
                 return static_cast<int32>( index );
         }
         return -1;
     }
 
-    void AIDirectorProfile::collectEncounterIds( vector<hashed_string>& outListId ) const
+    void AIDirectorProfile::collectEncounterIDs( vector<hashed_string>& outListID ) const
     {
         for ( const AIDirectorPoolDef& pool : _listPool )
         {
             for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
             {
-                if ( AIDirectorProfileInternal::contains( outListId, encounter._id ) == false )
-                    outListId.push_back( encounter._id );
+                if ( AIDirectorProfileInternal::contains( outListID, encounter._id ) == false )
+                    outListID.push_back( encounter._id );
             }
         }
     }
@@ -205,28 +205,28 @@ namespace sw
         for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
         {
             bValid          = Internal::validateAttributes( child, Internal::kArrSignalAttribute, false, sourceName ) && bValid;
-            const utf8* pId = GameDataXML::findRequiredId( child, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( child, sourceName );
+            if ( pID == nullptr )
             {
                 bValid = false;
                 continue;
             }
             AIDirectorSignalDef signal;
-            signal._id       = hashed_string( pId );
+            signal._id       = hashed_string( pID );
             signal._scale    = child.getAttributeFloat( "scale", signal._scale );
             signal._max      = child.getAttributeFloat( "max", signal._max );
             signal._bCombat  = child.getAttributeBool( "combat", false ) ? SW_TRUE : SW_FALSE;
             uint32 kindIndex = 0;
             if ( Internal::parseEnumName( child.getAttributeText( "kind" ), Internal::kArrSignalKindName, kindIndex ) == false )
             {
-                SW_LOG_WARNING( "%#: signal '%#' has an unknown kind '%#' (impulse, rate, level)", sourceName, pId, child.getAttributeText( "kind" ) );
+                SW_LOG_WARNING( "%#: signal '%#' has an unknown kind '%#' (impulse, rate, level)", sourceName, pID, child.getAttributeText( "kind" ) );
                 bValid = false;
                 continue;
             }
             signal._kind = static_cast<AIDirectorSignalKind>( kindIndex );
             if ( findSignalIndex( signal._id ) >= 0 )
             {
-                SW_LOG_WARNING( "%#: signal '%#' is declared twice", sourceName, pId );
+                SW_LOG_WARNING( "%#: signal '%#' is declared twice", sourceName, pID );
                 bValid = false;
                 continue;
             }
@@ -241,11 +241,11 @@ namespace sw
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateAttributes( node, Internal::kArrPhaseAttribute, false, sourceName );
         bValid                                        = Internal::validateChildren( node, kArrPhaseChild, sourceName ) && bValid;
-        const utf8* pId                               = GameDataXML::findRequiredId( node, sourceName );
-        if ( pId == nullptr )
+        const utf8* pID                               = GameDataXML::findRequiredID( node, sourceName );
+        if ( pID == nullptr )
             return false;
         AIDirectorPhaseDef phase;
-        phase._id          = hashed_string( pId );
+        phase._id          = hashed_string( pID );
         phase._spawnScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnScale", phase._spawnScale ) );
         phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
@@ -267,7 +267,7 @@ namespace sw
         }
         if ( findPhaseIndex( phase._id ) >= 0 )
         {
-            SW_LOG_WARNING( "%#: phase '%#' is declared twice", sourceName, pId );
+            SW_LOG_WARNING( "%#: phase '%#' is declared twice", sourceName, pID );
             return false;
         }
         _listPhase.push_back( phase );
@@ -280,16 +280,16 @@ namespace sw
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };
         bool                         bValid          = Internal::validateAttributes( node, Internal::kArrPoolAttribute, false, sourceName );
         bValid                                       = Internal::validateChildren( node, kArrPoolChild, sourceName ) && bValid;
-        const utf8* pId                              = GameDataXML::findRequiredId( node, sourceName );
-        if ( pId == nullptr )
+        const utf8* pID                              = GameDataXML::findRequiredID( node, sourceName );
+        if ( pID == nullptr )
             return false;
         AIDirectorPoolDef pool;
-        pool._id                    = hashed_string( pId );
+        pool._id                    = hashed_string( pID );
         uint32            kindIndex = 0;
         const string_view kindText  = node.getAttributeText( "kind" );
         if ( kindText.empty() == false && Internal::parseEnumName( kindText, Internal::kArrPoolKindName, kindIndex ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (encounter, reward)", sourceName, pId, kindText );
+            SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (encounter, reward)", sourceName, pID, kindText );
             bValid = false;
         }
         pool._kind                     = static_cast<AIDirectorPoolKind>( kindIndex );
@@ -297,7 +297,7 @@ namespace sw
         const string_view triggerText  = node.getAttributeText( "trigger" );
         if ( Internal::parseEnumName( triggerText, Internal::kArrPoolTriggerName, triggerIndex ) == false )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (phaseEnter, interval, budget)", sourceName, pId, triggerText );
+            SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (phaseEnter, interval, budget)", sourceName, pID, triggerText );
             bValid = false;
         }
         pool._trigger    = static_cast<AIDirectorPoolTrigger>( triggerIndex );
@@ -313,21 +313,21 @@ namespace sw
         ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
         if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
-            SW_LOG_WARNING( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pId );
+            SW_LOG_WARNING( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pID );
             bValid = false;
         }
 
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             bValid                   = Internal::validateAttributes( child, Internal::kArrEncounterAttribute, true, sourceName ) && bValid;
-            const utf8* pEncounterId = GameDataXML::findRequiredId( child, sourceName );
-            if ( pEncounterId == nullptr )
+            const utf8* pEncounterID = GameDataXML::findRequiredID( child, sourceName );
+            if ( pEncounterID == nullptr )
             {
                 bValid = false;
                 continue;
             }
             AIDirectorEncounterDef encounter;
-            encounter._id           = hashed_string( pEncounterId );
+            encounter._id           = hashed_string( pEncounterID );
             encounter._weight       = MathUtil::max( 0.0f, child.getAttributeFloat( "weight", encounter._weight ) );
             encounter._cost         = MathUtil::max( 0.0f, child.getAttributeFloat( "cost", encounter._cost ) );
             encounter._cooldown     = MathUtil::max( 0.0f, child.getAttributeFloat( "cooldown", encounter._cooldown ) );
@@ -340,12 +340,12 @@ namespace sw
             encounter._minCycle     = MathUtil::max( 0, child.getAttributeInt( "minCycle", encounter._minCycle ) );
             ScheduleCondition::parseNameList( child.getAttributeText( "areas" ), encounter._listArea );
             ScheduleCondition::parseNameList( child.getAttributeText( "pacing" ), encounter._listPacing );
-            encounter._condition.readFromNode( child, vocabulary, sourceName, pEncounterId );
+            encounter._condition.readFromNode( child, vocabulary, sourceName, pEncounterID );
             for ( const AIDirectorEncounterDef& other : pool._listEncounter )
             {
                 if ( other._id == encounter._id )
                 {
-                    SW_LOG_WARNING( "%#: pool '%#' lists '%#' twice", sourceName, pId, pEncounterId );
+                    SW_LOG_WARNING( "%#: pool '%#' lists '%#' twice", sourceName, pID, pEncounterID );
                     bValid = false;
                 }
             }
@@ -353,14 +353,14 @@ namespace sw
         }
         if ( pool._listEncounter.empty() )
         {
-            SW_LOG_WARNING( "%#: pool '%#' has no <Encounter>", sourceName, pId );
+            SW_LOG_WARNING( "%#: pool '%#' has no <Encounter>", sourceName, pID );
             bValid = false;
         }
         for ( const AIDirectorPoolDef& other : _listPool )
         {
             if ( other._id == pool._id )
             {
-                SW_LOG_WARNING( "%#: pool '%#' is declared twice", sourceName, pId );
+                SW_LOG_WARNING( "%#: pool '%#' is declared twice", sourceName, pID );
                 bValid = false;
             }
         }
@@ -368,14 +368,14 @@ namespace sw
         return bValid;
     }
 
-    bool AIDirectorProfile::validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerId, string_view sourceName ) const
+    bool AIDirectorProfile::validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerID, string_view sourceName ) const
     {
         bool bValid = true;
-        for ( const hashed_string& phaseId : listPacing )
+        for ( const hashed_string& phaseID : listPacing )
         {
-            if ( findPhaseIndex( phaseId ) >= 0 )
+            if ( findPhaseIndex( phaseID ) >= 0 )
                 continue;
-            SW_LOG_WARNING( "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerId.c_str(), phaseId.c_str() );
+            SW_LOG_WARNING( "%#: '%#' names an unknown pacing phase '%#'", sourceName, ownerID.c_str(), phaseID.c_str() );
             bValid = false;
         }
         return bValid;

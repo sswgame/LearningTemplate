@@ -73,7 +73,7 @@ namespace
         HTTPClientResponse run( const HTTPClientRequest& request, bool bServe = true )
         {
             int64        nowMs     = 0;
-            const uint64 requestId = _client.submitRequest( request, nowMs );
+            const uint64 requestID = _client.submitRequest( request, nowMs );
             for ( int32 step = 0; step < 400; ++step )
             {
                 if ( bServe )
@@ -83,7 +83,7 @@ namespace
                 (void)_client.pollResponses( listResponse );
                 for ( HTTPClientResponse& response : listResponse )
                 {
-                    if ( response._requestId == requestId )
+                    if ( response._requestID == requestID )
                         return std::move( response );
                 }
                 nowMs += 100;

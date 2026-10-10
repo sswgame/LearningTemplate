@@ -177,7 +177,7 @@ namespace sw
         return level;
     }
 
-    bool MonsterCollectorCatalog::rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesId,
+    bool MonsterCollectorCatalog::rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesID,
                                                  int32& outLevel ) const
     {
         // 후보를 목록에 모으지 않고 같은 순서로 두 번 훑는다(합 → 고르기). 조우마다 할당이 없다.
@@ -224,7 +224,7 @@ namespace sw
         } );
         if ( pPicked == nullptr )
             return false;
-        outSpeciesId = pPicked->_speciesId;
+        outSpeciesID = pPicked->_speciesID;
         outLevel     = random.nextInt( pPicked->_minLevel, pPicked->_maxLevel );
         return true;
     }
@@ -274,30 +274,30 @@ namespace sw
             const bool bEncounter = StringUtil::equals( pName, "Encounter", true );
             if ( ( bMove || bSpecies || bNature || bWeather || bEncounter ) == false )
                 continue;
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
 
             if ( bMove )
             {
-                loadMove( node, pId, sourceName );
+                loadMove( node, pID, sourceName );
             }
             else if ( bSpecies )
             {
-                loadSpecies( node, pId, sourceName );
+                loadSpecies( node, pID, sourceName );
             }
             else if ( bNature )
             {
                 // 칸이 없으면 기본값(Attack) 그대로 — up · down 이 같으면 무보정 성격이다. 틀린 이름은 그 성격을 빼고 알린다(반쪽만 보정되지 않게).
                 MonsterNatureDef def;
-                def._id                    = hashed_string( pId );
+                def._id                    = hashed_string( pID );
                 const string_view upText   = node.getAttributeText( "up" );
                 const string_view downText = node.getAttributeText( "down" );
                 const bool        bUpOk    = upText.empty() || parseStat( upText, def._raised );
                 const bool        bDownOk  = downText.empty() || parseStat( downText, def._lowered );
                 if ( bUpOk == false || bDownOk == false )
                 {
-                    SW_LOG_WARNING( "%#: Nature '%#' names an unknown stat (up '%#', down '%#') - skipped", sourceName, pId, upText, downText );
+                    SW_LOG_WARNING( "%#: Nature '%#' names an unknown stat (up '%#', down '%#') - skipped", sourceName, pID, upText, downText );
                     continue;
                 }
                 (void)_natureCatalog.add( def );
@@ -305,7 +305,7 @@ namespace sw
             else if ( bWeather )
             {
                 MonsterWeatherDef def;
-                def._id           = hashed_string( pId );
+                def._id           = hashed_string( pID );
                 def._boostedType  = hashed_string( node.getAttributeText( "boost" ) );
                 def._weakenedType = hashed_string( node.getAttributeText( "weaken" ) );
                 def._chipDivisor  = MathUtil::max( 0, node.getAttributeInt( "chip", 0 ) );
@@ -315,7 +315,7 @@ namespace sw
             }
             else
             {
-                loadEncounter( node, pId );
+                loadEncounter( node, pID );
             }
             ++loadedCount;
         }
@@ -325,34 +325,34 @@ namespace sw
         {
             for ( const MonsterLearnEntry& learn : species._listLearn )
             {
-                if ( _moveCatalog.find( learn._moveId ) == nullptr )
-                    SW_LOG_WARNING( "%#: species '%#' learns unknown move '%#'", sourceName, species._id.c_str(), learn._moveId.c_str() );
+                if ( _moveCatalog.find( learn._moveID ) == nullptr )
+                    SW_LOG_WARNING( "%#: species '%#' learns unknown move '%#'", sourceName, species._id.c_str(), learn._moveID.c_str() );
             }
             for ( const MonsterEvolutionDef& evolution : species._listEvolution )
             {
-                if ( _speciesCatalog.find( evolution._targetId ) == nullptr )
-                    SW_LOG_WARNING( "%#: species '%#' evolves into unknown '%#'", sourceName, species._id.c_str(), evolution._targetId.c_str() );
+                if ( _speciesCatalog.find( evolution._targetID ) == nullptr )
+                    SW_LOG_WARNING( "%#: species '%#' evolves into unknown '%#'", sourceName, species._id.c_str(), evolution._targetID.c_str() );
             }
         }
         for ( const MonsterEncounterDef& table : _encounterCatalog.getAll() )
         {
             for ( const MonsterEncounterSlot& slot : table._listSlot )
             {
-                if ( _speciesCatalog.find( slot._speciesId ) == nullptr )
-                    SW_LOG_WARNING( "%#: encounter '%#' names unknown species '%#'", sourceName, table._id.c_str(), slot._speciesId.c_str() );
+                if ( _speciesCatalog.find( slot._speciesID ) == nullptr )
+                    SW_LOG_WARNING( "%#: encounter '%#' names unknown species '%#'", sourceName, table._id.c_str(), slot._speciesID.c_str() );
             }
         }
         return loadedCount;
     }
 
-    void MonsterCollectorCatalog::loadMove( const XMLNode& node, const utf8* pId, string_view sourceName )
+    void MonsterCollectorCatalog::loadMove( const XMLNode& node, const utf8* pID, string_view sourceName )
     {
         MonsterMoveDef def;
-        def._id           = hashed_string( pId );
+        def._id           = hashed_string( pID );
         const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pId;
+        def._name         = pName != nullptr ? pName : pID;
         def._type         = hashed_string( node.getAttributeText( "type" ) );
-        def._weatherId    = hashed_string( node.getAttributeText( "weather" ) );
+        def._weatherID    = hashed_string( node.getAttributeText( "weather" ) );
         def._power        = MathUtil::max( 0, node.getAttributeInt( "power", def._power ) );
         def._accuracy     = MathUtil::clamp( node.getAttributeInt( "accuracy", def._accuracy ), 0, 100 );
         def._pp           = MathUtil::max( 1, node.getAttributeInt( "pp", def._pp ) );
@@ -365,11 +365,11 @@ namespace sw
         else if ( StringUtil::equals( category, string_view( "Status" ), true ) )
             def._category = MonsterMoveCategory::Status;
         else if ( category.empty() == false && StringUtil::equals( category, string_view( "Physical" ), true ) == false )
-            SW_LOG_WARNING( "%#: move '%#' has an unknown category '%#' - read as physical", sourceName, pId, category );
+            SW_LOG_WARNING( "%#: move '%#' has an unknown category '%#' - read as physical", sourceName, pID, category );
 
         const string_view status = node.getAttributeText( "status" );
         if ( status.empty() == false && parseStatus( status, def._status ) == false )
-            SW_LOG_WARNING( "%#: move '%#' has an unknown status '%#' - ignored", sourceName, pId, status );
+            SW_LOG_WARNING( "%#: move '%#' has an unknown status '%#' - ignored", sourceName, pID, status );
         const int32 defaultStatusChance = def._category == MonsterMoveCategory::Status ? 100 : 0;
         def._statusChance               = MathUtil::clamp( node.getAttributeInt( "statusChance", defaultStatusChance ), 0, 100 );
 
@@ -378,7 +378,7 @@ namespace sw
         {
             if ( parseStat( stat, def._stat ) == false || def._stat == MonsterStat::Hp )
             {
-                SW_LOG_WARNING( "%#: move '%#' changes an invalid stat '%#' - ignored", sourceName, pId, stat );
+                SW_LOG_WARNING( "%#: move '%#' changes an invalid stat '%#' - ignored", sourceName, pID, stat );
             }
             else
             {
@@ -391,41 +391,41 @@ namespace sw
         (void)_moveCatalog.add( def );
     }
 
-    void MonsterCollectorCatalog::loadSpecies( const XMLNode& node, const utf8* pId, string_view sourceName )
+    void MonsterCollectorCatalog::loadSpecies( const XMLNode& node, const utf8* pID, string_view sourceName )
     {
         MonsterSpeciesDef def;
-        def._id           = hashed_string( pId );
+        def._id           = hashed_string( pID );
         const utf8* pName = node.findAttribute( "name" );
-        def._name         = pName != nullptr ? pName : pId;
+        def._name         = pName != nullptr ? pName : pID;
         MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "types" ), def._listType );
         if ( def._listType.empty() || def._listType.size() > 2 )
-            SW_LOG_WARNING( "%#: species '%#' has %# types - expected 1 or 2", sourceName, pId, static_cast<uint32>( def._listType.size() ) );
+            SW_LOG_WARNING( "%#: species '%#' has %# types - expected 1 or 2", sourceName, pID, static_cast<uint32>( def._listType.size() ) );
         MonsterCollectorCatalogInternal::parseSixInts( node.getAttributeText( "stats" ), def._arrBaseStat, 1 );
         MonsterCollectorCatalogInternal::parseSixInts( node.getAttributeText( "evYield" ), def._arrEvYield, 0 );
         def._catchRate             = MathUtil::clamp( node.getAttributeInt( "catchRate", def._catchRate ), 1, 255 );
         def._baseExp               = MathUtil::max( 1, node.getAttributeInt( "baseExp", def._baseExp ) );
         const string_view expGroup = node.getAttributeText( "expGroup" );
         if ( expGroup.empty() == false && MonsterCollectorCatalogInternal::parseExpGroup( expGroup, def._expGroup ) == false )
-            SW_LOG_WARNING( "%#: species '%#' has an unknown expGroup '%#' - read as Medium", sourceName, pId, expGroup );
+            SW_LOG_WARNING( "%#: species '%#' has an unknown expGroup '%#' - read as Medium", sourceName, pID, expGroup );
 
         for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Learn", true ) )
             {
                 MonsterLearnEntry entry;
-                entry._moveId = hashed_string( child.getAttributeText( "move" ) );
+                entry._moveID = hashed_string( child.getAttributeText( "move" ) );
                 entry._level  = MathUtil::clamp( child.getAttributeInt( "level", 1 ), 1, kMaxLevel );
-                if ( entry._moveId.empty() == false )
+                if ( entry._moveID.empty() == false )
                     def._listLearn.push_back( entry );
             }
             else if ( StringUtil::equals( child.getName(), "Evolve", true ) )
             {
                 MonsterEvolutionDef evolution;
-                evolution._targetId   = hashed_string( child.getAttributeText( "to" ) );
-                evolution._itemId     = hashed_string( child.getAttributeText( "item" ) );
+                evolution._targetID   = hashed_string( child.getAttributeText( "to" ) );
+                evolution._itemID     = hashed_string( child.getAttributeText( "item" ) );
                 evolution._level      = MathUtil::max( 0, child.getAttributeInt( "level", 0 ) );
                 evolution._friendship = MathUtil::max( 0, child.getAttributeInt( "friendship", 0 ) );
-                if ( evolution._targetId.empty() == false )
+                if ( evolution._targetID.empty() == false )
                     def._listEvolution.push_back( evolution );
             }
         }
@@ -444,10 +444,10 @@ namespace sw
         (void)_speciesCatalog.add( def );
     }
 
-    void MonsterCollectorCatalog::loadEncounter( const XMLNode& node, const utf8* pId )
+    void MonsterCollectorCatalog::loadEncounter( const XMLNode& node, const utf8* pID )
     {
         MonsterEncounterDef def;
-        def._id   = hashed_string( pId );
+        def._id   = hashed_string( pID );
         def._area = hashed_string( node.getAttributeText( "area" ) );
         if ( def._area.empty() )
             def._area = def._id;
@@ -455,11 +455,11 @@ namespace sw
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             MonsterEncounterSlot slot;
-            slot._speciesId = hashed_string( child.getAttributeText( "species" ) );
+            slot._speciesID = hashed_string( child.getAttributeText( "species" ) );
             slot._minLevel  = MathUtil::clamp( child.getAttributeInt( "min", slot._minLevel ), 1, kMaxLevel );
             slot._maxLevel  = MathUtil::clamp( child.getAttributeInt( "max", slot._minLevel ), slot._minLevel, kMaxLevel );
             slot._weight    = MathUtil::max( 0, child.getAttributeInt( "weight", slot._weight ) );
-            if ( slot._speciesId.empty() == false )
+            if ( slot._speciesID.empty() == false )
                 def._listSlot.push_back( slot );
         }
         (void)_encounterCatalog.add( def );

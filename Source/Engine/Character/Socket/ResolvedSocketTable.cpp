@@ -37,7 +37,7 @@ namespace sw
         for ( Slot& slot : _listSlot )
         {
             slot._bActive  = SW_FALSE;
-            slot._redirect = kInvalidSocketId;
+            slot._redirect = kInvalidSocketID;
         }
         _listUnit.clear();
     }
@@ -52,16 +52,16 @@ namespace sw
         return hashed_string( string_view( fullName ) );
     }
 
-    SocketId ResolvedSocketTable::findOrAddSlot( const hashed_string& fullName )
+    SocketID ResolvedSocketTable::findOrAddSlot( const hashed_string& fullName )
     {
         const auto found = _mapNameToSocket.find( fullName );
         if ( found != _mapNameToSocket.end() )
             return found->second;
-        const SocketId socketId = static_cast<SocketId>( _listSlot.size() );
+        const SocketID socketID = static_cast<SocketID>( _listSlot.size() );
         _listSlot.emplace_back();
         _listSlot.back()._fullName = fullName;
-        _mapNameToSocket.emplace( fullName, socketId );
-        return socketId;
+        _mapNameToSocket.emplace( fullName, socketID );
+        return socketID;
     }
 
     const ResolvedSocketTable::Unit* ResolvedSocketTable::findUnit( uint32 unitIndex ) const
@@ -91,13 +91,13 @@ namespace sw
         for ( uint32 unitSlot = 0; unitSlot < addedUnit._sockets.getSockets().size(); ++unitSlot )
         {
             const SocketDef& def      = addedUnit._sockets.getSockets()[unitSlot];
-            const SocketId   socketId = findOrAddSlot( makeFullName( prefix, def._name ) );
-            Slot&            slot     = _listSlot[socketId];
+            const SocketID   socketID = findOrAddSlot( makeFullName( prefix, def._name ) );
+            Slot&            slot     = _listSlot[socketID];
             slot._def                 = def;
             slot._unit                = unitIndex;
             slot._unitSlot            = unitSlot;
             slot._bActive             = SW_TRUE;
-            slot._redirect            = kInvalidSocketId;
+            slot._redirect            = kInvalidSocketID;
             slot._surfaceBinding      = SurfaceBinding{};
             slot._shapeOffsetLocal    = float3::Zero;
 
@@ -139,12 +139,12 @@ namespace sw
             const Unit* pUnit = findUnit( slot._unit );
             for ( const hashed_string& candidate : slot._def._listFallback )
             {
-                SocketId candidateId = findSocket( candidate );
-                if ( ( candidateId == kInvalidSocketId || isSocketActive( candidateId ) == false ) && pUnit != nullptr && pUnit->_prefix.empty() == false )
-                    candidateId = findSocket( makeFullName( pUnit->_prefix, candidate ) );
-                if ( candidateId != kInvalidSocketId && isSocketActive( candidateId ) && &_listSlot[candidateId] != &slot )
+                SocketID candidateID = findSocket( candidate );
+                if ( ( candidateID == kInvalidSocketID || isSocketActive( candidateID ) == false ) && pUnit != nullptr && pUnit->_prefix.empty() == false )
+                    candidateID = findSocket( makeFullName( pUnit->_prefix, candidate ) );
+                if ( candidateID != kInvalidSocketID && isSocketActive( candidateID ) && &_listSlot[candidateID] != &slot )
                 {
-                    slot._redirect = candidateId;
+                    slot._redirect = candidateID;
                     break;
                 }
             }
@@ -165,63 +165,63 @@ namespace sw
         }
     }
 
-    SocketId ResolvedSocketTable::findSocket( const hashed_string& fullName ) const
+    SocketID ResolvedSocketTable::findSocket( const hashed_string& fullName ) const
     {
         const auto found = _mapNameToSocket.find( fullName );
-        return found == _mapNameToSocket.end() ? kInvalidSocketId : found->second;
+        return found == _mapNameToSocket.end() ? kInvalidSocketID : found->second;
     }
 
-    SocketId ResolvedSocketTable::findFirstActiveSocket( vector_reference<const hashed_string> listCandidate ) const
+    SocketID ResolvedSocketTable::findFirstActiveSocket( vector_reference<const hashed_string> listCandidate ) const
     {
         for ( const hashed_string& candidate : listCandidate )
         {
-            const SocketId socketId = findSocket( candidate );
-            if ( isSocketActive( socketId ) )
-                return socketId;
+            const SocketID socketID = findSocket( candidate );
+            if ( isSocketActive( socketID ) )
+                return socketID;
         }
-        return kInvalidSocketId;
+        return kInvalidSocketID;
     }
 
-    bool ResolvedSocketTable::isSocketActive( SocketId socketId ) const
+    bool ResolvedSocketTable::isSocketActive( SocketID socketID ) const
     {
-        return socketId < _listSlot.size() && _listSlot[socketId]._bActive == SW_TRUE;
+        return socketID < _listSlot.size() && _listSlot[socketID]._bActive == SW_TRUE;
     }
 
-    SocketId ResolvedSocketTable::resolveTarget( SocketId socketId ) const
+    SocketID ResolvedSocketTable::resolveTarget( SocketID socketID ) const
     {
-        if ( isSocketActive( socketId ) == false )
-            return kInvalidSocketId;
+        if ( isSocketActive( socketID ) == false )
+            return kInvalidSocketID;
         // 후보가 다시 후보를 가리킬 수 있다 — 순환이면 소켓 수만큼 걷고 멈춘다.
-        SocketId current = socketId;
+        SocketID current = socketID;
         for ( size_t step = 0; step < _listSlot.size(); ++step )
         {
-            const SocketId next = _listSlot[current]._redirect;
-            if ( next == kInvalidSocketId || isSocketActive( next ) == false )
+            const SocketID next = _listSlot[current]._redirect;
+            if ( next == kInvalidSocketID || isSocketActive( next ) == false )
                 return current;
             current = next;
         }
-        return socketId;
+        return socketID;
     }
 
-    uint32 ResolvedSocketTable::getSocketUnit( SocketId socketId ) const
+    uint32 ResolvedSocketTable::getSocketUnit( SocketID socketID ) const
     {
-        return socketId < _listSlot.size() ? _listSlot[socketId]._unit : 0;
+        return socketID < _listSlot.size() ? _listSlot[socketID]._unit : 0;
     }
 
-    const hashed_string& ResolvedSocketTable::getSocketName( SocketId socketId ) const
+    const hashed_string& ResolvedSocketTable::getSocketName( SocketID socketID ) const
     {
-        return socketId < _listSlot.size() ? _listSlot[socketId]._fullName : ResolvedSocketTableInternal::getEmptyName();
+        return socketID < _listSlot.size() ? _listSlot[socketID]._fullName : ResolvedSocketTableInternal::getEmptyName();
     }
 
-    const SocketDef* ResolvedSocketTable::findSocketDef( SocketId socketId ) const
+    const SocketDef* ResolvedSocketTable::findSocketDef( SocketID socketID ) const
     {
-        return socketId < _listSlot.size() ? &_listSlot[socketId]._def : nullptr;
+        return socketID < _listSlot.size() ? &_listSlot[socketID]._def : nullptr;
     }
 
-    bool ResolvedSocketTable::computeUnitTransform( SocketId socketId, const CharacterBoneArray& unitBones, float4x4& outUnitTransform ) const
+    bool ResolvedSocketTable::computeUnitTransform( SocketID socketID, const CharacterBoneArray& unitBones, float4x4& outUnitTransform ) const
     {
-        const SocketId target = resolveTarget( socketId );
-        if ( target == kInvalidSocketId )
+        const SocketID target = resolveTarget( socketID );
+        if ( target == kInvalidSocketID )
             return false;
         const Slot& slot  = _listSlot[target];
         const Unit* pUnit = findUnit( slot._unit );
@@ -237,10 +237,10 @@ namespace sw
         return getSocketTransform( findSocket( fullName ), pose, outWorldTransform );
     }
 
-    bool ResolvedSocketTable::getSocketTransform( SocketId socketId, const SocketPoseView& pose, float4x4& outWorldTransform ) const
+    bool ResolvedSocketTable::getSocketTransform( SocketID socketID, const SocketPoseView& pose, float4x4& outWorldTransform ) const
     {
-        const SocketId target = resolveTarget( socketId );
-        if ( target == kInvalidSocketId )
+        const SocketID target = resolveTarget( socketID );
+        if ( target == kInvalidSocketID )
             return false;
         const uint32 unitIndex = _listSlot[target]._unit;
         if ( unitIndex >= pose._listUnitBones.size() || pose._listUnitBones[unitIndex] == nullptr )

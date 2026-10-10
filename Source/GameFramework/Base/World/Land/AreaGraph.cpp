@@ -53,11 +53,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( areaNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( areaNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             AreaDef area;
-            area._id     = hashed_string( pId );
+            area._id     = hashed_string( pID );
             area._name   = AreaGraphInternal::readName( areaNode, "name" );
             area._region = AreaGraphInternal::readName( areaNode, "region" );
             area._x      = areaNode.getAttributeFloat( "x", area._x );
@@ -67,7 +67,7 @@ namespace sw
             if ( addArea( area ) )
                 ++loadedCount;
             else
-                SW_LOG_WARNING( "%#: duplicate area '%#' - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: duplicate area '%#' - skipped", sourceName, pID );
         }
         for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
@@ -169,9 +169,9 @@ namespace sw
         _listDiscovered[index] = SW_TRUE;
     }
 
-    bool AreaGraph::enterArea( const hashed_string& areaId )
+    bool AreaGraph::enterArea( const hashed_string& areaID )
     {
-        const int32 areaIndex = _catalog.findIndex( areaId );
+        const int32 areaIndex = _catalog.findIndex( areaID );
         if ( areaIndex < 0 )
             return false;
         const bool bFirstVisit = _listVisited[static_cast<size_t>( areaIndex )] == SW_FALSE;
@@ -185,9 +185,9 @@ namespace sw
         return bFirstVisit;
     }
 
-    bool AreaGraph::discoverArea( const hashed_string& areaId )
+    bool AreaGraph::discoverArea( const hashed_string& areaID )
     {
-        const int32 areaIndex = _catalog.findIndex( areaId );
+        const int32 areaIndex = _catalog.findIndex( areaID );
         if ( areaIndex < 0 || _listDiscovered[static_cast<size_t>( areaIndex )] == SW_TRUE )
             return false;
         _listDiscovered[static_cast<size_t>( areaIndex )] = SW_TRUE;
@@ -208,10 +208,10 @@ namespace sw
         return discoveredCount;
     }
 
-    bool AreaGraph::canTraverse( const hashed_string& fromId, const hashed_string& toId, const GameFlags& flags ) const
+    bool AreaGraph::canTraverse( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags ) const
     {
-        const int32 fromIndex = _catalog.findIndex( fromId );
-        const int32 toIndex   = _catalog.findIndex( toId );
+        const int32 fromIndex = _catalog.findIndex( fromID );
+        const int32 toIndex   = _catalog.findIndex( toID );
         if ( fromIndex < 0 || toIndex < 0 )
             return false;
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( fromIndex )] )
@@ -223,11 +223,11 @@ namespace sw
         return false;
     }
 
-    bool AreaGraph::findPath( const hashed_string& fromId, const hashed_string& toId, const GameFlags& flags, vector<hashed_string>& outListArea ) const
+    bool AreaGraph::findPath( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags, vector<hashed_string>& outListArea ) const
     {
         outListArea.clear();
-        const int32 fromIndex = _catalog.findIndex( fromId );
-        const int32 toIndex   = _catalog.findIndex( toId );
+        const int32 fromIndex = _catalog.findIndex( fromID );
+        const int32 toIndex   = _catalog.findIndex( toID );
         if ( fromIndex < 0 || toIndex < 0 )
             return false;
 
@@ -355,27 +355,27 @@ namespace sw
     void AreaGraph::restoreState( const vector<hashed_string>& listVisited, const vector<hashed_string>& listDiscovered )
     {
         resetState();
-        for ( const hashed_string& areaId : listDiscovered )
+        for ( const hashed_string& areaID : listDiscovered )
         {
-            (void)discoverArea( areaId );
+            (void)discoverArea( areaID );
         }
-        for ( const hashed_string& areaId : listVisited )
+        for ( const hashed_string& areaID : listVisited )
         {
-            const int32 areaIndex = _catalog.findIndex( areaId );
+            const int32 areaIndex = _catalog.findIndex( areaID );
             if ( areaIndex >= 0 )
                 markVisited( areaIndex );
         }
     }
 
-    bool AreaGraph::isVisited( const hashed_string& areaId ) const
+    bool AreaGraph::isVisited( const hashed_string& areaID ) const
     {
-        const int32 areaIndex = _catalog.findIndex( areaId );
+        const int32 areaIndex = _catalog.findIndex( areaID );
         return areaIndex >= 0 && _listVisited[static_cast<size_t>( areaIndex )] == SW_TRUE;
     }
 
-    bool AreaGraph::isDiscovered( const hashed_string& areaId ) const
+    bool AreaGraph::isDiscovered( const hashed_string& areaID ) const
     {
-        const int32 areaIndex = _catalog.findIndex( areaId );
+        const int32 areaIndex = _catalog.findIndex( areaID );
         return areaIndex >= 0 && _listDiscovered[static_cast<size_t>( areaIndex )] == SW_TRUE;
     }
 } // namespace sw

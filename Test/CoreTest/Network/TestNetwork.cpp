@@ -54,10 +54,10 @@ namespace
     /** @brief 서버(호스트 0)가 받은 메시지를 모두 꺼내 뒤에 붙입니다. */
     void drainServerMessages( test::LoopbackCluster& cluster, vector<vector<uint8>>& outListMessage )
     {
-        int32          connectionId = -1;
+        int32          connectionID = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
-        while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+        while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
             outListMessage.push_back( buffer );
         }
@@ -92,7 +92,7 @@ namespace
             : _rangeBase{ rangeBase }
             , _acceptedKind{ acceptedKind }
             , _handledCount{ 0 }
-            , _lastConnectionId{ -1 }
+            , _lastConnectionID{ -1 }
         {
         }
 
@@ -104,18 +104,18 @@ namespace
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             ++_handledCount;
-            _lastConnectionId = context._connectionId;
+            _lastConnectionID = context._connectionID;
             return NetHandleResult::Handled;
         }
 
         int32 getHandledCount() const { return _handledCount; }
-        int32 getLastConnectionId() const { return _lastConnectionId; }
+        int32 getLastConnectionID() const { return _lastConnectionID; }
 
     private:
         uint8 _rangeBase;
         uint8 _acceptedKind;
         int32 _handledCount;
-        int32 _lastConnectionId;
+        int32 _lastConnectionID;
     };
 
     /** @brief 시험용 의사 난수(xorshift) — 시드가 같으면 같은 수열입니다. */
@@ -598,12 +598,12 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     for ( int32 frame = 0; frame < 60 * 20 && listReceived.size() < 200; ++frame )
     {
         pair.run( 1.0 / 60.0 );
-        int32          connectionId = -1;
+        int32          connectionID = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
         vector<uint8>  buffer;
-        while ( pair.getServer().receiveMessage( connectionId, channel, buffer ) )
+        while ( pair.getServer().receiveMessage( connectionID, channel, buffer ) )
         {
-            SW_EXPECT_EQUAL( 0, connectionId );
+            SW_EXPECT_EQUAL( 0, connectionID );
             listReceived.push_back( readMessageValue( buffer ) );
         }
     }
@@ -630,10 +630,10 @@ SW_TEST_CASE( NetworkTest, HostsHandshakeExchangeAndSurviveBadNetworks )
     const vector<uint8> hello = makeMessage( 4242 );
     SW_EXPECT_EQUAL( 1, pair.getServer().broadcast( NetChannelType::ReliableOrdered, hello.data(), 4 ) );
     pair.run( 0.2 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair.getClient( 0 ).receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair.getClient( 0 ).receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelType::ReliableOrdered );
 }
@@ -652,7 +652,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
     first.initialize( network.createEndpoint( 5001 ), settings );
     second.initialize( network.createEndpoint( 5002 ), settings );
     NetHostSettings otherGame = settings;
-    otherGame._gameId         = 0xDEADBEEFu;
+    otherGame._gameID         = 0xDEADBEEFu;
     foreign.initialize( network.createEndpoint( 5003 ), otherGame );
     SW_EXPECT_TRUE( network.createEndpoint( 4000 ) == nullptr );
     SW_ASSERT_TRUE( server.listen() );
@@ -717,8 +717,8 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
  */
 SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
 {
-    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 7u, 2u ), "the wire version is part of the protocol id" );
-    static_assert( NetProtocol::makeProtocolId( 7u, 1u ) != NetProtocol::makeProtocolId( 8u, 1u ), "the game id is part of the protocol id" );
+    static_assert( NetProtocol::makeProtocolID( 7u, 1u ) != NetProtocol::makeProtocolID( 7u, 2u ), "the wire version is part of the protocol id" );
+    static_assert( NetProtocol::makeProtocolID( 7u, 1u ) != NetProtocol::makeProtocolID( 8u, 1u ), "the game id is part of the protocol id" );
     static_assert( NetWireVersion::combine( { 1u, 2u } ) != NetWireVersion::combine( { 2u, 1u } ), "layer order is part of the version" );
 
     NetHostSettings serverSettings;
@@ -732,7 +732,7 @@ SW_TEST_CASE( NetworkTest, WireVersionMismatchIsRefusedWithReason )
     server.initialize( network.createEndpoint( 4000 ), serverSettings );
     current.initialize( network.createEndpoint( 5001 ), serverSettings );
     outdated.initialize( network.createEndpoint( 5002 ), oldSettings );
-    SW_EXPECT_TRUE( current.getProtocolId() != outdated.getProtocolId() );
+    SW_EXPECT_TRUE( current.getProtocolID() != outdated.getProtocolID() );
     SW_ASSERT_TRUE( server.listen() );
     SW_ASSERT_TRUE( current.connect( NetAddress::makeLoopback( 4000 ) ) );
     SW_ASSERT_TRUE( outdated.connect( NetAddress::makeLoopback( 4000 ) ) );
@@ -799,10 +799,10 @@ SW_TEST_CASE( NetworkTest, LostAcceptedStillReportsClientIndex )
     // 수락 앞에 왔던 데이터 패킷의 신뢰 메시지는 재전송이 메운다.
     SW_ASSERT_TRUE( server.sendMessage( 1, NetChannelType::ReliableOrdered, makeMessage( 4321 ) ) );
     runAll( 0.5 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( second.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( second.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( 4321, readMessageValue( buffer ) );
 }
 
@@ -1123,10 +1123,10 @@ SW_TEST_CASE( NetworkTest, IdleConnectionsSendKeepAlivesInsteadOfEveryInterval )
         SW_EXPECT_FALSE( pair.getClient( 0 ).sendMessage( 0, NetChannelType::Unreliable, makeMessage( 0, NetConnection::kMaxSingleMessageSize + 1 ) ) );
     }
     pair.run( 2.0 / 30.0 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( pair.getServer().receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( pair.getServer().receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_EQUAL( NetConnection::kMaxSingleMessageSize, static_cast<int32>( buffer.size() ) );
     SW_EXPECT_EQUAL( 777, readMessageValue( buffer ) );
 }
@@ -1162,13 +1162,13 @@ SW_TEST_CASE( NetworkTest, MessageRouterDispatchesByRangeAndKeepsUnhandled )
     SW_EXPECT_EQUAL( 1, lockstep.getHandledCount() );
     SW_EXPECT_EQUAL( 1, gameFirst.getHandledCount() );
     SW_EXPECT_EQUAL( 2, gameSecond.getHandledCount() );
-    SW_EXPECT_EQUAL( 0, gameSecond.getLastConnectionId() );
+    SW_EXPECT_EQUAL( 0, gameSecond.getLastConnectionID() );
     // 거절(0x83 · 0x22)과 처리기 없는 영역(0x51)은 받은 순서대로 남는다.
     SW_ASSERT_EQUAL( 3, static_cast<int32>( listUnhandled.size() ) );
     SW_EXPECT_EQUAL( 0x83, static_cast<int32>( listUnhandled[0]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0x51, static_cast<int32>( listUnhandled[1]._buffer[0] ) );
     SW_EXPECT_EQUAL( 0x22, static_cast<int32>( listUnhandled[2]._buffer[0] ) );
-    SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionId );
+    SW_EXPECT_EQUAL( 0, listUnhandled[0]._connectionID );
 
     // 뺀 처리기는 더 묻지 않는다. 빈 메시지는 누구에게도 가지 않는다.
     router.removeHandler( &gameFirst );
@@ -1246,16 +1246,16 @@ SW_TEST_CASE( NetworkTest, RouterTellsHandlersAboutConnectionsBeforeTheirMessage
             _log.push_back( _bOpen ? 'M' : 'x' );
             return NetHandleResult::Handled;
         }
-        void onConnectionOpened( int32 connectionId ) override
+        void onConnectionOpened( int32 connectionID ) override
         {
-            (void)connectionId;
+            (void)connectionID;
             _bOpen = true;
             _log.push_back( 'O' );
         }
-        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override
         {
             (void)reason;
-            (void)connectionId;
+            (void)connectionID;
             _bOpen = false;
             _log.push_back( 'C' );
         }
@@ -1320,14 +1320,14 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
         SW_ASSERT_TRUE( arrClient[index].sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( index ) ) );
     }
     runAll( 0.2 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;
     vector<uint8>  buffer;
     int32          receivedCount = 0;
-    while ( server.receiveMessage( connectionId, channel, buffer ) )
+    while ( server.receiveMessage( connectionID, channel, buffer ) )
     {
         const int32 clientIndex = readMessageValue( buffer );
-        SW_EXPECT_EQUAL( static_cast<int32>( 6000 + clientIndex ), static_cast<int32>( server.getConnectionAddress( connectionId )._port ) );
+        SW_EXPECT_EQUAL( static_cast<int32>( 6000 + clientIndex ), static_cast<int32>( server.getConnectionAddress( connectionID )._port ) );
         ++receivedCount;
     }
     SW_EXPECT_EQUAL( kClientCount, receivedCount );
@@ -1341,8 +1341,8 @@ SW_TEST_CASE( NetworkTest, ServerTellsManyClientsApartByAddress )
     SW_ASSERT_EQUAL( kClientCount, server.getConnectedCount() );
     SW_ASSERT_TRUE( arrClient[7].sendMessage( 0, NetChannelType::ReliableOrdered, makeMessage( 7 ) ) );
     runAll( 0.2 );
-    SW_ASSERT_TRUE( server.receiveMessage( connectionId, channel, buffer ) );
-    SW_EXPECT_EQUAL( 6007, static_cast<int32>( server.getConnectionAddress( connectionId )._port ) );
+    SW_ASSERT_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
+    SW_EXPECT_EQUAL( 6007, static_cast<int32>( server.getConnectionAddress( connectionID )._port ) );
 }
 
 /**
@@ -1381,24 +1381,24 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
     writer.begin( NetMessageRange::kGame ).writeVarUint( 7 );
     SW_EXPECT_EQUAL( 1, writer.sendToPeers( arrClient[0], NetChannelType::Unreliable ) );
     runAll( 0.2 );
-    int32          connectionId = -1;
+    int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::ReliableOrdered;
     vector<uint8>  buffer;
-    SW_ASSERT_TRUE( server.receiveMessage( connectionId, channel, buffer ) );
+    SW_ASSERT_TRUE( server.receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
 
     // 서버의 중계 — 보낸 클라이언트 0 말고 1 만, 같은 채널로.
     NetMessageContext context;
     context._pMessage     = buffer.data();
     context._messageSize  = static_cast<int32>( buffer.size() );
-    context._connectionId = connectionId;
+    context._connectionID = connectionID;
     context._channel      = channel;
     context._kind         = buffer[0];
     SW_EXPECT_EQUAL( 1, NetMessageRouter::relayToOtherPeers( server, context ) );
     SW_EXPECT_EQUAL( 0, NetMessageRouter::relayToOtherPeers( arrClient[0], context ) ); // 클라이언트는 중계하지 않는다
     runAll( 0.2 );
-    SW_EXPECT_FALSE( arrClient[0].receiveMessage( connectionId, channel, buffer ) );
-    SW_ASSERT_TRUE( arrClient[1].receiveMessage( connectionId, channel, buffer ) );
+    SW_EXPECT_FALSE( arrClient[0].receiveMessage( connectionID, channel, buffer ) );
+    SW_ASSERT_TRUE( arrClient[1].receiveMessage( connectionID, channel, buffer ) );
     SW_EXPECT_TRUE( channel == NetChannelType::Unreliable );
 
     // 서버 → 모두.
@@ -1407,7 +1407,7 @@ SW_TEST_CASE( NetworkTest, SendToPeersAndRelayReachEveryOtherPeer )
     runAll( 0.2 );
     for ( NetHost& client : arrClient )
     {
-        SW_EXPECT_TRUE( client.receiveMessage( connectionId, channel, buffer ) );
+        SW_EXPECT_TRUE( client.receiveMessage( connectionID, channel, buffer ) );
     }
 }
 

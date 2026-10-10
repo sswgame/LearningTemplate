@@ -22,7 +22,7 @@ namespace sw
     {
         AdminReply        _reply{};
         NetIdempotencyKey _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘긴다
-        uint64            _requestId{ 0 };
+        uint64            _requestID{ 0 };
         uint16            _method{ 0 };
         uint16            _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
     };
@@ -53,16 +53,16 @@ namespace sw
         {
             ReplyDelegate     _onReply{};
             NetIdempotencyKey _key{};
-            uint64            _requestId{ 0 };
+            uint64            _requestID{ 0 };
             uint16            _method{ 0 };
         };
 
         void onResponse( const OnlineResponse& response );
 
-        unordered_map<uint64, PendingCall> _mapClientIdToCall;
+        unordered_map<uint64, PendingCall> _mapClientIDToCall;
         PendingCall                        _sendingCall;
         OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestId;
+        uint64                             _nextRequestID;
         uint8                              _bSending;
     };
 } // namespace sw

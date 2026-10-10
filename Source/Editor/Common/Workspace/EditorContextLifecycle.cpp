@@ -149,10 +149,10 @@ namespace sw::editor
     void EditorContext::destroyViewTarget( EditorViewKind kind )
     {
         EditorViewTarget& view = _arrViewTarget[static_cast<uint32>( kind )];
-        if ( view._pTextureId != nullptr && _pRendererBackend != nullptr )
+        if ( view._pTextureID != nullptr && _pRendererBackend != nullptr )
         {
-            _pRendererBackend->unregisterTexture( view._pTextureId );
-            view._pTextureId = nullptr;
+            _pRendererBackend->unregisterTexture( view._pTextureID );
+            view._pTextureID = nullptr;
         }
 
         if ( view._renderTarget != 0 && _pRHIDevice != nullptr && _pRHIDevice->getResourceFactory() != nullptr )
@@ -214,6 +214,6 @@ namespace sw::editor
         view._width  = width;
         view._height = height;
         if ( _pRendererBackend != nullptr )
-            view._pTextureId = _pRendererBackend->registerTexture( view._renderTarget );
+            view._pTextureID = _pRendererBackend->registerTexture( view._renderTarget );
     }
 } // namespace sw::editor

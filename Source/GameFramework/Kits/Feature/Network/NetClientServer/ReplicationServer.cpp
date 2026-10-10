@@ -38,11 +38,11 @@ namespace sw
         _worldEntityCount = 0;
     }
 
-    ReplicationServer::ClientState& ReplicationServer::acquireClient( int32 connectionId )
+    ReplicationServer::ClientState& ReplicationServer::acquireClient( int32 connectionID )
     {
-        if ( connectionId >= static_cast<int32>( _listClient.size() ) )
-            _listClient.resize( static_cast<size_t>( connectionId + 1 ) );
-        ClientState& client = _listClient[static_cast<size_t>( connectionId )];
+        if ( connectionID >= static_cast<int32>( _listClient.size() ) )
+            _listClient.resize( static_cast<size_t>( connectionID + 1 ) );
+        ClientState& client = _listClient[static_cast<size_t>( connectionID )];
         if ( client._bActive == SW_FALSE )
         {
             client          = ClientState{};
@@ -53,18 +53,18 @@ namespace sw
         return client;
     }
 
-    void ReplicationServer::resetClient( int32 connectionId )
+    void ReplicationServer::resetClient( int32 connectionID )
     {
-        if ( connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) )
-            _listClient[static_cast<size_t>( connectionId )] = ClientState{};
+        if ( connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) )
+            _listClient[static_cast<size_t>( connectionID )] = ClientState{};
     }
 
-    void ReplicationServer::onConnectionOpened( int32 connectionId ) { resetClient( connectionId ); }
+    void ReplicationServer::onConnectionOpened( int32 connectionID ) { resetClient( connectionID ); }
 
-    void ReplicationServer::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    void ReplicationServer::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        resetClient( connectionId );
+        resetClient( connectionID );
     }
 
     uint16 ReplicationServer::getMessageKindMask() const
@@ -79,21 +79,21 @@ namespace sw
         _worldEntityCount = 0; // 자리는 지우지 않는다 — `setEntity` 가 덮어쓰고 `endTick` 이 남는 것을 자른다(버퍼 용량을 다시 쓴다)
     }
 
-    void ReplicationServer::setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer )
+    void ReplicationServer::setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer )
     {
         if ( static_cast<int32>( buffer.size() ) > NetSnapshot::kMaxEntityBytes )
         {
             // 월드에는 넣는다(빼면 클라이언트에서 사라진다) — 델타가 싣지 않아 클라이언트는 마지막으로 받은 상태에 머문다.
             if ( _oversizedEntityCount == 0 )
                 SW_LOG_WARNING( "ReplicationServer: entity %# has %# state bytes, more than the snapshot limit %# - it is not replicated (further ones are only counted)",
-                                entityId, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
+                                entityID, static_cast<int32>( buffer.size() ), NetSnapshot::kMaxEntityBytes );
             ++_oversizedEntityCount;
         }
         if ( _worldEntityCount == _world._listEntity.size() )
             _world._listEntity.emplace_back();
         NetEntityState& entity = _world._listEntity[_worldEntityCount++];
-        entity._entityId       = entityId;
-        entity._typeId         = typeId;
+        entity._entityID       = entityID;
+        entity._typeID         = typeID;
         entity._buffer         = buffer; // 복사 대입 — 자리의 용량을 다시 쓴다
     }
 
@@ -138,7 +138,7 @@ namespace sw
         }
     }
 
-    void ReplicationServer::sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch )
+    void ReplicationServer::sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch )
     {
         // 이 클라이언트에게 관련 있는 것만 — 엔티티 버퍼는 자리에 덮어써 용량을 남긴다.
         NetSnapshot& filtered            = scratch._filtered;
@@ -150,14 +150,14 @@ namespace sw
         size_t relevantCount = 0;
         for ( const NetEntityState& entity : std::as_const( _world._listEntity ) ) // 여러 워커가 함께 읽는다
         {
-            if ( _pPolicy->isRelevant( connectionId, entity ) == false )
+            if ( _pPolicy->isRelevant( connectionID, entity ) == false )
                 continue;
             if ( relevantCount < filtered._listEntity.size() )
                 filtered._listEntity[relevantCount] = entity;
             else
                 filtered._listEntity.push_back( entity );
             ++relevantCount;
-            prioritizer.accumulate( entity._entityId, _pPolicy->computePriority( connectionId, entity ), 1.0f ); // 스냅샷 하나 = 한 번
+            prioritizer.accumulate( entity._entityID, _pPolicy->computePriority( connectionID, entity ), 1.0f ); // 스냅샷 하나 = 한 번
         }
         filtered._listEntity.resize( relevantCount );
         prioritizer.removeUntouched(); // 더는 관련 없는 엔티티는 잊는다(다시 관련되면 0 에서)
@@ -197,13 +197,13 @@ namespace sw
         // 받는 쪽이 이미 지금 상태인 것은 확정으로 0, 이번에 실은 것은 확인 기다리는 보냄으로 0 — 못 실은 것은 쌓인 채로 다음 스냅샷에서 앞선다.
         for ( size_t index = 0; index < filtered._listEntity.size(); ++index )
         {
-            const uint32 entityId = filtered._listEntity[index]._entityId;
+            const uint32 entityID = filtered._listEntity[index]._entityID;
             if ( scratch._listCurrent[index] == NetSnapshot::kEntityAlreadyCurrent )
-                prioritizer.markSent( entityId );
+                prioritizer.markSent( entityID );
             else if ( scratch._listCurrent[index] == NetSnapshot::kEntityWritten )
-                prioritizer.markSentUnconfirmed( entityId, _world._tick );
+                prioritizer.markSentUnconfirmed( entityID, _world._tick );
         }
-        (void)scratch._messageWriter.send( *_pHost, connectionId, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
+        (void)scratch._messageWriter.send( *_pHost, connectionID, NetChannelType::UnreliableSequenced ); // 여러 스레드가 동시에 — NetHost 가 지킨다
     }
 
     void ReplicationServer::resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const
@@ -215,25 +215,25 @@ namespace sw
         for ( const NetEntityState& entity : filtered._listEntity )
         {
             uint32 sentTick = 0;
-            if ( prioritizer.findUnconfirmedSendTick( entity._entityId, sentTick ) == false )
+            if ( prioritizer.findUnconfirmedSendTick( entity._entityID, sentTick ) == false )
                 continue;
             const bool bAckedPast = client._bHasAck == SW_TRUE && client._ackedTick >= sentTick;
             const bool bExpired   = _world._tick - sentTick >= capacity; // 보낸 재구성이 고리에서 밀렸다 — 더 기다리지 않는다
             if ( bAckedPast == false && bExpired == false )
                 continue; // 아직 오가는 중
             const NetSnapshot*    pSent      = bExpired ? nullptr : client._listSent.find( sentTick );
-            const NetEntityState* pSentState = pSent != nullptr ? pSent->findEntity( entity._entityId ) : nullptr;
-            const NetEntityState* pHave      = pAcked != nullptr ? pAcked->findEntity( entity._entityId ) : nullptr;
-            const bool            bDelivered = pSentState != nullptr && pHave != nullptr && pHave->_typeId == pSentState->_typeId && pHave->_buffer == pSentState->_buffer;
-            prioritizer.resolveSend( entity._entityId, bDelivered );
+            const NetEntityState* pSentState = pSent != nullptr ? pSent->findEntity( entity._entityID ) : nullptr;
+            const NetEntityState* pHave      = pAcked != nullptr ? pAcked->findEntity( entity._entityID ) : nullptr;
+            const bool            bDelivered = pSentState != nullptr && pHave != nullptr && pHave->_typeID == pSentState->_typeID && pHave->_buffer == pSentState->_buffer;
+            prioritizer.resolveSend( entity._entityID, bDelivered );
         }
     }
 
     NetHandleResult ReplicationServer::handleNetMessage( const NetMessageContext& context, BitReader& body )
     {
-        if ( context._connectionId < 0 )
+        if ( context._connectionID < 0 )
             return NetHandleResult::Malformed;
-        ClientState& client = acquireClient( context._connectionId );
+        ClientState& client = acquireClient( context._connectionID );
         if ( context._kind == NetClientServerMessage::kSnapshotAck )
         {
             const uint32 tick = static_cast<uint32>( body.readVarUint() );
@@ -261,12 +261,12 @@ namespace sw
         return true;
     }
 
-    bool ReplicationServer::popInput( int32 connectionId, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact )
+    bool ReplicationServer::popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact )
     {
         outbExact = false;
-        if ( connectionId < 0 || connectionId >= static_cast<int32>( _listClient.size() ) )
+        if ( connectionID < 0 || connectionID >= static_cast<int32>( _listClient.size() ) )
             return false;
-        ClientState& client = _listClient[static_cast<size_t>( connectionId )];
+        ClientState& client = _listClient[static_cast<size_t>( connectionID )];
         // 그 틱 것이 있으면 그것, 없으면 지난번에 꺼낸 틱 뒤로 늦게 온 것 중 가장 새것(되풀이할 값을 새것으로 바꾼다).
         const NetInputEntry* pEntry = client._input.findLatestAtOrBefore( tick, client._input.getWindowFirst() );
         if ( pEntry != nullptr )
@@ -283,21 +283,21 @@ namespace sw
         return true;
     }
 
-    void ReplicationServer::setLastProcessedInputTick( int32 connectionId, uint32 tick )
+    void ReplicationServer::setLastProcessedInputTick( int32 connectionID, uint32 tick )
     {
-        if ( connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) )
-            _listClient[static_cast<size_t>( connectionId )]._lastProcessedInputTick = tick;
+        if ( connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) )
+            _listClient[static_cast<size_t>( connectionID )]._lastProcessedInputTick = tick;
     }
 
-    float32 ReplicationServer::getClientViewTick( int32 connectionId ) const
+    float32 ReplicationServer::getClientViewTick( int32 connectionID ) const
     {
-        return connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionId )]._viewTick : 0.0f;
+        return connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionID )]._viewTick : 0.0f;
     }
 
     uint64 ReplicationServer::getOversizedEntityCount() const { return _oversizedEntityCount; }
 
-    uint32 ReplicationServer::getAckedTick( int32 connectionId ) const
+    uint32 ReplicationServer::getAckedTick( int32 connectionID ) const
     {
-        return connectionId >= 0 && connectionId < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionId )]._ackedTick : 0;
+        return connectionID >= 0 && connectionID < static_cast<int32>( _listClient.size() ) ? _listClient[static_cast<size_t>( connectionID )]._ackedTick : 0;
     }
 } // namespace sw

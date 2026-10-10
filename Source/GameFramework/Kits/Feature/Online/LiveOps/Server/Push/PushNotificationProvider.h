@@ -29,7 +29,7 @@ namespace sw
     /** @brief 제공자가 돌려주는 결과 하나입니다. */
     struct PushDeliveryResult
     {
-        uint64             _deliveryId{ 0 };
+        uint64             _deliveryID{ 0 };
         int64              _retryAfterMs{ 0 };
         PushDeliveryStatus _status{ PushDeliveryStatus::Delivered };
     };
@@ -48,8 +48,8 @@ namespace sw
         IPushNotificationProvider( const IPushNotificationProvider& )                                                                          = delete;
         IPushNotificationProvider& operator=( const IPushNotificationProvider& )                                                               = delete;
         virtual ~IPushNotificationProvider()                                                                                                   = default;
-        virtual string_view getProviderId() const                                                                                              = 0;
-        virtual void        send( uint64 deliveryId, const string& deviceToken, const string& locale, const PushNotificationMessage& message ) = 0;
+        virtual string_view getProviderID() const                                                                                              = 0;
+        virtual void        send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message ) = 0;
         /** @brief 끝난 배달의 결과를 @p outListResult 뒤에 붙입니다. 붙인 수입니다. */
         virtual int32 pollResults( vector<PushDeliveryResult>& outListResult ) = 0;
     };

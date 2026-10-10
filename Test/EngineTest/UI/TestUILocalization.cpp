@@ -152,7 +152,7 @@ SW_TEST_CASE( UILocalizationTest, FontChainChangesWithCulture )
     sw::TextWidget* pText = fixture.pushText( "\xEA\xB0\x80" ); // '가' — 키가 아닌 글 그대로
     UILocalizationTestUtil::runFrame( fixture._input, fixture._ui );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( pText->getLastLayout()._listGlyph.size() ) );
-    const sw::FontFaceId koreanFace = pText->getLastLayout()._listGlyph[0]._face;
+    const sw::FontFaceID koreanFace = pText->getLastLayout()._listGlyph[0]._face;
     SW_EXPECT_EQUAL( 0xAC00u, pText->getLastLayout()._listGlyph[0]._glyphIndex ); // 가짜 면의 글리프 번호 = 코드 포인트
 
     SW_ASSERT_TRUE( fixture._localization.setCurrentLanguage( "en" ) );

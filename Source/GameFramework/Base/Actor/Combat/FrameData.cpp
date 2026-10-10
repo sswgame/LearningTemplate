@@ -71,13 +71,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MoveFrameData move;
-            move._id              = hashed_string( pId );
+            move._id              = hashed_string( pID );
             const utf8* pName     = node.findAttribute( "name" );
-            move._name            = pName != nullptr ? pName : pId;
+            move._name            = pName != nullptr ? pName : pID;
             move._startup         = MathUtil::max( 1, node.getAttributeInt( "startup", move._startup ) );
             move._active          = MathUtil::max( 1, node.getAttributeInt( "active", move._active ) );
             move._recovery        = MathUtil::max( 0, node.getAttributeInt( "recovery", move._recovery ) );
@@ -105,7 +105,7 @@ namespace sw
                 hitbox._shape     = FrameDataInternal::parseShape( child.getAttributeText( "shape" ) );
                 if ( hitbox._toFrame < hitbox._fromFrame || hitbox._fromFrame > lastFrame )
                 {
-                    SW_LOG_WARNING( "%#: move '%#' has a hitbox outside its frames - skipped", sourceName, pId );
+                    SW_LOG_WARNING( "%#: move '%#' has a hitbox outside its frames - skipped", sourceName, pID );
                     continue;
                 }
                 move._listHitbox.push_back( hitbox );
@@ -118,10 +118,10 @@ namespace sw
                 window._toFrame    = child.getAttributeInt( "to", lastFrame );
                 window._bOnHitOnly = child.getAttributeBool( "onHit", false ) ? SW_TRUE : SW_FALSE;
                 GameDataXML::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
-                { window._listMoveId.push_back( hashed_string( token ) ); } );
-                if ( window._listMoveId.empty() || window._toFrame < window._fromFrame )
+                { window._listMoveID.push_back( hashed_string( token ) ); } );
+                if ( window._listMoveID.empty() || window._toFrame < window._fromFrame )
                 {
-                    SW_LOG_WARNING( "%#: move '%#' has an empty cancel window - skipped", sourceName, pId );
+                    SW_LOG_WARNING( "%#: move '%#' has an empty cancel window - skipped", sourceName, pID );
                     continue;
                 }
                 move._listCancel.push_back( window );
@@ -238,7 +238,7 @@ namespace sw
         return static_cast<uint32>( outListHitbox.size() );
     }
 
-    bool MoveTimeline::canCancelInto( const hashed_string& moveId ) const
+    bool MoveTimeline::canCancelInto( const hashed_string& moveID ) const
     {
         if ( _bPlaying == SW_FALSE )
             return false;
@@ -248,9 +248,9 @@ namespace sw
                 continue;
             if ( window._bOnHitOnly == SW_TRUE && _bContact == SW_FALSE )
                 continue;
-            for ( const hashed_string& candidate : window._listMoveId )
+            for ( const hashed_string& candidate : window._listMoveID )
             {
-                if ( candidate == moveId )
+                if ( candidate == moveID )
                     return true;
             }
         }
@@ -308,18 +308,18 @@ namespace sw
             cancel();
             return true;
         }
-        hashed_string moveId;
+        hashed_string moveID;
         int32         frame            = 0;
         int32         hitstopRemaining = 0;
         uint8         bContact         = SW_FALSE;
         uint8         bBlocked         = SW_FALSE;
-        if ( StateArchiveUtil::readName( archive, moveId ) == false )
+        if ( StateArchiveUtil::readName( archive, moveID ) == false )
             return false;
         archive >> frame;
         archive >> hitstopRemaining;
         archive >> bContact;
         archive >> bBlocked;
-        const MoveFrameData* pMove = catalog.findMove( moveId );
+        const MoveFrameData* pMove = catalog.findMove( moveID );
         if ( archive.isError() || pMove == nullptr )
             return false;
         return restoreState( *pMove, frame, hitstopRemaining, bContact == SW_TRUE, bBlocked == SW_TRUE );

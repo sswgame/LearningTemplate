@@ -522,7 +522,7 @@ namespace sw::editor
     void ContentBrowserPanel::drawSourcesSection()
     {
         editor::EditorSectionDesc sourcesDesc{};
-        sourcesDesc._pId       = "##cb_sources";
+        sourcesDesc._pID       = "##cb_sources";
         sourcesDesc._kind      = editor::EditorSectionKind::Child;
         sourcesDesc._childSize = float2{ 220.0f, 0.0f };
         // 오른쪽 Assets 칸과 같은 높이로 — 아래 개수 줄(drawCountLabel)이 창 안에 남는다. 높이 0(남은 전부)이면 그 줄이 창 밖으로 밀려 패널 전체가 스크롤된다.
@@ -634,7 +634,7 @@ namespace sw::editor
         }
 
         editor::EditorSectionDesc assetsDesc{};
-        assetsDesc._pId   = "##cb_assets";
+        assetsDesc._pID   = "##cb_assets";
         assetsDesc._kind  = editor::EditorSectionKind::Child;
         assetsDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining;
         EditorChrome::beginSection( assetsDesc );

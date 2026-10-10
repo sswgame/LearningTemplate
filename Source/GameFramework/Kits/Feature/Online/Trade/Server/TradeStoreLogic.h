@@ -39,20 +39,20 @@ namespace sw
     class SW_GF_API TradeStoreLogic
     {
     public:
-        TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverId, const TradeSettings& settings );
+        TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
 
         static const hashed_string& getSessionTable();
         static const hashed_string& getActiveTable();
         static const hashed_string& getOwnerTable();
 
         /** @brief 거래를 엽니다(Invited). @p seed 로 거래 id 를 만든다(겹치면 다음 값). 양쪽 활성 링크가 "없어야 함" — 닫혔거나 시한이 지난 옛 거래는 이 자리에서 정리한다. */
-        TradeResult invite( AccountId fromId, AccountId toId, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot );
+        TradeResult invite( AccountID fromID, AccountID toID, uint64 seed, int64 nowMs, TradeSnapshot& outSnapshot );
         /** @brief 명령 하나 — 둘 다 확정이 되면 같은 트랜잭션에서 정산합니다. 닫힌 거래의 확정 재시도는 그 결과(Settled → Ok)를 돌려준다. */
-        TradeResult applyCommand( uint64 tradeId, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger );
+        TradeResult applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferOutcome& outLedger );
         /** @brief 시한이 지났으면 닫습니다(Timeout). 닫았으면 Ok, 아직이면 WrongState. */
-        TradeResult closeIfIdle( uint64 tradeId, int64 nowMs, TradeSnapshot& outSnapshot );
+        TradeResult closeIfIdle( uint64 tradeID, int64 nowMs, TradeSnapshot& outSnapshot );
         /** @brief 계정의 열린 거래를 @p reason 으로 닫습니다(떠남 · 제재). 없으면 NotFound. */
-        TradeResult closeForAccount( AccountId accountId, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot );
+        TradeResult closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot );
         /** @brief 이 서버가 주인인 열린 거래를 모두 닫습니다(ServerRestart — 아무것도 안 움직였으니 안전). 닫은 것을 @p outListClosed 에. */
         TradeResult recoverOwned( int64 nowMs, vector<TradeSnapshot>& outListClosed );
 
@@ -62,11 +62,11 @@ namespace sw
         struct SessionRead
         {
             TradeSnapshot _snapshot{};
-            uint64        _ownerServerId{ 0 };
+            uint64        _ownerServerID{ 0 };
             uint64        _version{ 0 };
         };
 
-        TradeResult readSession( uint64 tradeId, SessionRead& outSession );
+        TradeResult readSession( uint64 tradeID, SessionRead& outSession );
         /** @brief 닫힌 레코드 · 활성 링크 지움 · 주인 색인 지움을 붙입니다. */
         void stageClose( const SessionRead& session, const TradeSnapshot& closed, ServiceTransaction& inoutTransaction );
         /** @brief 잠그는 쪽의 다리를 원장 잔액과 견줍니다(미리 보기 — 정산 때 다시 본다). */
@@ -76,7 +76,7 @@ namespace sw
         const ITradePolicy&      _policy;
         const ILedgerPolicy*     _pLedgerPolicy;
         const TradeSettings&     _settings;
-        uint64                   _serverId;
+        uint64                   _serverID;
     };
 } // namespace sw
 
@@ -85,9 +85,9 @@ namespace sw
     /** @brief 거래 레코드 코덱입니다. */
     struct SW_GF_API TradeRecordUtil
     {
-        static vector<uint8>      encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerId );
-        [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerId );
+        static vector<uint8>      encodeSession( const TradeSnapshot& snapshot, uint64 ownerServerID );
+        [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID );
         /** @brief 정산 분개 키입니다. */
-        [[nodiscard]] static bool makeJournalKey( uint64 tradeId, string& outKey );
+        [[nodiscard]] static bool makeJournalKey( uint64 tradeID, string& outKey );
     };
 } // namespace sw

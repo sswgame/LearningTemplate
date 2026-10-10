@@ -189,15 +189,15 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
-        int32 findPhaseIndex( const hashed_string& phaseId ) const;
-        int32 findSignalIndex( const hashed_string& signalId ) const;
+        int32 findPhaseIndex( const hashed_string& phaseID ) const;
+        int32 findSignalIndex( const hashed_string& signalID ) const;
 
         const AIDirectorIntensityDef&     getIntensity() const { return _intensity; }
         const vector<AIDirectorPhaseDef>& getPhases() const { return _listPhase; }
         const vector<AIDirectorPoolDef>&  getPools() const { return _listPool; }
         int32                             getStartPhaseIndex() const { return _startPhaseIndex; }
-        /** @brief 이 프로필이 내는 모든 조우 · 보상 id 를 @p outListId 에 붙입니다(겹치지 않게) — 게임이 아는 id 인지 검사할 때 씁니다. */
-        void collectEncounterIds( vector<hashed_string>& outListId ) const;
+        /** @brief 이 프로필이 내는 모든 조우 · 보상 id 를 @p outListID 에 붙입니다(겹치지 않게) — 게임이 아는 id 인지 검사할 때 씁니다. */
+        void collectEncounterIDs( vector<hashed_string>& outListID ) const;
 
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
@@ -205,7 +205,7 @@ namespace sw
         [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPool( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName );
         bool               resolveReferences( string_view sourceName );
-        bool               validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerId, string_view sourceName ) const;
+        bool               validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerID, string_view sourceName ) const;
 
         AIDirectorIntensityDef     _intensity;
         vector<AIDirectorPhaseDef> _listPhase;

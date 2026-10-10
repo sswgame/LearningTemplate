@@ -33,7 +33,7 @@ namespace sw
     {
         string _storeName{};
         string _payload{};
-        uint64 _accountId{ 0 };
+        uint64 _accountID{ 0 };
         uint64 _ticket{ 0 }; ///< 등록부가 매기는 번호 — 결과가 같은 번호로 돌아온다
     };
 } // namespace sw
@@ -44,11 +44,11 @@ namespace sw
     struct ReceiptValidationResult
     {
         string        _storeName{};
-        string        _transactionId{}; ///< 스토어의 거래 id(원장 분개 키가 된다) — 96 바이트 이하
-        string        _productId{};
+        string        _transactionID{}; ///< 스토어의 거래 id(원장 분개 키가 된다) — 96 바이트 이하
+        string        _productID{};
         string        _failureText{}; ///< 로그용(영어)
         uint64        _ticket{ 0 };
-        uint64        _accountId{ 0 };
+        uint64        _accountID{ 0 };
         int64         _purchaseTimeMs{ 0 };
         ReceiptStatus _status{ ReceiptStatus::Invalid };
         uint8         _bSandbox{ SW_FALSE }; ///< 시험 결제(샌드박스 · 테스트 카드)
@@ -93,7 +93,7 @@ namespace sw
         /** @brief 개발 전용 제공자가 하나라도 있는가입니다. */
         bool hasDevelopmentValidator() const;
         /** @brief 맡기고 번호를 돌려줍니다. 모르는 스토어면 0 이고 맡기지 않는다. */
-        uint64 submitValidation( string_view storeName, string_view payload, uint64 accountId );
+        uint64 submitValidation( string_view storeName, string_view payload, uint64 accountID );
         void   pollCompletions( vector<ReceiptValidationResult>& outListResult );
         void   shutdown();
 

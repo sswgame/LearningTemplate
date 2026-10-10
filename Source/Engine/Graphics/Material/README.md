@@ -41,7 +41,7 @@ MeshComponent  ──▶  GPUSceneBuilder 가 머티리얼 원소로 모아 셰�
 1. `Resource/engine/materials/defaultmaterial.material` 을 `Resource/game/empty/materials/` 폴더에 red.material 이라는 이름으로 복사합니다. 리소스 경로는 소문자여야 합니다.
 2. 복사한 파일의 `name` 을 `Red` 로 바꾸고, `color` 프로퍼티의 `defaultValue` 를 `"1.0 0.1 0.1 1.0"` 으로 바꿉니다.
    `_permutations` 는 지우지 말고 그대로 둡니다. 퍼뮤테이션이 없으면 백엔드마다 다른 방식으로 그리기에 실패합니다.
-3. 메시에 저장되는 머티리얼로 지정합니다. `EmptyGame::ensureTutorialSpinner` 에서 `setMeshId` 다음에 한 줄을 넣습니다.
+3. 메시에 저장되는 머티리얼로 지정합니다. `EmptyGame::ensureTutorialSpinner` 에서 `setMeshID` 다음에 한 줄을 넣습니다.
 
    ```cpp
    pMesh->setMaterialPath( "game/empty/materials/red.material" );

@@ -90,8 +90,8 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
     SW_EXPECT_TRUE( inventory.moveSlot( splitSlot, firstOre ) ); // 같은 아이템 — 합친다(넘치면 남긴다)
     SW_EXPECT_EQUAL( 6, inventory.getItemCount( hashed_string( "ore" ) ) );
     inventory.sortSlots();
-    SW_EXPECT_TRUE( inventory.getSlot( 0 )._itemId == hashed_string( "ore" ) && inventory.getSlot( 0 )._count == 5 ); // Material 먼저
-    SW_EXPECT_TRUE( inventory.getSlot( 2 )._itemId == hashed_string( "sword" ) );
+    SW_EXPECT_TRUE( inventory.getSlot( 0 )._itemID == hashed_string( "ore" ) && inventory.getSlot( 0 )._count == 5 ); // Material 먼저
+    SW_EXPECT_TRUE( inventory.getSlot( 2 )._itemID == hashed_string( "sword" ) );
     SW_EXPECT_EQUAL( 1, inventory.countEmptySlots() );
 
     // 내구도 — 다 닳으면 칸이 빈다.
@@ -282,15 +282,15 @@ SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
     // 기반 격자 가방 — 모양은 연결 함수로.
     GridInventory grid;
     grid.initialize( GridInventory::ShapeDelegate::create(
-                         []( const hashed_string& itemId, GridItemShape& outShape )
+                         []( const hashed_string& itemID, GridItemShape& outShape )
     {
-        if ( itemId == hashed_string( "rifle" ) )
+        if ( itemID == hashed_string( "rifle" ) )
         {
             outShape._width  = 3;
             outShape._height = 1;
             return true;
         }
-        if ( itemId == hashed_string( "ammo" ) )
+        if ( itemID == hashed_string( "ammo" ) )
         {
             outShape._maxStack = 30;
             return true;

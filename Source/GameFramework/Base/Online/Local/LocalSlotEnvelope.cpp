@@ -17,15 +17,15 @@ namespace sw
         {
             static constexpr uint8  kArrMagic[4] = { 'S', 'W', 'L', 'S' };
             static constexpr size_t kCrcSize     = 4;
-            static constexpr size_t kKeyIdSize   = 8;
+            static constexpr size_t kKeyIDSize   = 8;
             static constexpr utf8   kSealInfo[]  = "swls-seal-v1";
-            static constexpr utf8   kKeyIdInfo[] = "swls-key-id-v1";
+            static constexpr utf8   kKeyIDInfo[] = "swls-key-id-v1";
 
             struct Header
             {
                 uint64         _originalSize{ 0 };
                 uint64         _bodySize{ 0 };
-                uint64         _keyId{ 0 };
+                uint64         _keyID{ 0 };
                 uint32         _formatVersion{ 0 };
                 uint8          _codec{ 0 };
                 LocalStoreSeal _seal{ LocalStoreSeal::None };
@@ -77,7 +77,7 @@ namespace sw
                 writeUint32( pOut + 8, header._formatVersion );
                 writeUint64( pOut + 12, header._originalSize );
                 writeUint64( pOut + 20, header._bodySize );
-                writeUint64( pOut + 28, header._keyId );
+                writeUint64( pOut + 28, header._keyID );
             }
 
             static CompressionCodecRegistry* findRegistry( const LocalSealContext& context )
@@ -86,24 +86,24 @@ namespace sw
             }
 
             /** @brief 장치 키에서 봉인 키 · 키 표시를 가릅니다. 창구 · 키가 없으면 Invalid. */
-            static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAeadKeySize], uint64& outKeyId )
+            static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAeadKeySize], uint64& outKeyID )
             {
                 if ( context._pSecurityProvider == nullptr || context._pKeyProvider == nullptr )
                     return LocalStoreResult::Invalid;
                 uint8 arrDeviceKey[ILocalStoreKeyProvider::kKeySize] = {};
                 if ( context._pKeyProvider->getSealKey( arrDeviceKey ) == false )
                     return LocalStoreResult::IOError;
-                uint8      arrKeyId[kKeyIdSize] = {};
+                uint8      arrKeyID[kKeyIDSize] = {};
                 const bool bDerived             = context._pSecurityProvider->computeHkdfSha256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                                  reinterpret_cast<const uint8*>( kSealInfo ), sizeof( kSealInfo ) - 1, outSealKey,
                                                                                                  NetSecurityConstant::kAeadKeySize ) &&
                                       context._pSecurityProvider->computeHkdfSha256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
-                                                                                     reinterpret_cast<const uint8*>( kKeyIdInfo ), sizeof( kKeyIdInfo ) - 1, arrKeyId,
-                                                                                     static_cast<int32>( kKeyIdSize ) );
+                                                                                     reinterpret_cast<const uint8*>( kKeyIDInfo ), sizeof( kKeyIDInfo ) - 1, arrKeyID,
+                                                                                     static_cast<int32>( kKeyIDSize ) );
                 std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
                 if ( bDerived == false )
                     return LocalStoreResult::IOError;
-                outKeyId = readUint64( arrKeyId );
+                outKeyID = readUint64( arrKeyID );
                 return LocalStoreResult::Ok;
             }
 
@@ -173,7 +173,7 @@ namespace sw
         uint8 arrSealKey[NetSecurityConstant::kAeadKeySize] = {};
         if ( options._seal != LocalStoreSeal::None )
         {
-            const LocalStoreResult keyResult = Internal::deriveKeys( context, arrSealKey, header._keyId );
+            const LocalStoreResult keyResult = Internal::deriveKeys( context, arrSealKey, header._keyID );
             if ( keyResult != LocalStoreResult::Ok )
                 return keyResult;
         }
@@ -234,7 +234,7 @@ namespace sw
         header._formatVersion = Internal::readUint32( pEnvelopeBytes + 8 );
         header._originalSize  = Internal::readUint64( pEnvelopeBytes + 12 );
         header._bodySize      = Internal::readUint64( pEnvelopeBytes + 20 );
-        header._keyId         = Internal::readUint64( pEnvelopeBytes + 28 );
+        header._keyID         = Internal::readUint64( pEnvelopeBytes + 28 );
         const bool bSizesSane = header._originalSize <= static_cast<uint64>( ILocalStore::kMaxSlotSize ) && header._bodySize <= envelopeByteCount;
         if ( bSizesSane == false )
             return LocalStoreResult::Corrupt;
@@ -260,11 +260,11 @@ namespace sw
                 if ( envelopeByteCount != expectedSize )
                     return LocalStoreResult::Corrupt;
                 uint8                  arrSealKey[NetSecurityConstant::kAeadKeySize] = {};
-                uint64                 keyId                                         = 0;
-                const LocalStoreResult keyResult                                     = Internal::deriveKeys( context, arrSealKey, keyId );
+                uint64                 keyID                                         = 0;
+                const LocalStoreResult keyResult                                     = Internal::deriveKeys( context, arrSealKey, keyID );
                 if ( keyResult != LocalStoreResult::Ok )
                     return keyResult;
-                if ( keyId != header._keyId )
+                if ( keyID != header._keyID )
                 {
                     std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                     return LocalStoreResult::WrongKey;

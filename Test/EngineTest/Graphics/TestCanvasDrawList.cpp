@@ -273,7 +273,7 @@ SW_TEST_CASE( CanvasDrawListTest, UIScaleConvertsToPixels )
 SW_TEST_CASE( CanvasDrawListTest, GlyphQuadUsesAtlasRect )
 {
     sw::test::FakeFontRasterizer rasterizer;
-    const sw::FontFaceId         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
     sw::GlyphCache               cache( rasterizer );
     const float32                rasterPixelSize = static_cast<float32>( cache.getRasterParams()._pixelSize );
 

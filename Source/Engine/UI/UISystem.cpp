@@ -391,11 +391,11 @@ namespace sw
         }
     }
 
-    bool UISystem::tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
+    bool UISystem::tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
     {
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            if ( screen->getTree().findWidgetById( widget ) != nullptr )
+            if ( screen->getTree().findWidgetByID( widget ) != nullptr )
                 return screen->_animationPlayer.tween( widget, propertyPath, endValue, duration, curve );
         }
         SW_LOG_WARNING( "[UI] Tween of '%#': widget %# is not in any screen", string( propertyPath ).c_str(), widget );
@@ -635,8 +635,8 @@ namespace sw
         // 이름으로 이어 갈 것 — 포커스 위젯 · 덮였을 때의 포커스 · 스크롤 오프셋.
         WidgetTree&           tree          = screen.getTree();
         const bool            bHadFocus     = _focus.getFocusedTree() == &tree;
-        const Widget*         pFocused      = bHadFocus ? tree.findWidgetById( _focus.getFocusedWidget() ) : nullptr;
-        const Widget*         pLastFocused  = tree.findWidgetById( screen._lastFocused );
+        const Widget*         pFocused      = bHadFocus ? tree.findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
+        const Widget*         pLastFocused  = tree.findWidgetByID( screen._lastFocused );
         const hashed_string   focusedName   = pFocused != nullptr ? pFocused->getName() : hashed_string{};
         const hashed_string   lastFocusName = pLastFocused != nullptr ? pLastFocused->getName() : hashed_string{};
         vector<Widget*>       listOldWidget;
@@ -655,7 +655,7 @@ namespace sw
         tree.setRoot( std::move( root ) );
         screen._listBinding    = std::move( listBinding );
         screen._listStyleSheet = std::move( listStyleSheet );
-        screen._lastFocused    = kInvalidWidgetId;
+        screen._lastFocused    = kInvalidWidgetID;
         // 뷰모델은 화면이 그대로 든다 — 식이 새 위젯 번호를 가리키니 다음 바인딩 단계가 다시 걸고 모든 칸을 쓴다.
         screen._bindingSet->markRebind();
         screen.onTreeRebuilt();
@@ -674,11 +674,11 @@ namespace sw
         }
         const Widget* pNewLast = lastFocusName.empty() ? nullptr : tree.findWidgetByName( lastFocusName );
         if ( pNewLast != nullptr )
-            screen._lastFocused = pNewLast->getId();
+            screen._lastFocused = pNewLast->getID();
         if ( bHadFocus )
         {
             const Widget* pNewFocus = focusedName.empty() ? nullptr : tree.findWidgetByName( focusedName );
-            if ( pNewFocus == nullptr || _focus.setFocus( tree, pNewFocus->getId() ) == false )
+            if ( pNewFocus == nullptr || _focus.setFocus( tree, pNewFocus->getID() ) == false )
                 restoreFocus( screen );
         }
         return true;
@@ -835,7 +835,7 @@ namespace sw
         _inputMode = mode;
         // :focus-visible 은 입력 방식을 따른다 — 포커스 위젯을 다시 맞춘다.
         WidgetTree* pFocusTree = _focus.getFocusedTree();
-        Widget*     pFocused   = pFocusTree != nullptr ? pFocusTree->findWidgetById( _focus.getFocusedWidget() ) : nullptr;
+        Widget*     pFocused   = pFocusTree != nullptr ? pFocusTree->findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
         if ( pFocused != nullptr )
             pFocused->invalidate( WidgetDirty::kStyle );
         UIScreen* pActive = getActiveScreen();
@@ -1024,7 +1024,7 @@ namespace sw
             return false;
         }
         const UIPointerResult result = _pointer.process( pTarget->getTree(), event );
-        if ( result._focusRequest != kInvalidWidgetId && pTarget->takesFocus() )
+        if ( result._focusRequest != kInvalidWidgetID && pTarget->takesFocus() )
             (void)_focus.setFocus( pTarget->getTree(), result._focusRequest );
         return result._bHandled == SW_TRUE;
     }
@@ -1238,7 +1238,7 @@ namespace sw
     {
         WidgetTree& tree = screen.getTree();
         // 포커스가 없으면 첫 탐색 입력은 기본 포커스를 잡는 데 쓴다(어디로 갈지 모르는 채 옮기지 않는다).
-        if ( _focus.getFocusedTree() != &tree || _focus.getFocusedWidget() == kInvalidWidgetId )
+        if ( _focus.getFocusedTree() != &tree || _focus.getFocusedWidget() == kInvalidWidgetID )
         {
             restoreFocus( screen );
             return _focus.getFocusedTree() == &tree;
@@ -1314,9 +1314,9 @@ namespace sw
         event._action       = action;
         event._value        = value;
         event._deltaSeconds = _inputDeltaSeconds;
-        WidgetId      handler{ kInvalidWidgetId };
+        WidgetID      handler{ kInvalidWidgetID };
         const UIReply reply = UIEventRouter::routeActionEvent( screen.getTree(), path, event, handler );
-        if ( reply.isHandled() && reply._focusRequest != kInvalidWidgetId )
+        if ( reply.isHandled() && reply._focusRequest != kInvalidWidgetID )
             (void)_focus.setFocus( screen.getTree(), reply._focusRequest );
         return reply.isHandled();
     }
@@ -1325,7 +1325,7 @@ namespace sw
     {
         const Widget* pFocused = nullptr;
         if ( _focus.getFocusedTree() != nullptr )
-            pFocused = _focus.getFocusedTree()->findWidgetById( _focus.getFocusedWidget() );
+            pFocused = _focus.getFocusedTree()->findWidgetByID( _focus.getFocusedWidget() );
         const bool               bWantsText = pFocused != nullptr && pFocused->supportsTextInput();
         const InputKeyboardFocus current    = _pInput->getKeyboardFocus();
         if ( bWantsText && current == InputKeyboardFocus::Game )
@@ -1347,7 +1347,7 @@ namespace sw
     void UISystem::dispatchTextEvent( string_view text, bool bComposition )
     {
         WidgetTree* pTree   = _focus.getFocusedTree();
-        Widget*     pWidget = pTree != nullptr ? pTree->findWidgetById( _focus.getFocusedWidget() ) : nullptr;
+        Widget*     pWidget = pTree != nullptr ? pTree->findWidgetByID( _focus.getFocusedWidget() ) : nullptr;
         if ( pWidget == nullptr || pWidget->supportsTextInput() == false )
             return;
         UITextEvent event{};
@@ -1359,13 +1359,13 @@ namespace sw
     void UISystem::restoreFocus( UIScreen& screen )
     {
         WidgetTree& tree = screen.getTree();
-        if ( screen._lastFocused != kInvalidWidgetId && _focus.setFocus( tree, screen._lastFocused ) )
+        if ( screen._lastFocused != kInvalidWidgetID && _focus.setFocus( tree, screen._lastFocused ) )
             return;
         if ( _inputMode != UIInputMode::Navigation || tree.getRoot() == nullptr )
             return;
         const Widget*  pDefault = screen.getDesc()._defaultFocus.empty() ? nullptr : tree.findWidgetByName( screen.getDesc()._defaultFocus );
-        const WidgetId target   = pDefault != nullptr ? pDefault->getId() : UINavigationSolver::findFirstFocusable( *tree.getRoot() );
-        if ( target != kInvalidWidgetId )
+        const WidgetID target   = pDefault != nullptr ? pDefault->getID() : UINavigationSolver::findFirstFocusable( *tree.getRoot() );
+        if ( target != kInvalidWidgetID )
             (void)_focus.setFocus( tree, target );
     }
 
@@ -1387,10 +1387,10 @@ namespace sw
         return context;
     }
 
-    WidgetId UISystem::addScreenMarker( unique_ptr<Widget> widget )
+    WidgetID UISystem::addScreenMarker( unique_ptr<Widget> widget )
     {
         if ( widget == nullptr )
-            return kInvalidWidgetId;
+            return kInvalidWidgetID;
         UIScreen* pMarkers = findScreen( _markerScreen );
         if ( pMarkers == nullptr || pMarkers->isClosing() )
         {
@@ -1404,13 +1404,13 @@ namespace sw
             pMarkers          = findScreen( _markerScreen );
         }
         PanelWidget* pRoot = castTo<PanelWidget>( pMarkers->getTree().getRoot() );
-        return pRoot != nullptr ? pRoot->addChild( std::move( widget ) )->getId() : kInvalidWidgetId;
+        return pRoot != nullptr ? pRoot->addChild( std::move( widget ) )->getID() : kInvalidWidgetID;
     }
 
-    void UISystem::removeScreenMarker( WidgetId widget )
+    void UISystem::removeScreenMarker( WidgetID widget )
     {
         UIScreen*    pMarkers = findScreen( _markerScreen );
-        Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetById( widget ) : nullptr;
+        Widget*      pWidget  = pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
         PanelWidget* pRoot    = pWidget != nullptr ? pWidget->getParent() : nullptr;
         if ( pRoot == nullptr )
             return;
@@ -1422,10 +1422,10 @@ namespace sw
         }
     }
 
-    Widget* UISystem::findScreenMarker( WidgetId widget ) const
+    Widget* UISystem::findScreenMarker( WidgetID widget ) const
     {
         const UIScreen* pMarkers = findScreen( _markerScreen );
-        return pMarkers != nullptr ? pMarkers->getTree().findWidgetById( widget ) : nullptr;
+        return pMarkers != nullptr ? pMarkers->getTree().findWidgetByID( widget ) : nullptr;
     }
 
     void UISystem::registerWidgetComponent( WidgetComponent& component )
@@ -1583,7 +1583,7 @@ namespace sw
             // 포커스 테두리 — 패드 · 키보드로 다룰 때만(언리얼 CommonUI · 콘솔 게임과 같다), 그 화면 위 · 위 화면 아래.
             if ( _inputMode != UIInputMode::Navigation || _focus.getFocusedTree() != &tree )
                 continue;
-            const Widget* pFocused = tree.findWidgetById( _focus.getFocusedWidget() );
+            const Widget* pFocused = tree.findWidgetByID( _focus.getFocusedWidget() );
             if ( pFocused != nullptr && pFocused->isVisible() )
                 UIPaintPass::paintFocusRing( *pFocused, painter );
         }

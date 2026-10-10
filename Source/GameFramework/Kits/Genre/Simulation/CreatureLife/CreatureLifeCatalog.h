@@ -88,12 +88,12 @@ namespace sw
         ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`) · 날씨(`weathers`) — 비면 언제나. NPC 일정과 같은 조건 판정이다
         float32               _chance{ 0.5f };   ///< 조건이 맞는 시간마다 찾아올 확률
 
-        bool likesHabitat( const hashed_string& habitatId ) const;
-        bool likesFood( const hashed_string& itemId ) const;
-        bool likesGift( const hashed_string& itemId ) const;
-        bool hasAbility( const hashed_string& abilityId ) const;
-        bool offersRequest( const hashed_string& questId ) const;
-        bool comesIn( DayPhase phase, const hashed_string& weatherId ) const;
+        bool likesHabitat( const hashed_string& habitatID ) const;
+        bool likesFood( const hashed_string& itemID ) const;
+        bool likesGift( const hashed_string& itemID ) const;
+        bool hasAbility( const hashed_string& abilityID ) const;
+        bool offersRequest( const hashed_string& questID ) const;
+        bool comesIn( DayPhase phase, const hashed_string& weatherID ) const;
     };
 } // namespace sw
 

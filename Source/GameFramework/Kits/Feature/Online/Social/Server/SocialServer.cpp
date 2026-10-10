@@ -123,25 +123,25 @@ namespace sw
             return;
         }
         const uint64    requestTag = _pendingTable.add( context._token );
-        const AccountId selfId     = context._accountId;
+        const AccountID selfID     = context._accountID;
         const int64     nowMs      = context._nowMs;
         if ( context._method == SocialMethod::kRequestFriendByName )
         {
-            _pSocialService->requestFriendByName( selfId, request._text, nowMs, requestTag );
+            _pSocialService->requestFriendByName( selfID, request._text, nowMs, requestTag );
             return;
         }
         if ( SocialMethod::isLinkChange( context._method ) )
         {
-            _pSocialService->changeLink( Internal::toLinkOperation( context._method, request._bAccept == SW_TRUE ), selfId, request._otherId, nowMs, requestTag );
+            _pSocialService->changeLink( Internal::toLinkOperation( context._method, request._bAccept == SW_TRUE ), selfID, request._otherID, nowMs, requestTag );
             return;
         }
         if ( SocialMethod::isGuild( context._method ) )
         {
             GuildRequest guildRequest;
             guildRequest._text      = std::move( request._text );
-            guildRequest._accountId = selfId;
-            guildRequest._targetId  = request._otherId;
-            guildRequest._guildId   = request._guildId;
+            guildRequest._accountID = selfID;
+            guildRequest._targetID  = request._otherID;
+            guildRequest._guildID   = request._guildID;
             guildRequest._nowMs     = nowMs;
             guildRequest._role      = request._role;
             guildRequest._operation = Internal::toGuildOperation( context._method );
@@ -152,17 +152,17 @@ namespace sw
         {
             case SocialMethod::kListLinks:
             {
-                _pSocialService->listLinks( selfId, requestTag );
+                _pSocialService->listLinks( selfID, requestTag );
                 break;
             }
             case SocialMethod::kSetPresence:
             {
-                _pSocialService->setPresence( selfId, request._status, request._text, nowMs, requestTag );
+                _pSocialService->setPresence( selfID, request._status, request._text, nowMs, requestTag );
                 break;
             }
             default:
             {
-                _pSocialService->queryFriendPresence( selfId, requestTag );
+                _pSocialService->queryFriendPresence( selfID, requestTag );
                 break;
             }
         }
@@ -182,7 +182,7 @@ namespace sw
         {
             SocialReply reply;
             reply._result       = completion._result;
-            reply._otherId      = completion._otherId;
+            reply._otherID      = completion._otherID;
             reply._listLink     = std::move( completion._listLink );
             reply._listPresence = std::move( completion._listPresence );
             respond( host, completion._requestTag, reply );
@@ -200,18 +200,18 @@ namespace sw
         sendNotifications( host );
     }
 
-    void SocialServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+    void SocialServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         if ( _pSocialService == nullptr )
             return;
-        _pSocialService->removeAccount( accountId );
+        _pSocialService->removeAccount( accountID );
         sendNotifications( host ); // 이 서버 친구들에게 오프라인을 바로
     }
 
     void SocialServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
         const IServerBus* pBus = host.getServerBus();
-        if ( _pSocialService == nullptr || ( pBus != nullptr && message._originServerId == pBus->getServerId() ) )
+        if ( _pSocialService == nullptr || ( pBus != nullptr && message._originServerID == pBus->getServerID() ) )
             return; // 이 서버가 낸 것 — 바꾼 자리에서 이미 처리했다
         _pSocialService->handleBusMessage( message._topic, message._bytes );
     }
@@ -242,8 +242,8 @@ namespace sw
         {
             BitWriter body;
             SocialProtocol::writeNotification( body, notification );
-            if ( host.sendPush( notification._recipientId, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( notification._recipientId, SocialMethod::kPushNotification, body ); // 다른 서버에 붙어 있다
+            if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
+                (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 붙어 있다
         }
         _listNotificationScratch.clear();
     }

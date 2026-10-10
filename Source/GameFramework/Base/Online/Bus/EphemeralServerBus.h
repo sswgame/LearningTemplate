@@ -24,20 +24,20 @@ namespace sw
     {
     public:
         /** @brief @p pStore 는 빌려 쓴다(버스보다 오래 살고, 이 버스만 쓴다). */
-        EphemeralServerBus( IEphemeralStore* pStore, uint64 serverId );
+        EphemeralServerBus( IEphemeralStore* pStore, uint64 serverID );
 
         void   publish( string_view topic, const uint8* pData, int32 size ) override;
         void   subscribe( string_view topic ) override;
         void   unsubscribe( string_view topic ) override;
         int32  pollMessages( vector<ServerBusMessage>& outListMessage ) override;
-        uint64 getServerId() const override { return _serverId; }
+        uint64 getServerID() const override { return _serverID; }
 
         /** @brief 버린 봉투(깨진 것 · 판이 다른 것)의 수입니다(진단). */
         uint64 getDroppedCount() const { return _droppedCount; }
 
     private:
         IEphemeralStore* _pStore;
-        uint64           _serverId;
+        uint64           _serverID;
         uint64           _nextSequence;
         uint64           _droppedCount;
     };

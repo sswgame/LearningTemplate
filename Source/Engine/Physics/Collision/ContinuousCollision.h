@@ -17,7 +17,7 @@ namespace sw
         float32    _time{ 1.0f };
         float3     _hitPoint{ 0.0f, 0.0f, 0.0f };
         float3     _hitNormal{ 0.0f, 0.0f, 0.0f };
-        uint64     _hitObjectId{ 0 };
+        uint64     _hitObjectID{ 0 };
         SlotHandle _hitBody{};
     };
 } // namespace sw

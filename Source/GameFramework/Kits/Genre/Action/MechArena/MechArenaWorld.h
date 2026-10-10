@@ -76,8 +76,8 @@ namespace sw
     /** @brief 조종사가 판에 들고 나오는 것입니다. */
     struct MechPilotConfig
     {
-        vector<hashed_string> _listMechId{};  ///< 덱(첫 칸으로 출격)
-        vector<hashed_string> _listSkillId{}; ///< 장착 스킬 — 기체의 `_skillSlots` 만큼 앞에서부터 쓴다
+        vector<hashed_string> _listMechID{};  ///< 덱(첫 칸으로 출격)
+        vector<hashed_string> _listSkillID{}; ///< 장착 스킬 — 기체의 `_skillSlots` 만큼 앞에서부터 쓴다
         float3                _spawnPosition{};
         int32                 _team{ 0 };
     };

@@ -97,19 +97,19 @@ namespace sw
          */
         uint32 loadFromNode( const XMLNode& node, string_view sourceName );
         /** @brief 방에 들어갑니다 — 방문 · 발견, 이웃 발견. 처음 방문이면 true 입니다(없는 방은 false). */
-        bool enterArea( const hashed_string& areaId );
+        bool enterArea( const hashed_string& areaID );
         /** @brief 방을 지도에 드러냅니다(지도 아이템 · 힌트). 새로 드러났으면 true 입니다. */
-        bool discoverArea( const hashed_string& areaId );
+        bool discoverArea( const hashed_string& areaID );
         /** @brief 지역의 방을 모두 드러냅니다(층 지도). 새로 드러난 수입니다. */
         int32 discoverRegion( const hashed_string& region );
 
-        /** @brief @p fromId 에서 @p toId 로 바로 이어진 연결을 지금 지날 수 있는가입니다(방향 · 잠금). */
-        bool canTraverse( const hashed_string& fromId, const hashed_string& toId, const GameFlags& flags ) const;
+        /** @brief @p fromID 에서 @p toID 로 바로 이어진 연결을 지금 지날 수 있는가입니다(방향 · 잠금). */
+        bool canTraverse( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags ) const;
         /**
          * @brief 지금 지날 수 있는 연결만으로 가는 가장 짧은 길(지나는 연결 수)을 찾습니다.
          * @param outListArea 출발과 도착을 포함한 방 순서. 길이 없으면 비운다.
          */
-        [[nodiscard]] bool findPath( const hashed_string& fromId, const hashed_string& toId, const GameFlags& flags, vector<hashed_string>& outListArea ) const;
+        [[nodiscard]] bool findPath( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags, vector<hashed_string>& outListArea ) const;
         /** @brief 방문한 방 / 모든 방(0..1)입니다. */
         float32 computeExplorationRatio() const;
         /** @brief 지역의 방문 비율(0..1)입니다. 없는 지역은 0 입니다. */
@@ -129,9 +129,9 @@ namespace sw
         /** @brief 세이브에서 되살립니다. 방문한 방은 발견도 됩니다. 모르는 id 는 건너뜁니다. */
         void restoreState( const vector<hashed_string>& listVisited, const vector<hashed_string>& listDiscovered );
 
-        bool                    isVisited( const hashed_string& areaId ) const;
-        bool                    isDiscovered( const hashed_string& areaId ) const;
-        const AreaDef*          findArea( const hashed_string& areaId ) const { return _catalog.find( areaId ); }
+        bool                    isVisited( const hashed_string& areaID ) const;
+        bool                    isDiscovered( const hashed_string& areaID ) const;
+        const AreaDef*          findArea( const hashed_string& areaID ) const { return _catalog.find( areaID ); }
         const vector<AreaDef>&  getAreas() const { return _catalog.getAll(); }
         const vector<AreaLink>& getLinks() const { return _listLink; }
         int32                   getVisitedCount() const { return _visitedCount; }

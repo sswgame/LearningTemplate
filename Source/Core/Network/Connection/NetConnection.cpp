@@ -81,10 +81,10 @@ namespace sw
         , _lastStatsTime{ 0.0 }
         , _lastAckRequestTime{ -1.0e9 }
         , _nextPacketSequence{ 0 }
-        , _nextReliableSendId{ 0 }
-        , _oldestUnackedReliableId{ 0 }
-        , _nextReliableReceiveId{ 0 }
-        , _nextSequencedSendId{ 0 }
+        , _nextReliableSendID{ 0 }
+        , _oldestUnackedReliableID{ 0 }
+        , _nextReliableReceiveID{ 0 }
+        , _nextSequencedSendID{ 0 }
         , _bAckPending{ SW_FALSE }
         , _bDiscardingAssembly{ SW_FALSE }
         , _bUnreliableFirst{ SW_FALSE }
@@ -109,16 +109,16 @@ namespace sw
         _lastStatsTime           = 0.0;
         _lastAckRequestTime      = -1.0e9;
         _nextPacketSequence      = 0;
-        _nextReliableSendId      = 0;
-        _oldestUnackedReliableId = 0;
-        _nextReliableReceiveId   = 0;
-        _nextSequencedSendId     = 0;
+        _nextReliableSendID      = 0;
+        _oldestUnackedReliableID = 0;
+        _nextReliableReceiveID   = 0;
+        _nextSequencedSendID     = 0;
         _bAckPending             = SW_FALSE;
         _bDiscardingAssembly     = SW_FALSE;
         _bUnreliableFirst        = SW_FALSE;
     }
 
-    int32 NetConnection::getPendingReliableCount() const { return NetSequence::computeDifference( _nextReliableSendId, _oldestUnackedReliableId ); }
+    int32 NetConnection::getPendingReliableCount() const { return NetSequence::computeDifference( _nextReliableSendID, _oldestUnackedReliableID ); }
 
     bool NetConnection::sendMessage( NetChannelType channel, const uint8* pData, int32 size )
     {
@@ -183,12 +183,12 @@ namespace sw
         {
             const int32       offset   = fragment * kMaxSingleMessageSize;
             const int32       length   = MathUtil::min( kMaxSingleMessageSize, size - offset );
-            OutgoingReliable* pMessage = _outgoingReliable.insert( _nextReliableSendId );
+            OutgoingReliable* pMessage = _outgoingReliable.insert( _nextReliableSendID );
             pMessage->_buffer.assign( pData + offset, pData + offset + length );
             pMessage->_lastSentTime = -1.0;
             pMessage->_bMore        = fragment + 1 < fragmentCount ? SW_TRUE : SW_FALSE;
             pMessage->_channel      = channel;
-            ++_nextReliableSendId;
+            ++_nextReliableSendID;
         }
         return true;
     }
@@ -215,9 +215,9 @@ namespace sw
         if ( _bAckPending || _listOutgoingSequenced.empty() == false || _listOutgoingUnreliable.empty() == false )
             return true;
         const float64 resendDelay = computeResendDelay();
-        for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
+        for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
         {
-            const OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
+            const OutgoingReliable* pMessage = _outgoingReliable.find( messageID );
             if ( pMessage != nullptr && isReliableDue( *pMessage, time, resendDelay ) )
                 return true;
         }
@@ -254,7 +254,7 @@ namespace sw
         int32         usedBits     = 0;
         int32         written      = 0;
         const float64 resendDelay  = computeResendDelay();
-        const auto    writeMessage = [&]( NetChannelType channel, uint16 messageId, const vector<uint8>& buffer, bool bMore ) -> bool
+        const auto    writeMessage = [&]( NetChannelType channel, uint16 messageID, const vector<uint8>& buffer, bool bMore ) -> bool
         {
             const int32 bits = 1 + NetConnectionInternal::computeMessageBits( channel, static_cast<int32>( buffer.size() ) );
             if ( usedBits + bits > budgetBits || written >= NetConnectionInternal::kMessageCountMax )
@@ -262,7 +262,7 @@ namespace sw
             writer.writeBool( true );
             writer.writeBits( static_cast<uint32>( channel ), NetConnectionInternal::kChannelBits );
             if ( channel != NetChannelType::Unreliable )
-                writer.writeBits( messageId, 16 );
+                writer.writeBits( messageID, 16 );
             if ( channel == NetChannelType::ReliableOrdered )
                 writer.writeBool( bMore );
             writer.writeBits( static_cast<uint32>( buffer.size() ), kMessageSizeBits );
@@ -275,20 +275,20 @@ namespace sw
         // 신뢰 — 오래된 것부터, 처음 보내거나 재전송 시각이 된 것(조각 하나가 메시지 하나다).
         const auto writeReliable = [&]()
         {
-            for ( uint16 messageId = _oldestUnackedReliableId; messageId != _nextReliableSendId; ++messageId )
+            for ( uint16 messageID = _oldestUnackedReliableID; messageID != _nextReliableSendID; ++messageID )
             {
-                OutgoingReliable* pMessage = _outgoingReliable.find( messageId );
+                OutgoingReliable* pMessage = _outgoingReliable.find( messageID );
                 if ( pMessage == nullptr || isReliableDue( *pMessage, time, resendDelay ) == false )
                     continue;
                 if ( pSent->_reliableCount >= kMaxReliablePerPacket )
                     break;
-                if ( writeMessage( pMessage->_channel, messageId, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
+                if ( writeMessage( pMessage->_channel, messageID, pMessage->_buffer, pMessage->_bMore != SW_FALSE ) == false )
                     break;
                 if ( pMessage->_lastSentTime >= 0.0 )
                     ++_stats._resentMessageCount;
                 pMessage->_lastSentTime                        = time;
                 pMessage->_bResendNow                          = SW_FALSE;
-                pSent->_arrReliableId[pSent->_reliableCount++] = messageId;
+                pSent->_arrReliableID[pSent->_reliableCount++] = messageID;
             }
         };
         // 순서만 — 종류마다 가장 새 것 하나씩(쌓을 때 옛것은 이미 바뀌었다). 들어가지 않은 것은 다음 패킷에.
@@ -296,9 +296,9 @@ namespace sw
         {
             size_t sequencedWritten = 0;
             while ( sequencedWritten < _listOutgoingSequenced.size() &&
-                    writeMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendId, _listOutgoingSequenced[sequencedWritten], false ) )
+                    writeMessage( NetChannelType::UnreliableSequenced, _nextSequencedSendID, _listOutgoingSequenced[sequencedWritten], false ) )
             {
-                ++_nextSequencedSendId;
+                ++_nextSequencedSendID;
                 ++sequencedWritten;
             }
             _listOutgoingSequenced.erase( _listOutgoingSequenced.begin(), _listOutgoingSequenced.begin() + static_cast<std::ptrdiff_t>( sequencedWritten ) );
@@ -393,7 +393,7 @@ namespace sw
                 case NetChannelType::ReliableOrdered:
                 {
                     // 이미 건넨 것 · 창 밖은 버리고, 나머지는 자리에 두었다가 순서대로 건넨다.
-                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveId );
+                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
                     if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
                         break;
                     IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
@@ -407,7 +407,7 @@ namespace sw
                 case NetChannelType::ReliableUnordered:
                 {
                     // 받는 대로 건넨다 — 앞 신뢰 메시지를 기다리지 않는다. 자리에는 "건넸다" 표만 남겨 순서 커서가 지나가고 늦게 온 중복을 거른다.
-                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveId );
+                    const int32 ahead = NetSequence::computeDifference( message._id, _nextReliableReceiveID );
                     if ( ahead < 0 || ahead >= kReliableWindow || _incomingReliable.exists( message._id ) )
                         break;
                     IncomingReliable* pIncoming = _incomingReliable.insert( message._id );
@@ -427,14 +427,14 @@ namespace sw
                         if ( stream._kind == kind )
                             pStream = &stream;
                     }
-                    if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastId ) == false )
+                    if ( pStream != nullptr && NetSequence::isGreater( message._id, pStream->_lastID ) == false )
                         break; // 늦게 온 옛것
                     if ( pStream == nullptr )
                     {
                         _listSequencedReceive.push_back( SequencedStream{ message._id, kind } );
                         pStream = &_listSequencedReceive.back();
                     }
-                    pStream->_lastId = message._id;
+                    pStream->_lastID = message._id;
                     _arrIncoming[static_cast<int32>( NetChannelType::UnreliableSequenced )].push_back( std::move( message._buffer ) );
                     break;
                 }
@@ -449,12 +449,12 @@ namespace sw
                 }
             }
         }
-        for ( IncomingReliable* pIncoming = _incomingReliable.find( _nextReliableReceiveId ); pIncoming != nullptr;
-              pIncoming                   = _incomingReliable.find( _nextReliableReceiveId ) )
+        for ( IncomingReliable* pIncoming = _incomingReliable.find( _nextReliableReceiveID ); pIncoming != nullptr;
+              pIncoming                   = _incomingReliable.find( _nextReliableReceiveID ) )
         {
             deliverReliable( *pIncoming );
-            _incomingReliable.remove( _nextReliableReceiveId );
-            ++_nextReliableReceiveId;
+            _incomingReliable.remove( _nextReliableReceiveID );
+            ++_nextReliableReceiveID;
         }
         updateStats( time );
         return true;
@@ -525,14 +525,14 @@ namespace sw
             }
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
             {
-                _outgoingReliable.remove( pSent->_arrReliableId[index] );
+                _outgoingReliable.remove( pSent->_arrReliableID[index] );
             }
         }
         detectLostPackets( ack );
         // 가장 오래된 미확인 신뢰 id 를 앞으로.
-        while ( _oldestUnackedReliableId != _nextReliableSendId && _outgoingReliable.exists( _oldestUnackedReliableId ) == false )
+        while ( _oldestUnackedReliableID != _nextReliableSendID && _outgoingReliable.exists( _oldestUnackedReliableID ) == false )
         {
-            ++_oldestUnackedReliableId;
+            ++_oldestUnackedReliableID;
         }
     }
 
@@ -549,7 +549,7 @@ namespace sw
             pSent->_bLossDetected = SW_TRUE;
             for ( int32 index = 0; index < pSent->_reliableCount; ++index )
             {
-                OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableId[index] );
+                OutgoingReliable* pMessage = _outgoingReliable.find( pSent->_arrReliableID[index] );
                 if ( pMessage != nullptr && pMessage->_lastSentTime >= 0.0 )
                     pMessage->_bResendNow = SW_TRUE;
             }

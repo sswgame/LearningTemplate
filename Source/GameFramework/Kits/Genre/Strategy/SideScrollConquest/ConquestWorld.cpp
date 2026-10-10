@@ -78,7 +78,7 @@ namespace sw
         , _elapsed{ 0.0f }
         , _incomeTimer{ 0.0f }
         , _waveTimer{ 0.0f }
-        , _nextUnitId{ 1 }
+        , _nextUnitID{ 1 }
         , _bVictory{ SW_FALSE }
         , _bDefeat{ SW_FALSE }
     {
@@ -95,7 +95,7 @@ namespace sw
         _elapsed     = 0.0f;
         _incomeTimer = 0.0f;
         _waveTimer   = 0.0f;
-        _nextUnitId  = 1;
+        _nextUnitID  = 1;
         _bVictory    = SW_FALSE;
         _bDefeat     = SW_FALSE;
         if ( pCatalog == nullptr )
@@ -118,7 +118,7 @@ namespace sw
             {
                 for ( int32 count = 0; count < garrison._count; ++count )
                 {
-                    (void)spawnUnit( garrison._unitId, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 — 카탈로그 로드가 이미 경고했다
+                    (void)spawnUnit( garrison._unitID, def._owner, def._x, ConquestOrder::Hold ); // 모르는 유닛이면 -1 — 카탈로그 로드가 이미 경고했다
                 }
             }
         }
@@ -157,15 +157,15 @@ namespace sw
         }
     }
 
-    ConquestResult ConquestWorld::placeBuilding( const hashed_string& buildingId, const hashed_string& siteId )
+    ConquestResult ConquestWorld::placeBuilding( const hashed_string& buildingID, const hashed_string& siteID )
     {
-        const ConquestBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingId ) : nullptr;
+        const ConquestBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingID ) : nullptr;
         if ( pDef == nullptr )
             return ConquestResult::UnknownDef;
         int32 siteIndex = -1;
         for ( size_t index = 0; index < _listSite.size(); ++index )
         {
-            if ( _listSite[index]._pDef->_id == siteId )
+            if ( _listSite[index]._pDef->_id == siteID )
                 siteIndex = static_cast<int32>( index );
         }
         if ( siteIndex < 0 )
@@ -205,12 +205,12 @@ namespace sw
         return ConquestResult::Ok;
     }
 
-    ConquestResult ConquestWorld::trainUnit( int32 buildingIndex, const hashed_string& unitId )
+    ConquestResult ConquestWorld::trainUnit( int32 buildingIndex, const hashed_string& unitID )
     {
         if ( buildingIndex < 0 || buildingIndex >= static_cast<int32>( _listBuilding.size() ) )
             return ConquestResult::InvalidBuilding;
         ConquestBuilding&      building = _listBuilding[static_cast<size_t>( buildingIndex )];
-        const ConquestUnitDef* pUnit    = _pCatalog->findUnit( unitId );
+        const ConquestUnitDef* pUnit    = _pCatalog->findUnit( unitID );
         if ( pUnit == nullptr )
             return ConquestResult::UnknownDef;
         if ( _listSite[static_cast<size_t>( building._siteIndex )]._owner != ConquestTeam::Player )
@@ -218,7 +218,7 @@ namespace sw
         bool bTrainable = false;
         for ( const hashed_string& trainable : building._pDef->_listTrainable )
         {
-            bTrainable = bTrainable || trainable == unitId;
+            bTrainable = bTrainable || trainable == unitID;
         }
         if ( bTrainable == false )
             return ConquestResult::CannotTrainHere;
@@ -227,13 +227,13 @@ namespace sw
         if ( _resource.canAfford( pUnit->_cost ) == false )
             return ConquestResult::NotEnoughResources;
         (void)_resource.trySpend( pUnit->_cost ); // 바로 위 canAfford 를 지나 늘 성공한다
-        building._listQueue.push_back( unitId );
+        building._listQueue.push_back( unitID );
         return ConquestResult::Ok;
     }
 
-    int32 ConquestWorld::spawnUnit( const hashed_string& unitId, ConquestTeam team, float32 x, ConquestOrder order )
+    int32 ConquestWorld::spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order )
     {
-        const ConquestUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( unitId ) : nullptr;
+        const ConquestUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( unitID ) : nullptr;
         if ( pDef == nullptr || team == ConquestTeam::Neutral )
             return -1;
         ConquestUnit unit;
@@ -241,12 +241,12 @@ namespace sw
         unit._x         = x;
         unit._holdX     = x;
         unit._health    = pDef->_health;
-        unit._unitId    = _nextUnitId++;
+        unit._unitID    = _nextUnitID++;
         unit._team      = team;
         unit._order     = order;
         unit._squadSlot = team == ConquestTeam::Player ? getSquadSize() : -1;
         _listUnit.push_back( unit );
-        return unit._unitId;
+        return unit._unitID;
     }
 
     void ConquestWorld::drainEvents( vector<ConquestEvent>& outListEvent )
@@ -271,9 +271,9 @@ namespace sw
         {
             StateArchiveUtil::writeName( outArchive, building._pDef->_id );
             outArchive << static_cast<uint32>( building._listQueue.size() );
-            for ( const hashed_string& unitId : building._listQueue )
+            for ( const hashed_string& unitID : building._listQueue )
             {
-                StateArchiveUtil::writeName( outArchive, unitId );
+                StateArchiveUtil::writeName( outArchive, unitID );
             }
             outArchive << building._cycleProgress;
             outArchive << building._trainProgress;
@@ -289,7 +289,7 @@ namespace sw
             StateArchiveUtil::writeCountdown( outArchive, unit._attackCooldown );
             outArchive << unit._holdX;
             outArchive << unit._damageDealt;
-            outArchive << unit._unitId;
+            outArchive << unit._unitID;
             outArchive << unit._squadSlot;
             outArchive << static_cast<uint8>( unit._team );
             outArchive << static_cast<uint8>( unit._order );
@@ -308,7 +308,7 @@ namespace sw
         outArchive << _elapsed;
         outArchive << _incomeTimer;
         outArchive << _waveTimer;
-        outArchive << _nextUnitId;
+        outArchive << _nextUnitID;
         outArchive << _bVictory;
         outArchive << _bDefeat;
     }
@@ -325,12 +325,12 @@ namespace sw
             return false;
         for ( ConquestSite& site : restored._listSite )
         {
-            hashed_string siteId;
+            hashed_string siteID;
             uint8         owner       = 0;
             uint8         captureTeam = 0;
-            if ( StateArchiveUtil::readName( archive, siteId ) == false )
+            if ( StateArchiveUtil::readName( archive, siteID ) == false )
                 return false;
-            site._pDef = _pCatalog->findSite( siteId );
+            site._pDef = _pCatalog->findSite( siteID );
             archive >> site._gateHealth;
             archive >> site._wallHealth;
             archive >> site._captureProgress;
@@ -351,15 +351,15 @@ namespace sw
         restored._listBuilding.assign( count, ConquestBuilding{} );
         for ( ConquestBuilding& building : restored._listBuilding )
         {
-            hashed_string buildingId;
+            hashed_string buildingID;
             uint32        queueCount = 0;
-            if ( StateArchiveUtil::readName( archive, buildingId ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
+            if ( StateArchiveUtil::readName( archive, buildingID ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
                 return false;
-            building._pDef = _pCatalog->findBuilding( buildingId );
+            building._pDef = _pCatalog->findBuilding( buildingID );
             building._listQueue.assign( queueCount, hashed_string{} );
-            for ( hashed_string& unitId : building._listQueue )
+            for ( hashed_string& unitID : building._listQueue )
             {
-                if ( StateArchiveUtil::readName( archive, unitId ) == false || _pCatalog->findUnit( unitId ) == nullptr )
+                if ( StateArchiveUtil::readName( archive, unitID ) == false || _pCatalog->findUnit( unitID ) == nullptr )
                     return false;
             }
             archive >> building._cycleProgress;
@@ -377,18 +377,18 @@ namespace sw
         restored._listUnit.assign( count, ConquestUnit{} );
         for ( ConquestUnit& unit : restored._listUnit )
         {
-            hashed_string unitId;
+            hashed_string unitID;
             uint8         team  = 0;
             uint8         order = 0;
-            if ( StateArchiveUtil::readName( archive, unitId ) == false )
+            if ( StateArchiveUtil::readName( archive, unitID ) == false )
                 return false;
-            unit._pDef = _pCatalog->findUnit( unitId );
+            unit._pDef = _pCatalog->findUnit( unitID );
             archive >> unit._x;
             archive >> unit._health;
             const bool bCooldownRead = StateArchiveUtil::readCountdown( archive, unit._attackCooldown );
             archive >> unit._holdX;
             archive >> unit._damageDealt;
-            archive >> unit._unitId;
+            archive >> unit._unitID;
             archive >> unit._squadSlot;
             archive >> team;
             archive >> order;
@@ -415,7 +415,7 @@ namespace sw
         archive >> restored._elapsed;
         archive >> restored._incomeTimer;
         archive >> restored._waveTimer;
-        archive >> restored._nextUnitId;
+        archive >> restored._nextUnitID;
         archive >> restored._bVictory;
         archive >> restored._bDefeat;
         const bool bValid = bCommanderTimerRead && bStepRead && archive.isOk() && restored._commander._bAlive <= SW_TRUE && restored._bVictory <= SW_TRUE &&
@@ -505,21 +505,21 @@ namespace sw
         return rules._waveBaseCount + byTime + byTerritory;
     }
 
-    const ConquestSite* ConquestWorld::findSite( const hashed_string& siteId ) const
+    const ConquestSite* ConquestWorld::findSite( const hashed_string& siteID ) const
     {
         for ( const ConquestSite& site : _listSite )
         {
-            if ( site._pDef->_id == siteId )
+            if ( site._pDef->_id == siteID )
                 return &site;
         }
         return nullptr;
     }
 
-    const ConquestUnit* ConquestWorld::findUnit( int32 unitId ) const
+    const ConquestUnit* ConquestWorld::findUnit( int32 unitID ) const
     {
         for ( const ConquestUnit& unit : _listUnit )
         {
-            if ( unit._unitId == unitId )
+            if ( unit._unitID == unitID )
                 return &unit;
         }
         return nullptr;
@@ -763,10 +763,10 @@ namespace sw
                 if ( pUnit != nullptr && building._trainProgress >= pUnit->_trainTime )
                 {
                     building._trainProgress    = 0.0f;
-                    const hashed_string unitId = building._listQueue.front();
+                    const hashed_string unitID = building._listQueue.front();
                     building._listQueue.erase( building._listQueue.begin() );
-                    const int32 spawnedId = spawnUnit( unitId, ConquestTeam::Player, site._pDef->_x, ConquestOrder::Follow );
-                    pushEvent( ConquestEvent::Kind::UnitTrained, unitId, spawnedId, ConquestTeam::Player );
+                    const int32 spawnedID = spawnUnit( unitID, ConquestTeam::Player, site._pDef->_x, ConquestOrder::Follow );
+                    pushEvent( ConquestEvent::Kind::UnitTrained, unitID, spawnedID, ConquestTeam::Player );
                 }
             }
         }
@@ -977,7 +977,7 @@ namespace sw
             if ( victim._health <= 0.0f && victim._bAlive == SW_TRUE )
             {
                 victim._bAlive = SW_FALSE;
-                pushEvent( ConquestEvent::Kind::UnitDied, victim._pDef->_id, victim._unitId, victim._team );
+                pushEvent( ConquestEvent::Kind::UnitDied, victim._pDef->_id, victim._unitID, victim._team );
             }
             return;
         }

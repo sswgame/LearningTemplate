@@ -17,7 +17,7 @@ namespace sw
     AccountDeviceSecret::AccountDeviceSecret()
         : _pStore{ nullptr }
         , _pProvider{ nullptr }
-        , _requestId{ 0 }
+        , _requestID{ 0 }
         , _arrSecret{}
         , _state{ AccountDeviceSecretState::Idle }
     {
@@ -28,14 +28,14 @@ namespace sw
         _pStore    = pStore;
         _pProvider = pProvider;
         _state     = AccountDeviceSecretState::Reading;
-        _requestId = _pStore->submitRead( kSlot );
+        _requestID = _pStore->submitRead( kSlot );
     }
 
     bool AccountDeviceSecret::handleCompletion( const LocalStoreCompletion& completion )
     {
-        if ( completion._requestId != _requestId || _requestId == 0 )
+        if ( completion._requestID != _requestID || _requestID == 0 )
             return false;
-        _requestId = 0;
+        _requestID = 0;
         if ( _state == AccountDeviceSecretState::Reading )
         {
             const bool bRead = completion._result == LocalStoreResult::Ok && static_cast<int32>( completion._bytes.size() ) == LoginConstant::kDeviceSecretSize;
@@ -60,7 +60,7 @@ namespace sw
             LocalStoreWriteOptions options;
             options._seal = LocalStoreSeal::Encrypted;
             _state        = AccountDeviceSecretState::Writing;
-            _requestId    = _pStore->submitWrite( kSlot, vector<uint8>( _arrSecret, _arrSecret + LoginConstant::kDeviceSecretSize ), options );
+            _requestID    = _pStore->submitWrite( kSlot, vector<uint8>( _arrSecret, _arrSecret + LoginConstant::kDeviceSecretSize ), options );
             return true;
         }
         _state = completion._result == LocalStoreResult::Ok ? AccountDeviceSecretState::Ready : AccountDeviceSecretState::Failed;

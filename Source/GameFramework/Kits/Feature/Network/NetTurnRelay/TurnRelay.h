@@ -62,7 +62,7 @@ namespace sw
     struct TurnSeat
     {
         uint32 _token{ 0 };           ///< 다시 들어올 때 내는 값(서버가 정한다)
-        int32  _connectionId{ -1 };   ///< −1 = 끊겼다(자리는 남는다)
+        int32  _connectionID{ -1 };   ///< −1 = 끊겼다(자리는 남는다)
         int32  _sentActionCount{ 0 }; ///< 서버 — 이 자리 연결에 보낸 행동 수(그 뒤부터 이어 보낸다)
         uint8  _bTaken{ SW_FALSE };
     };
@@ -85,7 +85,7 @@ namespace sw
     {
         vector<TurnSeat>   _listSeat{};
         vector<TurnAction> _listAction{}; ///< 받아들인 행동(번호 = 자리)
-        uint32             _roomId{ 0 };
+        uint32             _roomID{ 0 };
         int32              _currentSeat{ 0 };
         int32              _direction{ 1 }; ///< 차례 방향(우노의 리버스 — 정책이 바꾼다)
         uint8              _bStarted{ SW_FALSE };
@@ -139,7 +139,7 @@ namespace sw
             SeatReturned    ///< 서버 — 돌아왔다
         };
         vector<uint8>    _buffer{};
-        uint32           _roomId{ 0 };
+        uint32           _roomID{ 0 };
         int32            _seat{ -1 };
         int32            _index{ -1 };
         TurnRejectReason _reason{ TurnRejectReason::NotYourTurn };
@@ -171,31 +171,31 @@ namespace sw
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 끊긴 연결의 자리를 비운다(자리 · 표는 남아 같은 표로 돌아올 수 있다). */
-        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
         void drainEvents( vector<TurnRelayEvent>& outListEvent );
 
-        const TurnRoom* findRoom( uint32 roomId ) const;
+        const TurnRoom* findRoom( uint32 roomID ) const;
 
     private:
         /** @brief 신뢰 창이 차서 줄 선 알림입니다(연결마다 들어온 순서). */
         struct PendingMessage
         {
             vector<uint8> _buffer{};
-            int32         _connectionId{ -1 };
+            int32         _connectionID{ -1 };
         };
 
-        TurnRoom*          findRoomMutable( uint32 roomId );
-        TurnRoom*          findRoomOfConnection( int32 connectionId );
-        [[nodiscard]] bool handleJoin( int32 connectionId, BitReader& reader );
-        [[nodiscard]] bool handleAction( int32 connectionId, BitReader& reader );
-        void               sendJoined( int32 connectionId, uint32 roomId, int32 seat, uint32 token );
-        void               sendDenied( int32 connectionId, uint32 roomId, TurnRejectReason reason );
+        TurnRoom*          findRoomMutable( uint32 roomID );
+        TurnRoom*          findRoomOfConnection( int32 connectionID );
+        [[nodiscard]] bool handleJoin( int32 connectionID, BitReader& reader );
+        [[nodiscard]] bool handleAction( int32 connectionID, BitReader& reader );
+        void               sendJoined( int32 connectionID, uint32 roomID, int32 seat, uint32 token );
+        void               sendDenied( int32 connectionID, uint32 roomID, TurnRejectReason reason );
         /** @brief 그 연결에 줄 선 것이 없으면 바로 보내고, 있거나 창이 찼으면 줄 끝에 둡니다. */
-        void sendOrQueue( int32 connectionId );
+        void sendOrQueue( int32 connectionID );
         /** @brief 자리 연결에 아직 안 보낸 행동을 창이 허락하는 만큼 보냅니다. */
         void   flushSeat( const TurnRoom& room, TurnSeat& seat );
         void   flushPending();
-        int32  countPending( int32 connectionId ) const;
+        int32  countPending( int32 connectionID ) const;
         uint32 nextToken();
 
         vector<TurnRoom>            _listRoom;
@@ -222,7 +222,7 @@ namespace sw
 
         void initialize( NetHost* pHost );
         /** @brief 방에 들어갑니다(자리 −1 = 아무 데나). 전에 받은 표가 있으면 그 자리로 돌아갑니다. */
-        void join( uint32 roomId, int32 seat = -1 );
+        void join( uint32 roomID, int32 seat = -1 );
         /** @brief 행동을 보냅니다. 행동 번호(거절 알림에 붙는다)입니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 −1 입니다. */
         int32 submitAction( const vector<uint8>& buffer );
         uint8 getMessageRangeBase() const override { return NetKitMessageRange::kTurnRelay; }
@@ -246,10 +246,10 @@ namespace sw
         vector<TurnAction>          _listAction;
         EventBuffer<TurnRelayEvent> _eventBuffer;
         NetHost*                    _pHost;
-        uint32                      _roomId;
+        uint32                      _roomID;
         uint32                      _token;
         int32                       _seat;
-        int32                       _nextSubmitId;
+        int32                       _nextSubmitID;
         uint8                       _bStarted;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지 — 버퍼를 다시 쓴다
     };

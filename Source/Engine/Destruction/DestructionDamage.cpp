@@ -78,9 +78,9 @@ namespace sw
         outListStrain.clear();
         if ( event._strain <= 0.0f || graph._leafCount == 0 )
             return;
-        const bool bFilter = event._groupId != 0 && listLeafGroup.size() == graph._leafCount;
+        const bool bFilter = event._groupID != 0 && listLeafGroup.size() == graph._leafCount;
         const bool bHint   = event._leafHint >= 0 && static_cast<uint32>( event._leafHint ) < graph._leafCount &&
-                           ( bFilter == false || listLeafGroup[static_cast<uint32>( event._leafHint )] == event._groupId );
+                           ( bFilter == false || listLeafGroup[static_cast<uint32>( event._leafHint )] == event._groupID );
         if ( event._radius <= 0.0f )
         {
             uint32  target = bHint ? static_cast<uint32>( event._leafHint ) : 0u;
@@ -89,7 +89,7 @@ namespace sw
             {
                 for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
                 {
-                    if ( bFilter && listLeafGroup[leaf] != event._groupId )
+                    if ( bFilter && listLeafGroup[leaf] != event._groupID )
                         continue;
                     const float32 distance = float3::getDistanceSquared( graph._listNode[leaf]._centroid, event._position );
                     if ( distance < best )
@@ -105,7 +105,7 @@ namespace sw
         }
         for ( uint32 leaf = 0; leaf < graph._leafCount; ++leaf )
         {
-            if ( bFilter && listLeafGroup[leaf] != event._groupId )
+            if ( bFilter && listLeafGroup[leaf] != event._groupID )
                 continue;
             float32 strain = 0.0f;
             if ( bHint && static_cast<uint32>( event._leafHint ) == leaf )
@@ -152,7 +152,7 @@ namespace sw
         {
             outBytes.push_back( static_cast<uint8>( event._kind ) );
             Internal::appendUint32( outBytes, static_cast<uint32>( event._leafHint ) );
-            Internal::appendUint32( outBytes, event._groupId );
+            Internal::appendUint32( outBytes, event._groupID );
             const float32 arrValue[9] = { event._position._x, event._position._y, event._position._z, event._direction._x, event._direction._y,
                                           event._direction._z, event._strain, event._radius, event._impulse };
             for ( const float32 value : arrValue )
@@ -193,7 +193,7 @@ namespace sw
             DestructionDamageEvent event;
             event._kind      = static_cast<DestructionDamageKind>( pCursor[0] );
             event._leafHint  = static_cast<int32>( Internal::readUint32( pCursor + 1 ) );
-            event._groupId   = Internal::readUint32( pCursor + 5 );
+            event._groupID   = Internal::readUint32( pCursor + 5 );
             const uint8* pF  = pCursor + 9;
             event._position  = float3{ Internal::readFloat32( pF ), Internal::readFloat32( pF + 4 ), Internal::readFloat32( pF + 8 ) };
             event._direction = float3{ Internal::readFloat32( pF + 12 ), Internal::readFloat32( pF + 16 ), Internal::readFloat32( pF + 20 ) };
@@ -222,9 +222,9 @@ namespace sw
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {
             _listScratchStrain[entry._leaf] = entry._strain;
-            const uint32 groupId            = _listLeafGroup[entry._leaf];
-            if ( std::find( listDirtyGroup.begin(), listDirtyGroup.end(), groupId ) == listDirtyGroup.end() )
-                listDirtyGroup.push_back( groupId );
+            const uint32 groupID            = _listLeafGroup[entry._leaf];
+            if ( std::find( listDirtyGroup.begin(), listDirtyGroup.end(), groupID ) == listDirtyGroup.end() )
+                listDirtyGroup.push_back( groupID );
         }
         const uint32 brokenNodeBefore = outChange._brokenNodeCount;
         const uint32 brokenLinkBefore = outChange._brokenLinkCount;

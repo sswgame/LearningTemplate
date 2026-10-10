@@ -239,14 +239,14 @@ namespace sw
             if ( pTarget == nullptr )
             {
                 if ( binding != Binding::None )
-                    SW_LOG_ERROR( "Gimmick node '%#' points at an object that is not loaded", _circuit.getNodeId( node ).c_str() );
+                    SW_LOG_ERROR( "Gimmick node '%#' points at an object that is not loaded", _circuit.getNodeID( node ).c_str() );
                 continue;
             }
             const bool bNeedsSensor = binding == Binding::Volume || binding == Binding::PressurePlate || binding == Binding::Damage || binding == Binding::Interaction ||
                                       binding == Binding::Signal || binding == Binding::Hazard;
             if ( bNeedsSensor && pTarget->getComponent<GimmickSensorComponent>() == nullptr )
             {
-                const string error = string( "Gimmick node '" ) + _circuit.getNodeId( node ).c_str() + "' (" + _circuit.getKind( node )._name.c_str() + ") needs a GimmickSensorComponent on '" +
+                const string error = string( "Gimmick node '" ) + _circuit.getNodeID( node ).c_str() + "' (" + _circuit.getKind( node )._name.c_str() + ") needs a GimmickSensorComponent on '" +
                                      pTarget->getName().c_str() + "'";
                 SW_LOG_ERROR( "%#", error );
                 _listError.push_back( error );
@@ -283,11 +283,11 @@ namespace sw
         const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar", 0.0f ) != 0.0f;
         const float3 origin   = pScene->getWorldPosition();
         float32      nearest  = GimmickCircuitComponentInternal::kFarDistance;
-        const uint64 targetId = target.getObjectId();
+        const uint64 targetID = target.getObjectID();
         manager.forEachGameObject( [&]( GameObject* pObject )
         {
             const SceneComponent* pOther = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pOther == nullptr || pObject->getObjectId() == targetId || pObject->isActiveInHierarchy() == false || pObject->hasTag( tag ) == false )
+            if ( pOther == nullptr || pObject->getObjectID() == targetID || pObject->isActiveInHierarchy() == false || pObject->hasTag( tag ) == false )
                 return;
             float3 delta = pOther->getWorldPosition() - origin;
             if ( bPlanar )
@@ -307,7 +307,7 @@ namespace sw
         const float3   direction = float3::transformVector( GimmickCircuitComponentInternal::readVector( _circuit, node, "direction" ), world ).normalize();
         const float32  range     = GimmickCircuitComponentInternal::readNumber( _circuit, node, "range", 10.0f );
         WorldRayHit    hit;
-        return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectId(), hit ) ? 1.0f : 0.0f;
+        return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
     }
 
     void GimmickCircuitComponent::pullSensors( GameObjectManager& manager )

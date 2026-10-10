@@ -70,10 +70,10 @@ namespace
         static TelemetryContext makeContext( const utf8* pSession = "testsession01" )
         {
             TelemetryContext context;
-            context._sessionId   = pSession;
+            context._sessionID   = pSession;
             context._buildConfig = "Debug";
             context._platform    = "Windows";
-            context._buildId     = "0123ABCD1";
+            context._buildID     = "0123ABCD1";
             context._game        = "probe";
             return context;
         }
@@ -338,7 +338,7 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_EQUAL( 1u, Internal::countSpoolFiles( folder ) );
     SW_ASSERT_FALSE( uploader._listBatch.empty() );
     const TelemetryUploadBatch& batch = uploader._listBatch.front();
-    SW_EXPECT_TRUE( batch._sessionId == "testsession01" );
+    SW_EXPECT_TRUE( batch._sessionID == "testsession01" );
     SW_EXPECT_EQUAL( static_cast<uint32>( Internal::splitLines( batch._content ).size() ) - 1u, batch._eventCount );
     // 끝: 지금 파일도 닫아 올린다(session.end 포함).
     telemetry.shutdown();
@@ -451,7 +451,7 @@ SW_TEST_CASE( TelemetryTest, HTTPUploaderBuildsTheRequestAndNeverTouchesTheNetwo
     HTTPTelemetryUploader                      uploader( client, "https://telemetry.invalid/v1/events", "key-123" );
     TelemetryUploadBatch                       batch;
     batch._content    = "{\"type\":\"context\"}\n{\"type\":\"event\"}\n";
-    batch._sessionId  = "s1";
+    batch._sessionID  = "s1";
     batch._eventCount = 1;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Sent );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( client._listRequest.size() ) );

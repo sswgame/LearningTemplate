@@ -75,7 +75,7 @@ namespace sw
         // Windows 와 마찬가지로 **분리**한다. 아직 도는 자식을 기다리지 않는다. 이미 끝나 있으면 여기서 거둬 좀비를
         // 남기지 않고, 아직 돌고 있으면 이 프로세스가 끝난 뒤 init 이 거둔다.
         // (`pclose` 처럼 기다리면 소멸자가 자식이 끝날 때까지 막힌다.)
-        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid > 0 )
         {
             int32 status = 0;
@@ -84,7 +84,7 @@ namespace sw
 
         _bufferedOutput.clear();
         _pNativeHandle = nullptr;
-        _processId.store( 0 );
+        _processID.store( 0 );
     }
 
     bool Process::launch( string_view command, const ProcessOptions& options )
@@ -206,7 +206,7 @@ namespace sw
 
         _pStdOutRead   = pStream;
         _pNativeHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( childPid ) );
-        _processId.store( static_cast<int32>( childPid ) );
+        _processID.store( static_cast<int32>( childPid ) );
         return true;
     }
 
@@ -286,7 +286,7 @@ namespace sw
     int32 Process::waitForExit()
     {
         // pid 는 **한 번만 읽어 지역 변수에 담는다.** 아래 `terminate` 주석과 같은 이유다.
-        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid <= 0 )
             return -1;
 
@@ -300,7 +300,7 @@ namespace sw
         // **거둔 뒤에는 pid 를 놓는다.** 그 번호는 OS 가 곧 다른 프로세스에 준다. 계속 들고 있으면 언젠가 소멸자의
         // `waitpid` 가 다른(정확히는 이 프로세스가 나중에 띄운 다른) 자식을 거둬, 그쪽의 `waitForExit` 에서 종료 코드를
         // 빼앗는다.
-        _processId.store( 0 );
+        _processID.store( 0 );
         _pNativeHandle = nullptr;
 
         return ( reaped < 0 ) ? -1 : exitCodeFromStatus( status );
@@ -312,10 +312,10 @@ namespace sw
         (void)exitCode;
 
         // **pid 를 한 번만 읽어 지역 변수에 담는다.** 이 함수는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는
-        // 중에 불린다(`ModuleCompiler::cancel` 이 UI 스레드에서 그렇게 부른다). 확인한 뒤에 `waitForExit` 이 `_processId` 를
-        // 0 으로 만들면 아래 `kill( -_processId, … )` 이 `kill( 0, … )` 이 되는데, 그것은 **이 프로세스 자신의 그룹에
+        // 중에 불린다(`ModuleCompiler::cancel` 이 UI 스레드에서 그렇게 부른다). 확인한 뒤에 `waitForExit` 이 `_processID` 를
+        // 0 으로 만들면 아래 `kill( -_processID, … )` 이 `kill( 0, … )` 이 되는데, 그것은 **이 프로세스 자신의 그룹에
         // SIGKILL 을 보내는 것**이다. 에디터가 통째로 죽는다. 지역 변수에 담아 두면 그 틈이 아예 없다.
-        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid <= 0 )
             return false;
 
@@ -363,13 +363,13 @@ namespace sw
 
     bool Process::requestStop()
     {
-        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
         return childPid > 0 && ( kill( -childPid, SIGTERM ) == 0 || kill( childPid, SIGTERM ) == 0 );
     }
 
     bool Process::isRunning() const
     {
-        const pid_t childPid = static_cast<pid_t>( _processId.load() );
+        const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid <= 0 )
             return false;
 
@@ -383,19 +383,19 @@ namespace sw
         return info.si_pid == 0; // 0 이면 아직 끝나지 않았다
     }
 
-    int32 Process::getCurrentProcessId()
+    int32 Process::getCurrentProcessID()
     {
         return static_cast<int32>( ::getpid() );
     }
 
-    bool Process::isProcessAlive( int32 processId )
+    bool Process::isProcessAlive( int32 processID )
     {
         // 0 이하를 kill 에 넘기면 프로세스 그룹을 가리킨다. 여기서 막는다.
-        if ( processId <= 0 )
+        if ( processID <= 0 )
             return false;
 
         // 신호 0 은 보내지 않고 대상이 있는지만 본다. EPERM 은 있지만 신호를 보낼 권한이 없다는 뜻이다.
-        if ( kill( static_cast<pid_t>( processId ), 0 ) == 0 )
+        if ( kill( static_cast<pid_t>( processID ), 0 ) == 0 )
             return true;
         return errno == EPERM;
     }

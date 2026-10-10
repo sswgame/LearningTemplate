@@ -29,7 +29,7 @@ namespace sw
         , _onEvent{}
         , _onFinished{}
         , _state{ DialogueRunnerState::Idle }
-        , _currentNodeId{ 0 }
+        , _currentNodeID{ 0 }
         , _transitionSerial{ 0 }
     {
         setCanEverTick( false ); // 대화는 입력 · 이벤트로만 넘어간다 — 빈 틱에 워커를 쓰지 않는다
@@ -91,7 +91,7 @@ namespace sw
         _graph = std::move( graph );
     }
 
-    bool DialogueRunnerComponent::startDialogue( int32 startNodeId )
+    bool DialogueRunnerComponent::startDialogue( int32 startNodeID )
     {
         if ( _graph._listNode.empty() )
         {
@@ -99,20 +99,20 @@ namespace sw
             return false;
         }
 
-        int32 targetId = startNodeId;
-        if ( targetId <= 0 )
+        int32 targetID = startNodeID;
+        if ( targetID <= 0 )
         {
             const DialogueAssetNode* pStart = _graph.findStartNode();
-            targetId                        = ( pStart != nullptr ) ? pStart->_id : 0;
+            targetID                        = ( pStart != nullptr ) ? pStart->_id : 0;
         }
 
-        if ( targetId <= 0 )
+        if ( targetID <= 0 )
         {
             SW_LOG_WARNING( "DialogueRunner: No valid root or start node to execute." );
             return false;
         }
 
-        executeNode( targetId );
+        executeNode( targetID );
         return true;
     }
 
@@ -121,7 +121,7 @@ namespace sw
         if ( _state != DialogueRunnerState::ShowingDialogue )
             return false;
 
-        stepFrom( _currentNodeId, DialogueStepInput{}, 0 );
+        stepFrom( _currentNodeID, DialogueStepInput{}, 0 );
         return true;
     }
 
@@ -130,13 +130,13 @@ namespace sw
         if ( _state != DialogueRunnerState::WaitingForChoice )
             return false;
 
-        const DialogueAssetNode* pNode = _graph.findNode( _currentNodeId );
+        const DialogueAssetNode* pNode = _graph.findNode( _currentNodeID );
         DialogueStepInput        input{};
         input._choiceIndex = choiceIndex;
-        const int32 nextId = ( pNode != nullptr ) ? DialogueCursor::step( _graph, *pNode, input ) : 0;
-        if ( nextId > 0 )
+        const int32 nextID = ( pNode != nullptr ) ? DialogueCursor::step( _graph, *pNode, input ) : 0;
+        if ( nextID > 0 )
         {
-            executeNode( nextId );
+            executeNode( nextID );
             return true;
         }
 
@@ -149,7 +149,7 @@ namespace sw
         ++_transitionSerial;
         const bool bWasActive = ( _state != DialogueRunnerState::Idle && _state != DialogueRunnerState::Finished );
         _state                = DialogueRunnerState::Idle;
-        _currentNodeId        = 0;
+        _currentNodeID        = 0;
         _currentSpeaker.clear();
         _currentText.clear();
         _listCurrentChoice.clear();
@@ -177,9 +177,9 @@ namespace sw
         return _state;
     }
 
-    int32 DialogueRunnerComponent::getCurrentNodeId() const
+    int32 DialogueRunnerComponent::getCurrentNodeID() const
     {
-        return _currentNodeId;
+        return _currentNodeID;
     }
 
     const string& DialogueRunnerComponent::getCurrentSpeaker() const
@@ -295,38 +295,38 @@ namespace sw
             _onFinished();
     }
 
-    void DialogueRunnerComponent::stepFrom( int32 nodeId, const DialogueStepInput& input, int32 recursionDepth )
+    void DialogueRunnerComponent::stepFrom( int32 nodeID, const DialogueStepInput& input, int32 recursionDepth )
     {
         // 노드를 다시 찾는다 — Action 핸들러가 그래프를 갈았으면 앞서 찾은 노드 참조는 죽은 메모리다.
-        const DialogueAssetNode* pNode = _graph.findNode( nodeId );
+        const DialogueAssetNode* pNode = _graph.findNode( nodeID );
         executeNode( pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : 0, recursionDepth );
     }
 
-    void DialogueRunnerComponent::executeNode( int32 nodeId, int32 recursionDepth )
+    void DialogueRunnerComponent::executeNode( int32 nodeID, int32 recursionDepth )
     {
         ++_transitionSerial;
         if ( recursionDepth > 64 )
         {
-            SW_LOG_WARNING( "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeId );
+            SW_LOG_WARNING( "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
             finishDialogue();
             return;
         }
 
-        if ( nodeId <= 0 )
+        if ( nodeID <= 0 )
         {
             finishDialogue();
             return;
         }
 
-        const DialogueAssetNode* pNode = _graph.findNode( nodeId );
+        const DialogueAssetNode* pNode = _graph.findNode( nodeID );
         if ( pNode == nullptr )
         {
-            SW_LOG_WARNING( "Node %# not found in graph.", nodeId );
+            SW_LOG_WARNING( "Node %# not found in graph.", nodeID );
             finishDialogue();
             return;
         }
 
-        _currentNodeId                = nodeId;
+        _currentNodeID                = nodeID;
         const DialogueAssetNode& node = *pNode;
         DialogueStepInput        input{};
 
@@ -382,12 +382,12 @@ namespace sw
             }
             case DialogueAssetNodeType::Count:
             {
-                SW_LOG_WARNING( "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeId, static_cast<uint32>( node._type ) );
+                SW_LOG_WARNING( "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeID, static_cast<uint32>( node._type ) );
                 finishDialogue();
                 return;
             }
         }
 
-        stepFrom( nodeId, input, recursionDepth + 1 );
+        stepFrom( nodeID, input, recursionDepth + 1 );
     }
 } // namespace sw

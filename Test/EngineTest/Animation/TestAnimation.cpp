@@ -29,11 +29,11 @@ namespace
     [[nodiscard]] bool writeNamedGraph( const string& path, std::initializer_list<const utf8*> listName )
     {
         AnimGraphAsset graph;
-        int32          nodeId = 1;
+        int32          nodeID = 1;
         for ( const utf8* pName : listName )
         {
             AnimGraphNode node{};
-            node._id   = nodeId++;
+            node._id   = nodeID++;
             node._name = pName;
             graph._listNode.push_back( node );
         }

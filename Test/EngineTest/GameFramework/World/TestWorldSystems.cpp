@@ -66,7 +66,7 @@ namespace
     struct SkillCheckRecord
     {
         float32 _startTime{ 0.0f };
-        uint32  _actorId{ 0 };
+        uint32  _actorID{ 0 };
         bool    _bSuccess{ false };
     };
 
@@ -101,21 +101,21 @@ namespace
                 {
                     SkillCheckRecord record;
                     record._startTime = generator.getTime();
-                    record._actorId   = event._actorId;
+                    record._actorID   = event._actorID;
                     outListRecord.push_back( record );
-                    const uint32  otherActor = event._actorId == 7 ? 9u : 7u;
+                    const uint32  otherActor = event._actorID == 7 ? 9u : 7u;
                     const float32 before     = generator.getProgress();
                     SW_EXPECT_FALSE( generator.respondSkillCheck( otherActor, event._value ) ); // 남의 체크에는 응답할 수 없다
                     const int32 mode = startedCount % 3;
                     ++startedCount;
                     if ( mode == 0 )
                     {
-                        SW_EXPECT_TRUE( generator.respondSkillCheck( event._actorId, event._value + 0.01f ) );
+                        SW_EXPECT_TRUE( generator.respondSkillCheck( event._actorID, event._value + 0.01f ) );
                         SW_EXPECT_NEAR_EQUAL( before + 0.1f, generator.getProgress(), 1.0e-5f ); // Great 보너스
                     }
                     else if ( mode == 1 )
                     {
-                        SW_EXPECT_TRUE( generator.respondSkillCheck( event._actorId, event._value + 0.5f ) );
+                        SW_EXPECT_TRUE( generator.respondSkillCheck( event._actorID, event._value + 0.5f ) );
                         SW_EXPECT_NEAR_EQUAL( MathUtil::max( 0.0f, before - 0.1f ), generator.getProgress(), 1.0e-5f ); // 창 밖 = 실패
                     }
                     // mode 2 — 응답하지 않는다. 창이 닫히면 update 가 실패로 처리한다.
@@ -416,14 +416,14 @@ SW_TEST_CASE( WorldSystemsTest, SkillChecksJudgeTimingAndRepeatWithTheSameSeed )
     for ( size_t index = 0; index < listFirst.size(); ++index )
     {
         SW_EXPECT_NEAR_EQUAL( listFirst[index]._startTime, listSecond[index]._startTime, 1.0e-6f );
-        SW_EXPECT_EQUAL( listFirst[index]._actorId, listSecond[index]._actorId );
+        SW_EXPECT_EQUAL( listFirst[index]._actorID, listSecond[index]._actorID );
     }
     SW_EXPECT_NEAR_EQUAL( firstProgress, secondProgress, 1.0e-6f );
     SW_EXPECT_EQUAL( firstNoise, secondNoise );
     bool bDiffers = listFirst.size() != listOther.size();
     for ( size_t index = 0; bDiffers == false && index < listFirst.size(); ++index )
     {
-        bDiffers = MathUtil::abs( listFirst[index]._startTime - listOther[index]._startTime ) > 1.0e-4f || listFirst[index]._actorId != listOther[index]._actorId;
+        bDiffers = MathUtil::abs( listFirst[index]._startTime - listOther[index]._startTime ) > 1.0e-4f || listFirst[index]._actorID != listOther[index]._actorID;
     }
     SW_EXPECT_TRUE( bDiffers );
 }
@@ -456,20 +456,20 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
 
     director.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 3 );
-    SW_EXPECT_TRUE( listEvent[0]._entryId == hashed_string( "bug" ) );
-    SW_EXPECT_EQUAL( 1u, listEvent[0]._spawnId );
-    SW_EXPECT_TRUE( listEvent[2]._entryId == hashed_string( "giant" ) );
+    SW_EXPECT_TRUE( listEvent[0]._entryID == hashed_string( "bug" ) );
+    SW_EXPECT_EQUAL( 1u, listEvent[0]._spawnID );
+    SW_EXPECT_TRUE( listEvent[2]._entryID == hashed_string( "giant" ) );
 
     // 벌레가 죽으면 자리가 나서 다시 나온다(환불 없음 — 예산을 다시 모은다).
-    SW_EXPECT_TRUE( director.notifyDespawned( listEvent[0]._spawnId ) );
-    SW_EXPECT_FALSE( director.notifyDespawned( listEvent[0]._spawnId ) );
+    SW_EXPECT_TRUE( director.notifyDespawned( listEvent[0]._spawnID ) );
+    SW_EXPECT_FALSE( director.notifyDespawned( listEvent[0]._spawnID ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, director.getBudget(), 1.0e-5f );
     SW_EXPECT_EQUAL( 0, director.update( 0.5f ) );
     SW_EXPECT_EQUAL( 1, director.update( 0.5f ) );
     SW_EXPECT_EQUAL( 2, director.getAliveCount( hashed_string( "bug" ) ) );
     // 환불을 켜면 죽은 거인의 비용이 돌아온다(상한까지).
     director.setRefundOnDespawn( true );
-    SW_EXPECT_TRUE( director.notifyDespawned( listEvent[2]._spawnId ) );
+    SW_EXPECT_TRUE( director.notifyDespawned( listEvent[2]._spawnID ) );
     SW_EXPECT_NEAR_EQUAL( 3.0f, director.getBudget(), 1.0e-5f );
 
     // 태그 거르기: 실내만 — 실외 거인은 나오지 않고, 태그 없는 벌레는 나온다.
@@ -504,18 +504,18 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
     SW_ASSERT_TRUE( listFirst.size() > 10 );
     for ( size_t index = 0; index < listFirst.size(); ++index )
     {
-        SW_EXPECT_TRUE( listFirst[index]._entryId == listSecond[index]._entryId );
+        SW_EXPECT_TRUE( listFirst[index]._entryID == listSecond[index]._entryID );
         SW_EXPECT_NEAR_EQUAL( listFirst[index]._time, listSecond[index]._time, 1.0e-6f );
     }
     bool bDiffers = listFirst.size() != listOther.size();
     for ( size_t index = 0; bDiffers == false && index < listFirst.size(); ++index )
     {
-        bDiffers = ( listFirst[index]._entryId == listOther[index]._entryId ) == false;
+        bDiffers = ( listFirst[index]._entryID == listOther[index]._entryID ) == false;
     }
     SW_EXPECT_TRUE( bDiffers );
     for ( const SpawnEvent& event : listFirst )
     {
-        if ( event._kind == SpawnEvent::Kind::Spawned && event._entryId == hashed_string( "c" ) )
+        if ( event._kind == SpawnEvent::Kind::Spawned && event._entryID == hashed_string( "c" ) )
             SW_EXPECT_TRUE( event._time >= 20.0f );
     }
 }

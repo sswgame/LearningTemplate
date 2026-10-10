@@ -139,7 +139,7 @@ namespace sw::editor
             {
                 if ( pObject == nullptr || prefabPath.empty() )
                     return false;
-                const string& mapped = ws.getGameObjectPrefabPath( pObject->getObjectId() );
+                const string& mapped = ws.getGameObjectPrefabPath( pObject->getObjectID() );
                 if ( mapped.empty() == false && FileUtil::pathsEqualNormalized( mapped, prefabPath ) )
                     return true;
                 return false;
@@ -194,7 +194,7 @@ namespace sw::editor
                         continue;
 
                     PrefabIsolationHiddenObject entry{};
-                    entry._objectId   = pObject->getObjectId();
+                    entry._objectID   = pObject->getObjectID();
                     entry._bWasActive = pObject->isActive() ? SW_TRUE : SW_FALSE;
                     outHidden.push_back( entry );
                     pObject->setActive( false );
@@ -207,7 +207,7 @@ namespace sw::editor
                     return;
                 for ( const PrefabIsolationHiddenObject& entry : listHidden )
                 {
-                    GameObject* pObject = pManager->findGameObjectById( entry._objectId );
+                    GameObject* pObject = pManager->findGameObjectByID( entry._objectID );
                     if ( pObject == nullptr )
                         continue;
                     pObject->setActive( entry._bWasActive == SW_TRUE );
@@ -243,7 +243,7 @@ namespace sw::editor
     bool EditorAssetCommands::loadScene( string_view path )
     {
         // 리소스 트리 안이면 리소스 id 로 연다(절대 경로 · 프로젝트 기준 경로 · id 모두). 밖이면 받은 경로 그대로다.
-        string loadPath = ResourceUtil::toResourceId( path );
+        string loadPath = ResourceUtil::toResourceID( path );
         if ( loadPath.empty() )
             loadPath = string{ path };
 
@@ -450,10 +450,10 @@ namespace sw::editor
         {
             // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 주의: 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
             // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려진다.
-            const string textureId = ResourceUtil::toResourceId( pPath );
-            if ( textureId.empty() )
+            const string textureID = ResourceUtil::toResourceID( pPath );
+            if ( textureID.empty() )
                 SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
-            pSprite->setTextureName( textureId );
+            pSprite->setTextureName( textureID );
             // 편집 모드에서는 시작(onBeginPlay)이 없다 — 떨군 자리에서 바로 그려지게 렌더 에셋을 푼다.
             pSprite->resolveRenderAssets();
         }
@@ -693,7 +693,7 @@ namespace sw::editor
 
         GameObject* pUnderRoot = nullptr;
         if ( ws.isPrefabIsolationActive() )
-            pUnderRoot = pManager->findGameObjectById( ws.getPrefabIsolationRootId() );
+            pUnderRoot = pManager->findGameObjectByID( ws.getPrefabIsolationRootID() );
 
         const string pathStr{ prefabPath };
         GameObject*  pRoot = EditorAssetCommandsInternal::findPrefabInstance( pManager, ws, prefabPath, pUnderRoot );
@@ -708,7 +708,7 @@ namespace sw::editor
 
         PrefabIsolationFrame frame{};
         frame._prefabPath   = pathStr;
-        frame._rootObjectId = pRoot->getObjectId();
+        frame._rootObjectID = pRoot->getObjectID();
         frame._bSpawnedRoot = bSpawnedRoot;
         EditorAssetCommandsInternal::hideObjectsOutsideIsolation( pManager, pRoot, frame._listHidden );
         ws.pushPrefabIsolation( std::move( frame ) );
@@ -739,7 +739,7 @@ namespace sw::editor
         GameObjectManager* pManager = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         GameObject*        pRoot    = nullptr;
         if ( pManager != nullptr )
-            pRoot = pManager->findGameObjectById( frame._rootObjectId );
+            pRoot = pManager->findGameObjectByID( frame._rootObjectID );
 
         // 저장하지 못하면 격리를 끝내지 않는다 — 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
         if ( bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false )
@@ -769,7 +769,7 @@ namespace sw::editor
 
         GameObject* pParentRoot = nullptr;
         if ( pManager != nullptr )
-            pParentRoot = pManager->findGameObjectById( ws.getPrefabIsolationRootId() );
+            pParentRoot = pManager->findGameObjectByID( ws.getPrefabIsolationRootID() );
         if ( pParentRoot != nullptr )
             ws.selectGameObject( pParentRoot );
         ws.setFocusedAssetPath( ws.getPrefabIsolationPrefabPath().c_str() );

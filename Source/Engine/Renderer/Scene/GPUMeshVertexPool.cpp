@@ -40,17 +40,17 @@ namespace sw
                         std::equal( _listBuilt.begin(), _listBuilt.end(), _listScratchSorted.begin() );
         for ( size_t index = 0; bSameSet && index < _listScratchSorted.size(); ++index )
         {
-            bSameSet = _listBuiltContentId[index] == _listScratchSorted[index]->getContentId();
+            bSameSet = _listBuiltContentID[index] == _listScratchSorted[index]->getContentID();
         }
         if ( bSameSet && ( _vertexBuffer != 0 || _listScratchSorted.empty() ) )
             return false;
 
         release( pDevice );
         _listBuilt = _listScratchSorted;
-        _listBuiltContentId.clear();
+        _listBuiltContentID.clear();
         for ( const Mesh* pMesh : _listBuilt )
         {
-            _listBuiltContentId.push_back( pMesh->getContentId() );
+            _listBuiltContentID.push_back( pMesh->getContentID() );
         }
 
         vector<RHIVertex> listVertex;
@@ -89,7 +89,7 @@ namespace sw
         _vertexBuffer = 0;
         _mapBase.clear();
         _listBuilt.clear();
-        _listBuiltContentId.clear();
+        _listBuiltContentID.clear();
         _vertexCount = 0;
     }
 } // namespace sw

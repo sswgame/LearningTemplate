@@ -19,7 +19,7 @@ namespace sw
                 outWriter.writeVarUint( listAttachment.size() );
                 for ( const ServiceMailAttachment& attachment : listAttachment )
                 {
-                    ServiceKeyUtil::writeString( outWriter, attachment._assetId );
+                    ServiceKeyUtil::writeString( outWriter, attachment._assetID );
                     outWriter.writeVarInt( attachment._amount );
                 }
             }
@@ -32,7 +32,7 @@ namespace sw
                 outListAttachment.resize( static_cast<size_t>( count ) );
                 for ( ServiceMailAttachment& attachment : outListAttachment )
                 {
-                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, attachment._assetId ) == false )
+                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
                         return false;
                     attachment._amount = reader.readVarInt();
                 }
@@ -110,7 +110,7 @@ namespace sw
         outWriter.writeVarUint( reply._listBalance.size() );
         for ( const LedgerBalance& balance : reply._listBalance )
         {
-            ServiceKeyUtil::writeString( outWriter, balance._assetId );
+            ServiceKeyUtil::writeString( outWriter, balance._assetID );
             outWriter.writeVarInt( balance._amount );
         }
         outWriter.writeVarUint( reply._listMail.size() );
@@ -135,7 +135,7 @@ namespace sw
         outReply._listBalance.resize( static_cast<size_t>( balanceCount ) );
         for ( LedgerBalance& balance : outReply._listBalance )
         {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, balance._assetId ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, balance._assetID ) == false )
                 return false;
             balance._amount = reader.readVarInt();
         }

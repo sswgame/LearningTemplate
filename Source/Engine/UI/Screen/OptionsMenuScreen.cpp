@@ -153,7 +153,7 @@ namespace sw
         {
             for ( uint32 index = 0; index < static_cast<uint32>( _listTabButton.size() ); ++index )
             {
-                if ( _listTabButton[index] == source.getId() )
+                if ( _listTabButton[index] == source.getID() )
                     selectTab( index );
             }
             return true;
@@ -163,8 +163,8 @@ namespace sw
             UISystem* pUI = getUISystem();
             for ( const RowEntry& row : _listRow )
             {
-                if ( row._value == source.getId() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false )
-                    _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingId, kRebindDocument );
+                if ( row._value == source.getID() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false )
+                    _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingID, kRebindDocument );
             }
             return true;
         }
@@ -216,7 +216,7 @@ namespace sw
         WidgetTree& tree = getTree();
         for ( uint32 tabIndex = 0; tabIndex < static_cast<uint32>( _listTabButton.size() ); ++tabIndex )
         {
-            Widget* pButton = tree.findWidgetById( _listTabButton[tabIndex] );
+            Widget* pButton = tree.findWidgetByID( _listTabButton[tabIndex] );
             if ( pButton != nullptr )
                 pButton->setStyleClass( tabIndex == index ? OptionsMenuScreenInternal::kSelectedTabClass : OptionsMenuScreenInternal::kTabClass );
         }
@@ -228,12 +228,12 @@ namespace sw
         (void)pUI->getFocusManager().setFocus( tree, _listRow.front()._value );
     }
 
-    Widget* OptionsMenuScreen::findRowValueWidget( const hashed_string& settingId ) const
+    Widget* OptionsMenuScreen::findRowValueWidget( const hashed_string& settingID ) const
     {
         for ( const RowEntry& row : _listRow )
         {
-            if ( row._settingId == settingId )
-                return getTree().findWidgetById( row._value );
+            if ( row._settingID == settingID )
+                return getTree().findWidgetByID( row._value );
         }
         return nullptr;
     }
@@ -293,7 +293,7 @@ namespace sw
             unique_ptr<TextWidget> label = make_unique<TextWidget>();
             label->setText( category._textKey.empty() ? string_view( category._id.c_str() ) : string_view( category._textKey ) );
             (void)button->addChild( std::move( label ) );
-            _listTabButton.push_back( button->getId() );
+            _listTabButton.push_back( button->getID() );
             _listCategory.push_back( category._id );
             (void)pTabs->addChild( std::move( button ) );
         }
@@ -350,21 +350,21 @@ namespace sw
         if ( TextWidget* pLabel = tree.findWidget<TextWidget>( hashed_string( prefix + "." + Internal::kLabelName ) ); pLabel != nullptr )
             pLabel->setText( setting._textKey.empty() ? string_view( prefix ) : string_view( setting._textKey ) );
         RowEntry entry{};
-        entry._settingId = setting._id;
+        entry._settingID = setting._id;
         Widget* pValue   = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueName ) );
         if ( pValue == nullptr )
         {
             SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", pDocumentPath, Internal::kValueName );
             return false;
         }
-        entry._value            = pValue->getId();
+        entry._value            = pValue->getID();
         const string expression = "{setting:" + prefix + "}";
         if ( const utf8* pProperty = Internal::findValueProperty( setting._type ); pProperty != nullptr )
-            addBinding( UIBindingDesc{ pProperty, expression, pValue->getId(), 0 } );
+            addBinding( UIBindingDesc{ pProperty, expression, pValue->getID(), 0 } );
         if ( Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) ); pValueText != nullptr )
-            addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getId(), 0 } );
+            addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getID(), 0 } );
         if ( Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) ); pGlyph != nullptr )
-            entry._glyph = pGlyph->getId();
+            entry._glyph = pGlyph->getID();
         _listRow.push_back( entry );
         return true;
     }
@@ -377,14 +377,14 @@ namespace sw
         const InputGlyphStyle style = pUI->getInputManager() != nullptr ? pUI->getInputManager()->getActiveGlyphStyle() : InputGlyphStyle::KeyboardMouse;
         for ( const RowEntry& row : _listRow )
         {
-            TextWidget* pGlyph = castTo<TextWidget>( getTree().findWidgetById( row._glyph ) );
+            TextWidget* pGlyph = castTo<TextWidget>( getTree().findWidgetByID( row._glyph ) );
             if ( pGlyph == nullptr )
                 continue;
-            const string glyph = _pSettings->getBindingGlyph( row._settingId, style );
+            const string glyph = _pSettings->getBindingGlyph( row._settingID, style );
             if ( pGlyph->getText() != glyph )
                 pGlyph->setText( glyph );
-            if ( Widget* pValue = getTree().findWidgetById( row._value ); pValue != nullptr )
-                pValue->setEnabled( _pSettings->isSettingEnabled( row._settingId ) );
+            if ( Widget* pValue = getTree().findWidgetByID( row._value ); pValue != nullptr )
+                pValue->setEnabled( _pSettings->isSettingEnabled( row._settingID ) );
         }
     }
 

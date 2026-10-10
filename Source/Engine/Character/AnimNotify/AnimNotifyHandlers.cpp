@@ -29,14 +29,14 @@ namespace sw
             static constexpr uint32 kAllLayers = 0xFFFFFFFFu;
 
             /** @brief 처리기가 한 일 하나를 컴포넌트에 적습니다. */
-            static void record( AnimNotifyContext& context, const hashed_string& detail, const float3& position, uint64 targetObjectId, AnimNotifyPhase phase )
+            static void record( AnimNotifyContext& context, const hashed_string& detail, const float3& position, uint64 targetObjectID, AnimNotifyPhase phase )
             {
                 AnimNotifyAction action;
                 action._notify         = context._fired._name;
                 action._handler        = context._entry._handlerName;
                 action._detail         = detail;
                 action._position       = position;
-                action._targetObjectId = targetObjectId;
+                action._targetObjectID = targetObjectID;
                 action._phase          = phase;
                 context._component.recordAction( action );
             }
@@ -99,7 +99,7 @@ namespace sw
                         if ( context._entry.getBoolParam( s_attach, false ) && pOwnerRoot != nullptr )
                             (void)pScene->attachToComponent( pOwnerRoot, AttachRule::KeepWorld ); // 붙일 수 없는 부모면 월드 자리에 따로 둔다
                     }
-                    record( context, hashed_string( prefab ), position, pSpawned != nullptr ? pSpawned->getObjectId() : 0, AnimNotifyPhase::Instant );
+                    record( context, hashed_string( prefab ), position, pSpawned != nullptr ? pSpawned->getObjectID() : 0, AnimNotifyPhase::Instant );
                 }
 
             private:
@@ -138,7 +138,7 @@ namespace sw
                     IAudioSystem*              pAudio  = findAudioSystem();
                     if ( sound.empty() == false && pAudio != nullptr )
                         (void)pAudio->play( StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) );
-                    record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectId() : 0, AnimNotifyPhase::Instant );
+                    record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectID() : 0, AnimNotifyPhase::Instant );
                 }
 
             private:
@@ -171,7 +171,7 @@ namespace sw
                 {
                     if ( context._pState == nullptr )
                         return;
-                    context._pState->_listHitObjectId.clear();
+                    context._pState->_listHitObjectID.clear();
                     collectBlade( context, context._pState->_listPreviousPoint );
                     context._pState->_bHasPrevious = SW_TRUE;
                 }
@@ -227,10 +227,10 @@ namespace sw
                     CharacterRayHit            rayHit;
                     if ( context._component.castFromTo( from, to, radius, kAllLayers, rayHit ) == false || rayHit._pObject == nullptr )
                         return;
-                    const uint64 targetId = rayHit._pObject->getObjectId();
-                    if ( std::find( state._listHitObjectId.begin(), state._listHitObjectId.end(), targetId ) != state._listHitObjectId.end() )
+                    const uint64 targetID = rayHit._pObject->getObjectID();
+                    if ( std::find( state._listHitObjectID.begin(), state._listHitObjectID.end(), targetID ) != state._listHitObjectID.end() )
                         return;
-                    state._listHitObjectId.push_back( targetId );
+                    state._listHitObjectID.push_back( targetID );
                     HitInfo hit;
                     hit._pInstigator = &context._owner;
                     hit._body        = rayHit._body;
@@ -242,7 +242,7 @@ namespace sw
                     hit._impulse     = context._entry.getFloatParam( s_impulse, 0.0f );
                     hit._bIs2D       = rayHit._bIs2D;
                     CharacterHitUtil::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
-                    record( context, hit._zone, hit._point, targetId, context._fired._phase );
+                    record( context, hit._zone, hit._point, targetID, context._fired._phase );
                     CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
                 }
 
@@ -270,7 +270,7 @@ namespace sw
                     static const hashed_string s_socket( "socket" );
                     CameraShakeRequest         request;
                     request._origin         = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
-                    request._sourceObjectId = context._owner.getObjectId();
+                    request._sourceObjectID = context._owner.getObjectID();
                     request._amplitude      = context._entry.getFloatParam( s_amplitude, request._amplitude );
                     request._duration       = context._entry.getFloatParam( s_duration, request._duration );
                     request._frequency      = context._entry.getFloatParam( s_frequency, request._frequency );
@@ -308,7 +308,7 @@ namespace sw
                     info._event  = context._entry.getNameParam( s_event );
                     info._weight = context._fired._weight;
                     info._phase  = phase;
-                    record( context, info._event, context._component.findSocketWorldPosition( hashed_string{} ), context._owner.getObjectId(), phase );
+                    record( context, info._event, context._component.findSocketWorldPosition( hashed_string{} ), context._owner.getObjectID(), phase );
                     const vector<Component*> listTarget( context._owner.getComponents().begin(), context._owner.getComponents().end() );
                     for ( Component* pComponent : listTarget )
                     {

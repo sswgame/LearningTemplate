@@ -19,21 +19,21 @@ namespace sw::editor
     struct EditorProfileUtil
     {
         /** @brief 구간 지점을 등록합니다. 프로파일러 서비스가 없으면 아무 데도 쌓이지 않는 지점(빈 슬롯)입니다. */
-        static ProfileScopeId registerScope( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
+        static ProfileScopeID registerScope( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line )
         {
             FrameProfiler* pProfiler = getService<FrameProfiler>();
             if ( pProfiler != nullptr )
                 return pProfiler->registerScopeSite( pName, pFunction, pFile, line );
-            ProfileScopeId emptyId{};
-            emptyId._slot = FrameProfiler::kInvalidSlot;
-            return emptyId;
+            ProfileScopeID emptyID{};
+            emptyID._slot = FrameProfiler::kInvalidSlot;
+            return emptyID;
         }
     };
 } // namespace sw::editor
 
 /** @brief 이 스코프의 CPU 시간을 name 구간에 쌓습니다(에디터 모듈용 `SW_PROFILE_SCOPE`). */
 #define SW_EDITOR_PROFILE_SCOPE( name )                                                                              \
-    static const ::sw::ProfileScopeId SW_PROFILE_CONCAT( swEditorProfileSlot_, __LINE__ ) =                          \
+    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swEditorProfileSlot_, __LINE__ ) =                          \
         ::sw::editor::EditorProfileUtil::registerScope( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
     ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swEditorProfileScope_, __LINE__ )                                    \
     {                                                                                                                \

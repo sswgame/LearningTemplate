@@ -50,7 +50,7 @@ namespace sw
         EconomyRedeemRequest   _redeem{};
         EconomyHistoryRequest  _history{};
         NetIdempotencyKey      _idempotencyKey{};
-        AccountId              _accountId{ kInvalidAccountId };
+        AccountID              _accountID{ kInvalidAccountID };
         int64                  _nowMs{ 0 }; ///< 0 이면 마지막 `tick` 의 시각
         uint16                 _method{ 0 };
     };
@@ -88,7 +88,7 @@ namespace sw
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
         /** @brief 일(work)의 `complete` 가 부릅니다 — 응답 · 지표. */
-        void  completeCall( uint64 callId, const EconomyReply& reply );
+        void  completeCall( uint64 callID, const EconomyReply& reply );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
     private:
@@ -98,10 +98,10 @@ namespace sw
             ReplyDelegate      _onReply{};
             NetRequestToken    _token{};
             OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callId{ 0 };
+            uint64             _callID{ 0 };
             uint64             _receiptTicket{ 0 }; ///< 0 이 아니면 영수증 검증을 기다리는 중
             int64              _receivedNanoseconds{ 0 };
-            AccountId          _accountId{ kInvalidAccountId };
+            AccountID          _accountID{ kInvalidAccountID };
             int32              _methodIndex{ 0 };
         };
 
@@ -113,7 +113,7 @@ namespace sw
         ServiceMetrics         _metrics;
         EconomyServiceSettings _settings;
         IServiceStore*         _pStore;
-        uint64                 _nextCallId;
+        uint64                 _nextCallID;
         int64                  _nowMs;
     };
 } // namespace sw

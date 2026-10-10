@@ -237,7 +237,7 @@ namespace sw
         for ( int32 placementIndex = 0; placementIndex < static_cast<int32>( _listPlacement.size() ); ++placementIndex )
         {
             const RidePlacement& placement = _listPlacement[static_cast<size_t>( placementIndex )];
-            int32&               cheapest  = placement._layoutId.empty() ? cheapestFlat : cheapestCoaster;
+            int32&               cheapest  = placement._layoutID.empty() ? cheapestFlat : cheapestCoaster;
             if ( cheapest < 0 || placement._buildCost < _listPlacement[static_cast<size_t>( cheapest )]._buildCost )
                 cheapest = placementIndex;
         }
@@ -264,10 +264,10 @@ namespace sw
 
         ParkRide                   ride = placement._ride;
         unique_ptr<CoasterRuntime> pCoaster;
-        if ( placement._layoutId.empty() == false )
+        if ( placement._layoutID.empty() == false )
         {
             // 코스터 — 짓고 시험 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 짓지 않는다.
-            const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutId );
+            const CoasterLayoutDef* pLayout = _layoutCatalog.findLayout( placement._layoutID );
             CoasterRideStats        stats{};
             pCoaster = createCoaster( placementIndex, stats );
             if ( pLayout == nullptr || pCoaster == nullptr )
@@ -277,7 +277,7 @@ namespace sw
                 SW_LOG_WARNING( "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
                 return false;
             }
-            ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutId, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
+            ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutID, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
             // 줄 입구 — 스테이션 가운데 옆(바깥쪽).
             const CoasterTrackFrame stationFrame = pCoaster->_pTrack->sample( 6.0f );
             ride._entrance                       = stationFrame._position - stationFrame._right * 5.0f;
@@ -306,7 +306,7 @@ namespace sw
         if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
             return nullptr;
         const RidePlacement&    placement = _listPlacement[static_cast<size_t>( placementIndex )];
-        const CoasterLayoutDef* pLayout   = _layoutCatalog.findLayout( placement._layoutId );
+        const CoasterLayoutDef* pLayout   = _layoutCatalog.findLayout( placement._layoutID );
         if ( pLayout == nullptr )
             return nullptr;
         CoasterTrackBuilder builder;
@@ -503,13 +503,13 @@ namespace sw
         const RidePlacement& placement = _listPlacement[static_cast<size_t>( placementIndex )];
         spawnPath( manager, _settings._gatePosition, placement._ride._entrance );
         (void)Internal::placeMesh( spawnPrefab( manager, _rideEntrancePrefab, "RideEntrance" ), placement._ride._entrance, float3{ 0.0f, 0.0f, 0.0f } );
-        if ( placement._layoutId.empty() )
+        if ( placement._layoutID.empty() )
         {
             GameObject*    pObject = spawnPrefab( manager, _flatRidePrefab, "FlatRide" );
             MeshComponent* pMesh   = Internal::placeMesh( pObject, placement._position + float3{ 0.0f, placement._size._y * 0.5f, 0.0f }, float3{ 0.0f, 0.0f, 0.0f } );
             if ( pMesh == nullptr )
                 return;
-            pMesh->setMeshId( placement._shape );
+            pMesh->setMeshID( placement._shape );
             pMesh->setLocalScale( placement._size );
             _tintCache.apply( *pMesh, placement._color );
             FlatRideComponent* pView = pObject->getComponent<FlatRideComponent>();

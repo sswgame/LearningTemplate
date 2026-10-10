@@ -20,7 +20,7 @@ namespace sw
             static constexpr int64  kDaysPerWeek    = 7;
             static constexpr int64  kEpochWeekday   = 3; ///< 1970-01-01 은 목요일(ISO 월요일 = 0)
             static constexpr int64  kRetryMs        = 5000;
-            static constexpr int32  kMaxJobIdSize   = 128;
+            static constexpr int32  kMaxJobIDSize   = 128;
             static constexpr uint64 kVersion        = 1;
             static constexpr uint32 kStateRunning   = 0;
             static constexpr uint32 kStateSucceeded = 1;
@@ -30,15 +30,15 @@ namespace sw
             /** @brief 차지 레코드입니다. */
             struct RunRecord
             {
-                uint64 _serverId{ 0 };
+                uint64 _serverID{ 0 };
                 int64  _startMs{ 0 };
                 int64  _endMs{ 0 };
                 uint32 _state{ kStateRunning };
             };
 
-            static string makeKey( string_view jobId, int64 occurrenceMs )
+            static string makeKey( string_view jobID, int64 occurrenceMs )
             {
-                string key{ jobId };
+                string key{ jobID };
                 key.push_back( '/' );
                 ServiceKeyUtil::appendHex64( key, static_cast<uint64>( occurrenceMs ) );
                 return key;
@@ -48,7 +48,7 @@ namespace sw
             {
                 BitWriter writer;
                 writer.writeVarUint( kVersion );
-                writer.writeVarUint( record._serverId );
+                writer.writeVarUint( record._serverID );
                 writer.writeVarInt( record._startMs );
                 writer.writeVarInt( record._endMs );
                 writer.writeBits( record._state, kStateBitCount );
@@ -60,7 +60,7 @@ namespace sw
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readVarUint() != kVersion )
                     return false;
-                outRecord._serverId = reader.readVarUint();
+                outRecord._serverID = reader.readVarUint();
                 outRecord._startMs  = reader.readVarInt();
                 outRecord._endMs    = reader.readVarInt();
                 outRecord._state    = reader.readBits( kStateBitCount );
@@ -82,12 +82,12 @@ namespace sw
     class ServiceScheduler::ClaimWork final : public IServiceStoreWork
     {
     public:
-        ClaimWork( ServiceScheduler* pScheduler, size_t jobIndex, string jobId, int64 occurrenceMs, uint64 serverId, int64 nowMs, int64 leaseMs )
-            : _jobId{ std::move( jobId ) }
+        ClaimWork( ServiceScheduler* pScheduler, size_t jobIndex, string jobID, int64 occurrenceMs, uint64 serverID, int64 nowMs, int64 leaseMs )
+            : _jobID{ std::move( jobID ) }
             , _pScheduler{ pScheduler }
             , _jobIndex{ jobIndex }
             , _occurrenceMs{ occurrenceMs }
-            , _serverId{ serverId }
+            , _serverID{ serverID }
             , _nowMs{ nowMs }
             , _leaseMs{ leaseMs }
             , _runToken{ 0 }
@@ -99,7 +99,7 @@ namespace sw
         void run( IServiceStoreConnection& connection ) override
         {
             _retryAtMs                   = _nowMs + ServiceSchedulerInternal::kRetryMs;
-            const string             key = ServiceSchedulerInternal::makeKey( _jobId, _occurrenceMs );
+            const string             key = ServiceSchedulerInternal::makeKey( _jobID, _occurrenceMs );
             ServiceRecord            record;
             const ServiceStoreResult readResult = connection.readRecord( getTable(), key, record );
             if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
@@ -125,7 +125,7 @@ namespace sw
                 expectedVersion = record._version; // 임대가 지났다 — 이어받는다
             }
             ServiceSchedulerInternal::RunRecord claim;
-            claim._serverId = _serverId;
+            claim._serverID = _serverID;
             claim._startMs  = _nowMs;
             ServiceTransaction transaction;
             transaction.put( getTable(), key, ServiceSchedulerInternal::encode( claim ), expectedVersion );
@@ -151,11 +151,11 @@ namespace sw
         }
 
     private:
-        string            _jobId;
+        string            _jobID;
         ServiceScheduler* _pScheduler;
         size_t            _jobIndex;
         int64             _occurrenceMs;
-        uint64            _serverId;
+        uint64            _serverID;
         int64             _nowMs;
         int64             _leaseMs;
         uint64            _runToken;
@@ -170,10 +170,10 @@ namespace sw
     class ServiceScheduler::FinishWork final : public IServiceStoreWork
     {
     public:
-        FinishWork( ServiceScheduler* pScheduler, const ScheduledRun& run, uint64 serverId, bool bSucceeded, int64 nowMs )
+        FinishWork( ServiceScheduler* pScheduler, const ScheduledRun& run, uint64 serverID, bool bSucceeded, int64 nowMs )
             : _run{ run }
             , _pScheduler{ pScheduler }
-            , _serverId{ serverId }
+            , _serverID{ serverID }
             , _nowMs{ nowMs }
             , _result{ ServiceStoreResult::Ok }
             , _bSucceeded{ static_cast<uint8>( bSucceeded ? SW_TRUE : SW_FALSE ) }
@@ -183,12 +183,12 @@ namespace sw
         void run( IServiceStoreConnection& connection ) override
         {
             ServiceSchedulerInternal::RunRecord finished;
-            finished._serverId = _serverId;
+            finished._serverID = _serverID;
             finished._startMs  = _nowMs;
             finished._endMs    = _nowMs;
             finished._state    = _bSucceeded == SW_TRUE ? ServiceSchedulerInternal::kStateSucceeded : ServiceSchedulerInternal::kStateFailed;
             ServiceTransaction transaction;
-            transaction.put( getTable(), ServiceSchedulerInternal::makeKey( _run._jobId, _run._occurrenceMs ), ServiceSchedulerInternal::encode( finished ), _run._runToken );
+            transaction.put( getTable(), ServiceSchedulerInternal::makeKey( _run._jobID, _run._occurrenceMs ), ServiceSchedulerInternal::encode( finished ), _run._runToken );
             _result = connection.commit( transaction );
         }
 
@@ -196,13 +196,13 @@ namespace sw
         {
             _pScheduler->onWorkCompleted();
             if ( _result != ServiceStoreResult::Ok )
-                SW_LOG_WARNING( "Could not record the end of scheduled run '%#' (another server took it over or the store is unavailable)", _run._jobId );
+                SW_LOG_WARNING( "Could not record the end of scheduled run '%#' (another server took it over or the store is unavailable)", _run._jobID );
         }
 
     private:
         ScheduledRun       _run;
         ServiceScheduler*  _pScheduler;
-        uint64             _serverId;
+        uint64             _serverID;
         int64              _nowMs;
         ServiceStoreResult _result;
         uint8              _bSucceeded;
@@ -214,7 +214,7 @@ namespace sw
     ServiceScheduler::ServiceScheduler()
         : _listJob{}
         , _pStore{ nullptr }
-        , _serverId{ 0 }
+        , _serverID{ 0 }
         , _lastTickMs{ 0 }
         , _pendingWorkCount{ 0 }
     {
@@ -222,10 +222,10 @@ namespace sw
 
     ServiceScheduler::~ServiceScheduler() { shutdown(); }
 
-    void ServiceScheduler::initialize( IServiceStore* pStore, uint64 serverId )
+    void ServiceScheduler::initialize( IServiceStore* pStore, uint64 serverID )
     {
         _pStore   = pStore;
-        _serverId = serverId;
+        _serverID = serverID;
         _listJob.clear();
     }
 
@@ -239,7 +239,7 @@ namespace sw
     {
         if ( pHandler == nullptr || isValidDefinition( definition ) == false )
         {
-            SW_LOG_WARNING( "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobId );
+            SW_LOG_WARNING( "Ignored scheduled job '%#' — invalid schedule or no handler", definition._jobID );
             return false;
         }
         Job& job        = _listJob.emplace_back();
@@ -266,7 +266,7 @@ namespace sw
                 continue;
             job._bClaimPending = SW_TRUE;
             ++_pendingWorkCount;
-            _pStore->submit( sw::make_unique<ClaimWork>( this, jobIndex, job._definition._jobId, occurrenceMs, _serverId, nowMs, job._definition._leaseMs ) );
+            _pStore->submit( sw::make_unique<ClaimWork>( this, jobIndex, job._definition._jobID, occurrenceMs, _serverID, nowMs, job._definition._leaseMs ) );
         }
     }
 
@@ -275,7 +275,7 @@ namespace sw
         if ( _pStore == nullptr )
             return;
         ++_pendingWorkCount;
-        _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverId, bSucceeded, _lastTickMs ) );
+        _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverID, bSucceeded, _lastTickMs ) );
     }
 
     int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDefinition& definition, int64 nowMs )
@@ -315,9 +315,9 @@ namespace sw
 
     bool ServiceScheduler::isValidDefinition( const ScheduleDefinition& definition )
     {
-        if ( definition._jobId.empty() || definition._jobId.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIdSize ) || definition._leaseMs <= 0 )
+        if ( definition._jobID.empty() || definition._jobID.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIDSize ) || definition._leaseMs <= 0 )
             return false;
-        for ( const utf8 ch : definition._jobId )
+        for ( const utf8 ch : definition._jobID )
         {
             const bool bAllowed = ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.';
             if ( bAllowed == false )
@@ -353,7 +353,7 @@ namespace sw
             {
                 job._handledOccurrenceMs = occurrenceMs;
                 ScheduledRun run;
-                run._jobId        = job._definition._jobId;
+                run._jobID        = job._definition._jobID;
                 run._occurrenceMs = occurrenceMs;
                 run._runToken     = runToken;
                 job._pHandler->onScheduledRun( run );

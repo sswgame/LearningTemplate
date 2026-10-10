@@ -61,13 +61,13 @@ namespace sw
         /** @brief 작물을 더합니다(같은 id 는 바꾼다). */
         void addCrop( const CropDef& crop );
 
-        const CropDef* findCrop( const hashed_string& cropId ) const { return _catalog.find( cropId ); }
+        const CropDef* findCrop( const hashed_string& cropID ) const { return _catalog.find( cropID ); }
         /** @brief 씨앗 아이템으로 작물을 찾습니다(해시 한 번). */
         const CropDef* findCropBySeed( const hashed_string& seedItem ) const;
         /**
          * @brief 아이템 하나의 판매가입니다 — 수확물은 `_sellPrice`, 씨앗은 `_seedPrice` 의 절반. 모르는 아이템은 0 입니다.
          */
-        int32                  findSellPrice( const hashed_string& itemId ) const;
+        int32                  findSellPrice( const hashed_string& itemID ) const;
         const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
         /** @brief 읽기 전에 알려 둔 계절 이름입니다 — 모르는 계절만 적힌 작물은 알리고 뺀다(비우면 검사하지 않는다). */

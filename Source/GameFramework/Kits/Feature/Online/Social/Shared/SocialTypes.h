@@ -61,7 +61,7 @@ namespace sw
     /** @brief 관계 한 줄입니다. */
     struct SocialLink
     {
-        AccountId       _otherId{ kInvalidAccountId };
+        AccountID       _otherID{ kInvalidAccountID };
         int64           _sinceMs{ 0 };
         SocialLinkState _state{ SocialLinkState::None };
     };
@@ -87,7 +87,7 @@ namespace sw
     struct SocialPresence
     {
         string               _activity{}; ///< "던전 3 층" — `SocialLimit::kMaxActivitySize` 바이트 이하
-        AccountId            _accountId{ kInvalidAccountId };
+        AccountID            _accountID{ kInvalidAccountID };
         SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
     };
 } // namespace sw
@@ -101,7 +101,7 @@ namespace sw
         FriendAdded,         ///< 친구가 됨
         FriendRemoved,
         PresenceChanged, ///< 친구의 접속 상태
-        GuildInvited,    ///< 길드 초대(상대 = 초대한 이, `_guildId`)
+        GuildInvited,    ///< 길드 초대(상대 = 초대한 이, `_guildID`)
         GuildChanged,    ///< 회원 · 역할 · 공지가 바뀜(다시 조회하라 — 내보내졌으면 조회가 NotInGuild)
         Count
     };
@@ -109,13 +109,13 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 알림 하나입니다. 받는 이(`_recipientId`)는 와이어에 싣지 않는다(서버가 고른 연결로 간다). */
+    /** @brief 알림 하나입니다. 받는 이(`_recipientID`)는 와이어에 싣지 않는다(서버가 고른 연결로 간다). */
     struct SocialNotification
     {
         SocialPresence         _presence{}; ///< PresenceChanged
-        AccountId              _recipientId{ kInvalidAccountId };
-        AccountId              _otherId{ kInvalidAccountId };
-        uint64                 _guildId{ 0 }; ///< 길드 알림
+        AccountID              _recipientID{ kInvalidAccountID };
+        AccountID              _otherID{ kInvalidAccountID };
+        uint64                 _guildID{ 0 }; ///< 길드 알림
         SocialNotificationKind _kind{ SocialNotificationKind::FriendRequested };
     };
 } // namespace sw
@@ -151,7 +151,7 @@ namespace sw
     /** @brief 길드 회원 하나입니다. */
     struct GuildMember
     {
-        AccountId _accountId{ kInvalidAccountId };
+        AccountID _accountID{ kInvalidAccountID };
         int64     _joinedMs{ 0 };
         GuildRole _role{ GuildRole::Member };
     };
@@ -165,8 +165,8 @@ namespace sw
         vector<GuildMember> _listMember{};
         string              _name{};
         string              _notice{};
-        uint64              _guildId{ 0 };
-        AccountId           _masterId{ kInvalidAccountId };
+        uint64              _guildID{ 0 };
+        AccountID           _masterID{ kInvalidAccountID };
         int64               _createdMs{ 0 };
         int32               _memberCount{ 0 };
     };

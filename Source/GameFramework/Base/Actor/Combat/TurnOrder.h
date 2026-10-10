@@ -24,7 +24,7 @@ namespace sw
 
     /**
      * @class TurnOrder
-     * @brief 행위자는 게임이 정한 번호(`actorId`)로 넣습니다. 쓰러지면 `removeActor`, 속도가 바뀌면 `setSpeed` 입니다(타임라인은 남은 몫을 비율로 옮긴다).
+     * @brief 행위자는 게임이 정한 번호(`actorID`)로 넣습니다. 쓰러지면 `removeActor`, 속도가 바뀌면 `setSpeed` 입니다(타임라인은 남은 몫을 비율로 옮긴다).
      */
     class SW_GF_API TurnOrder
     {
@@ -34,13 +34,13 @@ namespace sw
         TurnOrder();
 
         void initialize( TurnOrderMode mode, uint32 seed );
-        void addActor( int32 actorId, float32 speed );
-        void removeActor( int32 actorId );
-        void setSpeed( int32 actorId, float32 speed );
+        void addActor( int32 actorID, float32 speed );
+        void removeActor( int32 actorID );
+        void setSpeed( int32 actorID, float32 speed );
         /** @brief 라운드제 — 이번 라운드에 고른 행동의 우선도(높을수록 먼저, 다음 라운드를 짤 때 쓴다). */
-        void setPriority( int32 actorId, int32 priority );
+        void setPriority( int32 actorID, int32 priority );
         /** @brief 타임라인제 — 차례를 @p amount 몫(0..1, 1 = 한 차례 전체)만큼 늦춥니다(지연 공격 · 기절). 음수면 앞당긴다. */
-        void delayActor( int32 actorId, float32 amount );
+        void delayActor( int32 actorID, float32 amount );
         /** @brief 라운드제 — 지금 라운드 순서를 버리고 다음 `next` 에서 다시 짭니다(모두 행동을 고른 뒤 부른다). */
         void restartRound();
 
@@ -61,12 +61,12 @@ namespace sw
         {
             float32 _speed{ 1.0f };
             float32 _gauge{ 0.0f }; ///< 타임라인 — 다음 차례까지 남은 양
-            int32   _actorId{ -1 };
+            int32   _actorID{ -1 };
             int32   _priority{ 0 };
             uint32  _tieBreak{ 0 };
         };
 
-        Actor*       findActor( int32 actorId );
+        Actor*       findActor( int32 actorID );
         void         makeRoundQueue( vector<int32>& outListQueue, const vector<Actor>& listActor, GameRandom& random ) const;
         static int32 popTimeline( vector<Actor>& listActor );
 

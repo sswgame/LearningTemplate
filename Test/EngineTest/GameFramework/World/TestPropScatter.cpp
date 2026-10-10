@@ -169,8 +169,8 @@ SW_TEST_CASE( PropScatterTest, SceneStateFillsTheParams )
 {
     const string      xml = "<GameObject _schemaVersion=\"0\" _name=\"Trees\" _bActive=\"true\"><_listComponent>"
                             "<PropScatterComponent _regionMin=\"-1,0,-2\" _regionMax=\"3,0,4\" _spacing=\"2.5\" _seed=\"99\" _mode=\"Fill\" _scaleMin=\"2\" _scaleMax=\"3\">"
-                            "<_listModel><PropScatterModel _meshId=\"game/x/models/tree.mesh\" _weight=\"2\"/>"
-                            "<PropScatterModel _meshId=\"game/x/models/rock.mesh\" _weight=\"0.5\"/></_listModel>"
+                            "<_listModel><PropScatterModel _meshID=\"game/x/models/tree.mesh\" _weight=\"2\"/>"
+                            "<PropScatterModel _meshID=\"game/x/models/rock.mesh\" _weight=\"0.5\"/></_listModel>"
                             "<_listExclusion><PropScatterExclusion _center=\"1,0,1\" _radius=\"1.5\"/></_listExclusion>"
                             "</PropScatterComponent></_listComponent></GameObject>";
     GameObjectManager manager;
@@ -182,7 +182,7 @@ SW_TEST_CASE( PropScatterTest, SceneStateFillsTheParams )
 
     const PropScatterParams params = pScatter->makeParams();
     SW_ASSERT_EQUAL( static_cast<size_t>( 2 ), params._listModel.size() );
-    SW_EXPECT_TRUE( params._listModel[1]._meshId == "game/x/models/rock.mesh" );
+    SW_EXPECT_TRUE( params._listModel[1]._meshID == "game/x/models/rock.mesh" );
     SW_EXPECT_NEAR_EQUAL( 0.5f, params._listModel[1]._weight, 1.0e-6f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), params._listExclusion.size() );
     SW_EXPECT_NEAR_EQUAL( 1.5f, params._listExclusion[0]._radius, 1.0e-6f );

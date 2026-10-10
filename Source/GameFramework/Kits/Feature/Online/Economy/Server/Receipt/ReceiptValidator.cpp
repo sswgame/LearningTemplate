@@ -68,7 +68,7 @@ namespace sw
         return false;
     }
 
-    uint64 ReceiptValidatorRegistry::submitValidation( string_view storeName, string_view payload, uint64 accountId )
+    uint64 ReceiptValidatorRegistry::submitValidation( string_view storeName, string_view payload, uint64 accountID )
     {
         IReceiptValidator* pValidator = findValidator( storeName );
         if ( pValidator == nullptr )
@@ -76,7 +76,7 @@ namespace sw
         ReceiptValidationRequest request;
         request._storeName = string( storeName );
         request._payload   = string( payload );
-        request._accountId = accountId;
+        request._accountID = accountID;
         request._ticket    = _nextTicket++;
         pValidator->submitValidation( request );
         return request._ticket;

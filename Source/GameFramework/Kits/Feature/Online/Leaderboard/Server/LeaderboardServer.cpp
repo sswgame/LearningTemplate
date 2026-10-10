@@ -58,7 +58,7 @@ namespace sw
         }
         if ( context._method == LeaderboardMethod::kSubmitScore )
         {
-            const LeaderboardDefinition* pBoard = _pService->findBoard( request._boardId );
+            const LeaderboardDefinition* pBoard = _pService->findBoard( request._boardID );
             if ( pBoard == nullptr || pBoard->_bClientSubmit == SW_FALSE )
             {
                 LeaderboardReply reply;
@@ -70,40 +70,40 @@ namespace sw
             }
         }
         const uint64    requestTag = _pendingTable.add( context._token );
-        const AccountId selfId     = context._accountId;
+        const AccountID selfID     = context._accountID;
         switch ( context._method )
         {
             case LeaderboardMethod::kGetTop:
             {
-                _pService->readTop( request._boardId, request._offset, request._count, context._nowMs, requestTag );
+                _pService->readTop( request._boardID, request._offset, request._count, context._nowMs, requestTag );
                 break;
             }
             case LeaderboardMethod::kGetAround:
             {
-                _pService->readAround( request._boardId, selfId, request._count, context._nowMs, requestTag );
+                _pService->readAround( request._boardID, selfID, request._count, context._nowMs, requestTag );
                 break;
             }
             case LeaderboardMethod::kGetStats:
             {
-                _pService->readStats( selfId, requestTag );
+                _pService->readStats( selfID, requestTag );
                 break;
             }
             case LeaderboardMethod::kSubmitScore:
             {
                 AccountIdentity identity;
-                if ( _pDirectory == nullptr || _pDirectory->findIdentity( selfId, identity ) == false )
+                if ( _pDirectory == nullptr || _pDirectory->findIdentity( selfID, identity ) == false )
                     identity._displayName.clear();
-                _pService->submitScore( request._boardId, selfId, identity._displayName, request._score, context._nowMs, requestTag );
+                _pService->submitScore( request._boardID, selfID, identity._displayName, request._score, context._nowMs, requestTag );
                 break;
             }
             case LeaderboardMethod::kGetAchievements:
             {
-                _pService->readAchievements( selfId, requestTag );
+                _pService->readAchievements( selfID, requestTag );
                 break;
             }
             default:
             {
-                _pService->readSeasonResult( request._boardId, request._seasonId, selfId, requestTag );
+                _pService->readSeasonResult( request._boardID, request._seasonID, selfID, requestTag );
                 break;
             }
         }
@@ -123,7 +123,7 @@ namespace sw
                 continue; // 꼬리표 0(안에서 건 일) · 이미 답함
             LeaderboardReply reply;
             reply._result          = completion._result;
-            reply._periodId        = completion._periodId;
+            reply._periodID        = completion._periodID;
             reply._score           = completion._score;
             reply._listEntry       = std::move( completion._listEntry );
             reply._listStat        = std::move( completion._listStat );
@@ -139,8 +139,8 @@ namespace sw
         {
             BitWriter body;
             LeaderboardProtocol::writeAchievement( body, unlock._state );
-            if ( host.sendPush( unlock._accountId, LeaderboardMethod::kPushAchievement, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( unlock._accountId, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 붙어 있다
+            if ( host.sendPush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ) == false && _pPresence != nullptr )
+                (void)_pPresence->sendRemotePush( unlock._accountID, LeaderboardMethod::kPushAchievement, body ); // 다른 서버에 붙어 있다
         }
     }
 } // namespace sw

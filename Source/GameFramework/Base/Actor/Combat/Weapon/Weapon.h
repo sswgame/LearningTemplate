@@ -29,7 +29,7 @@ namespace sw
     struct WeaponDef
     {
         hashed_string _id{};
-        hashed_string _ammoId{}; ///< 예비탄으로 쓰는 아이템 id(인벤토리와 잇는 게임이 본다 — 비면 무기 자체 예비탄)
+        hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id(인벤토리와 잇는 게임이 본다 — 비면 무기 자체 예비탄)
         string        _name{};
         float32       _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
         float32       _reloadTime{ 1.8f };

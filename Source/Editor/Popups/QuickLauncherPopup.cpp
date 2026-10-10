@@ -60,28 +60,28 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().openPopup( kPopupId );
+            pContext->getPopupManager().openPopup( kPopupID );
     }
 
     void QuickLauncherPopup::close()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().closePopup( kPopupId );
+            pContext->getPopupManager().closePopup( kPopupID );
     }
 
     void QuickLauncherPopup::toggle()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            pContext->getPopupManager().togglePopup( kPopupId );
+            pContext->getPopupManager().togglePopup( kPopupID );
     }
 
     bool QuickLauncherPopup::isOpen()
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr )
-            return pContext->getPopupManager().isPopupOpen( kPopupId );
+            return pContext->getPopupManager().isPopupOpen( kPopupID );
         return false;
     }
 
@@ -103,15 +103,15 @@ namespace sw::editor
             // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
             pObjects->forEachGameObject( [this]( GameObject* pObj )
             {
-                const uint64      objId = pObj->getObjectId();
+                const uint64      objID = pObj->getObjectID();
                 QuickLauncherItem item{};
                 item._category = "GameObject";
                 item._title    = string{ pObj->getName().c_str() };
 
                 StringBuilder<constant::kMaxBuffer64> detailSb;
-                detailSb.appendFormat( "Scene GameObject (ID: %#)", objId );
+                detailSb.appendFormat( "Scene GameObject (ID: %#)", objID );
                 item._detail         = string{ detailSb.view() };
-                item._targetObjectId = objId;
+                item._targetObjectID = objID;
                 _listAllItem.push_back( std::move( item ) );
             } );
         }
@@ -145,7 +145,7 @@ namespace sw::editor
             if ( pObjects == nullptr )
                 return;
 
-            GameObject* pFound = pObjects->findGameObjectById( item._targetObjectId );
+            GameObject* pFound = pObjects->findGameObjectByID( item._targetObjectID );
             EditorSceneCommands::select( pFound, SelectionMode::Replace );
             return;
         }
@@ -162,7 +162,7 @@ namespace sw::editor
         pollFileIndex();
 
         editor::EditorSearchOverlayDesc overlayDesc{};
-        overlayDesc._pId          = "##QuickLauncherOverlay";
+        overlayDesc._pID          = "##QuickLauncherOverlay";
         overlayDesc._pOpen        = &_bOpen;
         overlayDesc._size         = float2{ 620.0f, 400.0f };
         overlayDesc._borderColor  = float4{ 0.25f, 0.55f, 0.85f, 1.0f };
@@ -201,7 +201,7 @@ namespace sw::editor
         ImGui::Separator();
 
         editor::EditorSectionDesc resultsDesc{};
-        resultsDesc._pId  = "##qlResults";
+        resultsDesc._pID  = "##qlResults";
         resultsDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( resultsDesc ) )
         {

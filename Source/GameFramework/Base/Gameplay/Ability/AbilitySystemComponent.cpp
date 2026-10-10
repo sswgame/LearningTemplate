@@ -185,10 +185,10 @@ namespace sw
         , _pModuleCodeGuard{ nullptr }
         , _pCatalog{ nullptr }
         , _time{ 0.0f }
-        , _nextHandleId{ 0 }
+        , _nextHandleID{ 0 }
         , _listLockDepth{ 0 }
         , _bHasPendingRemoval{ SW_FALSE }
-        , _abilitySetId{}
+        , _abilitySetID{}
         , _healthAttribute{ "Health" }
         , _maxHealthAttribute{ "MaxHealth" }
         , _damageNumberOffset{ 0.0f, 0.6f, 0.0f }
@@ -218,8 +218,8 @@ namespace sw
     void AbilitySystemComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        if ( _abilitySetId.empty() == false )
-            (void)grantAbilitySet( _abilitySetId ); // 실패는 안에서 알린다
+        if ( _abilitySetID.empty() == false )
+            (void)grantAbilitySet( _abilitySetID ); // 실패는 안에서 알린다
         notifyHealthChanged( true );
     }
 
@@ -256,18 +256,18 @@ namespace sw
         return game::getService<AbilityCatalog>();
     }
 
-    bool AbilitySystemComponent::grantAbilitySet( const hashed_string& setId )
+    bool AbilitySystemComponent::grantAbilitySet( const hashed_string& setID )
     {
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "grantAbilitySet '%#': no AbilityCatalog (setCatalog or bind it as a game service)", setId.c_str() );
+            SW_LOG_WARNING( "grantAbilitySet '%#': no AbilityCatalog (setCatalog or bind it as a game service)", setID.c_str() );
             return false;
         }
-        const AbilitySetDef* pSet = pCatalog->findAbilitySet( setId );
+        const AbilitySetDef* pSet = pCatalog->findAbilitySet( setID );
         if ( pSet == nullptr )
         {
-            SW_LOG_WARNING( "grantAbilitySet: no ability set '%#' in the catalog", setId.c_str() );
+            SW_LOG_WARNING( "grantAbilitySet: no ability set '%#' in the catalog", setID.c_str() );
             return false;
         }
 
@@ -277,7 +277,7 @@ namespace sw
             unique_ptr<AttributeSet> pAttributeSet = pCatalog->createAttributeSet( setEntry._className );
             if ( pAttributeSet == nullptr )
             {
-                SW_LOG_WARNING( "grantAbilitySet '%#': attribute set class '%#' is not registered", setId.c_str(), setEntry._className.c_str() );
+                SW_LOG_WARNING( "grantAbilitySet '%#': attribute set class '%#' is not registered", setID.c_str(), setEntry._className.c_str() );
                 continue;
             }
             for ( const AbilitySetAttributeEntry& attributeEntry : setEntry._listAttribute )
@@ -295,11 +295,11 @@ namespace sw
         }
         for ( const AbilitySetAbilityEntry& abilityEntry : pSet->_listAbility )
         {
-            (void)giveAbilityById( abilityEntry._abilityId, abilityEntry._level, abilityEntry._inputId ); // 실패는 안에서 알린다
+            (void)giveAbilityByID( abilityEntry._abilityID, abilityEntry._level, abilityEntry._inputID ); // 실패는 안에서 알린다
         }
         for ( const AbilitySetEffectEntry& effectEntry : pSet->_listEffect )
         {
-            (void)applyGameplayEffectToSelf( effectEntry._effectId, effectEntry._level ); // 태그 조건에 막힌 시작 이펙트는 걸리지 않는다
+            (void)applyGameplayEffectToSelf( effectEntry._effectID, effectEntry._level ); // 태그 조건에 막힌 시작 이펙트는 걸리지 않는다
         }
         return true;
     }
@@ -485,18 +485,18 @@ namespace sw
         return spec;
     }
 
-    GameplayEffectSpec AbilitySystemComponent::makeOutgoingSpecById( const hashed_string& effectId, int32 level ) const
+    GameplayEffectSpec AbilitySystemComponent::makeOutgoingSpecByID( const hashed_string& effectID, int32 level ) const
     {
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "makeOutgoingSpecById '%#': no AbilityCatalog", effectId.c_str() );
+            SW_LOG_WARNING( "makeOutgoingSpecByID '%#': no AbilityCatalog", effectID.c_str() );
             return GameplayEffectSpec{};
         }
-        shared_ptr<const GameplayEffectDef> pDef = pCatalog->findEffect( effectId );
+        shared_ptr<const GameplayEffectDef> pDef = pCatalog->findEffect( effectID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "makeOutgoingSpecById: no effect '%#' in the catalog", effectId.c_str() );
+            SW_LOG_WARNING( "makeOutgoingSpecByID: no effect '%#' in the catalog", effectID.c_str() );
             return GameplayEffectSpec{};
         }
         return makeOutgoingSpec( pDef, level );
@@ -515,7 +515,7 @@ namespace sw
         if ( def._durationPolicy == EffectDurationPolicy::Instant )
         {
             executeSpec( spec, 1 );
-            return ActiveEffectHandle{ ++_nextHandleId };
+            return ActiveEffectHandle{ ++_nextHandleID };
         }
         return applyDurationSpec( spec );
     }
@@ -542,9 +542,9 @@ namespace sw
         return ActiveEffectHandle{};
     }
 
-    ActiveEffectHandle AbilitySystemComponent::applyGameplayEffectToSelf( const hashed_string& effectId, int32 level )
+    ActiveEffectHandle AbilitySystemComponent::applyGameplayEffectToSelf( const hashed_string& effectID, int32 level )
     {
-        const GameplayEffectSpec spec = makeOutgoingSpecById( effectId, level );
+        const GameplayEffectSpec spec = makeOutgoingSpecByID( effectID, level );
         if ( spec.isValid() == false )
             return ActiveEffectHandle{};
         return applyGameplayEffectSpecToSelf( spec );
@@ -684,16 +684,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 5) 어빌리티
     // ------------------------------------------------------------------------------
-    AbilitySpecHandle AbilitySystemComponent::giveAbility( unique_ptr<GameplayAbility> pAbility, int32 level, int32 inputId )
+    AbilitySpecHandle AbilitySystemComponent::giveAbility( unique_ptr<GameplayAbility> pAbility, int32 level, int32 inputID )
     {
         if ( pAbility == nullptr )
             return AbilitySpecHandle{};
 
         unique_ptr<AbilitySpec> pSpec = make_unique<AbilitySpec>();
-        pSpec->_handle                = AbilitySpecHandle{ ++_nextHandleId };
+        pSpec->_handle                = AbilitySpecHandle{ ++_nextHandleID };
         pSpec->_pAbility              = std::move( pAbility );
         pSpec->_level                 = level;
-        pSpec->_inputId               = inputId;
+        pSpec->_inputID               = inputID;
 
         GameplayAbility*        pRaw   = pSpec->_pAbility.get();
         const AbilitySpecHandle handle = pSpec->_handle;
@@ -707,15 +707,15 @@ namespace sw
         return handle;
     }
 
-    AbilitySpecHandle AbilitySystemComponent::giveAbilityById( const hashed_string& abilityId, int32 level, int32 inputId )
+    AbilitySpecHandle AbilitySystemComponent::giveAbilityByID( const hashed_string& abilityID, int32 level, int32 inputID )
     {
         const AbilityCatalog* pCatalog = findCatalog();
         if ( pCatalog == nullptr )
         {
-            SW_LOG_WARNING( "giveAbilityById '%#': no AbilityCatalog", abilityId.c_str() );
+            SW_LOG_WARNING( "giveAbilityByID '%#': no AbilityCatalog", abilityID.c_str() );
             return AbilitySpecHandle{};
         }
-        return giveAbility( pCatalog->createAbility( abilityId ), level, inputId );
+        return giveAbility( pCatalog->createAbility( abilityID ), level, inputID );
     }
 
     bool AbilitySystemComponent::clearAbility( AbilitySpecHandle handle )
@@ -802,11 +802,11 @@ namespace sw
         return bAnyActivated;
     }
 
-    AbilitySpecHandle AbilitySystemComponent::findAbilitySpecHandle( const hashed_string& abilityId ) const
+    AbilitySpecHandle AbilitySystemComponent::findAbilitySpecHandle( const hashed_string& abilityID ) const
     {
         for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
         {
-            if ( pSpec->_bPendingRemove == SW_FALSE && pSpec->_pAbility->getConfig()._id == abilityId )
+            if ( pSpec->_bPendingRemove == SW_FALSE && pSpec->_pAbility->getConfig()._id == abilityID )
                 return pSpec->_handle;
         }
         return AbilitySpecHandle{};
@@ -884,9 +884,9 @@ namespace sw
         }
     }
 
-    void AbilitySystemComponent::abilityInputPressed( int32 inputId )
+    void AbilitySystemComponent::abilityInputPressed( int32 inputID )
     {
-        if ( inputId == kNoInputId )
+        if ( inputID == kNoInputID )
             return;
 
         const ScopedListLock lock{ *this };
@@ -894,7 +894,7 @@ namespace sw
         for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
         {
             AbilitySpec& spec = *_listAbilitySpec[specIndex];
-            if ( spec._bPendingRemove == SW_TRUE || spec._inputId != inputId )
+            if ( spec._bPendingRemove == SW_TRUE || spec._inputID != inputID )
                 continue;
             GameplayAbility* pAbility   = spec._pAbility.get();
             const bool       bWasActive = pAbility->isActive();
@@ -904,9 +904,9 @@ namespace sw
         }
     }
 
-    void AbilitySystemComponent::abilityInputReleased( int32 inputId )
+    void AbilitySystemComponent::abilityInputReleased( int32 inputID )
     {
-        if ( inputId == kNoInputId )
+        if ( inputID == kNoInputID )
             return;
 
         const ScopedListLock lock{ *this };
@@ -914,7 +914,7 @@ namespace sw
         for ( size_t specIndex = 0; specIndex < specCount && specIndex < _listAbilitySpec.size(); ++specIndex )
         {
             AbilitySpec& spec = *_listAbilitySpec[specIndex];
-            if ( spec._bPendingRemove == SW_FALSE && spec._inputId == inputId )
+            if ( spec._bPendingRemove == SW_FALSE && spec._inputID == inputID )
                 spec._pAbility->setInputPressed( false );
         }
     }
@@ -982,8 +982,8 @@ namespace sw
                 const bool bBoundary = charIndex == tagLength || pTagText[charIndex] == '.';
                 if ( bBoundary == false )
                     continue;
-                const uint64 prefixId = TagID::computeId( pTagText, charIndex );
-                const auto   mapIter  = _mapGameplayEventMulticast.find( prefixId );
+                const uint64 prefixID = TagID::computeID( pTagText, charIndex );
+                const auto   mapIter  = _mapGameplayEventMulticast.find( prefixID );
                 if ( mapIter != _mapGameplayEventMulticast.end() && mapIter->second != nullptr )
                     mapIter->second->broadcast( eventData );
             }
@@ -1217,7 +1217,7 @@ namespace sw
         }
 
         unique_ptr<ActiveGameplayEffect> pNewEffect = make_unique<ActiveGameplayEffect>();
-        pNewEffect->_handle                         = ActiveEffectHandle{ ++_nextHandleId };
+        pNewEffect->_handle                         = ActiveEffectHandle{ ++_nextHandleID };
         pNewEffect->_spec                           = spec;
         pNewEffect->_duration                       = spec.computeDuration();
         pNewEffect->_remainingTime                  = pNewEffect->_duration;
@@ -1538,9 +1538,9 @@ namespace sw
 
     bool AbilitySystemComponent::isAbilityBlocked( const TagContainer& abilityTags ) const
     {
-        for ( const auto& [blockedId, blockedEntry] : _mapBlockedAbilityTag )
+        for ( const auto& [blockedID, blockedEntry] : _mapBlockedAbilityTag )
         {
-            (void)blockedId;
+            (void)blockedID;
             for ( const TagID& abilityTag : abilityTags.getTags() )
             {
                 if ( abilityTag.isSubtagOf( blockedEntry._tag ) )

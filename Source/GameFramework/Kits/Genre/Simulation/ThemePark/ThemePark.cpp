@@ -75,7 +75,7 @@ namespace sw
         , _pLand{ nullptr }
         , _parkRating{ 0 }
         , _landOwner{ LandRegistry::kNoOwner }
-        , _nextGuestId{ 1 }
+        , _nextGuestID{ 1 }
         , _totalVisitorCount{ 0 }
     {
     }
@@ -90,7 +90,7 @@ namespace sw
         _runningCost.reset();
         _elapsedTime       = 0.0f;
         _stepTimer         = FixedStepTimer( settings._fixedStep, settings._maxFrameTime );
-        _nextGuestId       = 1;
+        _nextGuestID       = 1;
         _totalVisitorCount = 0;
         _random.setSeed( settings._randomSeed != 0 ? settings._randomSeed : 12345u );
         updateParkRating();
@@ -146,9 +146,9 @@ namespace sw
         // 닫으면 줄은 흩어진다(타고 있는 손님은 이번 바퀴를 마저 돈다).
         const vector<uint32> listQueued = ride._listQueue;
         ride._listQueue.clear();
-        for ( const uint32 guestId : listQueued )
+        for ( const uint32 guestID : listQueued )
         {
-            ParkGuest* pGuest = findGuest( guestId );
+            ParkGuest* pGuest = findGuest( guestID );
             if ( pGuest != nullptr )
             {
                 pGuest->_targetRideIndex = -1;
@@ -169,7 +169,7 @@ namespace sw
             return false;
 
         ParkGuest guest;
-        guest._id              = _nextGuestId++;
+        guest._id              = _nextGuestID++;
         guest._position        = _settings._gatePosition;
         guest._walkFrom        = guest._position;
         guest._walkTo          = guest._position;
@@ -304,9 +304,9 @@ namespace sw
 
                 const vector<uint32> listRider = ride._listRider;
                 ride._listRider.clear();
-                for ( const uint32 guestId : listRider )
+                for ( const uint32 guestID : listRider )
                 {
-                    ParkGuest* pGuest = findGuest( guestId );
+                    ParkGuest* pGuest = findGuest( guestID );
                     if ( pGuest == nullptr )
                         continue;
                     float32 fun      = 0.04f + ride._excitement * 0.025f;
@@ -338,9 +338,9 @@ namespace sw
             const size_t         boardCount = MathUtil::min( ride._listQueue.size(), static_cast<size_t>( ride._capacity ) );
             const vector<uint32> listBoarding( ride._listQueue.begin(), ride._listQueue.begin() + static_cast<ptrdiff_t>( boardCount ) );
             ride._listQueue.erase( ride._listQueue.begin(), ride._listQueue.begin() + static_cast<ptrdiff_t>( boardCount ) );
-            for ( const uint32 guestId : listBoarding )
+            for ( const uint32 guestID : listBoarding )
             {
-                ParkGuest* pGuest = findGuest( guestId );
+                ParkGuest* pGuest = findGuest( guestID );
                 if ( pGuest == nullptr )
                     continue;
                 if ( pGuest->_cash < ride._price )
@@ -355,7 +355,7 @@ namespace sw
                 ride._totalIncome += ride._price;
                 pGuest->_state    = ParkGuestState::Riding;
                 pGuest->_position = ride._entrance;
-                ride._listRider.push_back( guestId );
+                ride._listRider.push_back( guestID );
             }
             if ( ride._listRider.empty() == false )
                 ride._cycleTimer.start( ride._cycleTime );
@@ -591,11 +591,11 @@ namespace sw
         _parkRating = static_cast<int32>( MathUtil::clamp( rating, 0.0f, 999.0f ) );
     }
 
-    ParkGuest* ThemeParkSimulation::findGuest( uint32 guestId )
+    ParkGuest* ThemeParkSimulation::findGuest( uint32 guestID )
     {
-        const auto guestIter = std::lower_bound( _listGuest.begin(), _listGuest.end(), guestId, []( const ParkGuest& guest, uint32 id )
+        const auto guestIter = std::lower_bound( _listGuest.begin(), _listGuest.end(), guestID, []( const ParkGuest& guest, uint32 id )
         { return guest._id < id; } );
-        return ( guestIter != _listGuest.end() && guestIter->_id == guestId ) ? &*guestIter : nullptr;
+        return ( guestIter != _listGuest.end() && guestIter->_id == guestID ) ? &*guestIter : nullptr;
     }
 } // namespace sw
 
@@ -606,10 +606,10 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ThemeParkSimulation::writeState( Archive& outArchive ) const
     {
-        const auto writeIdList = [&outArchive]( const vector<uint32>& listId )
+        const auto writeIDList = [&outArchive]( const vector<uint32>& listID )
         {
-            outArchive << static_cast<uint32>( listId.size() );
-            for ( const uint32 id : listId )
+            outArchive << static_cast<uint32>( listID.size() );
+            for ( const uint32 id : listID )
             {
                 outArchive << id;
             }
@@ -629,8 +629,8 @@ namespace sw
             outArchive << ride._price;
             outArchive << ride._runningCostPerMinute;
             outArchive << ride._bOpen;
-            writeIdList( ride._listQueue );
-            writeIdList( ride._listRider );
+            writeIDList( ride._listQueue );
+            writeIDList( ride._listRider );
             outArchive << ride._cycleTimer._remaining;
             outArchive << ride._totalRiders;
             outArchive << ride._totalIncome;
@@ -663,19 +663,19 @@ namespace sw
         outArchive << _runningCost._fraction;
         outArchive << _elapsedTime;
         outArchive << _parkRating;
-        outArchive << _nextGuestId;
+        outArchive << _nextGuestID;
         outArchive << _totalVisitorCount;
     }
 
     bool ThemeParkSimulation::readState( Archive& archive )
     {
-        const auto readIdList = [&archive]( vector<uint32>& outListId )
+        const auto readIDList = [&archive]( vector<uint32>& outListID )
         {
             uint32 count = 0;
             if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), count ) == false )
                 return false;
-            outListId.resize( count );
-            for ( uint32& id : outListId )
+            outListID.resize( count );
+            for ( uint32& id : outListID )
             {
                 archive >> id;
             }
@@ -701,7 +701,7 @@ namespace sw
             archive >> ride._price;
             archive >> ride._runningCostPerMinute;
             archive >> ride._bOpen;
-            if ( readIdList( ride._listQueue ) == false || readIdList( ride._listRider ) == false )
+            if ( readIDList( ride._listQueue ) == false || readIDList( ride._listRider ) == false )
                 return false;
             archive >> ride._cycleTimer._remaining;
             archive >> ride._totalRiders;
@@ -750,13 +750,13 @@ namespace sw
         float32 costAccumulator    = 0.0f;
         float32 elapsedTime        = 0.0f;
         int32   parkRating         = 0;
-        uint32  nextGuestId        = 0;
+        uint32  nextGuestID        = 0;
         uint32  totalVisitorCount  = 0;
         archive >> arrivalAccumulator;
         archive >> costAccumulator;
         archive >> elapsedTime;
         archive >> parkRating;
-        archive >> nextGuestId;
+        archive >> nextGuestID;
         archive >> totalVisitorCount;
         if ( archive.isError() )
             return false;
@@ -770,7 +770,7 @@ namespace sw
         _runningCost._fraction = costAccumulator;
         _elapsedTime           = elapsedTime;
         _parkRating            = parkRating;
-        _nextGuestId           = nextGuestId;
+        _nextGuestID           = nextGuestID;
         _totalVisitorCount     = totalVisitorCount;
         return true;
     }

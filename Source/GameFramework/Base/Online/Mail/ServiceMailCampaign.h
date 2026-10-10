@@ -25,8 +25,8 @@ namespace sw
         string                        _titleKey{};
         string                        _body{};
         string                        _senderName{};
-        uint64                        _campaignId{ 0 };
-        uint64                        _actorId{ 0 }; ///< 만든 GM
+        uint64                        _campaignID{ 0 };
+        uint64                        _actorID{ 0 }; ///< 만든 GM
         int64                         _startMs{ 0 };
         int64                         _endMs{ 0 }; ///< 이 시각부터 받을 수 없다(목록에서도 빠진다)
         uint8                         _bLiteralText{ SW_FALSE };
@@ -47,7 +47,7 @@ namespace sw
         [[nodiscard]] static bool stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction );
         /** @brief 모든 캠페인(id 순)을 @p outListCampaign 뒤에 붙입니다 — 서비스가 주기마다 읽어 둔다. 읽지 못한 레코드는 오류 로그와 함께 건너뛴다. */
         [[nodiscard]] static ServiceStoreResult listCampaigns( IServiceStoreConnection& connection, vector<ServiceMailCampaign>& outListCampaign );
-        static string                           makeClaimKey( uint64 campaignId, uint64 accountId );
+        static string                           makeClaimKey( uint64 campaignID, uint64 accountID );
         static vector<uint8>                    encode( const ServiceMailCampaign& campaign );
         [[nodiscard]] static bool               decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign );
     };

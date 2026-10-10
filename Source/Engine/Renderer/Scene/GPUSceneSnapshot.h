@@ -285,7 +285,7 @@ namespace sw
         shared_ptr<const vector<uint32>> _pListRank;      ///< 꼬리 인스턴스(꼬리 시작 기준)마다 이 뷰에서 그리는 순번(0 = 가장 먼저 = 가장 멀다)
         shared_ptr<const vector<uint32>> _pListTailSlot;  ///< 배치마다 안쪽을 이 뷰 순서로 다시 놓은 꼬리 인스턴스 번호(전역) — 꼬리 길이와 같다
         vector<uint32>                   _listBatchOrder; ///< 이 뷰에서 투명 배치를 그리는 순서(`_listTransparentBatch` 의 번호)
-        uint64                           _viewId{ 0 };    ///< `RenderViewRequest::_viewId`
+        uint64                           _viewID{ 0 };    ///< `RenderViewRequest::_viewID`
         uint32                           _tailBase{ 0 };  ///< 꼬리의 첫 인스턴스 번호(불투명 인스턴스 수)
     };
 } // namespace sw

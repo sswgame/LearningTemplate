@@ -52,7 +52,7 @@ namespace sw
 
     uint64 LockOnSelector::pickBest( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate )
     {
-        uint64  bestId    = 0;
+        uint64  bestID    = 0;
         float32 bestScore = MathUtil::kMaxFloat;
         for ( const LockOnCandidate& candidate : listCandidate )
         {
@@ -66,10 +66,10 @@ namespace sw
             if ( score < bestScore )
             {
                 bestScore = score;
-                bestId    = candidate._id;
+                bestID    = candidate._id;
             }
         }
-        _target     = bestId;
+        _target     = bestID;
         _hiddenTime = 0.0f;
         return _target;
     }
@@ -82,7 +82,7 @@ namespace sw
             if ( candidate._id == _target )
                 currentYaw = computeYawOffset( eye, forward, candidate._position );
         }
-        uint64  bestId  = 0;
+        uint64  bestID  = 0;
         float32 bestGap = MathUtil::kMaxFloat;
         for ( const LockOnCandidate& candidate : listCandidate )
         {
@@ -94,12 +94,12 @@ namespace sw
             if ( gap > 0.0f && gap < bestGap )
             {
                 bestGap = gap;
-                bestId  = candidate._id;
+                bestID  = candidate._id;
             }
         }
-        if ( bestId != 0 )
+        if ( bestID != 0 )
         {
-            _target     = bestId;
+            _target     = bestID;
             _hiddenTime = 0.0f;
         }
         return _target;

@@ -38,16 +38,16 @@ namespace sw
     {
         const bool bPriceXorProduct = def._listPrice.empty() != def._listProduct.empty();
         const bool bShapeOk         = def._listGrant.empty() == false && bPriceXorProduct && def._maxCountPerPurchase >= 1 && def._limitPerAccount >= 0;
-        if ( bShapeOk == false || LedgerUtil::isValidAssetId( def._id ) == false || findOffer( def._id ) != nullptr )
+        if ( bShapeOk == false || LedgerUtil::isValidAssetID( def._id ) == false || findOffer( def._id ) != nullptr )
             return false;
         for ( const OfferGrant& grant : def._listGrant )
         {
-            if ( LedgerUtil::isValidAssetId( grant._assetId ) == false )
+            if ( LedgerUtil::isValidAssetID( grant._assetID ) == false )
                 return false;
         }
         for ( const OfferPrice& price : def._listPrice )
         {
-            if ( LedgerUtil::isValidAssetId( price._currencyId ) == false )
+            if ( LedgerUtil::isValidAssetID( price._currencyID ) == false )
                 return false;
         }
         _listOffer.push_back( def );
@@ -64,13 +64,13 @@ namespace sw
         return nullptr;
     }
 
-    const OfferDef* OfferCatalog::findOfferByProduct( string_view storeName, string_view productId ) const
+    const OfferDef* OfferCatalog::findOfferByProduct( string_view storeName, string_view productID ) const
     {
         for ( const OfferDef& def : _listOffer )
         {
             for ( const OfferProduct& product : def._listProduct )
             {
-                if ( product._storeName == storeName && product._productId == productId )
+                if ( product._storeName == storeName && product._productID == productID )
                     return &def;
             }
         }
@@ -82,36 +82,36 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Offer" ); node; node = node.findNextSibling( "Offer" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             OfferDef def;
-            def._id                  = pId;
+            def._id                  = pID;
             def._limitPerAccount     = node.getAttributeInt( "limit", 0 );
             def._maxCountPerPurchase = node.getAttributeInt( "maxCount", 1 );
             bool bOk                 = OfferCatalogInternal::readOptionalTime( node, "startMs", def._startMs ) && OfferCatalogInternal::readOptionalTime( node, "endMs", def._endMs );
             for ( XMLNode priceNode = node.findChild( "Price" ); bOk && priceNode; priceNode = priceNode.findNextSibling( "Price" ) )
             {
                 OfferPrice& price = def._listPrice.emplace_back();
-                price._currencyId = string( priceNode.getAttributeText( "currency" ) );
+                price._currencyID = string( priceNode.getAttributeText( "currency" ) );
                 bOk               = OfferCatalogInternal::readAmount( priceNode, price._amount );
             }
             for ( XMLNode grantNode = node.findChild( "Grant" ); bOk && grantNode; grantNode = grantNode.findNextSibling( "Grant" ) )
             {
                 OfferGrant& grant = def._listGrant.emplace_back();
-                grant._assetId    = string( grantNode.getAttributeText( "asset" ) );
+                grant._assetID    = string( grantNode.getAttributeText( "asset" ) );
                 bOk               = OfferCatalogInternal::readAmount( grantNode, grant._amount );
             }
             for ( XMLNode productNode = node.findChild( "Product" ); bOk && productNode; productNode = productNode.findNextSibling( "Product" ) )
             {
                 OfferProduct& product = def._listProduct.emplace_back();
                 product._storeName    = string( productNode.getAttributeText( "store" ) );
-                product._productId    = string( productNode.getAttributeText( "id" ) );
-                bOk                   = product._storeName.empty() == false && product._productId.empty() == false;
+                product._productID    = string( productNode.getAttributeText( "id" ) );
+                bOk                   = product._storeName.empty() == false && product._productID.empty() == false;
             }
             if ( bOk == false || addOffer( def ) == false )
             {
-                SW_LOG_WARNING( "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids) - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: offer '%#' is malformed (needs grants and either prices or products, amounts 1..1e15, lowercase ids) - skipped", sourceName, pID );
                 continue;
             }
             ++loadedCount;

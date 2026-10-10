@@ -27,7 +27,7 @@ namespace sw
         ITradePolicy( const ITradePolicy& )            = default;
         ITradePolicy& operator=( const ITradePolicy& ) = default;
 
-        virtual bool  isTradable( string_view assetId ) const = 0;
+        virtual bool  isTradable( string_view assetID ) const = 0;
         virtual int32 getMaxLegsPerSide() const               = 0;
     };
 } // namespace sw
@@ -38,7 +38,7 @@ namespace sw
     class SW_GF_API DefaultTradePolicy final : public ITradePolicy
     {
     public:
-        bool  isTradable( string_view assetId ) const override;
+        bool  isTradable( string_view assetID ) const override;
         int32 getMaxLegsPerSide() const override { return TradeConstant::kMaxLegsPerSide; }
     };
 } // namespace sw
@@ -60,7 +60,7 @@ namespace sw
     struct TradeCommand
     {
         vector<TradeLeg> _listLeg{}; ///< SetOffer
-        AccountId        _actorId{ kInvalidAccountId };
+        AccountID        _actorID{ kInvalidAccountID };
         uint32           _seenOwnRevision{ 0 };                         ///< Confirm — 확정하는 쪽이 본 자기 제시 판
         uint32           _seenPeerRevision{ 0 };                        ///< Confirm — 본 상대 제시 판
         TradeCloseReason _reason{ TradeCloseReason::CancelledByParty }; ///< Cancel

@@ -21,14 +21,14 @@ namespace sw
             static constexpr const utf8* kArrVariantAttribute[]  = { "bodyType" };
             static constexpr const utf8* kArrCompleteAttribute[] = { "visual", "slots" };
 
-            [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setId )
+            [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPieceAttribute, report, sourceName );
                 outPiece._slot = AppearanceXMLUtil::readName( node, "slot" );
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
-                    report.addError( "%#: set '%#' <Piece> needs a slot and items", sourceName, setId.c_str() );
+                    report.addError( "%#: set '%#' <Piece> needs a slot and items", sourceName, setID.c_str() );
                     return false;
                 }
                 return true;
@@ -162,9 +162,9 @@ namespace sw
         }
     }
 
-    EquipSetProgress EquipSetCatalog::computeProgress( const hashed_string& setId, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const
+    EquipSetProgress EquipSetCatalog::computeProgress( const hashed_string& setID, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const
     {
-        const EquipSetDef* pDef = findSet( setId );
+        const EquipSetDef* pDef = findSet( setID );
         if ( pDef == nullptr )
             return EquipSetProgress{};
         return computeProgressWith( *pDef, bodyType, [&]( const hashed_string& slot )
@@ -172,26 +172,26 @@ namespace sw
             for ( const EquipSlot& equipSlot : listSlot )
             {
                 if ( equipSlot._name == slot )
-                    return equipSlot._item.isEmpty() || equipSlot._bSuppressed == SW_TRUE ? hashed_string{} : equipSlot._item._itemId;
+                    return equipSlot._item.isEmpty() || equipSlot._bSuppressed == SW_TRUE ? hashed_string{} : equipSlot._item._itemID;
             }
             return hashed_string{};
         } );
     }
 
-    void EquipSetCatalog::collectSetItems( const hashed_string& setId, vector<hashed_string>& outListItemId ) const
+    void EquipSetCatalog::collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const
     {
-        const EquipSetDef* pDef = findSet( setId );
+        const EquipSetDef* pDef = findSet( setID );
         if ( pDef == nullptr )
             return;
         for ( const EquipSetPieceDef& piece : pDef->_listPiece )
         {
-            outListItemId.insert( outListItemId.end(), piece._listItem.begin(), piece._listItem.end() );
+            outListItemID.insert( outListItemID.end(), piece._listItem.begin(), piece._listItem.end() );
         }
         for ( const EquipSetVariantDef& variant : pDef->_listVariant )
         {
             for ( const EquipSetPieceDef& piece : variant._listPiece )
             {
-                outListItemId.insert( outListItemId.end(), piece._listItem.begin(), piece._listItem.end() );
+                outListItemID.insert( outListItemID.end(), piece._listItem.begin(), piece._listItem.end() );
             }
         }
     }

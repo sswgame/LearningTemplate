@@ -170,7 +170,7 @@ namespace
         sw::string fileName{ "LOG_2099-1-2-" };
         fileName += sw::to_string( hour );
         fileName += "_";
-        fileName += sw::getCrashSessionId();
+        fileName += sw::getCrashSessionID();
         fileName += ".txt";
         return sw::FileUtil::joinPath( output.getLogFolderPath(), fileName );
     }

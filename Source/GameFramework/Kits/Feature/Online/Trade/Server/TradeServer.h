@@ -38,7 +38,7 @@ namespace sw
         uint32 getProtocolVersion() const override { return TradeProtocol::kVersion; }
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override;
+        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
 
         static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
 
@@ -46,20 +46,20 @@ namespace sw
         struct PendingCall
         {
             NetRequestToken _token{};
-            AccountId       _accountId{ kInvalidAccountId };
+            AccountID       _accountID{ kInvalidAccountID };
         };
 
         struct PendingLookup
         {
             NetRequestToken _token{};
-            AccountId       _accountId{ kInvalidAccountId };
+            AccountID       _accountID{ kInvalidAccountID };
             int64           _nowMs{ 0 };
         };
 
         void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
         void        respondImmediately( OnlineServiceHost& host, const NetRequestToken& token, TradeResult result );
         void        onPresenceFound( const AccountPresenceResult& found );
-        static void collectBalances( const LedgerTransferOutcome& ledger, AccountId accountId, vector<TradeBalance>& outListBalance );
+        static void collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
 
         unordered_map<uint64, PendingCall>           _mapTagToCall;
         unordered_map<uint64, PendingLookup>         _mapLookupToCall;  ///< 접속 상태 창구의 이름 찾기 → 신청

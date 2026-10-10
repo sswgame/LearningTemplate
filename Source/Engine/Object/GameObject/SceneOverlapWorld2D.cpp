@@ -55,13 +55,13 @@ namespace sw
         // 이벤트 처리가 콜라이더를 만들거나 지워도 이 목록은 다음 step 까지 그대로지만, 같은 프레임에 다시 step 할 일은 없게 베껴 둔다.
         _listDelivered.assign( listEvent.begin(), listEvent.end() );
         // 한 쪽에서 본 겹침 — 상대 오브젝트와 어느 콜라이더끼리였는지(트리거 여부)를 함께 넘긴다.
-        auto deliver = [this, &manager]( uint64 selfId, uint64 otherId, const PhysicsOverlapEvent& event, bool bSelfTrigger, bool bOtherTrigger )
+        auto deliver = [this, &manager]( uint64 selfID, uint64 otherID, const PhysicsOverlapEvent& event, bool bSelfTrigger, bool bOtherTrigger )
         {
-            GameObject* pSelf = manager.findGameObjectById( selfId );
+            GameObject* pSelf = manager.findGameObjectByID( selfID );
             if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
                 return;
             OverlapInfo overlap;
-            overlap._pOther        = manager.findGameObjectById( otherId );
+            overlap._pOther        = manager.findGameObjectByID( otherID );
             overlap._time          = event._time;
             overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
             overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;

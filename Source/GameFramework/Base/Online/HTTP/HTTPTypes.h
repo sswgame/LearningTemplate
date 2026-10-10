@@ -71,7 +71,7 @@ namespace sw
         vector<HTTPHeader> _listHeader{};
         vector<uint8>      _bodyBytes{};
         string             _failureText{};
-        uint64             _requestId{ 0 };
+        uint64             _requestID{ 0 };
         int32              _statusCode{ 0 };
         uint8              _bTransportFailed{ SW_FALSE };
 

@@ -18,11 +18,11 @@ namespace test
         static bool isServerOnlyBuild() { return ( sw::ModuleCatalog::getBuildTargetMask() & static_cast<uint8>( sw::ModuleTarget::Client ) ) == 0; }
 
         /**
-         * @brief 전용 서버 빌드에서 @p resourceId 를 찾을 수 없으면 true 입니다.
+         * @brief 전용 서버 빌드에서 @p resourceID 를 찾을 수 없으면 true 입니다.
          * @details 서버 패키지는 쿠킹 표 `target_excluded_asset_kinds` 의 종류(텍스처 · 셰이더 바이너리 · 오디오)를 담지 않는다. 클라이언트 코드가 든
          *          빌드에서 파일이 없으면 결함이므로 false 다 — 그 시험은 돌아서 진다.
          */
-        static bool isLeftOutOfServerPackage( sw::string_view resourceId ) { return isServerOnlyBuild() && sw::ResourceUtil::hasResource( resourceId ) == false; }
+        static bool isLeftOutOfServerPackage( sw::string_view resourceID ) { return isServerOnlyBuild() && sw::ResourceUtil::hasResource( resourceID ) == false; }
     };
 } // namespace test
 

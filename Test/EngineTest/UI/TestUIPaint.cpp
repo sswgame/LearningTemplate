@@ -424,7 +424,7 @@ SW_TEST_CASE( UIPaintTest, UISystemCanvasRevisionAndFocusRing )
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( firstRevision + 1, ui.getCanvasRevision() );
 
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pBox->getId() ) );
+    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pBox->getID() ) );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( size_t{ 1 }, ui.getCanvas()._listQuad.size() ); // 포인터 방식 — 테두리 없음
     ui.setInputMode( sw::UIInputMode::Navigation );
@@ -445,14 +445,14 @@ SW_TEST_CASE( UIPaintTest, ButtonClickRequiresPressAndReleaseOnSameWidget )
     sw::ButtonWidget* pButton = static_cast<sw::ButtonWidget*>( pCanvas->addChild( sw::make_unique<sw::ButtonWidget>() ) );
     UIWidgetTestUtil::pin( *pButton, 10.0f, 10.0f, 100.0f, 40.0f );
     uint32 notified = 0;
-    (void)pButton->getOnClicked().add( [&notified]( sw::WidgetId )
+    (void)pButton->getOnClicked().add( [&notified]( sw::WidgetID )
     { ++notified; } );
     (void)fixture.runFrame();
 
     sw::UIPointerState        pointer;
     const sw::UIPointerResult down = pointer.process( fixture._tree, UIWidgetTestUtil::makePointer( sw::UIPointerEventKind::Down, 50.0f, 30.0f ) );
-    SW_EXPECT_EQUAL( pButton->getId(), down._focusRequest );
-    SW_EXPECT_EQUAL( pButton->getId(), pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( pButton->getID(), down._focusRequest );
+    SW_EXPECT_EQUAL( pButton->getID(), pointer.getCapturedWidget() );
     SW_EXPECT_TRUE( pButton->isPressed() );
     (void)pointer.process( fixture._tree, UIWidgetTestUtil::makePointer( sw::UIPointerEventKind::Up, 60.0f, 35.0f ) );
     SW_EXPECT_EQUAL( 1u, pButton->getClickCount() );
@@ -462,13 +462,13 @@ SW_TEST_CASE( UIPaintTest, ButtonClickRequiresPressAndReleaseOnSameWidget )
     (void)pointer.process( fixture._tree, UIWidgetTestUtil::makePointer( sw::UIPointerEventKind::Up, 300.0f, 200.0f ) ); // 밖 — 잡고 있어 버튼이 받지만 클릭은 아니다
     SW_EXPECT_EQUAL( 1u, pButton->getClickCount() );
     SW_EXPECT_FALSE( pButton->isPressed() );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, pointer.getCapturedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, pointer.getCapturedWidget() );
 
     sw::UIWidgetPath path{};
-    SW_ASSERT_TRUE( sw::UIEventRouter::makePathTo( fixture._tree, pButton->getId(), path ) );
+    SW_ASSERT_TRUE( sw::UIEventRouter::makePathTo( fixture._tree, pButton->getID(), path ) );
     sw::UIActionEvent accept{};
     accept._action = sw::hashed_string( sw::UIActionName::kAccept );
-    sw::WidgetId handler{ sw::kInvalidWidgetId };
+    sw::WidgetID handler{ sw::kInvalidWidgetID };
     SW_EXPECT_TRUE( sw::UIEventRouter::routeActionEvent( fixture._tree, path, accept, handler ).isHandled() );
     SW_EXPECT_EQUAL( 2u, pButton->getClickCount() );
 }
@@ -532,18 +532,18 @@ SW_TEST_CASE( UIPaintTest, SliderTakesLeftRightActions )
         input.endFrame();
     };
     runFrame();
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pSlider->getId() ) );
+    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pSlider->getID() ) );
 
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Left ) ) );
     runFrame();
     SW_EXPECT_NEAR_EQUAL( 4.0f, pSlider->getValue(), 1e-6f );
-    SW_EXPECT_EQUAL( pSlider->getId(), ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pSlider->getID(), ui.getFocusManager().getFocusedWidget() );
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyUp( sw::Key::Left ) ) );
     runFrame();
 
     SW_EXPECT_TRUE( input.postRawEvent( sw::RawInputEvent::makeKeyDown( sw::Key::Down ) ) );
     runFrame();
-    SW_EXPECT_EQUAL( pBelow->getId(), ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pBelow->getID(), ui.getFocusManager().getFocusedWidget() );
     ui.shutdown();
     input.shutdown();
 }
@@ -676,7 +676,7 @@ SW_TEST_CASE( UIPaintTest, TextInputTypesAndDeletes )
         input.endFrame();
     };
     runFrame();
-    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pField->getId() ) );
+    SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( screen )->getTree(), pField->getID() ) );
     runFrame();
     SW_EXPECT_TRUE( input.getKeyboardFocus() == sw::InputKeyboardFocus::UI );
 

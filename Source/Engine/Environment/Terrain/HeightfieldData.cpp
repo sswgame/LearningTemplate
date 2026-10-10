@@ -96,15 +96,15 @@ namespace sw
         return true;
     }
 
-    bool HeightfieldData::loadFromResource( string_view resourceId )
+    bool HeightfieldData::loadFromResource( string_view resourceID )
     {
         vector<uint8> bytes;
-        if ( ResourceUtil::readBinaryResource( resourceId, bytes ) == false )
+        if ( ResourceUtil::readBinaryResource( resourceID, bytes ) == false )
         {
-            SW_LOG_ERROR( "Heightfield '%#' could not be read", resourceId );
+            SW_LOG_ERROR( "Heightfield '%#' could not be read", resourceID );
             return false;
         }
-        return loadFromMemory( bytes, resourceId );
+        return loadFromMemory( bytes, resourceID );
     }
 
     void HeightfieldData::saveToMemory( vector<uint8>& outBytes ) const

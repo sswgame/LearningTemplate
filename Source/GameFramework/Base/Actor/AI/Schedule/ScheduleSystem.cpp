@@ -67,7 +67,7 @@ namespace sw
             static uint64 computeSegmentKey( const ScheduleSegment& segment )
             {
                 uint64 hash = HashUtil::kFnvOffset64;
-                hash        = hashName( hash, segment._sourceId );
+                hash        = hashName( hash, segment._sourceID );
                 hash        = hashName( hash, segment._activity );
                 hash        = hashValue( hash, segment._startMinute );
                 hash        = hashValue( hash, segment._endMinute );
@@ -303,8 +303,8 @@ namespace sw
         {
             for ( const ScheduleSegment& segment : npc._listSegment )
             {
-                if ( segment._reservationId != 0 && _pLocator != nullptr )
-                    _pLocator->release( segment._reservationId );
+                if ( segment._reservationID != 0 && _pLocator != nullptr )
+                    _pLocator->release( segment._reservationID );
             }
         }
         _listNpc.clear();
@@ -347,11 +347,11 @@ namespace sw
         _bConditionsDirty = SW_TRUE;
     }
 
-    void ScheduleSystem::setWeather( const hashed_string& weatherId )
+    void ScheduleSystem::setWeather( const hashed_string& weatherID )
     {
-        if ( _weather.isEqual( weatherId, NameCase::CaseSensitive ) )
+        if ( _weather.isEqual( weatherID, NameCase::CaseSensitive ) )
             return;
-        _weather          = weatherId;
+        _weather          = weatherID;
         _bConditionsDirty = SW_TRUE;
     }
 
@@ -456,21 +456,21 @@ namespace sw
         _listNpc[static_cast<size_t>( npcIndex )]._bTagsDirty = SW_TRUE;
     }
 
-    bool ScheduleSystem::pushInterruption( int32 npcIndex, const hashed_string& interruptId )
+    bool ScheduleSystem::pushInterruption( int32 npcIndex, const hashed_string& interruptID )
     {
         if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
             return false;
-        const ScheduleInterruptDef* pDef = _pCatalog->findInterrupt( interruptId );
+        const ScheduleInterruptDef* pDef = _pCatalog->findInterrupt( interruptID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "unknown interruption '%#' for npc '%#' - ignored", interruptId.c_str(), getNpcId( npcIndex ).c_str() );
+            SW_LOG_WARNING( "unknown interruption '%#' for npc '%#' - ignored", interruptID.c_str(), getNpcID( npcIndex ).c_str() );
             return false;
         }
         NpcRuntime& npc          = _listNpc[static_cast<size_t>( npcIndex )];
         const int32 expireMinute = pDef->_timeoutMinutes > 0 ? _minute + pDef->_timeoutMinutes : -1;
         for ( Interruption& interruption : npc._listInterruption )
         {
-            if ( interruption._id == interruptId )
+            if ( interruption._id == interruptID )
             {
                 interruption._expireMinute = expireMinute;
                 npc._wakeMinute            = computeWakeMinute( npcIndex );
@@ -482,11 +482,11 @@ namespace sw
             refreshNpc( npcIndex ); // 끼어들기 앞까지의 사건을 맞춘다
             npc._held = computeLogicLocation( npcIndex, _minute );
             if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNpcPhase::Performing )
-                emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceId );
+                emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceID );
             npc._bEmitted = SW_FALSE;
         }
         Interruption interruption;
-        interruption._id           = interruptId;
+        interruption._id           = interruptID;
         interruption._priority     = pDef->_priority;
         interruption._startMinute  = _minute;
         interruption._expireMinute = expireMinute;
@@ -496,19 +496,19 @@ namespace sw
             --insertIndex;
         }
         npc._listInterruption.insert( npc._listInterruption.begin() + static_cast<ptrdiff_t>( insertIndex ), interruption );
-        emitEvent( ScheduleEvent::Kind::Interrupted, npcIndex, nullptr, interruptId );
+        emitEvent( ScheduleEvent::Kind::Interrupted, npcIndex, nullptr, interruptID );
         npc._wakeMinute = computeWakeMinute( npcIndex );
         return true;
     }
 
-    bool ScheduleSystem::popInterruption( int32 npcIndex, const hashed_string& interruptId )
+    bool ScheduleSystem::popInterruption( int32 npcIndex, const hashed_string& interruptID )
     {
         if ( isValidNpc( npcIndex ) == false )
             return false;
         NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
         for ( size_t interruptionIndex = 0; interruptionIndex < npc._listInterruption.size(); ++interruptionIndex )
         {
-            if ( npc._listInterruption[interruptionIndex]._id != interruptId )
+            if ( npc._listInterruption[interruptionIndex]._id != interruptID )
                 continue;
             npc._listInterruption.erase( npc._listInterruption.begin() + static_cast<ptrdiff_t>( interruptionIndex ) );
             if ( npc._listInterruption.empty() )
@@ -527,17 +527,17 @@ namespace sw
         _listNpc[static_cast<size_t>( npcIndex )]._held = location;
     }
 
-    int32 ScheduleSystem::findNpcIndex( const hashed_string& npcId ) const
+    int32 ScheduleSystem::findNpcIndex( const hashed_string& npcID ) const
     {
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
         {
-            if ( getNpcId( npcIndex ) == npcId )
+            if ( getNpcID( npcIndex ) == npcID )
                 return npcIndex;
         }
         return -1;
     }
 
-    hashed_string ScheduleSystem::getNpcId( int32 npcIndex ) const
+    hashed_string ScheduleSystem::getNpcID( int32 npcIndex ) const
     {
         if ( _pCatalog == nullptr || isValidNpc( npcIndex ) == false )
             return hashed_string{};
@@ -596,12 +596,12 @@ namespace sw
         return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._listSegment : s_empty;
     }
 
-    bool ScheduleSystem::isAppointmentMet( const hashed_string& appointmentId ) const
+    bool ScheduleSystem::isAppointmentMet( const hashed_string& appointmentID ) const
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentId );
-        if ( appointmentIndex < 0 || isAppointmentBroken( appointmentId ) )
+        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
+        if ( appointmentIndex < 0 || isAppointmentBroken( appointmentID ) )
             return false;
         const ScheduleAppointmentDef& appointment = _pCatalog->getAppointments()[static_cast<size_t>( appointmentIndex )];
         if ( appointment._listAttendee.empty() )
@@ -614,11 +614,11 @@ namespace sw
         return true;
     }
 
-    bool ScheduleSystem::isAppointmentBroken( const hashed_string& appointmentId ) const
+    bool ScheduleSystem::isAppointmentBroken( const hashed_string& appointmentID ) const
     {
         if ( _pCatalog == nullptr )
             return false;
-        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentId );
+        const int32 appointmentIndex = _pCatalog->findAppointmentIndex( appointmentID );
         for ( const int32 brokenIndex : _listBrokenAppointment )
         {
             if ( brokenIndex == appointmentIndex )
@@ -644,7 +644,7 @@ namespace sw
         {
             const NpcRuntime&    npc = _listNpc[static_cast<size_t>( npcIndex )];
             ScheduleNpcSaveState npcState;
-            npcState._id             = getNpcId( npcIndex );
+            npcState._id             = getNpcID( npcIndex );
             npcState._originArea     = npc._origin._area;
             npcState._originPosition = npc._origin._position;
             npcState._originMinute   = npc._originMinute;
@@ -690,9 +690,9 @@ namespace sw
         _eventBuffer.clear();
         _listMetAppointment.clear();
         _listBrokenAppointment.clear();
-        for ( const string& appointmentId : state._listBrokenAppointment )
+        for ( const string& appointmentID : state._listBrokenAppointment )
         {
-            const int32 appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentId ) );
+            const int32 appointmentIndex = _pCatalog->findAppointmentIndex( hashed_string( appointmentID ) );
             if ( appointmentIndex >= 0 )
                 _listBrokenAppointment.push_back( appointmentIndex );
         }
@@ -959,7 +959,7 @@ namespace sw
 
                 BlockCandidate candidate;
                 candidate._pBlock      = &block;
-                candidate._sourceId    = routine._id;
+                candidate._sourceID    = routine._id;
                 candidate._startMinute = block._startMinute;
                 candidate._endMinute   = block._endMinute;
                 candidate._priority    = routine._priority;
@@ -981,7 +981,7 @@ namespace sw
                     context._chanceKey = Internal::hashNameToKey( appointment._id );
                     if ( appointment._condition.matches( context ) == false )
                         continue;
-                    candidate._sourceId   = appointment._id;
+                    candidate._sourceID   = appointment._id;
                     candidate._priority   = MathUtil::max( routine._priority, appointment._priority );
                     candidate._ownerIndex = appointmentIndex;
                     candidate._source     = ScheduleSegmentSource::Appointment;
@@ -996,13 +996,13 @@ namespace sw
         {
             const ScheduleEventDef& event     = listEvent[static_cast<size_t>( eventIndex )];
             bool                    bAttendee = event._listNpc.empty() && event._listArchetype.empty();
-            for ( const hashed_string& npcId : event._listNpc )
+            for ( const hashed_string& npcID : event._listNpc )
             {
-                bAttendee = bAttendee || npcId == def._id;
+                bAttendee = bAttendee || npcID == def._id;
             }
-            for ( const hashed_string& archetypeId : event._listArchetype )
+            for ( const hashed_string& archetypeID : event._listArchetype )
             {
-                bAttendee = bAttendee || _pCatalog->isNpcOfArchetype( def, archetypeId );
+                bAttendee = bAttendee || _pCatalog->isNpcOfArchetype( def, archetypeID );
             }
             if ( bAttendee == false )
                 continue;
@@ -1020,7 +1020,7 @@ namespace sw
                     continue;
                 BlockCandidate candidate;
                 candidate._pBlock      = &block;
-                candidate._sourceId    = event._id;
+                candidate._sourceID    = event._id;
                 candidate._startMinute = block._startMinute;
                 candidate._endMinute   = block._endMinute;
                 candidate._priority    = event._priority;
@@ -1053,7 +1053,7 @@ namespace sw
         segment._target      = home;
         if ( pCandidate != nullptr )
         {
-            segment._sourceId   = pCandidate->_sourceId;
+            segment._sourceID   = pCandidate->_sourceID;
             segment._priority   = pCandidate->_priority;
             segment._ownerIndex = pCandidate->_ownerIndex;
             segment._blockIndex = pCandidate->_blockIndex;
@@ -1086,11 +1086,11 @@ namespace sw
                 request._startMinute = startMinute;
                 request._endMinute   = endMinute;
                 ScheduleLocation reserved;
-                uint32           reservationId = 0;
-                if ( _pLocator != nullptr && _pLocator->reserve( request, reserved, reservationId ) )
+                uint32           reservationID = 0;
+                if ( _pLocator != nullptr && _pLocator->reserve( request, reserved, reservationID ) )
                 {
                     segment._target        = reserved;
-                    segment._reservationId = reservationId;
+                    segment._reservationID = reservationID;
                 }
                 break;
             }
@@ -1154,15 +1154,15 @@ namespace sw
             return;
         for ( const ScheduleSegment& oldSegment : listOld )
         {
-            if ( oldSegment._reservationId == 0 )
+            if ( oldSegment._reservationID == 0 )
                 continue;
             bool bKept = false;
             for ( const ScheduleSegment& newSegment : listNew )
             {
-                bKept = bKept || newSegment._reservationId == oldSegment._reservationId;
+                bKept = bKept || newSegment._reservationID == oldSegment._reservationID;
             }
             if ( bKept == false )
-                _pLocator->release( oldSegment._reservationId );
+                _pLocator->release( oldSegment._reservationID );
         }
     }
 
@@ -1376,25 +1376,25 @@ namespace sw
             if ( bChanged )
             {
                 if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNpcPhase::Performing )
-                    emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceId );
+                    emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceID );
                 if ( phase == ScheduleNpcPhase::Traveling )
-                    emitEvent( ScheduleEvent::Kind::Departed, npcIndex, &segment, segment._sourceId );
+                    emitEvent( ScheduleEvent::Kind::Departed, npcIndex, &segment, segment._sourceID );
             }
             const bool bArrivedNow = phase == ScheduleNpcPhase::Performing && ( bChanged || npc._emittedPhase != ScheduleNpcPhase::Performing );
             if ( bArrivedNow )
             {
-                emitEvent( ScheduleEvent::Kind::Arrived, npcIndex, &segment, segment._sourceId );
-                emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &segment, segment._sourceId );
+                emitEvent( ScheduleEvent::Kind::Arrived, npcIndex, &segment, segment._sourceID );
+                emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &segment, segment._sourceID );
                 const bool bAppointment = segment._source == ScheduleSegmentSource::Appointment;
                 bool       bMetBefore   = false;
                 for ( const int32 metIndex : _listMetAppointment )
                 {
                     bMetBefore = bMetBefore || metIndex == segment._ownerIndex;
                 }
-                if ( bAppointment && bMetBefore == false && isAppointmentMet( segment._sourceId ) )
+                if ( bAppointment && bMetBefore == false && isAppointmentMet( segment._sourceID ) )
                 {
                     _listMetAppointment.push_back( segment._ownerIndex );
-                    emitEvent( ScheduleEvent::Kind::AppointmentMet, npcIndex, &segment, segment._sourceId );
+                    emitEvent( ScheduleEvent::Kind::AppointmentMet, npcIndex, &segment, segment._sourceID );
                 }
             }
             npc._emittedSegment = segment;
@@ -1436,7 +1436,7 @@ namespace sw
         return MathUtil::min( wake, segmentWake );
     }
 
-    void ScheduleSystem::emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceId )
+    void ScheduleSystem::emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceID )
     {
         if ( _bSuppressEvents != SW_FALSE )
             return;
@@ -1444,7 +1444,7 @@ namespace sw
         event._kind     = kind;
         event._npcIndex = npcIndex;
         event._minute   = _minute;
-        event._sourceId = sourceId;
+        event._sourceID = sourceID;
         if ( pSegment != nullptr )
         {
             event._activity  = pSegment->_activity;
@@ -1461,7 +1461,7 @@ namespace sw
         cue._location  = pSegment->_target;
         cue._activity  = pSegment->_activity;
         cue._animation = pSegment->_animation;
-        cue._npc       = getNpcId( npcIndex );
+        cue._npc       = getNpcID( npcIndex );
         cue._npcIndex  = npcIndex;
         if ( kind == ScheduleEvent::Kind::ActivityStarted )
             _pAnimator->onActivityStarted( cue );
@@ -1476,7 +1476,7 @@ namespace sw
         if ( view._phase != ScheduleNpcPhase::Performing || view._segmentIndex < 0 )
             return;
         const NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
-        emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &npc._listSegment[static_cast<size_t>( view._segmentIndex )], npc._listSegment[static_cast<size_t>( view._segmentIndex )]._sourceId );
+        emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &npc._listSegment[static_cast<size_t>( view._segmentIndex )], npc._listSegment[static_cast<size_t>( view._segmentIndex )]._sourceID );
     }
 
     void ScheduleSystem::applyConditionChanges()
@@ -1564,7 +1564,7 @@ namespace sw
         if ( view._segmentIndex >= 0 )
         {
             const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( view._segmentIndex )];
-            text.appendFormat( "  active: %# '%#' block #%# ", toString( segment._source ), segment._sourceId.c_str(), segment._blockIndex );
+            text.appendFormat( "  active: %# '%#' block #%# ", toString( segment._source ), segment._sourceID.c_str(), segment._blockIndex );
             Internal::appendClock( text, segment._startMinute );
             text.append( "-" );
             Internal::appendClock( text, segment._endMinute );
@@ -1635,7 +1635,7 @@ namespace sw
             return;
         const NpcRuntime&                       npc = _listNpc[static_cast<size_t>( npcIndex )];
         StringBuilder<constant::kMaxBuffer4096> text;
-        text.appendFormat( "timeline '%#' day %# (planned at ", getNpcId( npcIndex ).c_str(), npc._planDay );
+        text.appendFormat( "timeline '%#' day %# (planned at ", getNpcID( npcIndex ).c_str(), npc._planDay );
         Internal::appendClock( text, Internal::toMinuteOfDay( npc._originMinute ) );
         text.append( ")\n" );
         for ( const ScheduleSegment& segment : npc._listSegment )
@@ -1652,7 +1652,7 @@ namespace sw
                 Internal::appendClock( text, segment._departMinute );
                 text.appendFormat( " (+%# min)", segment._travelMinutes );
             }
-            text.appendFormat( " [%# '%#' p%#]\n", toString( segment._source ), segment._sourceId.c_str(), segment._priority );
+            text.appendFormat( " [%# '%#' p%#]\n", toString( segment._source ), segment._sourceID.c_str(), segment._priority );
         }
         outText.assign( text.c_str() );
     }
@@ -1668,7 +1668,7 @@ namespace sw
         string     text;
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
         {
-            if ( bAll == false && getNpcId( npcIndex ) != hashed_string( _lastTraceRequest ) )
+            if ( bAll == false && getNpcID( npcIndex ) != hashed_string( _lastTraceRequest ) )
                 continue;
             explainNpc( npcIndex, text );
             SW_LOG_INFO( "[Schedule] %#", text );

@@ -56,7 +56,7 @@ namespace sw
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
         const RTSWorld& getWorld() const { return _match.getWorld(); }
-        bool            isSelected( RTSUnitId unitId ) const { return _selection.isSelected( unitId ); }
+        bool            isSelected( RTSUnitID unitID ) const { return _selection.isSelected( unitID ); }
         /** @brief 유닛 주인(또는 자원 종류) · 고름의 모습입니다. 아직 없으면 비어 있다. */
         const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
         /** @brief 끌어 고르는 중이면 true 이고 땅 위 상자의 가운데 · 크기를 줍니다. */
@@ -78,7 +78,7 @@ namespace sw
         /** @brief 유닛 id 자리 하나의 모습입니다. 틱이 보일 유닛을 정하고 틱 뒤에 오브젝트를 맞춘다. */
         struct UnitSlot
         {
-            RTSUnitId        _shownId{}; ///< 세웠거나 세울 유닛(무효면 없다)
+            RTSUnitID        _shownID{}; ///< 세웠거나 세울 유닛(무효면 없다)
             GameObjectHandle _object{};
             uint32           _stamp{ 0 };
         };
@@ -96,7 +96,7 @@ namespace sw
         void updateDrag( const InputManager& input, const float3& point, bool bPointValid );
         /** @brief `Skirmish.Order`(오른쪽 클릭) — 고른 것에 커서 자리로 똑똑한 명령(이동 · 공격 · 채취 · 집결)을 냅니다. */
         void issueOrder( const float3& point, bool bQueue );
-        void orderBuild( const utf8* pBuildingId, const float3& point );
+        void orderBuild( const utf8* pBuildingID, const float3& point );
         void trainFromPrimary( int32 productIndex );
         void handleEvents();
         /** @brief 포인터가 가리키는 땅(y = 0) 자리입니다(`getMousePositionNormalized`). 맵 밖이면 false 입니다. */

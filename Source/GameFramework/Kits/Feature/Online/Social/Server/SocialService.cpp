@@ -37,15 +37,15 @@ namespace sw
                 return s_table;
             }
 
-            static string makeLinkKey( AccountId ownerId, AccountId otherId )
+            static string makeLinkKey( AccountID ownerID, AccountID otherID )
             {
-                string key = ServiceKeyUtil::makeHex64( ownerId );
+                string key = ServiceKeyUtil::makeHex64( ownerID );
                 key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, otherId );
+                ServiceKeyUtil::appendHex64( key, otherID );
                 return key;
             }
 
-            static string makePresenceKey( AccountId accountId ) { return string( "social/rp/" ) + ServiceKeyUtil::makeHex64( accountId ); }
+            static string makePresenceKey( AccountID accountID ) { return string( "social/rp/" ) + ServiceKeyUtil::makeHex64( accountID ); }
 
             static vector<uint8> encodeLink( SocialLinkState state, int64 sinceMs )
             {
@@ -138,14 +138,14 @@ namespace sw
         class SocialLinkWork final : public IServiceStoreWork
         {
         public:
-            SocialLinkWork( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountId accountId, AccountId otherId,
+            SocialLinkWork( SocialService* pService, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID,
                             string_view displayName, int64 nowMs, uint64 requestTag )
                 : _decision{}
                 , _displayName{ displayName }
                 , _pService{ pService }
                 , _pNameIndex{ pNameIndex }
-                , _accountId{ accountId }
-                , _otherId{ otherId }
+                , _accountID{ accountID }
+                , _otherID{ otherID }
                 , _nowMs{ nowMs }
                 , _requestTag{ requestTag }
                 , _operation{ operation }
@@ -172,7 +172,7 @@ namespace sw
                 _decision._result = SocialResult::Conflict;
             }
 
-            void complete() override { _pService->applyLinkChange( _requestTag, _accountId, _otherId, _decision ); }
+            void complete() override { _pService->applyLinkChange( _requestTag, _accountID, _otherID, _decision ); }
 
         private:
             /** @brief 이름 → 계정 id. 못 찾으면 결과를 적고 false. */
@@ -186,8 +186,8 @@ namespace sw
                     _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialResult::Unavailable;
                     return false;
                 }
-                _otherId = identity._accountId;
-                if ( _otherId == _accountId || _otherId == kInvalidAccountId )
+                _otherID = identity._accountID;
+                if ( _otherID == _accountID || _otherID == kInvalidAccountID )
                 {
                     _decision._result = SocialResult::Invalid;
                     return false;
@@ -203,10 +203,10 @@ namespace sw
                 ServiceRecord otherLink;
                 ServiceRecord selfCount;
                 ServiceRecord otherCount;
-                const string  selfLinkKey   = Internal::makeLinkKey( _accountId, _otherId );
-                const string  otherLinkKey  = Internal::makeLinkKey( _otherId, _accountId );
-                const string  selfCountKey  = ServiceKeyUtil::makeHex64( _accountId );
-                const string  otherCountKey = ServiceKeyUtil::makeHex64( _otherId );
+                const string  selfLinkKey   = Internal::makeLinkKey( _accountID, _otherID );
+                const string  otherLinkKey  = Internal::makeLinkKey( _otherID, _accountID );
+                const string  selfCountKey  = ServiceKeyUtil::makeHex64( _accountID );
+                const string  otherCountKey = ServiceKeyUtil::makeHex64( _otherID );
                 const bool    bReadOk       = Internal::readOrAbsent( connection, Internal::getLinkTable(), selfLinkKey, selfLink ) &&
                                      Internal::readOrAbsent( connection, Internal::getLinkTable(), otherLinkKey, otherLink ) &&
                                      Internal::readOrAbsent( connection, Internal::getCountTable(), selfCountKey, selfCount ) &&
@@ -244,8 +244,8 @@ namespace sw
             string                   _displayName;
             SocialService*           _pService;
             const IAccountNameIndex* _pNameIndex;
-            AccountId                _accountId;
-            AccountId                _otherId;
+            AccountID                _accountID;
+            AccountID                _otherID;
             int64                    _nowMs;
             uint64                   _requestTag;
             SocialLinkOperation      _operation;
@@ -255,10 +255,10 @@ namespace sw
         class SocialLoadWork final : public IServiceStoreWork
         {
         public:
-            SocialLoadWork( SocialService* pService, AccountId accountId, uint64 requestTag )
+            SocialLoadWork( SocialService* pService, AccountID accountID, uint64 requestTag )
                 : _listLink{}
                 , _pService{ pService }
-                , _accountId{ accountId }
+                , _accountID{ accountID }
                 , _requestTag{ requestTag }
                 , _bReadOk{ SW_FALSE }
             {
@@ -267,13 +267,13 @@ namespace sw
             void run( IServiceStoreConnection& connection ) override
             {
                 vector<ServiceRecord> listRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( _accountId ) + "/";
+                const string          prefix = ServiceKeyUtil::makeHex64( _accountID ) + "/";
                 if ( connection.listRecords( SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord ) != ServiceStoreResult::Ok )
                     return;
                 for ( const ServiceRecord& record : listRecord )
                 {
                     SocialLink link;
-                    const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherId ) &&
+                    const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherID ) &&
                                          SocialServiceInternal::decodeLink( record._bytes, link._state, link._sinceMs );
                     if ( bParsed )
                         _listLink.push_back( link );
@@ -281,12 +281,12 @@ namespace sw
                 _bReadOk = SW_TRUE;
             }
 
-            void complete() override { _pService->applyLinksLoaded( _accountId, _requestTag, _bReadOk == SW_TRUE, std::move( _listLink ) ); }
+            void complete() override { _pService->applyLinksLoaded( _accountID, _requestTag, _bReadOk == SW_TRUE, std::move( _listLink ) ); }
 
         private:
             vector<SocialLink> _listLink;
             SocialService*     _pService;
-            AccountId          _accountId;
+            AccountID          _accountID;
             uint64             _requestTag;
             uint8              _bReadOk;
         };
@@ -302,7 +302,7 @@ namespace sw
         , _completionBuffer{}
         , _notificationBuffer{}
         , _dependencies{}
-        , _nextQueryId{ 1 }
+        , _nextQueryID{ 1 }
         , _pendingCount{ 0 }
     {
     }
@@ -319,9 +319,9 @@ namespace sw
     {
         if ( _dependencies._pRouter != nullptr )
         {
-            for ( const auto& [cacheRequestId, read] : _mapCacheRequestToRead )
+            for ( const auto& [cacheRequestID, read] : _mapCacheRequestToRead )
             {
-                _dependencies._pRouter->cancel( cacheRequestId );
+                _dependencies._pRouter->cancel( cacheRequestID );
             }
         }
         _mapCacheRequestToRead.clear();
@@ -332,85 +332,85 @@ namespace sw
 
     void SocialService::tick( int64 nowMs )
     {
-        for ( auto& [accountId, local] : _mapAccountToLocal ) // 접속 상태 시한 연장
+        for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태 시한 연장
         {
             if ( local._status == SocialPresenceStatus::Offline || nowMs - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
                 continue;
             local._presenceWrittenMs = nowMs;
-            writePresenceRecord( accountId, local );
+            writePresenceRecord( accountID, local );
         }
     }
 
-    void SocialService::changeLink( SocialLinkOperation operation, AccountId accountId, AccountId otherId, int64 nowMs, uint64 requestTag )
+    void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, int64 nowMs, uint64 requestTag )
     {
-        if ( otherId == kInvalidAccountId || otherId == accountId )
+        if ( otherID == kInvalidAccountID || otherID == accountID )
         {
             pushCompletion( requestTag, SocialResult::Invalid );
             return;
         }
-        submitLinkWork( operation, accountId, otherId, string_view{}, nowMs, requestTag );
+        submitLinkWork( operation, accountID, otherID, string_view{}, nowMs, requestTag );
     }
 
-    void SocialService::requestFriendByName( AccountId accountId, string_view displayName, int64 nowMs, uint64 requestTag )
+    void SocialService::requestFriendByName( AccountID accountID, string_view displayName, int64 nowMs, uint64 requestTag )
     {
         if ( displayName.empty() )
         {
             pushCompletion( requestTag, SocialResult::Invalid );
             return;
         }
-        submitLinkWork( SocialLinkOperation::Request, accountId, kInvalidAccountId, displayName, nowMs, requestTag );
+        submitLinkWork( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
     }
 
-    void SocialService::submitLinkWork( SocialLinkOperation operation, AccountId accountId, AccountId otherId, string_view displayName, int64 nowMs, uint64 requestTag )
+    void SocialService::submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag )
     {
-        (void)ensureLocal( accountId );
+        (void)ensureLocal( accountID );
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLinkWork>( this, _dependencies._pNameIndex, operation, accountId, otherId, displayName, nowMs, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<SocialLinkWork>( this, _dependencies._pNameIndex, operation, accountID, otherID, displayName, nowMs, requestTag ) );
     }
 
-    void SocialService::applyLinkChange( uint64 requestTag, AccountId accountId, AccountId otherId, const SocialLinkDecision& decision )
+    void SocialService::applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision )
     {
         --_pendingCount;
         SocialCompletion completion;
         completion._requestTag = requestTag;
-        completion._otherId    = otherId;
+        completion._otherID    = otherID;
         completion._result     = decision._result;
         _completionBuffer.push( std::move( completion ) );
         if ( decision._result != SocialResult::Ok || decision._bWrite == SW_FALSE )
             return;
 
         // 이 서버 메모리 — 두 사람 모두(붙어 있으면) 다시 읽는다. 다른 서버는 버스로.
-        reloadIfLocal( accountId );
-        reloadIfLocal( otherId );
+        reloadIfLocal( accountID );
+        reloadIfLocal( otherID );
         if ( _dependencies._pBus != nullptr )
         {
             BitWriter body;
-            body.writeVarUint( accountId );
-            body.writeVarUint( otherId );
+            body.writeVarUint( accountID );
+            body.writeVarUint( otherID );
             _dependencies._pBus->publish( SocialBus::kLinksTopic, body.getBytes().data(), body.getByteCount() );
         }
 
         if ( decision._bNotifyOtherRequested == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendRequested } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendRequested } );
         if ( decision._bNotifyBothAdded == SW_TRUE )
         {
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendAdded } );
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, accountId, otherId, 0, SocialNotificationKind::FriendAdded } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendAdded } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, accountID, otherID, 0, SocialNotificationKind::FriendAdded } );
         }
         if ( decision._bNotifyOtherRemoved == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherId, accountId, 0, SocialNotificationKind::FriendRemoved } );
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendRemoved } );
     }
 
-    void SocialService::listLinks( AccountId accountId, uint64 requestTag )
+    void SocialService::listLinks( AccountID accountID, uint64 requestTag )
     {
-        (void)_mapAccountToLocal[accountId];
-        startLoad( accountId, requestTag ); // 목록은 언제나 저장소에서(메모리는 그 김에 갈아 끼운다)
+        (void)_mapAccountToLocal[accountID];
+        startLoad( accountID, requestTag ); // 목록은 언제나 저장소에서(메모리는 그 김에 갈아 끼운다)
     }
 
-    void SocialService::applyLinksLoaded( AccountId accountId, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink )
+    void SocialService::applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink )
     {
         --_pendingCount;
-        const auto localIt = _mapAccountToLocal.find( accountId );
+        const auto localIt = _mapAccountToLocal.find( accountID );
         if ( localIt != _mapAccountToLocal.end() )
         {
             localIt->second._bLoading = SW_FALSE;
@@ -429,20 +429,20 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    bool SocialService::isBlockedLocal( AccountId ownerId, AccountId otherId ) const
+    bool SocialService::isBlockedLocal( AccountID ownerID, AccountID otherID ) const
     {
-        const auto localIt = _mapAccountToLocal.find( ownerId );
+        const auto localIt = _mapAccountToLocal.find( ownerID );
         if ( localIt == _mapAccountToLocal.end() )
             return false;
         for ( const SocialLink& link : localIt->second._listLink )
         {
-            if ( link._otherId == otherId )
+            if ( link._otherID == otherID )
                 return link._state == SocialLinkState::Blocked;
         }
         return false;
     }
 
-    void SocialService::setPresence( AccountId accountId, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag )
+    void SocialService::setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag )
     {
         const bool bValid = status != SocialPresenceStatus::Offline && status < SocialPresenceStatus::Count &&
                             activity.size() <= static_cast<size_t>( SocialLimit::kMaxActivitySize );
@@ -451,44 +451,44 @@ namespace sw
             pushCompletion( requestTag, SocialResult::Invalid );
             return;
         }
-        LocalAccount& local      = ensureLocal( accountId );
+        LocalAccount& local      = ensureLocal( accountID );
         local._status            = status;
         local._activity          = string( activity );
         local._presenceWrittenMs = nowMs;
-        writePresenceRecord( accountId, local );
-        publishPresence( accountId, local );
+        writePresenceRecord( accountID, local );
+        publishPresence( accountID, local );
         pushCompletion( requestTag, SocialResult::Ok );
     }
 
-    void SocialService::queryFriendPresence( AccountId accountId, uint64 requestTag )
+    void SocialService::queryFriendPresence( AccountID accountID, uint64 requestTag )
     {
-        const LocalAccount& local   = ensureLocal( accountId );
-        const uint64        queryId = _nextQueryId++;
+        const LocalAccount& local   = ensureLocal( accountID );
+        const uint64        queryID = _nextQueryID++;
         PresenceQuery       query;
         query._requestTag = requestTag;
         for ( const SocialLink& link : local._listLink )
         {
             if ( link._state != SocialLinkState::Friend )
                 continue;
-            const auto friendIt = _mapAccountToLocal.find( link._otherId );
+            const auto friendIt = _mapAccountToLocal.find( link._otherID );
             if ( friendIt != _mapAccountToLocal.end() && friendIt->second._status != SocialPresenceStatus::Offline )
             {
-                query._listPresence.push_back( SocialPresence{ friendIt->second._activity, link._otherId, friendIt->second._status } ); // 이 서버 — 캐시를 읽지 않는다
+                query._listPresence.push_back( SocialPresence{ friendIt->second._activity, link._otherID, friendIt->second._status } ); // 이 서버 — 캐시를 읽지 않는다
                 continue;
             }
             if ( _dependencies._pRouter == nullptr )
             {
-                query._listPresence.push_back( SocialPresence{ string{}, link._otherId, SocialPresenceStatus::Offline } );
+                query._listPresence.push_back( SocialPresence{ string{}, link._otherID, SocialPresenceStatus::Offline } );
                 continue;
             }
-            const uint64 cacheRequestId            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherId ) ),
+            const uint64 cacheRequestID            = _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( link._otherID ) ),
                                                                                      EphemeralStoreRouter::ReplyDelegate::create<&SocialService::onPresenceReply>( this ) );
-            _mapCacheRequestToRead[cacheRequestId] = PresenceRead{ queryId, link._otherId };
+            _mapCacheRequestToRead[cacheRequestID] = PresenceRead{ queryID, link._otherID };
             ++query._outstandingCount;
         }
         if ( query._outstandingCount > 0 )
         {
-            _mapQuery[queryId] = std::move( query );
+            _mapQuery[queryID] = std::move( query );
             return;
         }
         SocialCompletion completion;
@@ -497,18 +497,18 @@ namespace sw
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void SocialService::removeAccount( AccountId accountId )
+    void SocialService::removeAccount( AccountID accountID )
     {
-        const auto localIt = _mapAccountToLocal.find( accountId );
+        const auto localIt = _mapAccountToLocal.find( accountID );
         if ( localIt == _mapAccountToLocal.end() )
             return;
         if ( localIt->second._status != SocialPresenceStatus::Offline )
         {
             localIt->second._status = SocialPresenceStatus::Offline;
             localIt->second._activity.clear();
-            publishPresence( accountId, localIt->second );
+            publishPresence( accountID, localIt->second );
             if ( _dependencies._pRouter != nullptr )
-                (void)_dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountId ) ), EphemeralStoreRouter::ReplyDelegate{} );
+                (void)_dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ), EphemeralStoreRouter::ReplyDelegate{} );
         }
         _mapAccountToLocal.erase( localIt );
     }
@@ -518,12 +518,12 @@ namespace sw
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( topic == SocialBus::kLinksTopic )
         {
-            const AccountId firstId  = reader.readVarUint();
-            const AccountId secondId = reader.readVarUint();
+            const AccountID firstID  = reader.readVarUint();
+            const AccountID secondID = reader.readVarUint();
             if ( reader.hasOverflowed() )
                 return;
-            reloadIfLocal( firstId );
-            reloadIfLocal( secondId );
+            reloadIfLocal( firstID );
+            reloadIfLocal( secondID );
             return;
         }
         if ( topic == SocialBus::kPresenceTopic )
@@ -534,42 +534,42 @@ namespace sw
         }
     }
 
-    SocialService::LocalAccount& SocialService::ensureLocal( AccountId accountId )
+    SocialService::LocalAccount& SocialService::ensureLocal( AccountID accountID )
     {
-        LocalAccount& local = _mapAccountToLocal[accountId];
+        LocalAccount& local = _mapAccountToLocal[accountID];
         if ( local._bLoaded == SW_FALSE && local._bLoading == SW_FALSE )
-            startLoad( accountId, 0 );
+            startLoad( accountID, 0 );
         return local;
     }
 
-    void SocialService::startLoad( AccountId accountId, uint64 requestTag )
+    void SocialService::startLoad( AccountID accountID, uint64 requestTag )
     {
-        _mapAccountToLocal[accountId]._bLoading = SW_TRUE;
+        _mapAccountToLocal[accountID]._bLoading = SW_TRUE;
         ++_pendingCount;
-        _dependencies._pStore->submit( sw::make_unique<SocialLoadWork>( this, accountId, requestTag ) );
+        _dependencies._pStore->submit( sw::make_unique<SocialLoadWork>( this, accountID, requestTag ) );
     }
 
-    void SocialService::reloadIfLocal( AccountId accountId )
+    void SocialService::reloadIfLocal( AccountID accountID )
     {
-        const auto localIt = _mapAccountToLocal.find( accountId );
+        const auto localIt = _mapAccountToLocal.find( accountID );
         if ( localIt != _mapAccountToLocal.end() && localIt->second._bLoading == SW_FALSE )
-            startLoad( accountId, 0 );
+            startLoad( accountID, 0 );
     }
 
-    void SocialService::writePresenceRecord( AccountId accountId, const LocalAccount& local )
+    void SocialService::writePresenceRecord( AccountID accountID, const LocalAccount& local )
     {
         if ( _dependencies._pRouter == nullptr )
             return;
         BitWriter            body;
-        const SocialPresence presence{ local._activity, accountId, local._status };
+        const SocialPresence presence{ local._activity, accountID, local._status };
         SocialProtocol::writePresence( body, presence );
-        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( accountId ), body.getBytes(), SocialServiceInternal::kPresenceTtlMs ),
+        (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( accountID ), body.getBytes(), SocialServiceInternal::kPresenceTtlMs ),
                                               EphemeralStoreRouter::ReplyDelegate{} );
     }
 
-    void SocialService::publishPresence( AccountId accountId, const LocalAccount& local )
+    void SocialService::publishPresence( AccountID accountID, const LocalAccount& local )
     {
-        const SocialPresence presence{ local._activity, accountId, local._status };
+        const SocialPresence presence{ local._activity, accountID, local._status };
         notifyFriendsOfPresence( presence ); // 이 서버
         if ( _dependencies._pBus == nullptr )
             return;
@@ -580,15 +580,15 @@ namespace sw
 
     void SocialService::notifyFriendsOfPresence( const SocialPresence& presence )
     {
-        for ( const auto& [accountId, local] : _mapAccountToLocal )
+        for ( const auto& [accountID, local] : _mapAccountToLocal )
         {
-            if ( accountId == presence._accountId )
+            if ( accountID == presence._accountID )
                 continue;
             for ( const SocialLink& link : local._listLink )
             {
-                if ( link._otherId == presence._accountId && link._state == SocialLinkState::Friend )
+                if ( link._otherID == presence._accountID && link._state == SocialLinkState::Friend )
                 {
-                    _notificationBuffer.push( SocialNotification{ presence, accountId, presence._accountId, 0, SocialNotificationKind::PresenceChanged } );
+                    _notificationBuffer.push( SocialNotification{ presence, accountID, presence._accountID, 0, SocialNotificationKind::PresenceChanged } );
                     break;
                 }
             }
@@ -597,21 +597,21 @@ namespace sw
 
     void SocialService::onPresenceReply( const EphemeralReply& reply )
     {
-        const auto readIt = _mapCacheRequestToRead.find( reply._requestId );
+        const auto readIt = _mapCacheRequestToRead.find( reply._requestID );
         if ( readIt == _mapCacheRequestToRead.end() )
             return;
         const PresenceRead read = readIt->second;
         _mapCacheRequestToRead.erase( readIt );
-        const auto queryIt = _mapQuery.find( read._queryId );
+        const auto queryIt = _mapQuery.find( read._queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         PresenceQuery& query = queryIt->second;
-        SocialPresence presence{ string{}, read._friendId, SocialPresenceStatus::Offline };
+        SocialPresence presence{ string{}, read._friendID, SocialPresenceStatus::Offline };
         if ( reply._result == EphemeralResult::Ok )
         {
             BitReader reader( reply._value.data(), static_cast<int32>( reply._value.size() ) );
-            if ( SocialProtocol::readPresence( reader, presence ) == false || presence._accountId != read._friendId )
-                presence = SocialPresence{ string{}, read._friendId, SocialPresenceStatus::Offline };
+            if ( SocialProtocol::readPresence( reader, presence ) == false || presence._accountID != read._friendID )
+                presence = SocialPresence{ string{}, read._friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );
         if ( --query._outstandingCount > 0 )

@@ -581,7 +581,7 @@ SW_TEST_CASE( ClassicJRPGTest, StepEncounterRewardSplitAndDeterminism )
         bGraceHeld = bGraceHeld && step - lastStep > 3;
         lastStep   = step;
         ++encounters;
-        slimeGroups += pGroupA->_listEnemyId.size() == 2 ? 1 : 0;
+        slimeGroups += pGroupA->_listEnemyID.size() == 2 ? 1 : 0;
     }
     SW_EXPECT_TRUE( bSame );
     SW_EXPECT_TRUE( bGraceHeld );

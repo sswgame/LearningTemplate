@@ -843,7 +843,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentDifferentKeysStaySeparate )
  *          (2) 쓰이지 않게 된 원소는 지연 회수돼 자리가 재사용된다(자리를 **옮기지 않고**).
  *          기본 생성한 Material 은 셰이더 경로가 비어 있어 한 그룹에 모인다 — 리소스 없이 원소 로직만 본다.
  */
-SW_TEST_CASE( GPUSceneTest, MaterialElementIdsPersistAcrossBuildsAndAreFreed )
+SW_TEST_CASE( GPUSceneTest, MaterialElementIDsPersistAcrossBuildsAndAreFreed )
 {
     sw::Scene scene( "MaterialElementIdScene" );
     SW_ASSERT_TRUE( scene.ensureDefaultCameras() );

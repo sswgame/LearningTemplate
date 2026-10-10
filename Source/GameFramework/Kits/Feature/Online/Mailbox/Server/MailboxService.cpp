@@ -30,36 +30,36 @@ namespace sw
         class MailboxRequestWork final : public IServiceStoreWork
         {
         public:
-            MailboxRequestWork( MailboxService* pService, const MailboxCall& call, const vector<ServiceMailCampaign>& listCampaign, const ILedgerPolicy* pPolicy, uint64 callId )
+            MailboxRequestWork( MailboxService* pService, const MailboxCall& call, const vector<ServiceMailCampaign>& listCampaign, const ILedgerPolicy* pPolicy, uint64 callID )
                 : _call{ call }
                 , _listCampaign{ listCampaign }
                 , _reply{}
                 , _pService{ pService }
                 , _pPolicy{ pPolicy }
-                , _callId{ callId }
+                , _callID{ callID }
             {
             }
 
             void run( IServiceStoreConnection& connection ) override
             {
-                const uint64 accountId = _call._accountId;
+                const uint64 accountID = _call._accountID;
                 switch ( _call._method )
                 {
                     case MailboxMethod::kList:
                     {
-                        (void)MailboxStoreLogic::listMail( connection, accountId, _call._nowMs, _listCampaign, _call._request, _reply );
+                        (void)MailboxStoreLogic::listMail( connection, accountID, _call._nowMs, _listCampaign, _call._request, _reply );
                         break;
                     }
                     case MailboxMethod::kMarkRead:
                     {
-                        _reply._result = MailboxStoreLogic::markRead( connection, accountId, _call._request._mailKey );
+                        _reply._result = MailboxStoreLogic::markRead( connection, accountID, _call._request._mailKey );
                         break;
                     }
                     case MailboxMethod::kClaim:
                     {
                         MailboxClaimInput input;
                         input._mailKey   = _call._request._mailKey;
-                        input._accountId = accountId;
+                        input._accountID = accountID;
                         input._nowMs     = _call._nowMs;
                         input._pPolicy   = _pPolicy;
                         _reply._result   = MailboxStoreLogic::claim( connection, input, _reply );
@@ -67,12 +67,12 @@ namespace sw
                     }
                     case MailboxMethod::kClaimAll:
                     {
-                        (void)MailboxStoreLogic::claimAll( connection, accountId, _call._nowMs, _pPolicy, _reply );
+                        (void)MailboxStoreLogic::claimAll( connection, accountID, _call._nowMs, _pPolicy, _reply );
                         break;
                     }
                     case MailboxMethod::kDelete:
                     {
-                        _reply._result = MailboxStoreLogic::deleteMail( connection, accountId, _call._request._mailKey );
+                        _reply._result = MailboxStoreLogic::deleteMail( connection, accountID, _call._request._mailKey );
                         break;
                     }
                     default:
@@ -83,7 +83,7 @@ namespace sw
                 }
             }
 
-            void complete() override { _pService->completeCall( _callId, _reply ); }
+            void complete() override { _pService->completeCall( _callID, _reply ); }
 
         private:
             MailboxCall                 _call;
@@ -91,7 +91,7 @@ namespace sw
             MailboxReply                _reply;
             MailboxService*             _pService;
             const ILedgerPolicy*        _pPolicy;
-            uint64                      _callId;
+            uint64                      _callID;
         };
 
         /** @brief 만료 쓸기 한 번입니다. */
@@ -147,7 +147,7 @@ namespace sw
         , _settings{}
         , _pStore{ nullptr }
         , _arrExpiredCounter{}
-        , _nextCallId{ 1 }
+        , _nextCallID{ 1 }
         , _nowMs{ 0 }
         , _nextSweepMs{ 0 }
         , _nextCampaignRefreshMs{ 0 }
@@ -234,7 +234,7 @@ namespace sw
     {
         MailboxCall call;
         call._method         = context._method;
-        call._accountId      = context._accountId;
+        call._accountID      = context._accountID;
         call._idempotencyKey = context._idempotencyKey;
         call._nowMs          = context._nowMs;
         if ( MailboxProtocol::readRequest( body, call._request ) == false )
@@ -256,7 +256,7 @@ namespace sw
 
     void MailboxService::startCall( const MailboxCall& call, PendingCall pending )
     {
-        pending._callId              = _nextCallId++;
+        pending._callID              = _nextCallID++;
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._methodIndex         = MailboxMethod::toIndex( call._method );
         _listPendingCall.push_back( pending );
@@ -266,7 +266,7 @@ namespace sw
         refused._result = MailboxResult::Ok;
         if ( pending._methodIndex < 0 || _pStore == nullptr )
             refused._result = MailboxResult::InvalidRequest;
-        else if ( call._accountId == kInvalidAccountId )
+        else if ( call._accountID == kInvalidAccountID )
             refused._result = MailboxResult::NotSignedIn;
         else if ( MailboxMethod::isClaim( call._method ) && call._idempotencyKey.isValid() == false )
             refused._result = MailboxResult::InvalidRequest; // 수령은 멱등 키 필수
@@ -278,20 +278,20 @@ namespace sw
         MailboxCall work      = call;
         work._nowMs           = call._nowMs != 0 ? call._nowMs : _nowMs;
         const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, work, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callId ) );
+        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, work, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callID ) );
     }
 
-    void MailboxService::completeCall( uint64 callId, const MailboxReply& reply )
+    void MailboxService::completeCall( uint64 callID, const MailboxReply& reply )
     {
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
         {
-            if ( _listPendingCall[pendingIndex]._callId == callId )
+            if ( _listPendingCall[pendingIndex]._callID == callID )
             {
                 finishCall( pendingIndex, reply );
                 return;
             }
         }
-        SW_LOG_WARNING( "MailboxService completed an unknown call %#", callId );
+        SW_LOG_WARNING( "MailboxService completed an unknown call %#", callID );
     }
 
     void MailboxService::completeSweep( const MailboxSweepStats& stats )

@@ -22,7 +22,7 @@ namespace
         LedgerPosting posting;
         posting._from    = from;
         posting._to      = to;
-        posting._assetId = pAsset;
+        posting._assetID = pAsset;
         posting._amount  = amount;
         return posting;
     }
@@ -37,17 +37,17 @@ namespace
         return request;
     }
 
-    LedgerResult grant( MemoryServiceDatabase& database, uint64 accountId, const utf8* pAsset, int64 amount, const utf8* pKeyTail )
+    LedgerResult grant( MemoryServiceDatabase& database, uint64 accountID, const utf8* pAsset, int64 amount, const utf8* pKeyTail )
     {
         LedgerTransferOutcome outcome;
         return Ledger::executeTransfer(
-            database, makeRequest( pKeyTail, "test.grant", { makePosting( LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), pAsset, amount ) } ), outcome );
+            database, makeRequest( pKeyTail, "test.grant", { makePosting( LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), pAsset, amount ) } ), outcome );
     }
 
-    int64 readAmount( MemoryServiceDatabase& database, uint64 accountId, const utf8* pAsset )
+    int64 readAmount( MemoryServiceDatabase& database, uint64 accountID, const utf8* pAsset )
     {
         LedgerBalance balance;
-        if ( Ledger::readBalance( database, LedgerHolder::makeAccount( accountId ), pAsset, balance ) != ServiceStoreResult::Ok )
+        if ( Ledger::readBalance( database, LedgerHolder::makeAccount( accountID ), pAsset, balance ) != ServiceStoreResult::Ok )
             return -1;
         return balance._amount;
     }
@@ -61,7 +61,7 @@ namespace
     class CapPolicy final : public ILedgerPolicy
     {
     public:
-        int64 getBalanceCap( string_view assetId ) const override { return assetId == "cur.gold" ? 100 : 0; }
+        int64 getBalanceCap( string_view assetID ) const override { return assetID == "cur.gold" ? 100 : 0; }
     };
 
     struct ConcurrentContext
@@ -78,14 +78,14 @@ namespace
         for ( int32 transferIndex = 0; transferIndex < 200; ++transferIndex )
         {
             state                         = state * 6364136223846793005ull + 1442695040888963407ull;
-            const uint64          fromId  = 1 + ( state >> 33 ) % 4;
-            const uint64          toId    = 1 + ( fromId + ( state >> 40 ) % 3 ) % 4;
+            const uint64          fromID  = 1 + ( state >> 33 ) % 4;
+            const uint64          toID    = 1 + ( fromID + ( state >> 40 ) % 3 ) % 4;
             const int64           amount  = 1 + static_cast<int64>( ( state >> 20 ) % 40 );
             const string          keyTail = "c" + ServiceKeyUtil::makeHex64( static_cast<uint64>( pContext->_threadIndex ) * 1000 + static_cast<uint64>( transferIndex ) );
             LedgerTransferOutcome outcome;
             const LedgerResult    result = Ledger::executeTransfer(
                 *pContext->_pDatabase,
-                makeRequest( keyTail.c_str(), "test.move", { makePosting( LedgerHolder::makeAccount( fromId ), LedgerHolder::makeAccount( toId ), "cur.gold", amount ) } ),
+                makeRequest( keyTail.c_str(), "test.move", { makePosting( LedgerHolder::makeAccount( fromID ), LedgerHolder::makeAccount( toID ), "cur.gold", amount ) } ),
                 outcome );
             if ( result == LedgerResult::Ok )
                 ++pContext->_appliedCount;
@@ -231,10 +231,10 @@ SW_TEST_CASE( LedgerTest, ZeroBalanceRecordIsErasedAndCanComeBack )
 SW_TEST_CASE( LedgerTest, ConcurrentTransfersKeepTheSumAndNeverGoNegative )
 {
     MemoryServiceDatabase database;
-    for ( uint64 accountId = 1; accountId <= 4; ++accountId )
+    for ( uint64 accountID = 1; accountID <= 4; ++accountID )
     {
-        const string keyTail = "seed" + ServiceKeyUtil::makeHex64( accountId );
-        SW_ASSERT_TRUE( grant( database, accountId, "cur.gold", 100, keyTail.c_str() ) == LedgerResult::Ok );
+        const string keyTail = "seed" + ServiceKeyUtil::makeHex64( accountID );
+        SW_ASSERT_TRUE( grant( database, accountID, "cur.gold", 100, keyTail.c_str() ) == LedgerResult::Ok );
     }
     ConcurrentContext arrContext[4];
     std::thread       arrThread[4];
@@ -252,9 +252,9 @@ SW_TEST_CASE( LedgerTest, ConcurrentTransfersKeepTheSumAndNeverGoNegative )
     }
     SW_EXPECT_TRUE( appliedCount > 0 );
     int64 total = 0;
-    for ( uint64 accountId = 1; accountId <= 4; ++accountId )
+    for ( uint64 accountID = 1; accountID <= 4; ++accountID )
     {
-        const int64 amount = readAmount( database, accountId, "cur.gold" );
+        const int64 amount = readAmount( database, accountID, "cur.gold" );
         SW_EXPECT_TRUE( amount >= 0 );
         total += amount;
     }

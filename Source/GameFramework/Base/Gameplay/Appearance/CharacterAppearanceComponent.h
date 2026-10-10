@@ -78,9 +78,9 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 프리셋 · 씨앗을 바꾸고 다시 조립합니다(칸 덮어쓰기는 남김). */
-        void setPreset( const hashed_string& presetId, uint32 seed );
+        void setPreset( const hashed_string& presetID, uint32 seed );
         /** @brief 칸의 아이템을 덮어쓰고 다시 조립합니다(빈 아이템이면 칸을 비움). 같은 값이면 아무것도 안 합니다. */
-        void setSlotItem( const hashed_string& slot, const hashed_string& itemId );
+        void setSlotItem( const hashed_string& slot, const hashed_string& itemID );
         /** @brief 몸과 부품을 보이거나 숨깁니다(1인칭에서 몸 숨기기). */
         void setPartsVisible( bool bVisible );
         bool isPartsVisible() const { return _bPartsVisible; }
@@ -120,7 +120,7 @@ namespace sw
         struct SlotOverride
         {
             hashed_string _slot{};
-            hashed_string _itemId{};
+            hashed_string _itemID{};
         };
 
     private:
@@ -149,7 +149,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
-        string _presetId;
+        string _presetID;
         PROPERTY( Category = "Appearance", DisplayName = "Seed", Tooltip = "Seed for the preset's random choices (lists, ranges, colour lists)" )
         int32 _seed;
 

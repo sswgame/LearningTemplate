@@ -100,10 +100,10 @@ namespace sw
             BountyPaid,      ///< _value = 낸 돈
             PursuitChanged   ///< 추적 단계가 바뀌었다(_value = 수배 단계)
         };
-        hashed_string _regionId{};
-        hashed_string _crimeId{};
-        uint64        _witnessId{ 0 };
-        uint32        _incidentId{ 0 };
+        hashed_string _regionID{};
+        hashed_string _crimeID{};
+        uint64        _witnessID{ 0 };
+        uint32        _incidentID{ 0 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::Witnessed };
     };
@@ -132,24 +132,24 @@ namespace sw
          * @brief 범죄를 저지릅니다. 후보 중 @p sight 가 보았다고 한 사람만 목격자입니다.
          * @return 사건 번호(1 부터). 범죄 · 지역이 없으면 0 입니다. 목격자가 없어도 번호는 붙습니다(명예는 게임이 바꾼다).
          */
-        uint32 commitCrime( const hashed_string& crimeId, const hashed_string& regionId, const float3& position, const vector<WesternWitness>& listCandidate,
+        uint32 commitCrime( const hashed_string& crimeID, const hashed_string& regionID, const float3& position, const vector<WesternWitness>& listCandidate,
                             const IWesternWitnessSight& sight, bool bMasked );
         /** @brief 목격자를 처치 · 위협했습니다. 지운 신고 대기가 있으면 true 입니다(이미 신고했으면 늦었다). */
-        bool silenceWitness( uint64 witnessId );
+        bool silenceWitness( uint64 witnessID );
         /** @brief 법이 지금 플레이어를 보는가입니다(보이는 동안 수배가 식지 않는다). */
-        void setSeenByLaw( const hashed_string& regionId, bool bSeen );
+        void setSeenByLaw( const hashed_string& regionID, bool bSeen );
         /** @brief 옷을 갈아입었습니다(변장 — 수배가 빨리 식는다). 새 범죄가 신고되면 풀립니다. */
         void setDisguised( bool bDisguised ) { _bDisguised = bDisguised ? SW_TRUE : SW_FALSE; }
         void update( float32 deltaTime );
         /** @brief 하루가 지났습니다 — 현상금이 지역마다 줄어듭니다. */
         void advanceDay();
         /** @brief 현상금을 내고 그 지역의 기록을 지웁니다. */
-        WesternPayResult payBounty( const hashed_string& regionId, Wallet& inoutWallet );
+        WesternPayResult payBounty( const hashed_string& regionID, Wallet& inoutWallet );
 
-        int32 getBounty( const hashed_string& regionId ) const;
-        int32 getWantedLevel( const hashed_string& regionId ) const;
+        int32 getBounty( const hashed_string& regionID ) const;
+        int32 getWantedLevel( const hashed_string& regionID ) const;
         /** @brief 지금 그 지역의 보안관 추적입니다(수배가 없으면 nullptr). */
-        const WesternPursuitDef* findPursuit( const hashed_string& regionId ) const;
+        const WesternPursuitDef* findPursuit( const hashed_string& regionID ) const;
         /** @brief 신고를 기다리는 목격자 수입니다. */
         int32 countPendingReports() const { return static_cast<int32>( _listPending.size() ); }
         bool  isDisguised() const { return _bDisguised != SW_FALSE; }
@@ -162,7 +162,7 @@ namespace sw
     private:
         struct RegionRecord
         {
-            hashed_string _regionId{};
+            hashed_string _regionID{};
             float32       _unseenTime{ 0.0f };
             int32         _bounty{ 0 };
             int32         _wantedLevel{ 0 };
@@ -171,27 +171,27 @@ namespace sw
 
         struct PendingReport
         {
-            hashed_string _crimeId{};
-            hashed_string _regionId{};
-            uint64        _witnessId{ 0 };
-            uint32        _incidentId{ 0 };
+            hashed_string _crimeID{};
+            hashed_string _regionID{};
+            uint64        _witnessID{ 0 };
+            uint32        _incidentID{ 0 };
             Countdown     _remaining{};
             uint8         _bMasked{ SW_FALSE };
         };
 
-        RegionRecord*       findRecordMutable( const hashed_string& regionId );
-        const RegionRecord* findRecord( const hashed_string& regionId ) const;
-        RegionRecord&       acquireRecord( const hashed_string& regionId );
+        RegionRecord*       findRecordMutable( const hashed_string& regionID );
+        const RegionRecord* findRecord( const hashed_string& regionID ) const;
+        RegionRecord&       acquireRecord( const hashed_string& regionID );
         void                applyReport( const PendingReport& report );
         void                setWantedLevel( RegionRecord& record, int32 wantedLevel );
-        void                pushEvent( WesternLawEvent::Kind kind, const hashed_string& regionId, int32 value, uint32 incidentId = 0,
-                                       const hashed_string& crimeId = hashed_string{}, uint64 witnessId = 0 );
+        void                pushEvent( WesternLawEvent::Kind kind, const hashed_string& regionID, int32 value, uint32 incidentID = 0,
+                                       const hashed_string& crimeID = hashed_string{}, uint64 witnessID = 0 );
 
         vector<RegionRecord>         _listRecord;
         vector<PendingReport>        _listPending;
         EventBuffer<WesternLawEvent> _eventBuffer;
         const WesternCatalog*        _pCatalog;
-        uint32                       _nextIncidentId;
+        uint32                       _nextIncidentID;
         uint8                        _bDisguised;
     };
 } // namespace sw

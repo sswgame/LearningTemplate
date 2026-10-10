@@ -184,11 +184,11 @@ namespace sw::editor
         void registerCommand( EditorCommandDesc desc );
 
         /** @brief id 로 커맨드를 찾습니다. 없으면 nullptr입니다. */
-        const EditorCommandDesc* find( string_view commandId ) const;
+        const EditorCommandDesc* find( string_view commandID ) const;
         /** @brief 활성 조건을 평가합니다. 조건이 없으면 true입니다. */
         static bool isEnabled( const EditorCommandDesc& desc );
         /** @brief 활성 상태이면 실행하고 true입니다. */
-        bool execute( string_view commandId );
+        bool execute( string_view commandID );
         /** @brief 활성 상태이면 실행하고 true입니다. */
         static bool executeDesc( const EditorCommandDesc& desc );
 

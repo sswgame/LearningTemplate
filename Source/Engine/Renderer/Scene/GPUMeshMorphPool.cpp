@@ -72,7 +72,7 @@ namespace sw
         build( pDevice, listMesh, vector<Mesh*>{} );
     }
 
-    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentId )
+    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID )
     {
         // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::build 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
         if ( listBuilt.size() != listMesh.size() )
@@ -80,7 +80,7 @@ namespace sw
         for ( size_t index = 0; index < listMesh.size(); ++index )
         {
             const Mesh* pMesh = listMesh[index];
-            if ( listBuilt[index] != pMesh || pMesh == nullptr || listBuiltContentId[index] != pMesh->getContentId() )
+            if ( listBuilt[index] != pMesh || pMesh == nullptr || listBuiltContentID[index] != pMesh->getContentID() )
                 return false;
         }
         return true;
@@ -89,22 +89,22 @@ namespace sw
     void GPUMeshMorphPool::rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
     {
         // 원본 = 스킨 데이터 번호. 사본(`Mesh::createSkinInstance`)은 원본의 번호를 나누므로 레스트 · 가중치가 한 벌만 올라간다.
-        vector<uint64>      listDataId;
+        vector<uint64>      listDataID;
         vector<const Mesh*> listSource;
         for ( const Mesh* pMesh : listSkinMesh )
         {
             if ( pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 )
                 continue;
-            const uint64 dataId = pMesh->getSkinDataId();
-            if ( std::find( listDataId.begin(), listDataId.end(), dataId ) != listDataId.end() )
+            const uint64 dataID = pMesh->getSkinDataID();
+            if ( std::find( listDataID.begin(), listDataID.end(), dataID ) != listDataID.end() )
                 continue;
-            listDataId.push_back( dataId );
+            listDataID.push_back( dataID );
             listSource.push_back( pMesh );
         }
-        if ( listDataId == _listSourceDataId && _skinRest.isValid() == ( listDataId.empty() == false ) )
+        if ( listDataID == _listSourceDataID && _skinRest.isValid() == ( listDataID.empty() == false ) )
             return;
 
-        _listSourceDataId = listDataId;
+        _listSourceDataID = listDataID;
         _listSourceBase.clear();
         _skinSourceVertexCount = 0;
         vector<GPUMorphVertex> listRest;
@@ -175,23 +175,23 @@ namespace sw
 
         // 목록이 그대로면 다시 만들지 않는다. 레스트 포즈 · 스킨 가중치는 변하지 않으므로 **한 번만** 올린다.
         // 매 프레임 올리면 이 클래스가 없애려던 바로 그 비용(정점 재업로드)을 다시 치르게 된다.
-        const bool bSameMorph = isSameList( listMorphMesh, _listBuiltMorph, _listBuiltMorphContentId );
-        const bool bSameSkin  = isSameList( listSkinMesh, _listBuiltSkin, _listBuiltSkinContentId );
+        const bool bSameMorph = isSameList( listMorphMesh, _listBuiltMorph, _listBuiltMorphContentID );
+        const bool bSameSkin  = isSameList( listSkinMesh, _listBuiltSkin, _listBuiltSkinContentID );
         if ( bSameMorph && bSameSkin )
             return;
 
         _mapBase.clear();
         _listBuiltMorph.assign( listMorphMesh.begin(), listMorphMesh.end() );
-        _listBuiltMorphContentId.clear();
+        _listBuiltMorphContentID.clear();
         for ( const Mesh* pMesh : listMorphMesh )
         {
-            _listBuiltMorphContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+            _listBuiltMorphContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
         }
         _listBuiltSkin.assign( listSkinMesh.begin(), listSkinMesh.end() );
-        _listBuiltSkinContentId.clear();
+        _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
         {
-            _listBuiltSkinContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+            _listBuiltSkinContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
         }
 
         // 모프 구간 — 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
@@ -234,8 +234,8 @@ namespace sw
         {
             if ( pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0 || _mapBase.find( pMesh ) != _mapBase.end() )
                 continue;
-            const auto sourceIt = std::find( _listSourceDataId.begin(), _listSourceDataId.end(), pMesh->getSkinDataId() );
-            if ( sourceIt == _listSourceDataId.end() )
+            const auto sourceIt = std::find( _listSourceDataID.begin(), _listSourceDataID.end(), pMesh->getSkinDataID() );
+            if ( sourceIt == _listSourceDataID.end() )
                 continue;
             const uint32 count = pMesh->getVertexCount();
             if ( _skinVertexBase + resultOffset + count > kMaxPoolVertices )
@@ -245,7 +245,7 @@ namespace sw
             }
             GPUSkinInstanceRow row{};
             row._resultOffset     = resultOffset;
-            row._sourceBase       = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataId.begin() )];
+            row._sourceBase       = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataID.begin() )];
             row._vertexCount      = count;
             row._paletteBase      = _skinBoneCount;
             row._morphTargetCount = pMesh->getMorphTargetCount();
@@ -352,12 +352,12 @@ namespace sw
         _skinPalette.release( pDevice );
         _mapBase.clear();
         _listBuiltMorph.clear();
-        _listBuiltMorphContentId.clear();
+        _listBuiltMorphContentID.clear();
         _listBuiltSkin.clear();
-        _listBuiltSkinContentId.clear();
+        _listBuiltSkinContentID.clear();
         _listSkinMesh.clear();
         _listSkinRow.clear();
-        _listSourceDataId.clear();
+        _listSourceDataID.clear();
         _listSourceBase.clear();
         _vertexCount           = 0;
         _skinVertexBase        = 0;

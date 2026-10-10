@@ -71,7 +71,7 @@ namespace sw
             return;
         }
         LiveOpsReply reply;
-        _pService->computeActiveEvents( context._accountId, region, buildVersion, context._nowMs, true, reply._listEvent );
+        _pService->computeActiveEvents( context._accountID, region, buildVersion, context._nowMs, true, reply._listEvent );
         BitWriter replyBody;
         LiveOpsProtocol::writeReply( replyBody, reply );
         (void)host.respondOk( context._token, replyBody );
@@ -92,7 +92,7 @@ namespace sw
         }
         else
         {
-            bBodyOk = ServiceKeyUtil::readString( body, PushLimit::kMaxProviderIdSize, registration._providerId ) &&
+            bBodyOk = ServiceKeyUtil::readString( body, PushLimit::kMaxProviderIDSize, registration._providerID ) &&
                       ServiceKeyUtil::readString( body, PushLimit::kMaxTokenSize, registration._token );
         }
         if ( bBodyOk == false || body.hasOverflowed() )
@@ -104,11 +104,11 @@ namespace sw
         if ( context._method == LiveOpsMethod::kRegisterDevice )
         {
             registration._registeredMs = context._nowMs; // 등록 시각은 서버 시계(한도를 넘으면 가장 오래된 것을 밀어낸다)
-            _pDispatcher->registerDevice( context._accountId, registration, tag );
+            _pDispatcher->registerDevice( context._accountID, registration, tag );
         }
         else
         {
-            _pDispatcher->unregisterDevice( context._accountId, registration._providerId, registration._token, tag );
+            _pDispatcher->unregisterDevice( context._accountID, registration._providerID, registration._token, tag );
         }
     }
 
@@ -145,7 +145,7 @@ namespace sw
         const IServerBus* pBus = host.getServerBus();
         if ( _pService == nullptr || message._topic != LiveOpsBus::kChangedTopic )
             return;
-        if ( pBus != nullptr && message._originServerId == pBus->getServerId() )
+        if ( pBus != nullptr && message._originServerID == pBus->getServerID() )
             return; // 이 서버가 낸 것 — 쓰기 완료 때 이미 다시 읽기를 걸었다
         _pService->notifyChanged();
     }

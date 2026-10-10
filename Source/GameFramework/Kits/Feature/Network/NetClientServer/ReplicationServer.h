@@ -38,9 +38,9 @@ namespace sw
         IReplicationPolicy& operator=( const IReplicationPolicy& ) = default;
 
         /** @brief 이 클라이언트에게 이 엔티티를 보내는가입니다(안 보내면 클라이언트에서 사라진다). */
-        virtual bool isRelevant( int32 connectionId, const NetEntityState& entity ) const
+        virtual bool isRelevant( int32 connectionID, const NetEntityState& entity ) const
         {
-            (void)connectionId;
+            (void)connectionID;
             (void)entity;
             return true;
         }
@@ -48,9 +48,9 @@ namespace sw
          * @brief 스냅샷마다 쌓는 우선도입니다(클수록 자주). 쌓인 것이 큰 엔티티부터 예산에 싣고, 실으면 0 으로 돌린다 — 예산이 늘 차도 낮은 우선도가
          *        쌓여 언젠가 간다(`NetPrioritizer`). 우선도 1 은 우선도 10 이 예산을 채운 틱 열 번에 한 번쯤 간다.
          */
-        virtual float32 computePriority( int32 connectionId, const NetEntityState& entity ) const
+        virtual float32 computePriority( int32 connectionID, const NetEntityState& entity ) const
         {
-            (void)connectionId;
+            (void)connectionID;
             (void)entity;
             return 1.0f;
         }
@@ -76,12 +76,12 @@ namespace sw
      * @class ReplicationServer
      * @code
      *     server.beginTick( tick );
-     *     for ( each entity ) server.setEntity( id, typeId, bytes );
+     *     for ( each entity ) server.setEntity( id, typeID, bytes );
      *     server.endTick();
      *     server.sendSnapshots();
-     *     // 받은 메시지 · 연결 사건: router.addHandler( &server ) 뒤 매 틱 router.pump( host ) — 손으로는 server.handleMessage( connectionId, bytes ),
+     *     // 받은 메시지 · 연결 사건: router.addHandler( &server ) 뒤 매 틱 router.pump( host ) — 손으로는 server.handleMessage( connectionID, bytes ),
      *     //                        server.onConnectionOpened / onConnectionClosed
-     *     // 시뮬레이션: server.popInput( connectionId, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionId, tick );
+     *     // 시뮬레이션: server.popInput( connectionID, tick, inputBytes ); ... server.setLastProcessedInputTick( connectionID, tick );
      * @endcode
      */
     class SW_GF_API ReplicationServer : public INetMessageHandler
@@ -92,7 +92,7 @@ namespace sw
         void initialize( NetHost* pHost, const ReplicationServerSettings& settings, const IReplicationPolicy* pPolicy = nullptr );
         void beginTick( uint32 tick );
         /** @brief 이 틱의 엔티티입니다. 상태가 `NetSnapshot::kMaxEntityBytes` 를 넘으면 복제하지 않는다(처음 한 번 경고, 그 뒤로는 센다). */
-        void setEntity( uint32 entityId, uint32 typeId, const vector<uint8>& buffer );
+        void setEntity( uint32 entityID, uint32 typeID, const vector<uint8>& buffer );
         /** @brief 이 틱의 엔티티를 확정합니다(id 순 정렬). 그 전까지 월드에는 지난 틱의 자리가 남아 있다 — `sendSnapshots` · `getWorldSnapshot` 은 이 뒤에 쓴다. */
         void endTick();
         /**
@@ -106,18 +106,18 @@ namespace sw
         uint16          getMessageKindMask() const override;
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 연결마다의 상태(확인 틱 · 입력 줄 · 처리한 입력 틱)를 새로 시작합니다 — 같은 자리에 새로 온 클라이언트가 옛 상태를 이어 쓰지 않게. */
-        void onConnectionOpened( int32 connectionId ) override;
-        void onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
+        void onConnectionOpened( int32 connectionID ) override;
+        void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         /**
          * @brief 그 틱의 입력을 꺼냅니다. 아직 안 왔으면 가장 최근 입력을 되풀이합니다(@p outbExact false). 받은 입력이 하나도 없으면 false 입니다.
          *        그 틱까지는 다 쓴 것으로 놓는다 — 더 받지 않고, 스냅숏의 확인도 그 다음 틱으로 넘어간다.
          */
-        [[nodiscard]] bool popInput( int32 connectionId, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
-        void               setLastProcessedInputTick( int32 connectionId, uint32 tick );
+        [[nodiscard]] bool popInput( int32 connectionID, uint32 tick, vector<uint8>& outInputBuffer, bool& outbExact );
+        void               setLastProcessedInputTick( int32 connectionID, uint32 tick );
         /** @brief 클라이언트가 보고 있는 틱(보간 지연만큼 과거, 소수 — 랙 보정 되감기)입니다. */
-        float32            getClientViewTick( int32 connectionId ) const;
-        uint32             getAckedTick( int32 connectionId ) const;
+        float32            getClientViewTick( int32 connectionID ) const;
+        uint32             getAckedTick( int32 connectionID ) const;
         const NetSnapshot& getWorldSnapshot() const { return _world; }
         /** @brief 상한을 넘어 복제하지 않은 `setEntity` 수입니다. */
         uint64 getOversizedEntityCount() const;
@@ -147,13 +147,13 @@ namespace sw
             NetMessageWriter _messageWriter{};
         };
 
-        ClientState& acquireClient( int32 connectionId );
+        ClientState& acquireClient( int32 connectionID );
         void         sendSnapshotRange( uint32 start, uint32 end );
-        void         sendSnapshot( int32 connectionId, ClientState& client, SnapshotScratch& scratch );
+        void         sendSnapshot( int32 connectionID, ClientState& client, SnapshotScratch& scratch );
         /** @brief 이 클라이언트의 확인 기다리는 보냄을 판정합니다 — 확인한 틱이 보낸 틱을 지났는데 확인된 재구성에 그때 보낸 상태가 없으면 잃은 것(우선도를 되돌린다). */
         void               resolveUnconfirmedSends( ClientState& client, const NetSnapshot& filtered ) const;
         [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
-        void               resetClient( int32 connectionId );
+        void               resetClient( int32 connectionID );
 
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;

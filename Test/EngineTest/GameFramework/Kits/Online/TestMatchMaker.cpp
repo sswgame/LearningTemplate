@@ -13,15 +13,15 @@ using namespace sw;
 
 namespace
 {
-    MatchTicket makeTicket( uint64 ticketId, const vector<int32>& listRating, string_view region = "kr", int64 enqueuedMs = 0 )
+    MatchTicket makeTicket( uint64 ticketID, const vector<int32>& listRating, string_view region = "kr", int64 enqueuedMs = 0 )
     {
         MatchTicket ticket;
-        ticket._ticketId   = ticketId;
+        ticket._ticketID   = ticketID;
         ticket._region     = string( region );
         ticket._enqueuedMs = enqueuedMs;
         for ( size_t index = 0; index < listRating.size(); ++index )
         {
-            ticket._listMember.push_back( MatchMember{ ticketId * 10 + index, listRating[index] } );
+            ticket._listMember.push_back( MatchMember{ ticketID * 10 + index, listRating[index] } );
         }
         return ticket;
     }
@@ -29,19 +29,19 @@ namespace
     MatchModeDefinition makeMode( int32 teamCount, int32 teamSize )
     {
         MatchModeDefinition definition;
-        definition._modeId    = "duo";
+        definition._modeID    = "duo";
         definition._teamCount = teamCount;
         definition._teamSize  = teamSize;
         return definition;
     }
 
-    int32 findTeamOf( const MatchFormed& match, AccountId accountId )
+    int32 findTeamOf( const MatchFormed& match, AccountID accountID )
     {
         for ( int32 team = 0; team < static_cast<int32>( match._listTeam.size() ); ++team )
         {
             for ( const MatchMember& member : match._listTeam[static_cast<size_t>( team )] )
             {
-                if ( member._accountId == accountId )
+                if ( member._accountID == accountID )
                     return team;
             }
         }
@@ -53,9 +53,9 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
 {
     MatchMaker maker;
     maker.initialize( makeMode( 2, 2 ), 7 );
-    for ( uint64 ticketId = 1; ticketId <= 4; ++ticketId )
+    for ( uint64 ticketID = 1; ticketID <= 4; ++ticketID )
     {
-        SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketId, { static_cast<int32>( 1450 + ticketId * 20 ) } ) ) == MatchmakingResult::Ok );
+        SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketID, { static_cast<int32>( 1450 + ticketID * 20 ) } ) ) == MatchmakingResult::Ok );
     }
     vector<MatchFormed> listMatch;
     vector<MatchTicket> listTimedOut;
@@ -67,9 +67,9 @@ SW_TEST_CASE( MatchMakerTest, FourSolosMakeABalancedTwoVersusTwo )
     const int32 teamA = listMatch[0]._listTeam[0][0]._rating + listMatch[0]._listTeam[0][1]._rating;
     const int32 teamB = listMatch[0]._listTeam[1][0]._rating + listMatch[0]._listTeam[1][1]._rating;
     SW_EXPECT_TRUE( std::abs( teamA - teamB ) <= 40 );
-    SW_EXPECT_EQUAL( listMatch[0]._matchId >> 32, uint64( 7 ) );
+    SW_EXPECT_EQUAL( listMatch[0]._matchID >> 32, uint64( 7 ) );
     SW_EXPECT_EQUAL( listMatch[0]._averageRating, 1500 );
-    SW_EXPECT_STREQ( listMatch[0]._modeId.c_str(), "duo" );
+    SW_EXPECT_STREQ( listMatch[0]._modeID.c_str(), "duo" );
     SW_EXPECT_EQUAL( maker.getTicketCount(), 0 );
     SW_EXPECT_EQUAL( listTimedOut.size(), size_t( 0 ) );
 }
@@ -97,9 +97,9 @@ SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )
         if ( ticket._listMember.size() != 2 )
             continue;
         ++partyCount;
-        const int32 teamOfFirst = findTeamOf( listMatch[0], ticket._listMember[0]._accountId );
+        const int32 teamOfFirst = findTeamOf( listMatch[0], ticket._listMember[0]._accountID );
         SW_EXPECT_TRUE( teamOfFirst >= 0 );
-        SW_EXPECT_EQUAL( teamOfFirst, findTeamOf( listMatch[0], ticket._listMember[1]._accountId ) );
+        SW_EXPECT_EQUAL( teamOfFirst, findTeamOf( listMatch[0], ticket._listMember[1]._accountID ) );
     }
     SW_EXPECT_EQUAL( partyCount, 2 );
     SW_EXPECT_EQUAL( maker.getTicketCount(), 1 );
@@ -110,9 +110,9 @@ SW_TEST_CASE( MatchMakerTest, PartyStaysTogetherAndUnsplittableMixIsSkipped )
     // 그 닻이 실패하고, 파티를 닻으로 한 다른 조합(늦게 온 혼자 5 를 넣고 오래 기다린 혼자 3 을 남김)이 대신 묶인다.
     MatchMaker stackMaker;
     stackMaker.initialize( makeMode( 2, 3 ), 1 );
-    for ( uint64 ticketId = 1; ticketId <= 3; ++ticketId )
+    for ( uint64 ticketID = 1; ticketID <= 3; ++ticketID )
     {
-        SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( ticketId, { 1500 }, "kr", static_cast<int64>( ticketId ) ) ) == MatchmakingResult::Ok );
+        SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( ticketID, { 1500 }, "kr", static_cast<int64>( ticketID ) ) ) == MatchmakingResult::Ok );
     }
     SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( 4, { 1520, 1520, 1520 }, "kr", 4 ) ) == MatchmakingResult::Ok );
     SW_ASSERT_TRUE( stackMaker.addTicket( makeTicket( 5, { 1520 }, "kr", 5 ) ) == MatchmakingResult::Ok );
@@ -163,9 +163,9 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
     {
         MatchMaker maker;
         maker.initialize( mode, 3 );
-        for ( uint64 ticketId = 1; ticketId <= 9; ++ticketId )
+        for ( uint64 ticketID = 1; ticketID <= 9; ++ticketID )
         {
-            SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketId, { static_cast<int32>( 1000 + ( ticketId * 37 ) % 400 ) }, "kr", static_cast<int64>( ticketId ) ) ) == MatchmakingResult::Ok );
+            SW_ASSERT_TRUE( maker.addTicket( makeTicket( ticketID, { static_cast<int32>( 1000 + ( ticketID * 37 ) % 400 ) }, "kr", static_cast<int64>( ticketID ) ) ) == MatchmakingResult::Ok );
         }
         vector<MatchTicket> listTimedOut;
         maker.process( 20000, *pOut, listTimedOut );  // 창 100 + 19 × 25 = 575 — 실력 1037..1333 이 모두 든다
@@ -177,9 +177,9 @@ SW_TEST_CASE( MatchMakerTest, TimeoutAndDeterminism )
     SW_ASSERT_EQUAL( firstRun.size(), secondRun.size() );
     for ( size_t index = 0; index < firstRun.size(); ++index )
     {
-        SW_EXPECT_EQUAL( firstRun[index]._matchId, secondRun[index]._matchId );
-        SW_EXPECT_EQUAL( firstRun[index]._listTeam[0][0]._accountId, secondRun[index]._listTeam[0][0]._accountId );
-        SW_EXPECT_EQUAL( firstRun[index]._listTeam[1][1]._accountId, secondRun[index]._listTeam[1][1]._accountId );
+        SW_EXPECT_EQUAL( firstRun[index]._matchID, secondRun[index]._matchID );
+        SW_EXPECT_EQUAL( firstRun[index]._listTeam[0][0]._accountID, secondRun[index]._listTeam[0][0]._accountID );
+        SW_EXPECT_EQUAL( firstRun[index]._listTeam[1][1]._accountID, secondRun[index]._listTeam[1][1]._accountID );
     }
 
     MatchMaker maker;

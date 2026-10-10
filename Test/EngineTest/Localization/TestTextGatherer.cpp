@@ -56,7 +56,7 @@ namespace
             s_bRegistered              = true;
             s_info._name               = sw::hashed_string( "LocGatherProbe" );
             s_info._fullyQualifiedName = sw::hashed_string( "sw::LocGatherProbe" );
-            s_info._typeId             = static_cast<uint32>( s_info._name.getHash() );
+            s_info._typeID             = static_cast<uint32>( s_info._name.getHash() );
 
             sw::PropertyInfo label{};
             label._name                                                        = sw::hashed_string( "_label" );

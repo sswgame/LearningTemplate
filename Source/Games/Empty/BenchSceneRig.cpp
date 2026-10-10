@@ -95,12 +95,12 @@ namespace sw
             }
 
             /** @brief 오브젝트에 유닛(스켈레탈 메시)을 붙이고 메시 id 를 풉니다. */
-            static SkeletalMeshComponent* addUnit( GameObject& object, const utf8* pMeshId )
+            static SkeletalMeshComponent* addUnit( GameObject& object, const utf8* pMeshID )
             {
                 SkeletalMeshComponent* pUnit = object.addComponent<SkeletalMeshComponent>();
                 if ( pUnit == nullptr )
                     return nullptr;
-                pUnit->setMeshId( pMeshId );
+                pUnit->setMeshID( pMeshID );
                 pUnit->resolveRenderAssets();
                 return pUnit;
             }

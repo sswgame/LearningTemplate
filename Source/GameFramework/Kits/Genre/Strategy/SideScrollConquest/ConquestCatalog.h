@@ -84,7 +84,7 @@ namespace sw
     /** @brief 거점에 처음 있는 주둔군 한 줄입니다. */
     struct ConquestGarrisonDef
     {
-        hashed_string _unitId{};
+        hashed_string _unitID{};
         int32         _count{ 1 };
     };
 } // namespace sw

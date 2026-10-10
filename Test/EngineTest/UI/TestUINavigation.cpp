@@ -51,11 +51,11 @@ namespace
 
         sw::Widget* find( const sw::hashed_string& name ) const { return _tree.findWidgetByName( name ); }
 
-        bool focus( const sw::hashed_string& name ) { return find( name ) != nullptr && _focus.setFocus( _tree, find( name )->getId() ); }
+        bool focus( const sw::hashed_string& name ) { return find( name ) != nullptr && _focus.setFocus( _tree, find( name )->getID() ); }
 
         sw::string getFocusedName() const
         {
-            const sw::Widget* pWidget = _tree.findWidgetById( _focus.getFocusedWidget() );
+            const sw::Widget* pWidget = _tree.findWidgetByID( _focus.getFocusedWidget() );
             return pWidget != nullptr ? sw::string{ pWidget->getName().c_str() } : sw::string{};
         }
 
@@ -179,7 +179,7 @@ SW_TEST_CASE( UINavigationTest, RemovingFocusedWidgetClearsFocus )
     SW_EXPECT_TRUE( pFocused->hasFocus() );
 
     sw::unique_ptr<sw::Widget> removed = fixture._pGrid->removeChild( pFocused );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, fixture._focus.getFocusedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._focus.getFocusedWidget() );
     SW_EXPECT_FALSE( removed->hasFocus() );
     SW_EXPECT_FALSE( fixture._focus.navigate( fixture._tree, sw::UINavigationDirection::Right ) );
 }
@@ -194,11 +194,11 @@ SW_TEST_CASE( UINavigationTest, DestroyedTreeReleasesFocus )
         sw::PanelWidget* pRoot = root.get();
         tree.setRoot( std::move( root ) );
         sw::Widget* pButton = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "button", true ) );
-        SW_ASSERT_TRUE( focus.setFocus( tree, pButton->getId() ) );
+        SW_ASSERT_TRUE( focus.setFocus( tree, pButton->getID() ) );
         SW_EXPECT_TRUE( focus.getFocusedTree() == &tree );
     }
     SW_EXPECT_TRUE( focus.getFocusedTree() == nullptr );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, focus.getFocusedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, focus.getFocusedWidget() );
 }
 
 /**
@@ -225,7 +225,7 @@ SW_TEST_CASE( UINavigationTest, PerpendicularGapIsPenalized )
     sw::uitest::UITestUtil::placeWidget( *pFrom, 0.0f, 0.0f, 100.0f, 50.0f );
     sw::uitest::UITestUtil::placeWidget( *pB, 110.0f, 80.0f, 100.0f, 50.0f );
     sw::uitest::UITestUtil::placeWidget( *pA, 150.0f, 0.0f, 100.0f, 50.0f );
-    SW_EXPECT_EQUAL( pA->getId(), sw::UINavigationSolver::findNextWidget( tree, pFrom->getId(), sw::UINavigationDirection::Right ) );
+    SW_EXPECT_EQUAL( pA->getID(), sw::UINavigationSolver::findNextWidget( tree, pFrom->getID(), sw::UINavigationDirection::Right ) );
 }
 
 /** @brief [UINavigationTest] 탐색은 활성(모달) 화면의 트리 안에서만 — 오른쪽에 아래 메뉴의 버튼이 있어도 모달 밖으로 나가지 않는다 */
@@ -280,9 +280,9 @@ SW_TEST_CASE( UINavigationTest, NavigateRevealsClippedItemInScrollPanel )
     fixture.update();
 
     sw::UIFocusManager focus;
-    SW_ASSERT_TRUE( focus.setFocus( fixture.getTree(), pFirst->getId() ) );
+    SW_ASSERT_TRUE( focus.setFocus( fixture.getTree(), pFirst->getID() ) );
     SW_EXPECT_TRUE( focus.navigate( fixture.getTree(), sw::UINavigationDirection::Down ) );
-    SW_EXPECT_EQUAL( pLast->getId(), focus.getFocusedWidget() );
+    SW_EXPECT_EQUAL( pLast->getID(), focus.getFocusedWidget() );
     SW_EXPECT_NEAR_EQUAL( 90.0f, pScroll->getScrollOffset()._y, 0.001f ); // 끝(190 − 100)까지 — 여백 8 을 두려다 최대에 묶인다
     fixture.update();
     SW_EXPECT_NEAR_EQUAL( 60.0f, pLast->getGeometry()._position._y, 0.001f );

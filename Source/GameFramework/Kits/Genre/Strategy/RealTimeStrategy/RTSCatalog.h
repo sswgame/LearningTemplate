@@ -86,8 +86,8 @@ namespace sw
 
         const RTSUnitDef*         findUnit( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<RTSUnitDef>& getUnits() const { return _catalog.getAll(); }
-        /** @brief @p producerId 가 만드는(짓는) 정의들입니다(읽은 순서). */
-        void  findProducts( const hashed_string& producerId, vector<const RTSUnitDef*>& outListDef ) const;
+        /** @brief @p producerID 가 만드는(짓는) 정의들입니다(읽은 순서). */
+        void  findProducts( const hashed_string& producerID, vector<const RTSUnitDef*>& outListDef ) const;
         int32 getSupplyMax() const { return _supplyMax; }
 
     private:

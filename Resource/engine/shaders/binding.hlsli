@@ -51,7 +51,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
 	uint     g_Flags;
 	uint     g_SwInstancesIndex; // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
 	uint     g_SwInstanceCount;  // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
-	uint     g_SwVisibleInstanceIdsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
+	uint     g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
 	uint     g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
 	uint     g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
 	uint     g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -334,20 +334,20 @@ float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
 }
 
 // GPU 컬링이 압축해 넣은 가시 인스턴스 번호 목록. 컬링이 꺼져 있거나 못 만들면 안 걸린다.
-SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIds, SW_SLOT_VISIBLE_INSTANCE_SRV );
+SW_DECLARE_STRUCTURED_BUFFER( uint, g_SwVisibleInstanceIDs, SW_SLOT_VISIBLE_INSTANCE_SRV );
 
 /**
  * @brief 인스턴스 슬롯(전역 자리)을 **실제 인스턴스 번호**로 바꾼다.
  * @details GPU 컬링이 켜져 있으면 드로우가 그리는 것은 "배치의 n 번째 인스턴스"가 아니라 "배치에서
- *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIds 에 들어 있다.
+ *          살아남은 n 번째 인스턴스"다. 그 대응이 g_SwVisibleInstanceIDs 에 들어 있다.
  *          목록이 없으면(컬링 없음) 슬롯이 곧 인스턴스 번호다.
  */
 uint swResolveInstanceId( uint instanceSlot )
 {
 	// 슬롯은 입력 어셈블러가 인스턴스 슬롯 스트림에서 준 전역 자리다(간접 인자의 startInstance + 인스턴스 서수).
 	const uint slot = instanceSlot;
-	if ( g_SwVisibleInstanceIdsIndex != kInvalidIndex && slot < g_SwInstanceCount )
-		return g_SwVisibleInstanceIds[slot];
+	if ( g_SwVisibleInstanceIDsIndex != kInvalidIndex && slot < g_SwInstanceCount )
+		return g_SwVisibleInstanceIDs[slot];
 	return slot;
 }
 

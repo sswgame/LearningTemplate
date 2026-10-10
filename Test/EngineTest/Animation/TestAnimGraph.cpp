@@ -100,7 +100,7 @@ SW_TEST_CASE( AnimGraphTest, PlayStartsAtEntryNode )
 
     SW_EXPECT_TRUE( player.play( hashed_string{}, true, 0.0f ) );
     SW_EXPECT_EQUAL( string( "Idle" ), string( player.getCurrentStateName().c_str() ) );
-    SW_EXPECT_EQUAL( 1, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 1, player.getCurrentNodeID() );
     SW_EXPECT_TRUE( player.getPlayer().getCurrentPlayable() == &idle );
 }
 
@@ -124,7 +124,7 @@ SW_TEST_CASE( AnimGraphTest, AdvanceToCliplessNodeClearsPlayback )
     // Attack 노드에는 재생할 것이 없다.
     SW_EXPECT_TRUE( player.advance() );
     SW_EXPECT_EQUAL( string( "Attack" ), string( player.getCurrentStateName().c_str() ) );
-    SW_EXPECT_EQUAL( 2, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 2, player.getCurrentNodeID() );
     SW_EXPECT_NULL( player.getPlayer().getCurrentPlayable() );
 
     // 나가는 링크가 더 없으므로 전진은 실패한다.
@@ -146,7 +146,7 @@ SW_TEST_CASE( AnimGraphTest, StopClearsNodeAndPlayback )
     SW_EXPECT_TRUE( player.play( hashed_string( "Idle" ), true, 0.0f ) );
 
     player.stop();
-    SW_EXPECT_EQUAL( 0, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 0, player.getCurrentNodeID() );
     SW_EXPECT_TRUE( player.getCurrentStateName().empty() );
     SW_EXPECT_NULL( player.getPlayer().getCurrentPlayable() );
 }
@@ -215,21 +215,21 @@ SW_TEST_CASE( AnimGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
     SW_ASSERT_TRUE( player.play( hashed_string{}, true, 0.0f ) );
 
     player.update( 0.1f, &parameter, nullptr );
-    SW_EXPECT_EQUAL( 1, player.getCurrentNodeId() ); // Speed 0 — 그대로
+    SW_EXPECT_EQUAL( 1, player.getCurrentNodeID() ); // Speed 0 — 그대로
     parameter.setFloat( hashed_string( "Speed" ), 1.0f );
     player.update( 0.1f, &parameter, nullptr );
-    SW_EXPECT_EQUAL( 2, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 2, player.getCurrentNodeID() );
     SW_EXPECT_TRUE( player.getPlayer().isCurrentLooping() ); // 노드의 "loop": true
 
     parameter.setTrigger( hashed_string( "Jump" ) );
     player.update( 0.1f, &parameter, nullptr );
-    SW_EXPECT_EQUAL( 3, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 3, player.getCurrentNodeID() );
     SW_EXPECT_FALSE( parameter.isTrue( hashed_string( "Jump" ) ) ); // 트리거는 쓰이면 꺼진다
 
     // Jump(0.5 초, 반복 없음)가 끝나면 조건 없는 링크로 Land.
     player.update( 0.3f, &parameter, nullptr );
-    SW_EXPECT_EQUAL( 3, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 3, player.getCurrentNodeID() );
     player.update( 0.3f, &parameter, nullptr );
-    SW_EXPECT_EQUAL( 4, player.getCurrentNodeId() );
+    SW_EXPECT_EQUAL( 4, player.getCurrentNodeID() );
     SW_EXPECT_TRUE( player.getPlayer().getCurrentPlayable() == &land );
 }

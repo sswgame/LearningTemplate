@@ -108,7 +108,7 @@ namespace sw
         /**
          * @brief 스킨드 메시의 그릴 사본을 만듭니다(정점 · 스킨을 복사하고 **스킨 데이터 번호를 원본과 나눕니다**).
          * @details GPU 스키닝 결과(모프 풀의 결과 구간)는 메시 객체마다 하나라, 포즈가 다른 캐릭터 · 군중 묶음은 사본을 그립니다. 사본은 원본과
-         *          레스트 정점 · 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataId`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받습니다.
+         *          레스트 정점 · 가중치가 같으므로 모프 풀은 스킨 데이터 번호(`getSkinDataID`)로 원본 데이터를 **한 번만** 올리고 사본은 결과 구간만 받습니다.
          */
         static shared_ptr<Mesh> createSkinInstance( const Mesh& source );
 
@@ -158,7 +158,7 @@ namespace sw
          * @brief 스킨 데이터(레스트 정점 · 가중치)의 정체성입니다. 보통은 내용 번호이고, `createSkinInstance` 의 사본은 원본의 번호를 나눕니다.
          * @details 모프 풀이 같은 번호의 메시들을 한 원본 구간으로 묶습니다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 나누는 자리).
          */
-        uint64 getSkinDataId() const { return _sharedSkinDataId != 0 ? _sharedSkinDataId : _contentId; }
+        uint64 getSkinDataID() const { return _sharedSkinDataID != 0 ? _sharedSkinDataID : _contentID; }
 
         /**
          * @brief 정점 애니메이션 표(VAT)를 겁니다. 걸린 메시는 스키닝 대신 정점 셰이더가 표를 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
@@ -184,7 +184,7 @@ namespace sw
          * @details 정점 · 모프 풀은 메시 집합이 그대로인지를 이것으로 봅니다. 포인터만 보면 메시가 지워진 자리에 새 메시가
          *          생기거나(할당기는 같은 크기의 자리를 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그립니다.
          */
-        uint64 getContentId() const { return _contentId; }
+        uint64 getContentID() const { return _contentID; }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
         bool initRHI( IRHIDevice* pDevice ) override;
@@ -202,7 +202,7 @@ namespace sw
         /** @brief 정점 버퍼를 실제로 놓습니다. 살아 있는 디바이스면 돌려주고, 아니면 잊습니다. */
         void releaseVertexBuffer();
         /** @brief 새 내용 번호를 냅니다(프로세스 전역, 0 은 쓰지 않습니다). */
-        static uint64 allocateContentId();
+        static uint64 allocateContentID();
         /** @brief 정점에서 경계 반지름을 다시 구합니다. */
         void refreshBoundingRadius();
 
@@ -214,15 +214,15 @@ namespace sw
         /// @brief setMorphTargets 참고.
         vector<MeshMorphTarget> _listMorphTarget;
         /// @brief `createSkinInstance` 사본이 나눈 원본의 스킨 데이터 번호입니다. 0 이면 자기 내용 번호입니다(정점 · 스킨을 바꾸면 0 으로 돌아간다).
-        uint64 _sharedSkinDataId{ 0 };
+        uint64 _sharedSkinDataID{ 0 };
         /// @brief setVertexAnimation 참고.
         shared_ptr<const MeshVertexAnimation> _vertexAnimation;
         /// @brief getBoundingRadius 참고. setVertices 가 구합니다.
         float32 _boundingRadius{ 0.0f };
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};
-        /// @brief getContentId 참고. 만들 때와 setVertices 때 새로 받습니다.
-        uint64 _contentId{ allocateContentId() };
+        /// @brief getContentID 참고. 만들 때와 setVertices 때 새로 받습니다.
+        uint64 _contentID{ allocateContentID() };
         /// @brief setGPUMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
         /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 듭니다(RHIResidentBuffer). */

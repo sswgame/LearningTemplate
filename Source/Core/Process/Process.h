@@ -86,7 +86,7 @@ namespace sw
          * @return 프로세스 종료 코드(-1 = 대기 실패). **POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호`** 입니다(셸 규약.
          *         예: SIGKILL 이면 137). 시그널로 죽은 프로세스에는 종료 코드가 없기 때문입니다.
          * @details POSIX 는 여기서 자식을 거두고 **pid 를 놓습니다.** 그 번호는 OS 가 곧 재사용하므로, 계속 들고 있으면 나중에 다른
-         *          프로세스의 자식을 거두게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessId` 는 0 이고, 두 번째 `waitForExit` 은
+         *          프로세스의 자식을 거두게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessID` 는 0 이고, 두 번째 `waitForExit` 은
          *          -1 입니다.
          */
         int32 waitForExit();
@@ -128,7 +128,7 @@ namespace sw
          * @details **POSIX 는 `waitForExit` 이 거둔 뒤에도 0 입니다.** 그 시점에 pid 를 놓기 때문입니다. Windows 는 핸들을 닫을
          *          때까지 값이 남습니다.
          */
-        int32 getProcessId() const { return _processId.load(); }
+        int32 getProcessID() const { return _processID.load(); }
         /** @brief 네이티브 프로세스 핸들입니다(Windows: HANDLE, POSIX: pid 를 그대로 담은 값). */
         void* getNativeHandle() const { return _pNativeHandle; }
 
@@ -153,15 +153,15 @@ namespace sw
         static bool launchDetached( string_view command, const ProcessOptions& options = {} );
 
         /** @brief 이 프로세스의 ID 입니다. 같은 폴더를 나눠 쓰는 프로세스끼리 파일 이름이 겹치지 않게 가를 때 씁니다. */
-        static int32 getCurrentProcessId();
+        static int32 getCurrentProcessID();
 
         /**
-         * @brief ID 가 @p processId 인 프로세스가 지금 살아 있는지 OS 에 묻습니다. 0 이하는 false 입니다.
+         * @brief ID 가 @p processID 인 프로세스가 지금 살아 있는지 OS 에 묻습니다. 0 이하는 false 입니다.
          * @details 있지만 권한이 없어 열 수 없는 프로세스는 살아 있다고 봅니다(지우면 안 되는 쪽으로 틀린다). 끝났지만 아직 거두지 않은
          *          POSIX 좀비도 살아 있다고 나옵니다. OS 가 ID 를 다시 쓰면 다른 프로세스를 보고 true 일 수 있으므로, 이 답은 "죽었으니
          *          치워도 된다" 를 가르는 데만 씁니다.
          */
-        static bool isProcessAlive( int32 processId );
+        static bool isProcessAlive( int32 processID );
 
     private:
         void shutdown();
@@ -177,7 +177,7 @@ namespace sw
          *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다(보통 정수면 ThreadSanitizer 가
          *        두 스레드의 쓰기를 짚는다).
          */
-        atomic<int32> _processId;
+        atomic<int32> _processID;
         bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows)
     };
 } // namespace sw

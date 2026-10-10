@@ -104,14 +104,14 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         SW_EXPECT_FALSE( state.empty() );
         sw::ValidationIssueLog::get().collectIssues( listIssue );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
-        SW_EXPECT_EQUAL( pObject->getObjectId(), listIssue[0]._sourceId );
+        SW_EXPECT_EQUAL( pObject->getObjectID(), listIssue[0]._sourceID );
         SW_EXPECT_EQUAL( sw::string( "SlowMover" ), listIssue[0]._sourceLabel );
         SW_EXPECT_TRUE( listIssue[0]._severity == sw::ValidationSeverity::Error );
 
         // 로드 — 묶음이 값을 다 읽은 뒤 검증한다
         sw::GameObject* pLoaded = manager.createGameObject( sw::hashed_string( "LoadedMover" ) );
         SW_ASSERT_NOT_NULL( pLoaded );
-        sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Live );
+        sw::ObjectStateBatch  batch( sw::ObjectIDSpace::Live );
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLoaded, state, context ) );
@@ -125,6 +125,6 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
     SW_EXPECT_EQUAL( 0u, sw::ObjectValidation::reportGameObject( *pObject, false ) );
     sw::ValidationIssueLog::get().collectIssues( listIssue );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
-    SW_EXPECT_TRUE( listIssue[0]._sourceId != pObject->getObjectId() );
+    SW_EXPECT_TRUE( listIssue[0]._sourceID != pObject->getObjectID() );
     sw::ValidationIssueLog::get().clear();
 }

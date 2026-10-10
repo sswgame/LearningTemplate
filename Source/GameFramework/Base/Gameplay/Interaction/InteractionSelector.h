@@ -32,7 +32,7 @@ namespace sw
     {
         float3           _position{};
         float3           _forward{ 0.0f, 0.0f, 1.0f }; ///< 시선(정규화하지 않아도 된다)
-        uint64           _objectId{ 0 };
+        uint64           _objectID{ 0 };
         InteractionSpace _space{ InteractionSpace::Space3D };
     };
 } // namespace sw
@@ -43,7 +43,7 @@ namespace sw
     struct InteractionCandidate
     {
         float3  _position{};
-        uint64  _objectId{ 0 };
+        uint64  _objectID{ 0 };
         float32 _maxDistance{ 2.0f };
         float32 _maxAngle{ 0.0f }; ///< 라디안, 0 이면 보지 않는다
         int32   _priority{ 0 };    ///< 높을수록 먼저(같으면 가까운 것)
@@ -63,7 +63,7 @@ namespace sw
         ILineOfSightQuery( const ILineOfSightQuery& )            = default;
         ILineOfSightQuery& operator=( const ILineOfSightQuery& ) = default;
 
-        virtual bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const = 0;
+        virtual bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID ) const = 0;
     };
 } // namespace sw
 
@@ -75,7 +75,7 @@ namespace sw
     public:
         explicit WorldLineOfSightQuery( const GameObjectManager& manager );
 
-        bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const override;
+        bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID ) const override;
 
     private:
         const GameObjectManager& _manager;

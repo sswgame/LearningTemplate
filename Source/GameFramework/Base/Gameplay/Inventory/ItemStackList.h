@@ -21,7 +21,7 @@ namespace sw
      */
     struct ItemStack
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int32         _count{ 0 };
     };
 } // namespace sw
@@ -39,20 +39,20 @@ namespace sw
         ItemStackList();
 
         /** @brief 더합니다. id 가 비거나 개수가 0 이하면 아무것도 하지 않습니다. */
-        void addItem( const hashed_string& itemId, int32 count );
+        void addItem( const hashed_string& itemID, int32 count );
         /** @brief 뺍니다. 모자라면 빼지 않고 false 입니다. */
-        [[nodiscard]] bool removeItem( const hashed_string& itemId, int32 count );
+        [[nodiscard]] bool removeItem( const hashed_string& itemID, int32 count );
         /** @brief 이 목록의 @p count 개를 @p target 으로 옮깁니다. 모자라면 false 입니다. */
-        [[nodiscard]] bool moveItemTo( ItemStackList& target, const hashed_string& itemId, int32 count );
+        [[nodiscard]] bool moveItemTo( ItemStackList& target, const hashed_string& itemID, int32 count );
         void               clear() { _listStack.clear(); }
 
-        int32 getItemCount( const hashed_string& itemId ) const;
-        bool  hasItem( const hashed_string& itemId, int32 count = 1 ) const { return getItemCount( itemId ) >= count; }
+        int32 getItemCount( const hashed_string& itemID ) const;
+        bool  hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }
         /** @brief 모든 아이템 개수의 합입니다. */
         int32 getTotalCount() const;
         bool  isEmpty() const { return _listStack.empty(); }
         /** @brief 가진 아이템 id 입니다(처음 더한 순서). */
-        void                     getItemIds( vector<hashed_string>& outListItem ) const;
+        void                     getItemIDs( vector<hashed_string>& outListItem ) const;
         const vector<ItemStack>& getItems() const { return _listStack; }
 
         /** @brief 아이템을 이름 순으로 씁니다(같은 목록이면 더한 순서와 무관하게 같은 바이트). */
@@ -61,7 +61,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        ItemStack* findStack( const hashed_string& itemId );
+        ItemStack* findStack( const hashed_string& itemID );
 
         vector<ItemStack> _listStack;
     };

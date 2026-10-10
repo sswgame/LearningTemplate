@@ -65,10 +65,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `enabledWhen` 조건 하나 — "설정 @p _settingId 의 값이 @p _value 와 같다(다르다)" 입니다. */
+    /** @brief `enabledWhen` 조건 하나 — "설정 @p _settingID 의 값이 @p _value 와 같다(다르다)" 입니다. */
     struct UserSettingCondition
     {
-        hashed_string                _settingId{};
+        hashed_string                _settingID{};
         string                       _value{};
         UserSettingConditionOperator _operator{ UserSettingConditionOperator::Equal };
     };
@@ -134,7 +134,7 @@ namespace sw
     /** @brief 프리셋 하나가 정하는 값 하나입니다. */
     struct ScalabilityPresetValue
     {
-        hashed_string _settingId{};
+        hashed_string _settingID{};
         string        _value{};
     };
 } // namespace sw
@@ -164,12 +164,12 @@ namespace sw
 {
     /**
      * @brief 그래픽 품질 묶음(Unreal Scalability · Unity Quality Settings)입니다.
-     * @details 묶음 설정(`_settingId`, 열거형)을 프리셋 이름으로 바꾸면 묶인 설정들이 그 프리셋 값이 되고, 묶인 설정을 하나라도 프리셋과 다르게 바꾸면
+     * @details 묶음 설정(`_settingID`, 열거형)을 프리셋 이름으로 바꾸면 묶인 설정들이 그 프리셋 값이 되고, 묶인 설정을 하나라도 프리셋과 다르게 바꾸면
      *          묶음 설정이 `_customValue`("custom")가 됩니다.
      */
     struct ScalabilityGroupDef
     {
-        hashed_string                     _settingId{};
+        hashed_string                     _settingID{};
         string                            _customValue{};
         vector<ScalabilityPresetDef>      _listPreset{};
         vector<ScalabilityAutoDetectRule> _listAutoDetectRule{};
@@ -262,8 +262,8 @@ namespace sw
         uint32 findSettingIndex( const hashed_string& id ) const;
         /** @brief id 로 카테고리를 찾습니다. 없으면 nullptr 입니다. */
         const UserSettingCategoryDef* findCategory( const hashed_string& id ) const;
-        /** @brief @p settingId 가 묶음 설정이거나 묶인 설정인 품질 묶음입니다. 없으면 nullptr 입니다. */
-        const ScalabilityGroupDef* findScalabilityGroupOf( const hashed_string& settingId ) const;
+        /** @brief @p settingID 가 묶음 설정이거나 묶인 설정인 품질 묶음입니다. 없으면 nullptr 입니다. */
+        const ScalabilityGroupDef* findScalabilityGroupOf( const hashed_string& settingID ) const;
 
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );

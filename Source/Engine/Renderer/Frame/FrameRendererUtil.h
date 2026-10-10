@@ -452,8 +452,8 @@ namespace sw
         hashed_string _swMorphVertices{ "SwMorphVertices" };
         /// @brief 그 풀의 원소 수 ↔ PassCB g_SwMorphVertexCount 입니다.
         hashed_string _swMorphVertexCount{ "g_SwMorphVertexCount" };
-        /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다(binding.hlsli g_SwVisibleInstanceIds ↔ "SwVisibleInstanceIds").
-        hashed_string _swVisibleInstanceIds{ "SwVisibleInstanceIds" };
+        /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다(binding.hlsli g_SwVisibleInstanceIDs ↔ "SwVisibleInstanceIDs").
+        hashed_string _swVisibleInstanceIDs{ "SwVisibleInstanceIDs" };
         /// @brief 배치의 머티리얼 데이터 구조버퍼입니다(binding.hlsli g_SwMaterials ↔ "SwMaterials"). 배치마다 등록합니다.
         hashed_string _swMaterials{ "SwMaterials" };
         /// @brief 씬 라이트 구조버퍼입니다(lighting.hlsli g_SwLights ↔ "SwLights"). 패스당 한 번 겁니다.

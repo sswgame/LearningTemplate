@@ -108,10 +108,10 @@ namespace sw
         _listStep.push_back( step );
     }
 
-    void NileCityPlanner::addBuilding( const utf8* pBuildingId, int32 x, int32 y, int32 minPopulation )
+    void NileCityPlanner::addBuilding( const utf8* pBuildingID, int32 x, int32 y, int32 minPopulation )
     {
         PlanStep step;
-        step._buildingId    = hashed_string( pBuildingId );
+        step._buildingID    = hashed_string( pBuildingID );
         step._from          = int2{ x, y };
         step._to            = step._from;
         step._minPopulation = minPopulation;
@@ -220,7 +220,7 @@ namespace sw
             const PlanStep& step = _listStep[static_cast<size_t>( _nextStep )];
             if ( city.getPopulation() < step._minPopulation )
                 break;
-            if ( step._buildingId.empty() )
+            if ( step._buildingID.empty() )
             {
                 // 도로 — 다 깔 돈이 될 때까지 기다린다(반쯤 깐 길은 끊긴 길이다).
                 const int32 tileCount = MathUtil::abs( step._to._x - step._from._x ) + MathUtil::abs( step._to._y - step._from._y ) + 1;
@@ -231,7 +231,7 @@ namespace sw
                 ++doneCount;
                 continue;
             }
-            const CityPlaceResult result = city.placeBuilding( step._buildingId, step._from._x, step._from._y );
+            const CityPlaceResult result = city.placeBuilding( step._buildingID, step._from._x, step._from._y );
             if ( result == CityPlaceResult::NotEnoughMoney )
                 break;
             if ( result != CityPlaceResult::Ok )

@@ -54,7 +54,7 @@ game::bindLocalService<AbilityCatalog>( &catalog );
 
 ### 2단계 — 오브젝트에 어빌리티 시스템 붙이기
 
-유닛 오브젝트에 `AbilitySystemComponent` 를 붙이고 어빌리티 세트를 줍니다. PROPERTY `_abilitySetId` 를 정해 두면 플레이를 시작할 때 받고, 코드에서는 `grantAbilitySet( "Player" )` 를 부릅니다.
+유닛 오브젝트에 `AbilitySystemComponent` 를 붙이고 어빌리티 세트를 줍니다. PROPERTY `_abilitySetID` 를 정해 두면 플레이를 시작할 때 받고, 코드에서는 `grantAbilitySet( "Player" )` 를 부릅니다.
 세트는 어트리뷰트의 시작값과 어빌리티, 입력 번호, 시작 이펙트를 함께 줍니다.
 
 ### 3단계 — 입력을 넘기기
@@ -65,9 +65,9 @@ game::bindLocalService<AbilityCatalog>( &catalog );
 <!-- snippet: Source/Games/AbilityArena/ArenaUnitComponent.cpp 의 pressAbilityButtons — 5b U7 에서 대조 -->
 ```cpp
 if ( intent.wasTriggered( slot ) )
-    abilitySystem.abilityInputPressed( inputId );
+    abilitySystem.abilityInputPressed( inputID );
 if ( bWasDown && intent.isDown( slot ) == false )
-    abilitySystem.abilityInputReleased( inputId );
+    abilitySystem.abilityInputReleased( inputID );
 ```
 
 플레이어든 AI 든 같은 버튼을 누르므로 어빌리티 코드는 누가 조종하는지 모릅니다. 폰과 의도는 [GameFramework](../../../README.md)의 "조종 — 폰, 조종자, 의도"를 보세요.
@@ -145,7 +145,7 @@ HP 바(`HealthBarComponent`)가 그 리스너를 상속하므로, 어빌리티 �
 ### 핫 리로드와 저장
 
 게임 모듈이 준 어빌리티와 어트리뷰트 세트, 실행 계산은 vtable 이 그 모듈 안에 있습니다. 컴포넌트마다 `IModuleUnloadListener` 가 있어서 모듈을 언로드하기 전에 그 모듈의 것을 회수합니다.
-다시 로드된 뒤에는 PROPERTY `_abilitySetId` 가 세트를 다시 줍니다. 코드로 준 것은 게임이 다시 줍니다.
+다시 로드된 뒤에는 PROPERTY `_abilitySetID` 가 세트를 다시 줍니다. 코드로 준 것은 게임이 다시 줍니다.
 
 저장되는 것은 PROPERTY(세트 id, 체력 어트리뷰트 이름, 데미지 숫자 설정)뿐입니다. 어트리뷰트 값과 걸린 이펙트는 저장하지 않습니다. 저장이 필요한 값은 게임이 상태 데이터에 담습니다.
 

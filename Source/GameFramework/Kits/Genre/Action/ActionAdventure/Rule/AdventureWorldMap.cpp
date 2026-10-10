@@ -42,16 +42,16 @@ namespace sw
     {
         for ( XMLNode node = root.findChild( pNodeName ); node; node = node.findNextSibling( pNodeName ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             AdventureLandmarkDef landmark;
-            landmark._id        = hashed_string( pId );
+            landmark._id        = hashed_string( pID );
             landmark._kind      = kind;
             const utf8* pRegion = node.findAttribute( "region" );
             landmark._region    = pRegion != nullptr ? hashed_string( pRegion ) : hashed_string{};
             if ( kind == AdventureLandmarkKind::Tower && landmark._region.empty() )
-                SW_LOG_WARNING( "%#: tower '%#' has no region - it reveals nothing", sourceName, pId );
+                SW_LOG_WARNING( "%#: tower '%#' has no region - it reveals nothing", sourceName, pID );
             (void)_catalog.add( landmark );
             ++inoutCount;
         }
@@ -76,27 +76,27 @@ namespace sw
         _completedShrineCount = 0;
     }
 
-    int32 AdventureWorldMap::activateTower( const hashed_string& towerId, AreaGraph& areaGraph )
+    int32 AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )
     {
-        const int32 index = _catalog.findIndex( towerId );
+        const int32 index = _catalog.findIndex( towerID );
         if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Tower || _listActivated[static_cast<size_t>( index )] == SW_TRUE )
             return -1;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return areaGraph.discoverRegion( _catalog.getAt( static_cast<size_t>( index ) )._region );
     }
 
-    bool AdventureWorldMap::discoverShrine( const hashed_string& shrineId )
+    bool AdventureWorldMap::discoverShrine( const hashed_string& shrineID )
     {
-        const int32 index = _catalog.findIndex( shrineId );
+        const int32 index = _catalog.findIndex( shrineID );
         if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listActivated[static_cast<size_t>( index )] == SW_TRUE )
             return false;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
         return true;
     }
 
-    bool AdventureWorldMap::completeShrine( const hashed_string& shrineId )
+    bool AdventureWorldMap::completeShrine( const hashed_string& shrineID )
     {
-        const int32 index = _catalog.findIndex( shrineId );
+        const int32 index = _catalog.findIndex( shrineID );
         if ( index < 0 || _catalog.getAt( static_cast<size_t>( index ) )._kind != AdventureLandmarkKind::Shrine || _listCompleted[static_cast<size_t>( index )] == SW_TRUE )
             return false;
         _listActivated[static_cast<size_t>( index )] = SW_TRUE;
@@ -117,17 +117,17 @@ namespace sw
         return AdventureExchangeResult::Ok;
     }
 
-    bool AdventureWorldMap::canWarpTo( const hashed_string& landmarkId ) const { return isActivated( landmarkId ); }
+    bool AdventureWorldMap::canWarpTo( const hashed_string& landmarkID ) const { return isActivated( landmarkID ); }
 
-    bool AdventureWorldMap::isActivated( const hashed_string& landmarkId ) const
+    bool AdventureWorldMap::isActivated( const hashed_string& landmarkID ) const
     {
-        const int32 index = _catalog.findIndex( landmarkId );
+        const int32 index = _catalog.findIndex( landmarkID );
         return index >= 0 && _listActivated[static_cast<size_t>( index )] == SW_TRUE;
     }
 
-    bool AdventureWorldMap::isCompleted( const hashed_string& landmarkId ) const
+    bool AdventureWorldMap::isCompleted( const hashed_string& landmarkID ) const
     {
-        const int32 index = _catalog.findIndex( landmarkId );
+        const int32 index = _catalog.findIndex( landmarkID );
         return index >= 0 && _listCompleted[static_cast<size_t>( index )] == SW_TRUE;
     }
 } // namespace sw

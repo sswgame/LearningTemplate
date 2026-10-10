@@ -12,7 +12,7 @@ namespace sw
         , _worker{}
         , _mutex{}
         , _requestReady{}
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _pendingCount{ 0 }
         , _bStopping{ SW_FALSE }
     {
@@ -92,17 +92,17 @@ namespace sw
     uint64 ThreadedLocalStore::enqueueRequest( LocalStoreRequest request )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        request._requestId = _nextRequestId++;
+        request._requestID = _nextRequestID++;
         ++_pendingCount;
-        const uint64 requestId = request._requestId;
+        const uint64 requestID = request._requestID;
         if ( _bStopping == SW_TRUE )
         {
             _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
-            return requestId;
+            return requestID;
         }
         _listQueuedRequest.push_back( std::move( request ) );
         _requestReady.notify_one();
-        return requestId;
+        return requestID;
     }
 
     void ThreadedLocalStore::runWorker()

@@ -61,7 +61,7 @@ namespace sw
         _turnOrder.initialize( TurnOrderMode::Rounds, seed ^ 0x27d4eb2fu );
     }
 
-    bool JRPGBattle::start( JRPGParty* pParty, const vector<hashed_string>& listEnemyId )
+    bool JRPGBattle::start( JRPGParty* pParty, const vector<hashed_string>& listEnemyID )
     {
         _pParty = pParty;
         _listEnemy.clear();
@@ -75,13 +75,13 @@ namespace sw
         _outcome      = JRPGBattleOutcome::Ongoing;
         if ( _pCatalog == nullptr || pParty == nullptr || pParty->countAlive() == 0 )
             return false;
-        for ( const hashed_string& enemyId : listEnemyId )
+        for ( const hashed_string& enemyID : listEnemyID )
         {
-            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemyId );
+            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemyID );
             if ( pEnemy == nullptr )
                 continue;
             JRPGEnemyState state;
-            state._enemyId = enemyId;
+            state._enemyID = enemyID;
             state._hp      = pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHp )];
             _listEnemy.push_back( state );
         }
@@ -111,9 +111,9 @@ namespace sw
             if ( pCombo == nullptr || _comboPoints < pCombo->_points )
                 return false;
             bool bParticipant = false;
-            for ( const hashed_string& participantId : pCombo->_listMemberId )
+            for ( const hashed_string& participantID : pCombo->_listMemberID )
             {
-                const int32 participant = _pParty->findMemberIndex( participantId );
+                const int32 participant = _pParty->findMemberIndex( participantID );
                 if ( participant < 0 || _pParty->getMember( participant ).isAlive() == false )
                     return false;
                 bParticipant = bParticipant || participant == memberIndex;
@@ -139,9 +139,9 @@ namespace sw
             const JRPGComboDef* pCombo = _pCatalog->findCombo( _listCommand[memberIndex]._id );
             if ( pCombo == nullptr )
                 continue;
-            for ( const hashed_string& participantId : pCombo->_listMemberId )
+            for ( const hashed_string& participantID : pCombo->_listMemberID )
             {
-                const int32 participant = _pParty->findMemberIndex( participantId );
+                const int32 participant = _pParty->findMemberIndex( participantID );
                 if ( participant >= 0 && static_cast<size_t>( participant ) != memberIndex )
                     _listCommand[static_cast<size_t>( participant )] = JRPGCommand{};
             }
@@ -201,7 +201,7 @@ namespace sw
         int32   enemyCount   = 0;
         for ( const JRPGEnemyState& enemy : _listEnemy )
         {
-            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyId );
+            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyID );
             if ( enemy.isAlive() == false || pEnemy == nullptr )
                 continue;
             if ( pEnemy->_bBoss )
@@ -256,7 +256,7 @@ namespace sw
                 _turnOrder.removeActor( actor );
                 continue;
             }
-            const JRPGEnemyDef* pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( enemyIndex )]._enemyId );
+            const JRPGEnemyDef* pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( enemyIndex )]._enemyID );
             const float32       agility = pEnemy != nullptr ? static_cast<float32>( pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Agility )] ) : 1.0f;
             _turnOrder.addActor( actor, agility );
             _turnOrder.setSpeed( actor, agility );
@@ -304,8 +304,8 @@ namespace sw
         if ( target < 0 )
             return;
         const JRPGMember&     member  = _pParty->getMember( memberIndex );
-        const JRPGClassDef*   pClass  = _pCatalog->findClass( member._classId );
-        const JRPGEnemyDef*   pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( target )]._enemyId );
+        const JRPGClassDef*   pClass  = _pCatalog->findClass( member._classID );
+        const JRPGEnemyDef*   pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( target )]._enemyID );
         const int32           defense = pEnemy != nullptr ? pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Vitality )] / 2 : 0;
         vector<hashed_string> listType;
         if ( pClass != nullptr && pClass->_attackType.empty() == false )
@@ -355,7 +355,7 @@ namespace sw
         if ( pSpell->_kind == JRPGSpellKind::Damage )
         {
             // 주문은 지능, 초식(비급)은 힘으로 키운다.
-            const bool            bTechnique = pSpell->_manualId.empty() == false;
+            const bool            bTechnique = pSpell->_manualID.empty() == false;
             const int32           scale      = bTechnique ? _pParty->computeAttack( memberIndex ) : member.getStat( JRPGStat::Intellect );
             const int32           base       = pSpell->_power * ( 100 + scale ) / 100;
             vector<hashed_string> listType;
@@ -377,8 +377,8 @@ namespace sw
             }
             if ( bTechnique && pSpell->_proficiencyGain > 0 )
             {
-                _pParty->addProficiency( memberIndex, pSpell->_manualId, pSpell->_proficiencyGain );
-                pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, -1, pSpell->_proficiencyGain, pSpell->_manualId );
+                _pParty->addProficiency( memberIndex, pSpell->_manualID, pSpell->_proficiencyGain );
+                pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, -1, pSpell->_proficiencyGain, pSpell->_manualID );
             }
             return;
         }
@@ -413,9 +413,9 @@ namespace sw
             return;
         }
         int32 attackSum = 0;
-        for ( const hashed_string& participantId : pCombo->_listMemberId )
+        for ( const hashed_string& participantID : pCombo->_listMemberID )
         {
-            const int32 participant = _pParty->findMemberIndex( participantId );
+            const int32 participant = _pParty->findMemberIndex( participantID );
             if ( participant < 0 || _pParty->getMember( participant ).isAlive() == false )
             {
                 pushEvent( JRPGBattleEvent::Kind::CannotUse, false, memberIndex, command._target, 0, command._id );
@@ -445,7 +445,7 @@ namespace sw
         if ( enemyIndex < 0 || enemyIndex >= static_cast<int32>( _listEnemy.size() ) )
             return;
         JRPGEnemyState&     enemy  = _listEnemy[static_cast<size_t>( enemyIndex )];
-        const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyId );
+        const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyID );
         if ( enemy.isAlive() == false || pEnemy == nullptr )
             return;
         ++enemy._turnsTaken;
@@ -454,12 +454,12 @@ namespace sw
         {
             if ( --enemy._castTurnsLeft > 0 )
                 return; // 아직 시전 중
-            const JRPGSpellDef* pSpell    = _pCatalog->findSpell( pEnemy->_castSpellId );
+            const JRPGSpellDef* pSpell    = _pCatalog->findSpell( pEnemy->_castSpellID );
             const int32         remaining = static_cast<int32>( enemy._listLock.size() );
             const int32         basePower = pSpell != nullptr ? pSpell->_power : 0;
             const int32         power     = basePower * ( remaining + 1 ) / ( enemy._lockTotal + 1 );
             enemy._listLock.clear();
-            pushEvent( JRPGBattleEvent::Kind::CastReleased, true, enemyIndex, -1, power, pEnemy->_castSpellId );
+            pushEvent( JRPGBattleEvent::Kind::CastReleased, true, enemyIndex, -1, power, pEnemy->_castSpellID );
             const int32 scaled = power * ( 100 + pEnemy->_arrStat[static_cast<size_t>( JRPGStat::Intellect )] ) / 100;
             for ( int32 memberIndex = 0; memberIndex < _pParty->getMemberCount(); ++memberIndex )
             {
@@ -469,12 +469,12 @@ namespace sw
             return;
         }
 
-        if ( pEnemy->_castSpellId.empty() == false && enemy._turnsTaken % pEnemy->_castEvery == 0 )
+        if ( pEnemy->_castSpellID.empty() == false && enemy._turnsTaken % pEnemy->_castEvery == 0 )
         {
             enemy._castTurnsLeft = pEnemy->_castTurns;
             enemy._listLock      = pEnemy->_listLock;
             enemy._lockTotal     = static_cast<int32>( enemy._listLock.size() );
-            pushEvent( JRPGBattleEvent::Kind::CastStarted, true, enemyIndex, -1, enemy._lockTotal, pEnemy->_castSpellId );
+            pushEvent( JRPGBattleEvent::Kind::CastStarted, true, enemyIndex, -1, enemy._lockTotal, pEnemy->_castSpellID );
             return;
         }
 
@@ -495,7 +495,7 @@ namespace sw
     void JRPGBattle::hitEnemy( int32 memberIndex, int32 enemyIndex, int32 damage, const vector<hashed_string>& listDamageType )
     {
         JRPGEnemyState&     enemy  = _listEnemy[static_cast<size_t>( enemyIndex )];
-        const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyId );
+        const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyID );
         if ( enemy.isAlive() == false )
             return;
         bool bWeak = false;
@@ -530,7 +530,7 @@ namespace sw
             if ( enemy._listLock.empty() )
             {
                 enemy._castTurnsLeft = 0;
-                pushEvent( JRPGBattleEvent::Kind::CastCancelled, false, memberIndex, enemyIndex, 0, pEnemy != nullptr ? pEnemy->_castSpellId : hashed_string{} );
+                pushEvent( JRPGBattleEvent::Kind::CastCancelled, false, memberIndex, enemyIndex, 0, pEnemy != nullptr ? pEnemy->_castSpellID : hashed_string{} );
             }
         }
         if ( enemy.isAlive() == false )
@@ -538,7 +538,7 @@ namespace sw
             enemy._castTurnsLeft = 0;
             enemy._listLock.clear();
             _turnOrder.removeActor( kEnemyActorBase + enemyIndex );
-            pushEvent( JRPGBattleEvent::Kind::Defeated, false, memberIndex, enemyIndex, 0, enemy._enemyId );
+            pushEvent( JRPGBattleEvent::Kind::Defeated, false, memberIndex, enemyIndex, 0, enemy._enemyID );
         }
     }
 
@@ -616,7 +616,7 @@ namespace sw
             return;
         for ( const JRPGEnemyState& enemy : _listEnemy )
         {
-            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyId );
+            const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyID );
             if ( pEnemy == nullptr )
                 continue;
             _rewardExp += pEnemy->_exp;
@@ -649,7 +649,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listEnemy.size() );
         for ( const JRPGEnemyState& enemy : _listEnemy )
         {
-            StateArchiveUtil::writeName( outArchive, enemy._enemyId );
+            StateArchiveUtil::writeName( outArchive, enemy._enemyID );
             outArchive << static_cast<uint32>( enemy._listLock.size() );
             for ( const hashed_string& lock : enemy._listLock )
             {
@@ -691,7 +691,7 @@ namespace sw
         for ( JRPGEnemyState& enemy : restored._listEnemy )
         {
             uint32 lockCount = 0;
-            if ( StateArchiveUtil::readName( archive, enemy._enemyId ) == false || _pCatalog->findEnemy( enemy._enemyId ) == nullptr )
+            if ( StateArchiveUtil::readName( archive, enemy._enemyID ) == false || _pCatalog->findEnemy( enemy._enemyID ) == nullptr )
                 return false;
             if ( StateArchiveUtil::readCount( archive, 4, lockCount ) == false )
                 return false;

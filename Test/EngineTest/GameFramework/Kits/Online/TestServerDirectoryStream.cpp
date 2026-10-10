@@ -106,7 +106,7 @@ SW_TEST_CASE( ServerDirectoryStreamTest, ListBeforeLoginAssignAfterLoginAndMaint
 
     ServerRegistration registration;
     ServerDescriptor   descriptor;
-    descriptor._serverId = 10;
+    descriptor._serverID = 10;
     descriptor._kind     = "game";
     descriptor._region   = "kr";
     descriptor._address  = "10.0.0.1";

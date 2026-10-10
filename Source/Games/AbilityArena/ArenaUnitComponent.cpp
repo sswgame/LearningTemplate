@@ -118,14 +118,14 @@ namespace sw
         for ( int32 buttonIndex = 0; buttonIndex < kAbilityButtonCount; ++buttonIndex )
         {
             const int32 slot    = _arrButtonIndex[buttonIndex];
-            const int32 inputId = kArrAbilityButton[buttonIndex]._inputId;
+            const int32 inputID = kArrAbilityButton[buttonIndex]._inputID;
             if ( slot < 0 )
                 continue;
             const bool bWasDown = ( _previousButtonDown & ( 1u << slot ) ) != 0;
             if ( intent.wasTriggered( slot ) )
-                abilitySystem.abilityInputPressed( inputId );
+                abilitySystem.abilityInputPressed( inputID );
             if ( bWasDown && intent.isDown( slot ) == false )
-                abilitySystem.abilityInputReleased( inputId );
+                abilitySystem.abilityInputReleased( inputID );
         }
         _previousButtonDown = intent._buttonDown;
     }

@@ -50,7 +50,7 @@ namespace
             return true;
         }
 
-        VoxelBlockIndex findBlock( const utf8* pId ) const { return _catalog.findBlockIndex( hashed_string( pId ) ); }
+        VoxelBlockIndex findBlock( const utf8* pID ) const { return _catalog.findBlockIndex( hashed_string( pID ) ); }
 
         /** @brief y = @p floorY 높이에 돌 바닥을 깝니다. */
         void fillFloor( int32 floorY )

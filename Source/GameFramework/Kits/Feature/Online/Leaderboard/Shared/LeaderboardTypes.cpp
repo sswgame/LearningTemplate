@@ -12,9 +12,9 @@ namespace sw
         return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 
-    bool LeaderboardNameRule::isValidId( string_view id )
+    bool LeaderboardNameRule::isValidID( string_view id )
     {
-        if ( id.empty() || id.size() > static_cast<size_t>( LeaderboardLimit::kMaxIdSize ) )
+        if ( id.empty() || id.size() > static_cast<size_t>( LeaderboardLimit::kMaxIDSize ) )
             return false;
         for ( const utf8 character : id )
         {

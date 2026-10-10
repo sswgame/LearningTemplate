@@ -1012,7 +1012,7 @@ namespace sw
             std::sort( _listViewSortKey.begin(), _listViewSortKey.end(), &GPUSceneBuilder::isDrawnBefore );
 
             GPUViewTransparentOrder order;
-            order._viewId                       = view._viewId;
+            order._viewID                       = view._viewID;
             order._tailBase                     = tailBase;
             shared_ptr<vector<uint32>> listRank = make_shared<vector<uint32>>( tailCount );
             for ( uint32 rank = 0; rank < tailCount; ++rank )

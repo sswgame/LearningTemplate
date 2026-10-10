@@ -458,7 +458,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
             }
             EditorPanelEntry entry{};
             entry._pInstance     = registration._pCreate();
-            entry._id            = registration._pId;
+            entry._id            = registration._pID;
             entry._title         = entry._pInstance->getPanelTitle();
             entry._category      = registration._category;
             entry._pRegistration = &registration;
@@ -809,8 +809,8 @@ namespace sw::editor
  * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", ICON_FA_ROTATE, "ThemePark", "배치 파일을 다시 읽습니다",
  *                          "Reload rides.xml", {}, &reloadLayout, nullptr, "MainMenu/ThemePark" ); @endcode
  */
-#define SW_EDITOR_COMMAND( name, pId, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, pMenuPath )        \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pId, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
+#define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, pMenuPath )        \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
                         shortcut, pfnAction, pfnEnabled, pMenuPath )
 ```
 `EditorCommandGUI.h/.cpp`:
@@ -829,7 +829,7 @@ namespace sw::editor
             if ( IModuleUnloadListener::isAddressWithin( &row, pExcludeBegin, pExcludeEnd ) )
                 continue;
             EditorCommandDesc desc{};
-            desc._id              = row._pId;
+            desc._id              = row._pID;
             desc._label           = row._pLabel;
             desc._icon            = row._pIcon != nullptr ? row._pIcon : "";
             desc._category        = row._pCategory;
@@ -1419,8 +1419,8 @@ namespace sw::editor
  * @brief 환경설정 섹션 하나를 등록합니다. 예: `SW_EDITOR_SETTINGS( EditorViewportPreferences, "viewport", "Editor/Viewport", 300, &onViewportPreferencesChanged );`
  * @param TSettings 리플렉션 구조체(`REFLECT()` · `PROPERTY()`), 기본 생성자의 값이 기본값
  */
-#define SW_EDITOR_SETTINGS( TSettings, pId, pLabel, order, pfnOnChanged )                                                              \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##TSettings, { pId, order }, pLabel, &TSettings::StaticType, \
+#define SW_EDITOR_SETTINGS( TSettings, pID, pLabel, order, pfnOnChanged )                                                              \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##TSettings, { pID, order }, pLabel, &TSettings::StaticType, \
                         []() -> void* { static TSettings s_instance{}; return &s_instance; }, pfnOnChanged )
 ```
 (람다 하나 — 인스턴스 함수 정적을 등록 줄에 담는 가장 짧은 길. AGENTS "람다는 피한다" 의 예외로 주석.) `makeDifferenceJson` 은 프로퍼티마다 `SerializerUtil` 의 글 쓰기
@@ -1584,10 +1584,10 @@ namespace sw::editor
         [[nodiscard]] bool saveToFile( string_view filePath ) const;
         /** @brief 등록부의 커맨드에 덮어쓰기를 입힙니다. 입힌 수입니다. */
         uint32 applyTo( EditorCommandRegistry& registry ) const;
-        /** @brief @p commandId 의 덮어쓰기를 둡니다. 기본(@p defaultShortcut · @p defaultAlt)과 같으면 지웁니다. */
-        void setOverride( string_view commandId, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut,
+        /** @brief @p commandID 의 덮어쓰기를 둡니다. 기본(@p defaultShortcut · @p defaultAlt)과 같으면 지웁니다. */
+        void setOverride( string_view commandID, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut,
                           const EditorCommandShortcut& defaultShortcut, const EditorCommandShortcut& defaultAlt );
-        void removeOverride( string_view commandId );
+        void removeOverride( string_view commandID );
         void clear() { _listOverride.clear(); }
         const vector<EditorShortcutOverride>& getOverrides() const { return _listOverride; }
 
@@ -2414,7 +2414,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 **바꿀 것.**
 1) `ValidationIssueLog` 에 바뀜 번호 — `uint32 getRevision() const`(바꿀 때마다 +1, 원자) — 패널이 프레임마다 목록을 다시 모으지 않게. (Engine 헤더 → 엔진 ABI 도장.)
 2) `Panels/MapCheckPanel.h` · `.cpp` — `SW_EDITOR_PANEL( MapCheckPanel, "map_check", EditorPanelCategory::Tool, 2040 );` 제목 `"Map Check"`. 표: 무게(아이콘) · 오브젝트(`_sourceLabel`) · 타입 · 프로퍼티 · 메시지,
-   무게 필터(Error · Warning) · 검색, 줄 클릭 = 그 오브젝트 선택(`_sourceId` = 오브젝트 id → `GameObjectManager::findGameObjectById` → `EditorSelection::selectObject`) + 더블클릭 = 뷰포트 초점,
+   무게 필터(Error · Warning) · 검색, 줄 클릭 = 그 오브젝트 선택(`_sourceID` = 오브젝트 id → `GameObjectManager::findGameObjectByID` → `EditorSelection::selectObject`) + 더블클릭 = 뷰포트 초점,
    프로퍼티가 있으면 인스펙터가 그 프로퍼티 줄로 스크롤(그리드에 `requestFocusProperty( name )` 한 칸 — 다음 프레임 `SetScrollHereY`).
    위 단추 "Check Map" = 활성 씬의 모든 오브젝트에 `ObjectValidation::reportGameObject( obj, false )`(오브젝트 1 만 개 기준 시간을 로그 — 길면 프레임 예산으로 나눈다).
 3) 상태줄(메뉴바 오른쪽 "Ready · RHI" 옆)에 `ICON_FA_TRIANGLE_EXCLAMATION N` — 오류가 있으면 빨강, 누르면 패널. 씬을 열었을 때 오류가 있으면 토스트 "Map Check: N errors"(언리얼과 같다).

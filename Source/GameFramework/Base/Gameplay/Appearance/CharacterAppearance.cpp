@@ -71,7 +71,7 @@ namespace sw
                 inoutDef._listValue.push_back( value );
             }
 
-            static void readItemValue( const XMLNode& node, CharacterAppearanceSlotDef& inoutSlot, AppearanceLoadReport& report, string_view sourceName, const hashed_string& presetId )
+            static void readItemValue( const XMLNode& node, CharacterAppearanceSlotDef& inoutSlot, AppearanceLoadReport& report, string_view sourceName, const hashed_string& presetID )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrItemValueAttribute, report, sourceName );
                 const hashed_string parameter = AppearanceXMLUtil::readName( node, "name" );
@@ -82,18 +82,18 @@ namespace sw
                 else if ( node.findAttribute( "value" ) != nullptr )
                     inoutSlot._customization.setNumber( parameter, node.getAttributeFloat( "value", 0.0f ) );
                 else
-                    report.addError( "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetId.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
+                    report.addError( "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetID.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
             }
 
             static void readEquip( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrEquipAttribute, report, sourceName );
-                const hashed_string setId = AppearanceXMLUtil::readName( node, "set" );
-                if ( setId.empty() == false )
+                const hashed_string setID = AppearanceXMLUtil::readName( node, "set" );
+                if ( setID.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
                         report.addError( "%#: preset '%#' <Equip> names both a set and a slot", sourceName, inoutDef._id.c_str() );
-                    inoutDef._listSet.push_back( setId );
+                    inoutDef._listSet.push_back( setID );
                     return;
                 }
                 CharacterAppearanceSlotDef slot;
@@ -348,7 +348,7 @@ namespace sw
             return false;
         using Internal              = CharacterAppearanceInternal;
         outSpec                     = CharacterAppearanceSpec{};
-        outSpec._presetId           = id;
+        outSpec._presetID           = id;
         outSpec._seed               = seed;
         outSpec._schema             = merged._schema;
         outSpec._tags               = merged._tags;
@@ -401,9 +401,9 @@ namespace sw
         vector<EquipSetPieceDef> listPiece;
         for ( const CharacterAppearanceDef* pLevel : listChain )
         {
-            for ( const hashed_string& setId : pLevel->_listSet )
+            for ( const hashed_string& setID : pLevel->_listSet )
             {
-                const EquipSetDef* pSet = sets.findSet( setId );
+                const EquipSetDef* pSet = sets.findSet( setID );
                 if ( pSet == nullptr )
                     continue;
                 sets.computePieces( *pSet, outSpec._bodyType, listPiece );
@@ -414,7 +414,7 @@ namespace sw
                         continue;
                     *pRequest         = AppearanceSlotRequest{};
                     pRequest->_slot   = piece._slot;
-                    pRequest->_itemId = piece._listItem.front();
+                    pRequest->_itemID = piece._listItem.front();
                 }
             }
             for ( const CharacterAppearanceSlotDef& slot : pLevel->_listSlot )
@@ -430,13 +430,13 @@ namespace sw
                 }
                 if ( slot._listItem.empty() == false )
                 {
-                    const hashed_string itemId = Internal::pickName( slot._listItem, seed, slot._slot.getHash() ^ Internal::kKeySlot );
-                    if ( itemId != pRequest->_itemId )
+                    const hashed_string itemID = Internal::pickName( slot._listItem, seed, slot._slot.getHash() ^ Internal::kKeySlot );
+                    if ( itemID != pRequest->_itemID )
                     {
                         *pRequest       = AppearanceSlotRequest{};
                         pRequest->_slot = slot._slot;
                     }
-                    pRequest->_itemId = itemId;
+                    pRequest->_itemID = itemID;
                 }
                 if ( slot._visibleVisual.empty() == false )
                     pRequest->_visibleVisual = slot._visibleVisual;

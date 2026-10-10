@@ -41,7 +41,7 @@ namespace sw
     template <typename TParsed>
     struct AnnotationField
     {
-        string_view _id; ///< 정규 필드명(AnnotationMeta.txt 의 `kind.Id`)
+        string_view _id; ///< 정규 필드명(AnnotationMeta.txt 의 `kind.ID`)
         /** @brief 토큰 값을 대상에 넣습니다. 단독 토큰이면 값은 빈 문자열입니다(bool 로는 참). */
         void ( *_pApply )( TParsed& target, string_view value );
         /** @brief 코드젠에 쓸 값이 있는지 봅니다. Manual 이면 nullptr 입니다. */

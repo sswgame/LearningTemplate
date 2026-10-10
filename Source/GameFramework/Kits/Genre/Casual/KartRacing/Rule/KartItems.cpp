@@ -79,15 +79,15 @@ namespace sw
         rank._toPlace   = MathUtil::max( rank._fromPlace, MathUtil::max( fromPlace, toPlace ) );
         StringBuilder<constant::kMaxBuffer64> tableName;
         tableName.append( "kartRank" ).append( rank._fromPlace ).append( '_' ).append( rank._toPlace );
-        rank._tableId = hashed_string( tableName.c_str() );
+        rank._tableID = hashed_string( tableName.c_str() );
 
         LootTableDef table;
-        table._id        = rank._tableId;
+        table._id        = rank._tableID;
         table._listEntry = listEntry;
         _lootCatalog.addTable( table );
         for ( KartRankTable& existing : _listRankTable )
         {
-            if ( existing._tableId == rank._tableId )
+            if ( existing._tableID == rank._tableID )
                 return;
         }
         _listRankTable.push_back( rank );
@@ -126,17 +126,17 @@ namespace sw
         if ( pRank == nullptr )
             return nullptr;
         ItemStackList items;
-        if ( _lootCatalog.roll( pRank->_tableId, random, items ) == false || items.isEmpty() )
+        if ( _lootCatalog.roll( pRank->_tableID, random, items ) == false || items.isEmpty() )
             return nullptr;
         vector<hashed_string> listItem;
-        items.getItemIds( listItem );
+        items.getItemIDs( listItem );
         return findItem( listItem.front() );
     }
 
-    float32 KartItemCatalog::computeItemChance( int32 place, int32 racerCount, const hashed_string& itemId ) const
+    float32 KartItemCatalog::computeItemChance( int32 place, int32 racerCount, const hashed_string& itemID ) const
     {
         const KartRankTable* pRank = findRankTable( place, racerCount );
-        return pRank != nullptr ? _lootCatalog.computeDropChance( pRank->_tableId, itemId ) : 0.0f;
+        return pRank != nullptr ? _lootCatalog.computeDropChance( pRank->_tableID, itemID ) : 0.0f;
     }
 
     uint32 KartItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -145,14 +145,14 @@ namespace sw
         uint32 loadedCount   = 0;
         for ( XMLNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( itemNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( itemNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             KartItemDef def;
-            def._id = hashed_string( pId );
+            def._id = hashed_string( pID );
             if ( parseKartItemKind( itemNode.getAttributeText( "kind" ), def._kind ) == false )
             {
-                SW_LOG_WARNING( "%#: item '%#' has an unknown kind '%#' - skipped", sourceName, pId, itemNode.getAttributeText( "kind" ) );
+                SW_LOG_WARNING( "%#: item '%#' has an unknown kind '%#' - skipped", sourceName, pID, itemNode.getAttributeText( "kind" ) );
                 continue;
             }
             def._speed          = itemNode.getAttributeFloat( "speed", def._speed );
@@ -180,7 +180,7 @@ namespace sw
                     continue;
                 }
                 LootEntry entry;
-                entry._itemId = hashed_string( pItem );
+                entry._itemID = hashed_string( pItem );
                 entry._weight = entryNode.getAttributeFloat( "weight", 1.0f );
                 listEntry.push_back( entry );
             }

@@ -27,15 +27,15 @@ namespace sw
         MatchMaker();
 
         /** @brief 규칙과 경기 id 씨앗(권한 서버 id 아래 32 비트 — 권한이 넘어가도 경기 id 가 겹치지 않는다)으로 비운 대기열을 만듭니다. */
-        void initialize( const MatchModeDefinition& definition, uint64 matchIdSeed );
+        void initialize( const MatchModeDefinition& definition, uint64 matchIDSeed );
 
         /** @brief 경기를 만듭니다 — 만든 경기는 @p outListMatch, 시한을 넘긴 표는 @p outListTimedOut 뒤에 덧붙입니다. */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
 
         /** @brief 표를 넣습니다. 인원이 0 이거나 팀 인원을 넘으면 PartyTooLarge, 같은 id 가 있으면 AlreadyQueued 입니다. */
         MatchmakingResult  addTicket( const MatchTicket& ticket );
-        [[nodiscard]] bool removeTicket( uint64 ticketId );
-        bool               hasTicket( uint64 ticketId ) const;
+        [[nodiscard]] bool removeTicket( uint64 ticketID );
+        bool               hasTicket( uint64 ticketID ) const;
 
         int32                      getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
         const MatchModeDefinition& getDefinition() const { return _definition; }
@@ -48,6 +48,6 @@ namespace sw
 
         vector<MatchTicket> _listTicket;
         MatchModeDefinition _definition;
-        uint64              _nextMatchId;
+        uint64              _nextMatchID;
     };
 } // namespace sw

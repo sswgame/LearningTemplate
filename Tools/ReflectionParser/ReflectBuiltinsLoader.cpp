@@ -212,7 +212,7 @@ namespace sw
             id.appendFormat( "Builtin_%#", canonical );
             out += tpls.render( templatefile::kBuiltinTypeRegistrar,
                                 {
-                                    {       templatekey::kId,            id.view()},
+                                    {       templatekey::kID,            id.view()},
                                     {     templatekey::kName,            canonical},
                                     {  templatekey::kCppType, row._listArgument[1]},
                                     {templatekey::kAliasRegs,     aliasRegs.view()}

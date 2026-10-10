@@ -27,9 +27,9 @@ namespace sw
     /** @brief 구매 입력입니다. */
     struct EconomyPurchaseInput
     {
-        string _offerId{};
+        string _offerID{};
         string _journalKey{}; ///< `LedgerJournalKey::makeFromIdempotency( makeAccountScope( 계정 ), 멱등 키 )`
-        uint64 _accountId{ 0 };
+        uint64 _accountID{ 0 };
         int64  _nowMs{ 0 };
         int32  _count{ 1 };
     };
@@ -41,7 +41,7 @@ namespace sw
     struct EconomyRedeemInput
     {
         ReceiptValidationResult _receipt{};
-        uint64                  _accountId{ 0 };
+        uint64                  _accountID{ 0 };
         int64                   _nowMs{ 0 };
         uint8                   _bAcceptSandbox{ SW_FALSE };
     };
@@ -61,9 +61,9 @@ namespace sw
         /** @brief 검증이 끝난 영수증으로 지급합니다. */
         static EconomyResult redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
                                             EconomyReply& outReply );
-        static EconomyResult readWallet( IServiceStoreConnection& connection, uint64 accountId, EconomyReply& outReply );
-        static EconomyResult readHistory( IServiceStoreConnection& connection, uint64 accountId, const EconomyHistoryRequest& request, EconomyReply& outReply );
-        /** @brief 이동 결과에서 @p accountId 의 잔액만 고릅니다. */
-        static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountId, vector<LedgerBalance>& outListBalance );
+        static EconomyResult readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply );
+        static EconomyResult readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyReply& outReply );
+        /** @brief 이동 결과에서 @p accountID 의 잔액만 고릅니다. */
+        static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance );
     };
 } // namespace sw

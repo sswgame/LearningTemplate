@@ -37,7 +37,7 @@ namespace sw
             ViewTarget*              pView   = nullptr;
             for ( unique_ptr<ViewTarget>& pExisting : _listExtraView )
             {
-                if ( pExisting->_viewId == request._viewId )
+                if ( pExisting->_viewID == request._viewID )
                 {
                     pView = pExisting.get();
                     break;
@@ -47,7 +47,7 @@ namespace sw
             {
                 _listExtraView.push_back( make_unique<ViewTarget>() );
                 pView          = _listExtraView.back().get();
-                pView->_viewId = request._viewId;
+                pView->_viewID = request._viewID;
             }
             ViewTarget& view       = *pView;
             view._bSeenThisFrame   = SW_TRUE;
@@ -87,7 +87,7 @@ namespace sw
             const bool bSortCb = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
             if ( bCullCb == false || bSortCb == false )
             {
-                SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewId );
+                SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewID );
                 view._bRenderThisFrame = SW_FALSE;
                 continue;
             }
@@ -138,7 +138,7 @@ namespace sw
         view._bHasTransparentRank = SW_FALSE;
         view._bUsesViewSlotStream = SW_FALSE;
         view._listTransparentBatchOrder.clear();
-        const GPUViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewId );
+        const GPUViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewID );
         const bool                     bUsable = pOrder != nullptr && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
                              pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
                              pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();

@@ -240,9 +240,9 @@ namespace sw
                 else if constexpr ( std::is_same_v<T, SlotHandle> )
                     formatstring( buf.data(), buf.capacity(), "%#/%#", value.index(), value.generation() );
                 else if constexpr ( std::is_same_v<T, ComponentHandle> )
-                    formatstring( buf.data(), buf.capacity(), "%#/%#", value.objectId(), value.componentId() );
+                    formatstring( buf.data(), buf.capacity(), "%#/%#", value.objectID(), value.componentID() );
                 else if constexpr ( std::is_same_v<T, GameObjectHandle> )
-                    formatstring( buf.data(), buf.capacity(), "%#", value.objectId() );
+                    formatstring( buf.data(), buf.capacity(), "%#", value.objectID() );
                 else
                     formatstring( buf.data(), buf.capacity(), "<%#>", "float4x4" );
                 return string( buf.c_str() );

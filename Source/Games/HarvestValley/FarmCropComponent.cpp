@@ -64,22 +64,22 @@ namespace sw
         }
     }
 
-    const utf8* FarmCropComponent::findReadyModel( const hashed_string& cropId )
+    const utf8* FarmCropComponent::findReadyModel( const hashed_string& cropID )
     {
-        if ( cropId == hashed_string( "turnip" ) || cropId == hashed_string( "onion" ) )
+        if ( cropID == hashed_string( "turnip" ) || cropID == hashed_string( "onion" ) )
             return "crop_turnip";
-        if ( cropId == hashed_string( "carrot" ) )
+        if ( cropID == hashed_string( "carrot" ) )
             return "crop_carrot";
-        if ( cropId == hashed_string( "pumpkin" ) )
+        if ( cropID == hashed_string( "pumpkin" ) )
             return "crop_pumpkin";
-        if ( cropId == hashed_string( "corn" ) )
+        if ( cropID == hashed_string( "corn" ) )
             return "crops_corn_stage_d";
         return nullptr;
     }
 
-    const utf8* FarmCropComponent::findGrowingModel( const hashed_string& cropId, int32 stage )
+    const utf8* FarmCropComponent::findGrowingModel( const hashed_string& cropID, int32 stage )
     {
-        if ( cropId == hashed_string( "corn" ) )
+        if ( cropID == hashed_string( "corn" ) )
             return stage <= 1 ? "crops_corn_stage_a" : ( stage == 2 ? "crops_corn_stage_b" : "crops_corn_stage_c" );
         return stage <= 1 ? "crops_leafs_stage_a" : "crops_leafs_stage_b";
     }
@@ -117,7 +117,7 @@ namespace sw
         const bool    bWithered = pTile->_bWithered != SW_FALSE;
         const int32   cropState = pTile->hasCrop() == false ? 0
                                                             : 1 + stage * 4 + ( bReady ? 1 : 0 ) + ( bWithered ? 2 : 0 ) +
-                                                                static_cast<int32>( pTile->_cropId.getHash() % 997u ) * 32;
+                                                                static_cast<int32>( pTile->_cropID.getHash() % 997u ) * 32;
         if ( cropState == _cropState )
             return;
         if ( pTile->hasCrop() == false )
@@ -127,13 +127,13 @@ namespace sw
             return;
         }
         // 모델은 단계마다 바꾸고, 색은 정점 색 그대로(흰 모습). 시든 작물은 갈색으로, 제 모델이 없는 작물은 다 자라면 잎에 작물 색을 입힌다.
-        const utf8*                         pReadyModel = bReady ? findReadyModel( pTile->_cropId ) : nullptr;
-        const utf8*                         pModel      = pReadyModel != nullptr ? pReadyModel : findGrowingModel( pTile->_cropId, stage );
-        const shared_ptr<MaterialInstance>& look        = pDirector->findCropLook( pTile->_cropId, bWithered, bReady && pReadyModel == nullptr );
+        const utf8*                         pReadyModel = bReady ? findReadyModel( pTile->_cropID ) : nullptr;
+        const utf8*                         pModel      = pReadyModel != nullptr ? pReadyModel : findGrowingModel( pTile->_cropID, stage );
+        const shared_ptr<MaterialInstance>& look        = pDirector->findCropLook( pTile->_cropID, bWithered, bReady && pReadyModel == nullptr );
         if ( look == nullptr )
             return;
         const float32 size = _modelScale * ( bReady ? 1.0f : 0.7f + 0.3f * ratio );
-        pMesh->setMeshId( makeModelPath( pModel ) );
+        pMesh->setMeshID( makeModelPath( pModel ) );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );
         pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, Internal::kSoilTop + Internal::kModelFloor * size, 0.0f } );

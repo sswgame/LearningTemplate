@@ -204,9 +204,9 @@ namespace sw
         return placedCount;
     }
 
-    CityPlaceResult CitySimulation::placeBuilding( const hashed_string& buildingId, int32 x, int32 y )
+    CityPlaceResult CitySimulation::placeBuilding( const hashed_string& buildingID, int32 x, int32 y )
     {
-        const CityBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingId ) : nullptr;
+        const CityBuildingDef* pDef = _pCatalog != nullptr ? _pCatalog->findBuilding( buildingID ) : nullptr;
         if ( pDef == nullptr )
             return CityPlaceResult::UnknownBuilding;
         // 범위를 먼저 — 발밑 일부만 맵 밖이어도 "땅이 나쁘다" 가 아니라 "밖" 이다.
@@ -512,9 +512,9 @@ namespace sw
                     // 사 오기 — 같은 도로망의 창고에서 파는 물자마다 상한의 몫까지(바자 구매인을 줄였다).
                     const int32 component = getRoadComponent( building._accessTile );
                     const int32 perGood   = def._listGood.empty() ? 0 : def._capacity / static_cast<int32>( def._listGood.size() );
-                    for ( const hashed_string& goodId : def._listGood )
+                    for ( const hashed_string& goodID : def._listGood )
                     {
-                        int32 want = perGood - building._stock.getItemCount( goodId );
+                        int32 want = perGood - building._stock.getItemCount( goodID );
                         for ( CityBuilding& storage : _listBuilding )
                         {
                             if ( want <= 0 )
@@ -522,8 +522,8 @@ namespace sw
                             if ( storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f ||
                                  getRoadComponent( storage._accessTile ) != component || component < 0 )
                                 continue;
-                            const int32 moved = MathUtil::min( want, storage._stock.getItemCount( goodId ) );
-                            if ( moved > 0 && storage._stock.moveItemTo( building._stock, goodId, moved ) )
+                            const int32 moved = MathUtil::min( want, storage._stock.getItemCount( goodID ) );
+                            if ( moved > 0 && storage._stock.moveItemTo( building._stock, goodID, moved ) )
                                 want -= moved;
                         }
                     }
@@ -571,22 +571,22 @@ namespace sw
         const auto&   items    = building._stock.getItems();
         if ( items.empty() )
             return;
-        const hashed_string goodId    = items.front()._itemId;
+        const hashed_string goodID    = items.front()._itemID;
         const int32         amount    = items.front()._count;
         const int32         component = getRoadComponent( building._accessTile );
-        const int32         storage   = findStorageFor( goodId, component, building._accessTile, 1 );
+        const int32         storage   = findStorageFor( goodID, component, building._accessTile, 1 );
         if ( storage < 0 )
             return;
         CityWalker walker;
         if ( findRoadPath( building._accessTile, _listBuilding[static_cast<size_t>( storage )]._accessTile, walker._listPath ) == false )
             return;
         const int32 load = MathUtil::min( amount, computeStorageFree( _listBuilding[static_cast<size_t>( storage )] ) );
-        if ( load <= 0 || building._stock.removeItem( goodId, load ) == false )
+        if ( load <= 0 || building._stock.removeItem( goodID, load ) == false )
             return;
         walker._kind           = CityWalkerKind::Cart;
         walker._homeBuilding   = buildingIndex;
         walker._targetBuilding = storage;
-        walker._cargoGood      = goodId;
+        walker._cargoGood      = goodID;
         walker._cargoAmount    = load;
         walker._tile           = building._accessTile;
         walker._nextTile       = building._accessTile;
@@ -606,7 +606,7 @@ namespace sw
         return storage._pDef->_capacity - storage._stock.getTotalCount() - incoming;
     }
 
-    int32 CitySimulation::findStorageFor( const hashed_string& goodId, int32 roadComponent, const int2& from, int32 amount ) const
+    int32 CitySimulation::findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const
     {
         int32 best         = -1;
         int32 bestDistance = 1 << 30;
@@ -616,7 +616,7 @@ namespace sw
             if ( storage._bAlive == SW_FALSE || storage._pDef->_kind != CityBuildingKind::Storage || storage._efficiency <= 0.0f || roadComponent < 0 ||
                  getRoadComponent( storage._accessTile ) != roadComponent )
                 continue;
-            if ( std::find( storage._pDef->_listGood.begin(), storage._pDef->_listGood.end(), goodId ) == storage._pDef->_listGood.end() )
+            if ( std::find( storage._pDef->_listGood.begin(), storage._pDef->_listGood.end(), goodID ) == storage._pDef->_listGood.end() )
                 continue;
             if ( computeStorageFree( storage ) < amount )
                 continue;
@@ -796,11 +796,11 @@ namespace sw
                 // 상인 — 시장 재고에서 집이 바라는 만큼(두 달치까지) 판다.
                 CityBuilding& market = _listBuilding[static_cast<size_t>( walker._homeBuilding )];
                 const int32   target = CitySimulationInternal::computeStockTarget( house._population, _settings._goodsPerFourPeople );
-                for ( const hashed_string& goodId : market._pDef->_listGood )
+                for ( const hashed_string& goodID : market._pDef->_listGood )
                 {
-                    const int32 want = MathUtil::min( target - house._stock.getItemCount( goodId ), market._stock.getItemCount( goodId ) );
+                    const int32 want = MathUtil::min( target - house._stock.getItemCount( goodID ), market._stock.getItemCount( goodID ) );
                     if ( want > 0 )
-                        (void)market._stock.moveItemTo( house._stock, goodId, want ); // want 는 시장 재고 이하라 늘 성공한다
+                        (void)market._stock.moveItemTo( house._stock, goodID, want ); // want 는 시장 재고 이하라 늘 성공한다
                 }
             }
         }
@@ -832,9 +832,9 @@ namespace sw
             if ( ( pLevel->_serviceMask & makeCityServiceBit( service ) ) != 0 && isHouseServed( house, service ) == false )
                 return false;
         }
-        for ( const hashed_string& goodId : pLevel->_listRequiredGood )
+        for ( const hashed_string& goodID : pLevel->_listRequiredGood )
         {
-            if ( house._stock.getItemCount( goodId ) <= 0 )
+            if ( house._stock.getItemCount( goodID ) <= 0 )
                 return false;
         }
         const CityTile* pTile = findTile( house._origin._x, house._origin._y );
@@ -905,11 +905,11 @@ namespace sw
             // 먹기 — 가진 물자마다 네 사람에 하나.
             const int32           need = ( house._population + 3 ) / 4 * _settings._goodsPerFourPeople;
             vector<hashed_string> listGood;
-            house._stock.getItemIds( listGood );
-            for ( const hashed_string& goodId : listGood )
+            house._stock.getItemIDs( listGood );
+            for ( const hashed_string& goodID : listGood )
             {
                 // 재고가 0 이면 false — 먹을 것이 없을 뿐이다
-                (void)house._stock.removeItem( goodId, MathUtil::min( need, house._stock.getItemCount( goodId ) ) );
+                (void)house._stock.removeItem( goodID, MathUtil::min( need, house._stock.getItemCount( goodID ) ) );
             }
             // 세금 — 세리가 다녀간 집만.
             const CityHouseLevelDef* pLevel = _pCatalog->findHouseLevel( house._level );
@@ -1087,11 +1087,11 @@ namespace sw
         vector<CityBuilding> listBuilding( buildingCount );
         for ( CityBuilding& building : listBuilding )
         {
-            hashed_string defId;
-            if ( StateArchiveUtil::readName( archive, defId ) == false )
+            hashed_string defID;
+            if ( StateArchiveUtil::readName( archive, defID ) == false )
                 return false;
-            building._pDef = defId.empty() ? nullptr : _pCatalog->findBuilding( defId );
-            if ( defId.empty() == false && building._pDef == nullptr )
+            building._pDef = defID.empty() ? nullptr : _pCatalog->findBuilding( defID );
+            if ( defID.empty() == false && building._pDef == nullptr )
                 return false; // 카탈로그에서 빠진 건물 — 도시를 맞출 수 없다
             if ( building._stock.readState( archive ) == false )
                 return false;

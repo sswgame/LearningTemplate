@@ -31,11 +31,11 @@ namespace sw
             }
 
             /** @brief 대상을 id 로, 없으면 기록할 때의 이름으로 찾습니다(헤더의 주의 참고). 삭제 대기 오브젝트는 찾지 않습니다. */
-            static GameObject* findObject( const ActiveTarget& target, uint64 objectId, const string& name )
+            static GameObject* findObject( const ActiveTarget& target, uint64 objectID, const string& name )
             {
                 if ( target._pManager == nullptr )
                     return nullptr;
-                GameObject* pTarget = target._pManager->findGameObjectById( objectId );
+                GameObject* pTarget = target._pManager->findGameObjectByID( objectID );
                 if ( pTarget == nullptr && name.empty() == false )
                     pTarget = target._pManager->findGameObjectByName( hashed_string( name.c_str() ) );
                 return ( pTarget != nullptr && pTarget->isPendingDestroy() == false ) ? pTarget : nullptr;
@@ -51,24 +51,24 @@ namespace sw
                     SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
-            /** @brief 활성 씬에서 @p objectId 를 찾아 @p snapshot 을 다시 읽습니다. 없으면 아무것도 하지 않습니다. */
-            static void restore( CommandStack* pStack, SceneManager* pSceneManager, uint64 objectId, const string& name, const ObjectSnapshot& snapshot )
+            /** @brief 활성 씬에서 @p objectID 를 찾아 @p snapshot 을 다시 읽습니다. 없으면 아무것도 하지 않습니다. */
+            static void restore( CommandStack* pStack, SceneManager* pSceneManager, uint64 objectID, const string& name, const ObjectSnapshot& snapshot )
             {
-                GameObject* pTarget = findObject( findActiveTarget( pSceneManager ), objectId, name );
+                GameObject* pTarget = findObject( findActiveTarget( pSceneManager ), objectID, name );
                 if ( pTarget == nullptr )
                     return;
                 loadSnapshot( pTarget, snapshot );
-                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pTarget->getObjectId(), ObjectEditKind::Modified } );
+                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pTarget->getObjectID(), ObjectEditKind::Modified } );
             }
 
-            /** @brief 활성 씬에서 @p objectId 를 없앱니다(자식까지). 알림은 없애기 전 — 받는 쪽이 아직 오브젝트를 찾을 수 있다. */
-            static void destroy( CommandStack* pStack, SceneManager* pSceneManager, uint64 objectId, const string& name )
+            /** @brief 활성 씬에서 @p objectID 를 없앱니다(자식까지). 알림은 없애기 전 — 받는 쪽이 아직 오브젝트를 찾을 수 있다. */
+            static void destroy( CommandStack* pStack, SceneManager* pSceneManager, uint64 objectID, const string& name )
             {
                 const ActiveTarget target  = findActiveTarget( pSceneManager );
-                GameObject*        pTarget = findObject( target, objectId, name );
+                GameObject*        pTarget = findObject( target, objectID, name );
                 if ( pTarget == nullptr )
                     return;
-                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pTarget->getObjectId(), ObjectEditKind::Destroyed } );
+                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pTarget->getObjectID(), ObjectEditKind::Destroyed } );
                 target._pManager->destroyObject( pTarget );
             }
 
@@ -79,16 +79,16 @@ namespace sw
                 const ActiveTarget target = findActiveTarget( pSceneManager );
                 if ( target._pManager == nullptr )
                     return;
-                const uint64 objectId = snapshot._identity._objectId;
-                GameObject*  pCreated = target._pManager->createGameObjectWithId( hashed_string( name.c_str() ), objectId );
+                const uint64 objectID = snapshot._identity._objectID;
+                GameObject*  pCreated = target._pManager->createGameObjectWithID( hashed_string( name.c_str() ), objectID );
                 if ( pCreated == nullptr )
                 {
-                    SW_LOG_WARNING( "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectId );
+                    SW_LOG_WARNING( "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );
                     return;
                 }
                 loadSnapshot( pCreated, snapshot );
-                target._pScene->setEntityPrefabPath( pCreated->getObjectId(), prefabPath );
-                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pCreated->getObjectId(), ObjectEditKind::Recreated } );
+                target._pScene->setEntityPrefabPath( pCreated->getObjectID(), prefabPath );
+                pStack->notifyObjectEdit( CommandStack::ObjectEditNotice{ pCreated->getObjectID(), ObjectEditKind::Recreated } );
             }
         };
     } // namespace
@@ -111,17 +111,17 @@ namespace sw
     {
         CommandStack* const   pStack        = &stack;
         SceneManager* const   pSceneManager = &sceneManager;
-        const uint64          objectId      = obj.getObjectId();
+        const uint64          objectID      = obj.getObjectID();
         const string          name{ obj.getName().c_str() };
         CommandStack::Command cmd{};
         cmd._label = string{ label };
-        cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectId, name, before]()
+        cmd._undo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectID, name, before]()
          {
-            ObjectUndoUtilInternal::restore( pStack, pSceneManager, objectId, name, before );
+            ObjectUndoUtilInternal::restore( pStack, pSceneManager, objectID, name, before );
         } );
-        cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectId, name, after]()
+        cmd._redo  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectID, name, after]()
          {
-            ObjectUndoUtilInternal::restore( pStack, pSceneManager, objectId, name, after );
+            ObjectUndoUtilInternal::restore( pStack, pSceneManager, objectID, name, after );
         } );
         return cmd;
     }
@@ -135,15 +135,15 @@ namespace sw
 
         CommandStack* const  pStack        = &stack;
         SceneManager* const  pSceneManager = &sceneManager;
-        const uint64         objectId      = pObj->getObjectId();
+        const uint64         objectID      = pObj->getObjectID();
         const string         name{ pObj->getName().c_str() };
         const ObjectSnapshot snapshot   = captureSnapshot( pObj );
         const Scene*         pScene     = sceneManager.getActiveScene();
-        const string         prefabPath = ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectId ) : string{};
+        const string         prefabPath = ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string{};
 
-        const Delegate<void()> destroyStep  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectId, name]()
+        const Delegate<void()> destroyStep  = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, objectID, name]()
          {
-            ObjectUndoUtilInternal::destroy( pStack, pSceneManager, objectId, name );
+            ObjectUndoUtilInternal::destroy( pStack, pSceneManager, objectID, name );
         } );
         const Delegate<void()> recreateStep = SW_DELEGATE_LAMBDA( Delegate<void()>, [pStack, pSceneManager, name, snapshot, prefabPath]()
         {

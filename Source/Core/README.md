@@ -287,7 +287,7 @@ W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목�
 새 실행 파일에 매니페스트(`sw_embedProcessManifest`)를 빠뜨리면 한글 경로를 읽지 못합니다.
 
 **X11 창 제목은 `_NET_WM_NAME`(UTF8_STRING)까지 적어야 합니다.** `XStoreName` 은 Latin-1이라 한글이 깨집니다. 확인하는 테스트가 없으므로 리눅스에서 `xprop _NET_WM_NAME` 으로 봅니다.
-로드된 이미지는 이름이 아니라 주소로 찾습니다(`ModuleBuildId::find( &함수 )._modulePath`). 리눅스에서는 `Lib/libEngine.so` 라 이름으로 찾던 테스트가 늘 건너뛰어졌습니다.
+로드된 이미지는 이름이 아니라 주소로 찾습니다(`ModuleBuildID::find( &함수 )._modulePath`). 리눅스에서는 `Lib/libEngine.so` 라 이름으로 찾던 테스트가 늘 건너뛰어졌습니다.
 
 **MSVC 확장을 쓸 수 있는지는 `SW_PLATFORM_WINDOWS` 로 묻습니다.** clang-cl은 `SW_COMPILER_CLANG` 이라, `SW_COMPILER_MSVC` 로 물으면 clang-cl이 다른 분기로 갑니다.
 아키텍처는 `CMAKE_CXX_COMPILER_ARCHITECTURE_ID` 로 판정합니다. 교차 컴파일에서 `CMAKE_SYSTEM_PROCESSOR` 는 틀립니다. ReflectionParser는 CMake를 거치지 않으므로 `ParserConfig::load` 가 대상 매크로를 넘깁니다.

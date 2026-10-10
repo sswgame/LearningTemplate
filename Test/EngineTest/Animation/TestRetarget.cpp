@@ -434,5 +434,5 @@ SW_TEST_CASE( RetargetTest, BakeClipFileWritesTargetClip )
     SW_EXPECT_NEAR_EQUAL( source.getDuration(), baked.getDuration(), 1e-3f );
     SW_ASSERT_EQUAL( minion.getBoneCount(), baked.getTrackCount() );
     SW_EXPECT_TRUE( baked.getTrackNames()[1] == minion.getBone( 1 )._name );
-    SW_EXPECT_TRUE( baked.getCodecId() == source.getCodecId() );
+    SW_EXPECT_TRUE( baked.getCodecID() == source.getCodecID() );
 }

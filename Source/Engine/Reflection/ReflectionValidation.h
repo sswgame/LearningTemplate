@@ -33,7 +33,7 @@ namespace sw
         string             _sourceLabel;  ///< 어느 오브젝트(이름 · 경로)에서 났는가 — 부르는 쪽이 정한다
         hashed_string      _typeName;     ///< 검증 함수가 속한 타입(FQN)
         hashed_string      _propertyName; ///< 프로퍼티 검증이면 그 이름, 타입 검증이면 비어 있다
-        uint64             _sourceId{ 0 };
+        uint64             _sourceID{ 0 };
         ValidationSeverity _severity{ ValidationSeverity::Warning };
     };
 } // namespace sw
@@ -59,7 +59,7 @@ namespace sw
         void clear() { _listIssue.clear(); }
 
         /** @brief 결과에 붙일 출처(오브젝트)입니다. */
-        void setSource( uint64 sourceId, string_view sourceLabel );
+        void setSource( uint64 sourceID, string_view sourceLabel );
         /** @brief 지금 돌리는 검증 함수의 타입 · 프로퍼티입니다(`ReflectionValidation` 이 부른다). */
         void setScope( const hashed_string& typeName, const hashed_string& propertyName );
 
@@ -70,7 +70,7 @@ namespace sw
         string                  _sourceLabel;
         hashed_string           _typeName;
         hashed_string           _propertyName;
-        uint64                  _sourceId;
+        uint64                  _sourceID;
     };
 } // namespace sw
 
@@ -103,10 +103,10 @@ namespace sw
     public:
         static ValidationIssueLog& get();
 
-        /** @brief @p sourceId 의 결과를 @p listIssue 로 바꿉니다(비었으면 그 출처를 지운다). */
-        void replaceIssues( uint64 sourceId, const vector<ValidationIssue>& listIssue );
+        /** @brief @p sourceID 의 결과를 @p listIssue 로 바꿉니다(비었으면 그 출처를 지운다). */
+        void replaceIssues( uint64 sourceID, const vector<ValidationIssue>& listIssue );
         /** @brief 출처 하나의 결과를 지웁니다(오브젝트가 사라졌다). */
-        void removeSource( uint64 sourceId );
+        void removeSource( uint64 sourceID );
         /** @brief 모든 결과를 출처 순서 없이 모읍니다. */
         void collectIssues( vector<ValidationIssue>& outListIssue ) const;
         /** @brief 모든 결과의 수입니다. */

@@ -78,8 +78,8 @@ namespace sw
     private:
         void      paintMap();
         void      spawnBase( int32 player, bool bMirror );
-        void      spawnResource( const utf8* pDefId, int32 x, int32 y, bool bMirror );
-        RTSUnitId spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror );
+        void      spawnResource( const utf8* pDefID, int32 x, int32 y, bool bMirror );
+        RTSUnitID spawnAt( const utf8* pDefID, int32 owner, int32 x, int32 y, bool bMirror );
         /** @brief 적 시작 지점에 닿아 놀고 있는 병력을 가장 가까운 남은 적 건물로 보냅니다(멀리 지은 보급고가 남아 판이 끝나지 않는 일을 막는다). */
         void huntRemaining( int32 player );
 

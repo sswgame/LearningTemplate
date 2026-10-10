@@ -18,7 +18,7 @@ namespace sw
         /** @brief 프로세스에 하나인 인스턴스입니다(상태가 없습니다). */
         static const RawAnimCodec& getInstance();
 
-        AnimCodecId        getId() const override { return AnimCodecId::Raw; }
+        AnimCodecID        getID() const override { return AnimCodecID::Raw; }
         const utf8*        getName() const override { return "raw"; }
         [[nodiscard]] bool compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const override;
         [[nodiscard]] bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask = nullptr ) const override;

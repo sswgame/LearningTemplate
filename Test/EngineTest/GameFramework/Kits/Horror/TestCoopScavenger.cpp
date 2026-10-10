@@ -144,7 +144,7 @@ namespace
     {
         const ScavengerFacility& facility = expedition.getFacility();
         vector<hashed_string>    listArea;
-        if ( facility.getGraph().findPath( expedition.findCrewMember( player )->_areaId, target, facility.getFlags(), listArea ) == false )
+        if ( facility.getGraph().findPath( expedition.findCrewMember( player )->_areaID, target, facility.getFlags(), listArea ) == false )
             return false;
         for ( size_t index = 1; index < listArea.size(); ++index )
         {
@@ -157,17 +157,17 @@ namespace
     /** @brief 우주선에서 닿는 첫 고철(시신 · 양손 제외)을 주워 우주선에 싣습니다. 실은 고철의 가치입니다(없으면 −1). */
     int32 fetchOneScrap( ScavengerExpedition& expedition, int32 player )
     {
-        const hashed_string ship( ScavengerExpedition::kShipAreaId );
+        const hashed_string ship( ScavengerExpedition::kShipAreaID );
         for ( const ScavengerScrap& scrap : expedition.getFacility().getGroundScrap() )
         {
             if ( scrap.isBody() || scrap._bTwoHanded == SW_TRUE )
                 continue;
             vector<hashed_string> listArea;
-            if ( expedition.getFacility().getGraph().findPath( ship, scrap._areaId, expedition.getFacility().getFlags(), listArea ) == false )
+            if ( expedition.getFacility().getGraph().findPath( ship, scrap._areaID, expedition.getFacility().getFlags(), listArea ) == false )
                 continue;
             const int32 uid   = scrap._uid;
             const int32 value = scrap._value;
-            if ( walkTo( expedition, player, scrap._areaId ) == false || expedition.pickUp( player, uid ) != ScavengerPickupResult::Ok )
+            if ( walkTo( expedition, player, scrap._areaID ) == false || expedition.pickUp( player, uid ) != ScavengerPickupResult::Ok )
                 return -1;
             if ( walkTo( expedition, player, ship ) == false || expedition.depositToShip( player ) != 1 )
                 return -1;
@@ -272,8 +272,8 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
     for ( const ScavengerScrap& scrap : facility.getGroundScrap() )
     {
         SW_EXPECT_TRUE( scrap._value >= 20 && scrap._value <= 120 );
-        SW_EXPECT_TRUE( scrap._areaId != hashed_string( "outside" ) && scrap._areaId != hashed_string( "ship" ) );
-        SW_EXPECT_TRUE( ( scrap._scrapId == hashed_string( "bell" ) ) == ( scrap._bTwoHanded == SW_TRUE ) );
+        SW_EXPECT_TRUE( scrap._areaID != hashed_string( "outside" ) && scrap._areaID != hashed_string( "ship" ) );
+        SW_EXPECT_TRUE( ( scrap._scrapID == hashed_string( "bell" ) ) == ( scrap._bTwoHanded == SW_TRUE ) );
     }
     int32           fireExitCount = 0;
     const AreaLink* pLocked       = nullptr;
@@ -313,7 +313,7 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
     SW_EXPECT_TRUE( again.getGraph().getLinks().size() == facility.getGraph().getLinks().size() );
     for ( size_t index = 0; index < again.getGroundScrap().size(); ++index )
     {
-        SW_EXPECT_TRUE( again.getGroundScrap()[index]._areaId == facility.getGroundScrap()[index]._areaId );
+        SW_EXPECT_TRUE( again.getGroundScrap()[index]._areaID == facility.getGroundScrap()[index]._areaID );
         SW_EXPECT_EQUAL( facility.getGroundScrap()[index]._value, again.getGroundScrap()[index]._value );
     }
 
@@ -323,7 +323,7 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
     SW_EXPECT_TRUE( titan.getGroundScrap().size() >= 20 );
     for ( const ScavengerScrap& scrap : titan.getGroundScrap() )
     {
-        SW_EXPECT_TRUE( scrap._scrapId != hashed_string( "bolt" ) );
+        SW_EXPECT_TRUE( scrap._scrapID != hashed_string( "bolt" ) );
         SW_EXPECT_TRUE( scrap._value >= 72 && scrap._value <= 180 );
     }
     ScavengerFacility company;
@@ -429,7 +429,7 @@ SW_TEST_CASE( CoopScavengerTest, DayFlowDuskMidnightDepartureAndLeftBehind )
     SW_EXPECT_EQUAL( 1, expedition.getQuota().getDaysLeft() );
     SW_EXPECT_EQUAL( 1, expedition.getDayIndex() );
     SW_EXPECT_EQUAL( 2, expedition.countAlive() );
-    SW_EXPECT_TRUE( expedition.findCrewMember( 1 )->_areaId == hashed_string( "ship" ) );
+    SW_EXPECT_TRUE( expedition.findCrewMember( 1 )->_areaID == hashed_string( "ship" ) );
 
     // 이동 비용 — 모자라면 가지 못한다.
     SW_EXPECT_TRUE( expedition.routeTo( "titan" ) == ScavengerActionResult::Ok );
@@ -472,7 +472,7 @@ SW_TEST_CASE( CoopScavengerTest, BodyRecoveryFinesAndWipeLoss )
         SW_EXPECT_NEAR_EQUAL( 0.4f, expedition.findCrewMember( 1 )->_carry.computeSpeedScale(), 0.0001f );
         for ( const ScavengerScrap& scrap : expedition.getFacility().getGroundScrap() )
         {
-            if ( scrap._areaId == hashed_string( "entrance" ) && scrap.isBody() == false )
+            if ( scrap._areaID == hashed_string( "entrance" ) && scrap.isBody() == false )
                 SW_EXPECT_TRUE( expedition.pickUp( 1, scrap._uid ) == ScavengerPickupResult::HandsFull );
         }
         if ( walkTo( expedition, 1, "ship" ) == false || expedition.depositToShip( 1 ) != 1 )
@@ -522,12 +522,12 @@ SW_TEST_CASE( CoopScavengerTest, ThreatsScaleWithMoonRiskAndWeather )
         int32 _outdoor{ 0 };
         bool  _bTagsRespected{ true };
     };
-    const auto countThreats = [&]( const utf8* pMoonId ) -> ThreatCount
+    const auto countThreats = [&]( const utf8* pMoonID ) -> ThreatCount
     {
         ScavengerExpedition expedition;
         expedition.initialize( data.makeData(), data.makeRefs(), data.openShipStorage(), 5u, 1 );
         ThreatCount count;
-        if ( expedition.routeTo( hashed_string( pMoonId ) ) != ScavengerActionResult::Ok || expedition.land() != ScavengerActionResult::Ok )
+        if ( expedition.routeTo( hashed_string( pMoonID ) ) != ScavengerActionResult::Ok || expedition.land() != ScavengerActionResult::Ok )
             return count;
         vector<ScavengerEvent> listEvent;
         runScavenger( expedition, 60.0f, listEvent );

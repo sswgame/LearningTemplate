@@ -338,7 +338,7 @@ SW_TEST_CASE( FractureComponentTest, NetworkSnapshotRebuildsTheBrokenState )
     {
         const sw::FractureGroupPose& serverPose = listServerPose[index];
         const sw::FractureGroupPose& clientPose = listClientPose[index];
-        SW_EXPECT_EQUAL( serverPose._groupId, clientPose._groupId );
+        SW_EXPECT_EQUAL( serverPose._groupID, clientPose._groupID );
         if ( clientPose._bGone == SW_TRUE || clientPose._bHasBody == SW_FALSE )
             continue;
         if ( pClientWall->isChunkVolume( clientPose._volume ) )

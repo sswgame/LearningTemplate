@@ -59,7 +59,7 @@ namespace sw
     void ServerDirectoryClient::onStatusResponse( const OnlineResponse& response )
     {
         StatusDelegate onStatus;
-        if ( _statusCallTable.take( response._requestId, onStatus ) == false )
+        if ( _statusCallTable.take( response._requestID, onStatus ) == false )
             return;
         uint16                errorCode = response._errorCode;
         ServerDirectoryStatus status;
@@ -83,7 +83,7 @@ namespace sw
     void ServerDirectoryClient::onAssignmentResponse( const OnlineResponse& response )
     {
         AssignmentDelegate onAssignment;
-        if ( _assignmentCallTable.take( response._requestId, onAssignment ) == false )
+        if ( _assignmentCallTable.take( response._requestID, onAssignment ) == false )
             return;
         uint16           errorCode = response._errorCode;
         ServerAssignment assignment;
@@ -100,7 +100,7 @@ namespace sw
     void ServerDirectoryClient::onServerListResponse( const OnlineResponse& response )
     {
         ServerListDelegate onServerList;
-        if ( _serverListCallTable.take( response._requestId, onServerList ) == false )
+        if ( _serverListCallTable.take( response._requestID, onServerList ) == false )
             return;
         uint16                  errorCode = response._errorCode;
         vector<ServerListEntry> listEntry;

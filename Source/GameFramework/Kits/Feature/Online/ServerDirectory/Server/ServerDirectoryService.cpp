@@ -55,7 +55,7 @@ namespace sw
 
             static uint64 combineText( uint64 hash, string_view text ) { return HashUtil::combine( hash, StringUtil::computeHash64( text.data(), text.size(), false ) ); }
 
-            static string makeActor( AccountId actorId ) { return actorId == kInvalidAccountId ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorId ); }
+            static string makeActor( AccountID actorID ) { return actorID == kInvalidAccountID ? string( "system" ) : "gm." + ServiceKeyUtil::makeHex64( actorID ); }
 
             /** @brief 공지 정렬 — 우선순위 내림차순, 같으면 시작 시각 내림차순, 같으면 id 오름차순(결정적). */
             struct NoticeOrder
@@ -66,7 +66,7 @@ namespace sw
                         return left._priority > right._priority;
                     if ( left._startMs != right._startMs )
                         return left._startMs > right._startMs;
-                    return left._noticeId < right._noticeId;
+                    return left._noticeID < right._noticeID;
                 }
             };
         };
@@ -283,7 +283,7 @@ namespace sw
         {
             if ( notice.isActive( nowMs ) == false )
                 continue;
-            hash = HashUtil::combine( hash, notice._noticeId );
+            hash = HashUtil::combine( hash, notice._noticeID );
             hash = Internal::combineText( hash, notice._text );
             hash = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( notice._priority ) ) );
         }
@@ -318,11 +318,11 @@ namespace sw
         return status;
     }
 
-    bool ServerDirectoryService::isBlockedByMaintenance( string_view kind, AccountId accountId, int64 nowMs, MaintenanceWindow* pOutWindow ) const
+    bool ServerDirectoryService::isBlockedByMaintenance( string_view kind, AccountID accountID, int64 nowMs, MaintenanceWindow* pOutWindow ) const
     {
         for ( const MaintenanceWindow& window : _listMaintenance )
         {
-            const bool bBlocks = window.isActive( nowMs ) && window.appliesTo( kind ) && window.allowsAccount( accountId ) == false;
+            const bool bBlocks = window.isActive( nowMs ) && window.appliesTo( kind ) && window.allowsAccount( accountID ) == false;
             if ( bBlocks == false )
                 continue;
             if ( pOutWindow != nullptr )
@@ -332,7 +332,7 @@ namespace sw
         return false;
     }
 
-    ServerAssignment ServerDirectoryService::assignServer( AccountId accountId, const ServerAssignmentRequest& request, int64 nowMs )
+    ServerAssignment ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, int64 nowMs )
     {
         ServerAssignment      assignment;
         ServerRegistryReader* pReader = findReader( request._kind );
@@ -342,7 +342,7 @@ namespace sw
             return assignment;
         }
         MaintenanceWindow window;
-        if ( isBlockedByMaintenance( request._kind, accountId, nowMs, &window ) )
+        if ( isBlockedByMaintenance( request._kind, accountID, nowMs, &window ) )
         {
             assignment._result           = ServerDirectoryResult::Maintenance;
             assignment._maintenanceEndMs = window._endMs;
@@ -370,7 +370,7 @@ namespace sw
             return assignment;
         }
         assignment._result   = ServerDirectoryResult::Ok;
-        assignment._serverId = picked._descriptor._serverId;
+        assignment._serverID = picked._descriptor._serverID;
         assignment._address  = picked._descriptor._address;
         assignment._port     = picked._descriptor._port;
         return assignment;
@@ -387,7 +387,7 @@ namespace sw
             if ( bStale || status._state == ServerState::Starting || static_cast<int32>( outListEntry.size() ) >= ServerDirectoryLimit::kMaxServerListCount )
                 continue;
             ServerListEntry& entry = outListEntry.emplace_back();
-            entry._serverId        = status._descriptor._serverId;
+            entry._serverID        = status._descriptor._serverID;
             entry._region          = status._descriptor._region;
             entry._address         = status._descriptor._address;
             entry._port            = status._descriptor._port;
@@ -409,7 +409,7 @@ namespace sw
         return nullptr;
     }
 
-    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
         using Internal      = ServerDirectoryServiceInternal;
         const bool bScopeOk = window._scope == MaintenanceWindow::kScopeAll || ServerRecord::isValidName( window._scope );
@@ -425,7 +425,7 @@ namespace sw
         work->_table                              = Internal::getMaintenanceTable();
         work->_key                                = window._scope;
         work->_bytes                              = Internal::encodeMaintenance( window );
-        work->_auditEntry._actor                  = Internal::makeActor( actorId );
+        work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.maintenance.set";
         work->_auditEntry._subject                = "sd/" + window._scope;
         work->_auditEntry._memo                   = string( memo );
@@ -434,7 +434,7 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::clearMaintenance( string_view scope, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
@@ -445,7 +445,7 @@ namespace sw
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getMaintenanceTable();
         work->_key                                = string( scope );
-        work->_auditEntry._actor                  = Internal::makeActor( actorId );
+        work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.maintenance.clear";
         work->_auditEntry._subject                = "sd/" + string( scope );
         work->_auditEntry._memo                   = string( memo );
@@ -454,21 +454,21 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountId actorId, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag )
     {
         using Internal       = ServerDirectoryServiceInternal;
         const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
         const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
-        if ( notice._noticeId == 0 || bTextOk == false || bWindowOk == false )
+        if ( notice._noticeID == 0 || bTextOk == false || bWindowOk == false )
         {
             _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
             return;
         }
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getNoticeTable();
-        work->_key                                = ServiceKeyUtil::makeHex64( notice._noticeId );
+        work->_key                                = ServiceKeyUtil::makeHex64( notice._noticeID );
         work->_bytes                              = Internal::encodeNotice( notice );
-        work->_auditEntry._actor                  = Internal::makeActor( actorId );
+        work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.notice.post";
         work->_auditEntry._subject                = "sd/notice/" + work->_key;
         work->_auditEntry._after                  = notice._text;
@@ -477,13 +477,13 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::removeNotice( uint64 noticeId, AccountId actorId, int64 nowMs, uint64 requestTag )
+    void ServerDirectoryService::removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag )
     {
         using Internal                            = ServerDirectoryServiceInternal;
         unique_ptr<ServerDirectoryWriteWork> work = make_unique<ServerDirectoryWriteWork>();
         work->_table                              = Internal::getNoticeTable();
-        work->_key                                = ServiceKeyUtil::makeHex64( noticeId );
-        work->_auditEntry._actor                  = Internal::makeActor( actorId );
+        work->_key                                = ServiceKeyUtil::makeHex64( noticeID );
+        work->_auditEntry._actor                  = Internal::makeActor( actorID );
         work->_auditEntry._action                 = "sd.notice.remove";
         work->_auditEntry._subject                = "sd/notice/" + work->_key;
         work->_auditEntry._timeMs                 = nowMs;

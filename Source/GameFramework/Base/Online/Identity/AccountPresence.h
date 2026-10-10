@@ -19,14 +19,14 @@ namespace sw
 {
     class BitWriter;
 
-    /** @brief 찾은 결과 하나입니다. 접속해 있지 않으면 `_serverId` 가 0 입니다. */
+    /** @brief 찾은 결과 하나입니다. 접속해 있지 않으면 `_serverID` 가 0 입니다. */
     struct AccountPresenceResult
     {
         AccountIdentity _identity{}; ///< 이름으로 찾았으면 공개 신원, 계정 id 로 찾았으면 계정 id 만(못 찾았으면 계정 id 0)
-        uint64          _requestId{ 0 };
-        uint64          _serverId{ 0 }; ///< 그 계정이 붙어 있는 서버(이 서버일 수도 있다)
+        uint64          _requestID{ 0 };
+        uint64          _serverID{ 0 }; ///< 그 계정이 붙어 있는 서버(이 서버일 수도 있다)
 
-        bool isOnline() const { return _serverId != 0; }
+        bool isOnline() const { return _serverID != 0; }
     };
 
     using AccountPresenceDelegate = Delegate<void( const AccountPresenceResult& )>;
@@ -50,13 +50,13 @@ namespace sw
         /** @brief 접속한 계정을 표시 이름(대소문자 무시)으로 찾습니다. 0 이 아닌 요청 id — 결과는 @p onFound 로 한 번. */
         virtual uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) = 0;
         /** @brief 계정이 지금 붙어 있는 서버를 찾습니다(친구 접속 표시 · 다른 서버 귓속말 · 매칭 결과를 보낼 곳). 0 이 아닌 요청 id — 결과는 @p onFound 로 한 번. */
-        virtual uint64 submitFindByAccount( AccountId accountId, const AccountPresenceDelegate& onFound ) = 0;
+        virtual uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) = 0;
         /** @brief 다른 서버에 붙은 계정에게 알림(`[종류][몸]`)을 맡깁니다(그 계정의 서버를 찾아 넘긴다 — 접속해 있지 않으면 버린다). 서버 여럿이 아니면 false. */
-        virtual bool sendRemotePush( AccountId accountId, uint16 kind, const BitWriter& body ) = 0;
+        virtual bool sendRemotePush( AccountID accountID, uint16 kind, const BitWriter& body ) = 0;
         /**
          * @brief 맡긴 찾기를 취소합니다 — 그 델리게이트는 불리지 않는다. 델리게이트 주인이 이 창구보다 먼저 내려갈 때 자기 `shutdown` 에서 부른다
          *        (캐시 라우터의 `cancel` 과 같은 계약). 끝났거나 모르는 id 면 아무것도 하지 않는다.
          */
-        virtual void cancel( uint64 requestId ) = 0;
+        virtual void cancel( uint64 requestID ) = 0;
     };
 } // namespace sw

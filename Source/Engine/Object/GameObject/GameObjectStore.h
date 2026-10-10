@@ -55,17 +55,17 @@ namespace sw
 
         /** @brief 새 GameObject 를 만들고 등록합니다(`GameObjectManager::createGameObject`). */
         GameObject* createGameObject( hashed_string name );
-        /** @brief 앞서 발급한 objectId 를 그대로 써서 오브젝트를 다시 만듭니다(`GameObjectManager::createGameObjectWithId`). */
-        GameObject* createGameObjectWithId( hashed_string name, uint64 objectId );
+        /** @brief 앞서 발급한 objectID 를 그대로 써서 오브젝트를 다시 만듭니다(`GameObjectManager::createGameObjectWithID`). */
+        GameObject* createGameObjectWithID( hashed_string name, uint64 objectID );
         /** @brief 등록된 GameObject 의 이름이 바뀐 것을 이름 맵에 반영합니다(`GameObject::setName`). */
         void notifyNameChanged( GameObject* pObj, hashed_string oldName, hashed_string newName );
 
         /** @brief 이름으로 GameObject 를 찾습니다. */
         GameObject* findGameObjectByName( hashed_string name ) const;
         /** @brief 오브젝트 ID 로 GameObject 를 찾습니다. 락이 없습니다(칸이 그 id 를 들고 있으면). */
-        GameObject* findGameObjectById( uint64 objectId ) const;
+        GameObject* findGameObjectByID( uint64 objectID ) const;
         /** @brief 핸들이 가리키는 오브젝트를 찾습니다. 파괴됐거나 삭제 대기면 nullptr 입니다. */
-        GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectById( handle.objectId() ); }
+        GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectByID( handle.objectID() ); }
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 삭제 예정이면 nullptr 입니다. */
         Component* resolveComponent( ComponentHandle handle ) const;
 
@@ -195,7 +195,7 @@ namespace sw
 
         /**
          * @struct ObjectSlotTable
-         * @brief `objectId → GameObject*` 를 **락 없이** 읽는 밀집 표입니다.
+         * @brief `objectID → GameObject*` 를 **락 없이** 읽는 밀집 표입니다.
          *
          * @details 핸들 해석(`resolveComponent`)이 프레임당 오브젝트 수만큼 일어납니다. 매번 `_mutex` 를 공유 잠금하고
          *          해시 맵을 조회하면 큐브 20,000 개 벤치에서 **호출당 110ns, 프레임당 2.2ms** 다.
@@ -208,9 +208,9 @@ namespace sw
          *       맵(잠금 + 해시, 호출당 110 ns)으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 길이 된다. 칸을 **다른 살아 있는
          *       오브젝트**가 쓸 때만(이만큼 떨어진 id 둘이
          *       함께 살아 있을 때 — 오래 사는 오브젝트와 420 만 뒤의 스폰) 뒤에 온 것이 맵으로 갑니다. 칸의 오브젝트가 다른 id 면 "여기 없음" 이라
-         *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromId` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
-         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 오브젝트의 `_objectId` 를 한 번 더 읽어
-         *       조회가 0.8 ns 느리다. Release · FindById 번갈아 5 회 5.6 → 6.4 ns).
+         *       읽는 쪽이 id 를 견줍니다 — 묻는 id 가 `_compareFromID` 이상일 때만. 그 값은 칸 수이고, 칸 수를 넘는 id 가 한 번이라도 들어오면
+         *       0 이 됩니다. 그 전에는 칸 번호가 곧 id 라 작은 id 는 견줄 것이 없습니다(늘 견주면 오브젝트의 `_objectID` 를 한 번 더 읽어
+         *       조회가 0.8 ns 느리다. Release · FindByID 번갈아 5 회 5.6 → 6.4 ns).
          *       청크는 늘 1024 개 이하(32 MB 상한)입니다 — id 범위를
          *       넓히면(2 단 디렉터리) 지난 id 범위마다 청크가 남아 메모리가 스폰 수에 비례해 자랍니다. 언리얼 `FUObjectArray` 는 칸을
          *       재사용하고 약한 포인터가 일련번호로 견줍니다. 여기서는 id 자체가 일련번호입니다.
@@ -226,25 +226,25 @@ namespace sw
             using SlotArray = PagedArray<atomic<GameObject*>, kChunkSize, kMaxChunk>;
 
             /** @brief id 의 칸 번호입니다. */
-            static constexpr uint64 getSlotIndex( uint64 objectId ) { return objectId & ( kObjectSlotCount - 1 ); }
+            static constexpr uint64 getSlotIndex( uint64 objectID ) { return objectID & ( kObjectSlotCount - 1 ); }
             /** @brief 칸이 비었으면 씁니다. 다른 오브젝트가 쓰고 있으면 false — 부르는 쪽이 맵에 넣습니다. 저장소 락을 쥔 채 부르십시오. */
-            [[nodiscard]] bool tryStore( uint64 objectId, GameObject* pObject );
+            [[nodiscard]] bool tryStore( uint64 objectID, GameObject* pObject );
             /** @brief 칸이 이 오브젝트를 들고 있으면 비웁니다. 아니면 false — 맵에 든 것입니다. 저장소 락을 쥔 채 부르십시오. */
-            [[nodiscard]] bool tryRemove( uint64 objectId, const GameObject* pObject );
+            [[nodiscard]] bool tryRemove( uint64 objectID, const GameObject* pObject );
             /** @brief 칸이 **그 id 의** 오브젝트를 들고 있으면 반환합니다. **락이 필요 없습니다.** 비었거나 다른 id 면 nullptr 입니다. */
-            GameObject* load( uint64 objectId ) const;
+            GameObject* load( uint64 objectID ) const;
             /** @brief 모든 슬롯을 비웁니다. 락 없이 읽는 쪽이 있을 수 있어 청크는 그대로 둡니다. */
             void clear();
 
         private:
             SlotArray      _listSlot;
-            atomic<uint64> _compareFromId{ kObjectSlotCount }; ///< 이 이상의 id 를 물으면 칸의 오브젝트 id 와 견준다. 감긴 id 를 넣으면 0(`clear` 가 되돌린다)
+            atomic<uint64> _compareFromID{ kObjectSlotCount }; ///< 이 이상의 id 를 물으면 칸의 오브젝트 id 와 견준다. 감긴 id 를 넣으면 0(`clear` 가 되돌린다)
         };
 
-        /** @brief 새 ObjectId 를 발급합니다. */
-        static uint64 generateNewId();
-        /** @brief `_mutex` 를 쥔 채 @p objectId 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
-        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectId );
+        /** @brief 새 ObjectID 를 발급합니다. */
+        static uint64 generateNewID();
+        /** @brief `_mutex` 를 쥔 채 @p objectID 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
+        GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID );
         /**
          * @brief 잠금 없이 고유 이름을 만듭니다. 번호를 붙였으면 그 밑 이름과 번호를 @p outEntry 에 적습니다(`_pObject` 는 건드리지 않습니다).
          * @details 번호는 밑 이름마다 **지운 것부터 되씁니다**(`NameSuffixState`). 그래서 인턴되는 이름 수는 같은 이름으로 동시에 살아 있던
@@ -255,9 +255,9 @@ namespace sw
         void releaseNameSuffixUnlocked( const NameEntry& nameEntry );
         /**
          * @brief 잠금 없이 id 로 등록된 오브젝트(삭제 대기 포함)를 찾습니다. 슬롯 표를 보고, 범위 밖이면 맵을 봅니다.
-         * @details `findGameObjectById` 와 달리 삭제 대기 오브젝트도 반환하고 잠그지 않습니다. 이미 `_mutex` 를 쥔 자리에서 씁니다.
+         * @details `findGameObjectByID` 와 달리 삭제 대기 오브젝트도 반환하고 잠그지 않습니다. 이미 `_mutex` 를 쥔 자리에서 씁니다.
          */
-        GameObject* findRegisteredUnlocked( uint64 objectId ) const;
+        GameObject* findRegisteredUnlocked( uint64 objectID ) const;
         /**
          * @brief 잠금 없이 이름이 **살아 있는** 오브젝트에 쓰이고 있는지 봅니다.
          * @details 지연 파괴 대기(pending destroy) 오브젝트는 이름 맵에 남아 있지만 이름으로 찾을 수 없습니다. 그 이름은 비어 있는
@@ -280,10 +280,10 @@ namespace sw
          * @brief id → 오브젝트 맵입니다. **슬롯 표의 칸을 다른 살아 있는 오브젝트가 쓰는 id 만** 듭니다(보통 비어 있습니다).
          * @details 모든 오브젝트를 넣지 않습니다 — 표와 같은 답을 두 번 들고, 스폰마다 노드 할당 하나와 파괴마다 해제 하나가 붙는다.
          */
-        unordered_map<uint64, GameObject*> _mapIdToObject;
+        unordered_map<uint64, GameObject*> _mapIDToObject;
         /** @brief id → 오브젝트의 **빠른 읽기 길**입니다. 칸이 막힌 id 만 위 맵으로 갑니다. */
         ObjectSlotTable         _objectSlotTable;
-        atomic<uint32>          _overflowObjectCount; ///< `_mapIdToObject` 의 크기. 0 이면 읽는 쪽이 표에서 못 찾은 id 로 잠그지 않습니다
+        atomic<uint32>          _overflowObjectCount; ///< `_mapIDToObject` 의 크기. 0 이면 읽는 쪽이 표에서 못 찾은 id 로 잠그지 않습니다
         vector<GameObject*>     _listPendingAdd;
         vector<GameObject*>     _listPendingDestroyObject;
         vector<ComponentHandle> _listPendingDestroyComponent; ///< 핸들로 든다(`destroyComponent` 설명 참고)
@@ -292,11 +292,11 @@ namespace sw
 
         mutable std::shared_mutex _mutex;
         /**
-         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentId` 와 같은 규칙).
+         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentID` 와 같은 규칙).
          * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 지키려면 다른 매니저의 발급과 겹치지 않아야 한다 —
          *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체다.
          */
-        static atomic<uint64> _s_nextObjectId;
+        static atomic<uint64> _s_nextObjectID;
 
         bool                    _bProcessingDestruction;  ///< 지연 파괴를 처리하는 중 — 소멸자에서 다시 들어오면 단언한다
         vector<GameObject*>     _listPlayWalk;            ///< beginPlay · endPlay 가 잠금 없이 돌 오브젝트 목록(할당 재사용)

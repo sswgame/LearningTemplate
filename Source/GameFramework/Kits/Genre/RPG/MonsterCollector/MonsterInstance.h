@@ -22,11 +22,11 @@ namespace sw
     /** @brief 기술 칸 하나입니다. */
     struct MonsterMoveSlot
     {
-        hashed_string _moveId{};
+        hashed_string _moveID{};
         int32         _pp{ 0 };
         int32         _ppMax{ 0 };
 
-        bool isEmpty() const { return _moveId.empty(); }
+        bool isEmpty() const { return _moveID.empty(); }
     };
 } // namespace sw
 
@@ -38,8 +38,8 @@ namespace sw
         static constexpr int32  kMoveSlotCount = 4;
         static constexpr uint32 kStateMinBytes = 157; ///< `writeState` 한 개체의 최소 바이트(이름 셋 12 + 기술 칸 48 + 개체값 · 노력치 · 능력치 72 + 경험치 8 + 정수 넷 16 + 상태 1)
 
-        hashed_string   _speciesId{};
-        hashed_string   _natureId{};
+        hashed_string   _speciesID{};
+        hashed_string   _natureID{};
         string          _nickname{};
         MonsterMoveSlot _arrMove[kMoveSlotCount]{};
         int32           _arrIv[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
@@ -57,7 +57,7 @@ namespace sw
         bool  isFainted() const { return _hp <= 0; }
         int32 countMoves() const;
         /** @brief 이 기술을 가진 칸입니다. 없으면 −1 입니다. */
-        int32 findMoveSlot( const hashed_string& moveId ) const;
+        int32 findMoveSlot( const hashed_string& moveID ) const;
         /** @brief 개체 하나(종 · 성격 · 별명 · 기술 칸 · 개체값 · 노력치 · 능력치 · 경험치 · 레벨 · HP · 친밀도 · 상태이상)를 씁니다 — 보관함 · 전투가 함께 씁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다(종 · 기술이 카탈로그에 있는지는 부르는 쪽이 본다). */
@@ -108,7 +108,7 @@ namespace sw
          * @brief 종 · 레벨로 새 개체를 만듭니다. 개체값은 0..31 을 굴리고 성격은 카탈로그의 성격 중 하나를 굴립니다(씨앗이 같으면 같은 개체).
          * @details 기술은 그 레벨까지 배우는 것 중 **마지막 넷**입니다. 종이 없으면 빈 종 id 의 개체입니다.
          */
-        static MonsterInstance createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesId, int32 level, GameRandom& random );
+        static MonsterInstance createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random );
         /** @brief 쓰러뜨린 종의 노력치를 더합니다(한 능력치 252 · 합 510 에서 멈춘다). 능력치는 다시 셉니다. */
         static void addEffortValues( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const MonsterSpeciesDef& defeated );
         /** @brief 쓰러뜨려서 받는 경험치 ⌊b × L / 7⌋ 이고 트레이너전이면 ×1.5 입니다. */
@@ -119,15 +119,15 @@ namespace sw
          */
         static int32 gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent );
         /** @brief 기술을 배웁니다. 빈 칸이 있으면 거기, 없으면 @p replaceSlot 을 바꿉니다(−1 이면 실패). 이미 아는 기술도 실패입니다. */
-        [[nodiscard]] static bool learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveId,
+        [[nodiscard]] static bool learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID,
                                              int32 replaceSlot = -1 );
         /**
          * @brief 맞는 진화 갈래의 종입니다. 없으면 빈 이름입니다.
-         * @param itemId 비면 레벨업 진화(레벨 · 친밀도 조건만 있는 갈래)를, 비지 않으면 그 아이템 갈래를 봅니다.
+         * @param itemID 비면 레벨업 진화(레벨 · 친밀도 조건만 있는 갈래)를, 비지 않으면 그 아이템 갈래를 봅니다.
          */
-        static hashed_string findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemId );
+        static hashed_string findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemID );
         /** @brief 종을 바꾸고 능력치를 다시 셉니다(개체값 · 노력치 · 성격 · 기술 · 경험치는 그대로). */
-        [[nodiscard]] static bool evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesId );
+        [[nodiscard]] static bool evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesID );
         /** @brief HP · PP · 상태이상을 모두 회복합니다(포켓몬 센터). */
         static void restore( MonsterInstance& inoutMonster );
     };

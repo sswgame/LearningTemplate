@@ -23,12 +23,12 @@ namespace sw
 {
     /**
      * @struct ParkRidePlacement
-     * @brief 지을 수 있는 놀이기구 하나(배치 데이터의 한 줄)입니다. `_layoutId` 가 비면 평지 놀이기구, 아니면 코스터 레이아웃입니다.
+     * @brief 지을 수 있는 놀이기구 하나(배치 데이터의 한 줄)입니다. `_layoutID` 가 비면 평지 놀이기구, 아니면 코스터 레이아웃입니다.
      */
     struct ParkRidePlacement
     {
         ParkRide      _ride{};
-        hashed_string _layoutId{}; ///< 비면 평지 놀이기구
+        hashed_string _layoutID{}; ///< 비면 평지 놀이기구
         string        _shape{ "Cylinder" };
         float3        _position{};
         float3        _size{ 4.0f, 1.0f, 4.0f };

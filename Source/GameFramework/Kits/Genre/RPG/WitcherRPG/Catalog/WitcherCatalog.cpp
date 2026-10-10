@@ -50,9 +50,9 @@ namespace sw
     {
     }
 
-    hashed_string WitcherCatalog::getSkillColor( const hashed_string& skillId ) const
+    hashed_string WitcherCatalog::getSkillColor( const hashed_string& skillID ) const
     {
-        const WitcherSkillColorDef* pColor = _skillColorCatalog.find( skillId );
+        const WitcherSkillColorDef* pColor = _skillColorCatalog.find( skillID );
         return pColor != nullptr ? pColor->_color : hashed_string{};
     }
 
@@ -117,10 +117,10 @@ namespace sw
                 SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
-            const hashed_string id( pId );
+            const hashed_string id( pID );
             ++loadedCount;
             if ( WitcherCatalogInternal::isNamed( name, "Monster" ) )
             {
@@ -139,7 +139,7 @@ namespace sw
                 else if ( WitcherCatalogInternal::isNamed( kind, "Bomb" ) )
                     item._kind = WitcherAlchemyKind::Bomb;
                 else if ( kind.empty() == false && WitcherCatalogInternal::isNamed( kind, "Potion" ) == false )
-                    SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a potion", sourceName, pId, kind );
+                    SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a potion", sourceName, pID, kind );
                 item._toxicity = MathUtil::max( 0.0f, node.getAttributeFloat( "toxicity", item._toxicity ) );
                 item._duration = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", item._duration ) );
                 item._charges  = MathUtil::max( 1, node.getAttributeInt( "charges", item._charges ) );
@@ -222,7 +222,7 @@ namespace sw
     {
         WitcherContractDef contract;
         contract._id            = id;
-        contract._questId       = WitcherCatalogInternal::readName( node, "quest" );
+        contract._questID       = WitcherCatalogInternal::readName( node, "quest" );
         contract._reward        = MathUtil::max( 0, node.getAttributeInt( "reward", contract._reward ) );
         contract._limitRatio    = MathUtil::max( 1.0f, node.getAttributeFloat( "limit", contract._limitRatio ) );
         contract._angerMax      = MathUtil::max( 0.01f, node.getAttributeFloat( "angerMax", contract._angerMax ) );

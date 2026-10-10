@@ -4,7 +4,7 @@
 엔진 서비스 표와 그것을 **채우는 호스트**가 어긋나지 않는지 검사.
 
 `Source/RuntimeAPI/Service/EngineServiceList.xxx` 한 줄이 구조체 멤버 · getter · `areEngineServicesBound()` ·
-`ModuleServiceId` 를 전부 만든다. 그런데 **그 표를 실제로 채우는 것은 손으로 적은 대입 22줄**이고,
+`ModuleServiceID` 를 전부 만든다. 그런데 **그 표를 실제로 채우는 것은 손으로 적은 대입 22줄**이고,
 그것이 호스트마다 한 벌씩 있다(`EngineLoop::initialize`, `Test/TestFramework/main.cpp`). 목록이 하나여도
 채우는 곳이 둘이면 한쪽만 늘어난다.
 

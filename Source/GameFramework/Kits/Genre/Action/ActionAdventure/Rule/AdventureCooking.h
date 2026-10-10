@@ -50,7 +50,7 @@ namespace sw
     /** @brief 요리 결과입니다. */
     struct AdventureDish
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         hashed_string _effect{};
         float32       _duration{ 0.0f };
         float32       _potency{ 0.0f };

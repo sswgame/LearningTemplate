@@ -22,7 +22,7 @@
   material             셰이더 경로 · 블렌드 모드 · 정적 스위치 중복 · 키워드 프로퍼티와 스위치 대응 · 멀티 컴파일 선택값
   material_keywords    정적 스위치 키워드가 어느 셰이더 소스에라도 나오는가(안 나오면 죽은 퍼뮤테이션)
   component_type       씬 · 프리팹 컴포넌트가 소스의 `REFLECT` 타입인가(일곱 게임 팩 전부)
-  entity_id            씬 엔티티 id 가 0 이 아니고 겹치지 않으며 `_attachOwnerId` 가 있는 엔티티를 가리키는가
+  entity_id            씬 엔티티 id 가 0 이 아니고 겹치지 않으며 `_attachOwnerID` 가 있는 엔티티를 가리키는가
   prefab_guid          프리팹 인스턴스의 `prefabGuid` 가 그 프리팹 `.meta` 의 guid 인가 · `.meta` 의 sourcePath · guid 중복
                        (`stale_path_only` 면 guid 로는 열리지만 경로가 낡은 인스턴스만 알린다)
   catalog_reference    카탈로그(팩 데이터) 안의 id 참조가 같은(또는 지정한) 파일의 id 를 가리키는가 — 팩마다 규칙을 둔다
@@ -481,17 +481,17 @@ def checkEntityIdInternal(rule: Rule, relPath: str, context: ValidationContext) 
     listMessage: list[str] = []
     uniqueId: set[str] = set()
     for entity in root.iter("entity"):
-        entityId = entity.get("id", "")
-        if not entityId.isdigit() or int(entityId) == 0:
-            listMessage.append(f"entity '{entity.get('name')}' has id '{entityId}' (needs a non-zero integer)")
-        elif entityId in uniqueId:
-            listMessage.append(f"entity id {entityId} is used twice")
-        uniqueId.add(entityId)
+        entityID = entity.get("id", "")
+        if not entityID.isdigit() or int(entityID) == 0:
+            listMessage.append(f"entity '{entity.get('name')}' has id '{entityID}' (needs a non-zero integer)")
+        elif entityID in uniqueId:
+            listMessage.append(f"entity id {entityID} is used twice")
+        uniqueId.add(entityID)
     for entity in root.iter("entity"):
         for element in entity.iter():
-            ownerId = element.get("_attachOwnerId")
-            if ownerId and ownerId != "0" and ownerId not in uniqueId:
-                listMessage.append(f"entity {entity.get('id')} ({element.tag}) attaches to entity {ownerId}, which is not in the scene")
+            ownerID = element.get("_attachOwnerID")
+            if ownerID and ownerID != "0" and ownerID not in uniqueId:
+                listMessage.append(f"entity {entity.get('id')} ({element.tag}) attaches to entity {ownerID}, which is not in the scene")
     return listMessage
 
 

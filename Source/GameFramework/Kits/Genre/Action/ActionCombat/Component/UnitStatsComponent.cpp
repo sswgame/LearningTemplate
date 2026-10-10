@@ -27,10 +27,10 @@ namespace sw
                 if ( pManager == nullptr )
                     return;
 
-                const uint64 objectId = pOwner->getObjectId();
-                pManager->deferPostTick( [pManager, objectId, amount, bHeal, instigator]()
+                const uint64 objectID = pOwner->getObjectID();
+                pManager->deferPostTick( [pManager, objectID, amount, bHeal, instigator]()
                 {
-                    GameObject* pObj = pManager->findGameObjectById( objectId );
+                    GameObject* pObj = pManager->findGameObjectByID( objectID );
                     if ( pObj == nullptr )
                         return;
 

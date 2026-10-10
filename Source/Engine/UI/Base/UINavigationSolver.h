@@ -36,8 +36,8 @@ namespace sw
          */
         static float32 computeSpatialScore( const UIRect& from, const UIRect& candidate, UINavigationDirection direction );
         /** @brief @p from 에서 @p direction 으로 옮길 위젯입니다. 없으면 무효 번호입니다(그대로 선다). */
-        static WidgetId findNextWidget( const WidgetTree& tree, WidgetId from, UINavigationDirection direction );
+        static WidgetID findNextWidget( const WidgetTree& tree, WidgetID from, UINavigationDirection direction );
         /** @brief @p scope 아래(자기 포함)에서 문서 순서로 처음 받을 수 있는 위젯입니다. 없으면 무효 번호입니다. */
-        static WidgetId findFirstFocusable( const Widget& scope );
+        static WidgetID findFirstFocusable( const Widget& scope );
     };
 } // namespace sw

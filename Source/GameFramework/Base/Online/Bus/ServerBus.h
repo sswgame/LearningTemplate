@@ -1,7 +1,7 @@
 /**
  * @file ServerBus.h
  * @brief 서버 프로세스끼리의 알림 — 주제(topic) 발행/구독, 최대 한 번 배달입니다.
- * @details 놓치면 안 되는 것은 영속 저장 + 다시 읽기(버스는 "빨리 알기" 용). 받은 메시지에 자기 서버가 보낸 것도 온다(`_originServerId` 로 거른다).
+ * @details 놓치면 안 되는 것은 영속 저장 + 다시 읽기(버스는 "빨리 알기" 용). 받은 메시지에 자기 서버가 보낸 것도 온다(`_originServerID` 로 거른다).
  *          주제는 `[0-9a-z_.]`(200 B 이하) — "account.revoke" · "config.changed" · "chat.channel.<이름>". 틀린 주제의 발행 · 구독은 경고를 남기고 버린다.
  *          구현: `EphemeralServerBus`(캐시 발행/구독 위 — 서버 여럿), `LocalServerBus`(프로세스 안 — 서버 한 대 · 시험).
  */
@@ -19,7 +19,7 @@ namespace sw
     {
         vector<uint8> _bytes{};
         string        _topic{};
-        uint64        _originServerId{ 0 };
+        uint64        _originServerID{ 0 };
         uint64        _sequence{ 0 }; ///< 보낸 서버 안의 순번(1 부터 — 빠짐 감지, 진단만)
     };
 } // namespace sw
@@ -48,7 +48,7 @@ namespace sw
         virtual void unsubscribe( string_view topic )                             = 0;
         /** @brief 받은 메시지를 뒤에 붙입니다(서비스 스레드 — 틱마다). 붙인 수입니다. */
         virtual int32  pollMessages( vector<ServerBusMessage>& outListMessage ) = 0;
-        virtual uint64 getServerId() const                                      = 0;
+        virtual uint64 getServerID() const                                      = 0;
 
         /** @brief 주제 규칙(`[0-9a-z_.]`, 1..200 B)을 지키는가입니다. */
         static bool isValidTopic( string_view topic );

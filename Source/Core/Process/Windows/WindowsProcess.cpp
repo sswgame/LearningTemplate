@@ -55,7 +55,7 @@ namespace sw
         }
 
         _bufferedOutput.clear();
-        _processId.store( 0 );
+        _processID.store( 0 );
     }
 
     bool Process::launch( string_view command, const ProcessOptions& options )
@@ -137,8 +137,8 @@ namespace sw
 
         // 정상 종료 요청(`requestStop` — 콘솔 그룹에 Ctrl+Break)을 받을 자식은 이 프로세스의 콘솔을 나눠 써야 한다. CREATE_NO_WINDOW 는 숨은 새 콘솔을
         // 만들어 이벤트가 닿지 않는다. 이 프로세스에 콘솔이 없으면(서비스 · 창 앱) 나눠 쓸 것이 없으니 그대로 숨긴다 — 새 콘솔 창이 뜨지 않게.
-        DWORD       consoleProcessId = 0;
-        const bool  bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessId, 1 ) != 0;
+        DWORD       consoleProcessID = 0;
+        const bool  bShareConsole    = options._bNewProcessGroup && GetConsoleProcessList( &consoleProcessID, 1 ) != 0;
         const DWORD creationFlags    = ( options._bCreateWindow || bShareConsole ? 0 : CREATE_NO_WINDOW ) | EXTENDED_STARTUPINFO_PRESENT |
                                     ( options._bNewProcessGroup ? CREATE_NEW_PROCESS_GROUP : 0 );
 
@@ -174,7 +174,7 @@ namespace sw
         _pStdOutRead      = hStdOutRead;
         _pStdInWrite      = hStdInWrite;
         _bNewProcessGroup = options._bNewProcessGroup;
-        _processId.store( static_cast<int32>( pi.dwProcessId ) );
+        _processID.store( static_cast<int32>( pi.dwProcessId ) );
 
         return true;
     }
@@ -283,9 +283,9 @@ namespace sw
 
     bool Process::requestStop()
     {
-        const int32 processId = _processId.load();
+        const int32 processID = _processID.load();
         // Ctrl+Break 는 콘솔 그룹에 간다 — 새 그룹으로 띄운 자식이 아니면 이 프로세스(와 같은 콘솔의 모두)가 받는다.
-        return _bNewProcessGroup && processId > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processId ) ) != FALSE;
+        return _bNewProcessGroup && processID > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processID ) ) != FALSE;
     }
 
     bool Process::isRunning() const
@@ -298,17 +298,17 @@ namespace sw
         return WaitForSingleObject( static_cast<HANDLE>( _pNativeHandle ), 0 ) == WAIT_TIMEOUT;
     }
 
-    int32 Process::getCurrentProcessId()
+    int32 Process::getCurrentProcessID()
     {
         return static_cast<int32>( GetCurrentProcessId() );
     }
 
-    bool Process::isProcessAlive( int32 processId )
+    bool Process::isProcessAlive( int32 processID )
     {
-        if ( processId <= 0 )
+        if ( processID <= 0 )
             return false;
 
-        HANDLE hProcess = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, static_cast<DWORD>( processId ) );
+        HANDLE hProcess = OpenProcess( PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE, FALSE, static_cast<DWORD>( processID ) );
         if ( hProcess == nullptr )
             return GetLastError() == ERROR_ACCESS_DENIED; // 있지만 열 수 없다
 

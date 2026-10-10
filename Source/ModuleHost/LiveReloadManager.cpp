@@ -132,7 +132,7 @@ namespace sw
         , _onBeforeCommitBatch{}
         , _drainWorkers{}
         , _listDeferredUnloadImage{}
-        , _reloadBatchId{ 0 }
+        , _reloadBatchID{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -578,7 +578,7 @@ namespace sw
         out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
 
         ++LiveReloadManagerInternal::s_reloadCount;
-        const string tempName = ShadowCopyName::make( ctx._moduleName, Process::getCurrentProcessId(), LiveReloadManagerInternal::s_reloadCount, out._sourceMtime );
+        const string tempName = ShadowCopyName::make( ctx._moduleName, Process::getCurrentProcessID(), LiveReloadManagerInternal::s_reloadCount, out._sourceMtime );
         const string execDir  = FileUtil::getDirectoryPart( ctx._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
@@ -832,12 +832,12 @@ namespace sw
         deferredImage._moduleName  = string{ moduleName };
         deferredImage._tempPath    = string{ tempPath };
         deferredImage._pHandle     = pHandle;
-        deferredImage._batchId     = _reloadBatchId;
+        deferredImage._batchID     = _reloadBatchID;
         deferredImage._bKeepMapped = bKeepMapped;
         _listDeferredUnloadImage.push_back( std::move( deferredImage ) );
 
         // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
-        while ( _listDeferredUnloadImage.back()._batchId - _listDeferredUnloadImage.front()._batchId >= kMaxDeferredUnloadBatchCount )
+        while ( _listDeferredUnloadImage.back()._batchID - _listDeferredUnloadImage.front()._batchID >= kMaxDeferredUnloadBatchCount )
         {
             unloadOldestDeferredBatch();
         }
@@ -848,9 +848,9 @@ namespace sw
         if ( _listDeferredUnloadImage.empty() )
             return;
 
-        const uint32 oldestBatchId = _listDeferredUnloadImage.front()._batchId;
+        const uint32 oldestBatchID = _listDeferredUnloadImage.front()._batchID;
         size_t       batchEnd{ 0 };
-        while ( batchEnd < _listDeferredUnloadImage.size() && _listDeferredUnloadImage[batchEnd]._batchId == oldestBatchId )
+        while ( batchEnd < _listDeferredUnloadImage.size() && _listDeferredUnloadImage[batchEnd]._batchID == oldestBatchID )
         {
             ++batchEnd;
         }
@@ -862,10 +862,10 @@ namespace sw
             {
                 // 다른 코드가 아직 구독하는 이벤트 채널을 이 이미지가 만들었다(`ModuleImageUtil::releaseModuleCode`). 내리지도, 파일을 지우지도 않는다.
                 SW_LOG_INFO( "Keeping deferred module image %# mapped (batch %#) — an event channel it created is still subscribed", deferredImage._moduleName,
-                             deferredImage._batchId );
+                             deferredImage._batchID );
                 continue;
             }
-            SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchId, deferredImage._pHandle );
+            SW_LOG_INFO( "Unloading deferred module image %# (batch %#, handle=%#)", deferredImage._moduleName, deferredImage._batchID, deferredImage._pHandle );
             ModuleImageUtil::unloadDynamicLibrary( deferredImage._pHandle );
             LiveReloadManagerInternal::tryDeleteShadowArtifacts( deferredImage._tempPath );
         }
@@ -1080,7 +1080,7 @@ namespace sw
             return;
         }
 
-        ++_reloadBatchId;
+        ++_reloadBatchID;
 
         size_t committed{ 0 };
         for ( size_t moduleIndex = 0; moduleIndex < listPrepared.size(); ++moduleIndex )

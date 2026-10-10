@@ -96,7 +96,7 @@ namespace sw
             entry._ageSeconds += deltaSeconds;
             if ( entry._ageSeconds < entry._desc._durationSeconds )
                 continue;
-            Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetById( entry._widget ) : nullptr;
+            Widget*      pWidget = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
             PanelWidget* pParent = pWidget != nullptr ? pWidget->getParent() : nullptr;
             if ( pParent != nullptr )
                 (void)pParent->removeChild( pWidget ); // 부모에서 찾은 위젯이라 늘 빠진다
@@ -183,7 +183,7 @@ namespace sw
             return;
         }
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );
-        entry._widget = widget->getId();
+        entry._widget = widget->getID();
         (void)pStack->addChild( std::move( widget ) );
         refreshEntry( entry );
     }
@@ -192,7 +192,7 @@ namespace sw
     {
         using Internal    = UINotificationServiceInternal;
         UIScreen* pScreen = _ui.findScreen( _screen );
-        Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetById( entry._widget ) : nullptr;
+        Widget*   pEntry  = pScreen != nullptr ? pScreen->getTree().findWidgetByID( entry._widget ) : nullptr;
         if ( pEntry == nullptr )
             return; // 아직 기다리는 중
         if ( TextWidget* pMessage = castTo<TextWidget>( Internal::findDescendant( *pEntry, Internal::kMessageName ) ); pMessage != nullptr )

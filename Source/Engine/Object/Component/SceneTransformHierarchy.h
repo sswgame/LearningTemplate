@@ -170,13 +170,13 @@ namespace sw
          * @brief 틱 중의 세터 한 건을 **자기 스레드 슬롯**의 쓰기 큐에 올립니다(다른 오브젝트의 컴포넌트에 쓰는 것). 워커에서 불립니다.
          * @details 힙 할당도 공유 뮤텍스도 없이 슬롯 목록에 값으로 넣습니다(지연 델리게이트로 미루면 건마다 힙 람다 · 뮤텍스 줄서기 ·
          *          틱 뒤 직렬 재적용이 붙는다). 같은 슬롯의 직전 건이 같은 컴포넌트면 합칩니다(위치 · 스케일을 잇따라 부르는 흔한 모양).
-         *          @p writerId 는 이 쓰기를 낸 틱의 주인 오브젝트(`GameObjectManager::queueTransformWrite` 가 그 스레드의 틱 주인에서 구합니다)이고 순서 키가 됩니다 — 같은 컴포넌트에 여러
+         *          @p writerID 는 이 쓰기를 낸 틱의 주인 오브젝트(`GameObjectManager::queueTransformWrite` 가 그 스레드의 틱 주인에서 구합니다)이고 순서 키가 됩니다 — 같은 컴포넌트에 여러
          *          오브젝트의 틱이 썼으면 (쓴 오브젝트 id, 그 스레드의 순번) 순으로 적용해 마지막이 이깁니다(유니티 `EntityCommandBuffer.ParallelWriter`
          *          의 sortKey). 키는 건(`SceneTransformWrite`)이 아니라 슬롯의 키 목록에 둡니다 — 건은 바깥 배치도 쓰는 64 바이트라, 키를 넣어
          *          80 바이트가 되면 배치 8000 건이 읽는 양이 25% 는다.
          * @return 큐에 올렸으면 true 입니다. 슬롯이 준비되지 않았으면 false 이고, 부르는 쪽이 지연 델리게이트로 돌립니다.
          */
-        bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerId );
+        bool queueWriteParallel( const SceneTransformWrite& write, uint64 writerID );
         /**
          * @brief 틱 중에 칸에 바로 쓴 컴포넌트의 칸 번호를 **자기 스레드 슬롯**의 대기 목록에 올립니다. 워커에서 불립니다.
          * @details 세터(`SceneComponent::writeTickTransform`)가 칸이 처음 대기에 들 때 한 번 부릅니다. 대기 값 자체는 칸에 있고, 목록은
@@ -197,7 +197,7 @@ namespace sw
          * @brief 바깥에서 준 쓰기 여럿을 적용합니다(`GameObjectManager::applyTransformBatch`). 건수가 문턱을 넘으면 워커에 나눕니다.
          * @details 틱 중이면 건마다 세터로 돌립니다 — 세터가 틱 중 쓰기 길을 탑니다. 배치의 병렬 적용은 구조 변경이 없는 틱 밖에서만 안전합니다.
          *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다. 세대는 끝에 한 번 올립니다. 같은 핸들이 여러 번 있으면 배열에서
-         *          뒤의 것이 이깁니다 — 병렬일 때도 그렇도록 건을 대상(componentId) 버킷으로 나눠, 한 대상은 한 워커가 배열 순서대로 씁니다.
+         *          뒤의 것이 이깁니다 — 병렬일 때도 그렇도록 건을 대상(componentID) 버킷으로 나눠, 한 대상은 한 워커가 배열 순서대로 씁니다.
          *          배열을 연속 구간으로 자르면 같은 핸들이 두 구간에 있을 때 두 워커가 한 칸을 동시에 쓴다.
          * @return 실제로 값이 바뀐 건수입니다(틱 중이면 세터로 돌린 건수).
          */
@@ -238,14 +238,14 @@ namespace sw
         /** @brief 틱 큐 건 하나의 순서 키입니다(슬롯의 건 목록과 같은 자리). */
         struct TickWriteKey
         {
-            uint64 _writerId{ 0 }; ///< 이 쓰기를 낸 틱의 주인 오브젝트 id(틱 밖이면 0)
+            uint64 _writerID{ 0 }; ///< 이 쓰기를 낸 틱의 주인 오브젝트 id(틱 밖이면 0)
             uint32 _sequence{ 0 }; ///< 그 스레드가 올린 순번 — 같은 오브젝트의 틱이 잇따라 쓴 건의 순서
         };
         /** @brief 정렬할 틱 큐 건 하나입니다. 비교에 쓰는 값을 함께 들어 정렬이 건을 따라가지 않습니다. */
         struct OrderedTickWrite
         {
             const SceneTransformWrite* _pWrite{ nullptr };
-            uint64                     _targetId{ 0 }; ///< 대상 componentId
+            uint64                     _targetID{ 0 }; ///< 대상 componentID
             TickWriteKey               _key;
         };
 

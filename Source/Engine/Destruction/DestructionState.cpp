@@ -160,7 +160,7 @@ namespace sw
         , _listLeafLinkStart{}
         , _listLeafLinkIndex{}
         , _listGroup{}
-        , _nextGroupId{ 1 }
+        , _nextGroupID{ 1 }
         , _eventCount{ 0 }
         , _listScratchStrain{}
     {
@@ -215,14 +215,14 @@ namespace sw
         DestructionGroup group;
         group._listNode.push_back( root );
         group._id        = 1;
-        group._parentId  = 0;
+        group._parentID  = 0;
         group._leafCount = graph._leafCount;
         for ( const uint8 bAnchored : _listLeafAnchored )
         {
             group._bAnchored = ( group._bAnchored == SW_TRUE || bAnchored != SW_FALSE ) ? SW_TRUE : SW_FALSE;
         }
         _listGroup.push_back( std::move( group ) );
-        _nextGroupId = 2;
+        _nextGroupID = 2;
         _eventCount  = 0;
     }
 
@@ -231,25 +231,25 @@ namespace sw
         return vector_reference<const uint32>{ _listLeafLinkIndex.data() + _listLeafLinkStart[leaf], _listLeafLinkStart[leaf + 1] - _listLeafLinkStart[leaf] };
     }
 
-    const DestructionGroup* DestructionState::findGroup( uint32 groupId ) const
+    const DestructionGroup* DestructionState::findGroup( uint32 groupID ) const
     {
-        const int32 index = findGroupIndex( groupId );
+        const int32 index = findGroupIndex( groupID );
         return index >= 0 ? &_listGroup[static_cast<size_t>( index )] : nullptr;
     }
 
-    int32 DestructionState::findGroupIndex( uint32 groupId ) const
+    int32 DestructionState::findGroupIndex( uint32 groupID ) const
     {
         size_t low  = 0;
         size_t high = _listGroup.size();
         while ( low < high )
         {
             const size_t middle = ( low + high ) / 2;
-            if ( _listGroup[middle]._id < groupId )
+            if ( _listGroup[middle]._id < groupID )
                 low = middle + 1;
             else
                 high = middle;
         }
-        return ( low < _listGroup.size() && _listGroup[low]._id == groupId ) ? static_cast<int32>( low ) : -1;
+        return ( low < _listGroup.size() && _listGroup[low]._id == groupID ) ? static_cast<int32>( low ) : -1;
     }
 
     bool DestructionState::hasAnchoredLeaf( uint32 node ) const
@@ -510,13 +510,13 @@ namespace sw
         return bBroke;
     }
 
-    void DestructionState::regroup( vector<uint32>& inoutListDirtyGroupId, DestructionChange& outChange )
+    void DestructionState::regroup( vector<uint32>& inoutListDirtyGroupID, DestructionChange& outChange )
     {
-        std::sort( inoutListDirtyGroupId.begin(), inoutListDirtyGroupId.end() );
+        std::sort( inoutListDirtyGroupID.begin(), inoutListDirtyGroupID.end() );
         vector<DestructionGroup> listNewGroup;
-        for ( const uint32 groupId : inoutListDirtyGroupId )
+        for ( const uint32 groupID : inoutListDirtyGroupID )
         {
-            const int32 groupIndex = findGroupIndex( groupId );
+            const int32 groupIndex = findGroupIndex( groupID );
             if ( groupIndex < 0 )
                 continue;
             const DestructionGroup old = _listGroup[static_cast<size_t>( groupIndex )];
@@ -545,7 +545,7 @@ namespace sw
             {
                 DestructionGroup part;
                 part._listNode = std::move( component );
-                part._parentId = old._id;
+                part._parentID = old._id;
                 for ( const uint32 node : part._listNode )
                 {
                     part._leafCount += _pGraph->_listNode[node]._leafCount;
@@ -570,7 +570,7 @@ namespace sw
         }
         for ( DestructionGroup& group : listNewGroup )
         {
-            group._id = _nextGroupId++;
+            group._id = _nextGroupID++;
             for ( const uint32 node : group._listNode )
             {
                 const FractureNode& data = _pGraph->_listNode[node];
@@ -639,7 +639,7 @@ namespace sw
         writer.writeVarUint( _listLinkBroken.size() );
         writer.writeVarUint( _listLeafAnchored.size() );
         writer.writeVarUint( _eventCount );
-        writer.writeVarUint( _nextGroupId );
+        writer.writeVarUint( _nextGroupID );
         Internal::writeFlagBits( writer, _listNodeBroken );
         Internal::writeFlagBits( writer, _listLinkBroken );
         Internal::writeFlagBits( writer, _listLeafAnchored );
@@ -649,7 +649,7 @@ namespace sw
         for ( const DestructionGroup& group : _listGroup )
         {
             writer.writeVarUint( group._id );
-            writer.writeVarUint( group._parentId );
+            writer.writeVarUint( group._parentID );
             writer.writeBits( group._bAnchored == SW_TRUE ? 1u : 0u, 1 );
             writer.writeVarUint( group._listNode.size() );
             uint32 previous = 0;
@@ -677,7 +677,7 @@ namespace sw
         if ( nodeCount != graph._listNode.size() || linkCount != graph._listLink.size() || leafCount != graph._leafCount )
             return false;
         const uint32 eventCount  = static_cast<uint32>( reader.readVarUint() );
-        const uint32 nextGroupId = static_cast<uint32>( reader.readVarUint() );
+        const uint32 nextGroupID = static_cast<uint32>( reader.readVarUint() );
 
         vector<uint8>   listNodeBroken;
         vector<uint8>   listLinkBroken;
@@ -703,10 +703,10 @@ namespace sw
         {
             DestructionGroup group;
             group._id                = static_cast<uint32>( reader.readVarUint() );
-            group._parentId          = static_cast<uint32>( reader.readVarUint() );
+            group._parentID          = static_cast<uint32>( reader.readVarUint() );
             group._bAnchored         = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             const uint64 activeCount = reader.readVarUint();
-            const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupId;
+            const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupID;
             if ( bBadGroup )
                 return false;
             uint64 node = 0;
@@ -745,7 +745,7 @@ namespace sw
         _listLeafActive = std::move( listLeafActive );
         _listLeafGroup  = std::move( listLeafGroup );
         _listGroup      = std::move( listGroup );
-        _nextGroupId    = nextGroupId;
+        _nextGroupID    = nextGroupID;
         _eventCount     = eventCount;
         return true;
     }

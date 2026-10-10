@@ -86,7 +86,7 @@ namespace sw
 namespace sw
 {
     CharacterAppearanceComponent::CharacterAppearanceComponent()
-        : _presetId{}
+        : _presetID{}
         , _seed{ 0 }
         , _socketTask{ *this }
         , _rig{}
@@ -112,7 +112,7 @@ namespace sw
     {
         Component::onBeginPlay();
         _bStarted = SW_TRUE;
-        if ( _presetId.empty() == false )
+        if ( _presetID.empty() == false )
             requestAssemble();
     }
 
@@ -127,32 +127,32 @@ namespace sw
     void CharacterAppearanceComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
-        if ( _bStarted == SW_TRUE && ( propertyName == hashed_string( "_presetId" ) || propertyName == hashed_string( "_seed" ) ) )
+        if ( _bStarted == SW_TRUE && ( propertyName == hashed_string( "_presetID" ) || propertyName == hashed_string( "_seed" ) ) )
             requestAssemble();
     }
 
-    void CharacterAppearanceComponent::setPreset( const hashed_string& presetId, uint32 seed )
+    void CharacterAppearanceComponent::setPreset( const hashed_string& presetID, uint32 seed )
     {
-        _presetId = string{ presetId.c_str() };
+        _presetID = string{ presetID.c_str() };
         _seed     = static_cast<int32>( seed );
         if ( _bStarted == SW_TRUE )
             requestAssemble();
     }
 
-    void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemId )
+    void CharacterAppearanceComponent::setSlotItem( const hashed_string& slot, const hashed_string& itemID )
     {
         for ( SlotOverride& slotOverride : _listSlotOverride )
         {
             if ( slotOverride._slot != slot )
                 continue;
-            if ( slotOverride._itemId == itemId )
+            if ( slotOverride._itemID == itemID )
                 return;
-            slotOverride._itemId = itemId;
+            slotOverride._itemID = itemID;
             if ( _bStarted == SW_TRUE )
                 requestAssemble();
             return;
         }
-        _listSlotOverride.push_back( SlotOverride{ slot, itemId } );
+        _listSlotOverride.push_back( SlotOverride{ slot, itemID } );
         if ( _bStarted == SW_TRUE )
             requestAssemble();
     }
@@ -252,20 +252,20 @@ namespace sw
         AppearanceDatabase*    pDatabase = game::getService<AppearanceDatabase>();
         if ( pManager == nullptr || pBody == nullptr )
         {
-            SW_LOG_WARNING( "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetId.c_str() );
+            SW_LOG_WARNING( "'%#' has no skeletal mesh to wear appearance '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?", _presetID.c_str() );
             return;
         }
         if ( pDatabase == nullptr )
         {
-            SW_LOG_ERROR( "Appearance '%#' cannot be assembled - no AppearanceDatabase game service", _presetId.c_str() );
+            SW_LOG_ERROR( "Appearance '%#' cannot be assembled - no AppearanceDatabase game service", _presetID.c_str() );
             return;
         }
 
         CharacterAppearanceSpec spec;
-        if ( pDatabase->getPresets().expand( hashed_string( _presetId ), static_cast<uint32>( _seed ), pDatabase->getSlotTable(), pDatabase->getSets(),
+        if ( pDatabase->getPresets().expand( hashed_string( _presetID ), static_cast<uint32>( _seed ), pDatabase->getSlotTable(), pDatabase->getSets(),
                                              pDatabase->getSchemas(), spec ) == false )
         {
-            SW_LOG_ERROR( "Appearance preset '%#' could not be expanded", _presetId.c_str() );
+            SW_LOG_ERROR( "Appearance preset '%#' could not be expanded", _presetID.c_str() );
             return;
         }
         for ( const SlotOverride& slotOverride : _listSlotOverride )
@@ -277,7 +277,7 @@ namespace sw
                 pSlot        = &spec._listSlot.back();
                 pSlot->_slot = slotOverride._slot;
             }
-            pSlot->_itemId        = slotOverride._itemId;
+            pSlot->_itemID        = slotOverride._itemID;
             pSlot->_visibleVisual = hashed_string{};
             pSlot->_state         = hashed_string{};
         }
@@ -289,7 +289,7 @@ namespace sw
         (void)CharacterPoseUtil::copyUnitPose( *pBody, _bodyBones ); // 포즈가 아직 없으면 바인드 본 그대로 소켓을 구한다
         string socketError;
         if ( _rig.rebuild( _resolved, _bodyBindBones, _socketCache, &socketError ) == false )
-            SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetId.c_str(), socketError.c_str() );
+            SW_LOG_ERROR( "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
 
         syncParts( *pManager, *pBody, _bodyPart );
         bindSocketParts( *pManager );
@@ -309,13 +309,13 @@ namespace sw
             // 스켈레톤 먼저 — 메시의 스킨 사본이 그 본 수를 본다.
             if ( string_view( body.getSkeletonPath() ) != string_view( part._skeleton.c_str() ) )
                 body.setSkeletonPath( part._skeleton.c_str() );
-            if ( string_view( body.getMeshId() ) != string_view( part._asset.c_str() ) )
-                body.setMeshId( part._asset.c_str() );
+            if ( string_view( body.getMeshID() ) != string_view( part._asset.c_str() ) )
+                body.setMeshID( part._asset.c_str() );
             if ( part._material.empty() == false && body.getMaterialPath() != part._material )
                 body.setMaterialPath( part._material.c_str() );
             return static_cast<int32>( partIndex );
         }
-        SW_LOG_WARNING( "Appearance '%#' has no body part (a Skinned part without an owner)", _presetId.c_str() );
+        SW_LOG_WARNING( "Appearance '%#' has no body part (a Skinned part without an owner)", _presetID.c_str() );
         return -1;
     }
 
@@ -377,7 +377,7 @@ namespace sw
                 pObject                         = manager.createGameObject( part._partName );
                 SkeletalMeshComponent* pSkinned = pObject->addComponent<SkeletalMeshComponent>();
                 pSkinned->setSkeletonPath( part._skeleton.empty() ? string_view( body.getSkeletonPath() ) : string_view( part._skeleton.c_str() ) );
-                pSkinned->setMeshId( part._asset.c_str() );
+                pSkinned->setMeshID( part._asset.c_str() );
                 if ( part._material.empty() == false )
                     pSkinned->setMaterialPath( part._material.c_str() );
                 pSkinned->setLeaderPose( static_cast<SkeletalMeshComponent*>( manager.resolveComponent( bodyHandle ) ) );
@@ -387,7 +387,7 @@ namespace sw
             }
             if ( pObject == nullptr )
             {
-                SW_LOG_WARNING( "Appearance '%#' part '%#' (%#) could not be spawned", _presetId.c_str(), part._partName.c_str(), part._asset.c_str() );
+                SW_LOG_WARNING( "Appearance '%#' part '%#' (%#) could not be spawned", _presetID.c_str(), part._partName.c_str(), part._asset.c_str() );
                 continue;
             }
             spawned._object = pObject->getHandle();
@@ -408,7 +408,7 @@ namespace sw
             uint32                  unitIndex = AppearanceSocketRig::kNoUnit;
             if ( pBinding == nullptr || _rig.computePlacement( part._placement, _bodyBones, inUnit, unitIndex ) == false )
             {
-                SW_LOG_WARNING( "Appearance '%#' part '%#' has no active socket among its candidates", _presetId.c_str(), part._partName.c_str() );
+                SW_LOG_WARNING( "Appearance '%#' part '%#' has no active socket among its candidates", _presetID.c_str(), part._partName.c_str() );
                 continue;
             }
             GameObject* pHolder = findUnitObject( manager, unitIndex );

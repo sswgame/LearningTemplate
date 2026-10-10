@@ -192,7 +192,7 @@ namespace sw
         /** @brief 두 칸 사이에 ㄱ 자 도로를 깝니다(먼저 X, 다음 Y). 깐 칸 수입니다. */
         int32 placeRoadLine( const int2& from, const int2& to );
         /** @brief 건물을 @p x, @p y(왼쪽 아래 칸)에 짓습니다. 발자국의 공유 땅이 한 칸이라도 남의 것이면 `Occupied` 입니다. */
-        CityPlaceResult placeBuilding( const hashed_string& buildingId, int32 x, int32 y );
+        CityPlaceResult placeBuilding( const hashed_string& buildingID, int32 x, int32 y );
         /** @brief 그 칸의 건물 · 도로를 허뭅니다. 허물었으면 true 입니다. */
         bool demolish( int32 x, int32 y );
 
@@ -252,7 +252,7 @@ namespace sw
         void removeWalker( CityWalker& walker );
         /** @brief 도로 칸 사이의 가장 짧은 길(너비 우선)입니다. 못 가면 false 입니다. */
         bool  findRoadPath( const int2& from, const int2& to, vector<int2>& outListPath ) const;
-        int32 findStorageFor( const hashed_string& goodId, int32 roadComponent, const int2& from, int32 amount ) const;
+        int32 findStorageFor( const hashed_string& goodID, int32 roadComponent, const int2& from, int32 amount ) const;
         int32 computeStorageFree( const CityBuilding& storage ) const;
         bool  meetsHouseLevel( const CityBuilding& house, int32 level ) const;
         bool  isRoad( int32 x, int32 y ) const;

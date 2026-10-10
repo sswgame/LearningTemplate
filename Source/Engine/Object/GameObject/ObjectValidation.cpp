@@ -14,7 +14,7 @@ namespace sw
 {
     uint32 ObjectValidation::validateGameObject( const GameObject& object, ValidationContext& context )
     {
-        context.setSource( object.getObjectId(), object.getName().view() );
+        context.setSource( object.getObjectID(), object.getName().view() );
         uint32 issueCount = 0;
         for ( const Component* pComp : object.getComponents() )
         {
@@ -30,7 +30,7 @@ namespace sw
     {
         ValidationContext context;
         const uint32      issueCount = validateGameObject( object, context );
-        ValidationIssueLog::get().replaceIssues( object.getObjectId(), context.getIssues() );
+        ValidationIssueLog::get().replaceIssues( object.getObjectID(), context.getIssues() );
         if ( bLog )
         {
             for ( const ValidationIssue& issue : context.getIssues() )

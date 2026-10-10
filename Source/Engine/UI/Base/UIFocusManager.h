@@ -30,11 +30,11 @@ namespace sw
         UIFocusManager& operator=( const UIFocusManager& ) = delete;
 
         /** @brief @p widget(@p tree 안)으로 포커스를 옮깁니다. 받을 수 없는 위젯(`supportsFocus` false · 꺼짐 · 안 보임)이면 false 이고 그대로입니다. */
-        [[nodiscard]] bool setFocus( WidgetTree& tree, WidgetId widget );
+        [[nodiscard]] bool setFocus( WidgetTree& tree, WidgetID widget );
         /** @brief 포커스를 내립니다(어느 트리에 있든). */
         void clearFocus();
         /** @brief 지금 포커스 위젯입니다(없으면 무효). */
-        WidgetId getFocusedWidget() const;
+        WidgetID getFocusedWidget() const;
         /** @brief 포커스가 있는 트리입니다(없으면 nullptr). */
         WidgetTree* getFocusedTree() const { return _pFocusedTree; }
         /**

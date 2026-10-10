@@ -63,7 +63,7 @@ namespace sw::editor
                     PlaySessionData::ObjectSnapshot entry;
                     entry._identity   = ObjectStateSerializer::captureIdentity( pObj );
                     entry._name       = pObj->getName().c_str();
-                    entry._prefabPath = pScene->getEntityPrefabPath( entry._identity._objectId );
+                    entry._prefabPath = pScene->getEntityPrefabPath( entry._identity._objectID );
 
                     if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, entry._bytes ) )
                         data._listSnapshot.push_back( std::move( entry ) );
@@ -104,11 +104,11 @@ namespace sw::editor
 
                 // 1. 플레이 도중 생성된 오브젝트 파괴
                 {
-                    unordered_set<uint64> uniqueSnapIds;
-                    uniqueSnapIds.reserve( data._listSnapshot.size() );
+                    unordered_set<uint64> uniqueSnapIDs;
+                    uniqueSnapIDs.reserve( data._listSnapshot.size() );
                     for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                     {
-                        uniqueSnapIds.insert( snap._identity._objectId );
+                        uniqueSnapIDs.insert( snap._identity._objectID );
                     }
 
                     vector<GameObject*> listAllObject;
@@ -117,7 +117,7 @@ namespace sw::editor
                     vector<GameObject*> listToDestroy;
                     for ( GameObject* pObj : listAllObject )
                     {
-                        if ( pObj != nullptr && uniqueSnapIds.find( pObj->getObjectId() ) == uniqueSnapIds.end() )
+                        if ( pObj != nullptr && uniqueSnapIDs.find( pObj->getObjectID() ) == uniqueSnapIDs.end() )
                             listToDestroy.push_back( pObj );
                     }
                     for ( GameObject* pObj : listToDestroy )
@@ -127,15 +127,15 @@ namespace sw::editor
                 }
 
                 // 2. 기존 오브젝트 상태 복구 및 삭제된 오브젝트 재생성. 계층은 모두 읽은 뒤 묶음이 잇는다(아래 3).
-                ObjectStateBatch batch( ObjectIdSpace::Live );
+                ObjectStateBatch batch( ObjectIDSpace::Live );
                 for ( const PlaySessionData::ObjectSnapshot& snap : data._listSnapshot )
                 {
-                    GameObject* pObj = pObjects->findGameObjectById( snap._identity._objectId );
+                    GameObject* pObj = pObjects->findGameObjectByID( snap._identity._objectID );
 
                     // 플레이 중에 사라진 오브젝트는 원래 id 로 되살린다. 플레이 전에 들고 있던 핸들이 이어지게 하기 위해서다.
                     if ( pObj == nullptr )
                     {
-                        pObj = pObjects->createGameObjectWithId( hashed_string( snap._name.c_str() ), snap._identity._objectId );
+                        pObj = pObjects->createGameObjectWithID( hashed_string( snap._name.c_str() ), snap._identity._objectID );
                         if ( pObj == nullptr )
                         {
                             SW_LOG_WARNING( "Failed to recreate '%#' from play snapshot.", snap._name.c_str() );
@@ -144,7 +144,7 @@ namespace sw::editor
                     }
 
                     if ( snap._prefabPath.empty() == false && pScene != nullptr )
-                        pScene->setEntityPrefabPath( pObj->getObjectId(), snap._prefabPath );
+                        pScene->setEntityPrefabPath( pObj->getObjectID(), snap._prefabPath );
 
                     ObjectLoadContext context{};
                     context._pIdentity = &snap._identity;

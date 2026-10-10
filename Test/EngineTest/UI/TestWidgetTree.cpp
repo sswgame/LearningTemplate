@@ -13,9 +13,9 @@ namespace
 {
     struct WidgetTreeTestUtil
     {
-        static bool containsId( const sw::vector<sw::WidgetId>& listId, sw::WidgetId id )
+        static bool containsID( const sw::vector<sw::WidgetID>& listID, sw::WidgetID id )
         {
-            for ( const sw::WidgetId value : listId )
+            for ( const sw::WidgetID value : listID )
             {
                 if ( value == id )
                     return true;
@@ -26,7 +26,7 @@ namespace
 } // namespace
 
 /** @brief [WidgetTreeTest] 붙이면 번호 · 이름으로 찾고, 떼면 못 찾는다. 같은 이름 둘이면 경고 한 번 · 먼저 붙은 것 */
-SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIdsAndNames )
+SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIDsAndNames )
 {
     sw::WidgetTree   tree;
     auto             root  = sw::make_unique<sw::uitest::TestPanelWidget>( "root" );
@@ -35,7 +35,7 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIdsAndNames )
 
     sw::Widget* const pA = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
     SW_EXPECT_EQUAL( 2u, tree.getWidgetCount() );
-    SW_EXPECT_TRUE( tree.findWidgetById( pA->getId() ) == pA );
+    SW_EXPECT_TRUE( tree.findWidgetByID( pA->getID() ) == pA );
     SW_EXPECT_TRUE( tree.findWidget<sw::uitest::TestBoxWidget>( "a" ) == pA );
     SW_EXPECT_TRUE( pA->getTree() == &tree );
     SW_EXPECT_TRUE( pA->getParent() == pRoot );
@@ -45,21 +45,21 @@ SW_TEST_CASE( WidgetTreeTest, AddRemoveRegistersIdsAndNames )
         sw::Widget* const        pSecond = pRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "a" ) );
         SW_EXPECT_EQUAL( 1u, logs.countContaining( "used twice" ) );
         SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == pA );
-        SW_EXPECT_TRUE( tree.findWidgetById( pSecond->getId() ) == pSecond );
+        SW_EXPECT_TRUE( tree.findWidgetByID( pSecond->getID() ) == pSecond );
     }
 
-    const sw::WidgetId         removedId = pA->getId();
+    const sw::WidgetID         removedID = pA->getID();
     sw::unique_ptr<sw::Widget> removed   = pRoot->removeChild( pA );
     SW_ASSERT_TRUE( removed != nullptr );
     SW_EXPECT_TRUE( removed->getTree() == nullptr );
     SW_EXPECT_TRUE( removed->getParent() == nullptr );
-    SW_EXPECT_TRUE( tree.findWidgetById( removedId ) == nullptr );
+    SW_EXPECT_TRUE( tree.findWidgetByID( removedID ) == nullptr );
     SW_EXPECT_TRUE( tree.findWidgetByName( "a" ) == nullptr ); // 이름의 주인이 떨어졌다 — 둘째 "a" 는 이름표에 오르지 않았다
     SW_EXPECT_EQUAL( 2u, tree.getWidgetCount() );
 
     // 번호는 다시 쓰지 않는다 — 떼었다 다시 붙여도 같은 번호, 새 위젯은 새 번호.
     sw::Widget* const pReattached = pRoot->addChild( std::move( removed ) );
-    SW_EXPECT_EQUAL( removedId, pReattached->getId() );
+    SW_EXPECT_EQUAL( removedID, pReattached->getID() );
     SW_EXPECT_TRUE( tree.findWidget<sw::uitest::TestBoxWidget>( "a" ) == pReattached );
 }
 
@@ -77,7 +77,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
 
     pBox->invalidate( sw::WidgetDirty::kLayout );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
-    SW_EXPECT_EQUAL( pFixed->getId(), tree.getLayoutDirtyRoots()[0] );
+    SW_EXPECT_EQUAL( pFixed->getID(), tree.getLayoutDirtyRoots()[0] );
     SW_EXPECT_TRUE( ( pFixed->getDirtyFlags() & sw::WidgetDirty::kChildLayout ) != 0 );
     SW_EXPECT_EQUAL( 0u, pRoot->getDirtyFlags() & sw::WidgetDirty::kChildLayout );
 
@@ -90,7 +90,7 @@ SW_TEST_CASE( WidgetTreeTest, LayoutDirtyStopsAtLayoutBoundary )
     static_cast<sw::uitest::TestPanelWidget*>( pFixed )->_bLayoutBoundary = false;
     pBox->invalidate( sw::WidgetDirty::kLayout );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
-    SW_EXPECT_EQUAL( pRoot->getId(), tree.getLayoutDirtyRoots()[0] );
+    SW_EXPECT_EQUAL( pRoot->getID(), tree.getLayoutDirtyRoots()[0] );
 }
 
 /** @brief [WidgetTreeTest] 그리기만 바뀌면 레이아웃 뿌리는 없고 그리기 목록에 하나 — 불투명도도 그리기 쪽이고, 렌더 변환은 그 위젯만 다시 놓는다(재기 없음) */
@@ -106,7 +106,7 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
     pBox->invalidate( sw::WidgetDirty::kPaint );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getPaintDirtyWidgets().size() ) );
-    SW_EXPECT_EQUAL( pBox->getId(), tree.getPaintDirtyWidgets()[0] );
+    SW_EXPECT_EQUAL( pBox->getID(), tree.getPaintDirtyWidgets()[0] );
 
     pBox->setOpacity( 0.5f ); // 이미 그리기 목록에 있다 — 두 번 적지 않는다
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getPaintDirtyWidgets().size() ) );
@@ -118,7 +118,7 @@ SW_TEST_CASE( WidgetTreeTest, PaintDirtyDoesNotTouchLayout )
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) ); // 불투명도는 그림만
     pBox->setRenderTransform( transform );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) ); // 렌더 변환은 기하에 얹힌다 — 그 위젯만 배치(재기 없음)
-    SW_EXPECT_EQUAL( pBox->getId(), tree.getLayoutDirtyRoots()[0] );
+    SW_EXPECT_EQUAL( pBox->getID(), tree.getLayoutDirtyRoots()[0] );
     SW_EXPECT_TRUE( ( pBox->getDirtyFlags() & sw::WidgetDirty::kLayout ) == 0 );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getPaintDirtyWidgets().size() ) );
 }
@@ -135,7 +135,7 @@ SW_TEST_CASE( WidgetTreeTest, CollapsedToggleIsLayoutDirty )
 
     pBox->setVisibility( sw::WidgetVisibility::Collapsed );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
-    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsId( tree.getPaintDirtyWidgets(), pBox->getId() ) );
+    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsID( tree.getPaintDirtyWidgets(), pBox->getID() ) );
 
     pBox->setVisibility( sw::WidgetVisibility::Hidden );
     tree.clearAllDirty();
@@ -177,6 +177,6 @@ SW_TEST_CASE( WidgetTreeTest, DetachedInvalidationArrivesOnAttach )
     auto        box  = sw::make_unique<sw::uitest::TestBoxWidget>( "box" );
     sw::Widget* pBox = pRoot->addChild( std::move( box ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( tree.getLayoutDirtyRoots().size() ) );
-    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsId( tree.getPaintDirtyWidgets(), pBox->getId() ) );
-    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsId( tree.getStyleDirtyWidgets(), pBox->getId() ) );
+    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsID( tree.getPaintDirtyWidgets(), pBox->getID() ) );
+    SW_EXPECT_TRUE( WidgetTreeTestUtil::containsID( tree.getStyleDirtyWidgets(), pBox->getID() ) );
 }

@@ -51,8 +51,8 @@ SW_TEST_CASE( FontSystemTest, CatalogDefaultFamilyOpens )
     const sw::FontFaceChain chain = fontSystem.getFaceChain( sw::FontSpec{} );
     SW_ASSERT_TRUE( chain._faceCount >= 1 );
     uint32               glyphIndex = 0;
-    const sw::FontFaceId face       = fontSystem.findFaceForCodepoint( chain, 'A', glyphIndex );
-    SW_EXPECT_NOT_EQUAL( sw::kInvalidFontFaceId, face );
+    const sw::FontFaceID face       = fontSystem.findFaceForCodepoint( chain, 'A', glyphIndex );
+    SW_EXPECT_NOT_EQUAL( sw::kInvalidFontFaceID, face );
     SW_EXPECT_NOT_EQUAL( 0u, glyphIndex );
 }
 
@@ -69,9 +69,9 @@ SW_TEST_CASE( FontSystemTest, ChainFallsBackForMissingCodepoints )
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( chain._faceCount ) );
 
     uint32               glyphIndex = 0;
-    const sw::FontFaceId hangulFace = fixture._fontSystem->findFaceForCodepoint( chain, 0xAC00u, glyphIndex );
+    const sw::FontFaceID hangulFace = fixture._fontSystem->findFaceForCodepoint( chain, 0xAC00u, glyphIndex );
     SW_EXPECT_EQUAL( 0xAC00u, glyphIndex );
-    const sw::FontFaceId latinFace = fixture._fontSystem->findFaceForCodepoint( chain, 'A', glyphIndex );
+    const sw::FontFaceID latinFace = fixture._fontSystem->findFaceForCodepoint( chain, 'A', glyphIndex );
     SW_EXPECT_EQUAL( static_cast<uint32>( 'A' ), glyphIndex );
     SW_EXPECT_EQUAL( chain._arrFace[0], hangulFace );
     SW_EXPECT_EQUAL( chain._arrFace[1], latinFace );
@@ -99,7 +99,7 @@ SW_TEST_CASE( FontSystemTest, MissingFamilyWarnsOnceAndIsSkipped )
     SW_EXPECT_EQUAL( 1u, fixture._fontSystem->getWarnedOnceCount() );
 
     uint32               glyphIndex = 7;
-    const sw::FontFaceId face       = fixture._fontSystem->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 아랍 알리프 — 어느 면에도 없다
+    const sw::FontFaceID face       = fixture._fontSystem->findFaceForCodepoint( chain, 0x0627u, glyphIndex ); // 아랍 알리프 — 어느 면에도 없다
     SW_EXPECT_EQUAL( chain._arrFace[0], face );
     SW_EXPECT_EQUAL( 0u, glyphIndex );
     (void)fixture._fontSystem->findFaceForCodepoint( chain, 0x0627u, glyphIndex );
@@ -197,7 +197,7 @@ SW_TEST_CASE( FontSystemTest, LanguageChangeRebuildsChain )
 
     const sw::FontFaceChain koreanChain = fixture._fontSystem->getFaceChain( sw::FontSpec{} );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( koreanChain._faceCount ) ); // 기본(라틴)이 고른 가족이자 끝 — Noto Sans KR 이 사이에
-    const sw::FontFaceId koreanFace = koreanChain._arrFace[1];
+    const sw::FontFaceID koreanFace = koreanChain._arrFace[1];
 
     SW_ASSERT_TRUE( localization.setCurrentLanguage( "ar" ) );
     fixture._fontSystem->invalidateFaceChains();
@@ -238,7 +238,7 @@ SW_TEST_CASE( FontSystemTest, SystemFallbackCoversHangulWhenInstalled )
     const sw::FontFaceChain chain = fontSystem.getFaceChain( sw::FontSpec{} );
     SW_ASSERT_TRUE( chain._faceCount >= 2 );
     uint32               glyphIndex = 0;
-    const sw::FontFaceId face       = fontSystem.findFaceForCodepoint( chain, 0xAC00u, glyphIndex );
+    const sw::FontFaceID face       = fontSystem.findFaceForCodepoint( chain, 0xAC00u, glyphIndex );
     SW_EXPECT_NOT_EQUAL( 0u, glyphIndex );
     SW_EXPECT_NOT_EQUAL( chain._arrFace[0], face );
 }

@@ -126,8 +126,8 @@ namespace
         unique_ptr<TradeServerSide> _server;
         TradeClientSide             _alice;
         TradeClientSide             _bob;
-        AccountId                   _aliceId;
-        AccountId                   _bobId;
+        AccountID                   _aliceID;
+        AccountID                   _bobID;
         int64                       _nowMs;
 
         TradeRig()
@@ -137,8 +137,8 @@ namespace
             , _server{}
             , _alice{ _network }
             , _bob{ _network }
-            , _aliceId{ kInvalidAccountId }
-            , _bobId{ kInvalidAccountId }
+            , _aliceID{ kInvalidAccountID }
+            , _bobID{ kInvalidAccountID }
             , _nowMs{ 500000 }
         {
             restartServer();
@@ -161,7 +161,7 @@ namespace
             }
         }
 
-        AccountClientReply waitAccount( TradeClientSide& client, uint64 requestId )
+        AccountClientReply waitAccount( TradeClientSide& client, uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -169,7 +169,7 @@ namespace
                 (void)client._account.pollReplies( listReply );
                 for ( AccountClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -177,7 +177,7 @@ namespace
             return AccountClientReply{};
         }
 
-        TradeClientReply waitTrade( TradeClientSide& client, uint64 requestId )
+        TradeClientReply waitTrade( TradeClientSide& client, uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -185,7 +185,7 @@ namespace
                 (void)client._trade.pollReplies( listReply );
                 for ( TradeClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -205,30 +205,30 @@ namespace
                                      waitAccount( _bob, _bob._account.registerAccount( "bob", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply aliceLogin = waitAccount( _alice, _alice._account.login( "alice", "password123" ) );
             const AccountClientReply bobLogin   = waitAccount( _bob, _bob._account.login( "bob", "password123" ) );
-            _aliceId                            = aliceLogin._grant._identity._accountId;
-            _bobId                              = bobLogin._grant._identity._accountId;
-            _alice._trade.setAccountId( _aliceId );
-            _bob._trade.setAccountId( _bobId );
-            grant( _aliceId, "item.sword", 1 );
-            grant( _bobId, "cur.gold", 500 );
+            _aliceID                            = aliceLogin._grant._identity._accountID;
+            _bobID                              = bobLogin._grant._identity._accountID;
+            _alice._trade.setAccountID( _aliceID );
+            _bob._trade.setAccountID( _bobID );
+            grant( _aliceID, "item.sword", 1 );
+            grant( _bobID, "cur.gold", 500 );
             return bRegistered && aliceLogin._result == LoginResult::Ok && bobLogin._result == LoginResult::Ok;
         }
 
-        void grant( AccountId accountId, const utf8* pAsset, int64 amount )
+        void grant( AccountID accountID, const utf8* pAsset, int64 amount )
         {
             LedgerTransferRequest request;
-            request._journalKey = string( "test/grant." ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountId );
+            request._journalKey = string( "test/grant." ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountID );
             request._reason     = "test.grant";
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), pAsset, amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), pAsset, amount } );
             LedgerTransferOutcome outcome;
             (void)Ledger::executeTransfer( _database, request, outcome );
         }
 
-        int64 readAmount( AccountId accountId, const utf8* pAsset )
+        int64 readAmount( AccountID accountID, const utf8* pAsset )
         {
             LedgerBalance balance;
             // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
-            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), pAsset, balance );
+            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), pAsset, balance );
             return balance._amount;
         }
 
@@ -238,24 +238,24 @@ namespace
             const TradeClientReply invited = waitTrade( _alice, _alice._trade.invite( "BOB" ) );
             if ( invited._result != TradeResult::Ok )
                 return 0;
-            const uint64 tradeId = invited._snapshot._tradeId;
+            const uint64 tradeID = invited._snapshot._tradeID;
             step( 4 );
-            const bool bOpened = waitTrade( _bob, _bob._trade.respond( tradeId, true ) )._result == TradeResult::Ok &&
-                                 waitTrade( _alice, _alice._trade.setOffer( tradeId, {
+            const bool bOpened = waitTrade( _bob, _bob._trade.respond( tradeID, true ) )._result == TradeResult::Ok &&
+                                 waitTrade( _alice, _alice._trade.setOffer( tradeID, {
                                                                                          TradeLeg{ "item.sword", 1 }
             } ) )
                                          ._result == TradeResult::Ok &&
-                                 waitTrade( _bob, _bob._trade.setOffer( tradeId, { TradeLeg{ "cur.gold", 300 } } ) )._result == TradeResult::Ok && waitTrade( _alice, _alice._trade.lock( tradeId ) )._result == TradeResult::Ok && waitTrade( _bob, _bob._trade.lock( tradeId ) )._result == TradeResult::Ok;
+                                 waitTrade( _bob, _bob._trade.setOffer( tradeID, { TradeLeg{ "cur.gold", 300 } } ) )._result == TradeResult::Ok && waitTrade( _alice, _alice._trade.lock( tradeID ) )._result == TradeResult::Ok && waitTrade( _bob, _bob._trade.lock( tradeID ) )._result == TradeResult::Ok;
             step( 4 );
-            return bOpened ? tradeId : 0;
+            return bOpened ? tradeID : 0;
         }
     };
 
-    bool isTradableItem( const hashed_string& itemId, string& outAssetId )
+    bool isTradableItem( const hashed_string& itemID, string& outAssetID )
     {
-        if ( itemId == hashed_string( "quest_key" ) )
+        if ( itemID == hashed_string( "quest_key" ) )
             return false;
-        outAssetId = string( "item." ) + itemId.c_str();
+        outAssetID = string( "item." ) + itemID.c_str();
         return true;
     }
 } // namespace
@@ -264,16 +264,16 @@ SW_TEST_CASE( TradeStreamTest, TwoClientsTradeToTheEndAndBothSeeTheBalances )
 {
     TradeRig rig;
     SW_ASSERT_TRUE( rig.loginBoth() );
-    const uint64 tradeId = rig.openLockedTrade();
-    SW_ASSERT_TRUE( tradeId != 0 );
+    const uint64 tradeID = rig.openLockedTrade();
+    SW_ASSERT_TRUE( tradeID != 0 );
     vector<TradeClientUpdate> listBobUpdate;
     (void)rig._bob._trade.pollUpdates( listBobUpdate );
     SW_ASSERT_TRUE( listBobUpdate.empty() == false );
     SW_EXPECT_EQUAL( TradeMethod::kPushInvited, listBobUpdate.front()._kind ); // 초대 알림
 
-    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeId ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeID ) )._result == TradeResult::Ok );
     rig.step( 4 );
-    const TradeClientReply settled = rig.waitTrade( rig._bob, rig._bob._trade.confirm( tradeId ) );
+    const TradeClientReply settled = rig.waitTrade( rig._bob, rig._bob._trade.confirm( tradeID ) );
     SW_ASSERT_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
     SW_EXPECT_EQUAL( size_t( 2 ), settled._listBalance.size() ); // 요청한 쪽의 이동 뒤 잔액(칼 · 금)
@@ -285,12 +285,12 @@ SW_TEST_CASE( TradeStreamTest, TwoClientsTradeToTheEndAndBothSeeTheBalances )
     int64 aliceGold = -1;
     for ( const TradeBalance& balance : listAliceUpdate.back()._listBalance )
     {
-        if ( balance._assetId == "cur.gold" )
+        if ( balance._assetID == "cur.gold" )
             aliceGold = balance._amount;
     }
     SW_EXPECT_EQUAL( int64( 300 ), aliceGold ); // 상대 쪽 알림에도 그 계정의 잔액
-    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._bobId, "item.sword" ) );
-    SW_EXPECT_EQUAL( int64( 200 ), rig.readAmount( rig._bobId, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._bobID, "item.sword" ) );
+    SW_EXPECT_EQUAL( int64( 200 ), rig.readAmount( rig._bobID, "cur.gold" ) );
     LedgerAuditReport report;
     SW_ASSERT_TRUE( LedgerAudit::computeReport( rig._database, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( report.isBalanced() );
@@ -300,16 +300,16 @@ SW_TEST_CASE( TradeStreamTest, ConfirmRetriedWithTheSameKeyAfterADroppedStreamSe
 {
     TradeRig rig;
     SW_ASSERT_TRUE( rig.loginBoth() );
-    const uint64 tradeId = rig.openLockedTrade();
-    SW_ASSERT_TRUE( tradeId != 0 );
-    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeId ) )._result == TradeResult::Ok );
+    const uint64 tradeID = rig.openLockedTrade();
+    SW_ASSERT_TRUE( tradeID != 0 );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeID ) )._result == TradeResult::Ok );
     rig.step( 4 );
 
     const NetIdempotencyKey key  = NetIdempotencyKey::makeRandom();
     const TradeSnapshot     seen = rig._bob._trade.getSnapshot();
-    const int32             side = seen.findSideIndex( rig._bobId );
+    const int32             side = seen.findSideIndex( rig._bobID );
     SW_ASSERT_TRUE( side >= 0 );
-    (void)rig._bob._trade.confirmSeen( tradeId, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key );
+    (void)rig._bob._trade.confirmSeen( tradeID, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key );
     rig._bob._client.tick( rig._nowMs ); // 요청은 선에 올랐다
     rig._server->_host.tick( rig._nowMs );
     rig._bob._transport->close( rig._bob._client.getConnection(), StreamCloseMode::Abort ); // 응답 전에 끊겼다
@@ -320,12 +320,12 @@ SW_TEST_CASE( TradeStreamTest, ConfirmRetriedWithTheSameKeyAfterADroppedStreamSe
     }
     SW_ASSERT_TRUE( rig._bob._account.isLoggedIn() );
     const TradeClientReply retried =
-        rig.waitTrade( rig._bob, rig._bob._trade.confirmSeen( tradeId, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key ) );
+        rig.waitTrade( rig._bob, rig._bob._trade.confirmSeen( tradeID, seen._arrSide[side]._offerRevision, seen._arrSide[1 - side]._offerRevision, key ) );
     SW_EXPECT_EQUAL( 0, int32( retried._errorCode ) );
     SW_EXPECT_EQUAL( int32( TradeResult::Ok ), int32( retried._result ) );
     SW_EXPECT_TRUE( retried._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._bobId, "item.sword" ) );
-    SW_EXPECT_EQUAL( int64( 200 ), rig.readAmount( rig._bobId, "cur.gold" ) ); // 한 번만
+    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._bobID, "item.sword" ) );
+    SW_EXPECT_EQUAL( int64( 200 ), rig.readAmount( rig._bobID, "cur.gold" ) ); // 한 번만
     SW_EXPECT_EQUAL( 1, rig._database.countRecords( ServiceAuditLog::getTable() ) );
 }
 
@@ -333,9 +333,9 @@ SW_TEST_CASE( TradeStreamTest, ServerRestartBeforeSettleCancelsWithoutMovement )
 {
     TradeRig rig;
     SW_ASSERT_TRUE( rig.loginBoth() );
-    const uint64 tradeId = rig.openLockedTrade();
-    SW_ASSERT_TRUE( tradeId != 0 );
-    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeId ) )._result == TradeResult::Ok );
+    const uint64 tradeID = rig.openLockedTrade();
+    SW_ASSERT_TRUE( tradeID != 0 );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.confirm( tradeID ) )._result == TradeResult::Ok );
 
     rig.restartServer(); // 정산 전에 서버가 죽었다 — 새 서버가 자기 열린 거래를 닫는다
     rig.step( 2 );       // 클라이언트가 끊김을 안다
@@ -344,13 +344,13 @@ SW_TEST_CASE( TradeStreamTest, ServerRestartBeforeSettleCancelsWithoutMovement )
         rig.step();
     }
     SW_ASSERT_TRUE( rig._bob._account.isLoggedIn() );
-    const TradeClientReply late = rig.waitTrade( rig._bob, rig._bob._trade.confirm( tradeId ) );
+    const TradeClientReply late = rig.waitTrade( rig._bob, rig._bob._trade.confirm( tradeID ) );
     SW_EXPECT_EQUAL( 0, int32( late._errorCode ) );
     SW_EXPECT_EQUAL( int32( TradeResult::WrongState ), int32( late._result ) );
     SW_EXPECT_TRUE( late._snapshot._state == TradeState::Cancelled );
     SW_EXPECT_TRUE( late._snapshot._closeReason == TradeCloseReason::ServerRestart );
-    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._aliceId, "item.sword" ) );
-    SW_EXPECT_EQUAL( int64( 500 ), rig.readAmount( rig._bobId, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( rig._aliceID, "item.sword" ) );
+    SW_EXPECT_EQUAL( int64( 500 ), rig.readAmount( rig._bobID, "cur.gold" ) );
     SW_EXPECT_TRUE( rig.waitTrade( rig._alice, rig._alice._trade.invite( "bob" ) )._result == TradeResult::Ok ); // 링크가 풀려 새 거래를 연다
 }
 
@@ -358,8 +358,8 @@ SW_TEST_CASE( TradeStreamTest, PartnerLeavingClosesTheTradeAndFeatureFlagCanTurn
 {
     TradeRig rig;
     SW_ASSERT_TRUE( rig.loginBoth() );
-    const uint64 tradeId = rig.openLockedTrade();
-    SW_ASSERT_TRUE( tradeId != 0 );
+    const uint64 tradeID = rig.openLockedTrade();
+    SW_ASSERT_TRUE( tradeID != 0 );
     (void)rig.waitAccount( rig._bob, rig._bob._account.logout() ); // 서버가 연결을 닫는다 → 떠남
     rig.step( 10 );
     vector<TradeClientUpdate> listUpdate;
@@ -397,7 +397,7 @@ SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
     SW_ASSERT_EQUAL( 12, inventory.addItem( "potion", 12 ) ); // 두 칸(10 + 2)
     SW_ASSERT_EQUAL( 1, inventory.addItem( "quest_key", 1 ) );
     InventorySlot damaged;
-    damaged._itemId = "sword";
+    damaged._itemID = "sword";
     damaged._count  = 1;
     damaged._damage = 0.5f;
     SW_ASSERT_TRUE( inventory.addStack( damaged ) );
@@ -407,14 +407,14 @@ SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
     vector<int32> listPotionSlot;
     for ( int32 slot = 0; slot < inventory.getSlotCount(); ++slot )
     {
-        if ( inventory.getSlot( slot )._itemId == hashed_string( "potion" ) )
+        if ( inventory.getSlot( slot )._itemID == hashed_string( "potion" ) )
             listPotionSlot.push_back( slot );
     }
     SW_ASSERT_EQUAL( size_t( 2 ), listPotionSlot.size() );
     vector<TradeLeg> listLeg;
     SW_ASSERT_TRUE( TradeInventoryUtil::makeLegs( inventory, listPotionSlot, &isTradableItem, listLeg ) == TradeResult::Ok );
     SW_ASSERT_EQUAL( size_t( 1 ), listLeg.size() ); // 같은 아이템 칸은 한 다리로
-    SW_EXPECT_EQUAL( string( "item.potion" ), listLeg[0]._assetId );
+    SW_EXPECT_EQUAL( string( "item.potion" ), listLeg[0]._assetID );
     SW_EXPECT_EQUAL( int64( 12 ), listLeg[0]._amount );
     SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { questSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable );
     SW_EXPECT_TRUE( TradeInventoryUtil::makeLegs( inventory, { swordSlot }, &isTradableItem, listLeg ) == TradeResult::NotTradable ); // 외형 피해 = 인스턴스 상태

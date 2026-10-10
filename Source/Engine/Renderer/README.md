@@ -125,7 +125,7 @@ GPU 풀은 렌더 스레드가 소유합니다.
 
 - `GPUMeshVertexPool` 은 씬 메시의 정점을 정점 버퍼 하나에 이어 붙입니다. 메시 집합이 같으면 다시 만들지 않습니다.
 - `GPUMeshMorphPool` 은 모프와 스키닝 결과를 담습니다. 결과 버퍼는 앞이 모프 메시, 뒤가 스킨 인스턴스인 두 구간입니다.
-  스킨 데이터(레스트 포즈와 가중치)는 원본(`Mesh::getSkinDataId`)마다 한 번만 올라가고, 그리는 메시마다 인스턴스 테이블 한 줄이 결과와 원본을 연결합니다.
+  스킨 데이터(레스트 포즈와 가중치)는 원본(`Mesh::getSkinDataID`)마다 한 번만 올라가고, 그리는 메시마다 인스턴스 테이블 한 줄이 결과와 원본을 연결합니다.
   컴퓨트 셰이더(`meshskin.hlsl`)는 디스패치 하나로 모든 정점을 처리하고, 정점마다 이분 탐색으로 자기 인스턴스를 찾습니다.
 - `GPUVertexAnimationPool` 은 정점 애니메이션 텍스처(VAT)가 있는 메시(`Mesh::setVertexAnimation`)의 테이블을 버퍼 하나에 이어 붙입니다. 테이블은 베이크한 뒤 변하지 않으므로 집합이 바뀔 때만 올립니다.
 
@@ -160,7 +160,7 @@ GPU 풀은 렌더 스레드가 소유합니다.
 인스턴스 버퍼와 머티리얼 버퍼를 백엔드마다 어떻게 바인딩하는지는 [Shader 문서](../Graphics/Shader/README.md)의 "백엔드별 바인딩"에 있습니다.
 
 API 차이 하나는 남습니다. `SV_VertexID` 는 Vulkan과 OpenGL에서 `startVertex` 를 포함하고, Direct3D에서는 드로우 안의 0부터 시작하는 번호입니다.
-`binding.hlsli` 의 `swComputeMorphElement` 가 이 차이를 흡수하고, `RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대값을 확인합니다.
+`binding.hlsli` 의 `swComputeMorphElement` 가 이 차이를 흡수하고, `RHIDeviceTest.SceneDrawVertexIDStartsAtZeroOnlyOnD3D` 가 네 백엔드의 기대값을 확인합니다.
 
 DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 OpenGL의 DrawIndex를 쓰는 설계는 버렸습니다. 이미지는 맞았지만 DirectX 12 ExecuteIndirect가 런타임 패치 때문에 호출당 두 배 느려졌습니다.
 비용은 상태 변경이 아니라 호출 수에서 오므로 정렬 순서를 바꿔도 줄지 않았습니다.
@@ -314,7 +314,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 - **패스 상수 버퍼는 드로우마다 슬롯을 받습니다**(`PassConstantRing`). 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼 확보합니다.
   버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
 - **머티리얼 원소는 영속 ID를 가집니다.** 처음 본 조합에만 슬롯을 주고, 쓰이지 않으면 나중에 회수하지만 슬롯을 옮기지 않습니다.
-  옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GPUSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`).
+  옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GPUSceneTest.MaterialElementIDsPersistAcrossBuildsAndAreFreed`).
 - **머티리얼 폴백 버퍼는 stride마다 하나입니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
 - **스프라이트의 프레임과 색은 인스턴스 필드입니다**(`GPUInstance::_sprite`, 16바이트 `GPUSpriteInstanceData`). 언리얼의 Custom Primitive Data에 해당합니다.
   배치 키를 건드리지 않으므로 같은 텍스처의 스프라이트는 한 번에 그려집니다(`RenderPassGPUTest.SpriteFramesAndTintsArePerInstance`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)입니다.

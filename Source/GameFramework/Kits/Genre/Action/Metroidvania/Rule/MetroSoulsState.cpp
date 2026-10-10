@@ -46,11 +46,11 @@ namespace sw
         _flaskPotencyLevel = 0;
     }
 
-    bool MetroSoulsState::rest( const hashed_string& siteId, Vitality& vitality )
+    bool MetroSoulsState::rest( const hashed_string& siteID, Vitality& vitality )
     {
         if ( _pCatalog == nullptr )
             return false;
-        const MetroSiteDef* pSite = _pCatalog->findSite( siteId );
+        const MetroSiteDef* pSite = _pCatalog->findSite( siteID );
         if ( pSite == nullptr || pSite->_bRest == SW_FALSE )
             return false;
         _respawnSite = pSite->_id;
@@ -59,7 +59,7 @@ namespace sw
         return true;
     }
 
-    hashed_string MetroSoulsState::die( const hashed_string& areaId, const float2& position, Vitality& vitality )
+    hashed_string MetroSoulsState::die( const hashed_string& areaID, const float2& position, Vitality& vitality )
     {
         // 되찾지 못한 시체가 있으면 그 통화는 영영 사라진다 — 두 번째 죽음의 벌.
         if ( _corpse._bActive == SW_TRUE )
@@ -72,28 +72,28 @@ namespace sw
         const int64         carried  = _pWallet != nullptr ? _pWallet->getBalance( currency ) : 0;
         if ( carried > 0 )
         {
-            _corpse._area     = areaId;
+            _corpse._area     = areaID;
             _corpse._position = position;
             _corpse._currency = static_cast<int32>( MathUtil::min( carried, int64{ 0x7FFFFFFF } ) );
             _corpse._bActive  = SW_TRUE;
             _pWallet->charge( currency, _corpse._currency );
-            pushEvent( MetroSoulsEventType::CorpseDropped, areaId, _corpse._currency );
+            pushEvent( MetroSoulsEventType::CorpseDropped, areaID, _corpse._currency );
         }
         refreshWorld( vitality );
         pushEvent( MetroSoulsEventType::Died, _respawnSite, 0 );
         return _respawnSite;
     }
 
-    bool MetroSoulsState::tryRecoverCorpse( const hashed_string& areaId, const float2& position )
+    bool MetroSoulsState::tryRecoverCorpse( const hashed_string& areaID, const float2& position )
     {
-        if ( _corpse._bActive == SW_FALSE || _corpse._area != areaId || _pCatalog == nullptr )
+        if ( _corpse._bActive == SW_FALSE || _corpse._area != areaID || _pCatalog == nullptr )
             return false;
         const float32 radius = _pCatalog->getRules()._corpseRecoverRadius;
         if ( float2::getDistanceSquared( _corpse._position, position ) > radius * radius )
             return false;
         if ( _pWallet != nullptr )
             _pWallet->add( getCurrencyName(), _corpse._currency );
-        pushEvent( MetroSoulsEventType::CorpseRecovered, areaId, _corpse._currency );
+        pushEvent( MetroSoulsEventType::CorpseRecovered, areaID, _corpse._currency );
         _corpse = MetroCorpse{};
         return true;
     }
@@ -125,16 +125,16 @@ namespace sw
         return rules._flaskHeal + rules._flaskHealPerUpgrade * static_cast<float32>( _flaskPotencyLevel );
     }
 
-    int32 MetroSoulsState::registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random,
+    int32 MetroSoulsState::registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random,
                                          ItemStackList& outDrops )
     {
-        if ( _pCatalog == nullptr || isSpawnAlive( spawnId ) == false )
+        if ( _pCatalog == nullptr || isSpawnAlive( spawnID ) == false )
             return -1;
-        const MetroEnemyDef* pEnemy = _pCatalog->findEnemy( enemyId );
+        const MetroEnemyDef* pEnemy = _pCatalog->findEnemy( enemyID );
         if ( pEnemy == nullptr )
             return -1;
         MetroKillRecord record;
-        record._spawnId = spawnId;
+        record._spawnID = spawnID;
         record._bBoss   = pEnemy->_bBoss;
         _listKill.push_back( record );
         if ( _pWallet != nullptr )
@@ -150,11 +150,11 @@ namespace sw
         return pEnemy->_currency;
     }
 
-    bool MetroSoulsState::isSpawnAlive( const hashed_string& spawnId ) const
+    bool MetroSoulsState::isSpawnAlive( const hashed_string& spawnID ) const
     {
         for ( const MetroKillRecord& record : _listKill )
         {
-            if ( record._spawnId == spawnId )
+            if ( record._spawnID == spawnID )
                 return false;
         }
         return true;
@@ -198,7 +198,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listKill.size() );
         for ( const MetroKillRecord& kill : _listKill )
         {
-            StateArchiveUtil::writeName( outArchive, kill._spawnId );
+            StateArchiveUtil::writeName( outArchive, kill._spawnID );
             outArchive << kill._bBoss;
         }
         StateArchiveUtil::writeName( outArchive, _corpse._area );
@@ -221,7 +221,7 @@ namespace sw
         vector<MetroKillRecord> listKill( killCount );
         for ( MetroKillRecord& kill : listKill )
         {
-            if ( StateArchiveUtil::readName( archive, kill._spawnId ) == false )
+            if ( StateArchiveUtil::readName( archive, kill._spawnID ) == false )
                 return false;
             archive >> kill._bBoss;
             if ( archive.isError() || kill._bBoss > SW_TRUE )

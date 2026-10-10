@@ -95,7 +95,7 @@ namespace sw
     /** @brief 가게 진열 한 줄입니다. */
     struct ShopStockDef
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         string        _requirement{}; ///< 잠금 조건 식(키트 · 게임이 평가 — 예: GameFlags 조건). 비면 늘 열림
         int32         _price{ -1 };   ///< 단가(−1 이면 `ItemDef::_value`)
         int32         _count{ -1 };   ///< 처음 · 최대 재고(−1 = 끝없음)
@@ -119,7 +119,7 @@ namespace sw
         float32               _recoveryPerDay{ 0.1f }; ///< 하루마다 시세가 1 쪽으로 돌아오는 양
         int32                 _restockDays{ 1 };       ///< 며칠마다 재입고(0 = 안 한다)
 
-        const ShopStockDef* findStock( const hashed_string& itemId ) const;
+        const ShopStockDef* findStock( const hashed_string& itemID ) const;
         bool                refusesCategory( const hashed_string& category ) const;
     };
 } // namespace sw
@@ -197,8 +197,8 @@ namespace sw
             Sold,       ///< 손님이 팔았다
             Restocked   ///< 재입고(아이템마다 하나)
         };
-        hashed_string _shopId{};
-        hashed_string _itemId{};
+        hashed_string _shopID{};
+        hashed_string _itemID{};
         int64         _money{ 0 }; ///< 낸 돈 · 받은 돈
         int32         _count{ 0 };
         Kind          _kind{ Kind::Bought };
@@ -210,7 +210,7 @@ namespace sw
     /** @brief 가게 하나의 지금 상태입니다. */
     struct ShopRuntime
     {
-        hashed_string         _shopId{};
+        hashed_string         _shopID{};
         vector<int32>         _listStockCount{};    ///< `ShopDef::_listStock` 과 같은 자리(−1 = 끝없음)
         vector<hashed_string> _listSaturatedItem{}; ///< 시세가 떨어진 아이템
         vector<float32>       _listSellFactor{};    ///< 그 아이템의 시세(1 = 보통)
@@ -239,32 +239,32 @@ namespace sw
         /** @brief 잠금 조건을 평가할 쪽입니다. 없으면 조건이 있는 줄은 늘 잠겨 있습니다. */
         void setConditionEvaluator( const IShopConditionEvaluator* pEvaluator ) { _pConditionEvaluator = pEvaluator; }
         /** @brief 가격 배율 — 평판 · 할인 · 그날 매입률(리썰 컴퍼니). 사기와 팔기를 따로 둡니다. */
-        void setPriceModifier( const hashed_string& shopId, float32 buyModifier, float32 sellModifier );
+        void setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier );
         /** @brief 이 가게가 @p category 를 더는 사들이지 않게 합니다. */
-        void refuseCategory( const hashed_string& shopId, const hashed_string& category );
+        void refuseCategory( const hashed_string& shopID, const hashed_string& category );
 
-        ShopResult evaluateBuy( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Wallet& wallet, const Inventory& inventory ) const;
+        ShopResult evaluateBuy( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Wallet& wallet, const Inventory& inventory ) const;
         /** @brief 삽니다. @p pOutPaid 가 있으면 실제로 낸 금액(성공일 때만)을 적습니다. */
-        ShopResult buy( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid = nullptr );
-        ShopResult evaluateSell( const hashed_string& shopId, const hashed_string& itemId, int32 count, const Inventory& inventory ) const;
+        ShopResult buy( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutPaid = nullptr );
+        ShopResult evaluateSell( const hashed_string& shopID, const hashed_string& itemID, int32 count, const Inventory& inventory ) const;
         /** @brief 팝니다. @p pOutReceived 가 있으면 실제로 받은 금액(성공일 때만)을 적습니다. */
-        ShopResult sell( const hashed_string& shopId, const hashed_string& itemId, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
+        ShopResult sell( const hashed_string& shopID, const hashed_string& itemID, int32 count, Wallet& wallet, Inventory& inventory, int64* pOutReceived = nullptr );
         /** @brief 하루를 넘깁니다 — 시세 회복과(때가 되면) 재입고입니다. */
         void advanceDay();
         void drainEvents( vector<ShopEvent>& outListEvent );
 
         /** @brief 사는 단가입니다. 가게가 팔지 않으면 −1 입니다. */
-        int32 computeBuyPrice( const hashed_string& shopId, const hashed_string& itemId ) const;
+        int32 computeBuyPrice( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief @p count 개를 지금 팔면 받는 돈입니다(시세 하락 포함). */
-        int64 computeSellTotal( const hashed_string& shopId, const hashed_string& itemId, int32 count ) const;
+        int64 computeSellTotal( const hashed_string& shopID, const hashed_string& itemID, int32 count ) const;
         /** @brief 남은 재고입니다(−1 = 끝없음, 진열에 없으면 0). */
-        int32 getStockCount( const hashed_string& shopId, const hashed_string& itemId ) const;
+        int32 getStockCount( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief 그 아이템의 매입 시세(1 = 보통)입니다. */
-        float32 getSellFactor( const hashed_string& shopId, const hashed_string& itemId ) const;
+        float32 getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const;
         /** @brief 진열 줄이 열려 있는가입니다(조건 없음 또는 평가가 참). */
         bool               isUnlocked( const ShopStockDef& stock ) const;
-        hashed_string      getCurrency( const hashed_string& shopId ) const;
-        const ShopRuntime* findRuntime( const hashed_string& shopId ) const;
+        hashed_string      getCurrency( const hashed_string& shopID ) const;
+        const ShopRuntime* findRuntime( const hashed_string& shopID ) const;
 
         /** @brief 가게마다 런타임(가게 id · 재고 · 시세 · 사들이지 않는 분류 · 가격 배율 · 재입고 뒤 날)을 씁니다. 카탈로그는 `initialize` 의 것이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
@@ -272,10 +272,10 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        ShopRuntime* findRuntime( const hashed_string& shopId );
-        int32        findStockIndex( const ShopDef& shop, const hashed_string& itemId ) const;
+        ShopRuntime* findRuntime( const hashed_string& shopID );
+        int32        findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
         int32        computeBasePrice( const ShopStockDef& stock ) const;
-        bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemId ) const;
+        bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
 
         vector<ShopRuntime>            _listRuntime;
         EventBuffer<ShopEvent>         _eventBuffer;

@@ -82,11 +82,11 @@ namespace sw
                 }
             }
 
-            static const ItemVisualDef* findShownVisual( const AppearanceDatabase& database, const hashed_string& itemId, const hashed_string& visibleVisual )
+            static const ItemVisualDef* findShownVisual( const AppearanceDatabase& database, const hashed_string& itemID, const hashed_string& visibleVisual )
             {
                 if ( visibleVisual.empty() == false )
                     return database.getVisuals().findVisual( visibleVisual );
-                return database.findItemVisual( itemId );
+                return database.findItemVisual( itemID );
             }
 
             static const CustomizationSchemaDef* findVisualSchema( const AppearanceDatabase& database, const ItemVisualDef* pVisual )
@@ -265,7 +265,7 @@ namespace sw
     void AppearanceSelectionUtil::captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection )
     {
         outSelection                = AppearanceSelection{};
-        outSelection._basePresetId  = spec._presetId;
+        outSelection._basePresetID  = spec._presetID;
         outSelection._seed          = spec._seed;
         outSelection._schema        = spec._schema;
         outSelection._bodyType      = spec._bodyType;
@@ -279,7 +279,7 @@ namespace sw
                                                AppearanceSelection& outPartial )
     {
         outPartial                            = AppearanceSelection{};
-        outPartial._basePresetId              = selection._basePresetId;
+        outPartial._basePresetID              = selection._basePresetID;
         outPartial._seed                      = selection._seed;
         outPartial._schema                    = selection._schema;
         outPartial._listCategory              = listCategory;
@@ -303,11 +303,11 @@ namespace sw
         // 칸의 기본(지워졌거나 잠긴 아이템이 돌아갈 곳)은 기준 프리셋의 것이다.
         CharacterAppearanceSpec baseSpec = current;
         const bool              bBaseKnown =
-            selection._basePresetId.empty() == false && database.getPresets().expand( selection._basePresetId, selection._seed, database.getSlotTable(), database.getSets(), database.getSchemas(), baseSpec );
-        if ( selection._basePresetId.empty() == false && bBaseKnown == false )
+            selection._basePresetID.empty() == false && database.getPresets().expand( selection._basePresetID, selection._seed, database.getSlotTable(), database.getSets(), database.getSchemas(), baseSpec );
+        if ( selection._basePresetID.empty() == false && bBaseKnown == false )
         {
             outReport._bUnknownBasePreset = SW_TRUE;
-            SW_LOG_WARNING( "Appearance base preset '%#' no longer exists - applying on top of the current look", selection._basePresetId.c_str() );
+            SW_LOG_WARNING( "Appearance base preset '%#' no longer exists - applying on top of the current look", selection._basePresetID.c_str() );
             baseSpec = current;
         }
         outSpec = selection.isPartial() ? current : baseSpec;
@@ -349,20 +349,20 @@ namespace sw
             AppearanceSlotRequest* pTarget = outSpec.findSlot( request._slot );
             if ( pTarget == nullptr )
             {
-                Internal::addFallback( outReport, request._slot, request._itemId, hashed_string{}, AppearanceFallbackReason::UnknownSlot );
+                Internal::addFallback( outReport, request._slot, request._itemID, hashed_string{}, AppearanceFallbackReason::UnknownSlot );
                 continue;
             }
             const AppearanceSlotRequest* pBaseSlot   = baseSpec.findSlot( request._slot );
-            const hashed_string          defaultItem = pBaseSlot != nullptr ? pBaseSlot->_itemId : hashed_string{};
+            const hashed_string          defaultItem = pBaseSlot != nullptr ? pBaseSlot->_itemID : hashed_string{};
             AppearanceSlotRequest        accepted    = request;
-            if ( request._itemId.empty() == false )
+            if ( request._itemID.empty() == false )
             {
-                const bool bMissing = pItemCatalog == nullptr || pItemCatalog->findItem( request._itemId ) == nullptr;
-                const bool bLocked  = bMissing == false && pUnlockQuery != nullptr && pUnlockQuery->isItemUnlocked( request._itemId ) == false;
+                const bool bMissing = pItemCatalog == nullptr || pItemCatalog->findItem( request._itemID ) == nullptr;
+                const bool bLocked  = bMissing == false && pUnlockQuery != nullptr && pUnlockQuery->isItemUnlocked( request._itemID ) == false;
                 if ( bMissing || bLocked )
                 {
-                    Internal::addFallback( outReport, request._slot, request._itemId, defaultItem, bMissing ? AppearanceFallbackReason::MissingItem : AppearanceFallbackReason::LockedItem );
-                    accepted._itemId = defaultItem;
+                    Internal::addFallback( outReport, request._slot, request._itemID, defaultItem, bMissing ? AppearanceFallbackReason::MissingItem : AppearanceFallbackReason::LockedItem );
+                    accepted._itemID = defaultItem;
                     accepted._customization.clear();
                     accepted._listDetachedPart.clear();
                     accepted._damage = 0.0f;
@@ -370,10 +370,10 @@ namespace sw
             }
             if ( accepted._visibleVisual.empty() == false && database.getVisuals().findVisual( accepted._visibleVisual ) == nullptr )
             {
-                Internal::addFallback( outReport, request._slot, accepted._visibleVisual, accepted._itemId, AppearanceFallbackReason::MissingVisual );
+                Internal::addFallback( outReport, request._slot, accepted._visibleVisual, accepted._itemID, AppearanceFallbackReason::MissingVisual );
                 accepted._visibleVisual = hashed_string{};
             }
-            const ItemVisualDef*  pShown = Internal::findShownVisual( database, accepted._itemId, accepted._visibleVisual );
+            const ItemVisualDef*  pShown = Internal::findShownVisual( database, accepted._itemID, accepted._visibleVisual );
             CustomizationValueSet filtered;
             Internal::filterItemValues( Internal::findVisualSchema( database, pShown ), accepted._customization, filtered, outReport );
             accepted._customization = filtered;
@@ -392,7 +392,7 @@ namespace sw
     void AppearanceSelectionCodec::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
         using Internal = AppearanceSelectionInternal;
-        writer.writeUint32( Internal::toHash32( selection._basePresetId ) );
+        writer.writeUint32( Internal::toHash32( selection._basePresetID ) );
         writer.writeVarUint( selection._seed );
         writer.writeUint32( Internal::toHash32( selection._schema ) );
         writer.writeUint32( Internal::toHash32( selection._bodyType ) );
@@ -408,7 +408,7 @@ namespace sw
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
             writer.writeUint32( Internal::toHash32( request._slot ) );
-            writer.writeUint32( Internal::toHash32( request._itemId ) );
+            writer.writeUint32( Internal::toHash32( request._itemID ) );
             writer.writeUint32( Internal::toHash32( request._visibleVisual ) );
             writer.writeUint32( Internal::toHash32( request._state ) );
             writer.writeBits( static_cast<uint32>( AppearanceResolver::snapDamage( request._damage ) * 255.0f + 0.5f ), Internal::kDamageBits );
@@ -418,7 +418,7 @@ namespace sw
             {
                 writer.writeUint32( Internal::toHash32( part ) );
             }
-            const ItemVisualDef* pShown = Internal::findShownVisual( database, request._itemId, request._visibleVisual );
+            const ItemVisualDef* pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
             Internal::writeValues( writer, request._customization, Internal::findVisualSchema( database, pShown ) );
         }
     }
@@ -428,16 +428,16 @@ namespace sw
         using Internal = AppearanceSelectionInternal;
         outSelection   = AppearanceSelection{};
 
-        vector<hashed_string> listPresetId;
+        vector<hashed_string> listPresetID;
         for ( const CharacterAppearanceDef& preset : database.getPresets().getPresets() )
         {
-            listPresetId.push_back( preset._id );
+            listPresetID.push_back( preset._id );
         }
-        vector<hashed_string> listSchemaId;
+        vector<hashed_string> listSchemaID;
         vector<hashed_string> listCategory{ hashed_string( AppearanceSelection::kLoadoutCategory ) };
         for ( const CustomizationSchemaDef& schema : database.getSchemas().getSchemas() )
         {
-            listSchemaId.push_back( schema._id );
+            listSchemaID.push_back( schema._id );
             for ( const CustomizationParamDef& param : schema._listParameter )
             {
                 Internal::addUnique( listCategory, param._category );
@@ -446,9 +446,9 @@ namespace sw
         vector<hashed_string> listBodyName;
         Internal::collectBodyNames( database, listBodyName );
 
-        outSelection._basePresetId = Internal::findByHash( reader.readUint32(), listPresetId );
+        outSelection._basePresetID = Internal::findByHash( reader.readUint32(), listPresetID );
         outSelection._seed         = static_cast<uint32>( reader.readVarUint() );
-        outSelection._schema       = Internal::findByHash( reader.readUint32(), listSchemaId );
+        outSelection._schema       = Internal::findByHash( reader.readUint32(), listSchemaID );
         outSelection._bodyType     = Internal::findByHash( reader.readUint32(), listBodyName );
         outSelection._bodyShape    = Internal::findByHash( reader.readUint32(), listBodyName );
         outSelection._face         = Internal::findByHash( reader.readUint32(), listBodyName );
@@ -467,18 +467,18 @@ namespace sw
         {
             listSlotName.push_back( slot._name );
         }
-        vector<hashed_string> listItemId;
+        vector<hashed_string> listItemID;
         if ( database.getItemCatalog() != nullptr )
         {
             for ( const ItemDef& item : database.getItemCatalog()->getItems() )
             {
-                listItemId.push_back( item._id );
+                listItemID.push_back( item._id );
             }
         }
-        vector<hashed_string> listVisualId;
+        vector<hashed_string> listVisualID;
         for ( const ItemVisualDef& visual : database.getVisuals().getVisuals() )
         {
-            listVisualId.push_back( visual._id );
+            listVisualID.push_back( visual._id );
         }
         uint32 slotCount = 0;
         if ( Internal::readVarCount( reader, slotCount ) == false )
@@ -487,12 +487,12 @@ namespace sw
         {
             AppearanceSlotRequest request;
             request._slot                = Internal::findByHash( reader.readUint32(), listSlotName );
-            request._itemId              = Internal::findByHash( reader.readUint32(), listItemId );
-            request._visibleVisual       = Internal::findByHash( reader.readUint32(), listVisualId );
+            request._itemID              = Internal::findByHash( reader.readUint32(), listItemID );
+            request._visibleVisual       = Internal::findByHash( reader.readUint32(), listVisualID );
             const uint32 stateHash       = reader.readUint32();
             request._damage              = static_cast<float32>( reader.readBits( Internal::kDamageBits ) ) / 255.0f;
             request._bSuppressed         = reader.readBool() ? SW_TRUE : SW_FALSE;
-            const ItemVisualDef*  pShown = Internal::findShownVisual( database, request._itemId, request._visibleVisual );
+            const ItemVisualDef*  pShown = Internal::findShownVisual( database, request._itemID, request._visibleVisual );
             vector<hashed_string> listStateName;
             vector<hashed_string> listPartName;
             if ( pShown != nullptr )

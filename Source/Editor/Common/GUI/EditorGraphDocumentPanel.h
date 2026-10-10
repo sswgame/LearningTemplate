@@ -6,7 +6,7 @@
  * `AnimGraphPanel` 과 `DialogueGraphPanel` 은 **같은 패널**입니다. 노드 · 링크 목록을 들고, 캔버스를 하나
  * 소유하고, JSON 으로 읽고 쓰고, 노드를 옮기면 dirty 로 표시합니다. 뼈대를 패널마다 복사하면 복사본이 **조용히
  * 갈라집니다**("움직였는가" 판단의 `||` · `&&` 가 갈리면 수평 이동만 한 레이아웃이 저장되지 않는 식 — 판단 자체는
- * `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다). `EditorNodeGraphId.h` 가 id 변환을 모은 것과 같은
+ * `EditorSessionPolicy::hasNodeMoved` 로 올려 테스트가 지킵니다). `EditorNodeGraphID.h` 가 id 변환을 모은 것과 같은
  * 이유로 뼈대도 여기에 모읍니다.
  *
  * [애셋에 요구하는 것]
@@ -21,7 +21,7 @@
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
-#include "Editor/Common/Widgets/EditorNodeGraphId.h"
+#include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw::editor
@@ -64,9 +64,9 @@ namespace sw::editor
         virtual void ensureDefaults() = 0;
 
         /** @brief 다음에 쓸 노드 ID 입니다. */
-        int32 nextNodeId() const { return nextItemId( _listNode ); }
+        int32 nextNodeID() const { return nextItemID( _listNode ); }
         /** @brief 다음에 쓸 링크 ID 입니다. */
-        int32 nextLinkId() const { return nextItemId( _listLink ); }
+        int32 nextLinkID() const { return nextItemID( _listLink ); }
 
         /** @brief 지금 목록을 자산 한 벌로 만듭니다. */
         AssetType captureGraphData() const
@@ -133,7 +133,7 @@ namespace sw::editor
             bool bMoved{ false };
             for ( NodeType& node : _listNode )
             {
-                const ImVec2 position = ax::NodeEditor::GetNodePosition( toNodeId( node._id ) );
+                const ImVec2 position = ax::NodeEditor::GetNodePosition( toNodeID( node._id ) );
                 const bool   bChanged = EditorSessionPolicy::hasNodeMoved( node._position._x, node._position._y, position.x, position.y );
                 if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bChanged ) )
                     bMoved = true;
@@ -152,8 +152,8 @@ namespace sw::editor
          * @details 패널마다 다른 것은 "이 링크가 이 노드에 닿는가"
          *          (애니메이션은 노드 id, 대화는 핀 번호를 풀어 봅니다)와 Undo 이름뿐입니다. 노드를 지우면 그 노드에 닿은 링크도
          *          함께 지웁니다. 남기면 저장된 그래프가 없는 노드를 가리킵니다.
-         * @param linkTouchesNode `( const LinkType&, int32 nodeId ) -> bool`
-         * @param onNodeDeleted `( int32 nodeId ) -> void`. 선택 해제 같은 패널별 뒷정리
+         * @param linkTouchesNode `( const LinkType&, int32 nodeID ) -> bool`
+         * @param onNodeDeleted `( int32 nodeID ) -> void`. 선택 해제 같은 패널별 뒷정리
          */
         template <typename LinkTouchesNodeFn, typename OnNodeDeletedFn>
         void processCanvasDeletions( LinkTouchesNodeFn&& linkTouchesNode, OnNodeDeletedFn&& onNodeDeleted, const utf8* pDeleteLinkLabel,
@@ -162,24 +162,24 @@ namespace sw::editor
             if ( ax::NodeEditor::BeginDelete() == false )
                 return;
 
-            ax::NodeEditor::LinkId linkId;
-            while ( ax::NodeEditor::QueryDeletedLink( &linkId ) )
+            ax::NodeEditor::LinkId linkID;
+            while ( ax::NodeEditor::QueryDeletedLink( &linkID ) )
             {
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
-                const int32 id = static_cast<int32>( linkId.Get() );
+                const int32 id = static_cast<int32>( linkID.Get() );
                 _listLink.erase( std::remove_if( _listLink.begin(), _listLink.end(), [id]( const LinkType& link )
                 { return link._id == id; } ),
                                  _listLink.end() );
                 notifyDocumentEdited( pDeleteLinkLabel );
             }
 
-            ax::NodeEditor::NodeId nodeId;
-            while ( ax::NodeEditor::QueryDeletedNode( &nodeId ) )
+            ax::NodeEditor::NodeId nodeID;
+            while ( ax::NodeEditor::QueryDeletedNode( &nodeID ) )
             {
                 if ( ax::NodeEditor::AcceptDeletedItem() == false )
                     continue;
-                const int32 id = static_cast<int32>( nodeId.Get() );
+                const int32 id = static_cast<int32>( nodeID.Get() );
                 _listNode.erase( std::remove_if( _listNode.begin(), _listNode.end(), [id]( const NodeType& node )
                 { return node._id == id; } ),
                                  _listNode.end() );

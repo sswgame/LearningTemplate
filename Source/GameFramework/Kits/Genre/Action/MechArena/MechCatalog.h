@@ -50,8 +50,8 @@ namespace sw
     struct MechWeaponSlotDef
     {
         hashed_string         _id{};
-        hashed_string         _weaponId{};              ///< Shot — `WeaponCatalog` 의 id
-        vector<hashed_string> _listMoveId{};            ///< Melee — 콤보 단마다 `MoveCatalog` 의 id(개수 = 콤보 단수)
+        hashed_string         _weaponID{};              ///< Shot — `WeaponCatalog` 의 id
+        vector<hashed_string> _listMoveID{};            ///< Melee — 콤보 단마다 `MoveCatalog` 의 id(개수 = 콤보 단수)
         float32               _damage{ 0.0f };          ///< Special 의 피해(Shot 은 무기, Melee 는 기술의 피해)
         float32               _downValue{ 10.0f };      ///< 한 번 맞힐 때 쌓는 다운치
         float32               _knockback{ 0.0f };       ///< 맞은 쪽을 밀어내는 거리

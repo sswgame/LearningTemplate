@@ -65,7 +65,7 @@ SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( GPUBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_ViewRank, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 
 // 정렬할 값은 인스턴스 번호 하나다 — 번호가 곧 CPU 가 정한 그리는 순서다(위 주석).
 groupshared uint s_arrId[SW_SORT_MAX_ELEMENTS];
@@ -105,7 +105,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 		uint key = 0xFFFFFFFFu;
 		if (loadIndex < count)
 		{
-			const uint instanceId = g_VisibleInstanceIds[base + loadIndex];
+			const uint instanceId = g_VisibleInstanceIDs[base + loadIndex];
 			if (g_UseViewRank != 0u)
 			{
 				const uint viewRank = (instanceId >= g_TransparentTailBase) ? min(g_ViewRank[instanceId - g_TransparentTailBase], 0x7FFFFFu) : 0x7FFFFFu;
@@ -150,6 +150,6 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 	for (uint storeIndex = groupThreadId.x; storeIndex < count; storeIndex += SW_SORT_THREADS)
 	{
 		const uint key = s_arrId[storeIndex];
-		g_VisibleInstanceIds[base + storeIndex] = (g_UseViewRank != 0u) ? (base + (key & 0x1FFu)) : key;
+		g_VisibleInstanceIDs[base + storeIndex] = (g_UseViewRank != 0u) ? (base + (key & 0x1FFu)) : key;
 	}
 }

@@ -534,7 +534,7 @@ namespace sw
         RTSCommandResult getOpenBuildResult() const { return _openBuildResult; }
         RTSCommandResult getRoadBuildResult() const { return _roadBuildResult; }
         int32            getTempleStepCount() const { return _templeStepCount; }
-        RTSUnitId        getMarine() const { return _marine; }
+        RTSUnitID        getMarine() const { return _marine; }
 
         void writeState( Archive& outArchive ) const override
         {
@@ -575,7 +575,7 @@ namespace sw
                 return false;
             _world     = std::move( world );
             _tickCount = tickCount;
-            _marine    = RTSUnitId::fromPacked( marineValue );
+            _marine    = RTSUnitID::fromPacked( marineValue );
             return true;
         }
 
@@ -613,8 +613,8 @@ namespace sw
         }
 
         RTSWorld         _world;
-        RTSUnitId        _worker{};
-        RTSUnitId        _marine{};
+        RTSUnitID        _worker{};
+        RTSUnitID        _marine{};
         RTSCommandResult _blockedBuildResult{ RTSCommandResult::Ok };
         RTSCommandResult _openBuildResult{ RTSCommandResult::CannotDo };
         RTSCommandResult _roadBuildResult{ RTSCommandResult::Ok };
@@ -662,7 +662,7 @@ namespace
         explicit ScopedCompositionSceneService( SceneManager& manager )
         {
             ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
             game::bindGameService( service );
         }
         ~ScopedCompositionSceneService() { game::unbindGameService(); }
@@ -892,7 +892,7 @@ SW_TEST_CASE( KitCompositionTest, FarmIncomeBuysTheTownOrchardInTheSameTick )
     int32 completedCount = 0;
     for ( const QuestEvent& questEvent : listEvent )
     {
-        if ( questEvent._kind == QuestEvent::Kind::Completed && questEvent._questId == hashed_string( "meadow_request" ) )
+        if ( questEvent._kind == QuestEvent::Kind::Completed && questEvent._questID == hashed_string( "meadow_request" ) )
             ++completedCount;
     }
     SW_EXPECT_EQUAL( 1, completedCount );

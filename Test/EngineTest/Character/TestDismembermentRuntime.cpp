@@ -104,7 +104,7 @@ SW_TEST_CASE( DismembermentRuntimeTest, FatalHeadHitSeversAndSpawnsPhysicsPiece 
     RagdollComponent*       pRagdoll   = pSkeleton->addComponent<RagdollComponent>();
     DismembermentComponent* pDismember = pSkeleton->addComponent<DismembermentComponent>();
     SW_ASSERT_TRUE( pUnit != nullptr && pRagdoll != nullptr && pDismember != nullptr );
-    pUnit->setMeshId( Internal::kMeshPath );
+    pUnit->setMeshID( Internal::kMeshPath );
     pUnit->setSkeletonPath( Internal::kSkeletonPath );
     pRagdoll->setPhysicsAssetPath( Internal::kPhysicsPath );
     pDismember->setSeverableRegions( { hashed_string( "Head" ), hashed_string( "Arm_R" ) } );

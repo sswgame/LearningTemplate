@@ -105,9 +105,9 @@ namespace sw
         unordered_map<hashed_string, int32> _mapDrop{};
 
         /** @brief 보상 수량을 찾습니다. 없으면 fallback 입니다. */
-        int32 getDrop( const hashed_string& rewardId, int32 fallback = 0 ) const
+        int32 getDrop( const hashed_string& rewardID, int32 fallback = 0 ) const
         {
-            const auto mapIter = _mapDrop.find( rewardId );
+            const auto mapIter = _mapDrop.find( rewardID );
             return mapIter != _mapDrop.end() ? mapIter->second : fallback;
         }
     };
@@ -154,9 +154,9 @@ namespace sw
 
         /**
          * @brief `archetype` 속성을 열거자로 읽습니다. 속성이 없으면 MeleePatrol 이고, 모르는 이름이면 경고하고 MeleePatrol 입니다.
-         * @param pMonsterId 경고에 적을 몬스터 id 입니다.
+         * @param pMonsterID 경고에 적을 몬스터 id 입니다.
          */
-        static MonsterArchetype parseArchetype( const utf8* pStr, const utf8* pMonsterId );
+        static MonsterArchetype parseArchetype( const utf8* pStr, const utf8* pMonsterID );
 
         unordered_map<hashed_string, MonsterDef> _mapMonster;
     };

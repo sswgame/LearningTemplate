@@ -21,16 +21,16 @@ namespace sw
             return;
         // 몸 = 씬 컴포넌트(콜라이더 · 메시 · 스프라이트 · 빛). 논리 컴포넌트(센서 · 회로 · 이 기믹)는 켜 둔 채로 시간을 센다.
         const GameObjectHandle handle    = object.getHandle();
-        const uint64           keepId    = pKeep != nullptr ? pKeep->getComponentId() : 0;
+        const uint64           keepID    = pKeep != nullptr ? pKeep->getComponentID() : 0;
         GameObjectManager*     pResolver = pManager;
-        pManager->executeOrDeferPostTick( [pResolver, handle, keepId, bActive]()
+        pManager->executeOrDeferPostTick( [pResolver, handle, keepID, bActive]()
         {
             GameObject* pObject = pResolver->resolveGameObject( handle );
             if ( pObject == nullptr )
                 return;
             for ( Component* pComp : pObject->getComponents() )
             {
-                if ( pComp != nullptr && pComp->isSceneComponent() && pComp->getComponentId() != keepId )
+                if ( pComp != nullptr && pComp->isSceneComponent() && pComp->getComponentID() != keepID )
                     pComp->setActive( bActive );
             }
         } );

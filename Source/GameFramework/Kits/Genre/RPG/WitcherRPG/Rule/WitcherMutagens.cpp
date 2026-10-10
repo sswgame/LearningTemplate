@@ -50,7 +50,7 @@ namespace sw
         }
     }
 
-    WitcherSlotResult WitcherMutagens::equipSkill( int32 group, int32 slot, const hashed_string& skillId )
+    WitcherSlotResult WitcherMutagens::equipSkill( int32 group, int32 slot, const hashed_string& skillID )
     {
         if ( isValidSlot( group, slot ) == false )
             return WitcherSlotResult::InvalidSlot;
@@ -62,23 +62,23 @@ namespace sw
             for ( int32 slotIndex = 0; slotIndex < static_cast<int32>( listSkill.size() ); ++slotIndex )
             {
                 const bool bSameSlot = groupIndex == group && slotIndex == slot;
-                if ( bSameSlot == false && skillId.empty() == false && listSkill[static_cast<size_t>( slotIndex )] == skillId )
+                if ( bSameSlot == false && skillID.empty() == false && listSkill[static_cast<size_t>( slotIndex )] == skillID )
                     return WitcherSlotResult::AlreadyEquipped;
             }
         }
-        _listGroup[static_cast<size_t>( group )]._listSkill[static_cast<size_t>( slot )] = skillId;
+        _listGroup[static_cast<size_t>( group )]._listSkill[static_cast<size_t>( slot )] = skillID;
         return WitcherSlotResult::Ok;
     }
 
-    WitcherSlotResult WitcherMutagens::equipMutagen( int32 group, const hashed_string& mutagenId )
+    WitcherSlotResult WitcherMutagens::equipMutagen( int32 group, const hashed_string& mutagenID )
     {
         if ( group < 0 || group >= getGroupCount() )
             return WitcherSlotResult::InvalidSlot;
         if ( isGroupOpen( group ) == false )
             return WitcherSlotResult::Locked;
-        if ( mutagenId.empty() == false && ( _pCatalog == nullptr || _pCatalog->findMutagen( mutagenId ) == nullptr ) )
+        if ( mutagenID.empty() == false && ( _pCatalog == nullptr || _pCatalog->findMutagen( mutagenID ) == nullptr ) )
             return WitcherSlotResult::UnknownMutagen;
-        _listGroup[static_cast<size_t>( group )]._mutagenId = mutagenId;
+        _listGroup[static_cast<size_t>( group )]._mutagenID = mutagenID;
         return WitcherSlotResult::Ok;
     }
 
@@ -102,19 +102,19 @@ namespace sw
 
     hashed_string WitcherMutagens::getMutagen( int32 group ) const
     {
-        return group >= 0 && group < getGroupCount() ? _listGroup[static_cast<size_t>( group )]._mutagenId : hashed_string{};
+        return group >= 0 && group < getGroupCount() ? _listGroup[static_cast<size_t>( group )]._mutagenID : hashed_string{};
     }
 
     int32 WitcherMutagens::countMatches( int32 group ) const
     {
-        const hashed_string      mutagenId = getMutagen( group );
-        const WitcherMutagenDef* pMutagen  = mutagenId.empty() == false && _pCatalog != nullptr ? _pCatalog->findMutagen( mutagenId ) : nullptr;
+        const hashed_string      mutagenID = getMutagen( group );
+        const WitcherMutagenDef* pMutagen  = mutagenID.empty() == false && _pCatalog != nullptr ? _pCatalog->findMutagen( mutagenID ) : nullptr;
         if ( pMutagen == nullptr || pMutagen->_color.empty() )
             return 0;
         int32 matches = 0;
-        for ( const hashed_string& skillId : _listGroup[static_cast<size_t>( group )]._listSkill )
+        for ( const hashed_string& skillID : _listGroup[static_cast<size_t>( group )]._listSkill )
         {
-            matches += skillId.empty() == false && _pCatalog->getSkillColor( skillId ) == pMutagen->_color ? 1 : 0;
+            matches += skillID.empty() == false && _pCatalog->getSkillColor( skillID ) == pMutagen->_color ? 1 : 0;
         }
         return matches;
     }
@@ -125,8 +125,8 @@ namespace sw
             return;
         for ( int32 group = 0; group < getGroupCount(); ++group )
         {
-            const hashed_string      mutagenId = getMutagen( group );
-            const WitcherMutagenDef* pMutagen  = mutagenId.empty() ? nullptr : _pCatalog->findMutagen( mutagenId );
+            const hashed_string      mutagenID = getMutagen( group );
+            const WitcherMutagenDef* pMutagen  = mutagenID.empty() ? nullptr : _pCatalog->findMutagen( mutagenID );
             if ( pMutagen == nullptr || pMutagen->_stat.empty() || isGroupOpen( group ) == false )
                 continue;
             outStats.addValue( pMutagen->_stat, pMutagen->_value + static_cast<float32>( countMatches( group ) ) * pMutagen->_matchValue );
@@ -140,10 +140,10 @@ namespace sw
         {
             if ( isGroupOpen( group ) == false )
                 continue;
-            for ( const hashed_string& skillId : _listGroup[static_cast<size_t>( group )]._listSkill )
+            for ( const hashed_string& skillID : _listGroup[static_cast<size_t>( group )]._listSkill )
             {
-                if ( skillId.empty() == false )
-                    outListSkill.push_back( skillId );
+                if ( skillID.empty() == false )
+                    outListSkill.push_back( skillID );
             }
         }
     }
@@ -160,11 +160,11 @@ namespace sw
         for ( const Group& group : _listGroup )
         {
             outArchive << static_cast<uint32>( group._listSkill.size() );
-            for ( const hashed_string& skillId : group._listSkill )
+            for ( const hashed_string& skillID : group._listSkill )
             {
-                StateArchiveUtil::writeName( outArchive, skillId );
+                StateArchiveUtil::writeName( outArchive, skillID );
             }
-            StateArchiveUtil::writeName( outArchive, group._mutagenId );
+            StateArchiveUtil::writeName( outArchive, group._mutagenID );
         }
     }
 
@@ -181,14 +181,14 @@ namespace sw
         {
             if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != group._listSkill.size() )
                 return false;
-            for ( hashed_string& skillId : group._listSkill )
+            for ( hashed_string& skillID : group._listSkill )
             {
-                if ( StateArchiveUtil::readName( archive, skillId ) == false )
+                if ( StateArchiveUtil::readName( archive, skillID ) == false )
                     return false;
             }
-            if ( StateArchiveUtil::readName( archive, group._mutagenId ) == false )
+            if ( StateArchiveUtil::readName( archive, group._mutagenID ) == false )
                 return false;
-            if ( group._mutagenId.empty() == false && _pCatalog->findMutagen( group._mutagenId ) == nullptr )
+            if ( group._mutagenID.empty() == false && _pCatalog->findMutagen( group._mutagenID ) == nullptr )
                 return false;
         }
         _characterLevel = characterLevel;

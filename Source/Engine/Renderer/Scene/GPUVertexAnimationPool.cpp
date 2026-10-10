@@ -20,16 +20,16 @@ namespace sw
         bool bSame = _listBuilt.size() == listMesh.size();
         for ( size_t index = 0; bSame && index < listMesh.size(); ++index )
         {
-            bSame = _listBuilt[index] == listMesh[index] && listMesh[index] != nullptr && _listBuiltContentId[index] == listMesh[index]->getContentId();
+            bSame = _listBuilt[index] == listMesh[index] && listMesh[index] != nullptr && _listBuiltContentID[index] == listMesh[index]->getContentID();
         }
         if ( bSame )
             return;
 
         _listBuilt.assign( listMesh.begin(), listMesh.end() );
-        _listBuiltContentId.clear();
+        _listBuiltContentID.clear();
         for ( const Mesh* pMesh : listMesh )
         {
-            _listBuiltContentId.push_back( pMesh != nullptr ? pMesh->getContentId() : 0u );
+            _listBuiltContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
         }
         _mapBase.clear();
         _mapBaseByAnimation.clear();
@@ -84,7 +84,7 @@ namespace sw
         _mapBase.clear();
         _mapBaseByAnimation.clear();
         _listBuilt.clear();
-        _listBuiltContentId.clear();
+        _listBuiltContentID.clear();
         _elementCount = 0;
     }
 } // namespace sw

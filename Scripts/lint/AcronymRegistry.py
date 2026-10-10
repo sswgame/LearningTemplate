@@ -36,7 +36,7 @@ kAcronym: tuple[str, ...] = (
 )
 
 #: 게이트가 막는 약어. 그 약어를 트리 전체에서 바꾼 커밋이 여기에 올린다(계획 2절 순서).
-kEnforced: frozenset[str] = frozenset({"HUD", "IK", "DDS", "TLS", "UDP", "URL", "UUID", "RTS", "SRPG", "SQL", "AI", "LOD", "API", "RPC", "PSO", "XML", "JSON", "HTTP", "IO", "UI", "GPU", "CPU", "RHI", "AABB", "DSP", "MMO", "ACL", "GUI", "RPG", "JRPG"})
+kEnforced: frozenset[str] = frozenset({"HUD", "IK", "DDS", "TLS", "UDP", "URL", "UUID", "RTS", "SRPG", "SQL", "AI", "LOD", "API", "RPC", "PSO", "XML", "JSON", "HTTP", "IO", "UI", "GPU", "CPU", "RHI", "AABB", "DSP", "MMO", "ACL", "GUI", "RPG", "JRPG", "ID"})
 
 #: 복수 `s` 를 붙여 쓰지 않는 약어 — `Ios` 는 `IO` 의 복수가 아니라 플랫폼 이름(iOS)이다.
 kNoPlural: frozenset[str] = frozenset({"IO"})
@@ -98,7 +98,8 @@ kExternalName: frozenset[str] = frozenset({
     "GetCurrentProcessId", "GetCurrentThreadId", "GetProcessId", "GetThreadId", "GetWindowThreadProcessId", "CancelIoEx",
     "CreateIoCompletionPort", "UuidCreate", "UuidToStringA", "UuidFromStringA", "dwProcessId", "dwThreadId",
     "VendorId", "DeviceId", "SubSysId",
-    "ActiveId", "ActiveIdHasBeenEditedThisFrame", "HoveredId", "DockId",
+    "ActiveId", "ActiveIdHasBeenEditedThisFrame", "HoveredId", "DockId", "ThreadId",
+    "shapeIdA", "shapeIdB", "bodyIdA", "bodyIdB", "sensorShapeId", "visitorShapeId", "userMaterialId",
     "minLod", "maxLod", "mipLodBias",
 })
 

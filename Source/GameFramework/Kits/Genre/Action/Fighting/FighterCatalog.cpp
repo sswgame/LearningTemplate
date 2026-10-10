@@ -18,7 +18,7 @@ namespace sw
         struct FighterCatalogInternal
         {
             /** @brief "Standing,Crouching,Airborne,Stance" 를 비트로 읽습니다. 모르는 낱말은 경고합니다. 비면 @p fallback 입니다. */
-            static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveId )
+            static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveID )
             {
                 uint8 mask = 0;
                 GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
@@ -32,7 +32,7 @@ namespace sw
                     else if ( StringUtil::equals( token, "Stance", true ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Stance ) ) );
                     else
-                        SW_LOG_WARNING( "%#: move '%#' has an unknown posture '%#' - ignored", sourceName, pMoveId, string( token ) );
+                        SW_LOG_WARNING( "%#: move '%#' has an unknown posture '%#' - ignored", sourceName, pMoveID, string( token ) );
                 } );
                 return mask != 0 ? mask : fallback;
             }
@@ -59,11 +59,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // FighterDef
     // ------------------------------------------------------------------------------
-    int32 FighterDef::findMoveIndex( const hashed_string& moveId ) const
+    int32 FighterDef::findMoveIndex( const hashed_string& moveID ) const
     {
         for ( size_t index = 0; index < _listMove.size(); ++index )
         {
-            if ( _listMove[index]._frame._id == moveId )
+            if ( _listMove[index]._frame._id == moveID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -121,13 +121,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             FighterDef fighter;
-            fighter._id             = hashed_string( pId );
+            fighter._id             = hashed_string( pID );
             const utf8* pName       = node.findAttribute( "name" );
-            fighter._name           = pName != nullptr ? pName : pId;
+            fighter._name           = pName != nullptr ? pName : pID;
             fighter._health         = MathUtil::max( 1, node.getAttributeInt( "health", fighter._health ) );
             fighter._sidestepFrames = MathUtil::max( 1, node.getAttributeInt( "sidestepFrames", fighter._sidestepFrames ) );
             fighter._jumpFrames     = MathUtil::max( 2, node.getAttributeInt( "jumpFrames", fighter._jumpFrames ) );
@@ -144,26 +144,26 @@ namespace sw
                 FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "sidestepDown" ), "d,n", fighter._sidestepDown );
             const bool bJumpOk = FighterCatalogInternal::parseCommandOr( parser, node.getAttributeText( "jump" ), "u/f", fighter._jump );
             if ( bSidestepOk == false || bSidestepDownOk == false || bJumpOk == false )
-                SW_LOG_WARNING( "%#: fighter '%#' has an unreadable sidestep/jump command - movement disabled", sourceName, pId );
+                SW_LOG_WARNING( "%#: fighter '%#' has an unreadable sidestep/jump command - movement disabled", sourceName, pID );
 
             for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
             {
-                const utf8* pMoveId = GameDataXML::findRequiredId( child, sourceName );
-                if ( pMoveId == nullptr )
+                const utf8* pMoveID = GameDataXML::findRequiredID( child, sourceName );
+                if ( pMoveID == nullptr )
                     continue;
-                const string_view    framesId = child.getAttributeText( "frames" );
-                const MoveFrameData* pFrame   = moveCatalog.findMove( hashed_string( framesId.empty() ? string_view( pMoveId ) : framesId ) );
+                const string_view    framesID = child.getAttributeText( "frames" );
+                const MoveFrameData* pFrame   = moveCatalog.findMove( hashed_string( framesID.empty() ? string_view( pMoveID ) : framesID ) );
                 if ( pFrame == nullptr )
                 {
-                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has no frame data in the MoveCatalog - skipped", sourceName, pId, pMoveId );
+                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has no frame data in the MoveCatalog - skipped", sourceName, pID, pMoveID );
                     continue;
                 }
                 FighterMove move;
                 move._frame     = *pFrame;
-                move._frame._id = hashed_string( pMoveId );
+                move._frame._id = hashed_string( pMoveID );
                 if ( parser.parse( child.getAttributeText( "command" ), move._command ) == false )
                 {
-                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has an unreadable command - skipped", sourceName, pId, pMoveId );
+                    SW_LOG_WARNING( "%#: fighter '%#' move '%#' has an unreadable command - skipped", sourceName, pID, pMoveID );
                     continue;
                 }
                 move._command._id        = move._frame._id;
@@ -177,7 +177,7 @@ namespace sw
                 }
                 else
                 {
-                    move._postureMask = FighterCatalogInternal::parsePostureMask( child.getAttributeText( "from" ), move._postureMask, sourceName, pMoveId );
+                    move._postureMask = FighterCatalogInternal::parsePostureMask( child.getAttributeText( "from" ), move._postureMask, sourceName, pMoveID );
                 }
                 const string_view enterStance = child.getAttributeText( "enterStance" );
                 if ( enterStance.empty() == false )
@@ -189,7 +189,7 @@ namespace sw
                     if ( parser.parse( breakButtons, breakCommand ) && breakCommand._listStep.size() == 1 )
                         move._breakButtons = breakCommand._listStep[0]._buttons;
                     else
-                        SW_LOG_WARNING( "%#: fighter '%#' move '%#' has unreadable breakButtons - throw cannot be broken", sourceName, pId, pMoveId );
+                        SW_LOG_WARNING( "%#: fighter '%#' move '%#' has unreadable breakButtons - throw cannot be broken", sourceName, pID, pMoveID );
                 }
                 move._pushback    = MathUtil::max( 0.0f, child.getAttributeFloat( "pushback", move._pushback ) );
                 move._bStringOnly = child.getAttributeBool( "stringOnly", false ) ? SW_TRUE : SW_FALSE;
@@ -203,7 +203,7 @@ namespace sw
                 fighter._listMove.push_back( move );
             }
             if ( fighter._listMove.empty() )
-                SW_LOG_WARNING( "%#: fighter '%#' has no usable <Move>", sourceName, pId );
+                SW_LOG_WARNING( "%#: fighter '%#' has no usable <Move>", sourceName, pID );
             addFighter( fighter );
             ++loadedCount;
         }

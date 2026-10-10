@@ -149,7 +149,7 @@ namespace sw
         const ScavengerCarrySettings&    getCarrySettings() const { return _carry; }
         const ScavengerPenaltySettings&  getPenaltySettings() const { return _penalty; }
         const ScavengerFacilitySettings& getFacilitySettings() const { return _facility; }
-        const hashed_string&             getTerminalShopId() const { return _terminalShopId; }
+        const hashed_string&             getTerminalShopID() const { return _terminalShopID; }
         const hashed_string&             getCurrency() const { return _currency; }
         float32                          getCrewHealth() const { return _crewHealth; }
 
@@ -165,7 +165,7 @@ namespace sw
         ScavengerCarrySettings         _carry;
         ScavengerPenaltySettings       _penalty;
         ScavengerFacilitySettings      _facility;
-        hashed_string                  _terminalShopId;
+        hashed_string                  _terminalShopID;
         hashed_string                  _currency;
         float32                        _crewHealth; ///< 사람 하나의 체력
     };

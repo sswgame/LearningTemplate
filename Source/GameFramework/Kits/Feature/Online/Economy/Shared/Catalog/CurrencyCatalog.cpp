@@ -56,9 +56,9 @@ namespace sw
         return nullptr;
     }
 
-    int64 CurrencyCatalog::getBalanceCap( string_view assetId ) const
+    int64 CurrencyCatalog::getBalanceCap( string_view assetID ) const
     {
-        const CurrencyDef* pDef = findCurrency( assetId );
+        const CurrencyDef* pDef = findCurrency( assetID );
         return pDef != nullptr ? pDef->_cap : 0;
     }
 
@@ -66,22 +66,22 @@ namespace sw
     {
         for ( XMLNode node = root.findChild( "Currency" ); node; node = node.findNextSibling( "Currency" ) )
         {
-            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXML::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
-            if ( LedgerUtil::isValidAssetId( pId ) == false )
+            if ( LedgerUtil::isValidAssetID( pID ) == false )
             {
-                SW_LOG_WARNING( "%#: currency id '%#' must be [0-9a-z_.-] - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: currency id '%#' must be [0-9a-z_.-] - skipped", sourceName, pID );
                 continue;
             }
             CurrencyDef def;
-            def._id                   = pId;
+            def._id                   = pID;
             def._bPaid                = node.getAttributeBool( "paid", false ) ? SW_TRUE : SW_FALSE;
             const string_view capText = node.getAttributeText( "cap" );
             const bool        bCapBad = capText.empty() == false && ( StringUtil::parseInt64( capText, def._cap ) == false || def._cap < 0 );
             if ( bCapBad )
             {
-                SW_LOG_WARNING( "%#: currency '%#' has an invalid cap '%#' - no cap", sourceName, pId, capText );
+                SW_LOG_WARNING( "%#: currency '%#' has an invalid cap '%#' - no cap", sourceName, pID, capText );
                 def._cap = 0;
             }
             for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )

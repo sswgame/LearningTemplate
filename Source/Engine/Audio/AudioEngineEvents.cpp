@@ -192,7 +192,7 @@ namespace sw
                     case AudioStealPolicy::Oldest:
                     {
                         bBetter = instance._startFrame < victim._startFrame ||
-                                  ( instance._startFrame == victim._startFrame && instance._playingId < victim._playingId );
+                                  ( instance._startFrame == victim._startFrame && instance._playingID < victim._playingID );
                         break;
                     }
                     case AudioStealPolicy::Quietest:
@@ -218,7 +218,7 @@ namespace sw
                 }
                 EventInstance& victim = _listInstance[static_cast<size_t>( victimIndex )];
                 victim._bStopping     = true;
-                stopVoices( victim._playingId, 0, event._fadeOutSeconds );
+                stopVoices( victim._playingID, 0, event._fadeOutSeconds );
             }
         }
 
@@ -235,8 +235,8 @@ namespace sw
         EventInstance& instance = _listInstance[static_cast<size_t>( instanceIndex )];
         instance._pLibrary      = state._pLibrary;
         instance._pDesc         = &event;
-        instance._playingId     = command._playingId;
-        instance._emitterId     = command._emitterId;
+        instance._playingID     = command._playingID;
+        instance._emitterID     = command._emitterID;
         instance._startFrame    = _renderedFrameCount;
 
         // 재생 한 번의 볼륨 · 피치(레이어 보이스는 같은 값을 나눈다).
@@ -298,8 +298,8 @@ namespace sw
                 SW_LOG_WARNING( "Voice pool exhausted - dropped event '%#'", event._name.c_str() );
                 break;
             }
-            pSlot->_playingId        = command._playingId;
-            pSlot->_emitterId        = command._emitterId;
+            pSlot->_playingID        = command._playingID;
+            pSlot->_emitterID        = command._emitterID;
             pSlot->_clipPath         = clip._path;
             pSlot->_busName          = event._bus;
             pSlot->_busIndex         = busIndex;
@@ -334,11 +334,11 @@ namespace sw
         }
     }
 
-    float32 AudioEngine::findParameterValue( AudioEmitterId emitterId, const hashed_string& name ) const
+    float32 AudioEngine::findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const
     {
-        if ( emitterId != 0 )
+        if ( emitterID != 0 )
         {
-            const auto emitterIt = _mapEmitter.find( emitterId );
+            const auto emitterIt = _mapEmitter.find( emitterID );
             if ( emitterIt != _mapEmitter.end() )
             {
                 for ( const EmitterParameter& parameter : emitterIt->second._listParameter )
@@ -525,7 +525,7 @@ namespace sw
                 return lhs._priority > rhs._priority;
             if ( lhs._audibility != rhs._audibility )
                 return lhs._audibility > rhs._audibility;
-            return lhs._playingId < rhs._playingId;
+            return lhs._playingID < rhs._playingID;
         } );
         for ( size_t orderIndex = budget; orderIndex < _listVoiceOrder.size(); ++orderIndex )
         {

@@ -20,7 +20,7 @@ namespace sw
         /** @brief 프로세스에 하나인 인스턴스입니다(상태가 없습니다). */
         static const ACLAnimCodec& getInstance();
 
-        AnimCodecId        getId() const override { return AnimCodecId::ACL; }
+        AnimCodecID        getID() const override { return AnimCodecID::ACL; }
         const utf8*        getName() const override { return "acl"; }
         [[nodiscard]] bool compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const override;
         [[nodiscard]] bool sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask = nullptr ) const override;

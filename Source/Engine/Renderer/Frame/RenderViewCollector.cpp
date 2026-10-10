@@ -100,7 +100,7 @@ namespace sw
             RenderViewRequest request;
             request._settings       = RenderViewCollectorInternal::makeSettings( output );
             request._settings._bCut = pCamera->consumeCut() ? SW_TRUE : SW_FALSE;
-            request._viewId         = pCamera->getComponentId();
+            request._viewID         = pCamera->getComponentID();
             if ( output._target == CameraOutputTarget::RenderTexture )
             {
                 if ( output._renderTexture.empty() )
@@ -125,7 +125,7 @@ namespace sw
             request._transparentSortAxis = Render2DSettings::getActive().computeTransparentSortAxis( pCamera->isOrthographic(), pCamera->getCameraForward() );
 
             RenderViewScheduler::Candidate& candidate = arrCandidate[candidateCount];
-            candidate._viewId                         = request._viewId;
+            candidate._viewID                         = request._viewID;
             candidate._updateRate                     = MathUtil::max( 0.0f, output._updateRate );
             candidate._bVisible                       = output._visibilityObject.isValid() == false || RenderViewCollectorInternal::isObjectVisible( manager, output._visibilityObject, mainFrustum )
                                                           ? SW_TRUE
@@ -150,7 +150,7 @@ namespace sw
         request._settings             = RenderViewCollectorInternal::makeSettings( camera.getRenderOutput() );
         request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
         request._settings._bCut       = camera.consumeCut() ? SW_TRUE : SW_FALSE;
-        request._viewId               = camera.getComponentId();
+        request._viewID               = camera.getComponentID();
         request._outputKind           = RenderViewOutputKind::HostTarget;
         request._hostTarget           = target._renderTarget;
         request._outputWidth          = target._width;

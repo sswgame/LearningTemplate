@@ -83,14 +83,14 @@ namespace
         return pile;
     }
 
-    Card makeUno( UnoColor color, UnoValue value, uint16 cardId )
+    Card makeUno( UnoColor color, UnoValue value, uint16 cardID )
     {
-        return Card{ cardId, static_cast<uint8>( color ), static_cast<uint8>( value ) };
+        return Card{ cardID, static_cast<uint8>( color ), static_cast<uint8>( value ) };
     }
 
-    Card makeUnoNumber( UnoColor color, int32 number, uint16 cardId )
+    Card makeUnoNumber( UnoColor color, int32 number, uint16 cardID )
     {
-        return Card{ cardId, static_cast<uint8>( color ), static_cast<uint8>( number ) };
+        return Card{ cardID, static_cast<uint8>( color ), static_cast<uint8>( number ) };
     }
 
     template <typename TEvent>
@@ -180,8 +180,8 @@ SW_TEST_CASE( CardGameTest, ShuffleIsSeededDealsRoundRobinAndActionsRoundTrip )
     // 행동 바이트 — 턴 중계에 싣는 꼴.
     CardAction action;
     action._kind     = static_cast<uint8>( PokerActionKind::Raise );
-    action._cardId   = 0x1234;
-    action._targetId = 47;
+    action._cardID   = 0x1234;
+    action._targetID = 47;
     action._amount   = -123456;
     vector<uint8> buffer;
     CardActionUtil::encodeAction( action, buffer );
@@ -189,8 +189,8 @@ SW_TEST_CASE( CardGameTest, ShuffleIsSeededDealsRoundRobinAndActionsRoundTrip )
     CardAction decoded;
     SW_EXPECT_TRUE( CardActionUtil::decodeAction( buffer, decoded ) );
     SW_EXPECT_EQUAL( decoded._kind, action._kind );
-    SW_EXPECT_EQUAL( decoded._cardId, action._cardId );
-    SW_EXPECT_EQUAL( decoded._targetId, action._targetId );
+    SW_EXPECT_EQUAL( decoded._cardID, action._cardID );
+    SW_EXPECT_EQUAL( decoded._targetID, action._targetID );
     SW_EXPECT_EQUAL( decoded._amount, action._amount );
     buffer[0] = 0x00;
     SW_EXPECT_FALSE( CardActionUtil::decodeAction( buffer, decoded ) ); // 표지가 다르다
@@ -787,11 +787,11 @@ SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuff
     // 손에서 정의 id 로 찾아 쓴다.
     struct Finder
     {
-        static int32 findInHand( const DeckBattle& target, const utf8* pId )
+        static int32 findInHand( const DeckBattle& target, const utf8* pID )
         {
             for ( int32 index = 0; index < target.getHand().getCount(); ++index )
             {
-                if ( target.getCardDef( target.getHand().getAt( index ) )->_id == hashed_string( pId ) )
+                if ( target.getCardDef( target.getHand().getAt( index ) )->_id == hashed_string( pID ) )
                     return index;
             }
             return -1;

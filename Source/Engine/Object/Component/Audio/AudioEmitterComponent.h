@@ -48,14 +48,14 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 이 자리에서 이벤트를 냅니다. 엔진이 없으면(헤드리스) 0 입니다. 어느 스레드에서 불러도 됩니다. */
-        AudioPlayingId post( const hashed_string& eventName );
+        AudioPlayingID post( const hashed_string& eventName );
         /** @brief 이 자리의 소리를 모두 멈춥니다(음수 페이드는 이벤트의 값). */
         void stopAll( float32 fadeSeconds );
         /** @brief 이 자리에만 걸리는 파라미터 값입니다(엔진 `setEmitterParameter`). */
         void setParameter( const hashed_string& name, float32 value );
 
         /** @brief 엔진의 에미터 id 입니다(컴포넌트 id). */
-        AudioEmitterId getEmitterId() const { return getComponentId(); }
+        AudioEmitterID getEmitterID() const { return getComponentID(); }
         /** @brief 시작할 때 내는 이벤트입니다. */
         const hashed_string& getEvent() const { return _event; }
         /** @brief 시작할 때 낼 이벤트를 정합니다. */

@@ -40,26 +40,26 @@ namespace sw
             }
 
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거 이름을 모르면 false 입니다(경고). */
-            [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectId, string_view sourceName, GameplayEffectModifier& outModifier )
+            [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectID, string_view sourceName, GameplayEffectModifier& outModifier )
             {
                 outModifier._attribute = readName( node, "attribute" );
                 if ( outModifier._attribute.empty() )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectId );
+                    SW_LOG_WARNING( "%#: effect '%#' has a <Modifier> without an attribute - skipped", sourceName, pEffectID );
                     return false;
                 }
 
                 const utf8* pOp = node.findAttribute( "op" );
                 if ( pOp != nullptr && engine::getTypeRegistry().enumFromString( string_view( pOp ), outModifier._op ) == false )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectId, pOp );
+                    SW_LOG_WARNING( "%#: effect '%#' has unknown modifier op '%#' - skipped", sourceName, pEffectID, pOp );
                     return false;
                 }
 
                 const utf8* pSource = node.findAttribute( "source" );
                 if ( pSource != nullptr && engine::getTypeRegistry().enumFromString( string_view( pSource ), outModifier._magnitudeSource ) == false )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectId, pSource );
+                    SW_LOG_WARNING( "%#: effect '%#' has unknown magnitude source '%#' - skipped", sourceName, pEffectID, pSource );
                     return false;
                 }
 
@@ -78,14 +78,14 @@ namespace sw
                 const bool bMissingBacking = outModifier._magnitudeSource == EffectMagnitudeSource::AttributeBased && outModifier._backingAttribute.empty();
                 if ( bMissingBacking )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' AttributeBased modifier on '%#' has no backing attribute - skipped", sourceName, pEffectId,
+                    SW_LOG_WARNING( "%#: effect '%#' AttributeBased modifier on '%#' has no backing attribute - skipped", sourceName, pEffectID,
                                     outModifier._attribute.c_str() );
                     return false;
                 }
                 const bool bMissingCallerName = outModifier._magnitudeSource == EffectMagnitudeSource::SetByCaller && outModifier._setByCallerName.empty();
                 if ( bMissingCallerName )
                 {
-                    SW_LOG_WARNING( "%#: effect '%#' SetByCaller modifier on '%#' has no name - skipped", sourceName, pEffectId,
+                    SW_LOG_WARNING( "%#: effect '%#' SetByCaller modifier on '%#' has no name - skipped", sourceName, pEffectID,
                                     outModifier._attribute.c_str() );
                     return false;
                 }
@@ -185,36 +185,36 @@ namespace sw
         _mapAbilitySet.clear();
     }
 
-    shared_ptr<const GameplayEffectDef> AbilityCatalog::findEffect( const hashed_string& effectId ) const
+    shared_ptr<const GameplayEffectDef> AbilityCatalog::findEffect( const hashed_string& effectID ) const
     {
-        const auto mapIter = _mapEffect.find( effectId );
+        const auto mapIter = _mapEffect.find( effectID );
         return mapIter != _mapEffect.end() ? mapIter->second : nullptr;
     }
 
-    const GameplayAbilityDef* AbilityCatalog::findAbility( const hashed_string& abilityId ) const
+    const GameplayAbilityDef* AbilityCatalog::findAbility( const hashed_string& abilityID ) const
     {
-        const auto mapIter = _mapAbility.find( abilityId );
+        const auto mapIter = _mapAbility.find( abilityID );
         return mapIter != _mapAbility.end() ? &mapIter->second : nullptr;
     }
 
-    const AbilitySetDef* AbilityCatalog::findAbilitySet( const hashed_string& setId ) const
+    const AbilitySetDef* AbilityCatalog::findAbilitySet( const hashed_string& setID ) const
     {
-        const auto mapIter = _mapAbilitySet.find( setId );
+        const auto mapIter = _mapAbilitySet.find( setID );
         return mapIter != _mapAbilitySet.end() ? &mapIter->second : nullptr;
     }
 
-    unique_ptr<GameplayAbility> AbilityCatalog::createAbility( const hashed_string& abilityId ) const
+    unique_ptr<GameplayAbility> AbilityCatalog::createAbility( const hashed_string& abilityID ) const
     {
-        const GameplayAbilityDef* pDef = findAbility( abilityId );
+        const GameplayAbilityDef* pDef = findAbility( abilityID );
         if ( pDef == nullptr )
         {
-            SW_LOG_WARNING( "createAbility: no ability '%#' in the catalog", abilityId.c_str() );
+            SW_LOG_WARNING( "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
             return nullptr;
         }
         const auto factoryIter = _mapAbilityFactory.find( pDef->_className );
         if ( factoryIter == _mapAbilityFactory.end() )
         {
-            SW_LOG_WARNING( "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityId.c_str(),
+            SW_LOG_WARNING( "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
                             pDef->_className.c_str() );
             return nullptr;
         }
@@ -279,18 +279,18 @@ namespace sw
 
     bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, GameplayEffectDef& outDef ) const
     {
-        const utf8* pId = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pId ) )
+        const utf8* pID = node.findAttribute( "id" );
+        if ( StringUtil::isNullOrEmpty( pID ) )
         {
             SW_LOG_WARNING( "%#: <GameplayEffect> without an id - skipped", sourceName );
             return false;
         }
-        outDef._id = hashed_string( pId );
+        outDef._id = hashed_string( pID );
 
         const utf8* pDuration = node.findAttribute( "duration" );
         if ( pDuration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pDuration ), outDef._durationPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pId, pDuration );
+            SW_LOG_WARNING( "%#: effect '%#' has unknown duration policy '%#' - skipped", sourceName, pID, pDuration );
             return false;
         }
         outDef._duration._baseValue           = node.getAttributeFloat( "seconds", 0.0f );
@@ -305,24 +305,24 @@ namespace sw
         const utf8* pStacking = node.findAttribute( "stacking" );
         if ( pStacking != nullptr && engine::getTypeRegistry().enumFromString( string_view( pStacking ), outDef._stackingPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pId, pStacking );
+            SW_LOG_WARNING( "%#: effect '%#' has unknown stacking policy '%#' - skipped", sourceName, pID, pStacking );
             return false;
         }
         const utf8* pExpiration = node.findAttribute( "stackExpiration" );
         if ( pExpiration != nullptr && engine::getTypeRegistry().enumFromString( string_view( pExpiration ), outDef._stackExpirationPolicy ) == false )
         {
-            SW_LOG_WARNING( "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pId, pExpiration );
+            SW_LOG_WARNING( "%#: effect '%#' has unknown stack expiration '%#' - skipped", sourceName, pID, pExpiration );
             return false;
         }
 
         const bool bDurationWithoutLength = outDef._durationPolicy == EffectDurationPolicy::HasDuration && outDef._duration._baseValue <= 0.0f;
         if ( bDurationWithoutLength )
-            SW_LOG_WARNING( "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pId );
+            SW_LOG_WARNING( "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pID );
 
         for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
             GameplayEffectModifier modifier;
-            if ( AbilityCatalogInternal::readModifier( modifierNode, pId, sourceName, modifier ) )
+            if ( AbilityCatalogInternal::readModifier( modifierNode, pID, sourceName, modifier ) )
                 outDef._listModifier.push_back( modifier );
         }
 
@@ -332,7 +332,7 @@ namespace sw
             const auto          factoryIter = _mapExecutionFactory.find( className );
             if ( factoryIter == _mapExecutionFactory.end() )
             {
-                SW_LOG_WARNING( "%#: effect '%#' uses execution class '%#' which is not registered - skipped", sourceName, pId, className.c_str() );
+                SW_LOG_WARNING( "%#: effect '%#' uses execution class '%#' which is not registered - skipped", sourceName, pID, className.c_str() );
                 continue;
             }
             shared_ptr<const IGameplayEffectExecution> pExecution = factoryIter->second( executionNode );
@@ -351,25 +351,25 @@ namespace sw
 
     bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const
     {
-        const utf8* pId = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pId ) )
+        const utf8* pID = node.findAttribute( "id" );
+        if ( StringUtil::isNullOrEmpty( pID ) )
         {
             SW_LOG_WARNING( "%#: <Ability> without an id - skipped", sourceName );
             return false;
         }
-        outDef._id        = hashed_string( pId );
+        outDef._id        = hashed_string( pID );
         outDef._className = AbilityCatalogInternal::readName( node, "class" );
         if ( outDef._className.empty() )
         {
-            SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pId );
+            SW_LOG_WARNING( "%#: ability '%#' has no class - skipped", sourceName, pID );
             return false;
         }
         // 클래스 이름은 여기서 풀지 않는다 — 클래스는 게임 모듈이 등록하므로 데이터를 읽는 순서와 상관없어야 한다. 없는 클래스는 만들 때(`createAbility`) 알린다.
 
         GameplayAbilityConfig& config      = outDef._config;
         config._id                         = outDef._id;
-        config._pCostEffect                = resolveEffectReference( node.findAttribute( "cost" ), pId, sourceName );
-        config._pCooldownEffect            = resolveEffectReference( node.findAttribute( "cooldown" ), pId, sourceName );
+        config._pCostEffect                = resolveEffectReference( node.findAttribute( "cost" ), pID, sourceName );
+        config._pCooldownEffect            = resolveEffectReference( node.findAttribute( "cooldown" ), pID, sourceName );
         config._bRetriggerInstancedAbility = node.getAttributeBool( "retrigger", false ) ? SW_TRUE : SW_FALSE;
         config._bActivateOnGranted         = node.getAttributeBool( "activateOnGranted", false ) ? SW_TRUE : SW_FALSE;
 
@@ -397,13 +397,13 @@ namespace sw
 
     bool AbilityCatalog::readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const
     {
-        const utf8* pId = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pId ) )
+        const utf8* pID = node.findAttribute( "id" );
+        if ( StringUtil::isNullOrEmpty( pID ) )
         {
             SW_LOG_WARNING( "%#: <AbilitySet> without an id - skipped", sourceName );
             return false;
         }
-        outDef._id = hashed_string( pId );
+        outDef._id = hashed_string( pID );
 
         for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
@@ -431,19 +431,19 @@ namespace sw
         for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry;
-            abilityEntry._abilityId = AbilityCatalogInternal::readName( abilityNode, "id" );
-            if ( abilityEntry._abilityId.empty() )
+            abilityEntry._abilityID = AbilityCatalogInternal::readName( abilityNode, "id" );
+            if ( abilityEntry._abilityID.empty() )
                 continue;
             abilityEntry._level   = abilityNode.getAttributeInt( "level", 1 );
-            abilityEntry._inputId = abilityNode.getAttributeInt( "input", -1 );
+            abilityEntry._inputID = abilityNode.getAttributeInt( "input", -1 );
             outDef._listAbility.push_back( abilityEntry );
         }
 
         for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry;
-            effectEntry._effectId = AbilityCatalogInternal::readName( effectNode, "id" );
-            if ( effectEntry._effectId.empty() )
+            effectEntry._effectID = AbilityCatalogInternal::readName( effectNode, "id" );
+            if ( effectEntry._effectID.empty() )
                 continue;
             effectEntry._level = effectNode.getAttributeInt( "level", 1 );
             outDef._listEffect.push_back( effectEntry );
@@ -453,13 +453,13 @@ namespace sw
         return true;
     }
 
-    shared_ptr<const GameplayEffectDef> AbilityCatalog::resolveEffectReference( const utf8* pEffectId, const utf8* pOwnerId, string_view sourceName ) const
+    shared_ptr<const GameplayEffectDef> AbilityCatalog::resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const
     {
-        if ( StringUtil::isNullOrEmpty( pEffectId ) )
+        if ( StringUtil::isNullOrEmpty( pEffectID ) )
             return nullptr;
-        shared_ptr<const GameplayEffectDef> pDef = findEffect( hashed_string( pEffectId ) );
+        shared_ptr<const GameplayEffectDef> pDef = findEffect( hashed_string( pEffectID ) );
         if ( pDef == nullptr )
-            SW_LOG_WARNING( "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerId, pEffectId );
+            SW_LOG_WARNING( "%#: ability '%#' refers to effect '%#' which is not in the catalog", sourceName, pOwnerID, pEffectID );
         return pDef;
     }
 } // namespace sw

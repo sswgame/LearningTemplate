@@ -109,10 +109,10 @@ namespace sw
         /** @brief 토큰을 확인합니다(바꾸지 않는다). */
         void validateSession( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
         void logout( const LoginSessionToken& token, int64 nowMs, uint64 requestTag );
-        /** @brief 게임 서버 @p serverId 로 가는 UDP 접속 표를 냅니다. 세션이 살아 있어야 한다. */
-        void issueGameTicket( const LoginSessionToken& token, const hashed_string& serverId, int64 nowMs, uint64 requestTag );
+        /** @brief 게임 서버 @p serverID 로 가는 UDP 접속 표를 냅니다. 세션이 살아 있어야 한다. */
+        void issueGameTicket( const LoginSessionToken& token, const hashed_string& serverID, int64 nowMs, uint64 requestTag );
         /** @brief 계정의 세션을 끊습니다(운영 · 제재 · 게임 규칙). 이 프로세스에 붙어 있으면 `Revoked` 사건이 납니다. */
-        void revokeAccountSessions( uint64 accountId, LoginRevokeReason reason, int64 nowMs, uint64 requestTag );
+        void revokeAccountSessions( uint64 accountID, LoginRevokeReason reason, int64 nowMs, uint64 requestTag );
         void linkCredential( const LoginSessionToken& token, const LoginCredential& credential, int64 nowMs, uint64 requestTag );
         void linkPlatform( const LoginSessionToken& token, string_view provider, const vector<uint8>& ticketBytes, int64 nowMs, uint64 requestTag );
         void unlinkPlatform( const LoginSessionToken& token, string_view provider, int64 nowMs, uint64 requestTag );
@@ -123,7 +123,7 @@ namespace sw
         /** @brief 예약 시각이 지난 탈퇴 계정을 @p maxCount 개까지 지웁니다(예약 작업이 분마다 — 완료 없음). */
         void purgeDueDeletions( int64 nowMs, int32 maxCount );
         /** @brief 세션의 연결이 끊겼습니다 — 재접속 유예를 시작합니다(완료 없음 — 사건 `Disconnected` 만). */
-        void markDisconnected( uint64 sessionId, int64 nowMs );
+        void markDisconnected( uint64 sessionID, int64 nowMs );
         /** @brief 붙어 있는 세션 @p maxCount 개를 돌아가며 다시 읽습니다(서버 여럿일 때 — 버스 알림을 놓친 것을 줍는다). */
         void refreshOnlineSessions( int64 nowMs, int32 maxCount );
 
@@ -132,12 +132,12 @@ namespace sw
         /** @brief 이 프로세스에 붙어 있지 않은 세션을 끊은 기록(밀려남 · 운영)입니다 — 바인딩이 버스로 다른 서버에 알린다. */
         void drainRemoteRevocations( vector<LoginEvent>& outListEvent ) { _remoteRevokeBuffer.drainTo( outListEvent ); }
         /** @brief 다른 서버가 이 세션을 끊었다(버스) — 이 프로세스에 붙어 있으면 접속 표에서 빼고 `Revoked` 사건을 냅니다. */
-        void noteRevokedElsewhere( AccountId accountId, uint64 sessionId, LoginRevokeReason reason );
+        void noteRevokedElsewhere( AccountID accountID, uint64 sessionID, LoginRevokeReason reason );
 
         // IAccountDirectory — 이 프로세스에 붙어 있는 계정만(메모리, 저장소를 읽지 않는다)
-        bool findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const override;
+        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override;
         bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override;
-        bool isAccountOnline( AccountId accountId ) const override { return _mapAccountToSession.find( accountId ) != _mapAccountToSession.end(); }
+        bool isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다(외부 확인 대기 포함). */
         int32                       getPendingCount() const { return _pendingCount + static_cast<int32>( _listPendingVerification.size() ); }
@@ -145,7 +145,7 @@ namespace sw
         const LoginSettings&        getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
         /** @brief 이 프로세스에 붙어 있는 계정의 지금 세션 id 입니다(없으면 0). */
-        uint64 findOnlineSessionId( AccountId accountId ) const;
+        uint64 findOnlineSessionID( AccountID accountID ) const;
 
         /** @brief 일의 `complete` 가 부른다(키트 안 — 바인딩 · 게임은 부르지 않는다). */
         void applyCompletion( LoginCompletion&& completion, const LoginStoreOutcome& outcome );
@@ -158,7 +158,7 @@ namespace sw
             string                  _provider{};
             string                  _storeURL{};
             IPlatformLoginProvider* _pProvider{ nullptr };
-            uint64                  _verificationId{ 0 };
+            uint64                  _verificationID{ 0 };
             uint64                  _requestTag{ 0 };
             int64                   _nowMs{ 0 };
             LoginOperation          _operation{ LoginOperation::PlatformLogin };

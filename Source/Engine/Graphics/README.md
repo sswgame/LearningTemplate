@@ -51,7 +51,7 @@ flowchart LR
 ### 1. 큐브의 색 바꾸기
 
 큐브는 씬의 기본 머티리얼(`engine/materials/defaultmaterial.material`)로 그려집니다. 이 머티리얼에는 `color` 라는 값이 있습니다.
-머티리얼 인스턴스를 만들어 이 값만 바꿔 보겠습니다. `EmptyGame::ensureTutorialSpinner` 에서 `setMeshId` 다음에 아래 코드를 넣습니다.
+머티리얼 인스턴스를 만들어 이 값만 바꿔 보겠습니다. `EmptyGame::ensureTutorialSpinner` 에서 `setMeshID` 다음에 아래 코드를 넣습니다.
 
 <!-- snippet: 머티리얼 인스턴스로 큐브 색 바꾸기 — 5b U7 에서 RenderPassGPUTest 케이스 구간으로 대조 -->
 ```cpp

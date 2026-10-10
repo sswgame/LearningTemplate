@@ -124,7 +124,7 @@ namespace sw
     {
         // 렌더 스레드가 떠 있으면 그 스레드만 이 장치로 기록 · 제출한다. 다른 스레드가 장치 대기(펜스 Signal · 해제 큐 비우기)를 끼워 넣으려면
         // 렌더 스레드가 받은 일을 먼저 모두 끝내야 한다. 렌더 스레드 자신이 부르면 기다릴 것이 없다.
-        if ( _pfnRenderThreadDrain != nullptr && std::this_thread::get_id() != _renderThreadId )
+        if ( _pfnRenderThreadDrain != nullptr && std::this_thread::get_id() != _renderThreadID )
             _pfnRenderThreadDrain( _pRenderThreadDrainContext );
         // 렌더 스레드가 받은 일을 다 끝냈다 — 그 사이 미룬 핸들을 지금 내린다(GPU 대기 전에 넣어야 같은 대기가 해제 큐까지 비운다).
         flushDeferredHandleReleases();
@@ -166,11 +166,11 @@ namespace sw
         _memoryLedger->setDriverBudget( budget );
     }
 
-    void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadId )
+    void IRHIDevice::setRenderThreadDrain( RenderThreadDrainFunction pfnDrain, void* pContext, std::thread::id renderThreadID )
     {
         _pfnRenderThreadDrain      = pfnDrain;
         _pRenderThreadDrainContext = ( pfnDrain != nullptr ) ? pContext : nullptr;
-        _renderThreadId            = ( pfnDrain != nullptr ) ? renderThreadId : std::thread::id{};
+        _renderThreadID            = ( pfnDrain != nullptr ) ? renderThreadID : std::thread::id{};
         // 렌더 스레드가 서거나 풀리는 자리다 — 든 프레임이 없으니 미룬 것을 내리고 셈을 처음부터 한다.
         _pDeferredHandleQueue->_framesInFlight.store( 0, std::memory_order_release );
         flushDeferredHandleReleases();
@@ -181,7 +181,7 @@ namespace sw
         if ( handle == 0 && ( kind == RHIHandleKind::Buffer || kind == RHIHandleKind::Texture ) )
             return;
         const bool bRenderThreadBusy = _pDeferredHandleQueue->_framesInFlight.load( std::memory_order_acquire ) != 0;
-        if ( bRenderThreadBusy && std::this_thread::get_id() != _renderThreadId )
+        if ( bRenderThreadBusy && std::this_thread::get_id() != _renderThreadID )
         {
             std::scoped_lock<mutex> lock{ _pDeferredHandleQueue->_mutex };
             _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind } );
@@ -241,7 +241,7 @@ namespace sw
         : _pSurface{ nullptr }
         , _pfnRenderThreadDrain{ nullptr }
         , _pRenderThreadDrainContext{ nullptr }
-        , _renderThreadId{}
+        , _renderThreadID{}
         , _backBufferWidth{ 0 }
         , _backBufferHeight{ 0 }
         , _bPreferredVSync{ false }

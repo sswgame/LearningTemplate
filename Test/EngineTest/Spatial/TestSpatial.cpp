@@ -162,10 +162,10 @@ SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
                               4, 3 );
 
     // 8개 요소 삽입 (노드 분할 유도)
-    for ( uint64 elementId = 1; elementId <= 8; ++elementId )
+    for ( uint64 elementID = 1; elementID <= 8; ++elementID )
     {
-        const float32 offset = static_cast<float32>( elementId * 20 );
-        octree.insert( elementId, sw::AABB{
+        const float32 offset = static_cast<float32>( elementID * 20 );
+        octree.insert( elementID, sw::AABB{
                                       sw::float3{        offset,         offset,         offset},
                                       sw::float3{offset + 10.0f, offset + 10.0f, offset + 10.0f}
         } );
@@ -173,9 +173,9 @@ SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
     SW_EXPECT_EQUAL( size_t( 8 ), octree.getTotalElements() );
 
     // 7개 요소 삭제 (남은 1개 요소로 인해 자식 노드가 루트로 collapse 축소됨)
-    for ( uint64 elementId = 2; elementId <= 8; ++elementId )
+    for ( uint64 elementID = 2; elementID <= 8; ++elementID )
     {
-        SW_EXPECT_TRUE( octree.remove( elementId ) );
+        SW_EXPECT_TRUE( octree.remove( elementID ) );
     }
     SW_EXPECT_EQUAL( size_t( 1 ), octree.getTotalElements() );
 
@@ -194,19 +194,19 @@ SW_TEST_CASE( SpatialTest, SpatialOctreeAndQuadTreeNodeCollapse )
                                       sw::float2{1000.0f, 1000.0f}
     },
                                   4, 3 );
-    for ( uint64 elementId = 1; elementId <= 8; ++elementId )
+    for ( uint64 elementID = 1; elementID <= 8; ++elementID )
     {
-        const float32 offset = static_cast<float32>( elementId * 20 );
-        quadTree.insert( elementId, sw::AABB2D{
+        const float32 offset = static_cast<float32>( elementID * 20 );
+        quadTree.insert( elementID, sw::AABB2D{
                                         sw::float2{        offset,         offset},
                                         sw::float2{offset + 10.0f, offset + 10.0f}
         } );
     }
     SW_EXPECT_EQUAL( size_t( 8 ), quadTree.getTotalElements() );
 
-    for ( uint64 elementId = 2; elementId <= 8; ++elementId )
+    for ( uint64 elementID = 2; elementID <= 8; ++elementID )
     {
-        SW_EXPECT_TRUE( quadTree.remove( elementId ) );
+        SW_EXPECT_TRUE( quadTree.remove( elementID ) );
     }
     SW_EXPECT_EQUAL( size_t( 1 ), quadTree.getTotalElements() );
 

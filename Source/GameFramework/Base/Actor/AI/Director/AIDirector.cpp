@@ -174,14 +174,14 @@ namespace sw
         return 0 <= poolIndex && poolIndex < static_cast<int32>( _listPoolState.size() ) ? _listPoolState[static_cast<size_t>( poolIndex )]._budget : 0.0f;
     }
 
-    int32 AIDirector::findPoolIndex( const hashed_string& poolId ) const
+    int32 AIDirector::findPoolIndex( const hashed_string& poolID ) const
     {
         if ( _pProfile == nullptr )
             return -1;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t index = 0; index < listPool.size(); ++index )
         {
-            if ( listPool[index]._id == poolId )
+            if ( listPool[index]._id == poolID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -228,9 +228,9 @@ namespace sw
         return -1;
     }
 
-    bool AIDirector::forcePhase( const hashed_string& phaseId )
+    bool AIDirector::forcePhase( const hashed_string& phaseID )
     {
-        const int32 phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseId ) : -1;
+        const int32 phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseID ) : -1;
         if ( phaseIndex < 0 )
             return false;
         enterPhase( phaseIndex, -1 );
@@ -287,9 +287,9 @@ namespace sw
         drainSpawnEvents();
     }
 
-    bool AIDirector::notifyDespawned( uint32 spawnId )
+    bool AIDirector::notifyDespawned( uint32 spawnID )
     {
-        const bool bKnown = _spawnDirector.notifyDespawned( spawnId );
+        const bool bKnown = _spawnDirector.notifyDespawned( spawnID );
         drainSpawnEvents();
         return bKnown;
     }
@@ -302,12 +302,12 @@ namespace sw
         {
             AIDirectorEvent event;
             event._kind      = spawn._kind == SpawnEvent::Kind::Spawned ? AIDirectorEventKind::Spawned : AIDirectorEventKind::Despawned;
-            event._id        = spawn._entryId;
+            event._id        = spawn._entryID;
             event._source    = getPhase();
             event._time      = _time;
             event._intensity = _intensity;
             event._cost      = spawn._cost;
-            event._spawnId   = spawn._spawnId;
+            event._spawnID   = spawn._spawnID;
             event._count     = 1;
             pushEvent( event );
         }
@@ -575,8 +575,8 @@ namespace sw
                 line.appendFormat( " exit %# cycle %#", event._detail, event._count );
             else
                 line.appendFormat( " count %# scale %.2f", event._count, event._scale );
-            if ( event._spawnId != 0 )
-                line.appendFormat( " spawn #%#", event._spawnId );
+            if ( event._spawnID != 0 )
+                line.appendFormat( " spawn #%#", event._spawnID );
             line.append( "\n" );
             outText += line.c_str();
         }

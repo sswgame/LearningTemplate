@@ -23,32 +23,32 @@ namespace sw
 {
     void ChatProtocol::writeMessage( BitWriter& outWriter, const ChatMessage& message )
     {
-        ServiceKeyUtil::writeString( outWriter, message._channelId );
+        ServiceKeyUtil::writeString( outWriter, message._channelID );
         outWriter.writeBits( static_cast<uint32>( message._kind ), 8 );
-        outWriter.writeVarUint( message._senderId );
+        outWriter.writeVarUint( message._senderID );
         ServiceKeyUtil::writeString( outWriter, message._senderName );
-        outWriter.writeVarUint( message._recipientId );
+        outWriter.writeVarUint( message._recipientID );
         ServiceKeyUtil::writeString( outWriter, message._text );
         outWriter.writeVarInt( message._sentMs );
-        outWriter.writeVarUint( message._serverId );
+        outWriter.writeVarUint( message._serverID );
         outWriter.writeVarUint( message._sequence );
     }
 
     bool ChatProtocol::readMessage( BitReader& reader, ChatMessage& outMessage )
     {
-        if ( ServiceKeyUtil::readString( reader, ChatLimit::kMaxChannelIdSize, outMessage._channelId ) == false )
+        if ( ServiceKeyUtil::readString( reader, ChatLimit::kMaxChannelIDSize, outMessage._channelID ) == false )
             return false;
         const uint32 kind    = reader.readBits( 8 );
-        outMessage._senderId = reader.readVarUint();
+        outMessage._senderID = reader.readVarUint();
         if ( kind >= static_cast<uint32>( ChatChannelKind::Count ) ||
              ServiceKeyUtil::readString( reader, RequestLimits::kMaxDisplayNameSize, outMessage._senderName ) == false )
             return false;
         outMessage._kind        = static_cast<ChatChannelKind>( kind );
-        outMessage._recipientId = reader.readVarUint();
+        outMessage._recipientID = reader.readVarUint();
         if ( ServiceKeyUtil::readString( reader, ChatLimit::kMaxTextSize, outMessage._text ) == false ) // 가린 글은 코드 포인트마다 '*' 하나라 원문보다 길지 않다
             return false;
         outMessage._sentMs    = reader.readVarInt();
-        outMessage._serverId  = reader.readVarUint();
+        outMessage._serverID  = reader.readVarUint();
         const uint64 sequence = reader.readVarUint();
         outMessage._sequence  = static_cast<uint32>( sequence );
         return reader.hasOverflowed() == false && static_cast<uint64>( outMessage._sequence ) == sequence;
@@ -138,17 +138,17 @@ namespace sw
         }
     }
 
-    string ChatProtocol::makeChannelTopic( string_view channelId )
+    string ChatProtocol::makeChannelTopic( string_view channelID )
     {
         string topic( ChatBus::kChannelTopicPrefix );
-        topic += channelId;
+        topic += channelID;
         return topic;
     }
 
-    string ChatProtocol::makeServerTopic( uint64 serverId )
+    string ChatProtocol::makeServerTopic( uint64 serverID )
     {
         string topic( ChatBus::kServerTopicPrefix );
-        ServiceKeyUtil::appendHex64( topic, serverId );
+        ServiceKeyUtil::appendHex64( topic, serverID );
         return topic;
     }
 } // namespace sw

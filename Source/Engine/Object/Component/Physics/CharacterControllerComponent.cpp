@@ -112,7 +112,7 @@ namespace sw
         {
             PhysicsCharacterDesc3D desc;
             desc._position      = position;
-            desc._userData      = getOwner()->getObjectId();
+            desc._userData      = getOwner()->getObjectID();
             desc._radius        = _radius;
             desc._halfHeight    = _halfHeight;
             desc._maxSlopeAngle = _maxSlopeAngle;

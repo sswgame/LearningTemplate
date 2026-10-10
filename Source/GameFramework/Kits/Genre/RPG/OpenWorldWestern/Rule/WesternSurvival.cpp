@@ -112,9 +112,9 @@ namespace sw
         return regionBaseTemperature + weather.computeValue( WesternSurvivalInternal::getTemperatureName() );
     }
 
-    bool WesternSurvival::eat( const hashed_string& foodId )
+    bool WesternSurvival::eat( const hashed_string& foodID )
     {
-        const WesternFoodDef* pFood = _pCatalog != nullptr ? _pCatalog->findFood( foodId ) : nullptr;
+        const WesternFoodDef* pFood = _pCatalog != nullptr ? _pCatalog->findFood( foodID ) : nullptr;
         if ( pFood == nullptr )
             return false;
         setCore( WesternCore::Health, getCore( WesternCore::Health ) + pFood->_healthCore );
@@ -132,9 +132,9 @@ namespace sw
         float32 warmth = 0.0f;
         if ( _pCatalog == nullptr )
             return warmth;
-        for ( const hashed_string& clothingId : _listClothing )
+        for ( const hashed_string& clothingID : _listClothing )
         {
-            const WesternClothingDef* pClothing = _pCatalog->findClothing( clothingId );
+            const WesternClothingDef* pClothing = _pCatalog->findClothing( clothingID );
             warmth += pClothing != nullptr ? pClothing->_warmth : 0.0f;
         }
         return warmth;
@@ -152,11 +152,11 @@ namespace sw
         return true;
     }
 
-    bool WesternSurvival::markTarget( uint64 targetId )
+    bool WesternSurvival::markTarget( uint64 targetID )
     {
         if ( _bDeadEyeActive == SW_FALSE || static_cast<int32>( _listMark.size() ) >= getMarkLimit() )
             return false;
-        _listMark.push_back( targetId ); // 같은 대상에 여러 번 표시해도 된다(한 발씩)
+        _listMark.push_back( targetID ); // 같은 대상에 여러 번 표시해도 된다(한 발씩)
         return true;
     }
 
@@ -185,14 +185,14 @@ namespace sw
     void WesternSurvival::writeState( Archive& outArchive ) const
     {
         outArchive << static_cast<uint32>( _listClothing.size() );
-        for ( const hashed_string& clothingId : _listClothing )
+        for ( const hashed_string& clothingID : _listClothing )
         {
-            StateArchiveUtil::writeName( outArchive, clothingId );
+            StateArchiveUtil::writeName( outArchive, clothingID );
         }
         outArchive << static_cast<uint32>( _listMark.size() );
-        for ( const uint64 targetId : _listMark )
+        for ( const uint64 targetID : _listMark )
         {
-            outArchive << targetId;
+            outArchive << targetID;
         }
         for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
         {
@@ -211,17 +211,17 @@ namespace sw
         if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
             return false;
         restored._listClothing.resize( count );
-        for ( hashed_string& clothingId : restored._listClothing )
+        for ( hashed_string& clothingID : restored._listClothing )
         {
-            if ( StateArchiveUtil::readName( archive, clothingId ) == false )
+            if ( StateArchiveUtil::readName( archive, clothingID ) == false )
                 return false;
         }
         if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
             return false;
         restored._listMark.resize( count );
-        for ( uint64& targetId : restored._listMark )
+        for ( uint64& targetID : restored._listMark )
         {
-            archive >> targetId;
+            archive >> targetID;
         }
         for ( size_t coreIndex = 0; coreIndex < kCoreCount; ++coreIndex )
         {

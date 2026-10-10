@@ -155,7 +155,7 @@ namespace sw
         /** @brief 투명 배치를 반환합니다. */
         const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 실은 것)입니다. 없으면 nullptr 입니다. */
-        const GPUViewTransparentOrder* findViewTransparentOrder( uint64 viewId ) const;
+        const GPUViewTransparentOrder* findViewTransparentOrder( uint64 viewID ) const;
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
         const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */

@@ -83,7 +83,7 @@ namespace sw
             uint8 _tintR{ 180 };
             uint8 _tintG{ 200 };
             uint8 _tintB{ 160 };
-            uint8 _atlasId{ 0 };
+            uint8 _atlasID{ 0 };
         };
 
         /** @brief 타일 좌표에서 다른 맵으로 보내는 워프 */
@@ -94,7 +94,7 @@ namespace sw
             string _targetMap{};
             int32  _targetTileX{ 1 };
             int32  _targetTileY{ 1 };
-            string _pairId{};
+            string _pairID{};
         };
 
         string         _name{};

@@ -70,9 +70,9 @@ namespace sw
     /** @brief 세트가 줄 어빌리티 하나입니다. */
     struct AbilitySetAbilityEntry
     {
-        hashed_string _abilityId{};
+        hashed_string _abilityID{};
         int32         _level{ 1 };
-        int32         _inputId{ -1 }; ///< `AbilitySystemComponent::kNoInputId` 와 같은 값
+        int32         _inputID{ -1 }; ///< `AbilitySystemComponent::kNoInputID` 와 같은 값
     };
 } // namespace sw
 
@@ -81,7 +81,7 @@ namespace sw
     /** @brief 세트가 시작에 걸 이펙트 하나입니다. */
     struct AbilitySetEffectEntry
     {
-        hashed_string _effectId{};
+        hashed_string _effectID{};
         int32         _level{ 1 };
     };
 } // namespace sw
@@ -90,7 +90,7 @@ namespace sw
 {
     /**
      * @brief 오브젝트 한 종에 한 번에 주는 묶음입니다(언리얼 Lyra `ULyraAbilitySet`) — 어트리뷰트 묶음 · 어빌리티 · 시작 이펙트 · 태그.
-     * @details 컴포넌트의 `_abilitySetId` 가 이것을 가리키면 플레이 시작에 한 번 받습니다. 플레이어 · 몬스터 종마다 하나씩 둡니다.
+     * @details 컴포넌트의 `_abilitySetID` 가 이것을 가리키면 플레이 시작에 한 번 받습니다. 플레이어 · 몬스터 종마다 하나씩 둡니다.
      */
     struct AbilitySetDef
     {
@@ -170,11 +170,11 @@ namespace sw
         // --------------------------------------------------------------------------
         // 찾기 · 만들기
         // --------------------------------------------------------------------------
-        shared_ptr<const GameplayEffectDef> findEffect( const hashed_string& effectId ) const;
-        const GameplayAbilityDef*           findAbility( const hashed_string& abilityId ) const;
-        const AbilitySetDef*                findAbilitySet( const hashed_string& setId ) const;
+        shared_ptr<const GameplayEffectDef> findEffect( const hashed_string& effectID ) const;
+        const GameplayAbilityDef*           findAbility( const hashed_string& abilityID ) const;
+        const AbilitySetDef*                findAbilitySet( const hashed_string& setID ) const;
         /** @brief 어빌리티 정의로 인스턴스를 만들고 설정을 줍니다. 정의 · 클래스가 없으면 nullptr 입니다(경고). */
-        unique_ptr<GameplayAbility> createAbility( const hashed_string& abilityId ) const;
+        unique_ptr<GameplayAbility> createAbility( const hashed_string& abilityID ) const;
         /** @brief 등록된 이름의 어트리뷰트 묶음을 만듭니다. 없으면 nullptr 입니다. */
         unique_ptr<AttributeSet> createAttributeSet( const hashed_string& className ) const;
         /** @brief 어빌리티 클래스가 등록돼 있으면 true 입니다. */
@@ -201,7 +201,7 @@ namespace sw
         /** @brief `<AbilitySet>` 하나를 읽습니다. */
         [[nodiscard]] bool readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const;
         /** @brief 이펙트 id 를 정의로 풉니다. 비었으면 nullptr, 없으면 경고하고 nullptr 입니다. */
-        shared_ptr<const GameplayEffectDef> resolveEffectReference( const utf8* pEffectId, const utf8* pOwnerId, string_view sourceName ) const;
+        shared_ptr<const GameplayEffectDef> resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const;
 
         unordered_map<hashed_string, shared_ptr<const GameplayEffectDef>> _mapEffect;
         unordered_map<hashed_string, GameplayAbilityDef>                  _mapAbility;

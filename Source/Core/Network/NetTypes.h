@@ -76,15 +76,15 @@ namespace sw
      */
     struct NetProtocol
     {
-        static constexpr uint32 kDefaultGameId = 0x53574E31u;
+        static constexpr uint32 kDefaultGameID = 0x53574E31u;
         /** @brief 연결 요청 · 거절 패킷의 머리 값 — 판을 넘어 읽혀야 하므로 프로토콜 id 대신 이 고정 값으로 싸고, 두 패킷의 배치는 판과 함께 바꾸지 않는다. */
-        static constexpr uint32 kHandshakeId = 0x5357484Bu;
+        static constexpr uint32 kHandshakeID = 0x5357484Bu;
 
         /** @brief @p featureMask 는 `NetProtocolFeature` — 양쪽이 같아야 연결된다(협상하지 않는다). */
-        static constexpr uint32 makeProtocolId( uint32 gameId, uint32 wireVersion, uint32 featureMask = 0 )
+        static constexpr uint32 makeProtocolID( uint32 gameID, uint32 wireVersion, uint32 featureMask = 0 )
         {
-            const uint32 protocolId = NetWireVersion::combine( { gameId, NetWireVersion::kCore, wireVersion, featureMask } );
-            return protocolId != kHandshakeId ? protocolId : protocolId ^ 1u;
+            const uint32 protocolID = NetWireVersion::combine( { gameID, NetWireVersion::kCore, wireVersion, featureMask } );
+            return protocolID != kHandshakeID ? protocolID : protocolID ^ 1u;
         }
     };
 } // namespace sw

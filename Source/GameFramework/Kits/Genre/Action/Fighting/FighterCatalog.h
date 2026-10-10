@@ -77,7 +77,7 @@ namespace sw
         float32               _jumpDistance{ 0.8f };
 
         /** @brief id 의 기술 자리입니다. 없으면 −1 입니다. */
-        int32 findMoveIndex( const hashed_string& moveId ) const;
+        int32 findMoveIndex( const hashed_string& moveID ) const;
         /** @brief 고유 자세 이름의 자리입니다. 없으면 −1 입니다. */
         int32 findStanceIndex( const hashed_string& stance ) const;
     };

@@ -20,7 +20,7 @@ namespace sw
     {
         string   _propertyPath{};             ///< 위젯 기준 프로퍼티 경로 — `_text`, 구조체 칸이면 `_slot._offsetMin`
         string   _expression{};               ///< 원문 그대로(`{bind:_health, mode=TwoWay}`)
-        WidgetId _widget{ kInvalidWidgetId }; ///< 이 식이 붙은 위젯(인스턴스에서만)
+        WidgetID _widget{ kInvalidWidgetID }; ///< 이 식이 붙은 위젯(인스턴스에서만)
         uint32   _sourceLine{ 0 };            ///< 문서의 줄(오류 문구)
     };
 } // namespace sw

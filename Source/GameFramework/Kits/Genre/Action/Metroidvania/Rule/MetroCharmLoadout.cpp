@@ -26,27 +26,27 @@ namespace sw
         _notchCount = pCatalog != nullptr ? pCatalog->getRules()._charmNotches : 0;
     }
 
-    bool MetroCharmLoadout::grantCharm( const hashed_string& charmId )
+    bool MetroCharmLoadout::grantCharm( const hashed_string& charmID )
     {
-        if ( _pCatalog == nullptr || isOwned( charmId ) )
+        if ( _pCatalog == nullptr || isOwned( charmID ) )
             return false;
-        const MetroCharmDef* pCharm = _pCatalog->findCharm( charmId );
+        const MetroCharmDef* pCharm = _pCatalog->findCharm( charmID );
         if ( pCharm == nullptr )
             return false;
         _listOwned.push_back( pCharm->_id );
         return true;
     }
 
-    MetroCharmResult MetroCharmLoadout::equip( const hashed_string& charmId )
+    MetroCharmResult MetroCharmLoadout::equip( const hashed_string& charmID )
     {
         if ( _pCatalog == nullptr )
             return MetroCharmResult::UnknownCharm;
-        const MetroCharmDef* pCharm = _pCatalog->findCharm( charmId );
+        const MetroCharmDef* pCharm = _pCatalog->findCharm( charmID );
         if ( pCharm == nullptr )
             return MetroCharmResult::UnknownCharm;
-        if ( isOwned( charmId ) == false )
+        if ( isOwned( charmID ) == false )
             return MetroCharmResult::NotOwned;
-        if ( isEquipped( charmId ) )
+        if ( isEquipped( charmID ) )
             return MetroCharmResult::AlreadyEquipped;
         const int32 used = computeUsedNotches();
         if ( used + pCharm->_cost <= _notchCount )
@@ -63,11 +63,11 @@ namespace sw
         return MetroCharmResult::NotEnoughNotches;
     }
 
-    MetroCharmResult MetroCharmLoadout::unequip( const hashed_string& charmId )
+    MetroCharmResult MetroCharmLoadout::unequip( const hashed_string& charmID )
     {
         for ( size_t index = 0; index < _listEquipped.size(); ++index )
         {
-            if ( _listEquipped[index] == charmId )
+            if ( _listEquipped[index] == charmID )
             {
                 _listEquipped.erase( _listEquipped.begin() + static_cast<ptrdiff_t>( index ) );
                 return MetroCharmResult::Unequipped;
@@ -80,9 +80,9 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
-        for ( const hashed_string& charmId : _listEquipped )
+        for ( const hashed_string& charmID : _listEquipped )
         {
-            const MetroCharmDef* pCharm = _pCatalog->findCharm( charmId );
+            const MetroCharmDef* pCharm = _pCatalog->findCharm( charmID );
             if ( pCharm != nullptr )
                 outStats.merge( pCharm->_stats );
         }
@@ -93,9 +93,9 @@ namespace sw
         if ( _pCatalog == nullptr )
             return 0;
         int32 used = 0;
-        for ( const hashed_string& charmId : _listEquipped )
+        for ( const hashed_string& charmID : _listEquipped )
         {
-            const MetroCharmDef* pCharm = _pCatalog->findCharm( charmId );
+            const MetroCharmDef* pCharm = _pCatalog->findCharm( charmID );
             used += pCharm != nullptr ? pCharm->_cost : 0;
         }
         return used;
@@ -108,13 +108,13 @@ namespace sw
         return _pCatalog->getRules()._overcharmDamageTakenScale;
     }
 
-    bool MetroCharmLoadout::isOwned( const hashed_string& charmId ) const { return contains( _listOwned, charmId ); }
+    bool MetroCharmLoadout::isOwned( const hashed_string& charmID ) const { return contains( _listOwned, charmID ); }
 
-    bool MetroCharmLoadout::isEquipped( const hashed_string& charmId ) const { return contains( _listEquipped, charmId ); }
+    bool MetroCharmLoadout::isEquipped( const hashed_string& charmID ) const { return contains( _listEquipped, charmID ); }
 
-    bool MetroCharmLoadout::contains( const vector<hashed_string>& listId, const hashed_string& id )
+    bool MetroCharmLoadout::contains( const vector<hashed_string>& listID, const hashed_string& id )
     {
-        for ( const hashed_string& entry : listId )
+        for ( const hashed_string& entry : listID )
         {
             if ( entry == id )
                 return true;
@@ -125,14 +125,14 @@ namespace sw
     void MetroCharmLoadout::writeState( Archive& outArchive ) const
     {
         outArchive << static_cast<uint32>( _listOwned.size() );
-        for ( const hashed_string& charmId : _listOwned )
+        for ( const hashed_string& charmID : _listOwned )
         {
-            StateArchiveUtil::writeName( outArchive, charmId );
+            StateArchiveUtil::writeName( outArchive, charmID );
         }
         outArchive << static_cast<uint32>( _listEquipped.size() );
-        for ( const hashed_string& charmId : _listEquipped )
+        for ( const hashed_string& charmID : _listEquipped )
         {
-            StateArchiveUtil::writeName( outArchive, charmId );
+            StateArchiveUtil::writeName( outArchive, charmID );
         }
         outArchive << _notchCount;
     }
@@ -153,14 +153,14 @@ namespace sw
             listCharm.reserve( charmCount );
             for ( uint32 entry = 0; entry < charmCount; ++entry )
             {
-                hashed_string charmId;
-                if ( StateArchiveUtil::readName( archive, charmId ) == false )
+                hashed_string charmID;
+                if ( StateArchiveUtil::readName( archive, charmID ) == false )
                     return false;
-                const bool bOwnedIfEquipped = listIndex == 0 || contains( listOwned, charmId );
-                const bool bValid           = _pCatalog->findCharm( charmId ) != nullptr && contains( listCharm, charmId ) == false && bOwnedIfEquipped;
+                const bool bOwnedIfEquipped = listIndex == 0 || contains( listOwned, charmID );
+                const bool bValid           = _pCatalog->findCharm( charmID ) != nullptr && contains( listCharm, charmID ) == false && bOwnedIfEquipped;
                 if ( bValid == false )
                     return false;
-                listCharm.push_back( charmId );
+                listCharm.push_back( charmID );
             }
         }
         int32 notchCount = 0;

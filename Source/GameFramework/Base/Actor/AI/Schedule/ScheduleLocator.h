@@ -50,8 +50,8 @@ namespace sw
         IScheduleActivityLocator& operator=( IScheduleActivityLocator&& ) noexcept = default;
 
         /** @brief 자리를 예약합니다. 빈 자리가 없으면 false 입니다(일정은 칸의 `place` · 집으로 물러선다). 예약 id 는 0 이 아닙니다. */
-        [[nodiscard]] virtual bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationId ) = 0;
-        virtual void               release( uint32 reservationId )                                                                           = 0;
+        [[nodiscard]] virtual bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) = 0;
+        virtual void               release( uint32 reservationID )                                                                           = 0;
     };
 } // namespace sw
 
@@ -70,8 +70,8 @@ namespace sw
         void initialize( const ScheduleCatalog* pCatalog );
         void clear();
 
-        [[nodiscard]] bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationId ) override;
-        void               release( uint32 reservationId ) override;
+        [[nodiscard]] bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) override;
+        void               release( uint32 reservationID ) override;
 
         void   fillState( vector<ScheduleReservationSaveState>& outListReservation ) const;
         void   restoreState( const vector<ScheduleReservationSaveState>& listReservation );
@@ -93,6 +93,6 @@ namespace sw
 
         const ScheduleCatalog* _pCatalog;
         vector<Reservation>    _listReservation;
-        uint32                 _nextId;
+        uint32                 _nextID;
     };
 } // namespace sw

@@ -53,7 +53,7 @@ namespace sw
     /** @brief 직업 레벨에 배우는 주문 하나입니다. */
     struct JRPGLearnEntry
     {
-        hashed_string _spellId{};
+        hashed_string _spellID{};
         int32         _level{ 1 };
     };
 } // namespace sw
@@ -81,7 +81,7 @@ namespace sw
         hashed_string  _id{};
         string         _name{};
         hashed_string  _damageType{}; ///< 잠금 깨기 · 약점
-        hashed_string  _manualId{};   ///< 비지 않으면 그 비급의 초식(숙련 단계로 해금 · 쓸 때마다 숙련)
+        hashed_string  _manualID{};   ///< 비지 않으면 그 비급의 초식(숙련 단계로 해금 · 쓸 때마다 숙련)
         int32          _power{ 0 };
         int32          _mpCost{ 0 };
         int32          _innerCost{ 0 };       ///< 내공(무협 옵션일 때만 본다)
@@ -98,7 +98,7 @@ namespace sw
     {
         hashed_string         _id{};
         string                _name{};
-        vector<hashed_string> _listMemberId{};   ///< 참여 멤버의 id(직업이 아니라 캐릭터)
+        vector<hashed_string> _listMemberID{};   ///< 참여 멤버의 id(직업이 아니라 캐릭터)
         vector<hashed_string> _listDamageType{}; ///< 한 번에 여러 잠금을 깰 수 있다
         int32                 _points{ 1 };
         int32                 _power{ 0 };
@@ -111,7 +111,7 @@ namespace sw
     /** @brief 비급 숙련 단계 하나 — 숙련이 이만큼이면 이 초식이 열립니다. */
     struct JRPGManualStage
     {
-        hashed_string _techniqueId{};
+        hashed_string _techniqueID{};
         int32         _proficiency{ 0 };
     };
 } // namespace sw
@@ -135,7 +135,7 @@ namespace sw
         hashed_string         _id{};
         string                _name{};
         hashed_string         _attackType{};
-        hashed_string         _castSpellId{}; ///< 비지 않으면 시전하는 적
+        hashed_string         _castSpellID{}; ///< 비지 않으면 시전하는 적
         vector<hashed_string> _listWeakness{};
         vector<hashed_string> _listLock{}; ///< 시전 중 잠금(피해 유형 하나씩 — 같은 유형이 여럿일 수 있다)
         int32                 _arrStat[kJRPGStatCount]{ 10, 0, 5, 5, 5, 5, 5 };
@@ -152,7 +152,7 @@ namespace sw
     /** @brief 인카운터 무리 하나입니다. */
     struct JRPGEncounterGroup
     {
-        vector<hashed_string> _listEnemyId{};
+        vector<hashed_string> _listEnemyID{};
         int32                 _weight{ 1 };
     };
 } // namespace sw
@@ -202,9 +202,9 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "JRPGCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
-        void                         loadClass( const XMLNode& node, const utf8* pId );
-        void                         loadSpell( const XMLNode& node, const utf8* pId, string_view sourceName );
-        void                         loadEnemy( const XMLNode& node, const utf8* pId );
+        void                         loadClass( const XMLNode& node, const utf8* pID );
+        void                         loadSpell( const XMLNode& node, const utf8* pID, string_view sourceName );
+        void                         loadEnemy( const XMLNode& node, const utf8* pID );
 
         GameCatalog<JRPGClassDef>  _classCatalog;
         GameCatalog<JRPGSpellDef>  _spellCatalog;

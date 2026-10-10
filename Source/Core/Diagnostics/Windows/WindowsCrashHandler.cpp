@@ -25,7 +25,7 @@ namespace sw
          * @details bool 로 두면 두 스레드가 거의 동시에 죽을 때 두 번째 스레드가 "이미 보고 중" 을 보고 곧장 필터를 빠져나가 프로세스를
          *          끝냅니다 — 첫 스레드가 덤프를 쓰는 도중에. 같은 스레드가 보고하다 또 죽은 경우와 다른 스레드가 죽은 경우를 가르려고 ID 를 둡니다.
          */
-        atomic<uint32> s_reportingThreadId{ 0 };
+        atomic<uint32> s_reportingThreadID{ 0 };
 
         LPTOP_LEVEL_EXCEPTION_FILTER s_pPreviousFilter{ nullptr };
         _crt_signal_t                s_pPreviousAbortHandler{ SIG_DFL };
@@ -55,7 +55,7 @@ namespace sw
         HANDLE       s_hReportThread{ nullptr };
         HANDLE       s_hReportRequested{ nullptr };
         HANDLE       s_hReportFinished{ nullptr };
-        DWORD        s_reportThreadId{ 0 };
+        DWORD        s_reportThreadID{ 0 };
         atomic<bool> s_bStopReportThread{ false };
 
         /** @brief 보고 스레드에 넘기는 크래시 하나(폴트 스레드가 시한까지 기다리는 동안만 유효하다 — 그 스레드의 스택을 가리킨다). */
@@ -65,7 +65,7 @@ namespace sw
             const void*         _pFaultAddress{ nullptr };
             void*               _pPlatformContext{ nullptr };
             EXCEPTION_POINTERS* _pExceptionInfo{ nullptr };
-            DWORD               _faultThreadId{ 0 };
+            DWORD               _faultThreadID{ 0 };
         };
         PendingCrash s_pendingCrash{};
 
@@ -128,7 +128,7 @@ namespace sw
          *          비슷한 수준(스택 + 간접 참조 메모리 + 스레드 정보)으로 고릅니다. Full 덤프는 수백 MB 가 되어 사용자가 보내 주지
          *          못합니다.
          */
-        [[nodiscard]] bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadId )
+        [[nodiscard]] bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadID )
         {
             utf8 arrPath[constant::kMaxBuffer1024]{};
             buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
@@ -142,7 +142,7 @@ namespace sw
                 return false;
 
             MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
-            exceptionInfo.ThreadId          = faultThreadId;
+            exceptionInfo.ThreadId          = faultThreadID;
             exceptionInfo.ExceptionPointers = pInfo;
             exceptionInfo.ClientPointers    = FALSE;
 
@@ -185,8 +185,8 @@ namespace sw
             // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
             // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
             // **이 두 줄을 아래로 옮기지 말 것.**
-            const bool bMiniDumpWritten = writeMiniDump( crash._pExceptionInfo, crash._faultThreadId );
-            writeCrashContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadId );
+            const bool bMiniDumpWritten = writeMiniDump( crash._pExceptionInfo, crash._faultThreadID );
+            writeCrashContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
 
             // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp).
             writeCrashReport( crash._pReason, crash._pFaultAddress, crash._pPlatformContext, bMiniDumpWritten, hFaultThread );
@@ -202,7 +202,7 @@ namespace sw
                     return 0;
 
                 const HANDLE hFaultThread = OpenThread( THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME, FALSE,
-                                                        s_pendingCrash._faultThreadId );
+                                                        s_pendingCrash._faultThreadID );
                 writeReportInternal( s_pendingCrash, hFaultThread );
                 if ( hFaultThread != nullptr )
                     CloseHandle( hFaultThread );
@@ -218,18 +218,18 @@ namespace sw
         void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, EXCEPTION_POINTERS* pExceptionInfo )
         {
             // 보고 스레드 자신이 보고하다 죽었다 — 더 할 수 있는 것이 없다. 폴트 스레드는 시한이 지나면 스스로 끝난다.
-            if ( s_reportThreadId != 0 && GetCurrentThreadId() == s_reportThreadId )
+            if ( s_reportThreadID != 0 && GetCurrentThreadId() == s_reportThreadID )
                 return;
 
-            const uint32 selfThreadId = static_cast<uint32>( GetCurrentThreadId() );
-            uint32       expectedId   = 0;
-            if ( s_reportingThreadId.compare_exchange_strong( expectedId, selfThreadId ) == false )
+            const uint32 selfThreadID = static_cast<uint32>( GetCurrentThreadId() );
+            uint32       expectedID   = 0;
+            if ( s_reportingThreadID.compare_exchange_strong( expectedID, selfThreadID ) == false )
             {
                 // 같은 스레드가 보고하다 또 죽었다 — 더 할 수 있는 것이 없다.
-                if ( expectedId == selfThreadId )
+                if ( expectedID == selfThreadID )
                     return;
                 // 다른 스레드가 보고 중이다. 그 스레드가 덤프를 다 쓰고 프로세스를 끝낼 때까지 기다린다(보고가 멈춘 경우를 위해 상한을 둔다).
-                for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadId.load() != 0; ++waitIndex )
+                for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadID.load() != 0; ++waitIndex )
                 {
                     Sleep( 10 );
                 }
@@ -241,7 +241,7 @@ namespace sw
             crash._pFaultAddress    = pFaultAddress;
             crash._pPlatformContext = pPlatformContext;
             crash._pExceptionInfo   = pExceptionInfo;
-            crash._faultThreadId    = GetCurrentThreadId();
+            crash._faultThreadID    = GetCurrentThreadId();
 
             if ( s_hReportThread != nullptr )
             {
@@ -268,7 +268,7 @@ namespace sw
                 writeReportInternal( crash, nullptr );
             }
 
-            s_reportingThreadId.store( 0 );
+            s_reportingThreadID.store( 0 );
         }
 
         /** @brief 예외 코드를 사람이 읽을 수 있는 이름으로 바꿉니다. */
@@ -338,7 +338,7 @@ namespace sw
         s_hReportRequested = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         s_hReportFinished  = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         if ( s_hReportRequested != nullptr && s_hReportFinished != nullptr )
-            s_hReportThread = CreateThread( nullptr, 1024 * 1024, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadId );
+            s_hReportThread = CreateThread( nullptr, 1024 * 1024, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
         if ( s_hReportThread == nullptr )
             SW_LOG_WARNING( "Crash report thread could not be created - reports will be written on the faulting thread." );
 
@@ -370,7 +370,7 @@ namespace sw
             WaitForSingleObject( s_hReportThread, 2000 );
             CloseHandle( s_hReportThread );
             s_hReportThread  = nullptr;
-            s_reportThreadId = 0;
+            s_reportThreadID = 0;
         }
         for ( HANDLE* pEvent : { &s_hReportRequested, &s_hReportFinished } )
         {

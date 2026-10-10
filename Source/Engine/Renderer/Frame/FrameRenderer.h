@@ -331,7 +331,7 @@ namespace sw
 
         /**
          * @brief 뷰 하나가 프레임을 넘어 드는 것입니다 — 트랜지언트 풀 · 컬링 입력(추가 뷰) · TAA 기록 · 직렬 커맨드 리스트 · 출력 텍스처.
-         * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewId`)로 찾습니다. 패스 코드는 지금 그리는 뷰
+         * @details 주 시점은 `_mainView` 이고(컬링 입력은 `_arrView[Main]`), 추가 뷰는 카메라 id(`_viewID`)로 찾습니다. 패스 코드는 지금 그리는 뷰
          *          (`_pActiveView`)의 것만 봅니다 — 뷰가 바뀌면 트랜지언트 이름(SceneColor …)이 다른 텍스처를 가리킵니다.
          */
         struct ViewTarget
@@ -343,7 +343,7 @@ namespace sw
             hashed_string               _outputPath;                ///< 렌더 텍스처 경로
             Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 든 렌더 텍스처(`TextureCache`)
             RHITextureHandle            _hostTarget{ 0 };           ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
-            uint64                      _viewId{ 0 };
+            uint64                      _viewID{ 0 };
             RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TaaColor 의 복사본)
             RHIDescriptorIndex          _taaHistorySrv{ kInvalidDescriptorIndex };
             RHIStructuredBufferSlot     _transparentRank;           ///< 이 뷰의 투명 순번 표(정렬 디스패치 t2) — GPU 정렬 백엔드

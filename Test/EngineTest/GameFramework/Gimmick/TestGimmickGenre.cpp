@@ -372,17 +372,17 @@ SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
     int32             circuitCount = 0;
     for ( const string& filePath : listFile )
     {
-        const string resourceId = ResourceUtil::toResourceId( filePath );
+        const string resourceID = ResourceUtil::toResourceID( filePath );
         PrefabAsset  prefab;
-        SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( resourceId ), resourceId.c_str() );
+        SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( resourceID ), resourceID.c_str() );
         GameObject* pObject = manager.createGameObject( hashed_string( "Gimmick" ) );
-        SW_EXPECT_TRUE_MSG( prefab.applyStateTo( pObject ), resourceId.c_str() );
+        SW_EXPECT_TRUE_MSG( prefab.applyStateTo( pObject ), resourceID.c_str() );
         ++prefabCount;
         const GimmickCircuitComponent* pCircuit = pObject->getComponent<GimmickCircuitComponent>();
         if ( pCircuit == nullptr )
             continue;
         ++circuitCount;
-        SW_EXPECT_TRUE_MSG( pCircuit->getCircuit().isBuilt() && pCircuit->getErrors().empty(), resourceId.c_str() );
+        SW_EXPECT_TRUE_MSG( pCircuit->getCircuit().isBuilt() && pCircuit->getErrors().empty(), resourceID.c_str() );
     }
     SW_EXPECT_TRUE( prefabCount >= 25 );
     SW_EXPECT_TRUE( circuitCount >= 6 );

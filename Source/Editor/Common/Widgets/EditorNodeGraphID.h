@@ -1,5 +1,5 @@
 /**
- * @file EditorNodeGraphId.h
+ * @file EditorNodeGraphID.h
  * @brief 노드 그래프 패널이 쓰는 정수 id ↔ imgui-node-editor id 변환입니다.
  *
  * @details 그래프 패널은 노드 · 핀 · 링크를 자기 자료 구조에서 int32 로 들고, 캔버스에 넘길 때만 ed::NodeId 류로
@@ -16,19 +16,19 @@
 namespace sw::editor
 {
     /** @brief 노드 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    inline ax::NodeEditor::NodeId toNodeId( int32 id )
+    inline ax::NodeEditor::NodeId toNodeID( int32 id )
     {
         return ax::NodeEditor::NodeId( static_cast<uintptr_t>( id ) );
     }
 
     /** @brief 핀 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    inline ax::NodeEditor::PinId toPinId( int32 id )
+    inline ax::NodeEditor::PinId toPinID( int32 id )
     {
         return ax::NodeEditor::PinId( static_cast<uintptr_t>( id ) );
     }
 
     /** @brief 링크 id 를 캔버스가 쓰는 형식으로 감쌉니다. */
-    inline ax::NodeEditor::LinkId toLinkId( int32 id )
+    inline ax::NodeEditor::LinkId toLinkID( int32 id )
     {
         return ax::NodeEditor::LinkId( static_cast<uintptr_t>( id ) );
     }

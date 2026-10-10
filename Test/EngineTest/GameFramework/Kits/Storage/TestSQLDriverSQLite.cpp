@@ -39,7 +39,7 @@ namespace
     {
     public:
         SQLPoolCountingJob( int32 jobIndex, int32* pCompletedCount, int32* pOffThreadCount, int32* pLostCount )
-            : _threadId{}
+            : _threadID{}
             , _pCompletedCount{ pCompletedCount }
             , _pOffThreadCount{ pOffThreadCount }
             , _pLostCount{ pLostCount }
@@ -57,13 +57,13 @@ namespace
         void complete() override
         {
             ++*_pCompletedCount;
-            if ( std::this_thread::get_id() != _threadId )
+            if ( std::this_thread::get_id() != _threadID )
                 ++*_pOffThreadCount;
             if ( _result == SQLResult::ConnectionLost )
                 ++*_pLostCount;
         }
 
-        std::thread::id _threadId;
+        std::thread::id _threadID;
 
     private:
         int32*    _pCompletedCount;
@@ -96,7 +96,7 @@ SW_TEST_CASE( SQLDriverSQLiteTest, PoolCompletesOnThePollingThreadAndSurvivesShu
     for ( int32 jobIndex = 0; jobIndex < kJobCount; ++jobIndex )
     {
         unique_ptr<SQLPoolCountingJob> job = make_unique<SQLPoolCountingJob>( jobIndex, &completedCount, &offThreadCount, &lostCount );
-        job->_threadId                     = std::this_thread::get_id();
+        job->_threadID                     = std::this_thread::get_id();
         pool.submit( std::move( job ) );
     }
     const Deadline deadline = Deadline::afterMilliseconds( 10000 );
@@ -112,7 +112,7 @@ SW_TEST_CASE( SQLDriverSQLiteTest, PoolCompletesOnThePollingThreadAndSurvivesShu
 
     pool.shutdown();
     unique_ptr<SQLPoolCountingJob> late = make_unique<SQLPoolCountingJob>( kJobCount, &completedCount, &offThreadCount, &lostCount );
-    late->_threadId                     = std::this_thread::get_id();
+    late->_threadID                     = std::this_thread::get_id();
     pool.submit( std::move( late ) );
     SW_EXPECT_EQUAL( 1, pool.pollCompletions() );
     SW_EXPECT_EQUAL( 1, lostCount ); // 내린 뒤 맡긴 일은 닫힌 연결로 정확히 한 번

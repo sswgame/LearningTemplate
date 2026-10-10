@@ -12,13 +12,13 @@ namespace sw
     MatchServerAgent::MatchServerAgent()
         : _mapAccountToExpected{}
         , _newMatchBuffer{}
-        , _serverId{ 0 }
+        , _serverID{ 0 }
     {
     }
 
-    void MatchServerAgent::initialize( uint64 serverId ) { _serverId = serverId; }
+    void MatchServerAgent::initialize( uint64 serverID ) { _serverID = serverID; }
 
-    string MatchServerAgent::getAssignTopic() const { return MatchQueueService::makeAssignTopic( _serverId ); }
+    string MatchServerAgent::getAssignTopic() const { return MatchQueueService::makeAssignTopic( _serverID ); }
 
     bool MatchServerAgent::handleAssign( const vector<uint8>& bytes, int64 nowMs )
     {
@@ -33,7 +33,7 @@ namespace sw
         {
             for ( const MatchMember& member : match._listTeam[team] )
             {
-                _mapAccountToExpected[member._accountId] = Expected{ match._matchId, nowMs + kExpectTtlMs, static_cast<int32>( team ) };
+                _mapAccountToExpected[member._accountID] = Expected{ match._matchID, nowMs + kExpectTtlMs, static_cast<int32>( team ) };
             }
         }
         _newMatchBuffer.push( std::move( match ) );
@@ -51,12 +51,12 @@ namespace sw
         }
     }
 
-    bool MatchServerAgent::findExpected( AccountId accountId, uint64& outMatchId, int32& outTeam ) const
+    bool MatchServerAgent::findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const
     {
-        const auto expectedIt = _mapAccountToExpected.find( accountId );
+        const auto expectedIt = _mapAccountToExpected.find( accountID );
         if ( expectedIt == _mapAccountToExpected.end() )
             return false;
-        outMatchId = expectedIt->second._matchId;
+        outMatchID = expectedIt->second._matchID;
         outTeam    = expectedIt->second._team;
         return true;
     }

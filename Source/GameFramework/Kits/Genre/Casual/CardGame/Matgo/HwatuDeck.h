@@ -57,7 +57,7 @@ namespace sw
         /** @brief 48 장을 번호 순으로 채웁니다(섞지 않는다). */
         static void makeDeck( CardPile& outPile );
         /** @brief 카드 번호의 속성입니다. 범위 밖이면 빈 속성(월 0)입니다. */
-        static const HwatuCardInfo& getInfo( uint16 cardId );
+        static const HwatuCardInfo& getInfo( uint16 cardID );
         static Card                 makeCard( int32 month, int32 indexInMonth );
         static uint8                getMonth( const Card& card ) { return getInfo( card._id )._month; }
     };

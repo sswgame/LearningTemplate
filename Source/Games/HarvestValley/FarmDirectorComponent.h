@@ -122,7 +122,7 @@ namespace sw
         /** @brief 흙 상태(0 풀 · 1 갈았음 · 2 물 줌)의 모습입니다. 아직 없으면 비어 있다. */
         const shared_ptr<MaterialInstance>& getSoilLook( int32 soilState ) const;
         /** @brief 작물 모습 — 시든 것은 갈색, @p bCropColored 면 작물 색(제 모델이 없는 다 자란 작물), 아니면 정점 색 그대로(흰색)입니다. */
-        const shared_ptr<MaterialInstance>& findCropLook( const hashed_string& cropId, bool bWithered, bool bCropColored ) const;
+        const shared_ptr<MaterialInstance>& findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const;
         /** @brief 칸 가운데(땅 높이)입니다. 밭은 원점에서 +X · +Z 로 1 m 칸입니다. */
         static float3 computeTileCenter( int32 x, int32 y );
 
@@ -142,7 +142,7 @@ namespace sw
         /** @brief 작물 하나의 다 자란 색 모습입니다. */
         struct CropLook
         {
-            hashed_string                _cropId{};
+            hashed_string                _cropID{};
             shared_ptr<MaterialInstance> _instance{};
         };
 

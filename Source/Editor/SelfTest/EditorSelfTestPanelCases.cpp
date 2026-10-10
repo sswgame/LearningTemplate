@@ -33,7 +33,7 @@ namespace sw::editor
          */
         struct EditorSelfTestPanelCasesInternal
         {
-            static constexpr const utf8* kContentBrowserPanelId    = "content_browser";
+            static constexpr const utf8* kContentBrowserPanelID    = "content_browser";
             static constexpr const utf8* kContentBrowserPanelTitle = "Content Browser";
             static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래 시험 폴더 — 끝나면 지운다
             static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커) · 파일 감시를 기다리는 최대 프레임
@@ -58,8 +58,8 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
-                (void)pContext->getPanelManager().setPanelOpen( kContentBrowserPanelId, true );
-                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( kContentBrowserPanelId ) );
+                (void)pContext->getPanelManager().setPanelOpen( kContentBrowserPanelID, true );
+                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( kContentBrowserPanelID ) );
                 if ( context.expect( pPanel != nullptr, "no content browser panel" ) == false )
                     return nullptr;
                 ImGui::SetWindowFocus( kContentBrowserPanelTitle );
@@ -357,7 +357,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGlobalVariableGroupsStack( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelId      = "global_variables";
+                constexpr const utf8* kPanelID      = "global_variables";
                 constexpr uint32      kMaxStepCount = 30;
 
                 EditorContext* pContext = EditorContext::get();
@@ -366,7 +366,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -390,7 +390,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue; // 패널이 처음 그려지기를 기다린다
                 (void)context.expect( tableCount >= 2, "the global variables panel did not draw two module groups" );
                 (void)context.expect( scrollingTableCount == 0, "a module group table scrolls on its own and takes the whole panel height" );
-                (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -399,7 +399,7 @@ namespace sw::editor
             // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 0 폭이었고, Input Map Editor 는 처음부터 열렸다.
             // 자체 시험은 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
             // ------------------------------------------------------------------------------
-            static constexpr const utf8* kArrFloatingToolPanelId[] = { "history", "global_variables", "render_targets", "ui_preview",
+            static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "ui_preview",
                                                                        "animation_rewind", "data_table", "input_map", "user_settings" };
 
             /** @brief 도구 창 시험의 진행 상태입니다. */
@@ -418,7 +418,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runToolWindowsOpenAtAUsableSize( EditorSelfTestContext& context )
             {
-                constexpr uint32  kPanelCount      = static_cast<uint32>( sizeof( kArrFloatingToolPanelId ) / sizeof( kArrFloatingToolPanelId[0] ) );
+                constexpr uint32  kPanelCount      = static_cast<uint32>( sizeof( kArrFloatingToolPanelID ) / sizeof( kArrFloatingToolPanelID[0] ) );
                 constexpr uint32  kSettleStepCount = 3; ///< 연 뒤 창이 만들어지고 크기가 자리 잡기까지
                 constexpr float32 kMinUsableWidth  = 400.0f;
                 constexpr float32 kMinUsableHeight = 300.0f;
@@ -437,14 +437,14 @@ namespace sw::editor
                 {
                     probe = ToolWindowProbe{};
                     // 처음 열림은 등록부가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 시험 · 사용자가 열었을 수 있다.
-                    for ( const utf8* pPanelId : kArrFloatingToolPanelId )
+                    for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
-                        const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelId );
+                        const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelID );
                         if ( context.expect( pRegistration != nullptr, "a floating tool panel is not registered" ) == false )
                             continue;
                         const unique_ptr<IEditorPanel> pFresh = pRegistration->_pCreate();
                         string                         what{ "a floating tool panel starts open: " };
-                        what += pPanelId;
+                        what += pPanelID;
                         (void)context.expect( pFresh != nullptr && pFresh->isOpen() == false, what.c_str() );
                     }
                 }
@@ -455,8 +455,8 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 }
 
-                const utf8*   pPanelId = kArrFloatingToolPanelId[probe._panelIndex];
-                IEditorPanel* pPanel   = panelManager.findPanel( pPanelId );
+                const utf8*   pPanelID = kArrFloatingToolPanelID[probe._panelIndex];
+                IEditorPanel* pPanel   = panelManager.findPanel( pPanelID );
                 if ( pPanel == nullptr )
                 {
                     ++probe._panelIndex;
@@ -466,7 +466,7 @@ namespace sw::editor
                 {
                     probe._bWasOpen = pPanel->isOpen();
                     probe._openStep = stepIndex + 1; // 0 은 "아직 열지 않음"
-                    (void)panelManager.setPanelOpen( pPanelId, true );
+                    (void)panelManager.setPanelOpen( pPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex + 1 - probe._openStep < kSettleStepCount )
@@ -476,7 +476,7 @@ namespace sw::editor
                 const float32      minWidth  = MathUtil::min( kMinUsableWidth * dpiScale, pViewport->WorkSize.x * kViewportRatio );
                 const float32      minHeight = MathUtil::min( kMinUsableHeight * dpiScale, pViewport->WorkSize.y * kViewportRatio );
                 const ImGuiWindow* pWindow   = ImGui::FindWindowByName( pPanel->getPanelTitle() );
-                string             what{ pPanelId };
+                string             what{ pPanelID };
                 if ( context.expect( pWindow != nullptr, ( what + ": the tool window was not created" ).c_str() ) )
                 {
                     (void)context.expect( pWindow->Size.x >= minWidth && pWindow->Size.y >= minHeight, ( what + ": the tool window opened too small" ).c_str() );
@@ -485,7 +485,7 @@ namespace sw::editor
                                                  pWindow->Pos.y + pWindow->Size.y <= pViewport->Pos.y + pViewport->Size.y + kEdgeTolerancePx;
                     (void)context.expect( bInsideViewport, ( what + ": the tool window does not fit in the main viewport" ).c_str() );
                 }
-                (void)panelManager.setPanelOpen( pPanelId, probe._bWasOpen );
+                (void)panelManager.setPanelOpen( pPanelID, probe._bWasOpen );
                 ++probe._panelIndex;
                 probe._openStep = 0;
                 return EditorSelfTestStep::Continue;
@@ -496,13 +496,13 @@ namespace sw::editor
             // 창 그리기 목록에 자르지 않고 그려 카메라 절두체 선이 탭 · 툴바 위까지 뻗었다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
             // 한다(격자는 기본으로 켜져 있다).
             // ------------------------------------------------------------------------------
-            /** @brief @p pDrawList 에서 텍스처가 @p textureId 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false. */
-            static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureId, int32& outCommandIndex, ImVec4& outRect )
+            /** @brief @p pDrawList 에서 텍스처가 @p textureID 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false. */
+            static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureID, int32& outCommandIndex, ImVec4& outRect )
             {
                 for ( int32 commandIndex = 0; commandIndex < pDrawList->CmdBuffer.Size; ++commandIndex )
                 {
                     const ImDrawCmd& command = pDrawList->CmdBuffer[commandIndex];
-                    if ( command.ElemCount == 0 || command.GetTexID() != textureId )
+                    if ( command.ElemCount == 0 || command.GetTexID() != textureID )
                         continue;
                     ImVec4 rect{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, -MathUtil::kMaxFloat, -MathUtil::kMaxFloat };
                     for ( uint32 elemIndex = 0; elemIndex < command.ElemCount; ++elemIndex )
@@ -538,7 +538,7 @@ namespace sw::editor
                 }
 
                 const EditorViewTarget& view         = pContext->getViewTarget( EditorViewKind::Scene );
-                const ImTextureID       textureId    = reinterpret_cast<ImTextureID>( view._pTextureId );
+                const ImTextureID       textureID    = reinterpret_cast<ImTextureID>( view._pTextureID );
                 const ImGuiContext&     imguiContext = *ImGui::GetCurrentContext();
                 int32                   imageCommandIndex{ -1 };
                 ImVec4                  canvasRect{};
@@ -547,7 +547,7 @@ namespace sw::editor
                 {
                     const bool bInSceneView = pWindow != nullptr && pWindow->RootWindow != nullptr && pWindow->RootWindow->Name != nullptr &&
                                               StringUtil::equals( pWindow->RootWindow->Name, kSceneViewTitle ) && pWindow->LastFrameActive == imguiContext.FrameCount;
-                    if ( bInSceneView && view._pTextureId != nullptr && findImageCommand( pWindow->DrawList, textureId, imageCommandIndex, canvasRect ) )
+                    if ( bInSceneView && view._pTextureID != nullptr && findImageCommand( pWindow->DrawList, textureID, imageCommandIndex, canvasRect ) )
                     {
                         pCanvasDrawList = pWindow->DrawList;
                         break;

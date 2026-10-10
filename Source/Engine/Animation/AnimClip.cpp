@@ -137,7 +137,7 @@ namespace sw
         , _listCurve{}
         , _duration{ 0.0f }
         , _rootMotionTrack{ -1 }
-        , _codecId{ AnimCodecId::Raw }
+        , _codecID{ AnimCodecID::Raw }
         , _bLoop{ SW_TRUE }
     {
     }
@@ -160,7 +160,7 @@ namespace sw
             return false;
         _listTrackName = rawClip._listTrackName;
         _duration      = rawClip.getDuration();
-        _codecId       = codec.getId();
+        _codecID       = codec.getID();
         assignCodecBytes( bytes.data(), bytes.size() );
         if ( pOutStats != nullptr )
             *pOutStats = stats;
@@ -169,7 +169,7 @@ namespace sw
 
     bool AnimClip::sampleTracks( float32 time, Pose& outTrackPose, const uint8* pTrackMask ) const
     {
-        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( _codecId );
+        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( _codecID );
         if ( pCodec == nullptr || _codecByteCount == 0 )
             return false;
         return pCodec->sample( getCodecData(), _codecByteCount, MathUtil::clamp( time, 0.0f, _duration ), outTrackPose, pTrackMask );
@@ -289,7 +289,7 @@ namespace sw
             writer.writeString( trackName.c_str() );
         }
         writer.writeInt( _rootMotionTrack );
-        writer.writeUint( static_cast<uint32>( _codecId ) );
+        writer.writeUint( static_cast<uint32>( _codecID ) );
         writer.writeUint( static_cast<uint32>( _codecByteCount ) );
         writer.writeRaw( getCodecData(), _codecByteCount );
         writer.writeUint( static_cast<uint32>( _notifyTrack.getEvents().size() ) );
@@ -382,7 +382,7 @@ namespace sw
             }
         }
 
-        const bool bCodecKnown  = codecValue < static_cast<uint32>( AnimCodecId::Count );
+        const bool bCodecKnown  = codecValue < static_cast<uint32>( AnimCodecID::Count );
         const bool bRootInRange = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
         const bool bValidHeader = MathUtil::isFinite( _duration ) && _duration >= 0.0f;
         if ( reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false )
@@ -391,7 +391,7 @@ namespace sw
             clear();
             return false;
         }
-        _codecId = static_cast<AnimCodecId>( codecValue );
+        _codecID = static_cast<AnimCodecID>( codecValue );
         return true;
     }
 

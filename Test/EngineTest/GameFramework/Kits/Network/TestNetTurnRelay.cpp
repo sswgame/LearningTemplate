@@ -199,14 +199,14 @@ SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
 
     // 차례가 아니면 거절.
     const int32 seatOneClient = findClientAtSeat( listClient, 1 );
-    const int32 rejectedId    = listClient[static_cast<size_t>( seatOneClient )].submitAction( vector<uint8>{ 'z' } );
+    const int32 rejectedID    = listClient[static_cast<size_t>( seatOneClient )].submitAction( vector<uint8>{ 'z' } );
     harness.stepTicks( 30 );
     vector<TurnRelayEvent> listEvent;
     listClient[static_cast<size_t>( seatOneClient )].drainEvents( listEvent );
     bool bRejected = false;
     for ( const TurnRelayEvent& event : listEvent )
     {
-        bRejected = bRejected || ( event._kind == TurnRelayEvent::Kind::ActionRejected && event._index == rejectedId && event._reason == TurnRejectReason::NotYourTurn );
+        bRejected = bRejected || ( event._kind == TurnRelayEvent::Kind::ActionRejected && event._index == rejectedID && event._reason == TurnRejectReason::NotYourTurn );
     }
     SW_EXPECT_TRUE( bRejected );
 
@@ -231,7 +231,7 @@ SW_TEST_CASE( NetTurnRelayTest, RoomsEnforceTurnsAndResyncReturningPlayers )
     harness.stepTicks( 24 );
     playAtSeat( listClient, 0, 'e' );
     harness.stepTicks( 24 );
-    SW_EXPECT_TRUE( game._server.findRoom( 7 )->_listSeat[2]._connectionId < 0 );
+    SW_EXPECT_TRUE( game._server.findRoom( 7 )->_listSeat[2]._connectionID < 0 );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( listClient[static_cast<size_t>( seatTwoClient )].getActions().size() ) ); // a R b c 까지만
 
     // 같은 객체(표 · 받은 행동)로 돌아온다 — 표로 같은 자리, 놓친 d · e 를 받는다.
@@ -346,7 +346,7 @@ SW_TEST_CASE( NetTurnRelayTest, LiveSeatCannotBeReclaimed )
     harness.stepTicks( 30 );
     SW_ASSERT_TRUE( clientA.isStarted() && clientA.getToken() != 0 );
     const int32 seatA       = clientA.getSeat();
-    const int32 connectionA = game._server.findRoom( 7 )->_listSeat[static_cast<size_t>( seatA )]._connectionId;
+    const int32 connectionA = game._server.findRoom( 7 )->_listSeat[static_cast<size_t>( seatA )]._connectionID;
 
     // 침입자 — 가득 찬 방이라 거절되고, A 의 표를 그대로 내도 A 가 살아 있으니 거절된다.
     const int32 intruderWorld = addTurnClient( harness, game, intruder, NetSimLinkConditions{} );
@@ -363,7 +363,7 @@ SW_TEST_CASE( NetTurnRelayTest, LiveSeatCannotBeReclaimed )
     harness.stepTicks( 10 );
     SW_EXPECT_TRUE( hasDeniedEvent( intruder, TurnRejectReason::SeatInUse ) );
     SW_EXPECT_EQUAL( -1, intruder.getSeat() );
-    SW_EXPECT_EQUAL( connectionA, game._server.findRoom( 7 )->_listSeat[static_cast<size_t>( seatA )]._connectionId );
+    SW_EXPECT_EQUAL( connectionA, game._server.findRoom( 7 )->_listSeat[static_cast<size_t>( seatA )]._connectionID );
 }
 
 /**

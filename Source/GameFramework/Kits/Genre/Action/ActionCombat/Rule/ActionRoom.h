@@ -84,7 +84,7 @@ namespace sw
     struct ActionRoomSite
     {
         string _mapPath;       ///< 이 룸의 맵(`RoomClearedEvent::_mapPath`)
-        string _zoneId;        ///< 클리어 게이트가 걸린 존(`ClearGateStateChangedEvent::_zoneId`)
+        string _zoneID;        ///< 클리어 게이트가 걸린 존(`ClearGateStateChangedEvent::_zoneID`)
         string _returnMapPath; ///< 지면 돌아갈 오버월드 맵(`PlayerDefeatedInRoomEvent::_returnMapPath`)
     };
 } // namespace sw
@@ -217,13 +217,13 @@ namespace sw
             AABB bounds() const;
         };
 
-        /** @brief 종 @p monsterId 의 적 하나를 @p position 에 세웁니다. 정의가 없으면 세우지 않습니다(`findOrAddMonsterDef` 가 알린다). */
-        void spawnMonster( const hashed_string& monsterId, const float2& position );
+        /** @brief 종 @p monsterID 의 적 하나를 @p position 에 세웁니다. 정의가 없으면 세우지 않습니다(`findOrAddMonsterDef` 가 알린다). */
+        void spawnMonster( const hashed_string& monsterID, const float2& position );
         /**
-         * @brief 이번 싸움의 정의 목록에서 @p monsterId 의 칸을 찾고, 없으면 카탈로그 서비스 → 내장 정의 순서로 찾아 더합니다.
+         * @brief 이번 싸움의 정의 목록에서 @p monsterID 의 칸을 찾고, 없으면 카탈로그 서비스 → 내장 정의 순서로 찾아 더합니다.
          * @return 칸 번호. 어디에도 없으면 -1 입니다(경고한다). 카탈로그가 걸렸는데 그 id 가 없으면 내장 정의를 쓰며 경고한다.
          */
-        int32 findOrAddMonsterDef( const hashed_string& monsterId );
+        int32 findOrAddMonsterDef( const hashed_string& monsterID );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
         /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p out 에 더합니다. */

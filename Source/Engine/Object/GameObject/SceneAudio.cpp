@@ -105,7 +105,7 @@ namespace sw
         }
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine != nullptr && pEmitter != nullptr )
-            pEngine->removeEmitter( pEmitter->getEmitterId() );
+            pEngine->removeEmitter( pEmitter->getEmitterID() );
     }
 
     void SceneAudio::addReverbZone( AudioReverbZoneComponent* pZone )
@@ -184,7 +184,7 @@ namespace sw
             const float3 velocity            = SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
             pEmitter->_lastAudioPosition     = position;
             pEmitter->_bHasLastAudioPosition = true;
-            pEngine->setEmitter( pEmitter->getEmitterId(), position, velocity );
+            pEngine->setEmitter( pEmitter->getEmitterID(), position, velocity );
             _listEmitterSnapshot.push_back( pEmitter );
         }
 
@@ -205,7 +205,7 @@ namespace sw
                 AudioEmitterComponent* pEmitter = _listEmitterSnapshot[( _occlusionCursor + checkIndex ) % emitterCount];
                 if ( pEmitter->usesOcclusion() == false )
                     continue;
-                pEngine->setEmitterOcclusion( pEmitter->getEmitterId(), pQuery->computeOcclusion( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
+                pEngine->setEmitterOcclusion( pEmitter->getEmitterID(), pQuery->computeOcclusion( _primaryListenerPosition, pEmitter->_lastAudioPosition ) );
             }
             _occlusionCursor = ( _occlusionCursor + checkCount ) % emitterCount;
         }

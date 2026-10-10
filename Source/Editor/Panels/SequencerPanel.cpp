@@ -185,7 +185,7 @@ namespace sw::editor
         constexpr float32 kClipFieldRowCount = 5.0f; // 이름 · 대상 · 이동 · 회전 · 크기
         // 고른 클립의 편집 칸은 늘 같은 높이의 구역에 그린다 — 고를 때만 칸이 생기면 그만큼 타임라인이 밀려 내려간다.
         EditorSectionDesc clipDesc{};
-        clipDesc._pId       = "##sequence_clip";
+        clipDesc._pID       = "##sequence_clip";
         clipDesc._kind      = EditorSectionKind::Child;
         clipDesc._childSize = float2{ 0.0f, ImGui::GetFrameHeightWithSpacing() * kClipFieldRowCount };
         EditorChrome::beginSection( clipDesc );

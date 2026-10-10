@@ -109,7 +109,7 @@ namespace sw
                     if ( isBindingValue( attribute.getValue() ) )
                     {
                         inoutNode._listBinding.push_back(
-                            UIBindingDesc{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetId, findLine( context, source ) } );
+                            UIBindingDesc{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( context, source ) } );
                         continue;
                     }
                     destination.appendAttribute( attribute.getName(), attribute.getValue() );
@@ -148,7 +148,7 @@ namespace sw
                         return fail( context, element, string( "'" ) + pTag + "' has unknown attribute '" + pName + "'" );
                     if ( isBindingValue( attribute.getValue() ) )
                     {
-                        node._listBinding.push_back( UIBindingDesc{ string( pName ), string( attribute.getValue() ), kInvalidWidgetId, node._sourceLine } );
+                        node._listBinding.push_back( UIBindingDesc{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
                         continue;
                     }
                     propertyRoot.appendAttribute( pName, attribute.getValue() );
@@ -291,7 +291,7 @@ namespace sw
                 for ( const UIBindingDesc& binding : node._listBinding )
                 {
                     UIBindingDesc instanceBinding = binding;
-                    instanceBinding._widget       = widget->getId();
+                    instanceBinding._widget       = widget->getID();
                     context._pOutListBinding->push_back( std::move( instanceBinding ) );
                 }
 

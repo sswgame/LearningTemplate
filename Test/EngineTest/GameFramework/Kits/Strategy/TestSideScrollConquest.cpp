@@ -46,12 +46,12 @@ namespace
         }
     }
 
-    int32 countUnits( const ConquestWorld& world, const hashed_string& unitId, ConquestTeam team )
+    int32 countUnits( const ConquestWorld& world, const hashed_string& unitID, ConquestTeam team )
     {
         int32 count = 0;
         for ( const ConquestUnit& unit : world.getUnits() )
         {
-            if ( unit._pDef->_id == unitId && unit._team == team )
+            if ( unit._pDef->_id == unitID && unit._team == team )
                 ++count;
         }
         return count;
@@ -388,7 +388,7 @@ SW_TEST_CASE( SideScrollConquestTest, SameInputsGiveTheSameBattle )
     SW_EXPECT_TRUE( first.getUnits().size() > 2 ); // 웨이브가 나왔다
     for ( size_t index = 0; index < first.getUnits().size(); ++index )
     {
-        SW_EXPECT_EQUAL( first.getUnits()[index]._unitId, second.getUnits()[index]._unitId );
+        SW_EXPECT_EQUAL( first.getUnits()[index]._unitID, second.getUnits()[index]._unitID );
         SW_EXPECT_NEAR_EQUAL( first.getUnits()[index]._x, second.getUnits()[index]._x, 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( first.getUnits()[index]._health, second.getUnits()[index]._health, 1.0e-6f );
     }

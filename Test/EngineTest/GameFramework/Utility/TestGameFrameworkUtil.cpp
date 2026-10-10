@@ -431,7 +431,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )
 /**
  * @brief [GameFrameworkUtilTest] 데이터 XML — 루트 확인 · id 없는 원소 거르기 · 숫자 목록(빠진 성분은 기본값) · 빈 토큰을 건너뛰는 토큰 목록
  */
-SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIdsNumbersAndTokens )
+SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIDsNumbersAndTokens )
 {
     sw::XMLDocument doc;
     XMLNode         root;
@@ -440,7 +440,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIdsNumbersAndTokens )
     int32 idCount = 0;
     for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
     {
-        idCount += GameDataXML::findRequiredId( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+        idCount += GameDataXML::findRequiredID( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
     }
     SW_EXPECT_EQUAL( 1, idCount );
 

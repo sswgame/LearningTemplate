@@ -25,7 +25,7 @@ namespace sw
         , _mapCommandToHandler{}
         , _pUISystem{ nullptr }
         , _handle{ kInvalidUIScreenHandle }
-        , _lastFocused{ kInvalidWidgetId }
+        , _lastFocused{ kInvalidWidgetID }
         , _pushOrder{ 0 }
         , _bClosing{ SW_FALSE }
     {
@@ -59,7 +59,7 @@ namespace sw
     {
         const auto newEnd = std::remove_if( _listBinding.begin(), _listBinding.end(),
                                             [this]( const UIBindingDesc& binding )
-        { return _tree.findWidgetById( binding._widget ) == nullptr; } );
+        { return _tree.findWidgetByID( binding._widget ) == nullptr; } );
         if ( newEnd == _listBinding.end() )
             return;
         _listBinding.erase( newEnd, _listBinding.end() );

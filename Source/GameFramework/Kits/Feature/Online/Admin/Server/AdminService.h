@@ -56,10 +56,10 @@ namespace sw
         /** @brief 맡긴 일이 끝날 때까지 저장소를 거둡니다(상한 5 초) — 저장소를 내리기 전에. */
         void shutdown();
 
-        /** @brief 명령 하나 — @p adminId 는 로그인한 GM 계정(호스트 경로는 `OnlineCallContext::_accountId`). @p onReply 는 정확히 한 번. */
-        void submitCall( AccountId adminId, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply );
+        /** @brief 명령 하나 — @p adminID 는 로그인한 GM 계정(호스트 경로는 `OnlineCallContext::_accountID`). @p onReply 는 정확히 한 번. */
+        void submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply );
         /** @brief 서버 설정의 첫 관리자(레코드가 없을 때만)를 맡깁니다. 서버 조립이 기동 때 부른다. */
-        void seedRole( AccountId accountId, AdminRole role, int64 nowMs );
+        void seedRole( AccountID accountID, AdminRole role, int64 nowMs );
         void tick( int64 nowMs );
 
         // IOnlineService
@@ -69,7 +69,7 @@ namespace sw
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
         /** @brief 일의 `complete` 가 부릅니다. */
-        void  completeCall( uint64 callId, AdminReply& inoutReply );
+        void  completeCall( uint64 callID, AdminReply& inoutReply );
         void  completeSeed( AdminResult result );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
 
@@ -79,22 +79,22 @@ namespace sw
             ReplyDelegate      _onReply{};
             NetRequestToken    _token{};
             OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callId{ 0 };
+            uint64             _callID{ 0 };
             int64              _receivedNanoseconds{ 0 };
             int64              _nowMs{ 0 };
-            AccountId          _targetId{ kInvalidAccountId };
+            AccountID          _targetID{ kInvalidAccountID };
             int32              _methodIndex{ 0 };
             uint16             _method{ 0 };
         };
 
-        void startCall( AccountId adminId, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
+        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending );
         void finishCall( size_t pendingIndex, const AdminReply& reply );
 
         vector<PendingCall>  _listPendingCall;
         ServiceMetrics       _metrics;
         AdminServiceSettings _settings;
         IServiceStore*       _pStore;
-        uint64               _nextCallId;
+        uint64               _nextCallID;
         int64                _nowMs;
         int32                _pendingSeedCount;
     };

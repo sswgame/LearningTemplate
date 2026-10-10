@@ -63,7 +63,7 @@ namespace sw
                     (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                     return;
                 }
-                const ServerAssignment assignment = _pService->assignServer( context._accountId, request, context._nowMs );
+                const ServerAssignment assignment = _pService->assignServer( context._accountID, request, context._nowMs );
                 if ( assignment._result == ServerDirectoryResult::Invalid )
                 {
                     (void)host.respondError( context._token, ServerDirectoryError::kUnknownKind );
@@ -117,7 +117,7 @@ namespace sw
         const IServerBus* pBus = host.getServerBus();
         if ( _pService == nullptr || message._topic != ServerDirectoryBus::kChangedTopic )
             return;
-        if ( pBus != nullptr && message._originServerId == pBus->getServerId() )
+        if ( pBus != nullptr && message._originServerID == pBus->getServerID() )
             return; // 이 서버가 낸 것 — 쓰기 완료 때 이미 다시 읽기를 걸었다
         _pService->notifyChanged();
     }

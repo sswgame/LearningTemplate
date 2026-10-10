@@ -274,10 +274,10 @@ namespace sw
         // 슬롯이 정하는 샘플러는 네이티브 bindless 가 고르는 것과 같다: 머티리얼 슬롯은 shaderslot::kMaterialTextureSampler(선형 · 랩),
         // 그 밖(엔진 슬롯 t0..t3 — 풀스크린 입력 · 그림자 맵)은 shaderslot::kEngineTextureSampler(선형 · 클램프). 둘 다 정적 샘플러 세트의 객체다.
         const bool   bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
-        const uint32 samplerId     = bMaterialSlot ? shaderslot::kMaterialTextureSampler : shaderslot::kEngineTextureSampler;
-        if ( _pDevice->_arrStaticSampler[samplerId] != nullptr )
+        const uint32 samplerID     = bMaterialSlot ? shaderslot::kMaterialTextureSampler : shaderslot::kEngineTextureSampler;
+        if ( _pDevice->_arrStaticSampler[samplerID] != nullptr )
         {
-            _pContext->PSSetSamplers( slot, 1, _pDevice->_arrStaticSampler[samplerId].GetAddressOf() );
+            _pContext->PSSetSamplers( slot, 1, _pDevice->_arrStaticSampler[samplerID].GetAddressOf() );
             if ( slot != 0 )
                 _pContext->PSSetSamplers( 0, 1, _pDevice->_arrStaticSampler[shaderslot::kEngineTextureSampler].GetAddressOf() );
         }

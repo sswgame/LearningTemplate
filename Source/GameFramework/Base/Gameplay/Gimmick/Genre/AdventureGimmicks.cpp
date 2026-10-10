@@ -54,7 +54,7 @@ namespace sw
             return false;
         const float3 from = pScene->getWorldPosition();
         WorldRayHit  hit;
-        if ( WorldQuery::raycast( *pManager, from, from + cellStep, pOwner->getObjectId(), hit ) )
+        if ( WorldQuery::raycast( *pManager, from, from + cellStep, pOwner->getObjectID(), hit ) )
             return false;
         _from      = from;
         _to        = from + cellStep;
