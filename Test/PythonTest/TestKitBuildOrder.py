@@ -54,7 +54,8 @@ def writeManifestInternal(folder: Path, name: str, listDependency: list[str]) ->
 @unittest.skipIf(shutil.which("cmake") is None, "cmake 가 PATH 에 없다")
 class KitBuildOrderTest(unittest.TestCase):
     def testSharedKitComesBeforeEveryKitThatLinksIt(self) -> None:
-        listManifest = sorted(kKitRoot.rglob("*.module.json"))
+        listManifest = sorted(manifest for manifest in kKitRoot.rglob("*.module.json")
+                              if json.loads(manifest.read_text(encoding="utf-8")).get("_kind") == "Kit")
         with tempfile.TemporaryDirectory() as folder:
             outputPath = Path(folder) / "order.txt"
             completed = runOrderScriptInternal(listManifest, outputPath)
