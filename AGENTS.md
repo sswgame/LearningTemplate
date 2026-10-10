@@ -147,6 +147,11 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   (`isEqual( other, NameCase::CaseSensitive )` compares the spelling — use it for "did the name change?"), and there is
   no `operator<`: sort with `HashedStringLexicalLess` (stable, for output people or files see) or `HashedStringFastLess`
   (intern order, lookup only).
+- **Pick the string type by what it holds, not by habit.** A name on a per-frame path is a `hashed_string` or a
+  `string_view` into storage that already exists — return a view, not a copy. `fixed_string<N>` is only for text whose
+  bound is a code constant (never data, a path or user input) where the heap is off limits (crash, log and signal
+  paths) or a fixed buffer is required (ImGui input); it truncates past `N` with a warning and `size()` is a `strlen`.
+  Up to 15 characters `string` is already heap-free (SSO), so `fixed_string` buys nothing there. No bulk rewrites.
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a
   third-person verb (`supportsX`, `usesX`, `requiresX`, `matchesX`, `allowsX`, `overlapsX`).

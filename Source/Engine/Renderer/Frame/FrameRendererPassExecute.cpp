@@ -560,7 +560,7 @@ namespace sw
                 }
                 case RenderPassType::Present:
                 {
-                    const string           srcName = resolvePresentSource();
+                    const string_view      srcName = resolvePresentSource();
                     const RHITextureHandle src     = srcName.empty() ? 0 : findTransient( srcName );
                     // 출력은 뷰가 정한다(resolvePresentTarget — Canvas 와 같은 판단). 스크린샷 실행이면 백버퍼 대신 캡처 텍스처에 그리고,
                     // Swapchain 을 쓰는 마지막 패스(보통 Canvas) 끝에서 백버퍼로 복사한다 — 여기서 복사하면 뒤의 UI 가 캡처에 없다.

@@ -64,6 +64,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 | `name()`(짝 `setName`) | `getName()` | 맨이름 게터 금지 |
 | `Handle onLanguageChanged( callback )` | `registerLanguageChanged( callback )` | `on*` 은 "일어났다" 알림이지 등록이 아니다 |
 | `find( string_view )` + `find( const hashed_string& )` | `find( const hashed_string& )` 하나 · 키가 아닌 글은 `findStringByText( string_view )` | 리터럴 호출이 모호해진다 |
+| 매 프레임 `string resolvePresentSource()` · 이름에 `fixed_string<32>` | `string_view resolvePresentSource()`(파이프라인 선언을 가리킴) · `hashed_string` | 프레임 경로는 사본을 만들지 않고, 15자 이하는 `string` 도 힙이 없다 |
 | `attr()` | `attribute()` | 줄임말은 저장소의 타입 이름이 줄일 때만 |
 
 | 접미사 | 뜻 | 예 |

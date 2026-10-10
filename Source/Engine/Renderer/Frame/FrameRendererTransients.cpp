@@ -341,7 +341,7 @@ namespace sw
         return string_view{};
     }
 
-    string FrameRenderer::resolvePresentSource() const
+    string_view FrameRenderer::resolvePresentSource() const
     {
         // 파이프라인이 Present 의 입력을 선언했으면 그것이 기준이다. 다른 풀스크린 패스와 같은 규칙이다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
@@ -351,7 +351,7 @@ namespace sw
             for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
                 if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor && findTransient( input._attachment.view() ) != 0 )
-                    return string( input._attachment.view() );
+                    return input._attachment.view();
             }
         }
         // 선언이 없을 때의 폴백. 가장 나중에 만들어지는 컬러부터 본다.
@@ -359,6 +359,6 @@ namespace sw
             activePool().getAll(),
             { "TonemapColor", "OutlineColor", "BloomColor", "TaaColor",
               "TransparentColor", "LitColor", "SceneColor", "GBufferAlbedo" } );
-        return pName != nullptr ? string( pName ) : string{};
+        return pName != nullptr ? string_view{ pName } : string_view{};
     }
 } // namespace sw

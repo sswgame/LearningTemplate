@@ -235,6 +235,7 @@ NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않�
 **`formatstring` 에 `string_view` 를 `.data()` 로 풀어 넘기지 마세요.** 뷰 끝을 지나 읽습니다. `string_view` 는 그대로 넘기면 길이로 씁니다(`CheckLogViewArgument.py`).
 `%#` 은 순수 자리표이고, 모르는 `%…` 는 글자 그대로 나오고, 인자 수가 맞지 않으면 Debug에서 단언합니다. 자세한 규칙은 `FormatString` 클래스 주석에 있습니다.
 로캘은 C 로캘 그대로입니다. 잘못된 UTF-8은 `escapeInvalidUtf8` 로 처리합니다. `fixed_string` 은 넘치면 글자 경계에서 자르고 경고합니다.
+`fixed_string` 의 `size()` 는 매번 `strlen` 이라 반복문 조건에 두면 길이만큼 다시 셉니다. 넘침 경고는 `SW_LOG_WARNING` 이라, 로거 안에서 넘치면 로거로 다시 들어갑니다. 로그 경로의 상한은 넘칠 수 없는 코드 상수로 잡습니다. 언제 쓰는지는 [AGENTS.md](../../AGENTS.md#function-names) 에 있습니다.
 
 **`StringUtil` 은 비-ASCII 바이트를 `uint8` 로 넓혀 다룹니다.** UTF-16 문자열에 같은 치환을 하지 않고, `stristr` 을 바이트 묶어 읽기로 "최적화"하지 않습니다.
 Win32 문자열 변환은 `utf8ToUtf16` 을 씁니다. `ImmGetCompositionStringW` 는 글자 수가 아니라 바이트 수를 돌려줍니다. `std::hash` 는 `string`, `wstring`, `fixed_string` 모두 `RuntimeStringHash`(대소문자 구분)입니다.

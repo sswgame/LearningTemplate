@@ -629,8 +629,12 @@ namespace sw
         TransientAttachmentPool::Attachment findTransientAttachment( string_view name ) const;
         /** @brief 일시 텍스처 핸들을 찾습니다. 없으면 0 입니다. */
         RHITextureHandle findTransient( string_view name ) const;
-        /** @brief Present 소스 어태치먼트 이름을 정합니다. */
-        string resolvePresentSource() const;
+        /**
+         * @brief Present 소스 어태치먼트 이름을 정합니다. 없으면 빈 뷰입니다.
+         * @details 반환한 뷰는 파이프라인 선언(`_listResolvedInput`)이나 폴백 리터럴을 가리킵니다. 매 프레임 불리므로 사본을 만들지 않습니다.
+         *          파이프라인을 바꾸기 전까지만 유효하니 프레임을 넘겨 들고 있지 않습니다.
+         */
+        string_view resolvePresentSource() const;
         /**
          * @brief 지금 뷰의 주 출력 대상을 고릅니다 — 렌더 텍스처 뷰는 자기 텍스처, 주 시점 · 화면 사각형 뷰는 주 출력(백버퍼 · 게임 뷰 RT),
          *        스크린샷 실행이면 캡처 텍스처입니다. Present 와 Canvas 가 같은 판단을 쓴다.
