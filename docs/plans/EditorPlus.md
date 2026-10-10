@@ -93,7 +93,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 |------|------|------|------|------|------|
 | **3 인스펙터 · 콘텐츠** | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
-| | T3 | 공용 노드 그래프 틀을 확장에 공개(`EditorGraphDocumentPanel` 내보내기 + 노드 찾아 넣기 · 핀 타입 색 · 검증 표시) | S | C1 | |
 | | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
 | **추가 — 아이콘(12절)** | R3 | 컴포넌트와 오브젝트 아이콘(Hierarchy, 인스펙터) | M | 5b R2 | ★ |
@@ -273,54 +272,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 결과:
 - MapCheckRowsTest, 자체 시험 mapCheck.selectsIssueObject.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-
-### T3 공용 노드 그래프 틀을 확장에 공개 — 노드 찾아 넣기 · 핀 타입 색 · 검증 표시
-
-**목적.** `EditorGraphDocumentPanel<AssetType>` · `EditorNodeGraph` 는 애님 · 대화 두 패널이 쓰는 틀이다. 6 단계의 기믹 회로 그래프(키트 · 기반 확장 모듈)가 쓰려면 내보내야 하고,
-상용 그래프 편집기의 기본 셋(빈 곳 오른쪽 클릭 → **검색해 노드 넣기**, 핀 타입마다 색 · 맞지 않는 핀 연결 거절, **오류 노드 빨간 테두리 + 툴팁**)이 틀에 있어야 패널마다 다시 짜지 않는다.
-
-**바꿀 것.**
-- `EditorNodeGraph`(클래스) · `EditorNodeGraphId` 도우미에 `SW_EDITOR_API`. `EditorGraphDocumentPanel` 은 템플릿이라 헤더 그대로(확장이 인스턴스화).
-- `EditorNodeGraph` 에 셋:
-```cpp
-        /** @brief 노드 종류 하나 — 찾아 넣기 목록의 줄입니다. */
-        struct NodeKindEntry
-        {
-            const utf8* _pName;     ///< 보이는 이름
-            const utf8* _pCategory; ///< 묶음
-            uint32      _kindId;    ///< 패널이 정한 값 — 고르면 돌려준다
-        };
-        /** @brief 빈 곳 오른쪽 클릭이면 검색 팝업을 그리고, 고르면 true 와 그 종류 · 캔버스 좌표를 돌려줍니다. */
-        bool drawAddNodePopup( const vector<NodeKindEntry>& listKind, uint32& outKindId, float2& outCanvasPosition );
-        /** @brief 핀 타입 색 표를 둡니다(타입 id → 색). 연결 시도 때 두 핀의 타입이 다르면 거절하고 이유를 그 자리에 보입니다. */
-        void setPinTypeColors( const vector<Color4>& listColor );
-        /** @brief 이번 프레임의 오류 노드입니다(빨간 테두리 + 툴팁). 패널이 검증한 결과를 넘긴다. */
-        void setNodeIssues( const vector<EditorGraphNodeIssue>& listIssue );
-```
-  애님 · 대화 패널이 찾아 넣기를 쓰게 바꾼다(지금 노드 넣기 메뉴를 이것으로 — 동작은 같고 검색이 생긴다).
-- 판단(검색 일치 · 묶음 정렬 · 핀 타입 호환)은 ImGui 없는 `EditorNodeGraphSearch` · `EditorPinTypeUtil` → EditorTest.
-**시험.** `EditorNodeGraphSearchTest`(부분 일치 · 묶음 순서 · 빈 검색은 전부) · `EditorPinTypeUtilTest`(같은 타입 · 와일드카드 · 거절 이유). 자체 시험 `dialogueGraph.addNodeBySearch`(2 차 단위 8 입력 창구 — 빈 곳 오른쪽 클릭 → 글자 → Enter → 노드 수 +1).
-**확인 = 에디터 시나리오.** `graphaddnode.scenario.xml`: Dialogue Graph 를 시험 문서로 열고 캔버스 빈 곳(이름표 `graph.canvas`)을 `EditorClick button="1"` 로 오른쪽 클릭한 뒤,
-`EditorText` 로 노드 이름 일부를 치고 `EditorKey key="Enter"` 를 보내 탐침 `Editor.GraphNodeCount` 가 하나 늘었는지 봅니다. 같은 시나리오를 Animation Graph 로 하나 더 둡니다(13절 N8 이 이어 씁니다).
-
-**남길 교훈.** 없음(남는 기믹 회로 그래프는 9절 로드맵 6). **커밋 메시지:**
-```
-에디터 - 노드 그래프 틀을 확장에 내보내고 찾아 넣기 · 핀 타입 색 · 오류 노드 표시를 틀에 둔다
-
-문제점:
-- 노드 그래프 틀(EditorNodeGraph · EditorGraphDocumentPanel)이 EditorModule 안에만 있어 확장 모듈이 쓸 수 없었고, 노드 넣기는 패널마다
-  메뉴였으며 핀 타입 · 오류 노드 표시가 없었다.
-
-해결방안:
-- EditorNodeGraph 내보내기. drawAddNodePopup(검색 · 묶음), setPinTypeColors(색 · 맞지 않는 연결 거절 + 이유), setNodeIssues(빨간 테두리 + 툴팁).
-  판단은 ImGui 없는 EditorNodeGraphSearch · EditorPinTypeUtil.
-- 애님 · 대화 그래프가 찾아 넣기를 쓴다.
-
-결과:
-- EditorNodeGraphSearchTest · EditorPinTypeUtilTest, 자체 시험 dialogueGraph.addNodeBySearch.
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```

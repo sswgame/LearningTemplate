@@ -3,9 +3,17 @@
  * @brief imgui-node-editor 컨텍스트 수명주기 및 캔버스 Begin/End
  */
 #pragma once
+#include "Core/Common/Defines.h"
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Delegate.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/fixed_string.h"
+
+#include "Editor/Common/EditorColor.h"
+#include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
 namespace ax::NodeEditor
 {
@@ -16,13 +24,19 @@ namespace sw::editor
 {
     /**
      * @class EditorNodeGraph
-     * @brief 노드 그래프 캔버스 호스트입니다. 패널 · 팝업 · 섹션이 멤버로 소유합니다.
+     * @brief 노드 그래프 캔버스 호스트입니다(언리얼 SGraphEditor · 유니티 GraphView 의 자리). 패널 · 팝업 · 섹션이 멤버로 소유합니다.
+     * @details 틀이 주는 것: 빈 곳 오른쪽 클릭 → 검색해 노드 넣기(`drawAddNodePopup`), 핀 타입 색과 맞지 않는 연결 거절(`queryNewLink`),
+     *          문제 노드의 빨간 테두리 + 툴팁(`setNodeIssues` · `drawNodeIssues`). 판단은 ImGui 없는 `EditorNodeGraphRules` 가 한다.
+     *          확장 모듈은 imgui-node-editor 사본을 따로 가지므로(정적 링크) 캔버스 안에서 `ax::NodeEditor` 를 직접 부르기 전에 자기 사본에도
+     *          지금 편집기를 걸어야 한다 — `EditorGraphDocumentPanel::beginGraphCanvas` 가 한다.
      */
-    class EditorNodeGraph
+    class SW_EDITOR_API EditorNodeGraph
     {
     public:
         EditorNodeGraph();
         ~EditorNodeGraph();
+        EditorNodeGraph( const EditorNodeGraph& )            = delete;
+        EditorNodeGraph& operator=( const EditorNodeGraph& ) = delete;
 
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */
         void shutdown();
@@ -45,6 +59,39 @@ namespace sw::editor
 
         /** @brief 컨텍스트가 만들어져 있으면 true입니다. */
         bool isReady() const { return _pEditor != nullptr; }
+        /** @brief 노드 편집기 컨텍스트입니다(확장 모듈이 자기 imgui-node-editor 사본에 걸 때 쓴다). 없으면 nullptr 입니다. */
+        ax::NodeEditor::EditorContext* getContext() const { return _pEditor; }
+
+        /**
+         * @brief 빈 곳 오른쪽 클릭이면 노드 찾아 넣기 팝업을 엽니다. 캔버스 안(`beginCanvas` ~ `endCanvas`)에서 프레임마다 부릅니다.
+         * @details 팝업은 검색 칸(열 때 초점) + 묶음별 목록입니다. Enter 는 첫 줄을 고릅니다. 이름표: 캔버스 `graph.canvas`(endCanvas), 검색 칸 `graph.addNode.search`.
+         * @return 골랐으면 true 이고 그 종류와, 오른쪽 클릭한 자리의 캔버스 좌표를 돌려줍니다.
+         */
+        bool drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition );
+        /**
+         * @brief 끌어서 잇는 새 링크를 받습니다(`ed::BeginCreate` ~ `EndCreate` 전체). 캔버스 안에서 부릅니다.
+         * @param findPin 핀 번호 → 연결 정보. 모르는 핀이면 false 를 돌려준다(그 연결은 거절).
+         * @details 방향 · 타입이 맞지 않으면 링크를 빨갛게 거절하고 이유를 그 자리 툴팁으로 보입니다(`EditorNodeGraphRules::canConnect`).
+         * @return 받아들인 연결이면 true 이고 나가는 핀 → 들어오는 핀 순서로 돌려줍니다.
+         */
+        bool queryNewLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin );
+        /** @brief 핀 타입 색 표를 둡니다(핀 타입 번호 = 칸). 표 밖의 타입은 글자색입니다. */
+        void setPinTypeColors( const vector<Color4>& listColor ) { _listPinTypeColor = listColor; }
+        /** @brief 핀 타입의 색입니다. */
+        Color4 getPinTypeColor( uint32 pinType ) const;
+        /** @brief 핀 자리에 타입 색 동그라미를 그립니다(이어졌으면 채운다). `ed::BeginPin` ~ `EndPin` 안에서 부릅니다. */
+        void drawPinIcon( uint32 pinType, bool bConnected ) const;
+        /** @brief 이번 프레임의 문제 노드입니다. 패널이 검증한 결과를 넘깁니다. */
+        void setNodeIssues( vector<EditorGraphNodeIssue> listIssue ) { _listNodeIssue = std::move( listIssue ); }
+        /** @brief 문제 노드에 빨간 테두리를 두르고, 노드 위에 마우스가 있으면 이유를 툴팁으로 보입니다. 캔버스 안에서 노드를 그린 뒤 부릅니다. */
+        void drawNodeIssues() const;
+        /** @brief 지금 문제 노드 수입니다. */
+        uint32 getNodeIssueCount() const { return static_cast<uint32>( _listNodeIssue.size() ); }
+
+        /** @brief 이번 프레임에 그린 그래프의 노드 수를 적습니다(시나리오 탐침 `Editor.GraphNodeCount` 가 읽는다). */
+        static void noteDrawnNodeCount( uint32 nodeCount );
+        /** @brief 가장 최근에 그린 그래프의 노드 수입니다. */
+        static uint32 getDrawnNodeCount();
 
         /** @brief 다음 Begin에서 노드 위치를 시드하고 뷰를 맞출지 여부입니다. */
         bool needsContentFit() const { return _bNeedsContentFit; }
@@ -70,10 +117,14 @@ namespace sw::editor
         void ensureContext( const utf8* pSettingsFileName );
         void destroyContext();
 
-        ax::NodeEditor::EditorContext* _pEditor;
-        string                         _settingsPath;
-        float2                         _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 잰다)
-        float2                         _canvasSize;         ///< 이번 프레임의 캔버스 크기
-        bool                           _bNeedsContentFit;
+        ax::NodeEditor::EditorContext*       _pEditor;
+        string                               _settingsPath;
+        float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 잰다)
+        float2                               _canvasSize;         ///< 이번 프레임의 캔버스 크기
+        vector<Color4>                       _listPinTypeColor;   ///< 핀 타입 번호 → 색
+        vector<EditorGraphNodeIssue>         _listNodeIssue;      ///< 이번 프레임의 문제 노드
+        fixed_string<constant::kMaxBuffer64> _addNodeFilter;      ///< 찾아 넣기 검색어
+        float2                               _addNodePosition;    ///< 찾아 넣기를 연 자리(캔버스 좌표)
+        bool                                 _bNeedsContentFit;
     };
 } // namespace sw::editor

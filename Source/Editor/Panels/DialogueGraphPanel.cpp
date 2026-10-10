@@ -80,6 +80,9 @@ namespace sw::editor
         , _selectedNodeID{ 0 }
         , _previewNodeID{ 0 }
     {
+        _nodeGraph.setPinTypeColors( {
+            Color4{ 0.85f, 0.85f, 0.90f, 1.0f }
+        } ); // 흐름 핀 하나
     }
 
     void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
@@ -160,7 +163,7 @@ namespace sw::editor
         canvasDesc._flags     = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
         EditorChrome::beginSection( canvasDesc );
 
-        if ( _nodeGraph.beginCanvas( "DialogueGraphCanvas", EditorUtil::kDialogueGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "DialogueGraphCanvas", EditorUtil::kDialogueGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
@@ -176,6 +179,8 @@ namespace sw::editor
             ed::Link( toLinkID( link._id ), toPinID( link._fromPin ), toPinID( link._toPin ) );
         }
 
+        updateNodeIssues();
+        _nodeGraph.drawNodeIssues();
         handleCanvasInteractions();
         // 선택 노드 추적
         ed::NodeId  selectedNodes[1];
@@ -186,7 +191,7 @@ namespace sw::editor
         _nodeGraph.applyContentFitIfNeeded();
         cacheNodeLayout();
 
-        _nodeGraph.endCanvas();
+        endGraphCanvas();
         EditorChrome::endSection();
     }
 
@@ -204,48 +209,39 @@ namespace sw::editor
 
             if ( _nodeGraph.needsContentFit() )
                 ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
+            applyNodePlacement( node._id );
         }
     }
 
     void DialogueGraphPanel::handleCanvasInteractions()
     {
-        // 새 링크 생성 처리
-        if ( ed::BeginCreate() )
+        // 새 링크 — 방향(나가는 핀 → 들어오는 핀) · 타입 판정과 거절 표시는 틀(`EditorNodeGraph::queryNewLink`)이 한다.
+        int32 fromPin{ 0 };
+        int32 toPin{ 0 };
+        if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &DialogueGraphPanel::findGraphPin, this ), fromPin, toPin ) )
         {
-            ed::PinId a;
-            ed::PinId b;
-            if ( ed::QueryNewLink( &a, &b ) )
-            {
-                if ( a.Get() != 0 && b.Get() != 0 && ed::AcceptNewItem() )
-                {
-                    DialogueLink newLink{};
-                    newLink._id      = nextLinkID();
-                    const int32 pinA = static_cast<int32>( a.Get() );
-                    const int32 pinB = static_cast<int32>( b.Get() );
-
-                    // 핀 종류(In/Out) 구분: 핀 오프셋이 kPinInputOffset 이면 In 핀이다
-                    const bool bIsAInput = DialogueGraphAsset::decodePinOffset( pinA ) == DialogueGraphPanelInternal::kPinInputOffset;
-                    const bool bIsBInput = DialogueGraphAsset::decodePinOffset( pinB ) == DialogueGraphPanelInternal::kPinInputOffset;
-
-                    if ( bIsAInput != bIsBInput )
-                    {
-                        if ( bIsAInput )
-                        {
-                            newLink._fromPin = pinB;
-                            newLink._toPin   = pinA;
-                        }
-                        else
-                        {
-                            newLink._fromPin = pinA;
-                            newLink._toPin   = pinB;
-                        }
-                        _listLink.push_back( newLink );
-                        notifyDocumentEdited( "Link Dialogue Nodes" );
-                    }
-                }
-            }
+            DialogueLink newLink{};
+            newLink._id      = nextLinkID();
+            newLink._fromPin = fromPin;
+            newLink._toPin   = toPin;
+            _listLink.push_back( newLink );
+            notifyDocumentEdited( "Link Dialogue Nodes" );
         }
-        ed::EndCreate();
+
+        // 빈 곳 오른쪽 클릭 → 찾아 넣기. 고른 노드는 오른쪽 클릭한 자리에 놓는다.
+        vector<EditorGraphNodeKind> listKind;
+        for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
+        {
+            if ( info._bAddable )
+                listKind.push_back( EditorGraphNodeKind{ info._pName, "Dialogue", static_cast<uint32>( info._type ) } );
+        }
+        uint32 kindID{ 0 };
+        float2 canvasPosition{};
+        if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
+        {
+            placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeType>( kindID ) ), canvasPosition );
+            notifyDocumentEdited( "Add Dialogue Node" );
+        }
 
         // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
         // `decodePinNodeID` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 여기서 손으로 풀면
@@ -507,13 +503,59 @@ namespace sw::editor
             _bPreviewPlaying = SW_FALSE;
     }
 
-    void DialogueGraphPanel::addNode( DialogueAssetNodeType type )
+    int32 DialogueGraphPanel::addNode( DialogueAssetNodeType type )
     {
         DialogueNode node = DialogueCursor::makeNode( type, nextNodeID() );
         node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
         node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
         _selectedNodeID   = node._id;
         _listNode.push_back( std::move( node ) );
+        return _selectedNodeID;
+    }
+
+    bool DialogueGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const
+    {
+        const int32 nodeID = DialogueGraphAsset::decodePinNodeID( pinID );
+        bool        bKnown = false;
+        for ( const DialogueNode& node : _listNode )
+        {
+            bKnown = bKnown || node._id == nodeID;
+        }
+        if ( bKnown == false )
+            return false;
+        outInfo._type   = 0;
+        outInfo._bInput = DialogueGraphAsset::decodePinOffset( pinID ) == DialogueGraphPanelInternal::kPinInputOffset;
+        return true;
+    }
+
+    bool DialogueGraphPanel::isPinLinked( int32 pinID ) const
+    {
+        for ( const DialogueLink& link : _listLink )
+        {
+            if ( link._fromPin == pinID || link._toPin == pinID )
+                return true;
+        }
+        return false;
+    }
+
+    void DialogueGraphPanel::updateNodeIssues()
+    {
+        vector<int32> listInputNode;
+        for ( const DialogueNode& node : _listNode )
+        {
+            const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( node._type );
+            if ( pInfo != nullptr && pInfo->_bHasInputPin )
+                listInputNode.push_back( node._id );
+        }
+        vector<EditorGraphEdge> listEdge;
+        listEdge.reserve( _listLink.size() );
+        for ( const DialogueLink& link : _listLink )
+        {
+            listEdge.push_back( EditorGraphEdge{ DialogueGraphAsset::decodePinNodeID( link._fromPin ), DialogueGraphAsset::decodePinNodeID( link._toPin ) } );
+        }
+        vector<EditorGraphNodeIssue> listIssue;
+        EditorNodeGraphRules::collectUnreachableNodes( listInputNode, listEdge, listIssue );
+        _nodeGraph.setNodeIssues( std::move( listIssue ) );
     }
 
     void DialogueGraphPanel::drawNodeBody( const DialogueNode& node )
@@ -681,8 +723,11 @@ namespace sw::editor
 
     void DialogueGraphPanel::drawInputPin( int32 nodeID )
     {
-        ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinIn( nodeID ) ), ed::PinKind::Input );
-        ImGui::TextUnformatted( "-> In" );
+        const int32 pinID = DialogueGraphPanelInternal::pinIn( nodeID );
+        ed::BeginPin( toPinID( pinID ), ed::PinKind::Input );
+        _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "In" );
         ed::EndPin();
     }
 
@@ -690,6 +735,8 @@ namespace sw::editor
     {
         ed::BeginPin( toPinID( pinID ), ed::PinKind::Output );
         ImGui::TextUnformatted( pLabel );
+        ImGui::SameLine();
+        _nodeGraph.drawPinIcon( 0, isPinLinked( pinID ) );
         ed::EndPin();
     }
 } // namespace sw::editor

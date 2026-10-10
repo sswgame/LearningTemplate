@@ -69,13 +69,13 @@ namespace sw::editor
          * @return 없는 이름이면 false 입니다.
          */
         [[nodiscard]] static bool findKeyByName( string_view name, int32& outImguiKey );
-        /** @brief 이름표의 가운데로 마우스를 옮깁니다. 이름표가 없으면 false. */
-        [[nodiscard]] static bool moveMouseToMark( string_view key );
+        /** @brief 이름표의 @p anchor 자리(0..1 — 가운데가 (0.5, 0.5))로 마우스를 옮깁니다. 이름표가 없으면 false. */
+        [[nodiscard]] static bool moveMouseToMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         /**
          * @brief 이름표의 가운데에 커서를 붙잡아 둡니다. `releaseMouseHold` 까지 프레임마다 그 자리를 다시 넣습니다 — 단추를 누른 채 여러 프레임을 두는
          *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 합니다. 이름표가 없으면 false.
          */
-        [[nodiscard]] static bool holdMouseAtMark( string_view key );
+        [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         static void               releaseMouseHold();
         /** @brief 큐를 ImGuiIO 에 넣고 비웁니다. `ImGuiEditor::beginFrame` 이 플랫폼 newFrame 뒤에 부릅니다. */
         static void flushIntoImGui();

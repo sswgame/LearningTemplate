@@ -183,22 +183,22 @@ namespace sw::editor
         return false;
     }
 
-    bool EditorSelfTestInput::moveMouseToMark( string_view key )
+    bool EditorSelfTestInput::moveMouseToMark( string_view key, const float2& anchor )
     {
         EditorSelfTestMark mark;
         if ( EditorSelfTestMarks::find( key, mark ) == false )
             return false;
-        moveMouse( float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f }, mark._viewportID );
+        moveMouse( float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y }, mark._viewportID );
         return true;
     }
 
-    bool EditorSelfTestInput::holdMouseAtMark( string_view key )
+    bool EditorSelfTestInput::holdMouseAtMark( string_view key, const float2& anchor )
     {
         EditorSelfTestMark mark;
         if ( EditorSelfTestMarks::find( key, mark ) == false )
             return false;
         EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
-        state._heldMousePosition                  = float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
+        state._heldMousePosition                  = float2{ mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x, mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y };
         state._heldMouseViewportID                = mark._viewportID;
         state._bHoldMouse                         = true;
         return true;

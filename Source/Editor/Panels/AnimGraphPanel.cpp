@@ -69,6 +69,9 @@ namespace sw::editor
         , _previewGraph{}
         , _previewPlayer{}
     {
+        _nodeGraph.setPinTypeColors( {
+            Color4{ 0.45f, 0.85f, 0.55f, 1.0f }
+        } ); // 상태 전환 핀 하나
     }
 
     void AnimGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
@@ -163,7 +166,7 @@ namespace sw::editor
 
     void AnimGraphPanel::drawAnimationCanvas()
     {
-        if ( _nodeGraph.beginCanvas( "AnimGraphCanvas", EditorUtil::kAnimGraphCanvasFileName ) == false )
+        if ( beginGraphCanvas( "AnimGraphCanvas", EditorUtil::kAnimGraphCanvasFileName ) == false )
         {
             if ( _nodeGraph.hasContext() == false )
                 ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
@@ -178,17 +181,29 @@ namespace sw::editor
                 ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
+            bool bLinkedIn  = false;
+            bool bLinkedOut = false;
+            for ( const GraphLink& link : _listLink )
+            {
+                bLinkedIn  = bLinkedIn || link._toNode == node._id;
+                bLinkedOut = bLinkedOut || link._fromNode == node._id;
+            }
             ed::BeginPin( toPinID( AnimGraphPanelInternal::pinIn( node._id ) ), ed::PinKind::Input );
-            ImGui::TextUnformatted( "-> In" );
+            _nodeGraph.drawPinIcon( 0, bLinkedIn );
+            ImGui::SameLine();
+            ImGui::TextUnformatted( "In" );
             ed::EndPin();
             ImGui::SameLine();
             ed::BeginPin( toPinID( AnimGraphPanelInternal::pinOut( node._id ) ), ed::PinKind::Output );
-            ImGui::TextUnformatted( "Out ->" );
+            ImGui::TextUnformatted( "Out" );
+            ImGui::SameLine();
+            _nodeGraph.drawPinIcon( 0, bLinkedOut );
             ed::EndPin();
             ed::EndNode();
 
             if ( _nodeGraph.needsContentFit() )
                 ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
+            applyNodePlacement( node._id );
         }
 
         for ( const GraphLink& link : _listLink )
@@ -196,36 +211,46 @@ namespace sw::editor
             ed::Link( toLinkID( link._id ), toPinID( AnimGraphPanelInternal::pinOut( link._fromNode ) ), toPinID( AnimGraphPanelInternal::pinIn( link._toNode ) ) );
         }
 
-        if ( ed::BeginCreate() )
+        // 상태 그래프의 첫 노드가 진입이다 — 나머지는 들어오는 전환이 없으면 닿지 않는다.
+        vector<int32> listInputNode;
+        for ( size_t index = 1; index < _listNode.size(); ++index )
         {
-            ed::PinId a;
-            ed::PinId b;
-            if ( ed::QueryNewLink( &a, &b ) )
-            {
-                if ( a.Get() != 0 && b.Get() != 0 && ed::AcceptNewItem() )
-                {
-                    GraphLink link{};
-                    link._id          = nextLinkID();
-                    const int32 ap    = static_cast<int32>( a.Get() );
-                    const int32 bp    = static_cast<int32>( b.Get() );
-                    const int32 aNode = AnimGraphPanelInternal::pinNodeID( ap );
-                    const int32 bNode = AnimGraphPanelInternal::pinNodeID( bp );
-                    if ( AnimGraphPanelInternal::isOutputPin( ap ) )
-                    {
-                        link._fromNode = aNode;
-                        link._toNode   = bNode;
-                    }
-                    else
-                    {
-                        link._fromNode = bNode;
-                        link._toNode   = aNode;
-                    }
-                    _listLink.push_back( link );
-                    notifyDocumentEdited( "Link Animation Graph Nodes" );
-                }
-            }
+            listInputNode.push_back( _listNode[index]._id );
         }
-        ed::EndCreate();
+        vector<EditorGraphEdge> listEdge;
+        for ( const GraphLink& link : _listLink )
+        {
+            listEdge.push_back( EditorGraphEdge{ link._fromNode, link._toNode } );
+        }
+        vector<EditorGraphNodeIssue> listIssue;
+        EditorNodeGraphRules::collectUnreachableNodes( listInputNode, listEdge, listIssue );
+        _nodeGraph.setNodeIssues( std::move( listIssue ) );
+        _nodeGraph.drawNodeIssues();
+
+        int32 fromPin{ 0 };
+        int32 toPin{ 0 };
+        if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &AnimGraphPanel::findGraphPin, this ), fromPin, toPin ) )
+        {
+            GraphLink link{};
+            link._id       = nextLinkID();
+            link._fromNode = AnimGraphPanelInternal::pinNodeID( fromPin );
+            link._toNode   = AnimGraphPanelInternal::pinNodeID( toPin );
+            _listLink.push_back( link );
+            notifyDocumentEdited( "Link Animation Graph Nodes" );
+        }
+
+        const vector<EditorGraphNodeKind> listKind{
+            EditorGraphNodeKind{  "Idle", "State", 0},
+            EditorGraphNodeKind{  "Walk", "State", 1},
+            EditorGraphNodeKind{"Attack", "State", 2}
+        };
+        uint32 kindID{ 0 };
+        float2 canvasPosition{};
+        if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) && kindID < listKind.size() )
+        {
+            placeNodeOnNextDraw( addNamedNode( listKind[kindID]._pName ), canvasPosition );
+            notifyDocumentEdited( "Add Animation Graph Node" );
+        }
 
         processCanvasDeletions( []( const auto& link, int32 nodeID )
         { return link._fromNode == nodeID || link._toNode == nodeID; },
@@ -233,7 +258,7 @@ namespace sw::editor
 
         _nodeGraph.applyContentFitIfNeeded();
         cacheNodeLayout();
-        _nodeGraph.endCanvas();
+        endGraphCanvas();
     }
 
     void AnimGraphPanel::ensureDefaults()
@@ -311,13 +336,30 @@ namespace sw::editor
             EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), getLoadedAssetPath() );
     }
 
-    void AnimGraphPanel::addNamedNode( const utf8* pName )
+    int32 AnimGraphPanel::addNamedNode( const utf8* pName )
     {
         GraphNode n{};
-        n._id          = nextNodeID();
-        n._name        = ( pName != nullptr ) ? pName : "Node";
-        n._position._x = 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
-        n._position._y = 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
+        n._id              = nextNodeID();
+        n._name            = ( pName != nullptr ) ? pName : "Node";
+        n._position._x     = 40.0f + static_cast<float32>( _listNode.size() ) * 40.0f;
+        n._position._y     = 40.0f + static_cast<float32>( _listNode.size() ) * 30.0f;
+        const int32 nodeID = n._id;
         _listNode.push_back( std::move( n ) );
+        return nodeID;
+    }
+
+    bool AnimGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const
+    {
+        const int32 nodeID = AnimGraphPanelInternal::pinNodeID( pinID );
+        bool        bKnown = false;
+        for ( const GraphNode& node : _listNode )
+        {
+            bKnown = bKnown || node._id == nodeID;
+        }
+        if ( bKnown == false )
+            return false;
+        outInfo._type   = 0;
+        outInfo._bInput = AnimGraphPanelInternal::isOutputPin( pinID ) == false;
+        return true;
     }
 } // namespace sw::editor

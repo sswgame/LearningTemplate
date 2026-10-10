@@ -44,6 +44,12 @@ namespace sw::editor
         void drawOutputPin( int32 pinID, const utf8* pLabel );
         /** @brief 캔버스의 링크 생성·삭제 상호작용을 처리합니다. */
         void handleCanvasInteractions();
+        /** @brief 핀 번호의 연결 정보입니다(들어오는 핀 · 흐름 타입 하나). 이 그래프의 핀이 아니면 false 입니다. */
+        bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
+        /** @brief 핀에 링크가 닿아 있는지입니다(핀 동그라미를 채운다). */
+        bool isPinLinked( int32 pinID ) const;
+        /** @brief 들어오는 링크가 없는 노드(시작 노드 말고)를 캔버스에 문제로 넘깁니다. */
+        void updateNodeIssues();
         /** @brief 선택된 노드의 상세 인스펙터를 그립니다. */
         void drawSelectedNodeInspector();
 
@@ -60,8 +66,8 @@ namespace sw::editor
         /** @brief 대화 그래프를 JSON 파일로 저장합니다. */
         [[nodiscard]] bool saveGraphData();
 
-        /** @brief 지정한 타입의 노드를 특성 표의 기본값으로 추가합니다. */
-        void addNode( DialogueAssetNodeType type );
+        /** @brief 지정한 타입의 노드를 특성 표의 기본값으로 추가하고 그 id 를 돌려줍니다. */
+        int32 addNode( DialogueAssetNodeType type );
         /** @brief 노드 하나의 머리 · 핀 · 본문 요약을 그립니다. 모양은 특성 표(`kArrDialogueNodeInfo`)가 정합니다. */
         void drawNodeBody( const DialogueNode& node );
         /** @brief 선택한 노드의 편집 칸을 그립니다. 어떤 칸을 보일지는 특성 표가 정합니다. */

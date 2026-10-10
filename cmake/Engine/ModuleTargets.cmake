@@ -249,7 +249,7 @@ function(sw_addEditorExtension TARGET_NAME)
 		LOG_TAG "${TARGET_NAME}"
 		FOLDER "Source/EditorExtensions"
 		SOURCES ${listExtensionSource} "${binderSource}"
-		LINK_PRIVATE EditorModule Engine RuntimeAPI ${listLinkedModule} imgui implot
+		LINK_PRIVATE EditorModule Engine RuntimeAPI ${listLinkedModule} imgui implot imgui_nodeeditor
 		DELAYLOAD ${listDelayLoad}
 	)
 	add_dependencies(EditorAll ${TARGET_NAME})

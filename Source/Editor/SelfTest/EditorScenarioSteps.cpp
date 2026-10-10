@@ -15,6 +15,7 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -172,8 +173,14 @@ namespace sw::editor
 
             static bool validateClick( const AutomationStep& step, string& outError )
             {
-                if ( validate( step, { "mark", "button", "mods", "state" }, "mark", outError ) == false )
+                if ( validate( step, { "mark", "button", "mods", "state", "anchor" }, "mark", outError ) == false )
                     return false;
+                float2 anchor{ 0.5f, 0.5f };
+                if ( readAnchor( step, anchor ) == false )
+                {
+                    outError = step.describe() + ": anchor must be 'x,y' in 0..1 (0.5,0.5 is the centre), got '" + *step.findAttribute( "anchor" ) + "'";
+                    return false;
+                }
                 PressState state = PressState::Tap;
                 if ( readPressState( step, state ) == false )
                 {
@@ -198,7 +205,24 @@ namespace sw::editor
 
             static bool validateText( const AutomationStep& step, string& outError ) { return validate( step, { "value" }, "value", outError ); }
 
-            /** @brief 이름표 가운데로 마우스를 옮기고 누르고 뗀다(ImGui 입력 큐가 누름 · 뗌을 프레임에 나눠 넣는다). 이름표가 없으면 실패를 적는다. */
+            /** @brief `anchor="x,y"`(이름표 안 자리 0..1)를 읽습니다. 없으면 가운데이고 true, 꼴이 틀리면 false 입니다. */
+            [[nodiscard]] static bool readAnchor( const AutomationStep& step, float2& outAnchor )
+            {
+                outAnchor             = float2{ 0.5f, 0.5f };
+                const string* pAnchor = step.findAttribute( "anchor" );
+                if ( pAnchor == nullptr )
+                    return true;
+                const size_t comma = pAnchor->find( ',' );
+                float64      x{ 0.0 };
+                float64      y{ 0.0 };
+                if ( comma == string::npos || StringUtil::parseDouble( string_view{ *pAnchor }.substr( 0, comma ), x ) == false ||
+                     StringUtil::parseDouble( string_view{ *pAnchor }.substr( comma + 1 ), y ) == false || x < 0.0 || x > 1.0 || y < 0.0 || y > 1.0 )
+                    return false;
+                outAnchor = float2{ static_cast<float32>( x ), static_cast<float32>( y ) };
+                return true;
+            }
+
+            /** @brief 이름표 가운데(또는 `anchor` 자리)로 마우스를 옮기고 누르고 뗀다(ImGui 입력 큐가 누름 · 뗌을 프레임에 나눠 넣는다). 이름표가 없으면 실패를 적는다. */
             static bool runClick( AutomationRunner& runner, const AutomationStep& step )
             {
                 const string& mark    = *step.findAttribute( "mark" );
@@ -206,7 +230,9 @@ namespace sw::editor
                 int32         button  = 0;
                 if ( pButton != nullptr )
                     (void)StringUtil::parseInt( string_view{ *pButton }, button ); // 검사에서 봤다
-                if ( EditorSelfTestInput::moveMouseToMark( mark ) == false )
+                float2 anchor{ 0.5f, 0.5f };
+                (void)readAnchor( step, anchor ); // 검사에서 봤다
+                if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
                 {
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                     return true;
@@ -227,7 +253,7 @@ namespace sw::editor
                 if ( state == PressState::Down )
                 {
                     // 커서를 먼저 이름표에 붙잡아 한 프레임 둔 뒤 누른다 — 누른 프레임의 마우스 이동량이 0 이라 뷰포트 비행이 시점을 돌리지 않는다.
-                    (void)EditorSelfTestInput::holdMouseAtMark( mark ); // 위에서 같은 이름으로 찾았다
+                    (void)EditorSelfTestInput::holdMouseAtMark( mark, anchor ); // 위에서 같은 이름으로 찾았다
                     EditorSelfTestInput::waitNextFrame();
                 }
                 for ( const int32 modifier : listModifier )
@@ -238,7 +264,7 @@ namespace sw::editor
                 if ( state == PressState::Down )
                     return true;
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveMouseToMark( mark ); // 표식은 누르기 전에 같은 이름으로 찾았다
+                (void)EditorSelfTestInput::moveMouseToMark( mark, anchor ); // 표식은 누르기 전에 같은 이름으로 찾았다
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {
@@ -904,6 +930,13 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 가장 최근에 그린 노드 그래프 캔버스의 노드 수입니다(대화 · 애니메이션 그래프 · 확장의 그래프 문서 패널). */
+            [[nodiscard]] static bool readGraphNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( EditorNodeGraph::getDrawnNodeCount() );
+                return true;
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1061,6 +1094,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSelectedCurveKeyCount, "Editor.SelectedCurveKeyCount",
                          "Keys of the FloatCurve gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection",
                          &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
+    SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
+                         &EditorScenarioStepsInternal::readGraphNodeCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",

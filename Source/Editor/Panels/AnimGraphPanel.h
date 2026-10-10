@@ -44,8 +44,10 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 그래프 데이터를 저장합니다. */
         [[nodiscard]] bool saveGraphData();
-        /** @brief 주어진 이름의 노드를 추가합니다. */
-        void addNamedNode( const utf8* pName );
+        /** @brief 주어진 이름의 노드를 추가하고 그 id 를 돌려줍니다. */
+        int32 addNamedNode( const utf8* pName );
+        /** @brief 핀 번호의 연결 정보입니다(포즈 타입 하나). 이 그래프의 핀이 아니면 false 입니다. */
+        bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
         /** @brief 미리보기 플레이어에 현재 그래프를 넣습니다. */
         void syncPreviewGraph();
         /** @brief 미리보기 재생을 한 틱 진행합니다. */

@@ -54,6 +54,8 @@ namespace sw::editor
             , _pNodeMoveEditLabel{ pNodeMoveEditLabel }
             , _pNodeMoveCoalesceKey{ pNodeMoveCoalesceKey }
             , _previewHoldSeconds{ 0.0f }
+            , _pendingPlacementNodeID{ 0 }
+            , _pendingPlacement{}
             , _bGraphLayoutReady{ SW_FALSE }
             , _bPreviewPlaying{ SW_FALSE }
             , _reservedGraph{ 0 }
@@ -75,6 +77,43 @@ namespace sw::editor
             data._listNode = _listNode;
             data._listLink = _listLink;
             return data;
+        }
+
+        /**
+         * @brief 캔버스를 열고 이 이미지의 imgui-node-editor 사본에도 지금 편집기를 겁니다. false 면 `endGraphCanvas` 를 부르지 않습니다.
+         * @details 이 헤더는 템플릿이라 확장 모듈 안에서 컴파일됩니다. 확장은 imgui-node-editor 를 정적으로 따로 링크하므로, 틀(EditorModule)이
+         *          건 지금 편집기를 확장의 사본은 모른다 — 걸지 않으면 캔버스 안의 `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다.
+         */
+        bool beginGraphCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName )
+        {
+            if ( _nodeGraph.beginCanvas( pCanvasID, pSettingsFileName ) == false )
+                return false;
+            ax::NodeEditor::SetCurrentEditor( _nodeGraph.getContext() );
+            return true;
+        }
+
+        /** @brief `beginGraphCanvas` 의 짝입니다. 그린 노드 수를 탐침(`Editor.GraphNodeCount`)에 적습니다. */
+        void endGraphCanvas()
+        {
+            EditorNodeGraph::noteDrawnNodeCount( static_cast<uint32>( _listNode.size() ) );
+            _nodeGraph.endCanvas();
+            ax::NodeEditor::SetCurrentEditor( nullptr );
+        }
+
+        /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다(찾아 넣기가 오른쪽 클릭한 자리). */
+        void placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition )
+        {
+            _pendingPlacementNodeID = nodeID;
+            _pendingPlacement       = canvasPosition;
+        }
+
+        /** @brief 노드를 그린 직후(`ed::EndNode` 뒤) 부릅니다. 놓을 자리가 걸린 노드면 그 자리에 둡니다. */
+        void applyNodePlacement( int32 nodeID )
+        {
+            if ( _pendingPlacementNodeID == 0 || _pendingPlacementNodeID != nodeID )
+                return;
+            ax::NodeEditor::SetNodePosition( toNodeID( nodeID ), ImVec2( _pendingPlacement._x, _pendingPlacement._y ) );
+            _pendingPlacementNodeID = 0;
         }
 
         /** @brief 문서 텍스트는 애셋 JSON 입니다. */
@@ -194,14 +233,16 @@ namespace sw::editor
         }
 
     protected:
-        EditorNodeGraph        _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유합니다. */
-        NodeList               _listNode;              /**< 편집 중인 노드. 캔버스 위치는 cacheNodeLayout 이 담습니다. */
-        LinkList               _listLink;              /**< 편집 중인 링크. */
-        const utf8*            _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */
-        const utf8*            _pNodeMoveCoalesceKey;  /**< 노드 이동 합치기 키. */
-        float32                _previewHoldSeconds;    /**< 미리보기 재생이 현재 노드에 머문 시간. */
-        uint8                  _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤에 켜집니다. */
-        uint8                  _bPreviewPlaying   : 1; /**< 미리보기 재생 중. */
+        EditorNodeGraph        _nodeGraph;              /**< 캔버스 컨텍스트. 패널마다 하나씩 소유합니다. */
+        NodeList               _listNode;               /**< 편집 중인 노드. 캔버스 위치는 cacheNodeLayout 이 담습니다. */
+        LinkList               _listLink;               /**< 편집 중인 링크. */
+        const utf8*            _pNodeMoveEditLabel;     /**< 노드 이동 Undo 이름. */
+        const utf8*            _pNodeMoveCoalesceKey;   /**< 노드 이동 합치기 키. */
+        float32                _previewHoldSeconds;     /**< 미리보기 재생이 현재 노드에 머문 시간. */
+        int32                  _pendingPlacementNodeID; /**< 다음 그리기에서 자리를 정할 새 노드(0 이면 없음). */
+        float2                 _pendingPlacement;       /**< 그 노드의 캔버스 좌표. */
+        uint8                  _bGraphLayoutReady : 1;  /**< 캔버스가 위치를 한 번 정한 뒤에 켜집니다. */
+        uint8                  _bPreviewPlaying   : 1;  /**< 미리보기 재생 중. */
         [[maybe_unused]] uint8 _reservedGraph     : 6;
     };
 } // namespace sw::editor

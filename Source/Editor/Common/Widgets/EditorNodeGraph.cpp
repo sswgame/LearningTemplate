@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -13,11 +15,30 @@ namespace ed = ax::NodeEditor;
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct EditorNodeGraphInternal
+        {
+            static ImVec4 toImVec4( const Color4& color ) { return ImVec4{ color._r, color._g, color._b, color._a }; }
+
+            /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). */
+            static uint32& getDrawnNodeCountSlot()
+            {
+                static uint32 s_nodeCount{ 0 };
+                return s_nodeCount;
+            }
+        };
+    } // namespace
+
     EditorNodeGraph::EditorNodeGraph()
         : _pEditor{ nullptr }
         , _settingsPath{}
         , _previousCanvasSize{}
         , _canvasSize{}
+        , _listPinTypeColor{}
+        , _listNodeIssue{}
+        , _addNodeFilter{}
+        , _addNodePosition{}
         , _bNeedsContentFit{ true }
     {
     }
@@ -89,7 +110,151 @@ namespace sw::editor
     void EditorNodeGraph::endCanvas()
     {
         ed::End();
+        EditorSelfTestMarks::note( "graph.canvas" ); // 마지막 항목은 캔버스 자식 창이다
         ed::SetCurrentEditor( nullptr );
+    }
+
+    bool EditorNodeGraph::drawAddNodePopup( const vector<EditorGraphNodeKind>& listKind, uint32& outKindID, float2& outCanvasPosition )
+    {
+        // 캔버스 안의 마우스 자리는 캔버스 좌표다 — 팝업을 그리려고 멈추기(Suspend) 전에 잡는다.
+        const ImVec2 canvasMouse = ImGui::GetMousePos();
+        ed::Suspend();
+        if ( ed::ShowBackgroundContextMenu() )
+        {
+            _addNodePosition = float2{ canvasMouse.x, canvasMouse.y };
+            _addNodeFilter.clear();
+            ImGui::OpenPopup( "AddGraphNode" );
+        }
+        bool bPicked = false;
+        if ( ImGui::BeginPopup( "AddGraphNode" ) )
+        {
+            if ( ImGui::IsWindowAppearing() )
+                ImGui::SetKeyboardFocusHere();
+            ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
+            const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", "Search nodes...", _addNodeFilter.data(), _addNodeFilter.capacity(),
+                                                          ImGuiInputTextFlags_EnterReturnsTrue );
+            EditorSelfTestMarks::note( "graph.addNode.search" );
+            vector<uint32> listIndex;
+            EditorNodeGraphRules::filterNodeKinds( listKind, _addNodeFilter.c_str(), listIndex );
+            const utf8* pLastCategory = nullptr;
+            for ( const uint32 index : listIndex )
+            {
+                const EditorGraphNodeKind& kind      = listKind[index];
+                const utf8*                pCategory = kind._pCategory != nullptr ? kind._pCategory : "General";
+                if ( pLastCategory == nullptr || string_view{ pLastCategory } != string_view{ pCategory } )
+                {
+                    ImGui::SeparatorText( pCategory );
+                    pLastCategory = pCategory;
+                }
+                if ( ImGui::Selectable( kind._pName ) && bPicked == false )
+                {
+                    outKindID = kind._kindID;
+                    bPicked   = true;
+                }
+            }
+            if ( listIndex.empty() )
+                ImGui::TextDisabled( "No node matches." );
+            // Enter 는 맨 위 줄을 고른다(언리얼 · 유니티 검색 팝업과 같다).
+            if ( bEnter && bPicked == false && listIndex.empty() == false )
+            {
+                outKindID = listKind[listIndex[0]]._kindID;
+                bPicked   = true;
+            }
+            if ( bPicked )
+                ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+        ed::Resume();
+        outCanvasPosition = _addNodePosition;
+        return bPicked;
+    }
+
+    bool EditorNodeGraph::queryNewLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin )
+    {
+        bool bAccepted = false;
+        if ( ed::BeginCreate() )
+        {
+            ed::PinId pinA;
+            ed::PinId pinB;
+            if ( ed::QueryNewLink( &pinA, &pinB ) && pinA.Get() != 0 && pinB.Get() != 0 )
+            {
+                const int32        idA = static_cast<int32>( pinA.Get() );
+                const int32        idB = static_cast<int32>( pinB.Get() );
+                EditorGraphPinInfo infoA{};
+                EditorGraphPinInfo infoB{};
+                const utf8*        pReason = "Unknown pin";
+                const bool         bKnown  = findPin.isBound() && findPin( idA, infoA ) && findPin( idB, infoB );
+                if ( bKnown && EditorNodeGraphRules::canConnect( idA, infoA, idB, infoB, outFromPin, outToPin, pReason ) )
+                {
+                    if ( ed::AcceptNewItem( EditorNodeGraphInternal::toImVec4( getPinTypeColor( infoA._type ) ), 2.0f ) )
+                        bAccepted = true;
+                }
+                else
+                {
+                    ed::RejectNewItem( EditorNodeGraphInternal::toImVec4( style::kError ), 2.0f );
+                    ed::Suspend();
+                    ImGui::SetTooltip( "%s", pReason );
+                    ed::Resume();
+                }
+            }
+        }
+        ed::EndCreate();
+        return bAccepted;
+    }
+
+    Color4 EditorNodeGraph::getPinTypeColor( uint32 pinType ) const
+    {
+        if ( pinType < _listPinTypeColor.size() )
+            return _listPinTypeColor[pinType];
+        const ImVec4 text = ImGui::GetStyleColorVec4( ImGuiCol_Text );
+        return Color4{ text.x, text.y, text.z, text.w };
+    }
+
+    void EditorNodeGraph::drawPinIcon( uint32 pinType, bool bConnected ) const
+    {
+        const float32 size   = ImGui::GetTextLineHeight();
+        const ImVec2  corner = ImGui::GetCursorScreenPos();
+        ImGui::Dummy( ImVec2{ size, size } );
+        const ImVec2 center{ corner.x + size * 0.5f, corner.y + size * 0.5f };
+        const ImU32  color     = ImGui::ColorConvertFloat4ToU32( EditorNodeGraphInternal::toImVec4( getPinTypeColor( pinType ) ) );
+        ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
+        if ( bConnected )
+            pDrawList->AddCircleFilled( center, size * 0.3f, color );
+        else
+            pDrawList->AddCircle( center, size * 0.3f, color, 0, 1.5f );
+    }
+
+    void EditorNodeGraph::drawNodeIssues() const
+    {
+        const ImU32      color   = ImGui::ColorConvertFloat4ToU32( EditorNodeGraphInternal::toImVec4( style::kError ) );
+        const ed::NodeId hovered = ed::GetHoveredNode();
+        for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
+        {
+            const ed::NodeId nodeID{ static_cast<uintptr_t>( issue._nodeID ) };
+            ImDrawList*      pDrawList = ed::GetNodeBackgroundDrawList( nodeID );
+            if ( pDrawList == nullptr )
+                continue;
+            const ImVec2 position = ed::GetNodePosition( nodeID );
+            const ImVec2 size     = ed::GetNodeSize( nodeID );
+            pDrawList->AddRect( ImVec2{ position.x - 2.0f, position.y - 2.0f }, ImVec2{ position.x + size.x + 2.0f, position.y + size.y + 2.0f }, color,
+                                ed::GetStyle().NodeRounding, 0, 3.0f );
+            if ( hovered == nodeID )
+            {
+                ed::Suspend();
+                ImGui::SetTooltip( "%s", issue._message.c_str() );
+                ed::Resume();
+            }
+        }
+    }
+
+    void EditorNodeGraph::noteDrawnNodeCount( uint32 nodeCount )
+    {
+        EditorNodeGraphInternal::getDrawnNodeCountSlot() = nodeCount;
+    }
+
+    uint32 EditorNodeGraph::getDrawnNodeCount()
+    {
+        return EditorNodeGraphInternal::getDrawnNodeCountSlot();
     }
 
     bool EditorNodeGraph::bind() const

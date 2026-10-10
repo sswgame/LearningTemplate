@@ -139,7 +139,7 @@ echo $LASTEXITCODE
 | `ExpectUI` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UIAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
 | `UILayoutDump` | `file` | `Engine/UI/Automation/UIAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
 | `EditorDrag` | `mark`, `dx`, `dy`(픽셀), `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기 |
-| `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
+| `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`), `anchor`(`x,y` 0..1) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데(`anchor` 를 주면 그 안의 자리 — 캔버스 빈 곳)를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
 | `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
 | `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
 | `EditorExpectObject` | `name`, `count`(기본 1), `component`, `selected` | 에디터 `EditorScenarioSteps` | 활성 씬에서 그 이름의 오브젝트 수를 확인합니다. `component` 는 그 컴포넌트를 가진 것만, `selected=1` 은 선택된 것만 셉니다 |
@@ -227,6 +227,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
 | `Editor.SelectedPropertySum` | 선택한 오브젝트 모두의 `gv_editorProbeProperty` 값 합(다중 편집) |
 | `Editor.SelectedCurveKeyCount` | 주 선택 오브젝트의 `gv_editorProbeProperty` 커브(`FloatCurve`) 키 수 |
+| `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
 | `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |
 | `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
@@ -239,7 +240,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
-`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 시험 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
+`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 시험 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
