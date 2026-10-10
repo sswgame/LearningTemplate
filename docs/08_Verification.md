@@ -134,9 +134,6 @@ cd build/Ninja-Debug/Bin
 - **GPU 업로드 비용은 호출당이다**(DX12 ~3.3 us) — 쪼개면 느려진다. 구간을 배열로 묶어 한 번에.
 - **워커가 쓴 데이터를 다른 코어가 읽으면** 캐시 이동이 항목당 일(~40 ns)보다 비싸다. 쓰는 스레드와 읽는 스레드를 같게 둔다.
 - **워커는 공유 카운터 · 비트필드에 쓰지 않는다.** `fetch_add` 한 줄이 병렬 플러시를 직렬보다 느리게 했다. "하나라도" 플래그는 프레임에 한 번 쓰고 읽기만 한다.
-- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 재서
-  중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
-  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계).
 - **도구**: `RunDuplicateCode.py --filter <dir> --no-headers`(머리말에 "합칠 대상 아님" 목록), `RunEngineLayerGraph.py`, `Scripts/dev/RunBackendSmoke.py`(4 백엔드 평균 RGB),
   Release 로 읽는 `TaskManagerBenchTest` · `GameObjectBenchTest` · `ContainerBenchTest` · `NetReplicationBenchTest`(클라이언트 16 × 엔티티 1000), `Test/TestFramework/TestBench.h`.
 - **측정 라운드마다 매니저 · 풀 · 레지스트리를 새로 만듭니다.** best-of-N 반복은 자라는 컨테이너가 만든 오염을 거르지 못합니다. 같은 값이 연달아 세 번 나올 때까지 수치를 믿지 않습니다.
@@ -145,6 +142,26 @@ cd build/Ninja-Debug/Bin
 - **성능 워크로드는 움직여야 합니다.** 정지한 씬은 "바뀐 것 없음" 빠른 경로만 잽니다. 워크로드가 지나지 않은 경로는 "검증됨" 이 아니라 "실행된 적 없음" 으로 보고,
   최적화 대상은 프로파일 표에서 고르고 전후 숫자를 커밋 메시지에 남깁니다. 새 프로파일 구간을 넣을 때는 그 상위 구간도 함께 넣습니다. 하위 구간의 합과 전체의 차가 대개 진짜 병목입니다.
 - **렌더 성능은 디스크에서 읽은 씬으로 배치 수를 먼저 셉니다.** 인스턴스 수와 배치 수가 비슷하면 인스턴싱이 꺼진 것입니다.
+
+### 빌드 속도
+
+- **빌드 시간 기준선은 `Scripts/dev/RunBuildBaseline.py`** — 풀 빌드(sccache 없는 별도 폴더) · 헤더 하나 수정 · `.cpp` 하나 수정 · 워크트리 콜드(sccache 웜)를 각 3 회 재서
+  중앙값 표를 내고 머리에 PC 이름 · CPU 를 적는다. 다른 빌드가 돌면 멈춘다. 헤더별 누적 파싱 시간 상위는 `Scripts/lint/report/RunIncludeCost.py`(전 TU `-ftime-trace`, PCH 없이)다.
+  표는 같은 PC 의 전후만 견준다([빌드 속도 계획](plans/BuildSpeed.md) 0 단계). 재는 동안은 `LT-wt/.slot1` ~ `.slot3` 를 모두 잡아 다른 에이전트의 빌드를 막는다.
+- **기준선**(2026-10-10, PC `SW` · AMD Ryzen 7 6800H 논리 코어 16, 커밋 `0d054352a`(= main `8653de727` + 스크립트 수정), `Ninja-Debug`, 타깃 `all`, 시험 제외):
+
+  | 시나리오 | 1 회(s) | 2 회(s) | 3 회(s) | 중앙값(s) |
+  |---|---:|---:|---:|---:|
+  | 풀 빌드(sccache 없음) | 125.9 | 131.5 | 131.7 | **131.5** |
+  | 헤더 하나 수정(`Core/Container/vector.h`) | 131.6 | 132.7 | 130.7 | **131.6** |
+  | `.cpp` 하나 수정(`GameObjectManager.cpp`) | 7.4 | 7.2 | 7.0 | **7.2** |
+  | 워크트리 콜드(구성 + 빌드, sccache 웜) | 141.2 | 146.8 | 142.9 | **142.9** |
+
+  헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
+  워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 재지 않았다(풀 1 회 192.3 s 만 있다).
+- **Jolt 백엔드 TU**(`Physics/Jolt/*.cpp` 다섯, 같은 PC, 컴파일 DB 명령 그대로 3 회 중앙값의 합): 자기 PCH 없이 11.1 s(그중 헤더 파싱 7.0 s, 엔진 `pch.h` 만 5.8 s) →
+  `EngineJolt_objects` PCH 2.9 s + TU 2.6 s = 5.5 s. 한 파일 수정 뒤 다시 짓는 시간은 TU 하나당 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
+  재는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 잰 값은 1.5 배까지 흔들린다.
 
 ## 3. 검증 · 테스트 쓰기
 

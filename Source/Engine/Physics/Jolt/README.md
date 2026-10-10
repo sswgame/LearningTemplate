@@ -20,7 +20,8 @@
 
 ## 함정과 주의
 
-**이 폴더의 `.cpp` 에 PCH 를 붙이지 마세요.** 이 소스들은 Jolt 임포트 타깃의 정의와 대상 기능(AVX2)으로 컴파일됩니다(`Source/Engine/CMakeLists.txt`). 엔진 PCH 와 컴파일 옵션이 다릅니다.
+**이 폴더의 `.cpp` 는 Engine 이 아니라 OBJECT 라이브러리 `EngineJolt_objects` 가 짓습니다**(`Source/Engine/CMakeLists.txt` 7절). 이 소스들은 Jolt 임포트 타깃의 정의와 대상 기능(AVX2)으로 컴파일되어 엔진 PCH 를 쓸 수 없으므로, 엔진 `pch.h` 와 이 폴더의 래퍼 헤더로 자기 PCH 를 따로 만듭니다.
+컴파일 설정은 Engine 의 것을 파일 끝에서 옮겨 오므로, Engine 에 정의 · include · 옵션을 더할 때는 그 블록보다 앞에 둡니다. 래퍼 헤더를 더하거나 지우면 PCH 목록도 같이 고칩니다.
 
 **vcpkg 설치본의 헤더와 라이브러리는 부동소수 예외 설정이 다릅니다.** 처리는 `JoltPhysicsBackend.cpp` 의 `findLibraryVersionId` 와 `assertFailed` 에 있고, 이유는 [Physics](../README.md)의 "함정과 주의"에 있습니다.
 

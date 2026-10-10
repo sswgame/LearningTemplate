@@ -28,6 +28,7 @@ endif()
 set(coreExclude
 	"Graphics/RHI/Modules/"
 	"Module/DelayLoadNotifyHook.cpp"
+	"Physics/Jolt/[^/]+\\.cpp$"   # EngineJolt_objects 가 짓는다(아래 7))
 )
 
 # ------------------------------------------------------------------------------
@@ -153,17 +154,11 @@ endif()
 # 서드파티 물리 · 애니메이션 라이브러리를 링크하는 곳은 이 파일 하나다 — 다른 타깃은 엔진 인터페이스(IPhysicsScene)만 본다.
 #
 # Jolt 임포트 타깃은 사용 요건으로 AVX2 같은 대상 기능(-mavx2 ...)과 JPH_* 정의를 싣는다. 그대로 링크하면 **Engine 의 모든 TU**
-# 가 AVX2 로 컴파일된다. 링크만 받고($<LINK_ONLY:>), 정의 · 옵션은 Jolt 백엔드 소스에만 붙인다. 그 소스는 PCH 를 쓰지 않는다
-# (대상 기능이 다른 PCH 는 clang 이 거부한다). 소스 속성이 있는 파일은 CMake 가 유니티 묶음에서 저절로 뺀다.
+# 가 AVX2 로 컴파일된다. 링크만 받고($<LINK_ONLY:>), 정의 · 옵션은 Jolt 백엔드 소스에만 붙인다 — 그 소스는 Engine 이 아니라
+# 자기 PCH 를 가진 OBJECT 라이브러리 `EngineJolt_objects` 가 짓는다(아래 7)).
 # Box2D 는 BOX2D_DLL 정의 하나뿐이라 그대로 PRIVATE 로 링크한다. 둘 다 DLL 이고(x64-windows) Bin 에는 vcpkg applocal 이 옮긴다.
 # ------------------------------------------------------------------------------
 target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
-file(GLOB swJoltBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
-set_source_files_properties(${swJoltBackendSources} PROPERTIES
-	COMPILE_DEFINITIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>"
-	COMPILE_OPTIONS "$<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>"
-	SKIP_PRECOMPILE_HEADERS ON
-)
 
 # ------------------------------------------------------------------------------
 # 2-2) Tracy — 엔진 프로파일러의 두 번째 출력(Profiling). 헤더는 Profiling/Tracy 에서만 include 한다(CheckThirdPartyIsolation.py).
@@ -307,6 +302,46 @@ sw_addReflectionStep(Engine
 	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )
 sw_addReflectBuiltinsGen(Engine)
+
+# ------------------------------------------------------------------------------
+# 7) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core_objects 처럼 Engine 에 들어간다)
+#
+# Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
+# PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt
+# 래퍼 헤더로 PCH 를 하나 만든다(측정은 docs/08_Verification.md "빌드 속도"). 컴파일 설정은 Engine 의 것을 그대로 옮기고 Jolt 의 정의 ·
+# 옵션만 더한다. 그래서 이 블록은 Engine 설정이 모두 끝난 뒤(파일 끝)에 둔다 — 이 뒤에 Engine 에 더한 설정은 Jolt 소스에 가지 않는다.
+# 유니티 묶음에는 넣지 않는다. 코드젠 산출물(`FlagOps.gen.h` 등)을 읽으므로 Engine 이 기다리는 대상을 같이 기다린다.
+# ------------------------------------------------------------------------------
+file(GLOB swJoltBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/*.cpp")
+add_library(EngineJolt_objects OBJECT ${swJoltBackendSources})
+set_target_properties(EngineJolt_objects PROPERTIES
+	POSITION_INDEPENDENT_CODE ON
+	FOLDER "Source/Engine"
+)
+# Engine 에 직접 적은 값과 링크 목록을 그대로 옮긴다 — 링크 목록이 인터페이스 라이브러리의 include(SYSTEM 표시 포함) · 정의 · 옵션을 다시 실어 온다.
+# ($<TARGET_PROPERTY:Engine,INCLUDE_DIRECTORIES> 로 한 번에 읽으면 서드파티 경로의 SYSTEM 표시가 빠져 그 헤더의 경고가 나온다.)
+foreach(swProperty IN ITEMS COMPILE_DEFINITIONS INCLUDE_DIRECTORIES COMPILE_OPTIONS LINK_LIBRARIES)
+	get_target_property(swEngineValue Engine ${swProperty})
+	if(swEngineValue)
+		set_property(TARGET EngineJolt_objects APPEND PROPERTY ${swProperty} ${swEngineValue})
+	endif()
+endforeach()
+target_compile_definitions(EngineJolt_objects PRIVATE $<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_DEFINITIONS>)
+target_compile_options(EngineJolt_objects PRIVATE $<TARGET_PROPERTY:joltphysics,INTERFACE_COMPILE_OPTIONS>)
+if(SW_ENABLE_PCH)
+	target_precompile_headers(EngineJolt_objects PRIVATE
+		"${CMAKE_CURRENT_SOURCE_DIR}/pch.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/JoltJobSystem.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/JoltPhysicsScene.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Physics/Jolt/JoltUtil.h"
+	)
+endif()
+get_target_property(swEngineDependency Engine MANUALLY_ADDED_DEPENDENCIES)
+if(swEngineDependency)
+	add_dependencies(EngineJolt_objects ${swEngineDependency})
+endif()
+target_sources(Engine PRIVATE $<TARGET_OBJECTS:EngineJolt_objects>)
+add_dependencies(Engine EngineJolt_objects)
 
 # RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다.
 # Shipping 은 모듈 엔트리(Modules/<백엔드>/ModuleEntry.cpp)를 짓지 않는다 — 소스 검사 게이트에 적는다.
