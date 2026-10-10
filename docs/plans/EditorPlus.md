@@ -92,8 +92,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
 | **3 인스펙터 · 콘텐츠** | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
-| **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
-| | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
+| **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T3 | 공용 노드 그래프 틀을 확장에 공개(`EditorGraphDocumentPanel` 내보내기 + 노드 찾아 넣기 · 핀 타입 색 · 검증 표시) | S | C1 | |
 | | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
@@ -243,102 +242,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 그래프 편집기는 `SGraphEditor`(블루프린트 · 머티리얼 · 애님 그래프 · 사운드 큐가 같은 틀 — 노드 찾아 넣기 · 핀 타입 색 · 컴파일 오류 표시), Project Launcher/Package Project(플랫폼 · 구성 · 쿠킹 · 진행 로그).
 유니티는 `AnimationCurve` + CurveField · Curve Editor 창, Console 의 클릭 → 오브젝트 핑, GraphView(셰이더 그래프 · VFX 그래프의 공용 틀), Build Settings 창. 우리는 노드 그래프 틀이 EditorModule 안에만 있고(애님 · 대화 둘이 쓴다),
 검증 결과 저장소(`ValidationIssueLog` — "맵 검사 패널이 읽는다" 고 주석에 적힌)는 있는데 패널이 없다.
-
-### T1 `FloatCurve` 값 타입 + 커브 편집 위젯
-
-**새 파일 `Source/Engine/Utility/Curve/FloatCurve.h` · `.cpp`(Utility 층 — 리플렉션):**
-```cpp
-namespace sw
-{
-    /** @brief 키 사이 보간입니다(언리얼 ERichCurveInterpMode · 유니티 키 접선 모드와 같은 셋). */
-    ENUM()
-    enum class CurveInterpolation : uint8
-    {
-        Constant, ///< 다음 키까지 이 키의 값
-        Linear,   ///< 직선
-        Cubic,    ///< 에르미트 — 키의 나가는 접선 · 다음 키의 들어오는 접선
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 커브 키 하나입니다. */
-    REFLECT()
-    struct FloatCurveKey
-    {
-        REFLECT_BODY();
-        PROPERTY()
-        float32 _time{ 0.0f };
-        PROPERTY()
-        float32 _value{ 0.0f };
-        PROPERTY()
-        float32 _arriveTangent{ 0.0f }; ///< 들어오는 기울기(값/초)
-        PROPERTY()
-        float32 _leaveTangent{ 0.0f };  ///< 나가는 기울기(값/초)
-        PROPERTY()
-        CurveInterpolation _interpolation{ CurveInterpolation::Cubic };
-        PROPERTY()
-        bool _bAutoTangent{ true };     ///< 이웃 키로 접선을 정한다(캣멀-롬). 손으로 접선을 끌면 꺼진다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct FloatCurve
-     * @brief 시간 → 값 커브입니다(키 · 키마다 보간 · 접선). 첫 키 앞 · 끝 키 뒤는 끝 값입니다. 키가 없으면 대체값입니다.
-     * @details 컴포넌트 · 데이터 에셋의 `PROPERTY()` 로 두면 인스펙터가 작은 미리보기와 편집기를 그린다(`FloatCurvePropertyDrawer`).
-     */
-    REFLECT()
-    struct SW_API FloatCurve
-    {
-        REFLECT_BODY();
-        PROPERTY()
-        vector<FloatCurveKey> _listKey; ///< 시각 순(편집기 · 읽기가 정렬한다)
-
-        /** @brief @p time 의 값입니다. 키가 없으면 @p fallback. */
-        float32 evaluate( float32 time, float32 fallback = 0.0f ) const;
-        /** @brief 키를 시각 순 자리에 넣고 자동 접선을 다시 셉니다. 넣은 자리입니다. */
-        uint32 addKey( float32 time, float32 value, CurveInterpolation interpolation = CurveInterpolation::Cubic );
-        /** @brief 키를 시각 순으로 정렬하고 `_bAutoTangent` 키의 접선을 이웃으로 다시 셉니다. */
-        void sortAndComputeAutoTangents();
-        /** @brief 키 값의 최소 · 최대(곡선이 넘는 부분은 표본 64 개로 넓힌다 — 편집기 화면 맞추기). 키가 없으면 false. */
-        bool computeValueRange( float32& outMin, float32& outMax ) const;
-    };
-} // namespace sw
-```
-`evaluate`: 이분 탐색으로 구간 → Constant 는 앞 키 값, Linear 는 직선, Cubic 은 `h00·p0 + h10·dt·m0 + h01·p1 + h11·dt·m1`(m0 = 앞 키 `_leaveTangent`, m1 = 뒤 키 `_arriveTangent`).
-자동 접선 = `(next.value − prev.value) / (next.time − prev.time)`(끝 키는 0 — 평평).
-
-**편집 위젯 — `Common/Widgets/EditorCurveEditor.h` · `.cpp` + ImGui 없는 `EditorCurveView`(화면 ↔ 커브 좌표 · 키/접선 손잡이 맞힘 · 화면 맞추기):**
-- 프로퍼티 줄: 폭 전체 · 높이 2 줄의 미리보기(꺾은선 64 점) — 누르면 팝업 편집기(창 크기 640 × 360, 크기 조절 가능).
-- 편집기: 격자(초 · 값 눈금 자동), 키 끌기(Shift = 시간만 · Ctrl = 값만), 접선 손잡이(Cubic · 자동 접선 끔), 오른쪽 클릭 = 키 더하기 / 지우기 / 보간 바꾸기, F = 전체 보기, 휠 = 확대, 가운데 끌기 = 이동,
-  선택 키의 시각 · 값 숫자 칸. 끌기를 **놓을 때** 한 번 편집 통지(Undo 한 줄 — 그리드의 `_onEdited`).
-- `SW_EDITOR_PROPERTY_DRAWER( FloatCurve, "sw::FloatCurve", FloatCurvePropertyDrawer );`(I3).
-**시험.** `FloatCurveTest`(EngineTest nogpu): 키 없음 = 대체값, 끝 밖 = 끝 값, Constant · Linear · Cubic 값(손으로 센 값), 자동 접선(가운데 키 기울기 = 이웃 평균), JSON 왕복(`_listKey` 는 JSON 배열 — 시퀀스는 배열, 맵은 오브젝트).
-`EditorCurveViewTest`(EditorTest): 좌표 왕복 · 키 맞힘 반경 · 화면 맞추기가 키를 모두 담는다. 자체 시험 `curve.dragKeyRecordsOneUndo`(시험 구조체를 가진 시험 컴포넌트 — `EditorPreviewProbe` 처럼 EditorModule 안 시험 전용 타입이 없으면 자체 시험이 `FloatCurve` 지역 값으로 그리드를 직접 연다).
-**확인 = 에디터 시나리오.** `curveedit.scenario.xml`: 커브 프로퍼티를 가진 시험 컴포넌트의 미리보기(이름표 `inspector.curve.<프로퍼티>`)를 눌러 편집기를 열고, 빈 곳 오른쪽 클릭으로 키를 하나 더한 뒤
-탐침 `Editor.UndoCount` 가 하나 늘었는지, `EditorKey key="Z" mods="ctrl"` 뒤 키 수 탐침이 원래대로인지 봅니다. 끌기 한 번이 Undo 한 줄인지는 자체 시험 `curve.dragKeyRecordsOneUndo` 가 봅니다.
-
-**남길 교훈.** [백로그](../06_Backlog.md) 1-6 에 남은 일 한 줄: `- **GameCurve(키트 꺾은선)는 FloatCurve 로 옮기지 않았다** — 데이터(<Curve time scale>)를 다시 써야 한다. 쓰는 곳(SpawnTable · AIDirectorProfile)을 고칠 때 같이.`
-**커밋 메시지:**
-```
-엔진 · 에디터 - FloatCurve 값 타입(Constant · Linear · Cubic 키)과 커브 편집 위젯
-
-문제점:
-- 엔진에 리플렉션 커브 값 타입이 없어(키트의 GameCurve 는 꺾은선 · XML 손 읽기) 컴포넌트가 커브를 PROPERTY 로 들 수 없었고 편집 위젯도 없었다.
-
-해결방안:
-- FloatCurve · FloatCurveKey · CurveInterpolation(리플렉션): 에르미트 평가 · 자동 접선(이웃 기울기, 끝은 평평) · 값 범위.
-- EditorCurveEditor(미리보기 + 팝업 편집기 — 격자 · 키/접선 끌기 · 메뉴 · 전체 보기 · 놓을 때 Undo 한 줄), 좌표 계산은 ImGui 없는
-  EditorCurveView. SW_EDITOR_PROPERTY_DRAWER 로 sw::FloatCurve 에 건다.
-
-결과:
-- FloatCurveTest · EditorCurveViewTest, 자체 시험 curve.dragKeyRecordsOneUndo.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** re-configure(새 `REFLECT` 헤더 — CLAUDE.md Gotchas), 생성 폴더의 `FloatCurve.gen.cpp` 확인.
 
 ### T2 맵 검사 패널 — `ValidationIssueLog` 를 보이고, 누르면 그 오브젝트로
 

@@ -334,7 +334,7 @@ namespace sw::editor
         IInspectorProperty* pProperty = pContext->getInspectorPropertyManager().find( prop._typeName.c_str() );
         if ( pProperty != nullptr )
         {
-            if ( pProperty->draw( pInstance, prop ) )
+            if ( pProperty->draw( pInstance, prop, *this ) )
                 return;
         }
 

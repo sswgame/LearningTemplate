@@ -115,6 +115,8 @@
 
 ### 1-6. 게임프레임워크 · 킷 · 게임
 
+- **GameCurve(키트 꺾은선)는 FloatCurve 로 옮기지 않았다** — 데이터(`<Curve time scale>`)를 다시 써야 한다. 쓰는 곳(SpawnTable · AIDirectorProfile)을 고칠 때 같이.
+  엔진의 커브 값 타입은 `Engine/Utility/FloatCurve`(키 · Constant · Linear · Cubic · 접선, 에디터 그리기 확장 있음)다.
 - **사용자 설정(옵션 메뉴 백엔드)의 남은 것** — 백엔드 · 바인딩 API 는 `Source/Engine/UserSettings/README.md`, 메뉴는 `Engine/UI/Screen/OptionsMenuScreen`.
   (2) 값만 있고 읽는 곳이 없는 대상: `gv_renderScale`(업스케일 패스) · 시야 거리 · 후처리 ·
   텍스처 · 이펙트 품질 · 모션 블러 · `gv_colorVisionMode` 의 톤맵 쪽(톤맵에 상수 버퍼가 없어 미뤘다 — 함수는 `colorvision.hlsli`, UI 캔버스는 이미 쓴다),

@@ -36,7 +36,7 @@ namespace sw::editor
             return nullptr;
         if ( _pManager == nullptr )
             _pManager = make_unique<GameObjectManager>();
-        GameObject* pOwner     = _pManager->createGameObject( hashed_string( "EditorDefaultObject" ) );
+        GameObject* pOwner     = _pManager->createGameObject( type._name ); // 타입마다 하나라 타입 이름이 겹치지 않는 이름이다
         Component*  pComponent = pOwner != nullptr ? type._addComponent( pOwner ) : nullptr;
         _listType.push_back( &type );
         _listDefault.push_back( pComponent );

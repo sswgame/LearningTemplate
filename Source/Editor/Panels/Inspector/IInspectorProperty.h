@@ -16,6 +16,11 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorPropertyGrid;
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 프로퍼티 타입 하나의 인스펙터 위젯 */
     class SW_EDITOR_API IInspectorProperty
     {
@@ -29,10 +34,12 @@ namespace sw::editor
          * @brief 프로퍼티 UI를 그립니다.
          * @return 이 구현이 프로퍼티를 **처리했으면** true (값이 바뀌었는지가 아닙니다). false 면 부르는 쪽이
          *         enum · 컨테이너 · 중첩 구조체 같은 일반 경로로 넘어갑니다.
-         * @note 값 변경 통지는 구현이 하지 않습니다. InspectorPanel::drawPropertyWidget 이
+         * @param grid 그리는 그리드입니다. ImGui 위젯 하나로 끝나지 않는 편집(팝업 편집기 · 끌기를 놓을 때 한 번)은
+         *             `grid.applyPropertyTextAsEdit` 로 값을 입혀 통지 · 되돌리기를 그리드에 맡깁니다(언리얼 IPropertyHandle 의 자리).
+         * @note ImGui 위젯으로 고친 값의 변경 통지는 구현이 하지 않습니다. `EditorPropertyGrid::drawPropertyWidget` 이
          *       ImGui 편집 플래그로 한곳에서 판정합니다.
          */
-        virtual bool draw( void* pInstance, const PropertyInfo& prop ) = 0;
+        virtual bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) = 0;
     };
 } // namespace sw::editor
 

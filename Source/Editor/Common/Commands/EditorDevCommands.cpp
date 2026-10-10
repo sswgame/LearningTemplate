@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -23,6 +24,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Utility/DebugOverlayState.h"
@@ -186,6 +188,24 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 고른 오브젝트마다 컴포넌트 하나를 단다(되돌리기 한 줄씩). "Add Component" 메뉴에 숨긴 타입(`HideInMenu`)도 단다 — 시나리오가 시험 컴포넌트를 단다. */
+            static bool runAddComponent( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( listArgument.size() != 1 || pContext == nullptr )
+                    return false;
+                vector<GameObject*> listSelected;
+                pContext->getEditorSelection().getSelectedObjects( listSelected );
+                uint32 addedCount{ 0 };
+                for ( GameObject* pObject : listSelected )
+                {
+                    if ( EditorSceneCommands::addComponent( pObject, hashed_string( listArgument[0] ) ) != nullptr )
+                        ++addedCount;
+                }
+                outReply = "added " + listArgument[0] + " to " + to_string( addedCount ) + " object(s)";
+                return addedCount > 0;
+            }
+
             static bool runSelectTag( const vector<string>& listArgument, string& outReply )
             {
                 GameObjectManager* pManager = editor::getActiveObjectManager();
@@ -294,6 +314,8 @@ namespace sw::editor
     SW_DEV_COMMAND( Step, "step", "step [frames]", "Advance the play session by N frames, then pause", &EditorDevCommandsInternal::runStep );
     SW_DEV_COMMAND( SelectType, "select.type", "select.type <ComponentType>", "Select every object with that component type (or a derived one)",
                     &EditorDevCommandsInternal::runSelectType );
+    SW_DEV_COMMAND( AddComponent, "component.add", "component.add <ComponentType>", "Add a component to every selected object (hidden test types too)",
+                    &EditorDevCommandsInternal::runAddComponent );
     SW_DEV_COMMAND( SelectTag, "select.tag", "select.tag <Tag>", "Select every object with that tag (or a child tag)", &EditorDevCommandsInternal::runSelectTag );
     SW_DEV_COMMAND( DebugDrawDemo, "debugdraw.demo", "debugdraw.demo [seconds]", "Draw a box, sphere, arrow and text in front of the scene view camera",
                     &EditorDevCommandsInternal::runDebugDrawDemo );

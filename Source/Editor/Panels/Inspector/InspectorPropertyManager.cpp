@@ -288,7 +288,7 @@ namespace sw::editor
             static constexpr bool kIsInteger = std::is_integral_v<T>;
 
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 if constexpr ( kIsInteger )
                 {
@@ -350,7 +350,7 @@ namespace sw::editor
         class CheckboxProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 if constexpr ( std::is_same_v<T, bool> )
                 {
@@ -380,7 +380,7 @@ namespace sw::editor
         class ValueProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 T* pPtr = prop.getValuePtr<T>( pInstance );
                 if ( pPtr == nullptr )
@@ -400,7 +400,7 @@ namespace sw::editor
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
@@ -442,7 +442,7 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
@@ -480,7 +480,7 @@ namespace sw::editor
         class Float3Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 float3* pPtr = prop.getValuePtr<float3>( pInstance );
                 if ( pPtr == nullptr )
@@ -515,7 +515,7 @@ namespace sw::editor
         class Float2Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 float2* pPtr = prop.getValuePtr<float2>( pInstance );
                 if ( pPtr == nullptr )
@@ -538,7 +538,7 @@ namespace sw::editor
         class Float4Property : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
             {
                 float4* pPtr = prop.getValuePtr<float4>( pInstance );
                 if ( pPtr == nullptr )

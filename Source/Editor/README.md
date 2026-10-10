@@ -395,7 +395,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 Output Log 아래 입력 줄이 개발 콘솔(`Engine/Console/DevConsole`)입니다 — `help`, `gv_이름 [값]` · `get` · `set`, 개발 명령(`SW_DEV_COMMAND`),
 Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기록. 답은 로그(`DevConsole`)로 남아 같은 패널에 보입니다. 에디터가 등록하는 명령은
 `Common/Commands/EditorDevCommands.cpp` — `editor <커맨드 id>`(커맨드 팔레트의 id) · `play` · `simulate` · `pause` · `stop` · `step [N]` ·
-`select.type <컴포넌트 타입>` · `select.tag <태그>` · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
+`select.type <컴포넌트 타입>` · `select.tag <태그>` · `component.add <컴포넌트 타입>`(고른 오브젝트마다 — 메뉴에 숨긴 시험 타입도) · `layout.save <이름>` · `layout.load <이름>` · `debugdraw.demo [초]`(뷰포트 카메라 앞에 상자 · 구 · 화살표 · 글자와 HUD 값 하나 — 시각화가 도는지 보는 용도). 엔진 명령(`timescale` · `teleport` ·
 `debugdraw.category` …)은 소유 코드 옆에 있습니다(`Source/Engine/README.md` 의 개발 명령 절). 에디터 없이 띄운 게임 창에서는 `~` 오버레이가 같은 콘솔입니다(`Source/App/README.md`).
 시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleControllerTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
 
@@ -549,6 +549,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   둘 이상 고르면 공통 컴포넌트만 그리고(`EditorMultiEditUtil` — 교집합 · 혼합 판정 · 고친 프로퍼티 하나만 나머지에 입히기), 혼합 값은 이름 앞에 "—" 다.
   되돌리기 기록은 위젯이 풀린 순간이 아니라 편집 통지 뒤(`InspectorPropertyUndo::commitFinishedEdits`)에 선택한 오브젝트 모두를 한 트랜잭션으로 남긴다 —
   풀린 순간에 "뒤" 스냅샷을 뜨면 나머지에 입힌 값이 빠져 Ctrl+Z 가 주 선택만 되돌린다(시나리오 `editor/multiedit`).
+  타입 그리기 확장(`SW_EDITOR_PROPERTY_DRAWER`, id = 리플렉션 타입 이름)은 `draw( 인스턴스, 프로퍼티, 그리드 )` 를 받는다. ImGui 위젯 하나로 끝나지 않는 편집(팝업 편집기)은
+  작업 사본을 고치고 마칠 때 `grid.applyPropertyTextAsEdit` 로 한 번 입힌다 — 끄는 동안 값에 바로 쓰면 되돌리기의 "앞" 스냅샷이 이미 바뀐 값이다.
+  첫 사용처가 `FloatCurve` 의 미리보기 + 팝업 편집기(`EditorCurveEditor`, 좌표는 ImGui 없는 `EditorCurveView`)다(시나리오 `editor/curveedit` — 시험 컴포넌트
+  `EditorCurveProbeComponent` 는 메뉴에 숨겨 두고 `component.add` 로 단다).
   타입 사슬 전부의 확장을 기반 → 파생 순으로(`collectForType`), 확장은 자기가 그린 프로퍼티만 알린다. 각도는 라디안으로 저장하고 에디터만 도로 보인다(`Units=rad`),
   0..1 비율은 `Units=ratio`, `PropertyUnitsTest.UnitsMatchHowValuesAreStored` 가 본다. 검색은 `EditorListFilter`, 0 건 안내는 `drawNoSearchResultHint`(손으로 쓴 `stristr` 술어는 빈 필터에서
   목록을 지운다).

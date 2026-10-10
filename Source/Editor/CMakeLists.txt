@@ -37,6 +37,7 @@ sw_addModuleLibrary(EditorModule
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorPreferences.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/SelfTest/EditorCurveProbeComponent.h"
 )
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).

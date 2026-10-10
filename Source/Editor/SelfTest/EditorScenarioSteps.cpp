@@ -47,6 +47,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/CommandStack.h"
+#include "Engine/Utility/FloatCurve.h"
 #include "Engine/Window/IWindow.h"
 
 #include <imgui.h>
@@ -238,6 +239,79 @@ namespace sw::editor
                     return true;
                 EditorSelfTestInput::waitNextFrame();
                 (void)EditorSelfTestInput::moveMouseToMark( mark ); // 표식은 누르기 전에 같은 이름으로 찾았다
+                EditorSelfTestInput::setMouseButton( button, false );
+                for ( const int32 modifier : listModifier )
+                {
+                    EditorSelfTestInput::setKey( modifier, false );
+                }
+                return true;
+            }
+
+            static bool validateDrag( const AutomationStep& step, string& outError )
+            {
+                if ( validate( step, { "mark", "dx", "dy", "button", "mods" }, "mark", outError ) == false )
+                    return false;
+                for ( const utf8* pName : { "dx", "dy", "button" } )
+                {
+                    const string* pValue = step.findAttribute( pName );
+                    float64       number{ 0.0 };
+                    if ( pValue != nullptr && StringUtil::parseDouble( string_view{ *pValue }, number ) == false )
+                    {
+                        outError = step.describe() + ": " + pName + " must be a number, got '" + *pValue + "'";
+                        return false;
+                    }
+                }
+                vector<int32> listModifier;
+                if ( parseModifiers( step, listModifier ) == false )
+                {
+                    outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + *step.findAttribute( "mods" ) + "'";
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 이름표 가운데를 누르고 (dx, dy) 픽셀만큼 끌어 놓습니다(키 · 손잡이 끌기). 프레임마다 커서를 다시 넣는다 — 넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다.
+             * @details 누름 → 절반 → 끝 → 뗌을 네 프레임에 나눈다. 수정자는 누르기 전에 눌러 뗀 뒤에 놓는다.
+             */
+            static bool runDrag( AutomationRunner& runner, const AutomationStep& step )
+            {
+                const string&      mark = *step.findAttribute( "mark" );
+                EditorSelfTestMark found{};
+                if ( EditorSelfTestMarks::find( mark, found ) == false )
+                {
+                    runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
+                    return true;
+                }
+                float64 deltaX{ 0.0 };
+                float64 deltaY{ 0.0 };
+                float64 buttonNumber{ 0.0 };
+                if ( const string* pValue = step.findAttribute( "dx" ); pValue != nullptr )
+                    (void)StringUtil::parseDouble( string_view{ *pValue }, deltaX ); // 검사에서 봤다
+                if ( const string* pValue = step.findAttribute( "dy" ); pValue != nullptr )
+                    (void)StringUtil::parseDouble( string_view{ *pValue }, deltaY ); // 검사에서 봤다
+                if ( const string* pValue = step.findAttribute( "button" ); pValue != nullptr )
+                    (void)StringUtil::parseDouble( string_view{ *pValue }, buttonNumber ); // 검사에서 봤다
+                const int32   button = static_cast<int32>( buttonNumber );
+                vector<int32> listModifier;
+                (void)parseModifiers( step, listModifier ); // 검사에서 봤다
+                const float2 start{ ( found._min._x + found._max._x ) * 0.5f, ( found._min._y + found._max._y ) * 0.5f };
+                const float2 middle{ start._x + static_cast<float32>( deltaX ) * 0.5f, start._y + static_cast<float32>( deltaY ) * 0.5f };
+                const float2 end{ start._x + static_cast<float32>( deltaX ), start._y + static_cast<float32>( deltaY ) };
+                EditorSelfTestInput::moveMouse( start, found._viewportID );
+                for ( const int32 modifier : listModifier )
+                {
+                    EditorSelfTestInput::setKey( modifier, true );
+                }
+                EditorSelfTestInput::waitNextFrame();
+                EditorSelfTestInput::moveMouse( start, found._viewportID );
+                EditorSelfTestInput::setMouseButton( button, true );
+                EditorSelfTestInput::waitNextFrame();
+                EditorSelfTestInput::moveMouse( middle, found._viewportID );
+                EditorSelfTestInput::waitNextFrame();
+                EditorSelfTestInput::moveMouse( end, found._viewportID );
+                EditorSelfTestInput::waitNextFrame();
+                EditorSelfTestInput::moveMouse( end, found._viewportID );
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {
@@ -810,6 +884,26 @@ namespace sw::editor
                 return listSelected.empty() == false;
             }
 
+            /** @brief 주 선택의 `-gv_editorProbeProperty` 커브(`FloatCurve`)의 키 수입니다. 커브가 아니면 값을 내지 않는다. */
+            [[nodiscard]] static bool readSelectedCurveKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                const size_t   dot      = gv_editorProbeProperty.find( '.' );
+                if ( pContext == nullptr || dot == string::npos )
+                    return false;
+                GameObject* pObject = pContext->getEditorSelection().getPrimaryObject();
+                if ( pObject == nullptr )
+                    return false;
+                Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                    return false;
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
+                if ( pProperty == nullptr || pProperty->_typeName != hashed_string( "FloatCurve" ) )
+                    return false;
+                outValue = static_cast<float64>( pProperty->getValuePtr<FloatCurve>( pComponent )->_listKey.size() );
+                return true;
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -909,6 +1003,7 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_STEP( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, false );
+    SW_AUTOMATION_STEP( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag, false );
     SW_AUTOMATION_STEP( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText, false );
     SW_AUTOMATION_STEP( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey, false );
     SW_AUTOMATION_STEP( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
@@ -963,6 +1058,9 @@ namespace sw::editor
                          "Numeric value of gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection", &EditorScenarioStepsInternal::readSelectedProperty );
     SW_AUTOMATION_PROBE( editorSelectedPropertySum, "Editor.SelectedPropertySum",
                          "Sum of gv_editorProbeProperty (<ComponentType>.<property>) over every selected object", &EditorScenarioStepsInternal::readSelectedPropertySum );
+    SW_AUTOMATION_PROBE( editorSelectedCurveKeyCount, "Editor.SelectedCurveKeyCount",
+                         "Keys of the FloatCurve gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection",
+                         &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",

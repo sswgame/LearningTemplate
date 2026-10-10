@@ -75,13 +75,16 @@ namespace sw::editor
         void drawProperties( const EditorPropertyGridTarget& target, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
         /** @brief 대상 타입의 메서드(FUNCTION)와, @p bEvents 면 이벤트를 그립니다(인스펙터의 Methods 구역). */
         void drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents );
+        /**
+         * @brief 프로퍼티 하나에 글 값(`SerializerUtil::formatPropertyText` 꼴)을 입혀 편집으로 남깁니다(통지 · 주인 오브젝트의 되돌리기 한 줄).
+         * @details Reset · Paste Value 와 그리기 확장(`IInspectorProperty`)의 팝업 편집기가 같이 씁니다. 그리는 동안에만 부릅니다(대상이 걸려 있을 때).
+         */
+        void applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
 
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
         /** @brief 프로퍼티 하나를 기본값(@p pDefaultInstance 의 값, 없으면 메타 글)으로 되돌립니다. 통지 · 되돌리기 기록은 편집과 같다. */
         void resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance );
-        /** @brief 프로퍼티 하나에 글 값을 입혀 편집으로 남깁니다(통지 · 주인 오브젝트의 되돌리기). Reset · Paste Value 가 같이 쓴다. */
-        void applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
         void endTarget();
         /**
          * @brief 타입의 반사 프로퍼티를 상속분까지 카테고리별로 그립니다(`InspectorPropertyLayout`). 그릴 것이 있을 때만 @p pSectionTitle 구분선을 둡니다.

@@ -41,6 +41,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorSettingsRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorCurveView.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorListFilter.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowserLogic.cpp"
