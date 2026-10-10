@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — 사촌 린트 패키지
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
+from conventions import Model, NamingVocabulary, Patterns  # noqa: E402
 from gate import CheckCodeConventions  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
@@ -161,7 +162,7 @@ def checkSubjectMatrixInternal(tempRoot: Path, bVerbose: bool) -> list[str]:
     """
     listError: list[str] = []
 
-    for subjectKey in CheckCodeConventions.kMapNamingSubject:
+    for subjectKey in NamingVocabulary.kMapNamingSubject:
         for vocabularyKey, (declaration, badName) in _kMapVocabularyProbe.items():
             relPath, content = buildSubjectProbeInternal(subjectKey, declaration, badName)
             caseRoot = tempRoot / f"matrix_{subjectKey}_{vocabularyKey}"
@@ -317,7 +318,7 @@ def resetPathMapCacheInternal() -> None:
     여기서는 조각마다 임시 루트가 다르므로, 비우지 않으면 앞 조각의 맵으로 판정해
     `Include/PathCasing` 같은 규칙이 조용히 안 걸린다.
     """
-    CheckCodeConventions._s_exactPathMap = {}
+    Patterns._s_exactPathMap = {}
 
 
 def writeFixtureInternal(root: Path, relPath: str, content: str | bytes) -> Path:
@@ -340,8 +341,9 @@ def categoriesForTreeInternal(root: Path) -> set[str]:
 
 
 def knownCategoriesInternal() -> set[str]:
-    """`CheckCodeConventions.py` 가 실제로 만들 수 있는 카테고리 전부."""
-    text = Path(CheckCodeConventions.__file__).read_text(encoding="utf-8", errors="ignore")
+    """게이트와 규칙 묶음(`Scripts/lint/conventions/`)이 실제로 만들 수 있는 카테고리 전부."""
+    listPath = [Path(CheckCodeConventions.__file__), *sorted(Path(Model.__file__).parent.glob("*.py"))]
+    text = "\n".join(path.read_text(encoding="utf-8", errors="ignore") for path in listPath)
     return set(re.findall(r'rule_category="([^"]+)"', text))
 
 
@@ -364,7 +366,7 @@ class CheckCodeConventionsSelfTestGate(LintGate):
         try:
             # --- 규칙이 스스로 드는 조각 (표가 아니라 규칙에서 온다) ---
             ruleOwnedCases: list[tuple[str, str, str]] = []
-            for scopeRules in CheckCodeConventions._kRulesByScope.values():
+            for scopeRules in Model._kRulesByScope.values():
                 for rule in scopeRules:
                     # 조각이 없으면 아래 "조각이 없는 카테고리" 검사가 잡는다 (파일 짝이 필요한 규칙은
                     # `_kWholeScanCases` 가 대신 덮는다 — 그쪽도 같은 검사에 걸린다).
