@@ -51,7 +51,8 @@ Scripts/
   │     ├── BuildTree.py              # 빌드 폴더 하나(build/<프리셋>) — --preset · --build-dir 고르기 · 컴파일 DB · CMakeCache · 짓지 않는 소스
   │     ├── Process.py                # 자식 프로세스 한 창구(runProcess — UTF-8 디코딩, 못 띄움 · 시간 초과를 칸으로)
   │     ├── GeneratedFile.py          # 생성 파일 쓰기(바뀌었을 때만) · CMake 값 · 생성기 진입점(runGenerator)
-  │     ├── CodeText.py               # C++ · HLSL 글에서 주석 · 리터럴을 같은 길이 공백으로 가리기(게이트 공용)
+  │     ├── CodeText.py               # C++ · HLSL 글 읽기(게이트 공용) — 주석 · 리터럴 가리기(blankComments · blankMatch), 줄 번호(lineOf),
+  │     │                             #   include 줄 훑기(iterIncludes), 층 폴더(firstFolderAfter), include → 저장소 파일(IncludeResolver)
   │     ├── ConfigCatalog.py          # 설정 파일 목록(층 · 읽는 곳 · 언제 · 배포본) — docs/Config 생성기와 CheckConfigReference 가 같이 읽는다
   │     ├── ConfigReference.py        # 설정 참조 문서(docs/Config)를 코드에서 만든다
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
@@ -67,6 +68,7 @@ Scripts/
   │     ├── SetupEnvironment.py       # 통합 환경 설정 (ToolLocator 기반) → toolchain_config.json
   │     ├── SetupLlvm.py              # LLVM/libclang 부트스트랩 (kLlvmToolSpec 적용)
   │     ├── SetupVcpkg.py             # vcpkg 부트스트랩 (kVcpkgToolSpec 적용)
+  │     ├── SetupSccache.py           # sccache 설정(basedirs = 저장소 + 워크트리 뿌리 전부)
   │     ├── SetupLinuxDevEnvironment.py # Linux · WSL 홈 디렉터리 설정
   │     ├── HostTools.py              # MSVC, WinSDK, DXC, system include 탐색 (라이브러리 — SetupEnvironment 가 쓴다)
   │     ├── InstallGitHooks.py        # Git pre-commit 훅 설치
@@ -95,8 +97,17 @@ Scripts/
   │     ├── AcronymRegistry.py        # 약어 등록부 — 약어 · 줄임말 · 제품 이름 · 남의 이름 표와 철자 판정 (게이트 · 코드모드가 같이 읽는다)
   │     ├── PreCommitLint.py          # Git Staged 대상 사전 커밋 종합 검사 (넷을 조율하므로 여기 남는다)
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
+  │     ├── RunLintSuite.py           # 린트 전체를 빌드 폴더 없이 돌려 린트마다 · 커밋 훅 시간을 잰다 (CI 린트 잡)
+  │     ├── conventions/              # CheckCodeConventions 의 규칙 묶음(라이브러리 — 묶음 지도는 __init__.py). LintCatalog 는 훑지 않는다
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
-  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 (줄 단위 규칙 하나 = 클래스 하나)
+  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/)
+  │     │     ├── CheckOutParameterNames.py   # 맨이름 `out` 매개변수(헤더 선언)
+  │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
+  │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
+  │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
+  │     │     ├── CheckProductNames.py        # 제품 이름 식별자는 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 안에서만
+  │     │     ├── CheckEditorIcons.py         # 에디터 아이콘 폰트 · 글리프 헤더가 그림 정의와 같은지
+  │     │     ├── CheckResourceCredits.py     # Resource 원본 자산이 도메인 credits.md 에 있고 라이선스가 CC0 1.0 · 이 저장소인지
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 대문자 묶음은 등록부 약어)
   │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (등록부 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
@@ -169,12 +180,15 @@ Scripts/
   │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
   │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
   │     │     ├── RunBuildScriptInventory.py  # 빌드 스크립트 재고 — 죽은 CMake 함수 · 큰 CMake 파일 · 손 목록 · common 을 비켜 간 파이썬 호출
+  │     │     ├── RunDiscardReasons.py        # (void) 로 버린 실패 가능 결과의 목록과 이유
   │     │     └── RunDocStyle.py              # 문서마다 읽기 어려운 문장 모양과 조어 수 (기준은 docs/10_WritingDocs.md, `--files` 로 다시 쓰기 전후 비교)
   │     └── selftest/                 # 코드가 아니라 **린트** 를 본다
   │           ├── CheckLintsAreAlive.py       # gate/ 를 훑어 각 게이트가 아직 무는지 확인
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
   │           ├── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
   │           ├── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
+  │           ├── CheckExemptionTables.py     # 게이트의 예외가 LintGate.mapExemption 한 자리에만 있는지
+  │           ├── CheckLintScanRoots.py       # 게이트가 대상 뿌리를 손으로 조립하지 않는지(kLintTargetRelDirs 하나)
   │           └── CheckReportsRun.py          # report/ 의 보고서가 모두 LintReport 이고 --help 로 뜨는지
   │
   ├── dev/                            # [개발 실험] 사람이 가끔 손으로 돌린다 — 빌드 · CI 가 부르지 않는다
@@ -191,6 +205,7 @@ Scripts/
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
   │     ├── MoveEngineFolders.py      # Engine 폴더 재배치의 이동 표(git mv + 경로 치환)와 티어 표 맞추기(--sync-tier) — 다시 돌릴 수 있다
+  │     ├── MoveGameFrameworkLayout.py # GameFramework 폴더 재배치(docs/plans/GameFrameworkLayout.md)의 이동 표와 경로 치환 — 다시 돌릴 수 있다
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
@@ -235,6 +250,22 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe   # 성능 회귀 (P
 py -3 -m Scripts symbols --preset Ninja-Shipping --store <저장소>   # 심볼 저장소 배치 (StoreSymbols)
 py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러 (SampleStacks, Windows)
 ```
+
+## 게이트 추가
+
+`lint/gate/Check<무엇>.py` 에 `LintGate` 하위 클래스 하나를 두고 `main = XxxGate.run` 으로 내보낸다 — CMake 타깃 · CTest · 커밋 훅 · 자기 시험은
+폴더를 훑어 알아서 집는다(틀은 `lint/LintGate.py` 머리말). 게이트가 쓰는 것은 두 곳에서만 온다:
+
+| 필요한 것 | 자리 |
+| --- | --- |
+| `--files` · 대상 파일 고르기 · 읽기 | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` |
+| 예외(이유 · 낡음 검사 포함) | `LintGate.mapExemption` · `seeExemption` · `useExemption` |
+| 주석 · 리터럴 가리기, 줄 번호 | `common.blankComments` · `blankCommentsAndLiterals` · `blankMatch` · `lineOf` |
+| include 줄 · 층 폴더 · include 가 가리키는 파일 | `common.iterIncludes` · `firstFolderAfter` · `IncludeResolver` |
+| 파일마다 무거운 정규식 | `common.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
+
+예: `CheckCoreNetworkLayers` 는 `selectTargetFiles` → `readFiles` → `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
+`CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 시험 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
 
 ## 커밋 훅과 병합 커밋
 
@@ -358,6 +389,11 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   멤버 정규식 `_kClassMemberRe` 를 넓히면 `_kWholeScanCleanCase` 의 `RangeTable` 조각으로 확인한다.
   교차 파일 검사(`Style/BitfieldBoolean` · `Naming/Duplicate*` · `Style/HeaderMemberInitializer` · `Style/ConstructorInitializesEveryField`)는 파일별 몫을 워커가
   `CrossFileFacts` 로 모으고 부모는 합치기만 한다 — 새 교차 파일 검사도 그 모양으로(부모에서 파일을 다시 읽으면 그것이 게이트 시간의 2/3 였다).
+  규칙은 `lint/conventions/` 의 묶음 모듈에 있다(어휘 표는 `NamingVocabulary`, 정규식은 `Patterns`, 줄 규칙은 `LineRules`, 교차 파일은 `CrossFile`).
+  줄 규칙은 `FileScan` 이 `LineRules` 를 import 할 때 레지스트리에 오른다 — 프로세스 워커도 그 import 로 규칙을 받으므로 등록을 다른 자리로 옮기지 말 것.
+  파일 읽기 캐시는 `FileScan.scopedTextCache()` 블록 안에서만 있다(모듈 전역을 다른 모듈에서 `global` 로 바꾸면 그 모듈의 사본만 바뀐다).
+- **include 를 저장소 파일로 풀 때는 `common.IncludeResolver`** — include 마다 `is_file` · `resolve()` 를 부르면 트리 전체가 십수 초다(CheckModuleTargets 가
+  19.9 s 로 커밋 훅의 바닥이었다). 표는 Source 아래를 한 번 걸어 들고, Windows 에서는 대소문자를 가리지 않아 파일 시스템과 같은 답을 낸다.
 - **린트 정규식에 `(식별자+ … \s*)+` 모양을 쓰지 말 것** — 빈 구분자로 식별자를 몇 조각으로든 나눌 수 있어 맞지 않는 줄에서 역추적이 지수로 는다(한 줄 7 초,
   커밋 훅이 부하에서 수십 분). 식별자 뒤에 `(?![A-Za-z0-9_:])` 를 붙인다. 느린 게이트는 파일별 시간부터 정렬해 볼 것 — 평균이 아니라 몇 파일이 지배한다.
   줄 규칙의 `"글자" in line and 정규식` 앞 검사는 그 정규식이 반드시 품는 글자다 — 정규식을 바꾸면 같이 본다.

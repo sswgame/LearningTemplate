@@ -476,6 +476,13 @@
 - **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
   그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
   `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
+- **Scripts 정리의 남은 후보**(2026-10-10, `CodeText` 도우미 · `lint/conventions/` 나누기 뒤). 커밋 훅이 staged 1 개 9.5 s 로 아직 상한 8 s 위다 —
+  남은 바닥은 트리 전체 게이트 `CheckConfigReference`(단독 ~7~14 s, 생성 문서를 통째로 다시 만들어 견준다)와 `CheckDuplicateTypeNames` ·
+  `CheckKitNamespaces`(각 ~5~9 s)다. 파일 단위로 바꿀 수 있는지(staged 가 PROPERTY · gv · 설정 파일을 건드릴 때만 돌기) 먼저 본다.
+  ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
+  (CTest 이름 · `mapExemption` 표를 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
+  모양이다 — 두 계획(`docs/plans/EnginePartition.md` · `GameFrameworkLayout.md`)이 끝나면 지우거나 공용 이동기 하나로. ③ `CheckCoreLayers._kHiddenLogUse` 는
+  `mapExemption` 밖의 예외 표다(이름이 `CheckExemptionTables` 의 패턴을 비켜 간다) — 옮기면 OK 줄에 "예외 5 줄" 이 붙는다.
 - **훅의 `CheckHeaderSelfContained` 도 뒤에서 띄울지.** staged 헤더마다 ~1.3 s CPU(헤더 6 개 1.9 s 벽 / 9 s CPU) — 지금은 이 프로세스에서 다른 파일 단위 게이트와
   차례로 돈다. 헤더가 든 커밋에서 트리 전체 게이트와 겹치면 ~1.5 s 를 더 벌 수 있다. `LintGate.preCommitRunsInBackground` 같은 선언 하나로 — 재고 넣을 것.
 
