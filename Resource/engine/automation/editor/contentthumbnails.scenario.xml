@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저 썸네일(R9): engine/textures 를 열면 DDS 가 썸네일 캐시에 올라가 실제 텍스처로 그려지고(Editor.ThumbnailCacheCount),
+  그림 썸네일이 없는 종류(engine/data 의 Data)는 종류 아이콘을 가운데에 그린다(Editor.ThumbnailFallbackGlyphCount).
+  CaptureWindow 의 PNG(Saved/Automation/editor.contentthumbnails/)로 두 화면을 본다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/contentthumbnails.scenario.xml -dx12
+-->
+<Scenario name="editor.contentthumbnails" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="20"><RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="35"><DevCommand line="panel.focus content_browser"/></At>
+	<At frame="40"><DevCommand line="content.open engine/textures"/></At>
+	<!-- 썸네일은 프레임마다 하나씩 읽는다 -->
+	<At frame="120">
+		<Expect probe="Editor.ThumbnailCacheCount" atLeast="1"/>
+		<CaptureWindow file="textures.png"/>
+	</At>
+	<At frame="130"><DevCommand line="content.open engine/data"/></At>
+	<At frame="160">
+		<Expect probe="Editor.ThumbnailFallbackGlyphCount" atLeast="1"/>
+		<CaptureWindow file="data.png"/>
+	</At>
+	<At frame="170"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

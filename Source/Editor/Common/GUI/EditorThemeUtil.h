@@ -8,6 +8,13 @@
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 
+struct ImDrawList;
+
+namespace sw
+{
+    struct float2;
+} // namespace sw
+
 namespace sw::editor
 {
     enum class EditorAssetType : uint8;
@@ -156,5 +163,11 @@ namespace sw::editor
          *          두 번째가 첫 번째를 덮습니다(그런 자리는 지역 fixed_string 을 씁니다).
          */
         static const utf8* makeIconLabel( const utf8* pIcon, const utf8* pLabel );
+
+        /**
+         * @brief 아이콘 글리프 하나를 사각형 가운데에 그립니다. 글리프 높이는 사각형 짧은 변의 @p sizeRatio 배입니다.
+         * @details 콘텐츠 브라우저의 종류 아이콘 썸네일이 쓴다. 글리프 폭과 높이는 그 글꼴 크기로 잰다(가운데가 글자 기준선이 아니라 글리프 상자다).
+         */
+        static void drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color4& color, float32 sizeRatio );
     };
 } // namespace sw::editor

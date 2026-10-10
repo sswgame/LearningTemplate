@@ -496,6 +496,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `_bShowAllPacksByDefault` 다. 참조 찾기(오른쪽 클릭 Find References · Show Dependencies, 삭제 확인의 참조 수)는 `EditorReferenceIndex` 다. 텍스트 에셋(xml, json, material, hlsl)의 글 가운데
   실제로 있는 파일의 리소스 id 만 세고, `Resource/` 변경 번호가 바뀌면 워커가 통째로 다시 훑는다(Debug 1.1 초, 377 파일). 바이너리 안의 경로와 확장자를 뗀 이름은 참조로 잡지 않는다.
   콘솔 `content.open <리소스 폴더>` 가 그 폴더를 연다. 시험 `EditorReferenceIndexTest`, 자체 시험 `contentBrowser.showsActivePackOnly`, 시나리오 `editor/contentbrowser`.
+- **텍스처 썸네일은 엔진 텍스처 캐시에서 빌린 실제 텍스처다**(`EditorThumbnailCache` — `TextureCache::acquire` → `registerTexture`, 64 개 LRU). DDS 읽기와 GPU 업로드가 UI 스레드에서 돌므로
+  프레임마다 하나만 읽는다. 놓을 때는 ImGui 등록을 먼저 풀고(`unregisterTexture` 는 그린 스냅샷이 끝난 뒤 디스크립터를 놓는다) 텍스처 참조를 놓는다. 패널 `shutdown` 이 렌더 백엔드보다 먼저 비운다.
+  이미지 썸네일은 종류 동작의 `hasImagePreview` 로 정하고, 그림 썸네일이 없는 종류는 종류 아이콘을 가운데에 그린다(`EditorThemeUtil::drawCenteredGlyph`). 시나리오 `editor/contentthumbnails`.
 - **콘텐츠 브라우저는 디스크 목록을 들고 있으므로 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다** — 탐색기 · git 의 변경도 이 번호가 셉니다. 에디터 안의 삭제처럼 결과를 바로 아는 경로는 번호를 기다리지 않고 그 자리에서 다시 읽기로 합니다(감시는 한두 프레임 늦다). 시험 `contentBrowser.deleteRefreshesTheList`.
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).

@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -736,6 +737,20 @@ namespace sw::editor
         if ( bIsDirectory )
             return getFolderColor();
         return getAssetTypeColor( EditorAssetTypeRegistry::findKind( path ) );
+    }
+
+    void EditorThemeUtil::drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color4& color, float32 sizeRatio )
+    {
+        if ( pDrawList == nullptr || pGlyph == nullptr || pGlyph[0] == '\0' )
+            return;
+        ImFont*       pFont    = ImGui::GetFont();
+        const float32 boxSize  = MathUtil::min( maxPos._x - minPos._x, maxPos._y - minPos._y );
+        const float32 fontSize = boxSize * sizeRatio;
+        if ( pFont == nullptr || fontSize <= 0.0f )
+            return;
+        const ImVec2 glyphSize = pFont->CalcTextSizeA( fontSize, MathUtil::kMaxFloat, 0.0f, pGlyph );
+        const ImVec2 position{ ( minPos._x + maxPos._x - glyphSize.x ) * 0.5f, ( minPos._y + maxPos._y - glyphSize.y ) * 0.5f };
+        pDrawList->AddText( pFont, fontSize, position, ImGui::ColorConvertFloat4ToU32( ImVec4( color._r, color._g, color._b, color._a ) ), pGlyph );
     }
 
     const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )

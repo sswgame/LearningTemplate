@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorReferenceIndex.h"
+#include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowserLogic.h"
 
@@ -32,6 +33,8 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Content Browser"; }
         /** @brief 소스 트리, 브레드크럼, 애셋 타일/리스트를 그립니다. */
         void drawContent() override;
+        /** @brief 썸네일 캐시가 든 텍스처와 ImGui 등록을 놓습니다. */
+        void shutdown( IRHIDevice* pDevice ) override;
 
         // ------------------------------------------------------------------------------
         // 1-1) 삭제 · 시험 창구 — 우클릭 Delete 는 requestDeleteAsset → 확인 모달 → confirmDeleteAsset 이다. 자체 시험이 같은 길을 부른다
@@ -74,6 +77,10 @@ namespace sw::editor
         void showReferences( string_view absolutePath, bool bDependencies );
         /** @brief 마지막 참조 찾기의 결과 줄 수입니다. */
         uint32 getReferenceResultCount() const { return static_cast<uint32>( _listReferenceResult.size() ); }
+        /** @brief 썸네일 캐시가 들고 있는 텍스처 썸네일 수입니다. */
+        uint32 getThumbnailCacheCount() const { return _thumbnailCache.getCachedCount(); }
+        /** @brief 지난 그리기에서 종류 아이콘으로 그린 타일 수입니다(그림 썸네일이 없는 종류). */
+        uint32 getFallbackGlyphCount() const { return _lastFallbackGlyphCount; }
 
     private:
         // ------------------------------------------------------------------------------
@@ -206,11 +213,14 @@ namespace sw::editor
         vector<EditorAssetReference>          _listReferenceResult;
         EditorReferenceIndex                  _referenceIndex;
         EditorReferenceIndexJob               _referenceIndexJob;
+        EditorThumbnailCache                  _thumbnailCache;
         uint64                                _referenceIndexSerial; /**< 역색인 훑기를 요청할 때의 `AssetHotReload::getContentChangeSerial` */
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         uint64                                _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
         float32                               _tileSize;
         uint32                                _filterIndex;
+        uint32                                _fallbackGlyphCount;     /**< 이번 그리기에서 종류 아이콘으로 그린 타일 수 */
+        uint32                                _lastFallbackGlyphCount; /**< 지난 그리기의 값(탐침이 읽는다) */
         int32                                 _historyIndex;
         ViewMode                              _viewMode;
         mutex                                 _pendingImportMutex;

@@ -36,6 +36,11 @@ namespace sw::editor
         virtual EditorAssetType getKind() const = 0;
         /** @brief 콘텐츠 브라우저 카드 썸네일을 그립니다(배경 · 테두리는 브라우저가 그린다). 그리지 않으면 false 입니다. */
         virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const;
+        /**
+         * @brief 썸네일이 에셋 자신의 이미지이면 true 입니다(텍스처). 브라우저가 썸네일 캐시로 그 이미지를 읽어 그린다.
+         * @details 이미지가 아직 없거나 읽지 못하면 `drawThumbnail` 로 넘어간다(언리얼 텍스처 썸네일과 같다).
+         */
+        virtual bool hasImagePreview() const { return false; }
         /** @brief 전용 도구 패널이 없는 종류를 엽니다. 이 종류가 열기를 하지 않거나 열지 못했으면 false 입니다. */
         [[nodiscard]] virtual bool open( string_view relativePath ) const;
         /** @brief 뷰포트에 끌어 놓은 것을 처리합니다(스폰 · 로드). 처리하지 않으면 false 이고, 부르는 쪽이 열기로 넘어갑니다. */

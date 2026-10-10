@@ -240,6 +240,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.TestRunnerPassCount` | 마지막(또는 지금) 에디터 자체 시험 실행에서 통과한 시험 수 — Test Runner 창 · `-gv_editorSelfTest` 모두 |
 | `Editor.ProfilerTimelineThreadCount` | 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수(녹화 전 0) |
 | `Editor.ContentGameRootCount` | 콘텐츠 브라우저의 게임 팩 루트 수(활성 팩만이면 1) |
+| `Editor.ThumbnailCacheCount`, `Editor.ThumbnailFallbackGlyphCount` | 콘텐츠 브라우저가 든 텍스처 썸네일 수, 지난 그리기에서 종류 아이콘으로 그린 타일 수 |
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 

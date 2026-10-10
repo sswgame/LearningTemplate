@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
@@ -62,6 +63,8 @@ namespace sw::editor
             static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
             /** @brief 게임 팩 루트의 표시 이름 접두입니다(`game/<팩>`). */
             static constexpr const utf8* kGameDomainPrefix = "game/";
+            /** @brief 그림 썸네일이 없는 종류의 아이콘 크기(썸네일 짧은 변 대비)입니다. */
+            static constexpr float32 kFallbackGlyphSizeRatio = 0.5f;
             /** @brief 참조 결과 표가 스크롤 없이 보이는 최대 줄 수입니다. */
             static constexpr size_t kReferenceVisibleRowCount = 12;
 
@@ -118,6 +121,24 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readThumbnailCacheCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getThumbnailCacheCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readFallbackGlyphCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getFallbackGlyphCount() );
+                return true;
+            }
+
             [[nodiscard]] static bool readReferenceResultCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
@@ -140,6 +161,10 @@ namespace sw::editor
                          &ContentBrowserPanelInternal::readReferenceIndexReady );
     SW_AUTOMATION_PROBE( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
                          &ContentBrowserPanelInternal::readReferenceResultCount );
+    SW_AUTOMATION_PROBE( editorThumbnailCacheCount, "Editor.ThumbnailCacheCount", "Texture thumbnails the Content Browser holds as ImGui textures",
+                         &ContentBrowserPanelInternal::readThumbnailCacheCount );
+    SW_AUTOMATION_PROBE( editorThumbnailFallbackGlyphCount, "Editor.ThumbnailFallbackGlyphCount",
+                         "Content Browser tiles drawn last frame with the kind icon (kinds without a drawn thumbnail)", &ContentBrowserPanelInternal::readFallbackGlyphCount );
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );
 
@@ -152,11 +177,6 @@ namespace sw::editor
         const ImVec2 minVec{ minPos._x, minPos._y };
         const ImVec2 maxVec{ maxPos._x, maxPos._y };
 
-        const float32 w  = maxPos._x - minPos._x;
-        const float32 h  = maxPos._y - minPos._y;
-        const float32 cx = minPos._x + w * 0.5f;
-        const float32 cy = minPos._y + h * 0.5f;
-
         // 카드 썸네일 배경
         pDrawList->AddRectFilled( minVec, maxVec, IM_COL32( 22, 24, 30, 255 ), 4.0f );
 
@@ -167,16 +187,31 @@ namespace sw::editor
         }
         else
         {
-            // 종류별 그림은 그 종류의 동작이 그린다(`IEditorAssetTypeActions`). 없으면 종류 라벨을 얹은 일반 문서다.
+            // 종류별 그림은 그 종류의 동작이 그린다(`IEditorAssetTypeActions`). 이미지 미리보기가 있는 종류(텍스처)는 썸네일 캐시의 그 이미지가 먼저다.
+            // 둘 다 없으면 종류 아이콘을 종류 색으로 가운데에 그린다.
             const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
-            const bool                     bDrawn   = pActions != nullptr && pActions->drawThumbnail( pDrawList, minPos, maxPos );
+            bool                           bDrawn   = false;
+            if ( pActions != nullptr && pActions->hasImagePreview() )
+            {
+                void* pTextureID = _thumbnailCache.findTexture( entry._relativePath );
+                if ( pTextureID != nullptr )
+                {
+                    // 정사각형으로 가운데에 — 썸네일 칸은 가로가 길다. 텍스처 비율은 보지 않는다(대부분 정사각형이고, 아니면 늘어난 채 보인다).
+                    const float32 side    = MathUtil::min( maxPos._x - minPos._x, maxPos._y - minPos._y );
+                    const float32 centerX = ( minPos._x + maxPos._x ) * 0.5f;
+                    const float32 centerY = ( minPos._y + maxPos._y ) * 0.5f;
+                    pDrawList->AddImage( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2( centerX - side * 0.5f, centerY - side * 0.5f ),
+                                         ImVec2( centerX + side * 0.5f, centerY + side * 0.5f ) );
+                    bDrawn = true;
+                }
+            }
+            if ( bDrawn == false && pActions != nullptr )
+                bDrawn = pActions->drawThumbnail( pDrawList, minPos, maxPos );
             if ( bDrawn == false )
             {
-                pDrawList->AddRectFilled( ImVec2( minPos._x + w * 0.22f, minPos._y + h * 0.16f ),
-                                          ImVec2( minPos._x + w * 0.78f, minPos._y + h * 0.84f ), IM_COL32( 65, 70, 82, 255 ), 3.0f );
-                const utf8*  pLbl  = ContentBrowserPanelInternal::typeLabel( entry._extension, false );
-                const ImVec2 txtSz = ImGui::CalcTextSize( pLbl );
-                pDrawList->AddText( ImVec2( cx - txtSz.x * 0.5f, cy - txtSz.y * 0.5f ), IM_COL32( 220, 225, 235, 230 ), pLbl );
+                EditorThemeUtil::drawCenteredGlyph( pDrawList, minPos, maxPos, EditorThemeUtil::getAssetIconForPath( entry._name ),
+                                                    EditorThemeUtil::getAssetColorForPath( entry._name ), ContentBrowserPanelInternal::kFallbackGlyphSizeRatio );
+                ++_fallbackGlyphCount;
             }
         }
 
@@ -321,11 +356,14 @@ namespace sw::editor
         , _listReferenceResult{}
         , _referenceIndex{}
         , _referenceIndexJob{}
+        , _thumbnailCache{}
         , _referenceIndexSerial{ 0 }
         , _searchBuffer{}
         , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
         , _filterIndex{ 0 }
+        , _fallbackGlyphCount{ 0 }
+        , _lastFallbackGlyphCount{ 0 }
         , _historyIndex{ -1 }
         , _viewMode{ ViewMode::Tiles }
         , _pendingImportMutex{}
@@ -415,6 +453,11 @@ namespace sw::editor
         _seenContentChangeSerial = serial;
         _bFolderDirty            = SW_TRUE;
         _folderCache.clear();
+    }
+
+    void ContentBrowserPanel::shutdown( IRHIDevice* /*pDevice*/ )
+    {
+        _thumbnailCache.clear();
     }
 
     void ContentBrowserPanel::syncReferenceIndex()
@@ -536,6 +579,10 @@ namespace sw::editor
             else if ( io.KeyAlt && ImGui::IsKeyPressed( ImGuiKey_RightArrow ) )
                 navigateForward();
         }
+
+        _lastFallbackGlyphCount = _fallbackGlyphCount;
+        _fallbackGlyphCount     = 0;
+        _thumbnailCache.update();
 
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();

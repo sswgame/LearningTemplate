@@ -13,11 +13,13 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 텍스처 — 체크무늬 위 액자 썸네일. 뷰포트에 끌어 놓으면 그 텍스처의 스프라이트를 만든다. */
+        /** @brief 텍스처 — 썸네일은 그 텍스처 자체이고, 읽기 전에는 체크무늬 위 액자다. 뷰포트에 끌어 놓으면 그 텍스처의 스프라이트를 만든다. */
         class TextureAssetTypeActions final : public IEditorAssetTypeActions
         {
         public:
             virtual EditorAssetType getKind() const override { return EditorAssetType::Texture; }
+
+            virtual bool hasImagePreview() const override { return true; }
 
             virtual bool drawThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos ) const override
             {
