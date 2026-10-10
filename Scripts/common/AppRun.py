@@ -120,8 +120,8 @@ def findUsableBackends(tree: BuildTree) -> list[str]:
 
 
 def loadGameTable(repositoryRoot: Path) -> dict:
-    """QA 러너가 함께 쓰는 게임 표(`Test/Qa/Games.json`) — 자동 플레이 인자 · 캡처 프레임."""
-    return json.loads((repositoryRoot / "Test/Qa/Games.json").read_text(encoding="utf-8"))
+    """QA 러너가 함께 쓰는 게임 표(`Test/QA/Games.json`) — 자동 플레이 인자 · 캡처 프레임."""
+    return json.loads((repositoryRoot / "Test/QA/Games.json").read_text(encoding="utf-8"))
 
 
 # ------------------------------------------------------------------------------

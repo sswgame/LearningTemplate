@@ -6,7 +6,7 @@
     py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe                    # 비교(기준이 없으면 77 = 건너뜀)
     py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe --record           # 이 기계의 기준을 새로 뜬다
 
-기준: `Test/Qa/Perf/<게임>.json` 의 `machines.<기계 키>` — **기계마다 다르다**(CPU · GPU · 드라이버가 숫자를 정한다). 기계 키는 호스트 이름과
+기준: `Test/QA/Perf/<게임>.json` 의 `machines.<기계 키>` — **기계마다 다르다**(CPU · GPU · 드라이버가 숫자를 정한다). 기계 키는 호스트 이름과
 프로세서 이름이다. 판마다 `-gv_profileFrames=N`(워밍업 60 프레임은 엔진이 버린다)으로 재고, 판들의 중앙값을 쓴다 — 한 판의 max 는 잡음이다
 (docs/08_Verification.md 2 절 "측정 · 프로파일"). 판정: 값 > 기준 × (1 + 허용) + 바닥(us) 이면 회귀다. 개선은 알리기만 한다.
 
@@ -106,7 +106,7 @@ def main(listArgument: list[str] | None = None) -> int:
     buildType = appTree.readCacheValue("CMAKE_BUILD_TYPE")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Perf] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
+        print(f"[Perf] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     if buildType != "Release" and not args.allow_debug:
         print(f"[Perf] {appTree.name} 은 {buildType} 빌드다 — Release 로 재십시오(또는 --allow-debug)", file=sys.stderr)
@@ -122,7 +122,7 @@ def main(listArgument: list[str] | None = None) -> int:
         print("[Perf] FAIL no [Profile] table in the output", flush=True)
         return 1
 
-    baselinePath = repositoryRoot / "Test/Qa/Perf" / f"{gameName}.json"
+    baselinePath = repositoryRoot / "Test/QA/Perf" / f"{gameName}.json"
     document = json.loads(baselinePath.read_text(encoding="utf-8")) if baselinePath.is_file() else {"game": gameName, "machines": {}}
     machineKey = makeMachineKey()
     entryKey = f"{machineKey}|{args.backend}"

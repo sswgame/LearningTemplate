@@ -270,8 +270,8 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 **게임 골든 이미지는 픽셀이 아니라 지표로 비교합니다**(`Scripts/common/ImageMetrics.py`). 모서리에서 배경색을 추정해 빼고, 전경 비율, 전경 평균색, (R−B), 경계 밀도, 8×4 격자 밝기를 비교합니다.
 자동 플레이는 실제 시간을 따라가서 같은 프레임 번호에서도 장면이 조금씩 다르므로, 허용 오차는 `--record` 가 같은 조건으로 여러 번 돌린 결과의 퍼짐으로 정합니다.
 
-- 기준은 `Test/Qa/Golden/<게임>/<백엔드>.png` 와 `.json` 입니다. 160×90 PNG라 작고 사람이 열어 볼 수 있습니다. 지금 Empty, NileCity, StarSkirmish, Shooter3D에 네 백엔드씩 있습니다.
-- 게임마다의 자동 플레이 인자와 캡처 프레임은 `Test/Qa/Games.json` 에 있습니다. 기준이 없는 게임과 돌지 못하는 백엔드는 건너뜁니다(77, CTest Skipped).
+- 기준은 `Test/QA/Golden/<게임>/<백엔드>.png` 와 `.json` 입니다. 160×90 PNG라 작고 사람이 열어 볼 수 있습니다. 지금 Empty, NileCity, StarSkirmish, Shooter3D에 네 백엔드씩 있습니다.
+- 게임마다의 자동 플레이 인자와 캡처 프레임은 `Test/QA/Games.json` 에 있습니다. 기준이 없는 게임과 돌지 못하는 백엔드는 건너뜁니다(77, CTest Skipped).
 - 네 모서리가 두 색으로 갈리는 장면(1인칭에서 위는 하늘, 아래는 땅)은 배경이 없다고 보고 화면 전체를 전경으로 측정합니다.
 - 판정이 실제로 실패를 잡는지는 `--extra-arg=-gv_viewMode=2`(와이어프레임)나 `--extra-arg=-gv_benchMeshes=0` 으로 일부러 망가진 이미지를 만들어 봅니다. 이 실행은 기준에 남지 않습니다.
 - 실패한 실행의 App 출력은 `%TEMP%/sw_golden_<백엔드>_<회차>_app.log` 에 있습니다.
@@ -279,7 +279,7 @@ py -3 -m Scripts perf --app build/Ninja-Release/Bin/App.exe [--record]
 **soak** 는 `-gv_profileSeconds=<초>` 로 App이 그 시간 동안 돌고 스스로 끝나게 하고, 바깥에서 프라이빗 메모리, 작업 집합, 핸들, GDI와 USER 개체 수를 측정합니다.
 판정은 워밍업 뒤의 최소제곱 기울기(MB/분, 개/분)입니다. 처음과 끝 두 점만 보면 캐시 채우기 같은 계단을 누수로 오해하기 때문입니다.
 
-**성능 기준은 기계마다**(호스트, CPU, 백엔드) 따로 있고 `Test/Qa/Perf/<게임>.json` 에 저장됩니다. 여러 번 돌린 결과의 중앙값을 쓰고, `값 > 기준 × (1 + 허용 오차) + 바닥` 이면 실패입니다.
+**성능 기준은 기계마다**(호스트, CPU, 백엔드) 따로 있고 `Test/QA/Perf/<게임>.json` 에 저장됩니다. 여러 번 돌린 결과의 중앙값을 쓰고, `값 > 기준 × (1 + 허용 오차) + 바닥` 이면 실패입니다.
 
 **로더 퍼징.** `EngineTest` 의 `LoaderFuzzTest`(nogpu)는 씨앗을 고정한 변이로 로더를 퍼징합니다. 오래 돌리려면 반복 수를 늘립니다.
 

@@ -162,7 +162,7 @@ class GameTableTest(unittest.TestCase):
     def testGoldenReferencesMatchTheTable(self) -> None:
         import json
         table = loadGameTable(kRepositoryRoot)
-        goldenRoot = kRepositoryRoot / "Test/Qa/Golden"
+        goldenRoot = kRepositoryRoot / "Test/QA/Golden"
         for referencePath in sorted(goldenRoot.glob("*/*.json")):
             record = json.loads(referencePath.read_text(encoding="utf-8"))
             game = table["games"][referencePath.parent.name]

@@ -198,9 +198,9 @@ Scripts/
   │
   ├── qa/                             # [QA] 빌드된 App 을 돌려 기준과 견주거나(hostgpu · soak · perf CTest 와 사람이 부른다) 에셋을 규칙으로 훑는다
   │     ├── ValidateAssets.py         # 에셋 검증 표(파일 · 규칙 · 심각도 · 메시지) — 게이트와 같은 코드, 경고까지 · JSON 출력
-  │     ├── GoldenImages.py           # 시험 게임 자동 플레이 × 네 백엔드 캡처를 Test/Qa/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
+  │     ├── GoldenImages.py           # 시험 게임 자동 플레이 × 네 백엔드 캡처를 Test/QA/Golden 기준과 지표로 비교(`--record` 로 기준을 뜬다)
   │     ├── Soak.py                   # 자동 플레이 장시간 실행 — 메모리 · 핸들 증가 기울기, 프레임 p50 · p99
-  │     └── PerfRegression.py         # Release 프레임 p50 · p99 를 이 기계의 기준(Test/Qa/Perf)과 비교
+  │     └── PerfRegression.py         # Release 프레임 p50 · p99 를 이 기계의 기준(Test/QA/Perf)과 비교
   │
   ├── asset/                          # [에셋 도구] 사람과 git 이 부르는 에셋 비교 · 병합
   │     └── AssetMerge.py             # XML 에셋 의미 diff · 3-way merge, git 병합 · 비교 드라이버(아래 절)

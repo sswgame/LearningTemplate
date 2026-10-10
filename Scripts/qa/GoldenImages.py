@@ -7,7 +7,7 @@
     py -3 -m Scripts golden --app <App> --backends dx12 vk                             # 백엔드를 골라
     py -3 -m Scripts golden --app <App> --record [--runs 3]                            # 기준을 새로 뜬다(같은 조건 여러 판 → 허용 오차)
 
-기준: `Test/Qa/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건 ·
+기준: `Test/QA/Golden/<게임>/<백엔드>.png`(160x90 축소본, 사람이 열어 보는 그림)와 `<백엔드>.json`(지표 · 지표별 허용 오차 · 캡처 조건 ·
 뜬 장치 `device` — GPU 이름 · 드라이버 판). 다른 기계에서 지면 비교 메시지가 두 장치를 함께 찍는다 — 그 기계에서 `--record` 로 떠 드라이버 차이인지
 회귀인지 가른다(기계별 기준 파일은 아직 두지 않는다).
 판정은 픽셀이 아니라 지표다(`Scripts/common/ImageMetrics.py`) — 자동 플레이는 프레임 시간이 벽시계를 따라가 같은 프레임 번호에서도 장면이
@@ -35,7 +35,7 @@ from common.ImageMetrics import (ImageMetrics, averageMetrics, compareMetrics, c
                                  readPng, readPpm, writePng)
 
 #: 기준 폴더(저장소 루트 기준).
-kGoldenRelativeDir = "Test/Qa/Golden"
+kGoldenRelativeDir = "Test/QA/Golden"
 
 
 def captureInternal(appPath: Path, game: dict, table: dict, backend: str, workDir: Path, runIndex: int) -> tuple[str, object]:
@@ -119,7 +119,7 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
         return "skip", f"no reference ({referencePath.relative_to(goldenDir.parents[2])}) - record it with --record"
     record = json.loads(referencePath.read_text(encoding="utf-8"))
     if record["capture"]["arguments"] != game["arguments"] or record["capture"]["frame"] != game["screenshot_frame"]:
-        return "fail", "the reference was captured with other arguments/frame than Test/Qa/Games.json - re-record it"
+        return "fail", "the reference was captured with other arguments/frame than Test/QA/Games.json - re-record it"
     status, payload = captureInternal(appPath, game, table, backend, workDir, 0)
     if status != "ok":
         return status, str(payload)
@@ -149,7 +149,7 @@ def main(listArgument: list[str] | None = None) -> int:
     gameName = args.game or appTree.readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Golden] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
+        print(f"[Golden] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     if not args.app.is_file():
         print(f"[Golden] App 이 없습니다: {args.app}", file=sys.stderr)

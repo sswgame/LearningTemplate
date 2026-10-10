@@ -47,7 +47,7 @@ def main(listArgument: list[str] | None = None) -> int:
     gameName = args.game or BuildTree.ofApp(args.app).readCacheValue("SW_ACTIVE_GAME")
     table = loadGameTable(repositoryRoot)
     if not gameName or gameName not in table["games"]:
-        print(f"[Soak] 모르는 게임 '{gameName}' — Test/Qa/Games.json 에 더하십시오", file=sys.stderr)
+        print(f"[Soak] 모르는 게임 '{gameName}' — Test/QA/Games.json 에 더하십시오", file=sys.stderr)
         return 1
     seconds = max(10, int(args.minutes * 60))
     listAppArgument = [*table["games"][gameName]["arguments"], f"-gv_profileSeconds={seconds}", kBackendSwitch[args.backend]]

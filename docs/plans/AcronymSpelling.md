@@ -70,14 +70,14 @@
 | `GameFramework/Base/UI/HUD` | `HUD` | include 경로 |
 | `Online/Account/Shared/Api` · `Online/Economy/Shared/Api` (키트) | `API` | include 경로 |
 | `Core/UUID` · `Test/CoreTest/UUID` | `UUID` | include 경로 |
-| `Test/Qa` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/Qa` 서른 곳 안팎 |
+| `Test/QA` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/QA` 서른 곳 안팎 |
 | `Engine/Audio/Dsp` | `DSP` | include 경로 |
 | `Kits/Feature/Network/NetMmo` | `NetMMO` | 모듈 `GF_NetMMO` |
 | `Engine/Animation/Codec/Acl` | `ACL` | include 경로 · `AclAnimCodec` → `ACLAnimCodec` (ACL 라이브러리 이름과 맞춤) |
 | `Editor/Common/Gui` | `GUI` | include 경로 |
 | `Test/EditorUiTest` | `EditorUITest` | 실행 파일 · CTest 이름 · `CheckTestSuites` 의 `XxxTest` 규칙 · `.vscode/launch.json` · CLAUDE.md 의 시험 목록 |
 
-- **`Scripts/` 의 폴더(`qa` · `lint` · `gate` …)는 파이썬 패키지 이름이라 소문자 규칙이 따로 있다**(`CheckScriptLayout`) — `Scripts/qa` 는 그대로 두고 `Test/Qa` 만 `Test/QA` 로 바꾼다. 줄임말(`Net` · `Dev` · `Anim` · `Resp` · `Std`)과 제품 이름(`Box2D` · `Jolt` · `FreeType`)은 약어가 아니라서 대상이 아니다.
+- **`Scripts/` 의 폴더(`qa` · `lint` · `gate` …)는 파이썬 패키지 이름이라 소문자 규칙이 따로 있다**(`CheckScriptLayout`) — `Scripts/qa` 는 그대로 두고 `Test/QA` 만 `Test/QA` 로 바꾼다. 줄임말(`Net` · `Dev` · `Anim` · `Resp` · `Std`)과 제품 이름(`Box2D` · `Jolt` · `FreeType`)은 약어가 아니라서 대상이 아니다.
 - 모듈 이름은 DLL 파일 이름 · 핫 리로드의 섀도 복사본 · 매니페스트 · `ResolvedModules.txt` 가 쓰므로 CMake 를 새로 구성(reconfigure)하고 오래된 `Bin/Modules` 산출물은 configure 가 지운다(Dev Bin 정리).
 - `CheckProductNames.py` · `CheckGameFrameworkLayers.py` 의 이름 표를 같이 고친다.
 - 대소문자만 바뀌는 이동은 임시 이름을 거친다(2 단계 `git mv`).
