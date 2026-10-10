@@ -31,7 +31,7 @@ cost), the commit message format, and replying to the user in Korean.
 **Read [AGENTS.md](AGENTS.md) before writing any C++, CMake, or Python in this repo.** It is the
 authoritative rule set for naming (`_camelCase` members, `p`/`pp` pointer prefixes, `list`/`map`/`arr`/`unique`
 container prefixes with **singular** names, `out`/`pOut` parameter prefixes), function-name vocabulary
-(acronyms are camelCase words; one verb per concept; predicates read as questions), include ordering,
+(acronyms are capitals — `UISystem`, `updateUI`; one verb per concept; predicates read as questions), include ordering,
 header declaration order, constructor initialization, and branch style.
 `docs/04_CodingGuidelines.md` is a Korean collection of examples per AGENTS.md section; it does not restate the rules
 (a new rule goes into AGENTS.md first, an example into docs/04 in the same commit).
@@ -239,7 +239,7 @@ py -3 Scripts/lint/gate/CheckModuleTargets.py                  # module targets 
 py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files
 py -3 Scripts/lint/gate/CheckDocPaths.py                       # links, anchors and backticked repo paths in *.md exist; every README is on docs/02_DocumentMap.md
 py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
-py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; acronyms are camelCase words
+py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; capital runs are registered acronyms
 py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning fallible verbs (load/save/apply…) are [[nodiscard]]
 py -3 Scripts/lint/gate/CheckTargetMacros.py                   # platform/arch/compiler via SW_* macros, never compiler built-ins
 py -3 Scripts/lint/gate/CheckStdFilesystemIsolation.py         # std::filesystem only inside Core/File/Std (engine code asks FileUtil)

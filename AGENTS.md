@@ -108,10 +108,11 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   members: capitals in the middle or at the end (`updateUI`, `queryAABB`, `entityID`, `pUISystem`, `_pGPUScene`), all lower case
   as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one
   out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
-  their spelling. The tree moves one acronym at a time and only the acronyms in `kEnforced` are enforced
-  (`CheckAcronymSpelling.py` — Pascal spellings and touching capitals; `AcronymRun` — a capital run in a function name must be
-  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`getOwnerID`, `bindComputeUav`) until
-  `FormatAcronymSpelling.py` rewrites it across the tree.
+  their spelling (a third-party member that looks like ours goes in `kExternalName`: Box2D `bodyIdA`, Tracy `queryId`).
+  `CheckAcronymSpelling.py` blocks Pascal spellings and touching capitals of the acronyms in `kEnforced` (every registered acronym);
+  `AcronymRun` blocks a capital run in a function name that is not one registered acronym (`bindComputeUAV` — `UAV` is not
+  registered, so it stays `bindComputeUav`). A new acronym is added to `kAcronym` · `kEnforced` and rewritten across the tree with
+  `FormatAcronymSpelling.py` in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |

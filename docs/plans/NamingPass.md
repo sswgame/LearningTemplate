@@ -1,7 +1,7 @@
 # 이름 정리 계획
 
 이름 점검(헤더 위주, 2026-10-10)이 낸 제안을 하나씩 다시 따져서 **채택 · 문서로 해결 · 기각**으로 나눴다. 점검이 "모호하다"고 한 것이 곧 "바꾸라"는 뜻은 아니다 —
-`GameObjectManager` 는 한 씬의 `GameObject` 를 만들고 소유하고 틱하는 일을 이름 그대로 하므로 그대로 둔다(사용자 지적, 2026-10-10). 약어 철자는 [약어 철자 통일 계획](AcronymSpelling.md)이 맡는다.
+`GameObjectManager` 는 한 씬의 `GameObject` 를 만들고 소유하고 틱하는 일을 이름 그대로 하므로 그대로 둔다(사용자 지적, 2026-10-10). 약어 철자는 끝났다(약어는 대문자 — AGENTS.md "Function names").
 기각된 구조 변경(`ResourceUtil` 소유 객체화 · `EditorContext` 소유 분할, `docs/09_Decisions.md`)은 이름 변경으로도 건드리지 않는다.
 
 ## 검토 결과

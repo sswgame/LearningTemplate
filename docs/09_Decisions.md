@@ -168,6 +168,7 @@
 
 ### 5-1. 문서와 저장소
 
+- **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/AcronymRegistry.py` 한 자리, 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
 - **코딩 규칙의 원본은 `AGENTS.md` 하나입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
   언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 영어 요약이고, 자주 바뀌는 목록은 링크로만 가리킵니다.

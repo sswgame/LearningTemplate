@@ -3,7 +3,7 @@
 """
 Scripts/lint/fixer/FormatAcronymSpelling.py
 
-약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(docs/plans/AcronymSpelling.md, 규칙 정본은 `Scripts/lint/AcronymRegistry.py`).
+약어 철자 코드모드 — Pascal 낱말로 쓴 약어를 대문자로 고칩니다(AGENTS.md "Function names", 규칙 정본은 `Scripts/lint/AcronymRegistry.py`).
 
 `UiSystem` → `UISystem`, `updateUi` → `updateUI`, `_pGpuScene` → `_pGPUScene`, `entityIds` → `entityIDs`. 이름 맨 앞의 소문자 약어(`uiSystem`)는 그대로다.
 문자열 리터럴 · 주석 · `#include` 줄 · `gv_` 전역 변수 · `SW_*` 매크로 · 서드파티 이름 · 제품 이름(`ImGui`)은 건드리지 않는다.
@@ -392,7 +392,7 @@ _kProseSuffix: tuple[str, ...] = (".md", ".cmake", ".py", ".txt", ".natvis", ".y
 #: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 시험 · 계획 문서.
 _kTextExcludedRel: frozenset[str] = frozenset({
     "Scripts/lint/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
-    "Test/PythonTest/TestAcronymSpelling.py", "docs/plans/AcronymSpelling.md", "docs/04_CodingGuidelines.md",
+    "Test/PythonTest/TestAcronymSpelling.py", "docs/04_CodingGuidelines.md",
     "Scripts/lint/gate/CheckFunctionVocabulary.py",
 })
 

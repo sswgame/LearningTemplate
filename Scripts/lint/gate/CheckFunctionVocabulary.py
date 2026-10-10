@@ -10,7 +10,7 @@
 규칙은 AGENTS.md "Function names" 에 적혀 있고 여기서 강제한다.
 
   1) AcronymRun  — 함수 이름의 대문자 묶음은 등록부(`Scripts/lint/AcronymRegistry.py`)의 강제 약어 하나여야 한다
-                   (`updateUI` · `queryAABB` — 약어는 대문자, docs/plans/AcronymSpelling.md). 등록부에 없거나 아직 강제하지 않은
+                   (`updateUI` · `queryAABB` — 약어는 대문자, AGENTS.md "Function names"). 등록부에 없거나 아직 강제하지 않은
                    약어의 대문자 묶음(`bindComputeUAV`)은 잡는다. 마지막 대문자가 다음 낱말의 첫 글자면 묶음에서 뺀다
                    (`getHUDScale` 의 묶음은 `HUD`, `bindVector2DCallback` 의 `DC` 는 묶음이 아니다). 강제 약어를 Pascal 로 쓴 이름
                    (`updateHud`)과 이어 붙은 약어(`RHIUI`)는 `CheckAcronymSpelling.py` 가 본다.

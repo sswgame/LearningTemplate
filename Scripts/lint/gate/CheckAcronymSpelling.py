@@ -4,7 +4,7 @@
 Scripts/lint/gate/CheckAcronymSpelling.py
 
 약어 철자 게이트 — Pascal 낱말로 쓴 약어(`UiSystem` · `updateUi`)와 이어 붙은 대문자 약어(`RHIUIPass`)를 막습니다
-(docs/plans/AcronymSpelling.md 규칙 2 · 3 · 4, 목록과 철자 판정은 `Scripts/lint/AcronymRegistry.py` 한 자리).
+(AGENTS.md "Function names" 규칙 2 · 3 · 4, 목록과 철자 판정은 `Scripts/lint/AcronymRegistry.py` 한 자리).
 
 **강제는 약어 하나씩이다.** 트리에는 아직 바꾸지 않은 약어 철자가 수만 곳 있다. 그것을 모두 예외로 적지 않는다 —
 등록부의 `kEnforced` 에 오른 약어(그 약어를 트리 전체에서 바꾼 커밋이 올린다)와 `--enforce` 로 넘긴 약어만 위반이고,

@@ -97,7 +97,7 @@ Scripts/
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 (줄 단위 규칙 하나 = 클래스 하나)
-  │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 약어는 단어)
+  │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 대문자 묶음은 등록부 약어)
   │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (등록부 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)
   │     │     ├── CheckIncludeOrder.py        # 인클루드 순서·중복 (검사만 — 고치기는 fixer/FormatIncludeOrder.py)
   │     │     ├── CheckEngineLayers.py        # 아키텍처 레이어 침범
@@ -285,6 +285,14 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 
 ## 함정 · 계약
 
+- **약어 코드모드(`FormatAcronymSpelling`)는 도구 자신과 견주는 글도 고친다.** `--apply-files` · `--apply-text` 는 트리 전체를 돌고 `--files` 를 받지 않는다 — 치환 뒤 등록부 · 코드모드 · 시험 · `AGENTS.md` 의 옛↔새 철자 예시와 인계 문서를 diff 로 보고 되돌린다(`_kTextExcludedRel` 에 오른 파일은 건너뛴다). `--check` 로 목록을 먼저 본다.
+- **코드모드를 다시 돌리면 남의 이름도 다시 바뀐다**(Vulkan `samplerInfo.maxLod`, Tracy `queryId`, Box2D `bodyIdA`) — 앞머리 규칙은 구조체 이름만 가리고 멤버는 못 가린다. 컴파일로 드러나면 `AcronymRegistry.kExternalName` 에 올린다. `--strings` 는 파일 · 전송 형식 키(`"buildId"` · 크래시 텍스트)도 바꾸니 그 자리는 되돌린다.
+- **이름 길이 · 대소문자가 바뀌면 include 정렬과 clang-format 정렬이 달라진다** — 치환 뒤 `fixer/FormatIncludeOrder` · `FormatModified` 를 돌린다. 에디터 아이콘 상수(`EditorIconGlyphs.h`)는 생성물이라 `generate/GenerateEditorIcons.py` 로 다시 만든다(생성기가 등록부의 강제 약어로 쓴다).
+- **약어를 줄기 여럿으로 나눠 치환한 뒤의 병합은 손으로 풀지 않는다** — 충돌 파일은 한쪽을 고르고(`git checkout --ours`) 다른 쪽 약어의 코드모드를 다시 돌린 뒤 그쪽 커밋 본문의 손 맞춤을 다시 적용한다. 옛 폴더 철자가 남은 include 는 대소문자만 다르므로 Windows 에서는 컴파일되고 리눅스에서만 깨진다 — 실제 파일 철자와 맞는지 따로 본다. 대소문자만 바뀐 리플렉션 헤더는 `generated/` 의 낡은 스탬프(옛 철자 경로)가 "Generated file name collision" 을 낸다 — 그 스탬프와 `.gen.*` 를 지운다.
+- **`CheckCodeConventions` 의 출력 매개변수 검사는 `outP…` 를 원시 포인터 출력(`pOut`)으로 읽는다** — `outPSO` 같은 대문자 약어 이름은 풀어 쓴다(`outPipelineState`).
+- **Windows SDK 의 전역 이름과 약어 철자가 겹친다**(`UUID` · `XMLDocument`) — `using namespace sw;` 를 쓰는 전역 범위에서는 `sw::` 를 붙이고, 클래스 앞의 `friend class X;` 는 같은 이름공간에 먼저 선언한다(안 하면 전역 이름을 friend 로 잡는다).
+- **파이썬 조각은 heredoc 이 아니라 파일로**(정규식 백슬래시가 뭉개져 287 파일을 망친 적이 있다), 셸 파이프에서 표준 입력을 읽는 명령(`cat` · `py -3 -`)은 `< /dev/null` 이나 heredoc 으로 입력을 닫는다(입력을 기다리며 멈춘다).
+- **`SetupVcpkg.py --install` 은 `search_paths.json` 의 `vcpkg_git_commit` 이 비면 `Tools/vcpkg` 체크아웃을 옮기지 않는다** — `vcpkg.json` 의 `builtin-baseline` 보다 오래된 체크아웃이면 configure 가 "no version database entry" 로 진다. 기준선으로 옮기면 포트 전체를 다시 짓는다(이 PC 에서 약 2 시간).
 - **키트 커밋은 저장소가 고정한 clang-format(`Tools/LLVM/bin/clang-format`, 20)으로.** 시스템의 18 은 멤버 포인터(`float32 Foo::*_pMember`) 줄을 다르게 맞춰 린트가 막는다.
 - **clang-format 은 고정 바이너리 `Tools/LLVM/bin/clang-format.exe`(20.1.8)** 로만 센다(`clang_format_version` 키로 LLVM 과 따로 고정, `Scripts/common/ClangFormat.py`).
   PATH 의 것으로 세면 틀린다(정답은 0 개). `--dry-run` 에 파일 여럿을 한꺼번에 주면 보고가 조용히 잘린다 — 파일마다 한 번씩 센다:

@@ -18,7 +18,6 @@
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 - **GameFramework 폴더 재배치 — 계획은 [docs/plans/GameFrameworkLayout.md](plans/GameFrameworkLayout.md).** `Base` 24 개 폴더를 층으로 묶고, 평평한 폴더와 키트 안을 나눈다. 엔진 분할 0-3 뒤에 한다. 단위를 끝내면 계획 문서에서 지운다.
-- **약어 철자 통일 — 계획은 [docs/plans/AcronymSpelling.md](plans/AcronymSpelling.md).** 사용자 결정(2026-10-10): 타입 · 함수 · 변수 · 파일에서 약어를 대문자로(`UISystem` · `updateUI` · `GPUScene`). 폴더 재배치 뒤에 약어마다 한 커밋으로 한다.
 - **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 이름 점검 제안을 채택 · 기각 · 문서화로 가린 결과와 순서. 린트 · 어휘표가 먼저, 기계적 치환은 약어 코드모드 틀에.
 - **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 컴파일이 CPU 시간의 85 %, 헤더 파싱이 한 TU 의 57 %, PCH 가 타깃마다 86 개. 1 단계(시험 빌드 분리)와 0 단계 도구(`RunBuildBaseline` · `RunIncludeCost`)는 끝났고, 기준선 측정은 다른 빌드가 없을 때 남았다.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-약어 등록부 — 무엇이 약어이고 어떻게 쓰는지를 정하는 한 자리입니다(docs/plans/AcronymSpelling.md).
+약어 등록부 — 무엇이 약어이고 어떻게 쓰는지를 정하는 한 자리입니다(AGENTS.md "Function names").
 
 게이트(`gate/CheckAcronymSpelling.py`) · 코드모드(`fixer/FormatAcronymSpelling.py`) · 사전 실행 보고가 모두 이 모듈을 읽는다.
 목록과 규칙을 한 파일에 두는 이유는 하나다 — 게이트가 막는 철자와 코드모드가 고치는 철자가 갈리면 고친 코드를 게이트가 다시 막는다.
